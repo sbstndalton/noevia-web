@@ -73,6 +73,8 @@ export function ProjectView({ project, onNewChat, onOpenChat, onPatch, onDeleteC
               value={project.instructions}
               placeholder="How the AI should behave in every chat of this project…"
               onChange={(v) => onPatch(project.id, { instructions: v })}
+              onFile={(t) => onPatch(project.id, { instructions: t })}
+              fileMode="replace"
             />
           )}
 
@@ -93,6 +95,8 @@ export function ProjectView({ project, onNewChat, onOpenChat, onPatch, onDeleteC
               value={project.memories.join('\n')}
               placeholder="One memory per line — e.g. I run Unraid with an AMD 890M iGPU"
               onChange={(v) => onPatch(project.id, { memories: v.split('\n').map((x) => x.trim()).filter(Boolean) })}
+              onFile={(t) => onPatch(project.id, { memories: [...project.memories, ...t.split('\n').map((x) => x.trim()).filter(Boolean)] })}
+              fileMode="append"
             />
           )}
 
@@ -114,23 +118,50 @@ function RailRow({ label, hint, onClick }: { label: string; hint: string; onClic
   );
 }
 
+const UPLOAD_CAP = 200_000; // same cap RailFiles applies
+
 function RailTextarea({
   value,
   placeholder,
   onChange,
+  onFile,
+  fileMode,
 }: {
   value: string;
   placeholder: string;
   onChange: (v: string) => void;
+  onFile?: (content: string) => void;
+  fileMode?: 'replace' | 'append';
 }): JSX.Element {
+  const addFile = async (list: FileList | null) => {
+    const f = list?.[0];
+    if (!f || f.size > UPLOAD_CAP || !onFile) return;
+    onFile(await f.text());
+  };
+
   return (
-    <textarea
-      className="modal-input"
-      style={{ minHeight: 110, marginBottom: 12 }}
-      placeholder={placeholder}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
+    <div style={{ marginBottom: 12 }}>
+      <textarea
+        className="modal-input"
+        style={{ minHeight: 110, marginBottom: 8 }}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {onFile && (
+        <label className="modal-filepick">
+          <input
+            type="file"
+            accept=".md,.txt"
+            onChange={(e) => {
+              void addFile(e.target.files);
+              e.target.value = '';
+            }}
+          />
+          <span>{fileMode === 'append' ? 'Append .md / .txt' : 'Replace with .md / .txt'}</span>
+        </label>
+      )}
+    </div>
   );
 }
 
