@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import type { LiveStats } from '../types';
-import { fetchStats } from '../api';
 
 interface StatsBarProps {
-  refreshMs?: number;
+  stats: LiveStats | null; // App polls /api/stats and passes it down (single poller)
 }
 
 function fmt(n: number | null, digits = 1, suffix = ''): string {
@@ -20,37 +19,22 @@ function fmtCount(n: number | null): string {
 }
 
 /** Slim live readout docked at the bottom of the chat column.
- *  Polls the proxy's /api/stats (Lemonade /v1/stats + /v1/system-stats). */
-export function StatsBar({ refreshMs = 2500 }: StatsBarProps): JSX.Element {
-  const [stats, setStats] = useState<LiveStats | null>(null);
+ *  Purely presentational: App owns the /api/stats poll loop (one poller total). */
+export function StatsBar({ stats }: StatsBarProps): JSX.Element {
   const [flash, setFlash] = useState(false);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevTok = useRef<number | null>(null);
 
+  // Flash when tok/s changes (deriving the old effect's visual from the shared poll).
   useEffect(() => {
-    let alive = true;
-    const tick = () => {
-      fetchStats()
-        .then((s) => {
-          if (!alive) return;
-          setStats((prev) => {
-            if (prev && s.tokensPerSecond != null && s.tokensPerSecond !== prev.tokensPerSecond) {
-              setFlash(true);
-              setTimeout(() => setFlash(false), 450);
-            }
-            return s;
-          });
-        })
-        .catch(() => {
-          if (alive) setStats((prev) => (prev ? { ...prev, up: false } : prev));
-        });
-    };
-    tick();
-    timer.current = setInterval(tick, refreshMs);
-    return () => {
-      alive = false;
-      if (timer.current) clearInterval(timer.current);
-    };
-  }, [refreshMs]);
+    const tok = stats?.tokensPerSecond ?? null;
+    const changed = tok != null && prevTok.current != null && tok !== prevTok.current;
+    prevTok.current = tok;
+    if (changed) {
+      setFlash(true);
+      const t = setTimeout(() => setFlash(false), 450);
+      return () => clearTimeout(t);
+    }
+  }, [stats]);
 
   return (
     <div className={`stats-bar${flash ? ' is-flash' : ''}`}>

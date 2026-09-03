@@ -540,7 +540,7 @@ export default function App(): JSX.Element {
       )}
 
       </div>
-      {view.kind !== 'diary' && <StatsBar />}
+      {view.kind !== 'diary' && <StatsBar stats={stats} />}
       </div>
     </div>
   );
