@@ -1,0 +1,67 @@
+/* Cowork UI — design tokens distilled from the ui-mockups artboards.
+   Light: Manrope artboards (Main/Diary/Settings). Dark: DirectionB (IBM Plex).
+   A theme is a palette swap + a few shape/type swaps; layout is shared. */
+
+:root {
+  /* ── Shape & type (light = Manrope artboards) ── */
+  --font-ui: 'Manrope', system-ui, sans-serif;
+  --font-mono: 'Manrope', system-ui, sans-serif;
+  --radius-card: 10px;
+  --radius-bubble: 14px;
+  --radius-input: 16px;
+  --radius-pill: 999px;
+
+  /* ── Light palette (Main-html / Diary-html / Settings-html) ── */
+  --bg: oklch(98% 0.006 80);
+  --bg-sidebar: oklch(96% 0.008 75);
+  --bg-pinned: oklch(91% 0.035 165);
+  --bg-active: oklch(93% 0.03 40);
+  --bg-panel: oklch(96.5% 0.008 75);
+  --bg-assistant: oklch(96% 0.012 75);
+  --bg-input: oklch(100% 0 0);
+  --bg-card: oklch(100% 0 0);
+  --bg-off: oklch(95% 0.006 75);
+  --border: oklch(90% 0.012 70);
+  --text: oklch(24% 0.02 60);
+  --text-muted: oklch(52% 0.018 60);
+  --text-faint: oklch(68% 0.014 65);
+  --text-off: oklch(74% 0.008 70);
+  --accent: oklch(62% 0.15 40);
+  --accent-ink: oklch(30% 0.1 40);
+  --accent-2: oklch(55% 0.1 165);
+  --accent-2-soft: oklch(93% 0.03 165);
+  --good: oklch(62% 0.12 155);
+  --send-icon: #ffffff;
+  --shadow-soft: none;
+
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  /* ── Dark palette (DirectionB hues) ──
+     Design-language note (user feedback 2026-09-03): both themes share the LIGHT
+     artboard's language — Manrope, rounded shapes. Only the palette swaps.
+     A full color-theming rethink is deferred (see MIGRATION.md §2b). */
+  --bg: oklch(19% 0.012 258);
+  --bg-sidebar: oklch(16% 0.013 258);
+  --bg-pinned: oklch(24% 0.05 300);
+  --bg-active: oklch(26% 0.03 165);
+  --bg-panel: oklch(17% 0.013 258);
+  --bg-assistant: oklch(23% 0.014 258);
+  --bg-input: oklch(15% 0.013 258);
+  --bg-card: oklch(19% 0.012 258);
+  --bg-off: oklch(16% 0.01 258);
+  --border: oklch(32% 0.015 258);
+  --text: oklch(93% 0.008 258);
+  --text-muted: oklch(70% 0.012 258);
+  --text-faint: oklch(52% 0.012 258);
+  --text-off: oklch(45% 0.01 258);
+  --accent: oklch(78% 0.15 165);
+  --accent-ink: oklch(85% 0.13 165);
+  --accent-2: oklch(78% 0.13 300);
+  --accent-2-soft: oklch(24% 0.05 300);
+  --good: oklch(78% 0.15 165);
+  --send-icon: var(--bg);
+
+  color-scheme: dark;
+}

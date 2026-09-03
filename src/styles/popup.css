@@ -1,0 +1,47 @@
+/* Model popup tabs & small shared controls. */
+.popup-tab {
+  font-family: var(--font-ui);
+  font-size: 12px; font-weight: 600;
+  color: var(--text-muted);
+  background: none; border: none; cursor: pointer;
+  padding: 6px 10px; border-radius: 8px;
+}
+.popup-tab:hover:not(:disabled) { background: var(--bg-assistant); color: var(--text); }
+.popup-tab:disabled { opacity: 0.5; cursor: default; }
+
+/* Thinking / tool-call disclosure blocks in the transcript. */
+.thinking-block {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-bubble);
+  padding: 8px 12px;
+  background: var(--bg-off);
+}
+.thinking-block summary {
+  cursor: pointer;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--text-faint);
+  user-select: none;
+}
+.thinking-block summary:hover { color: var(--text-muted); }
+.thinking-body {
+  margin: 8px 0 2px;
+  font-size: 12.5px; line-height: 1.55;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}
+.thinking-live { animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+.tool-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-ui);
+  font-size: 11px; font-weight: 700;
+  color: var(--accent-2);
+  background: var(--accent-2-soft);
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+}
+.tool-chip code {
+  font-family: ui-monospace, monospace; font-weight: 400;
+  color: var(--text-faint); font-size: 10.5px;
+}
