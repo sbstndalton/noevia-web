@@ -29,6 +29,7 @@ export interface Project {
   files: ProjectFile[];
   model?: string; // unset until picked; server defaults to the loaded model
   provider?: string; // unset = 'lemonade' (seeded default)
+  routing?: 'manual' | 'auto'; // default 'manual'; 'auto' = Fast/Smart per-message routing
   chats: ChatMeta[];
   createdAt: number;
   updatedAt: number;

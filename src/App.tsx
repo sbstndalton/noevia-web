@@ -277,7 +277,12 @@ export default function App(): JSX.Element {
           projectId,
           chatId,
         })) {
-          if (ev.type === 'reasoning' && ev.text) {
+          if (ev.type === 'meta' && ev.route) {
+            setMessagesByChat((prev) => ({
+              ...prev,
+              [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, senderLabel: `Assistant · Auto (${ev.route})` } : m)),
+            }));
+          } else if (ev.type === 'reasoning' && ev.text) {
             reasoning += ev.text;
             setMessagesByChat((prev) => ({
               ...prev,
@@ -488,7 +493,11 @@ export default function App(): JSX.Element {
         <ChatView
           title={activeChatMeta?.title ?? (view.projectId ? 'New task' : 'New chat')}
           projectName={activeProject?.name ?? null}
-          modelLabel={activeProject?.model ?? models.find((m) => m.loaded)?.name ?? 'local model'}
+          modelLabel={
+            activeProject?.routing === 'auto'
+              ? 'Auto (Fast/Smart)'
+              : activeProject?.model ?? models.find((m) => m.loaded)?.name ?? 'local model'
+          }
           messages={messages}
           streaming={streaming}
           onSend={sendToCurrent}

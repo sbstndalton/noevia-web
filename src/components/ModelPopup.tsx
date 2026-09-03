@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, Provider } from '../types';
-import { fetchInstalledModels, fetchProviders } from '../api';
+import { fetchAutoRoles, fetchInstalledModels, fetchProviders, saveProjectConfig, setAutoRoles as putAutoRoles } from '../api';
 
 interface ModelPopupProps {
   projects: Project[];
@@ -71,12 +71,15 @@ function SwitchTab({
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [cloudModel, setCloudModel] = useState('');
+  const [autoInfo, setAutoInfo] = useState<{ configured: boolean; roles: { fast: string; smart: string } | null } | null>(null);
+  const [pendingRoles, setPendingRoles] = useState<{ fast?: string; smart?: string }>({});
 
   const refresh = () => {
     fetchInstalledModels()
       .then(setModels)
       .catch(() => setErr('Could not reach Lemonade'));
     fetchProviders().then((r) => setProviders(r.providers || [])).catch(() => undefined);
+    fetchAutoRoles().then(setAutoInfo).catch(() => undefined);
   };
   useEffect(refresh, []);
 
@@ -114,6 +117,31 @@ function SwitchTab({
     }
   };
 
+  const setRouting = async (routing: 'auto' | 'manual') => {
+    if (!activeProject) return;
+    setBusy('routing');
+    try {
+      await saveProjectConfig(activeProject.id, { routing });
+      onChanged();
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const saveRoles = async () => {
+    const fast = (pendingRoles.fast || autoInfo?.roles?.fast || '').trim();
+    const smart = (pendingRoles.smart || autoInfo?.roles?.smart || '').trim();
+    if (!fast || !smart) return;
+    setBusy('roles');
+    try {
+      await putAutoRoles({ fast, smart });
+      setPendingRoles({});
+      setAutoInfo({ configured: true, roles: { fast, smart } });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   // Cloud providers take a free-text model ID — no pull/download flow exists
   // for a hosted API (feature doc Item 0 point 4).
   const setCloudModelId = async () => {
@@ -136,6 +164,83 @@ function SwitchTab({
       <div className="rail-label">
         {activeProject ? `Model for ${activeProject.name}` : 'Open a project to switch its model'}
       </div>
+      {activeProject && (
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            className="popup-tab"
+            style={{
+              flex: 1,
+              border: '1px solid',
+              borderColor: activeProject.routing === 'auto' ? 'var(--accent)' : 'var(--border)',
+              color: activeProject.routing === 'auto' ? 'var(--accent-ink)' : 'var(--text-muted)',
+              background: activeProject.routing === 'auto' ? 'var(--accent-2-soft)' : 'transparent',
+            }}
+            disabled={busy !== null}
+            onClick={() => void setRouting('auto')}
+          >
+            Auto
+            <span style={{ display: 'block', fontSize: 10, fontWeight: 500, opacity: 0.75 }}>picks a model per message</span>
+          </button>
+          <button
+            className="popup-tab"
+            style={{
+              flex: 1,
+              border: '1px solid',
+              borderColor: activeProject.routing !== 'auto' ? 'var(--accent)' : 'var(--border)',
+              color: activeProject.routing !== 'auto' ? 'var(--accent-ink)' : 'var(--text-muted)',
+              background: activeProject.routing !== 'auto' ? 'var(--accent-2-soft)' : 'transparent',
+            }}
+            disabled={busy !== null}
+            onClick={() => void setRouting('manual')}
+          >
+            Manual
+            <span style={{ display: 'block', fontSize: 10, fontWeight: 500, opacity: 0.75 }}>one pinned model</span>
+          </button>
+        </div>
+      )}
+      {activeProject?.routing === 'auto' && (
+        <div
+          style={{
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-card, 10px)',
+            padding: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+          }}
+        >
+          <span className="rail-label" style={{ margin: 0 }}>
+            Roles {autoInfo?.configured ? '(models load on demand)' : '— pick Fast and Smart, then Save'}
+          </span>
+          {(['fast', 'smart'] as const).map((role) => (
+            <label key={role} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+              <span style={{ width: 44, fontWeight: 600, color: 'var(--text-muted)' }}>{role}</span>
+              <select
+                className="modal-input"
+                style={{ flex: 1, padding: '4px 8px' }}
+                value={pendingRoles[role] ?? autoInfo?.roles?.[role] ?? ''}
+                onChange={(e) => setPendingRoles((prev) => ({ ...prev, [role]: e.target.value }))}
+              >
+                <option value="">— pick a model —</option>
+                {models.map((m) => (
+                  <option key={m.name} value={m.name}>
+                    {m.name}
+                  </option>
+                ))}
+                {autoInfo?.roles?.[role] && !models.some((m) => m.name === autoInfo.roles?.[role]) && (
+                  <option value={autoInfo.roles[role]}>{autoInfo.roles[role]}</option>
+                )}
+              </select>
+              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                {models.find((m) => m.name === (pendingRoles[role] ?? autoInfo?.roles?.[role]))?.loaded ? 'loaded' : ''}
+              </span>
+            </label>
+          ))}
+          <button className="modal-btn primary" style={{ padding: '5px 12px', alignSelf: 'flex-end' }} disabled={busy !== null} onClick={() => void saveRoles()}>
+            Save roles
+          </button>
+        </div>
+      )}
       {providers.length > 1 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {providers.map((p) => (
@@ -178,7 +283,7 @@ function SwitchTab({
           </button>
         </div>
       )}
-      {activeProviderId === 'lemonade' && activeProject?.model && (
+      {activeProviderId === 'lemonade' && activeProject?.model && activeProject.routing !== 'auto' && (
         <p className="rail-empty" style={{ margin: 0 }}>
           Current: <strong>{activeProject.model}</strong>
           {activeProvider && activeProviderId !== 'lemonade' ? ` via ${activeProvider.label}` : ''}

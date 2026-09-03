@@ -32,6 +32,16 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function putJson<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`PUT ${url} failed: ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
 export function fetchWorkspace(): Promise<WorkspaceInfo> {
   return getJson('/api/workspace');
 }
@@ -75,9 +85,20 @@ export function deleteProject(projectId: string): Promise<{ ok: true }> {
 
 export function saveProjectConfig(
   projectId: string,
-  patch: Partial<Pick<Project, 'name' | 'goal' | 'instructions' | 'model' | 'memories' | 'files'>>,
+  patch: Partial<Pick<Project, 'name' | 'goal' | 'instructions' | 'model' | 'memories' | 'files'>> & {
+    provider?: string;
+    routing?: 'manual' | 'auto';
+  },
 ): Promise<{ ok: true }> {
   return postJson(`/api/projects/${encodeURIComponent(projectId)}/config`, patch);
+}
+
+export function fetchAutoRoles(): Promise<{ configured: boolean; roles: { fast: string; smart: string } | null }> {
+  return getJson('/api/auto-roles');
+}
+
+export function setAutoRoles(roles: { fast: string; smart: string }): Promise<{ configured: boolean }> {
+  return putJson('/api/auto-roles', roles);
 }
 
 export function fetchProjectChats(projectId: string): Promise<ChatMeta[]> {
@@ -189,6 +210,7 @@ export async function* streamChat(
   name?: string;
   args?: string;
   decision?: string;
+  route?: string; // 'fast' | 'smart' when Auto routing picked the model (step 12)
 }> {
   const res = await fetch('/api/chat', {
     method: 'POST',
