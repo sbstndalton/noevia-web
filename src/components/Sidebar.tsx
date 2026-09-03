@@ -18,6 +18,7 @@ interface SidebarProps {
   onNewChat: () => void;
   onOpenProjects: () => void;
   onOpenProject: (id: string) => void;
+  onOpenChat: (chatId: string, projectId: string | null) => void;
   onOpenDiary: () => void;
   onOpenSettings: () => void;
   health: HealthState;
@@ -40,6 +41,7 @@ export function Sidebar({
   onNewChat,
   onOpenProjects,
   onOpenProject,
+  onOpenChat,
   onOpenDiary,
   onOpenSettings,
   health,
@@ -103,7 +105,7 @@ export function Sidebar({
               <button
                 key={c.id}
                 className={`nav-item${activeChatId === c.id && activeView === 'chat' ? ' is-active' : ''}`}
-                onClick={() => (c.projectId ? onOpenProject(c.projectId) : undefined)}
+                onClick={() => onOpenChat(c.id, c.projectId ?? null)}
                 title={c.title}
               >
                 <span className="nav-emoji" role="img" aria-label="chat">💬</span>

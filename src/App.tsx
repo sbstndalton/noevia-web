@@ -402,6 +402,7 @@ export default function App(): JSX.Element {
         onNewChat={startFreeChat}
         onOpenProjects={() => setView({ kind: 'projects' })}
         onOpenProject={(id) => setView({ kind: 'project', id })}
+        onOpenChat={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
         onOpenDiary={() => setView({ kind: 'diary' })}
         onOpenSettings={() => setView({ kind: 'settings' })}
         health={health}
