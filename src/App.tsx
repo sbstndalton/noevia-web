@@ -302,6 +302,14 @@ export default function App(): JSX.Element {
                 m.id === replyId ? { ...m, toolCalls: [...tools] } : m,
               ),
             }));
+          } else if (ev.type === 'tool_result' && ev.name) {
+            tools.push({ name: `${ev.name} ✓`, args: (ev.text || '').slice(0, 120) });
+            setMessagesByChat((prev) => ({
+              ...prev,
+              [chatId]: (prev[chatId] ?? []).map((m) =>
+                m.id === replyId ? { ...m, toolCalls: [...tools] } : m,
+              ),
+            }));
           }
         }
       } catch (err) {
