@@ -1,5 +1,6 @@
 node_modules
+server/node_modules
+server/ui-data
 dist
-ui-data
-.git
 .DS_Store
+*.log
