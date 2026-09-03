@@ -27,10 +27,19 @@ export interface Project {
   instructions: string;
   memories: string[];
   files: ProjectFile[];
-  model: string;
+  model?: string; // unset until picked; server defaults to the loaded model
+  provider?: string; // unset = 'lemonade' (seeded default)
   chats: ChatMeta[];
   createdAt: number;
   updatedAt: number;
+}
+
+/** A chat backend: Lemonade local, or any OpenAI-compatible API endpoint. */
+export interface Provider {
+  id: string;
+  label: string;
+  baseUrl: string;
+  apiKeyMasked?: string | null;
 }
 
 /** Claude-style chat: a named conversation inside a project (or free-floating). */

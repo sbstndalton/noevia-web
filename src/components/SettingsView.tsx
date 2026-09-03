@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import type { HealthState, InstalledModel, LiveStats, Project, RouteRule } from '../types';
+import type { HealthState, InstalledModel, LiveStats, Project, Provider, RouteRule } from '../types';
+import { createProvider, deleteProvider, fetchProviders } from '../api';
 
 interface SettingsViewProps {
   models: InstalledModel[];
@@ -148,19 +150,127 @@ export function SettingsView({
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-              <span className="rail-label" style={{ marginBottom: 0 }}>Cloud providers</span>
-              <span className="badge-off">Off by default</span>
+              <span className="rail-label" style={{ marginBottom: 0 }}>Chat providers</span>
             </div>
-            <div className="cloud-note">
-              <span>
-                Nothing leaves this network. Cloud models (Anthropic/OpenAI/OpenRouter)
-                would be added in Lemonade as providers first, then selectable here — a
-                deliberate, later decision.
-              </span>
-            </div>
+            <ProvidersCard />
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Connect-a-provider flow (step 9): list connected OpenAI-compatible
+ *  endpoints, add one (label / base URL / API key), remove non-lemonade ones.
+ *  Keys live server-side only — the list shows masked hints, never plaintext. */
+function ProvidersCard(): JSX.Element {
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [label, setLabel] = useState('');
+  const [baseUrl, setBaseUrl] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const refresh = () => {
+    fetchProviders().then((r) => setProviders(r.providers || [])).catch(() => setErr('Could not load providers'));
+  };
+  useEffect(refresh, []);
+
+  const submit = async () => {
+    if (!label.trim() || !baseUrl.trim() || busy) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await createProvider({ label: label.trim(), baseUrl: baseUrl.trim(), apiKey: apiKey.trim() || undefined });
+      setLabel('');
+      setBaseUrl('');
+      setApiKey('');
+      setAdding(false);
+      refresh();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'connect failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (id: string) => {
+    try {
+      await deleteProvider(id);
+      refresh();
+    } catch {
+      setErr('delete failed');
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="card-list">
+        {providers.map((p) => (
+          <div key={p.id} className="model-row">
+            <span className="model-dot" />
+            <div className="model-name-group">
+              <span className="model-name">{p.label}</span>
+              <span className="model-quant">{p.baseUrl}</span>
+            </div>
+            {p.id === 'lemonade' ? (
+              <span className="model-role">default · always on</span>
+            ) : (
+              <>
+                {p.apiKeyMasked && <span className="model-quant">key {p.apiKeyMasked}</span>}
+                <button className="recents-del" title="Remove provider" onClick={() => void remove(p.id)}>
+                  ✕
+                </button>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {adding ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
+          <input
+            className="modal-input"
+            placeholder="Name (e.g. OpenRouter)"
+            value={label}
+            autoFocus
+            onChange={(e) => setLabel(e.target.value)}
+          />
+          <input
+            className="modal-input"
+            placeholder="Base URL (e.g. https://openrouter.ai/api/v1)"
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+          />
+          <input
+            className="modal-input"
+            type="password"
+            placeholder="API key (stored server-side only)"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+          />
+          {err && <p className="modal-err">{err}</p>}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button className="modal-btn secondary" onClick={() => setAdding(false)}>Cancel</button>
+            <button className="modal-btn primary" disabled={!label.trim() || !baseUrl.trim() || busy} onClick={() => void submit()}>
+              {busy ? 'Connecting…' : 'Connect provider'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {err && <p className="modal-err">{err}</p>}
+          <button className="modal-btn secondary" style={{ width: 'fit-content' }} onClick={() => setAdding(true)}>
+            + Connect a provider
+          </button>
+          <p className="route-note">
+            Any OpenAI-compatible /chat/completions endpoint works (Anthropic, OpenAI,
+            OpenRouter…). Keys are stored server-side and never returned in plaintext.
+            Pick a provider per project from the model popup.
+          </p>
+        </>
+      )}
     </div>
   );
 }

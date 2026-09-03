@@ -11,6 +11,7 @@ import type {
   LiveStats,
   ModelVariant,
   Project,
+  Provider,
   SearchHit,
   WorkspaceInfo,
 } from './types';
@@ -33,6 +34,23 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
 
 export function fetchWorkspace(): Promise<WorkspaceInfo> {
   return getJson('/api/workspace');
+}
+
+// ── Providers (step 9: generic OpenAI-compatible endpoints) ─────────────────
+
+export function fetchProviders(): Promise<{ providers: Provider[] }> {
+  return getJson('/api/providers');
+}
+
+export function createProvider(body: { label: string; baseUrl: string; apiKey?: string }): Promise<Provider> {
+  return postJson('/api/providers', body);
+}
+
+export function deleteProvider(id: string): Promise<{ ok: boolean }> {
+  return fetch(`/api/providers/${encodeURIComponent(id)}`, { method: 'DELETE' }).then((res) => {
+    if (!res.ok) throw new Error(`DELETE provider failed: ${res.status}`);
+    return res.json() as Promise<{ ok: boolean }>;
+  });
 }
 
 // ── Projects (Claude-style) ──────────────────────────────────────────────────

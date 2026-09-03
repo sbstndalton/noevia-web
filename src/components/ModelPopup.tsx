@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import type { InstalledModel, Project } from '../types';
-import { fetchInstalledModels } from '../api';
+import type { InstalledModel, Project, Provider } from '../types';
+import { fetchInstalledModels, fetchProviders } from '../api';
 
 interface ModelPopupProps {
   projects: Project[];
@@ -67,15 +67,21 @@ function SwitchTab({
   onChanged: () => void;
 }): JSX.Element {
   const [models, setModels] = useState<InstalledModel[]>([]);
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [cloudModel, setCloudModel] = useState('');
 
   const refresh = () => {
     fetchInstalledModels()
       .then(setModels)
       .catch(() => setErr('Could not reach Lemonade'));
+    fetchProviders().then((r) => setProviders(r.providers || [])).catch(() => undefined);
   };
   useEffect(refresh, []);
+
+  const activeProviderId = activeProject?.provider || 'lemonade';
+  const activeProvider = providers.find((p) => p.id === activeProviderId);
 
   const pick = async (name: string) => {
     if (!activeProject) return;
@@ -92,13 +98,99 @@ function SwitchTab({
     }
   };
 
+  const pickProvider = async (id: string) => {
+    if (!activeProject) return;
+    setBusy(id);
+    try {
+      await fetch(`/api/projects/${activeProject.id}/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: id }),
+      });
+      setCloudModel('');
+      onChanged();
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // Cloud providers take a free-text model ID — no pull/download flow exists
+  // for a hosted API (feature doc Item 0 point 4).
+  const setCloudModelId = async () => {
+    if (!activeProject || !cloudModel.trim()) return;
+    setBusy('cloud-model');
+    try {
+      await fetch(`/api/projects/${activeProject.id}/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: cloudModel.trim() }),
+      });
+      onChanged();
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div className="rail-label">
         {activeProject ? `Model for ${activeProject.name}` : 'Open a project to switch its model'}
       </div>
+      {providers.length > 1 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {providers.map((p) => (
+            <button
+              key={p.id}
+              className="popup-tab"
+              style={{
+                border: '1px solid',
+                borderColor: activeProviderId === p.id ? 'var(--accent-2)' : 'var(--border)',
+                color: activeProviderId === p.id ? 'var(--accent-ink)' : 'var(--text-muted)',
+                background: activeProviderId === p.id ? 'var(--accent-2-soft)' : 'transparent',
+              }}
+              disabled={!activeProject || busy !== null}
+              onClick={() => void pickProvider(p.id)}
+            >
+              {p.label}
+            </button>
+          ))
+          }
+        </div>
+      )}
       {err && <p className="rail-empty">{err}</p>}
-      {models.map((m) => (
+      {activeProviderId !== 'lemonade' && (
+        <div style={{ display: 'flex', gap: 6 }}>
+          <input
+            className="modal-input"
+            style={{ flex: 1 }}
+            placeholder="Model ID for this provider (e.g. claude-sonnet-4-5)"
+            value={cloudModel}
+            onChange={(e) => setCloudModel(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && void setCloudModelId()}
+          />
+          <button
+            className="modal-btn primary"
+            style={{ padding: '6px 14px' }}
+            disabled={!activeProject || !cloudModel.trim() || busy !== null}
+            onClick={() => void setCloudModelId()}
+          >
+            Set
+          </button>
+        </div>
+      )}
+      {activeProviderId === 'lemonade' && activeProject?.model && (
+        <p className="rail-empty" style={{ margin: 0 }}>
+          Current: <strong>{activeProject.model}</strong>
+          {activeProvider && activeProviderId !== 'lemonade' ? ` via ${activeProvider.label}` : ''}
+        </p>
+      )}
+      {activeProviderId !== 'lemonade' && (
+        <p className="rail-empty" style={{ margin: 0 }}>
+          Local models are listed only for the Lemonade provider — this project
+          sends every message to {activeProvider?.label}.
+        </p>
+      )}
+      {activeProviderId === 'lemonade' && models.map((m) => (
         <button
           key={m.name}
           className="model-row"

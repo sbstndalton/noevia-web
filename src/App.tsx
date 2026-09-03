@@ -434,7 +434,7 @@ export default function App(): JSX.Element {
 
   const routes = useMemo(
     () => [
-      ...projects.slice(0, 3).map((p) => ({ task: p.name, model: p.model })),
+      ...projects.slice(0, 3).map((p) => ({ task: p.name, model: p.model || '(loaded model)' })),
       { task: 'Diary tab', model: 'sidecar pipeline' },
     ],
     [projects],
