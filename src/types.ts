@@ -50,6 +50,7 @@ export interface HistoryEntry {
 export interface WorkspaceInfo {
   spaces: Space[];
   projects: Project[];
+  freeChats?: ChatMeta[];
 }
 
 export interface ChatMetaOnly {

@@ -3,6 +3,7 @@ import type { JSX } from 'react';
 import {
   createProject,
   deleteChat,
+  deleteFreeChat,
   deleteProject,
   fetchChatHistory,
   fetchDiaryCorpus,
@@ -11,6 +12,7 @@ import {
   fetchStats,
   fetchWorkspace,
   saveChatHistory,
+  saveFreeChats,
   saveProjectConfig,
   saveProjectChats,
   streamChat,
@@ -51,20 +53,11 @@ function loadTheme(): 'light' | 'dark' {
   return stored === 'dark' ? 'dark' : 'light';
 }
 
-function loadFreeChats(): ChatMeta[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem('cowork-free-chats') || '[]');
-    return Array.isArray(raw) ? raw : [];
-  } catch {
-    return [];
-  }
-}
-
 export default function App(): JSX.Element {
   const [theme, setTheme] = useState<'light' | 'dark'>(loadTheme);
   const [view, setView] = useState<View>({ kind: 'projects' });
   const [projects, setProjects] = useState<Project[]>([]);
-  const [freeChats, setFreeChats] = useState<ChatMeta[]>(loadFreeChats);
+  const [freeChats, setFreeChats] = useState<ChatMeta[]>([]);
   const [messagesByChat, setMessagesByChat] = useState<Record<string, Message[]>>({});
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [modelsError, setModelsError] = useState<string | null>(null);
@@ -95,9 +88,40 @@ export default function App(): JSX.Element {
 
   const refreshProjects = useCallback(() => {
     fetchWorkspace()
-      .then((w) => setProjects(w.projects || []))
+      .then((w) => {
+        setProjects(w.projects || []);
+        setFreeChats(Array.isArray(w.freeChats) ? w.freeChats : []);
+      })
       .catch(() => undefined);
   }, []);
+
+  // One-time migration: fold any localStorage free-chats into the server list
+  // (free chats used to live only in this browser), then retire the key.
+  useEffect(() => {
+    const raw = localStorage.getItem('cowork-free-chats');
+    if (!raw) return;
+    localStorage.removeItem('cowork-free-chats');
+    let legacy: ChatMeta[] = [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) legacy = parsed;
+    } catch {
+      /* ignore malformed */
+    }
+    if (legacy.length === 0) return;
+    fetchWorkspace()
+      .then((w) => {
+        const server = Array.isArray(w.freeChats) ? w.freeChats : [];
+        const known = new Set(server.map((c) => c.id));
+        const merged = [...server, ...legacy.filter((c) => !known.has(c.id))].sort(
+          (a, b) => b.updatedAt - a.updatedAt,
+        );
+        saveFreeChats(merged)
+          .then(refreshProjects)
+          .catch(() => undefined);
+      })
+      .catch(() => undefined);
+  }, [refreshProjects]);
 
   useEffect(() => {
     refreshProjects();
@@ -218,9 +242,12 @@ export default function App(): JSX.Element {
             .catch(() => undefined);
         }
       } else if (!freeChats.some((c) => c.id === chatId)) {
-        const next = [{ id: chatId, title: text.slice(0, 80), updatedAt: Date.now(), projectId: null }, ...freeChats];
-        setFreeChats(next);
-        localStorage.setItem('cowork-free-chats', JSON.stringify(next));
+        saveFreeChats([
+          { id: chatId, title: text.slice(0, 80), updatedAt: Date.now() },
+          ...freeChats,
+        ])
+          .then(() => refreshProjects())
+          .catch(() => undefined);
       }
 
       try {
@@ -346,9 +373,11 @@ export default function App(): JSX.Element {
     [refreshProjects],
   );
 
+  // Handles both project chats and free chats (projectId null).
   const handleDeleteChat = useCallback(
-    (projectId: string, chatId: string) => {
-      deleteChat(projectId, chatId)
+    (projectId: string | null, chatId: string) => {
+      const req = projectId ? deleteChat(projectId, chatId) : deleteFreeChat(chatId);
+      req
         .then(() => {
           loadedChats.current.delete(chatId);
           setMessagesByChat((prev) => {
@@ -356,7 +385,7 @@ export default function App(): JSX.Element {
             delete next[chatId];
             return next;
           });
-          setView({ kind: 'project', id: projectId });
+          if (projectId) setView({ kind: 'project', id: projectId });
           refreshProjects();
         })
         .catch(() => undefined);
@@ -403,6 +432,7 @@ export default function App(): JSX.Element {
         onOpenProjects={() => setView({ kind: 'projects' })}
         onOpenProject={(id) => setView({ kind: 'project', id })}
         onOpenChat={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
+        onDeleteChat={(chatId) => handleDeleteChat(null, chatId)}
         onOpenDiary={() => setView({ kind: 'diary' })}
         onOpenSettings={() => setView({ kind: 'settings' })}
         health={health}

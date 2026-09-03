@@ -19,6 +19,7 @@ interface SidebarProps {
   onOpenProjects: () => void;
   onOpenProject: (id: string) => void;
   onOpenChat: (chatId: string, projectId: string | null) => void;
+  onDeleteChat: (chatId: string) => void;
   onOpenDiary: () => void;
   onOpenSettings: () => void;
   health: HealthState;
@@ -42,6 +43,7 @@ export function Sidebar({
   onOpenProjects,
   onOpenProject,
   onOpenChat,
+  onDeleteChat,
   onOpenDiary,
   onOpenSettings,
   health,
@@ -102,15 +104,26 @@ export function Sidebar({
           <div className="spaces">
             <div className="section-label">Recent chats</div>
             {chats.slice(0, 8).map((c) => (
-              <button
+              <div
                 key={c.id}
-                className={`nav-item${activeChatId === c.id && activeView === 'chat' ? ' is-active' : ''}`}
-                onClick={() => onOpenChat(c.id, c.projectId ?? null)}
-                title={c.title}
+                className={`chat-row${activeChatId === c.id && activeView === 'chat' ? ' is-active' : ''}`}
               >
-                <span className="nav-emoji" role="img" aria-label="chat">💬</span>
-                <span className="nav-name">{c.title}</span>
-              </button>
+                <button
+                  className="nav-item"
+                  onClick={() => onOpenChat(c.id, c.projectId ?? null)}
+                  title={c.title}
+                >
+                  <span className="nav-emoji" role="img" aria-label="chat">💬</span>
+                  <span className="nav-name">{c.title}</span>
+                </button>
+                <button
+                  className="recents-del"
+                  title="Delete chat"
+                  onClick={() => onDeleteChat(c.id)}
+                >
+                  ✕
+                </button>
+              </div>
             ))}
           </div>
         </>

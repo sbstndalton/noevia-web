@@ -143,6 +143,19 @@ export function fetchChatHistory(chatId: string): Promise<HistoryEntry[]> {
   ).then((r) => (Array.isArray(r.history) ? r.history : []));
 }
 
+// ── Free (non-project) chats — server-side metas so they survive browsers ──
+
+export function saveFreeChats(chats: ChatMeta[]): Promise<{ ok: true }> {
+  return postJson('/api/freechats', { chats });
+}
+
+export function deleteFreeChat(chatId: string): Promise<{ ok: true }> {
+  return fetch(`/api/freechats/${encodeURIComponent(chatId)}`, { method: 'DELETE' }).then((r) => {
+    if (!r.ok) throw new Error(`delete failed: ${r.status}`);
+    return { ok: true } as const;
+  });
+}
+
 export function saveChatHistory(chatId: string, history: HistoryEntry[]): Promise<{ ok: true }> {
   return postJson(`/api/chats/${encodeURIComponent(chatId)}/history`, { history });
 }
