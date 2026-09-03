@@ -7,8 +7,11 @@ interface DiaryViewProps {
   corpus: DiaryCorpus | null;
   corpusError: string | null;
   months: DiaryMonth[];
+  screen: 'picker' | 'month'; // picker = month-selection landing page
   selectedMonthId: string | null; // null = today
-  onSelectMonth: (monthId: string | null) => void;
+  onOpenMonth: (monthId: string | null) => void; // from the picker grid
+  onBackToPicker: () => void; // from inside a month
+  onSelectMonth: (monthId: string | null) => void; // arrows inside a month
   modelLabel: string;
   busy: boolean;
   outcome: string | null;
@@ -77,7 +80,10 @@ export function DiaryView({
   corpus,
   corpusError,
   months,
+  screen,
   selectedMonthId,
+  onOpenMonth,
+  onBackToPicker,
   onSelectMonth,
   modelLabel,
   busy,
@@ -114,11 +120,19 @@ export function DiaryView({
     };
   }, [months, selectedMonthId]);
 
+  if (screen === 'picker') {
+    return <MonthPicker months={months} onOpenMonth={onOpenMonth} />;
+  }
+
   return (
     <div className="main">
       <div className="chat-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <span className="header-title">Diary</span>
+          <button className="month-nav-back" onClick={onBackToPicker} title="All months">
+            <ChevronLeft />
+            <span>All months</span>
+          </button>
           <div className="month-nav">
             <button
               className="month-nav-btn"
@@ -128,7 +142,7 @@ export function DiaryView({
             >
               <ChevronLeft />
             </button>
-            <span className="month-nav-label">{nav.label}{selectedMonthId === null ? '' : ''}</span>
+            <span className="month-nav-label">{nav.label}</span>
             <button
               className="month-nav-btn"
               onClick={() => onSelectMonth(nav.entries[nav.idx + 1]?.id === '' ? null : nav.entries[nav.idx + 1]?.id ?? null)}
@@ -260,6 +274,52 @@ export function DiaryView({
               )}
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Landing page: pick a month (Claude-projects-style grid). Writing always logs to today. */
+function MonthPicker({
+  months,
+  onOpenMonth,
+}: {
+  months: DiaryMonth[];
+  onOpenMonth: (monthId: string | null) => void;
+}): JSX.Element {
+  const todayLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
+  const seen = new Set<string>();
+  const entries = months.filter((m) => (seen.has(m.id) ? false : (seen.add(m.id), true)));
+
+  return (
+    <div className="main">
+      <div className="settings-scroll">
+        <div className="projects-head">
+          <div>
+            <h1>Diary</h1>
+            <p className="projects-head-sub">Pick a month to read — writing an entry always logs to today.</p>
+          </div>
+        </div>
+        <div className="projects-grid">
+          <button className="month-card is-today" onClick={() => onOpenMonth(null)}>
+            <span className="month-card-emoji">✍️</span>
+            <span className="month-card-name">Today</span>
+            <span className="month-card-meta">{todayLabel} · write an entry</span>
+          </button>
+          {entries.map((m) => (
+            <button key={m.id} className="month-card" onClick={() => onOpenMonth(m.id)}>
+              <span className="month-card-emoji">📔</span>
+              <span className="month-card-name">{m.label}</span>
+              <span className="month-card-meta">View entries</span>
+            </button>
+          ))}
+          {entries.length === 0 && (
+            <div className="empty-state" style={{ gridColumn: '1 / -1', minHeight: 220 }}>
+              <h2>No months yet</h2>
+              <p>Months appear here as the diary sidecar finds files in your Nextcloud corpus.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

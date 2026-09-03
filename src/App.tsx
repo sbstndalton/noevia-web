@@ -69,6 +69,7 @@ export default function App(): JSX.Element {
   const [corpus, setCorpus] = useState<DiaryCorpus | null>(null);
   const [corpusError, setCorpusError] = useState<string | null>(null);
   const [diaryMonths, setDiaryMonths] = useState<DiaryMonth[]>([]);
+  const [diaryScreen, setDiaryScreen] = useState<'picker' | 'month'>('picker'); // diary lands on the month picker
   const [diaryMonthId, setDiaryMonthId] = useState<string | null>(null); // null = today
   const [streaming, setStreaming] = useState(false);
   const [diaryOutcome, setDiaryOutcome] = useState<string | null>(null);
@@ -161,7 +162,7 @@ export default function App(): JSX.Element {
   }, [view.kind]);
 
   useEffect(() => {
-    if (view.kind !== 'diary') return;
+    if (view.kind !== 'diary' || diaryScreen !== 'month') return;
     setCorpus(null);
     setCorpusError(null);
     const load = diaryMonthId ? fetchDiaryMonth(diaryMonthId) : fetchDiaryCorpus();
@@ -171,7 +172,7 @@ export default function App(): JSX.Element {
         setCorpusError(null);
       })
       .catch(() => setCorpusError('Could not reach the diary sidecar (read-only).'));
-  }, [view.kind, diaryMonthId]);
+  }, [view.kind, diaryScreen, diaryMonthId]);
 
   // Lazily load a chat's persisted history when it is opened.
   useEffect(() => {
@@ -341,6 +342,7 @@ export default function App(): JSX.Element {
         setDiaryOutcome(verdict);
         // Refresh whatever view is open; new exchanges always land in today's file,
         // so jump the selector back to today to show the result.
+        setDiaryScreen('month');
         setDiaryMonthId(null);
         fetchDiaryCorpus()
           .then((c) => setCorpus(c))
@@ -499,7 +501,10 @@ export default function App(): JSX.Element {
           corpus={corpus}
           corpusError={corpusError}
           months={diaryMonths}
+          screen={diaryScreen}
           selectedMonthId={diaryMonthId}
+          onOpenMonth={(id) => { setDiaryScreen('month'); setDiaryMonthId(id); }}
+          onBackToPicker={() => setDiaryScreen('picker')}
           onSelectMonth={setDiaryMonthId}
           modelLabel="pipeline"
           busy={diaryBusy}
