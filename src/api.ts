@@ -12,7 +12,6 @@ import type {
   ModelVariant,
   Project,
   SearchHit,
-  Space,
   WorkspaceInfo,
 } from './types';
 
@@ -87,10 +86,6 @@ export function fetchStats(): Promise<LiveStats> {
   return getJson('/api/stats');
 }
 
-export function saveSpace(spaceId: string, patch: Partial<Space>): Promise<{ ok: true }> {
-  return postJson(`/api/spaces/${encodeURIComponent(spaceId)}/config`, patch);
-}
-
 export function fetchHealth(): Promise<HealthState> {
   return getJson('/api/health');
 }
@@ -129,12 +124,6 @@ export function fetchDownloads(): Promise<DownloadJob[]> {
 
 export function fetchDiaryCorpus(): Promise<DiaryCorpus> {
   return getJson('/api/diary/today');
-}
-
-export function fetchSpaceHistory(spaceId: string): Promise<HistoryEntry[]> {
-  return getJson<{ history: HistoryEntry[] }>(
-    `/api/spaces/${encodeURIComponent(spaceId)}/history`,
-  ).then((r) => (Array.isArray(r.history) ? r.history : []));
 }
 
 export function fetchChatHistory(chatId: string): Promise<HistoryEntry[]> {

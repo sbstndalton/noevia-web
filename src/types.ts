@@ -48,22 +48,12 @@ export interface HistoryEntry {
 }
 
 export interface WorkspaceInfo {
-  spaces: Space[];
   projects: Project[];
   freeChats?: ChatMeta[];
 }
 
 export interface ChatMetaOnly {
   chats: ChatMeta[];
-}
-
-/** Legacy spaces shape — only the Diary pipeline reads it server-side now. */
-export interface Space {
-  id: string;
-  name: string;
-  model: string;
-  systemPrompt: string;
-  memories: string[];
 }
 
 export interface HealthState {
