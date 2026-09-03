@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import type { InstalledModel, Project } from '../types';
 import { fetchInstalledModels } from '../api';
@@ -222,47 +222,49 @@ function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
           </div>
         ))}
       {hits.map((h) => (
-        <div key={h.repo} className="model-row">
-          <span className="model-dot down" />
-          <div className="model-name-group">
-            <span className="model-name">{h.name || h.repo}</span>
-            <span className="model-quant">{h.repo}{h.downloads != null ? ` · ${h.downloads}` : ''}</span>
+        <Fragment key={h.repo}>
+          <div className="model-row">
+            <span className="model-dot down" />
+            <div className="model-name-group">
+              <span className="model-name">{h.name || h.repo}</span>
+              <span className="model-quant">{h.repo}{h.downloads != null ? ` · ${h.downloads}` : ''}</span>
+            </div>
+            <button className="popup-tab" style={{ border: '1px solid var(--border)' }} onClick={() => void showVariants(h.repo)}>
+              variants
+            </button>
           </div>
-          <button className="popup-tab" style={{ border: '1px solid var(--border)' }} onClick={() => void showVariants(h.repo)}>
-            variants
-          </button>
-        </div>
-      ))}
-      {variants && (
-        <div style={{ border: '1px dashed var(--border)', borderRadius: 12, padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div className="rail-label">{variants.repo}</div>
-          {variants.variants.length === 0 && <p className="rail-empty">No variants listed — pull the default.</p>}
-          {variants.variants.map((v) => (
-            <div key={v.id} className="model-row" style={{ padding: '8px 12px' }}>
-              <div className="model-name-group">
-                <span className="model-name">{v.label}</span>
-                {v.sizeGB != null && <span className="model-quant">{v.sizeGB} GB</span>}
-              </div>
+          {variants?.repo === h.repo && (
+            <div style={{ border: '1px dashed var(--border)', borderRadius: 12, padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div className="rail-label">{variants.repo}</div>
+              {variants.variants.length === 0 && <p className="rail-empty">No variants listed — pull the default.</p>}
+              {variants.variants.map((v) => (
+                <div key={v.id} className="model-row" style={{ padding: '8px 12px' }}>
+                  <div className="model-name-group">
+                    <span className="model-name">{v.label}</span>
+                    {v.sizeGB != null && <span className="model-quant">{v.sizeGB} GB</span>}
+                  </div>
+                  <button
+                    className="popup-tab"
+                    style={{ border: '1px solid var(--accent-2)', color: 'var(--accent-2)' }}
+                    disabled={pulling !== null}
+                    onClick={() => void pull(v.id)}
+                  >
+                    {pulling === v.id ? 'starting…' : 'download'}
+                  </button>
+                </div>
+              ))}
               <button
                 className="popup-tab"
-                style={{ border: '1px solid var(--accent-2)', color: 'var(--accent-2)' }}
+                style={{ alignSelf: 'flex-start', border: '1px solid var(--border)' }}
                 disabled={pulling !== null}
-                onClick={() => void pull(v.id)}
+                onClick={() => void pull(variants.repo)}
               >
-                {pulling === v.id ? 'starting…' : 'download'}
+                pull default checkpoint
               </button>
             </div>
-          ))}
-          <button
-            className="popup-tab"
-            style={{ alignSelf: 'flex-start', border: '1px solid var(--border)' }}
-            disabled={pulling !== null}
-            onClick={() => void pull(variants.repo)}
-          >
-            pull default checkpoint
-          </button>
-        </div>
-      )}
+          )}
+        </Fragment>
+      ))}
     </div>
   );
 }
