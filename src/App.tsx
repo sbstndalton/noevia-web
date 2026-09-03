@@ -453,6 +453,8 @@ export default function App(): JSX.Element {
         onOpenProject={(id) => setView({ kind: 'project', id })}
         onOpenChat={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
         onDeleteChat={(chatId) => handleDeleteChat(null, chatId)}
+        onRenameProject={(id, name) => handlePatchProject(id, { name })}
+        onDeleteProject={handleDeleteProject}
         onOpenDiary={() => setView({ kind: 'diary' })}
         onOpenSettings={() => setView({ kind: 'settings' })}
         health={health}
