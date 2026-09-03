@@ -7,6 +7,8 @@ import {
   deleteProject,
   fetchChatHistory,
   fetchDiaryCorpus,
+  fetchDiaryMonth,
+  fetchDiarySource,
   fetchHealth,
   fetchInstalledModels,
   fetchStats,
@@ -20,6 +22,7 @@ import {
 import type {
   ChatMeta,
   DiaryCorpus,
+  DiaryMonth,
   HealthState,
   HistoryEntry,
   InstalledModel,
@@ -65,6 +68,8 @@ export default function App(): JSX.Element {
   const [stats, setStats] = useState<LiveStats | null>(null);
   const [corpus, setCorpus] = useState<DiaryCorpus | null>(null);
   const [corpusError, setCorpusError] = useState<string | null>(null);
+  const [diaryMonths, setDiaryMonths] = useState<DiaryMonth[]>([]);
+  const [diaryMonthId, setDiaryMonthId] = useState<string | null>(null); // null = today
   const [streaming, setStreaming] = useState(false);
   const [diaryOutcome, setDiaryOutcome] = useState<string | null>(null);
   const [diaryBusy, setDiaryBusy] = useState(false);
@@ -146,17 +151,27 @@ export default function App(): JSX.Element {
     };
   }, []);
 
+  // Diary tab: month list loads once per tab-open; the corpus refetches when
+  // the selected month changes (null = today). Writes always go to today.
+  useEffect(() => {
+    if (view.kind !== 'diary') return;
+    fetchDiarySource()
+      .then((s) => setDiaryMonths(Array.isArray(s.months) ? s.months : []))
+      .catch(() => setDiaryMonths([]));
+  }, [view.kind]);
+
   useEffect(() => {
     if (view.kind !== 'diary') return;
     setCorpus(null);
     setCorpusError(null);
-    fetchDiaryCorpus()
+    const load = diaryMonthId ? fetchDiaryMonth(diaryMonthId) : fetchDiaryCorpus();
+    load
       .then((c) => {
         setCorpus(c);
         setCorpusError(null);
       })
       .catch(() => setCorpusError('Could not reach the diary sidecar (read-only).'));
-  }, [view.kind]);
+  }, [view.kind, diaryMonthId]);
 
   // Lazily load a chat's persisted history when it is opened.
   useEffect(() => {
@@ -324,6 +339,9 @@ export default function App(): JSX.Element {
           if (ev.type === 'diary' && ev.decision) verdict = ev.decision;
         }
         setDiaryOutcome(verdict);
+        // Refresh whatever view is open; new exchanges always land in today's file,
+        // so jump the selector back to today to show the result.
+        setDiaryMonthId(null);
         fetchDiaryCorpus()
           .then((c) => setCorpus(c))
           .catch(() => undefined);
@@ -480,6 +498,9 @@ export default function App(): JSX.Element {
         <DiaryView
           corpus={corpus}
           corpusError={corpusError}
+          months={diaryMonths}
+          selectedMonthId={diaryMonthId}
+          onSelectMonth={setDiaryMonthId}
           modelLabel="pipeline"
           busy={diaryBusy}
           outcome={diaryOutcome}

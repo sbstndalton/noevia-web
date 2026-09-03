@@ -94,6 +94,11 @@ export interface DiaryCorpus {
   standing: string;
 }
 
+export interface DiaryMonth {
+  id: string;
+  label: string;
+}
+
 export interface RouteRule {
   task: string;
   model: string;

@@ -126,6 +126,14 @@ export function fetchDiaryCorpus(): Promise<DiaryCorpus> {
   return getJson('/api/diary/today');
 }
 
+export function fetchDiarySource(): Promise<{ source: string; months: { id: string; label: string }[] }> {
+  return getJson('/api/diary/source');
+}
+
+export function fetchDiaryMonth(monthId: string): Promise<DiaryCorpus> {
+  return getJson(`/api/diary/today?month=${encodeURIComponent(monthId)}`);
+}
+
 export function fetchChatHistory(chatId: string): Promise<HistoryEntry[]> {
   return getJson<{ history: HistoryEntry[] }>(
     `/api/chats/${encodeURIComponent(chatId)}/history`,

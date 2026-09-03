@@ -1,21 +1,19 @@
 import { useMemo, useState } from 'react';
 import type { JSX } from 'react';
-import type { DiaryCorpus } from '../types';
+import type { DiaryCorpus, DiaryMonth } from '../types';
 import { ChevronLeft, ChevronRight } from './Icons';
 
 interface DiaryViewProps {
   corpus: DiaryCorpus | null;
   corpusError: string | null;
+  months: DiaryMonth[];
+  selectedMonthId: string | null; // null = today
+  onSelectMonth: (monthId: string | null) => void;
   modelLabel: string;
   busy: boolean;
   outcome: string | null;
   onSend: (text: string) => void;
 }
-
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
 
 /** Day headers inside a month file: `## Thursday, September 3, 2026` (real corpus format). */
 const DAY_RE = /^## ([A-Za-z]+), ([A-Za-z]+) (\d{1,2}), (\d{4})/;
@@ -75,8 +73,17 @@ function parseMonthFile(text: string): {
   return { days, questions, timeline };
 }
 
-export function DiaryView({ corpus, corpusError, modelLabel, busy, outcome, onSend }: DiaryViewProps): JSX.Element {
-  const [monthOffset, setMonthOffset] = useState(0);
+export function DiaryView({
+  corpus,
+  corpusError,
+  months,
+  selectedMonthId,
+  onSelectMonth,
+  modelLabel,
+  busy,
+  outcome,
+  onSend,
+}: DiaryViewProps): JSX.Element {
   const [draft, setDraft] = useState('');
 
   const submit = () => {
@@ -88,11 +95,24 @@ export function DiaryView({ corpus, corpusError, modelLabel, busy, outcome, onSe
 
   const parsed = useMemo(() => (corpus ? parseMonthFile(corpus.todayLog) : null), [corpus]);
 
-  const monthLabel = useMemo(() => {
-    const now = new Date();
-    const d = new Date(now.getFullYear(), now.getMonth() - monthOffset, 1);
-    return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-  }, [monthOffset]);
+  // Real month navigation over the sidecar's month list. `today` is always
+  // available as the rightmost stop; arrows step through actual corpus months.
+  const nav = useMemo(() => {
+    const todayLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    const todayEntry: DiaryMonth = { id: '', label: todayLabel }; // id '' = today
+    const entries = [...months, todayEntry].filter(
+      (m, i, arr) => arr.findIndex((x) => x.id === m.id) === i,
+    );
+    const idx = selectedMonthId === null ? entries.length - 1 : entries.findIndex((m) => m.id === selectedMonthId);
+    const safeIdx = idx === -1 ? entries.length - 1 : idx;
+    return {
+      entries,
+      idx: safeIdx,
+      label: entries[safeIdx]?.label ?? todayLabel,
+      hasPrev: safeIdx > 0,
+      hasNext: safeIdx < entries.length - 1,
+    };
+  }, [months, selectedMonthId]);
 
   return (
     <div className="main">
@@ -102,17 +122,17 @@ export function DiaryView({ corpus, corpusError, modelLabel, busy, outcome, onSe
           <div className="month-nav">
             <button
               className="month-nav-btn"
-              onClick={() => setMonthOffset((v) => Math.min(3, v + 1))}
-              disabled={monthOffset >= 3}
+              onClick={() => onSelectMonth(nav.entries[nav.idx - 1]?.id === '' ? null : nav.entries[nav.idx - 1]?.id ?? null)}
+              disabled={!nav.hasPrev}
               title="Previous month"
             >
               <ChevronLeft />
             </button>
-            <span className="month-nav-label">{monthLabel}</span>
+            <span className="month-nav-label">{nav.label}{selectedMonthId === null ? '' : ''}</span>
             <button
               className="month-nav-btn"
-              onClick={() => setMonthOffset((v) => Math.max(0, v - 1))}
-              disabled={monthOffset === 0}
+              onClick={() => onSelectMonth(nav.entries[nav.idx + 1]?.id === '' ? null : nav.entries[nav.idx + 1]?.id ?? null)}
+              disabled={!nav.hasNext}
               title="Next month"
             >
               <ChevronRight />
@@ -142,7 +162,11 @@ export function DiaryView({ corpus, corpusError, modelLabel, busy, outcome, onSe
               </div>
             </div>
           )}
-          {!corpusError && corpus && <CorpusTranscript todayLog={corpus.todayLog} />}
+          {!corpusError && corpus && (
+            corpus.todayLog.trim()
+              ? <CorpusTranscript todayLog={corpus.todayLog} />
+              : <div className="empty-state"><h2>No entries</h2><p>This month has no diary file yet.</p></div>
+          )}
           {!corpus && !corpusError && (
             <div className="empty-state">
               <h2>Diary</h2>
