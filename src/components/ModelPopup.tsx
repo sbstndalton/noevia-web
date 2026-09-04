@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, Provider } from '../types';
-import { fetchAutoRoles, fetchInstalledModels, fetchProviders, saveProjectConfig, setAutoRoles as putAutoRoles } from '../api';
+import { apiFetch, fetchAutoRoles, fetchInstalledModels, fetchProviders, saveProjectConfig, setAutoRoles as putAutoRoles } from '../api';
 
 interface ModelPopupProps {
   projects: Project[];
@@ -90,7 +90,7 @@ function SwitchTab({
     if (!activeProject) return;
     setBusy(name);
     try {
-      await fetch(`/api/projects/${activeProject.id}/config`, {
+      await apiFetch(`/api/projects/${activeProject.id}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: name }),
@@ -105,7 +105,7 @@ function SwitchTab({
     if (!activeProject) return;
     setBusy(id);
     try {
-      await fetch(`/api/projects/${activeProject.id}/config`, {
+      await apiFetch(`/api/projects/${activeProject.id}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider: id }),
@@ -148,7 +148,7 @@ function SwitchTab({
     if (!activeProject || !cloudModel.trim()) return;
     setBusy('cloud-model');
     try {
-      await fetch(`/api/projects/${activeProject.id}/config`, {
+      await apiFetch(`/api/projects/${activeProject.id}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: cloudModel.trim() }),
@@ -339,7 +339,7 @@ function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
 
   useEffect(() => {
     const t = setInterval(() => {
-      fetch('/api/models/downloads').then((r) => r.json()).then(setJobs).catch(() => undefined);
+      apiFetch('/api/models/downloads').then((r) => r.json()).then(setJobs).catch(() => undefined);
     }, 2500);
     return () => clearInterval(t);
   }, []);
@@ -350,7 +350,7 @@ function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
     setVariants(null);
     setMsg(null);
     try {
-      const r = await fetch(`/api/models/search?q=${encodeURIComponent(q)}`);
+      const r = await apiFetch(`/api/models/search?q=${encodeURIComponent(q)}`);
       setHits(await r.json());
     } catch {
       setMsg('search failed');
@@ -362,7 +362,7 @@ function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
   const showVariants = async (repo: string) => {
     setMsg(null);
     try {
-      const r = await fetch(`/api/models/variants?repo=${encodeURIComponent(repo)}`);
+      const r = await apiFetch(`/api/models/variants?repo=${encodeURIComponent(repo)}`);
       const list = await r.json();
       setVariants({ repo, variants: list });
     } catch {
@@ -374,7 +374,7 @@ function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
     setPulling(checkpoint);
     setMsg(null);
     try {
-      const r = await fetch('/api/models/pull', {
+      const r = await apiFetch('/api/models/pull', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ checkpoint }),
@@ -480,7 +480,7 @@ function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
   const act = async (verb: 'load' | 'unload' | 'delete', name: string) => {
     setBusy(name);
     try {
-      await fetch(`/api/models/${verb}`, {
+      await apiFetch(`/api/models/${verb}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),

@@ -16,14 +16,35 @@ import type {
   WorkspaceInfo,
 } from './types';
 
+const AUTH_TOKEN_KEY = 'cowork-auth-token';
+
+export function getStoredAuthToken(): string {
+  return localStorage.getItem(AUTH_TOKEN_KEY) || '';
+}
+
+export function setStoredAuthToken(token: string): void {
+  const trimmed = token.trim();
+  if (trimmed) localStorage.setItem(AUTH_TOKEN_KEY, trimmed);
+  else localStorage.removeItem(AUTH_TOKEN_KEY);
+}
+
+export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers);
+  const token = getStoredAuthToken();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  const response = await fetch(input, { ...init, headers });
+  if (response.status === 401) window.dispatchEvent(new Event('cowork:unauthorized'));
+  return response;
+}
+
 async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+  const res = await apiFetch(url);
   if (!res.ok) throw new Error(`GET ${url} failed: ${res.status}`);
   return res.json() as Promise<T>;
 }
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
+  const res = await apiFetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -33,7 +54,7 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
 }
 
 async function putJson<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
+  const res = await apiFetch(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -57,7 +78,7 @@ export function createProvider(body: { label: string; baseUrl: string; apiKey?: 
 }
 
 export function deleteProvider(id: string): Promise<{ ok: boolean }> {
-  return fetch(`/api/providers/${encodeURIComponent(id)}`, { method: 'DELETE' }).then((res) => {
+  return apiFetch(`/api/providers/${encodeURIComponent(id)}`, { method: 'DELETE' }).then((res) => {
     if (!res.ok) throw new Error(`DELETE provider failed: ${res.status}`);
     return res.json() as Promise<{ ok: boolean }>;
   });
@@ -75,7 +96,7 @@ export function createProject(body: {
 }
 
 export function deleteProject(projectId: string): Promise<{ ok: true }> {
-  return fetch(`/api/projects/${encodeURIComponent(projectId)}`, { method: 'DELETE' }).then(
+  return apiFetch(`/api/projects/${encodeURIComponent(projectId)}`, { method: 'DELETE' }).then(
     (r) => {
       if (!r.ok) throw new Error(`delete failed: ${r.status}`);
       return { ok: true } as const;
@@ -112,7 +133,7 @@ export function saveProjectChats(projectId: string, chats: ChatMeta[]): Promise<
 }
 
 export function deleteChat(projectId: string, chatId: string): Promise<{ ok: true }> {
-  return fetch(
+  return apiFetch(
     `/api/projects/${encodeURIComponent(projectId)}/chats/${encodeURIComponent(chatId)}`,
     { method: 'DELETE' },
   ).then((r) => {
@@ -186,7 +207,7 @@ export function saveFreeChats(chats: ChatMeta[]): Promise<{ ok: true }> {
 }
 
 export function deleteFreeChat(chatId: string): Promise<{ ok: true }> {
-  return fetch(`/api/freechats/${encodeURIComponent(chatId)}`, { method: 'DELETE' }).then((r) => {
+  return apiFetch(`/api/freechats/${encodeURIComponent(chatId)}`, { method: 'DELETE' }).then((r) => {
     if (!r.ok) throw new Error(`delete failed: ${r.status}`);
     return { ok: true } as const;
   });
@@ -212,7 +233,7 @@ export async function* streamChat(
   decision?: string;
   route?: string; // 'fast' | 'smart' when Auto routing picked the model (step 12)
 }> {
-  const res = await fetch('/api/chat', {
+  const res = await apiFetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
