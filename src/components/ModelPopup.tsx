@@ -77,13 +77,14 @@ function SwitchTab({
   const refresh = () => {
     fetchInstalledModels()
       .then(setModels)
-      .catch(() => setErr('Could not reach Lemonade'));
+      .catch(() => setErr('Model manager unavailable or disabled'));
     fetchProviders().then((r) => setProviders(r.providers || [])).catch(() => undefined);
     fetchAutoRoles().then(setAutoInfo).catch(() => undefined);
   };
   useEffect(refresh, []);
 
-  const activeProviderId = activeProject?.provider || 'lemonade';
+  const defaultProviderId = providers.find((provider) => provider.isDefault)?.id || 'default';
+  const activeProviderId = activeProject?.provider === 'lemonade' ? defaultProviderId : activeProject?.provider || defaultProviderId;
   const activeProvider = providers.find((p) => p.id === activeProviderId);
 
   const pick = async (name: string) => {
@@ -263,7 +264,7 @@ function SwitchTab({
         </div>
       )}
       {err && <p className="rail-empty">{err}</p>}
-      {activeProviderId !== 'lemonade' && (
+      {!activeProvider?.managed && (
         <div style={{ display: 'flex', gap: 6 }}>
           <input
             className="modal-input"
@@ -283,19 +284,19 @@ function SwitchTab({
           </button>
         </div>
       )}
-      {activeProviderId === 'lemonade' && activeProject?.model && activeProject.routing !== 'auto' && (
+      {activeProvider?.managed && activeProject?.model && activeProject.routing !== 'auto' && (
         <p className="rail-empty" style={{ margin: 0 }}>
           Current: <strong>{activeProject.model}</strong>
-          {activeProvider && activeProviderId !== 'lemonade' ? ` via ${activeProvider.label}` : ''}
+          {activeProvider ? ` via ${activeProvider.label}` : ''}
         </p>
       )}
-      {activeProviderId !== 'lemonade' && (
+      {!activeProvider?.managed && (
         <p className="rail-empty" style={{ margin: 0 }}>
-          Local models are listed only for the Lemonade provider — this project
-          sends every message to {activeProvider?.label}.
+          This provider does not expose model management. Enter its model ID above;
+          messages will be sent to {activeProvider?.label || 'the selected provider'}.
         </p>
       )}
-      {activeProviderId === 'lemonade' && models.map((m) => (
+      {activeProvider?.managed && models.map((m) => (
         <button
           key={m.name}
           className="model-row"
@@ -473,7 +474,7 @@ function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
   const [confirmName, setConfirmName] = useState<string | null>(null);
 
   const refresh = () => {
-    fetchInstalledModels().then(setModels).catch(() => setErr('Could not reach Lemonade'));
+    fetchInstalledModels().then(setModels).catch(() => setErr('Model manager unavailable or disabled'));
   };
   useEffect(refresh, []);
 

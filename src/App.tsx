@@ -64,7 +64,7 @@ export default function App(): JSX.Element {
   const [messagesByChat, setMessagesByChat] = useState<Record<string, Message[]>>({});
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [modelsError, setModelsError] = useState<string | null>(null);
-  const [health, setHealth] = useState<HealthState>({ lemonadeUp: null, diaryUp: null });
+  const [health, setHealth] = useState<HealthState>({ inferenceUp: null, diaryUp: null });
   const [stats, setStats] = useState<LiveStats | null>(null);
   const [corpus, setCorpus] = useState<DiaryCorpus | null>(null);
   const [corpusError, setCorpusError] = useState<string | null>(null);
@@ -89,7 +89,7 @@ export default function App(): JSX.Element {
         setModels(list);
         setModelsError(null);
       })
-      .catch(() => setModelsError('Lemonade unreachable — is the stack up?'));
+      .catch(() => setModelsError('Model manager unavailable or disabled.'));
   }, []);
 
   const refreshProjects = useCallback(() => {
@@ -134,7 +134,7 @@ export default function App(): JSX.Element {
     refreshModels();
     fetchHealth()
       .then(setHealth)
-      .catch(() => setHealth({ lemonadeUp: false, diaryUp: null }));
+      .catch(() => setHealth({ inferenceUp: false, diaryUp: null }));
   }, [refreshModels, refreshProjects]);
 
   // Live engine stats — the bottom bar refreshes in near-real-time.

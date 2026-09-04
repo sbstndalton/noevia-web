@@ -84,7 +84,7 @@ export function deleteProvider(id: string): Promise<{ ok: boolean }> {
   });
 }
 
-// ── Projects (Claude-style) ──────────────────────────────────────────────────
+// ── Projects ─────────────────────────────────────────────────────────────────
 
 export function createProject(body: {
   name: string;
@@ -147,7 +147,10 @@ export function fetchStats(): Promise<LiveStats> {
 }
 
 export function fetchHealth(): Promise<HealthState> {
-  return getJson('/api/health');
+  return getJson<HealthState>('/api/health').then((health) => ({
+    ...health,
+    inferenceUp: health.inferenceUp ?? health.lemonadeUp ?? null,
+  }));
 }
 
 export function fetchInstalledModels(): Promise<InstalledModel[]> {

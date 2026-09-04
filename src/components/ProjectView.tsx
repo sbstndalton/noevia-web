@@ -93,7 +93,7 @@ export function ProjectView({ project, onNewChat, onOpenChat, onPatch, onDeleteC
           {panel === 'memory' && (
             <RailTextarea
               value={project.memories.join('\n')}
-              placeholder="One memory per line — e.g. I run Unraid with an AMD 890M iGPU"
+              placeholder="One memory per line — e.g. Prefer concise answers with runnable examples"
               onChange={(v) => onPatch(project.id, { memories: v.split('\n').map((x) => x.trim()).filter(Boolean) })}
               onFile={(t) => onPatch(project.id, { memories: [...project.memories, ...t.split('\n').map((x) => x.trim()).filter(Boolean)] })}
               fileMode="append"

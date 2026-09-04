@@ -28,7 +28,7 @@ export function SettingsView({
         <div className="settings-head">
           <h1>Settings</h1>
           <p>
-            The proxy routes each project to its model directly on Lemonade —
+            The proxy routes each project to its configured OpenAI-compatible provider —
             instructions, files, and memories are applied per project, server-side.
           </p>
         </div>
@@ -38,20 +38,20 @@ export function SettingsView({
             <div className="rail-label" style={{ marginBottom: 12 }}>Connected services</div>
             <div className="card-list">
               <div className="model-row">
-                <span className={`model-dot${health.lemonadeUp ? '' : ' down'}`} />
+                <span className={`model-dot${health.inferenceUp ? '' : ' down'}`} />
                 <div className="model-name-group">
-                  <span className="model-name">Lemonade</span>
-                  <span className="model-quant">models · inference · downloads</span>
+                  <span className="model-name">Default inference</span>
+                  <span className="model-quant">chat · embeddings · optional model management</span>
                 </div>
                 <span className="model-role">
-                  {health.lemonadeUp ? 'online' : health.lemonadeUp === false ? 'unreachable' : 'checking…'}
+                  {health.inferenceUp ? 'online' : health.inferenceUp === false ? 'unreachable' : 'checking…'}
                 </span>
               </div>
               <div className="model-row">
                 <span className={`model-dot${health.diaryUp ? '' : ' down'}`} />
                 <div className="model-name-group">
                   <span className="model-name">Diary sidecar</span>
-                  <span className="model-quant">pipeline · Nextcloud corpus</span>
+                  <span className="model-quant">pipeline · configurable corpus storage</span>
                 </div>
                 <span className="model-role">
                   {health.diaryUp ? 'online' : health.diaryUp === false ? 'unreachable' : 'checking…'}
@@ -161,7 +161,7 @@ export function SettingsView({
 }
 
 /** Connect-a-provider flow (step 9): list connected OpenAI-compatible
- *  endpoints, add one (label / base URL / API key), remove non-lemonade ones.
+ *  endpoints, add one (label / base URL / API key), and remove non-default ones.
  *  Keys live server-side only — the list shows masked hints, never plaintext. */
 function ProvidersCard(): JSX.Element {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -214,7 +214,7 @@ function ProvidersCard(): JSX.Element {
               <span className="model-name">{p.label}</span>
               <span className="model-quant">{p.baseUrl}</span>
             </div>
-            {p.id === 'lemonade' ? (
+            {p.isDefault ? (
               <span className="model-role">default · always on</span>
             ) : (
               <>

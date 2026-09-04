@@ -180,7 +180,7 @@ function CreateProjectModal({
         <textarea
           id="proj-instr"
           className="modal-input"
-          placeholder="e.g. Always show code first. Assume I run Unraid with an AMD 890M iGPU. Be terse."
+          placeholder="e.g. Show code first, explain key tradeoffs, and keep answers concise."
           value={instructions}
           onChange={(e) => setInstructions(e.target.value)}
         />

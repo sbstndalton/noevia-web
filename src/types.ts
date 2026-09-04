@@ -28,22 +28,24 @@ export interface Project {
   memories: string[];
   files: ProjectFile[];
   model?: string; // unset until picked; server defaults to the loaded model
-  provider?: string; // unset = 'lemonade' (seeded default)
+  provider?: string; // unset = the server-configured default provider
   routing?: 'manual' | 'auto'; // default 'manual'; 'auto' = Fast/Smart per-message routing
   chats: ChatMeta[];
   createdAt: number;
   updatedAt: number;
 }
 
-/** A chat backend: Lemonade local, or any OpenAI-compatible API endpoint. */
+/** An OpenAI-compatible chat and embedding endpoint. */
 export interface Provider {
   id: string;
   label: string;
   baseUrl: string;
   apiKeyMasked?: string | null;
+  isDefault?: boolean;
+  managed?: boolean;
 }
 
-/** Claude-style chat: a named conversation inside a project (or free-floating). */
+/** A named conversation inside a project (or free-floating). */
 export interface ChatMeta {
   id: string;
   title: string;
@@ -67,7 +69,9 @@ export interface ChatMetaOnly {
 }
 
 export interface HealthState {
-  lemonadeUp: boolean | null;
+  inferenceUp: boolean | null;
+  /** One-release compatibility field returned by older/newer mixed deployments. */
+  lemonadeUp?: boolean | null;
   diaryUp: boolean | null;
 }
 
@@ -114,7 +118,7 @@ export interface RouteRule {
   model: string;
 }
 
-/** Live inference stats from Lemonade's /v1/stats + /v1/system-stats. */
+/** Optional live statistics supplied by a model-management adapter. */
 export interface LiveStats {
   up: boolean;
   tokensPerSecond: number | null;

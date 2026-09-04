@@ -31,9 +31,9 @@ interface SidebarProps {
 }
 
 function statusText(health: HealthState): string {
-  if (health.lemonadeUp) return 'Lemonade · local · online';
-  if (health.lemonadeUp === false) return 'Lemonade · unreachable';
-  return 'Lemonade · checking…';
+  if (health.inferenceUp) return 'Inference · online';
+  if (health.inferenceUp === false) return 'Inference · unreachable';
+  return 'Inference · checking…';
 }
 
 export function Sidebar({
@@ -55,7 +55,7 @@ export function Sidebar({
   theme,
   onToggleTheme,
 }: SidebarProps): JSX.Element {
-  // Claude-style per-project hamburger menu: rename inline, open settings, delete.
+  // Per-project menu: rename inline, open settings, delete.
   // The menu uses position:fixed (anchored to the button's viewport rect) because
   // .spaces is overflow-y:auto and would clip an absolutely-positioned dropdown.
   const [menuFor, setMenuFor] = useState<string | null>(null);
@@ -244,7 +244,7 @@ export function Sidebar({
         <div className="status-row">
           <span
             className="status-dot"
-            style={health.lemonadeUp === false ? { background: 'var(--accent)' } : undefined}
+            style={health.inferenceUp === false ? { background: 'var(--accent)' } : undefined}
           />
           <span className="status-text">{statusText(health)}</span>
         </div>

@@ -210,7 +210,7 @@ export function DiaryView({
             </button>
           </div>
           <div className="composer-hint">
-            {busy ? 'Logging through the diary pipeline…' : 'Every exchange is skip-classified and auto-logged to Nextcloud by the diary pipeline'}
+            {busy ? 'Logging through the diary pipeline…' : 'Every exchange is classified and logged to the configured corpus by the diary pipeline'}
           </div>
           {outcome && (
             <div style={{ maxWidth: 760, margin: '0 auto', padding: '4px 4px 0' }}>
@@ -280,7 +280,7 @@ export function DiaryView({
   );
 }
 
-/** Landing page: pick a month (Claude-projects-style grid). Writing always logs to today. */
+/** Landing page: pick a month. Writing always logs to today. */
 function MonthPicker({
   months,
   onOpenMonth,
@@ -317,7 +317,7 @@ function MonthPicker({
           {entries.length === 0 && (
             <div className="empty-state" style={{ gridColumn: '1 / -1', minHeight: 220 }}>
               <h2>No months yet</h2>
-              <p>Months appear here as the diary sidecar finds files in your Nextcloud corpus.</p>
+              <p>Months appear here as the diary service finds files in your configured corpus.</p>
             </div>
           )}
         </div>
@@ -326,7 +326,7 @@ function MonthPicker({
   );
 }
 
-/** Renders a month-file body as the mockup's day/time/Me/Claude transcript structure. */
+/** Renders a month-file body as a day/time/user/assistant transcript. */
 function CorpusTranscript({ todayLog }: { todayLog: string }): JSX.Element {
   const nodes: JSX.Element[] = [];
   let key = 0;
@@ -348,7 +348,7 @@ function CorpusTranscript({ todayLog }: { todayLog: string }): JSX.Element {
     } else if (mode === 'claude') {
       nodes.push(
         <div key={key++} className="msg" data-role="assistant">
-          <span className="msg-sender is-assistant">Claude</span>
+          <span className="msg-sender is-assistant">Assistant</span>
           <div className="bubble"><p>{text}</p></div>
         </div>,
       );
@@ -383,10 +383,10 @@ function CorpusTranscript({ todayLog }: { todayLog: string }): JSX.Element {
       buffer = [line.slice(7).trim()];
       continue;
     }
-    if (line.startsWith('**Claude:**')) {
+    if (line.startsWith('**Claude:**') || line.startsWith('**Assistant:**')) {
       flush();
       mode = 'claude';
-      buffer = [line.slice(11).trim()];
+      buffer = [line.replace(/^\*\*(?:Claude|Assistant):\*\*\s*/, '').trim()];
       continue;
     }
     if (mode !== 'none' && line.startsWith('<!--')) continue; // hidden xid markers

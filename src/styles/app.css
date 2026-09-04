@@ -133,7 +133,7 @@ body { margin: 0; background: var(--bg); }
 .nav-item.is-active .nav-name { font-weight: 700; color: var(--text); }
 .nav-name { font-size: 13.5px; font-weight: 600; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Sidebar project row: open button + Claude-style hamburger menu. */
+/* Sidebar project row: open button + project menu. */
 .proj-row { display: flex; align-items: center; position: relative; }
 .proj-row .nav-item { flex-grow: 1; min-width: 0; }
 .proj-row.is-active .nav-item { background: var(--bg-active); color: var(--text); }
@@ -430,7 +430,7 @@ body { margin: 0; background: var(--bg); }
   padding: 2px 8px; border-radius: var(--radius-pill);
 }
 
-/* ── Projects grid (Claude-style) ────────────────────────── */
+/* ── Projects grid ───────────────────────────────────────── */
 
 .projects-head {
   display: flex; align-items: center; justify-content: space-between;

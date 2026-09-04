@@ -76,7 +76,7 @@ export function StatsBar({ stats }: StatsBarProps): JSX.Element {
         <span className="stats-value">{fmt(stats?.vramGb ?? null, 1, ' GB')}</span>
       </span>
       <span className="stats-grow" />
-      <span className="stats-src">Lemonade</span>
+      <span className="stats-src">Inference</span>
     </div>
   );
 }
