@@ -32,9 +32,9 @@ export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {})
   return response;
 }
 
-export interface AuthUser { id: string; username: string; displayName: string; role: 'admin' | 'member'; disabled: boolean }
+export interface AuthUser { id: string; username: string; displayName: string; role: 'admin' | 'member'; disabled: boolean; diaryEnabled: boolean }
 export const setupStatus = (): Promise<{ configured: boolean; publicOrigin: string }> => fetch('/api/setup/status').then(r => r.json());
-export const completeSetup = (body: { setupCode: string; publicOrigin: string; username: string; displayName: string; password: string }) => postJson<{ user: AuthUser }>('/api/setup/complete', body);
+export const completeSetup = (body: { setupCode: string; publicOrigin: string; username: string; displayName: string; password: string; diaryEnabled: boolean }) => postJson<{ user: AuthUser }>('/api/setup/complete', body);
 export const passwordLogin = (username: string, password: string) => postJson<{ user: AuthUser }>('/api/auth/login/password', { username, password });
 export const fetchSession = () => getJson<{ user: AuthUser }>('/api/auth/session');
 export const logout = () => postJson<{ ok: true }>('/api/auth/logout', {});
@@ -42,10 +42,11 @@ export const passkeyLoginOptions = (username: string) => postJson<{ options: Pub
 export const passkeyLoginVerify = (challengeToken: string, response: unknown) => postJson<{ user: AuthUser }>('/api/auth/login/passkey/verify', { challengeToken, response });
 export const passkeyRegistrationOptions = () => postJson<{ options: PublicKeyCredentialCreationOptionsJSON; challengeToken: string }>('/api/auth/passkeys/register/options', {});
 export const passkeyRegistrationVerify = (challengeToken: string, response: unknown, name: string) => postJson<{ verified: boolean }>('/api/auth/passkeys/register/verify', { challengeToken, response, name });
-export const acceptInvitation = (body: { token: string; username: string; displayName: string; password: string }) => postJson<{ user: AuthUser }>('/api/auth/invitations/accept', body);
+export const acceptInvitation = (body: { token: string; username: string; displayName: string; password: string; diaryEnabled: boolean }) => postJson<{ user: AuthUser }>('/api/auth/invitations/accept', body);
 export interface PasskeyInfo { id: string; name: string; deviceType: string; backedUp: boolean; createdAt: number; lastUsedAt?: number | null }
 export const fetchProfile = () => getJson<{ user: AuthUser; passkeys: PasskeyInfo[] }>('/api/profile');
 export const updateProfile = (displayName: string) => apiFetch('/api/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ displayName }) }).then(r => { if (!r.ok) throw new Error('profile update failed'); return r.json(); });
+export const updateFeatures = (diaryEnabled: boolean) => putJson<{ diaryEnabled: boolean }>('/api/profile/features', { diaryEnabled });
 export const removePasskey = (id: string) => apiFetch(`/api/auth/passkeys/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(r => r.json());
 export const fetchUsers = () => getJson<{ users: AuthUser[] }>('/api/admin/users');
 export const createInvitation = (role: 'admin' | 'member' = 'member') => postJson<{ token: string; expiresAt: number }>('/api/admin/invitations', { role });

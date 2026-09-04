@@ -11,6 +11,7 @@ import {
   fetchDiarySource,
   fetchHealth,
   fetchInstalledModels,
+  fetchProfile,
   fetchStats,
   fetchWorkspace,
   saveChatHistory,
@@ -77,6 +78,7 @@ export default function App(): JSX.Element {
   const [streaming, setStreaming] = useState(false);
   const [diaryOutcome, setDiaryOutcome] = useState<string | null>(null);
   const [diaryBusy, setDiaryBusy] = useState(false);
+  const [diaryEnabled, setDiaryEnabled] = useState(false);
   const [popupOpen, setPopupOpen] = useState(false);
   const loadedChats = useRef<Set<string>>(new Set());
   const patchTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -135,6 +137,7 @@ export default function App(): JSX.Element {
   useEffect(() => {
     refreshProjects();
     refreshModels();
+    fetchProfile().then((profile) => setDiaryEnabled(profile.user.diaryEnabled)).catch(() => undefined);
     fetchHealth()
       .then(setHealth)
       .catch(() => setHealth({ inferenceUp: false, diaryUp: null }));
@@ -451,9 +454,9 @@ export default function App(): JSX.Element {
   const routes = useMemo(
     () => [
       ...projects.slice(0, 3).map((p) => ({ task: p.name, model: p.model || '(loaded model)' })),
-      { task: 'Diary tab', model: 'sidecar pipeline' },
+      ...(diaryEnabled ? [{ task: 'Diary app', model: 'sidecar pipeline' }] : []),
     ],
-    [projects],
+    [diaryEnabled, projects],
   );
 
   return (
@@ -472,6 +475,7 @@ export default function App(): JSX.Element {
         onRenameProject={(id, name) => handlePatchProject(id, { name })}
         onDeleteProject={handleDeleteProject}
         onOpenDiary={() => setView({ kind: 'diary' })}
+        diaryEnabled={diaryEnabled}
         onOpenSettings={() => setView({ kind: 'settings' })}
         health={health}
         theme={theme}
@@ -518,7 +522,7 @@ export default function App(): JSX.Element {
         />
       )}
 
-      {view.kind === 'diary' && (
+      {view.kind === 'diary' && diaryEnabled && (
         <DiaryView
           corpus={corpus}
           corpusError={corpusError}
@@ -544,6 +548,10 @@ export default function App(): JSX.Element {
           health={health}
           stats={stats}
           onOpenModels={() => setPopupOpen(true)}
+          diaryEnabled={diaryEnabled}
+          onDiaryEnabledChange={(enabled) => {
+            setDiaryEnabled(enabled);
+          }}
         />
       )}
 

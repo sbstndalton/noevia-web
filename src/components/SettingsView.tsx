@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import type { HealthState, InstalledModel, LiveStats, Project, Provider, RouteRule } from '../types';
-import { createInvitation, createProvider, createRecovery, deleteProvider, deleteUser, fetchProfile, fetchProviders, fetchStorage, fetchUsers, logout, passkeyRegistrationOptions, passkeyRegistrationVerify, pollNextcloud, removePasskey, saveStorage, setUserDisabled, startNextcloud, testProvider, testStorage, updateProfile } from '../api';
+import { createInvitation, createProvider, createRecovery, deleteProvider, deleteUser, fetchProfile, fetchProviders, fetchStorage, fetchUsers, logout, passkeyRegistrationOptions, passkeyRegistrationVerify, pollNextcloud, removePasskey, saveStorage, setUserDisabled, startNextcloud, testProvider, testStorage, updateFeatures, updateProfile } from '../api';
 import type { AuthUser, PasskeyInfo, StorageConnection } from '../api';
 import { startRegistration } from '@simplewebauthn/browser';
 
@@ -13,6 +13,8 @@ interface SettingsViewProps {
   health: HealthState;
   stats: LiveStats | null;
   onOpenModels: () => void;
+  diaryEnabled: boolean;
+  onDiaryEnabledChange: (enabled: boolean) => void;
 }
 
 export function SettingsView({
@@ -23,6 +25,8 @@ export function SettingsView({
   health,
   stats,
   onOpenModels,
+  diaryEnabled,
+  onDiaryEnabledChange,
 }: SettingsViewProps): JSX.Element {
   return (
     <div className="main">
@@ -37,7 +41,8 @@ export function SettingsView({
 
         <div className="settings-body">
           <ProfileCard />
-          <StorageCard />
+          <DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange} />
+          {diaryEnabled && <StorageCard />}
           <div>
             <div className="rail-label" style={{ marginBottom: 12 }}>Connected services</div>
             <div className="card-list">
@@ -51,7 +56,7 @@ export function SettingsView({
                   {health.inferenceUp ? 'online' : health.inferenceUp === false ? 'unreachable' : 'checking…'}
                 </span>
               </div>
-              <div className="model-row">
+              {diaryEnabled && <div className="model-row">
                 <span className={`model-dot${health.diaryUp ? '' : ' down'}`} />
                 <div className="model-name-group">
                   <span className="model-name">Diary sidecar</span>
@@ -60,7 +65,7 @@ export function SettingsView({
                 <span className="model-role">
                   {health.diaryUp ? 'online' : health.diaryUp === false ? 'unreachable' : 'checking…'}
                 </span>
-              </div>
+              </div>}
             </div>
           </div>
 
@@ -146,9 +151,8 @@ export function SettingsView({
                 </div>
               ))}
             </div>
-            <p className="route-note">
-              Each project pins its own model (change it from the model button). The Diary
-              tab always routes through the sidecar pipeline, called exactly once per exchange.
+            <p className="route-note">Each project pins its own model (change it from the model button).
+              {diaryEnabled && ' The optional Diary app always routes through its sidecar pipeline, called exactly once per exchange.'}
             </p>
           </div>
 
@@ -162,6 +166,23 @@ export function SettingsView({
       </div>
     </div>
   );
+}
+
+function DiaryAddonCard({ enabled, onChange }: { enabled: boolean; onChange: (enabled: boolean) => void }): JSX.Element {
+  const [busy, setBusy] = useState(false);
+  const toggle = async () => {
+    const next = !enabled;
+    setBusy(true);
+    try {
+      const result = await updateFeatures(next);
+      onChange(result.diaryEnabled);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return <div><div className="rail-label" style={{ marginBottom: 12 }}>Optional apps</div><div className="card-list">
+    <div className="model-row"><span className={`model-dot${enabled ? '' : ' down'}`} /><div className="model-name-group"><span className="model-name">Diary</span><span className="model-quant">Private journaling, memory, and configurable corpus storage</span></div><button className="popup-tab" disabled={busy} onClick={() => void toggle()}>{busy ? 'Saving…' : enabled ? 'Disable' : 'Enable'}</button></div>
+  </div></div>;
 }
 
 function StorageCard(): JSX.Element {

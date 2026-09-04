@@ -24,6 +24,7 @@ interface SidebarProps {
   onRenameProject: (id: string, name: string) => void;
   onDeleteProject: (id: string) => void;
   onOpenDiary: () => void;
+  diaryEnabled: boolean;
   onOpenSettings: () => void;
   health: HealthState;
   theme: 'light' | 'dark';
@@ -50,6 +51,7 @@ export function Sidebar({
   onRenameProject,
   onDeleteProject,
   onOpenDiary,
+  diaryEnabled,
   onOpenSettings,
   health,
   theme,
@@ -105,13 +107,6 @@ export function Sidebar({
         >
           <BookIcon />
           <span className="nav-name">Projects</span>
-        </button>
-        <button
-          className={`nav-item${activeView === 'diary' ? ' is-active' : ''}`}
-          onClick={onOpenDiary}
-        >
-          <span className="nav-emoji" role="img" aria-label="Diary">📔</span>
-          <span className="nav-name">Diary</span>
         </button>
       </div>
 
@@ -227,6 +222,16 @@ export function Sidebar({
       )}
 
       <div style={{ flexGrow: 1 }} />
+
+      {diaryEnabled && <button
+        className={`nav-item${activeView === 'diary' ? ' is-active' : ''}`}
+        onClick={onOpenDiary}
+      >
+        <span className="nav-emoji" role="img" aria-label="Diary">📔</span>
+        <span className="nav-name">Diary</span>
+      </button>}
+
+      <div className="divider" />
 
       <div className="side-footer">
         <button

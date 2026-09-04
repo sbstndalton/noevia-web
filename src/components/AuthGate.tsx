@@ -12,6 +12,7 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
+  const [diaryEnabled, setDiaryEnabled] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const invite = new URLSearchParams(window.location.search).get('invite');
@@ -32,8 +33,8 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
     setBusy(true); setError(null);
     try {
       if (recovery) { await completeRecovery(recovery, password); window.history.replaceState({}, '', '/'); setScreen('login'); setPassword(''); return; }
-      if (screen === 'setup') await completeSetup({ setupCode, publicOrigin: origin, username, displayName: displayName || username, password });
-      else if (invite) await acceptInvitation({ token: invite, username, displayName: displayName || username, password });
+      if (screen === 'setup') await completeSetup({ setupCode, publicOrigin: origin, username, displayName: displayName || username, password, diaryEnabled });
+      else if (invite) await acceptInvitation({ token: invite, username, displayName: displayName || username, password, diaryEnabled });
       else await passwordLogin(username, password);
       setScreen('secure');
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not continue'); }
@@ -84,6 +85,7 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
         {!recovery && <><label htmlFor="username">Username</label><input id="username" autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} required /></>}
         {(isSetup || invite) && <><label htmlFor="display-name">Display name</label><input id="display-name" autoComplete="name" value={displayName} onChange={e => setDisplayName(e.target.value)} /></>}
         <label htmlFor="password">Password</label><input id="password" type="password" minLength={12} maxLength={128} autoComplete={isSetup || invite ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} required />
+        {(isSetup || invite) && <label className="auth-option"><input type="checkbox" checked={diaryEnabled} onChange={e => setDiaryEnabled(e.target.checked)} /><span><strong>Enable Diary add-on</strong><small>A private journaling app with optional local, Nextcloud, or WebDAV storage. You can enable it later.</small></span></label>}
         {error && <p className="auth-error" role="alert">{error}</p>}
         <button type="submit" disabled={busy}>{busy ? 'Please wait…' : recovery ? 'Reset password' : isSetup || invite ? 'Create account' : 'Sign in with password'}</button>
         {!recovery && !isSetup && !invite && <button type="button" className="modal-btn secondary" disabled={busy || !username.trim()} onClick={() => void usePasskey()}>Use a passkey (recommended)</button>}
