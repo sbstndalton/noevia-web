@@ -15,27 +15,50 @@ import type {
   SearchHit,
   WorkspaceInfo,
 } from './types';
+import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser';
 
-const AUTH_TOKEN_KEY = 'cowork-auth-token';
-
-export function getStoredAuthToken(): string {
-  return localStorage.getItem(AUTH_TOKEN_KEY) || '';
-}
-
-export function setStoredAuthToken(token: string): void {
-  const trimmed = token.trim();
-  if (trimmed) localStorage.setItem(AUTH_TOKEN_KEY, trimmed);
-  else localStorage.removeItem(AUTH_TOKEN_KEY);
+function cookie(name: string): string {
+  const item = document.cookie.split(';').map((x) => x.trim()).find((x) => x.startsWith(`${name}=`));
+  return item ? decodeURIComponent(item.slice(name.length + 1)) : '';
 }
 
 export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
-  const token = getStoredAuthToken();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
-  const response = await fetch(input, { ...init, headers });
+  const method = (init.method || 'GET').toUpperCase();
+  const csrf = cookie('cowork_csrf');
+  if (csrf && !['GET', 'HEAD', 'OPTIONS'].includes(method)) headers.set('X-CSRF-Token', csrf);
+  const response = await fetch(input, { ...init, headers, credentials: 'same-origin' });
   if (response.status === 401) window.dispatchEvent(new Event('cowork:unauthorized'));
   return response;
 }
+
+export interface AuthUser { id: string; username: string; displayName: string; role: 'admin' | 'member'; disabled: boolean }
+export const setupStatus = (): Promise<{ configured: boolean; publicOrigin: string }> => fetch('/api/setup/status').then(r => r.json());
+export const completeSetup = (body: { setupCode: string; publicOrigin: string; username: string; displayName: string; password: string }) => postJson<{ user: AuthUser }>('/api/setup/complete', body);
+export const passwordLogin = (username: string, password: string) => postJson<{ user: AuthUser }>('/api/auth/login/password', { username, password });
+export const fetchSession = () => getJson<{ user: AuthUser }>('/api/auth/session');
+export const logout = () => postJson<{ ok: true }>('/api/auth/logout', {});
+export const passkeyLoginOptions = (username: string) => postJson<{ options: PublicKeyCredentialRequestOptionsJSON; challengeToken: string }>('/api/auth/login/passkey/options', { username });
+export const passkeyLoginVerify = (challengeToken: string, response: unknown) => postJson<{ user: AuthUser }>('/api/auth/login/passkey/verify', { challengeToken, response });
+export const passkeyRegistrationOptions = () => postJson<{ options: PublicKeyCredentialCreationOptionsJSON; challengeToken: string }>('/api/auth/passkeys/register/options', {});
+export const passkeyRegistrationVerify = (challengeToken: string, response: unknown, name: string) => postJson<{ verified: boolean }>('/api/auth/passkeys/register/verify', { challengeToken, response, name });
+export const acceptInvitation = (body: { token: string; username: string; displayName: string; password: string }) => postJson<{ user: AuthUser }>('/api/auth/invitations/accept', body);
+export interface PasskeyInfo { id: string; name: string; deviceType: string; backedUp: boolean; createdAt: number; lastUsedAt?: number | null }
+export const fetchProfile = () => getJson<{ user: AuthUser; passkeys: PasskeyInfo[] }>('/api/profile');
+export const updateProfile = (displayName: string) => apiFetch('/api/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ displayName }) }).then(r => { if (!r.ok) throw new Error('profile update failed'); return r.json(); });
+export const removePasskey = (id: string) => apiFetch(`/api/auth/passkeys/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(r => r.json());
+export const fetchUsers = () => getJson<{ users: AuthUser[] }>('/api/admin/users');
+export const createInvitation = (role: 'admin' | 'member' = 'member') => postJson<{ token: string; expiresAt: number }>('/api/admin/invitations', { role });
+export const setUserDisabled = (id: string, disabled: boolean) => putJson<{ ok: true }>(`/api/admin/users/${encodeURIComponent(id)}/disabled`, { disabled });
+export const createRecovery = (id: string) => postJson<{ token: string; expiresAt: number }>(`/api/admin/users/${encodeURIComponent(id)}/recovery`, {});
+export const deleteUser = (id: string, username: string) => apiFetch(`/api/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }) }).then(r => r.json());
+export interface StorageConnection { kind: 'local' | 'nextcloud' | 'webdav'; baseUrl: string; username: string; corpusRoot: string; secretConfigured?: boolean }
+export const fetchStorage = () => getJson<StorageConnection>('/api/integrations/storage');
+export const saveStorage = (body: StorageConnection & { secret?: string }) => putJson<StorageConnection>('/api/integrations/storage', body);
+export const testStorage = (body: Partial<StorageConnection> & { secret?: string; useSaved?: boolean }) => postJson<{ ok: true }>('/api/integrations/storage/test', body);
+export const startNextcloud = (baseUrl: string) => postJson<{ flowId: string; loginUrl: string; expiresAt: number }>('/api/integrations/storage/nextcloud/start', { baseUrl });
+export const pollNextcloud = (flowId: string, corpusRoot: string) => postJson<StorageConnection & { pending?: boolean }>('/api/integrations/storage/nextcloud/poll', { flowId, corpusRoot });
+export const completeRecovery = (token: string, password: string) => postJson<{ ok: true }>('/api/auth/recovery/complete', { token, password });
 
 async function getJson<T>(url: string): Promise<T> {
   const res = await apiFetch(url);
@@ -73,9 +96,10 @@ export function fetchProviders(): Promise<{ providers: Provider[] }> {
   return getJson('/api/providers');
 }
 
-export function createProvider(body: { label: string; baseUrl: string; apiKey?: string }): Promise<Provider> {
+export function createProvider(body: { label: string; baseUrl: string; apiKey?: string; defaultModel?: string; shared?: boolean }): Promise<Provider> {
   return postJson('/api/providers', body);
 }
+export function testProvider(body: { baseUrl: string; apiKey?: string }): Promise<{ ok: true; models: string[] }> { return postJson('/api/providers/test', body); }
 
 export function deleteProvider(id: string): Promise<{ ok: boolean }> {
   return apiFetch(`/api/providers/${encodeURIComponent(id)}`, { method: 'DELETE' }).then((res) => {

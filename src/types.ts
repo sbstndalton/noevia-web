@@ -43,6 +43,8 @@ export interface Provider {
   apiKeyMasked?: string | null;
   isDefault?: boolean;
   managed?: boolean;
+  shared?: boolean;
+  defaultModel?: string;
 }
 
 /** A named conversation inside a project (or free-floating). */

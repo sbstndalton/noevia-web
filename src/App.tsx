@@ -58,7 +58,10 @@ function loadTheme(): 'light' | 'dark' {
 
 export default function App(): JSX.Element {
   const [theme, setTheme] = useState<'light' | 'dark'>(loadTheme);
-  const [view, setView] = useState<View>({ kind: 'projects' });
+  const [view, setView] = useState<View>(() => {
+    if (sessionStorage.getItem('cowork-new-account')) { sessionStorage.removeItem('cowork-new-account'); return { kind: 'settings' }; }
+    return { kind: 'projects' };
+  });
   const [projects, setProjects] = useState<Project[]>([]);
   const [freeChats, setFreeChats] = useState<ChatMeta[]>([]);
   const [messagesByChat, setMessagesByChat] = useState<Record<string, Message[]>>({});
