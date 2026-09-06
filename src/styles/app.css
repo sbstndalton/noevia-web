@@ -717,3 +717,40 @@ body { margin: 0; background: var(--bg); }
   color: var(--text-muted);
 }
 .diary-zero-rail { padding: 18px 16px; }
+
+.diary-zero-sources {
+  margin-top: 22px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 10px);
+  background: color-mix(in srgb, var(--border) 25%, transparent);
+  text-align: left;
+}
+.diary-zero-sources-title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.diary-zero-source + .diary-zero-source { margin-top: 8px; }
+.diary-zero-source-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+}
+.diary-zero-source-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.diary-zero-source-meta { font-size: 11.5px; color: var(--text-faint); white-space: nowrap; }
+.diary-zero-sources-note {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}

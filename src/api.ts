@@ -228,6 +228,35 @@ export function fetchDiarySource(): Promise<{ source: string; months: { id: stri
   return getJson('/api/diary/source');
 }
 
+export interface ExternalSourceFile {
+  name: string;
+  rel_path: string;
+  size: number;
+  date: string | null;
+  date_source: 'filename' | 'mtime' | 'unavailable';
+}
+
+export interface ExternalSourcesScan {
+  configured: boolean;
+  sources: {
+    path: string;
+    exists: boolean;
+    error?: string;
+    files: ExternalSourceFile[];
+    total: number;
+    truncated: boolean;
+  }[];
+  total: number;
+}
+
+export function fetchExternalSources(): Promise<ExternalSourcesScan> {
+  return getJson('/api/diary/external-sources');
+}
+
+export function importExternalFile(sourcePath: string, relPath: string): Promise<{ imported: boolean; day: string }> {
+  return postJson('/api/diary/external-sources/import', { sourcePath, relPath });
+}
+
 export function fetchDiaryMonth(monthId: string): Promise<DiaryCorpus> {
   return getJson(`/api/diary/today?month=${encodeURIComponent(monthId)}`);
 }

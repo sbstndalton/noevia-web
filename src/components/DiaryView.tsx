@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { JSX } from 'react';
 import type { DiaryCorpus, DiaryMonth } from '../types';
+import { fetchExternalSources, importExternalFile } from '../api';
+import type { ExternalSourcesScan } from '../api';
 import { ChevronLeft, ChevronRight } from './Icons';
 
 interface DiaryViewProps {
@@ -16,6 +18,7 @@ interface DiaryViewProps {
   busy: boolean;
   outcome: string | null;
   onSend: (text: string) => void;
+  onImported: (day: string | null) => void; // jump to the entry's month + refresh months
 }
 
 /** Day headers inside a month file: `## Thursday, September 3, 2026` (real corpus format). */
@@ -89,8 +92,12 @@ export function DiaryView({
   busy,
   outcome,
   onSend,
+  onImported,
 }: DiaryViewProps): JSX.Element {
   const [draft, setDraft] = useState('');
+  const [ext, setExt] = useState<ExternalSourcesScan | null>(null);
+  const [imported, setImported] = useState<Set<string>>(new Set());
+  const [importing, setImporting] = useState<string | null>(null);
 
   // First-run zero-state: the user has never had any diary content at all —
   // no corpus months exist and today's file is empty or absent. A returning
@@ -108,6 +115,39 @@ export function DiaryView({
   };
 
   const parsed = useMemo(() => (corpus ? parseMonthFile(corpus.todayLog) : null), [corpus]);
+
+  // Detection of pre-existing diary-like files elsewhere: only relevant in
+  // the zero-state (that's where "bring your old journal in" belongs), and
+  // only while the user hasn't imported that file already this session.
+  useEffect(() => {
+    if (!isFirstRun) return;
+    let stale = false;
+    fetchExternalSources()
+      .then((scan) => {
+        if (!stale) setExt(scan);
+      })
+      .catch(() => {
+        if (!stale) setExt(null);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [isFirstRun]);
+
+  const doImport = (sourcePath: string, relPath: string) => {
+    const key = `${sourcePath}::${relPath}`;
+    setImporting(key);
+    importExternalFile(sourcePath, relPath)
+      .then((r) => {
+        setImported((prev) => new Set(prev).add(key));
+        onImported(r.day);
+      })
+      .catch(() => {
+        // The scan list stays; the user can retry. Error surfaces via outcome
+        // on the next action — keep this quiet and non-destructive.
+      })
+      .finally(() => setImporting(null));
+  };
 
   // Real month navigation over the sidecar's month list. `today` is always
   // available as the rightmost stop; arrows step through actual corpus months.
@@ -201,6 +241,40 @@ export function DiaryView({
                       what you log and keeps it verbatim — everything stays on your
                       server, in plain text you can read and back up.
                     </p>
+                    {ext && ext.configured && ext.total > 0 && (
+                      <div className="diary-zero-sources">
+                        <p className="diary-zero-sources-title">
+                          We found {ext.total} {ext.total === 1 ? 'entry' : 'entries'} in other sources
+                        </p>
+                        {ext.sources.filter((s) => s.files.length > 0).map((s) => (
+                          <div key={s.path} className="diary-zero-source">
+                            {s.files.map((f) => {
+                              const key = `${s.path}::${f.rel_path}`;
+                              const isImported = imported.has(key);
+                              return (
+                                <div key={key} className="diary-zero-source-row">
+                                  <span className="diary-zero-source-name" title={f.rel_path}>{f.name}</span>
+                                  <span className="diary-zero-source-meta">
+                                    {f.date ?? 'no date'}{f.date_source === 'mtime' ? ' (from file)' : ''}
+                                  </span>
+                                  <button
+                                    className="popup-tab"
+                                    disabled={isImported || importing === key}
+                                    onClick={() => doImport(s.path, f.rel_path)}
+                                  >
+                                    {isImported ? 'Imported ✓' : importing === key ? 'Importing…' : 'Import'}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
+                        <p className="diary-zero-sources-note">
+                          Importing copies a file's text into your diary on its date.
+                          Your original files are never modified.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )
                 : <div className="empty-state"><h2>No entries</h2><p>This month has no diary file yet.</p></div>
@@ -248,7 +322,14 @@ export function DiaryView({
 
         <div className="rail">
           {isFirstRun ? (
-            <p className="rail-empty diary-zero-rail">Entries, open questions, and a timeline will appear here as you write.</p>
+            <>
+              <p className="rail-empty diary-zero-rail">Entries, open questions, and a timeline will appear here as you write.</p>
+              {ext && ext.configured && ext.total > 0 && (
+                <p className="rail-empty diary-zero-rail">
+                  {ext.total} {ext.total === 1 ? 'entry' : 'entries'} found in other sources — see the import list by your composer.
+                </p>
+              )}
+            </>
           ) : (
           <>
           <div className="rail-section">

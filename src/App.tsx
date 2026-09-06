@@ -605,6 +605,23 @@ export default function App(): JSX.Element {
           busy={diaryBusy}
           outcome={diaryOutcome}
           onSend={(text) => void sendToDiary(text)}
+          onImported={(day) => {
+            // An import lands on its own (possibly past) date: refresh the
+            // month list, jump the month selector to the entry's month, and
+            // refetch the corpus.
+            fetchDiarySource()
+              .then((s) => {
+                setDiaryMonths(Array.isArray(s.months) ? s.months : []);
+                if (day) {
+                  const monthId = day.slice(0, 7);
+                  if (Array.isArray(s.months) && s.months.some((m) => m.id === monthId)) setDiaryMonthId(monthId);
+                }
+              })
+              .catch(() => undefined);
+            fetchDiaryCorpus()
+              .then((c) => setCorpus(c))
+              .catch(() => undefined);
+          }}
         />
       )}
 
