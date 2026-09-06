@@ -64,7 +64,7 @@ export const createInvitation = (role: 'admin' | 'member' = 'member') => postJso
 export const setUserDisabled = (id: string, disabled: boolean) => putJson<{ ok: true }>(`/api/admin/users/${encodeURIComponent(id)}/disabled`, { disabled });
 export const createRecovery = (id: string) => postJson<{ token: string; expiresAt: number }>(`/api/admin/users/${encodeURIComponent(id)}/recovery`, {});
 export const deleteUser = (id: string, username: string) => apiFetch(`/api/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }) }).then(r => r.json());
-export interface StorageConnection { kind: 'local' | 'nextcloud' | 'webdav'; baseUrl: string; username: string; corpusRoot: string; secretConfigured?: boolean }
+export interface StorageConnection { kind: 'local' | 'nextcloud' | 'webdav' | 's3'; baseUrl: string; bucket?: string; username: string; corpusRoot: string; secretConfigured?: boolean }
 export const fetchStorage = () => getJson<StorageConnection>('/api/integrations/storage');
 export const saveStorage = (body: StorageConnection & { secret?: string }) => putJson<StorageConnection>('/api/integrations/storage', body);
 export const testStorage = (body: Partial<StorageConnection> & { secret?: string; useSaved?: boolean }) => postJson<{ ok: true }>('/api/integrations/storage/test', body);

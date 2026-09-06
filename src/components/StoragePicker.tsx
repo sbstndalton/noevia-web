@@ -63,24 +63,33 @@ export function StoragePicker({ onSaved, onSkip }: StoragePickerProps): JSX.Elem
         <option value="local">Local storage</option>
         <option value="nextcloud">Nextcloud</option>
         <option value="webdav">Generic WebDAV</option>
+        <option value="s3">S3-compatible</option>
       </select>
       {value.kind !== 'local' && (
         <>
           <input
             className="modal-input"
-            placeholder={value.kind === 'nextcloud' ? 'https://cloud.example.com' : 'WebDAV base URL'}
+            placeholder={value.kind === 'nextcloud' ? 'https://cloud.example.com' : value.kind === 's3' ? 'Endpoint URL (https://s3.example.com)' : 'WebDAV base URL'}
             value={value.baseUrl}
             onChange={(e) => patch({ baseUrl: e.target.value })}
           />
+          {value.kind === 's3' && (
+            <input
+              className="modal-input"
+              placeholder="Bucket"
+              value={value.bucket || ''}
+              onChange={(e) => patch({ bucket: e.target.value })}
+            />
+          )}
           <input
             className="modal-input"
-            placeholder="Corpus folder"
+            placeholder={value.kind === 's3' ? 'Folder inside the bucket (optional)' : 'Corpus folder'}
             value={value.corpusRoot}
             onChange={(e) => patch({ corpusRoot: e.target.value })}
           />
         </>
       )}
-      {value.kind === 'webdav' && (
+      {(value.kind === 'webdav' || value.kind === 's3') && (
         <>
           <input
             className="modal-input"
@@ -91,7 +100,7 @@ export function StoragePicker({ onSaved, onSkip }: StoragePickerProps): JSX.Elem
           <input
             className="modal-input"
             type="password"
-            placeholder={value.secretConfigured ? 'App password configured' : 'App password'}
+            placeholder={value.secretConfigured ? (value.kind === 's3' ? 'Secret access key configured' : 'App password configured') : value.kind === 's3' ? 'Secret access key' : 'App password'}
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
           />
