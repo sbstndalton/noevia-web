@@ -75,6 +75,8 @@ export interface HealthState {
   /** One-release compatibility field returned by older/newer mixed deployments. */
   lemonadeUp?: boolean | null;
   diaryUp: boolean | null;
+  /** Project RAG readiness — false means native deps are missing (keyword-only context). */
+  ragAvailable?: boolean | null;
 }
 
 export interface InstalledModel {

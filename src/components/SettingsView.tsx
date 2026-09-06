@@ -68,6 +68,20 @@ export function SettingsView({
                   {health.diaryUp ? 'online' : health.diaryUp === false ? 'unreachable' : 'checking…'}
                 </span>
               </div>}
+              <div className="model-row">
+                <span className={`model-dot${health.ragAvailable === false ? ' down' : ''}`} />
+                <div className="model-name-group">
+                  <span className="model-name">Project RAG</span>
+                  <span className="model-quant">semantic retrieval over project files</span>
+                </div>
+                <span className="model-role">
+                  {health.ragAvailable == null
+                    ? 'checking…'
+                    : health.ragAvailable
+                      ? 'available'
+                      : 'degraded (missing native deps)'}
+                </span>
+              </div>
             </div>
           </div>
 
