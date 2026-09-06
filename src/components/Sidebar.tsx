@@ -65,6 +65,10 @@ export function Sidebar({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  // Two-step confirm for chat deletion, mirroring the project-delete pattern:
+  // first click arms, second click ("Yes, delete") fires. Clicking elsewhere
+  // or re-opening resets both arms.
+  const [confirmChatDeleteId, setConfirmChatDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!menuFor) return;
@@ -76,6 +80,17 @@ export function Sidebar({
     document.addEventListener('pointerdown', close);
     return () => document.removeEventListener('pointerdown', close);
   }, [menuFor]);
+
+  // Disarm a pending chat-delete when clicking anywhere outside chat rows.
+  useEffect(() => {
+    if (!confirmChatDeleteId) return;
+    const close = (e: PointerEvent) => {
+      if ((e.target as HTMLElement).closest('.chat-row')) return;
+      setConfirmChatDeleteId(null);
+    };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [confirmChatDeleteId]);
 
   const startRename = (p: Project) => {
     setRenamingId(p.id);
@@ -209,11 +224,18 @@ export function Sidebar({
                   <span className="nav-name">{c.title}</span>
                 </button>
                 <button
-                  className="recents-del"
-                  title="Delete chat"
-                  onClick={() => onDeleteChat(c.id)}
+                  className={`recents-del${confirmChatDeleteId === c.id ? ' confirm-arm' : ''}`}
+                  title={confirmChatDeleteId === c.id ? 'Click again to delete' : 'Delete chat'}
+                  onClick={() => {
+                    if (confirmChatDeleteId === c.id) {
+                      setConfirmChatDeleteId(null);
+                      onDeleteChat(c.id);
+                    } else {
+                      setConfirmChatDeleteId(c.id);
+                    }
+                  }}
                 >
-                  ✕
+                  {confirmChatDeleteId === c.id ? 'Sure?' : '✕'}
                 </button>
               </div>
             ))}
