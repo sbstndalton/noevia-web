@@ -10,6 +10,7 @@ interface ChatViewProps {
   messages: Message[];
   streaming: boolean;
   onSend: (text: string) => void;
+  onStop: () => void;
   onBack: (() => void) | null;
   onOpenModels: () => void;
   onOpenSettings: () => void;
@@ -46,6 +47,7 @@ export function ChatView({
   messages,
   streaming,
   onSend,
+  onStop,
   onBack,
   onOpenModels,
   onOpenSettings,
@@ -157,9 +159,15 @@ export function ChatView({
               }
             }}
           />
-          <button className="send-btn" onClick={submit} disabled={streaming || !draft.trim()} title="Send">
-            <SendIcon />
-          </button>
+          {streaming ? (
+            <button className="send-btn" onClick={onStop} title="Stop generating">
+              <span aria-hidden="true">&#9632;</span>
+            </button>
+          ) : (
+            <button className="send-btn" onClick={submit} disabled={!draft.trim()} title="Send">
+              <SendIcon />
+            </button>
+          )}
         </div>
         <div className="composer-hint">
           Replies with {modelLabel}

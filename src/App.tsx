@@ -82,11 +82,29 @@ export default function App(): JSX.Element {
   const [popupOpen, setPopupOpen] = useState(false);
   const loadedChats = useRef<Set<string>>(new Set());
   const patchTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // AbortController for the in-flight generation (chat or diary). Aborting
+  // stops the client-side stream; the server's disconnect handling (Phase 1)
+  // then terminates the upstream request.
+  const streamAbort = useRef<AbortController | null>(null);
+  const abortStream = useCallback(() => {
+    streamAbort.current?.abort();
+    streamAbort.current = null;
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('cowork-theme', theme);
   }, [theme]);
+
+  // Switching chats/views away from an in-flight generation, or unmounting,
+  // stops the stream — matching Claude-style chat UX where navigation ends
+  // the current response rather than letting it keep streaming.
+  useEffect(() => {
+    return () => {
+      streamAbort.current?.abort();
+      streamAbort.current = null;
+    };
+  }, [view.kind, view.kind === 'chat' ? view.chatId : null, streamAbort]);
 
   const refreshModels = useCallback(() => {
     fetchInstalledModels()
@@ -250,6 +268,8 @@ export default function App(): JSX.Element {
         ],
       }));
       setStreaming(true);
+      const controller = new AbortController();
+      streamAbort.current = controller;
 
       // Register the chat in its project (or the free-chats list) on first send.
       if (projectId) {
@@ -276,13 +296,16 @@ export default function App(): JSX.Element {
         let acc = '';
         let reasoning = '';
         const tools: { name: string; args: string }[] = [];
-        for await (const ev of streamChat({
-          spaceId: projectId || 'free',
-          message: text,
-          history,
-          projectId,
-          chatId,
-        })) {
+        for await (const ev of streamChat(
+          {
+            spaceId: projectId || 'free',
+            message: text,
+            history,
+            projectId,
+            chatId,
+          },
+          controller.signal,
+        )) {
           if (ev.type === 'meta' && ev.route) {
             setMessagesByChat((prev) => ({
               ...prev,
@@ -319,14 +342,28 @@ export default function App(): JSX.Element {
           }
         }
       } catch (err) {
-        const detail = err instanceof Error ? err.message : 'unknown error';
-        setMessagesByChat((prev) => ({
-          ...prev,
-          [chatId]: (prev[chatId] ?? []).map((m) =>
-            m.id === replyId ? { ...m, content: `Request failed — ${detail}`, error: true } : m,
-          ),
-        }));
+        if (controller.signal.aborted) {
+          // User pressed Stop (or navigated away): keep what streamed in,
+          // mark nothing as an error.
+          setMessagesByChat((prev) => ({
+            ...prev,
+            [chatId]: (prev[chatId] ?? []).map((m) =>
+              m.id === replyId && !m.content && !m.reasoning
+                ? { ...m, content: '(generation stopped)', senderLabel: 'Stopped' }
+                : m,
+            ),
+          }));
+        } else {
+          const detail = err instanceof Error ? err.message : 'unknown error';
+          setMessagesByChat((prev) => ({
+            ...prev,
+            [chatId]: (prev[chatId] ?? []).map((m) =>
+              m.id === replyId ? { ...m, content: `Request failed — ${detail}`, error: true } : m,
+            ),
+          }));
+        }
       } finally {
+        if (streamAbort.current === controller) streamAbort.current = null;
         setStreaming(false);
         setMessagesByChat((prev) => {
           const msgs = prev[chatId] ?? [];
@@ -353,9 +390,11 @@ export default function App(): JSX.Element {
       if (diaryBusy) return;
       setDiaryBusy(true);
       setDiaryOutcome(null);
+      const controller = new AbortController();
+      streamAbort.current = controller;
       try {
         let verdict = 'skipped';
-        for await (const ev of streamChat({ spaceId: 'diary', message: text, history: [] })) {
+        for await (const ev of streamChat({ spaceId: 'diary', message: text, history: [] }, controller.signal)) {
           if (ev.type === 'diary' && ev.decision) verdict = ev.decision;
         }
         setDiaryOutcome(verdict);
@@ -367,9 +406,14 @@ export default function App(): JSX.Element {
           .then((c) => setCorpus(c))
           .catch(() => undefined);
       } catch (err) {
-        const detail = err instanceof Error ? err.message : 'unknown error';
-        setDiaryOutcome(`error — ${detail}`);
+        if (controller.signal.aborted) {
+          setDiaryOutcome('stopped');
+        } else {
+          const detail = err instanceof Error ? err.message : 'unknown error';
+          setDiaryOutcome(`error — ${detail}`);
+        }
       } finally {
+        if (streamAbort.current === controller) streamAbort.current = null;
         setDiaryBusy(false);
       }
     },
@@ -516,6 +560,7 @@ export default function App(): JSX.Element {
           messages={messages}
           streaming={streaming}
           onSend={sendToCurrent}
+          onStop={abortStream}
           onBack={activeProject ? () => setView({ kind: 'project', id: activeProject.id }) : null}
           onOpenModels={() => setPopupOpen(true)}
           onOpenSettings={() => setView({ kind: 'settings' })}
