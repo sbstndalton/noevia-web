@@ -412,6 +412,26 @@ export default function App(): JSX.Element {
     [activeChatMeta, handleSend, view],
   );
 
+  // Retry a failed exchange: drop the failed assistant bubble and the user
+  // message that triggered it, then re-send that same text. History rebuild
+  // in handleSend excludes error messages, so nothing stale leaks in.
+  const retryLast = useCallback(
+    (chatId: string) => {
+      if (streaming) return;
+      const msgs = messagesByChat[chatId] ?? [];
+      const errIdx = msgs.findIndex((m) => m.error);
+      if (errIdx === -1) return;
+      const failedText = msgs[errIdx - 1]?.role === 'user' ? msgs[errIdx - 1].content : null;
+      if (!failedText) return;
+      setMessagesByChat((prev) => ({
+        ...prev,
+        [chatId]: (prev[chatId] ?? []).slice(0, errIdx - 1),
+      }));
+      void handleSend(chatId, view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null, failedText);
+    },
+    [activeChatMeta, handleSend, messagesByChat, streaming, view],
+  );
+
   const sendToDiary = useCallback(
     async (text: string) => {
       if (diaryBusy) return;
@@ -580,6 +600,7 @@ export default function App(): JSX.Element {
 
       {view.kind === 'chat' && (
         <ChatView
+          chatId={view.chatId}
           title={activeChatMeta?.title ?? (view.projectId ? 'New task' : 'New chat')}
           projectName={activeProject?.name ?? null}
           modelLabel={
@@ -591,6 +612,7 @@ export default function App(): JSX.Element {
           streaming={streaming}
           inferenceUp={health.inferenceUp}
           onSend={sendToCurrent}
+          onRetry={retryLast}
           onStop={abortStream}
           onBack={activeProject ? () => setView({ kind: 'project', id: activeProject.id }) : null}
           onOpenModels={() => setPopupOpen(true)}

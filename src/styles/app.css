@@ -206,6 +206,18 @@ body { margin: 0; background: var(--bg); }
 .chat-row .recents-del:focus-visible { opacity: 1; }
 .chat-row.is-active .nav-item { background: var(--bg-active); color: var(--text); }
 .chat-row.is-active .nav-item .nav-name { font-weight: 700; color: var(--text); }
+/* Retry affordance on a failed assistant bubble. */
+.msg-retry {
+  align-self: flex-start;
+  margin-top: 2px;
+  background: none; border: 1px solid var(--border); border-radius: var(--radius-pill);
+  color: var(--text); cursor: pointer;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+  padding: 4px 12px;
+}
+.msg-retry:hover:not(:disabled) { color: var(--accent); border-color: var(--accent-2); background: var(--accent-2-soft); }
+.msg-retry:disabled { opacity: 0.5; cursor: default; }
+
 /* Inline connection-health banner under the chat/diary header. */
 .conn-banner {
   margin: 0 auto; width: 100%; max-width: 860px; padding: 8px 16px;

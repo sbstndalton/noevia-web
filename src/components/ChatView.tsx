@@ -11,6 +11,8 @@ interface ChatViewProps {
   streaming: boolean;
   inferenceUp?: boolean | null;
   onSend: (text: string) => void;
+  onRetry: (chatId: string) => void;
+  chatId: string;
   onStop: () => void;
   onBack: (() => void) | null;
   onOpenModels: () => void;
@@ -49,6 +51,8 @@ export function ChatView({
   streaming,
   inferenceUp = null,
   onSend,
+  onRetry,
+  chatId,
   onStop,
   onBack,
   onOpenModels,
@@ -135,6 +139,16 @@ export function ChatView({
                   {m.content ? (
                     <div className="bubble">
                       <p style={m.error ? { color: 'var(--accent)' } : undefined}>{m.content}</p>
+                      {m.error && isLast && (
+                        <button
+                          className="msg-retry"
+                          onClick={() => onRetry(chatId)}
+                          disabled={streaming}
+                          title="Re-send your last message"
+                        >
+                          ↻ Retry
+                        </button>
+                      )}
                     </div>
                   ) : (
                     streaming && isLast && !m.reasoning && (
