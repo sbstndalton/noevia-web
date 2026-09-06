@@ -266,6 +266,10 @@ export function fetchDiaryMonth(monthId: string): Promise<DiaryCorpus> {
   return getJson(`/api/diary/today?month=${encodeURIComponent(monthId)}`);
 }
 
+export function editDiaryEntry(body: { xid: string; me: string; assistant: string; month?: string | null }): Promise<{ ok: boolean; document: string; day: string }> {
+  return postJson('/api/diary/entries/edit', body);
+}
+
 export function fetchChatHistory(chatId: string): Promise<HistoryEntry[]> {
   return getJson<{ history: HistoryEntry[] }>(
     `/api/chats/${encodeURIComponent(chatId)}/history`,

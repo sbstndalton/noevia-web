@@ -630,6 +630,10 @@ export default function App(): JSX.Element {
           onOpenMonth={(id) => { setDiaryScreen('month'); setDiaryMonthId(id); }}
           onBackToPicker={() => setDiaryScreen('picker')}
           onSelectMonth={setDiaryMonthId}
+          onRefresh={() => {
+            const load = diaryMonthId ? fetchDiaryMonth(diaryMonthId) : fetchDiaryCorpus();
+            load.then((c) => setCorpus(c)).catch(() => undefined);
+          }}
           modelLabel="pipeline"
           busy={diaryBusy}
           inferenceUp={health.inferenceUp}

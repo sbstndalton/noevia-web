@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { JSX } from 'react';
 import type { DiaryCorpus, DiaryMonth } from '../types';
-import { fetchExternalSources, importExternalFile } from '../api';
+import { editDiaryEntry, fetchExternalSources, importExternalFile } from '../api';
 import type { ExternalSourcesScan } from '../api';
 import { ChevronLeft, ChevronRight } from './Icons';
 
@@ -14,6 +14,7 @@ interface DiaryViewProps {
   onOpenMonth: (monthId: string | null) => void; // from the picker grid
   onBackToPicker: () => void; // from inside a month
   onSelectMonth: (monthId: string | null) => void; // arrows inside a month
+  onRefresh: () => void; // refetch the corpus after an in-place edit
   modelLabel: string;
   busy: boolean;
   inferenceUp?: boolean | null;
@@ -89,6 +90,7 @@ export function DiaryView({
   onOpenMonth,
   onBackToPicker,
   onSelectMonth,
+  onRefresh,
   modelLabel,
   busy,
   inferenceUp = null,
@@ -238,7 +240,7 @@ export function DiaryView({
           )}
           {!corpusError && corpus && (
             corpus.todayLog.trim()
-              ? <CorpusTranscript todayLog={corpus.todayLog} />
+              ? <CorpusTranscript todayLog={corpus.todayLog} monthHint={selectedMonthId ?? ''} onEdited={onRefresh} />
               : isFirstRun
                 ? (
                   <div className="diary-zero-hero">
@@ -445,73 +447,211 @@ function MonthPicker({
   );
 }
 
-/** Renders a month-file body as a day/time/user/assistant transcript. */
-function CorpusTranscript({ todayLog }: { todayLog: string }): JSX.Element {
-  const nodes: JSX.Element[] = [];
-  let key = 0;
-  let buffer: string[] = [];
-  let mode: 'none' | 'me' | 'claude' | 'time' = 'none';
+/** One logged exchange parsed from the month-file text. */
+interface ParsedExchange {
+  xid: string | null; // hidden marker id — present only when the read included markers
+  me: string;
+  assistant: string;
+}
+
+type ParsedNode =
+  | { kind: 'day'; label: string }
+  | { kind: 'time'; label: string }
+  | { kind: 'exchange'; exchange: ParsedExchange };
+
+/** Parse month-file text into day/time/exchange nodes (xid markers captured, never shown). */
+function parseTranscript(todayLog: string): ParsedNode[] {
+  const nodes: ParsedNode[] = [];
+  let current: ParsedExchange | null = null;
+  let mode: 'none' | 'me' | 'claude' = 'none';
 
   const flush = () => {
-    if (buffer.length === 0) return;
-    const text = buffer.join('\n').trim();
-    buffer = [];
-    if (!text) return;
-    if (mode === 'me') {
-      nodes.push(
-        <div key={key++} className="msg" data-role="user">
-          <span className="msg-sender">Me</span>
-          <p>{text}</p>
-        </div>,
-      );
-    } else if (mode === 'claude') {
-      nodes.push(
-        <div key={key++} className="msg" data-role="assistant">
-          <span className="msg-sender is-assistant">Assistant</span>
-          <div className="bubble"><p>{text}</p></div>
-        </div>,
-      );
-    } else if (mode === 'time') {
-      nodes.push(
-        <div key={key++} className="time-topic">{text}</div>,
-      );
-    }
+    if (!current) return;
+    if (current.me.trim() || current.assistant.trim()) nodes.push({ kind: 'exchange', exchange: current });
+    current = null;
+    mode = 'none';
   };
 
   for (const raw of todayLog.split('\n')) {
     const line = raw.trimEnd();
     if (line.startsWith('## ')) {
       flush();
-      mode = 'none';
-      nodes.push(
-        <div key={key++} className="day-divider">
-          <span>{line.slice(3).trim()}</span>
-        </div>,
-      );
+      nodes.push({ kind: 'day', label: line.slice(3).trim() });
       continue;
     }
     if (line.startsWith('### ')) {
       flush();
-      mode = 'time';
-      buffer = [line.slice(4).trim()];
+      nodes.push({ kind: 'time', label: line.slice(4).trim() });
       continue;
     }
     if (line.startsWith('**Me:**')) {
       flush();
       mode = 'me';
-      buffer = [line.slice(7).trim()];
+      current = { xid: null, me: line.slice(7).trim(), assistant: '' };
       continue;
     }
     if (line.startsWith('**Claude:**') || line.startsWith('**Assistant:**')) {
-      flush();
-      mode = 'claude';
-      buffer = [line.replace(/^\*\*(?:Claude|Assistant):\*\*\s*/, '').trim()];
+      if (current) mode = 'claude';
+      if (current) current.assistant = line.replace(/^\*\*(?:Claude|Assistant):\*\*\s*/, '').trim();
       continue;
     }
-    if (mode !== 'none' && line.startsWith('<!--')) continue; // hidden xid markers
-    buffer.push(line);
+    const xidMatch = line.match(/^\s*<!--\s*xid:([0-9a-fA-F-]+)\s*-->\s*$/);
+    if (xidMatch) {
+      if (current) current.xid = xidMatch[1];
+      continue; // hidden marker — parsed, never rendered
+    }
+    if (mode === 'me' && current) current.me = `${current.me}${current.me ? '\n' : ''}${line}`.trim();
+    else if (mode === 'claude' && current) current.assistant = `${current.assistant}${current.assistant ? '\n' : ''}${line}`.trim();
   }
   flush();
+  return nodes;
+}
 
-  return <>{nodes}</>;
+/** Renders a month-file body as a day/time/user/assistant transcript with per-exchange editing. */
+function CorpusTranscript({
+  todayLog,
+  monthHint,
+  onEdited,
+}: {
+  todayLog: string;
+  monthHint: string;
+  onEdited: () => void;
+}): JSX.Element {
+  const nodes = useMemo(() => parseTranscript(todayLog), [todayLog]);
+  const [editingXid, setEditingXid] = useState<string | null>(null);
+  const [draftMe, setDraftMe] = useState('');
+  const [draftAssistant, setDraftAssistant] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Optimistic override: xid -> replacement, applied while the refetch is in flight.
+  const [override, setOverride] = useState<Record<string, { me: string; assistant: string }>>({});
+
+  const startEdit = (exchange: ParsedExchange) => {
+    if (!exchange.xid) return;
+    const o = override[exchange.xid];
+    setEditingXid(exchange.xid);
+    setDraftMe(o ? o.me : exchange.me);
+    setDraftAssistant(o ? o.assistant : exchange.assistant);
+    setError(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingXid(null);
+    setError(null);
+  };
+
+  const saveEdit = () => {
+    if (!editingXid || saving) return;
+    const xid = editingXid;
+    setSaving(true);
+    setError(null);
+    // Optimistic: show the edited words immediately; revert if the write fails.
+    setOverride((prev) => ({ ...prev, [xid]: { me: draftMe.trim(), assistant: draftAssistant.trim() } }));
+    editDiaryEntry({ xid, me: draftMe, assistant: draftAssistant, month: monthHint })
+      .then(() => {
+        setEditingXid(null);
+        onEdited(); // refetch confirms the server-side state
+      })
+      .catch((e: unknown) => {
+        setOverride((prev) => {
+          const next = { ...prev };
+          delete next[xid];
+          return next;
+        });
+        setError(e instanceof Error ? e.message : 'Edit failed — the diary was not changed.');
+      })
+      .finally(() => setSaving(false));
+  };
+
+  const out: JSX.Element[] = [];
+  let key = 0;
+  for (const node of nodes) {
+    if (node.kind === 'day') {
+      out.push(
+        <div key={key++} className="day-divider">
+          <span>{node.label}</span>
+        </div>,
+      );
+    } else if (node.kind === 'time') {
+      out.push(
+        <div key={key++} className="time-topic">{node.label}</div>,
+      );
+    } else {
+      const ex = node.exchange;
+      const o = ex.xid ? override[ex.xid] : undefined;
+      const meText = o ? o.me : ex.me;
+      const asstText = o ? o.assistant : ex.assistant;
+      const editable = !!ex.xid;
+      const isEditing = !!ex.xid && ex.xid === editingXid;
+      out.push(
+        <div key={key++}>
+          {meText.trim() !== '' && (
+            <div className="msg" data-role="user">
+              <span className="msg-sender">Me</span>
+              <p style={o ? { textDecoration: undefined, outline: '1px dashed var(--accent-2)' } : undefined}>
+                {meText}
+                {o && <span style={{ display: 'block', fontSize: 11, opacity: 0.7 }}>(edited — saving…)</span>}
+              </p>
+            </div>
+          )}
+          {asstText.trim() !== '' && (
+            <div className="msg" data-role="assistant">
+              <span className="msg-sender is-assistant">Assistant</span>
+              <div className="bubble"><p>{asstText}</p></div>
+            </div>
+          )}
+          {editable && !isEditing && (
+            <div style={{ margin: '2px 0 10px' }}>
+              <button
+                className="popup-tab"
+                onClick={() => startEdit(ex)}
+                title="Correct this entry — an explicit, logged edit of your diary text"
+              >
+                Edit
+              </button>
+            </div>
+          )}
+          {isEditing && (
+            <div className="diary-edit-form" style={{ margin: '2px 0 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label style={{ fontSize: 12, fontWeight: 600 }}>
+                Your words
+                <textarea
+                  value={draftMe}
+                  rows={Math.min(8, Math.max(2, draftMe.split('\n').length))}
+                  disabled={saving}
+                  onChange={(e) => setDraftMe(e.target.value)}
+                  style={{ width: '100%', marginTop: 4 }}
+                />
+              </label>
+              <label style={{ fontSize: 12, fontWeight: 600 }}>
+                Assistant's reply (as logged)
+                <textarea
+                  value={draftAssistant}
+                  rows={Math.min(8, Math.max(2, draftAssistant.split('\n').length))}
+                  disabled={saving}
+                  onChange={(e) => setDraftAssistant(e.target.value)}
+                  style={{ width: '100%', marginTop: 4 }}
+                />
+              </label>
+              <p style={{ fontSize: 11, opacity: 0.75, margin: 0 }}>
+                Saving replaces this entry in your diary. Editing is yours alone —
+                nothing rewrites your words unless you ask it to.
+              </p>
+              {error && <p style={{ fontSize: 12, color: 'var(--accent)', margin: 0 }}>{error}</p>}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="popup-tab" onClick={saveEdit} disabled={saving || !draftMe.trim()}>
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+                <button className="popup-tab" onClick={cancelEdit} disabled={saving}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>,
+      );
+    }
+  }
+
+  return <>{out}</>;
 }
