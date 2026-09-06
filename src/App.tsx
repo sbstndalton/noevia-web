@@ -34,6 +34,7 @@ import type {
 } from './types';
 import { ChatView } from './components/ChatView';
 import { DiaryView } from './components/DiaryView';
+import { InsightsView } from './components/InsightsView';
 import { ModelPopup } from './components/ModelPopup';
 import { ProjectView } from './components/ProjectView';
 import { ProjectsView } from './components/ProjectsView';
@@ -73,7 +74,7 @@ export default function App(): JSX.Element {
   const [corpus, setCorpus] = useState<DiaryCorpus | null>(null);
   const [corpusError, setCorpusError] = useState<string | null>(null);
   const [diaryMonths, setDiaryMonths] = useState<DiaryMonth[]>([]);
-  const [diaryScreen, setDiaryScreen] = useState<'picker' | 'month'>('picker'); // diary lands on the month picker (skipped for the first-run zero-state)
+  const [diaryScreen, setDiaryScreen] = useState<'picker' | 'month' | 'insights'>('picker'); // diary lands on the month picker (skipped for the first-run zero-state)
   const [diaryMonthId, setDiaryMonthId] = useState<string | null>(null); // null = today
   const [streaming, setStreaming] = useState(false);
   const [diaryOutcome, setDiaryOutcome] = useState<string | null>(null);
@@ -620,7 +621,7 @@ export default function App(): JSX.Element {
         />
       )}
 
-      {view.kind === 'diary' && diaryEnabled && (
+      {view.kind === 'diary' && diaryEnabled && diaryScreen !== 'insights' && (
         <DiaryView
           corpus={corpus}
           corpusError={corpusError}
@@ -628,6 +629,7 @@ export default function App(): JSX.Element {
           screen={diaryScreen}
           selectedMonthId={diaryMonthId}
           onOpenMonth={(id) => { setDiaryScreen('month'); setDiaryMonthId(id); }}
+          onOpenInsights={() => setDiaryScreen('insights')}
           onBackToPicker={() => setDiaryScreen('picker')}
           onSelectMonth={setDiaryMonthId}
           onRefresh={() => {
@@ -656,6 +658,13 @@ export default function App(): JSX.Element {
               .then((c) => setCorpus(c))
               .catch(() => undefined);
           }}
+        />
+      )}
+
+      {view.kind === 'diary' && diaryEnabled && diaryScreen === 'insights' && (
+        <InsightsView
+          onBack={() => setDiaryScreen('picker')}
+          onOpenMonth={(monthId) => { setDiaryScreen('month'); setDiaryMonthId(monthId); }}
         />
       )}
 

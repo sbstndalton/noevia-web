@@ -9,9 +9,10 @@ interface DiaryViewProps {
   corpus: DiaryCorpus | null;
   corpusError: string | null;
   months: DiaryMonth[];
-  screen: 'picker' | 'month'; // picker = month-selection landing page
+  screen: 'picker' | 'month' | 'insights'; // picker = month-selection landing page
   selectedMonthId: string | null; // null = today
   onOpenMonth: (monthId: string | null) => void; // from the picker grid
+  onOpenInsights: () => void; // from the picker grid
   onBackToPicker: () => void; // from inside a month
   onSelectMonth: (monthId: string | null) => void; // arrows inside a month
   onRefresh: () => void; // refetch the corpus after an in-place edit
@@ -88,6 +89,7 @@ export function DiaryView({
   screen,
   selectedMonthId,
   onOpenMonth,
+  onOpenInsights,
   onBackToPicker,
   onSelectMonth,
   onRefresh,
@@ -173,7 +175,7 @@ export function DiaryView({
   }, [months, selectedMonthId]);
 
   if (screen === 'picker') {
-    return <MonthPicker months={months} onOpenMonth={onOpenMonth} />;
+    return <MonthPicker months={months} onOpenMonth={onOpenMonth} onOpenInsights={onOpenInsights} />;
   }
 
   return (
@@ -405,9 +407,11 @@ export function DiaryView({
 function MonthPicker({
   months,
   onOpenMonth,
+  onOpenInsights,
 }: {
   months: DiaryMonth[];
   onOpenMonth: (monthId: string | null) => void;
+  onOpenInsights: () => void;
 }): JSX.Element {
   const todayLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
   const seen = new Set<string>();
@@ -435,6 +439,11 @@ function MonthPicker({
               <span className="month-card-meta">View entries</span>
             </button>
           ))}
+          <button className="month-card" onClick={onOpenInsights}>
+            <span className="month-card-emoji">✦</span>
+            <span className="month-card-name">Insights</span>
+            <span className="month-card-meta">AI reflections, only when you ask</span>
+          </button>
           {entries.length === 0 && (
             <div className="empty-state" style={{ gridColumn: '1 / -1', minHeight: 220 }}>
               <h2>No months yet</h2>
