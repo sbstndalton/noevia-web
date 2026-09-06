@@ -73,10 +73,31 @@ export default function App(): JSX.Element {
   const [corpus, setCorpus] = useState<DiaryCorpus | null>(null);
   const [corpusError, setCorpusError] = useState<string | null>(null);
   const [diaryMonths, setDiaryMonths] = useState<DiaryMonth[]>([]);
-  const [diaryScreen, setDiaryScreen] = useState<'picker' | 'month'>('picker'); // diary lands on the month picker
+  const [diaryScreen, setDiaryScreen] = useState<'picker' | 'month'>('picker'); // diary lands on the month picker (skipped for the first-run zero-state)
   const [diaryMonthId, setDiaryMonthId] = useState<string | null>(null); // null = today
   const [streaming, setStreaming] = useState(false);
   const [diaryOutcome, setDiaryOutcome] = useState<string | null>(null);
+
+  // Diary first-run: on a fresh corpus the month list is empty and today's file
+  // doesn't exist yet — land directly in the writing zero-state instead of the
+  // month picker. Anything already in the corpus (returning user) keeps the
+  // picker landing.
+  useEffect(() => {
+    if (view.kind !== 'diary') return;
+    let stale = false;
+    fetchDiarySource()
+      .then((s) => {
+        if (stale) return;
+        setDiaryMonths(Array.isArray(s.months) ? s.months : []);
+        if (Array.isArray(s.months) && s.months.length === 0) setDiaryScreen('month');
+      })
+      .catch(() => {
+        if (!stale) setDiaryMonths([]);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [view.kind]);
   const [diaryBusy, setDiaryBusy] = useState(false);
   const [diaryEnabled, setDiaryEnabled] = useState(false);
   const [popupOpen, setPopupOpen] = useState(false);
@@ -176,8 +197,8 @@ export default function App(): JSX.Element {
     };
   }, []);
 
-  // Diary tab: month list loads once per tab-open; the corpus refetches when
-  // the selected month changes (null = today). Writes always go to today.
+  // Diary tab: the corpus refetches when the selected month changes (null =
+  // today). Writes always go to today.
   useEffect(() => {
     if (view.kind !== 'diary') return;
     fetchDiarySource()

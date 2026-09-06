@@ -700,3 +700,20 @@ body { margin: 0; background: var(--bg); }
 .stats-sep { width: 1px; height: 14px; background: var(--border); }
 .stats-grow { flex-grow: 1; }
 .stats-src { font-size: 10.5px; color: var(--text-faint); }
+
+/* Diary first-run zero-state */
+.diary-zero-hero {
+  max-width: 520px;
+  margin: auto;
+  text-align: center;
+  padding: 24px 16px;
+}
+.diary-zero-glyph { font-size: 34px; margin-bottom: 10px; }
+.diary-zero-hero h2 { margin: 0 0 10px; font-size: 19px; letter-spacing: -0.01em; }
+.diary-zero-hero p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.diary-zero-rail { padding: 18px 16px; }

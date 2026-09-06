@@ -92,6 +92,14 @@ export function DiaryView({
 }: DiaryViewProps): JSX.Element {
   const [draft, setDraft] = useState('');
 
+  // First-run zero-state: the user has never had any diary content at all —
+  // no corpus months exist and today's file is empty or absent. A returning
+  // user whose *current* month happens to be empty still has months in the
+  // list, so they get the normal (navigable) view instead. Requires the
+  // sidecar to be reachable (no corpusError): a down sidecar must show its
+  // error, not a welcome message.
+  const isFirstRun = !corpusError && months.length === 0 && (!corpus || corpus.todayLog.trim() === '');
+
   const submit = () => {
     const text = draft.trim();
     if (!text || busy) return;
@@ -129,10 +137,13 @@ export function DiaryView({
       <div className="chat-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <span className="header-title">Diary</span>
-          <button className="month-nav-back" onClick={onBackToPicker} title="All months">
-            <ChevronLeft />
-            <span>All months</span>
-          </button>
+          {!isFirstRun && (
+            <button className="month-nav-back" onClick={onBackToPicker} title="All months">
+              <ChevronLeft />
+              <span>All months</span>
+            </button>
+          )}
+          {!isFirstRun && (
           <div className="month-nav">
             <button
               className="month-nav-btn"
@@ -152,6 +163,7 @@ export function DiaryView({
               <ChevronRight />
             </button>
           </div>
+          )}
         </div>
         <div
           style={{
@@ -179,7 +191,19 @@ export function DiaryView({
           {!corpusError && corpus && (
             corpus.todayLog.trim()
               ? <CorpusTranscript todayLog={corpus.todayLog} />
-              : <div className="empty-state"><h2>No entries</h2><p>This month has no diary file yet.</p></div>
+              : isFirstRun
+                ? (
+                  <div className="diary-zero-hero">
+                    <div className="diary-zero-glyph">✍️</div>
+                    <h2>Welcome to your diary</h2>
+                    <p>
+                      Write your first entry below. The diary pipeline classifies
+                      what you log and keeps it verbatim — everything stays on your
+                      server, in plain text you can read and back up.
+                    </p>
+                  </div>
+                )
+                : <div className="empty-state"><h2>No entries</h2><p>This month has no diary file yet.</p></div>
           )}
           {!corpus && !corpusError && (
             <div className="empty-state">
@@ -194,7 +218,7 @@ export function DiaryView({
             <textarea
               className="composer-input"
               rows={1}
-              placeholder="Write today's entry…"
+              placeholder={isFirstRun ? 'Enter your first entry…' : "Write today's entry…"}
               value={draft}
               disabled={busy}
               onChange={(e) => setDraft(e.target.value)}
@@ -214,8 +238,8 @@ export function DiaryView({
           </div>
           {outcome && (
             <div style={{ maxWidth: 760, margin: '0 auto', padding: '4px 4px 0' }}>
-              <span className={`diary-outcome${outcome === 'ok' ? ' is-logged' : outcome.startsWith('error') ? ' is-error' : ''}`}>
-                {outcome === 'ok' ? '● logged to diary' : outcome.startsWith('error') ? `● ${outcome}` : '● skipped — not diary-worthy'}
+              <span className={`diary-outcome${outcome === 'ok' || outcome === 'logged' ? ' is-logged' : outcome.startsWith('error') ? ' is-error' : ''}`}>
+                {outcome === 'ok' || outcome === 'logged' ? '● logged to diary' : outcome === 'stopped' ? '● stopped' : outcome.startsWith('error') ? `● ${outcome}` : '● skipped — not diary-worthy'}
               </span>
             </div>
           )}
@@ -223,6 +247,10 @@ export function DiaryView({
         </div>
 
         <div className="rail">
+          {isFirstRun ? (
+            <p className="rail-empty diary-zero-rail">Entries, open questions, and a timeline will appear here as you write.</p>
+          ) : (
+          <>
           <div className="rail-section">
             <div className="rail-label">This month</div>
             <div className="rail-rows">
@@ -274,6 +302,8 @@ export function DiaryView({
               )}
             </div>
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>
