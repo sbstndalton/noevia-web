@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import type { HealthState, InstalledModel, LiveStats, Project, Provider, RouteRule } from '../types';
-import { createInvitation, createRecovery, deleteProvider, deleteUser, fetchProfile, fetchProviders, fetchUsers, logout, passkeyRegistrationOptions, passkeyRegistrationVerify, removePasskey, setUserDisabled, updateFeatures, updateProfile } from '../api';
-import type { AuthUser, PasskeyInfo } from '../api';
+import { createInvitation, createRecovery, deleteProvider, deleteUser, fetchProfile, fetchProviders, fetchUsers, logout, passkeyRegistrationOptions, passkeyRegistrationVerify, removePasskey, revokeSession, setUserDisabled, updateFeatures, updateProfile } from '../api';
+import type { AuthUser, PasskeyInfo, SessionInfo } from '../api';
 import { startRegistration } from '@simplewebauthn/browser';
 import { ProviderForm } from './ProviderForm';
 import { StoragePicker } from './StoragePicker';
@@ -208,13 +208,22 @@ function StorageCard(): JSX.Element {
   </div>;
 }
 
+/** Short device label from a session's User-Agent (browser-focused). */
+function sessionLabel(ua?: string | null): string {
+  if (!ua) return 'Unknown device';
+  const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : /Firefox\//.test(ua) ? 'Firefox' : 'Browser';
+  const os = /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? 'macOS' : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Linux/.test(ua) ? 'Linux' : '';
+  return `${browser}${os ? ` · ${os}` : ''}`;
+}
+
 function ProfileCard(): JSX.Element {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([]);
+  const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [name, setName] = useState('');
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
-  const refresh = () => fetchProfile().then(p => { setUser(p.user); setName(p.user.displayName); setPasskeys(p.passkeys); if (p.user.role === 'admin') fetchUsers().then(r => setUsers(r.users)); });
+  const refresh = () => fetchProfile().then(p => { setUser(p.user); setName(p.user.displayName); setPasskeys(p.passkeys); setSessions(p.sessions ?? []); if (p.user.role === 'admin') fetchUsers().then(r => setUsers(r.users)); });
   useEffect(() => { void refresh(); }, []);
   const addKey = async () => { const c = await passkeyRegistrationOptions(); const response = await startRegistration({ optionsJSON: c.options }); await passkeyRegistrationVerify(c.challengeToken, response, `Passkey ${passkeys.length + 1}`); refresh(); };
   const invite = async () => { const x = await createInvitation(); const link = `${window.location.origin}/?invite=${encodeURIComponent(x.token)}`; await navigator.clipboard.writeText(link); setNotice('Single-use invitation copied. It expires in 24 hours.'); };
@@ -226,6 +235,18 @@ function ProfileCard(): JSX.Element {
       <div className="model-row"><input className="modal-input" value={name} onChange={e => setName(e.target.value)} /><button className="popup-tab" onClick={() => void updateProfile(name).then(refresh)}>Save name</button></div>
       {passkeys.map(k => <div className="model-row" key={k.id}><span className="model-dot"/><div className="model-name-group"><span className="model-name">{k.name}</span><span className="model-quant">{k.backedUp ? 'synced passkey' : k.deviceType}</span></div><button className="recents-del" onClick={() => void removePasskey(k.id).then(refresh)}>✕</button></div>)}
       <button className="modal-btn secondary" onClick={() => void addKey().catch(() => setNotice('Passkey setup was cancelled.'))}>+ Add passkey</button>
+      {sessions.length > 0 && sessions.map(s => (
+        <div className="model-row" key={s.id}>
+          <span className="model-dot" />
+          <div className="model-name-group">
+            <span className="model-name">{sessionLabel(s.userAgent)}</span>
+            <span className="model-quant">
+              {s.ip || 'unknown IP'} · last seen {new Date(s.lastSeenAt).toLocaleString()}
+            </span>
+          </div>
+          <button className="recents-del" title="Revoke session" onClick={() => void revokeSession(s.id).then(refresh)}>✕</button>
+        </div>
+      ))}
       <button className="modal-btn secondary" onClick={() => void logout().then(() => window.location.reload())}>Sign out</button>
     </div>
     {user.role === 'admin' && <div style={{ marginTop: 24 }}><div className="rail-label" style={{ marginBottom: 12 }}>Users</div><div className="card-list">
