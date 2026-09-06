@@ -16,6 +16,7 @@ interface DiaryViewProps {
   onSelectMonth: (monthId: string | null) => void; // arrows inside a month
   modelLabel: string;
   busy: boolean;
+  inferenceUp?: boolean | null;
   outcome: string | null;
   onSend: (text: string) => void;
   onImported: (day: string | null) => void; // jump to the entry's month + refresh months
@@ -90,6 +91,7 @@ export function DiaryView({
   onSelectMonth,
   modelLabel,
   busy,
+  inferenceUp = null,
   outcome,
   onSend,
   onImported,
@@ -216,6 +218,12 @@ export function DiaryView({
           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-ink)' }}>Auto → {modelLabel}</span>
         </div>
       </div>
+
+      {inferenceUp === false && (
+        <div className="conn-banner" role="status">
+          Inference is unreachable right now — diary entries will fail until it's back.
+        </div>
+      )}
 
       <div className="diary-body">
         <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minWidth: 0 }}>

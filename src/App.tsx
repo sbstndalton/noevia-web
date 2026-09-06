@@ -180,6 +180,12 @@ export default function App(): JSX.Element {
     fetchHealth()
       .then(setHealth)
       .catch(() => setHealth({ inferenceUp: false, diaryUp: null }));
+    // Re-poll health so an inference outage that starts mid-session surfaces
+    // in the Chat/Diary warning banners instead of only failing on send.
+    const t = setInterval(() => {
+      fetchHealth().then(setHealth).catch(() => setHealth((prev) => ({ ...prev, inferenceUp: false })));
+    }, 30_000);
+    return () => clearInterval(t);
   }, [refreshModels, refreshProjects]);
 
   // Live engine stats — the bottom bar refreshes in near-real-time.
@@ -583,6 +589,7 @@ export default function App(): JSX.Element {
           }
           messages={messages}
           streaming={streaming}
+          inferenceUp={health.inferenceUp}
           onSend={sendToCurrent}
           onStop={abortStream}
           onBack={activeProject ? () => setView({ kind: 'project', id: activeProject.id }) : null}
@@ -603,6 +610,7 @@ export default function App(): JSX.Element {
           onSelectMonth={setDiaryMonthId}
           modelLabel="pipeline"
           busy={diaryBusy}
+          inferenceUp={health.inferenceUp}
           outcome={diaryOutcome}
           onSend={(text) => void sendToDiary(text)}
           onImported={(day) => {

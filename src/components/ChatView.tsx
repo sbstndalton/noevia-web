@@ -9,6 +9,7 @@ interface ChatViewProps {
   modelLabel: string;
   messages: Message[];
   streaming: boolean;
+  inferenceUp?: boolean | null;
   onSend: (text: string) => void;
   onStop: () => void;
   onBack: (() => void) | null;
@@ -46,6 +47,7 @@ export function ChatView({
   modelLabel,
   messages,
   streaming,
+  inferenceUp = null,
   onSend,
   onStop,
   onBack,
@@ -99,6 +101,13 @@ export function ChatView({
           </button>
         </div>
       </div>
+
+      {inferenceUp === false && (
+        <div className="conn-banner" role="status">
+          Inference is unreachable right now — messages will fail until it's back.
+          Check the model backend in <button className="conn-banner-link" onClick={onOpenSettings}>Settings</button>.
+        </div>
+      )}
 
       <div className="transcript" ref={scrollRef}>
         {messages.length === 0 && (
