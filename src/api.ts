@@ -70,6 +70,9 @@ export const saveStorage = (body: StorageConnection & { secret?: string }) => pu
 export const testStorage = (body: Partial<StorageConnection> & { secret?: string; useSaved?: boolean }) => postJson<{ ok: true }>('/api/integrations/storage/test', body);
 export const startNextcloud = (baseUrl: string) => postJson<{ flowId: string; loginUrl: string; expiresAt: number }>('/api/integrations/storage/nextcloud/start', { baseUrl });
 export const pollNextcloud = (flowId: string, corpusRoot: string) => postJson<StorageConnection & { pending?: boolean }>('/api/integrations/storage/nextcloud/poll', { flowId, corpusRoot });
+export interface StorageEntry { name: string; path: string; isDir: boolean; size: number | null; ext: string }
+export const browseStorage = (path: string) => getJson<{ entries: StorageEntry[] }>(`/api/integrations/storage/files${path ? `/${path.split('/').map(encodeURIComponent).join('/')}` : ''}`);
+export const readStorageFile = (path: string) => postJson<{ name: string; content: string; truncated: boolean }>('/api/integrations/storage/file', { path });
 export const completeRecovery = (token: string, password: string) => postJson<{ ok: true }>('/api/auth/recovery/complete', { token, password });
 
 async function getJson<T>(url: string): Promise<T> {

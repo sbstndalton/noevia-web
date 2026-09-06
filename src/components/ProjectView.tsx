@@ -2,6 +2,19 @@ import { useState } from 'react';
 import type { JSX } from 'react';
 import type { Project, ProjectFile } from '../types';
 import { PlusIcon } from './Icons';
+import { StorageFileBrowser } from './StorageFileBrowser';
+
+/** First free "name", "name (2)", "name (3)", … avoiding collisions. */
+function uniqueName(name: string, existing: { name: string }[]): string {
+  if (!existing.some((f) => f.name === name)) return name;
+  const dot = name.lastIndexOf('.');
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot) : '';
+  for (let n = 2; ; n++) {
+    const candidate = `${stem} (${n})${ext}`;
+    if (!existing.some((f) => f.name === candidate)) return candidate;
+  }
+}
 
 interface ProjectViewProps {
   project: Project;
@@ -172,6 +185,7 @@ function RailFiles({
   files: ProjectFile[];
   onChange: (files: ProjectFile[]) => void;
 }): JSX.Element {
+  const [browsing, setBrowsing] = useState(false);
   const add = async (list: FileList | null) => {
     if (!list) return;
     const next: ProjectFile[] = [];
@@ -198,15 +212,30 @@ function RailFiles({
           </button>
         </div>
       ))}
-      <label className="modal-filepick">
-        <input
-          type="file"
-          multiple
-          accept=".txt,.md,.json,.csv,.yml,.yaml,.ts,.tsx,.js,.jsx,.py,.sh,.html,.css"
-          onChange={(e) => void add(e.target.files)}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <label className="modal-filepick">
+          <input
+            type="file"
+            multiple
+            accept=".txt,.md,.json,.csv,.yml,.yaml,.ts,.tsx,.js,.jsx,.py,.sh,.html,.css"
+            onChange={(e) => void add(e.target.files)}
+          />
+          <span>Add text files</span>
+        </label>
+        <button
+          className="modal-filepick"
+          style={{ background: 'none', cursor: 'pointer' }}
+          onClick={() => setBrowsing(true)}
+        >
+          <span>Pull from storage</span>
+        </button>
+      </div>
+      {browsing && (
+        <StorageFileBrowser
+          onClose={() => setBrowsing(false)}
+          onPick={(picked) => onChange([...files, ...picked.map((p) => ({ name: uniqueName(p.name, files) , content: p.content }))].slice(0, 20))}
         />
-        <span>Add text files</span>
-      </label>
+      )}
     </div>
   );
 }

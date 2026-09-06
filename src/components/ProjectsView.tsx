@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { JSX } from 'react';
 import type { Project } from '../types';
 import { PlusIcon } from './Icons';
+import { StorageFileBrowser } from './StorageFileBrowser';
 
 interface ProjectsViewProps {
   projects: Project[];
@@ -118,6 +119,7 @@ function CreateProjectModal({
   const [goal, setGoal] = useState('');
   const [instructions, setInstructions] = useState('');
   const [files, setFiles] = useState<{ name: string; content: string }[]>([]);
+  const [browsing, setBrowsing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -132,6 +134,17 @@ function CreateProjectModal({
       next.push({ name: f.name, content: await f.text() });
     }
     setFiles((prev) => [...prev, ...next].slice(0, 10));
+  };
+
+  const addPicked = (picked: { name: string; content: string }[]) => {
+    setFiles((prev) => {
+      const next = [...prev];
+      for (const p of picked) {
+        if (next.some((f) => f.name === p.name)) continue;
+        next.push(p);
+      }
+      return next.slice(0, 10);
+    });
   };
 
   const submit = async () => {
@@ -186,10 +199,18 @@ function CreateProjectModal({
         />
 
         <label className="modal-label">Knowledge files (text files injected into every chat)</label>
-        <label className="modal-filepick">
-          <input type="file" multiple accept=".txt,.md,.json,.csv,.yml,.yaml,.ts,.tsx,.js,.jsx,.py,.sh,.html,.css" onChange={(e) => void addFiles(e.target.files)} />
-          <span>Add text files</span>
-        </label>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <label className="modal-filepick">
+            <input type="file" multiple accept=".txt,.md,.json,.csv,.yml,.yaml,.ts,.tsx,.js,.jsx,.py,.sh,.html,.css" onChange={(e) => void addFiles(e.target.files)} />
+            <span>Add text files</span>
+          </label>
+          <button className="modal-filepick" style={{ background: 'none', cursor: 'pointer' }} onClick={() => setBrowsing(true)}>
+            <span>Pull from storage</span>
+          </button>
+        </div>
+        {browsing && (
+          <StorageFileBrowser onClose={() => setBrowsing(false)} onPick={addPicked} />
+        )}
         {files.length > 0 && (
           <div className="modal-files">
             {files.map((f, i) => (
