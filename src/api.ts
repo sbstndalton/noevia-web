@@ -298,6 +298,14 @@ export function requestQuestionReflection(question: string): Promise<InsightRefl
   return postJson('/api/diary/insights/about-question', { question });
 }
 
+export function setInsightsBadge(enabled: boolean): Promise<{ insightsBadge: boolean }> {
+  return putJson('/api/profile/insights-badge', { enabled });
+}
+
+export function markInsightsSeen(): Promise<{ ok: boolean }> {
+  return apiFetch('/api/profile/insights-badge', { method: 'DELETE' }).then((r) => { if (!r.ok) throw new Error('failed'); return r.json(); });
+}
+
 export function fetchChatHistory(chatId: string): Promise<HistoryEntry[]> {
   return getJson<{ history: HistoryEntry[] }>(
     `/api/chats/${encodeURIComponent(chatId)}/history`,

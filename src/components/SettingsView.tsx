@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import type { HealthState, InstalledModel, LiveStats, Project, Provider, RouteRule } from '../types';
-import { createInvitation, createRecovery, deleteProvider, deleteUser, fetchProfile, fetchProviders, fetchUsers, logout, passkeyRegistrationOptions, passkeyRegistrationVerify, removePasskey, revokeSession, setUserDisabled, updateFeatures, updateProfile } from '../api';
+import { createInvitation, createRecovery, deleteProvider, deleteUser, fetchProfile, fetchProviders, fetchUsers, logout, passkeyRegistrationOptions, passkeyRegistrationVerify, removePasskey, revokeSession, setInsightsBadge, setUserDisabled, updateFeatures, updateProfile } from '../api';
 import type { AuthUser, PasskeyInfo, SessionInfo } from '../api';
 import { startRegistration } from '@simplewebauthn/browser';
 import { ProviderForm } from './ProviderForm';
@@ -198,7 +198,41 @@ function DiaryAddonCard({ enabled, onChange }: { enabled: boolean; onChange: (en
   };
   return <div><div className="rail-label" style={{ marginBottom: 12 }}>Optional apps</div><div className="card-list">
     <div className="model-row"><span className={`model-dot${enabled ? '' : ' down'}`} /><div className="model-name-group"><span className="model-name">Diary</span><span className="model-quant">Private journaling, memory, and configurable corpus storage</span></div><button className="popup-tab" disabled={busy} onClick={() => void toggle()}>{busy ? 'Saving…' : enabled ? 'Disable' : 'Enable'}</button></div>
+    {enabled && <InsightsBadgeRow />}
   </div></div>;
+}
+
+/** Opt-in badge row — proactive surfacing is never assumed; this is the only switch. */
+function InsightsBadgeRow(): JSX.Element {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let stale = false;
+    fetchProfile().then((p) => {
+      if (!stale) setEnabled(!!(p as { insightsBadge?: boolean }).insightsBadge);
+    }).catch(() => undefined);
+    return () => { stale = true; };
+  }, []);
+  const toggle = async () => {
+    const next = !(enabled ?? false);
+    setBusy(true);
+    try {
+      const result = await setInsightsBadge(next);
+      setEnabled(result.insightsBadge);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="model-row">
+      <span className={`model-dot${enabled ? '' : ' down'}`} />
+      <div className="model-name-group">
+        <span className="model-name">Insights badge</span>
+        <span className="model-quant">A subtle “new reflections” dot on the Diary tab when your open questions or timeline change. Off by default.</span>
+      </div>
+      <button className="popup-tab" disabled={busy || enabled === null} onClick={() => void toggle()}>{busy ? 'Saving…' : enabled ? 'Disable' : 'Enable'}</button>
+    </div>
+  );
 }
 
 function StorageCard(): JSX.Element {

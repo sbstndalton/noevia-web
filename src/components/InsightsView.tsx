@@ -11,6 +11,7 @@ import { ChevronLeft } from './Icons';
 interface InsightsViewProps {
   onBack: () => void; // back to the diary picker
   onOpenMonth: (monthId: string) => void; // jump to a source entry's month
+  onSeen: () => void; // clears the opt-in sidebar badge (server-side seen marker)
 }
 
 /**
@@ -22,7 +23,7 @@ interface InsightsViewProps {
  * distinct panel — it is never mixed into the diary transcript, and nothing
  * on this screen writes to the corpus.
  */
-export function InsightsView({ onBack, onOpenMonth }: InsightsViewProps): JSX.Element {
+export function InsightsView({ onBack, onOpenMonth, onSeen }: InsightsViewProps): JSX.Element {
   const [standing, setStanding] = useState<StandingPayload | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reflection, setReflection] = useState<InsightReflection | null>(null);
@@ -37,9 +38,13 @@ export function InsightsView({ onBack, onOpenMonth }: InsightsViewProps): JSX.El
       .catch(() => {
         if (!stale) setLoadError('Could not reach the diary sidecar.');
       });
+    // Visiting Insights is what clears the opt-in badge — server-side marker,
+    // so it survives reloads and other sessions.
+    onSeen();
     return () => {
       stale = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const reflect = () => {

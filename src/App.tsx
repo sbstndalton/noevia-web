@@ -7,6 +7,7 @@ import {
   deleteProject,
   fetchChatHistory,
   fetchDiaryCorpus,
+  markInsightsSeen,
   fetchDiaryMonth,
   fetchDiarySource,
   fetchHealth,
@@ -571,6 +572,7 @@ export default function App(): JSX.Element {
         onDeleteProject={handleDeleteProject}
         onOpenDiary={() => setView({ kind: 'diary' })}
         diaryEnabled={diaryEnabled}
+        insightsFresh={diaryEnabled && !!health.insightsFresh}
         onOpenSettings={() => setView({ kind: 'settings' })}
         health={health}
         theme={theme}
@@ -665,6 +667,9 @@ export default function App(): JSX.Element {
         <InsightsView
           onBack={() => setDiaryScreen('picker')}
           onOpenMonth={(monthId) => { setDiaryScreen('month'); setDiaryMonthId(monthId); }}
+          onSeen={() => {
+            markInsightsSeen().then(() => setHealth((h) => ({ ...h, insightsFresh: false }))).catch(() => undefined);
+          }}
         />
       )}
 

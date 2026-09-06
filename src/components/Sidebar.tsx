@@ -25,6 +25,8 @@ interface SidebarProps {
   onDeleteProject: (id: string) => void;
   onOpenDiary: () => void;
   diaryEnabled: boolean;
+  /** Opt-in: standing sections have activity newer than the last Insights visit. */
+  insightsFresh?: boolean;
   onOpenSettings: () => void;
   health: HealthState;
   theme: 'light' | 'dark';
@@ -52,6 +54,7 @@ export function Sidebar({
   onDeleteProject,
   onOpenDiary,
   diaryEnabled,
+  insightsFresh = false,
   onOpenSettings,
   health,
   theme,
@@ -251,6 +254,16 @@ export function Sidebar({
       >
         <span className="nav-emoji" role="img" aria-label="Diary">📔</span>
         <span className="nav-name">Diary</span>
+        {insightsFresh && activeView !== 'diary' && (
+          <span
+            aria-label="New insights available"
+            title="Your open questions or timeline have new activity — Insights may have something worth reading"
+            style={{
+              width: 7, height: 7, borderRadius: 'var(--radius-pill)',
+              background: 'var(--accent-2)', marginLeft: 'auto', flexShrink: 0,
+            }}
+          />
+        )}
       </button>}
 
       <div className="divider" />
