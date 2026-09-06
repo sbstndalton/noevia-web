@@ -437,7 +437,10 @@ export default function App(): JSX.Element {
 
   const handleCreateProject = useCallback(
     async (body: { name: string; goal: string; instructions: string; files: ProjectFile[] }) => {
-      const project = await createProject(body);
+      // Honor the setup wizard's "Auto Fast/Smart for new projects" preference.
+      const defaultRouting =
+        localStorage.getItem('cowork-default-routing') === 'auto' ? ('auto' as const) : undefined;
+      const project = await createProject({ ...body, routing: defaultRouting });
       refreshProjects();
       setView({ kind: 'project', id: project.id });
     },

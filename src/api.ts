@@ -32,11 +32,18 @@ export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {})
   return response;
 }
 
-export interface AuthUser { id: string; username: string; displayName: string; role: 'admin' | 'member'; disabled: boolean; diaryEnabled: boolean }
+export interface AuthUser { id: string; username: string; displayName: string; role: 'admin' | 'member'; disabled: boolean; diaryEnabled: boolean; onboarded?: boolean }
 export const setupStatus = (): Promise<{ configured: boolean; publicOrigin: string }> => fetch('/api/setup/status').then(r => r.json());
 export const completeSetup = (body: { setupCode: string; publicOrigin: string; username: string; displayName: string; password: string; diaryEnabled: boolean }) => postJson<{ user: AuthUser }>('/api/setup/complete', body);
 export const passwordLogin = (username: string, password: string) => postJson<{ user: AuthUser }>('/api/auth/login/password', { username, password });
 export const fetchSession = () => getJson<{ user: AuthUser }>('/api/auth/session');
+/** Session probe that stays quiet on 401 (no cowork:unauthorized event) — used
+ *  by the setup wizard, where "no session yet" is the normal fresh-deployment
+ *  case, not an auth failure. Returns the user, or null when signed out. */
+export const probeSession = (): Promise<AuthUser | null> =>
+  fetch('/api/auth/session', { credentials: 'same-origin' })
+    .then((r) => (r.ok ? r.json().then((j: { user: AuthUser }) => j.user) : null))
+    .catch(() => null);
 export const logout = () => postJson<{ ok: true }>('/api/auth/logout', {});
 export const passkeyLoginOptions = (username: string) => postJson<{ options: PublicKeyCredentialRequestOptionsJSON; challengeToken: string }>('/api/auth/login/passkey/options', { username });
 export const passkeyLoginVerify = (challengeToken: string, response: unknown) => postJson<{ user: AuthUser }>('/api/auth/login/passkey/verify', { challengeToken, response });
@@ -47,6 +54,8 @@ export interface PasskeyInfo { id: string; name: string; deviceType: string; bac
 export const fetchProfile = () => getJson<{ user: AuthUser; passkeys: PasskeyInfo[] }>('/api/profile');
 export const updateProfile = (displayName: string) => apiFetch('/api/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ displayName }) }).then(r => { if (!r.ok) throw new Error('profile update failed'); return r.json(); });
 export const updateFeatures = (diaryEnabled: boolean) => putJson<{ diaryEnabled: boolean }>('/api/profile/features', { diaryEnabled });
+/** Marks the setup wizard as finished for this account (resumability gate). */
+export const completeOnboarding = () => postJson<{ onboarded: boolean }>('/api/profile/onboarding', {});
 export const removePasskey = (id: string) => apiFetch(`/api/auth/passkeys/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(r => r.json());
 export const fetchUsers = () => getJson<{ users: AuthUser[] }>('/api/admin/users');
 export const createInvitation = (role: 'admin' | 'member' = 'member') => postJson<{ token: string; expiresAt: number }>('/api/admin/invitations', { role });
@@ -116,6 +125,7 @@ export function createProject(body: {
   goal?: string;
   instructions?: string;
   files?: { name: string; content: string }[];
+  routing?: 'manual' | 'auto';
 }): Promise<Project> {
   return postJson('/api/projects', body);
 }

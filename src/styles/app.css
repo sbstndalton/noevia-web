@@ -70,6 +70,24 @@ body { margin: 0; background: var(--bg); }
 .auth-card .auth-option span { display: grid; gap: 3px; }
 .auth-card .auth-option small { display: block; font-weight: 400; }
 
+/* Setup wizard */
+.wizard-card { width: min(460px, 100%); }
+.wizard-progress {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-faint);
+}
+.wizard-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--border);
+}
+.wizard-dot.done { background: var(--accent-2-soft); }
+.wizard-dot.active { background: var(--accent-2); }
+.wizard-step-label { margin-left: auto; font-variant-numeric: tabular-nums; }
+.wizard-card code {
+  padding: 1px 5px; border-radius: 5px;
+  background: var(--bg-input); font-size: 12px;
+}
+
 .app {
   display: flex;
   height: 100vh;

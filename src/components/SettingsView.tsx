@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import type { HealthState, InstalledModel, LiveStats, Project, Provider, RouteRule } from '../types';
-import { createInvitation, createProvider, createRecovery, deleteProvider, deleteUser, fetchProfile, fetchProviders, fetchStorage, fetchUsers, logout, passkeyRegistrationOptions, passkeyRegistrationVerify, pollNextcloud, removePasskey, saveStorage, setUserDisabled, startNextcloud, testProvider, testStorage, updateFeatures, updateProfile } from '../api';
-import type { AuthUser, PasskeyInfo, StorageConnection } from '../api';
+import { createInvitation, createRecovery, deleteProvider, deleteUser, fetchProfile, fetchProviders, fetchUsers, logout, passkeyRegistrationOptions, passkeyRegistrationVerify, removePasskey, setUserDisabled, updateFeatures, updateProfile } from '../api';
+import type { AuthUser, PasskeyInfo } from '../api';
 import { startRegistration } from '@simplewebauthn/browser';
+import { ProviderForm } from './ProviderForm';
+import { StoragePicker } from './StoragePicker';
 
 interface SettingsViewProps {
   models: InstalledModel[];
@@ -186,21 +188,10 @@ function DiaryAddonCard({ enabled, onChange }: { enabled: boolean; onChange: (en
 }
 
 function StorageCard(): JSX.Element {
-  const [value, setValue] = useState<StorageConnection>({ kind: 'local', baseUrl: '', username: '', corpusRoot: '' });
-  const [secret, setSecret] = useState(''); const [message, setMessage] = useState('');
-  useEffect(() => { void fetchStorage().then(setValue); }, []);
-  const patch = (next: Partial<StorageConnection>) => setValue(v => ({ ...v, ...next }));
-  const connectNextcloud = async () => {
-    const flow = await startNextcloud(value.baseUrl); window.open(flow.loginUrl, '_blank', 'noopener,noreferrer'); setMessage('Grant access in Nextcloud, then click Finish connection.'); sessionStorage.setItem('cowork-nextcloud-flow', flow.flowId);
-  };
-  const finishNextcloud = async () => { const id = sessionStorage.getItem('cowork-nextcloud-flow') || ''; const result = await pollNextcloud(id, value.corpusRoot || 'Cowork/Diary'); if (result.pending) setMessage('Still waiting for Nextcloud approval.'); else { setValue(result); setMessage('Nextcloud connected.'); sessionStorage.removeItem('cowork-nextcloud-flow'); } };
-  return <div><div className="rail-label" style={{ marginBottom: 12 }}>Diary storage</div><div className="card-list" style={{ padding: 12, gap: 8 }}>
-    <select className="modal-input" value={value.kind} onChange={e => patch({ kind: e.target.value as StorageConnection['kind'] })}><option value="local">Local storage</option><option value="nextcloud">Nextcloud</option><option value="webdav">Generic WebDAV</option></select>
-    {value.kind !== 'local' && <><input className="modal-input" placeholder={value.kind === 'nextcloud' ? 'https://cloud.example.com' : 'WebDAV base URL'} value={value.baseUrl} onChange={e => patch({ baseUrl: e.target.value })}/><input className="modal-input" placeholder="Corpus folder" value={value.corpusRoot} onChange={e => patch({ corpusRoot: e.target.value })}/></>}
-    {value.kind === 'webdav' && <><input className="modal-input" placeholder="Username" value={value.username} onChange={e => patch({ username: e.target.value })}/><input className="modal-input" type="password" placeholder={value.secretConfigured ? 'App password configured' : 'App password'} value={secret} onChange={e => setSecret(e.target.value)}/></>}
-    <div style={{ display: 'flex', gap: 8 }}>{value.kind === 'nextcloud' ? <><button className="modal-btn primary" onClick={() => void connectNextcloud().catch(e => setMessage(String(e)))}>Grant Nextcloud access</button><button className="modal-btn secondary" onClick={() => void finishNextcloud().catch(e => setMessage(String(e)))}>Finish connection</button></> : <><button className="modal-btn primary" onClick={() => void saveStorage({ ...value, secret }).then(v => { setValue(v); setSecret(''); setMessage('Storage saved.'); })}>Save</button><button className="modal-btn secondary" onClick={() => void testStorage(value.secretConfigured && !secret ? { useSaved: true } : { ...value, secret }).then(() => setMessage('Connection successful.')).catch(e => setMessage(String(e)))}>Test</button></>}</div>
-    {message && <p className="route-note">{message}</p>}
-  </div></div>;
+  return <div>
+    <div className="rail-label" style={{ marginBottom: 12 }}>Diary storage</div>
+    <StoragePicker />
+  </div>;
 }
 
 function ProfileCard(): JSX.Element {
@@ -232,49 +223,17 @@ function ProfileCard(): JSX.Element {
 }
 
 /** Connect-a-provider flow (step 9): list connected OpenAI-compatible
- *  endpoints, add one (label / base URL / API key), and remove non-default ones.
+ *  endpoints, add one via the shared ProviderForm, and remove non-default ones.
  *  Keys live server-side only — the list shows masked hints, never plaintext. */
 function ProvidersCard(): JSX.Element {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [adding, setAdding] = useState(false);
-  const [label, setLabel] = useState('');
-  const [baseUrl, setBaseUrl] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [defaultModel, setDefaultModel] = useState('');
-  const [shared, setShared] = useState(false);
-  const presets: Record<string, { label: string; url: string }> = {
-    custom: { label: '', url: '' }, openai: { label: 'OpenAI', url: 'https://api.openai.com/v1' },
-    openrouter: { label: 'OpenRouter', url: 'https://openrouter.ai/api/v1' }, ollama: { label: 'Ollama', url: 'http://host.docker.internal:11434/v1' },
-    lmstudio: { label: 'LM Studio', url: 'http://host.docker.internal:1234/v1' }, lemonade: { label: 'Lemonade', url: 'http://host.docker.internal:13305/v1' },
-  };
-  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const refresh = () => {
     fetchProviders().then((r) => setProviders(r.providers || [])).catch(() => setErr('Could not load providers'));
   };
   useEffect(refresh, []);
-
-  const submit = async () => {
-    if (!label.trim() || !baseUrl.trim() || busy) return;
-    setBusy(true);
-    setErr(null);
-    try {
-      await testProvider({ baseUrl: baseUrl.trim(), apiKey: apiKey.trim() || undefined });
-      await createProvider({ label: label.trim(), baseUrl: baseUrl.trim(), apiKey: apiKey.trim() || undefined, defaultModel: defaultModel.trim() || undefined, shared });
-      setLabel('');
-      setBaseUrl('');
-      setApiKey('');
-      setDefaultModel('');
-      setShared(false);
-      setAdding(false);
-      refresh();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'connect failed');
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const remove = async (id: string) => {
     try {
@@ -310,38 +269,16 @@ function ProvidersCard(): JSX.Element {
       </div>
 
       {adding ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
-          <select className="modal-input" defaultValue="custom" onChange={e => { const p = presets[e.target.value]; setLabel(p.label); setBaseUrl(p.url); }}><option value="custom">Custom OpenAI-compatible</option><option value="openai">OpenAI</option><option value="openrouter">OpenRouter</option><option value="ollama">Ollama</option><option value="lmstudio">LM Studio</option><option value="lemonade">Lemonade</option></select>
-          <input
-            className="modal-input"
-            placeholder="Name (e.g. OpenRouter)"
-            value={label}
-            autoFocus
-            onChange={(e) => setLabel(e.target.value)}
-          />
-          <input
-            className="modal-input"
-            placeholder="Base URL (e.g. https://openrouter.ai/api/v1)"
-            value={baseUrl}
-            onChange={(e) => setBaseUrl(e.target.value)}
-          />
-          <input
-            className="modal-input"
-            type="password"
-            placeholder="API key (stored server-side only)"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-          />
-          <input className="modal-input" placeholder="Default model (optional)" value={defaultModel} onChange={e => setDefaultModel(e.target.value)} />
-          <label className="route-note"><input type="checkbox" checked={shared} onChange={e => setShared(e.target.checked)} /> Share as an administrator-managed default</label>
-          {err && <p className="modal-err">{err}</p>}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <button className="modal-btn secondary" onClick={() => setAdding(false)}>Cancel</button>
-            <button className="modal-btn primary" disabled={!label.trim() || !baseUrl.trim() || busy} onClick={() => void submit()}>
-              {busy ? 'Connecting…' : 'Connect provider'}
-            </button>
-          </div>
-        </div>
+        <ProviderForm
+          autoFocus
+          allowShared
+          cancelLabel="Cancel"
+          onCancel={() => setAdding(false)}
+          onConnected={() => {
+            setAdding(false);
+            refresh();
+          }}
+        />
       ) : (
         <>
           {err && <p className="modal-err">{err}</p>}
