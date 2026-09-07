@@ -19,7 +19,7 @@ export function AccountMenu({ onSettings, onToggleTheme, theme }: { onSettings:(
   return <div className="account-area" ref={ref}>
     {open&&<div className="account-popover" aria-label="Account options"><div className="account-popover-head"><strong>{name}</strong><span>Personal workspace</span></div>
       <button onClick={()=>{setOpen(false);onSettings();}}><ShellIcon name="settings"/>Settings</button>
-      <button onClick={onToggleTheme}><ShellIcon name="sun"/>{theme==='light'?'Switch to dark':'Switch to light'}</button>
+      <button onClick={onToggleTheme}><ShellIcon name="sun"/>{theme==='light'?'Polymetal Night':'Polymetal Day'}</button>
       <button disabled title="Not connected in this preview"><ShellIcon name="grid"/>Usage & activity <small>Preview</small></button>
       <div className="account-divider"/>
       <button onClick={()=>void logout().then(()=>window.location.reload()).catch(()=>setError('Could not sign out. Please retry.'))}><ShellIcon name="arrow"/>Log out</button>

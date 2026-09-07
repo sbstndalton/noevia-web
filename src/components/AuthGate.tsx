@@ -29,7 +29,7 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
           setScreen((cur) => (cur === 'wizard-resume' ? cur : 'ready'));
         })
         .catch(() => setScreen('login'));
-    }).catch(() => { setError('Could not reach Cowork.'); setScreen('login'); });
+    }).catch(() => { setError('Could not reach noevia.'); setScreen('login'); });
     const lock = () => setScreen('login');
     window.addEventListener('cowork:unauthorized', lock);
     return () => window.removeEventListener('cowork:unauthorized', lock);
@@ -72,11 +72,11 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
   };
 
   if (screen === 'ready') return <>{children}</>;
-  if (screen === 'checking') return <main className="auth-screen"><div className="auth-card"><h1>Opening Cowork…</h1></div></main>;
+  if (screen === 'checking') return <main className="auth-screen"><div className="auth-card"><h1>Opening noevia…</h1></div></main>;
   if (screen === 'wizard') return <SetupWizard mode="fresh" onFinished={() => setScreen('ready')} />;
   if (screen === 'wizard-resume') return <SetupWizard mode="resume" onFinished={() => setScreen('ready')} />;
   if (screen === 'secure') return <main className="auth-screen"><section className="auth-card">
-    <div className="auth-mark" aria-hidden="true">C</div><h1>Secure your account</h1>
+    <div className="auth-mark" aria-hidden="true">n</div><h1>Secure your account</h1>
     <p>Passkeys are the recommended way to sign in using your device or security key.</p>
     {error && <p className="auth-error" role="alert">{error}</p>}
     <button type="button" disabled={busy} onClick={() => void addPasskey()}>{busy ? 'Waiting for your device…' : 'Create a passkey'}</button>
@@ -86,8 +86,8 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
   return (
     <main className="auth-screen">
       <form className="auth-card" onSubmit={(event) => void submit(event)}>
-        <div className="auth-mark" aria-hidden="true">C</div>
-        <h1>{recovery ? 'Reset your password' : invite ? 'Create your Cowork account' : 'Sign in to Cowork'}</h1>
+        <div className="auth-mark" aria-hidden="true">n</div>
+        <h1>{recovery ? 'Reset your password' : invite ? 'Create your noevia account' : 'Sign in to noevia'}</h1>
         <p>{recovery ? 'Choose a new password. All existing sessions will be signed out.' : 'Use your password or the recommended passkey option.'}</p>
         {!recovery && <><label htmlFor="username">Username</label><input id="username" autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} required /></>}
         {invite && <><label htmlFor="display-name">Display name</label><input id="display-name" autoComplete="name" value={displayName} onChange={e => setDisplayName(e.target.value)} /></>}

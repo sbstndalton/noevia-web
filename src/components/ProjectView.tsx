@@ -205,7 +205,7 @@ function RailFiles({
           </span>
           <button
             className="popup-tab"
-            style={{ border: '1px solid var(--border)', color: 'var(--accent)' }}
+            style={{ border: '1px solid var(--border)', color: 'var(--accent-text)' }}
             onClick={() => onChange(files.filter((_, j) => j !== i))}
           >
             remove

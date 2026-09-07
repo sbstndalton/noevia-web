@@ -7,6 +7,7 @@ import './styles/app.css';
 import './styles/diary-tab.css';
 import './styles/popup.css';
 import './styles/shell.css';
+import './styles/noevia.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -62,7 +62,7 @@ export function ProjectsView({ projects, onOpenProject, onCreate, onDelete }: Pr
                     <span className="project-card-del" onClick={(e) => e.stopPropagation()}>
                       <button
                         className="popup-tab"
-                        style={{ border: '1px solid var(--accent)', color: 'var(--accent)' }}
+                        style={{ border: '1px solid var(--accent)', color: 'var(--accent-text)' }}
                         onClick={() => {
                           onDelete(p.id);
                           setConfirmDelete(null);

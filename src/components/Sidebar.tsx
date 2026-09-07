@@ -110,7 +110,7 @@ export function Sidebar({
   };
   return (
     <div className={`sidebar${activeView === 'diary' ? ' diary-sidebar' : ''}`}>
-      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>Cowork</span></div><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div>
+      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div>
       <div className="app-mode-switch" aria-label="Workspace mode"><button className="is-selected" aria-pressed="true"><ShellIcon name="chat"/>Chat</button><button onClick={onEnterCode} aria-pressed="false"><ShellIcon name="code"/>Code</button></div>
       {searching&&<input className="shell-search" autoFocus aria-label="Search projects and chats" placeholder="Search projects and chats…" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');}}}/>}
 
@@ -129,7 +129,7 @@ export function Sidebar({
         </button>
       </div>
 
-      <nav className="shell-extra-nav" aria-label="Explore Cowork">{[['Scheduled','clock'],['Plugins','plugins'],['Explore','explore']].map(([label,icon])=><button className="nav-item" key={label} onClick={()=>onPreview(label)}><ShellIcon name={icon}/><span className="nav-name">{label}</span></button>)}</nav>
+      <nav className="shell-extra-nav" aria-label="Explore noevia">{[['Scheduled','clock'],['Plugins','plugins'],['Explore','explore']].map(([label,icon])=><button className="nav-item" key={label} onClick={()=>onPreview(label)}><ShellIcon name={icon}/><span className="nav-name">{label}</span></button>)}</nav>
       <div className="spaces">
         <div className="section-label">Projects</div>
         {projects.filter(p=>p.name.toLowerCase().includes(query.toLowerCase())).map((p) => (

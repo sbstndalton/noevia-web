@@ -51,12 +51,13 @@ function uid(): string {
 
 function loadTheme(): 'light' | 'dark' {
   const stored = localStorage.getItem('cowork-theme');
-  return stored === 'dark' ? 'dark' : 'light';
+  return stored === 'light' ? 'light' : 'dark';
 }
 
 export default function App(): JSX.Element {
   const [theme, setTheme] = useState<'light' | 'dark'>(loadTheme);
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account'); return fresh; });
+  const [inspectorOpen, setInspectorOpen] = useState(false);
   const [appMode, setAppMode] = useState<'chat'|'code'>('chat');
   const [view, setView] = useState<View>({ kind: 'projects' });
   const [projects, setProjects] = useState<Project[]>([]);
@@ -85,6 +86,7 @@ export default function App(): JSX.Element {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('cowork-theme', theme);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#181A1F' : '#EAECEE');
   }, [theme]);
 
   // Switching chats/views away from an in-flight generation, or unmounting,
@@ -544,8 +546,10 @@ export default function App(): JSX.Element {
       </div>
       {view.kind !== 'diary' && <StatsBar stats={stats} />}
       </div>
+      {view.kind !== 'diary' && <button className="inspector-toggle" aria-expanded={inspectorOpen} aria-controls="noevia-inspector" aria-label={inspectorOpen?'Close context inspector':'Open context inspector'} onClick={()=>setInspectorOpen(!inspectorOpen)}>☷</button>}
+      {view.kind !== 'diary' && inspectorOpen && <aside id="noevia-inspector" className="noevia-inspector"><h2>Context & models</h2><h3>AI parameters</h3><p>Routing: {activeProject?.routing === 'auto'?'Auto · Fast / Smart':'Manual'}</p><p>Model: {activeProject?.model || models.find(m=>m.loaded)?.name || 'Not selected'}</p><button onClick={()=>setPopupOpen(true)}>Configure models & routing</button><h3>Linked knowledge</h3>{activeProject ? <><p>{activeProject.name}</p>{activeProject.files.length ? <ul>{activeProject.files.map((file,i)=><li key={i}>{file.name}</li>)}</ul>:<p>No knowledge files linked.</p>}<p>{activeProject.memories.length} saved memories</p></>:<p>Open a project to see its linked knowledge and memories.</p>}</aside>}
       </div>
-      {appMode === 'code' && <CodingWorkspace onExit={() => setAppMode('chat')} onSettings={() => setSettingsOpen(true)} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/>}
+      {appMode === 'code'  && <CodingWorkspace onExit={() => setAppMode('chat')} onSettings={() => setSettingsOpen(true)} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/>}
       {settingsOpen && (
         <SettingsShell
           onClose={() => setSettingsOpen(false)}

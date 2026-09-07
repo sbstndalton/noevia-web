@@ -173,7 +173,7 @@ function SwitchTab({
               flex: 1,
               border: '1px solid',
               borderColor: activeProject.routing === 'auto' ? 'var(--accent)' : 'var(--border)',
-              color: activeProject.routing === 'auto' ? 'var(--accent-ink)' : 'var(--text-muted)',
+              color: activeProject.routing === 'auto' ? 'var(--accent-ink)' : 'var(--text-secondary)',
               background: activeProject.routing === 'auto' ? 'var(--accent-2-soft)' : 'transparent',
             }}
             disabled={busy !== null}
@@ -188,7 +188,7 @@ function SwitchTab({
               flex: 1,
               border: '1px solid',
               borderColor: activeProject.routing !== 'auto' ? 'var(--accent)' : 'var(--border)',
-              color: activeProject.routing !== 'auto' ? 'var(--accent-ink)' : 'var(--text-muted)',
+              color: activeProject.routing !== 'auto' ? 'var(--accent-ink)' : 'var(--text-secondary)',
               background: activeProject.routing !== 'auto' ? 'var(--accent-2-soft)' : 'transparent',
             }}
             disabled={busy !== null}
@@ -215,7 +215,7 @@ function SwitchTab({
           </span>
           {(['fast', 'smart'] as const).map((role) => (
             <label key={role} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-              <span style={{ width: 44, fontWeight: 600, color: 'var(--text-muted)' }}>{role}</span>
+              <span style={{ width: 44, fontWeight: 600, color: 'var(--text-secondary)' }}>{role}</span>
               <select
                 className="modal-input"
                 style={{ flex: 1, padding: '4px 8px' }}
@@ -232,7 +232,7 @@ function SwitchTab({
                   <option value={autoInfo.roles[role]}>{autoInfo.roles[role]}</option>
                 )}
               </select>
-              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+              <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
                 {models.find((m) => m.name === (pendingRoles[role] ?? autoInfo?.roles?.[role]))?.loaded ? 'loaded' : ''}
               </span>
             </label>
@@ -251,7 +251,7 @@ function SwitchTab({
               style={{
                 border: '1px solid',
                 borderColor: activeProviderId === p.id ? 'var(--accent-2)' : 'var(--border)',
-                color: activeProviderId === p.id ? 'var(--accent-ink)' : 'var(--text-muted)',
+                color: activeProviderId === p.id ? 'var(--accent-ink)' : 'var(--text-secondary)',
                 background: activeProviderId === p.id ? 'var(--accent-2-soft)' : 'transparent',
               }}
               disabled={!activeProject || busy !== null}
@@ -510,7 +510,7 @@ function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
               <>
                 <button
                   className="popup-tab"
-                  style={{ border: '1px solid var(--accent)', color: 'var(--accent)' }}
+                  style={{ border: '1px solid var(--accent)', color: 'var(--accent-text)' }}
                   disabled={busy !== null}
                   onClick={() => void act('delete', m.name)}
                 >
@@ -532,7 +532,7 @@ function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
                 </button>
                 <button
                   className="popup-tab"
-                  style={{ border: '1px solid var(--border)', color: 'var(--accent)' }}
+                  style={{ border: '1px solid var(--border)', color: 'var(--accent-text)' }}
                   disabled={busy !== null}
                   onClick={() => setConfirmName(m.name)}
                 >

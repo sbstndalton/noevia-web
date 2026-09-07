@@ -120,7 +120,7 @@ export function StorageFileBrowser({
                     className="popup-tab"
                     style={{
                       border: added.includes(e.path) ? '1px solid var(--border)' : '1px solid var(--accent)',
-                      color: added.includes(e.path) ? 'var(--text-dim, inherit)' : 'var(--accent)',
+                      color: added.includes(e.path) ? 'var(--text-dim, inherit)' : 'var(--accent-text)',
                     }}
                     disabled={added.includes(e.path)}
                     onClick={() => void addFile(e)}

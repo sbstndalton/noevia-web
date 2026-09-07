@@ -138,7 +138,7 @@ export function ChatView({
                   {m.toolCalls && m.toolCalls.length > 0 ? <ToolChips calls={m.toolCalls} /> : null}
                   {m.content ? (
                     <div className="bubble">
-                      <p style={m.error ? { color: 'var(--accent)' } : undefined}>{m.content}</p>
+                      <p style={m.error ? { color: 'var(--accent-text)' } : undefined}>{m.content}</p>
                       {m.error && isLast && (
                         <button
                           className="msg-retry"

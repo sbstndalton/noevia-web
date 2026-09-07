@@ -177,13 +177,13 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
   return (
     <main className="auth-screen">
       <section className="auth-card wizard-card">
-        <div className="auth-mark" aria-hidden="true">C</div>
+        <div className="auth-mark" aria-hidden="true">n</div>
         <h1>{STEP_TITLES[step]}</h1>
         {progress}
 
         {step === 'account' && (
           <form onSubmit={(e) => void createAccount(e)}>
-            <p>Welcome to Cowork. This walks through the essentials — every later step can be skipped and finished later in Settings.</p>
+            <p>Welcome to noevia. This walks through the essentials — every later step can be skipped and finished later in Settings.</p>
             <label htmlFor="wiz-code">One-time setup code</label>
             <input id="wiz-code" type="password" value={setupCode} onChange={(e) => setSetupCode(e.target.value)} required />
             <small>Find it in the container logs (<code>docker compose logs web</code>) — it is printed once at first start.</small>
@@ -210,7 +210,7 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
 
         {step === 'provider' && (
           <div>
-            <p>Cowork needs an OpenAI-compatible chat endpoint to talk to. You can also run everything on a local model server.</p>
+            <p>noevia needs an OpenAI-compatible chat endpoint to talk to. You can also run everything on a local model server.</p>
             <ProviderForm
               autoFocus
               submitLabel="Connect provider"
@@ -245,7 +245,7 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
         {step === 'models' && (
           <div>
             <p>
-              Cowork can manage local models through a model server (Lemonade). This is
+              noevia can manage local models through a model server (Lemonade). This is
               configured through the deployment environment, not the app: set{' '}
               <code>MODEL_MANAGER_KIND</code> and <code>MODEL_MANAGER_BASE_URL</code> in
               your <code>.env</code> file, then restart the web container. Nothing to
@@ -272,7 +272,7 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
               <input type="checkbox" checked={autoRouting} onChange={(e) => setAutoRouting(e.target.checked)} />
               <span>
                 <strong>Use Auto Fast/Smart routing for new projects</strong>
-                <small>Lets Cowork pick a lighter or heavier model per message. Configure the models in the model popup later.</small>
+                <small>Lets noevia pick a lighter or heavier model per message. Configure the models in the model popup later.</small>
               </span>
             </label>
             {error && <p className="auth-error" role="alert">{error}</p>}
@@ -302,7 +302,7 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
             <p>You're all set. You can finish configuration any time in Settings.</p>
             {error && <p className="auth-error" role="alert">{error}</p>}
             <button type="button" disabled={busy} onClick={() => void finish()}>
-              Start using Cowork
+              Start using noevia
             </button>
           </div>
         )}
