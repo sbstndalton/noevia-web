@@ -7,7 +7,8 @@ import { startRegistration } from '@simplewebauthn/browser';
 import { ProviderForm } from './ProviderForm';
 import { StoragePicker } from './StoragePicker';
 
-interface SettingsViewProps {
+export interface SettingsViewProps {
+  section?: string;
   models: InstalledModel[];
   routes: RouteRule[];
   modelsError: string | null;
@@ -19,169 +20,14 @@ interface SettingsViewProps {
   onDiaryEnabledChange: (enabled: boolean) => void;
 }
 
-export function SettingsView({
-  models,
-  routes,
-  modelsError,
-  projects,
-  health,
-  stats,
-  onOpenModels,
-  diaryEnabled,
-  onDiaryEnabledChange,
-}: SettingsViewProps): JSX.Element {
-  return (
-    <div className="main">
-      <div className="settings-scroll">
-        <div className="settings-head">
-          <h1>Settings</h1>
-          <p>
-            The proxy routes each project to its configured OpenAI-compatible provider —
-            instructions, files, and memories are applied per project, server-side.
-          </p>
-        </div>
-
-        <div className="settings-body">
-          <ProfileCard />
-          <DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange} />
-          {diaryEnabled && <StorageCard />}
-          <div>
-            <div className="rail-label" style={{ marginBottom: 12 }}>Connected services</div>
-            <div className="card-list">
-              <div className="model-row">
-                <span className={`model-dot${health.inferenceUp ? '' : ' down'}`} />
-                <div className="model-name-group">
-                  <span className="model-name">Default inference</span>
-                  <span className="model-quant">chat · embeddings · optional model management</span>
-                </div>
-                <span className="model-role">
-                  {health.inferenceUp ? 'online' : health.inferenceUp === false ? 'unreachable' : 'checking…'}
-                </span>
-              </div>
-              {diaryEnabled && <div className="model-row">
-                <span className={`model-dot${health.diaryUp ? '' : ' down'}`} />
-                <div className="model-name-group">
-                  <span className="model-name">Diary sidecar</span>
-                  <span className="model-quant">pipeline · configurable corpus storage</span>
-                </div>
-                <span className="model-role">
-                  {health.diaryUp ? 'online' : health.diaryUp === false ? 'unreachable' : 'checking…'}
-                </span>
-              </div>}
-              <div className="model-row">
-                <span className={`model-dot${health.ragAvailable === false ? ' down' : ''}`} />
-                <div className="model-name-group">
-                  <span className="model-name">Project RAG</span>
-                  <span className="model-quant">semantic retrieval over project files</span>
-                </div>
-                <span className="model-role">
-                  {health.ragAvailable == null
-                    ? 'checking…'
-                    : health.ragAvailable
-                      ? 'available'
-                      : 'degraded (missing native deps)'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div className="rail-label" style={{ marginBottom: 12 }}>Live engine stats</div>
-            <div className="card-list">
-              <div className="model-row">
-                <span className={`model-dot${stats?.up ? '' : ' down'}`} />
-                <div className="model-name-group">
-                  <span className="model-name">
-                    {stats?.tokensPerSecond != null ? `${stats.tokensPerSecond.toFixed(1)} tok/s` : '— tok/s'}
-                  </span>
-                  <span className="model-quant">
-                    {stats?.timeToFirstToken != null ? `TTFT ${stats.timeToFirstToken.toFixed(2)}s · ` : ''}
-                    {stats?.requestCount != null ? `${stats.requestCount} requests · ` : ''}
-                    {stats?.vramGb != null ? `${stats.vramGb.toFixed(1)} GB VRAM` : ''}
-                  </span>
-                </div>
-                <span className="model-role">{stats?.up ? 'live' : 'unavailable'}</span>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <span className="rail-label" style={{ marginBottom: 0 }}>Models</span>
-              <button className="popup-tab" style={{ border: '1px solid var(--border)' }} onClick={onOpenModels}>
-                open model manager
-              </button>
-            </div>
-            <div className="card-list">
-              {modelsError && (
-                <div className="model-row">
-                  <span className="model-dot down" />
-                  <div className="model-name-group">
-                    <span className="model-name" style={{ color: 'var(--accent)' }}>{modelsError}</span>
-                  </div>
-                </div>
-              )}
-              {models.map((m) => (
-                <div key={m.name} className="model-row">
-                  <span className={`model-dot${m.loaded ? '' : ' down'}`} title={m.loaded ? 'loaded' : 'not loaded'} />
-                  <div className="model-name-group">
-                    <span className="model-name">{m.name}</span>
-                    <span className="model-quant">
-                      {m.sizeGB != null ? `${m.sizeGB} GB` : ''}
-                      {m.maxContext ? ` · ${m.maxContext.toLocaleString()} ctx` : ''}
-                    </span>
-                  </div>
-                  <span className="model-role">{m.labels.join(' · ')}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div className="rail-label" style={{ marginBottom: 12 }}>Projects ({projects.length})</div>
-            <div className="card-list">
-              {projects.length === 0 && <p className="rail-empty">No projects yet — create one from the Projects page.</p>}
-              {projects.map((p) => (
-                <div key={p.id} className="model-row">
-                  <span className="model-dot" />
-                  <div className="model-name-group">
-                    <span className="model-name">{p.name}</span>
-                    <span className="model-quant">{p.model}</span>
-                  </div>
-                  <span className="model-role">
-                    {p.chats.length} {p.chats.length === 1 ? 'chat' : 'chats'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div className="rail-label" style={{ marginBottom: 12 }}>Routing</div>
-            <div className="route-table">
-              {routes.map((r) => (
-                <div key={r.task} className="route-row">
-                  <span className="route-task">{r.task}</span>
-                  <span className="route-arrow">→</span>
-                  <span className="route-model">{r.model}</span>
-                </div>
-              ))}
-            </div>
-            <p className="route-note">Each project pins its own model (change it from the model button).
-              {diaryEnabled && ' The optional Diary app always routes through its sidecar pipeline, called exactly once per exchange.'}
-            </p>
-          </div>
-
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-              <span className="rail-label" style={{ marginBottom: 0 }}>Chat providers</span>
-            </div>
-            <ProvidersCard />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+export function SettingsView({ models, routes, modelsError, projects, health, stats, onOpenModels, diaryEnabled, onDiaryEnabledChange, section = 'profile' }: SettingsViewProps): JSX.Element {
+  return <div className="settings-live-content">
+    {section === 'profile' && <ProfileCard />}
+    {section === 'diary' && <><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
+    {section === 'providers' && <ProvidersCard />}
+    {section === 'models' && <><div className="settings-section-heading"><h2>Models</h2><button className="modal-btn secondary" onClick={onOpenModels}>Open model manager</button></div>{modelsError && <p role="alert" className="modal-err">{modelsError}</p>}<div className="card-list">{models.map(m=><div className="model-row" key={m.name}><span className={`model-dot${m.loaded?'':' down'}`}/><div className="model-name-group"><span className="model-name">{m.name}</span><span className="model-quant">{m.sizeGB != null ? `${m.sizeGB} GB` : ''}{m.maxContext ? ` · ${m.maxContext.toLocaleString()} context` : ''}</span></div><span className="model-role">{m.loaded?'loaded':'not loaded'}</span></div>)}</div><h2>Project routing</h2><div className="route-table">{routes.map(r=><div className="route-row" key={r.task}><span>{r.task}</span><span>→</span><span>{r.model}</span></div>)}</div><p className="route-note">{projects.length} projects. Change a project's model from its model selector.</p></>}
+    {section === 'status' && <><h2>Connected services</h2><div className="card-list">{[['Inference',health.inferenceUp],['Diary',diaryEnabled?health.diaryUp:null],['Project retrieval',health.ragAvailable]].map(([label,up])=><div className="model-row" key={String(label)}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?'available':up===false?'unavailable':'not available'}</span></div>)}</div><h2>Live engine</h2><div className="settings-stat-row"><div><span>Tokens / second</span><strong>{stats?.tokensPerSecond?.toFixed(1) ?? '—'}</strong></div><div><span>Requests</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${stats.vramGb.toFixed(1)} GB`:'—'}</strong></div></div></>}
+  </div>;
 }
 
 function DiaryAddonCard({ enabled, onChange }: { enabled: boolean; onChange: (enabled: boolean) => void }): JSX.Element {

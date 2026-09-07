@@ -1,22 +1,23 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
+import { AccountMenu } from './AccountMenu';
+import { ShellIcon } from './ShellIcon';
 import type { ChatMeta, HealthState, Project } from '../types';
 import {
   BookIcon,
   Logo,
-  MoonIcon,
   PlusIcon,
-  SlidersIcon,
-  SunIcon,
 } from './Icons';
 
 interface SidebarProps {
   projects: Project[];
   chats: ChatMeta[];
-  activeView: 'diary' | 'settings' | 'projects' | 'project' | 'chat';
+  activeView: 'diary' | 'settings' | 'projects' | 'project' | 'chat' | 'preview';
   activeProjectId: string | null;
   activeChatId: string | null;
   onNewChat: () => void;
+  onEnterCode: () => void;
+  onPreview: (title: string) => void;
   onOpenProjects: () => void;
   onOpenProject: (id: string) => void;
   onOpenChat: (chatId: string, projectId: string | null) => void;
@@ -44,6 +45,8 @@ export function Sidebar({
   activeProjectId,
   activeChatId,
   onNewChat,
+  onEnterCode,
+  onPreview,
   onOpenProjects,
   onOpenProject,
   onOpenChat,
@@ -57,6 +60,8 @@ export function Sidebar({
   theme,
   onToggleTheme,
 }: SidebarProps): JSX.Element {
+  const [searching, setSearching] = useState(false);
+  const [query, setQuery] = useState('');
   // Per-project menu: rename inline, open settings, delete.
   // The menu uses position:fixed (anchored to the button's viewport rect) because
   // .spaces is overflow-y:auto and would clip an absolutely-positioned dropdown.
@@ -105,14 +110,13 @@ export function Sidebar({
   };
   return (
     <div className={`sidebar${activeView === 'diary' ? ' diary-sidebar' : ''}`}>
-      <div className="side-logo">
-        <Logo />
-        <span>Cowork</span>
-      </div>
+      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>Cowork</span></div><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div>
+      <div className="app-mode-switch" aria-label="Workspace mode"><button className="is-selected" aria-pressed="true"><ShellIcon name="chat"/>Chat</button><button onClick={onEnterCode} aria-pressed="false"><ShellIcon name="code"/>Code</button></div>
+      {searching&&<input className="shell-search" autoFocus aria-label="Search projects and chats" placeholder="Search projects and chats…" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');}}}/>}
 
       <button className="new-chat-btn" onClick={onNewChat} title="New chat">
         <PlusIcon />
-        <span>New</span>
+        <span>New chat</span>
       </button>
 
       <div className="side-nav">
@@ -125,11 +129,10 @@ export function Sidebar({
         </button>
       </div>
 
-      <div className="divider" />
-
+      <nav className="shell-extra-nav" aria-label="Explore Cowork">{[['Scheduled','clock'],['Plugins','plugins'],['Explore','explore']].map(([label,icon])=><button className="nav-item" key={label} onClick={()=>onPreview(label)}><ShellIcon name={icon}/><span className="nav-name">{label}</span></button>)}</nav>
       <div className="spaces">
         <div className="section-label">Projects</div>
-        {projects.map((p) => (
+        {projects.filter(p=>p.name.toLowerCase().includes(query.toLowerCase())).map((p) => (
           <div key={p.id} className={`proj-row${activeProjectId === p.id && activeView !== 'projects' ? ' is-active' : ''}`}>
             {renamingId === p.id ? (
               <input
@@ -210,7 +213,7 @@ export function Sidebar({
           <div className="divider" />
           <div className="spaces">
             <div className="section-label">Recent chats</div>
-            {chats.slice(0, 8).map((c) => (
+            {chats.filter(c=>c.title.toLowerCase().includes(query.toLowerCase())).slice(0, 12).map((c) => (
               <div
                 key={c.id}
                 className={`chat-row${activeChatId === c.id && activeView === 'chat' ? ' is-active' : ''}`}
@@ -256,27 +259,7 @@ export function Sidebar({
 
       <div className="divider" />
 
-      <div className="side-footer">
-        <button
-          className="nav-item"
-          onClick={onOpenSettings}
-          style={activeView === 'settings' ? { background: 'var(--bg-active)' } : undefined}
-        >
-          <SlidersIcon />
-          <span className="nav-name">Settings</span>
-        </button>
-        <button className="theme-row" onClick={onToggleTheme} title="Toggle light/dark theme">
-          {theme === 'light' ? <SunIcon /> : <MoonIcon />}
-          <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
-        </button>
-        <div className="status-row">
-          <span
-            className="status-dot"
-            style={health.inferenceUp === false ? { background: 'var(--accent)' } : undefined}
-          />
-          <span className="status-text">{statusText(health)}</span>
-        </div>
-      </div>
+      <div className="side-footer"><div className="status-row"><span className="status-dot" style={health.inferenceUp===false?{background:'var(--accent)'}:undefined}/><span className="status-text">{statusText(health)}</span></div><AccountMenu onSettings={onOpenSettings} onToggleTheme={onToggleTheme} theme={theme}/></div>
     </div>
   );
 }

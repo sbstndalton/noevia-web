@@ -32,13 +32,15 @@ import { DiaryView } from './components/DiaryView';
 import { ModelPopup } from './components/ModelPopup';
 import { ProjectView } from './components/ProjectView';
 import { ProjectsView } from './components/ProjectsView';
-import { SettingsView } from './components/SettingsView';
+import { SettingsShell } from './components/SettingsShell';
+import { CodingWorkspace } from './components/CodingWorkspace';
+import { FeaturePreview } from './components/PreviewPanel';
 import { Sidebar } from './components/Sidebar';
 import { StatsBar } from './components/StatsBar';
 
 type View =
   | { kind: 'diary' }
-  | { kind: 'settings' }
+  | { kind: 'preview'; title: string }
   | { kind: 'projects' }
   | { kind: 'project'; id: string }
   | { kind: 'chat'; chatId: string; projectId?: string | null };
@@ -54,10 +56,9 @@ function loadTheme(): 'light' | 'dark' {
 
 export default function App(): JSX.Element {
   const [theme, setTheme] = useState<'light' | 'dark'>(loadTheme);
-  const [view, setView] = useState<View>(() => {
-    if (sessionStorage.getItem('cowork-new-account')) { sessionStorage.removeItem('cowork-new-account'); return { kind: 'settings' }; }
-    return { kind: 'projects' };
-  });
+  const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account'); return fresh; });
+  const [appMode, setAppMode] = useState<'chat'|'code'>('chat');
+  const [view, setView] = useState<View>({ kind: 'projects' });
   const [projects, setProjects] = useState<Project[]>([]);
   const [freeChats, setFreeChats] = useState<ChatMeta[]>([]);
   const [messagesByChat, setMessagesByChat] = useState<Record<string, Message[]>>({});
@@ -457,7 +458,10 @@ export default function App(): JSX.Element {
 
   return (
     <div className="app">
+      <div className="regular-workspace" style={{display:appMode==='chat'?'contents':'none'}}>
       <Sidebar
+        onEnterCode={() => setAppMode('code')}
+        onPreview={(title) => setView({kind:'preview',title})}
         projects={projects}
         chats={allChats}
         activeView={view.kind}
@@ -472,7 +476,7 @@ export default function App(): JSX.Element {
         onDeleteProject={handleDeleteProject}
         onOpenDiary={() => setView({ kind: 'diary' })}
         diaryEnabled={diaryEnabled}
-        onOpenSettings={() => setView({ kind: 'settings' })}
+        onOpenSettings={() => setSettingsOpen(true)}
         health={health}
         theme={theme}
         onToggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
@@ -481,6 +485,7 @@ export default function App(): JSX.Element {
       <div className="app-stack">
       <div className="app-main">
 
+      {view.kind === 'preview' && <FeaturePreview title={view.title}/> }
       {view.kind === 'projects' && (
         <ProjectsView
           projects={projects}
@@ -518,27 +523,11 @@ export default function App(): JSX.Element {
           onStop={abortStream}
           onBack={activeProject ? () => setView({ kind: 'project', id: activeProject.id }) : null}
           onOpenModels={() => setPopupOpen(true)}
-          onOpenSettings={() => setView({ kind: 'settings' })}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
       )}
 
       {diaryEnabled && <div className="diary-mount" style={{ display: view.kind === 'diary' ? 'contents' : 'none' }}><DiaryView inferenceUp={health.inferenceUp} /></div>}
-
-      {view.kind === 'settings' && (
-        <SettingsView
-          models={models}
-          routes={routes}
-          modelsError={modelsError}
-          projects={projects}
-          health={health}
-          stats={stats}
-          onOpenModels={() => setPopupOpen(true)}
-          diaryEnabled={diaryEnabled}
-          onDiaryEnabledChange={(enabled) => {
-            setDiaryEnabled(enabled);
-          }}
-        />
-      )}
 
       {popupOpen && (
         <ModelPopup
@@ -555,6 +544,27 @@ export default function App(): JSX.Element {
       </div>
       {view.kind !== 'diary' && <StatsBar stats={stats} />}
       </div>
+      </div>
+      {appMode === 'code' && <CodingWorkspace onExit={() => setAppMode('chat')} onSettings={() => setSettingsOpen(true)} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/>}
+      {settingsOpen && (
+        <SettingsShell
+          onClose={() => setSettingsOpen(false)}
+          theme={theme}
+          onTheme={setTheme}
+          models={models}
+          routes={routes}
+          modelsError={modelsError}
+          projects={projects}
+          health={health}
+          stats={stats}
+          onOpenModels={() => { setSettingsOpen(false); setAppMode('chat'); setPopupOpen(true); }}
+          diaryEnabled={diaryEnabled}
+          onDiaryEnabledChange={(enabled) => {
+            setDiaryEnabled(enabled);
+          }}
+        />
+      )}
+
     </div>
   );
 }
