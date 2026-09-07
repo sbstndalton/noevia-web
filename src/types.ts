@@ -8,6 +8,20 @@ export interface Message {
   reasoning?: string;
   toolCalls?: ToolCallView[];
   error?: boolean;
+  stats?: MessageStats;
+  /** Set when this message was edited and the exchange re-run from here. */
+  edited?: boolean;
+}
+
+/** What a finished reply cost. Token counts come from the provider's own
+ *  usage chunk (never estimated locally); elapsedMs is measured client-side
+ *  because it includes the queue/load time the provider does not report. */
+export interface MessageStats {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  tokensPerSecond?: number;
+  elapsedMs?: number;
 }
 
 export interface ToolCallView {
@@ -59,6 +73,12 @@ export interface HistoryEntry {
   role: Role;
   content: string;
   model?: string;
+  // Persisted so a reloaded chat still shows its thinking, tool activity and
+  // cost. The server stores these opaquely and strips everything but
+  // role/content before the history is replayed to a model.
+  reasoning?: string;
+  toolCalls?: ToolCallView[];
+  stats?: MessageStats;
 }
 
 export interface WorkspaceInfo {

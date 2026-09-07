@@ -190,6 +190,9 @@ export default function App(): JSX.Element {
             role: h.role,
             content: h.content,
             senderLabel: h.model,
+            reasoning: h.reasoning,
+            toolCalls: h.toolCalls,
+            stats: h.stats,
           })),
         }));
       })
@@ -220,7 +223,18 @@ export default function App(): JSX.Element {
       chatId,
       msgs
         .filter((m) => !m.error)
-        .map((m) => ({ role: m.role, content: m.content, model: m.senderLabel })),
+        // Reasoning, tool activity and cost are persisted too, so reopening a
+        // chat shows the same thinking block and stats it had while streaming
+        // instead of a bare answer. The server strips these before replaying
+        // history to a model, so they cost nothing in prompt tokens.
+        .map((m) => ({
+          role: m.role,
+          content: m.content,
+          model: m.senderLabel,
+          reasoning: m.reasoning || undefined,
+          toolCalls: m.toolCalls && m.toolCalls.length ? m.toolCalls : undefined,
+          stats: m.stats,
+        })),
     ).catch(() => undefined);
   }, []);
 
@@ -264,6 +278,7 @@ export default function App(): JSX.Element {
           .catch(() => undefined);
       }
 
+      const startedAt = Date.now();
       try {
         let acc = '';
         let reasoning = '';
@@ -302,6 +317,18 @@ export default function App(): JSX.Element {
               [chatId]: (prev[chatId] ?? []).map((m) =>
                 m.id === replyId ? { ...m, toolCalls: [...tools] } : m,
               ),
+            }));
+          } else if (ev.type === 'usage') {
+            const stats = {
+              promptTokens: ev.promptTokens,
+              completionTokens: ev.completionTokens,
+              totalTokens: ev.totalTokens,
+              tokensPerSecond: ev.tokensPerSecond,
+              elapsedMs: Date.now() - startedAt,
+            };
+            setMessagesByChat((prev) => ({
+              ...prev,
+              [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, stats } : m)),
             }));
           } else if (ev.type === 'error') {
             throw new Error(ev.text || 'Generation failed');
@@ -371,6 +398,27 @@ export default function App(): JSX.Element {
     const projectId = view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
     void handleSend(chatId, projectId, msgs[index - 1].content, msgs.slice(0, index - 1));
   }, [activeChatMeta, handleSend, streaming, view]);
+
+  // Edit an earlier message and re-run the conversation from that point.
+  // Everything after the edited message is dropped rather than kept as dead
+  // context: the point is to correct the prompt that led somewhere wrong, so
+  // paying to re-send the wrong turns (and letting the model keep reading
+  // them) would defeat it. The truncated tail is gone — same trade the
+  // "edit" affordance makes in ChatGPT/Claude.
+  const editAndResend = useCallback(
+    (chatId: string, messageId: string, nextText: string) => {
+      if (streaming) return;
+      const msgs = messagesRef.current[chatId] ?? [];
+      const index = msgs.findIndex((m) => m.id === messageId);
+      if (index < 0 || msgs[index].role !== 'user') return;
+      const text = nextText.trim();
+      if (!text) return;
+      const projectId =
+        view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
+      void handleSend(chatId, projectId, text, msgs.slice(0, index));
+    },
+    [activeChatMeta, handleSend, streaming, view],
+  );
 
   const startFreeChat = useCallback(() => {
     const chatId = `c-${uid()}`;
@@ -518,6 +566,7 @@ export default function App(): JSX.Element {
               : activeProject?.model ?? models.find((m) => m.loaded)?.name ?? 'local model'
           }
           messages={messages}
+          onEditMessage={editAndResend}
           streaming={streaming}
           inferenceUp={health.inferenceUp}
           onSend={sendToCurrent}

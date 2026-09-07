@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import type { Message, ToolCallView } from '../types';
+import type { Message, MessageStats, ToolCallView } from '../types';
 import { ChevronDown, ChevronLeft, SendIcon, SlidersIcon } from './Icons';
 import { MarkdownPreview } from './DiaryModal';
 
@@ -13,6 +13,7 @@ interface ChatViewProps {
   inferenceUp?: boolean | null;
   onSend: (text: string) => void;
   onRetry: (chatId: string, messageId: string) => void;
+  onEditMessage: (chatId: string, messageId: string, text: string) => void;
   chatId: string;
   onStop: () => void;
   onBack: (() => void) | null;
@@ -21,14 +22,58 @@ interface ChatViewProps {
 }
 
 function ThinkingBlock({ text, live }: { text: string; live: boolean }) {
+  // Open while the model is still thinking so the reasoning is visible as it
+  // streams, then collapsed once the answer lands — the answer is what you
+  // want to read, with the reasoning one click away. `open` is uncontrolled
+  // after the first render, so a reader who expands a finished block keeps it
+  // expanded.
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
   return (
-    <details className="thinking-block">
+    <details className="thinking-block" open={live}>
       <summary className={live ? 'thinking-live' : undefined}>
-        {live ? 'Thinking…' : 'Thought process'}
+        {live ? 'Thinking…' : `Thought process${words ? ` · ${words} words` : ''}`}
       </summary>
       <div className="thinking-body">{text}</div>
     </details>
   );
+}
+
+function fmtDuration(ms: number): string {
+  const s = ms / 1000;
+  if (s < 60) return `${s.toFixed(1)}s`;
+  const m = Math.floor(s / 60);
+  return `${m}m ${Math.round(s - m * 60)}s`;
+}
+
+// Compact per-reply footer: what it cost and how long it took. Mirrors the
+// agent-runner status lines the operator asked for — elapsed, tokens, rate —
+// but only renders what the provider actually reported, so a provider that
+// sends no usage chunk simply shows nothing rather than zeros.
+function MessageMeta({ stats, tools }: { stats?: MessageStats; tools?: ToolCallView[] }): JSX.Element | null {
+  const parts: string[] = [];
+  if (stats?.elapsedMs) parts.push(fmtDuration(stats.elapsedMs));
+  if (stats?.totalTokens) {
+    const io =
+      stats.promptTokens != null && stats.completionTokens != null
+        ? ` (${stats.promptTokens} in / ${stats.completionTokens} out)`
+        : '';
+    parts.push(`${stats.totalTokens} tokens${io}`);
+  }
+  if (stats?.tokensPerSecond) parts.push(`${stats.tokensPerSecond.toFixed(1)} tok/s`);
+  if (tools && tools.length) parts.push(`${tools.length} tool ${tools.length === 1 ? 'call' : 'calls'}`);
+  if (!parts.length) return null;
+  return <div className="msg-meta">{parts.join(' · ')}</div>;
+}
+
+// Elapsed-time ticker shown while a reply is still streaming, so a long
+// local-model generation does not look hung.
+function LiveTimer({ startedAt }: { startedAt: number }): JSX.Element {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => force((n) => n + 1), 200);
+    return () => clearInterval(t);
+  }, []);
+  return <span>{fmtDuration(Date.now() - startedAt)}</span>;
 }
 
 function ToolChips({ calls }: { calls: ToolCallView[] }) {
@@ -53,6 +98,7 @@ export function ChatView({
   inferenceUp = null,
   onSend,
   onRetry,
+  onEditMessage,
   chatId,
   onStop,
   onBack,
@@ -60,7 +106,21 @@ export function ChatView({
   onOpenSettings,
 }: ChatViewProps): JSX.Element {
   const [draft, setDraft] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  // When the current stream began, for the live elapsed counter. Reset on each
+  // new stream rather than on every message change, or the timer would restart
+  // mid-reply as tokens arrive.
+  const streamStart = useRef<number>(Date.now());
+  useEffect(() => {
+    if (streaming) streamStart.current = Date.now();
+  }, [streaming]);
+  // An in-progress edit must not survive switching chats.
+  useEffect(() => {
+    setEditingId(null);
+    setEditDraft('');
+  }, [chatId]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -167,9 +227,65 @@ export function ChatView({
                       </div>
                     )
                   )}
+                  {streaming && isLast && !m.error ? (
+                    <div className="msg-meta" aria-live="off">
+                      <LiveTimer startedAt={streamStart.current} />
+                      {m.reasoning && !m.content ? ' · thinking…' : ' · generating…'}
+                    </div>
+                  ) : (
+                    !m.error && <MessageMeta stats={m.stats} tools={m.toolCalls} />
+                  )}
                 </div>
               ) : (
-                <p style={{ whiteSpace: 'pre-wrap' }}>{m.content}</p>
+                editingId === m.id ? (
+                  <div className="msg-edit">
+                    <textarea
+                      value={editDraft}
+                      autoFocus
+                      rows={Math.min(12, editDraft.split('\n').length + 1)}
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') { setEditingId(null); return; }
+                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                          e.preventDefault();
+                          const text = editDraft.trim();
+                          if (!text) return;
+                          setEditingId(null);
+                          onEditMessage(chatId, m.id, text);
+                        }
+                      }}
+                      aria-label="Edit your message and re-run from here"
+                    />
+                    <div className="msg-edit-actions">
+                      <button
+                        onClick={() => {
+                          const text = editDraft.trim();
+                          if (!text) return;
+                          setEditingId(null);
+                          onEditMessage(chatId, m.id, text);
+                        }}
+                        disabled={streaming || !editDraft.trim()}
+                      >
+                        Save &amp; re-run
+                      </button>
+                      <button className="secondary" onClick={() => setEditingId(null)}>Cancel</button>
+                      <small>Everything after this message is replaced.</small>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="msg-user-row">
+                    <p style={{ whiteSpace: 'pre-wrap' }}>{m.content}</p>
+                    <button
+                      className="msg-edit-btn"
+                      onClick={() => { setEditingId(m.id); setEditDraft(m.content); }}
+                      disabled={streaming}
+                      title="Edit this message and re-run the conversation from here"
+                      aria-label="Edit and re-run from this message"
+                    >
+                      ✎ Edit
+                    </button>
+                  </div>
+                )
               )}
             </div>
           );

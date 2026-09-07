@@ -309,6 +309,7 @@ export function saveChatHistory(chatId: string, history: HistoryEntry[]): Promis
 // Chat streams SSE events from the proxy:
 //   { type:'meta', model, chatId? } { type:'reasoning', text } { type:'delta', text }
 //   { type:'tool', name, args } { type:'done', model } { type:'diary', decision }
+//   { type:'usage', promptTokens, completionTokens, totalTokens, tokensPerSecond }
 export async function* streamChat(
   body: { spaceId: string;
     entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null },
@@ -322,6 +323,11 @@ export async function* streamChat(
   args?: string;
   decision?: string;
   route?: string; // 'fast' | 'smart' when Auto routing picked the model (step 12)
+  // 'usage' event: provider-reported totals for the finished reply.
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  tokensPerSecond?: number;
 }> {
   const res = await apiFetch('/api/chat', {
     method: 'POST',
