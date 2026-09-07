@@ -23,6 +23,7 @@ export interface SettingsViewProps {
 export function SettingsView({ models, routes, modelsError, projects, health, stats, onOpenModels, diaryEnabled, onDiaryEnabledChange, section = 'profile' }: SettingsViewProps): JSX.Element {
   return <div className="settings-live-content">
     {section === 'profile' && <ProfileCard />}
+    {section === 'users' && <UsersCard />}
     {section === 'diary' && <><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
     {section === 'providers' && <ProvidersCard />}
     {section === 'models' && <><div className="settings-section-heading"><h2>Models</h2><button className="modal-btn secondary" onClick={onOpenModels}>Open model manager</button></div>{modelsError && <p role="alert" className="modal-err">{modelsError}</p>}<div className="card-list">{models.map(m=><div className="model-row" key={m.name}><span className={`model-dot${m.loaded?'':' down'}`}/><div className="model-name-group"><span className="model-name">{m.name}</span><span className="model-quant">{m.sizeGB != null ? `${m.sizeGB} GB` : ''}{m.maxContext ? ` · ${m.maxContext.toLocaleString()} context` : ''}</span></div><span className="model-role">{m.loaded?'loaded':'not loaded'}</span></div>)}</div><h2>Project routing</h2><div className="route-table">{routes.map(r=><div className="route-row" key={r.task}><span>{r.task}</span><span>→</span><span>{r.model}</span></div>)}</div><p className="route-note">{projects.length} projects. Change a project's model from its model selector.</p></>}
@@ -67,12 +68,10 @@ function ProfileCard(): JSX.Element {
   const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [name, setName] = useState('');
-  const [users, setUsers] = useState<AuthUser[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
-  const refresh = () => fetchProfile().then(p => { setUser(p.user); setName(p.user.displayName); setPasskeys(p.passkeys); setSessions(p.sessions ?? []); if (p.user.role === 'admin') fetchUsers().then(r => setUsers(r.users)); });
+  const refresh = () => fetchProfile().then(p => { setUser(p.user); setName(p.user.displayName); setPasskeys(p.passkeys); setSessions(p.sessions ?? []); });
   useEffect(() => { void refresh(); }, []);
   const addKey = async () => { const c = await passkeyRegistrationOptions(); const response = await startRegistration({ optionsJSON: c.options }); await passkeyRegistrationVerify(c.challengeToken, response, `Passkey ${passkeys.length + 1}`); refresh(); };
-  const invite = async () => { const x = await createInvitation(); const link = `${window.location.origin}/?invite=${encodeURIComponent(x.token)}`; await navigator.clipboard.writeText(link); setNotice('Single-use invitation copied. It expires in 24 hours.'); };
   if (!user) return <div><div className="rail-label">Profile</div><p className="route-note">Loading…</p></div>;
   return <div>
     <div className="rail-label" style={{ marginBottom: 12 }}>Profile and security</div>
@@ -95,10 +94,40 @@ function ProfileCard(): JSX.Element {
       ))}
       <button className="modal-btn secondary" onClick={() => void logout().then(() => window.location.reload())}>Sign out</button>
     </div>
-    {user.role === 'admin' && <div style={{ marginTop: 24 }}><div className="rail-label" style={{ marginBottom: 12 }}>Users</div><div className="card-list">
+    {notice && <p className="route-note">{notice}</p>}
+  </div>;
+}
+
+/** Administration → Users. Split out of ProfileCard so personal security and
+ *  managing other people's accounts are no longer the same page: one is
+ *  something every member does, the other is an operator task. The server is
+ *  the real gate — /api/users returns 403 to non-admins regardless of what the
+ *  navigation shows — so this only decides what is worth rendering. */
+function UsersCard(): JSX.Element {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [users, setUsers] = useState<AuthUser[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [denied, setDenied] = useState(false);
+  const refresh = () =>
+    fetchProfile().then((p) => {
+      setUser(p.user);
+      if (p.user.role === 'admin') fetchUsers().then((r) => setUsers(r.users)).catch(() => setDenied(true));
+      else setDenied(true);
+    });
+  useEffect(() => { void refresh(); }, []);
+  const invite = async () => {
+    const x = await createInvitation();
+    await navigator.clipboard.writeText(`${window.location.origin}/?invite=${encodeURIComponent(x.token)}`);
+    setNotice('Single-use invitation copied. It expires in 24 hours.');
+  };
+  if (!user) return <div><div className="rail-label">Users</div><p className="route-note">Loading…</p></div>;
+  if (denied) return <div><div className="rail-label">Users</div><p className="route-note">Administrator access is required to manage accounts.</p></div>;
+  return <div>
+    <div className="rail-label" style={{ marginBottom: 12 }}>Users</div>
+    <div className="card-list">
       {users.map(u => <div className="model-row" key={u.id}><div className="model-name-group"><span className="model-name">{u.displayName}</span><span className="model-quant">@{u.username} · {u.role}{u.disabled ? ' · disabled' : ''}</span></div>{u.id !== user.id && <><button className="popup-tab" onClick={() => void setUserDisabled(u.id, !u.disabled).then(refresh)}>{u.disabled ? 'Enable' : 'Disable'}</button><button className="popup-tab" onClick={() => void createRecovery(u.id).then(async r => { await navigator.clipboard.writeText(`${window.location.origin}/?recovery=${r.token}`); setNotice('Recovery link copied.'); })}>Recovery</button><button className="recents-del" title="Delete user" onClick={() => { const typed = window.prompt(`Type ${u.username} to permanently delete this noevia account. Remote corpus files will be preserved.`); if (typed === u.username) void deleteUser(u.id, typed).then(refresh); }}>✕</button></>}</div>)}
       <button className="modal-btn secondary" onClick={() => void invite()}>+ Copy invitation link</button>
-    </div></div>}
+    </div>
     {notice && <p className="route-note">{notice}</p>}
   </div>;
 }
