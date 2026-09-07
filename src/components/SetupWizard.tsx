@@ -67,7 +67,7 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
-  const [diaryEnabled, setDiaryEnabled] = useState(true);
+  const [diaryEnabled, setDiaryEnabled] = useState(false);
 
   // Prefs-step fields.
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
@@ -146,18 +146,18 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
     }
   };
 
-  const finish = () => {
-    // The auto-routing preference is honored by App.tsx for every project
-    // created afterward — stored client-side (like the theme) until the user
-    // changes routing per-project in the model popup.
-    if (autoRouting) localStorage.setItem('cowork-default-routing', 'auto');
-    else localStorage.removeItem('cowork-default-routing');
-    // Mark onboarding finished server-side so the resumability check in
-    // AuthGate doesn't re-enter the wizard for a user who deliberately chose
-    // the skip path. Best-effort: the wizard exit must never fail.
-    completeOnboarding().catch(() => undefined);
-    sessionStorage.setItem('cowork-new-account', '1');
-    onFinished();
+  const finish = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await completeOnboarding();
+      if (autoRouting) localStorage.setItem('cowork-default-routing', 'auto');
+      else localStorage.removeItem('cowork-default-routing');
+      sessionStorage.setItem('cowork-new-account', '1');
+      onFinished();
+    } catch {
+      setError('Could not finish setup. Please retry; your settings have been saved.');
+    } finally { setBusy(false); }
   };
 
   const progress = (
@@ -277,7 +277,8 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
             </label>
             {error && <p className="auth-error" role="alert">{error}</p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button className="modal-btn primary" onClick={() => go('passkey')}>Continue</button>
+              <button className="modal-btn secondary" onClick={() => go('passkey')}>Skip — set up later</button>
+              <button className="modal-btn primary" onClick={() => go('passkey')}>Use these preferences</button>
             </div>
           </div>
         )}
@@ -299,6 +300,7 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
         {step === 'done' && (
           <div>
             <p>You're all set. You can finish configuration any time in Settings.</p>
+            {error && <p className="auth-error" role="alert">{error}</p>}
             <button type="button" disabled={busy} onClick={() => void finish()}>
               Start using Cowork
             </button>

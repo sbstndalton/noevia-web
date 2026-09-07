@@ -787,3 +787,52 @@ body { margin: 0; background: var(--bg); }
   line-height: 1.5;
   color: var(--text-faint);
 }
+
+/* Consistent, quieter surfaces and comfortable reading in both themes. */
+body { font-family: var(--font-ui); -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font: inherit; }
+button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; }
+button { transition: background .16s ease, border-color .16s ease, box-shadow .16s ease; }
+button:disabled { cursor: not-allowed; }
+.app { height: 100dvh; }
+.chat-header { min-height: 84px; background: var(--bg); }
+.header-subtitle { max-width: 48ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.transcript { scroll-behavior: smooth; }
+.msg p, .bubble p { line-height: 1.8; overflow-wrap: anywhere; }
+.composer { background: var(--bg); padding-top: 16px; padding-bottom: 18px; }
+.composer-inner { border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 4px 20px #00000006; align-items: flex-end; padding: 12px 14px; }
+.composer-inner:focus-within { border-color: var(--accent-2); box-shadow: 0 0 0 3px var(--accent-2-soft); }
+.composer-input { resize: vertical; min-height: 48px; max-height: 220px; line-height: 1.65; }
+.send-btn { width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; }
+.composer-hint { font-size: 11px; line-height: 1.6; padding-top: 10px; color: var(--text-muted); }
+.empty-state h2, .diary-zero-hero h2 { font-size: clamp(24px, 3vw, 34px); font-weight: 650; letter-spacing: -.04em; }
+.empty-state p, .diary-zero-hero p { max-width: 48ch; margin-left: auto; margin-right: auto; line-height: 1.8; color: var(--text-muted); }
+.projects-head h1 { letter-spacing: -.04em; }
+.month-card, .project-card { border-radius: 16px; padding: 24px; }
+.month-card:hover, .project-card:hover { border-color: var(--accent-2); box-shadow: 0 5px 24px #00000008; }
+.month-card-emoji { font-size: 26px; color: var(--accent-2); }
+.month-card-meta { line-height: 1.7; }
+.conn-banner { font-size: 13px; line-height: 1.6; padding: 12px 22px; }
+.auth-card button { color: var(--send-icon); }
+.auth-card .modal-btn.secondary { background: var(--bg-panel); color: var(--text-muted); border: 1px solid var(--border); }
+@media (max-width: 640px) {
+  .sidebar { width: 170px; padding: 12px 8px; }
+  .chat-header { padding: 16px; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+  .header-controls { margin-left: auto; }
+  .header-title { font-size: 15px; }
+  .projects-grid { grid-template-columns: 1fr; }
+  .settings-scroll { padding: 20px 16px; }
+  .diary-conversation { padding: 20px 16px; }
+  .diary-reply[data-role="assistant"] { padding: 14px; }
+  .composer { padding: 12px; }
+  .composer-hint { text-align: left; }
+}
+@media (max-width: 420px) {
+  .sidebar { width: 132px; }
+  .sidebar .chat-row-title { max-width: 85px; }
+  .header-subtitle { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}

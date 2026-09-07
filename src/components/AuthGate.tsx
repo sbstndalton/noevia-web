@@ -42,7 +42,8 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
       if (recovery) { await completeRecovery(recovery, password); window.history.replaceState({}, '', '/'); setScreen('login'); setPassword(''); return; }
       if (invite) await acceptInvitation({ token: invite, username, displayName: displayName || username, password, diaryEnabled });
       else await passwordLogin(username, password);
-      setScreen('secure');
+      const session = await fetchSession();
+      setScreen(session.user.onboarded === false ? 'wizard-resume' : 'secure');
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not continue'); }
     finally { setBusy(false); }
   };
@@ -53,7 +54,9 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
     try {
       const challenge = await passkeyLoginOptions(username);
       const response = await startAuthentication({ optionsJSON: challenge.options });
-      await passkeyLoginVerify(challenge.challengeToken, response); setScreen('ready');
+      await passkeyLoginVerify(challenge.challengeToken, response);
+      const session = await fetchSession();
+      setScreen(session.user.onboarded === false ? 'wizard-resume' : 'ready');
     } catch { setError('Passkey sign-in was cancelled or failed.'); }
     finally { setBusy(false); }
   };

@@ -11,7 +11,7 @@ interface ChatViewProps {
   streaming: boolean;
   inferenceUp?: boolean | null;
   onSend: (text: string) => void;
-  onRetry: (chatId: string) => void;
+  onRetry: (chatId: string, messageId: string) => void;
   chatId: string;
   onStop: () => void;
   onBack: (() => void) | null;
@@ -74,7 +74,7 @@ export function ChatView({
   };
 
   const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant' && !m.error);
-  const subtitle = lastAssistant ? lastAssistant.content.slice(0, 90) : `Local model · ${modelLabel}`;
+  const subtitle = lastAssistant ? lastAssistant.content.slice(0, 90) : `Conversation · ${modelLabel}`;
 
   return (
     <div className="main">
@@ -120,7 +120,7 @@ export function ChatView({
             <p>
               {projectName
                 ? `Part of ${projectName} — instructions, files, and memory from the project are applied to every reply.`
-                : `A local chat on ${modelLabel}. Persona and memories live under the model button.`}
+                : `A space to think, ask questions, and work things through.`}
             </p>
           </div>
         )}
@@ -142,7 +142,7 @@ export function ChatView({
                       {m.error && isLast && (
                         <button
                           className="msg-retry"
-                          onClick={() => onRetry(chatId)}
+                          onClick={() => onRetry(chatId, m.id)}
                           disabled={streaming}
                           title="Re-send your last message"
                         >
@@ -170,13 +170,14 @@ export function ChatView({
         <div className="composer-inner">
           <textarea
             className="composer-input"
-            rows={1}
+            aria-label="Message"
+            rows={2}
             placeholder={`Message ${title}…`}
             value={draft}
             disabled={streaming}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 submit();
               }
@@ -194,7 +195,7 @@ export function ChatView({
         </div>
         <div className="composer-hint">
           Replies with {modelLabel}
-          {projectName ? ` · project context from ${projectName} applied` : ' · persona & memories under the model button'}
+          {projectName ? ` · project context from ${projectName} applied` : ' · Enter to send, Shift + Enter for a new line'}
         </div>
       </div>
     </div>

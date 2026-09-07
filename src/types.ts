@@ -77,8 +77,6 @@ export interface HealthState {
   diaryUp: boolean | null;
   /** Project RAG readiness — false means native deps are missing (keyword-only context). */
   ragAvailable?: boolean | null;
-  /** Opt-in: standing sections have activity newer than the last Insights visit. */
-  insightsFresh?: boolean;
 }
 
 export interface InstalledModel {

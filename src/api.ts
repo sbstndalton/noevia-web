@@ -270,42 +270,6 @@ export function editDiaryEntry(body: { xid: string; me: string; assistant: strin
   return postJson('/api/diary/entries/edit', body);
 }
 
-export interface StandingPayload {
-  questions: { text: string; resolved: boolean }[];
-  timeline: { date: string; text: string }[];
-  index_enabled: boolean;
-}
-
-export interface InsightReflection {
-  kind: 'reflection' | 'about_question';
-  text: string;
-  question?: string | null;
-  used_chunks: number;
-  sources: { day: string; header: string }[];
-  degraded?: boolean;
-  error?: string;
-}
-
-export function fetchInsights(): Promise<StandingPayload> {
-  return getJson('/api/diary/insights');
-}
-
-export function requestReflection(focus?: string): Promise<InsightReflection> {
-  return postJson('/api/diary/insights/reflect', { focus: focus || null });
-}
-
-export function requestQuestionReflection(question: string): Promise<InsightReflection> {
-  return postJson('/api/diary/insights/about-question', { question });
-}
-
-export function setInsightsBadge(enabled: boolean): Promise<{ insightsBadge: boolean }> {
-  return putJson('/api/profile/insights-badge', { enabled });
-}
-
-export function markInsightsSeen(): Promise<{ ok: boolean }> {
-  return apiFetch('/api/profile/insights-badge', { method: 'DELETE' }).then((r) => { if (!r.ok) throw new Error('failed'); return r.json(); });
-}
-
 export function fetchChatHistory(chatId: string): Promise<HistoryEntry[]> {
   return getJson<{ history: HistoryEntry[] }>(
     `/api/chats/${encodeURIComponent(chatId)}/history`,
@@ -333,7 +297,8 @@ export function saveChatHistory(chatId: string, history: HistoryEntry[]): Promis
 //   { type:'meta', model, chatId? } { type:'reasoning', text } { type:'delta', text }
 //   { type:'tool', name, args } { type:'done', model } { type:'diary', decision }
 export async function* streamChat(
-  body: { spaceId: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null },
+  body: { spaceId: string;
+    sessionId?: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null },
   signal?: AbortSignal,
 ): AsyncGenerator<{
   type: string;

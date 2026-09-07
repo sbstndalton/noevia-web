@@ -7,7 +7,6 @@ import {
   deleteProject,
   fetchChatHistory,
   fetchDiaryCorpus,
-  markInsightsSeen,
   fetchDiaryMonth,
   fetchDiarySource,
   fetchHealth,
@@ -35,7 +34,6 @@ import type {
 } from './types';
 import { ChatView } from './components/ChatView';
 import { DiaryView } from './components/DiaryView';
-import { InsightsView } from './components/InsightsView';
 import { ModelPopup } from './components/ModelPopup';
 import { ProjectView } from './components/ProjectView';
 import { ProjectsView } from './components/ProjectsView';
@@ -75,9 +73,13 @@ export default function App(): JSX.Element {
   const [corpus, setCorpus] = useState<DiaryCorpus | null>(null);
   const [corpusError, setCorpusError] = useState<string | null>(null);
   const [diaryMonths, setDiaryMonths] = useState<DiaryMonth[]>([]);
-  const [diaryScreen, setDiaryScreen] = useState<'picker' | 'month' | 'insights'>('picker'); // diary lands on the month picker (skipped for the first-run zero-state)
+  const [diaryScreen, setDiaryScreen] = useState<'picker' | 'month'>('picker'); // diary lands on the month picker (skipped for the first-run zero-state)
   const [diaryMonthId, setDiaryMonthId] = useState<string | null>(null); // null = today
   const [streaming, setStreaming] = useState(false);
+  const [diaryConversation, setDiaryConversation] = useState<Message[]>([]);
+  const diarySession = useRef(crypto.randomUUID());
+  const messagesRef = useRef(messagesByChat);
+  messagesRef.current = messagesByChat;
   const [diaryOutcome, setDiaryOutcome] = useState<string | null>(null);
 
   // Diary first-run: on a fresh corpus the month list is empty and today's file
@@ -277,17 +279,12 @@ export default function App(): JSX.Element {
   }, []);
 
   const handleSend = useCallback(
-    async (chatId: string, projectId: string | null, text: string) => {
+    async (chatId: string, projectId: string | null, text: string, base?: Message[]) => {
       if (streaming) return;
       const userMsg: Message = { id: uid(), role: 'user', content: text };
-      let history: HistoryEntry[] = [];
-      setMessagesByChat((prev) => {
-        const existing = prev[chatId] ?? [];
-        history = existing
-          .filter((m) => !m.error)
-          .map((m) => ({ role: m.role, content: m.content }));
-        return { ...prev, [chatId]: [...existing, userMsg] };
-      });
+      const existing = base ?? messagesRef.current[chatId] ?? [];
+      const history: HistoryEntry[] = existing.filter(m => !m.error).map(m => ({ role: m.role, content: m.content }));
+      setMessagesByChat(prev => ({ ...prev, [chatId]: [...existing, userMsg] }));
       const replyId = uid();
       setMessagesByChat((prev) => ({
         ...prev,
@@ -360,6 +357,8 @@ export default function App(): JSX.Element {
                 m.id === replyId ? { ...m, toolCalls: [...tools] } : m,
               ),
             }));
+          } else if (ev.type === 'error') {
+            throw new Error(ev.text || 'Generation failed');
           } else if (ev.type === 'tool_result' && ev.name) {
             tools.push({ name: `${ev.name} ✓`, args: (ev.text || '').slice(0, 120) });
             setMessagesByChat((prev) => ({
@@ -417,36 +416,34 @@ export default function App(): JSX.Element {
   // Retry a failed exchange: drop the failed assistant bubble and the user
   // message that triggered it, then re-send that same text. History rebuild
   // in handleSend excludes error messages, so nothing stale leaks in.
-  const retryLast = useCallback(
-    (chatId: string) => {
-      if (streaming) return;
-      const msgs = messagesByChat[chatId] ?? [];
-      const errIdx = msgs.findIndex((m) => m.error);
-      if (errIdx === -1) return;
-      const failedText = msgs[errIdx - 1]?.role === 'user' ? msgs[errIdx - 1].content : null;
-      if (!failedText) return;
-      setMessagesByChat((prev) => ({
-        ...prev,
-        [chatId]: (prev[chatId] ?? []).slice(0, errIdx - 1),
-      }));
-      void handleSend(chatId, view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null, failedText);
-    },
-    [activeChatMeta, handleSend, messagesByChat, streaming, view],
-  );
+  const retryLast = useCallback((chatId: string, messageId: string) => {
+    if (streaming) return;
+    const msgs = messagesRef.current[chatId] ?? [];
+    const index = msgs.findIndex(m => m.id === messageId && m.error);
+    // Retry is offered only for the final exchange. Never truncate later history.
+    if (index !== msgs.length - 1 || index < 1 || msgs[index - 1].role !== 'user') return;
+    const projectId = view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
+    void handleSend(chatId, projectId, msgs[index - 1].content, msgs.slice(0, index - 1));
+  }, [activeChatMeta, handleSend, streaming, view]);
 
   const sendToDiary = useCallback(
     async (text: string) => {
       if (diaryBusy) return;
       setDiaryBusy(true);
       setDiaryOutcome(null);
+      const replyId = uid();
+      setDiaryConversation(prev => [...prev, { id: uid(), role: 'user', content: text }, { id: replyId, role: 'assistant', content: '' }]);
       const controller = new AbortController();
       streamAbort.current = controller;
       try {
         let verdict = 'skipped';
-        for await (const ev of streamChat({ spaceId: 'diary', message: text, history: [] }, controller.signal)) {
+        for await (const ev of streamChat({ spaceId: 'diary', message: text, history: [], sessionId: diarySession.current }, controller.signal)) {
           if (ev.type === 'diary' && ev.decision) verdict = ev.decision;
+          if (ev.type === 'delta' && ev.text) setDiaryConversation(prev => prev.map(m => m.id === replyId ? { ...m, content: m.content + ev.text } : m));
+          if (ev.type === 'error') throw new Error(ev.text || 'Diary request failed');
         }
         setDiaryOutcome(verdict);
+        fetchDiarySource().then(s => setDiaryMonths(s.months || [])).catch(() => undefined);
         // Refresh whatever view is open; new exchanges always land in today's file,
         // so jump the selector back to today to show the result.
         setDiaryScreen('month');
@@ -460,6 +457,7 @@ export default function App(): JSX.Element {
         } else {
           const detail = err instanceof Error ? err.message : 'unknown error';
           setDiaryOutcome(`error — ${detail}`);
+          setDiaryConversation(prev => prev.map(m => m.id === replyId ? { ...m, content: detail, error: true } : m));
         }
       } finally {
         if (streamAbort.current === controller) streamAbort.current = null;
@@ -572,7 +570,6 @@ export default function App(): JSX.Element {
         onDeleteProject={handleDeleteProject}
         onOpenDiary={() => setView({ kind: 'diary' })}
         diaryEnabled={diaryEnabled}
-        insightsFresh={diaryEnabled && !!health.insightsFresh}
         onOpenSettings={() => setView({ kind: 'settings' })}
         health={health}
         theme={theme}
@@ -623,7 +620,7 @@ export default function App(): JSX.Element {
         />
       )}
 
-      {view.kind === 'diary' && diaryEnabled && diaryScreen !== 'insights' && (
+      {view.kind === 'diary' && diaryEnabled && (
         <DiaryView
           corpus={corpus}
           corpusError={corpusError}
@@ -631,14 +628,13 @@ export default function App(): JSX.Element {
           screen={diaryScreen}
           selectedMonthId={diaryMonthId}
           onOpenMonth={(id) => { setDiaryScreen('month'); setDiaryMonthId(id); }}
-          onOpenInsights={() => setDiaryScreen('insights')}
           onBackToPicker={() => setDiaryScreen('picker')}
           onSelectMonth={setDiaryMonthId}
           onRefresh={() => {
             const load = diaryMonthId ? fetchDiaryMonth(diaryMonthId) : fetchDiaryCorpus();
             load.then((c) => setCorpus(c)).catch(() => undefined);
           }}
-          modelLabel="pipeline"
+          conversation={diaryConversation}
           busy={diaryBusy}
           inferenceUp={health.inferenceUp}
           outcome={diaryOutcome}
@@ -659,16 +655,6 @@ export default function App(): JSX.Element {
             fetchDiaryCorpus()
               .then((c) => setCorpus(c))
               .catch(() => undefined);
-          }}
-        />
-      )}
-
-      {view.kind === 'diary' && diaryEnabled && diaryScreen === 'insights' && (
-        <InsightsView
-          onBack={() => setDiaryScreen('picker')}
-          onOpenMonth={(monthId) => { setDiaryScreen('month'); setDiaryMonthId(monthId); }}
-          onSeen={() => {
-            markInsightsSeen().then(() => setHealth((h) => ({ ...h, insightsFresh: false }))).catch(() => undefined);
           }}
         />
       )}

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import type { DiaryCorpus, DiaryMonth } from '../types';
+import type { DiaryCorpus, DiaryMonth, Message } from '../types';
 import { editDiaryEntry, fetchExternalSources, importExternalFile } from '../api';
 import type { ExternalSourcesScan } from '../api';
 import { ChevronLeft, ChevronRight } from './Icons';
@@ -9,14 +9,13 @@ interface DiaryViewProps {
   corpus: DiaryCorpus | null;
   corpusError: string | null;
   months: DiaryMonth[];
-  screen: 'picker' | 'month' | 'insights'; // picker = month-selection landing page
+  screen: 'picker' | 'month'; // picker = month-selection landing page
   selectedMonthId: string | null; // null = today
   onOpenMonth: (monthId: string | null) => void; // from the picker grid
-  onOpenInsights: () => void; // from the picker grid
   onBackToPicker: () => void; // from inside a month
   onSelectMonth: (monthId: string | null) => void; // arrows inside a month
   onRefresh: () => void; // refetch the corpus after an in-place edit
-  modelLabel: string;
+  conversation: Message[];
   busy: boolean;
   inferenceUp?: boolean | null;
   outcome: string | null;
@@ -89,20 +88,24 @@ export function DiaryView({
   screen,
   selectedMonthId,
   onOpenMonth,
-  onOpenInsights,
   onBackToPicker,
   onSelectMonth,
   onRefresh,
-  modelLabel,
+  conversation,
   busy,
   inferenceUp = null,
   outcome,
   onSend,
   onImported,
 }: DiaryViewProps): JSX.Element {
+  const readingRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (conversation.length && readingRef.current) readingRef.current.scrollTop = readingRef.current.scrollHeight;
+  }, [conversation]);
   const [draft, setDraft] = useState('');
   const [ext, setExt] = useState<ExternalSourcesScan | null>(null);
   const [imported, setImported] = useState<Set<string>>(new Set());
+  const [importError, setImportError] = useState<string | null>(null);
   const [importing, setImporting] = useState<string | null>(null);
 
   // First-run zero-state: the user has never had any diary content at all —
@@ -111,7 +114,7 @@ export function DiaryView({
   // list, so they get the normal (navigable) view instead. Requires the
   // sidecar to be reachable (no corpusError): a down sidecar must show its
   // error, not a welcome message.
-  const isFirstRun = !corpusError && months.length === 0 && (!corpus || corpus.todayLog.trim() === '');
+  const isFirstRun = !!corpus && !corpusError && months.length === 0 && corpus.todayLog.trim() === '';
 
   const submit = () => {
     const text = draft.trim();
@@ -142,16 +145,14 @@ export function DiaryView({
 
   const doImport = (sourcePath: string, relPath: string) => {
     const key = `${sourcePath}::${relPath}`;
+    setImportError(null);
     setImporting(key);
     importExternalFile(sourcePath, relPath)
       .then((r) => {
         setImported((prev) => new Set(prev).add(key));
         onImported(r.day);
       })
-      .catch(() => {
-        // The scan list stays; the user can retry. Error surfaces via outcome
-        // on the next action — keep this quiet and non-destructive.
-      })
+      .catch((e: unknown) => setImportError(e instanceof Error ? e.message : 'Import failed. Please retry.'))
       .finally(() => setImporting(null));
   };
 
@@ -175,7 +176,7 @@ export function DiaryView({
   }, [months, selectedMonthId]);
 
   if (screen === 'picker') {
-    return <MonthPicker months={months} onOpenMonth={onOpenMonth} onOpenInsights={onOpenInsights} />;
+    return <MonthPicker months={months} onOpenMonth={onOpenMonth} />;
   }
 
   return (
@@ -219,7 +220,7 @@ export function DiaryView({
           }}
         >
           <span style={{ width: 6, height: 6, borderRadius: 'var(--radius-pill)', background: 'var(--accent-2)' }} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-ink)' }}>Auto → {modelLabel}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-ink)' }}>Private diary</span>
         </div>
       </div>
 
@@ -230,7 +231,8 @@ export function DiaryView({
       )}
 
       <div className="diary-body">
-        <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minWidth: 0 }}>
+        <div className="diary-column">
+        <div className="diary-reading" ref={readingRef}>
         <div className="diary-transcript">
           {corpusError && (
             <div className="msg" data-role="assistant">
@@ -249,9 +251,8 @@ export function DiaryView({
                     <div className="diary-zero-glyph">✍️</div>
                     <h2>Welcome to your diary</h2>
                     <p>
-                      Write your first entry below. The diary pipeline classifies
-                      what you log and keeps it verbatim — everything stays on your
-                      server, in plain text you can read and back up.
+                      A place for your days, your questions, and whatever is on your mind.
+                      Write an entry or ask about something you’ve noticed. Your words stay yours.
                     </p>
                     {ext && ext.configured && ext.total > 0 && (
                       <div className="diary-zero-sources">
@@ -299,17 +300,29 @@ export function DiaryView({
           )}
         </div>
 
+        {importError && <p className="conn-banner" role="alert">{importError}</p>}
+        {conversation.length > 0 && (
+          <section className="diary-conversation" aria-label="Diary conversation" aria-live="polite" aria-busy={busy}>
+            <div className="section-eyebrow">This conversation</div>
+            {conversation.map(m => <article key={m.id} className="diary-reply" data-role={m.role}>
+              <span className="msg-sender">{m.role === 'user' ? 'You' : 'Diary companion'}</span>
+              <p className={m.error ? 'response-error' : undefined}>{m.content || (busy ? 'Thinking about your question…' : '')}</p>
+            </article>)}
+          </section>
+        )}
+        </div>
         <div className="composer">
           <div className="composer-inner">
             <textarea
               className="composer-input"
-              rows={1}
-              placeholder={isFirstRun ? 'Enter your first entry…' : "Write today's entry…"}
+              rows={3}
+              aria-label="Write in your diary or ask a question"
+              placeholder={isFirstRun ? 'What’s on your mind today?' : 'Write an entry, or ask your diary a question…'}
               value={draft}
               disabled={busy}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                   e.preventDefault();
                   submit();
                 }
@@ -320,12 +333,12 @@ export function DiaryView({
             </button>
           </div>
           <div className="composer-hint">
-            {busy ? 'Logging through the diary pipeline…' : 'Every exchange is classified and logged to the configured corpus by the diary pipeline'}
+            {busy ? 'Your diary is responding…' : 'Questions welcome · Enter to send · Shift + Enter for a new line'}
           </div>
           {outcome && (
             <div style={{ maxWidth: 760, margin: '0 auto', padding: '4px 4px 0' }}>
               <span className={`diary-outcome${outcome === 'ok' || outcome === 'logged' ? ' is-logged' : outcome.startsWith('error') ? ' is-error' : ''}`}>
-                {outcome === 'ok' || outcome === 'logged' ? '● logged to diary' : outcome === 'stopped' ? '● stopped' : outcome.startsWith('error') ? `● ${outcome}` : '● skipped — not diary-worthy'}
+                {outcome === 'ok' || outcome === 'logged' ? '● logged to diary' : outcome === 'stopped' ? '● stopped' : outcome.startsWith('error') ? `● ${outcome}` : '● conversation only — no entry saved'}
               </span>
             </div>
           )}
@@ -407,11 +420,9 @@ export function DiaryView({
 function MonthPicker({
   months,
   onOpenMonth,
-  onOpenInsights,
 }: {
   months: DiaryMonth[];
   onOpenMonth: (monthId: string | null) => void;
-  onOpenInsights: () => void;
 }): JSX.Element {
   const todayLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
   const seen = new Set<string>();
@@ -423,27 +434,22 @@ function MonthPicker({
         <div className="projects-head">
           <div>
             <h1>Diary</h1>
-            <p className="projects-head-sub">Pick a month to read — writing an entry always logs to today.</p>
+            <p className="projects-head-sub">Your days, in your own words. Open today to write or talk things through.</p>
           </div>
         </div>
         <div className="projects-grid">
           <button className="month-card is-today" onClick={() => onOpenMonth(null)}>
-            <span className="month-card-emoji">✍️</span>
+            <span className="month-card-emoji">↗</span>
             <span className="month-card-name">Today</span>
             <span className="month-card-meta">{todayLabel} · write an entry</span>
           </button>
           {entries.map((m) => (
             <button key={m.id} className="month-card" onClick={() => onOpenMonth(m.id)}>
-              <span className="month-card-emoji">📔</span>
+              <span className="month-card-emoji">◷</span>
               <span className="month-card-name">{m.label}</span>
               <span className="month-card-meta">View entries</span>
             </button>
           ))}
-          <button className="month-card" onClick={onOpenInsights}>
-            <span className="month-card-emoji">✦</span>
-            <span className="month-card-name">Insights</span>
-            <span className="month-card-meta">AI reflections, only when you ask</span>
-          </button>
           {entries.length === 0 && (
             <div className="empty-state" style={{ gridColumn: '1 / -1', minHeight: 220 }}>
               <h2>No months yet</h2>
