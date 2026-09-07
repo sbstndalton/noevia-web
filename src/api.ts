@@ -75,9 +75,22 @@ export const browseStorage = (path: string) => getJson<{ entries: StorageEntry[]
 export const readStorageFile = (path: string) => postJson<{ name: string; content: string; truncated: boolean }>('/api/integrations/storage/file', { path });
 export const completeRecovery = (token: string, password: string) => postJson<{ ok: true }>('/api/auth/recovery/complete', { token, password });
 
+/** Prefer the server's own {error} message over a bare status code — the
+ *  server already explains *why* (e.g. "origin not allowed", "invalid CSRF
+ *  token"), and swallowing that forced users to guess from a status code alone. */
+async function describeFailure(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = await res.clone().json();
+    if (typeof body?.error === 'string' && body.error) return body.error;
+  } catch {
+    // non-JSON body; fall through to the generic message
+  }
+  return `${fallback}: ${res.status}`;
+}
+
 async function getJson<T>(url: string): Promise<T> {
   const res = await apiFetch(url);
-  if (!res.ok) throw new Error(`GET ${url} failed: ${res.status}`);
+  if (!res.ok) throw new Error(await describeFailure(res, `GET ${url} failed`));
   return res.json() as Promise<T>;
 }
 
@@ -87,7 +100,7 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`POST ${url} failed: ${res.status}`);
+  if (!res.ok) throw new Error(await describeFailure(res, `POST ${url} failed`));
   return res.json() as Promise<T>;
 }
 
@@ -97,7 +110,7 @@ async function putJson<T>(url: string, body: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`PUT ${url} failed: ${res.status}`);
+  if (!res.ok) throw new Error(await describeFailure(res, `PUT ${url} failed`));
   return res.json() as Promise<T>;
 }
 

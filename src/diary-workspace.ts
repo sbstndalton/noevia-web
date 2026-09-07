@@ -22,6 +22,17 @@ export interface DirectoryHandle {
   getFileHandle(name: string, options?: { create: boolean }): Promise<LocalFileHandle>;
 }
 export const directoryPicker = () => (window as unknown as { showDirectoryPicker?: (options: { mode: string }) => Promise<DirectoryHandle> }).showDirectoryPicker;
+/**
+ * The File System Access API is spec'd to be unavailable outside a secure
+ * context (https, or http://localhost/127.0.0.1) even in Chrome/Edge — so a
+ * plain-HTTP LAN/Docker deployment fails this exactly like an unsupported
+ * browser does. Surface which one it is so the message tells the user
+ * something they can actually act on.
+ */
+export function directoryPickerBlockedReason(): 'insecure-context' | 'unsupported' | null {
+  if (directoryPicker()) return null;
+  return window.isSecureContext ? 'unsupported' : 'insecure-context';
+}
 export async function scanLocal(root: DirectoryHandle): Promise<Record<string, string>> {
   const files: Record<string, string> = {};
   let total = 0, visited = 0;

@@ -6,6 +6,14 @@ import { SetupWizard } from './SetupWizard';
 
 type Screen = 'checking' | 'wizard' | 'wizard-resume' | 'login' | 'secure' | 'ready';
 
+/** WebAuthn's RP ID must be a domain name — browsers refuse the ceremony
+ *  outright on an IP-address origin (e.g. a bare LAN IP), regardless of
+ *  server-side config. Detecting it lets the error say that instead of the
+ *  generic "cancelled or failed", which reads like a fixable client hiccup. */
+function isIpAddressHost(hostname: string): boolean {
+  return /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname.includes(':');
+}
+
 export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
   const [screen, setScreen] = useState<Screen>('checking');
   const [username, setUsername] = useState('');
@@ -57,7 +65,15 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
       await passkeyLoginVerify(challenge.challengeToken, response);
       const session = await fetchSession();
       setScreen(session.user.onboarded === false ? 'wizard-resume' : 'ready');
-    } catch { setError('Passkey sign-in was cancelled or failed.'); }
+    } catch (e) {
+      setError(
+        isIpAddressHost(window.location.hostname)
+          ? 'Passkeys need a real hostname — they cannot work from a bare IP address like this one. Sign in with your password here, or use your usual domain for passkeys.'
+          : e instanceof Error && e.message
+            ? e.message
+            : 'Passkey sign-in was cancelled or failed.',
+      );
+    }
     finally { setBusy(false); }
   };
 

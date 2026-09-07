@@ -451,14 +451,16 @@ function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
                   </button>
                 </div>
               ))}
-              <button
-                className="popup-tab"
-                style={{ alignSelf: 'flex-start', border: '1px solid var(--border)' }}
-                disabled={pulling !== null}
-                onClick={() => void pull(variants.repo)}
-              >
-                pull default checkpoint
-              </button>
+              {variants.variants[0] && (
+                <button
+                  className="popup-tab"
+                  style={{ alignSelf: 'flex-start', border: '1px solid var(--border)' }}
+                  disabled={pulling !== null}
+                  onClick={() => void pull(variants.variants[0].id)}
+                >
+                  pull recommended quant ({variants.variants[0].label})
+                </button>
+              )}
             </div>
           )}
         </Fragment>
