@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { fetchDiaryMonth, fetchDiarySource, fetchStorage, streamChat } from '../api';
 import type { StorageConnection } from '../api';
 import { calendarDays, dateInText, dayLabel, localDay, localTimestamp, monthLabel, splitDays } from '../diary-data';
-import { diaryRequest, directoryPicker, directoryPickerBlockedReason, listFiles, readFile, saveLocal, scanLocal, syncFileChange, writeFile } from '../diary-workspace';
+import { diaryRequest, directoryPicker, directoryPickerBlockedReason, listFiles, randomSessionId, readFile, saveLocal, scanLocal, syncFileChange, writeFile } from '../diary-workspace';
 import type { DiaryFile, DirectoryHandle, FileEntry } from '../diary-workspace';
 import { DiaryModal, MarkdownPreview } from './DiaryModal';
 import { StoragePicker } from './StoragePicker';
@@ -34,7 +34,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const [editText, setEditText] = useState('');
   const [preview, setPreview] = useState(true);
   const [revision, setRevision] = useState(0);
-  const session = useRef(crypto.randomUUID());
+  const session = useRef(randomSessionId());
   const today = localDay();
   const scope = day || (month ? `month:${month}` : 'home');
   const conversation = turns[scope] || [];

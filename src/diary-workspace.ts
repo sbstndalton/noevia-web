@@ -33,6 +33,24 @@ export function directoryPickerBlockedReason(): 'insecure-context' | 'unsupporte
   if (directoryPicker()) return null;
   return window.isSecureContext ? 'unsupported' : 'insecure-context';
 }
+
+/**
+ * crypto.randomUUID() is also secure-context-only (unlike getRandomValues,
+ * which has never been gated) — calling it unguarded on an insecure origin
+ * throws, and since this id is generated at component-mount time with no
+ * error boundary above it, that crash took down the whole page. This id is
+ * only a client-side correlation key for a chat stream, not a security
+ * token, so the getRandomValues-backed fallback is fine everywhere.
+ */
+export function randomSessionId(): string {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 export async function scanLocal(root: DirectoryHandle): Promise<Record<string, string>> {
   const files: Record<string, string> = {};
   let total = 0, visited = 0;
