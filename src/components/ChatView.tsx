@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import type { Message, ToolCallView } from '../types';
 import { ChevronDown, ChevronLeft, SendIcon, SlidersIcon } from './Icons';
+import { MarkdownPreview } from './DiaryModal';
 
 interface ChatViewProps {
   title: string;
@@ -138,7 +139,16 @@ export function ChatView({
                   {m.toolCalls && m.toolCalls.length > 0 ? <ToolChips calls={m.toolCalls} /> : null}
                   {m.content ? (
                     <div className="bubble">
-                      <p style={m.error ? { color: 'var(--accent-text)' } : undefined}>{m.content}</p>
+                      {/* Model replies are Markdown. A bare <p> showed the raw
+                          source (**bold**, list dashes) and collapsed every
+                          newline, so multi-section answers arrived as one wall
+                          of text. Errors stay plain — they are our own strings,
+                          not model output. */}
+                      {m.error ? (
+                        <p style={{ color: 'var(--accent-text)' }}>{m.content}</p>
+                      ) : (
+                        <MarkdownPreview text={m.content} />
+                      )}
                       {m.error && isLast && (
                         <button
                           className="msg-retry"
@@ -159,7 +169,7 @@ export function ChatView({
                   )}
                 </div>
               ) : (
-                <p>{m.content}</p>
+                <p style={{ whiteSpace: 'pre-wrap' }}>{m.content}</p>
               )}
             </div>
           );
