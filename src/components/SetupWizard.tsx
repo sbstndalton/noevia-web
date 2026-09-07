@@ -10,12 +10,18 @@ import {
   probeSession,
   setupStatus,
 } from '../api';
+import { classifyOrigin, isIpAddressHost } from '../browser-support';
 import { ProviderForm } from './ProviderForm';
 import { StoragePicker } from './StoragePicker';
 
 type Step = 'account' | 'provider' | 'diary' | 'models' | 'prefs' | 'passkey' | 'done';
 
 const STEP_ORDER: Step[] = ['account', 'provider', 'diary', 'models', 'prefs', 'passkey'];
+
+// Same wording the server returns for a rejected origin, so blocking the
+// submit client-side reads identically to hitting the server check.
+const INVALID_ORIGIN_MESSAGE =
+  'use https://, or a private-network address (a LAN IP, a bare LAN hostname, or localhost) over http://';
 
 const STEP_TITLES: Record<Step, string> = {
   account: 'Create the administrator',
@@ -105,8 +111,16 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
     setStep(next);
   }, []);
 
+  // Categorized the same way the server's setup() will categorize it, so the
+  // wizard never shows a green light for an origin the server then rejects.
+  const originClass = classifyOrigin(origin);
+
   const createAccount = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (originClass === 'invalid') {
+      setError(INVALID_ORIGIN_MESSAGE);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -140,7 +154,11 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
       sessionStorage.setItem('cowork-new-account', '1');
       go('done');
     } catch {
-      setError('Passkey setup was cancelled or failed. You can add one later in Settings.');
+      setError(
+        isIpAddressHost(window.location.hostname)
+          ? 'Passkeys need a real hostname — they cannot work from a bare IP address like this one. Skip this step and add a passkey later in Settings, once you reach noevia through a domain name.'
+          : 'Passkey setup was cancelled or failed. You can add one later in Settings.',
+      );
     } finally {
       setBusy(false);
     }
@@ -189,6 +207,22 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
             <small>Find it in the container logs (<code>docker compose logs web</code>) — it is printed once at first start.</small>
             <label htmlFor="wiz-origin">Canonical URL of this deployment</label>
             <input id="wiz-origin" value={origin} onChange={(e) => setOrigin(e.target.value)} required />
+            {originClass === 'public-https' && (
+              <small>Recommended — passkeys and remote access will work here.</small>
+            )}
+            {originClass === 'loopback' && <small>This machine only — other devices cannot reach it.</small>}
+            {originClass === 'private-lan-http' && (
+              <p className="auth-error" role="alert">
+                This address only works on your local network. Passkeys and some browser security
+                features require HTTPS and will not work from a plain IP address — you can still sign
+                in with your password. You can point noevia at a real domain later, and{' '}
+                <code>ADDITIONAL_TRUSTED_ORIGINS</code>{' '}
+                (see README.md) lets you keep this address working alongside it.
+              </p>
+            )}
+            {originClass === 'invalid' && (
+              <p className="auth-error" role="alert">{INVALID_ORIGIN_MESSAGE}</p>
+            )}
             <label htmlFor="wiz-username">Username</label>
             <input id="wiz-username" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
             <label htmlFor="wiz-display">Display name (optional)</label>
@@ -203,7 +237,7 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
               </span>
             </label>
             {error && <p className="auth-error" role="alert">{error}</p>}
-            <button type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
+            <button type="submit" disabled={busy || originClass === 'invalid'}>{busy ? 'Creating…' : 'Create account'}</button>
             <small>Passwords use Argon2id. Passkey private keys never leave your device.</small>
           </form>
         )}

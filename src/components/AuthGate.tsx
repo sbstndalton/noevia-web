@@ -2,17 +2,10 @@ import { useEffect, useState } from 'react';
 import type { FormEvent, JSX, ReactNode } from 'react';
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import { acceptInvitation, completeRecovery, fetchSession, passkeyLoginOptions, passkeyLoginVerify, passkeyRegistrationOptions, passkeyRegistrationVerify, passwordLogin, setupStatus } from '../api';
+import { isIpAddressHost } from '../browser-support';
 import { SetupWizard } from './SetupWizard';
 
 type Screen = 'checking' | 'wizard' | 'wizard-resume' | 'login' | 'secure' | 'ready';
-
-/** WebAuthn's RP ID must be a domain name — browsers refuse the ceremony
- *  outright on an IP-address origin (e.g. a bare LAN IP), regardless of
- *  server-side config. Detecting it lets the error say that instead of the
- *  generic "cancelled or failed", which reads like a fixable client hiccup. */
-function isIpAddressHost(hostname: string): boolean {
-  return /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname.includes(':');
-}
 
 export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
   const [screen, setScreen] = useState<Screen>('checking');
