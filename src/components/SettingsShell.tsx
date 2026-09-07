@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { SettingsView } from './SettingsView';
 import type { SettingsViewProps } from './SettingsView';
 import { fetchProfile } from '../api';
-import { ActivityGrid, PreviewPanel } from './PreviewPanel';
+import { PreviewPanel } from './PreviewPanel';
+import { UsageView } from './UsageView';
 import { ShellIcon } from './ShellIcon';
 
 type Item = [id: string, label: string];
@@ -119,11 +120,7 @@ export function SettingsShell(props: SettingsViewProps & {onClose:()=>void; them
             </section>
           </>
         ) : section === 'usage' ? (
-          <>
-            <div className="settings-title"><h1>Usage &amp; activity</h1><p>How much you have run through noevia.</p></div>
-            <ActivityGrid/>
-            <PreviewPanel title="Analytics" description="Per-reply token counts are recorded in each chat today. Aggregate history lands in a follow-up." items={['Token totals', 'Model breakdown', 'Active days']}/>
-          </>
+          <UsageView/>
         ) : section === 'planned' ? (
           <>
             <div className="settings-title"><h1>Planned features</h1><p>Not built yet. Listed here so the rest of Settings only shows what noevia can actually do.</p></div>

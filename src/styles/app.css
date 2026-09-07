@@ -882,3 +882,40 @@ button:disabled { cursor: not-allowed; }
 }
 .msg-edit-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .msg-edit-actions small { color: var(--muted-ink, #6b7280); font-size: 11.5px; }
+
+/* ── Usage & activity ─────────────────────────────────────────────────────
+   Numbers first, chrome second: the stat cards carry the answer and the
+   heat map gives it shape over time. */
+.usage-section { margin-bottom: 32px; }
+.usage-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+.usage-section-head h2 { margin: 0 0 2px; font-size: 15px; }
+.usage-section-head p { margin: 0; font-size: 12.5px; color: var(--muted-ink, #6b7280); }
+
+.usage-window { display: flex; gap: 4px; }
+.usage-window button {
+  font-size: 12px; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line, #d4d4d8); background: transparent; color: inherit;
+}
+.usage-window button.is-active { border-color: var(--accent-2); color: var(--accent-text); background: var(--accent-2-soft, transparent); }
+
+.usage-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line, #e4e4e7); border: 1px solid var(--line, #e4e4e7); border-radius: 10px; overflow: hidden; }
+.usage-stat { background: var(--surface, #fff); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.usage-stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-ink, #6b7280); }
+.usage-stat-value { font-size: 26px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.usage-stat-hint { font-size: 11.5px; color: var(--muted-ink, #6b7280); }
+
+/* The grid is column-major: each column a week, each row a weekday. */
+.usage-heatmap-scroll { overflow-x: auto; padding-bottom: 4px; }
+.usage-months { display: grid; gap: 2px; margin-bottom: 4px; font-size: 10px; color: var(--muted-ink, #6b7280); }
+.usage-months span { grid-row: 1; }
+.usage-heatmap { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 10px); grid-auto-columns: 10px; gap: 2px; }
+.usage-cell { width: 10px; height: 10px; border-radius: 2px; background: var(--line, #e4e4e7); }
+.usage-cell.is-pad { background: transparent; }
+.usage-cell.level-0 { background: var(--line, #e4e4e7); }
+.usage-cell.level-1 { background: color-mix(in srgb, var(--accent-2) 30%, transparent); }
+.usage-cell.level-2 { background: color-mix(in srgb, var(--accent-2) 55%, transparent); }
+.usage-cell.level-3 { background: color-mix(in srgb, var(--accent-2) 78%, transparent); }
+.usage-cell.level-4 { background: var(--accent-2); }
+
+.usage-legend { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 11.5px; color: var(--muted-ink, #6b7280); flex-wrap: wrap; }
+.usage-scale { display: inline-flex; align-items: center; gap: 3px; }

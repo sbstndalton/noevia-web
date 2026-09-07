@@ -157,3 +157,22 @@ export interface LiveStats {
   vramGb: number | null;
   memoryGb: number | null;
 }
+
+/** Aggregate usage for the signed-in user, from GET /api/usage. Days are a
+ *  dense series (zeros included) covering the retention window, oldest first,
+ *  so the heat map can render straight from it. */
+export interface UsageDay { day: string; input: number; output: number; replies: number }
+export interface UsageTotals { input: number; output: number; replies: number }
+export interface UsageModel { name: string; input: number; output: number; replies: number }
+export interface UsageSummary {
+  days: UsageDay[];
+  allTime: UsageTotals;
+  last7: UsageTotals;
+  last30: UsageTotals;
+  activeDays: number;
+  currentStreak: number;
+  longestStreak: number;
+  models: UsageModel[];
+  retentionDays: number;
+  timeZone: string;
+}

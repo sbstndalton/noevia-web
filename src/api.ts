@@ -283,6 +283,8 @@ export function editDiaryEntry(body: { xid: string; me: string; assistant: strin
   return postJson('/api/diary/entries/edit', body);
 }
 
+export const fetchUsage = () => getJson<import('./types').UsageSummary>('/api/usage');
+
 export function fetchChatHistory(chatId: string): Promise<HistoryEntry[]> {
   return getJson<{ history: HistoryEntry[] }>(
     `/api/chats/${encodeURIComponent(chatId)}/history`,
