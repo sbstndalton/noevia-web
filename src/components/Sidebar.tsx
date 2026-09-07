@@ -104,7 +104,7 @@ export function Sidebar({
     setRenamingId(null);
   };
   return (
-    <div className="sidebar">
+    <div className={`sidebar${activeView === 'diary' ? ' diary-sidebar' : ''}`}>
       <div className="side-logo">
         <Logo />
         <span>Cowork</span>

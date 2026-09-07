@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "test": "node --test server/*.test.cjs",
+    "test": "node --test server/*.test.cjs tests/*.test.cjs",
     "start": "node server/index.cjs"
   },
   "dependencies": {

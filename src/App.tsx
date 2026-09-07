@@ -6,9 +6,6 @@ import {
   deleteFreeChat,
   deleteProject,
   fetchChatHistory,
-  fetchDiaryCorpus,
-  fetchDiaryMonth,
-  fetchDiarySource,
   fetchHealth,
   fetchInstalledModels,
   fetchProfile,
@@ -22,8 +19,6 @@ import {
 } from './api';
 import type {
   ChatMeta,
-  DiaryCorpus,
-  DiaryMonth,
   HealthState,
   HistoryEntry,
   InstalledModel,
@@ -70,39 +65,9 @@ export default function App(): JSX.Element {
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthState>({ inferenceUp: null, diaryUp: null });
   const [stats, setStats] = useState<LiveStats | null>(null);
-  const [corpus, setCorpus] = useState<DiaryCorpus | null>(null);
-  const [corpusError, setCorpusError] = useState<string | null>(null);
-  const [diaryMonths, setDiaryMonths] = useState<DiaryMonth[]>([]);
-  const [diaryScreen, setDiaryScreen] = useState<'picker' | 'month'>('picker'); // diary lands on the month picker (skipped for the first-run zero-state)
-  const [diaryMonthId, setDiaryMonthId] = useState<string | null>(null); // null = today
   const [streaming, setStreaming] = useState(false);
-  const [diaryConversation, setDiaryConversation] = useState<Message[]>([]);
-  const diarySession = useRef(crypto.randomUUID());
   const messagesRef = useRef(messagesByChat);
   messagesRef.current = messagesByChat;
-  const [diaryOutcome, setDiaryOutcome] = useState<string | null>(null);
-
-  // Diary first-run: on a fresh corpus the month list is empty and today's file
-  // doesn't exist yet — land directly in the writing zero-state instead of the
-  // month picker. Anything already in the corpus (returning user) keeps the
-  // picker landing.
-  useEffect(() => {
-    if (view.kind !== 'diary') return;
-    let stale = false;
-    fetchDiarySource()
-      .then((s) => {
-        if (stale) return;
-        setDiaryMonths(Array.isArray(s.months) ? s.months : []);
-        if (Array.isArray(s.months) && s.months.length === 0) setDiaryScreen('month');
-      })
-      .catch(() => {
-        if (!stale) setDiaryMonths([]);
-      });
-    return () => {
-      stale = true;
-    };
-  }, [view.kind]);
-  const [diaryBusy, setDiaryBusy] = useState(false);
   const [diaryEnabled, setDiaryEnabled] = useState(false);
   const [popupOpen, setPopupOpen] = useState(false);
   const loadedChats = useRef<Set<string>>(new Set());
@@ -206,28 +171,6 @@ export default function App(): JSX.Element {
       clearInterval(t);
     };
   }, []);
-
-  // Diary tab: the corpus refetches when the selected month changes (null =
-  // today). Writes always go to today.
-  useEffect(() => {
-    if (view.kind !== 'diary') return;
-    fetchDiarySource()
-      .then((s) => setDiaryMonths(Array.isArray(s.months) ? s.months : []))
-      .catch(() => setDiaryMonths([]));
-  }, [view.kind]);
-
-  useEffect(() => {
-    if (view.kind !== 'diary' || diaryScreen !== 'month') return;
-    setCorpus(null);
-    setCorpusError(null);
-    const load = diaryMonthId ? fetchDiaryMonth(diaryMonthId) : fetchDiaryCorpus();
-    load
-      .then((c) => {
-        setCorpus(c);
-        setCorpusError(null);
-      })
-      .catch(() => setCorpusError('Could not reach the diary sidecar (read-only).'));
-  }, [view.kind, diaryScreen, diaryMonthId]);
 
   // Lazily load a chat's persisted history when it is opened.
   useEffect(() => {
@@ -426,47 +369,6 @@ export default function App(): JSX.Element {
     void handleSend(chatId, projectId, msgs[index - 1].content, msgs.slice(0, index - 1));
   }, [activeChatMeta, handleSend, streaming, view]);
 
-  const sendToDiary = useCallback(
-    async (text: string) => {
-      if (diaryBusy) return;
-      setDiaryBusy(true);
-      setDiaryOutcome(null);
-      const replyId = uid();
-      setDiaryConversation(prev => [...prev, { id: uid(), role: 'user', content: text }, { id: replyId, role: 'assistant', content: '' }]);
-      const controller = new AbortController();
-      streamAbort.current = controller;
-      try {
-        let verdict = 'skipped';
-        for await (const ev of streamChat({ spaceId: 'diary', message: text, history: [], sessionId: diarySession.current }, controller.signal)) {
-          if (ev.type === 'diary' && ev.decision) verdict = ev.decision;
-          if (ev.type === 'delta' && ev.text) setDiaryConversation(prev => prev.map(m => m.id === replyId ? { ...m, content: m.content + ev.text } : m));
-          if (ev.type === 'error') throw new Error(ev.text || 'Diary request failed');
-        }
-        setDiaryOutcome(verdict);
-        fetchDiarySource().then(s => setDiaryMonths(s.months || [])).catch(() => undefined);
-        // Refresh whatever view is open; new exchanges always land in today's file,
-        // so jump the selector back to today to show the result.
-        setDiaryScreen('month');
-        setDiaryMonthId(null);
-        fetchDiaryCorpus()
-          .then((c) => setCorpus(c))
-          .catch(() => undefined);
-      } catch (err) {
-        if (controller.signal.aborted) {
-          setDiaryOutcome('stopped');
-        } else {
-          const detail = err instanceof Error ? err.message : 'unknown error';
-          setDiaryOutcome(`error — ${detail}`);
-          setDiaryConversation(prev => prev.map(m => m.id === replyId ? { ...m, content: detail, error: true } : m));
-        }
-      } finally {
-        if (streamAbort.current === controller) streamAbort.current = null;
-        setDiaryBusy(false);
-      }
-    },
-    [diaryBusy],
-  );
-
   const startFreeChat = useCallback(() => {
     const chatId = `c-${uid()}`;
     setMessagesByChat((prev) => ({ ...prev, [chatId]: [] }));
@@ -620,44 +522,7 @@ export default function App(): JSX.Element {
         />
       )}
 
-      {view.kind === 'diary' && diaryEnabled && (
-        <DiaryView
-          corpus={corpus}
-          corpusError={corpusError}
-          months={diaryMonths}
-          screen={diaryScreen}
-          selectedMonthId={diaryMonthId}
-          onOpenMonth={(id) => { setDiaryScreen('month'); setDiaryMonthId(id); }}
-          onBackToPicker={() => setDiaryScreen('picker')}
-          onSelectMonth={setDiaryMonthId}
-          onRefresh={() => {
-            const load = diaryMonthId ? fetchDiaryMonth(diaryMonthId) : fetchDiaryCorpus();
-            load.then((c) => setCorpus(c)).catch(() => undefined);
-          }}
-          conversation={diaryConversation}
-          busy={diaryBusy}
-          inferenceUp={health.inferenceUp}
-          outcome={diaryOutcome}
-          onSend={(text) => void sendToDiary(text)}
-          onImported={(day) => {
-            // An import lands on its own (possibly past) date: refresh the
-            // month list, jump the month selector to the entry's month, and
-            // refetch the corpus.
-            fetchDiarySource()
-              .then((s) => {
-                setDiaryMonths(Array.isArray(s.months) ? s.months : []);
-                if (day) {
-                  const monthId = day.slice(0, 7);
-                  if (Array.isArray(s.months) && s.months.some((m) => m.id === monthId)) setDiaryMonthId(monthId);
-                }
-              })
-              .catch(() => undefined);
-            fetchDiaryCorpus()
-              .then((c) => setCorpus(c))
-              .catch(() => undefined);
-          }}
-        />
-      )}
+      {diaryEnabled && <div className="diary-mount" style={{ display: view.kind === 'diary' ? 'contents' : 'none' }}><DiaryView inferenceUp={health.inferenceUp} /></div>}
 
       {view.kind === 'settings' && (
         <SettingsView

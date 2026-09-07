@@ -298,7 +298,7 @@ export function saveChatHistory(chatId: string, history: HistoryEntry[]): Promis
 //   { type:'tool', name, args } { type:'done', model } { type:'diary', decision }
 export async function* streamChat(
   body: { spaceId: string;
-    sessionId?: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null },
+    entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null },
   signal?: AbortSignal,
 ): AsyncGenerator<{
   type: string;

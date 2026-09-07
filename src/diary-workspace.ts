@@ -1,0 +1,66 @@
+import { apiFetch } from './api';
+export interface DiaryFile { path: string; content: string | null; version: string | null }
+export interface FileEntry { path: string; name: string; isDir: boolean }
+export async function diaryRequest<T>(path: string, body?: unknown, method = 'POST'): Promise<T> {
+  const r = await apiFetch('/api/diary/' + path, body === undefined ? {} : { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const value = await r.json();
+  if (!r.ok) throw new Error(value.error || 'Diary request failed');
+  return value;
+}
+export const listFiles = (path = '') => diaryRequest<{ files: FileEntry[] }>('files?path=' + encodeURIComponent(path));
+export const readFile = (path: string) => diaryRequest<DiaryFile>('file', { path });
+export const writeFile = (file: DiaryFile) => diaryRequest<DiaryFile>('file', file, 'PUT');
+interface LocalFileHandle {
+  kind: 'file'; name: string;
+  getFile(): Promise<File>;
+  createWritable(): Promise<{ write(text: string): Promise<void>; close(): Promise<void>; abort(): Promise<void> }>;
+}
+export interface DirectoryHandle {
+  kind: 'directory'; name: string;
+  values(): AsyncIterable<DirectoryHandle | LocalFileHandle>;
+  getDirectoryHandle(name: string, options?: { create: boolean }): Promise<DirectoryHandle>;
+  getFileHandle(name: string, options?: { create: boolean }): Promise<LocalFileHandle>;
+}
+export const directoryPicker = () => (window as unknown as { showDirectoryPicker?: (options: { mode: string }) => Promise<DirectoryHandle> }).showDirectoryPicker;
+export async function scanLocal(root: DirectoryHandle): Promise<Record<string, string>> {
+  const files: Record<string, string> = {};
+  let total = 0, visited = 0;
+  async function scan(dir: DirectoryHandle, prefix = '', depth = 0) {
+    if (depth > 10) throw new Error('Folder nesting exceeds 10 levels. Choose a diary subfolder.');
+    for await (const handle of dir.values()) {
+      if (++visited > 2000) throw new Error('Too many items. Choose a diary subfolder.');
+      if (handle.name.startsWith('.')) continue;
+      const path = prefix + handle.name;
+      if (handle.kind === 'directory') await scan(handle, path + '/', depth + 1);
+      else if (path.toLowerCase().endsWith('.md')) {
+        const file = await handle.getFile();
+        total += file.size;
+        if (file.size > 512*1024 || total > 12*1024*1024 || Object.keys(files).length >= 500) throw new Error('Choose a diary folder with at most 500 Markdown files, 512 KiB per file, and 12 MiB total.');
+        files[path] = await file.text();
+      }
+    }
+  }
+  await scan(root);
+  return files;
+}
+export async function saveLocal(root: DirectoryHandle, path: string, text: string, expected: string | null): Promise<void> {
+  const parts = path.split('/');
+  if (parts.some(p => !p || p.startsWith('.') || p.includes('\\')) || !path.toLowerCase().endsWith('.md')) throw new Error('Invalid Markdown path');
+  let dir = root;
+  for (const part of parts.slice(0,-1)) dir = await dir.getDirectoryHandle(part, { create: true });
+  let file: LocalFileHandle | undefined;
+  let current: string | null = null;
+  try { file = await dir.getFileHandle(parts[parts.length-1]); current = await (await file.getFile()).text(); }
+  catch (e) { if (!(e instanceof DOMException && e.name === 'NotFoundError')) throw e; }
+  if (current !== expected) throw new Error(`${path} changed on your computer. Reopen it before saving.`);
+  file ??= await dir.getFileHandle(parts[parts.length-1], { create: true });
+  const writable = await file.createWritable();
+  try { await writable.write(text); await writable.close(); }
+  catch (e) { await writable.abort().catch(() => undefined); throw e; }
+}
+export async function syncFileChange(path: string, before: string | null, content: string): Promise<void> {
+  const remote = await readFile(path);
+  if (remote.content === content) return;
+  if (remote.content !== null && remote.content !== before) throw new Error(`${path} differs in saved storage. Local copy kept; review the saved file before syncing.`);
+  await writeFile({ ...remote, content });
+}

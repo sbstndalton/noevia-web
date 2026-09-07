@@ -8,17 +8,18 @@ export interface StoragePickerProps {
   onSaved?: (connection: StorageConnection) => void;
   /** Skip path — shown in the wizard, hidden in Settings. */
   onSkip?: () => void;
+  onlineOnly?: boolean;
 }
 
 /** Diary storage backend picker (local / Nextcloud / generic WebDAV), shared by
  *  the setup wizard (step 3) and Settings → Diary storage. */
-export function StoragePicker({ onSaved, onSkip }: StoragePickerProps): JSX.Element {
+export function StoragePicker({ onSaved, onSkip, onlineOnly = false }: StoragePickerProps): JSX.Element {
   const [value, setValue] = useState<StorageConnection>({ kind: 'local', baseUrl: '', username: '', corpusRoot: '' });
   const [secret, setSecret] = useState('');
   const [message, setMessage] = useState('');
   useEffect(() => {
     void fetchStorage()
-      .then(setValue)
+      .then(v => setValue(onlineOnly && v.kind === 'local' ? { kind: 'nextcloud', baseUrl: '', username: '', corpusRoot: 'Cowork/Diary' } : v))
       .catch(() => undefined);
   }, []);
   const patch = (next: Partial<StorageConnection>) => setValue((v) => ({ ...v, ...next }));
@@ -60,7 +61,7 @@ export function StoragePicker({ onSaved, onSkip }: StoragePickerProps): JSX.Elem
         value={value.kind}
         onChange={(e) => patch({ kind: e.target.value as StorageConnection['kind'] })}
       >
-        <option value="local">Local storage</option>
+        {!onlineOnly && <option value="local">Server storage</option>}
         <option value="nextcloud">Nextcloud</option>
         <option value="webdav">Generic WebDAV</option>
         <option value="s3">S3-compatible</option>
