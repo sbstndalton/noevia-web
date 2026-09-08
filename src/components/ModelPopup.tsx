@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import type { InstalledModel, Project, Provider } from '../types';
-import { apiFetch, fetchAutoRoles, fetchInstalledModels, fetchProviders, saveProjectConfig, setAutoRoles as putAutoRoles } from '../api';
+import type { InstalledModel, Project, Provider, Toolbox } from '../types';
+import { apiFetch, fetchAutoRoles, fetchInstalledModels, fetchProviders, fetchToolboxes, saveProjectConfig, setAutoRoles as putAutoRoles } from '../api';
 
 interface ModelPopupProps {
   projects: Project[];
@@ -73,6 +73,7 @@ function SwitchTab({
   const [cloudModel, setCloudModel] = useState('');
   const [autoInfo, setAutoInfo] = useState<{ configured: boolean; roles: { fast: string; smart: string } | null } | null>(null);
   const [pendingRoles, setPendingRoles] = useState<{ fast?: string; smart?: string }>({});
+  const [toolboxes, setToolboxes] = useState<Toolbox[]>([]);
 
   const refresh = () => {
     fetchInstalledModels()
@@ -80,6 +81,7 @@ function SwitchTab({
       .catch(() => setErr('Model manager unavailable or disabled'));
     fetchProviders().then((r) => setProviders(r.providers || [])).catch(() => undefined);
     fetchAutoRoles().then(setAutoInfo).catch(() => undefined);
+    fetchToolboxes().then((r) => setToolboxes(r.toolboxes || [])).catch(() => undefined);
   };
   useEffect(refresh, []);
 
@@ -112,6 +114,27 @@ function SwitchTab({
         body: JSON.stringify({ provider: id }),
       });
       setCloudModel('');
+      onChanged();
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // An unset selection means the server default (core only), so the first
+  // toggle has to materialise that default before changing it — otherwise
+  // deselecting core would read as "unset" and silently re-enable it.
+  const selectedBoxes = activeProject?.toolboxes ?? ['core'];
+  const chosen = toolboxes.filter((b) => selectedBoxes.includes(b.id));
+  const selectedTools = chosen.reduce((n, b) => n + b.toolCount, 0);
+  const selectedTokens = chosen.reduce((n, b) => n + b.estTokens, 0);
+  const toggleToolbox = async (id: string) => {
+    if (!activeProject) return;
+    const next = selectedBoxes.includes(id)
+      ? selectedBoxes.filter((b) => b !== id)
+      : [...selectedBoxes, id];
+    setBusy(`box-${id}`);
+    try {
+      await saveProjectConfig(activeProject.id, { toolboxes: next });
       onChanged();
     } finally {
       setBusy(null);
@@ -240,6 +263,50 @@ function SwitchTab({
           <button className="modal-btn primary" style={{ padding: '5px 12px', alignSelf: 'flex-end' }} disabled={busy !== null} onClick={() => void saveRoles()}>
             Save roles
           </button>
+        </div>
+      )}
+      {activeProject && toolboxes.length > 0 && (
+        <div
+          style={{
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-card, 10px)',
+            padding: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+          }}
+        >
+          <span className="rail-label" style={{ margin: 0 }}>
+            Tools ({selectedTools} enabled · ~{selectedTokens} tokens per message)
+          </span>
+          {toolboxes.map((box) => {
+            const on = selectedBoxes.includes(box.id);
+            return (
+              <label
+                key={box.id}
+                style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, cursor: 'pointer' }}
+              >
+                <input
+                  type="checkbox"
+                  checked={on}
+                  disabled={busy !== null}
+                  onChange={() => void toggleToolbox(box.id)}
+                  style={{ marginTop: 2 }}
+                />
+                <span style={{ flex: 1 }}>
+                  <strong>{box.label}</strong>
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    {' '}· {box.toolCount} {box.toolCount === 1 ? 'tool' : 'tools'} · ~{box.estTokens} tokens
+                  </span>
+                  <span style={{ display: 'block', color: 'var(--text-secondary)', fontSize: 11 }}>{box.description}</span>
+                </span>
+              </label>
+            );
+          })}
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+            Every enabled tool is re-sent on each message, so the cost above is paid per turn.
+            {selectedBoxes.length === 0 && ' No tools enabled — the model can only talk.'}
+          </span>
         </div>
       )}
       {providers.length > 1 && (

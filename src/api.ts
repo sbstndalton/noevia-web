@@ -13,6 +13,7 @@ import type {
   Project,
   Provider,
   SearchHit,
+  Toolbox,
   WorkspaceInfo,
 } from './types';
 import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser';
@@ -162,9 +163,14 @@ export function saveProjectConfig(
   patch: Partial<Pick<Project, 'name' | 'goal' | 'instructions' | 'model' | 'memories' | 'files'>> & {
     provider?: string;
     routing?: 'manual' | 'auto';
+    toolboxes?: string[];
   },
 ): Promise<{ ok: true }> {
   return postJson(`/api/projects/${encodeURIComponent(projectId)}/config`, patch);
+}
+
+export function fetchToolboxes(): Promise<{ toolboxes: Toolbox[] }> {
+  return getJson('/api/toolboxes');
 }
 
 export function fetchAutoRoles(): Promise<{ configured: boolean; roles: { fast: string; smart: string } | null }> {

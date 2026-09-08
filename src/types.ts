@@ -44,6 +44,7 @@ export interface Project {
   model?: string; // unset until picked; server defaults to the loaded model
   provider?: string; // unset = the server-configured default provider
   routing?: 'manual' | 'auto'; // default 'manual'; 'auto' = Fast/Smart per-message routing
+  toolboxes?: string[]; // step 14: named tool sets offered to the model; defaults to ['core']
   chats: ChatMeta[];
   createdAt: number;
   updatedAt: number;
@@ -175,4 +176,16 @@ export interface UsageSummary {
   models: UsageModel[];
   retentionDays: number;
   timeZone: string;
+}
+
+// A selectable set of tools. `estTokens` is what the set costs in the prompt
+// on every single turn — the number that decides whether a box is affordable
+// on a small local model, so it is surfaced in the picker.
+export interface Toolbox {
+  id: string;
+  label: string;
+  description: string;
+  source: 'builtin' | 'mcp';
+  toolCount: number;
+  estTokens: number;
 }
