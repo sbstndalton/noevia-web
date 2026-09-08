@@ -38,6 +38,7 @@ import { CodingWorkspace } from './components/CodingWorkspace';
 import { FeaturePreview } from './components/PreviewPanel';
 import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
+import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
 
 type View =
@@ -672,7 +673,15 @@ export default function App(): JSX.Element {
           />
         ) : null;
       })()}
-      {view.kind !== 'diary' && inspectorOpen && <aside id="noevia-inspector" className="noevia-inspector"><h2>Context & models</h2><h3>AI parameters</h3><p>Routing: {activeProject?.routing === 'auto'?'Auto · Fast / Smart':'Manual'}</p><p>Model: {activeProject?.model || models.find(m=>m.loaded)?.name || 'Not selected'}</p><button onClick={()=>setPopupOpen(true)}>Configure models & routing</button><h3>Linked knowledge</h3>{activeProject ? <><p>{activeProject.name}</p>{activeProject.files.length ? <ul>{activeProject.files.map((file,i)=><li key={i}>{file.name}</li>)}</ul>:<p>No knowledge files linked.</p>}<p>{activeProject.memories.length} saved memories</p></>:<p>Open a project to see its linked knowledge and memories.</p>}</aside>}
+      {view.kind !== 'diary' && inspectorOpen && (
+        <Inspector
+          project={activeProject ?? null}
+          models={models}
+          onClose={() => setInspectorOpen(false)}
+          onConfigureModels={() => setPopupOpen(true)}
+          onEditProject={setEditingProjectId}
+        />
+      )}
       </div>
       {appMode === 'code'  && <CodingWorkspace onExit={() => setAppMode('chat')} onSettings={() => setSettingsOpen(true)} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/>}
       {settingsOpen && (

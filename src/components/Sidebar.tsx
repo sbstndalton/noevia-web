@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { AccountMenu } from './AccountMenu';
 import { ContextMenu, ConfirmDialog } from './ContextMenu';
@@ -87,6 +87,25 @@ export function Sidebar({
   >(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
+  // The hover card lives in .spaces, which is overflow-y:auto — an absolutely
+  // positioned card is clipped by it, which made the card useless. Render it
+  // fixed at a measured point instead, after a delay so it does not flash
+  // while the pointer is only passing over the row.
+  const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openHover = (id: string, el: HTMLElement) => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => {
+      const r = el.getBoundingClientRect();
+      setHover({ id, x: r.right + 10, y: r.top });
+    }, 450);
+  };
+  const closeHover = () => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    setHover(null);
+  };
+  useEffect(() => () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); }, []);
   // MCP reachability. Nothing surfaced this before; a configured server that
   // has failed to discover its tools should say so rather than look healthy.
   const [mcp, setMcp] = useState<McpStatus | null>(null);
@@ -185,15 +204,6 @@ export function Sidebar({
           <BookIcon />
           <span className="nav-name">Projects</span>
         </button>
-        {diaryEnabled && (
-          <button
-            className={`nav-item${activeView === 'diary' ? ' is-active' : ''}`}
-            onClick={onOpenDiary}
-          >
-            <span className="nav-emoji" role="img" aria-label="Diary">📔</span>
-            <span className="nav-name">Diary</span>
-          </button>
-        )}
       </div>
 
       {SHOW_PLACEHOLDER_NAV && <nav className="shell-extra-nav" aria-label="Explore noevia">{[['Scheduled','clock'],['Plugins','plugins'],['Explore','explore']].map(([label,icon])=><button className="nav-item" key={label} onClick={()=>onPreview(label)}><ShellIcon name={icon}/><span className="nav-name">{label}</span></button>)}</nav>}
@@ -225,20 +235,13 @@ export function Sidebar({
               <button
                 className={`nav-item${activeProjectId === p.id && activeView !== 'projects' ? ' is-active' : ''}`}
                 onClick={() => onOpenProject(p.id)}
+                onMouseEnter={(e) => openHover(p.id, e.currentTarget)}
+                onMouseLeave={closeHover}
+                onFocus={(e) => openHover(p.id, e.currentTarget)}
+                onBlur={closeHover}
               >
                 <span className="nav-emoji" role="img" aria-label={p.name}>{p.pinned ? '📌' : '📁'}</span>
                 <span className="nav-name">{p.name}</span>
-                {/* What this project is working from, on hover — the sources it
-                    pulls context from, which is otherwise only visible inside
-                    the project. */}
-                <span className="row-card" role="tooltip">
-                  <strong>{p.name}</strong>
-                  {p.goal && <em>{p.goal}</em>}
-                  <span>{(p.chats || []).length} chat{(p.chats || []).length === 1 ? '' : 's'} · {(p.files || []).length} source{(p.files || []).length === 1 ? '' : 's'}</span>
-                  {(p.files || []).slice(0, 4).map((f) => <span key={f.name} className="row-card-src">{f.name}</span>)}
-                  {(p.files || []).length > 4 && <span className="row-card-src">+{(p.files || []).length - 4} more</span>}
-                  {(p.files || []).length === 0 && <span className="row-card-src">No sources attached</span>}
-                </span>
               </button>
             )}
             <button
@@ -319,8 +322,40 @@ export function Sidebar({
 
       <div style={{ flexGrow: 1 }} />
 
+      {/* The diary is its own space, not another project — it keeps a separate
+          area above the footer rather than sitting in the Projects nav. */}
+      {diaryEnabled && (
+        <>
+          <div className="divider" />
+          <nav className="side-diary" aria-label="Diary">
+            <button
+              className={`nav-item${activeView === 'diary' ? ' is-active' : ''}`}
+              onClick={onOpenDiary}
+            >
+              <span className="nav-emoji" role="img" aria-label="Diary">📔</span>
+              <span className="nav-name">Diary</span>
+            </button>
+          </nav>
+        </>
+      )}
+
       <div className="divider" />
 
+      {hover && (() => {
+        const p = projects.find((x) => x.id === hover.id);
+        if (!p) return null;
+        const files = p.files || [];
+        return (
+          <div className="row-card" role="tooltip" style={{ top: hover.y, left: hover.x }}>
+            <strong>{p.name}</strong>
+            {p.goal && <em>{p.goal}</em>}
+            <span>{(p.chats || []).length} chat{(p.chats || []).length === 1 ? '' : 's'} · {files.length} source{files.length === 1 ? '' : 's'}</span>
+            {files.slice(0, 4).map((f) => <span key={f.name} className="row-card-src">{f.name}</span>)}
+            {files.length > 4 && <span className="row-card-src">+{files.length - 4} more</span>}
+            {files.length === 0 && <span className="row-card-src">No sources attached</span>}
+          </div>
+        );
+      })()}
       {menu && (
         <ContextMenu
           at={menu.at}
@@ -348,7 +383,7 @@ export function Sidebar({
           <span className="status-dot" style={mcp.error ? { background: 'var(--danger)' } : { background: 'var(--good)' }} />
           <span className="status-text">{mcp.error ? 'Local MCP · unavailable' : `Local MCP · ${mcp.discovered ?? 0} tools`}</span>
         </div>
-      )}<div className="status-row"><span className="status-dot" style={health.inferenceUp===false?{background:'var(--accent)'}:undefined}/><span className="status-text">{statusText(health)}</span></div><AccountMenu onSettings={onOpenSettings} onToggleTheme={onToggleTheme} theme={theme}/></div>
+      )}<div className="status-row"><span className={`status-dot${health.inferenceUp === true ? ' is-up' : health.inferenceUp === false ? ' is-down' : ''}`}/><span className="status-text">{statusText(health)}</span></div><AccountMenu onSettings={onOpenSettings}/></div>
     </div>
   );
 }

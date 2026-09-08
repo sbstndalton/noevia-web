@@ -17,8 +17,8 @@ button:disabled { opacity:1; }
 .theme-swatch { background:#fff; border-left-color:#EAECEE; }.theme-swatch i { background:#5A6572; }
 .theme-swatch.dark { background:#21252D; border-left-color:#181A1F; }.theme-swatch.dark i { background:#A3ADBA; }
 .auth-mark { font-size:20px; }.side-logo { letter-spacing:-.6px; }
-.noevia-inspector { position:absolute; inset:0 0 0 auto; width:min(320px,86vw); z-index:20; padding:20px; background:var(--bg-surface); border-left:1px solid var(--border); box-shadow:var(--shadow-pop); overflow:auto; font-size:13px; }
-.noevia-inspector h2 { font-size:15px; margin:0 0 22px; }.noevia-inspector h3 { font-size:12px; margin-top:24px; }.noevia-inspector p { color:var(--text-secondary); line-height:1.6; overflow-wrap:anywhere; }.noevia-inspector button { padding:8px; color:var(--accent-text); background:var(--tint-garnet); border:1px solid var(--control-border); border-radius:8px; cursor:pointer; }
+.noevia-inspector { position:absolute; inset:0 0 0 auto; width:min(320px,86vw); z-index:20; padding:0; background:var(--bg-surface); border-left:1px solid var(--border); box-shadow:var(--shadow-pop); overflow:auto; font-size:13px; }
+
 .inspector-toggle { align-self:flex-start; margin:12px 6px 0 0; color:var(--accent-text); background:var(--bg-surface); border:1px solid var(--control-border); border-radius:8px; padding:8px; cursor:pointer; }
 @media(max-width:900px) { .app-main { margin:4px; } }
 @media(max-width:600px) {

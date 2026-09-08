@@ -1199,18 +1199,16 @@ button:disabled { cursor: not-allowed; }
 
 /* The row hover card: what a project is working from, without opening it. */
 .row-card {
-  position: absolute; left: calc(100% + 10px); top: 0; z-index: 120;
-  min-width: 210px; max-width: 280px; padding: 10px 12px;
+  z-index: 120; min-width: 210px; max-width: 280px; padding: 10px 12px;
   background: var(--bg-surface); border: 1px solid var(--border);
   border-radius: 12px; box-shadow: var(--shadow-pop);
-  display: none; flex-direction: column; gap: 4px;
+  flex-direction: column; gap: 4px;
   font-size: 11.5px; color: var(--text-secondary); text-align: left;
   white-space: normal; pointer-events: none;
 }
 .row-card strong { font-size: 12.5px; color: var(--text-primary); }
 .row-card em { font-style: normal; color: var(--text-secondary); }
 .row-card-src { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-faint); overflow-wrap: anywhere; }
-.proj-row .nav-item:hover .row-card { display: flex; }
 @media (hover: none) { .row-card { display: none !important; } }
 
 .edit-project-modal {
@@ -1256,3 +1254,76 @@ button:disabled { cursor: not-allowed; }
 .seg button:hover { color: var(--text); }
 .seg button.is-selected { background: var(--bg-surface-active); color: var(--text-primary); }
 .projects-head .projects-search { margin-left: 4px; }
+
+/* ── Project rail ─────────────────────────────────────────────────────────
+   Sectioned cards with a header row and one affordance each, rather than a
+   run of bare headings and paragraphs. */
+.noevia-inspector { display: flex; flex-direction: column; }
+.insp-bar {
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+  padding: 14px 16px; border-bottom: 1px solid var(--border-subtle);
+  position: sticky; top: 0; background: var(--bg-surface); z-index: 1;
+}
+.insp-bar h2 {
+  margin: 0; flex: 1; min-width: 0; font-size: 14px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* The drawer owns its dismissal: at narrow widths it covers the toggle that
+   opened it, so an external control alone left no way out. */
+.insp-close {
+  flex-shrink: 0; width: 28px; height: 28px; border: 0; border-radius: 7px;
+  background: transparent; color: var(--text-secondary); cursor: pointer;
+  font-size: 13px; line-height: 1;
+  transition: background var(--duration-fast) var(--ease-spring), color var(--duration-fast) var(--ease-spring);
+}
+.insp-close:hover { background: var(--nav-hover); color: var(--text); }
+
+.insp-section { padding: 14px 16px; border-bottom: 1px solid var(--border-subtle); }
+.insp-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.insp-head h3 {
+  margin: 0; flex: 1; font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint);
+}
+.insp-action {
+  flex-shrink: 0; width: 24px; height: 24px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 12px;
+  transition: background var(--duration-fast) var(--ease-spring), color var(--duration-fast) var(--ease-spring);
+}
+.insp-action:hover { background: var(--nav-hover); color: var(--text); }
+.insp-value { margin: 0; font-size: 13px; color: var(--text-primary); overflow-wrap: anywhere; }
+.insp-note { margin: 4px 0 0; font-size: 12px; line-height: 1.6; color: var(--text-secondary); overflow-wrap: anywhere; }
+.insp-clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.insp-empty { margin: 0; font-size: 12px; color: var(--text-faint); line-height: 1.6; }
+.insp-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.insp-list li {
+  font-size: 12px; color: var(--text-secondary); overflow-wrap: anywhere;
+  padding: 6px 8px; background: var(--bg-surface-hover); border-radius: 7px;
+}
+
+/* Inference reachability, at a glance: green up, red down, muted while the
+   first health check is still in flight. */
+.status-dot { background: var(--text-faint); }
+.status-dot.is-up { background: var(--good); }
+.status-dot.is-down { background: var(--danger); }
+
+/* The hover card is rendered fixed, outside the scrolling list that used to
+   clip it, and fades in after the open delay. */
+.row-card {
+  position: fixed; display: flex;
+  animation: row-card-in var(--duration-base) var(--ease-spring);
+}
+@keyframes row-card-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
+
+/* Three controls share this row, so it wraps as a whole rather than letting
+   the segmented labels break across lines or the filter run off the edge. */
+.projects-head { flex-wrap: wrap; row-gap: 10px; }
+.seg { flex-shrink: 0; }
+.seg button { white-space: nowrap; }
+.projects-head .projects-search { flex: 1 1 200px; max-width: none; margin-left: 0; }
+@media (min-width: 900px) { .projects-head .projects-search { max-width: 280px; } }
+
+/* Below 600px the external toggle is absolutely positioned at top-right with a
+   higher z-index than the drawer — landing exactly on the drawer's own close
+   button and swallowing the click, so an open panel could not be dismissed.
+   The drawer owns dismissal once it is open, so the toggle steps aside. */
+.inspector-toggle[aria-expanded='true'] { display: none; }
