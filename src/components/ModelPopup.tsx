@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, Provider, Toolbox } from '../types';
+import type { McpStatus } from '../api';
 import { apiFetch, fetchAutoRoles, fetchInstalledModels, fetchProviders, fetchToolboxes, saveProjectConfig, setAutoRoles as putAutoRoles } from '../api';
 
 interface ModelPopupProps {
@@ -74,6 +75,7 @@ function SwitchTab({
   const [autoInfo, setAutoInfo] = useState<{ configured: boolean; roles: { fast: string; smart: string } | null } | null>(null);
   const [pendingRoles, setPendingRoles] = useState<{ fast?: string; smart?: string }>({});
   const [toolboxes, setToolboxes] = useState<Toolbox[]>([]);
+  const [mcpStatus, setMcpStatus] = useState<McpStatus | null>(null);
 
   const refresh = () => {
     fetchInstalledModels()
@@ -81,7 +83,7 @@ function SwitchTab({
       .catch(() => setErr('Model manager unavailable or disabled'));
     fetchProviders().then((r) => setProviders(r.providers || [])).catch(() => undefined);
     fetchAutoRoles().then(setAutoInfo).catch(() => undefined);
-    fetchToolboxes().then((r) => setToolboxes(r.toolboxes || [])).catch(() => undefined);
+    fetchToolboxes().then((r) => { setToolboxes(r.toolboxes || []); setMcpStatus(r.mcp || null); }).catch(() => undefined);
   };
   useEffect(refresh, []);
 
@@ -127,6 +129,13 @@ function SwitchTab({
   const chosen = toolboxes.filter((b) => selectedBoxes.includes(b.id));
   const selectedTools = chosen.reduce((n, b) => n + b.toolCount, 0);
   const selectedTokens = chosen.reduce((n, b) => n + b.estTokens, 0);
+  // Mirrors toolTokenBudgetFor() on the server. Duplicated deliberately: the
+  // point is to warn BEFORE the server silently truncates, and a round trip
+  // per keystroke to learn the budget would be worse than one shared constant
+  // that a test pins on the server side.
+  const sizeMatch = /(\d+(?:\.\d+)?)\s*[bB]\b/.exec(activeProject?.model || '');
+  const budget = sizeMatch && Number(sizeMatch[1]) <= 12 ? 3000 : 8000;
+  const overBudget = selectedTokens > budget;
   const toggleToolbox = async (id: string) => {
     if (!activeProject) return;
     const next = selectedBoxes.includes(id)
@@ -295,6 +304,11 @@ function SwitchTab({
                 />
                 <span style={{ flex: 1 }}>
                   <strong>{box.label}</strong>
+                  {box.source === 'mcp' && (
+                    <span style={{ fontSize: 10, marginLeft: 6, padding: '1px 5px', borderRadius: 4, background: 'var(--accent-2-soft)', color: 'var(--accent-ink)' }}>
+                      MCP
+                    </span>
+                  )}
                   <span style={{ color: 'var(--text-secondary)' }}>
                     {' '}· {box.toolCount} {box.toolCount === 1 ? 'tool' : 'tools'} · ~{box.estTokens} tokens
                   </span>
@@ -303,10 +317,17 @@ function SwitchTab({
               </label>
             );
           })}
-          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-            Every enabled tool is re-sent on each message, so the cost above is paid per turn.
+          <span style={{ fontSize: 11, color: overBudget ? 'var(--danger, #b3261e)' : 'var(--text-secondary)' }}>
+            {overBudget
+              ? `Over budget for ${activeProject?.model || 'this model'} (~${budget} tokens). Tools past the limit are dropped in selection order — untick a box, or use a larger model.`
+              : 'Every enabled tool is re-sent on each message, so the cost above is paid per turn.'}
             {selectedBoxes.length === 0 && ' No tools enabled — the model can only talk.'}
           </span>
+          {mcpStatus?.configured && mcpStatus.error && (
+            <span style={{ fontSize: 11, color: 'var(--danger, #b3261e)' }}>
+              MCP server unreachable: {mcpStatus.error}. Its toolboxes are unavailable until it recovers.
+            </span>
+          )}
         </div>
       )}
       {providers.length > 1 && (

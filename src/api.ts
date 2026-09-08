@@ -169,7 +169,13 @@ export function saveProjectConfig(
   return postJson(`/api/projects/${encodeURIComponent(projectId)}/config`, patch);
 }
 
-export function fetchToolboxes(): Promise<{ toolboxes: Toolbox[] }> {
+export interface McpStatus {
+  configured: boolean;
+  error?: string | null;
+  discovered?: number;
+}
+
+export function fetchToolboxes(): Promise<{ toolboxes: Toolbox[]; mcp: McpStatus }> {
   return getJson('/api/toolboxes');
 }
 
