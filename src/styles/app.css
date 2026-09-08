@@ -1431,3 +1431,29 @@ button:disabled { cursor: not-allowed; }
 .folder-new-name { flex: 1; min-width: 0; height: 30px; font-size: 13px; }
 .folder-picker header code { font-family: var(--font-mono, ui-monospace, monospace); }
 .source-add-error { margin: 10px 0 0; font-size: 12px; line-height: 1.5; }
+
+/* A save that did not land has to be visible. It used to be swallowed, so a
+   source appeared to attach and then vanished at the next refresh. */
+.save-error {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 300;
+  display: flex; align-items: center; gap: 12px; max-width: min(560px, calc(100vw - 32px));
+  padding: 12px 14px; border-radius: 12px;
+  background: var(--bg-surface); border: 1px solid var(--danger);
+  box-shadow: var(--shadow-pop); color: var(--text); font-size: 13px; line-height: 1.5;
+}
+.save-error button {
+  flex-shrink: 0; background: none; border: 0; cursor: pointer;
+  color: var(--text-secondary); font-size: 12px; padding: 4px; border-radius: 6px;
+}
+.save-error button:hover { background: var(--nav-hover); color: var(--text); }
+
+/* A chat that is still generating while you look at something else. Without
+   this, work continuing in the background is invisible and reads as lost. */
+.chat-working { display: inline-flex; gap: 3px; align-items: center; margin-left: 6px; flex-shrink: 0; }
+.chat-working i {
+  width: 4px; height: 4px; border-radius: 50%; background: var(--accent-text);
+  animation: chat-working 1.2s infinite ease-in-out;
+}
+.chat-working i:nth-child(2) { animation-delay: 0.15s; }
+.chat-working i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes chat-working { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }

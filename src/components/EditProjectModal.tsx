@@ -5,6 +5,7 @@ import { StorageFileBrowser } from './StorageFileBrowser';
 import type { PickedFile } from './StorageFileBrowser';
 import { FolderPicker } from './FolderPicker';
 import { syncProjectSources } from '../api';
+import { TEXT_EXTENSIONS, readTextSources, describeRejection } from '../sources';
 
 /** Edit a project in place. Previously "Edit project" simply navigated into the
  *  project, which meant the settings people actually wanted to change — the
@@ -32,6 +33,7 @@ export function EditProjectModal({
   const [folders, setFolders] = useState<string[]>(project.sourceFolders || []);
   const [syncing, setSyncing] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
+  const [addError, setAddError] = useState('');
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -39,12 +41,16 @@ export function EditProjectModal({
     return () => { ref.current?.close(); previous?.focus(); };
   }, []);
 
-  const addLocalFiles = (list: FileList | null) => {
+  // The accept attribute is a hint the OS dialog lets you override, so the
+  // rules are enforced here too. Without this an image was read as text,
+  // stored as replacement characters, and — once it pushed the save past the
+  // 1 MB request cap — silently failed to save at all.
+  const addLocalFiles = async (list: FileList | null) => {
     if (!list) return;
-    for (const f of Array.from(list)) {
-      void f.text().then((content) =>
-        setFiles((prev) => [...prev.filter((x) => x.name !== f.name), { name: f.name, content }]),
-      );
+    const { accepted, rejected } = await readTextSources(Array.from(list));
+    setAddError(rejected.length ? `Not added — ${describeRejection(rejected)}. A source is read as text.` : '');
+    if (accepted.length) {
+      setFiles((prev) => [...prev.filter((x) => !accepted.some((a) => a.name === x.name)), ...accepted]);
     }
   };
 
@@ -199,15 +205,16 @@ export function EditProjectModal({
               ))}
             </ul>
           )}
+          {addError && <p className="modal-err source-add-error">{addError}</p>}
           <div className="source-actions">
             <label className="btn btn-secondary btn-sm">
               Add files
               <input
                 type="file"
                 multiple
-                accept=".md,.txt,.json,.csv,.yml,.yaml,.ts,.tsx,.js,.py"
+                accept={TEXT_EXTENSIONS.join(',')}
                 style={{ display: 'none' }}
-                onChange={(e) => addLocalFiles(e.target.files)}
+                onChange={(e) => { void addLocalFiles(e.target.files); e.target.value = ''; }}
               />
             </label>
             <button className="btn btn-secondary btn-sm" onClick={() => setBrowsing(true)}>

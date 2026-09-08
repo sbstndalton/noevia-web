@@ -68,11 +68,16 @@ export default function App(): JSX.Element {
   const [messagesByChat, setMessagesByChat] = useState<Record<string, Message[]>>({});
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [projectError, setProjectError] = useState<string | null>(null);
   const pendingFirstSend = useRef<{ chatId: string; projectId: string; text: string } | null>(null);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthState>({ inferenceUp: null, diaryUp: null });
   const [stats, setStats] = useState<LiveStats | null>(null);
-  const [streaming, setStreaming] = useState(false);
+  // Per chat, not global. A generation now continues while you look at
+  // something else, so "is something streaming" is only ever a question about
+  // a particular chat — and one chat working must not lock the composer of
+  // another.
+  const [streamingChats, setStreamingChats] = useState<Record<string, true>>({});
   const messagesRef = useRef(messagesByChat);
   messagesRef.current = messagesByChat;
   const [diaryEnabled, setDiaryEnabled] = useState(false);
@@ -82,10 +87,10 @@ export default function App(): JSX.Element {
   // AbortController for the in-flight generation (chat or diary). Aborting
   // stops the client-side stream; the server's disconnect handling (Phase 1)
   // then terminates the upstream request.
-  const streamAbort = useRef<AbortController | null>(null);
-  const abortStream = useCallback(() => {
-    streamAbort.current?.abort();
-    streamAbort.current = null;
+  const streamAbort = useRef<Record<string, AbortController>>({});
+  const abortStream = useCallback((chatId: string) => {
+    streamAbort.current[chatId]?.abort();
+    delete streamAbort.current[chatId];
   }, []);
 
   useEffect(() => {
@@ -94,15 +99,17 @@ export default function App(): JSX.Element {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#0c0e12' : '#F5F6F9');
   }, [theme]);
 
-  // Switching chats/views away from an in-flight generation, or unmounting,
-  // stops the stream — matching Claude-style chat UX where navigation ends
-  // the current response rather than letting it keep streaming.
+  // Navigating away used to abort the generation, so stepping into another
+  // chat mid-answer threw the answer away — you came back to nothing and had
+  // to ask again. A reply now runs to completion wherever you are, and is
+  // waiting when you return. Only leaving the app entirely cancels, because
+  // nothing is left to receive the result.
   useEffect(() => {
+    const controllers = streamAbort.current;
     return () => {
-      streamAbort.current?.abort();
-      streamAbort.current = null;
+      for (const c of Object.values(controllers)) c.abort();
     };
-  }, [view.kind, view.kind === 'chat' ? view.chatId : null, streamAbort]);
+  }, [streamAbort]);
 
   const refreshModels = useCallback(() => {
     fetchInstalledModels()
@@ -250,7 +257,7 @@ export default function App(): JSX.Element {
 
   const handleSend = useCallback(
     async (chatId: string, projectId: string | null, text: string, base?: Message[]) => {
-      if (streaming) return;
+      if (streamingChats[chatId]) return;
       const userMsg: Message = { id: uid(), role: 'user', content: text };
       const existing = base ?? messagesRef.current[chatId] ?? [];
       const history: HistoryEntry[] = existing.filter(m => !m.error).map(m => ({ role: m.role, content: m.content }));
@@ -263,9 +270,9 @@ export default function App(): JSX.Element {
           { id: replyId, role: 'assistant', content: '', reasoning: '', toolCalls: [] },
         ],
       }));
-      setStreaming(true);
+      setStreamingChats((prev) => ({ ...prev, [chatId]: true }));
       const controller = new AbortController();
-      streamAbort.current = controller;
+      streamAbort.current[chatId] = controller;
 
       // Upsert the chat's meta on every send, not only the first. Registering
       // once meant updatedAt froze at creation, so a list sorted by recency
@@ -410,8 +417,12 @@ export default function App(): JSX.Element {
           }));
         }
       } finally {
-        if (streamAbort.current === controller) streamAbort.current = null;
-        setStreaming(false);
+        if (streamAbort.current[chatId] === controller) delete streamAbort.current[chatId];
+        setStreamingChats((prev) => {
+          const next = { ...prev };
+          delete next[chatId];
+          return next;
+        });
         setMessagesByChat((prev) => {
           const msgs = prev[chatId] ?? [];
           persist(chatId, msgs);
@@ -419,7 +430,7 @@ export default function App(): JSX.Element {
         });
       }
     },
-    [freeChats, persist, projects, streaming],
+    [freeChats, persist, projects, streamingChats],
   );
 
   const sendToCurrent = useCallback(
@@ -436,14 +447,14 @@ export default function App(): JSX.Element {
   // message that triggered it, then re-send that same text. History rebuild
   // in handleSend excludes error messages, so nothing stale leaks in.
   const retryLast = useCallback((chatId: string, messageId: string) => {
-    if (streaming) return;
+    if (streamingChats[chatId]) return;
     const msgs = messagesRef.current[chatId] ?? [];
     const index = msgs.findIndex(m => m.id === messageId && m.error);
     // Retry is offered only for the final exchange. Never truncate later history.
     if (index !== msgs.length - 1 || index < 1 || msgs[index - 1].role !== 'user') return;
     const projectId = view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
     void handleSend(chatId, projectId, msgs[index - 1].content, msgs.slice(0, index - 1));
-  }, [activeChatMeta, handleSend, streaming, view]);
+  }, [activeChatMeta, handleSend, streamingChats, view]);
 
   // Edit an earlier message and re-run the conversation from that point.
   // Everything after the edited message is dropped rather than kept as dead
@@ -453,7 +464,7 @@ export default function App(): JSX.Element {
   // "edit" affordance makes in ChatGPT/Claude.
   const editAndResend = useCallback(
     (chatId: string, messageId: string, nextText: string) => {
-      if (streaming) return;
+      if (streamingChats[chatId]) return;
       const msgs = messagesRef.current[chatId] ?? [];
       const index = msgs.findIndex((m) => m.id === messageId);
       if (index < 0 || msgs[index].role !== 'user') return;
@@ -463,7 +474,7 @@ export default function App(): JSX.Element {
         view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
       void handleSend(chatId, projectId, text, msgs.slice(0, index));
     },
-    [activeChatMeta, handleSend, streaming, view],
+    [activeChatMeta, handleSend, streamingChats, view],
   );
 
   const startFreeChat = useCallback(() => {
@@ -589,7 +600,19 @@ export default function App(): JSX.Element {
         if (!p) return;
         saveProjectConfig(projectId, patch)
           .then(() => refreshProjects())
-          .catch(() => undefined);
+          .catch((e: unknown) => {
+            // Swallowing this was how a source could appear to save and then
+            // vanish: the optimistic entry survived until the next refresh,
+            // which is usually the first message sent in a chat. A patch that
+            // did not land has to say so, and the state has to go back to
+            // whatever the server actually holds.
+            setProjectError(
+              e instanceof Error && /exceeds size limit|413/i.test(e.message)
+                ? 'That did not save — the change is too large to send. Attach a smaller file.'
+                : `That did not save — ${e instanceof Error ? e.message : 'the server rejected the change'}.`,
+            );
+            refreshProjects();
+          });
         void p;
       }, 600);
     },
@@ -621,6 +644,7 @@ export default function App(): JSX.Element {
         onOpenChat={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
         onDeleteChat={handleDeleteChat}
         onPatchChat={handlePatchChat}
+        streamingChats={streamingChats}
         onPatchProject={handlePatchProject}
         onEditProject={setEditingProjectId}
         onDeleteProject={handleDeleteProject}
@@ -649,6 +673,7 @@ export default function App(): JSX.Element {
       {view.kind === 'project' && activeProject && (
         <ProjectView
           project={activeProject}
+          streamingChats={streamingChats}
           onNewChat={startProjectChat}
           onSendFirst={startProjectChatWith}
           onEditProject={setEditingProjectId}
@@ -670,11 +695,11 @@ export default function App(): JSX.Element {
           }
           messages={messages}
           onEditMessage={editAndResend}
-          streaming={streaming}
+          streaming={view.kind === 'chat' ? !!streamingChats[view.chatId] : false}
           inferenceUp={health.inferenceUp}
           onSend={sendToCurrent}
           onRetry={retryLast}
-          onStop={abortStream}
+          onStop={() => { if (view.kind === 'chat') abortStream(view.chatId); }}
           onBack={activeProject ? () => setView({ kind: 'project', id: activeProject.id }) : null}
           onOpenModels={() => setPopupOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
@@ -710,6 +735,12 @@ export default function App(): JSX.Element {
           />
         ) : null;
       })()}
+      {projectError && (
+        <div className="save-error" role="alert">
+          <span>{projectError}</span>
+          <button onClick={() => setProjectError(null)} aria-label="Dismiss">✕</button>
+        </div>
+      )}
       {view.kind !== 'diary' && inspectorOpen && (
         <Inspector
           project={activeProject ?? null}

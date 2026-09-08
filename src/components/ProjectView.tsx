@@ -3,15 +3,7 @@ import type { JSX } from 'react';
 import type { Project } from '../types';
 import { SendIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
-
-// What a project source can be read as. A project file is stored and given to
-// the model as text, so anything else would arrive as mojibake — the same list
-// the server enforces on storage reads, kept in step deliberately.
-const TEXT_EXTENSIONS = [
-  '.txt', '.md', '.markdown', '.json', '.csv', '.yml', '.yaml',
-  '.ts', '.tsx', '.js', '.jsx', '.py', '.sh', '.html', '.css',
-];
-const isTextFile = (name: string) => TEXT_EXTENSIONS.some((e) => name.toLowerCase().endsWith(e));
+import { TEXT_EXTENSIONS, readTextSources, describeRejection } from '../sources';
 
 /** First free "name", "name (2)", "name (3)", … avoiding collisions. */
 function uniqueName(name: string, existing: { name: string }[]): string {
@@ -33,6 +25,7 @@ interface ProjectViewProps {
   onOpenChat: (projectId: string, chatId: string) => void;
   onPatch: (projectId: string, patch: Partial<Project>) => void;
   onDeleteChat: (projectId: string, chatId: string) => void;
+  streamingChats: Record<string, true>;
 }
 
 function timeAgo(ts: number): string {
@@ -54,6 +47,7 @@ export function ProjectView({
   onOpenChat,
   onPatch,
   onDeleteChat,
+  streamingChats,
 }: ProjectViewProps): JSX.Element {
   const [panel, setPanel] = useState<'instructions' | 'memory' | null>(null);
   const [tab, setTab] = useState<'chats' | 'sources'>('chats');
@@ -103,6 +97,7 @@ export function ProjectView({
                       <button className="chat-index-row" onClick={() => onOpenChat(project.id, c.id)}>
                         <span className="chat-index-main">
                           <span className="chat-index-title">
+                            {streamingChats[c.id] && <span className="chat-working" aria-label="Still generating"><i /><i /><i /></span>}
                             {c.pinned && <span aria-label="Pinned">📌 </span>}
                             {c.title || 'New task'}
                           </span>
@@ -179,22 +174,13 @@ export function ProjectView({
                     onChange={(e) => {
                       const list = e.target.files;
                       if (!list) return;
-                      const chosen = Array.from(list);
-                      const rejected = chosen.filter((f) => !isTextFile(f.name));
-                      const accepted = chosen.filter((f) => isTextFile(f.name));
-                      setAddError(
-                        rejected.length
-                          ? `Not added — ${rejected.map((f) => f.name).join(', ')}. A source is read as text; a PDF or image would arrive as unreadable characters.`
-                          : '',
-                      );
-                      // One patch for the whole selection. Patching per file
-                      // rebuilt the list from the same stale array each time,
-                      // so selecting several kept only one of them.
-                      void Promise.all(accepted.map(async (f) => ({ file: f, content: await f.text() }))).then((read) => {
+                      void readTextSources(Array.from(list)).then(({ accepted, rejected }) => {
+                        setAddError(rejected.length ? `Not added — ${describeRejection(rejected)}. A source is read as text.` : '');
+                        if (!accepted.length) return;
+                        // One patch for the whole selection: patching per file
+                        // rebuilt the list from the same stale array each time.
                         const next = [...project.files.filter((f) => !f.source)];
-                        for (const { file, content } of read) {
-                          next.push({ name: uniqueName(file.name, next), content });
-                        }
+                        for (const a of accepted) next.push({ name: uniqueName(a.name, next), content: a.content });
                         onPatch(project.id, { files: next });
                       });
                       e.target.value = '';

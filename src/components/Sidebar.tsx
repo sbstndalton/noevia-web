@@ -27,6 +27,8 @@ interface SidebarProps {
   onOpenChat: (chatId: string, projectId: string | null) => void;
   onDeleteChat: (projectId: string | null, chatId: string) => void;
   onPatchChat: (projectId: string | null, chatId: string, patch: Partial<ChatMeta>) => void;
+  /** Chats generating right now, so work continuing elsewhere stays visible. */
+  streamingChats: Record<string, true>;
   onPatchProject: (id: string, patch: Partial<Project>) => void;
   onEditProject: (id: string) => void;
   onDeleteProject: (id: string) => void;
@@ -64,6 +66,7 @@ export function Sidebar({
   onOpenChat,
   onDeleteChat,
   onPatchChat,
+  streamingChats,
   onPatchProject,
   onEditProject,
   onDeleteProject,
@@ -310,6 +313,9 @@ export function Sidebar({
                   >
                     <span className="nav-emoji" role="img" aria-label="chat">{c.pinned ? '📌' : '💬'}</span>
                     <span className="nav-name">{c.title}</span>
+                    {streamingChats[c.id] && (
+                      <span className="chat-working" aria-label="Still generating"><i /><i /><i /></span>
+                    )}
                   </button>
                 )}
                 <button
