@@ -35,6 +35,11 @@ body { margin: 0; background: var(--bg); }
   color: var(--accent-ink);
   font-weight: 800;
 }
+/* The card is a flex column, but its fields sit inside a <form> — one flex
+   child with no layout of its own, so labels/inputs/hints fell back to inline
+   and ran together. The form carries the same column as the card. */
+.auth-card form { display: flex; flex-direction: column; gap: 12px; }
+.auth-card label, .auth-card small { display: block; }
 .auth-card h1 { margin: 4px 0 0; font-size: 24px; }
 .auth-card p { margin: 0; color: var(--text-secondary); line-height: 1.5; }
 .auth-card label { margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
