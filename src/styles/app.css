@@ -312,7 +312,7 @@ body { margin: 0; background: var(--bg); }
 .msg-sender.is-assistant { color: var(--accent-ink); }
 .msg p { margin: 0; font-size: 14.5px; line-height: 1.6; }
 
-.bubble { background: var(--bg-assistant); border-radius: var(--radius-bubble); padding: 14px 16px; }
+.bubble { background: var(--bg-surface); border-radius: var(--radius-bubble); padding: 14px 16px; }
 
 .msg-user p { white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg-error { color: var(--accent-text); }
@@ -597,13 +597,39 @@ body { margin: 0; background: var(--bg); }
 }
 .modal-err { margin: 0; font-size: 12.5px; color: var(--accent-text); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
-.modal-btn {
-  padding: 9px 18px; border-radius: 10px; cursor: pointer;
-  font-family: var(--font-ui); font-size: 13px; font-weight: 700; border: none;
+/* Standard button scale: .btn is the base; primary/secondary/ghost/icon are
+   the variants. .modal-btn is kept as an alias so every existing call site
+   picks up the scale without component edits. */
+.btn, .modal-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 34px; padding: 0 16px; border-radius: 8px; cursor: pointer;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 500; border: none;
+  transition: background var(--duration-fast) var(--ease-spring),
+              border-color var(--duration-fast) var(--ease-spring),
+              box-shadow var(--duration-fast) var(--ease-spring),
+              transform var(--duration-fast) var(--ease-spring);
 }
-.modal-btn.primary { background: var(--accent); color: #fff; }
-.modal-btn.primary:disabled { opacity: 0.5; cursor: default; }
-.modal-btn.secondary { background: var(--bg-assistant); color: var(--text-secondary); border: 1px solid var(--border); }
+.btn:active:not(:disabled), .modal-btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:disabled, .modal-btn:disabled { opacity: 0.5; cursor: default; }
+.btn:focus-visible, .modal-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.btn-primary {
+  background: var(--accent-garnet); color: #fff;
+}
+.btn-primary:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--tint-garnet), 0 0 14px rgba(148,37,55,0.35); }
+.btn-secondary {
+  background: var(--bg-surface); color: var(--text-secondary); border: 1px solid var(--border);
+}
+.btn-secondary:hover:not(:disabled) { background: var(--bg-surface-hover); color: var(--text); }
+.btn-ghost {
+  background: transparent; color: var(--text-secondary);
+}
+.btn-ghost:hover:not(:disabled) { background: var(--bg-surface-hover); color: var(--text); }
+.btn-icon { width: 34px; height: 34px; padding: 0; }
+
+.modal-btn.primary { background: var(--accent-garnet); color: #fff; }
+.modal-btn.primary:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--tint-garnet), 0 0 14px rgba(148,37,55,0.35); }
+.modal-btn.secondary { background: var(--bg-surface); color: var(--text-secondary); border: 1px solid var(--border); }
+.modal-btn.secondary:hover:not(:disabled) { background: var(--bg-surface-hover); color: var(--text); }
 
 /* ── Project detail ──────────────────────────────────────── */
 

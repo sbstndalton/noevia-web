@@ -1,18 +1,23 @@
 /* noevia — Polymetal Night is the default, including before React mounts.
-   Palette swatches remain exact; semantic text/focus variants meet contrast. */
+   Palette swatches remain exact; semantic text/focus variants meet contrast.
+   Values are measured against tests/theme-contrast.test.cjs — do not
+   substitute without re-measuring. */
 :root, [data-theme='dark'] {
-  --bg-canvas: #181A1F;
-  --bg-surface: #21252D;
-  --text-primary: #E5E7EB;
-  --text-muted: #717D8A;
-  --accent-garnet: #DC2626;
-  --border-subtle: #2E3440;
-  --text-secondary: #A3ADBA;
-  --accent-text: #FF919D;
-  --focus-ring: #FF919D;
-  --control-border: #8894A3;
-  --tint-garnet: #37232D;
+  --bg-canvas: #0c0e12;
+  --bg-surface: #171b24;
+  --bg-surface-hover: #1e2330;
+  --bg-surface-active: #252b3b;
+  --text-primary: #f0f2f5;
+  --text-muted: #717d8a;
+  --accent-garnet: #942537;
+  --border-subtle: rgba(255,255,255,0.08);
+  --text-secondary: #9aa1b0;
+  --accent-text: #e57385;
+  --focus-ring: #b84a60;
+  --control-border: #6b6d73;
+  --tint-garnet: #2a1c27;
   --good: #8ED4B0;
+  --danger: #ef4444;
   color-scheme: dark;
 }
 :root {
@@ -27,7 +32,7 @@
   --bg-card: var(--bg-surface);
   --bg-panel: var(--bg-surface);
   --bg-input: var(--bg-surface);
-  --bg-assistant: var(--bg-surface);
+  --bg-assistant: var(--bg-surface-hover);
   --bg-off: var(--bg-canvas);
   --bg-active: var(--tint-garnet);
   --bg-pinned: var(--tint-garnet);
@@ -41,19 +46,38 @@
   --accent-2-soft: var(--tint-garnet);
   --send-icon: #FFFFFF;
   --shadow-soft: 0 8px 24px #00000012;
+
+  /* 4px-based spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* motion */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
 }
 [data-theme='light'] {
-  --bg-canvas: #EAECEE;
+  --bg-canvas: #F5F6F9;
   --bg-surface: #FFFFFF;
+  --bg-surface-hover: #f2f4f8;
+  --bg-surface-active: #e9edf3;
   --text-primary: #13171A;
   --text-muted: #5A6572;
-  --accent-garnet: #881337;
-  --border-subtle: #D1D5DB;
+  --accent-garnet: #942537;
+  --border-subtle: #DDE2EC;
   --text-secondary: #5A6572;
   --accent-text: #881337;
   --focus-ring: #881337;
   --control-border: #727D89;
-  --tint-garnet: #F4E2E8;
+  --tint-garnet: #f4e9eb;
   --good: #246548;
+  --danger: #b3261e;
   color-scheme: light;
 }

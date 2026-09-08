@@ -317,14 +317,14 @@ function SwitchTab({
               </label>
             );
           })}
-          <span style={{ fontSize: 11, color: overBudget ? 'var(--danger, #b3261e)' : 'var(--text-secondary)' }}>
+          <span style={{ fontSize: 11, color: overBudget ? 'var(--danger)' : 'var(--text-secondary)' }}>
             {overBudget
               ? `Over budget for ${activeProject?.model || 'this model'} (~${budget} tokens). Tools past the limit are dropped in selection order — untick a box, or use a larger model.`
               : 'Every enabled tool is re-sent on each message, so the cost above is paid per turn.'}
             {selectedBoxes.length === 0 && ' No tools enabled — the model can only talk.'}
           </span>
           {mcpStatus?.configured && mcpStatus.error && (
-            <span style={{ fontSize: 11, color: 'var(--danger, #b3261e)' }}>
+            <span style={{ fontSize: 11, color: 'var(--danger)' }}>
               MCP server unreachable: {mcpStatus.error}. Its toolboxes are unavailable until it recovers.
             </span>
           )}
