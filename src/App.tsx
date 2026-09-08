@@ -37,6 +37,7 @@ import { SettingsShell } from './components/SettingsShell';
 import { CodingWorkspace } from './components/CodingWorkspace';
 import { FeaturePreview } from './components/PreviewPanel';
 import { Sidebar } from './components/Sidebar';
+import { EditProjectModal } from './components/EditProjectModal';
 import { StatsBar } from './components/StatsBar';
 
 type View =
@@ -65,6 +66,7 @@ export default function App(): JSX.Element {
   const [freeChats, setFreeChats] = useState<ChatMeta[]>([]);
   const [messagesByChat, setMessagesByChat] = useState<Record<string, Message[]>>({});
   const [models, setModels] = useState<InstalledModel[]>([]);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthState>({ inferenceUp: null, diaryUp: null });
   const [stats, setStats] = useState<LiveStats | null>(null);
@@ -519,6 +521,26 @@ export default function App(): JSX.Element {
     [refreshProjects],
   );
 
+  // Rename / pin / archive on a chat meta. Chats live either inside their
+  // project or in the free-chats list, and each has its own save endpoint, so
+  // the projectId decides which list is rewritten.
+  const handlePatchChat = useCallback(
+    (projectId: string | null, chatId: string, patch: Partial<ChatMeta>) => {
+      if (projectId) {
+        const project = projects.find((p) => p.id === projectId);
+        if (!project) return;
+        const next = (project.chats || []).map((c) => (c.id === chatId ? { ...c, ...patch } : c));
+        setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, chats: next } : p)));
+        saveProjectChats(projectId, next).then(() => refreshProjects()).catch(() => undefined);
+      } else {
+        const next = freeChats.map((c) => (c.id === chatId ? { ...c, ...patch } : c));
+        setFreeChats(next);
+        saveFreeChats(next).then(() => refreshProjects()).catch(() => undefined);
+      }
+    },
+    [projects, freeChats, refreshProjects],
+  );
+
   // Rail edits are debounced per project so typing doesn't hammer projects.json.
   const handlePatchProject = useCallback(
     (projectId: string, patch: Partial<Project>) => {
@@ -561,8 +583,10 @@ export default function App(): JSX.Element {
         onOpenProjects={() => setView({ kind: 'projects' })}
         onOpenProject={(id) => setView({ kind: 'project', id })}
         onOpenChat={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
-        onDeleteChat={(chatId) => handleDeleteChat(null, chatId)}
-        onRenameProject={(id, name) => handlePatchProject(id, { name })}
+        onDeleteChat={handleDeleteChat}
+        onPatchChat={handlePatchChat}
+        onPatchProject={handlePatchProject}
+        onEditProject={setEditingProjectId}
         onDeleteProject={handleDeleteProject}
         onOpenDiary={() => setView({ kind: 'diary' })}
         diaryEnabled={diaryEnabled}
@@ -578,6 +602,7 @@ export default function App(): JSX.Element {
       {view.kind === 'preview' && <FeaturePreview title={view.title}/> }
       {view.kind === 'projects' && (
         <ProjectsView
+          onPatch={handlePatchProject}
           projects={projects}
           onOpenProject={(id) => setView({ kind: 'project', id })}
           onCreate={handleCreateProject}
@@ -636,6 +661,17 @@ export default function App(): JSX.Element {
       {view.kind !== 'diary' && <StatsBar stats={stats} />}
       </div>
       {view.kind !== 'diary' && <button className="inspector-toggle" aria-expanded={inspectorOpen} aria-controls="noevia-inspector" aria-label={inspectorOpen?'Close context inspector':'Open context inspector'} onClick={()=>setInspectorOpen(!inspectorOpen)}>☷</button>}
+      {editingProjectId && (() => {
+        const p = projects.find((x) => x.id === editingProjectId);
+        return p ? (
+          <EditProjectModal
+            project={p}
+            models={models}
+            onClose={() => setEditingProjectId(null)}
+            onSave={(patch) => handlePatchProject(p.id, patch)}
+          />
+        ) : null;
+      })()}
       {view.kind !== 'diary' && inspectorOpen && <aside id="noevia-inspector" className="noevia-inspector"><h2>Context & models</h2><h3>AI parameters</h3><p>Routing: {activeProject?.routing === 'auto'?'Auto · Fast / Smart':'Manual'}</p><p>Model: {activeProject?.model || models.find(m=>m.loaded)?.name || 'Not selected'}</p><button onClick={()=>setPopupOpen(true)}>Configure models & routing</button><h3>Linked knowledge</h3>{activeProject ? <><p>{activeProject.name}</p>{activeProject.files.length ? <ul>{activeProject.files.map((file,i)=><li key={i}>{file.name}</li>)}</ul>:<p>No knowledge files linked.</p>}<p>{activeProject.memories.length} saved memories</p></>:<p>Open a project to see its linked knowledge and memories.</p>}</aside>}
       </div>
       {appMode === 'code'  && <CodingWorkspace onExit={() => setAppMode('chat')} onSettings={() => setSettingsOpen(true)} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/>}

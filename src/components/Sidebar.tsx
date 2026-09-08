@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { AccountMenu } from './AccountMenu';
+import { ContextMenu, ConfirmDialog } from './ContextMenu';
+import type { MenuItem } from './ContextMenu';
 import { fetchToolboxes } from '../api';
 import type { McpStatus } from '../api';
 import { ShellIcon } from './ShellIcon';
@@ -23,8 +25,10 @@ interface SidebarProps {
   onOpenProjects: () => void;
   onOpenProject: (id: string) => void;
   onOpenChat: (chatId: string, projectId: string | null) => void;
-  onDeleteChat: (chatId: string) => void;
-  onRenameProject: (id: string, name: string) => void;
+  onDeleteChat: (projectId: string | null, chatId: string) => void;
+  onPatchChat: (projectId: string | null, chatId: string, patch: Partial<ChatMeta>) => void;
+  onPatchProject: (id: string, patch: Partial<Project>) => void;
+  onEditProject: (id: string) => void;
   onDeleteProject: (id: string) => void;
   onOpenDiary: () => void;
   diaryEnabled: boolean;
@@ -59,7 +63,9 @@ export function Sidebar({
   onOpenProject,
   onOpenChat,
   onDeleteChat,
-  onRenameProject,
+  onPatchChat,
+  onPatchProject,
+  onEditProject,
   onDeleteProject,
   onOpenDiary,
   diaryEnabled,
@@ -70,18 +76,17 @@ export function Sidebar({
 }: SidebarProps): JSX.Element {
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
-  // Per-project menu: rename inline, open settings, delete.
-  // The menu uses position:fixed (anchored to the button's viewport rect) because
-  // .spaces is overflow-y:auto and would clip an absolutely-positioned dropdown.
-  const [menuFor, setMenuFor] = useState<string | null>(null);
-  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
+  // One menu model for both entity types, opened from a right-click or the
+  // hamburger. Destructive choices route through `confirm` rather than an
+  // inline two-step arm, so the subject is named before anything happens.
+  const [menu, setMenu] = useState<
+    { kind: 'project' | 'chat'; id: string; projectId: string | null; at: { x: number; y: number } } | null
+  >(null);
+  const [confirm, setConfirm] = useState<
+    { title: string; body: string; confirmLabel: string; danger?: boolean; run: () => void } | null
+  >(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  // Two-step confirm for chat deletion, mirroring the project-delete pattern:
-  // first click arms, second click ("Yes, delete") fires. Clicking elsewhere
-  // or re-opening resets both arms.
-  const [confirmChatDeleteId, setConfirmChatDeleteId] = useState<string | null>(null);
   // MCP reachability. Nothing surfaced this before; a configured server that
   // has failed to discover its tools should say so rather than look healthy.
   const [mcp, setMcp] = useState<McpStatus | null>(null);
@@ -90,39 +95,77 @@ export function Sidebar({
     void fetchToolboxes().then((r) => setMcp(r.mcp ?? null)).catch(() => undefined);
   }, []);
 
-  useEffect(() => {
-    if (!menuFor) return;
-    const close = (e: PointerEvent) => {
-      if ((e.target as HTMLElement).closest('.proj-row')) return;
-      setMenuFor(null);
-      setConfirmDeleteId(null);
-    };
-    document.addEventListener('pointerdown', close);
-    return () => document.removeEventListener('pointerdown', close);
-  }, [menuFor]);
-
-  // Disarm a pending chat-delete when clicking anywhere outside chat rows.
-  useEffect(() => {
-    if (!confirmChatDeleteId) return;
-    const close = (e: PointerEvent) => {
-      if ((e.target as HTMLElement).closest('.chat-row')) return;
-      setConfirmChatDeleteId(null);
-    };
-    document.addEventListener('pointerdown', close);
-    return () => document.removeEventListener('pointerdown', close);
-  }, [confirmChatDeleteId]);
-
-  const startRename = (p: Project) => {
-    setRenamingId(p.id);
-    setRenameDraft(p.name);
-    setMenuFor(null);
+  const startRename = (id: string, current: string) => {
+    setRenamingId(id);
+    setRenameDraft(current);
   };
 
-  const commitRename = () => {
+  const commitRename = (projectId: string | null, isChat: boolean) => {
     const name = renameDraft.trim();
-    if (renamingId && name) onRenameProject(renamingId, name);
+    if (renamingId && name) {
+      if (isChat) onPatchChat(projectId, renamingId, { title: name });
+      else onPatchProject(renamingId, { name });
+    }
     setRenamingId(null);
   };
+
+  // Pinned first, archived hidden. Archived items stay reachable from the
+  // Projects page's Archived tab rather than vanishing.
+  const visibleProjects = projects
+    .filter((p) => !p.archived && p.name.toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
+  const visibleChats = chats
+    .filter((c) => !c.archived && (c.title || '').toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
+
+  const projectMenu = (p: Project): MenuItem[] => [
+    { label: p.pinned ? 'Unpin' : 'Pin', onSelect: () => onPatchProject(p.id, { pinned: !p.pinned }) },
+    { label: 'Rename', onSelect: () => startRename(p.id, p.name) },
+    { label: 'Edit project', onSelect: () => onEditProject(p.id) },
+    {
+      label: 'Archive',
+      onSelect: () =>
+        setConfirm({
+          title: `Archive ${p.name}?`,
+          body: 'It leaves the sidebar and moves to Archived on the Projects page. Its chats and files are kept, and you can restore it at any time.',
+          confirmLabel: 'Archive',
+          run: () => onPatchProject(p.id, { archived: true }),
+        }),
+    },
+    {
+      label: 'Delete project',
+      danger: true,
+      onSelect: () =>
+        setConfirm({
+          title: `Delete ${p.name}?`,
+          body: `This permanently deletes the project along with its ${(p.chats || []).length} chat${(p.chats || []).length === 1 ? '' : 's'} and ${(p.files || []).length} file${(p.files || []).length === 1 ? '' : 's'}. This cannot be undone.`,
+          confirmLabel: 'Delete project',
+          danger: true,
+          run: () => onDeleteProject(p.id),
+        }),
+    },
+  ];
+
+  const chatMenu = (c: ChatMeta): MenuItem[] => [
+    { label: c.pinned ? 'Unpin' : 'Pin', onSelect: () => onPatchChat(c.projectId ?? null, c.id, { pinned: !c.pinned }) },
+    { label: 'Rename', onSelect: () => startRename(c.id, c.title || '') },
+    {
+      label: 'Archive',
+      onSelect: () => onPatchChat(c.projectId ?? null, c.id, { archived: true }),
+    },
+    {
+      label: 'Delete chat',
+      danger: true,
+      onSelect: () =>
+        setConfirm({
+          title: `Delete "${c.title || 'this chat'}"?`,
+          body: 'The conversation and its history are permanently removed. This cannot be undone.',
+          confirmLabel: 'Delete chat',
+          danger: true,
+          run: () => onDeleteChat(c.projectId ?? null, c.id),
+        }),
+    },
+  ];
   return (
     <div className={`sidebar${activeView === 'diary' ? ' diary-sidebar' : ''}`}>
       <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button" aria-label={theme==='dark'?'Switch to Polymetal Day':'Switch to Polymetal Night'} title={theme==='dark'?'Polymetal Day':'Polymetal Night'} onClick={onToggleTheme}><ShellIcon name="sun"/></button><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
@@ -156,8 +199,15 @@ export function Sidebar({
       {SHOW_PLACEHOLDER_NAV && <nav className="shell-extra-nav" aria-label="Explore noevia">{[['Scheduled','clock'],['Plugins','plugins'],['Explore','explore']].map(([label,icon])=><button className="nav-item" key={label} onClick={()=>onPreview(label)}><ShellIcon name={icon}/><span className="nav-name">{label}</span></button>)}</nav>}
       <div className="spaces">
         <div className="section-label">Projects</div>
-        {projects.filter(p=>p.name.toLowerCase().includes(query.toLowerCase())).map((p) => (
-          <div key={p.id} className={`proj-row${activeProjectId === p.id && activeView !== 'projects' ? ' is-active' : ''}`}>
+        {visibleProjects.map((p) => (
+          <div
+            key={p.id}
+            className={`proj-row${activeProjectId === p.id && activeView !== 'projects' ? ' is-active' : ''}`}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setMenu({ kind: 'project', id: p.id, projectId: null, at: { x: e.clientX, y: e.clientY } });
+            }}
+          >
             {renamingId === p.id ? (
               <input
                 className="proj-rename-input"
@@ -165,9 +215,9 @@ export function Sidebar({
                 autoFocus
                 onFocus={(e) => e.currentTarget.select()}
                 onChange={(e) => setRenameDraft(e.target.value)}
-                onBlur={commitRename}
+                onBlur={() => commitRename(null, false)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') commitRename();
+                  if (e.key === 'Enter') commitRename(null, false);
                   if (e.key === 'Escape') setRenamingId(null);
                 }}
               />
@@ -176,93 +226,90 @@ export function Sidebar({
                 className={`nav-item${activeProjectId === p.id && activeView !== 'projects' ? ' is-active' : ''}`}
                 onClick={() => onOpenProject(p.id)}
               >
-                <span className="nav-emoji" role="img" aria-label={p.name}>📁</span>
+                <span className="nav-emoji" role="img" aria-label={p.name}>{p.pinned ? '📌' : '📁'}</span>
                 <span className="nav-name">{p.name}</span>
+                {/* What this project is working from, on hover — the sources it
+                    pulls context from, which is otherwise only visible inside
+                    the project. */}
+                <span className="row-card" role="tooltip">
+                  <strong>{p.name}</strong>
+                  {p.goal && <em>{p.goal}</em>}
+                  <span>{(p.chats || []).length} chat{(p.chats || []).length === 1 ? '' : 's'} · {(p.files || []).length} source{(p.files || []).length === 1 ? '' : 's'}</span>
+                  {(p.files || []).slice(0, 4).map((f) => <span key={f.name} className="row-card-src">{f.name}</span>)}
+                  {(p.files || []).length > 4 && <span className="row-card-src">+{(p.files || []).length - 4} more</span>}
+                  {(p.files || []).length === 0 && <span className="row-card-src">No sources attached</span>}
+                </span>
               </button>
             )}
             <button
-              className={`proj-menu-btn${menuFor === p.id ? ' is-open' : ''}`}
+              className={`proj-menu-btn${menu?.kind === 'project' && menu.id === p.id ? ' is-open' : ''}`}
               title="Project options"
+              aria-label={`Options for ${p.name}`}
               onClick={(e) => {
                 const r = e.currentTarget.getBoundingClientRect();
-                setMenuPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
-                setMenuFor(menuFor === p.id ? null : p.id);
-                setConfirmDeleteId(null);
+                setMenu({ kind: 'project', id: p.id, projectId: null, at: { x: r.left, y: r.bottom + 4 } });
               }}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                 <path d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            {menuFor === p.id && menuPos && (
-              <div className="proj-menu" role="menu" style={{ top: menuPos.top, right: menuPos.right }}>
-                <button className="proj-menu-item" onClick={() => startRename(p)}>Rename</button>
-                <button
-                  className="proj-menu-item"
-                  onClick={() => {
-                    setMenuFor(null);
-                    onOpenProject(p.id);
-                  }}
-                >
-                  Project settings
-                </button>
-                {confirmDeleteId === p.id ? (
-                  <div className="proj-menu-confirm">
-                    <span>Delete project?</span>
-                    <button
-                      className="proj-menu-item danger"
-                      onClick={() => {
-                        setMenuFor(null);
-                        onDeleteProject(p.id);
-                      }}
-                    >
-                      Yes, delete
-                    </button>
-                    <button className="proj-menu-item" onClick={() => setConfirmDeleteId(null)}>Keep</button>
-                  </div>
-                ) : (
-                  <button className="proj-menu-item danger" onClick={() => setConfirmDeleteId(p.id)}>Delete project</button>
-                )}
-              </div>
-            )}
           </div>
         ))}
-        {projects.length === 0 && (
+        {visibleProjects.length === 0 && (
           <p className="side-hint">No projects yet — create one from the Projects page.</p>
         )}
       </div>
 
-      {chats.length > 0 && (
+      {visibleChats.length > 0 && (
         <>
           <div className="divider" />
           <div className="spaces">
             <div className="section-label">Recent chats</div>
-            {chats.filter(c=>(c.title || '').toLowerCase().includes(query.toLowerCase())).slice(0, 12).map((c) => (
+            {visibleChats.slice(0, 12).map((c) => (
               <div
                 key={c.id}
                 className={`chat-row${activeChatId === c.id && activeView === 'chat' ? ' is-active' : ''}`}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setMenu({ kind: 'chat', id: c.id, projectId: c.projectId ?? null, at: { x: e.clientX, y: e.clientY } });
+                }}
               >
+                {renamingId === c.id ? (
+                  <input
+                    className="proj-rename-input"
+                    value={renameDraft}
+                    autoFocus
+                    onFocus={(e) => e.currentTarget.select()}
+                    onChange={(e) => setRenameDraft(e.target.value)}
+                    onBlur={() => commitRename(c.projectId ?? null, true)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitRename(c.projectId ?? null, true);
+                      if (e.key === 'Escape') setRenamingId(null);
+                    }}
+                  />
+                ) : (
+                  <button
+                    className="nav-item"
+                    onClick={() => onOpenChat(c.id, c.projectId ?? null)}
+                    title={c.title}
+                  >
+                    <span className="nav-emoji" role="img" aria-label="chat">{c.pinned ? '📌' : '💬'}</span>
+                    <span className="nav-name">{c.title}</span>
+                  </button>
+                )}
                 <button
-                  className="nav-item"
-                  onClick={() => onOpenChat(c.id, c.projectId ?? null)}
-                  title={c.title}
-                >
-                  <span className="nav-emoji" role="img" aria-label="chat">💬</span>
-                  <span className="nav-name">{c.title}</span>
-                </button>
-                <button
-                  className={`recents-del${confirmChatDeleteId === c.id ? ' confirm-arm' : ''}`}
-                  title={confirmChatDeleteId === c.id ? 'Click again to delete' : 'Delete chat'}
-                  onClick={() => {
-                    if (confirmChatDeleteId === c.id) {
-                      setConfirmChatDeleteId(null);
-                      onDeleteChat(c.id);
-                    } else {
-                      setConfirmChatDeleteId(c.id);
-                    }
+                  className={`proj-menu-btn${menu?.kind === 'chat' && menu.id === c.id ? ' is-open' : ''}`}
+                  title="Chat options"
+                  aria-label={`Options for ${c.title || 'this chat'}`}
+                  onClick={(e) => {
+                    const r = e.currentTarget.getBoundingClientRect();
+                    setMenu({ kind: 'chat', id: c.id, projectId: c.projectId ?? null, at: { x: r.left, y: r.bottom + 4 } });
                   }}
                 >
-                  {confirmChatDeleteId === c.id ? 'Sure?' : '✕'}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                    <path d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
                 </button>
               </div>
             ))}
@@ -273,6 +320,28 @@ export function Sidebar({
       <div style={{ flexGrow: 1 }} />
 
       <div className="divider" />
+
+      {menu && (
+        <ContextMenu
+          at={menu.at}
+          onClose={() => setMenu(null)}
+          items={
+            menu.kind === 'project'
+              ? (() => { const p = projects.find((x) => x.id === menu.id); return p ? projectMenu(p) : []; })()
+              : (() => { const c = chats.find((x) => x.id === menu.id); return c ? chatMenu(c) : []; })()
+          }
+        />
+      )}
+      {confirm && (
+        <ConfirmDialog
+          title={confirm.title}
+          body={confirm.body}
+          confirmLabel={confirm.confirmLabel}
+          danger={confirm.danger}
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => { const run = confirm.run; setConfirm(null); run(); }}
+        />
+      )}
 
       <div className="side-footer">{mcp?.configured && (
         <div className={`mcp-row${mcp.error ? ' is-degraded' : ''}`}>

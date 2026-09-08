@@ -49,6 +49,8 @@ export interface Project {
   model?: string; // unset until picked; server defaults to the loaded model
   provider?: string; // unset = the server-configured default provider
   routing?: 'manual' | 'auto'; // default 'manual'; 'auto' = Fast/Smart per-message routing
+  pinned?: boolean;
+  archived?: boolean;
   toolboxes?: string[]; // step 14: named tool sets offered to the model; defaults to ['core']
   chats: ChatMeta[];
   createdAt: number;
@@ -73,6 +75,10 @@ export interface ChatMeta {
   title: string;
   projectId?: string | null;
   updatedAt: number;
+  /** Sorts to a Pinned group above the rest; independent of archived. */
+  pinned?: boolean;
+  /** Hidden from the default lists, still reachable under Archived. */
+  archived?: boolean;
 }
 
 export interface HistoryEntry {

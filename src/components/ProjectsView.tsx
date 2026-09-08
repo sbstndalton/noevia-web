@@ -7,6 +7,7 @@ import { StorageFileBrowser } from './StorageFileBrowser';
 interface ProjectsViewProps {
   projects: Project[];
   onOpenProject: (id: string) => void;
+  onPatch: (id: string, patch: Partial<Project>) => void;
   onCreate: (body: { name: string; goal: string; instructions: string; files: { name: string; content: string }[] }) => Promise<void>;
   onDelete: (id: string) => void;
 }
@@ -31,10 +32,12 @@ function badgeHue(name: string): number {
   return BADGE_HUES[h % BADGE_HUES.length];
 }
 
-export function ProjectsView({ projects, onOpenProject, onCreate, onDelete }: ProjectsViewProps): JSX.Element {
+export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDelete }: ProjectsViewProps): JSX.Element {
   const [creating, setCreating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [tab, setTab] = useState<'active' | 'archived'>('active');
+  const archivedCount = projects.filter((p) => p.archived).length;
 
   return (
     <div className="main">
@@ -48,6 +51,14 @@ export function ProjectsView({ projects, onOpenProject, onCreate, onDelete }: Pr
           </p>
         </div>
         <div className="projects-head">
+          <div className="seg" role="tablist" aria-label="Project list">
+            <button role="tab" aria-selected={tab === 'active'} className={tab === 'active' ? 'is-selected' : ''} onClick={() => setTab('active')}>
+              Your projects
+            </button>
+            <button role="tab" aria-selected={tab === 'archived'} className={tab === 'archived' ? 'is-selected' : ''} onClick={() => setTab('archived')}>
+              Archived{archivedCount ? ` (${archivedCount})` : ''}
+            </button>
+          </div>
           <input
             className="projects-search"
             type="search"
@@ -73,7 +84,9 @@ export function ProjectsView({ projects, onOpenProject, onCreate, onDelete }: Pr
         ) : (
           <div className="projects-grid">
             {projects
+              .filter((p) => (tab === 'archived' ? p.archived : !p.archived))
               .filter((p) => `${p.name} ${p.goal || ''}`.toLowerCase().includes(query.trim().toLowerCase()))
+              .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned))
               .map((p) => (
               <div
                 key={p.id}
@@ -129,6 +142,14 @@ export function ProjectsView({ projects, onOpenProject, onCreate, onDelete }: Pr
                   <span className="project-chip">{p.chats.length} {p.chats.length === 1 ? 'chat' : 'chats'}</span>
                   {p.files.length > 0 && <span className="project-chip">{p.files.length} files</span>}
                   <span className="project-card-time">{timeAgo(p.updatedAt)}</span>
+                  {p.archived && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => { e.stopPropagation(); onPatch(p.id, { archived: false }); }}
+                    >
+                      Restore
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
