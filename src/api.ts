@@ -185,10 +185,19 @@ export function decideToolApproval(
   return postJson(`/api/tool-approvals/${encodeURIComponent(approvalId)}`, { decision });
 }
 
+export interface McpServerStatus {
+  id: string;
+  auth: 'nextcloud' | 'none';
+  error: string | null;
+  discovered: number;
+}
+
 export interface McpStatus {
   configured: boolean;
+  /** The first server error, if any — kept for the single-server shape. */
   error?: string | null;
   discovered?: number;
+  servers?: McpServerStatus[];
 }
 
 /** What noevia has measured about this hardware's prefill speed. `models` is

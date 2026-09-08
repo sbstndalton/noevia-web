@@ -389,12 +389,28 @@ export function Sidebar({
         />
       )}
 
-      <div className="side-footer">{mcp?.configured && (
-        <div className={`mcp-row${mcp.error ? ' is-degraded' : ''}`}>
-          <span className="status-dot" style={mcp.error ? { background: 'var(--danger)' } : { background: 'var(--good)' }} />
-          <span className="status-text">{mcp.error ? 'Local MCP · unavailable' : `Local MCP · ${mcp.discovered ?? 0} tools`}</span>
-        </div>
-      )}<div className="status-row"><span className={`status-dot${health.inferenceUp === true ? ' is-up' : health.inferenceUp === false ? ' is-down' : ''}`}/><span className="status-text">{statusText(health)}</span></div><AccountMenu onSettings={onOpenSettings}/></div>
+      <div className="side-footer">{mcp?.configured && (() => {
+        // With several servers, one being down is a partial outage, not an
+        // outage — say which, rather than reporting the whole integration dead.
+        const servers = mcp.servers ?? [];
+        const down = servers.filter((sv) => sv.error);
+        const degraded = down.length > 0 || (!servers.length && !!mcp.error);
+        const allDown = servers.length > 0 && down.length === servers.length;
+        const label = !degraded
+          ? `MCP · ${mcp.discovered ?? 0} tools${servers.length > 1 ? ` · ${servers.length} servers` : ''}`
+          : allDown || !servers.length
+            ? 'MCP · unavailable'
+            : `MCP · ${mcp.discovered ?? 0} tools · ${down.map((sv) => sv.id).join(', ')} down`;
+        return (
+          <div
+            className={`mcp-row${degraded ? ' is-degraded' : ''}`}
+            title={down.map((sv) => `${sv.id}: ${sv.error}`).join('\n') || undefined}
+          >
+            <span className="status-dot" style={{ background: allDown || (!servers.length && mcp.error) ? 'var(--danger)' : degraded ? 'var(--accent-garnet)' : 'var(--good)' }} />
+            <span className="status-text">{label}</span>
+          </div>
+        );
+      })()}<div className="status-row"><span className={`status-dot${health.inferenceUp === true ? ' is-up' : health.inferenceUp === false ? ' is-down' : ''}`}/><span className="status-text">{statusText(health)}</span></div><AccountMenu onSettings={onOpenSettings}/></div>
     </div>
   );
 }
