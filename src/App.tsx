@@ -604,7 +604,12 @@ export default function App(): JSX.Element {
       }
       try {
         await saveProjectConfig(projectId, patch);
-        if (Array.isArray(patch.sourceFolders) && patch.sourceFolders.length) {
+        // Sync whenever the folder list is touched at all, including when it
+        // is emptied. Requiring a non-empty list meant detaching the LAST
+        // folder skipped the sync and left its files behind — detaching one of
+        // several worked, because the sync rebuilds from what remains, which
+        // is why the behaviour looked arbitrary.
+        if (Array.isArray(patch.sourceFolders)) {
           const r = await syncProjectSources(projectId);
           if (r.skipped.length) {
             setProjectError(`Some sources could not be read — ${r.skipped[0].reason}.`);
