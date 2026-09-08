@@ -14,6 +14,7 @@ import {
   saveChatHistory,
   saveFreeChats,
   saveProjectConfig,
+  syncProjectSources,
   saveProjectChats,
   streamChat,
 } from './api';
@@ -588,6 +589,36 @@ export default function App(): JSX.Element {
     [projects, freeChats, refreshProjects],
   );
 
+  // Saving the project settings dialog. Unlike the debounced rail edits this
+  // lands immediately and then pulls the attached folders, because a folder
+  // that is attached but not read is indistinguishable from one that does not
+  // work: the project lists it and the model sees nothing.
+  const saveProjectAndSync = useCallback(
+    async (projectId: string, patch: Partial<Project>) => {
+      setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, ...patch, updatedAt: Date.now() } : p)));
+      // A pending debounced patch would otherwise land after this one and
+      // overwrite it with older values.
+      if (patchTimers.current[projectId]) {
+        clearTimeout(patchTimers.current[projectId]);
+        delete patchTimers.current[projectId];
+      }
+      try {
+        await saveProjectConfig(projectId, patch);
+        if (Array.isArray(patch.sourceFolders) && patch.sourceFolders.length) {
+          const r = await syncProjectSources(projectId);
+          if (r.skipped.length) {
+            setProjectError(`Some sources could not be read — ${r.skipped[0].reason}.`);
+          }
+        }
+      } catch (e) {
+        setProjectError(`That did not save — ${e instanceof Error ? e.message : 'the server rejected the change'}.`);
+      } finally {
+        refreshProjects();
+      }
+    },
+    [refreshProjects],
+  );
+
   // Rail edits are debounced per project so typing doesn't hammer projects.json.
   const handlePatchProject = useCallback(
     (projectId: string, patch: Partial<Project>) => {
@@ -732,7 +763,7 @@ export default function App(): JSX.Element {
             project={p}
             models={models}
             onClose={() => setEditingProjectId(null)}
-            onSave={(patch) => handlePatchProject(p.id, patch)}
+            onSave={(patch) => void saveProjectAndSync(p.id, patch)}
           />
         ) : null;
       })()}

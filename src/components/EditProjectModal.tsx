@@ -19,7 +19,7 @@ export function EditProjectModal({
 }: {
   project: Project;
   models: InstalledModel[];
-  onSave: (patch: Partial<Project>) => void;
+  onSave: (patch: Partial<Project>) => void | Promise<void>;
   onClose: () => void;
 }): JSX.Element {
   const ref = useRef<HTMLDialogElement>(null);
@@ -57,6 +57,9 @@ export function EditProjectModal({
   const save = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
+    // onSave pulls the attached folders as part of saving, so a folder picked
+    // here is readable straight away rather than after a separate refresh
+    // nobody knows to press.
     onSave({
       name: trimmed,
       goal,
@@ -69,18 +72,14 @@ export function EditProjectModal({
     onClose();
   };
 
-  // Attached folders are re-read on demand. Save first, so the server syncs
-  // against the folder list actually shown here rather than the stored one.
+  // Attached folders are re-read on demand. Save first so the server syncs
+  // against the folder list shown here rather than the stored one.
   const syncNow = async () => {
     setSyncing(true);
     setSyncNote(null);
     try {
-      onSave({ sourceFolders: folders });
-      await new Promise((r) => setTimeout(r, 700)); // the project patch is debounced
+      await onSave({ sourceFolders: folders });
       const r = await syncProjectSources(project.id);
-      // The sync response is metadata (name/source/bytes), not content. Show
-      // what the server now holds; folder-derived entries are display-only and
-      // are filtered back out on save.
       setFiles((prev) => {
         const byName = new Map(prev.map((f) => [f.name, f]));
         return r.files.map((f) => (f.source
@@ -153,6 +152,9 @@ export function EditProjectModal({
           <span>Source folders</span>
           <small>Text files in these folders are re-read on refresh, so the project follows the folder rather than holding a copy.</small>
           {folders.length === 0 && <p className="insp-empty">No folders attached.</p>}
+          {folders.length > 0 && files.filter((f) => f.source).length === 0 && (
+            <p className="insp-empty">Attached, not yet read. Saving pulls their files in.</p>
+          )}
           {folders.length > 0 && (
             <ul className="source-list">
               {folders.map((f) => (
