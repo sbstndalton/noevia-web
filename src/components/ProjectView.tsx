@@ -3,8 +3,8 @@ import type { JSX } from 'react';
 import type { Project } from '../types';
 import { SendIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
-import { TEXT_EXTENSIONS, readTextSources, describeRejection, IMAGE_MIME, MAX_IMAGE_BYTES, fileToBase64 } from '../sources';
-import { uploadProjectImage, deleteProjectImage, projectImageUrl } from '../api';
+import { TEXT_EXTENSIONS, readTextSources, describeRejection, IMAGE_MIME, MAX_IMAGE_BYTES, fileToBase64, DOCUMENT_EXTENSIONS, MAX_DOCUMENT_BYTES, isDocumentFile } from '../sources';
+import { uploadProjectImage, deleteProjectImage, projectImageUrl, uploadProjectDocument } from '../api';
 
 /** First free "name", "name (2)", "name (3)", … avoiding collisions. */
 function uniqueName(name: string, existing: { name: string }[]): string {
@@ -58,6 +58,31 @@ export function ProjectView({
   const [browsing, setBrowsing] = useState(false);
   const [addError, setAddError] = useState('');
   const [busyImages, setBusyImages] = useState(false);
+  const [busyDocs, setBusyDocs] = useState(false);
+
+  const addDocuments = async (list: FileList | null) => {
+    if (!list) return;
+    setAddError('');
+    setBusyDocs(true);
+    const failed: string[] = [];
+    const done: string[] = [];
+    for (const file of Array.from(list)) {
+      if (!isDocumentFile(file.name)) { failed.push(`${file.name} (not a PDF)`); continue; }
+      if (file.size > MAX_DOCUMENT_BYTES) { failed.push(`${file.name} (over the 25 MB limit)`); continue; }
+      try {
+        const r = await uploadProjectDocument(project.id, { name: file.name, dataBase64: await fileToBase64(file) });
+        done.push(`${file.name} — ${r.pages} page${r.pages === 1 ? '' : 's'}${r.truncated ? ', truncated' : ''}`);
+      } catch (e) {
+        failed.push(`${file.name} (${e instanceof Error ? e.message : 'could not read'})`);
+      }
+    }
+    setBusyDocs(false);
+    setAddError([
+      failed.length ? `Not added — ${failed.join(', ')}.` : '',
+      done.length ? `Added ${done.join('; ')}.` : '',
+    ].filter(Boolean).join(' '));
+    onRefresh();
+  };
 
   const addImages = async (list: FileList | null) => {
     if (!list) return;
@@ -161,6 +186,24 @@ export function ProjectView({
                   ))}
                 </ul>
               )}
+
+              <div className="rail-label">Documents</div>
+              <p className="rail-empty">
+                A PDF is converted to text when you add it, and then behaves like any other source.
+                Scanned pages have no text to extract.
+              </p>
+              <div className="source-actions">
+                <label className={`btn btn-secondary btn-sm${busyDocs ? ' is-busy' : ''}`}>
+                  {busyDocs ? 'Reading…' : 'Add PDF'}
+                  <input
+                    type="file"
+                    multiple
+                    accept={DOCUMENT_EXTENSIONS.join(',')}
+                    style={{ display: 'none' }}
+                    onChange={(e) => { void addDocuments(e.target.files); e.target.value = ''; }}
+                  />
+                </label>
+              </div>
 
               <div className="rail-label">Images</div>
               {(project.assets || []).length === 0 ? (

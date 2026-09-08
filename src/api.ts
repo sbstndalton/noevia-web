@@ -86,6 +86,12 @@ export const deleteProjectImage = (id: string, assetId: string) =>
 export const projectImageUrl = (id: string, assetId: string) =>
   `/api/projects/${encodeURIComponent(id)}/assets/${encodeURIComponent(assetId)}`;
 
+/** Upload a document (PDF). The server extracts its text and stores it as an
+ *  ordinary source. */
+export const uploadProjectDocument = (id: string, body: { name: string; dataBase64: string }) =>
+  postJson<{ name: string; pages: number; characters: number; truncated: boolean }>(
+    `/api/projects/${encodeURIComponent(id)}/documents`, body);
+
 /** Re-read every attached folder and refresh the project's sources from it. */
 export const syncProjectSources = (id: string) =>
   postJson<{ files: { name: string; source: string | null; bytes: number }[]; skipped: { folder: string; file?: string; reason: string }[] }>(

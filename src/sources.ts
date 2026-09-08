@@ -18,6 +18,13 @@ export const isTextFile = (name: string) =>
 // Images are not text and are not decoded as text: they are stored as bytes
 // and shown to the model as pictures, so they get their own path entirely.
 export const IMAGE_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+
+// A document is neither text nor a picture: it is converted to text on the
+// server at ingest, so it ends up an ordinary source.
+export const DOCUMENT_EXTENSIONS = ['.pdf'];
+export const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
+export const isDocumentFile = (name: string) =>
+  DOCUMENT_EXTENSIONS.some((e) => name.toLowerCase().endsWith(e));
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 export const isImageFile = (file: File) => IMAGE_MIME.includes(file.type.toLowerCase());
 
@@ -55,7 +62,11 @@ export async function readTextSources(
     if (!isTextFile(file.name)) {
       rejected.push({
         name: file.name,
-        reason: isImageFile(file) ? 'an image — add it under Images' : 'not a text file',
+        reason: isImageFile(file)
+          ? 'an image — add it under Images'
+          : isDocumentFile(file.name)
+            ? 'a document — add it under Documents'
+            : 'not a text file',
       });
       continue;
     }
