@@ -3,6 +3,8 @@ import type { JSX } from 'react';
 import type { InstalledModel, Project, ProjectFile } from '../types';
 import { StorageFileBrowser } from './StorageFileBrowser';
 import type { PickedFile } from './StorageFileBrowser';
+import { FolderPicker } from './FolderPicker';
+import { syncProjectSources } from '../api';
 
 /** Edit a project in place. Previously "Edit project" simply navigated into the
  *  project, which meant the settings people actually wanted to change — the
@@ -26,6 +28,10 @@ export function EditProjectModal({
   const [model, setModel] = useState(project.model || '');
   const [files, setFiles] = useState<ProjectFile[]>(project.files || []);
   const [browsing, setBrowsing] = useState(false);
+  const [pickingFolder, setPickingFolder] = useState(false);
+  const [folders, setFolders] = useState<string[]>(project.sourceFolders || []);
+  const [syncing, setSyncing] = useState(false);
+  const [syncNote, setSyncNote] = useState<string | null>(null);
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -45,8 +51,30 @@ export function EditProjectModal({
   const save = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    onSave({ name: trimmed, goal, instructions, files, ...(model ? { model } : {}) });
+    onSave({ name: trimmed, goal, instructions, files, sourceFolders: folders, ...(model ? { model } : {}) });
     onClose();
+  };
+
+  // Attached folders are re-read on demand. Save first, so the server syncs
+  // against the folder list actually shown here rather than the stored one.
+  const syncNow = async () => {
+    setSyncing(true);
+    setSyncNote(null);
+    try {
+      onSave({ sourceFolders: folders });
+      await new Promise((r) => setTimeout(r, 700)); // the project patch is debounced
+      const r = await syncProjectSources(project.id);
+      setFiles(r.files.map((f) => ({ name: f.name, content: '', source: f.source || undefined })));
+      const failed = r.skipped.length;
+      setSyncNote(
+        `${r.files.length} source${r.files.length === 1 ? '' : 's'} in place` +
+          (failed ? ` · ${failed} skipped (${r.skipped[0].reason})` : ''),
+      );
+    } catch (e) {
+      setSyncNote(e instanceof Error ? e.message : 'Could not refresh from storage');
+    } finally {
+      setSyncing(false);
+    }
   };
 
   return (
@@ -100,6 +128,35 @@ export function EditProjectModal({
         </label>
 
         <div className="field">
+          <span>Source folders</span>
+          <small>Text files in these folders are re-read on refresh, so the project follows the folder rather than holding a copy.</small>
+          {folders.length === 0 && <p className="insp-empty">No folders attached.</p>}
+          {folders.length > 0 && (
+            <ul className="source-list">
+              {folders.map((f) => (
+                <li key={f}>
+                  <span className="source-name">📁 {f}</span>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setFolders((prev) => prev.filter((x) => x !== f))}
+                    aria-label={`Detach ${f}`}
+                  >
+                    Detach
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="source-actions">
+            <button className="btn btn-secondary btn-sm" onClick={() => setPickingFolder(true)}>Attach folder</button>
+            <button className="btn btn-secondary btn-sm" onClick={() => void syncNow()} disabled={syncing || folders.length === 0}>
+              {syncing ? 'Refreshing…' : 'Refresh from storage'}
+            </button>
+          </div>
+          {syncNote && <small>{syncNote}</small>}
+        </div>
+
+        <div className="field">
           <span>Sources</span>
           <small>Every chat in this project reads these as its reference material.</small>
           {files.length === 0 && <p className="side-hint">No sources attached yet.</p>}
@@ -107,15 +164,21 @@ export function EditProjectModal({
             <ul className="source-list">
               {files.map((f) => (
                 <li key={f.name}>
-                  <span className="source-name">{f.name}</span>
-                  <span className="source-size">{Math.max(1, Math.round(f.content.length / 1024))} KB</span>
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => setFiles((prev) => prev.filter((x) => x.name !== f.name))}
-                    aria-label={`Remove ${f.name}`}
-                  >
-                    Remove
-                  </button>
+                  <span className="source-name">{f.source ? '📁' : '📄'} {f.name}</span>
+                  {f.content.length > 0 && (
+                    <span className="source-size">{Math.max(1, Math.round(f.content.length / 1024))} KB</span>
+                  )}
+                  {f.source ? (
+                    <span className="source-size">from folder</span>
+                  ) : (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setFiles((prev) => prev.filter((x) => x.name !== f.name))}
+                      aria-label={`Remove ${f.name}`}
+                    >
+                      Remove
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -143,6 +206,15 @@ export function EditProjectModal({
         <button className="btn btn-primary" onClick={save} disabled={!name.trim()}>Save</button>
       </footer>
 
+      {pickingFolder && (
+        <FolderPicker
+          onClose={() => setPickingFolder(false)}
+          onPick={(path) => {
+            setFolders((prev) => (prev.includes(path) ? prev : [...prev, path]));
+            setPickingFolder(false);
+          }}
+        />
+      )}
       {browsing && (
         <StorageFileBrowser
           onClose={() => setBrowsing(false)}

@@ -73,6 +73,10 @@ export const startNextcloud = (baseUrl: string) => postJson<{ flowId: string; lo
 export const pollNextcloud = (flowId: string, corpusRoot: string) => postJson<StorageConnection & { pending?: boolean }>('/api/integrations/storage/nextcloud/poll', { flowId, corpusRoot });
 export interface StorageEntry { name: string; path: string; isDir: boolean; size: number | null; ext: string }
 export const browseStorage = (path: string) => getJson<{ entries: StorageEntry[] }>(`/api/integrations/storage/files${path ? `/${path.split('/').map(encodeURIComponent).join('/')}` : ''}`);
+/** Re-read every attached folder and refresh the project's sources from it. */
+export const syncProjectSources = (id: string) =>
+  postJson<{ files: { name: string; source: string | null; bytes: number }[]; skipped: { folder: string; file?: string; reason: string }[] }>(
+    `/api/projects/${encodeURIComponent(id)}/sources/sync`, {});
 export const readStorageFile = (path: string) => postJson<{ name: string; content: string; truncated: boolean }>('/api/integrations/storage/file', { path });
 export const completeRecovery = (token: string, password: string) => postJson<{ ok: true }>('/api/auth/recovery/complete', { token, password });
 

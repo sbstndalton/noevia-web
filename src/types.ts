@@ -37,6 +37,9 @@ export interface ToolCallView {
 export interface ProjectFile {
   name: string;
   content: string;
+  /** The attached storage folder this came from. Absent for uploaded files,
+   *  which a folder sync must never overwrite. */
+  source?: string;
 }
 
 export interface Project {
@@ -51,6 +54,8 @@ export interface Project {
   routing?: 'manual' | 'auto'; // default 'manual'; 'auto' = Fast/Smart per-message routing
   pinned?: boolean;
   archived?: boolean;
+  /** Storage folders whose text files are pulled in as sources on sync. */
+  sourceFolders?: string[];
   toolboxes?: string[]; // step 14: named tool sets offered to the model; defaults to ['core']
   chats: ChatMeta[];
   createdAt: number;
