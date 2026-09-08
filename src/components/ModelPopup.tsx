@@ -134,7 +134,7 @@ function SwitchTab({
   // per keystroke to learn the budget would be worse than one shared constant
   // that a test pins on the server side.
   const sizeMatch = /(\d+(?:\.\d+)?)\s*[bB]\b/.exec(activeProject?.model || '');
-  const budget = sizeMatch && Number(sizeMatch[1]) <= 12 ? 3000 : 8000;
+  const budget = sizeMatch && Number(sizeMatch[1]) <= 12 ? 4500 : 8000;
   const overBudget = selectedTokens > budget;
   const toggleToolbox = async (id: string) => {
     if (!activeProject) return;
