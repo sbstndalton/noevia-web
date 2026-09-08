@@ -79,7 +79,7 @@ function LiveTimer({ startedAt }: { startedAt: number }): JSX.Element {
 
 function ToolChips({ calls }: { calls: ToolCallView[] }) {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+    <div className="tool-chips">
       {calls.map((tc, i) => (
         tc.status === 'pending' && tc.approvalId
           ? <PendingToolCall key={i} call={tc} />
@@ -116,32 +116,25 @@ function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
   let pretty = call.args;
   try { pretty = JSON.stringify(JSON.parse(call.args || '{}'), null, 1); } catch { /* show it raw */ }
   return (
-    <div
-      style={{
-        width: '100%', border: '1px solid var(--accent-2)', borderRadius: 'var(--radius-card, 10px)',
-        padding: 10, display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--accent-2-soft)',
-      }}
-    >
-      <span style={{ fontSize: 12 }}>
+    <div className="tool-approval" role="group" aria-label={`Approval required for ${call.name}`}>
+      <span className="tool-approval-ask">
         Allow <strong>{call.name}</strong> to run? This changes data in your account.
       </span>
-      {pretty && pretty !== '{}' && (
-        <pre style={{ margin: 0, fontSize: 11, maxHeight: 180, overflow: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          {pretty}
-        </pre>
-      )}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        <button className="modal-btn primary" style={{ padding: '4px 12px' }} disabled={busy} onClick={() => void decide('approve')}>
+      {/* Full, unabbreviated arguments. Seeing exactly what the model proposes
+          IS the gate — no clamp, no scroll-to-hide, no "show more". */}
+      {pretty && pretty !== '{}' && <pre className="tool-approval-args">{pretty}</pre>}
+      <div className="tool-approval-actions">
+        <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => void decide('approve')}>
           Allow once
         </button>
-        <button className="modal-btn secondary" style={{ padding: '4px 12px' }} disabled={busy} onClick={() => void decide('deny')}>
+        <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => void decide('deny')}>
           Decline
         </button>
-        <button className="modal-btn secondary" style={{ padding: '4px 12px' }} disabled={busy} onClick={() => void decide('approve_all')}>
+        <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => void decide('approve_all')}>
           Allow for this chat
         </button>
       </div>
-      {err && <span className="modal-err" style={{ fontSize: 11 }}>{err}</span>}
+      {err && <span className="modal-err tool-approval-err">{err}</span>}
     </div>
   );
 }
@@ -251,7 +244,7 @@ export function ChatView({
                 {m.senderLabel ?? (m.role === 'user' ? 'You' : `Assistant · ${modelLabel}`)}
               </span>
               {m.role === 'assistant' ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="assistant-card">
                   {m.reasoning ? <ThinkingBlock text={m.reasoning} live={!!thinkingLive && !m.content} /> : null}
                   {m.toolCalls && m.toolCalls.length > 0 ? <ToolChips calls={m.toolCalls} /> : null}
                   {m.content ? (

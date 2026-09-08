@@ -960,3 +960,96 @@ button:disabled { cursor: not-allowed; }
 
 .usage-legend { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 11.5px; color: var(--muted-ink, #6b7280); flex-wrap: wrap; }
 .usage-scale { display: inline-flex; align-items: center; gap: 3px; }
+
+/* ── Phase 3: chat ────────────────────────────────────────────────────────
+   The transcript is a reading column, so it is width-constrained and centred.
+   Assistant replies are cards with a real surface; user messages are bubbles
+   on the opposite edge, so authorship is obvious without reading the label. */
+.transcript { max-width: 820px; }
+
+.msg[data-role="user"] { align-items: flex-end; }
+.msg[data-role="user"] .msg-sender { text-align: right; }
+.msg[data-role="user"] .msg-user-row {
+  background: var(--bg-surface-active); border-radius: var(--radius-bubble);
+  padding: 12px 18px; max-width: 80%; align-items: center;
+}
+.msg[data-role="user"] .msg-user-row > p { color: var(--text-primary); }
+
+.assistant-card {
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--bg-surface); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card); padding: 14px 16px;
+}
+/* The bubble inside a card would be a second surface on top of the first. */
+.assistant-card .bubble { background: none; padding: 0; border-radius: 0; }
+.assistant-card .msg-meta {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  border-top: 1px solid var(--border-subtle); padding-top: 8px; margin-top: 2px;
+}
+
+.tool-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ── The write-tool approval gate ─────────────────────────────────────────
+   Styling only. The card blocks the chat until a human answers, the three
+   decisions stay distinct, and the arguments stay complete — a clamp here
+   would defeat the point of showing them. */
+.tool-approval {
+  width: 100%; display: flex; flex-direction: column; gap: 10px;
+  border: 1px solid var(--accent-garnet); border-left-width: 3px;
+  border-radius: var(--radius-card); padding: 12px 14px;
+  background: var(--tint-garnet);
+}
+.tool-approval-ask { font-size: 12.5px; line-height: 1.5; color: var(--text-primary); }
+.tool-approval-args {
+  margin: 0; font-family: var(--font-mono, ui-monospace, monospace); font-size: 11.5px;
+  line-height: 1.55; white-space: pre-wrap; word-break: break-word;
+  background: var(--bg-canvas); border: 1px solid var(--border-subtle);
+  border-radius: 8px; padding: 10px; max-height: none; overflow: visible;
+}
+.tool-approval-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.tool-approval-err { font-size: 11.5px; }
+.btn-sm { height: 28px; padding: 0 12px; font-size: 12px; }
+
+/* ── Composer ─────────────────────────────────────────────────────────────
+   A floating card that clears the telemetry strip, with a circular accent
+   send button. */
+.composer { border-top: 0; padding-bottom: 36px; }
+.composer-inner {
+  max-width: 820px; margin-inline: auto;
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: var(--radius-input); box-shadow: var(--shadow-soft);
+}
+.composer-hint { max-width: 820px; margin-inline: auto; }
+.send-btn {
+  border-radius: 50%; background: var(--accent-garnet); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  transition: box-shadow var(--duration-fast) var(--ease-spring),
+              transform var(--duration-fast) var(--ease-spring);
+}
+.send-btn:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--tint-garnet), 0 0 14px rgba(148,37,55,.35); }
+.send-btn:active:not(:disabled) { transform: scale(0.94); }
+
+/* ── Inspector as a slide-over ────────────────────────────────────────────
+   It used to push the layout; as a drawer it overlays the transcript, so
+   opening it no longer reflows what you were reading. */
+.noevia-inspector {
+  position: absolute; top: 0; right: 0; bottom: 0; width: min(340px, 86vw); z-index: 6;
+  background: var(--bg-surface); border-left: 1px solid var(--border);
+  box-shadow: -18px 0 48px rgba(0,0,0,.22); overflow-y: auto;
+  animation: inspector-in var(--duration-base) var(--ease-spring);
+}
+@keyframes inspector-in { from { transform: translateX(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Chat titles are derived from the first user message, so they can be a
+   paragraph. The header is chrome — it stays one line at any width, and the
+   model pill never wraps its id across four lines. */
+.chat-header { flex-wrap: nowrap; gap: 12px; }
+.header-titles { flex: 1; min-width: 0; }
+.header-title {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.model-pill { flex-shrink: 1; min-width: 0; max-width: 220px; }
+.model-pill-label {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.model-pill-dot, .model-pill svg { flex-shrink: 0; }
