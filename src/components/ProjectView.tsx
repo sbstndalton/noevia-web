@@ -4,6 +4,15 @@ import type { Project } from '../types';
 import { SendIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
 
+// What a project source can be read as. A project file is stored and given to
+// the model as text, so anything else would arrive as mojibake — the same list
+// the server enforces on storage reads, kept in step deliberately.
+const TEXT_EXTENSIONS = [
+  '.txt', '.md', '.markdown', '.json', '.csv', '.yml', '.yaml',
+  '.ts', '.tsx', '.js', '.jsx', '.py', '.sh', '.html', '.css',
+];
+const isTextFile = (name: string) => TEXT_EXTENSIONS.some((e) => name.toLowerCase().endsWith(e));
+
 /** First free "name", "name (2)", "name (3)", … avoiding collisions. */
 function uniqueName(name: string, existing: { name: string }[]): string {
   if (!existing.some((f) => f.name === name)) return name;
@@ -50,6 +59,7 @@ export function ProjectView({
   const [tab, setTab] = useState<'chats' | 'sources'>('chats');
   const [draft, setDraft] = useState('');
   const [browsing, setBrowsing] = useState(false);
+  const [addError, setAddError] = useState('');
 
   const chats = [...project.chats]
     .filter((c) => !c.archived)
@@ -147,7 +157,7 @@ export function ProjectView({
                       ) : (
                         <button
                           className="btn btn-ghost btn-sm"
-                          onClick={() => onPatch(project.id, { files: project.files.filter((x) => x.name !== f.name) })}
+                          onClick={() => onPatch(project.id, { files: project.files.filter((x) => !x.source && x.name !== f.name) })}
                           aria-label={`Remove ${f.name}`}
                         >
                           Remove
@@ -164,23 +174,37 @@ export function ProjectView({
                   <input
                     type="file"
                     multiple
+                    accept={TEXT_EXTENSIONS.join(',')}
                     style={{ display: 'none' }}
                     onChange={(e) => {
                       const list = e.target.files;
                       if (!list) return;
-                      for (const file of Array.from(list)) {
-                        void file.text().then((content) =>
-                          onPatch(project.id, {
-                            files: [...project.files, { name: uniqueName(file.name, project.files), content }],
-                          }),
-                        );
-                      }
+                      const chosen = Array.from(list);
+                      const rejected = chosen.filter((f) => !isTextFile(f.name));
+                      const accepted = chosen.filter((f) => isTextFile(f.name));
+                      setAddError(
+                        rejected.length
+                          ? `Not added — ${rejected.map((f) => f.name).join(', ')}. A source is read as text; a PDF or image would arrive as unreadable characters.`
+                          : '',
+                      );
+                      // One patch for the whole selection. Patching per file
+                      // rebuilt the list from the same stale array each time,
+                      // so selecting several kept only one of them.
+                      void Promise.all(accepted.map(async (f) => ({ file: f, content: await f.text() }))).then((read) => {
+                        const next = [...project.files.filter((f) => !f.source)];
+                        for (const { file, content } of read) {
+                          next.push({ name: uniqueName(file.name, next), content });
+                        }
+                        onPatch(project.id, { files: next });
+                      });
+                      e.target.value = '';
                     }}
                   />
                 </label>
                 <button className="btn btn-secondary btn-sm" onClick={() => setBrowsing(true)}>Add from storage</button>
                 <button className="btn btn-secondary btn-sm" onClick={() => onEditProject(project.id)}>Manage folders</button>
               </div>
+              {addError && <p className="modal-err source-add-error">{addError}</p>}
             </div>
           )}
 

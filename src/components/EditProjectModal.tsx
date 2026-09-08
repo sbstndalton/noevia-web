@@ -51,7 +51,15 @@ export function EditProjectModal({
   const save = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    onSave({ name: trimmed, goal, instructions, files, sourceFolders: folders, ...(model ? { model } : {}) });
+    onSave({
+      name: trimmed,
+      goal,
+      instructions,
+      // Uploads only — folder-derived sources are the sync's to manage.
+      files: files.filter((f) => !f.source),
+      sourceFolders: folders,
+      ...(model ? { model } : {}),
+    });
     onClose();
   };
 
@@ -64,7 +72,15 @@ export function EditProjectModal({
       onSave({ sourceFolders: folders });
       await new Promise((r) => setTimeout(r, 700)); // the project patch is debounced
       const r = await syncProjectSources(project.id);
-      setFiles(r.files.map((f) => ({ name: f.name, content: '', source: f.source || undefined })));
+      // The sync response is metadata (name/source/bytes), not content. Show
+      // what the server now holds; folder-derived entries are display-only and
+      // are filtered back out on save.
+      setFiles((prev) => {
+        const byName = new Map(prev.map((f) => [f.name, f]));
+        return r.files.map((f) => (f.source
+          ? { name: f.name, content: '', source: f.source }
+          : byName.get(f.name) ?? { name: f.name, content: '' }));
+      });
       const failed = r.skipped.length;
       setSyncNote(
         `${r.files.length} source${r.files.length === 1 ? '' : 's'} in place` +

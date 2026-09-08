@@ -1430,3 +1430,4 @@ button:disabled { cursor: not-allowed; }
 .folder-picker footer { gap: 8px; }
 .folder-new-name { flex: 1; min-width: 0; height: 30px; font-size: 13px; }
 .folder-picker header code { font-family: var(--font-mono, ui-monospace, monospace); }
+.source-add-error { margin: 10px 0 0; font-size: 12px; line-height: 1.5; }
