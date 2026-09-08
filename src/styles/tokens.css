@@ -18,6 +18,10 @@
   --tint-garnet: #2a1c27;
   --good: #8ED4B0;
   --danger: #ef4444;
+  /* Nav row fills. Decorative, so rgba is allowed; they must be tinted per
+     theme because a white overlay is invisible on a light canvas. */
+  --nav-hover: rgba(255,255,255,0.045);
+  --nav-active: rgba(255,255,255,0.08);
   color-scheme: dark;
 }
 :root {
@@ -79,5 +83,7 @@
   --tint-garnet: #f4e9eb;
   --good: #246548;
   --danger: #b3261e;
+  --nav-hover: rgba(19,23,26,0.035);
+  --nav-active: rgba(19,23,26,0.065);
   color-scheme: light;
 }

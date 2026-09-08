@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { AccountMenu } from './AccountMenu';
+import { fetchToolboxes } from '../api';
+import type { McpStatus } from '../api';
 import { ShellIcon } from './ShellIcon';
 import type { ChatMeta, HealthState, Project } from '../types';
 import {
@@ -31,6 +33,12 @@ interface SidebarProps {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
 }
+
+// Scheduled, Plugins and Explore all route to PreviewPanel and do nothing.
+// Advertising three features that dead-end is itself what makes the product
+// feel unfinished, so they stay hidden until they execute. Flip to true to
+// restore them — the nav markup below is unchanged.
+const SHOW_PLACEHOLDER_NAV = false;
 
 function statusText(health: HealthState): string {
   if (health.inferenceUp) return 'Inference · online';
@@ -74,6 +82,13 @@ export function Sidebar({
   // first click arms, second click ("Yes, delete") fires. Clicking elsewhere
   // or re-opening resets both arms.
   const [confirmChatDeleteId, setConfirmChatDeleteId] = useState<string | null>(null);
+  // MCP reachability. Nothing surfaced this before; a configured server that
+  // has failed to discover its tools should say so rather than look healthy.
+  const [mcp, setMcp] = useState<McpStatus | null>(null);
+
+  useEffect(() => {
+    void fetchToolboxes().then((r) => setMcp(r.mcp ?? null)).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (!menuFor) return;
@@ -110,7 +125,7 @@ export function Sidebar({
   };
   return (
     <div className={`sidebar${activeView === 'diary' ? ' diary-sidebar' : ''}`}>
-      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div>
+      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button" aria-label={theme==='dark'?'Switch to Polymetal Day':'Switch to Polymetal Night'} title={theme==='dark'?'Polymetal Day':'Polymetal Night'} onClick={onToggleTheme}><ShellIcon name="sun"/></button><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
       <div className="app-mode-switch" aria-label="Workspace mode"><button className="is-selected" aria-pressed="true"><ShellIcon name="chat"/>Chat</button><button onClick={onEnterCode} aria-pressed="false"><ShellIcon name="code"/>Code</button></div>
       {searching&&<input className="shell-search" autoFocus aria-label="Search projects and chats" placeholder="Search projects and chats…" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');}}}/>}
 
@@ -127,9 +142,18 @@ export function Sidebar({
           <BookIcon />
           <span className="nav-name">Projects</span>
         </button>
+        {diaryEnabled && (
+          <button
+            className={`nav-item${activeView === 'diary' ? ' is-active' : ''}`}
+            onClick={onOpenDiary}
+          >
+            <span className="nav-emoji" role="img" aria-label="Diary">📔</span>
+            <span className="nav-name">Diary</span>
+          </button>
+        )}
       </div>
 
-      <nav className="shell-extra-nav" aria-label="Explore noevia">{[['Scheduled','clock'],['Plugins','plugins'],['Explore','explore']].map(([label,icon])=><button className="nav-item" key={label} onClick={()=>onPreview(label)}><ShellIcon name={icon}/><span className="nav-name">{label}</span></button>)}</nav>
+      {SHOW_PLACEHOLDER_NAV && <nav className="shell-extra-nav" aria-label="Explore noevia">{[['Scheduled','clock'],['Plugins','plugins'],['Explore','explore']].map(([label,icon])=><button className="nav-item" key={label} onClick={()=>onPreview(label)}><ShellIcon name={icon}/><span className="nav-name">{label}</span></button>)}</nav>}
       <div className="spaces">
         <div className="section-label">Projects</div>
         {projects.filter(p=>p.name.toLowerCase().includes(query.toLowerCase())).map((p) => (
@@ -248,18 +272,14 @@ export function Sidebar({
 
       <div style={{ flexGrow: 1 }} />
 
-      {diaryEnabled && <button
-        className={`nav-item${activeView === 'diary' ? ' is-active' : ''}`}
-        onClick={onOpenDiary}
-      >
-        <span className="nav-emoji" role="img" aria-label="Diary">📔</span>
-        <span className="nav-name">Diary</span>
-
-      </button>}
-
       <div className="divider" />
 
-      <div className="side-footer"><div className="status-row"><span className="status-dot" style={health.inferenceUp===false?{background:'var(--accent)'}:undefined}/><span className="status-text">{statusText(health)}</span></div><AccountMenu onSettings={onOpenSettings} onToggleTheme={onToggleTheme} theme={theme}/></div>
+      <div className="side-footer">{mcp?.configured && (
+        <div className={`mcp-row${mcp.error ? ' is-degraded' : ''}`}>
+          <span className="status-dot" style={mcp.error ? { background: 'var(--danger)' } : { background: 'var(--good)' }} />
+          <span className="status-text">{mcp.error ? 'Local MCP · unavailable' : `Local MCP · ${mcp.discovered ?? 0} tools`}</span>
+        </div>
+      )}<div className="status-row"><span className="status-dot" style={health.inferenceUp===false?{background:'var(--accent)'}:undefined}/><span className="status-text">{statusText(health)}</span></div><AccountMenu onSettings={onOpenSettings} onToggleTheme={onToggleTheme} theme={theme}/></div>
     </div>
   );
 }
