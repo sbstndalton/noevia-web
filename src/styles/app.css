@@ -1401,3 +1401,28 @@ button:disabled { cursor: not-allowed; }
 .project-newchat:hover { color: var(--text); text-decoration: underline; }
 
 @media (max-width: 640px) { .project-main { padding: 20px 16px 14px; } }
+
+/* The expand control only exists while the rail is collapsed. Qualified
+   because .shell-icon-button sets display in a later stylesheet. */
+.shell-icon-button.side-expand { display: none; }
+@media (max-width: 600px) {
+  .app { position: relative; }
+  .shell-icon-button.side-expand { display: inline-flex; }
+  .sidebar.is-expanded .spaces { max-height: 46vh; }
+  /* 60px of rail cannot hold a brand mark and a 32px button side by side, so
+     the head stacks rather than letting the button hang over the content. */
+  .sidebar:not(.coding-sidebar):not(.is-expanded) .shell-sidebar-head {
+    flex-direction: column; gap: 6px; align-items: center;
+  }
+  .sidebar:not(.coding-sidebar):not(.is-expanded) .side-logo { padding: 0; }
+}
+
+/* The model pill held a fixed 220px while the title block was free to shrink,
+   so on a narrow screen the title collapsed to zero and the header showed a
+   model id and nothing else. The title keeps a floor; the pill yields first. */
+.header-titles { min-width: 96px; }
+.model-pill { flex-shrink: 2; }
+@media (max-width: 640px) {
+  .model-pill { max-width: 132px; }
+  .model-pill-label { font-size: 11.5px; }
+}

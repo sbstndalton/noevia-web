@@ -75,6 +75,10 @@ export function Sidebar({
   onToggleTheme,
 }: SidebarProps): JSX.Element {
   const [searching, setSearching] = useState(false);
+  // Below 600px the sidebar collapses to an icon rail, which hid the project
+  // and chat lists entirely — a free chat was then unreachable from anywhere
+  // on a phone. The rail can be expanded over the content instead.
+  const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState('');
   // One menu model for both entity types, opened from a right-click or the
   // hamburger. Destructive choices route through `confirm` rather than an
@@ -186,8 +190,15 @@ export function Sidebar({
     },
   ];
   return (
-    <div className={`sidebar${activeView === 'diary' ? ' diary-sidebar' : ''}`}>
-      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button" aria-label={theme==='dark'?'Switch to Polymetal Day':'Switch to Polymetal Night'} title={theme==='dark'?'Polymetal Day':'Polymetal Night'} onClick={onToggleTheme}><ShellIcon name="sun"/></button><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
+    <div
+      className={`sidebar${activeView === 'diary' ? ' diary-sidebar' : ''}${expanded ? ' is-expanded' : ''}`}
+      onClick={(e) => {
+        // Any navigation collapses the rail again, so the overlay never
+        // stays over the thing it just navigated to.
+        if (expanded && (e.target as HTMLElement).closest('.nav-item')) setExpanded(false);
+      }}
+    >
+      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={expanded ? 'Collapse navigation' : 'Expand navigation'} aria-expanded={expanded} onClick={() => setExpanded(!expanded)}><ShellIcon name="panel"/></button><button className="shell-icon-button" aria-label={theme==='dark'?'Switch to Polymetal Day':'Switch to Polymetal Night'} title={theme==='dark'?'Polymetal Day':'Polymetal Night'} onClick={onToggleTheme}><ShellIcon name="sun"/></button><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
       <div className="app-mode-switch" aria-label="Workspace mode"><button className="is-selected" aria-pressed="true"><ShellIcon name="chat"/>Chat</button><button onClick={onEnterCode} aria-pressed="false"><ShellIcon name="code"/>Code</button></div>
       {searching&&<input className="shell-search" autoFocus aria-label="Search projects and chats" placeholder="Search projects and chats…" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');}}}/>}
 
