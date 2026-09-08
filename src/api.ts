@@ -184,7 +184,15 @@ export interface McpStatus {
   discovered?: number;
 }
 
-export function fetchToolboxes(): Promise<{ toolboxes: Toolbox[]; mcp: McpStatus }> {
+/** What noevia has measured about this hardware's prefill speed. `models` is
+ *  keyed by model id; `tokensPerSecond` is null until enough real traffic has
+ *  been seen to fit a rate. */
+export interface PrefillStatus {
+  targetMs: number;
+  models: Record<string, { buckets: number; tokensPerSecond: number | null; range: [number, number] | null }>;
+}
+
+export function fetchToolboxes(): Promise<{ toolboxes: Toolbox[]; mcp: McpStatus; prefill?: PrefillStatus }> {
   return getJson('/api/toolboxes');
 }
 
