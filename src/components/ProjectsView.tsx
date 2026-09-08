@@ -22,16 +22,41 @@ function timeAgo(ts: number): string {
   return `${days} days ago`;
 }
 
+// A stable colour per project, so a card is recognisable by its badge before
+// the title is read. Derived from the name, not stored — nothing to migrate.
+const BADGE_HUES = [8, 200, 150, 265, 32, 340];
+function badgeHue(name: string): number {
+  let h = 0;
+  for (let i = 0; i < name.length; i += 1) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return BADGE_HUES[h % BADGE_HUES.length];
+}
+
 export function ProjectsView({ projects, onOpenProject, onCreate, onDelete }: ProjectsViewProps): JSX.Element {
   const [creating, setCreating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   return (
     <div className="main">
       <div className="settings-scroll">
-        <div className="projects-head">
+        <div className="projects-hero">
           <h1>Projects</h1>
-          <button className="new-project-btn" onClick={() => setCreating(true)}>
+          <p className="projects-hero-sub">
+            {projects.length === 0
+              ? 'No workspaces yet.'
+              : `${projects.length} ${projects.length === 1 ? 'workspace' : 'workspaces'} · ${projects.reduce((n, p) => n + p.chats.length, 0)} chats`}
+          </p>
+        </div>
+        <div className="projects-head">
+          <input
+            className="projects-search"
+            type="search"
+            aria-label="Filter projects"
+            placeholder="Filter projects…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <button className="btn btn-primary" onClick={() => setCreating(true)}>
             <PlusIcon />
             <span>New project</span>
           </button>
@@ -47,7 +72,9 @@ export function ProjectsView({ projects, onOpenProject, onCreate, onDelete }: Pr
           </div>
         ) : (
           <div className="projects-grid">
-            {projects.map((p) => (
+            {projects
+              .filter((p) => `${p.name} ${p.goal || ''}`.toLowerCase().includes(query.trim().toLowerCase()))
+              .map((p) => (
               <div
                 key={p.id}
                 className="project-card"
@@ -57,6 +84,16 @@ export function ProjectsView({ projects, onOpenProject, onCreate, onDelete }: Pr
                 onKeyDown={(e) => e.key === 'Enter' && onOpenProject(p.id)}
               >
                 <div className="project-card-top">
+                  <span
+                    className="project-badge"
+                    aria-hidden="true"
+                    style={{
+                      background: `oklch(72% 0.13 ${badgeHue(p.name)} / 0.18)`,
+                      color: `oklch(72% 0.13 ${badgeHue(p.name)})`,
+                    }}
+                  >
+                    {p.name.slice(0, 1).toUpperCase()}
+                  </span>
                   <span className="project-card-name">{p.name}</span>
                   {confirmDelete === p.id ? (
                     <span className="project-card-del" onClick={(e) => e.stopPropagation()}>
@@ -89,8 +126,9 @@ export function ProjectsView({ projects, onOpenProject, onCreate, onDelete }: Pr
                 </div>
                 {p.goal && <p className="project-card-goal">{p.goal}</p>}
                 <div className="project-card-meta">
-                  <span>{timeAgo(p.updatedAt)}</span>
-                  <span>{p.chats.length} {p.chats.length === 1 ? 'chat' : 'chats'}</span>
+                  <span className="project-chip">{p.chats.length} {p.chats.length === 1 ? 'chat' : 'chats'}</span>
+                  {p.files.length > 0 && <span className="project-chip">{p.files.length} files</span>}
+                  <span className="project-card-time">{timeAgo(p.updatedAt)}</span>
                 </div>
               </div>
             ))}

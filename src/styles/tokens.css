@@ -3,6 +3,11 @@
    Values are measured against tests/theme-contrast.test.cjs — do not
    substitute without re-measuring. */
 :root, [data-theme='dark'] {
+  /* Four grounds, not one value plus hairlines: chrome (sidebar) sits below
+     the app ground, cards sit above it, popovers above those. Borders then
+     refine an edge that elevation has already established. */
+  --bg-chrome: #0c0e12;
+  --bg-app: #12151c;
   --bg-canvas: #0c0e12;
   --bg-surface: #171b24;
   --bg-surface-hover: #1e2330;
@@ -22,17 +27,21 @@
      theme because a white overlay is invisible on a light canvas. */
   --nav-hover: rgba(255,255,255,0.045);
   --nav-active: rgba(255,255,255,0.08);
+  /* Dark needs materially deeper shadows than light: on a near-black ground a
+     6%-black shadow is invisible. */
+  --shadow-card: 0 1px 2px rgba(0,0,0,.40), 0 8px 24px rgba(0,0,0,.36);
+  --shadow-pop: 0 16px 48px rgba(0,0,0,.55);
   color-scheme: dark;
 }
 :root {
   --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
   --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
-  --radius-card: 12px;
+  --radius-card: 14px;
   --radius-bubble: 14px;
   --radius-input: 16px;
   --radius-pill: 999px;
-  --bg: var(--bg-canvas);
-  --bg-sidebar: var(--bg-canvas);
+  --bg: var(--bg-app);
+  --bg-sidebar: var(--bg-chrome);
   --bg-card: var(--bg-surface);
   --bg-panel: var(--bg-surface);
   --bg-input: var(--bg-surface);
@@ -49,7 +58,7 @@
   --accent-2: var(--accent-text);
   --accent-2-soft: var(--tint-garnet);
   --send-icon: #FFFFFF;
-  --shadow-soft: 0 8px 24px #00000012;
+  --shadow-soft: var(--shadow-card);
 
   /* 4px-based spacing scale */
   --space-1: 4px;
@@ -68,6 +77,8 @@
   --duration-base: 180ms;
 }
 [data-theme='light'] {
+  --bg-chrome: #EBEEF4;
+  --bg-app: #F5F6F9;
   --bg-canvas: #F5F6F9;
   --bg-surface: #FFFFFF;
   --bg-surface-hover: #f2f4f8;
@@ -85,5 +96,7 @@
   --danger: #b3261e;
   --nav-hover: rgba(19,23,26,0.035);
   --nav-active: rgba(19,23,26,0.065);
+  --shadow-card: 0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.08);
+  --shadow-pop: 0 16px 48px rgba(16,24,40,.16);
   color-scheme: light;
 }

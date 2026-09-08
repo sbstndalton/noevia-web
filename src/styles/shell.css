@@ -32,12 +32,11 @@
 .sidebar .nav-item.is-active .nav-name,
 .sidebar .proj-row.is-active .nav-item .nav-name,
 .sidebar .chat-row.is-active .nav-item .nav-name { font-weight:600; color:var(--text-primary); }
-.sidebar .nav-item.is-active::before,
-.sidebar .proj-row.is-active .nav-item::before,
-.sidebar .chat-row.is-active .nav-item::before {
-  content:''; position:absolute; left:0; top:50%; transform:translateY(-50%);
-  width:3px; height:18px; border-radius:0 3px 3px 0; background:var(--accent-garnet);
-}
+/* The accent pip is an inset box-shadow in noevia.css, which loads last and
+   is authoritative; a ::before here would double it. Project and chat rows
+   pick up the same treatment as plain nav rows. */
+.sidebar .proj-row.is-active .nav-item,
+.sidebar .chat-row.is-active .nav-item { box-shadow:inset 3px 0 var(--accent-garnet); }
 .sidebar .nav-item:focus-visible { outline:2px solid var(--focus-ring); outline-offset:-2px; }
 
 /* MCP reachability, alongside inference health. */
