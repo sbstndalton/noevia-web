@@ -3,6 +3,7 @@ import type { JSX } from 'react';
 import type { Message, MessageStats, ToolCallView } from '../types';
 import { ChevronDown, ChevronLeft, SendIcon, SlidersIcon } from './Icons';
 import { MarkdownPreview } from './DiaryModal';
+import { decideToolApproval } from '../api';
 
 interface ChatViewProps {
   title: string;
@@ -80,11 +81,67 @@ function ToolChips({ calls }: { calls: ToolCallView[] }) {
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
       {calls.map((tc, i) => (
-        <span key={i} className="tool-chip">
-          ⚒ {tc.name || 'tool'}
-          {tc.args ? <code>{tc.args.slice(0, 80)}</code> : null}
-        </span>
+        tc.status === 'pending' && tc.approvalId
+          ? <PendingToolCall key={i} call={tc} />
+          : (
+            <span key={i} className="tool-chip" style={tc.status === 'denied' ? { opacity: 0.6 } : undefined}>
+              ⚒ {tc.name || 'tool'}
+              {tc.args ? <code>{tc.args.slice(0, 80)}</code> : null}
+            </span>
+          )
       ))}
+    </div>
+  );
+}
+
+/** A write tool waiting on the user. The arguments are shown in full and
+ *  unabbreviated: this is the one moment where seeing exactly what the model
+ *  proposes to do is the entire point, so truncating them here would defeat
+ *  the gate. */
+function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const decide = async (decision: 'approve' | 'deny' | 'approve_all') => {
+    if (!call.approvalId || busy) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await decideToolApproval(call.approvalId, decision);
+    } catch (e) {
+      // Most likely the request timed out and the server already denied it.
+      setErr(e instanceof Error ? e.message : 'Could not send the decision');
+      setBusy(false);
+    }
+  };
+  let pretty = call.args;
+  try { pretty = JSON.stringify(JSON.parse(call.args || '{}'), null, 1); } catch { /* show it raw */ }
+  return (
+    <div
+      style={{
+        width: '100%', border: '1px solid var(--accent-2)', borderRadius: 'var(--radius-card, 10px)',
+        padding: 10, display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--accent-2-soft)',
+      }}
+    >
+      <span style={{ fontSize: 12 }}>
+        Allow <strong>{call.name}</strong> to run? This changes data in your account.
+      </span>
+      {pretty && pretty !== '{}' && (
+        <pre style={{ margin: 0, fontSize: 11, maxHeight: 180, overflow: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {pretty}
+        </pre>
+      )}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <button className="modal-btn primary" style={{ padding: '4px 12px' }} disabled={busy} onClick={() => void decide('approve')}>
+          Allow once
+        </button>
+        <button className="modal-btn secondary" style={{ padding: '4px 12px' }} disabled={busy} onClick={() => void decide('deny')}>
+          Decline
+        </button>
+        <button className="modal-btn secondary" style={{ padding: '4px 12px' }} disabled={busy} onClick={() => void decide('approve_all')}>
+          Allow for this chat
+        </button>
+      </div>
+      {err && <span className="modal-err" style={{ fontSize: 11 }}>{err}</span>}
     </div>
   );
 }

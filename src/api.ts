@@ -169,6 +169,15 @@ export function saveProjectConfig(
   return postJson(`/api/projects/${encodeURIComponent(projectId)}/config`, patch);
 }
 
+/** Decide a pending write tool call. 'approve_all' also stops asking for the
+ *  rest of this chat; there is deliberately no global "never ask". */
+export function decideToolApproval(
+  approvalId: string,
+  decision: 'approve' | 'deny' | 'approve_all',
+): Promise<{ ok: true }> {
+  return postJson(`/api/tool-approvals/${encodeURIComponent(approvalId)}`, { decision });
+}
+
 export interface McpStatus {
   configured: boolean;
   error?: string | null;
@@ -323,6 +332,9 @@ export function saveChatHistory(chatId: string, history: HistoryEntry[]): Promis
 // Chat streams SSE events from the proxy:
 //   { type:'meta', model, chatId? } { type:'reasoning', text } { type:'delta', text }
 //   { type:'tool', index, name, args } — accumulated state, upsert on index
+//   { type:'tool_pending', id, index, name, args } — a WRITE tool is waiting
+//     for the user. The stream stays open and nothing runs until a decision is
+//     posted to /api/tool-approvals/:id.
 //   { type:'done', model } { type:'diary', decision }
 //   { type:'usage', promptTokens, completionTokens, totalTokens, tokensPerSecond }
 export async function* streamChat(
@@ -337,6 +349,7 @@ export async function* streamChat(
   name?: string;
   args?: string;
   index?: number; // 'tool' events: which call this is, for upsert-by-index
+  id?: string; // 'tool_pending': the approval id to post a decision against
   decision?: string;
   route?: string; // 'fast' | 'smart' when Auto routing picked the model (step 12)
   // 'usage' event: provider-reported totals for the finished reply.

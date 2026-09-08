@@ -26,6 +26,7 @@ import type {
   Message,
   Project,
   ProjectFile,
+  ToolCallView,
 } from './types';
 import { ChatView } from './components/ChatView';
 import { DiaryView } from './components/DiaryView';
@@ -282,7 +283,7 @@ export default function App(): JSX.Element {
       try {
         let acc = '';
         let reasoning = '';
-        const tools: { name: string; args: string }[] = [];
+        const tools: ToolCallView[] = [];
         for await (const ev of streamChat(
           {
             spaceId: projectId || 'free',
@@ -317,7 +318,24 @@ export default function App(): JSX.Element {
             // appending — appending rendered one chip per delta, most of them
             // nameless with a fragment of JSON for arguments.
             const at = typeof ev.index === 'number' ? ev.index : tools.length;
-            tools[at] = { name: ev.name || 'tool', args: ev.args || '' };
+            tools[at] = { name: ev.name || 'tool', args: ev.args || '', status: 'running' };
+            setMessagesByChat((prev) => ({
+              ...prev,
+              [chatId]: (prev[chatId] ?? []).map((m) =>
+                m.id === replyId ? { ...m, toolCalls: tools.filter(Boolean).map((t) => ({ ...t })) } : m,
+              ),
+            }));
+          } else if (ev.type === 'tool_pending') {
+            // A write tool is waiting on the user. The stream stays open, so
+            // the chip becomes an approve/deny prompt in place rather than the
+            // reply appearing to stall for no reason.
+            const at = typeof ev.index === 'number' ? ev.index : Math.max(0, tools.length - 1);
+            tools[at] = {
+              name: ev.name || 'tool',
+              args: ev.args || '',
+              status: 'pending',
+              approvalId: ev.id,
+            };
             setMessagesByChat((prev) => ({
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) =>
@@ -340,9 +358,16 @@ export default function App(): JSX.Element {
             throw new Error(ev.text || 'Generation failed');
           } else if (ev.type === 'tool_result' && ev.name) {
             // Mark the call that produced it as complete rather than adding a
-            // second chip for the same call.
+            // second chip for the same call. This also clears any 'pending'
+            // state, so an approved or refused call stops offering buttons
+            // that would now 404.
             const done = tools.findIndex((t) => t && t.name === ev.name);
-            const chip = { name: `${ev.name} ✓`, args: (ev.text || '').slice(0, 120) };
+            const denied = (ev.text || '').startsWith('ERROR: the user');
+            const chip = {
+              name: `${ev.name} ${denied ? '⃠' : '✓'}`,
+              args: (ev.text || '').slice(0, 120),
+              status: denied ? ('denied' as const) : ('done' as const),
+            };
             if (done >= 0) tools[done] = chip; else tools.push(chip);
             setMessagesByChat((prev) => ({
               ...prev,
