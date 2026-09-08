@@ -213,7 +213,7 @@ export function Sidebar({
           <div className="divider" />
           <div className="spaces">
             <div className="section-label">Recent chats</div>
-            {chats.filter(c=>c.title.toLowerCase().includes(query.toLowerCase())).slice(0, 12).map((c) => (
+            {chats.filter(c=>(c.title || '').toLowerCase().includes(query.toLowerCase())).slice(0, 12).map((c) => (
               <div
                 key={c.id}
                 className={`chat-row${activeChatId === c.id && activeView === 'chat' ? ' is-active' : ''}`}

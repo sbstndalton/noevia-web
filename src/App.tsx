@@ -201,8 +201,13 @@ export default function App(): JSX.Element {
   }, [view]);
 
   const allChats: ChatMeta[] = useMemo(() => {
+    // Spreading a malformed entry (a bare chat-id string) yields a record with
+    // no title, which throws downstream and blanks the app. The server
+    // sanitizes these, but never render-crash on data we did not write.
     const fromProjects = projects.flatMap((p) =>
-      (p.chats || []).map((c) => ({ ...c, projectId: p.id })),
+      (p.chats || [])
+        .filter((c): c is ChatMeta => !!c && typeof c === 'object' && typeof c.id === 'string')
+        .map((c) => ({ ...c, projectId: p.id })),
     );
     return [...fromProjects, ...freeChats].sort((a, b) => b.updatedAt - a.updatedAt);
   }, [projects, freeChats]);
