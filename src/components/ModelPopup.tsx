@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
+import { useModalDialog } from './useModalDialog';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, Provider, Toolbox } from '../types';
 import type { McpStatus } from '../api';
@@ -16,8 +17,9 @@ type Tab = 'switch' | 'download' | 'manage';
 
 export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged }: ModelPopupProps): JSX.Element {
   const [tab, setTab] = useState<Tab>('switch');
+  const dialog = useModalDialog();
   return (
-    <div
+    <dialog ref={dialog} className="native-modal" aria-label="Models and tools" onCancel={(e) => { e.preventDefault(); onClose(); }}
       style={{
         position: 'fixed', inset: 0, zIndex: 50,
         background: 'oklch(20% 0.02 60 / 0.35)',
@@ -55,7 +57,7 @@ export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged
           {tab === 'manage' && <ManageTab onChanged={onProjectsChanged} />}
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }
 
@@ -96,12 +98,10 @@ function SwitchTab({
     if (!activeProject) return;
     setBusy(name);
     try {
-      await apiFetch(`/api/projects/${activeProject.id}/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: name }),
-      });
+      await saveProjectConfig(activeProject.id, { model: name });
       onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'The change could not be saved.');
     } finally {
       setBusy(null);
     }
@@ -111,13 +111,11 @@ function SwitchTab({
     if (!activeProject) return;
     setBusy(id);
     try {
-      await apiFetch(`/api/projects/${activeProject.id}/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: id }),
-      });
+      await saveProjectConfig(activeProject.id, { provider: id });
       setCloudModel('');
       onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'The change could not be saved.');
     } finally {
       setBusy(null);
     }
@@ -146,6 +144,8 @@ function SwitchTab({
     try {
       await saveProjectConfig(activeProject.id, { toolboxes: next });
       onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'The change could not be saved.');
     } finally {
       setBusy(null);
     }
@@ -157,6 +157,8 @@ function SwitchTab({
     try {
       await saveProjectConfig(activeProject.id, { routing });
       onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'The change could not be saved.');
     } finally {
       setBusy(null);
     }
@@ -174,6 +176,8 @@ function SwitchTab({
       await putAutoRoles({ fast, smart, vision });
       setPendingRoles({});
       setAutoInfo({ configured: true, roles: { fast, smart, ...(vision ? { vision } : {}) } });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'The change could not be saved.');
     } finally {
       setBusy(null);
     }
@@ -185,12 +189,10 @@ function SwitchTab({
     if (!activeProject || !cloudModel.trim()) return;
     setBusy('cloud-model');
     try {
-      await apiFetch(`/api/projects/${activeProject.id}/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: cloudModel.trim() }),
-      });
+      await saveProjectConfig(activeProject.id, { model: cloudModel.trim() });
       onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'The change could not be saved.');
     } finally {
       setBusy(null);
     }

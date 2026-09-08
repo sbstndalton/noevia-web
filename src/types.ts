@@ -8,6 +8,7 @@ export interface Message {
   reasoning?: string;
   toolCalls?: ToolCallView[];
   error?: boolean;
+  warning?: string;
   stats?: MessageStats;
   /** Set when this message was edited and the exchange re-run from here. */
   edited?: boolean;

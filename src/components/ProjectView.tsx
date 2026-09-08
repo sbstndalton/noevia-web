@@ -66,7 +66,7 @@ export function ProjectView({
   // sync that follows turns them into sources. One path, whether the file came
   // from this machine or was dropped into the folder from elsewhere.
   const addFiles = async (list: FileList | null) => {
-    if (!list) return;
+    if (!list || busyDocs) return;
     setAddError('');
     setBusyDocs(true);
     const failed: string[] = [];
@@ -83,12 +83,15 @@ export function ProjectView({
       }
     }
     if (done.length) {
-      try { await syncProjectSources(project.id); } catch { /* the refresh below still shows what landed */ }
+      try {
+        const synced = await syncProjectSources(project.id);
+        if (synced.skipped.length) failed.push(`source refresh: ${synced.skipped[0].reason}`);
+      } catch (e) { failed.push(`source refresh: ${e instanceof Error ? e.message : 'failed'}`); }
     }
     setBusyDocs(false);
     setAddError([
       failed.length ? `Not added — ${failed.join(', ')}.` : '',
-      done.length ? `Added ${done.join(', ')} to ${project.projectFolder}.` : '',
+      done.length ? `Uploaded ${done.join(', ')}.` : '',
     ].filter(Boolean).join(' '));
     onRefresh();
   };
@@ -295,6 +298,7 @@ export function ProjectView({
                   <input
                     type="file"
                     multiple
+                    disabled={busyDocs}
                     accept={[...TEXT_EXTENSIONS, ...DOCUMENT_EXTENSIONS].join(',')}
                     style={{ display: 'none' }}
                     onChange={(e) => { void addFiles(e.target.files); e.target.value = ''; }}

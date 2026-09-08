@@ -84,8 +84,8 @@ function ToolChips({ calls }: { calls: ToolCallView[] }) {
         tc.status === 'pending' && tc.approvalId
           ? <PendingToolCall key={i} call={tc} />
           : (
-            <span key={i} className="tool-chip" style={tc.status === 'denied' ? { opacity: 0.6 } : undefined}>
-              ⚒ {tc.name || 'tool'}
+            <span key={i} className="tool-chip tool-call-chip" style={tc.status === 'denied' ? { opacity: 0.6 } : undefined}>
+              <span>⚒ {tc.name || 'tool'}</span>
               {tc.args ? <code>{tc.args.slice(0, 80)}</code> : null}
             </span>
           )
@@ -245,6 +245,7 @@ export function ChatView({
               </span>
               {m.role === 'assistant' ? (
                 <div className="assistant-card">
+                  {m.warning && <p className="msg-warning" role="status">{m.warning}</p>}
                   {m.reasoning ? <ThinkingBlock text={m.reasoning} live={!!thinkingLive && !m.content} /> : null}
                   {m.toolCalls && m.toolCalls.length > 0 ? <ToolChips calls={m.toolCalls} /> : null}
                   {m.content ? (

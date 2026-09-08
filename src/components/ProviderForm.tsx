@@ -73,6 +73,7 @@ export function ProviderForm({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <select
         className="modal-input"
+        aria-label="Provider type"
         defaultValue="custom"
         onChange={(e) => {
           const p = PRESETS[e.target.value];
@@ -89,6 +90,7 @@ export function ProviderForm({
       </select>
       <input
         className="modal-input"
+        aria-label="Provider name"
         placeholder="Name (e.g. OpenRouter)"
         value={label}
         autoFocus={autoFocus}
@@ -96,6 +98,7 @@ export function ProviderForm({
       />
       <input
         className="modal-input"
+        aria-label="Provider base URL"
         placeholder="Base URL (e.g. https://openrouter.ai/api/v1)"
         value={baseUrl}
         onChange={(e) => setBaseUrl(e.target.value)}
@@ -103,12 +106,14 @@ export function ProviderForm({
       <input
         className="modal-input"
         type="password"
+        aria-label="Provider API key"
         placeholder="API key (stored server-side only)"
         value={apiKey}
         onChange={(e) => setApiKey(e.target.value)}
       />
       <input
         className="modal-input"
+        aria-label="Default model"
         placeholder="Default model (optional)"
         value={defaultModel}
         onChange={(e) => setDefaultModel(e.target.value)}
@@ -120,7 +125,7 @@ export function ProviderForm({
         </label>
       )}
       {err && <p className="modal-err">{err}</p>}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 8 }}>
         {onCancel && (
           <button type="button" className="modal-btn secondary" onClick={onCancel}>
             {cancelLabel}

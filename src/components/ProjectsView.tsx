@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useModalDialog } from './useModalDialog';
 import type { JSX } from 'react';
 import type { Project } from '../types';
 import { PlusIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
+import { readTextSources, describeRejection } from '../sources';
 
 interface ProjectsViewProps {
   projects: Project[];
@@ -38,6 +40,11 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<'active' | 'archived'>('active');
   const archivedCount = projects.filter((p) => p.archived).length;
+  const chatCount = projects.reduce((n, p) => n + p.chats.length, 0);
+  const visibleProjects = projects
+    .filter((p) => (tab === 'archived' ? p.archived : !p.archived))
+    .filter((p) => `${p.name} ${p.goal || ''}`.toLowerCase().includes(query.trim().toLowerCase()))
+    .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
 
   return (
     <div className="main">
@@ -47,7 +54,7 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
           <p className="projects-hero-sub">
             {projects.length === 0
               ? 'No workspaces yet.'
-              : `${projects.length} ${projects.length === 1 ? 'workspace' : 'workspaces'} · ${projects.reduce((n, p) => n + p.chats.length, 0)} chats`}
+              : `${projects.length} ${projects.length === 1 ? 'workspace' : 'workspaces'} · ${chatCount} ${chatCount === 1 ? 'chat' : 'chats'}`}
           </p>
         </div>
         <div className="projects-head">
@@ -83,18 +90,23 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
           </div>
         ) : (
           <div className="projects-grid">
-            {projects
-              .filter((p) => (tab === 'archived' ? p.archived : !p.archived))
-              .filter((p) => `${p.name} ${p.goal || ''}`.toLowerCase().includes(query.trim().toLowerCase()))
-              .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned))
-              .map((p) => (
+            {visibleProjects.length === 0 && (
+              <div className="empty-state" role="status">
+                <h2>{query.trim() ? 'No matching projects' : 'No archived projects'}</h2>
+                <p>{query.trim() ? 'Try a different name or clear the filter.' : 'Archived projects will appear here.'}</p>
+              </div>
+            )}
+            {visibleProjects              .map((p) => (
               <div
                 key={p.id}
                 className="project-card"
                 onClick={() => onOpenProject(p.id)}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && onOpenProject(p.id)}
+                onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget) return;
+                  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenProject(p.id); }
+                }}
               >
                 <div className="project-card-top">
                   <span
@@ -102,7 +114,7 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
                     aria-hidden="true"
                     style={{
                       background: `oklch(72% 0.13 ${badgeHue(p.name)} / 0.18)`,
-                      color: `oklch(72% 0.13 ${badgeHue(p.name)})`,
+                      color: 'var(--text-primary)',
                     }}
                   >
                     {p.name.slice(0, 1).toUpperCase()}
@@ -174,6 +186,7 @@ function CreateProjectModal({
   onClose: () => void;
   onCreate: ProjectsViewProps['onCreate'];
 }): JSX.Element {
+  const dialog = useModalDialog();
   const [name, setName] = useState('');
   const [goal, setGoal] = useState('');
   const [instructions, setInstructions] = useState('');
@@ -184,15 +197,9 @@ function CreateProjectModal({
 
   const addFiles = async (list: FileList | null) => {
     if (!list) return;
-    const next: { name: string; content: string }[] = [];
-    for (const f of Array.from(list).slice(0, 10)) {
-      if (f.size > 200_000) {
-        setErr(`${f.name} is over 200 KB — paste the relevant part instead.`);
-        continue;
-      }
-      next.push({ name: f.name, content: await f.text() });
-    }
-    setFiles((prev) => [...prev, ...next].slice(0, 10));
+    const { accepted, rejected } = await readTextSources(Array.from(list).slice(0, 10));
+    setErr(rejected.length ? `Not added — ${describeRejection(rejected)}.` : null);
+    setFiles((prev) => [...prev.filter((f) => !accepted.some((a) => a.name === f.name)), ...accepted].slice(0, 10));
   };
 
   const addPicked = (picked: { name: string; content: string }[]) => {
@@ -221,7 +228,7 @@ function CreateProjectModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <dialog ref={dialog} className="modal-overlay native-modal" aria-label="Create a project" onCancel={(e) => { e.preventDefault(); onClose(); }} onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h2>Create a project</h2>
@@ -295,6 +302,6 @@ function CreateProjectModal({
           </button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

@@ -94,6 +94,11 @@ export function SettingsShell(props: SettingsViewProps & {onClose:()=>void; them
     <aside className="settings-navigation">
       <button className="settings-back" onClick={props.onClose}><ShellIcon name="arrow"/>Back to app</button>
       <div className="settings-search"><ShellIcon name="search" size={16}/><input aria-label="Search settings" placeholder="Search settings…" value={query} onChange={e => setQuery(e.target.value)}/></div>
+      <select className="mobile-settings-section" aria-label="Settings category" value={section} onChange={(e) => setSection(e.target.value)}>
+        {groups.map((group) => <optgroup key={group.name} label={group.name}>
+          {group.items.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+        </optgroup>)}
+      </select>
       <nav aria-label="Settings categories">
         {filtered.map(g => g.items.length > 0 && <section key={g.name}>
           <h2>{g.name}</h2>

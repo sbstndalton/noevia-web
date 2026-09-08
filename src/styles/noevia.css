@@ -40,3 +40,53 @@ button:disabled { opacity:1; }
   .app-main .projects-head { padding-right:32px; }
   .noevia-inspector { max-width:calc(100vw - 60px); }
 }
+
+/* Breadcrumbs must yield to controls, including unusually long project names. */
+.header-crumbs, .crumb-back { min-width: 0; }
+.crumb-back { max-width: 55%; }
+.crumb-back span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crumb-back svg, .crumb-sep { flex-shrink: 0; }
+.header-title { min-width: 0; }
+.header-controls { min-width: 0; flex-shrink: 0; }
+.project-main h1, .project-card-name, .source-name { overflow-wrap: anywhere; }
+.projects-grid > .empty-state { grid-column: 1 / -1; }
+
+@media (max-width: 640px) {
+  .chat-header { flex-direction: column; align-items: stretch; gap: 8px; min-height: 0; padding: 14px 16px; }
+  .chat-header .header-titles { flex: auto; min-width: 0; padding-right: 38px; }
+  .header-crumbs { display: flex; align-items: center; flex-wrap: nowrap; gap: 6px; }
+  .header-controls { justify-content: flex-end; }
+  .chat-header .model-pill { max-width: 190px; }
+  .project-main h1 { padding-right: 38px; }
+  .tool-approval-actions { flex-wrap: wrap; }
+  .tool-approval, .tool-approval-args { min-width: 0; max-width: 100%; overflow-wrap: anywhere; white-space: pre-wrap; }
+}
+
+/* A phone needs the full width for connection and storage forms. Keep every
+   settings category available through a native selector above the content. */
+.mobile-settings-section { display: none; }
+.tool-call-chip { border-radius: 8px; flex-direction: column; align-items: flex-start; min-width: 0; max-width: 100%; }
+.tool-call-chip > span { white-space: nowrap; }
+.tool-call-chip code { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 600px) {
+  .settings-shell { flex-direction: column; }
+  .settings-navigation { width: 100%; flex-shrink: 0; padding: 10px 14px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .settings-navigation .settings-back { margin: 0 0 8px; }
+  .settings-navigation .settings-search, .settings-navigation nav { display: none; }
+  .mobile-settings-section { display: block; width: 100%; padding: 9px; border: 1px solid var(--control-border); border-radius: 8px; background: var(--bg-input); color: var(--text); }
+  .settings-detail { min-height: 0; }
+  .settings-detail-scroll { padding: 18px 16px; }
+}
+
+.native-modal { margin: 0; border: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; color: var(--text); }
+.native-modal:not([open]) { display: none; }
+.native-modal::backdrop { background: transparent; }
+
+.msg-warning { color: var(--text-secondary); border-left: 3px solid var(--focus-ring); padding: 8px 12px; font-size: 13px; line-height: 1.5; }
+@media (max-width: 600px) {
+  .settings-detail .model-name-group { flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; }
+  .settings-detail .model-name { max-width: 100%; }
+  .settings-detail .model-quant { overflow-wrap: anywhere; }
+}
+
+@media (max-width: 600px) { .diary-sidebar .shell-sidebar-head .side-expand { display: inline-flex; } }

@@ -34,6 +34,7 @@ export function EditProjectModal({
   const [syncing, setSyncing] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
   const [addError, setAddError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -54,22 +55,28 @@ export function EditProjectModal({
     }
   };
 
-  const save = () => {
+  const save = async () => {
     const trimmed = name.trim();
-    if (!trimmed) return;
-    // onSave pulls the attached folders as part of saving, so a folder picked
-    // here is readable straight away rather than after a separate refresh
-    // nobody knows to press.
-    onSave({
-      name: trimmed,
-      goal,
-      instructions,
-      // Uploads only — folder-derived sources are the sync's to manage.
-      files: files.filter((f) => !f.source),
-      sourceFolders: folders,
-      ...(model ? { model } : {}),
-    });
-    onClose();
+    if (!trimmed || saving) return;
+    setSaving(true);
+    setAddError('');
+    try {
+      // onSave pulls the attached folders as part of saving, so a folder picked
+      // here is readable straight away rather than after a separate refresh
+      // nobody knows to press.
+      await onSave({
+        name: trimmed,
+        goal,
+        instructions,
+        // Uploads only — folder-derived sources are the sync's to manage.
+        files: files.filter((f) => !f.source),
+        sourceFolders: folders,
+        ...(model ? { model } : {}),
+      });
+      onClose();
+    } catch (e) {
+      setAddError(e instanceof Error ? e.message : 'Could not save the project.');
+    } finally { setSaving(false); }
   };
 
   // Attached folders are re-read on demand. Save first so the server syncs
@@ -228,7 +235,7 @@ export function EditProjectModal({
 
       <footer>
         <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" onClick={save} disabled={!name.trim()}>Save</button>
+        <button className="btn btn-primary" onClick={() => void save()} disabled={!name.trim() || saving}>{saving ? 'Saving…' : 'Save'}</button>
       </footer>
 
       {pickingFolder && (

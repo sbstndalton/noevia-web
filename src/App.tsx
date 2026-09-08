@@ -85,6 +85,8 @@ export default function App(): JSX.Element {
   const [popupOpen, setPopupOpen] = useState(false);
   const loadedChats = useRef<Set<string>>(new Set());
   const patchTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const pendingPatches = useRef<Record<string, Partial<Project>>>({});
+  const lastSourceSync = useRef<Record<string, number>>({});
   // AbortController for the in-flight generation (chat or diary). Aborting
   // stops the client-side stream; the server's disconnect handling (Phase 1)
   // then terminates the upstream request.
@@ -124,7 +126,7 @@ export default function App(): JSX.Element {
   const refreshProjects = useCallback(() => {
     fetchWorkspace()
       .then((w) => {
-        setProjects(w.projects || []);
+        setProjects((w.projects || []).map((p) => ({ ...p, ...pendingPatches.current[p.id] })));
         setFreeChats(Array.isArray(w.freeChats) ? w.freeChats : []);
       })
       .catch(() => undefined);
@@ -234,6 +236,23 @@ export default function App(): JSX.Element {
           ? projects.find((p) => p.id === activeChatMeta.projectId) ?? null
           : null;
 
+  // Revisit storage when opening a project, without polling a whole drive or
+  // repeatedly fetching it while switching between that project's chats.
+  const sourceProjectId = activeProject?.id;
+  const sourceFolderKey = (activeProject?.sourceFolders || []).join('\n');
+  useEffect(() => {
+    if (!sourceProjectId || !sourceFolderKey) return;
+    const key = `${sourceProjectId}:${sourceFolderKey}`;
+    if (Date.now() - (lastSourceSync.current[key] || 0) < 60000) return;
+    lastSourceSync.current[key] = Date.now();
+    syncProjectSources(sourceProjectId)
+      .then((result) => {
+        if (result.skipped.length) setProjectError(`Some sources could not be refreshed — ${result.skipped[0].reason}. Previous copies were kept.`);
+        refreshProjects();
+      })
+      .catch((error) => setProjectError(`Sources could not be refreshed — ${error instanceof Error ? error.message : 'storage unavailable'}.`));
+  }, [sourceProjectId, sourceFolderKey, refreshProjects]);
+
   const messages: Message[] = view.kind === 'chat' ? messagesByChat[view.chatId] ?? [] : [];
 
   const persist = useCallback((chatId: string, msgs: Message[]) => {
@@ -318,6 +337,11 @@ export default function App(): JSX.Element {
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, senderLabel: `Assistant · Auto (${ev.route})` } : m)),
             }));
+          } else if (ev.type === 'warning' && ev.text) {
+            setMessagesByChat((prev) => ({
+              ...prev,
+              [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, warning: ev.text } : m)),
+            }));
           } else if (ev.type === 'reasoning' && ev.text) {
             reasoning += ev.text;
             setMessagesByChat((prev) => ({
@@ -380,7 +404,7 @@ export default function App(): JSX.Element {
             // second chip for the same call. This also clears any 'pending'
             // state, so an approved or refused call stops offering buttons
             // that would now 404.
-            const done = tools.findIndex((t) => t && t.name === ev.name);
+            const done = typeof ev.index === 'number' ? ev.index : tools.findIndex((t) => t && t.name === ev.name);
             const denied = (ev.text || '').startsWith('ERROR: the user');
             const chip = {
               name: `${ev.name} ${denied ? '⃠' : '✓'}`,
@@ -595,6 +619,8 @@ export default function App(): JSX.Element {
   // work: the project lists it and the model sees nothing.
   const saveProjectAndSync = useCallback(
     async (projectId: string, patch: Partial<Project>) => {
+      patch = { ...pendingPatches.current[projectId], ...patch };
+      delete pendingPatches.current[projectId];
       setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, ...patch, updatedAt: Date.now() } : p)));
       // A pending debounced patch would otherwise land after this one and
       // overwrite it with older values.
@@ -617,6 +643,7 @@ export default function App(): JSX.Element {
         }
       } catch (e) {
         setProjectError(`That did not save — ${e instanceof Error ? e.message : 'the server rejected the change'}.`);
+        throw e;
       } finally {
         refreshProjects();
       }
@@ -630,11 +657,14 @@ export default function App(): JSX.Element {
       setProjects((prev) =>
         prev.map((p) => (p.id === projectId ? { ...p, ...patch, updatedAt: Date.now() } : p)),
       );
+      pendingPatches.current[projectId] = { ...pendingPatches.current[projectId], ...patch };
       if (patchTimers.current[projectId]) clearTimeout(patchTimers.current[projectId]);
       patchTimers.current[projectId] = setTimeout(() => {
-        const p = projects.find((x) => x.id === projectId);
-        if (!p) return;
-        saveProjectConfig(projectId, patch)
+        const merged = pendingPatches.current[projectId];
+        delete pendingPatches.current[projectId];
+        delete patchTimers.current[projectId];
+        if (!merged) return;
+        saveProjectConfig(projectId, merged)
           .then(() => refreshProjects())
           .catch((e: unknown) => {
             // Swallowing this was how a source could appear to save and then
@@ -649,7 +679,6 @@ export default function App(): JSX.Element {
             );
             refreshProjects();
           });
-        void p;
       }, 600);
     },
     [projects, refreshProjects],
@@ -768,7 +797,7 @@ export default function App(): JSX.Element {
             project={p}
             models={models}
             onClose={() => setEditingProjectId(null)}
-            onSave={(patch) => void saveProjectAndSync(p.id, patch)}
+            onSave={(patch) => saveProjectAndSync(p.id, patch)}
           />
         ) : null;
       })()}
