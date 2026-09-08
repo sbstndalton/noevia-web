@@ -77,6 +77,9 @@ export const browseStorage = (path: string) => getJson<{ entries: StorageEntry[]
 export const syncProjectSources = (id: string) =>
   postJson<{ files: { name: string; source: string | null; bytes: number }[]; skipped: { folder: string; file?: string; reason: string }[] }>(
     `/api/projects/${encodeURIComponent(id)}/sources/sync`, {});
+/** Create one directory in connected storage. */
+export const createStorageFolder = (path: string) =>
+  postJson<{ path: string; existed: boolean }>('/api/integrations/storage/folder', { path });
 export const readStorageFile = (path: string) => postJson<{ name: string; content: string; truncated: boolean }>('/api/integrations/storage/file', { path });
 export const completeRecovery = (token: string, password: string) => postJson<{ ok: true }>('/api/auth/recovery/complete', { token, password });
 
