@@ -311,11 +311,17 @@ export default function App(): JSX.Element {
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, content: acc } : m)),
             }));
           } else if (ev.type === 'tool') {
-            tools.push({ name: ev.name || 'tool', args: ev.args || '' });
+            // One tool call arrives as many deltas (the name once, then the
+            // arguments a few characters at a time). The server sends the
+            // accumulated state keyed by index, so slot it in rather than
+            // appending — appending rendered one chip per delta, most of them
+            // nameless with a fragment of JSON for arguments.
+            const at = typeof ev.index === 'number' ? ev.index : tools.length;
+            tools[at] = { name: ev.name || 'tool', args: ev.args || '' };
             setMessagesByChat((prev) => ({
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) =>
-                m.id === replyId ? { ...m, toolCalls: [...tools] } : m,
+                m.id === replyId ? { ...m, toolCalls: tools.filter(Boolean).map((t) => ({ ...t })) } : m,
               ),
             }));
           } else if (ev.type === 'usage') {
@@ -333,11 +339,15 @@ export default function App(): JSX.Element {
           } else if (ev.type === 'error') {
             throw new Error(ev.text || 'Generation failed');
           } else if (ev.type === 'tool_result' && ev.name) {
-            tools.push({ name: `${ev.name} ✓`, args: (ev.text || '').slice(0, 120) });
+            // Mark the call that produced it as complete rather than adding a
+            // second chip for the same call.
+            const done = tools.findIndex((t) => t && t.name === ev.name);
+            const chip = { name: `${ev.name} ✓`, args: (ev.text || '').slice(0, 120) };
+            if (done >= 0) tools[done] = chip; else tools.push(chip);
             setMessagesByChat((prev) => ({
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) =>
-                m.id === replyId ? { ...m, toolCalls: [...tools] } : m,
+                m.id === replyId ? { ...m, toolCalls: tools.filter(Boolean).map((t) => ({ ...t })) } : m,
               ),
             }));
           }

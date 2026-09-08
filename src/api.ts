@@ -310,7 +310,8 @@ export function saveChatHistory(chatId: string, history: HistoryEntry[]): Promis
 
 // Chat streams SSE events from the proxy:
 //   { type:'meta', model, chatId? } { type:'reasoning', text } { type:'delta', text }
-//   { type:'tool', name, args } { type:'done', model } { type:'diary', decision }
+//   { type:'tool', index, name, args } — accumulated state, upsert on index
+//   { type:'done', model } { type:'diary', decision }
 //   { type:'usage', promptTokens, completionTokens, totalTokens, tokensPerSecond }
 export async function* streamChat(
   body: { spaceId: string;
@@ -323,6 +324,7 @@ export async function* streamChat(
   chatId?: string;
   name?: string;
   args?: string;
+  index?: number; // 'tool' events: which call this is, for upsert-by-index
   decision?: string;
   route?: string; // 'fast' | 'smart' when Auto routing picked the model (step 12)
   // 'usage' event: provider-reported totals for the finished reply.
