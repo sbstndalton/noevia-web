@@ -1457,3 +1457,14 @@ button:disabled { cursor: not-allowed; }
 .chat-working i:nth-child(2) { animation-delay: 0.15s; }
 .chat-working i:nth-child(3) { animation-delay: 0.3s; }
 @keyframes chat-working { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
+
+/* Image sources. Shown as thumbnails because the point of an image source is
+   that you can see it — a filename tells you nothing about a screenshot. */
+.image-grid { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr)); gap: 10px; }
+.image-grid li {
+  display: flex; flex-direction: column; gap: 6px; padding: 8px;
+  background: var(--bg-surface-hover); border-radius: 10px; min-width: 0;
+}
+.image-grid img { width: 100%; height: 96px; object-fit: cover; border-radius: 7px; background: var(--bg-canvas); }
+.image-name { font-size: 11.5px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn.is-busy { opacity: 0.6; pointer-events: none; }

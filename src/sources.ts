@@ -15,6 +15,26 @@ export const TEXT_EXTENSIONS = [
 export const isTextFile = (name: string) =>
   TEXT_EXTENSIONS.some((e) => name.toLowerCase().endsWith(e));
 
+// Images are not text and are not decoded as text: they are stored as bytes
+// and shown to the model as pictures, so they get their own path entirely.
+export const IMAGE_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+export const isImageFile = (file: File) => IMAGE_MIME.includes(file.type.toLowerCase());
+
+/** base64 without the data: prefix, read in one pass. */
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error(`could not read ${file.name}`));
+    reader.onload = () => {
+      const out = String(reader.result || '');
+      const comma = out.indexOf(',');
+      resolve(comma >= 0 ? out.slice(comma + 1) : out);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 /** The server truncates a stored source at 200k characters, but the request
  *  carrying it is capped at 1 MB — and JSON-escaping inflates the payload well
  *  past its byte size. Refuse locally with a reason rather than letting the
@@ -33,7 +53,10 @@ export async function readTextSources(
   const rejected: { name: string; reason: string }[] = [];
   for (const file of files) {
     if (!isTextFile(file.name)) {
-      rejected.push({ name: file.name, reason: 'not a text file' });
+      rejected.push({
+        name: file.name,
+        reason: isImageFile(file) ? 'an image — add it under Images' : 'not a text file',
+      });
       continue;
     }
     if (file.size > MAX_SOURCE_BYTES) {

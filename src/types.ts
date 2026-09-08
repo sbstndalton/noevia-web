@@ -42,6 +42,13 @@ export interface ProjectFile {
   source?: string;
 }
 
+export interface ProjectAsset {
+  id: string;
+  name: string;
+  mime: string;
+  bytes: number;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -56,6 +63,8 @@ export interface Project {
   archived?: boolean;
   /** Storage folders whose text files are pulled in as sources on sync. */
   sourceFolders?: string[];
+  /** Image sources. Stored as bytes on the server, not inline. */
+  assets?: ProjectAsset[];
   toolboxes?: string[]; // step 14: named tool sets offered to the model; defaults to ['core']
   chats: ChatMeta[];
   createdAt: number;

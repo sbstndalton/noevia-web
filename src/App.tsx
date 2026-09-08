@@ -674,6 +674,7 @@ export default function App(): JSX.Element {
         <ProjectView
           project={activeProject}
           streamingChats={streamingChats}
+          onRefresh={refreshProjects}
           onNewChat={startProjectChat}
           onSendFirst={startProjectChatWith}
           onEditProject={setEditingProjectId}

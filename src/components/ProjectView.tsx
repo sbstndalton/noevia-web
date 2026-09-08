@@ -3,7 +3,8 @@ import type { JSX } from 'react';
 import type { Project } from '../types';
 import { SendIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
-import { TEXT_EXTENSIONS, readTextSources, describeRejection } from '../sources';
+import { TEXT_EXTENSIONS, readTextSources, describeRejection, IMAGE_MIME, MAX_IMAGE_BYTES, fileToBase64 } from '../sources';
+import { uploadProjectImage, deleteProjectImage, projectImageUrl } from '../api';
 
 /** First free "name", "name (2)", "name (3)", … avoiding collisions. */
 function uniqueName(name: string, existing: { name: string }[]): string {
@@ -26,6 +27,7 @@ interface ProjectViewProps {
   onPatch: (projectId: string, patch: Partial<Project>) => void;
   onDeleteChat: (projectId: string, chatId: string) => void;
   streamingChats: Record<string, true>;
+  onRefresh: () => void;
 }
 
 function timeAgo(ts: number): string {
@@ -48,12 +50,33 @@ export function ProjectView({
   onPatch,
   onDeleteChat,
   streamingChats,
+  onRefresh,
 }: ProjectViewProps): JSX.Element {
   const [panel, setPanel] = useState<'instructions' | 'memory' | null>(null);
   const [tab, setTab] = useState<'chats' | 'sources'>('chats');
   const [draft, setDraft] = useState('');
   const [browsing, setBrowsing] = useState(false);
   const [addError, setAddError] = useState('');
+  const [busyImages, setBusyImages] = useState(false);
+
+  const addImages = async (list: FileList | null) => {
+    if (!list) return;
+    setAddError('');
+    setBusyImages(true);
+    const failed: string[] = [];
+    for (const file of Array.from(list)) {
+      if (!IMAGE_MIME.includes(file.type.toLowerCase())) { failed.push(`${file.name} (not an image)`); continue; }
+      if (file.size > MAX_IMAGE_BYTES) { failed.push(`${file.name} (${Math.round(file.size / 1024 / 1024)} MB, over the 8 MB limit)`); continue; }
+      try {
+        await uploadProjectImage(project.id, { name: file.name, mime: file.type.toLowerCase(), dataBase64: await fileToBase64(file) });
+      } catch (e) {
+        failed.push(`${file.name} (${e instanceof Error ? e.message : 'upload failed'})`);
+      }
+    }
+    setBusyImages(false);
+    setAddError(failed.length ? `Not added — ${failed.join(', ')}.` : '');
+    onRefresh();
+  };
 
   const chats = [...project.chats]
     .filter((c) => !c.archived)
@@ -138,6 +161,39 @@ export function ProjectView({
                   ))}
                 </ul>
               )}
+
+              <div className="rail-label">Images</div>
+              {(project.assets || []).length === 0 ? (
+                <p className="rail-empty">No images attached. A model that can see images will be shown them with your message.</p>
+              ) : (
+                <ul className="image-grid">
+                  {(project.assets || []).map((a) => (
+                    <li key={a.id}>
+                      <img src={projectImageUrl(project.id, a.id)} alt={a.name} loading="lazy" />
+                      <span className="image-name" title={a.name}>{a.name}</span>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => void deleteProjectImage(project.id, a.id).then(onRefresh).catch(() => undefined)}
+                        aria-label={`Remove ${a.name}`}
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="source-actions">
+                <label className={`btn btn-secondary btn-sm${busyImages ? ' is-busy' : ''}`}>
+                  {busyImages ? 'Uploading…' : 'Add images'}
+                  <input
+                    type="file"
+                    multiple
+                    accept={IMAGE_MIME.join(',')}
+                    style={{ display: 'none' }}
+                    onChange={(e) => { void addImages(e.target.files); e.target.value = ''; }}
+                  />
+                </label>
+              </div>
 
               <div className="rail-label">Files</div>
               {project.files.length === 0 ? (
