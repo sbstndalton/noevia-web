@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { JSX } from 'react';
-import type { Project, ProjectFile } from '../types';
-import { PlusIcon } from './Icons';
+import type { Project } from '../types';
+import { SendIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
 
 /** First free "name", "name (2)", "name (3)", … avoiding collisions. */
@@ -19,6 +19,8 @@ function uniqueName(name: string, existing: { name: string }[]): string {
 interface ProjectViewProps {
   project: Project;
   onNewChat: (projectId: string) => void;
+  onSendFirst: (projectId: string, text: string) => void;
+  onEditProject: (projectId: string) => void;
   onOpenChat: (projectId: string, chatId: string) => void;
   onPatch: (projectId: string, patch: Partial<Project>) => void;
   onDeleteChat: (projectId: string, chatId: string) => void;
@@ -35,44 +37,180 @@ function timeAgo(ts: number): string {
   return `${days} days ago`;
 }
 
-export function ProjectView({ project, onNewChat, onOpenChat, onPatch, onDeleteChat }: ProjectViewProps): JSX.Element {
-  const [panel, setPanel] = useState<'instructions' | 'files' | 'memory' | null>(null);
+export function ProjectView({
+  project,
+  onNewChat,
+  onSendFirst,
+  onEditProject,
+  onOpenChat,
+  onPatch,
+  onDeleteChat,
+}: ProjectViewProps): JSX.Element {
+  const [panel, setPanel] = useState<'instructions' | 'memory' | null>(null);
+  const [tab, setTab] = useState<'chats' | 'sources'>('chats');
+  const [draft, setDraft] = useState('');
+  const [browsing, setBrowsing] = useState(false);
+
+  const chats = [...project.chats]
+    .filter((c) => !c.archived)
+    .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || b.updatedAt - a.updatedAt);
+  const folderSources = project.files.filter((f) => f.source);
+  const uploaded = project.files.filter((f) => !f.source);
+
+  const send = () => {
+    const text = draft.trim();
+    if (!text) return;
+    setDraft('');
+    onSendFirst(project.id, text);
+  };
 
   return (
     <div className="main">
       <div className="project-layout">
         <div className="project-main">
-          <h1 className="project-title">{project.name}</h1>
-          {project.goal && <p className="project-goal">{project.goal}</p>}
+          <header className="project-head">
+            <h1 className="project-title">{project.name}</h1>
+            {project.goal && <p className="project-goal">{project.goal}</p>}
+          </header>
 
-          <button className="new-task-row" onClick={() => onNewChat(project.id)}>
-            <PlusIcon />
-            <span>New task in {project.name}</span>
-          </button>
+          <div className="seg project-tabs" role="tablist" aria-label="Project">
+            <button role="tab" aria-selected={tab === 'chats'} className={tab === 'chats' ? 'is-selected' : ''} onClick={() => setTab('chats')}>
+              Chats{chats.length ? ` (${chats.length})` : ''}
+            </button>
+            <button role="tab" aria-selected={tab === 'sources'} className={tab === 'sources' ? 'is-selected' : ''} onClick={() => setTab('sources')}>
+              Sources{project.files.length ? ` (${project.files.length})` : ''}
+            </button>
+          </div>
 
-          <div className="rail-label" style={{ marginTop: 26 }}>Recents</div>
-          {project.chats.length === 0 ? (
-            <p className="rail-empty">No chats yet — start the first one above.</p>
+          {tab === 'chats' ? (
+            <div className="project-scroll">
+              {chats.length === 0 ? (
+                <p className="rail-empty">No chats yet — start one below.</p>
+              ) : (
+                <ul className="chat-index">
+                  {chats.map((c) => (
+                    <li key={c.id}>
+                      <button className="chat-index-row" onClick={() => onOpenChat(project.id, c.id)}>
+                        <span className="chat-index-main">
+                          <span className="chat-index-title">
+                            {c.pinned && <span aria-label="Pinned">📌 </span>}
+                            {c.title || 'New task'}
+                          </span>
+                          {/* The title is the first message, so until a second
+                              one arrives the preview repeats it verbatim. */}
+                          {c.preview && c.preview.trim() !== (c.title || '').trim() && (
+                            <span className="chat-index-preview">{c.preview}</span>
+                          )}
+                        </span>
+                        <span className="chat-index-time">{timeAgo(c.updatedAt)}</span>
+                      </button>
+                      <button
+                        className="recents-del"
+                        title="Delete chat"
+                        aria-label={`Delete ${c.title || 'chat'}`}
+                        onClick={() => onDeleteChat(project.id, c.id)}
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           ) : (
-            <div className="recents-list">
-              {project.chats.map((c) => (
-                <div key={c.id} className="recents-row" onClick={() => onOpenChat(project.id, c.id)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onOpenChat(project.id, c.id)}>
-                  <span className="recents-title">{c.title || 'New task'}</span>
-                  <span className="recents-meta">{timeAgo(c.updatedAt)}</span>
-                  <button
-                    className="recents-del"
-                    title="Delete chat"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteChat(project.id, c.id);
+            <div className="project-scroll">
+              <p className="rail-empty">
+                Every chat in this project reads these as reference material.
+              </p>
+
+              <div className="rail-label">Attached folders</div>
+              {(project.sourceFolders || []).length === 0 ? (
+                <p className="rail-empty">No folders attached. Attach one in Edit project to keep sources in step with storage.</p>
+              ) : (
+                <ul className="source-list">
+                  {(project.sourceFolders || []).map((f) => (
+                    <li key={f}><span className="source-name">📁 {f}</span></li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="rail-label">Files</div>
+              {project.files.length === 0 ? (
+                <p className="rail-empty">Nothing attached yet.</p>
+              ) : (
+                <ul className="source-list">
+                  {folderSources.concat(uploaded).map((f) => (
+                    <li key={f.name}>
+                      <span className="source-name">{f.source ? '📁' : '📄'} {f.name}</span>
+                      {f.source ? (
+                        <span className="source-size">from folder</span>
+                      ) : (
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => onPatch(project.id, { files: project.files.filter((x) => x.name !== f.name) })}
+                          aria-label={`Remove ${f.name}`}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="source-actions">
+                <label className="btn btn-secondary btn-sm">
+                  Add files
+                  <input
+                    type="file"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const list = e.target.files;
+                      if (!list) return;
+                      for (const file of Array.from(list)) {
+                        void file.text().then((content) =>
+                          onPatch(project.id, {
+                            files: [...project.files, { name: uniqueName(file.name, project.files), content }],
+                          }),
+                        );
+                      }
                     }}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
+                  />
+                </label>
+                <button className="btn btn-secondary btn-sm" onClick={() => setBrowsing(true)}>Add from storage</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => onEditProject(project.id)}>Manage folders</button>
+              </div>
             </div>
           )}
+
+          {/* Starting a chat from the project page is the point of being here,
+              so the composer is present rather than a button that empties into
+              a blank chat. */}
+          <div className="project-composer">
+            <div className="composer-inner">
+              <textarea
+                className="composer-input"
+                rows={1}
+                aria-label={`Message ${project.name}`}
+                placeholder={`Message ${project.name}`}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    send();
+                  }
+                }}
+              />
+              <button className="send-btn" onClick={send} disabled={!draft.trim()} title="Send" aria-label="Send">
+                <SendIcon />
+              </button>
+            </div>
+            <button className="project-newchat" onClick={() => onNewChat(project.id)}>
+              or open an empty chat in {project.name}
+            </button>
+          </div>
         </div>
 
         <div className="project-rail">
@@ -92,13 +230,6 @@ export function ProjectView({ project, onNewChat, onOpenChat, onPatch, onDeleteC
           )}
 
           <RailRow
-            label="Files"
-            hint={project.files.length ? `${project.files.length} file${project.files.length === 1 ? '' : 's'}` : 'Add'}
-            onClick={() => setPanel(panel === 'files' ? null : 'files')}
-          />
-          {panel === 'files' && <RailFiles files={project.files} onChange={(files) => onPatch(project.id, { files })} />}
-
-          <RailRow
             label="Memory"
             hint={project.memories.length ? `${project.memories.length} line${project.memories.length === 1 ? '' : 's'}` : 'Edit'}
             onClick={() => setPanel(panel === 'memory' ? null : 'memory')}
@@ -113,11 +244,29 @@ export function ProjectView({ project, onNewChat, onOpenChat, onPatch, onDeleteC
             />
           )}
 
+          <RailRow label="Sources" hint={`${project.files.length}`} onClick={() => setTab('sources')} />
+
           <p className="rail-empty" style={{ marginTop: 10 }}>
-            Instructions, files, and memory ride along with every chat in this project.
+            Instructions, sources, and memory ride along with every chat in this project.
           </p>
         </div>
       </div>
+
+      {browsing && (
+        <StorageFileBrowser
+          onClose={() => setBrowsing(false)}
+          onPick={(picked) => {
+            const next = [...project.files];
+            for (const f of picked) {
+              const i = next.findIndex((x) => x.name === f.name);
+              if (i >= 0) next[i] = { ...next[i], content: f.content };
+              else next.push({ name: uniqueName(f.name, next), content: f.content });
+            }
+            onPatch(project.id, { files: next });
+            setBrowsing(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -173,68 +322,6 @@ function RailTextarea({
           />
           <span>{fileMode === 'append' ? 'Append .md / .txt' : 'Replace with .md / .txt'}</span>
         </label>
-      )}
-    </div>
-  );
-}
-
-function RailFiles({
-  files,
-  onChange,
-}: {
-  files: ProjectFile[];
-  onChange: (files: ProjectFile[]) => void;
-}): JSX.Element {
-  const [browsing, setBrowsing] = useState(false);
-  const add = async (list: FileList | null) => {
-    if (!list) return;
-    const next: ProjectFile[] = [];
-    for (const f of Array.from(list).slice(0, 5)) {
-      if (f.size > 200_000) continue;
-      next.push({ name: f.name, content: await f.text() });
-    }
-    onChange([...files, ...next].slice(0, 20));
-  };
-
-  return (
-    <div style={{ marginBottom: 12 }}>
-      {files.map((f, i) => (
-        <div key={i} className="model-row" style={{ padding: '8px 12px', marginBottom: 6 }}>
-          <span className="model-name-group">
-            <span className="model-name" style={{ fontWeight: 400 }}>{f.name}</span>
-          </span>
-          <button
-            className="popup-tab"
-            style={{ border: '1px solid var(--border)', color: 'var(--accent-text)' }}
-            onClick={() => onChange(files.filter((_, j) => j !== i))}
-          >
-            remove
-          </button>
-        </div>
-      ))}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <label className="modal-filepick">
-          <input
-            type="file"
-            multiple
-            accept=".txt,.md,.json,.csv,.yml,.yaml,.ts,.tsx,.js,.jsx,.py,.sh,.html,.css"
-            onChange={(e) => void add(e.target.files)}
-          />
-          <span>Add text files</span>
-        </label>
-        <button
-          className="modal-filepick"
-          style={{ background: 'none', cursor: 'pointer' }}
-          onClick={() => setBrowsing(true)}
-        >
-          <span>Pull from storage</span>
-        </button>
-      </div>
-      {browsing && (
-        <StorageFileBrowser
-          onClose={() => setBrowsing(false)}
-          onPick={(picked) => onChange([...files, ...picked.map((p) => ({ name: uniqueName(p.name, files) , content: p.content }))].slice(0, 20))}
-        />
       )}
     </div>
   );

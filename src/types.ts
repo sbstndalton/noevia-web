@@ -80,6 +80,8 @@ export interface ChatMeta {
   title: string;
   projectId?: string | null;
   updatedAt: number;
+  /** The latest user message, for the project chat list. */
+  preview?: string;
   /** Sorts to a Pinned group above the rest; independent of archived. */
   pinned?: boolean;
   /** Hidden from the default lists, still reachable under Archived. */

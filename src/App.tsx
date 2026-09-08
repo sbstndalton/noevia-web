@@ -68,6 +68,7 @@ export default function App(): JSX.Element {
   const [messagesByChat, setMessagesByChat] = useState<Record<string, Message[]>>({});
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const pendingFirstSend = useRef<{ chatId: string; projectId: string; text: string } | null>(null);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthState>({ inferenceUp: null, diaryUp: null });
   const [stats, setStats] = useState<LiveStats | null>(null);
@@ -266,23 +267,25 @@ export default function App(): JSX.Element {
       const controller = new AbortController();
       streamAbort.current = controller;
 
-      // Register the chat in its project (or the free-chats list) on first send.
+      // Upsert the chat's meta on every send, not only the first. Registering
+      // once meant updatedAt froze at creation, so a list sorted by recency
+      // never actually moved, and there was nothing to preview a chat with.
+      const upsert = (list: ChatMeta[]): ChatMeta[] => {
+        const existing = list.find((c) => c.id === chatId);
+        const meta: ChatMeta = existing
+          ? { ...existing, preview: text.slice(0, 200), updatedAt: Date.now() }
+          : { id: chatId, title: text.slice(0, 80), preview: text.slice(0, 200), updatedAt: Date.now() };
+        return [meta, ...list.filter((c) => c.id !== chatId)];
+      };
       if (projectId) {
         const project = projects.find((p) => p.id === projectId);
-        if (project && !(project.chats || []).some((c) => c.id === chatId)) {
-          const nextChats = [
-            { id: chatId, title: text.slice(0, 80), updatedAt: Date.now() },
-            ...(project.chats || []),
-          ];
-          saveProjectChats(projectId, nextChats)
+        if (project) {
+          saveProjectChats(projectId, upsert(project.chats || []))
             .then(() => refreshProjects())
             .catch(() => undefined);
         }
-      } else if (!freeChats.some((c) => c.id === chatId)) {
-        saveFreeChats([
-          { id: chatId, title: text.slice(0, 80), updatedAt: Date.now() },
-          ...freeChats,
-        ])
+      } else {
+        saveFreeChats(upsert(freeChats))
           .then(() => refreshProjects())
           .catch(() => undefined);
       }
@@ -465,6 +468,7 @@ export default function App(): JSX.Element {
 
   const startFreeChat = useCallback(() => {
     const chatId = `c-${uid()}`;
+    loadedChats.current.add(chatId);
     setMessagesByChat((prev) => ({ ...prev, [chatId]: [] }));
     setView({ kind: 'chat', chatId, projectId: null });
   }, []);
@@ -472,11 +476,42 @@ export default function App(): JSX.Element {
   const startProjectChat = useCallback(
     (projectId: string) => {
       const chatId = `c-${uid()}`;
+      loadedChats.current.add(chatId);
       setMessagesByChat((prev) => ({ ...prev, [chatId]: [] }));
       setView({ kind: 'chat', chatId, projectId });
     },
     [],
   );
+
+  // Send straight from the project page: open a new chat in the project and
+  // deliver the first message into it, rather than dropping into a blank chat
+  // the person then has to retype into.
+  //
+  // The send cannot happen inline with setView. Navigating away from a chat
+  // aborts any in-flight generation, and that cleanup runs when the new view
+  // commits — after this handler — so a stream started here would be aborted
+  // by the very navigation that opened it. Hand the message to an effect that
+  // fires once the view is the one we are sending into.
+  const startProjectChatWith = useCallback(
+    (projectId: string, text: string) => {
+      const chatId = `c-${uid()}`;
+      // Without this the lazy-history effect fetches this brand-new chat's
+      // (empty) history and overwrites the message we are about to send.
+      loadedChats.current.add(chatId);
+      pendingFirstSend.current = { chatId, projectId, text };
+      setMessagesByChat((prev) => ({ ...prev, [chatId]: [] }));
+      setView({ kind: 'chat', chatId, projectId });
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const pending = pendingFirstSend.current;
+    if (!pending) return;
+    if (view.kind !== 'chat' || view.chatId !== pending.chatId) return;
+    pendingFirstSend.current = null;
+    void handleSend(pending.chatId, pending.projectId, pending.text, []);
+  }, [view, handleSend]);
 
   const handleCreateProject = useCallback(
     async (body: { name: string; goal: string; instructions: string; files: ProjectFile[] }) => {
@@ -615,6 +650,8 @@ export default function App(): JSX.Element {
         <ProjectView
           project={activeProject}
           onNewChat={startProjectChat}
+          onSendFirst={startProjectChatWith}
+          onEditProject={setEditingProjectId}
           onOpenChat={(_projectId, chatId) => setView({ kind: 'chat', chatId, projectId: _projectId })}
           onPatch={handlePatchProject}
           onDeleteChat={handleDeleteChat}

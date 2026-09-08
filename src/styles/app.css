@@ -1350,3 +1350,54 @@ button:disabled { cursor: not-allowed; }
 }
 .folder-open:hover { background: var(--nav-hover); }
 .edit-project-modal { position: relative; }
+
+/* ── Project page ─────────────────────────────────────────────────────────
+   The main column is a fixed frame — head, tabs, a scrolling body and a
+   composer pinned at the bottom — rather than one long scrolling page, so
+   the composer stays reachable however many chats a project has. */
+.project-main { display: flex; flex-direction: column; overflow: hidden; padding: 26px 32px 20px; }
+.project-head { flex-shrink: 0; }
+.project-head .project-title { margin: 0; }
+.project-head .project-goal { margin: 6px 0 0; color: var(--text-secondary); font-size: 13.5px; }
+.project-tabs { flex-shrink: 0; align-self: flex-start; margin: 18px 0 12px; }
+.project-scroll { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; }
+
+.chat-index { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.chat-index li { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--border-subtle); }
+.chat-index li:last-child { border-bottom: 0; }
+.chat-index-row {
+  flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 14px;
+  background: none; border: 0; cursor: pointer; text-align: left;
+  font-family: var(--font-ui); color: var(--text); padding: 14px 8px; border-radius: 8px;
+  transition: background var(--duration-fast) var(--ease-spring);
+}
+.chat-index-row:hover { background: var(--nav-hover); }
+.chat-index-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.chat-index-title { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* One line of the last message, so a list of chats is scannable by what was
+   actually said rather than by title alone. */
+.chat-index-preview {
+  font-size: 12.5px; color: var(--text-secondary); line-height: 1.5;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chat-index-time { flex-shrink: 0; font-size: 11.5px; color: var(--text-faint); }
+
+.project-composer { flex-shrink: 0; padding-top: 14px; }
+.project-composer .composer-inner {
+  display: flex; align-items: flex-end; gap: 10px; padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: var(--radius-input);
+  background: var(--bg-surface); box-shadow: var(--shadow-card); max-width: none;
+}
+.project-composer .composer-inner:focus-within { box-shadow: var(--shadow-card), 0 0 0 3px var(--tint-garnet); }
+.project-composer .composer-input {
+  flex: 1; min-width: 0; background: none; border: 0; resize: none; outline: none;
+  font-family: var(--font-ui); font-size: 14px; color: var(--text); min-height: 24px; max-height: 160px; line-height: 1.6;
+}
+.project-composer .send-btn { width: 34px; height: 34px; }
+.project-newchat {
+  display: block; margin: 10px auto 0; background: none; border: 0; cursor: pointer;
+  font-family: var(--font-ui); font-size: 12px; color: var(--text-faint);
+}
+.project-newchat:hover { color: var(--text); text-decoration: underline; }
+
+@media (max-width: 640px) { .project-main { padding: 20px 16px 14px; } }
