@@ -245,11 +245,13 @@ export function fetchToolboxes(): Promise<{ toolboxes: Toolbox[]; mcp: McpStatus
   return getJson('/api/toolboxes');
 }
 
-export function fetchAutoRoles(): Promise<{ configured: boolean; roles: { fast: string; smart: string } | null }> {
+export interface AutoRoles { fast: string; smart: string; vision?: string }
+
+export function fetchAutoRoles(): Promise<{ configured: boolean; roles: AutoRoles | null }> {
   return getJson('/api/auto-roles');
 }
 
-export function setAutoRoles(roles: { fast: string; smart: string }): Promise<{ configured: boolean }> {
+export function setAutoRoles(roles: AutoRoles): Promise<{ configured: boolean }> {
   return putJson('/api/auto-roles', roles);
 }
 

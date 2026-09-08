@@ -250,13 +250,24 @@ export function ProjectView({
               ) : (
                 <ul className="source-list">
                   {folderSources.concat(uploaded).map((f) => {
-                    const own = !!project.projectFolder && f.name.startsWith(`${project.projectFolder}/`);
+                    // Deletable when it lives directly in a folder this
+                    // project has attached — its own or one you attached for
+                    // reading. Both are your files; the dialog says which path
+                    // is going.
+                    const folders = [
+                      ...(project.projectFolder ? [project.projectFolder] : []),
+                      ...(project.sourceFolders || []),
+                    ];
+                    const deletable = folders.some((d) => {
+                      const rel = f.name.startsWith(`${d}/`) ? f.name.slice(d.length + 1) : null;
+                      return !!rel && !rel.includes('/');
+                    });
                     return (
                       <li key={f.name}>
                         <span className="source-name" title={f.name}>
                           {f.source ? '📁' : '📄'} {f.name.split('/').pop()}
                         </span>
-                        {own ? (
+                        {deletable ? (
                           <button
                             className="btn btn-ghost btn-sm"
                             onClick={() => setConfirmDelete(f.name)}
@@ -264,8 +275,6 @@ export function ProjectView({
                           >
                             Delete
                           </button>
-                        ) : f.source ? (
-                          <span className="source-size">read-only</span>
                         ) : (
                           <button
                             className="btn btn-ghost btn-sm"
@@ -369,7 +378,7 @@ export function ProjectView({
       {confirmDelete && (
         <ConfirmDialog
           title={`Delete ${confirmDelete.split('/').pop()}?`}
-          body={`This deletes the file from your storage at ${confirmDelete}, not just from this project. This cannot be undone.`}
+          body={`This deletes the file from your storage at ${confirmDelete}, not just from this project. If that folder is shared or synced, it goes everywhere. This cannot be undone.`}
           confirmLabel="Delete file"
           danger
           onCancel={() => setConfirmDelete(null)}

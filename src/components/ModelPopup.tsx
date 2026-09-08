@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, Provider, Toolbox } from '../types';
 import type { McpStatus } from '../api';
+import type { AutoRoles } from '../api';
 import { apiFetch, fetchAutoRoles, fetchInstalledModels, fetchProviders, fetchToolboxes, saveProjectConfig, setAutoRoles as putAutoRoles } from '../api';
 
 interface ModelPopupProps {
@@ -72,8 +73,8 @@ function SwitchTab({
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [cloudModel, setCloudModel] = useState('');
-  const [autoInfo, setAutoInfo] = useState<{ configured: boolean; roles: { fast: string; smart: string } | null } | null>(null);
-  const [pendingRoles, setPendingRoles] = useState<{ fast?: string; smart?: string }>({});
+  const [autoInfo, setAutoInfo] = useState<{ configured: boolean; roles: AutoRoles | null } | null>(null);
+  const [pendingRoles, setPendingRoles] = useState<{ fast?: string; smart?: string; vision?: string }>({});
   const [toolboxes, setToolboxes] = useState<Toolbox[]>([]);
   const [mcpStatus, setMcpStatus] = useState<McpStatus | null>(null);
 
@@ -164,12 +165,15 @@ function SwitchTab({
   const saveRoles = async () => {
     const fast = (pendingRoles.fast || autoInfo?.roles?.fast || '').trim();
     const smart = (pendingRoles.smart || autoInfo?.roles?.smart || '').trim();
+    // Vision is optional: leaving it unset means images go straight to the
+    // answering model, if that model can read them at all.
+    const vision = (pendingRoles.vision ?? autoInfo?.roles?.vision ?? '').trim();
     if (!fast || !smart) return;
     setBusy('roles');
     try {
-      await putAutoRoles({ fast, smart });
+      await putAutoRoles({ fast, smart, vision });
       setPendingRoles({});
-      setAutoInfo({ configured: true, roles: { fast, smart } });
+      setAutoInfo({ configured: true, roles: { fast, smart, ...(vision ? { vision } : {}) } });
     } finally {
       setBusy(null);
     }
@@ -245,7 +249,11 @@ function SwitchTab({
           <span className="rail-label" style={{ margin: 0 }}>
             Roles {autoInfo?.configured ? '(models load on demand)' : '— pick Fast and Smart, then Save'}
           </span>
-          {(['fast', 'smart'] as const).map((role) => (
+          <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            Vision is optional. Set it and that model describes any images in the project, then Fast or
+            Smart answers from the description — so the answering model does not need to see.
+          </p>
+          {(['fast', 'smart', 'vision'] as const).map((role) => (
             <label key={role} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
               <span style={{ width: 44, fontWeight: 600, color: 'var(--text-secondary)' }}>{role}</span>
               <select
@@ -254,7 +262,7 @@ function SwitchTab({
                 value={pendingRoles[role] ?? autoInfo?.roles?.[role] ?? ''}
                 onChange={(e) => setPendingRoles((prev) => ({ ...prev, [role]: e.target.value }))}
               >
-                <option value="">— pick a model —</option>
+                <option value="">{role === 'vision' ? '— none —' : '— pick a model —'}</option>
                 {models.map((m) => (
                   <option key={m.name} value={m.name}>
                     {m.name}
