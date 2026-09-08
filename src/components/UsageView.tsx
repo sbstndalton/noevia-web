@@ -60,6 +60,7 @@ export function UsageView(): JSX.Element {
   const grid = data.days;
   const firstWeekday = new Date(`${grid[0].day}T12:00:00`).getDay();
   const cells = [...Array.from({ length: firstWeekday }, () => null), ...grid];
+  const weeks = Math.ceil(cells.length / 7);
   const monthMarks: { col: number; label: string }[] = [];
   grid.forEach((d, i) => {
     const date = new Date(`${d.day}T12:00:00`);
@@ -103,17 +104,30 @@ export function UsageView(): JSX.Element {
         <div><h2>Activity</h2><p>The last {data.retentionDays} days, in {data.timeZone} time.</p></div>
       </div>
       <div className="usage-heatmap-scroll">
-        <div className="usage-months" style={{ gridTemplateColumns: `repeat(${Math.ceil(cells.length / 7)}, 12px)` }}>
-          {monthMarks.map((m, i) => <span key={`${m.label}-${i}`} style={{ gridColumnStart: m.col + 1 }}>{m.label}</span>)}
-        </div>
-        <div className="usage-heatmap" role="img" aria-label={`Daily activity for the last ${data.retentionDays} days. ${data.activeDays} active days.`}>
-          {cells.map((d, i) => d === null
-            ? <span key={`pad-${i}`} className="usage-cell is-pad" />
-            : <span
-                key={d.day}
-                className={`usage-cell level-${level(d.input + d.output, busiest)}`}
-                title={`${d.day} · ${compact(d.input + d.output)} tokens · ${d.replies} ${d.replies === 1 ? 'reply' : 'replies'}`}
-              />)}
+        <div className="usage-heatmap-inner">
+          {/* The month strip must share the grid's exact column pitch (cell +
+              gap). It previously used wider columns *and* the same gap, so the
+              labels drifted right by the difference on every week and ran past
+              the end of the grid by the end of the year. */}
+          <div className="usage-months" style={{ gridTemplateColumns: `repeat(${weeks}, 10px)` }}>
+            {monthMarks.map((m, i) => <span key={`${m.label}-${i}`} style={{ gridColumnStart: m.col + 1 }}>{m.label}</span>)}
+          </div>
+          <div className="usage-grid-row">
+            {/* Rows are weekdays, Sunday first. Without labels there is no way
+                to tell which row a square belongs to. */}
+            <div className="usage-weekdays" aria-hidden="true">
+              {['', 'Mon', '', 'Wed', '', 'Fri', ''].map((label, i) => <span key={i}>{label}</span>)}
+            </div>
+            <div className="usage-heatmap" role="img" aria-label={`Daily activity for the last ${data.retentionDays} days. ${data.activeDays} active days.`}>
+              {cells.map((d, i) => d === null
+                ? <span key={`pad-${i}`} className="usage-cell is-pad" />
+                : <span
+                    key={d.day}
+                    className={`usage-cell level-${level(d.input + d.output, busiest)}`}
+                    title={`${d.day} · ${compact(d.input + d.output)} tokens · ${d.replies} ${d.replies === 1 ? 'reply' : 'replies'}`}
+                  />)}
+            </div>
+          </div>
         </div>
       </div>
       <div className="usage-legend">
