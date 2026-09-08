@@ -63,6 +63,9 @@ export interface Project {
   archived?: boolean;
   /** Storage folders whose text files are pulled in as sources on sync. */
   sourceFolders?: string[];
+  /** This project's own folder in storage. Uploads land here, and only files
+   *  here may be deleted from within the project. */
+  projectFolder?: string;
   /** Image sources. Stored as bytes on the server, not inline. */
   assets?: ProjectAsset[];
   toolboxes?: string[]; // step 14: named tool sets offered to the model; defaults to ['core']

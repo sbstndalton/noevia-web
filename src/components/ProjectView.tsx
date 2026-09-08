@@ -3,8 +3,9 @@ import type { JSX } from 'react';
 import type { Project } from '../types';
 import { SendIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
-import { TEXT_EXTENSIONS, readTextSources, describeRejection, IMAGE_MIME, MAX_IMAGE_BYTES, fileToBase64, DOCUMENT_EXTENSIONS, MAX_DOCUMENT_BYTES, isDocumentFile } from '../sources';
-import { uploadProjectImage, deleteProjectImage, projectImageUrl, uploadProjectDocument } from '../api';
+import { ConfirmDialog } from './ContextMenu';
+import { TEXT_EXTENSIONS, IMAGE_MIME, MAX_IMAGE_BYTES, fileToBase64, DOCUMENT_EXTENSIONS, MAX_DOCUMENT_BYTES, isDocumentFile, isTextFile } from '../sources';
+import { uploadProjectImage, deleteProjectImage, projectImageUrl, uploadProjectFile, deleteProjectFile, syncProjectSources } from '../api';
 
 /** First free "name", "name (2)", "name (3)", … avoiding collisions. */
 function uniqueName(name: string, existing: { name: string }[]): string {
@@ -59,28 +60,45 @@ export function ProjectView({
   const [addError, setAddError] = useState('');
   const [busyImages, setBusyImages] = useState(false);
   const [busyDocs, setBusyDocs] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  const addDocuments = async (list: FileList | null) => {
+  // Text files and PDFs both go into the project's own storage folder; the
+  // sync that follows turns them into sources. One path, whether the file came
+  // from this machine or was dropped into the folder from elsewhere.
+  const addFiles = async (list: FileList | null) => {
     if (!list) return;
     setAddError('');
     setBusyDocs(true);
     const failed: string[] = [];
     const done: string[] = [];
     for (const file of Array.from(list)) {
-      if (!isDocumentFile(file.name)) { failed.push(`${file.name} (not a PDF)`); continue; }
+      const ok = isTextFile(file.name) || isDocumentFile(file.name);
+      if (!ok) { failed.push(`${file.name} (not a text file or PDF)`); continue; }
       if (file.size > MAX_DOCUMENT_BYTES) { failed.push(`${file.name} (over the 25 MB limit)`); continue; }
       try {
-        const r = await uploadProjectDocument(project.id, { name: file.name, dataBase64: await fileToBase64(file) });
-        done.push(`${file.name} — ${r.pages} page${r.pages === 1 ? '' : 's'}${r.truncated ? ', truncated' : ''}`);
+        await uploadProjectFile(project.id, { name: file.name, dataBase64: await fileToBase64(file) });
+        done.push(file.name);
       } catch (e) {
-        failed.push(`${file.name} (${e instanceof Error ? e.message : 'could not read'})`);
+        failed.push(`${file.name} (${e instanceof Error ? e.message : 'upload failed'})`);
       }
+    }
+    if (done.length) {
+      try { await syncProjectSources(project.id); } catch { /* the refresh below still shows what landed */ }
     }
     setBusyDocs(false);
     setAddError([
       failed.length ? `Not added — ${failed.join(', ')}.` : '',
-      done.length ? `Added ${done.join('; ')}.` : '',
+      done.length ? `Added ${done.join(', ')} to ${project.projectFolder}.` : '',
     ].filter(Boolean).join(' '));
+    onRefresh();
+  };
+
+  const removeFile = async (path: string) => {
+    try {
+      await deleteProjectFile(project.id, path);
+    } catch (e) {
+      setAddError(e instanceof Error ? e.message : 'Could not delete that file');
+    }
     onRefresh();
   };
 
@@ -187,24 +205,6 @@ export function ProjectView({
                 </ul>
               )}
 
-              <div className="rail-label">Documents</div>
-              <p className="rail-empty">
-                A PDF is converted to text when you add it, and then behaves like any other source.
-                Scanned pages have no text to extract.
-              </p>
-              <div className="source-actions">
-                <label className={`btn btn-secondary btn-sm${busyDocs ? ' is-busy' : ''}`}>
-                  {busyDocs ? 'Reading…' : 'Add PDF'}
-                  <input
-                    type="file"
-                    multiple
-                    accept={DOCUMENT_EXTENSIONS.join(',')}
-                    style={{ display: 'none' }}
-                    onChange={(e) => { void addDocuments(e.target.files); e.target.value = ''; }}
-                  />
-                </label>
-              </div>
-
               <div className="rail-label">Images</div>
               {(project.assets || []).length === 0 ? (
                 <p className="rail-empty">No images attached. A model that can see images will be shown them with your message.</p>
@@ -239,51 +239,56 @@ export function ProjectView({
               </div>
 
               <div className="rail-label">Files</div>
+              {project.projectFolder && (
+                <p className="rail-empty">
+                  Uploads are saved to <code>{project.projectFolder}</code> in your storage, so you can open,
+                  edit or back them up like any other folder. Text files and PDFs both work.
+                </p>
+              )}
               {project.files.length === 0 ? (
                 <p className="rail-empty">Nothing attached yet.</p>
               ) : (
                 <ul className="source-list">
-                  {folderSources.concat(uploaded).map((f) => (
-                    <li key={f.name}>
-                      <span className="source-name">{f.source ? '📁' : '📄'} {f.name}</span>
-                      {f.source ? (
-                        <span className="source-size">from folder</span>
-                      ) : (
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => onPatch(project.id, { files: project.files.filter((x) => !x.source && x.name !== f.name) })}
-                          aria-label={`Remove ${f.name}`}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </li>
-                  ))}
+                  {folderSources.concat(uploaded).map((f) => {
+                    const own = !!project.projectFolder && f.name.startsWith(`${project.projectFolder}/`);
+                    return (
+                      <li key={f.name}>
+                        <span className="source-name" title={f.name}>
+                          {f.source ? '📁' : '📄'} {f.name.split('/').pop()}
+                        </span>
+                        {own ? (
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => setConfirmDelete(f.name)}
+                            aria-label={`Delete ${f.name}`}
+                          >
+                            Delete
+                          </button>
+                        ) : f.source ? (
+                          <span className="source-size">read-only</span>
+                        ) : (
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => onPatch(project.id, { files: project.files.filter((x) => !x.source && x.name !== f.name) })}
+                            aria-label={`Remove ${f.name}`}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
-
               <div className="source-actions">
-                <label className="btn btn-secondary btn-sm">
-                  Add files
+                <label className={`btn btn-secondary btn-sm${busyDocs ? ' is-busy' : ''}`}>
+                  {busyDocs ? 'Uploading…' : 'Add files'}
                   <input
                     type="file"
                     multiple
-                    accept={TEXT_EXTENSIONS.join(',')}
+                    accept={[...TEXT_EXTENSIONS, ...DOCUMENT_EXTENSIONS].join(',')}
                     style={{ display: 'none' }}
-                    onChange={(e) => {
-                      const list = e.target.files;
-                      if (!list) return;
-                      void readTextSources(Array.from(list)).then(({ accepted, rejected }) => {
-                        setAddError(rejected.length ? `Not added — ${describeRejection(rejected)}. A source is read as text.` : '');
-                        if (!accepted.length) return;
-                        // One patch for the whole selection: patching per file
-                        // rebuilt the list from the same stale array each time.
-                        const next = [...project.files.filter((f) => !f.source)];
-                        for (const a of accepted) next.push({ name: uniqueName(a.name, next), content: a.content });
-                        onPatch(project.id, { files: next });
-                      });
-                      e.target.value = '';
-                    }}
+                    onChange={(e) => { void addFiles(e.target.files); e.target.value = ''; }}
                   />
                 </label>
                 <button className="btn btn-secondary btn-sm" onClick={() => setBrowsing(true)}>Add from storage</button>
@@ -361,6 +366,16 @@ export function ProjectView({
         </div>
       </div>
 
+      {confirmDelete && (
+        <ConfirmDialog
+          title={`Delete ${confirmDelete.split('/').pop()}?`}
+          body={`This deletes the file from your storage at ${confirmDelete}, not just from this project. This cannot be undone.`}
+          confirmLabel="Delete file"
+          danger
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={() => { const path = confirmDelete; setConfirmDelete(null); void removeFile(path); }}
+        />
+      )}
       {browsing && (
         <StorageFileBrowser
           onClose={() => setBrowsing(false)}

@@ -86,6 +86,20 @@ export const deleteProjectImage = (id: string, assetId: string) =>
 export const projectImageUrl = (id: string, assetId: string) =>
   `/api/projects/${encodeURIComponent(id)}/assets/${encodeURIComponent(assetId)}`;
 
+/** Upload a source file into the project's own storage folder. */
+export const uploadProjectFile = (id: string, body: { name: string; dataBase64: string }) =>
+  postJson<{ name: string; path: string; bytes: number }>(
+    `/api/projects/${encodeURIComponent(id)}/upload`, body);
+
+/** Delete one source file from the project's own folder — removes it from
+ *  storage, not just from the project. */
+export const deleteProjectFile = (id: string, path: string) =>
+  apiFetch(`/api/projects/${encodeURIComponent(id)}/files`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+  }).then(async (r) => { if (!r.ok) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error || 'could not delete'); });
+
 /** Upload a document (PDF). The server extracts its text and stores it as an
  *  ordinary source. */
 export const uploadProjectDocument = (id: string, body: { name: string; dataBase64: string }) =>
