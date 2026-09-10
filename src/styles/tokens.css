@@ -6,21 +6,21 @@
   /* Four grounds, not one value plus hairlines: chrome (sidebar) sits below
      the app ground, cards sit above it, popovers above those. Borders then
      refine an edge that elevation has already established. */
-  --bg-chrome: #0c0e12;
-  --bg-app: #12151c;
-  --bg-canvas: #0c0e12;
-  --bg-surface: #171b24;
-  --bg-surface-hover: #1e2330;
-  --bg-surface-active: #252b3b;
-  --text-primary: #f0f2f5;
+  --bg-chrome: #17181b;
+  --bg-app: #1c1d20;
+  --bg-canvas: #17181b;
+  --bg-surface: #242529;
+  --bg-surface-hover: #2b2d31;
+  --bg-surface-active: #33353a;
+  --text-primary: #eeeff2;
   --text-muted: #717d8a;
   --accent-garnet: #942537;
   --border-subtle: rgba(255,255,255,0.08);
-  --text-secondary: #9aa1b0;
+  --text-secondary: #b0b1b8;
   --accent-text: #e57385;
-  --focus-ring: #b84a60;
-  --control-border: #6b6d73;
-  --tint-garnet: #2a1c27;
+  --focus-ring: #cf8795;
+  --control-border: #85868d;
+  --tint-garnet: #302328;
   --good: #8ED4B0;
   --danger: #ef4444;
   /* Nav row fills. Decorative, so rgba is allowed; they must be tinted per
@@ -29,7 +29,7 @@
   --nav-active: rgba(255,255,255,0.08);
   /* Dark needs materially deeper shadows than light: on a near-black ground a
      6%-black shadow is invisible. */
-  --shadow-card: 0 1px 2px rgba(0,0,0,.40), 0 8px 24px rgba(0,0,0,.36);
+  --shadow-card: 0 2px 8px rgba(0,0,0,.12);
   --shadow-pop: 0 16px 48px rgba(0,0,0,.55);
   color-scheme: dark;
 }
@@ -38,7 +38,7 @@
   --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
   --radius-card: 14px;
   --radius-bubble: 14px;
-  --radius-input: 16px;
+  --radius-input: 20px;
   --radius-pill: 999px;
   --bg: var(--bg-app);
   --bg-sidebar: var(--bg-chrome);
@@ -47,8 +47,8 @@
   --bg-input: var(--bg-surface);
   --bg-assistant: var(--bg-surface-hover);
   --bg-off: var(--bg-canvas);
-  --bg-active: var(--tint-garnet);
-  --bg-pinned: var(--tint-garnet);
+  --bg-active: var(--nav-active);
+  --bg-pinned: var(--nav-active);
   --text: var(--text-primary);
   --text-faint: var(--text-secondary);
   --text-off: var(--text-secondary);
@@ -57,7 +57,7 @@
   --accent-ink: var(--accent-text);
   --accent-2: var(--accent-text);
   --accent-2-soft: var(--tint-garnet);
-  --send-icon: #FFFFFF;
+  --send-icon: var(--bg-app);
   --shadow-soft: var(--shadow-card);
 
   /* 4px-based spacing scale */
@@ -77,26 +77,26 @@
   --duration-base: 180ms;
 }
 [data-theme='light'] {
-  --bg-chrome: #EBEEF4;
-  --bg-app: #F5F6F9;
-  --bg-canvas: #F5F6F9;
+  --bg-chrome: #f1f0ee;
+  --bg-app: #faf9f7;
+  --bg-canvas: #faf9f7;
   --bg-surface: #FFFFFF;
-  --bg-surface-hover: #f2f4f8;
-  --bg-surface-active: #e9edf3;
-  --text-primary: #13171A;
-  --text-muted: #5A6572;
+  --bg-surface-hover: #f2f1ef;
+  --bg-surface-active: #e7e6e3;
+  --text-primary: #26272b;
+  --text-muted: #64656c;
   --accent-garnet: #942537;
-  --border-subtle: #DDE2EC;
-  --text-secondary: #5A6572;
+  --border-subtle: #e3e2df;
+  --text-secondary: #64656c;
   --accent-text: #881337;
   --focus-ring: #881337;
-  --control-border: #727D89;
+  --control-border: #83848a;
   --tint-garnet: #f4e9eb;
   --good: #246548;
   --danger: #b3261e;
   --nav-hover: rgba(19,23,26,0.035);
   --nav-active: rgba(19,23,26,0.065);
-  --shadow-card: 0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.08);
+  --shadow-card: 0 2px 8px rgba(16,24,40,.04);
   --shadow-pop: 0 16px 48px rgba(16,24,40,.16);
   color-scheme: light;
 }

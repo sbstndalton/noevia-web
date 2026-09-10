@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useModalDialog } from './useModalDialog';
 import type { JSX } from 'react';
 import type { Project } from '../types';
+import { ShellIcon } from './ShellIcon';
 import { PlusIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
 import { readTextSources, describeRejection } from '../sources';
@@ -25,15 +26,6 @@ function timeAgo(ts: number): string {
   return `${days} days ago`;
 }
 
-// A stable colour per project, so a card is recognisable by its badge before
-// the title is read. Derived from the name, not stored — nothing to migrate.
-const BADGE_HUES = [8, 200, 150, 265, 32, 340];
-function badgeHue(name: string): number {
-  let h = 0;
-  for (let i = 0; i < name.length; i += 1) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return BADGE_HUES[h % BADGE_HUES.length];
-}
-
 export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDelete }: ProjectsViewProps): JSX.Element {
   const [creating, setCreating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -47,15 +39,16 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
     .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
 
   return (
-    <div className="main">
+    <div className="main projects-workspace">
       <div className="settings-scroll">
         <div className="projects-hero">
-          <h1>Projects</h1>
+          <div><h1>Projects</h1>
           <p className="projects-hero-sub">
             {projects.length === 0
-              ? 'No workspaces yet.'
+              ? 'Keep related chats and files together.'
               : `${projects.length} ${projects.length === 1 ? 'workspace' : 'workspaces'} · ${chatCount} ${chatCount === 1 ? 'chat' : 'chats'}`}
-          </p>
+          </p></div>
+          <button className="btn btn-primary" onClick={() => setCreating(true)}><PlusIcon /><span>New project</span></button>
         </div>
         <div className="projects-head">
           <div className="seg" role="tablist" aria-label="Project list">
@@ -74,18 +67,14 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <button className="btn btn-primary" onClick={() => setCreating(true)}>
-            <PlusIcon />
-            <span>New project</span>
-          </button>
         </div>
 
         {projects.length === 0 ? (
           <div className="empty-state" style={{ minHeight: 320 }}>
             <h2>No projects yet</h2>
             <p>
-              A project keeps instructions, knowledge files, and memories with every
-              chat inside it — like a workspace with a brain. Create your first one.
+              Keep your chats, files, and instructions in one place.
+              Create a project to get started.
             </p>
           </div>
         ) : (
@@ -109,16 +98,7 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
                 }}
               >
                 <div className="project-card-top">
-                  <span
-                    className="project-badge"
-                    aria-hidden="true"
-                    style={{
-                      background: `oklch(72% 0.13 ${badgeHue(p.name)} / 0.18)`,
-                      color: 'var(--text-primary)',
-                    }}
-                  >
-                    {p.name.slice(0, 1).toUpperCase()}
-                  </span>
+                  <span className="project-badge" aria-hidden="true"><ShellIcon name="folder" size={22}/></span>
                   <span className="project-card-name">{p.name}</span>
                   {confirmDelete === p.id ? (
                     <span className="project-card-del" onClick={(e) => e.stopPropagation()}>
@@ -152,7 +132,7 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
                 {p.goal && <p className="project-card-goal">{p.goal}</p>}
                 <div className="project-card-meta">
                   <span className="project-chip">{p.chats.length} {p.chats.length === 1 ? 'chat' : 'chats'}</span>
-                  {p.files.length > 0 && <span className="project-chip">{p.files.length} files</span>}
+                  {p.files.length > 0 && <span className="project-chip">{p.files.length} {p.files.length === 1 ? 'file' : 'files'}</span>}
                   <span className="project-card-time">{timeAgo(p.updatedAt)}</span>
                   {p.archived && (
                     <button

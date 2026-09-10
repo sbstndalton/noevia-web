@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import type { LiveStats } from '../types';
 
@@ -21,23 +20,10 @@ function fmtCount(n: number | null): string {
 /** Slim live readout docked at the bottom of the chat column.
  *  Purely presentational: App owns the /api/stats poll loop (one poller total). */
 export function StatsBar({ stats }: StatsBarProps): JSX.Element {
-  const [flash, setFlash] = useState(false);
-  const prevTok = useRef<number | null>(null);
-
-  // Flash when tok/s changes (deriving the old effect's visual from the shared poll).
-  useEffect(() => {
-    const tok = stats?.tokensPerSecond ?? null;
-    const changed = tok != null && prevTok.current != null && tok !== prevTok.current;
-    prevTok.current = tok;
-    if (changed) {
-      setFlash(true);
-      const t = setTimeout(() => setFlash(false), 450);
-      return () => clearTimeout(t);
-    }
-  }, [stats]);
-
   return (
-    <div className={`stats-bar${flash ? ' is-flash' : ''}`}>
+    <details className="stats-disclosure">
+      <summary><span className={`stats-live-dot${stats?.up ? '' : ' down'}`} />Inference details</summary>
+      <div className="stats-bar">
       <span className={`stats-live-dot${stats?.up ? '' : ' down'}`} />
       <span className="stats-item">
         <span className="stats-label">tok/s</span>
@@ -77,6 +63,7 @@ export function StatsBar({ stats }: StatsBarProps): JSX.Element {
       </span>
       <span className="stats-grow" />
       <span className="stats-src">Inference</span>
-    </div>
+      </div>
+    </details>
   );
 }

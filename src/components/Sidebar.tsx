@@ -221,6 +221,7 @@ export function Sidebar({
       </div>
 
       {SHOW_PLACEHOLDER_NAV && <nav className="shell-extra-nav" aria-label="Explore noevia">{[['Scheduled','clock'],['Plugins','plugins'],['Explore','explore']].map(([label,icon])=><button className="nav-item" key={label} onClick={()=>onPreview(label)}><ShellIcon name={icon}/><span className="nav-name">{label}</span></button>)}</nav>}
+      <div className="sidebar-history">
       <div className="spaces">
         <div className="section-label">Projects</div>
         {visibleProjects.map((p) => (
@@ -254,7 +255,7 @@ export function Sidebar({
                 onFocus={(e) => openHover(p.id, e.currentTarget)}
                 onBlur={closeHover}
               >
-                <span className="nav-emoji" role="img" aria-label={p.name}>{p.pinned ? '📌' : '📁'}</span>
+                <ShellIcon name={p.pinned ? 'pin' : 'folder'} size={17}/>
                 <span className="nav-name">{p.name}</span>
               </button>
             )}
@@ -311,7 +312,7 @@ export function Sidebar({
                     onClick={() => onOpenChat(c.id, c.projectId ?? null)}
                     title={c.title}
                   >
-                    <span className="nav-emoji" role="img" aria-label="chat">{c.pinned ? '📌' : '💬'}</span>
+                    <ShellIcon name={c.pinned ? 'pin' : 'chat'} size={17}/>
                     <span className="nav-name">{c.title}</span>
                     {streamingChats[c.id] && (
                       <span className="chat-working" aria-label="Still generating"><i /><i /><i /></span>
@@ -337,7 +338,7 @@ export function Sidebar({
         </>
       )}
 
-      <div style={{ flexGrow: 1 }} />
+      </div>
 
       {/* The diary is its own space, not another project — it keeps a separate
           area above the footer rather than sitting in the Projects nav. */}
@@ -347,9 +348,10 @@ export function Sidebar({
           <nav className="side-diary" aria-label="Diary">
             <button
               className={`nav-item${activeView === 'diary' ? ' is-active' : ''}`}
+              aria-label="Diary"
               onClick={onOpenDiary}
             >
-              <span className="nav-emoji" role="img" aria-label="Diary">📔</span>
+              <ShellIcon name="book" size={17}/>
               <span className="nav-name">Diary</span>
             </button>
           </nav>

@@ -1,3 +1,4 @@
+import { ShellIcon } from './components/ShellIcon';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import {
@@ -99,7 +100,7 @@ export default function App(): JSX.Element {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('cowork-theme', theme);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#0c0e12' : '#F5F6F9');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#1c1d20' : '#faf9f7');
   }, [theme]);
 
   // Navigating away used to abort the generation, so stepping into another
@@ -789,7 +790,7 @@ export default function App(): JSX.Element {
       </div>
       {view.kind !== 'diary' && <StatsBar stats={stats} />}
       </div>
-      {view.kind !== 'diary' && <button className="inspector-toggle" aria-expanded={inspectorOpen} aria-controls="noevia-inspector" aria-label={inspectorOpen?'Close context inspector':'Open context inspector'} onClick={()=>setInspectorOpen(!inspectorOpen)}>☷</button>}
+      {view.kind !== 'diary' && <button className="inspector-toggle" aria-expanded={inspectorOpen} aria-controls="noevia-inspector" aria-label={inspectorOpen?'Close context inspector':'Open context inspector'} onClick={()=>setInspectorOpen(!inspectorOpen)}><ShellIcon name="panel" size={18}/></button>}
       {editingProjectId && (() => {
         const p = projects.find((x) => x.id === editingProjectId);
         return p ? (

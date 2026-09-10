@@ -184,11 +184,8 @@ export function ChatView({
     setDraft('');
   };
 
-  const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant' && !m.error);
-  const subtitle = lastAssistant ? lastAssistant.content.slice(0, 90) : `Conversation · ${modelLabel}`;
-
   return (
-    <div className="main">
+    <div className={`main chat-workspace${messages.length === 0 ? ' is-empty' : ''}`}>
       <div className="chat-header">
         <div className="header-titles">
           <span className="header-crumbs">
@@ -203,7 +200,6 @@ export function ChatView({
             ) : null}
             <span className="header-title">{title}</span>
           </span>
-          <span className="header-subtitle">{subtitle}</span>
         </div>
         <div className="header-controls">
           <button className="model-pill" onClick={onOpenModels} title="Switch model · download · manage">
@@ -227,11 +223,11 @@ export function ChatView({
       <div className="transcript" ref={scrollRef}>
         {messages.length === 0 && (
           <div className="empty-state">
-            <h2>{title}</h2>
+            <h2>{projectName ? `Let’s work on ${projectName}` : 'What’s on your mind?'}</h2>
             <p>
               {projectName
-                ? `Part of ${projectName} — instructions, files, and memory from the project are applied to every reply.`
-                : `A space to think, ask questions, and work things through.`}
+                ? `Your project’s files and instructions are ready.`
+                : `Ask a question, explore an idea, or start something new.`}
             </p>
           </div>
         )}
@@ -349,7 +345,7 @@ export function ChatView({
             className="composer-input"
             aria-label="Message"
             rows={2}
-            placeholder={`Message ${title}…`}
+            placeholder="Message noevia…"
             value={draft}
             disabled={streaming}
             onChange={(e) => setDraft(e.target.value)}

@@ -78,7 +78,7 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
 
   // Prefs-step fields.
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
-    localStorage.getItem('cowork-theme') === 'dark' ? 'dark' : 'light',
+    localStorage.getItem('cowork-theme') === 'light' ? 'light' : 'dark',
   );
   const [autoRouting, setAutoRouting] = useState(false);
   const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
@@ -87,6 +87,7 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('cowork-theme', theme);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#1c1d20' : '#faf9f7');
   }, [theme]);
 
   // Resumability: if a session already exists, skip straight past account

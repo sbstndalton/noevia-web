@@ -88,10 +88,8 @@ export function LockIcon() {
 
 export function SendIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--send-icon)">
-      {/* Tip on the right: the original had its point at x=4, so the send
-          arrow aimed backwards. */}
-      <path d="M20 12L4 4l6 8-6 8 16-8z" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 19V5m-6 6 6-6 6 6" />
     </svg>
   );
 }

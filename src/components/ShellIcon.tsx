@@ -1,5 +1,7 @@
 export function ShellIcon({ name, size = 18 }: { name: string; size?: number }) {
   const paths: Record<string, string> = {
+    book: 'M4 3h16v18H4V3zm4 0v18M12 7h4M12 11h4',
+    pin: 'm9 3 6 0v5l3 4v2H6v-2l3-4V3zm3 11v7',
     chat: 'M4 4h16v12H9l-5 4V4z', code: 'm8 6-6 6 6 6m8-12 6 6-6 6m-3-15-2 18',
     new: 'M12 5v14M5 12h14', search: 'M16 16l5 5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',
     clock: 'M12 8v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
