@@ -127,7 +127,7 @@ export default function App(): JSX.Element {
   }, []);
 
   const refreshProjects = useCallback(() => {
-    fetchWorkspace()
+    return fetchWorkspace()
       .then((w) => {
         setProjects((w.projects || []).map((p) => ({ ...p, ...pendingPatches.current[p.id] })));
         setFreeChats(Array.isArray(w.freeChats) ? w.freeChats : []);
@@ -757,6 +757,8 @@ export default function App(): JSX.Element {
 
       {view.kind === 'chat' && (
         <ChatView
+          project={activeProject ?? null}
+          onProjectChanged={refreshProjects}
           chatId={view.chatId}
           title={activeChatMeta?.title ?? (view.projectId ? 'New task' : 'New chat')}
           projectName={activeProject?.name ?? null}

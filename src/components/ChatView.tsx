@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import type { Message, MessageStats, ToolCallView } from '../types';
+import type { Message, MessageStats, ToolCallView, Project } from '../types';
 import { ChevronDown, ChevronLeft, SendIcon, SlidersIcon } from './Icons';
 import { MarkdownPreview } from './DiaryModal';
+import { ComposerActions } from './ComposerActions';
 import { decideToolApproval } from '../api';
 
 interface ChatViewProps {
+  project: Project | null;
+  onProjectChanged: () => void | Promise<void>;
   title: string;
   projectName: string | null;
   modelLabel: string;
@@ -141,6 +144,8 @@ function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
 
 export function ChatView({
   title,
+  project,
+  onProjectChanged,
   projectName,
   modelLabel,
   messages,
@@ -155,6 +160,8 @@ export function ChatView({
   onOpenModels,
   onOpenSettings,
 }: ChatViewProps): JSX.Element {
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionStatus, setActionStatus] = useState('');
   const [draft, setDraft] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
@@ -168,6 +175,7 @@ export function ChatView({
   }, [streaming]);
   // An in-progress edit must not survive switching chats.
   useEffect(() => {
+    setActionStatus('');
     setEditingId(null);
     setEditDraft('');
   }, [chatId]);
@@ -179,7 +187,7 @@ export function ChatView({
 
   const submit = () => {
     const text = draft.trim();
-    if (!text || streaming) return;
+    if (!text || streaming || actionBusy) return;
     onSend(text);
     setDraft('');
   };
@@ -341,6 +349,7 @@ export function ChatView({
 
       <div className="composer">
         <div className="composer-inner">
+          <ComposerActions key={chatId} project={project} disabled={streaming || actionBusy} onChanged={onProjectChanged} onModels={onOpenModels} onBusy={setActionBusy} onStatus={setActionStatus} />
           <textarea
             className="composer-input"
             aria-label="Message"
@@ -361,11 +370,12 @@ export function ChatView({
               <span aria-hidden="true">&#9632;</span>
             </button>
           ) : (
-            <button className="send-btn" onClick={submit} disabled={!draft.trim()} title="Send">
+            <button className="send-btn" onClick={submit} disabled={!draft.trim() || actionBusy} title="Send">
               <SendIcon />
             </button>
           )}
         </div>
+        {actionStatus && <div className="composer-action-status" role="status">{actionStatus}</div>}
         <div className="composer-hint">
           Replies with {modelLabel}
           {projectName ? ` · project context from ${projectName} applied` : ' · Enter to send, Shift + Enter for a new line'}
