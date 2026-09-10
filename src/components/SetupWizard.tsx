@@ -11,6 +11,7 @@ import {
   setupStatus,
 } from '../api';
 import { classifyOrigin, isIpAddressHost } from '../browser-support';
+import { timezoneEnvSetting } from '../setup-timezone';
 import { ProviderForm } from './ProviderForm';
 import { StoragePicker } from './StoragePicker';
 
@@ -80,6 +81,8 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
     localStorage.getItem('cowork-theme') === 'dark' ? 'dark' : 'light',
   );
   const [autoRouting, setAutoRouting] = useState(false);
+  const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+  const timezoneSetting = timezoneEnvSetting(timezone);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -293,7 +296,7 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
 
         {step === 'prefs' && (
           <div>
-            <p>Two quick preferences. Both can be changed any time.</p>
+            <p>Choose your preferences and confirm your timezone.</p>
             <label className="auth-option">
               <input type="radio" name="wiz-theme" checked={theme === 'light'} onChange={() => setTheme('light')} />
               <span><strong>Light theme</strong></span>
@@ -309,10 +312,33 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
                 <small>Lets noevia pick a lighter or heavier model per message. Configure the models in the model popup later.</small>
               </span>
             </label>
+            <label htmlFor="wiz-timezone">Your timezone</label>
+            <input
+              id="wiz-timezone"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              aria-describedby="wiz-timezone-help"
+              aria-invalid={!timezoneSetting}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <small id="wiz-timezone-help">
+              Detected from your browser; confirm or enter an IANA name such as America/New_York.
+              Diary entries use your browser clock. The server fallback timezone is shared by all users.
+            </small>
+            {timezoneSetting ? (
+              <p>
+                Give your server administrator this setting for the deployment’s <code>.env</code> file:
+                {' '}<code>{timezoneSetting}</code>. Recreate the diary container to apply it.
+                This wizard cannot change the container’s timezone.
+              </p>
+            ) : (
+              <p className="auth-error" role="alert">Enter a valid IANA timezone, such as America/New_York or UTC.</p>
+            )}
             {error && <p className="auth-error" role="alert">{error}</p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button className="modal-btn secondary" onClick={() => go('passkey')}>Skip — set up later</button>
-              <button className="modal-btn primary" onClick={() => go('passkey')}>Use these preferences</button>
+              <button className="modal-btn primary" disabled={!timezoneSetting} onClick={() => go('passkey')}>Use these preferences</button>
             </div>
           </div>
         )}
