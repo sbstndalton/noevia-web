@@ -1,3 +1,4 @@
+import DiarySharing from './DiarySharing';
 import AppPasswords from './AppPasswords';
 import { ReasoningControl } from './ReasoningControl';
 import { useEffect, useState } from 'react';
@@ -54,6 +55,7 @@ function StorageCard(): JSX.Element {
   return <div>
     <div className="rail-label" style={{ marginBottom: 12 }}>Diary storage</div>
     <StoragePicker />
+    <DiarySharing />
   </div>;
 }
 

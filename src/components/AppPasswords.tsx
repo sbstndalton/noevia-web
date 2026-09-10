@@ -38,7 +38,7 @@ export default function AppPasswords(): JSX.Element {
   };
   return <section aria-label="App passwords" style={{ marginTop: 24 }}>
     <div className="rail-label">App passwords</div>
-    <p className="route-note">Device credentials for your diary files. File sharing is not available yet; creating a password does not enable it. These passwords cannot sign in to noevia.</p>
+    <p className="route-note">Device credentials for your diary files. Enable file sharing separately in Diary & storage. Creating a password does not enable it. These passwords cannot sign in to noevia.</p>
     <div className="card-list">
       {items.map(item => <div className="model-row" key={item.id}>
         <div className="model-name-group">
