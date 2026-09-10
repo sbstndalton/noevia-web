@@ -61,8 +61,8 @@ export function StatsBar({ stats }: StatsBarProps): JSX.Element {
         <span className="stats-label">VRAM</span>
         <span className="stats-value">{fmt(stats?.vramGb ?? null, 1, ' GB')}</span>
       </span>
-      {(stats?.mtp || []).map(m=><span className="stats-mtp" key={m.model} title={`${m.model} · cumulative accepted draft tokens / proposed draft tokens for this loaded backend`}>
-        <span>MTP acceptance · {m.rate == null ? 'Awaiting backend counters' : `${(m.rate*100).toFixed(1)}%`}</span>
+      {(stats?.mtp || []).map(m=><span className="stats-mtp" key={m.model} title={`${m.model} · ${m.source || "backend total"}: accepted draft tokens / proposed draft tokens`}>
+        <span>MTP acceptance{m.source === 'last response' ? ' (last response)' : ''} · {m.rate == null ? 'Awaiting backend counters' : `${(m.rate*100).toFixed(1)}%`}</span>
         <progress aria-label={`MTP acceptance for ${m.model}`} max={1} value={m.rate ?? undefined} />
       </span>)}
       <span className="stats-grow" />

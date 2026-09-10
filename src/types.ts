@@ -199,7 +199,7 @@ export interface RouteRule {
 
 /** Optional live statistics supplied by a model-management adapter. */
 export interface LiveStats {
-  mtp?: {model:string;rate:number|null;drafted:number|null;accepted:number|null}[];
+  mtp?: {model:string;source?:string;rate:number|null;drafted:number|null;accepted:number|null}[];
   up: boolean;
   tokensPerSecond: number | null;
   timeToFirstToken: number | null;
