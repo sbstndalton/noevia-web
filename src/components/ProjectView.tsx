@@ -229,7 +229,7 @@ export function ProjectView({
                     return <li key={f.name}>
                       {f.attachment?.assetId && <img className="source-thumbnail" src={projectImageUrl(project.id, f.attachment.assetId)} alt="" />}
                       <span className="source-name" title={f.name}><ShellIcon name="file"/><span>{f.name.split('/').pop()}
-                        <small className="source-status">{f.document ? sourceStatus(f) : f.attachment?.state === 'stored' ? (f.attachment.reason || 'Original stored · reader not available yet') : f.attachment?.state === 'vision' ? 'Uploaded · image read when you send a message' : f.attachment?.state === 'partial' ? 'Text preview limited · original kept' : 'Text ready'}</small>
+                        <small className="source-status">{f.document ? sourceStatus(f) : f.attachment?.state === 'stored' ? (f.attachment.reason || 'Original stored · reader not available yet') : f.attachment?.state === 'vision' ? 'Uploaded · image read when you send a message' : f.attachment?.state === 'partial' ? (f.attachment.reason || 'Text preview limited · original kept') : 'Text ready'}</small>
                         <small className="source-status">{f.source ? f.name : 'Stored in noevia'}{f.attachment ? ` · ${(f.attachment.bytes / 1024 / 1024).toFixed(2)} MB` : ''}</small>
                       </span></span>
                       {(f.attachment || f.document?.byteHash) && <a className="btn btn-ghost btn-sm" href={`/api/projects/${encodeURIComponent(project.id)}/${f.attachment ? 'uploads' : 'documents'}/original?name=${encodeURIComponent(f.name)}`} download>Original</a>}

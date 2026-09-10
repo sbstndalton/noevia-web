@@ -51,7 +51,7 @@ export interface DocumentStatus {
 }
 
 export interface ProjectFile {
-  attachment?: { id: string; bytes: number; group: string; state: string; reason?: string; assetId?: string };
+  attachment?: { id: string; bytes: number; group: string; state: string; reason?: string; assetId?: string; readerVersion?: string };
   document?: DocumentStatus;
   name: string;
   content: string;
