@@ -28,7 +28,7 @@ async function layout(page, label) {
     await page.getByRole('heading', {level:1}).focus();
     await page.keyboard.press('Tab');
     assert.ok(await page.evaluate(() => { const el = document.activeElement; return el !== document.body && (getComputedStyle(el).outlineStyle !== 'none' || getComputedStyle(el).boxShadow !== 'none'); }), `${label}: focus indicator`);
-    if (screenshots) await page.screenshot({path:path.join(screenshots,`${label}-${width}-${theme}.png`),fullPage:true});
+    if (screenshots) await page.screenshot({path:path.join(screenshots,`${label}-${width}-${theme}.png`),fullPage:true,animations:'disabled'});
   }
 }
 (async () => {
@@ -45,10 +45,12 @@ async function layout(page, label) {
         const page = await context.newPage(); const errors=[];
         page.on('pageerror',e=>errors.push(e.message));
         await page.goto(origin);
+        await layout(page,`welcome-${diaryEnabled}`);
+        await page.getByRole('button',{name:'Get started',exact:true}).click();
+        await page.getByRole('button',{name:diaryEnabled?'Yes, I want a diary':'Chat only',exact:true}).click();
         await page.locator('#wiz-code').fill(fs.readFileSync(path.join(dir,'first-run-setup-code'),'utf8').trim());
         await page.locator('#wiz-username').fill('owner');
         await page.locator('#wiz-password').fill(password);
-        await page.getByRole('checkbox',{name:'Enable the Diary add-on'}).setChecked(diaryEnabled);
         await layout(page,`fresh-${diaryEnabled}`);
         await page.getByRole('button',{name:'Create account',exact:true}).click();
         await page.getByRole('heading',{name:'Connect an inference provider'}).waitFor();

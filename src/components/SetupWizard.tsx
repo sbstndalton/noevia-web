@@ -16,11 +16,12 @@ import type { AuthUser } from '../api';
 import { classifyOrigin, isIpAddressHost } from '../browser-support';
 import { timezoneEnvSetting } from '../setup-timezone';
 import { ProviderForm } from './ProviderForm';
-import { StoragePicker } from './StoragePicker';
+import { StorageChoice } from './StorageChoice';
+import { ReasoningControl } from './ReasoningControl';
 
-type Step = 'account' | 'provider' | 'diary' | 'prefs' | 'passkey' | 'done';
+type Step = 'welcome' | 'choice' | 'account' | 'provider' | 'diary' | 'prefs' | 'passkey' | 'done';
 
-const STEP_ORDER: Step[] = ['account', 'provider', 'diary', 'prefs', 'passkey'];
+const STEP_ORDER: Step[] = ['welcome', 'choice', 'account', 'provider', 'diary', 'prefs', 'passkey'];
 
 // Same wording the server returns for a rejected origin, so blocking the
 // submit client-side reads identically to hitting the server check.
@@ -28,6 +29,8 @@ const INVALID_ORIGIN_MESSAGE =
   'use https://, or a private-network address (a LAN IP, a bare LAN hostname, or localhost) over http://';
 
 const STEP_TITLES: Record<Step, string> = {
+  welcome: 'Welcome to noevia',
+  choice: 'Would you like a diary?',
   account: 'Create the administrator',
   provider: 'Connect an inference provider',
   diary: 'Set up the diary',
@@ -47,10 +50,10 @@ export interface SetupWizardProps {
 /** Account choices live on the server; reload restarts the optional steps without
  * overwriting them. Members never see deployment or global model controls. */
 export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWizardProps): JSX.Element {
-  const [step, setStep] = useState<Step>(mode === 'fresh' ? 'account' : mode === 'invited' ? 'diary' : 'provider');
+  const [step, setStep] = useState<Step>(mode === 'fresh' ? 'welcome' : mode === 'invited' ? 'diary' : 'provider');
   const [accountCreated, setAccountCreated] = useState(mode !== 'fresh');
   const heading = useRef<HTMLHeadingElement>(null);
-  const steps = STEP_ORDER.filter(s => s !== 'account' && (mode !== 'invited' || s !== 'provider'));
+  const steps = STEP_ORDER.filter(s => !['account','welcome','choice'].includes(s) && (mode !== 'invited' || s !== 'provider'));
   const visibleSteps = mode === 'fresh' ? STEP_ORDER : steps;
   const stepNumber = step === 'done' ? visibleSteps.length : visibleSteps.indexOf(step) + 1;
   useEffect(() => { heading.current?.focus(); }, [step]);
@@ -186,6 +189,19 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
         {progress}
         {accountCreated && <p>Saved account choices survive reload. Closing or signing out resumes these optional steps next time; finishing setup leaves later changes in Settings.</p>}
 
+        {step === 'welcome' && <div>
+          <p>Your own workspace for chat, projects and an optional private diary. Choose the essentials now; later steps can be skipped.</p>
+          <button type="button" onClick={() => go('choice')}>Get started</button>
+        </div>}
+        {step === 'choice' && <div>
+          <p>Your choice will be saved with the account. You can change it later in Settings.</p>
+          <div style={{display:'grid',gap:12}}>
+            <button type="button" className="modal-btn secondary" onClick={() => { setDiaryEnabled(true); go('account'); }}>Yes, I want a diary</button>
+            <button type="button" className="modal-btn secondary" onClick={() => { setDiaryEnabled(false); go('account'); }}>Chat only</button>
+          </div>
+          <button type="button" className="modal-btn secondary" onClick={() => go('welcome')}>Back</button>
+        </div>}
+
         {step === 'account' && (
           <form onSubmit={(e) => void createAccount(e)}>
             <p>Welcome to noevia. This walks through the essentials — every later step can be skipped and finished later in Settings.</p>
@@ -216,13 +232,7 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
             <input id="wiz-display" autoComplete="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
             <label htmlFor="wiz-password">Password</label>
             <input id="wiz-password" type="password" minLength={12} maxLength={128} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-            <label className="auth-option">
-              <input type="checkbox" checked={diaryEnabled} onChange={(e) => setDiaryEnabled(e.target.checked)} />
-              <span>
-                <strong>Enable the Diary add-on</strong>
-                <small>A private journal with optional Nextcloud/WebDAV storage. You can enable it later in Settings.</small>
-              </span>
-            </label>
+            <p>Diary: {diaryEnabled ? 'enabled' : 'off'}. <button type="button" className="popup-tab" disabled={busy} onClick={() => go('choice')}>Change choice</button></p>
             {error && <p className="auth-error" role="alert">{error}</p>}
             <button type="submit" disabled={busy || originClass === 'invalid'}>{busy ? 'Creating…' : 'Create account'}</button>
             <small>Passwords use Argon2id. Passkey private keys never leave your device.</small>
@@ -253,11 +263,7 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
             <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
               {diaryEnabled ? (
                 <>
-                  <p>Where should diary entries live? Server storage keeps them on this server; Nextcloud and WebDAV write to your own cloud. Skipping keeps your current storage configuration.</p>
-                  <StoragePicker
-                    onSaved={() => go('prefs')}
-                    onSkip={() => go('prefs')}
-                  />
+                  <StorageChoice onContinue={() => go('prefs')}/>
                 </>
               ) : (
                 <>
@@ -289,6 +295,7 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
               </span>
             </label>
             <PalettePicker theme={theme}/>
+            {mode !== 'invited' && <div style={{marginBlock:16}}><ReasoningControl global/><small>Changing the thinking default saves immediately for this deployment. Members inherit it unless a project overrides it.</small></div>}
             <label htmlFor="wiz-timezone">Your timezone</label>
             <input
               id="wiz-timezone"
