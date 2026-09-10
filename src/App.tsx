@@ -66,7 +66,7 @@ export default function App(): JSX.Element {
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account'); return fresh; });
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [appMode, setAppMode] = useState<'chat'|'code'>('chat');
-  const [view, setView] = useState<View>({ kind: 'projects' });
+  const [view, setView] = useState<View>(() => ({ kind: 'chat', chatId: `c-${uid()}`, projectId: null }));
   const [projects, setProjects] = useState<Project[]>([]);
   const [freeChats, setFreeChats] = useState<ChatMeta[]>([]);
   const [messagesByChat, setMessagesByChat] = useState<Record<string, Message[]>>({});
@@ -86,7 +86,7 @@ export default function App(): JSX.Element {
   messagesRef.current = messagesByChat;
   const [diaryEnabled, setDiaryEnabled] = useState(false);
   const [popupOpen, setPopupOpen] = useState(false);
-  const loadedChats = useRef<Set<string>>(new Set());
+  const loadedChats = useRef<Set<string>>(new Set(view.kind === 'chat' ? [view.chatId] : []));
   const patchTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const pendingPatches = useRef<Record<string, Partial<Project>>>({});
   const lastSourceSync = useRef<Record<string, number>>({});
