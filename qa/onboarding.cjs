@@ -58,8 +58,36 @@ async function layout(page, label) {
         await page.reload();
         await page.getByRole('button',{name:'Skip — set up later in Settings',exact:true}).click();
         assert.equal(await page.getByRole('checkbox',{name:'Enable the Diary add-on'}).isChecked(),diaryEnabled);
-        if (diaryEnabled) await page.getByRole('button',{name:'Skip — set up later in Settings',exact:true}).click();
-        else await page.getByRole('button',{name:'Continue',exact:true}).click();
+        if (diaryEnabled) {
+          const host=page.getByRole('button',{name:'Let noevia hold my diary',exact:true});
+          const external=page.getByRole('button',{name:'Connect storage I already run',exact:true});
+          assert.equal(await host.getAttribute('aria-pressed'),'false');assert.equal(await external.getAttribute('aria-pressed'),'false');
+          // Save a synthetic external connection without contacting it, then
+          // prove mere choice/skip cannot replace it with server storage.
+          const connection={kind:'webdav',baseUrl:'https://synthetic.invalid',username:'synthetic',secret:'synthetic-only',corpusRoot:'Synthetic diary'};
+          assert.equal((await api(page,'/api/integrations/storage',connection,'PUT')).status,200);
+          await page.route('**/api/integrations/storage',async route=>{
+            if(route.request().method()==='GET')return route.fulfill({status:500,json:{error:'Synthetic load failure'}});
+            return route.continue();
+          });
+          await external.click();await page.getByText('Could not load saved storage.',{exact:false}).waitFor();
+          assert.equal(await page.getByRole('button',{name:'Grant Nextcloud access',exact:true}).isDisabled(),true);
+          await page.unroute('**/api/integrations/storage');await host.click();await external.click();
+          await page.waitForFunction(()=>document.querySelector('select[aria-label="Diary storage type"]')?.value==='webdav');
+          assert.equal(await page.getByPlaceholder('WebDAV base URL').inputValue(),connection.baseUrl);
+          await page.getByRole('button',{name:'Skip — set up later in Settings',exact:true}).click();
+          assert.equal((await api(page,'/api/integrations/storage',undefined,'GET')).body.kind,'webdav');
+          await page.getByRole('button',{name:'Back',exact:true}).click();await host.click();
+          await page.route('**/api/integrations/storage',route=>route.request().method()==='PUT'?route.fulfill({status:500,json:{error:'Synthetic save failure'}}):route.continue());
+          await page.getByRole('button',{name:'Use server storage',exact:true}).click();await page.getByRole('alert').filter({hasText:'Synthetic save failure'}).waitFor();
+          assert.equal((await api(page,'/api/integrations/storage',undefined,'GET')).body.kind,'webdav');
+          await page.unroute('**/api/integrations/storage');await page.getByRole('button',{name:'Use server storage',exact:true}).click();
+          await page.getByText('Server storage saved.',{exact:true}).waitFor();
+          assert.equal((await api(page,'/api/integrations/storage',undefined,'GET')).body.kind,'local');
+          assert.equal((await api(page,'/api/profile/sharing',undefined,'GET')).body.scope,'off');
+          await layout(page,'hosted-storage');
+          await page.getByRole('button',{name:'Continue',exact:true}).click();
+        } else await page.getByRole('button',{name:'Continue',exact:true}).click();
         await layout(page,`prefs-${diaryEnabled}`);
         await page.getByRole('radio',{name:'Light theme'}).check();
         assert.equal(await page.locator('html').getAttribute('data-theme'),'light');

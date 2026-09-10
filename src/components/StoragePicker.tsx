@@ -14,13 +14,14 @@ export interface StoragePickerProps {
 /** Diary storage backend picker (local / Nextcloud / generic WebDAV), shared by
  *  the setup wizard (step 3) and Settings → Diary storage. */
 export function StoragePicker({ onSaved, onSkip, onlineOnly = false }: StoragePickerProps): JSX.Element {
-  const [value, setValue] = useState<StorageConnection>({ kind: 'local', baseUrl: '', username: '', corpusRoot: '' });
+  const [value, setValue] = useState<StorageConnection>({ kind: onlineOnly ? 'nextcloud' : 'local', baseUrl: '', username: '', corpusRoot: '' });
+  const [loaded, setLoaded] = useState(false);
   const [secret, setSecret] = useState('');
   const [message, setMessage] = useState('');
   useEffect(() => {
     void fetchStorage()
-      .then(v => setValue(onlineOnly && v.kind === 'local' ? { kind: 'nextcloud', baseUrl: '', username: '', corpusRoot: 'Cowork/Diary' } : v))
-      .catch(() => undefined);
+      .then(v => { setValue(onlineOnly && v.kind === 'local' ? { kind: 'nextcloud', baseUrl: '', username: '', corpusRoot: 'Cowork/Diary' } : v); setLoaded(true); })
+      .catch(() => setMessage('Could not load saved storage. Reopen this step or reload before changing it.'));
   }, []);
   const patch = (next: Partial<StorageConnection>) => setValue((v) => ({ ...v, ...next }));
 
@@ -59,6 +60,7 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false }: StoragePi
       <select
         className="modal-input"
         aria-label="Diary storage type"
+        disabled={!loaded}
         value={value.kind}
         onChange={(e) => patch({ kind: e.target.value as StorageConnection['kind'] })}
       >
@@ -70,6 +72,7 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false }: StoragePi
       {value.kind !== 'local' && (
         <>
           <input
+            disabled={!loaded}
             className="modal-input"
             placeholder={value.kind === 'nextcloud' ? 'https://cloud.example.com' : value.kind === 's3' ? 'Endpoint URL (https://s3.example.com)' : 'WebDAV base URL'}
             value={value.baseUrl}
@@ -77,6 +80,7 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false }: StoragePi
           />
           {value.kind === 's3' && (
             <input
+            disabled={!loaded}
               className="modal-input"
               placeholder="Bucket"
               value={value.bucket || ''}
@@ -84,6 +88,7 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false }: StoragePi
             />
           )}
           <input
+            disabled={!loaded}
             className="modal-input"
             placeholder={value.kind === 's3' ? 'Folder inside the bucket (optional)' : 'Corpus folder'}
             value={value.corpusRoot}
@@ -94,12 +99,14 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false }: StoragePi
       {(value.kind === 'webdav' || value.kind === 's3') && (
         <>
           <input
+            disabled={!loaded}
             className="modal-input"
             placeholder="Username"
             value={value.username}
             onChange={(e) => patch({ username: e.target.value })}
           />
           <input
+            disabled={!loaded}
             className="modal-input"
             type="password"
             placeholder={value.secretConfigured ? (value.kind === 's3' ? 'Secret access key configured' : 'App password configured') : value.kind === 's3' ? 'Secret access key' : 'App password'}
@@ -113,12 +120,14 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false }: StoragePi
           <>
             <button
               className="modal-btn primary"
+              disabled={!loaded}
               onClick={() => void connectNextcloud().catch((e) => setMessage(String(e)))}
             >
               Grant Nextcloud access
             </button>
             <button
               className="modal-btn secondary"
+              disabled={!loaded}
               onClick={() => void finishNextcloud().catch((e) => setMessage(String(e)))}
             >
               Finish connection
@@ -126,10 +135,10 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false }: StoragePi
           </>
         ) : (
           <>
-            <button className="modal-btn primary" onClick={() => void save().catch((e) => setMessage(String(e)))}>
+            <button disabled={!loaded} className="modal-btn primary" onClick={() => void save().catch((e) => setMessage(String(e)))}>
               Save
             </button>
-            <button className="modal-btn secondary" onClick={() => void test().catch((e) => setMessage(String(e)))}>
+            <button disabled={!loaded} className="modal-btn secondary" onClick={() => void test().catch((e) => setMessage(String(e)))}>
               Test
             </button>
           </>
