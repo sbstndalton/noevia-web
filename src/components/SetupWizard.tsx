@@ -245,7 +245,7 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
 
         {step === 'diary' && (
           <div aria-busy={busy}>
-            {mode === 'invited' && <p>Your administrator manages shared models. You can use available models after setup, or add an approved personal provider in Settings → Providers.</p>}
+            {mode === 'invited' && <p>Your administrator manages shared models. You can use available models after setup, or add an approved personal provider in Settings → Your connections.</p>}
             <label className="auth-option">
               <input type="checkbox" checked={diaryEnabled} aria-disabled={busy} onChange={e => void saveDiaryChoice(e.target.checked)} />
               <span><strong>Enable the Diary add-on</strong><small>Saved for your account when changed. Turning it off keeps existing files.</small></span>
