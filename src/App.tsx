@@ -1,3 +1,4 @@
+import { sourceRefreshIssues } from './source-status';
 import { updateThemeColor } from './appearance';
 import { ShellIcon } from './components/ShellIcon';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -249,7 +250,7 @@ export default function App(): JSX.Element {
     lastSourceSync.current[key] = Date.now();
     syncProjectSources(sourceProjectId)
       .then((result) => {
-        if (result.skipped.length) setProjectError(`Some sources could not be refreshed — ${result.skipped[0].reason}. Previous copies were kept.`);
+        if (result.skipped.length) setProjectError(sourceRefreshIssues(result.skipped));
         refreshProjects();
       })
       .catch((error) => setProjectError(`Sources could not be refreshed — ${error instanceof Error ? error.message : 'storage unavailable'}.`));
@@ -640,7 +641,7 @@ export default function App(): JSX.Element {
         if (Array.isArray(patch.sourceFolders)) {
           const r = await syncProjectSources(projectId);
           if (r.skipped.length) {
-            setProjectError(`Some sources could not be read — ${r.skipped[0].reason}.`);
+            setProjectError(sourceRefreshIssues(r.skipped));
           }
         }
       } catch (e) {

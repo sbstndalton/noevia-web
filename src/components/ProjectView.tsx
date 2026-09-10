@@ -1,3 +1,4 @@
+import { sourceStatus, sourceRefreshIssues } from '../source-status';
 import { FolderPicker } from './FolderPicker';
 import { ShellIcon } from './ShellIcon';
 import { ProjectIcon } from './ProjectIdentity';
@@ -90,7 +91,7 @@ export function ProjectView({
     if (done.length) {
       try {
         const synced = await syncProjectSources(project.id);
-        if (synced.skipped.length) failed.push(`source refresh: ${synced.skipped[0].reason}`);
+        if (synced.skipped.length) failed.push(sourceRefreshIssues(synced.skipped));
       } catch (e) { failed.push(`source refresh: ${e instanceof Error ? e.message : 'failed'}`); }
     }
     setBusyDocs(false);
@@ -212,7 +213,7 @@ export function ProjectView({
 
               <section className="project-storage-summary">
                 <h3>Upload folder</h3>
-                <p className="rail-empty">Text files and PDFs you upload are saved here in your connected storage. Chats and project settings are saved in noevia.</p>
+                <p className="rail-empty">With connected storage, uploads are saved in the project folder. Without it, uploaded PDFs and their original bytes are saved in noevia. Chats and project settings are always saved in noevia.</p>
                 {project.projectFolder ? <p className="storage-path"><ShellIcon name="folder"/><span>{project.projectFolder}</span></p>
                   : <p className="rail-empty">A folder is created on your first document upload when storage is connected.</p>}
               </section>
@@ -251,8 +252,10 @@ export function ProjectView({
                     return (
                       <li key={f.name}>
                         <span className="source-name" title={f.name}>
-                          <ShellIcon name="file"/> {f.name.split('/').pop()}
+                          <ShellIcon name="file"/> <span>{f.name.split('/').pop()}
+                          {f.document && <small className="source-status">{sourceStatus(f)}</small>}</span>
                         </span>
+                        {f.document?.byteHash && <a className="btn btn-ghost btn-sm" href={`/api/projects/${encodeURIComponent(project.id)}/documents/original?name=${encodeURIComponent(f.name)}`} download>Original PDF</a>}
                         {deletable ? (
                           <button
                             className="btn btn-ghost btn-sm"

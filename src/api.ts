@@ -109,7 +109,7 @@ export const uploadProjectDocument = (id: string, body: { name: string; dataBase
 
 /** Re-read every attached folder and refresh the project's sources from it. */
 export const syncProjectSources = (id: string) =>
-  postJson<{ files: { name: string; source: string | null; bytes: number }[]; skipped: { folder: string; file?: string; reason: string }[] }>(
+  postJson<{ files: { name: string; source: string | null; bytes: number }[]; skipped: { folder: string; file?: string; reason: string; retained?: boolean }[] }>(
     `/api/projects/${encodeURIComponent(id)}/sources/sync`, {});
 /** Create one directory in connected storage. */
 export const createStorageFolder = (path: string) =>

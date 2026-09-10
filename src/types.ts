@@ -35,7 +35,20 @@ export interface ToolCallView {
   approvalId?: string;
 }
 
+export interface DocumentStatus {
+  version?: string;
+  byteHash?: string;
+  state: 'ready' | 'partial' | 'failed';
+  stale?: boolean;
+  pages?: number;
+  truncated?: boolean;
+  error?: string;
+  indexing?: string;
+  pageStatus?: { number: number; status: string }[];
+}
+
 export interface ProjectFile {
+  document?: DocumentStatus;
   name: string;
   content: string;
   /** The attached storage folder this came from. Absent for uploaded files,

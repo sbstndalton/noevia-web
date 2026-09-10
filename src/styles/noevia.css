@@ -471,3 +471,11 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
   .sidebar .sidebar-label-text { white-space:inherit; overflow-wrap:anywhere; }
 }
 @media(hover:none) { .sidebar-section-head .section-options {opacity:1;} }
+
+/* Source extraction state belongs to the source row, not the navigation. */
+.source-status { display: block; white-space: normal; overflow-wrap: anywhere; font-size: 0.75rem; line-height: 1.4; margin-top: 0.25rem; }
+.source-name > span { min-width: 0; white-space: normal; }
+@media (max-width: 600px) {
+  .source-list li { flex-wrap: wrap; }
+  .source-list .source-name { flex-basis: 100%; }
+}
