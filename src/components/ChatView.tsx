@@ -1,3 +1,4 @@
+import { useChatScroll } from '../useChatScroll';
 import { ReasoningControl } from './ReasoningControl';
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
@@ -28,7 +29,7 @@ interface ChatViewProps {
   onOpenSettings: () => void;
 }
 
-function ThinkingBlock({ text, live }: { text: string; live: boolean }) {
+export function ThinkingBlock({ text, live }: { text: string; live: boolean }) {
   // Open while the model is still thinking so the reasoning is visible as it
   // streams, then collapsed once the answer lands — the answer is what you
   // want to read, with the reasoning one click away. `open` is uncontrolled
@@ -186,7 +187,7 @@ export function ChatView({
   const [draft, setDraft] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const { scrollRef, onScroll, follow } = useChatScroll(chatId, messages, true, streaming);
   // When the current stream began, for the live elapsed counter. Reset on each
   // new stream rather than on every message change, or the timer would restart
   // mid-reply as tokens arrive.
@@ -201,16 +202,13 @@ export function ChatView({
     setEditDraft('');
   }, [chatId]);
 
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages, streaming]);
 
   const openModels = () => { if (!project && freeContext) setFreeModels(true); else onOpenModels(); };
   if (!project && freeContext) modelLabel = freeContext.routing === 'auto' ? 'Auto (Fast/Smart)' : freeContext.model || modelLabel;
   const submit = () => {
     const text = draft.trim();
     if (!text || streaming || actionBusy) return;
+    follow();
     onSend(text);
     setDraft('');
   };
@@ -247,7 +245,7 @@ export function ChatView({
         </div>
       )}
 
-      <div className="transcript" ref={scrollRef}>
+      <div className="transcript" ref={scrollRef} onScroll={onScroll}>
         {messages.length === 0 && (
           <div className="empty-state">
             <h2>{projectName ? `Let’s work on ${projectName}` : 'What’s on your mind?'}</h2>

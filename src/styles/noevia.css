@@ -527,3 +527,21 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
 .reasoning-result { display: block; color: var(--text-secondary); margin: 6px 0; }
 @media(max-width:600px) { .chat-composer-inner > .reasoning-control select { max-width: 80px; } }
 .reasoning-control .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Diary conversation and composer have independent layout; only content scrolls. */
+.diary-layout { overflow: hidden; }
+.diary-primary { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
+.diary-content-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-anchor: none; padding: 32px clamp(16px, 4vw, 64px); }
+.diary-composer-dock { flex: none; padding: 8px clamp(16px, 4vw, 64px) 12px; background: var(--bg-app); }
+.diary-composer-dock .diary-compose { margin: 0 auto; }
+.diary-primary > .diary-save-status { flex: none; margin: 0; padding: 0 20px 8px; }
+.diary-context { min-height: 0; overflow-y: auto; }
+.diary-saved-record > summary { cursor: pointer; color: var(--text-secondary); margin-bottom: 16px; }
+.diary-conversation { padding-inline: 0; }
+.transcript { overflow-anchor: none; scroll-behavior: auto; }
+@media (max-width: 1000px) {
+  .diary-layout { display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+  .diary-context { max-height: 150px; padding: 12px 18px; }
+  .diary-content-scroll { padding: 20px 16px; }
+  .diary-composer-dock { padding: 8px 16px; }
+}

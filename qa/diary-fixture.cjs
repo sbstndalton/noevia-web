@@ -29,11 +29,20 @@ function createFixture(port = 31239) {
     if(url.pathname==='/api/projects/__diary-context/config'){extraProject.reasoningEffort=body.reasoningEffort;return json({ok:true});}
     if(url.pathname==='/api/chat'||url.pathname==='/api/diary/local-exchange') {
       requests.push({path:url.pathname,body});
-      if(url.pathname.endsWith('local-exchange'))return setTimeout(()=>json({reply:'Synthetic local reply',decision:'logged',files:{['Entries/'+body.entryDay+'.md']:'# '+body.entryDay+'\n\nSynthetic local entry'}}),250);
+      if(url.pathname.endsWith('local-exchange'))return setTimeout(()=>json({reply:'Synthetic local reply',reasoning:'Synthetic provider reasoning',decision:'logged',files:{['Entries/'+body.entryDay+'.md']:'# '+body.entryDay+'\n\nSynthetic local entry'}}),250);
       res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache'});
       const event=(data)=>res.write('data: '+JSON.stringify(data)+'\n\n');
+      event({type:'reasoning',text:'Synthetic provider reasoning'});
       event({type:'status',text:body.spaceId==='diary-extras'?'Preparing synthetic context':'Reading synthetic diary'});
       if(body.message==='cancel synthetic'&&body.spaceId==='diary-extras') { pending.add(res);res.on('close',()=>pending.delete(res));return; }
+      if(body.message==='long synthetic') {
+        let chunk=0;
+        const timer=setInterval(()=>{
+          event({type:'delta',text:('Synthetic streaming paragraph '+(++chunk)+'. ').repeat(20)+'\n\n'});
+          if(chunk===80){clearInterval(timer);event({type:'done'});res.end();}
+        },60);
+        pending.add(res);res.on('close',()=>{clearInterval(timer);pending.delete(res);});return;
+      }
       setTimeout(()=>{
         if(body.message==='fail synthetic')event({type:'error',text:'Synthetic unavailable'});
         else {event({type:'delta',text:body.spaceId==='diary-extras'?'Synthetic optional reference':'Synthetic streamed reply'});if(body.spaceId==='diary')event({type:'diary',decision:'skip'});}

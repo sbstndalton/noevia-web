@@ -20,12 +20,18 @@ const {createFixture}=require('./diary-fixture.cjs');
    await page.getByRole('heading',{name:'September 10, 2026',exact:true}).waitFor();
    assert.match(await page.locator('.diary-conversation [data-role=user]').innerText(),/You\s+first synthetic/);
    await page.getByText(local?'Synthetic local reply':'Synthetic streamed reply',{exact:true}).waitFor();
+   await page.locator('.thinking-block summary').click();
+   await page.getByText('Synthetic provider reasoning',{exact:true}).waitFor();
    assert.ok(fixture.requests.at(-1).body.entryTime.startsWith('2026-09-10T22:30:'));
    assert.equal(fixture.requests.at(-1).body.entryDay,'2026-09-10');
    if(local)assert.ok(await page.evaluate(()=>Object.keys(window.__fixtureFiles).some(x=>x.includes('2026-09-10'))));
    for(const width of [375,768,1440])for(const theme of ['light','dark']){
     await page.setViewportSize({width,height:950});await page.evaluate(t=>{document.documentElement.setAttribute('data-theme',t);localStorage.setItem('cowork-theme',t);},theme);
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    assert.ok(await page.evaluate(()=>{
+      const input=document.querySelector('#diary-draft'), scroll=document.querySelector('.diary-content-scroll');
+      return !scroll.contains(input) && input.getBoundingClientRect().bottom < innerHeight;
+    }));
     await page.locator('#diary-draft').focus();await page.keyboard.press('Tab');
     assert.notEqual(await page.evaluate(()=>getComputedStyle(document.activeElement).outlineStyle),'none');
     if(process.env.QA_SCREENSHOTS)await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/diary-${local}-${width}-${theme}.png`,fullPage:true,animations:'disabled'});
@@ -34,6 +40,8 @@ const {createFixture}=require('./diary-fixture.cjs');
    await page.getByRole('button',{name:'Send diary message'}).waitFor();
    await page.waitForFunction(()=>document.querySelector('.diary-conversation')?.getAttribute('aria-busy')==='false');
    assert.equal(fixture.requests.at(-1).body.history.length,2);
+   assert.ok(fixture.requests.at(-1).body.history.every(t=>!('reasoning' in t)));
+   assert.equal(await page.locator('.thinking-block').count(),2);
    assert.equal(fixture.requests.at(-1).body.history[0].content,'first synthetic');
    await page.locator('.diary-breadcrumb').getByRole('button',{name:'September 2026'}).click();
    await page.getByRole('button',{name:'September 9, 2026, no entries',exact:true}).click();await send('past synthetic');
