@@ -1,3 +1,4 @@
+import AppPasswords from './AppPasswords';
 import { ReasoningControl } from './ReasoningControl';
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
@@ -96,6 +97,7 @@ function ProfileCard(): JSX.Element {
       <button className="modal-btn secondary" onClick={() => void logout().then(() => window.location.reload())}>Sign out</button>
     </div>
     {notice && <p className="route-note">{notice}</p>}
+    <AppPasswords />
   </div>;
 }
 
