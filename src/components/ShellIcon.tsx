@@ -1,5 +1,8 @@
 export function ShellIcon({ name, size = 18 }: { name: string; size?: number }) {
   const paths: Record<string, string> = {
+    archive: 'M3 4h18v4H3zM5 8v12h14V8M10 12h4',
+    compose: 'M12 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-7M16 3l5 5-10 10H6v-5z',
+    file: 'M5 3h9l5 5v13H5zM14 3v5h5M8 12h8M8 16h6',
     edit: 'm4 15 12-12 5 5-12 12-6 1zM13 6l5 5',
     book: 'M4 3h16v18H4V3zm4 0v18M12 7h4M12 11h4',
     pin: 'm9 3 6 0v5l3 4v2H6v-2l3-4V3zm3 11v7',
@@ -14,5 +17,6 @@ export function ShellIcon({ name, size = 18 }: { name: string; size?: number }) 
     panel: 'M3 4h18v16H3V4zm6 0v16', user:'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M4 21v-3c0-6 16-6 16 0v3',
     down:'m6 9 6 6 6-6', sun:'M12 2v2m0 16v2M2 12h2m16 0h2M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2M17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0',
   };
+  if (name === 'more') return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">{[5,12,19].map(x=><circle key={x} cx={x} cy="12" r="1.8"/>)}</svg>;
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] || paths.settings} /></svg>;
 }

@@ -706,6 +706,7 @@ export default function App(): JSX.Element {
         activeProjectId={activeProject?.id ?? null}
         activeChatId={view.kind === 'chat' ? view.chatId : null}
         onNewChat={startFreeChat}
+        onNewProjectChat={startProjectChat}
         onOpenProjects={() => setView({ kind: 'projects' })}
         onOpenProject={(id) => setView({ kind: 'project', id })}
         onOpenChat={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
@@ -744,7 +745,7 @@ export default function App(): JSX.Element {
           onRefresh={refreshProjects}
           onNewChat={startProjectChat}
           onSendFirst={startProjectChatWith}
-          onEditProject={setEditingProjectId}
+          onSave={saveProjectAndSync}
           onOpenChat={(_projectId, chatId) => setView({ kind: 'chat', chatId, projectId: _projectId })}
           onPatch={handlePatchProject}
           onDeleteChat={handleDeleteChat}

@@ -21,6 +21,7 @@ interface SidebarProps {
   activeProjectId: string | null;
   activeChatId: string | null;
   onNewChat: () => void;
+  onNewProjectChat: (projectId: string) => void;
   onEnterCode: () => void;
   onPreview: (title: string) => void;
   onOpenProjects: () => void;
@@ -60,6 +61,7 @@ export function Sidebar({
   activeProjectId,
   activeChatId,
   onNewChat,
+  onNewProjectChat,
   onEnterCode,
   onPreview,
   onOpenProjects,
@@ -151,7 +153,7 @@ export function Sidebar({
   const projectMenu = (p: Project): MenuItem[] => [
     { label: 'Rename', icon:<ShellIcon name="edit"/>, onSelect: () => startRename(p.id, p.name) },
     { label: 'Project settings', icon:<ShellIcon name="settings"/>, onSelect: () => onEditProject(p.id) },
-    {label:'Open project',icon:<ShellIcon name="folder"/>,onSelect:()=>onOpenProject(p.id)},
+    {label:'Open project',icon:<ShellIcon name="folder"/>,onSelect:()=>{onOpenProject(p.id);setExpanded(false);}},
     { icon:<ShellIcon name="pin"/>, separator:true, label: p.pinned ? 'Unpin' : 'Pin', onSelect: () => onPatchProject(p.id, { pinned: !p.pinned }) },
     {
       label: 'Archive',
@@ -197,6 +199,11 @@ export function Sidebar({
         }),
     },
   ];
+  const chatActions = (c: ChatMeta, projectId: string | null) => <div className="row-actions">
+    <button className="row-action" aria-label={`${c.pinned ? 'Unpin' : 'Pin'} ${c.title || 'chat'}`} title={c.pinned ? 'Unpin chat' : 'Pin chat'} aria-pressed={!!c.pinned} onClick={()=>onPatchChat(projectId,c.id,{pinned:!c.pinned})}><ShellIcon name="pin" size={18}/></button>
+    <button className="row-action" aria-label={`Archive ${c.title || 'chat'}`} title="Archive chat" onClick={()=>onPatchChat(projectId,c.id,{archived:true})}><ShellIcon name="archive" size={18}/></button>
+    <button className="row-action" aria-label={`Options for ${c.title || 'chat'}`} aria-haspopup="menu" onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'chat',id:c.id,projectId,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={20}/></button>
+  </div>;
   return (
     <div
       className={`sidebar${activeView === 'diary' ? ' diary-sidebar' : ''}${expanded ? ' is-expanded' : ''}${collapsed ? ' is-collapsed' : ''}`}
@@ -236,13 +243,17 @@ export function Sidebar({
           <button className="section-label section-toggle" aria-expanded={!closedGroups[group]} onClick={()=>setClosedGroups(g=>({...g,[group]:!g[group]}))}>{group}<span>{closedGroups[group]?'›':'⌄'}</span></button>
           {(!closedGroups[group] || query) && entries.map(p=><div className="project-branch" key={p.id}>
             <div className={`proj-row${activeProjectId===p.id && activeView!=='projects'?' is-active':''}`} onContextMenu={e=>{e.preventDefault();setMenu({kind:'project',id:p.id,projectId:null,at:{x:e.clientX,y:e.clientY}});}}>
-              {renamingId===p.id ? <input className="proj-rename-input" aria-label="Project name" value={renameDraft} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(null,false)} onKeyDown={e=>{if(e.key==='Enter')commitRename(null,false);if(e.key==='Escape')setRenamingId(null);}}/> : <button className="project-disclosure" aria-label={`Expand chats in ${p.name}`} aria-expanded={!!openProjects[p.id]} onClick={()=>setOpenProjects(prev=>({...prev,[p.id]:!prev[p.id]}))}><ProjectIcon project={p} size={18}/><span className="nav-name">{p.name}</span><span className="branch-chevron">{openProjects[p.id]?'⌄':'›'}</span></button>}
-              <button className="project-home-btn" aria-label={`Open ${p.name}`} title="Open project" onClick={()=>{onOpenProject(p.id);setExpanded(false);}} onMouseEnter={e=>openHover(p.id,e.currentTarget)} onMouseLeave={closeHover} onBlur={closeHover}><ShellIcon name="folder" size={16}/></button>
-              <button className="proj-menu-btn" aria-label={`Options for ${p.name}`} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'project',id:p.id,projectId:null,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="explore" size={16}/></button>
+              {renamingId===p.id ? <input className="proj-rename-input" aria-label="Project name" value={renameDraft} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(null,false)} onKeyDown={e=>{if(e.key==='Enter')commitRename(null,false);if(e.key==='Escape')setRenamingId(null);}}/> : <button className="project-disclosure" aria-label={`Expand chats in ${p.name}`} aria-expanded={!!openProjects[p.id]} onMouseEnter={e=>openHover(p.id,e.currentTarget)} onMouseLeave={closeHover} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:!prev[p.id]}));}}><ProjectIcon project={p} size={18}/><span className="nav-name">{p.name}</span><span className="branch-chevron">{openProjects[p.id]?'⌄':'›'}</span></button>}
+              <div className="row-actions">
+                <button className="row-action" aria-label={`Options for ${p.name}`} aria-haspopup="menu" onClick={e=>{closeHover();const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'project',id:p.id,projectId:null,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={22}/></button>
+                <button className="row-action" aria-label={`New chat in ${p.name}`} title="New chat in project" onClick={()=>{onNewProjectChat(p.id);setExpanded(false);}}><ShellIcon name="compose" size={20}/></button>
+              </div>
             </div>
             {openProjects[p.id] && <div className="project-children">
-              <button onClick={()=>{onOpenProject(p.id);setExpanded(false);}}>Open project<ShellIcon name="folder" size={14}/></button>
-              {(p.chats || []).filter(c=>!c.archived).map(c=><button key={c.id} className={activeChatId===c.id?'is-active':''} onClick={()=>{onOpenChat(c.id,p.id);setExpanded(false);}}>{c.title || 'New chat'}{streamingChats[c.id] && <span aria-label="Still generating"> ···</span>}</button>)}
+              {(p.chats || []).filter(c=>!c.archived).sort((a,b)=>Number(!!b.pinned)-Number(!!a.pinned)).map(c=><div className="chat-row" key={c.id}>
+                {renamingId===c.id ? <input className="proj-rename-input" aria-label="Chat name" value={renameDraft} autoFocus onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(p.id,true)} onKeyDown={e=>{if(e.key==='Enter')commitRename(p.id,true);if(e.key==='Escape')setRenamingId(null);}}/> : <button className={`nested-chat-title${activeChatId===c.id?' is-active':''}`} onClick={()=>{onOpenChat(c.id,p.id);setExpanded(false);}}><span>{c.title || 'New chat'}</span>{streamingChats[c.id] && <span aria-label="Still generating"> ···</span>}</button>}
+                {chatActions(c,p.id)}
+              </div>)}
               {!p.chats?.filter(c=>!c.archived).length && <p>No chats yet</p>}
             </div>}
           </div>)}
@@ -264,7 +275,7 @@ export function Sidebar({
                   setMenu({ kind: 'chat', id: c.id, projectId: c.projectId ?? null, at: { x: e.clientX, y: e.clientY } });
                 }}
               >
-                {renamingId === c.id ? (
+                {renamingId === c.id && !openProjects[c.projectId || ''] ? (
                   <input
                     className="proj-rename-input"
                     value={renameDraft}
@@ -290,19 +301,7 @@ export function Sidebar({
                     )}
                   </button>
                 )}
-                <button
-                  className={`proj-menu-btn${menu?.kind === 'chat' && menu.id === c.id ? ' is-open' : ''}`}
-                  title="Chat options"
-                  aria-label={`Options for ${c.title || 'this chat'}`}
-                  onClick={(e) => {
-                    const r = e.currentTarget.getBoundingClientRect();
-                    setMenu({ kind: 'chat', id: c.id, projectId: c.projectId ?? null, at: { x: r.left, y: r.bottom + 4 } });
-                  }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-                    <path d="M5 12h.01M12 12h.01M19 12h.01" />
-                  </svg>
-                </button>
+                {chatActions(c,c.projectId ?? null)}
               </div>
             ))}
           </div>
@@ -353,7 +352,7 @@ export function Sidebar({
           items={
             menu.kind === 'project'
               ? (() => { const p = projects.find((x) => x.id === menu.id); return p ? projectMenu(p) : []; })()
-              : (() => { const c = chats.find((x) => x.id === menu.id); return c ? chatMenu(c) : []; })()
+              : (() => { const c = chats.find((x) => x.id === menu.id) || projects.find(p=>p.id===menu.projectId)?.chats.find(c=>c.id===menu.id); return c ? chatMenu({...c,projectId:menu.projectId}) : []; })()
           }
         />
       )}

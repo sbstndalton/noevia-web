@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { browseStorage, createStorageFolder } from '../api';
 import type { StorageEntry } from '../api';
@@ -14,6 +14,12 @@ export function FolderPicker({
   onClose: () => void;
   onPick: (path: string) => void;
 }): JSX.Element {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    dialog.current?.showModal();
+    return () => { dialog.current?.close(); previous?.focus(); };
+  }, []);
   const [path, setPath] = useState('');
   const [entries, setEntries] = useState<StorageEntry[]>([]);
   const [busy, setBusy] = useState(true);
@@ -51,7 +57,7 @@ export function FolderPicker({
   const up = () => setPath(path.split('/').slice(0, -1).join('/'));
 
   return (
-    <div className="folder-picker" role="dialog" aria-label="Choose a folder">
+    <dialog ref={dialog} className="folder-picker" aria-label="Choose a folder" onCancel={e=>{e.preventDefault();onClose();}}>
       <header>
         <button className="btn btn-ghost btn-sm" onClick={up} disabled={!path}>↑ Up</button>
         <code>{path ? `/${path}` : '/ (all files)'}</code>
@@ -60,7 +66,7 @@ export function FolderPicker({
       {error && <p className="modal-err">{error}</p>}
       {busy && <p className="insp-empty">Loading…</p>}
       {!busy && entries.length === 0 && (
-        <p className="insp-empty">No sub-folders here. Attach this folder, create one, or go up.</p>
+        <p className="insp-empty">No sub-folders here. Link this folder, create one, or go up.</p>
       )}
       <ul className="folder-list">
         {entries.map((e) => (
@@ -90,11 +96,11 @@ export function FolderPicker({
           <>
             <button className="btn btn-secondary btn-sm" onClick={() => setCreating(true)}>New folder</button>
             <button className="btn btn-primary btn-sm" onClick={() => onPick(path)} disabled={!path}>
-              Attach {path ? `“${path.split('/').pop()}”` : 'this folder'}
+              Link {path ? `“${path.split('/').pop()}”` : 'this folder'}
             </button>
           </>
         )}
       </footer>
-    </div>
+    </dialog>
   );
 }

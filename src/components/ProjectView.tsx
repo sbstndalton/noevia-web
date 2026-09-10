@@ -1,3 +1,5 @@
+import { FolderPicker } from './FolderPicker';
+import { ShellIcon } from './ShellIcon';
 import { ProjectIcon } from './ProjectIdentity';
 import { useState } from 'react';
 import type { JSX } from 'react';
@@ -24,7 +26,7 @@ interface ProjectViewProps {
   project: Project;
   onNewChat: (projectId: string) => void;
   onSendFirst: (projectId: string, text: string) => void;
-  onEditProject: (projectId: string) => void;
+  onSave: (projectId: string, patch: Partial<Project>) => Promise<void>;
   onOpenChat: (projectId: string, chatId: string) => void;
   onPatch: (projectId: string, patch: Partial<Project>) => void;
   onDeleteChat: (projectId: string, chatId: string) => void;
@@ -47,7 +49,7 @@ export function ProjectView({
   project,
   onNewChat,
   onSendFirst,
-  onEditProject,
+  onSave,
   onOpenChat,
   onPatch,
   onDeleteChat,
@@ -57,6 +59,8 @@ export function ProjectView({
   const [panel, setPanel] = useState<'instructions' | 'memory' | null>(null);
   const [tab, setTab] = useState<'chats' | 'sources'>('chats');
   const [draft, setDraft] = useState('');
+  const [pickingFolder, setPickingFolder] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [browsing, setBrowsing] = useState(false);
   const [addError, setAddError] = useState('');
   const [busyImages, setBusyImages] = useState(false);
@@ -95,6 +99,14 @@ export function ProjectView({
       done.length ? `Uploaded ${done.join(', ')}.` : '',
     ].filter(Boolean).join(' '));
     onRefresh();
+  };
+
+  const updateFolders = async (folders: string[]) => {
+    setSyncing(true);
+    setAddError('');
+    try { await onSave(project.id, {sourceFolders: folders}); }
+    catch (e) { setAddError(e instanceof Error ? e.message : 'Could not update linked folders.'); }
+    finally { setSyncing(false); }
   };
 
   const removeFile = async (path: string) => {
@@ -193,25 +205,93 @@ export function ProjectView({
               )}
             </div>
           ) : (
-            <div className="project-scroll">
+            <div className="project-scroll project-sources">
               <p className="rail-empty">
-                Every chat in this project reads these as reference material.
+                Reference files and images available to chats in this project.
               </p>
 
-              <div className="rail-label">Attached folders</div>
-              {(project.sourceFolders || []).length === 0 ? (
-                <p className="rail-empty">No folders attached. Attach one in Edit project to keep sources in step with storage.</p>
+              <section className="project-storage-summary">
+                <h3>Upload folder</h3>
+                <p className="rail-empty">Text files and PDFs you upload are saved here in your connected storage. Chats and project settings are saved in noevia.</p>
+                {project.projectFolder ? <p className="storage-path"><ShellIcon name="folder"/><span>{project.projectFolder}</span></p>
+                  : <p className="rail-empty">A folder is created on your first document upload when storage is connected.</p>}
+              </section>
+              <details className="project-linked-folders">
+                <summary>Linked reference folders ({(project.sourceFolders || []).filter(f=>f!==project.projectFolder).length})</summary>
+                <p className="rail-empty">Read files from other storage folders without moving them. Refresh to pick up changes; unlinking keeps the original files.</p>
+                <ul className="source-list">{(project.sourceFolders || []).filter(f=>f!==project.projectFolder).map(f=><li key={f}>
+                  <span className="source-name" title={f}><ShellIcon name="folder"/> {f}</span>
+                  <button className="btn btn-ghost btn-sm" disabled={syncing} onClick={()=>void updateFolders((project.sourceFolders || []).filter(x=>x!==f))} aria-label={`Unlink ${f}`}>Unlink</button>
+                </li>)}</ul>
+                <button className="btn btn-secondary btn-sm" disabled={syncing} onClick={()=>setPickingFolder(true)}>Link folder</button>
+              </details>
+              <div className="source-actions">
+                <button className="btn btn-secondary btn-sm" disabled={syncing || !project.sourceFolders?.length} onClick={()=>void updateFolders(project.sourceFolders || [])}>{syncing ? 'Refreshing…' : 'Refresh from storage'}</button>
+              </div>
+
+              <div className="rail-label">Files</div>
+              <p className="rail-empty">Upload text files or PDFs to the upload folder, or import a text copy from storage.</p>
+              {project.files.length === 0 ? (
+                <p className="rail-empty">Nothing attached yet.</p>
               ) : (
                 <ul className="source-list">
-                  {(project.sourceFolders || []).map((f) => (
-                    <li key={f}><span className="source-name">📁 {f}</span></li>
-                  ))}
+                  {folderSources.concat(uploaded).map((f) => {
+                    // Deletable when it lives directly in a folder this
+                    // project has attached — its own or one you attached for
+                    // reading. Both are your files; the dialog says which path
+                    // is going.
+                    const folders = [
+                      ...(project.projectFolder ? [project.projectFolder] : []),
+                      ...(project.sourceFolders || []),
+                    ];
+                    const deletable = folders.some((d) => {
+                      const rel = f.name.startsWith(`${d}/`) ? f.name.slice(d.length + 1) : null;
+                      return !!rel && !rel.includes('/');
+                    });
+                    return (
+                      <li key={f.name}>
+                        <span className="source-name" title={f.name}>
+                          <ShellIcon name="file"/> {f.name.split('/').pop()}
+                        </span>
+                        {deletable ? (
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => setConfirmDelete(f.name)}
+                            aria-label={`Delete ${f.name}`}
+                          >
+                            Delete
+                          </button>
+                        ) : (
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => onPatch(project.id, { files: project.files.filter((x) => !x.source && x.name !== f.name) })}
+                            aria-label={`Remove ${f.name}`}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
-
+              <div className="source-actions">
+                <label className={`btn btn-secondary btn-sm${busyDocs ? ' is-busy' : ''}`}>
+                  {busyDocs ? 'Uploading…' : 'Upload files'}
+                  <input
+                    type="file"
+                    multiple
+                    disabled={busyDocs}
+                    accept={[...TEXT_EXTENSIONS, ...DOCUMENT_EXTENSIONS].join(',')}
+                    style={{ display: 'none' }}
+                    onChange={(e) => { void addFiles(e.target.files); e.target.value = ''; }}
+                  />
+                </label>
+                <button className="btn btn-secondary btn-sm" onClick={() => setBrowsing(true)}>Import text from storage</button>
+              </div>
               <div className="rail-label">Images</div>
               {(project.assets || []).length === 0 ? (
-                <p className="rail-empty">No images attached. A model that can see images will be shown them with your message.</p>
+                <p className="rail-empty">No images yet. Images are stored in noevia and used when an image-capable model is available.</p>
               ) : (
                 <ul className="image-grid">
                   {(project.assets || []).map((a) => (
@@ -242,72 +322,6 @@ export function ProjectView({
                 </label>
               </div>
 
-              <div className="rail-label">Files</div>
-              {project.projectFolder && (
-                <p className="rail-empty">
-                  Uploads are saved to <code>{project.projectFolder}</code> in your storage, so you can open,
-                  edit or back them up like any other folder. Text files and PDFs both work.
-                </p>
-              )}
-              {project.files.length === 0 ? (
-                <p className="rail-empty">Nothing attached yet.</p>
-              ) : (
-                <ul className="source-list">
-                  {folderSources.concat(uploaded).map((f) => {
-                    // Deletable when it lives directly in a folder this
-                    // project has attached — its own or one you attached for
-                    // reading. Both are your files; the dialog says which path
-                    // is going.
-                    const folders = [
-                      ...(project.projectFolder ? [project.projectFolder] : []),
-                      ...(project.sourceFolders || []),
-                    ];
-                    const deletable = folders.some((d) => {
-                      const rel = f.name.startsWith(`${d}/`) ? f.name.slice(d.length + 1) : null;
-                      return !!rel && !rel.includes('/');
-                    });
-                    return (
-                      <li key={f.name}>
-                        <span className="source-name" title={f.name}>
-                          {f.source ? '📁' : '📄'} {f.name.split('/').pop()}
-                        </span>
-                        {deletable ? (
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            onClick={() => setConfirmDelete(f.name)}
-                            aria-label={`Delete ${f.name}`}
-                          >
-                            Delete
-                          </button>
-                        ) : (
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            onClick={() => onPatch(project.id, { files: project.files.filter((x) => !x.source && x.name !== f.name) })}
-                            aria-label={`Remove ${f.name}`}
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              <div className="source-actions">
-                <label className={`btn btn-secondary btn-sm${busyDocs ? ' is-busy' : ''}`}>
-                  {busyDocs ? 'Uploading…' : 'Add files'}
-                  <input
-                    type="file"
-                    multiple
-                    disabled={busyDocs}
-                    accept={[...TEXT_EXTENSIONS, ...DOCUMENT_EXTENSIONS].join(',')}
-                    style={{ display: 'none' }}
-                    onChange={(e) => { void addFiles(e.target.files); e.target.value = ''; }}
-                  />
-                </label>
-                <button className="btn btn-secondary btn-sm" onClick={() => setBrowsing(true)}>Add from storage</button>
-                <button className="btn btn-secondary btn-sm" onClick={() => onEditProject(project.id)}>Manage folders</button>
-              </div>
               {addError && <p className="modal-err source-add-error">{addError}</p>}
             </div>
           )}
@@ -390,15 +404,14 @@ export function ProjectView({
           onConfirm={() => { const path = confirmDelete; setConfirmDelete(null); void removeFile(path); }}
         />
       )}
+      {pickingFolder && <FolderPicker onClose={()=>setPickingFolder(false)} onPick={path=>{setPickingFolder(false);void updateFolders([...new Set([...(project.sourceFolders || []),path])]);}}/>}
       {browsing && (
         <StorageFileBrowser
           onClose={() => setBrowsing(false)}
           onPick={(picked) => {
-            const next = [...project.files];
+            const next = project.files.filter(f=>!f.source);
             for (const f of picked) {
-              const i = next.findIndex((x) => x.name === f.name);
-              if (i >= 0) next[i] = { ...next[i], content: f.content };
-              else next.push({ name: uniqueName(f.name, next), content: f.content });
+              next.push({ name: uniqueName(f.name, [...project.files,...next]), content: f.content });
             }
             onPatch(project.id, { files: next });
             setBrowsing(false);
