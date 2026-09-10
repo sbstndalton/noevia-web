@@ -399,8 +399,8 @@ button:disabled { opacity: .5; cursor: default; }
 
 /* Compact project navigation and one home for reference management. */
 .row-actions { display:flex; flex-shrink:0; align-items:center; opacity:0; }
-.proj-row:hover .row-actions, .proj-row:focus-within .row-actions,
-.chat-row:hover .row-actions, .chat-row:focus-within .row-actions { opacity:1; }
+.proj-row:hover .row-actions, .proj-row:has(:focus-visible) .row-actions,
+.chat-row:hover .row-actions, .chat-row:has(:focus-visible) .row-actions { opacity:1; }
 .sidebar .row-action, .project-children .row-action { display:flex; align-items:center; justify-content:center; flex:0 0 30px; width:30px; height:34px; padding:4px; border:0; border-radius:6px; color:var(--text-secondary); background:none; cursor:pointer; }
 .sidebar .row-action:hover { background:var(--bg-active); color:var(--text-primary); }
 .project-children .nested-chat-title { flex:1; min-width:0; }
@@ -422,11 +422,11 @@ button:disabled { opacity: .5; cursor: default; }
 
 .sidebar .proj-row, .sidebar .chat-row { position:relative; }
 .sidebar .row-actions { position:absolute; right:0; background:var(--bg-sidebar); border-radius:7px; pointer-events:none; }
-.sidebar .proj-row:hover .row-actions, .sidebar .proj-row:focus-within .row-actions,
-.sidebar .chat-row:hover .row-actions, .sidebar .chat-row:focus-within .row-actions { pointer-events:auto; }
-.sidebar .proj-row:hover .project-disclosure, .sidebar .proj-row:focus-within .project-disclosure { padding-right:64px; }
-.sidebar .chat-row:hover .nav-item, .sidebar .chat-row:focus-within .nav-item,
-.sidebar .chat-row:hover .nested-chat-title, .sidebar .chat-row:focus-within .nested-chat-title { padding-right:94px; }
+.sidebar .proj-row:hover .row-actions, .sidebar .proj-row:has(:focus-visible) .row-actions,
+.sidebar .chat-row:hover .row-actions, .sidebar .chat-row:has(:focus-visible) .row-actions { pointer-events:auto; }
+.sidebar .proj-row:hover .project-disclosure, .sidebar .proj-row:has(:focus-visible) .project-disclosure { padding-right:64px; }
+.sidebar .chat-row:hover .nav-item, .sidebar .chat-row:has(:focus-visible) .nav-item,
+.sidebar .chat-row:hover .nested-chat-title, .sidebar .chat-row:has(:focus-visible) .nested-chat-title { padding-right:94px; }
 .edit-project-body .project-name-field { margin-bottom:0; }
 .edit-project-body .project-extra-settings, .edit-project-body .project-storage-summary { margin:0; }
 @media(hover:none) {
@@ -438,3 +438,36 @@ dialog.folder-picker { position:fixed; inset:0; width:min(560px,calc(100vw - 32p
 dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur(3px); }
 
 .project-sources > .rail-label { margin:24px 0 8px; font-size:15px; text-transform:none; letter-spacing:normal; font-weight:600; color:var(--text-primary); }
+
+/* Row actions share the row highlight; only text is clipped beneath them. */
+.sidebar .row-actions, .sidebar .row-action:hover { background:transparent; }
+.sidebar .proj-row, .sidebar .chat-row { border-radius:8px; }
+.sidebar .proj-row:hover, .sidebar .proj-row:has(:focus-visible),
+.sidebar .chat-row:hover, .sidebar .chat-row:has(:focus-visible),
+.sidebar .chat-row.is-active { background:var(--bg-active); }
+.sidebar .chat-row .nav-item, .sidebar .project-children button,
+.sidebar .chat-row.is-active .nav-item { background:transparent; box-shadow:none; }
+.sidebar .project-expand { display:flex; align-items:center; justify-content:center; width:30px; height:36px; padding:5px; flex-shrink:0; border:0; border-radius:6px; background:transparent; color:var(--text-secondary); cursor:pointer; }
+.sidebar .project-disclosure { padding-left:4px; }
+.sidebar-section-head { display:flex; align-items:center; }
+.sidebar-section-head .section-options { opacity:0; }
+.sidebar-section-head:hover .section-options, .sidebar-section-head:has(:focus-visible) .section-options { opacity:1; }
+.recent-children { margin-left:16px; padding-left:8px; border-left:1px solid var(--border); }
+.sidebar-label { display:block; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; }
+.sidebar-label-text { display:inline-block; min-width:100%; white-space:nowrap; }
+.sidebar .proj-row:hover .sidebar-label.is-overflowing,
+.sidebar .proj-row:has(:focus-visible) .sidebar-label.is-overflowing,
+.sidebar .chat-row:hover .sidebar-label.is-overflowing,
+.sidebar .chat-row:has(:focus-visible) .sidebar-label.is-overflowing { text-overflow:clip; mask-image:linear-gradient(to right,#000 calc(100% - 14px),transparent); }
+.sidebar .proj-row:hover .sidebar-label.is-overflowing .sidebar-label-text,
+.sidebar .proj-row:has(:focus-visible) .sidebar-label.is-overflowing .sidebar-label-text,
+.sidebar .chat-row:hover .sidebar-label.is-overflowing .sidebar-label-text,
+.sidebar .chat-row:has(:focus-visible) .sidebar-label.is-overflowing .sidebar-label-text { animation:sidebar-title-scroll var(--label-duration) 800ms ease-in-out infinite alternate; }
+@keyframes sidebar-title-scroll { 0%,15% {transform:translateX(0)} 85%,100% {transform:translateX(calc(var(--label-travel) - 14px))} }
+@media(prefers-reduced-motion:reduce) {
+  .sidebar .sidebar-label-text { animation:none !important; }
+  .sidebar .proj-row:hover .sidebar-label, .sidebar .proj-row:has(:focus-visible) .sidebar-label,
+  .sidebar .chat-row:hover .sidebar-label, .sidebar .chat-row:has(:focus-visible) .sidebar-label { white-space:normal; overflow:visible; mask-image:none; }
+  .sidebar .sidebar-label-text { white-space:inherit; overflow-wrap:anywhere; }
+}
+@media(hover:none) { .sidebar-section-head .section-options {opacity:1;} }

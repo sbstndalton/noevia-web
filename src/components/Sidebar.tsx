@@ -1,10 +1,12 @@
+import { SidebarLabel } from './SidebarLabel';
+import { orderedProjects, recentChats, readSidebarOrder, moveProject } from '../sidebar-order';
 import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { AccountMenu } from './AccountMenu';
 import { ContextMenu, ConfirmDialog } from './ContextMenu';
 import type { MenuItem } from './ContextMenu';
-import { fetchToolboxes } from '../api';
+import { fetchToolboxes, fetchProfile } from '../api';
 import type { McpStatus } from '../api';
 import { ShellIcon } from './ShellIcon';
 import type { ChatMeta, HealthState, Project } from '../types';
@@ -80,6 +82,20 @@ export function Sidebar({
   theme,
   onToggleTheme,
 }: SidebarProps): JSX.Element {
+  const [orderKey,setOrderKey]=useState<string | null>(null);
+  const [order,setOrder]=useState(()=>readSidebarOrder(null));
+  const [sorting,setSorting]=useState<{x:number;y:number} | null>(null);
+  useEffect(()=>{
+    let active=true;
+    void fetchProfile().then(({user})=>{
+      if(!active)return;
+      const key=`cowork-sidebar-order:${user.id}`;
+      try { setOrder(readSidebarOrder(localStorage.getItem(key))); } catch { /* Storage can be disabled. */ }
+      setOrderKey(key);
+    }).catch(()=>undefined);
+    return ()=>{active=false;};
+  },[]);
+  useEffect(()=>{if(orderKey)try{localStorage.setItem(orderKey,JSON.stringify(order));}catch{/* Keep working without persistence. */}},[order,orderKey]);
   const [collapsed, setCollapsed] = useState(false);
   const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
@@ -93,11 +109,12 @@ export function Sidebar({
   // hamburger. Destructive choices route through `confirm` rather than an
   // inline two-step arm, so the subject is named before anything happens.
   const [menu, setMenu] = useState<
-    { kind: 'project' | 'chat'; id: string; projectId: string | null; at: { x: number; y: number } } | null
+    { source?: 'nested' | 'list'; kind: 'project' | 'chat'; id: string; projectId: string | null; at: { x: number; y: number } } | null
   >(null);
   const [confirm, setConfirm] = useState<
     { title: string; body: string; confirmLabel: string; danger?: boolean; run: () => void } | null
   >(null);
+  const [renameSource,setRenameSource]=useState<'nested' | 'list'>('list');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
   // The hover card lives in .spaces, which is overflow-y:auto — an absolutely
@@ -127,7 +144,8 @@ export function Sidebar({
     void fetchToolboxes().then((r) => setMcp(r.mcp ?? null)).catch(() => undefined);
   }, []);
 
-  const startRename = (id: string, current: string) => {
+  const startRename = (id: string, current: string, source: 'nested' | 'list' = 'list') => {
+    setRenameSource(source);
     setRenamingId(id);
     setRenameDraft(current);
   };
@@ -141,19 +159,23 @@ export function Sidebar({
     setRenamingId(null);
   };
 
-  // Pinned first, archived hidden. Archived items stay reachable from the
-  // Projects page's Archived tab rather than vanishing.
-  const visibleProjects = projects
-    .filter((p) => !p.archived && p.name.toLowerCase().includes(query.toLowerCase()))
-    .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
-  const visibleChats = chats
-    .filter((c) => !c.archived && (c.title || '').toLowerCase().includes(query.toLowerCase()))
-    .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
+  const sortedProjects = orderedProjects(projects,order);
+  const visibleProjects = sortedProjects.filter(p=>p.name.toLowerCase().includes(query.toLowerCase()));
+  const visibleChats = recentChats(chats).filter(c=>(c.title || '').toLowerCase().includes(query.toLowerCase()));
+  const manualItems = (p: Project): MenuItem[] => {
+    if(order.sort!=='manual')return [];
+    const peers=sortedProjects.filter(x=>!!x.pinned===!!p.pinned);
+    const index=peers.findIndex(x=>x.id===p.id);
+    return [-1,1].flatMap(direction=>{
+      const neighbor=peers[index+direction];
+      return neighbor ? [{label:direction<0?'Move up':'Move down',onSelect:()=>setOrder(prev=>({...prev,order:moveProject(sortedProjects.map(x=>x.id),p.id,neighbor.id)}))}] : [];
+    });
+  };
 
   const projectMenu = (p: Project): MenuItem[] => [
+    ...manualItems(p),
     { label: 'Rename', icon:<ShellIcon name="edit"/>, onSelect: () => startRename(p.id, p.name) },
     { label: 'Project settings', icon:<ShellIcon name="settings"/>, onSelect: () => onEditProject(p.id) },
-    {label:'Open project',icon:<ShellIcon name="folder"/>,onSelect:()=>{onOpenProject(p.id);setExpanded(false);}},
     { icon:<ShellIcon name="pin"/>, separator:true, label: p.pinned ? 'Unpin' : 'Pin', onSelect: () => onPatchProject(p.id, { pinned: !p.pinned }) },
     {
       label: 'Archive',
@@ -181,7 +203,7 @@ export function Sidebar({
 
   const chatMenu = (c: ChatMeta): MenuItem[] => [
     { label: c.pinned ? 'Unpin' : 'Pin', onSelect: () => onPatchChat(c.projectId ?? null, c.id, { pinned: !c.pinned }) },
-    { label: 'Rename', onSelect: () => startRename(c.id, c.title || '') },
+    { label: 'Rename', onSelect: () => startRename(c.id, c.title || '', menu?.source) },
     {
       label: 'Archive',
       onSelect: () => onPatchChat(c.projectId ?? null, c.id, { archived: true }),
@@ -199,11 +221,49 @@ export function Sidebar({
         }),
     },
   ];
-  const chatActions = (c: ChatMeta, projectId: string | null) => <div className="row-actions">
+  const chatActions = (c: ChatMeta, projectId: string | null, source: 'nested' | 'list' = 'list') => <div className="row-actions">
     <button className="row-action" aria-label={`${c.pinned ? 'Unpin' : 'Pin'} ${c.title || 'chat'}`} title={c.pinned ? 'Unpin chat' : 'Pin chat'} aria-pressed={!!c.pinned} onClick={()=>onPatchChat(projectId,c.id,{pinned:!c.pinned})}><ShellIcon name="pin" size={18}/></button>
     <button className="row-action" aria-label={`Archive ${c.title || 'chat'}`} title="Archive chat" onClick={()=>onPatchChat(projectId,c.id,{archived:true})}><ShellIcon name="archive" size={18}/></button>
-    <button className="row-action" aria-label={`Options for ${c.title || 'chat'}`} aria-haspopup="menu" onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'chat',id:c.id,projectId,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={20}/></button>
+    <button className="row-action" aria-label={`Options for ${c.title || 'chat'}`} aria-haspopup="menu" onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'chat',id:c.id,projectId,source,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={20}/></button>
   </div>;
+  const renderChat = (c: ChatMeta) => (
+              <div
+                key={c.id}
+                className={`chat-row${activeChatId === c.id && activeView === 'chat' ? ' is-active' : ''}`}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setMenu({ kind: 'chat', id: c.id, projectId: c.projectId ?? null, at: { x: e.clientX, y: e.clientY } });
+                }}
+              >
+                {renamingId === c.id && renameSource==='list' ? (
+                  <input
+                    className="proj-rename-input"
+                    value={renameDraft}
+                    autoFocus
+                    onFocus={(e) => e.currentTarget.select()}
+                    onChange={(e) => setRenameDraft(e.target.value)}
+                    onBlur={() => commitRename(c.projectId ?? null, true)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitRename(c.projectId ?? null, true);
+                      if (e.key === 'Escape') setRenamingId(null);
+                    }}
+                  />
+                ) : (
+                  <button
+                    className="nav-item"
+                    onClick={() => onOpenChat(c.id, c.projectId ?? null)}
+                    title={c.title}
+                  >
+                    <ShellIcon name={c.pinned ? 'pin' : 'chat'} size={17}/>
+                    <SidebarLabel text={c.title || 'New chat'}/>
+                    {streamingChats[c.id] && (
+                      <span className="chat-working" aria-label="Still generating"><i /><i /><i /></span>
+                    )}
+                  </button>
+                )}
+                {chatActions(c,c.projectId ?? null)}
+              </div>
+  );
   return (
     <div
       className={`sidebar${activeView === 'diary' ? ' diary-sidebar' : ''}${expanded ? ' is-expanded' : ''}${collapsed ? ' is-collapsed' : ''}`}
@@ -234,76 +294,42 @@ export function Sidebar({
       </div>
 
       {SHOW_PLACEHOLDER_NAV && <nav className="shell-extra-nav" aria-label="Explore noevia">{[['Scheduled','clock'],['Plugins','plugins'],['Explore','explore']].map(([label,icon])=><button className="nav-item" key={label} onClick={()=>onPreview(label)}><ShellIcon name={icon}/><span className="nav-name">{label}</span></button>)}</nav>}
-      <div className="rail-tools"><button className="shell-icon-button" aria-label="Search projects and chats" onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(true);}}><ShellIcon name="search"/></button><button className="shell-icon-button" aria-label="Show pinned projects" onClick={()=>{setCollapsed(false);setExpanded(true);setClosedGroups(g=>({...g,Pinned:false}));}}><ShellIcon name="pin"/></button></div>
+      <div className="rail-tools"><button className="shell-icon-button" aria-label="Search projects and chats" onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(true);}}><ShellIcon name="search"/></button><button className="shell-icon-button" aria-label="Show pinned items" onClick={()=>{setCollapsed(false);setExpanded(true);setClosedGroups(g=>({...g,Pinned:false}));}}><ShellIcon name="pin"/></button></div>
       <div className="sidebar-history">
       {['Pinned','Projects'].map(group => {
         const entries = visibleProjects.filter(p=>group==='Pinned'?p.pinned:!p.pinned);
-        if(group==='Pinned' && !entries.length)return null;
+        if(group==='Pinned' && !entries.length && !visibleChats.some(c=>c.pinned))return null;
         return <div className="spaces" key={group}>
-          <button className="section-label section-toggle" aria-expanded={!closedGroups[group]} onClick={()=>setClosedGroups(g=>({...g,[group]:!g[group]}))}>{group}<span>{closedGroups[group]?'›':'⌄'}</span></button>
+          <div className="sidebar-section-head"><button className="section-label section-toggle" aria-label={`${group} section`} aria-expanded={!closedGroups[group]} onClick={()=>setClosedGroups(g=>({...g,[group]:!g[group]}))}>{group}</button>{group==='Projects' && <button className="row-action section-options" aria-label="Project ordering" aria-haspopup="menu" onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setSorting({x:r.left,y:r.bottom+4});}}><ShellIcon name="more" size={20}/></button>}</div>
+          {group==='Pinned' && (!closedGroups[group] || query) && visibleChats.filter(c=>c.pinned).map(renderChat)}
           {(!closedGroups[group] || query) && entries.map(p=><div className="project-branch" key={p.id}>
             <div className={`proj-row${activeProjectId===p.id && activeView!=='projects'?' is-active':''}`} onContextMenu={e=>{e.preventDefault();setMenu({kind:'project',id:p.id,projectId:null,at:{x:e.clientX,y:e.clientY}});}}>
-              {renamingId===p.id ? <input className="proj-rename-input" aria-label="Project name" value={renameDraft} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(null,false)} onKeyDown={e=>{if(e.key==='Enter')commitRename(null,false);if(e.key==='Escape')setRenamingId(null);}}/> : <button className="project-disclosure" aria-label={`Expand chats in ${p.name}`} aria-expanded={!!openProjects[p.id]} onMouseEnter={e=>openHover(p.id,e.currentTarget)} onMouseLeave={closeHover} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:!prev[p.id]}));}}><ProjectIcon project={p} size={18}/><span className="nav-name">{p.name}</span><span className="branch-chevron">{openProjects[p.id]?'⌄':'›'}</span></button>}
+              {renamingId===p.id ? <input className="proj-rename-input" aria-label="Project name" value={renameDraft} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(null,false)} onKeyDown={e=>{if(e.key==='Enter')commitRename(null,false);if(e.key==='Escape')setRenamingId(null);}}/> : <><button className="project-expand" aria-label={`${openProjects[p.id]?'Collapse':'Expand'} chats in ${p.name}`} aria-expanded={!!openProjects[p.id]} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:!prev[p.id]}));}}><ProjectIcon project={p} size={18}/></button><button className="project-disclosure" aria-label={`Open ${p.name}`} onMouseEnter={e=>openHover(p.id,e.currentTarget)} onMouseLeave={closeHover} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:true}));onOpenProject(p.id);setExpanded(false);}}><SidebarLabel text={p.name}/></button></>}
+
               <div className="row-actions">
                 <button className="row-action" aria-label={`Options for ${p.name}`} aria-haspopup="menu" onClick={e=>{closeHover();const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'project',id:p.id,projectId:null,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={22}/></button>
                 <button className="row-action" aria-label={`New chat in ${p.name}`} title="New chat in project" onClick={()=>{onNewProjectChat(p.id);setExpanded(false);}}><ShellIcon name="compose" size={20}/></button>
               </div>
             </div>
             {openProjects[p.id] && <div className="project-children">
-              {(p.chats || []).filter(c=>!c.archived).sort((a,b)=>Number(!!b.pinned)-Number(!!a.pinned)).map(c=><div className="chat-row" key={c.id}>
-                {renamingId===c.id ? <input className="proj-rename-input" aria-label="Chat name" value={renameDraft} autoFocus onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(p.id,true)} onKeyDown={e=>{if(e.key==='Enter')commitRename(p.id,true);if(e.key==='Escape')setRenamingId(null);}}/> : <button className={`nested-chat-title${activeChatId===c.id?' is-active':''}`} onClick={()=>{onOpenChat(c.id,p.id);setExpanded(false);}}><span>{c.title || 'New chat'}</span>{streamingChats[c.id] && <span aria-label="Still generating"> ···</span>}</button>}
-                {chatActions(c,p.id)}
+              {(p.chats || []).filter(c=>!c.archived && !c.pinned).sort((a,b)=>b.updatedAt-a.updatedAt).map(c=><div className="chat-row" key={c.id}>
+                {renamingId===c.id && renameSource==='nested' ? <input className="proj-rename-input" aria-label="Chat name" value={renameDraft} autoFocus onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(p.id,true)} onKeyDown={e=>{if(e.key==='Enter')commitRename(p.id,true);if(e.key==='Escape')setRenamingId(null);}}/> : <button className={`nested-chat-title${activeChatId===c.id?' is-active':''}`} onClick={()=>{onOpenChat(c.id,p.id);setExpanded(false);}}><SidebarLabel text={c.title || 'New chat'}/>{streamingChats[c.id] && <span aria-label="Still generating"> ···</span>}</button>}
+                {chatActions(c,p.id,'nested')}
               </div>)}
-              {!p.chats?.filter(c=>!c.archived).length && <p>No chats yet</p>}
+              {!p.chats?.some(c=>!c.archived && !c.pinned) && <p>{p.chats?.some(c=>!c.archived && c.pinned)?'Chats pinned above':'No chats yet'}</p>}
             </div>}
           </div>)}
           {!entries.length && group==='Projects' && <p className="side-hint">{query?'No matching projects.':'Create a project from the Projects page.'}</p>}
         </div>;
       })}
 
-      {visibleChats.length > 0 && (
+      {visibleChats.some(c=>!c.pinned) && (
         <>
           <div className="divider" />
           <div className="spaces">
-            <button className="section-label section-toggle" aria-expanded={!closedGroups.Chats} onClick={()=>setClosedGroups(g=>({...g,Chats:!g.Chats}))}>Recent chats<span>{closedGroups.Chats?'›':'⌄'}</span></button>
-            {(!closedGroups.Chats || query) && visibleChats.slice(0, 12).map((c) => (
-              <div
-                key={c.id}
-                className={`chat-row${activeChatId === c.id && activeView === 'chat' ? ' is-active' : ''}`}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  setMenu({ kind: 'chat', id: c.id, projectId: c.projectId ?? null, at: { x: e.clientX, y: e.clientY } });
-                }}
-              >
-                {renamingId === c.id && !openProjects[c.projectId || ''] ? (
-                  <input
-                    className="proj-rename-input"
-                    value={renameDraft}
-                    autoFocus
-                    onFocus={(e) => e.currentTarget.select()}
-                    onChange={(e) => setRenameDraft(e.target.value)}
-                    onBlur={() => commitRename(c.projectId ?? null, true)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') commitRename(c.projectId ?? null, true);
-                      if (e.key === 'Escape') setRenamingId(null);
-                    }}
-                  />
-                ) : (
-                  <button
-                    className="nav-item"
-                    onClick={() => onOpenChat(c.id, c.projectId ?? null)}
-                    title={c.title}
-                  >
-                    <ShellIcon name={c.pinned ? 'pin' : 'chat'} size={17}/>
-                    <span className="nav-name">{c.title}</span>
-                    {streamingChats[c.id] && (
-                      <span className="chat-working" aria-label="Still generating"><i /><i /><i /></span>
-                    )}
-                  </button>
-                )}
-                {chatActions(c,c.projectId ?? null)}
-              </div>
-            ))}
+            <button className="section-label section-toggle" aria-expanded={!closedGroups.Chats} onClick={()=>setClosedGroups(g=>({...g,Chats:!g.Chats}))}>Recent chats</button>
+            {(!closedGroups.Chats || query) && <div className="recent-children">{visibleChats.filter(c=>!c.pinned).slice(0,12).map(renderChat)}</div>}
+
           </div>
         </>
       )}
@@ -345,6 +371,10 @@ export function Sidebar({
           </div>
         );
       })()}
+      {sorting && <ContextMenu at={sorting} onClose={()=>setSorting(null)} items={[
+        {label:`${order.sort==='recent'?'✓ ':''}Last used`,onSelect:()=>setOrder(prev=>({...prev,sort:'recent'}))},
+        {label:`${order.sort==='manual'?'✓ ':''}Manual order`,onSelect:()=>setOrder(prev=>({...prev,sort:'manual',order:prev.order.length ? prev.order : sortedProjects.map(p=>p.id)}))},
+      ]}/>}
       {menu && (
         <ContextMenu
           at={menu.at}
