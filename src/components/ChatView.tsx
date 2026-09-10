@@ -232,11 +232,6 @@ export function ChatView({
           </span>
         </div>
         <div className="header-controls">
-          <button className="model-pill" onClick={openModels} title="Switch model · download · manage">
-            <span className="model-pill-dot" />
-            <span className="model-pill-label">{modelLabel}</span>
-            <ChevronDown />
-          </button>
           <button className="icon-btn" onClick={onOpenSettings} title="Settings">
             <SlidersIcon size={15} />
           </button>
@@ -370,8 +365,7 @@ export function ChatView({
       </div>
 
       <div className="composer">
-        <div className="composer-inner">
-          <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={setActionStatus} />
+        <div className="composer-inner chat-composer-inner">
           <textarea
             className="composer-input"
             aria-label="Message"
@@ -387,6 +381,11 @@ export function ChatView({
               }
             }}
           />
+          <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={setActionStatus} />
+          <button className="model-pill composer-model" onClick={openModels} title={`Choose model · ${modelLabel}`} aria-label={`Choose model: ${modelLabel}`}>
+            <span className="model-pill-label">{modelLabel}</span>
+            <ChevronDown />
+          </button>
           {streaming ? (
             <button className="send-btn" onClick={onStop} title="Stop generating">
               <span aria-hidden="true">&#9632;</span>
@@ -399,8 +398,7 @@ export function ChatView({
         </div>
         {actionStatus && <div className="composer-action-status" role="status">{actionStatus}</div>}
         <div className="composer-hint">
-          Replies with {modelLabel}
-          {projectName ? ` · project context from ${projectName} applied` : ' · Enter to send, Shift + Enter for a new line'}
+          {projectName ? `Project context from ${projectName} applied` : 'Enter to send, Shift + Enter for a new line'}
         </div>
       </div>
     </div>
