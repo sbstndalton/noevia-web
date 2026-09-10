@@ -21,8 +21,8 @@ function fmtCount(n: number | null): string {
  *  Purely presentational: App owns the /api/stats poll loop (one poller total). */
 export function StatsBar({ stats }: StatsBarProps): JSX.Element {
   return (
-    <details className="stats-disclosure">
-      <summary><span className={`stats-live-dot${stats?.up ? '' : ' down'}`} />Inference details</summary>
+    <section className="stats-disclosure" aria-label="Inference details">
+
       <div className="stats-bar">
       <span className={`stats-live-dot${stats?.up ? '' : ' down'}`} />
       <span className="stats-item">
@@ -61,9 +61,13 @@ export function StatsBar({ stats }: StatsBarProps): JSX.Element {
         <span className="stats-label">VRAM</span>
         <span className="stats-value">{fmt(stats?.vramGb ?? null, 1, ' GB')}</span>
       </span>
+      {(stats?.mtp || []).map(m=><span className="stats-mtp" key={m.model} title={`${m.model} · cumulative accepted draft tokens / proposed draft tokens for this loaded backend`}>
+        <span>MTP acceptance · {m.rate == null ? 'Awaiting backend counters' : `${(m.rate*100).toFixed(1)}%`}</span>
+        <progress aria-label={`MTP acceptance for ${m.model}`} max={1} value={m.rate ?? undefined} />
+      </span>)}
       <span className="stats-grow" />
       <span className="stats-src">Inference</span>
       </div>
-    </details>
+    </section>
   );
 }

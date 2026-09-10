@@ -154,6 +154,7 @@ export interface HealthState {
 }
 
 export interface InstalledModel {
+  mtp?: {supported:boolean;enabled:boolean;reason:string};
   name: string;
   sizeGB: number | null;
   loaded: boolean;
@@ -198,6 +199,7 @@ export interface RouteRule {
 
 /** Optional live statistics supplied by a model-management adapter. */
 export interface LiveStats {
+  mtp?: {model:string;rate:number|null;drafted:number|null;accepted:number|null}[];
   up: boolean;
   tokensPerSecond: number | null;
   timeToFirstToken: number | null;

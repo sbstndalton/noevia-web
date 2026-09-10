@@ -1,3 +1,4 @@
+import { MtpControl } from './MtpControl';
 import { Fragment, useEffect, useState } from 'react';
 import { useModalDialog } from './useModalDialog';
 import type { JSX } from 'react';
@@ -388,6 +389,7 @@ function SwitchTab({
           {activeProvider ? ` via ${activeProvider.label}` : ''}
         </p>
       )}
+      {activeProvider?.managed && models.find(m=>m.name===activeProject?.model) && <MtpControl key={activeProject?.model} model={models.find(m=>m.name===activeProject?.model)!} onChanged={()=>{refresh();onChanged();}} />}
       {!activeProvider?.managed && (
         <p className="rail-empty" style={{ margin: 0 }}>
           This provider does not expose model management. Enter its model ID above;
@@ -581,14 +583,15 @@ function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
   const act = async (verb: 'load' | 'unload' | 'delete', name: string) => {
     setBusy(name);
     try {
-      await apiFetch(`/api/models/${verb}`, {
+      const response = await apiFetch(`/api/models/${verb}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
       });
+      if (!response.ok) throw new Error((await response.json()).error || `${verb} failed`);
       refresh();
       onChanged();
-    } finally {
+    } catch (error) { setErr(error instanceof Error ? error.message : 'Model operation failed'); } finally {
       setBusy(null);
       setConfirmName(null);
     }
@@ -604,6 +607,7 @@ function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
           <div className="model-name-group">
             <span className="model-name">{m.name}</span>
             {m.sizeGB != null && <span className="model-quant">{m.sizeGB} GB</span>}
+            <MtpControl model={m} onChanged={()=>{refresh();onChanged();}} />
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             {confirmName === m.name ? (

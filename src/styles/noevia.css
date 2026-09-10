@@ -549,3 +549,10 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
 .diary-activity { color: var(--text-secondary); margin: 8px 0 16px; font-size: 13px; }
 .diary-activity summary { cursor: pointer; }
 .diary-activity ol { padding-left: 22px; line-height: 1.7; }
+
+.stats-disclosure { margin-top:auto; padding-top: 4px; border-top:1px solid var(--border); }
+.stats-mtp { display:flex; flex-direction:column; gap:4px; max-width:240px; }
+.stats-mtp progress { width:160px; height:6px; accent-color:var(--accent); }
+.model-mtp { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 0; font-family:var(--font-ui); }
+.model-mtp small { flex-basis:100%; color:var(--text-secondary); }
+.model-mtp select { background:var(--bg-surface); color:var(--text-primary); border:1px solid var(--border); padding:4px; border-radius:6px; }

@@ -180,11 +180,15 @@ export default function App(): JSX.Element {
 
   // Live engine stats — the bottom bar refreshes in near-real-time.
   useEffect(() => {
-    let alive = true;
-    const tick = () =>
-      fetchStats()
+    let alive = true, pending = false;
+    const tick = () => {
+      if (pending) return;
+      pending = true;
+      void fetchStats()
         .then((s) => alive && setStats(s))
-        .catch(() => alive && setStats((prev) => (prev ? { ...prev, up: false } : prev)));
+        .catch(() => alive && setStats((prev) => (prev ? { ...prev, up: false, mtp: [] } : prev)))
+        .finally(() => { pending = false; });
+    };
     tick();
     const t = setInterval(tick, 2500);
     return () => {
@@ -801,7 +805,7 @@ export default function App(): JSX.Element {
       )}
 
       </div>
-      {view.kind !== 'diary' && <StatsBar stats={stats} />}
+      <StatsBar stats={stats} />
       </div>
       {view.kind !== 'diary' && <button className="inspector-toggle" aria-expanded={inspectorOpen} aria-controls="noevia-inspector" aria-label={inspectorOpen?'Close context inspector':'Open context inspector'} onClick={()=>setInspectorOpen(!inspectorOpen)}><ShellIcon name="panel" size={18}/></button>}
       {editingProjectId && (() => {
