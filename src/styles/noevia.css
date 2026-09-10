@@ -498,6 +498,12 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
 .composer-tool-option { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; }
 .composer-tool-option input { margin-top: 4px; flex-shrink: 0; }
 .composer-action-status { max-width: 744px; margin: 8px auto 0; color: var(--text-secondary); font-size: 12px; overflow-wrap: anywhere; }
-.chat-composer-inner { display: grid; grid-template-columns: 32px minmax(0, 1fr) 32px; gap: 10px; }
-.chat-composer-inner > .composer-input { grid-column: 1 / -1; width: 100%; box-sizing: border-box; }
+.composer-inner.chat-composer-inner { display: grid; grid-template-columns: 32px minmax(0, 1fr) 32px; gap: 10px; }
+.chat-composer-inner > .composer-input { grid-column: 1 / -1; grid-row: 1; width: 100%; box-sizing: border-box; }
+.chat-composer-inner > .composer-actions { grid-column: 1; grid-row: 2; }
+.chat-composer-inner > .composer-model { grid-column: 2; grid-row: 2; }
+.chat-composer-inner > .send-btn { grid-column: 3; grid-row: 2; }
+.composer-model:disabled { opacity: 1; color: var(--text-secondary); cursor: default; }
+.composer-model:disabled .model-pill-label { color: inherit; }
+.composer-model:disabled:hover { background: transparent; }
 .chat-composer-inner > .composer-model { justify-self: end; align-self: center; min-width: 0; max-width: 100%; min-height: 32px; }

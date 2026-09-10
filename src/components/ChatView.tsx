@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import type { Message, MessageStats, ToolCallView, Project } from '../types';
-import { ChevronDown, ChevronLeft, SendIcon, SlidersIcon } from './Icons';
+import { ChevronLeft, SendIcon, SlidersIcon } from './Icons';
+import { ComposerModel } from './ComposerModel';
 import { MarkdownPreview } from './DiaryModal';
 import { ModelPopup } from './ModelPopup';
 import { ComposerActions } from './ComposerActions';
@@ -382,10 +383,7 @@ export function ChatView({
             }}
           />
           <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={setActionStatus} />
-          <button className="model-pill composer-model" onClick={openModels} title={`Choose model · ${modelLabel}`} aria-label={`Choose model: ${modelLabel}`}>
-            <span className="model-pill-label">{modelLabel}</span>
-            <ChevronDown />
-          </button>
+          <ComposerModel label={modelLabel} onClick={openModels} />
           {streaming ? (
             <button className="send-btn" onClick={onStop} title="Stop generating">
               <span aria-hidden="true">&#9632;</span>

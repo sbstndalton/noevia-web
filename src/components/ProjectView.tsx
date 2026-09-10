@@ -1,4 +1,5 @@
 import { ComposerActions } from './ComposerActions';
+import { ComposerModel } from './ComposerModel';
 import { sourceStatus } from '../source-status';
 import { FolderPicker } from './FolderPicker';
 import { ShellIcon } from './ShellIcon';
@@ -35,6 +36,7 @@ interface ProjectViewProps {
   streamingChats: Record<string, true>;
   onRefresh: () => void | Promise<void>;
   onOpenModels: () => void;
+  modelLabel: string;
 }
 
 function timeAgo(ts: number): string {
@@ -59,6 +61,7 @@ export function ProjectView({
   streamingChats,
   onRefresh,
   onOpenModels,
+  modelLabel,
 }: ProjectViewProps): JSX.Element {
   const [composerBusy, setComposerBusy] = useState(false);
   const [composerStatus, setComposerStatus] = useState('');
@@ -244,8 +247,7 @@ export function ProjectView({
               so the composer is present rather than a button that empties into
               a blank chat. */}
           <div className="project-composer">
-            <div className="composer-inner">
-              <ComposerActions key={project.id} project={project} disabled={composerBusy || busyDocs || syncing} onChanged={onRefresh} onModels={onOpenModels} onBusy={setComposerBusy} onStatus={setComposerStatus} />
+            <div className="composer-inner chat-composer-inner">
               <textarea
                 className="composer-input"
                 rows={1}
@@ -260,6 +262,8 @@ export function ProjectView({
                   }
                 }}
               />
+              <ComposerActions key={project.id} project={project} disabled={composerBusy || busyDocs || syncing} onChanged={onRefresh} onModels={onOpenModels} onBusy={setComposerBusy} onStatus={setComposerStatus} />
+              <ComposerModel label={modelLabel} onClick={onOpenModels} />
               <button className="send-btn" onClick={send} disabled={!draft.trim() || composerBusy || busyDocs || syncing} title="Send" aria-label="Send">
                 <SendIcon />
               </button>

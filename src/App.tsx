@@ -743,6 +743,7 @@ export default function App(): JSX.Element {
 
       {view.kind === 'project' && activeProject && (
         <ProjectView
+          modelLabel={activeProject.routing === 'auto' ? 'Auto (Fast/Smart)' : activeProject.model || models.find(m => m.loaded)?.name || 'local model'}
           onOpenModels={() => setPopupOpen(true)}
           project={activeProject}
           streamingChats={streamingChats}
