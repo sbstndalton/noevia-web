@@ -90,7 +90,7 @@ export const projectImageUrl = (id: string, assetId: string) =>
 /** Upload a source file into the project's own storage folder. */
 export const uploadProjectFile = (id: string, body: { name: string; dataBase64: string }) =>
   postJson<{ name: string; path: string; bytes: number }>(
-    `/api/projects/${encodeURIComponent(id)}/upload`, body);
+    `/api/projects/${encodeURIComponent(id)}/upload?background=1`, body);
 
 /** Delete one source file from the project's own folder — removes it from
  *  storage, not just from the project. */
@@ -105,12 +105,12 @@ export const deleteProjectFile = (id: string, path: string) =>
  *  ordinary source. */
 export const uploadProjectDocument = (id: string, body: { name: string; dataBase64: string }) =>
   postJson<{ name: string; pages: number; characters: number; truncated: boolean }>(
-    `/api/projects/${encodeURIComponent(id)}/documents`, body);
+    `/api/projects/${encodeURIComponent(id)}/documents?background=1`, body);
 
 /** Re-read every attached folder and refresh the project's sources from it. */
 export const syncProjectSources = (id: string) =>
   postJson<{ files: { name: string; source: string | null; bytes: number }[]; skipped: { folder: string; file?: string; reason: string; retained?: boolean }[] }>(
-    `/api/projects/${encodeURIComponent(id)}/sources/sync`, {});
+    `/api/projects/${encodeURIComponent(id)}/sources/sync?background=1`, {});
 /** Create one directory in connected storage. */
 export const createStorageFolder = (path: string) =>
   postJson<{ path: string; existed: boolean }>('/api/integrations/storage/folder', { path });
@@ -143,6 +143,17 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(await describeFailure(res, `POST ${url} failed`));
+  if (res.status === 202) {
+    const { poll } = await res.json() as { poll: string };
+    // Source processing can outlive a proxy request. Each poll is short and authenticated.
+    for (;;) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const job = await getJson<{ done: boolean; status?: number; body?: T & { error?: string } }>(poll);
+      if (!job.done) continue;
+      if ((job.status || 500) >= 400) throw new Error(job.body?.error || 'Source processing failed');
+      return job.body as T;
+    }
+  }
   return res.json() as Promise<T>;
 }
 
