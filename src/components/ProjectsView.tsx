@@ -3,6 +3,8 @@ import { useModalDialog } from './useModalDialog';
 import type { JSX } from 'react';
 import type { Project } from '../types';
 import { ShellIcon } from './ShellIcon';
+import { ProjectIcon, ProjectIdentityPicker } from './ProjectIdentity';
+import { ContextMenu, ConfirmDialog } from './ContextMenu';
 import { PlusIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
 import { readTextSources, describeRejection } from '../sources';
@@ -11,7 +13,8 @@ interface ProjectsViewProps {
   projects: Project[];
   onOpenProject: (id: string) => void;
   onPatch: (id: string, patch: Partial<Project>) => void;
-  onCreate: (body: { name: string; goal: string; instructions: string; files: { name: string; content: string }[] }) => Promise<void>;
+  onCreate: (body: { icon?: string; color?: string; name: string; goal: string; instructions: string; files: { name: string; content: string }[] }) => Promise<void>;
+  onEdit: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
@@ -26,8 +29,9 @@ function timeAgo(ts: number): string {
   return `${days} days ago`;
 }
 
-export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDelete }: ProjectsViewProps): JSX.Element {
+export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDelete, onEdit }: ProjectsViewProps): JSX.Element {
   const [creating, setCreating] = useState(false);
+  const [menu, setMenu] = useState<{project: Project; at:{x:number;y:number}} | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<'active' | 'archived'>('active');
@@ -98,36 +102,9 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
                 }}
               >
                 <div className="project-card-top">
-                  <span className="project-badge" aria-hidden="true"><ShellIcon name="folder" size={22}/></span>
+                  <span className="project-badge" aria-hidden="true"><ProjectIcon project={p} size={24}/></span>
                   <span className="project-card-name">{p.name}</span>
-                  {confirmDelete === p.id ? (
-                    <span className="project-card-del" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        className="popup-tab"
-                        style={{ border: '1px solid var(--accent)', color: 'var(--accent-text)' }}
-                        onClick={() => {
-                          onDelete(p.id);
-                          setConfirmDelete(null);
-                        }}
-                      >
-                        delete
-                      </button>
-                      <button className="popup-tab" style={{ border: '1px solid var(--border)' }} onClick={() => setConfirmDelete(null)}>
-                        keep
-                      </button>
-                    </span>
-                  ) : (
-                    <button
-                      className="project-card-x"
-                      title="Delete project"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setConfirmDelete(p.id);
-                      }}
-                    >
-                      ✕
-                    </button>
-                  )}
+                  <button className="project-card-options" aria-label={`Project options for ${p.name}`} onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setMenu({project:p,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="explore"/></button>
                 </div>
                 {p.goal && <p className="project-card-goal">{p.goal}</p>}
                 <div className="project-card-meta">
@@ -149,6 +126,13 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
         )}
       </div>
 
+      {menu && <ContextMenu at={menu.at} onClose={()=>setMenu(null)} items={[
+        {label:'Project settings',icon:<ShellIcon name="settings"/>,onSelect:()=>onEdit(menu.project.id)},
+        {label:menu.project.pinned?'Unpin project':'Pin project',icon:<ShellIcon name="pin"/>,onSelect:()=>onPatch(menu.project.id,{pinned:!menu.project.pinned})},
+        {label:menu.project.archived?'Restore project':'Archive project',icon:<ShellIcon name="folder"/>,onSelect:()=>onPatch(menu.project.id,{archived:!menu.project.archived})},
+        {label:'Delete project',danger:true,onSelect:()=>setConfirmDelete(menu.project.id)}
+      ]}/>}
+      {confirmDelete && <ConfirmDialog title={`Delete ${projects.find(p=>p.id===confirmDelete)?.name || 'project'}?`} body="This permanently deletes the project and its chats. This cannot be undone." confirmLabel="Delete project" danger onCancel={()=>setConfirmDelete(null)} onConfirm={()=>{onDelete(confirmDelete);setConfirmDelete(null);}}/>}
       {creating && (
         <CreateProjectModal
           onClose={() => setCreating(false)}
@@ -167,6 +151,8 @@ function CreateProjectModal({
   onCreate: ProjectsViewProps['onCreate'];
 }): JSX.Element {
   const dialog = useModalDialog();
+  const [icon, setIcon] = useState('folder');
+  const [color, setColor] = useState('default');
   const [name, setName] = useState('');
   const [goal, setGoal] = useState('');
   const [instructions, setInstructions] = useState('');
@@ -198,7 +184,7 @@ function CreateProjectModal({
     setBusy(true);
     setErr(null);
     try {
-      await onCreate({ name: name.trim(), goal: goal.trim(), instructions, files });
+      await onCreate({ icon, color, name: name.trim(), goal: goal.trim(), instructions, files });
       onClose();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'create failed');
@@ -215,6 +201,7 @@ function CreateProjectModal({
           <button className="modal-x" onClick={onClose} title="Close">✕</button>
         </div>
 
+        <ProjectIdentityPicker icon={icon} color={color} onChange={(i,c)=>{setIcon(i);setColor(c);}}/>
         <label className="modal-label" htmlFor="proj-name">What are you working on?</label>
         <input
           id="proj-name"

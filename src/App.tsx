@@ -552,7 +552,7 @@ export default function App(): JSX.Element {
   }, [view, handleSend]);
 
   const handleCreateProject = useCallback(
-    async (body: { name: string; goal: string; instructions: string; files: ProjectFile[] }) => {
+    async (body: { icon?: string; color?: string; name: string; goal: string; instructions: string; files: ProjectFile[] }) => {
       // Honor the setup wizard's "Auto Fast/Smart for new projects" preference.
       const defaultRouting =
         localStorage.getItem('cowork-default-routing') === 'auto' ? ('auto' as const) : undefined;
@@ -728,7 +728,7 @@ export default function App(): JSX.Element {
 
       {view.kind === 'preview' && <FeaturePreview title={view.title}/> }
       {view.kind === 'projects' && (
-        <ProjectsView
+        <ProjectsView onEdit={setEditingProjectId}
           onPatch={handlePatchProject}
           projects={projects}
           onOpenProject={(id) => setView({ kind: 'project', id })}

@@ -1,3 +1,4 @@
+import { ProjectIcon } from './ProjectIdentity';
 import { useState } from 'react';
 import type { JSX } from 'react';
 import type { Project } from '../types';
@@ -142,7 +143,7 @@ export function ProjectView({
       <div className="project-layout">
         <div className="project-main">
           <header className="project-head">
-            <h1 className="project-title">{project.name}</h1>
+            <h1 className="project-title"><ProjectIcon project={project} size={30}/>{project.name}</h1>
             {project.goal && <p className="project-goal">{project.goal}</p>}
           </header>
 

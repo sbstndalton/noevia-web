@@ -181,6 +181,8 @@ export function deleteProvider(id: string): Promise<{ ok: boolean }> {
 // ── Projects ─────────────────────────────────────────────────────────────────
 
 export function createProject(body: {
+  icon?: string;
+  color?: string;
   name: string;
   goal?: string;
   instructions?: string;
@@ -201,7 +203,7 @@ export function deleteProject(projectId: string): Promise<{ ok: true }> {
 
 export function saveProjectConfig(
   projectId: string,
-  patch: Partial<Pick<Project, 'name' | 'goal' | 'instructions' | 'model' | 'memories' | 'files'>> & {
+  patch: Partial<Pick<Project, 'name' | 'goal' | 'instructions' | 'model' | 'memories' | 'files' | 'icon' | 'color'>> & {
     provider?: string;
     routing?: 'manual' | 'auto';
     toolboxes?: string[];

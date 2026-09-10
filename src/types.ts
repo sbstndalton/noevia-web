@@ -51,6 +51,8 @@ export interface ProjectAsset {
 }
 
 export interface Project {
+  icon?: string;
+  color?: string;
   id: string;
   name: string;
   goal: string;

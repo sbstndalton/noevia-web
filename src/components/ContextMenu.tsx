@@ -6,6 +6,7 @@ export interface MenuItem {
   onSelect: () => void;
   /** Renders in --danger and sits below a separator. */
   danger?: boolean;
+  separator?: boolean;
   icon?: ReactNode;
 }
 
@@ -24,6 +25,7 @@ export function ContextMenu({
 }): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState(at);
+  const trigger = useRef(document.activeElement as HTMLElement | null);
 
   // Flip back inside the viewport rather than letting the menu run off the
   // edge — a right-click near the bottom right is the normal case, not an edge
@@ -33,8 +35,8 @@ export function ContextMenu({
     if (!el) return;
     const r = el.getBoundingClientRect();
     setPos({
-      x: Math.min(at.x, window.innerWidth - r.width - 8),
-      y: Math.min(at.y, window.innerHeight - r.height - 8),
+      x: Math.max(8, Math.min(at.x, window.innerWidth - r.width - 8)),
+      y: Math.max(8, Math.min(at.y, window.innerHeight - r.height - 8)),
     });
   }, [at.x, at.y]);
 
@@ -42,7 +44,17 @@ export function ContextMenu({
     const down = (e: PointerEvent) => {
       if (!ref.current?.contains(e.target as Node)) onClose();
     };
-    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); trigger.current?.focus(); }
+      const buttons = Array.from(ref.current?.querySelectorAll<HTMLButtonElement>('button') || []);
+      const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      if (['ArrowDown','ArrowUp','Home','End'].includes(e.key)) {
+        e.preventDefault();
+        const next = e.key === 'Home' ? 0 : e.key === 'End' ? buttons.length-1 : (index + (e.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length;
+        buttons[next]?.focus();
+      }
+      if (e.key === 'Tab') onClose();
+    };
     document.addEventListener('pointerdown', down);
     document.addEventListener('keydown', key);
     return () => {
@@ -61,10 +73,10 @@ export function ContextMenu({
         <button
           key={i}
           role="menuitem"
-          className={`ctx-item${it.danger ? ' is-danger' : ''}`}
+          className={`ctx-item${it.danger ? ' is-danger' : ''}${it.separator ? ' has-separator' : ''}`}
           onClick={() => { onClose(); it.onSelect(); }}
         >
-          {it.label}
+          {it.icon}<span>{it.label}</span>
         </button>
       ))}
     </div>

@@ -1,3 +1,4 @@
+import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { AccountMenu } from './AccountMenu';
@@ -77,6 +78,9 @@ export function Sidebar({
   theme,
   onToggleTheme,
 }: SidebarProps): JSX.Element {
+  const [collapsed, setCollapsed] = useState(false);
+  const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
+  const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
   const [searching, setSearching] = useState(false);
   // Below 600px the sidebar collapses to an icon rail, which hid the project
   // and chat lists entirely — a free chat was then unreachable from anywhere
@@ -145,9 +149,10 @@ export function Sidebar({
     .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
 
   const projectMenu = (p: Project): MenuItem[] => [
-    { label: p.pinned ? 'Unpin' : 'Pin', onSelect: () => onPatchProject(p.id, { pinned: !p.pinned }) },
-    { label: 'Rename', onSelect: () => startRename(p.id, p.name) },
-    { label: 'Edit project', onSelect: () => onEditProject(p.id) },
+    { label: 'Rename', icon:<ShellIcon name="edit"/>, onSelect: () => startRename(p.id, p.name) },
+    { label: 'Project settings', icon:<ShellIcon name="settings"/>, onSelect: () => onEditProject(p.id) },
+    {label:'Open project',icon:<ShellIcon name="folder"/>,onSelect:()=>onOpenProject(p.id)},
+    { icon:<ShellIcon name="pin"/>, separator:true, label: p.pinned ? 'Unpin' : 'Pin', onSelect: () => onPatchProject(p.id, { pinned: !p.pinned }) },
     {
       label: 'Archive',
       onSelect: () =>
@@ -194,18 +199,18 @@ export function Sidebar({
   ];
   return (
     <div
-      className={`sidebar${activeView === 'diary' ? ' diary-sidebar' : ''}${expanded ? ' is-expanded' : ''}`}
+      className={`sidebar${activeView === 'diary' ? ' diary-sidebar' : ''}${expanded ? ' is-expanded' : ''}${collapsed ? ' is-collapsed' : ''}`}
       onClick={(e) => {
         // Any navigation collapses the rail again, so the overlay never
         // stays over the thing it just navigated to.
         if (expanded && (e.target as HTMLElement).closest('.nav-item')) setExpanded(false);
       }}
     >
-      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={expanded ? 'Collapse navigation' : 'Expand navigation'} aria-expanded={expanded} onClick={() => setExpanded(!expanded)}><ShellIcon name="panel"/></button><button className="shell-icon-button" aria-label={theme==='dark'?'Switch to Polymetal Day':'Switch to Polymetal Night'} title={theme==='dark'?'Polymetal Day':'Polymetal Night'} onClick={onToggleTheme}><ShellIcon name="sun"/></button><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
+      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={collapsed || (!expanded && window.innerWidth <= 600) ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={!collapsed && (expanded || window.innerWidth > 600)} onClick={() => {if(window.innerWidth <= 600)setExpanded(!expanded);else setCollapsed(!collapsed);}}><ShellIcon name="panel"/></button><button className="shell-icon-button" aria-label={theme==='dark'?'Switch to Polymetal Day':'Switch to Polymetal Night'} title={theme==='dark'?'Polymetal Day':'Polymetal Night'} onClick={onToggleTheme}><ShellIcon name="sun"/></button><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
       <div className="app-mode-switch" aria-label="Workspace mode"><button className="is-selected" aria-pressed="true"><ShellIcon name="chat"/>Chat</button><button onClick={onEnterCode} aria-pressed="false"><ShellIcon name="code"/>Code</button></div>
       {searching&&<input className="shell-search" autoFocus aria-label="Search projects and chats" placeholder="Search projects and chats…" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');}}}/>}
 
-      <button className="new-chat-btn" onClick={onNewChat} title="New chat">
+      <button className="new-chat-btn" onClick={()=>{onNewChat();setExpanded(false);}} title="New chat">
         <PlusIcon />
         <span>New chat</span>
       </button>
@@ -213,6 +218,7 @@ export function Sidebar({
       <div className="side-nav">
         <button
           className={`nav-item${activeView === 'projects' ? ' is-active' : ''}`}
+          aria-label="Projects"
           onClick={onOpenProjects}
         >
           <BookIcon />
@@ -221,70 +227,35 @@ export function Sidebar({
       </div>
 
       {SHOW_PLACEHOLDER_NAV && <nav className="shell-extra-nav" aria-label="Explore noevia">{[['Scheduled','clock'],['Plugins','plugins'],['Explore','explore']].map(([label,icon])=><button className="nav-item" key={label} onClick={()=>onPreview(label)}><ShellIcon name={icon}/><span className="nav-name">{label}</span></button>)}</nav>}
+      <div className="rail-tools"><button className="shell-icon-button" aria-label="Search projects and chats" onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(true);}}><ShellIcon name="search"/></button><button className="shell-icon-button" aria-label="Show pinned projects" onClick={()=>{setCollapsed(false);setExpanded(true);setClosedGroups(g=>({...g,Pinned:false}));}}><ShellIcon name="pin"/></button></div>
       <div className="sidebar-history">
-      <div className="spaces">
-        <div className="section-label">Projects</div>
-        {visibleProjects.map((p) => (
-          <div
-            key={p.id}
-            className={`proj-row${activeProjectId === p.id && activeView !== 'projects' ? ' is-active' : ''}`}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              setMenu({ kind: 'project', id: p.id, projectId: null, at: { x: e.clientX, y: e.clientY } });
-            }}
-          >
-            {renamingId === p.id ? (
-              <input
-                className="proj-rename-input"
-                value={renameDraft}
-                autoFocus
-                onFocus={(e) => e.currentTarget.select()}
-                onChange={(e) => setRenameDraft(e.target.value)}
-                onBlur={() => commitRename(null, false)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') commitRename(null, false);
-                  if (e.key === 'Escape') setRenamingId(null);
-                }}
-              />
-            ) : (
-              <button
-                className={`nav-item${activeProjectId === p.id && activeView !== 'projects' ? ' is-active' : ''}`}
-                onClick={() => onOpenProject(p.id)}
-                onMouseEnter={(e) => openHover(p.id, e.currentTarget)}
-                onMouseLeave={closeHover}
-                onFocus={(e) => openHover(p.id, e.currentTarget)}
-                onBlur={closeHover}
-              >
-                <ShellIcon name={p.pinned ? 'pin' : 'folder'} size={17}/>
-                <span className="nav-name">{p.name}</span>
-              </button>
-            )}
-            <button
-              className={`proj-menu-btn${menu?.kind === 'project' && menu.id === p.id ? ' is-open' : ''}`}
-              title="Project options"
-              aria-label={`Options for ${p.name}`}
-              onClick={(e) => {
-                const r = e.currentTarget.getBoundingClientRect();
-                setMenu({ kind: 'project', id: p.id, projectId: null, at: { x: r.left, y: r.bottom + 4 } });
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-                <path d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-        ))}
-        {visibleProjects.length === 0 && (
-          <p className="side-hint">No projects yet — create one from the Projects page.</p>
-        )}
-      </div>
+      {['Pinned','Projects'].map(group => {
+        const entries = visibleProjects.filter(p=>group==='Pinned'?p.pinned:!p.pinned);
+        if(group==='Pinned' && !entries.length)return null;
+        return <div className="spaces" key={group}>
+          <button className="section-label section-toggle" aria-expanded={!closedGroups[group]} onClick={()=>setClosedGroups(g=>({...g,[group]:!g[group]}))}>{group}<span>{closedGroups[group]?'›':'⌄'}</span></button>
+          {(!closedGroups[group] || query) && entries.map(p=><div className="project-branch" key={p.id}>
+            <div className={`proj-row${activeProjectId===p.id && activeView!=='projects'?' is-active':''}`} onContextMenu={e=>{e.preventDefault();setMenu({kind:'project',id:p.id,projectId:null,at:{x:e.clientX,y:e.clientY}});}}>
+              {renamingId===p.id ? <input className="proj-rename-input" aria-label="Project name" value={renameDraft} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(null,false)} onKeyDown={e=>{if(e.key==='Enter')commitRename(null,false);if(e.key==='Escape')setRenamingId(null);}}/> : <button className="project-disclosure" aria-label={`Expand chats in ${p.name}`} aria-expanded={!!openProjects[p.id]} onClick={()=>setOpenProjects(prev=>({...prev,[p.id]:!prev[p.id]}))}><ProjectIcon project={p} size={18}/><span className="nav-name">{p.name}</span><span className="branch-chevron">{openProjects[p.id]?'⌄':'›'}</span></button>}
+              <button className="project-home-btn" aria-label={`Open ${p.name}`} title="Open project" onClick={()=>{onOpenProject(p.id);setExpanded(false);}} onMouseEnter={e=>openHover(p.id,e.currentTarget)} onMouseLeave={closeHover} onBlur={closeHover}><ShellIcon name="folder" size={16}/></button>
+              <button className="proj-menu-btn" aria-label={`Options for ${p.name}`} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'project',id:p.id,projectId:null,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="explore" size={16}/></button>
+            </div>
+            {openProjects[p.id] && <div className="project-children">
+              <button onClick={()=>{onOpenProject(p.id);setExpanded(false);}}>Open project<ShellIcon name="folder" size={14}/></button>
+              {(p.chats || []).filter(c=>!c.archived).map(c=><button key={c.id} className={activeChatId===c.id?'is-active':''} onClick={()=>{onOpenChat(c.id,p.id);setExpanded(false);}}>{c.title || 'New chat'}{streamingChats[c.id] && <span aria-label="Still generating"> ···</span>}</button>)}
+              {!p.chats?.filter(c=>!c.archived).length && <p>No chats yet</p>}
+            </div>}
+          </div>)}
+          {!entries.length && group==='Projects' && <p className="side-hint">{query?'No matching projects.':'Create a project from the Projects page.'}</p>}
+        </div>;
+      })}
 
       {visibleChats.length > 0 && (
         <>
           <div className="divider" />
           <div className="spaces">
-            <div className="section-label">Recent chats</div>
-            {visibleChats.slice(0, 12).map((c) => (
+            <button className="section-label section-toggle" aria-expanded={!closedGroups.Chats} onClick={()=>setClosedGroups(g=>({...g,Chats:!g.Chats}))}>Recent chats<span>{closedGroups.Chats?'›':'⌄'}</span></button>
+            {(!closedGroups.Chats || query) && visibleChats.slice(0, 12).map((c) => (
               <div
                 key={c.id}
                 className={`chat-row${activeChatId === c.id && activeView === 'chat' ? ' is-active' : ''}`}
@@ -329,7 +300,7 @@ export function Sidebar({
                   }}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-                    <path d="M4 6h16M4 12h16M4 18h16" />
+                    <path d="M5 12h.01M12 12h.01M19 12h.01" />
                   </svg>
                 </button>
               </div>

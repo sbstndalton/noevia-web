@@ -1,3 +1,4 @@
+import { ProjectIdentityPicker } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, ProjectFile } from '../types';
@@ -23,6 +24,8 @@ export function EditProjectModal({
   onClose: () => void;
 }): JSX.Element {
   const ref = useRef<HTMLDialogElement>(null);
+  const [icon, setIcon] = useState(project.icon || 'folder');
+  const [color, setColor] = useState(project.color || 'default');
   const [name, setName] = useState(project.name);
   const [goal, setGoal] = useState(project.goal || '');
   const [instructions, setInstructions] = useState(project.instructions || '');
@@ -65,7 +68,7 @@ export function EditProjectModal({
       // here is readable straight away rather than after a separate refresh
       // nobody knows to press.
       await onSave({
-        name: trimmed,
+        name: trimmed, icon, color,
         goal,
         instructions,
         // Uploads only — folder-derived sources are the sync's to manage.
@@ -118,6 +121,7 @@ export function EditProjectModal({
       </header>
 
       <div className="edit-project-body">
+        <ProjectIdentityPicker icon={icon} color={color} onChange={(i,c)=>{setIcon(i);setColor(c);}}/>
         <label className="field">
           <span>Name</span>
           <input className="modal-input" value={name} onChange={(e) => setName(e.target.value)} />
@@ -214,7 +218,7 @@ export function EditProjectModal({
               ))}
             </ul>
           )}
-          {addError && <p className="modal-err source-add-error">{addError}</p>}
+
           <div className="source-actions">
             <label className="btn btn-secondary btn-sm">
               Add files
@@ -233,6 +237,7 @@ export function EditProjectModal({
         </div>
       </div>
 
+      {addError && <p role="alert" className="modal-err project-save-error">{addError}</p>}
       <footer>
         <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
         <button className="btn btn-primary" onClick={() => void save()} disabled={!name.trim() || saving}>{saving ? 'Saving…' : 'Save'}</button>
