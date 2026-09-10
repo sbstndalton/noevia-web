@@ -1,13 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { Project, Toolbox } from '../types';
 import { fetchToolboxes, saveProjectConfig, uploadProjectFile } from '../api';
 import { fileToBase64, MAX_DOCUMENT_BYTES } from '../sources';
 
 /** Composer shortcuts use the existing project APIs; enabling tools never approves a write. */
-export function ComposerActions({ project, disabled, onChanged, onModels, onBusy, onStatus }: {
+export function ComposerActions({ project, disabled, onChanged, onModels, onBusy, onStatus, header, diary = false, chatOnly = false }: {
+  header?: ReactNode; diary?: boolean; chatOnly?: boolean;
   project: Project | null; disabled: boolean; onChanged: () => void | Promise<void>;
   onModels: () => void; onBusy: (busy: boolean) => void; onStatus: (status: string) => void;
 }) {
+  const panelId = useId();
+  const [menuLayout, setMenuLayout] = useState<CSSProperties>({});
   const [open, setOpen] = useState(false);
   const [boxes, setBoxes] = useState<Toolbox[]>([]);
   const [selected, setSelected] = useState(project?.toolboxes ?? ['core']);
@@ -17,8 +21,21 @@ export function ComposerActions({ project, disabled, onChanged, onModels, onBusy
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLInputElement>(null);
-  useEffect(() => { setSelected(project?.toolboxes ?? ['core']); }, [project]);
-  useEffect(() => { setOpen(false); setError(''); }, [project?.id]);
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const rect = root.current?.getBoundingClientRect();
+      if (!rect) return;
+      const above = rect.top - (window.innerWidth < 768 ? 112 : 76), below = window.innerHeight - rect.bottom - 20;
+      const useBelow = above < 180 && below > above;
+      setMenuLayout({ maxHeight: Math.max(60, Math.min(520, useBelow ? below : above)), top: useBelow ? 'calc(100% + 12px)' : 'auto', bottom: useBelow ? 'auto' : 'calc(100% + 12px)' });
+    };
+    place(); window.addEventListener('resize', place); window.addEventListener('scroll', place, true);
+    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
+  }, [open]);
+
+  useEffect(() => { setSelected(project?.toolboxes ?? (diary ? [] : ['core'])); }, [project, diary]);
+  useEffect(() => { if (!diary) setOpen(false); setError(''); }, [project?.id, diary]);
   useEffect(() => {
     if (!open) return;
     let active = true;
@@ -56,7 +73,7 @@ export function ComposerActions({ project, disabled, onChanged, onModels, onBusy
     }
     try { await onChanged(); }
     finally {
-      onStatus(failures.length ? `Saved ${files.length - failures.length}/${files.length}. ${failures.join('; ')}` : `Saved ${files.length} ${files.length === 1 ? 'file' : 'files'} to ${project.name} · available to all chats in this project`);
+      onStatus(failures.length ? `Saved ${files.length - failures.length}/${files.length}. ${failures.join('; ')}` : `Saved ${files.length} ${files.length === 1 ? 'file' : 'files'} to ${chatOnly ? 'this chat' : project.name} · ${diary ? 'used only while extras are on' : chatOnly ? 'ready for your next message' : 'available to all chats in this project'}`);
       onBusy(false);
     }
   };
@@ -64,15 +81,16 @@ export function ComposerActions({ project, disabled, onChanged, onModels, onBusy
   return <div className="composer-actions" ref={root} onKeyDown={event => {
     if (event.key === 'Escape') { event.stopPropagation(); setOpen(false); trigger.current?.focus(); }
   }}>
-    <button ref={trigger} type="button" className="composer-add" aria-label="Add files and tools" aria-expanded={open} aria-controls="composer-actions-panel" disabled={disabled || saving} onClick={() => setOpen(!open)}>+</button>
+    <button ref={trigger} type="button" className="composer-add" aria-label="Add files and tools" aria-expanded={open} aria-controls={panelId} disabled={disabled || saving} onClick={() => setOpen(!open)}>+</button>
     <input ref={input} hidden type="file" multiple onChange={event => { const files = Array.from(event.target.files || []); event.target.value = ''; void upload(files); }} />
-    {open && <div id="composer-actions-panel" className="composer-actions-panel" role="region" aria-label="Files and tools">
-      <span className="composer-menu-label">Add to project</span>
-      <button type="button" disabled={!project} onClick={() => input.current?.click()}>＋ <span>Files and photos<small>Up to 25 MB each · saved to project storage</small></span></button>
-      {!project && <p>Open a project chat to attach files or choose tools.</p>}
+    {open && <div id={panelId} className="composer-actions-panel" style={menuLayout} role="region" aria-label="Files and tools">
+      {header}
+      <span className="composer-menu-label">{diary ? 'Optional diary context' : chatOnly ? 'Add to chat' : 'Add to project'}</span>
+      <button type="button" disabled={!project} onClick={() => input.current?.click()}>＋ <span>Files and photos<small>Up to 25 MB each · {diary ? 'separate attachment storage' : chatOnly ? 'saved with this chat' : 'saved to project storage'}</small></span></button>
+      {!project && <p>{diary ? 'Enable extras to use attachments and connectors. Diary retrieval and capture remain active.' : 'Open a project chat to attach files or choose tools.'}</p>}
       <details>
         <summary>Tools <span>›</span></summary>
-        <p>Available to every chat in this project. The model chooses when to call them; writes still ask for approval.</p>
+        <p>{diary ? 'Used only while diary extras are on. Your normal diary retrieval and capture stay active.' : chatOnly ? 'Available only to this chat.' : 'Available to every chat in this project.'} The model chooses when to call them; writes still ask for approval.</p>
         {loading ? <p>Loading tools…</p> : <>
           {(['builtin', 'mcp'] as const).map(source => <div key={source}>
             <span className="composer-menu-label">{source === 'builtin' ? 'Built-in' : 'Connectors'}</span>
@@ -86,7 +104,7 @@ export function ComposerActions({ project, disabled, onChanged, onModels, onBusy
         </>}
       </details>
       {error && <p role="alert">{error}</p>}
-      <button type="button" onClick={() => { setOpen(false); onModels(); }}>◇ <span>Model and routing<small>Choose a model and review tool budgets</small></span></button>
+      <button type="button" disabled={diary && !project} onClick={() => { setOpen(false); onModels(); }}>◇ <span>{diary ? 'Extras model and routing' : 'Model and routing'}<small>{diary ? 'For optional context; the diary companion stays unchanged' : 'Choose a model and review tool budgets'}</small></span></button>
     </div>}
   </div>;
 }

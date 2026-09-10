@@ -438,7 +438,7 @@ export function saveChatHistory(chatId: string, history: HistoryEntry[]): Promis
 //   { type:'done', model } { type:'diary', decision }
 //   { type:'usage', promptTokens, completionTokens, totalTokens, tokensPerSecond }
 export async function* streamChat(
-  body: { spaceId: string;
+  body: { spaceId: string; extrasEnabled?: boolean; extraContext?: string;
     entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null },
   signal?: AbortSignal,
 ): AsyncGenerator<{

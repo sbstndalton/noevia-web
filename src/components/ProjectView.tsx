@@ -1,3 +1,4 @@
+import { ComposerActions } from './ComposerActions';
 import { sourceStatus } from '../source-status';
 import { FolderPicker } from './FolderPicker';
 import { ShellIcon } from './ShellIcon';
@@ -32,7 +33,8 @@ interface ProjectViewProps {
   onPatch: (projectId: string, patch: Partial<Project>) => void;
   onDeleteChat: (projectId: string, chatId: string) => void;
   streamingChats: Record<string, true>;
-  onRefresh: () => void;
+  onRefresh: () => void | Promise<void>;
+  onOpenModels: () => void;
 }
 
 function timeAgo(ts: number): string {
@@ -56,7 +58,10 @@ export function ProjectView({
   onDeleteChat,
   streamingChats,
   onRefresh,
+  onOpenModels,
 }: ProjectViewProps): JSX.Element {
+  const [composerBusy, setComposerBusy] = useState(false);
+  const [composerStatus, setComposerStatus] = useState('');
   const [panel, setPanel] = useState<'instructions' | 'memory' | null>(null);
   const [tab, setTab] = useState<'chats' | 'sources'>('chats');
   const [draft, setDraft] = useState('');
@@ -114,7 +119,7 @@ export function ProjectView({
 
   const send = () => {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || composerBusy || busyDocs || syncing) return;
     setDraft('');
     onSendFirst(project.id, text);
   };
@@ -240,6 +245,7 @@ export function ProjectView({
               a blank chat. */}
           <div className="project-composer">
             <div className="composer-inner">
+              <ComposerActions key={project.id} project={project} disabled={composerBusy || busyDocs || syncing} onChanged={onRefresh} onModels={onOpenModels} onBusy={setComposerBusy} onStatus={setComposerStatus} />
               <textarea
                 className="composer-input"
                 rows={1}
@@ -254,10 +260,11 @@ export function ProjectView({
                   }
                 }}
               />
-              <button className="send-btn" onClick={send} disabled={!draft.trim()} title="Send" aria-label="Send">
+              <button className="send-btn" onClick={send} disabled={!draft.trim() || composerBusy || busyDocs || syncing} title="Send" aria-label="Send">
                 <SendIcon />
               </button>
             </div>
+            {composerStatus && <div className="composer-action-status" role="status">{composerStatus}</div>}
             <button className="project-newchat" onClick={() => onNewChat(project.id)}>
               or open an empty chat in {project.name}
             </button>

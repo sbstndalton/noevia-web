@@ -1,7 +1,12 @@
+import { ComposerActions } from './ComposerActions';
+import { ModelPopup } from './ModelPopup';
+import { ToolChips } from './ChatView';
+import { prepareDiaryExtras } from '../diary-extras';
+import type { Project, ToolCallView } from '../types';
 import { SendIcon } from './Icons';
 import { ShellIcon } from './ShellIcon';
 import { useEffect, useRef, useState } from 'react';
-import { fetchDiaryMonth, fetchDiarySource, fetchStorage, streamChat } from '../api';
+import { apiFetch, deleteProjectFile, fetchDiaryMonth, fetchDiarySource, fetchStorage, streamChat } from '../api';
 import type { StorageConnection } from '../api';
 import { calendarDays, dateInText, dayLabel, localDay, localTimestamp, monthLabel, splitDays } from '../diary-data';
 import { diaryRequest, directoryPicker, directoryPickerBlockedReason, listFiles, randomSessionId, readFile, saveLocal, scanLocal, syncFileChange, writeFile } from '../diary-workspace';
@@ -12,6 +17,31 @@ import { StoragePicker } from './StoragePicker';
 type Turn = { role: 'user' | 'assistant'; content: string };
 type Pending = { before: string | null; content: string };
 export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
+  const [extrasEnabled, setExtrasEnabled] = useState(false);
+  const [extraProject, setExtraProject] = useState<Project | null>(null);
+  const [extraBusy, setExtraBusy] = useState(false);
+  const [extraStatus, setExtraStatus] = useState('');
+  const [extraCalls, setExtraCalls] = useState<ToolCallView[]>([]);
+  const [extraModels, setExtraModels] = useState(false);
+  const [extraFiles, setExtraFiles] = useState(false);
+  const extraAbort = useRef<AbortController | null>(null);
+  useEffect(() => () => extraAbort.current?.abort(), []);
+  const refreshExtraProject = async () => {
+    const response = await apiFetch('/api/diary/context');
+    if (!response.ok) throw new Error('Could not load diary attachments');
+    setExtraProject((await response.json()).project);
+  };
+  const toggleExtras = async () => {
+    if (busyRef.current || extraBusy) return;
+    if (extrasEnabled) { setExtrasEnabled(false); setExtraCalls([]); setExtraStatus('Extras off. Normal diary retrieval and capture remain active.'); return; }
+    setExtraBusy(true);
+    try {
+      const response = await apiFetch('/api/diary/context', { method: 'POST' });
+      if (!response.ok) throw new Error('Could not enable diary extras');
+      setExtraProject((await response.json()).project); setExtrasEnabled(true); setExtraStatus('Extras on for this session. Attachments are stored separately from diary entries.');
+    } catch (err) { setExtraStatus(err instanceof Error ? err.message : 'Could not enable extras'); }
+    finally { setExtraBusy(false); }
+  };
   const [month, setMonth] = useState<string | null>(null);
   const [day, setDay] = useState<string | null>(null);
   const [months, setMonths] = useState<string[]>([]);
@@ -40,6 +70,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const today = localDay();
   const scope = day || (month ? `month:${month}` : 'home');
   const conversation = turns[scope] || [];
+  useEffect(() => { setExtraCalls([]); setExtraStatus(''); }, [scope]);
   const savedLabel = storage?.kind === 'local' ? 'Server storage' : storage?.kind === 'nextcloud' ? 'Nextcloud' : storage?.kind === 's3' ? 'S3' : storage?.kind === 'webdav' ? 'WebDAV' : 'saved storage';
   const pendingCount = Object.keys(pendingSync).length + Object.keys(pendingLocal).length;
 
@@ -127,7 +158,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   };
   const submit = () => void run(async () => {
     const message = draft.trim();
-    if (!message) return;
+    if (!message || extraBusy) return;
     if (Object.keys(pendingLocal).length) throw new Error('Retry the pending local save before sending another entry.');
     const now = new Date(), entryDay = day || localDay(now), entryTime = localTimestamp(now);
     const history = conversation.slice(-16);
@@ -136,16 +167,35 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     const reply = (text: string) => setTurns(prev => ({ ...prev, [scope]: [...history, { role: 'user', content: message }, { role: 'assistant', content: text }] }));
     let answered = false;
     try {
+      setExtraCalls([]);
+      extraAbort.current = new AbortController();
+      const useExtras = extrasEnabled && !!extraProject && !!((extraProject.files || []).length || (extraProject.assets || []).length || (extraProject.toolboxes || []).length);
+      setExtraStatus(useExtras ? 'Preparing optional context…' : '');
+      const extraContext = await prepareDiaryExtras(useExtras, message, `${session.current.slice(0,36)}-${entryDay}-${scope}`, ev => {
+        if (ev.type === 'status') setExtraStatus(ev.text || 'Preparing optional context…');
+        if (ev.type === 'tool' || ev.type === 'tool_pending' || ev.type === 'tool_result') {
+          setExtraCalls(previous => {
+            const next = [...previous], index = ev.index ?? next.length;
+            next[index] = ev.type === 'tool_result'
+              ? { name: ev.name || 'tool', args: ev.text || '', status: (ev.text || '').startsWith('ERROR: the user') ? 'denied' : 'done' }
+              : { name: ev.name || 'tool', args: ev.args || '', status: ev.type === 'tool_pending' ? 'pending' : undefined, approvalId: ev.id };
+            return next;
+          });
+        }
+      }, extraAbort.current.signal);
+      extraAbort.current = null;
+      if (useExtras) setExtraStatus('Optional context ready · diary retrieval and capture now running');
+
       if (folder) {
         const snapshot = await scanLocal(folder); setLocalFiles(snapshot);
-        const result = await diaryRequest<{reply: string; decision: string; files: Record<string,string>}>('local-exchange', { files: snapshot, message, history, entryDay, entryTime });
+        const result = await diaryRequest<{reply: string; decision: string; files: Record<string,string>}>('local-exchange', { files: snapshot, message, history, entryDay, entryTime, extrasEnabled: useExtras, extraContext });
         reply(result.reply); answered = true;
         const changes = Object.fromEntries(Object.entries(result.files).map(([path, content]) => [path, { before: snapshot[path] ?? null, content }]));
         if (Object.keys(changes).length) await commitLocal(changes);
         else setStatus('Conversation only — no entry saved.');
       } else {
         let text = '', decision = '';
-        for await (const ev of streamChat({ spaceId: 'diary', message, history, sessionId: `${session.current.slice(0,36)}-${entryDay}`, entryDay, entryTime })) {
+        for await (const ev of streamChat({ spaceId: 'diary', extrasEnabled: useExtras, extraContext, message, history, sessionId: `${session.current.slice(0,36)}-${entryDay}`, entryDay, entryTime })) {
           if (ev.type === 'error') throw new Error(ev.text || 'Diary request failed');
           if (ev.type === 'delta') { text += ev.text || ''; reply(text); }
           if (ev.type === 'diary') decision = ev.decision || '';
@@ -155,7 +205,15 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
         setStatus(decision === 'logged' || decision === 'ok' ? `Saved to ${dayLabel(entryDay)}.` : 'Conversation only — no entry saved.');
       }
       setRevision(n => n+1);
-    } catch (e) { if (!answered) setDraft(message); throw e; }
+    } catch (e) {
+      const cancelled = extraAbort.current?.signal.aborted;
+      extraAbort.current = null;
+      setExtraStatus(cancelled ? 'Optional context cancelled. No diary entry was sent.' : 'Optional context or diary request failed; your draft is preserved.');
+      setExtraCalls(previous => previous.map(call => call?.status === 'pending' ? { ...call, status: 'denied', approvalId: undefined, args: 'Optional context ended before this approval completed.' } : call));
+      if (!answered) { setDraft(message); setTurns(previous => ({ ...previous, [scope]: history })); }
+      if (cancelled) throw new Error('Optional context cancelled. No diary entry was sent.');
+      throw e;
+    }
   });
   const navigate = (nextMonth: string | null, nextDay: string | null = null) => {
     if (busy) return;
@@ -198,8 +256,15 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const blockedReason = wizard === 'local' ? directoryPickerBlockedReason() : null;
   const composer = <div className="diary-compose">
     <label htmlFor="diary-draft">{day ? `Add to ${dayLabel(day)}` : 'What’s on your mind today?'}</label>
-    <div className="composer-inner"><textarea id="diary-draft" className="composer-input" rows={3} placeholder={day ? 'Continue this day’s story…' : 'Write about your day, or ask your diary a question…'} value={draft} disabled={busy} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();submit();} }} />
-    <button className="send-btn" aria-label="Send diary message" disabled={busy || !draft.trim()} onClick={submit}><SendIcon /></button></div>
+    <div className="composer-inner"><ComposerActions diary project={extrasEnabled ? extraProject : null} disabled={busy || extraBusy} onChanged={refreshExtraProject} onModels={()=>setExtraModels(true)} onBusy={setExtraBusy} onStatus={setExtraStatus} header={<>
+      <p><strong>Diary retrieval &amp; capture</strong> · always on</p>
+      <label className="composer-tool-option"><input type="checkbox" checked={extrasEnabled} disabled={busy || extraBusy} onChange={()=>void toggleExtras()} /><span>Extra attachments &amp; tools<small>Off by default. Applies while this session is open.</small></span></label>
+      {extrasEnabled && <button type="button" onClick={()=>setExtraFiles(true)}>Manage attachments ({extraProject?.files.length || 0})</button>}
+    </>} /><textarea id="diary-draft" className="composer-input" rows={3} placeholder={day ? 'Continue this day’s story…' : 'Write about your day, or ask your diary a question…'} value={draft} disabled={busy} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();submit();} }} />
+    <button className="send-btn" aria-label="Send diary message" disabled={busy || extraBusy || !draft.trim()} onClick={submit}><SendIcon /></button></div>
+    {extraStatus && <p className="composer-action-status" role="status">{extraStatus}</p>}
+    {!!extraCalls.length && <ToolChips calls={extraCalls.filter(Boolean)} />}
+    {busy && extraAbort.current && <button className="popup-tab" onClick={()=>extraAbort.current?.abort()}>Cancel optional context</button>}
     <p className="composer-hint">{busy ? 'Working on your diary…' : day ? `Writing to ${dayLabel(day)} · Shift + Enter for a new line` : 'Your current local date and time are used when you send.'}</p>
   </div>;
   return <main className="main diary-workspace">
@@ -216,6 +281,8 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       {status && <p className="diary-save-status" role="status">{status}</p>}
       {!month && <section className="diary-months"><h2>Past entries</h2><div className="diary-month-grid">{months.map(m=><button key={m} className="month-card" disabled={busy} onClick={()=>navigate(m)}><span className="month-card-name">{monthLabel(m)}</span><span className="month-card-meta">Open calendar <span aria-hidden="true">↗</span></span></button>)}</div></section>}
     </section><aside className="diary-context"><section><div className="diary-panel-heading"><h2>Memory & context</h2><button className="popup-tab" disabled={busy} onClick={()=>{setEditor({path:'memory/notes.md',content:null,version:null});setEditText('');setPreview(false);}}>New</button></div><p className="diary-intro">Open a Markdown file to read or edit it.</p><div className="diary-file-breadcrumb"><button className="popup-tab" disabled={busy} onClick={()=>setFilePath('')}>Diary folder</button>{filePath && <><span>/ {filePath}</span><button className="popup-tab" onClick={()=>setFilePath(filePath.split('/').slice(0,-1).join('/'))}>Up</button></>}</div><div className="diary-file-list">{files.map(f=><button key={f.path} disabled={busy} title={f.path} onClick={()=>f.isDir?setFilePath(f.path):openFile(f.path)}><ShellIcon name={f.isDir?'folder':'book'} size={16}/>{f.name}</button>)}{files.length===0&&<p className="diary-intro">No Markdown files here yet.</p>}</div><p className="diary-context-note">MEMORY.md and files in memory/ or context/ are included as diary reference material.</p></section><section><div className="diary-panel-heading"><h2>Storage location</h2><button className="popup-tab" disabled={busy || pendingCount>0} onClick={()=>setWizard('choose')}>Edit</button></div><strong>{folder ? folder.name : savedLabel}</strong><p className="diary-storage-path">{folder?'This computer · current session':storage?.corpusRoot || 'Diary folder'}</p>{folder ? <><label className="diary-sync-toggle"><input type="checkbox" checked={sync} disabled={busy} onChange={e=>setSync(e.target.checked)} />Also sync to {savedLabel}</label><p className="diary-context-note">Applies to new changes. Pending sync remains available to retry. Reopening noevia restores {savedLabel}.</p><button className="popup-tab" disabled={busy || Object.keys(pendingLocal).length>0} onClick={disconnect}>Return to {savedLabel}</button></>:<p className="diary-context-note">Your saved connection is used when you reopen noevia.</p>}</section></aside></div>
+    {extraModels && extraProject && <ModelPopup projects={[extraProject]} activeProject={extraProject} onClose={()=>setExtraModels(false)} onProjectsChanged={()=>void refreshExtraProject()} />}
+    {extraFiles && <DiaryModal title="Optional diary attachments" onClose={()=>setExtraFiles(false)}><p>Stored separately from your diary corpus. Used only while extras are on.</p>{(extraProject?.files || []).map(file=><div className="model-row" key={file.name}><span>{file.name}<small> · {file.attachment?.state || file.document?.state || 'ready'}</small></span><button className="popup-tab" disabled={busy || extraBusy} onClick={()=>void (async()=>{if(!extraProject || !window.confirm(`Delete attachment ${file.name} from storage?`))return;setExtraBusy(true);try{await deleteProjectFile(extraProject.id,file.name);await refreshExtraProject();}catch(err){setExtraStatus(String(err));}finally{setExtraBusy(false);}})()}>Delete attachment</button></div>)}</DiaryModal>}
     {wizard && <DiaryModal title="Choose diary storage" onClose={()=>{if(!busy)setWizard(null);}}>{error&&<p className="conn-banner" role="alert">{error}</p>}{wizard==='choose'?<div className="diary-storage-options"><button className="month-card" disabled={busy} onClick={()=>setWizard('local')}><strong>Folder on this computer</strong><span>Use a local or mounted SMB folder for this session.</span></button><button className="month-card" disabled={busy || !!folder} onClick={()=>setWizard('online')}><strong>Online connection</strong><span>Nextcloud, WebDAV, or S3-compatible storage.</span></button>{folder&&<p>Return to your saved storage before changing the online connection.</p>}</div>:wizard==='local'?<div className="diary-wizard-step"><p>Select your diary folder. noevia reads its Markdown files and saves new entries there while this page is open.</p><p>To use SMB, mount the share on your computer first, then select its folder.</p><label className="diary-sync-toggle"><input type="checkbox" checked={sync} onChange={e=>setSync(e.target.checked)} />Also sync to {savedLabel}</label><p className="diary-context-note">Diary text is sent to your configured noevia/inference service to answer questions. With sync off, it is processed in memory and is not saved to your online diary. The folder permission is not stored by noevia.</p>{blockedReason==='insecure-context'&&<p role="alert">This page isn’t loaded over HTTPS (or localhost), so browsers block local folder access here for security — even in Chrome/Edge. Access noevia via HTTPS or a localhost tunnel, or choose online storage.</p>}{blockedReason==='unsupported'&&<p role="alert">Your browser does not offer writable folder access. Use Chrome/Edge or choose online storage.</p>}<button className="modal-btn primary" disabled={busy || !directoryPicker()} onClick={connectLocal}>Choose folder</button><button className="modal-btn secondary" disabled={busy} onClick={()=>setWizard('choose')}>Back</button></div>:<StoragePicker onlineOnly onSaved={value=>{setStorage(value);setWizard(null);setFilePath('');setRevision(n=>n+1);setTurns({});}} />}</DiaryModal>}
     {editor && <DiaryModal title="Markdown viewer & editor" onClose={closeEditor}><label className="diary-editor-path">File path<input className="modal-input" value={editor.path} disabled={editor.content!==null || busy} onChange={e=>setEditor({...editor,path:e.target.value})} /></label><div className="diary-editor-tabs"><button className="popup-tab" aria-pressed={!preview} onClick={()=>setPreview(false)}>Edit Markdown</button><button className="popup-tab" aria-pressed={preview} onClick={()=>setPreview(true)}>Preview</button></div>{preview?<MarkdownPreview text={editText || 'This file is empty.'}/>:<textarea className="diary-md-input" aria-label="Markdown content" value={editText} disabled={busy} onChange={e=>setEditText(e.target.value)} spellCheck={false}/>} {error&&<p role="alert" className="conn-banner">{error}</p>}<footer><span>Changes are saved only when you choose Save.</span><button className="modal-btn secondary" disabled={busy} onClick={closeEditor}>Cancel</button><button className="modal-btn primary" disabled={busy || !editor.path} onClick={saveEditor}>{busy?'Saving…':'Save'}</button></footer></DiaryModal>}
   </main>;

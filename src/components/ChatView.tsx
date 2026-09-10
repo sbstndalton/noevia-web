@@ -3,8 +3,9 @@ import type { JSX } from 'react';
 import type { Message, MessageStats, ToolCallView, Project } from '../types';
 import { ChevronDown, ChevronLeft, SendIcon, SlidersIcon } from './Icons';
 import { MarkdownPreview } from './DiaryModal';
+import { ModelPopup } from './ModelPopup';
 import { ComposerActions } from './ComposerActions';
-import { decideToolApproval } from '../api';
+import { apiFetch, decideToolApproval } from '../api';
 
 interface ChatViewProps {
   project: Project | null;
@@ -80,7 +81,7 @@ function LiveTimer({ startedAt }: { startedAt: number }): JSX.Element {
   return <span>{fmtDuration(Date.now() - startedAt)}</span>;
 }
 
-function ToolChips({ calls }: { calls: ToolCallView[] }) {
+export function ToolChips({ calls }: { calls: ToolCallView[] }) {
   return (
     <div className="tool-chips">
       {calls.map((tc, i) => (
@@ -160,6 +161,24 @@ export function ChatView({
   onOpenModels,
   onOpenSettings,
 }: ChatViewProps): JSX.Element {
+  const [freeModels, setFreeModels] = useState(false);
+  const [freeContext, setFreeContext] = useState<Project | null>(null);
+  useEffect(() => {
+    setFreeContext(null);
+    if (project) return;
+    let current = true;
+    apiFetch(`/api/chats/${encodeURIComponent(chatId)}/context`, { method: 'POST' }).then(async response => {
+      if (!response.ok) throw new Error('Could not load chat tools');
+      const value = await response.json(); if (current) setFreeContext(value.project);
+    }).catch(err => { if (current) setActionStatus(String(err)); });
+    return () => { current = false; };
+  }, [chatId, project?.id]);
+  const refreshContext = async () => {
+    if (project) { await onProjectChanged(); return; }
+    const response = await apiFetch(`/api/chats/${encodeURIComponent(chatId)}/context`);
+    if (!response.ok) throw new Error('Could not refresh chat attachments');
+    setFreeContext((await response.json()).project);
+  };
   const [actionBusy, setActionBusy] = useState(false);
   const [actionStatus, setActionStatus] = useState('');
   const [draft, setDraft] = useState('');
@@ -185,6 +204,8 @@ export function ChatView({
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, streaming]);
 
+  const openModels = () => { if (!project && freeContext) setFreeModels(true); else onOpenModels(); };
+  if (!project && freeContext) modelLabel = freeContext.routing === 'auto' ? 'Auto (Fast/Smart)' : freeContext.model || modelLabel;
   const submit = () => {
     const text = draft.trim();
     if (!text || streaming || actionBusy) return;
@@ -194,6 +215,7 @@ export function ChatView({
 
   return (
     <div className={`main chat-workspace${messages.length === 0 ? ' is-empty' : ''}`}>
+      {freeModels && freeContext && <ModelPopup projects={[freeContext]} activeProject={{...freeContext, name: title}} onClose={()=>setFreeModels(false)} onProjectsChanged={()=>void refreshContext()} />}
       <div className="chat-header">
         <div className="header-titles">
           <span className="header-crumbs">
@@ -210,7 +232,7 @@ export function ChatView({
           </span>
         </div>
         <div className="header-controls">
-          <button className="model-pill" onClick={onOpenModels} title="Switch model · download · manage">
+          <button className="model-pill" onClick={openModels} title="Switch model · download · manage">
             <span className="model-pill-dot" />
             <span className="model-pill-label">{modelLabel}</span>
             <ChevronDown />
@@ -349,7 +371,7 @@ export function ChatView({
 
       <div className="composer">
         <div className="composer-inner">
-          <ComposerActions key={chatId} project={project} disabled={streaming || actionBusy} onChanged={onProjectChanged} onModels={onOpenModels} onBusy={setActionBusy} onStatus={setActionStatus} />
+          <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={setActionStatus} />
           <textarea
             className="composer-input"
             aria-label="Message"

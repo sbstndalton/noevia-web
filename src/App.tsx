@@ -743,6 +743,7 @@ export default function App(): JSX.Element {
 
       {view.kind === 'project' && activeProject && (
         <ProjectView
+          onOpenModels={() => setPopupOpen(true)}
           project={activeProject}
           streamingChats={streamingChats}
           onRefresh={refreshProjects}
