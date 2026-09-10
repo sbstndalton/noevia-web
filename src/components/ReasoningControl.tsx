@@ -41,7 +41,7 @@ export function ReasoningControl({ project, disabled, onChanged, global = false 
       </select>
     </label>
     {!global && <small title="Actual request mode is reported with the reply. Auto routing may select another model.">{settings.mode === 'real'?'Parameter':settings.mode === 'hint'?'Hint':'Provider default'}</small>}
-    {global && <small>Applies unless a project overrides it. High hints request an 8,192-token output budget; provider limits still apply.</small>}
+    {global && <small>Applies unless a project overrides it. Local Qwen: Low turns thinking off; High turns it on. Other providers may use effort parameters or hints. High hints request an 8,192-token budget.</small>}
     {error && <span role="alert">{error}</span>}
   </span>;
 }
