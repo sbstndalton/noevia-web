@@ -1,3 +1,4 @@
+import { DiaryLanding } from './DiaryLanding';
 import { ComposerActions } from './ComposerActions';
 import { ComposerModel } from './ComposerModel';
 import { ModelPopup } from './ModelPopup';
@@ -46,6 +47,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   };
   const [month, setMonth] = useState<string | null>(null);
   const [day, setDay] = useState<string | null>(null);
+  const [overview, setOverview] = useState<{ready: boolean; failed: boolean; memory: FileEntry[]; sources: FileEntry[]; recentDays: string[]}>({ready:false,failed:false,memory:[],sources:[],recentDays:[]});
   const [months, setMonths] = useState<string[]>([]);
   const [days, setDays] = useState<Record<string,string>>({});
   const [draft, setDraft] = useState('');
@@ -79,28 +81,48 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const savedLabel = storage?.kind === 'local' ? 'Server storage' : storage?.kind === 'nextcloud' ? 'Nextcloud' : storage?.kind === 's3' ? 'S3' : storage?.kind === 'webdav' ? 'WebDAV' : 'saved storage';
   const pendingCount = Object.keys(pendingSync).length + Object.keys(pendingLocal).length;
 
+  const emptyDiary = overview.ready && !months.length && !overview.memory.length && !overview.sources.length;
+
   useEffect(() => { fetchStorage().then(setStorage).catch(e => setError(String(e))); }, [revision]);
   useEffect(() => {
     let stale = false;
     const load = async () => {
+      setOverview(prev => ({...prev,ready:false,failed:false}));
+      const memoryFolders = ['AI Memory','memory','Memory','context','Context'];
+      const isMemory = (path: string) => /^(MEMORY|context|instructions)\.md$/i.test(path) || memoryFolders.some(f => path.startsWith(f+'/') && !path.slice(f.length+1).includes('/'));
+      let memory: FileEntry[] = [], sources: FileEntry[] = [], recentDays: string[] = [];
       if (folder) {
         const parsed: Record<string,string> = {};
         for (const [path, text] of Object.entries(localFiles)) {
           for (const [date, content] of Object.entries(splitDays(text, dateInText(path)))) parsed[date] = (parsed[date] || '') + content;
         }
         setDays(parsed);
-        setMonths([...new Set([...Object.keys(parsed).map(d => d.slice(0,7)), today.slice(0,7)])].sort().reverse());
+        recentDays = Object.keys(parsed);
+        const rows = Object.keys(localFiles).map(path => ({path,name:path.split('/').pop()!,isDir:false}));
+        memory = rows.filter(f => isMemory(f.path));
+        sources = rows.filter(f => f.path.startsWith('Raw Sources/') && !f.path.slice(12).includes('/'));
+        setMonths([...new Set(Object.keys(parsed).map(d => d.slice(0,7)))].sort().reverse());
       } else {
         const source = await fetchDiarySource();
         if (stale) return;
-        setMonths([...new Set([...source.months.map(m => m.id), today.slice(0,7)])].sort().reverse());
+        setMonths([...new Set(source.months.map(m => m.id))].sort().reverse());
+        const root = await listFiles('');
+        const folders = root.files.filter(f => f.isDir && [...memoryFolders,'Raw Sources'].includes(f.name));
+        const listings = await Promise.all(folders.map(f => listFiles(f.path)));
+        const all = [...root.files,...listings.flatMap(row => row.files)].filter(f => !f.isDir);
+        memory = all.filter(f => isMemory(f.path));
+        sources = all.filter(f => f.path.startsWith('Raw Sources/'));
+        const recent = await Promise.all(source.months.map(m=>m.id).sort().reverse().slice(0,2).map(fetchDiaryMonth));
+        recentDays = recent.flatMap(r => Object.keys(splitDays(r.todayLog)));
+        if (stale) return;
         if (month) {
           const result = await fetchDiaryMonth(month);
           if (!stale) setDays(splitDays(result.todayLog));
         }
       }
+      if (!stale) setOverview({ready:true,failed:false,memory,sources,recentDays:[...new Set(recentDays)].sort().reverse().slice(0,7)});
     };
-    void load().catch(e => { if (!stale) setError(String(e)); });
+    void load().catch(e => { if (!stale) { setError(String(e)); setOverview(prev => ({...prev,ready:false,failed:true})); } });
     return () => { stale = true; };
   }, [folder, localFiles, month, revision, today]);
   useEffect(() => {
@@ -263,7 +285,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const blockedReason = wizard === 'local' ? directoryPickerBlockedReason() : null;
   const composer = <div className="diary-compose">
     <label htmlFor="diary-draft">{day ? `Add to ${dayLabel(day)}` : 'What’s on your mind today?'}</label>
-    <div className="composer-inner chat-composer-inner"><textarea id="diary-draft" className="composer-input" rows={3} placeholder={day ? 'Continue this day’s story…' : 'Write about your day, or ask your diary a question…'} value={draft} disabled={busy} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();submit();} }} /><ComposerActions diary project={extrasEnabled ? extraProject : null} disabled={busy || extraBusy} onChanged={refreshExtraProject} onModels={()=>setExtraModels(true)} onBusy={setExtraBusy} onStatus={setExtraStatus} header={<>
+    <div className="composer-inner chat-composer-inner"><textarea id="diary-draft" className="composer-input" rows={3} placeholder={day ? 'Continue this day’s story…' : emptyDiary ? 'Write your first entry…' : 'Write about your day, or ask your diary a question…'} value={draft} disabled={busy} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();submit();} }} /><ComposerActions diary project={extrasEnabled ? extraProject : null} disabled={busy || extraBusy} onChanged={refreshExtraProject} onModels={()=>setExtraModels(true)} onBusy={setExtraBusy} onStatus={setExtraStatus} header={<>
       <p><strong>Diary retrieval &amp; capture</strong> · always on</p>
       <label className="composer-tool-option"><input type="checkbox" checked={extrasEnabled} disabled={busy || extraBusy} onChange={()=>void toggleExtras()} /><span>Extra attachments &amp; tools<small>Off by default. Applies while this session is open.</small></span></label>
       {extrasEnabled && <button type="button" onClick={()=>setExtraFiles(true)}>Manage attachments ({extraProject?.files.length || 0})</button>}
@@ -281,14 +303,14 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       {inferenceUp === false && <p className="conn-banner">Inference is currently unavailable. Your saved files are still accessible.</p>}
       {error && <p className="conn-banner" role="alert">{error}</p>}
       {pendingCount > 0 && <div className="diary-pending" role="status"><span>{Object.keys(pendingLocal).length ? 'Local save needs attention.' : `${Object.keys(pendingSync).length} file(s) waiting to sync. Local copies are safe.`}</span><button className="popup-tab" disabled={busy} onClick={()=>void run(async()=>{ if(Object.keys(pendingLocal).length) await commitLocal(pendingLocal); else await syncChanges(pendingSync); })}>Retry save / sync</button></div>}
-      {!month && <div className="diary-landing"><h1>How has your day been?</h1><p className="diary-intro">A moment, a thought, a question. Start wherever you are.</p>{composer}</div>}
+      {!month && <DiaryLanding failed={overview.failed} ready={overview.ready} empty={emptyDiary} composer={composer} months={months} recentDays={overview.recentDays} memory={overview.memory} sources={overview.sources} busy={busy} navigate={navigate} openFile={openFile} />}
       {month && !day && <section className="diary-calendar-section"><div className="diary-calendar-heading"><button className="popup-tab" disabled={busy} aria-label="Previous month" onClick={()=>{ const d=new Date(`${month}-01T12:00:00`);d.setMonth(d.getMonth()-1);navigate(localDay(d).slice(0,7)); }}>←</button><h1>{monthLabel(month)}</h1><button className="popup-tab" disabled={busy || month>=today.slice(0,7)} aria-label="Next month" onClick={()=>{const d=new Date(`${month}-01T12:00:00`);d.setMonth(d.getMonth()+1);navigate(localDay(d).slice(0,7));}}>→</button></div><p>Choose a day to read or add an entry.</p><div className="diary-calendar" aria-label={monthLabel(month)}>{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=><span className="calendar-weekday" key={d}>{d}</span>)}{calendarDays(month).map((d,i)=>d ? <button key={d} className={`calendar-day${d===today?' calendar-today':''}`} disabled={busy || d>today} aria-label={`${dayLabel(d)}${days[d]?.replace(/^#+.*$/gm,'').trim() ? ', has entries' : ', no entries'}`} onClick={()=>navigate(month,d)}><span>{Number(d.slice(-2))}</span>{!!days[d]?.replace(/^#+.*$/gm,'').trim() && <span className="calendar-dot" aria-hidden="true" />}</button>:<span key={`blank${i}`} />)}</div></section>}
       {day && <section className="diary-day"><h1>{dayLabel(day)}</h1>{days[day]?.trim() ? <MarkdownPreview text={days[day]} /> : <p className="diary-intro">A blank page for this day. Add something if you’d like.</p>}</section>}
       {!!conversation.length && <section className="diary-conversation" aria-live="polite" aria-busy={busy}>{conversation.map((t,i)=><article className="diary-reply" data-role={t.role} key={i}><span className="msg-sender">{t.role==='user'?'You':'Diary companion'}</span><MarkdownPreview text={t.content || 'Thinking…'} /></article>)}</section>}
       {day && composer}
       {status && <p className="diary-save-status" role="status">{status}</p>}
-      {!month && <section className="diary-months"><h2>Past entries</h2><div className="diary-month-grid">{months.map(m=><button key={m} className="month-card" disabled={busy} onClick={()=>navigate(m)}><span className="month-card-name">{monthLabel(m)}</span><span className="month-card-meta">Open calendar <span aria-hidden="true">↗</span></span></button>)}</div></section>}
-    </section><aside className="diary-context"><section><div className="diary-panel-heading"><h2>Memory & context</h2><button className="popup-tab" disabled={busy} onClick={()=>{setEditor({path:'memory/notes.md',content:null,version:null});setEditText('');setPreview(false);}}>New</button></div><p className="diary-intro">Open a Markdown file to read or edit it.</p><div className="diary-file-breadcrumb"><button className="popup-tab" disabled={busy} onClick={()=>setFilePath('')}>Diary folder</button>{filePath && <><span>/ {filePath}</span><button className="popup-tab" onClick={()=>setFilePath(filePath.split('/').slice(0,-1).join('/'))}>Up</button></>}</div><div className="diary-file-list">{files.map(f=><button key={f.path} disabled={busy} title={f.path} onClick={()=>f.isDir?setFilePath(f.path):openFile(f.path)}><ShellIcon name={f.isDir?'folder':'book'} size={16}/>{f.name}</button>)}{files.length===0&&<p className="diary-intro">No Markdown files here yet.</p>}</div><p className="diary-context-note">MEMORY.md and files in memory/ or context/ are included as diary reference material.</p></section><section><div className="diary-panel-heading"><h2>Storage location</h2><button className="popup-tab" disabled={busy || pendingCount>0} onClick={()=>setWizard('choose')}>Edit</button></div><strong>{folder ? folder.name : savedLabel}</strong><p className="diary-storage-path">{folder?'This computer · current session':storage?.corpusRoot || 'Diary folder'}</p>{folder ? <><label className="diary-sync-toggle"><input type="checkbox" checked={sync} disabled={busy} onChange={e=>setSync(e.target.checked)} />Also sync to {savedLabel}</label><p className="diary-context-note">Applies to new changes. Pending sync remains available to retry. Reopening noevia restores {savedLabel}.</p><button className="popup-tab" disabled={busy || Object.keys(pendingLocal).length>0} onClick={disconnect}>Return to {savedLabel}</button></>:<p className="diary-context-note">Your saved connection is used when you reopen noevia.</p>}</section></aside></div>
+
+    </section><aside className="diary-context"><section><div className="diary-panel-heading"><h2>Memory & context</h2><button className="popup-tab" disabled={busy} onClick={()=>{setEditor({path:'AI Memory/notes.md',content:null,version:null});setEditText('');setPreview(false);}}>New</button></div><p className="diary-intro">Open a Markdown file to read or edit it.</p><div className="diary-file-breadcrumb"><button className="popup-tab" disabled={busy} onClick={()=>setFilePath('')}>Diary folder</button>{filePath && <><span>/ {filePath}</span><button className="popup-tab" onClick={()=>setFilePath(filePath.split('/').slice(0,-1).join('/'))}>Up</button></>}</div><div className="diary-file-list">{files.map(f=><button key={f.path} disabled={busy} title={f.path} onClick={()=>f.isDir?setFilePath(f.path):openFile(f.path)}><ShellIcon name={f.isDir?'folder':'book'} size={16}/>{f.name}</button>)}{files.length===0&&<p className="diary-intro">No Markdown files here yet.</p>}</div><p className="diary-context-note">MEMORY.md and files in AI Memory/, memory/ or context/ are included as diary reference material.</p></section><section><div className="diary-panel-heading"><h2>Storage location</h2><button className="popup-tab" disabled={busy || pendingCount>0} onClick={()=>setWizard('choose')}>Edit</button></div><strong>{folder ? folder.name : savedLabel}</strong><p className="diary-storage-path">{folder?'This computer · current session':storage?.corpusRoot || 'Diary folder'}</p>{folder ? <><label className="diary-sync-toggle"><input type="checkbox" checked={sync} disabled={busy} onChange={e=>setSync(e.target.checked)} />Also sync to {savedLabel}</label><p className="diary-context-note">Applies to new changes. Pending sync remains available to retry. Reopening noevia restores {savedLabel}.</p><button className="popup-tab" disabled={busy || Object.keys(pendingLocal).length>0} onClick={disconnect}>Return to {savedLabel}</button></>:<p className="diary-context-note">Your saved connection is used when you reopen noevia.</p>}</section></aside></div>
     {extraModels && extraProject && <ModelPopup projects={[extraProject]} activeProject={extraProject} onClose={()=>setExtraModels(false)} onProjectsChanged={()=>void refreshExtraProject()} />}
     {extraFiles && <DiaryModal title="Optional diary attachments" onClose={()=>setExtraFiles(false)}><p>Stored separately from your diary corpus. Used only while extras are on.</p>{(extraProject?.files || []).map(file=><div className="model-row" key={file.name}><span>{file.name}<small> · {file.attachment?.state || file.document?.state || 'ready'}</small></span><button className="popup-tab" disabled={busy || extraBusy} onClick={()=>void (async()=>{if(!extraProject || !window.confirm(`Delete attachment ${file.name} from storage?`))return;setExtraBusy(true);try{await deleteProjectFile(extraProject.id,file.name);await refreshExtraProject();}catch(err){setExtraStatus(String(err));}finally{setExtraBusy(false);}})()}>Delete attachment</button></div>)}</DiaryModal>}
     {wizard && <DiaryModal title="Choose diary storage" onClose={()=>{if(!busy)setWizard(null);}}>{error&&<p className="conn-banner" role="alert">{error}</p>}{wizard==='choose'?<div className="diary-storage-options"><button className="month-card" disabled={busy} onClick={()=>setWizard('local')}><strong>Folder on this computer</strong><span>Use a local or mounted SMB folder for this session.</span></button><button className="month-card" disabled={busy || !!folder} onClick={()=>setWizard('online')}><strong>Online connection</strong><span>Nextcloud, WebDAV, or S3-compatible storage.</span></button>{folder&&<p>Return to your saved storage before changing the online connection.</p>}</div>:wizard==='local'?<div className="diary-wizard-step"><p>Select your diary folder. noevia reads its Markdown files and saves new entries there while this page is open.</p><p>To use SMB, mount the share on your computer first, then select its folder.</p><label className="diary-sync-toggle"><input type="checkbox" checked={sync} onChange={e=>setSync(e.target.checked)} />Also sync to {savedLabel}</label><p className="diary-context-note">Diary text is sent to your configured noevia/inference service to answer questions. With sync off, it is processed in memory and is not saved to your online diary. The folder permission is not stored by noevia.</p>{blockedReason==='insecure-context'&&<p role="alert">This page isn’t loaded over HTTPS (or localhost), so browsers block local folder access here for security — even in Chrome/Edge. Access noevia via HTTPS or a localhost tunnel, or choose online storage.</p>}{blockedReason==='unsupported'&&<p role="alert">Your browser does not offer writable folder access. Use Chrome/Edge or choose online storage.</p>}<button className="modal-btn primary" disabled={busy || !directoryPicker()} onClick={connectLocal}>Choose folder</button><button className="modal-btn secondary" disabled={busy} onClick={()=>setWizard('choose')}>Back</button></div>:<StoragePicker onlineOnly onSaved={value=>{setStorage(value);setWizard(null);setFilePath('');setRevision(n=>n+1);setTurns({});}} />}</DiaryModal>}

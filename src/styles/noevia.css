@@ -507,3 +507,11 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
 .composer-model:disabled .model-pill-label { color: inherit; }
 .composer-model:disabled:hover { background: transparent; }
 .chat-composer-inner > .composer-model { justify-self: end; align-self: center; min-width: 0; max-width: 100%; min-height: 32px; }
+
+/* Diary overview follows the existing semantic surfaces and responsive shell. */
+.diary-overview { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin: 28px auto; max-width: 960px; }
+.diary-overview > section { min-width: 0; padding: 18px; border: 1px solid var(--border); border-radius: 14px; }
+.diary-overview h2 { margin: 0 0 12px; font-size: 15px; font-weight: 500; }
+.diary-overview button { overflow-wrap: anywhere; }
+.diary-empty { margin-block: clamp(48px,16vh,180px); }
+@media(max-width:1100px) { .diary-overview { grid-template-columns: 1fr; } }
