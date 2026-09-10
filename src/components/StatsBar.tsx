@@ -26,7 +26,7 @@ export function StatsBar({ stats }: StatsBarProps): JSX.Element {
       <div className="stats-bar">
       <span className={`stats-live-dot${stats?.up ? '' : ' down'}`} />
       <span className="stats-item">
-        <span className="stats-label">tok/s</span>
+        <span className="stats-label" title="Provider-reported rate. Invalid samples and samples shorter than one estimated second are omitted.">reported tok/s</span>
         <span className="stats-value">{fmt(stats?.tokensPerSecond ?? null)}</span>
       </span>
       <span className="stats-item">
