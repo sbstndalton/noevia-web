@@ -10,11 +10,11 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
  },{url,body,method});
 }
 (async()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'noevia-reasoning-')),requests=[];
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'noevia-reasoning-')),requests=[];let reasoningOnly=false;
  const upstream=http.createServer(async(req,res)=>{
   let raw='';for await(const c of req)raw+=c;
   if(req.url.endsWith('/models')){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({data:[{id:'synthetic-model'}]}));}
-  const body=JSON.parse(raw);requests.push(body);res.setHeader('Content-Type','text/event-stream');res.end('data: '+JSON.stringify({choices:[{delta:{content:'Synthetic effort answer'}}]})+'\n\ndata: [DONE]\n\n');
+  const body=JSON.parse(raw);requests.push(body);res.setHeader('Content-Type','text/event-stream');res.end('data: '+JSON.stringify({choices:[{delta:reasoningOnly?{reasoning_content:'Synthetic internal plan, not a final answer'}:{content:'Synthetic effort answer'}}]})+'\n\ndata: [DONE]\n\n');
  });await new Promise(r=>upstream.listen(31243,'127.0.0.1',r));
  const server=spawn(process.execPath,['server/index.cjs'],{cwd:web,stdio:'ignore',env:{...process.env,UI_DATA_DIR:dir,UI_PORT:'31242',UI_HOST:'127.0.0.1',PUBLIC_ORIGIN:origin,LEGACY_AUTH_COMPAT:'false',DIARY_AUTH_TOKEN:'synthetic-only',INFERENCE_BASE_URL:'http://127.0.0.1:31243/v1',DIARY_BASE_URL:'http://127.0.0.1:1',MODEL_MANAGER_KIND:'none',MCP_SERVERS:'',MCP_SERVER_URL:''}});
  const browser=await chromium.launch({headless:true,channel:'chrome'});
@@ -57,6 +57,11 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   await admin.getByText('Effort: high · best-effort hint',{exact:true}).waitFor();
   assert.equal(requests.at(-1).max_tokens,8192);assert.equal(requests.at(-1).reasoning_effort,undefined);
   assert.equal(requests.at(-1).messages[0].content,'Think through this step by step before answering.');
+  reasoningOnly=true;
+  await admin.locator('.composer-input').fill('Synthetic reasoning-only regression');
+  await admin.getByRole('button',{name:'Send',exact:true}).click();
+  await admin.getByText('The model returned reasoning without a final answer. Try again or choose another model.',{exact:true}).waitFor();
+  if(process.env.QA_SCREENSHOTS)await admin.screenshot({path:process.env.QA_SCREENSHOTS+'/reasoning-only.png',fullPage:true,animations:'disabled'});
   console.log('PASS real-server reasoning defaults/overrides/validation/reload/member isolation and responsive composer controls');
  }finally{await browser.close();server.kill('SIGTERM');await once(server,'exit');await new Promise(r=>upstream.close(r));fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
