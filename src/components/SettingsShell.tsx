@@ -1,3 +1,6 @@
+import { PalettePicker } from './PalettePicker';
+import { SettingsPanelBoundary } from './SettingsPanelBoundary';
+import { currentPalette } from '../appearance';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SettingsView } from './SettingsView';
 import type { SettingsViewProps } from './SettingsView';
@@ -53,6 +56,7 @@ const PLANNED: { group: string; items: string[] }[] = [
 ];
 
 export function SettingsShell(props: SettingsViewProps & {onClose:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void}) {
+  const [palette, setPalette] = useState(currentPalette);
   const [section, setSection] = useState('general');
   const [query, setQuery] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -112,6 +116,7 @@ export function SettingsShell(props: SettingsViewProps & {onClose:()=>void; them
     <section className="settings-detail">
       <header><span>{title}</span><button className="shell-icon-button" aria-label="Close settings" onClick={props.onClose}><ShellIcon name="close"/></button></header>
       <div className="settings-detail-scroll" key={section}>
+        <SettingsPanelBoundary>
         {['profile', 'users', 'diary', 'providers', 'models', 'status'].includes(section) ? (
           <SettingsView {...props} section={section}/>
         ) : section === 'general' ? (
@@ -120,8 +125,9 @@ export function SettingsShell(props: SettingsViewProps & {onClose:()=>void; them
             <section className="settings-appearance">
               <div><h2>Appearance</h2><p>Choose a light or dark interface.</p></div>
               <div className="theme-choice">{(['light', 'dark'] as const).map(t => <button className={props.theme === t ? 'is-active' : ''} aria-pressed={props.theme === t} key={t} onClick={() => props.onTheme(t)}>
-                <span className={`theme-swatch ${t}`}><i/><i/><i/></span>{t === 'light' ? 'Polymetal Day' : 'Polymetal Night'}
+                <span className={`theme-swatch ${t}`} data-theme={t} data-palette={palette}><i/><i/><i/></span>{t === 'light' ? 'Light' : 'Dark'}
               </button>)}</div>
+              <PalettePicker theme={props.theme} onChange={setPalette}/>
             </section>
           </>
         ) : section === 'usage' ? (
@@ -132,6 +138,7 @@ export function SettingsShell(props: SettingsViewProps & {onClose:()=>void; them
             {PLANNED.map(p => <PreviewPanel key={p.group} title={p.group} description="" items={p.items}/>)}
           </>
         ) : null}
+        </SettingsPanelBoundary>
       </div>
     </section>
   </dialog>;

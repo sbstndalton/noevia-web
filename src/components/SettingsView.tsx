@@ -108,23 +108,37 @@ function UsersCard(): JSX.Element {
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
-  const refresh = () =>
-    fetchProfile().then((p) => {
-      setUser(p.user);
-      if (p.user.role === 'admin') fetchUsers().then((r) => setUsers(r.users)).catch(() => setDenied(true));
-      else setDenied(true);
-    });
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    setDenied(false);
+    try {
+      const profile = await fetchProfile();
+      setUser(profile.user);
+      if (profile.user.role !== 'admin') { setDenied(true); return; }
+      const result = await fetchUsers();
+      setUsers(result.users);
+    } catch {
+      setError('Users could not be loaded. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => { void refresh(); }, []);
   const invite = async () => {
     const x = await createInvitation();
     await navigator.clipboard.writeText(`${window.location.origin}/?invite=${encodeURIComponent(x.token)}`);
     setNotice('Single-use invitation copied. It expires in 24 hours.');
   };
-  if (!user) return <div><div className="rail-label">Users</div><p className="route-note">Loading…</p></div>;
+  if (error) return <div><h2>Users</h2><p className="route-note" role="alert">{error}</p><button className="btn btn-secondary" onClick={() => void refresh()}>Retry users</button></div>;
+  if (loading || !user) return <div><div className="rail-label">Users</div><p className="route-note">Loading…</p></div>;
   if (denied) return <div><div className="rail-label">Users</div><p className="route-note">Administrator access is required to manage accounts.</p></div>;
   return <div>
     <div className="rail-label" style={{ marginBottom: 12 }}>Users</div>
     <div className="card-list">
+      {users.length === 0 && <p className="route-note">No users returned by the server.</p>}
       {users.map(u => <div className="model-row" key={u.id}><div className="model-name-group"><span className="model-name">{u.displayName}</span><span className="model-quant">@{u.username} · {u.role}{u.disabled ? ' · disabled' : ''}</span></div>{u.id !== user.id && <><button className="popup-tab" onClick={() => void setUserDisabled(u.id, !u.disabled).then(refresh)}>{u.disabled ? 'Enable' : 'Disable'}</button><button className="popup-tab" onClick={() => void createRecovery(u.id).then(async r => { await navigator.clipboard.writeText(`${window.location.origin}/?recovery=${r.token}`); setNotice('Recovery link copied.'); })}>Recovery</button><button className="recents-del" title="Delete user" onClick={() => { const typed = window.prompt(`Type ${u.username} to permanently delete this noevia account. Remote corpus files will be preserved.`); if (typed === u.username) void deleteUser(u.id, typed).then(refresh); }}>✕</button></>}</div>)}
       <button className="modal-btn secondary" onClick={() => void invite()}>+ Copy invitation link</button>
     </div>

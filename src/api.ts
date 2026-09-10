@@ -1,3 +1,4 @@
+import { parseUsage, parseUsers } from './settings-data';
 // API client — all calls go through the local proxy server (same origin),
 // which holds credentials server-side.
 
@@ -60,7 +61,7 @@ export const updateFeatures = (diaryEnabled: boolean) => putJson<{ diaryEnabled:
 /** Marks the setup wizard as finished for this account (resumability gate). */
 export const completeOnboarding = () => postJson<{ onboarded: boolean }>('/api/profile/onboarding', {});
 export const removePasskey = (id: string) => apiFetch(`/api/auth/passkeys/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(r => r.json());
-export const fetchUsers = () => getJson<{ users: AuthUser[] }>('/api/admin/users');
+export const fetchUsers = () => getJson<unknown>('/api/admin/users').then(parseUsers);
 export const createInvitation = (role: 'admin' | 'member' = 'member') => postJson<{ token: string; expiresAt: number }>('/api/admin/invitations', { role });
 export const setUserDisabled = (id: string, disabled: boolean) => putJson<{ ok: true }>(`/api/admin/users/${encodeURIComponent(id)}/disabled`, { disabled });
 export const createRecovery = (id: string) => postJson<{ token: string; expiresAt: number }>(`/api/admin/users/${encodeURIComponent(id)}/recovery`, {});
@@ -363,7 +364,7 @@ export function editDiaryEntry(body: { xid: string; me: string; assistant: strin
   return postJson('/api/diary/entries/edit', body);
 }
 
-export const fetchUsage = () => getJson<import('./types').UsageSummary>('/api/usage');
+export const fetchUsage = () => getJson<unknown>('/api/usage').then(parseUsage);
 
 export function fetchChatHistory(chatId: string): Promise<HistoryEntry[]> {
   return getJson<{ history: HistoryEntry[] }>(

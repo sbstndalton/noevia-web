@@ -1,3 +1,5 @@
+import { PalettePicker } from './PalettePicker';
+import { updateThemeColor } from '../appearance';
 import { useCallback, useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { startRegistration } from '@simplewebauthn/browser';
@@ -87,7 +89,7 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('cowork-theme', theme);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#1c1d20' : '#faf9f7');
+    updateThemeColor();
   }, [theme]);
 
   // Resumability: if a session already exists, skip straight past account
@@ -313,6 +315,7 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
                 <small>Lets noevia pick a lighter or heavier model per message. Configure the models in the model popup later.</small>
               </span>
             </label>
+            <PalettePicker theme={theme}/>
             <label htmlFor="wiz-timezone">Your timezone</label>
             <input
               id="wiz-timezone"

@@ -100,3 +100,59 @@
   --shadow-pop: 0 16px 48px rgba(16,24,40,.16);
   color-scheme: light;
 }
+
+/* Palette is independent of light/dark. The existing base is Cool. */
+[data-theme='dark'][data-palette='warm'] {
+  --bg-chrome: #1c1917;
+  --bg-app: #24201d;
+  --bg-canvas: #24201d;
+  --bg-surface: #2d2723;
+  --bg-surface-hover: #383029;
+  --bg-surface-active: #40372f;
+  --text-primary: #f1eae2;
+  --text-secondary: #bfb2a5;
+  --text-muted: #bfb2a5;
+  --control-border: #95887e;
+  --focus-ring: #d39577;
+  --border-subtle: #433b34;
+}
+[data-theme='light'][data-palette='warm'] {
+  --bg-chrome: #f0e9df;
+  --bg-app: #fbf7f0;
+  --bg-canvas: #fbf7f0;
+  --bg-surface: #fffdf8;
+  --bg-surface-hover: #f3ede4;
+  --bg-surface-active: #e8dfd2;
+  --text-primary: #302a25;
+  --text-secondary: #716052;
+  --text-muted: #716052;
+  --control-border: #8a796a;
+  --border-subtle: #e4dbce;
+}
+[data-theme='dark'][data-palette='neutral'] {
+  --bg-chrome: #181818;
+  --bg-app: #202020;
+  --bg-canvas: #202020;
+  --bg-surface: #282828;
+  --bg-surface-hover: #303030;
+  --bg-surface-active: #383838;
+  --text-primary: #eeeeee;
+  --text-secondary: #b3b3b3;
+  --text-muted: #b3b3b3;
+  --control-border: #898989;
+  --focus-ring: #c8939d;
+  --border-subtle: #3b3b3b;
+}
+[data-theme='light'][data-palette='neutral'] {
+  --bg-chrome: #f0f0f0;
+  --bg-app: #fafafa;
+  --bg-canvas: #fafafa;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #f2f2f2;
+  --bg-surface-active: #e6e6e6;
+  --text-primary: #262626;
+  --text-secondary: #626262;
+  --text-muted: #626262;
+  --control-border: #808080;
+  --border-subtle: #dedede;
+}

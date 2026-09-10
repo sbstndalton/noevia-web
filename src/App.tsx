@@ -1,3 +1,4 @@
+import { updateThemeColor } from './appearance';
 import { ShellIcon } from './components/ShellIcon';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
@@ -100,7 +101,7 @@ export default function App(): JSX.Element {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('cowork-theme', theme);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#1c1d20' : '#faf9f7');
+    updateThemeColor();
   }, [theme]);
 
   // Navigating away used to abort the generation, so stepping into another

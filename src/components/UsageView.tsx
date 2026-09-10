@@ -37,17 +37,20 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 export function UsageView(): JSX.Element {
   const [data, setData] = useState<UsageSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [window_, setWindow] = useState<'7' | '30' | 'all'>('30');
 
   useEffect(() => {
     let live = true;
+    setError(null);
+    setData(null);
     fetchUsage()
       .then((d) => { if (live) setData(d); })
       .catch(() => { if (live) setError('Usage could not be loaded.'); });
     return () => { live = false; };
-  }, []);
+  }, [attempt]);
 
-  if (error) return <><div className="settings-title"><h1>Usage &amp; activity</h1></div><p className="route-note" role="alert">{error}</p></>;
+  if (error) return <><div className="settings-title"><h1>Usage &amp; activity</h1></div><p className="route-note" role="alert">{error}</p><button className="btn btn-secondary" onClick={() => setAttempt(n => n + 1)}>Retry usage</button></>;
   if (!data) return <><div className="settings-title"><h1>Usage &amp; activity</h1></div><p className="route-note">Loading…</p></>;
 
   const totals: UsageTotals = window_ === '7' ? data.last7 : window_ === '30' ? data.last30 : data.allTime;
@@ -58,9 +61,9 @@ export function UsageView(): JSX.Element {
   // Column-major weeks so the grid reads left-to-right in time, like a
   // contribution graph: each column is a week, each row a weekday.
   const grid = data.days;
-  const firstWeekday = new Date(`${grid[0].day}T12:00:00`).getDay();
+  const firstWeekday = grid.length ? new Date(`${grid[0].day}T12:00:00`).getDay() : 0;
   const cells = [...Array.from({ length: firstWeekday }, () => null), ...grid];
-  const weeks = Math.ceil(cells.length / 7);
+  const weeks = Math.max(1, Math.ceil(cells.length / 7));
   const monthMarks: { col: number; label: string }[] = [];
   grid.forEach((d, i) => {
     const date = new Date(`${d.day}T12:00:00`);
@@ -103,6 +106,7 @@ export function UsageView(): JSX.Element {
       <div className="usage-section-head">
         <div><h2>Activity</h2><p>The last {data.retentionDays} days, in {data.timeZone} time.</p></div>
       </div>
+      {grid.length === 0 && <p className="route-note">No daily activity recorded yet.</p>}
       <div className="usage-heatmap-scroll">
         <div className="usage-heatmap-inner">
           {/* The month strip must share the grid's exact column pitch (cell +
