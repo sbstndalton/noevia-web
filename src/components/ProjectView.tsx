@@ -11,7 +11,7 @@ import type { Project } from '../types';
 import { SendIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
 import { ConfirmDialog } from './ContextMenu';
-import { fileToBase64, MAX_DOCUMENT_BYTES } from '../sources';
+import { fileToBase64, uploadLimit } from '../sources';
 import { deleteProjectImage, projectImageUrl, uploadProjectFile, deleteProjectFile } from '../api';
 
 /** First free "name", "name (2)", "name (3)", … avoiding collisions. */
@@ -88,10 +88,10 @@ export function ProjectView({
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       try {
-        if (file.size > MAX_DOCUMENT_BYTES) throw new Error('Over the 25 MB limit');
+        if (file.size > uploadLimit(file.name)) throw new Error('File exceeds the limit: 25 MB, or 60 MB for PDF reduction');
         update(i, { stage: 'Reading file' });
-        await uploadProjectFile(project.id, { name: file.name, dataBase64: await fileToBase64(file) }, value => update(i, value));
-        update(i, { stage: 'Saved', percent: 100, finished: Date.now() });
+        const result = await uploadProjectFile(project.id, { name: file.name, dataBase64: await fileToBase64(file) }, value => update(i, value));
+        update(i, { stage: result.attachment?.reduction?.note || 'Saved', percent: 100, finished: Date.now() });
         onRefresh();
       } catch (err) { update(i, { stage: err instanceof Error ? err.message : 'Upload failed', finished: Date.now() }); }
     }
@@ -214,7 +214,7 @@ export function ProjectView({
                 </label>
                 <button className="btn btn-secondary btn-sm" onClick={() => setBrowsing(true)}>Import text from storage</button>
               </div>
-              <p className="rail-empty">Up to 25 MB per file. Documents such as DOCX are accepted; archive bundles are not. Files without a reader stay available as originals.</p>
+              <p className="rail-empty">Up to 25 MB per file. PDFs up to 60 MB are compressed automatically, with a text-only fallback if needed. Documents such as DOCX are accepted; archive bundles are not. Files without a reader stay available as originals.</p>
               {uploadRows.length > 0 && <details open={busyDocs}><summary>{busyDocs ? 'Uploading files…' : `Upload results (${uploadRows.length})${uploadRows.some(r => r.stage !== 'Saved') ? ' · some files were not added' : ' · saved'}`}</summary><ul className="source-list upload-progress" aria-label="Upload progress" aria-live="polite">{uploadRows.map((r, i) => <li key={i}>
                 <span><strong>{r.name}</strong><small className="source-status">{r.stage}{r.percent !== undefined ? ` · ${r.percent}%` : ''} · {Math.max(0, Math.round(((r.finished || now) - r.started) / 1000))}s</small></span>
               </li>)}</ul></details>}

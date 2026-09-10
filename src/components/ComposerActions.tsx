@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Project, Toolbox } from '../types';
 import { fetchToolboxes, saveProjectConfig, uploadProjectFile } from '../api';
-import { fileToBase64, MAX_DOCUMENT_BYTES } from '../sources';
+import { fileToBase64, uploadLimit } from '../sources';
 
 /** Composer shortcuts use the existing project APIs; enabling tools never approves a write. */
 export function ComposerActions({ project, disabled, onChanged, onModels, onBusy, onStatus, header, diary = false, chatOnly = false }: {
@@ -61,19 +61,20 @@ export function ComposerActions({ project, disabled, onChanged, onModels, onBusy
   const upload = async (files: File[]) => {
     if (!project || !files.length || disabled) return;
     setOpen(false); onBusy(true);
-    const failures: string[] = [];
+    const failures: string[] = [], notices: string[] = [];
     const started = Date.now();
     for (const [index, file] of files.entries()) {
       const status = (stage: string) => onStatus(`${index + 1}/${files.length} · ${file.name} · ${stage} · ${Math.round((Date.now() - started) / 1000)}s`);
       try {
-        if (file.size > MAX_DOCUMENT_BYTES) throw new Error('File exceeds 25 MB');
+        if (file.size > uploadLimit(file.name)) throw new Error('File exceeds the limit: 25 MB, or 60 MB for PDF reduction');
         status('Reading file');
-        await uploadProjectFile(project.id, { name: file.name, dataBase64: await fileToBase64(file) }, value => status(`${value.stage}${value.percent == null ? '' : ` ${value.percent}%`}`));
+        const result = await uploadProjectFile(project.id, { name: file.name, dataBase64: await fileToBase64(file) }, value => status(`${value.stage}${value.percent == null ? '' : ` ${value.percent}%`}`));
+        if(result.attachment?.reduction?.note)notices.push(`${file.name}: ${result.attachment.reduction.note}`);
       } catch (err) { failures.push(`${file.name}: ${err instanceof Error ? err.message : 'Upload failed'}`); }
     }
     try { await onChanged(); }
     finally {
-      onStatus(failures.length ? `Saved ${files.length - failures.length}/${files.length}. ${failures.join('; ')}` : `Saved ${files.length} ${files.length === 1 ? 'file' : 'files'} to ${chatOnly ? 'this chat' : project.name} · ${diary ? 'used only while extras are on' : chatOnly ? 'ready for your next message' : 'available to all chats in this project'}`);
+      onStatus(failures.length ? `Saved ${files.length - failures.length}/${files.length}. ${failures.join('; ')}` : `Saved ${files.length} ${files.length === 1 ? 'file' : 'files'} to ${chatOnly ? 'this chat' : project.name} · ${diary ? 'used only while extras are on' : chatOnly ? 'ready for your next message' : 'available to all chats in this project'}${notices.length ? ' · '+notices.join('; ') : ''}`);
       onBusy(false);
     }
   };
@@ -86,7 +87,7 @@ export function ComposerActions({ project, disabled, onChanged, onModels, onBusy
     {open && <div id={panelId} className="composer-actions-panel" style={menuLayout} role="region" aria-label="Files and tools">
       {header}
       <span className="composer-menu-label">{diary ? 'Optional diary context' : chatOnly ? 'Add to chat' : 'Add to project'}</span>
-      <button type="button" disabled={!project} onClick={() => input.current?.click()}>＋ <span>Files and photos<small>Up to 25 MB each · {diary ? 'separate attachment storage' : chatOnly ? 'saved with this chat' : 'saved to project storage'}</small></span></button>
+      <button type="button" disabled={!project} onClick={() => input.current?.click()}>＋ <span>Files and photos<small>25 MB · PDF reduction up to 60 MB · {diary ? 'separate attachment storage' : chatOnly ? 'saved with this chat' : 'saved to project storage'}</small></span></button>
       {!project && <p>{diary ? 'Enable extras to use attachments and connectors. Diary retrieval and capture remain active.' : 'Open a project chat to attach files or choose tools.'}</p>}
       <details>
         <summary>Tools <span>›</span></summary>

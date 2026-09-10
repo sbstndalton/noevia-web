@@ -23,6 +23,7 @@ export const IMAGE_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
 // server at ingest, so it ends up an ordinary source.
 export const DOCUMENT_EXTENSIONS = ['.pdf'];
 export const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
+export const uploadLimit = (name: string) => /\.pdf$/i.test(name) ? 60 * 1024 * 1024 : MAX_DOCUMENT_BYTES;
 export const isDocumentFile = (name: string) =>
   DOCUMENT_EXTENSIONS.some((e) => name.toLowerCase().endsWith(e));
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
