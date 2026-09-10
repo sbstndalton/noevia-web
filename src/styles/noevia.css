@@ -545,3 +545,7 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
   .diary-content-scroll { padding: 20px 16px; }
   .diary-composer-dock { padding: 8px 16px; }
 }
+
+.diary-activity { color: var(--text-secondary); margin: 8px 0 16px; font-size: 13px; }
+.diary-activity summary { cursor: pointer; }
+.diary-activity ol { padding-left: 22px; line-height: 1.7; }

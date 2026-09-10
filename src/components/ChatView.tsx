@@ -75,7 +75,7 @@ function MessageMeta({ stats, tools }: { stats?: MessageStats; tools?: ToolCallV
 
 // Elapsed-time ticker shown while a reply is still streaming, so a long
 // local-model generation does not look hung.
-function LiveTimer({ startedAt }: { startedAt: number }): JSX.Element {
+export function LiveTimer({ startedAt }: { startedAt: number }): JSX.Element {
   const [, force] = useState(0);
   useEffect(() => {
     const t = setInterval(() => force((n) => n + 1), 200);

@@ -4,7 +4,7 @@ import { ComposerActions } from './ComposerActions';
 import { ComposerModel } from './ComposerModel';
 import { ModelPopup } from './ModelPopup';
 import { useChatScroll } from '../useChatScroll';
-import { ThinkingBlock, ToolChips } from './ChatView';
+import { LiveTimer, ThinkingBlock, ToolChips } from './ChatView';
 import { prepareDiaryExtras } from '../diary-extras';
 import type { Project, ToolCallView } from '../types';
 import { SendIcon } from './Icons';
@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from 'react';
 import { apiFetch, deleteProjectFile, fetchDiaryMonth, fetchDiarySource, fetchStorage, streamChat } from '../api';
 import type { StorageConnection } from '../api';
 import { dateInText, dayLabel, localDay, monthLabel, splitDays } from '../diary-data';
-import { diaryRequest, directoryPicker, directoryPickerBlockedReason, listFiles, randomSessionId, readFile, saveLocal, scanLocal, syncFileChange, writeFile } from '../diary-workspace';
+import { directoryPicker, directoryPickerBlockedReason, listFiles, randomSessionId, readFile, saveLocal, scanLocal, syncFileChange, writeFile } from '../diary-workspace';
 import type { DiaryFile, DirectoryHandle, FileEntry } from '../diary-workspace';
 import { DiaryModal, MarkdownPreview } from './DiaryModal';
 import { StoragePicker } from './StoragePicker';
@@ -27,7 +27,6 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const [extraProject, setExtraProject] = useState<Project | null>(null);
   const [extraBusy, setExtraBusy] = useState(false);
   const [extraStatus, setExtraStatus] = useState('');
-  const [extraCalls, setExtraCalls] = useState<ToolCallView[]>([]);
   const [extraModels, setExtraModels] = useState(false);
   const [extraFiles, setExtraFiles] = useState(false);
   const extraAbort = useRef<AbortController | null>(null);
@@ -39,7 +38,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   };
   const toggleExtras = async () => {
     if (busyRef.current || extraBusy) return;
-    if (extrasEnabled) { setExtrasEnabled(false); setExtraCalls([]); setExtraStatus('Extras off. Normal diary retrieval and capture remain active.'); return; }
+    if (extrasEnabled) { setExtrasEnabled(false); setExtraStatus('Extras off. Normal diary retrieval and capture remain active.'); return; }
     setExtraBusy(true);
     try {
       const response = await apiFetch('/api/diary/context', { method: 'POST' });
@@ -80,7 +79,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const { scrollRef, onScroll, follow } = useChatScroll(scope, turns, !!day);
   useEffect(() => {
     // Sending from home changes the visible scope while preparation is active.
-    if (!busyRef.current) { setExtraCalls([]); setExtraStatus(''); }
+    if (!busyRef.current) { setExtraStatus(''); }
   }, [scope]);
   const savedLabel = storage?.kind === 'local' ? 'Server storage' : storage?.kind === 'nextcloud' ? 'Nextcloud' : storage?.kind === 's3' ? 'S3' : storage?.kind === 'webdav' ? 'WebDAV' : 'saved storage';
   const pendingCount = Object.keys(pendingSync).length + Object.keys(pendingLocal).length;
@@ -198,55 +197,73 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     if (month !== entryMonth) setDays({});
     setMonth(entryMonth); setDay(entryDay);
     setDraft('');
-    setTurns(prev => ({ ...prev, [entryDay]: [...displayHistory, { role: 'user', content: message }, { role: 'assistant', content: '' }] }));
-    const reply = (text: string, reasoning = '') => setTurns(prev => ({ ...prev, [entryDay]: [...displayHistory, { role: 'user', content: message }, { role: 'assistant', content: text, reasoning }] }));
-    let answered = false;
+    setTurns(prev => ({ ...prev, [entryDay]: [...displayHistory, { role: 'user', content: message }, { role: 'assistant', content: '', startedAt: Date.now() }] }));
+    const patchReply = (patch: Partial<Turn>) => setTurns(prev => {
+      const current = prev[entryDay] || [];
+      return {...prev, [entryDay]: [...current.slice(0,-1), {...current[current.length-1], ...patch}]};
+    });
+    let text = '', reasoning = '';
+    const activity: string[] = [];
+    const progress = (label: string) => {
+      if (activity.at(-1) !== label) activity.push(label);
+      patchReply({activity:[...activity]});
+    };
+    progress('Preparing diary conversation…');
+    let answered = false, diaryStarted = false;
+    const calls: ToolCallView[] = [];
     try {
-      setExtraCalls([]);
       extraAbort.current = new AbortController();
       const useExtras = extrasEnabled && !!extraProject && !!((extraProject.files || []).length || (extraProject.assets || []).length || (extraProject.toolboxes || []).length);
       setExtraStatus(useExtras ? 'Preparing optional context…' : '');
       const extraContext = await prepareDiaryExtras(useExtras, message, `${session.current.slice(0,36)}-${entryDay}-${entryDay}`, ev => {
-        if (ev.type === 'status') setExtraStatus(ev.text || 'Preparing optional context…');
+        if (ev.type === 'status') { setExtraStatus(ev.text || 'Preparing optional context…'); progress(ev.text || 'Preparing optional context…'); }
+        if (ev.type === 'reasoning') { reasoning += ev.text || ''; patchReply({reasoning}); }
         if (ev.type === 'tool' || ev.type === 'tool_pending' || ev.type === 'tool_result') {
-          setExtraCalls(previous => {
-            const next = [...previous], index = ev.index ?? next.length;
-            next[index] = ev.type === 'tool_result'
-              ? { name: ev.name || 'tool', args: ev.text || '', status: (ev.text || '').startsWith('ERROR: the user') ? 'denied' : 'done' }
-              : { name: ev.name || 'tool', args: ev.args || '', status: ev.type === 'tool_pending' ? 'pending' : undefined, approvalId: ev.id };
-            return next;
-          });
+          const index = ev.index ?? calls.length;
+          calls[index] = ev.type === 'tool_result'
+            ? {name:ev.name || 'tool',args:ev.text || '',status:(ev.text || '').startsWith('ERROR: the user') ? 'denied' : 'done'}
+            : {name:ev.name || 'tool',args:ev.args || '',status:ev.type === 'tool_pending' ? 'pending' : undefined,approvalId:ev.id};
+          patchReply({tools:[...calls]});
         }
       }, extraAbort.current.signal);
       extraAbort.current = null;
       if (useExtras) setExtraStatus('Optional context ready · diary retrieval and capture now running');
 
-      if (folder) {
-        const snapshot = await scanLocal(folder); setLocalFiles(snapshot);
-        const result = await diaryRequest<{reply: string; reasoning?: string; decision: string; files: Record<string,string>}>('local-exchange', { files: snapshot, message, history, entryDay, entryTime, extrasEnabled: useExtras, extraContext });
-        reply(result.reply, result.reasoning); answered = true;
-        const changes = Object.fromEntries(Object.entries(result.files).map(([path, content]) => [path, { before: snapshot[path] ?? null, content }]));
-        if (Object.keys(changes).length) await commitLocal(changes);
-        else setStatus('Conversation only — no entry saved.');
-      } else {
-        let text = '', reasoning = '', decision = '';
-        for await (const ev of streamChat({ spaceId: 'diary', extrasEnabled: useExtras, extraContext, message, history, sessionId: `${session.current.slice(0,36)}-${entryDay}`, entryDay, entryTime })) {
-          if (ev.type === 'error') throw new Error(ev.text || 'Diary request failed');
-          if (ev.type === 'reasoning') { reasoning += ev.text || ''; reply(text, reasoning); }
-          if (ev.type === 'delta') { text += ev.text || ''; reply(text, reasoning); }
-          if (ev.type === 'diary') decision = ev.decision || '';
+      const snapshot = folder ? await scanLocal(folder) : undefined;
+      if (snapshot) setLocalFiles(snapshot);
+      let decision = '', completed = false, changes: Record<string,string> | undefined;
+      diaryStarted = true;
+      for await (const ev of streamChat({spaceId:'diary', files:snapshot, extrasEnabled:useExtras, extraContext,
+        message, history, sessionId:`${session.current.slice(0,36)}-${entryDay}`, entryDay, entryTime})) {
+        if (ev.type === 'error') throw new Error(ev.text || 'Diary request failed');
+        if (ev.type === 'status') progress(ev.text || 'Working…');
+        if (ev.type === 'reasoning') { reasoning += ev.text || ''; patchReply({reasoning}); }
+        if (ev.type === 'delta' || ev.type === 'answer') {
+          text = ev.type === 'answer' ? ev.text || '' : text + (ev.text || '');
+          patchReply({content:text}); answered = true;
         }
-        answered = true;
-        if (decision === 'error') throw new Error('The reply arrived, but the diary write failed. Check storage before retrying.');
-        setStatus(decision === 'logged' || decision === 'ok' ? `Saved to ${dayLabel(entryDay)}.` : 'Conversation only — no entry saved.');
+        if (ev.type === 'diary') { decision = ev.decision || ''; changes = ev.files; }
+        if (ev.type === 'done') completed = true;
       }
+      if (!completed || !decision) throw new Error('Saving was not confirmed. Check the saved diary before sending again.');
+      if (decision === 'error') throw new Error('The reply arrived, but the diary write failed. Check storage before retrying.');
+      if (snapshot) {
+        if (!changes) throw new Error('Local save files were not received. Check before retrying.');
+        progress('Writing to your local folder…');
+        const pending = Object.fromEntries(Object.entries(changes).map(([path,content])=>[path,{before:snapshot[path] ?? null,content}]));
+        if (Object.keys(pending).length) await commitLocal(pending);
+      }
+      const saved = decision === 'logged' || decision === 'ok';
+      progress(saved ? 'Diary entry saved.' : 'Conversation complete · no entry saved.');
+      setStatus(saved ? `Saved to ${dayLabel(entryDay)}.` : 'Conversation only — no entry saved.');
       setRevision(n => n+1);
     } catch (e) {
       const cancelled = extraAbort.current?.signal.aborted;
       extraAbort.current = null;
-      setExtraStatus(cancelled ? 'Optional context cancelled. No diary entry was sent.' : 'Optional context or diary request failed; your draft is preserved.');
-      setExtraCalls(previous => previous.map(call => call?.status === 'pending' ? { ...call, status: 'denied', approvalId: undefined, args: 'Optional context ended before this approval completed.' } : call));
-      if (!answered) { setDraft(message); setTurns(previous => ({ ...previous, [entryDay]: displayHistory })); }
+      progress(cancelled ? 'Optional context cancelled.' : 'Connection or save needs attention.');
+      setExtraStatus(cancelled ? 'Optional context cancelled. No diary entry was sent.' : '');
+      patchReply({tools:calls.map(call => call?.status === 'pending' ? {...call,status:'denied',approvalId:undefined,args:'Optional context ended before this approval completed.'} : call)});
+      if (!answered && !diaryStarted) { setDraft(message); setTurns(previous => ({ ...previous, [entryDay]: displayHistory })); }
       if (cancelled) throw new Error('Optional context cancelled. No diary entry was sent.');
       throw e;
     }
@@ -301,7 +318,6 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     {extrasEnabled && extraProject && <ReasoningControl project={extraProject} disabled={busy || extraBusy} onChanged={refreshExtraProject} />}
     <button className="send-btn" aria-label="Send diary message" disabled={busy || extraBusy || !draft.trim()} onClick={submit}><SendIcon /></button></div>
     {extraStatus && <p className="composer-action-status" role="status">{extraStatus}</p>}
-    {!!extraCalls.length && <ToolChips calls={extraCalls.filter(Boolean)} />}
     {busy && extraAbort.current && <button className="popup-tab" onClick={()=>extraAbort.current?.abort()}>Cancel optional context</button>}
     <p className="composer-hint">{busy ? 'Working on your diary…' : day ? `Writing to ${dayLabel(day)} · Shift + Enter for a new line` : 'Your current local date and time are used when you send.'}</p>
   </div>;
@@ -314,7 +330,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       {!month && <DiaryLanding failed={overview.failed} ready={overview.ready} empty={emptyDiary} composer={composer} months={months} recentDays={overview.recentDays} memory={overview.memory} sources={overview.sources} busy={busy} navigate={navigate} openFile={openFile} />}
       {month && !day && <DiaryCalendar month={month} today={today} days={days} busy={busy} navigate={navigate} />}
       {day && <section className="diary-day"><h1>{dayLabel(day)}</h1>{days[day]?.trim() ? <details className="diary-saved-record" key={`${day}-${!!conversation.length}`} open={!conversation.length}><summary>Saved diary entry</summary><MarkdownPreview text={days[day]} /></details> : !conversation.length && <p className="diary-intro">A blank page for this day. Add something if you’d like.</p>}</section>}
-      {!!conversation.length && <section className="diary-conversation" aria-live="polite" aria-busy={busy}>{conversation.map((t,i)=><article className="diary-reply" data-role={t.role} key={i}><span className="msg-sender">{t.role==='user'?'You':'Diary companion'}</span>{t.reasoning && <ThinkingBlock text={t.reasoning} live={busy && i === conversation.length - 1 && !t.content} />}<MarkdownPreview text={t.content || (busy ? 'Working on your diary…' : '')} /></article>)}</section>}
+      {!!conversation.length && <section className="diary-conversation" aria-live="polite" aria-busy={busy}>{conversation.map((t,i)=><article className="diary-reply" data-role={t.role} key={i}><span className="msg-sender">{t.role==='user'?'You':'Diary companion'}</span>{t.role === 'assistant' && t.activity?.length && <details className="diary-activity" open={busy && i === conversation.length - 1}><summary>{busy && i === conversation.length - 1 ? <>{t.activity.at(-1)}{t.startedAt && <> · <LiveTimer startedAt={t.startedAt} /></>}</> : 'Diary activity'}</summary><ol>{t.activity.map((label,n)=><li key={n}>{label}</li>)}</ol></details>}{!!t.tools?.length && <ToolChips calls={t.tools.filter(Boolean)} />}{t.reasoning && <ThinkingBlock text={t.reasoning} live={busy && i === conversation.length - 1 && !t.content} />}<MarkdownPreview text={t.content || (busy ? 'Working on your diary…' : '')} /></article>)}</section>}
       </div>
       {day && <div className="diary-composer-dock">{composer}</div>}
       {status && <p className="diary-save-status" role="status">{status}</p>}

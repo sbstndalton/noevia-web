@@ -1,7 +1,7 @@
 // Isolated UI fixture: every API is synthetic, no inference/storage/network calls.
 const http = require('node:http'), fs = require('node:fs'), path = require('node:path');
 function createFixture(port = 31239) {
-  const requests = [], pending = new Set();
+  const requests = [], pending = new Set(), live = new Set();
   const extraProject={id:'__diary-context',name:'Extras',model:'synthetic',files:[],assets:[],toolboxes:['core']};
   const server = http.createServer(async (req,res) => {
     const url = new URL(req.url,'http://localhost');
@@ -29,17 +29,21 @@ function createFixture(port = 31239) {
     if(url.pathname==='/api/projects/__diary-context/config'){extraProject.reasoningEffort=body.reasoningEffort;return json({ok:true});}
     if(url.pathname==='/api/chat'||url.pathname==='/api/diary/local-exchange') {
       requests.push({path:url.pathname,body});
-      if(url.pathname.endsWith('local-exchange'))return setTimeout(()=>json({reply:'Synthetic local reply',reasoning:'Synthetic provider reasoning',decision:'logged',files:{['Entries/'+body.entryDay+'.md']:'# '+body.entryDay+'\n\nSynthetic local entry'}}),250);
       res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache'});
       const event=(data)=>res.write('data: '+JSON.stringify(data)+'\n\n');
       event({type:'reasoning',text:'Synthetic provider reasoning'});
+      if(url.pathname.endsWith('local-exchange')) {
+        return setTimeout(()=>{event({type:'answer',text:'Synthetic local reply'});event({type:'diary',decision:'logged',files:{['Entries/'+body.entryDay+'.md']:'# '+body.entryDay+'\n\nSynthetic local entry'}});event({type:'done'});res.end();},250);
+      }
       event({type:'status',text:body.spaceId==='diary-extras'?'Preparing synthetic context':'Reading synthetic diary'});
+      if(body.spaceId==='diary-extras') {event({type:'tool',index:0,name:'synthetic_read',args:'{}'});event({type:'tool_result',index:0,name:'synthetic_read',text:'Synthetic reference read'});}
       if(body.message==='cancel synthetic'&&body.spaceId==='diary-extras') { pending.add(res);res.on('close',()=>pending.delete(res));return; }
+      if(body.message==='live synthetic') { live.add(res);pending.add(res);res.on('close',()=>{live.delete(res);pending.delete(res);});return; }
       if(body.message==='long synthetic') {
         let chunk=0;
         const timer=setInterval(()=>{
           event({type:'delta',text:('Synthetic streaming paragraph '+(++chunk)+'. ').repeat(20)+'\n\n'});
-          if(chunk===80){clearInterval(timer);event({type:'done'});res.end();}
+          if(chunk===80){clearInterval(timer);event({type:'diary',decision:'skip'});event({type:'done'});res.end();}
         },60);
         pending.add(res);res.on('close',()=>{clearInterval(timer);pending.delete(res);});return;
       }
@@ -52,7 +56,7 @@ function createFixture(port = 31239) {
     if(url.pathname==='/api/models/installed')return json([]);
     return json({});
   });
-  return {server,requests,listen:()=>new Promise(r=>server.listen(port,'127.0.0.1',r)),close:()=>{for(const res of pending)res.end();return new Promise(r=>server.close(r));}};
+  return {server,requests,liveEvent:event=>{for(const res of live)res.write('data: '+JSON.stringify(event)+'\n\n');},finishLive:()=>{for(const res of live){res.write('data: {"type":"diary","decision":"skip"}\n\ndata: {"type":"done"}\n\n');res.end();}},listen:()=>new Promise(r=>server.listen(port,'127.0.0.1',r)),close:()=>{for(const res of pending)res.end();return new Promise(r=>server.close(r));}};
 }
 module.exports={createFixture};
 if(require.main===module){const f=createFixture();f.listen().then(()=>console.log('Synthetic Diary UI fixture on http://localhost:31239'));process.on('SIGTERM',()=>f.close().then(()=>process.exit()));}

@@ -49,7 +49,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    assert.equal(fixture.requests.at(-1).body.entryDay,'2026-09-09');assert.equal(fixture.requests.at(-1).body.history.length,0);
    if(!local){
     await page.locator('.diary-home-link').click();await send('fail synthetic');await page.getByRole('alert').filter({hasText:'Synthetic unavailable'}).waitFor();
-    assert.equal(await page.locator('#diary-draft').inputValue(),'fail synthetic');assert.equal(await page.locator('.diary-conversation [data-role=user]').count(),2);
+    assert.equal(await page.locator('#diary-draft').inputValue(),'');assert.equal(await page.locator('.diary-conversation [data-role=user]').count(),3);
     await page.locator('#diary-draft').fill('');await page.locator('.diary-home-link').click();
     await page.getByRole('button',{name:'Add files and tools'}).click();await page.getByRole('checkbox',{name:'Extra attachments & tools'}).click();await page.getByText('Manage attachments (0)',{exact:true}).waitFor();await page.keyboard.press('Escape');
     await send('extras synthetic');await page.waitForFunction(()=>document.querySelector('.diary-conversation')?.getAttribute('aria-busy')==='false');

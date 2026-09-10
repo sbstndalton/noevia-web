@@ -440,10 +440,12 @@ export function saveChatHistory(chatId: string, history: HistoryEntry[]): Promis
 //   { type:'usage', promptTokens, completionTokens, totalTokens, tokensPerSecond }
 export async function* streamChat(
   body: { spaceId: string; extrasEnabled?: boolean; extraContext?: string;
-    entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null },
+    files?: Record<string,string>; entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null },
   signal?: AbortSignal,
 ): AsyncGenerator<{
   type: string;
+  files?: Record<string,string>;
+  reply?: string;
   text?: string;
   model?: string;
   chatId?: string;
@@ -461,19 +463,27 @@ export async function* streamChat(
   totalTokens?: number;
   tokensPerSecond?: number;
 }> {
-  const res = await apiFetch('/api/chat', {
+  const res = await apiFetch(body.files ? '/api/diary/local-exchange' : '/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({...body, ...(body.spaceId === 'diary' ? {stream:true} : {})}),
     signal,
+  }).catch(error => {
+    if (body.spaceId === 'diary') throw new Error('The diary connection failed. Saving is unconfirmed; check the saved diary before sending again.');
+    throw error;
   });
   if (!res.ok || !res.body) {
     const detail = await res.text().catch(() => '');
-    throw new Error(`chat failed: ${res.status} ${detail.slice(0, 120)}`);
+    let message = '';
+    try { const error = JSON.parse(detail); message = typeof error.error === 'string' ? error.error : ''; } catch { /* Proxy HTML is not a useful error. */ }
+    throw new Error(message || (res.status === 524
+      ? 'The connection timed out. Your diary entry may still be saving; check the saved diary before sending again.'
+      : `Chat request failed (${res.status}). Please check the connection.`));
   }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
-  let buffer = '';
+  let buffer = '', completed = false;
+  try {
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -483,7 +493,16 @@ export async function* streamChat(
       const chunk = buffer.slice(0, idx);
       buffer = buffer.slice(idx + 2);
       const dataLine = chunk.split('\n').find((l) => l.startsWith('data: '));
-      if (dataLine) yield JSON.parse(dataLine.slice(6));
+      if (dataLine) {
+        const event = JSON.parse(dataLine.slice(6));
+        if (event.type === 'done' || event.type === 'error') completed = true;
+        yield event;
+      }
     }
   }
+  if (!completed && body.spaceId === 'diary') throw new Error('The diary connection ended before saving was confirmed. Check the saved diary before sending again.');
+  } catch (error) {
+    if (body.spaceId === 'diary' && !completed) throw new Error('The diary connection ended before saving was confirmed. Check the saved diary before sending again.');
+    throw error;
+  } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
 }

@@ -1,6 +1,7 @@
+import type { ToolCallView } from './types';
 import { localDay, localTimestamp } from './diary-data';
 
-export type DiaryTurn = { role: 'user' | 'assistant'; content: string; reasoning?: string };
+export type DiaryTurn = { role: 'user' | 'assistant'; content: string; startedAt?: number; tools?: ToolCallView[]; activity?: string[]; reasoning?: string };
 
 /** Pin the date once at Send, including history when returning through home.
  * This same target owns replies, retries and optional-tool approval scope. */
