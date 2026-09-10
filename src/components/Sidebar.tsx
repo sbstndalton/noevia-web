@@ -414,7 +414,7 @@ export function Sidebar({
             className={`mcp-row${degraded ? ' is-degraded' : ''}`}
             title={down.map((sv) => `${sv.id}: ${sv.error}`).join('\n') || undefined}
           >
-            <span className="status-dot" style={{ background: allDown || (!servers.length && mcp.error) ? 'var(--danger)' : degraded ? 'var(--accent-garnet)' : 'var(--good)' }} />
+            <span className="status-dot" style={{ background: allDown || (!servers.length && mcp.error) ? 'var(--status-danger)' : degraded ? 'var(--status-warning)' : 'var(--status-good)' }} />
             <span className="status-text">{label}</span>
           </div>
         );

@@ -22,6 +22,9 @@
   --control-border: #85868d;
   --tint-garnet: #302328;
   --good: #8ED4B0;
+  --status-good: #60dfa1;
+  --status-danger: #ff7973;
+  --status-warning: #edbc65;
   --danger: #ef4444;
   /* Nav row fills. Decorative, so rgba is allowed; they must be tinted per
      theme because a white overlay is invisible on a light canvas. */
@@ -77,22 +80,25 @@
   --duration-base: 180ms;
 }
 [data-theme='light'] {
-  --bg-chrome: #f1f0ee;
-  --bg-app: #faf9f7;
-  --bg-canvas: #faf9f7;
+  --bg-chrome: #edf0f5;
+  --bg-app: #f7f9fc;
+  --bg-canvas: #f7f9fc;
   --bg-surface: #FFFFFF;
-  --bg-surface-hover: #f2f1ef;
-  --bg-surface-active: #e7e6e3;
+  --bg-surface-hover: #eef2f7;
+  --bg-surface-active: #e2e8f0;
   --text-primary: #26272b;
   --text-muted: #64656c;
   --accent-garnet: #942537;
-  --border-subtle: #e3e2df;
+  --border-subtle: #dfe5ed;
   --text-secondary: #64656c;
   --accent-text: #881337;
   --focus-ring: #881337;
   --control-border: #83848a;
   --tint-garnet: #f4e9eb;
   --good: #246548;
+  --status-good: #39c987;
+  --status-danger: #f46f68;
+  --status-warning: #d9a43f;
   --danger: #b3261e;
   --nav-hover: rgba(19,23,26,0.035);
   --nav-active: rgba(19,23,26,0.065);
