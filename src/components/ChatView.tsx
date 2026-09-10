@@ -277,7 +277,7 @@ export function ChatView({
                   {streaming && isLast && !m.error ? (
                     <div className="msg-meta" aria-live="off">
                       <LiveTimer startedAt={streamStart.current} />
-                      {m.reasoning && !m.content ? ' · thinking…' : ' · generating…'}
+                      {m.reasoning && !m.content ? ' · thinking…' : ` · ${m.processingStatus || 'generating…'}`}
                     </div>
                   ) : (
                     !m.error && <MessageMeta stats={m.stats} tools={m.toolCalls} />

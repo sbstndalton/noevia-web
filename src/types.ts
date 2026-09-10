@@ -9,6 +9,7 @@ export interface Message {
   toolCalls?: ToolCallView[];
   error?: boolean;
   warning?: string;
+  processingStatus?: string;
   stats?: MessageStats;
   /** Set when this message was edited and the exchange re-run from here. */
   edited?: boolean;
@@ -48,6 +49,7 @@ export interface DocumentStatus {
 }
 
 export interface ProjectFile {
+  attachment?: { id: string; bytes: number; group: string; state: string; reason?: string; assetId?: string };
   document?: DocumentStatus;
   name: string;
   content: string;
@@ -57,6 +59,8 @@ export interface ProjectFile {
 }
 
 export interface ProjectAsset {
+  sourceName?: string;
+  storagePath?: string;
   id: string;
   name: string;
   mime: string;

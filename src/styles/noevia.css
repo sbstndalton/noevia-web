@@ -479,3 +479,6 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
   .source-list li { flex-wrap: wrap; }
   .source-list .source-name { flex-basis: 100%; }
 }
+
+.source-thumbnail { width: 48px; height: 48px; object-fit: contain; border-radius: 6px; flex: 0 0 auto; }
+.upload-progress li { align-items: flex-start; }

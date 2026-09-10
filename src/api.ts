@@ -88,9 +88,36 @@ export const projectImageUrl = (id: string, assetId: string) =>
   `/api/projects/${encodeURIComponent(id)}/assets/${encodeURIComponent(assetId)}`;
 
 /** Upload a source file into the project's own storage folder. */
-export const uploadProjectFile = (id: string, body: { name: string; dataBase64: string }) =>
-  postJson<{ name: string; path: string; bytes: number }>(
-    `/api/projects/${encodeURIComponent(id)}/upload?background=1`, body);
+export interface UploadProgress { stage: string; percent?: number }
+export async function uploadProjectFile(id: string, body: { name: string; dataBase64: string }, progress: (value: UploadProgress) => void = () => {}) {
+  const response = await new Promise<{ poll: string }>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `/api/projects/${encodeURIComponent(id)}/upload?background=1`);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    const csrf = cookie('cowork_csrf');
+    if (csrf) xhr.setRequestHeader('X-CSRF-Token', csrf);
+    xhr.timeout = 120000;
+    xhr.upload.onprogress = e => progress({ stage: 'Sending file', percent: e.lengthComputable ? Math.round(100 * e.loaded / e.total) : undefined });
+    xhr.onerror = () => reject(new Error('Upload connection failed; retry.'));
+    xhr.ontimeout = () => reject(new Error('Upload timed out; retry.'));
+    xhr.onload = () => {
+      if (xhr.status === 401) window.dispatchEvent(new Event('cowork:unauthorized'));
+      try { const value = JSON.parse(xhr.responseText); if (xhr.status >= 400) reject(new Error(value.error || 'Upload failed')); else resolve(value); }
+      catch { reject(new Error('Invalid upload response')); }
+    };
+    xhr.send(JSON.stringify({ ...body, organized: true }));
+  });
+  progress({ stage: 'Upload received · waiting for processing' });
+  for (;;) {
+    const job = await getJson<{ done: boolean; stage?: string; status?: number; body?: { error?: string; name: string; path: string; bytes: number } }>(response.poll);
+    if (job.done) {
+      if ((job.status || 500) >= 400) throw new Error(job.body?.error || 'Source processing failed');
+      progress({ stage: 'Saved', percent: 100 }); return job.body!;
+    }
+    progress({ stage: job.stage || 'Queued for processing' });
+    await new Promise(resolve => setTimeout(resolve, 750));
+  }
+}
 
 /** Delete one source file from the project's own folder — removes it from
  *  storage, not just from the project. */
