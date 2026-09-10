@@ -9,13 +9,14 @@ import { ShellIcon } from './ShellIcon';
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch, deleteProjectFile, fetchDiaryMonth, fetchDiarySource, fetchStorage, streamChat } from '../api';
 import type { StorageConnection } from '../api';
-import { calendarDays, dateInText, dayLabel, localDay, localTimestamp, monthLabel, splitDays } from '../diary-data';
+import { calendarDays, dateInText, dayLabel, localDay, monthLabel, splitDays } from '../diary-data';
 import { diaryRequest, directoryPicker, directoryPickerBlockedReason, listFiles, randomSessionId, readFile, saveLocal, scanLocal, syncFileChange, writeFile } from '../diary-workspace';
 import type { DiaryFile, DirectoryHandle, FileEntry } from '../diary-workspace';
 import { DiaryModal, MarkdownPreview } from './DiaryModal';
 import { StoragePicker } from './StoragePicker';
 
-type Turn = { role: 'user' | 'assistant'; content: string };
+import { diaryExchangeTarget } from '../diary-conversation';
+import type { DiaryTurn as Turn } from '../diary-conversation';
 type Pending = { before: string | null; content: string };
 export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const [extrasEnabled, setExtrasEnabled] = useState(false);
@@ -71,7 +72,10 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const today = localDay();
   const scope = day || (month ? `month:${month}` : 'home');
   const conversation = turns[scope] || [];
-  useEffect(() => { setExtraCalls([]); setExtraStatus(''); }, [scope]);
+  useEffect(() => {
+    // Sending from home changes the visible scope while preparation is active.
+    if (!busyRef.current) { setExtraCalls([]); setExtraStatus(''); }
+  }, [scope]);
   const savedLabel = storage?.kind === 'local' ? 'Server storage' : storage?.kind === 'nextcloud' ? 'Nextcloud' : storage?.kind === 's3' ? 'S3' : storage?.kind === 'webdav' ? 'WebDAV' : 'saved storage';
   const pendingCount = Object.keys(pendingSync).length + Object.keys(pendingLocal).length;
 
@@ -161,18 +165,20 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     const message = draft.trim();
     if (!message || extraBusy) return;
     if (Object.keys(pendingLocal).length) throw new Error('Retry the pending local save before sending another entry.');
-    const now = new Date(), entryDay = day || localDay(now), entryTime = localTimestamp(now);
-    const history = conversation.slice(-16);
+    const { entryDay, entryTime, month: entryMonth, history } = diaryExchangeTarget(day, turns);
+    // This is a submitted draft, so do not invoke navigate's discard prompt.
+    if (month !== entryMonth) setDays({});
+    setMonth(entryMonth); setDay(entryDay);
     setDraft('');
-    setTurns(prev => ({ ...prev, [scope]: [...history, { role: 'user', content: message }, { role: 'assistant', content: '' }] }));
-    const reply = (text: string) => setTurns(prev => ({ ...prev, [scope]: [...history, { role: 'user', content: message }, { role: 'assistant', content: text }] }));
+    setTurns(prev => ({ ...prev, [entryDay]: [...history, { role: 'user', content: message }, { role: 'assistant', content: '' }] }));
+    const reply = (text: string) => setTurns(prev => ({ ...prev, [entryDay]: [...history, { role: 'user', content: message }, { role: 'assistant', content: text }] }));
     let answered = false;
     try {
       setExtraCalls([]);
       extraAbort.current = new AbortController();
       const useExtras = extrasEnabled && !!extraProject && !!((extraProject.files || []).length || (extraProject.assets || []).length || (extraProject.toolboxes || []).length);
       setExtraStatus(useExtras ? 'Preparing optional context…' : '');
-      const extraContext = await prepareDiaryExtras(useExtras, message, `${session.current.slice(0,36)}-${entryDay}-${scope}`, ev => {
+      const extraContext = await prepareDiaryExtras(useExtras, message, `${session.current.slice(0,36)}-${entryDay}-${entryDay}`, ev => {
         if (ev.type === 'status') setExtraStatus(ev.text || 'Preparing optional context…');
         if (ev.type === 'tool' || ev.type === 'tool_pending' || ev.type === 'tool_result') {
           setExtraCalls(previous => {
@@ -211,7 +217,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       extraAbort.current = null;
       setExtraStatus(cancelled ? 'Optional context cancelled. No diary entry was sent.' : 'Optional context or diary request failed; your draft is preserved.');
       setExtraCalls(previous => previous.map(call => call?.status === 'pending' ? { ...call, status: 'denied', approvalId: undefined, args: 'Optional context ended before this approval completed.' } : call));
-      if (!answered) { setDraft(message); setTurns(previous => ({ ...previous, [scope]: history })); }
+      if (!answered) { setDraft(message); setTurns(previous => ({ ...previous, [entryDay]: history })); }
       if (cancelled) throw new Error('Optional context cancelled. No diary entry was sent.');
       throw e;
     }
