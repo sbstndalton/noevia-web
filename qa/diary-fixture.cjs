@@ -2,6 +2,7 @@
 const http = require('node:http'), fs = require('node:fs'), path = require('node:path');
 function createFixture(port = 31239) {
   const requests = [], pending = new Set();
+  const extraProject={id:'__diary-context',name:'Extras',model:'synthetic',files:[],assets:[],toolboxes:['core']};
   const server = http.createServer(async (req,res) => {
     const url = new URL(req.url,'http://localhost');
     if (!url.pathname.startsWith('/api/')) {
@@ -23,7 +24,9 @@ function createFixture(port = 31239) {
     if(url.pathname==='/api/diary/files')return json({files:[]});
     if(url.pathname==='/api/providers')return json({providers:[]});
     if(url.pathname==='/api/toolboxes')return json({toolboxes:[],mcp:{enabled:false}});
-    if(url.pathname==='/api/diary/context')return json({project:{id:'__diary-context',name:'Extras',model:'synthetic',files:[],assets:[],toolboxes:['core']}});
+    if(url.pathname==='/api/diary/context')return json({project:extraProject});
+    if(url.pathname==='/api/reasoning-settings')return json({default:'default',effort:extraProject.reasoningEffort||'default',mode:extraProject.reasoningEffort && extraProject.reasoningEffort!=='default'?'hint':'off',admin:false});
+    if(url.pathname==='/api/projects/__diary-context/config'){extraProject.reasoningEffort=body.reasoningEffort;return json({ok:true});}
     if(url.pathname==='/api/chat'||url.pathname==='/api/diary/local-exchange') {
       requests.push({path:url.pathname,body});
       if(url.pathname.endsWith('local-exchange'))return setTimeout(()=>json({reply:'Synthetic local reply',decision:'logged',files:{['Entries/'+body.entryDay+'.md']:'# '+body.entryDay+'\n\nSynthetic local entry'}}),250);

@@ -5,6 +5,8 @@ export interface Message {
   role: Role;
   senderLabel?: string;
   content: string;
+  reasoningMode?: string;
+  reasoningEffort?: string;
   reasoning?: string;
   toolCalls?: ToolCallView[];
   error?: boolean;
@@ -68,6 +70,7 @@ export interface ProjectAsset {
 }
 
 export interface Project {
+  reasoningEffort?: 'default' | 'low' | 'high' | null;
   icon?: string;
   color?: string;
   id: string;

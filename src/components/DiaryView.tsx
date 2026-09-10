@@ -1,3 +1,4 @@
+import { ReasoningControl } from './ReasoningControl';
 import { DiaryLanding } from './DiaryLanding';
 import { ComposerActions } from './ComposerActions';
 import { ComposerModel } from './ComposerModel';
@@ -292,6 +293,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       {extrasEnabled && <button type="button" onClick={()=>setExtraFiles(true)}>Manage attachments ({extraProject?.files.length || 0})</button>}
     </>} />
     <ComposerModel label={extrasEnabled && extraProject ? `Extras: ${extraProject.routing === 'auto' ? 'Auto' : extraProject.model || 'local model'}` : 'Diary companion'} disabled={!extrasEnabled || !extraProject || busy || extraBusy} onClick={()=>setExtraModels(true)} hint={extrasEnabled ? 'Choose the optional context model; diary capture stays unchanged' : 'Diary retrieval and capture are always active. Enable extras in + to choose an optional context model.'} />
+    {extrasEnabled && extraProject && <ReasoningControl project={extraProject} disabled={busy || extraBusy} onChanged={refreshExtraProject} />}
     <button className="send-btn" aria-label="Send diary message" disabled={busy || extraBusy || !draft.trim()} onClick={submit}><SendIcon /></button></div>
     {extraStatus && <p className="composer-action-status" role="status">{extraStatus}</p>}
     {!!extraCalls.length && <ToolChips calls={extraCalls.filter(Boolean)} />}

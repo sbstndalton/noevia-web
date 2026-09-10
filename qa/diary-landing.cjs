@@ -34,7 +34,7 @@ const {createFixture}=require('./diary-fixture.cjs');
     await page.setViewportSize({width,height:1000});await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     await page.locator('#diary-draft').focus();await page.keyboard.press('Tab');assert.notEqual(await page.evaluate(()=>getComputedStyle(document.activeElement).outlineStyle),'none');
-    if(process.env.QA_SCREENSHOTS)await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/landing-${populated}-${theme}-${width}.png`,fullPage:true});
+    if(process.env.QA_SCREENSHOTS)await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/landing-${populated}-${theme}-${width}.png`,fullPage:true,animations:'disabled'});
    }
   }
   failed=true;await open();await page.getByRole('alert').waitFor();assert.equal(await page.getByPlaceholder('Write your first entry…').count(),0);

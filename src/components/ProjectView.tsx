@@ -1,3 +1,4 @@
+import { ReasoningControl } from './ReasoningControl';
 import { ComposerActions } from './ComposerActions';
 import { ComposerModel } from './ComposerModel';
 import { sourceStatus } from '../source-status';
@@ -264,6 +265,7 @@ export function ProjectView({
               />
               <ComposerActions key={project.id} project={project} disabled={composerBusy || busyDocs || syncing} onChanged={onRefresh} onModels={onOpenModels} onBusy={setComposerBusy} onStatus={setComposerStatus} />
               <ComposerModel label={modelLabel} onClick={onOpenModels} />
+          <ReasoningControl project={project} disabled={composerBusy || busyDocs || syncing} onChanged={onRefresh} />
               <button className="send-btn" onClick={send} disabled={!draft.trim() || composerBusy || busyDocs || syncing} title="Send" aria-label="Send">
                 <SendIcon />
               </button>

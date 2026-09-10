@@ -28,7 +28,7 @@ const {createFixture}=require('./diary-fixture.cjs');
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.locator('#diary-draft').focus();await page.keyboard.press('Tab');
     assert.notEqual(await page.evaluate(()=>getComputedStyle(document.activeElement).outlineStyle),'none');
-    if(process.env.QA_SCREENSHOTS)await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/diary-${local}-${width}-${theme}.png`,fullPage:true});
+    if(process.env.QA_SCREENSHOTS)await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/diary-${local}-${width}-${theme}.png`,fullPage:true,animations:'disabled'});
    }
    await page.locator('.diary-home-link').click();await send('second synthetic');
    await page.getByRole('button',{name:'Send diary message'}).waitFor();

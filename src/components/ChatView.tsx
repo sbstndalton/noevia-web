@@ -1,3 +1,4 @@
+import { ReasoningControl } from './ReasoningControl';
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import type { Message, MessageStats, ToolCallView, Project } from '../types';
@@ -267,6 +268,7 @@ export function ChatView({
               </span>
               {m.role === 'assistant' ? (
                 <div className="assistant-card">
+                  {m.reasoningMode && m.reasoningMode !== 'off' && <small className="reasoning-result">Effort: {m.reasoningEffort} · {m.reasoningMode === 'real' ? 'provider parameter' : 'best-effort hint'}</small>}
                   {m.warning && <p className="msg-warning" role="status">{m.warning}</p>}
                   {m.reasoning ? <ThinkingBlock text={m.reasoning} live={!!thinkingLive && !m.content} /> : null}
                   {m.toolCalls && m.toolCalls.length > 0 ? <ToolChips calls={m.toolCalls} /> : null}
@@ -384,6 +386,7 @@ export function ChatView({
           />
           <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={setActionStatus} />
           <ComposerModel label={modelLabel} onClick={openModels} />
+          <ReasoningControl project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} />
           {streaming ? (
             <button className="send-btn" onClick={onStop} title="Stop generating">
               <span aria-hidden="true">&#9632;</span>

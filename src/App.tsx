@@ -335,6 +335,10 @@ export default function App(): JSX.Element {
           },
           controller.signal,
         )) {
+          if (ev.type === 'meta' && ev.reasoning) {
+            window.dispatchEvent(new Event('cowork-reasoning-updated'));
+            setMessagesByChat(prev => ({...prev,[chatId]:(prev[chatId] ?? []).map(m => m.id === replyId ? {...m,reasoningMode:ev.reasoning,reasoningEffort:ev.reasoningEffort} : m)}));
+          }
           if (ev.type === 'meta' && ev.route) {
             setMessagesByChat((prev) => ({
               ...prev,

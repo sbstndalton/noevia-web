@@ -22,6 +22,7 @@ export function EditProjectModal({
   const [name, setName] = useState(project.name);
   const [goal, setGoal] = useState(project.goal || '');
   const [instructions, setInstructions] = useState(project.instructions || '');
+  const [effort, setEffort] = useState<'inherit' | 'default' | 'low' | 'high'>(project.reasoningEffort || 'inherit');
   const [model, setModel] = useState(project.model || '');
   const [addError, setAddError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -43,6 +44,7 @@ export function EditProjectModal({
         goal,
         instructions,
         model,
+        reasoningEffort: effort === 'inherit' ? null : effort,
       });
       onClose();
     } catch (e) {
@@ -85,6 +87,14 @@ export function EditProjectModal({
           />
         </label>
 
+        <label className="field">
+          <span>Thinking effort</span>
+          <select className="modal-input" value={effort} onChange={e => setEffort(e.target.value as typeof effort)}>
+            <option value="inherit">Inherit deployment default</option><option value="default">Provider default</option>
+            <option value="low">Low</option><option value="high">High</option>
+          </select>
+          <small>Unverified providers use a best-effort hint. The request mode is shown with each reply.</small>
+        </label>
         <label className="field">
           <span>Default model</span>
           <select className="modal-input" value={model} onChange={(e) => setModel(e.target.value)}>

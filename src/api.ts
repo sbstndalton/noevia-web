@@ -244,6 +244,7 @@ export function saveProjectConfig(
   patch: Partial<Pick<Project, 'name' | 'goal' | 'instructions' | 'model' | 'memories' | 'files' | 'icon' | 'color'>> & {
     provider?: string;
     routing?: 'manual' | 'auto';
+    reasoningEffort?: 'default' | 'low' | 'high' | null;
     toolboxes?: string[];
   },
 ): Promise<{ ok: true }> {
@@ -451,6 +452,8 @@ export async function* streamChat(
   index?: number; // 'tool' events: which call this is, for upsert-by-index
   id?: string; // 'tool_pending': the approval id to post a decision against
   decision?: string;
+  reasoning?: string;
+  reasoningEffort?: string;
   route?: string; // 'fast' | 'smart' when Auto routing picked the model (step 12)
   // 'usage' event: provider-reported totals for the finished reply.
   promptTokens?: number;
