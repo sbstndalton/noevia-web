@@ -1,25 +1,26 @@
 import { PalettePicker } from './PalettePicker';
 import { updateThemeColor } from '../appearance';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { startRegistration } from '@simplewebauthn/browser';
 import {
   completeOnboarding,
   completeSetup,
-  fetchProviders,
   passkeyRegistrationOptions,
   passkeyRegistrationVerify,
-  probeSession,
+  logout,
+  updateFeatures,
   setupStatus,
 } from '../api';
+import type { AuthUser } from '../api';
 import { classifyOrigin, isIpAddressHost } from '../browser-support';
 import { timezoneEnvSetting } from '../setup-timezone';
 import { ProviderForm } from './ProviderForm';
 import { StoragePicker } from './StoragePicker';
 
-type Step = 'account' | 'provider' | 'diary' | 'models' | 'prefs' | 'passkey' | 'done';
+type Step = 'account' | 'provider' | 'diary' | 'prefs' | 'passkey' | 'done';
 
-const STEP_ORDER: Step[] = ['account', 'provider', 'diary', 'models', 'prefs', 'passkey'];
+const STEP_ORDER: Step[] = ['account', 'provider', 'diary', 'prefs', 'passkey'];
 
 // Same wording the server returns for a rejected origin, so blocking the
 // submit client-side reads identically to hitting the server check.
@@ -30,43 +31,29 @@ const STEP_TITLES: Record<Step, string> = {
   account: 'Create the administrator',
   provider: 'Connect an inference provider',
   diary: 'Set up the diary',
-  models: 'Local model manager',
   prefs: 'Preferences',
   passkey: 'Secure your account',
   done: 'Setup complete',
 };
 
-function stepNumber(step: Step): number {
-  return STEP_ORDER.indexOf(step) + 1;
-}
-
-/** True when the server has at least one configured provider (default or user-added). */
-async function hasAnyProvider(): Promise<boolean> {
-  try {
-    const { providers } = await fetchProviders();
-    return (providers || []).length > 0;
-  } catch {
-    return false;
-  }
-}
-
 export interface SetupWizardProps {
   /** Once setup finishes, hand control back (AuthGate proceeds to the app). */
   onFinished: () => void;
-  /** 'fresh' = first-run setup (start at account creation); 'resume' = an
-   *  authenticated admin with no provider yet (start past the account step). */
-  mode?: 'fresh' | 'resume';
+  /** Fresh bootstrap, resumed administrator, or member account setup. */
+  mode?: 'fresh' | 'resume' | 'invited';
+  initialUser?: AuthUser;
 }
 
-/** First-run setup wizard: a Nextcloud-style, one-question-at-a-time flow that
- *  replaces the old flat setup form. Step 1 (admin account) is mandatory; every
- *  later step offers an explicit skip — never a silently-applied default. The
- *  wizard is resumable: it also runs for an authenticated admin who has no
- *  provider configured yet, so a browser closed mid-setup isn't stranded. */
-export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): JSX.Element {
-  // 'account' covers both brand-new setup and a resumable session (later steps
-  // only). `setupCode` etc. are only needed on a truly fresh deployment.
-  const [step, setStep] = useState<Step>(mode === 'resume' ? 'provider' : 'account');
+/** Account choices live on the server; reload restarts the optional steps without
+ * overwriting them. Members never see deployment or global model controls. */
+export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWizardProps): JSX.Element {
+  const [step, setStep] = useState<Step>(mode === 'fresh' ? 'account' : mode === 'invited' ? 'diary' : 'provider');
+  const [accountCreated, setAccountCreated] = useState(mode !== 'fresh');
+  const heading = useRef<HTMLHeadingElement>(null);
+  const steps = STEP_ORDER.filter(s => s !== 'account' && (mode !== 'invited' || s !== 'provider'));
+  const visibleSteps = mode === 'fresh' ? STEP_ORDER : steps;
+  const stepNumber = step === 'done' ? visibleSteps.length : visibleSteps.indexOf(step) + 1;
+  useEffect(() => { heading.current?.focus(); }, [step]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -76,13 +63,13 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
-  const [diaryEnabled, setDiaryEnabled] = useState(false);
+  const [diaryEnabled, setDiaryEnabled] = useState(initialUser?.diaryEnabled ?? false);
 
   // Prefs-step fields.
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     localStorage.getItem('cowork-theme') === 'light' ? 'light' : 'dark',
   );
-  const [autoRouting, setAutoRouting] = useState(false);
+  const [autoRouting, setAutoRouting] = useState(() => localStorage.getItem('cowork-default-routing') === 'auto');
   const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
   const timezoneSetting = timezoneEnvSetting(timezone);
 
@@ -92,25 +79,21 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
     updateThemeColor();
   }, [theme]);
 
-  // Resumability: if a session already exists, skip straight past account
-  // creation (and the diary toggle is then read from the profile, not asked).
-  // On a fresh deployment, prefill the canonical URL from setup status.
   useEffect(() => {
-    probeSession()
-      .then(async (user) => {
-        if (!user) {
-          // No session → fresh setup. Prefill the origin the server advertises.
-          setupStatus()
-            .then((s) => { if (s.publicOrigin) setOrigin(s.publicOrigin); })
-            .catch(() => undefined);
-          return;
-        }
-        setDiaryEnabled(user.diaryEnabled);
-        if (await hasAnyProvider()) setStep((cur) => (cur === 'account' ? 'diary' : cur));
-        else setStep((cur) => (cur === 'account' ? 'provider' : cur));
-      })
+    if (mode === 'fresh') void setupStatus()
+      .then(s => { if (s.publicOrigin) setOrigin(s.publicOrigin); })
       .catch(() => undefined);
-  }, []);
+  }, [mode]);
+
+  const saveDiaryChoice = async (enabled: boolean) => {
+    if (busy) return;
+    setBusy(true); setError(null);
+    try {
+      const saved = await updateFeatures(enabled);
+      setDiaryEnabled(saved.diaryEnabled);
+    } catch { setError('Could not save your Diary choice. Please retry.'); }
+    finally { setBusy(false); }
+  };
 
   const go = useCallback((next: Step) => {
     setError(null);
@@ -139,9 +122,8 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
         diaryEnabled,
       });
       // completeSetup issues a session; the rest of the wizard runs as
-      // authenticated calls. A fresh account has no provider yet, so the
-      // provider step is always next; the diary step itself no-ops (with an
-      // explanatory notice) when the user left the add-on disabled.
+      // authenticated calls, with the explicitly saved Diary choice.
+      setAccountCreated(true);
       setStep('provider');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create the account');
@@ -175,8 +157,6 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
     setError(null);
     try {
       await completeOnboarding();
-      if (autoRouting) localStorage.setItem('cowork-default-routing', 'auto');
-      else localStorage.removeItem('cowork-default-routing');
       sessionStorage.setItem('cowork-new-account', '1');
       onFinished();
     } catch {
@@ -185,15 +165,15 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
   };
 
   const progress = (
-    <div className="wizard-progress" aria-label={`Step ${stepNumber(step)} of ${STEP_ORDER.length}`}>
-      {STEP_ORDER.map((s, i) => (
+    <div className="wizard-progress" aria-label={`Step ${stepNumber} of ${visibleSteps.length}`}>
+      {visibleSteps.map((s, i) => (
         <span
           key={s}
-          className={`wizard-dot${s === step ? ' active' : ''}${i < stepNumber(step) - 1 ? ' done' : ''}`}
+          className={`wizard-dot${s === step ? ' active' : ''}${i < stepNumber - 1 ? ' done' : ''}`}
         />
       ))}
       <span className="wizard-step-label">
-        {stepNumber(step)} / {STEP_ORDER.length}
+        {stepNumber} / {visibleSteps.length}
       </span>
     </div>
   );
@@ -202,8 +182,9 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
     <main className="auth-screen">
       <section className="auth-card wizard-card">
         <div className="auth-mark" aria-hidden="true">n</div>
-        <h1>{STEP_TITLES[step]}</h1>
+        <h1 ref={heading} tabIndex={-1}>{STEP_TITLES[step]}</h1>
         {progress}
+        {accountCreated && <p>Saved account choices survive reload. Closing or signing out resumes these optional steps next time; finishing setup leaves later changes in Settings.</p>}
 
         {step === 'account' && (
           <form onSubmit={(e) => void createAccount(e)}>
@@ -250,56 +231,48 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
 
         {step === 'provider' && (
           <div>
-            <p>noevia needs an OpenAI-compatible chat endpoint to talk to. You can also run everything on a local model server.</p>
+            <p>Connect a personal OpenAI-compatible provider, or skip to use an available deployment provider. Administrators manage shared providers and local models in Settings.</p>
             <ProviderForm
               autoFocus
               submitLabel="Connect provider"
               cancelLabel="Skip — set up later in Settings"
-              onCancel={() => go(diaryEnabled ? 'diary' : 'models')}
-              onConnected={() => go(diaryEnabled ? 'diary' : 'models')}
+              onCancel={() => go('diary')}
+              onConnected={() => go('diary')}
             />
             {error && <p className="auth-error" role="alert">{error}</p>}
           </div>
         )}
 
         {step === 'diary' && (
-          <div>
-            {diaryEnabled ? (
-              <>
-                <p>Where should diary entries live? Local storage keeps them on this server; Nextcloud and WebDAV write to your own cloud.</p>
-                <StoragePicker
-                  onSaved={() => go('models')}
-                  onSkip={() => go('models')}
-                />
-              </>
-            ) : (
-              <>
-                <p>The Diary add-on is currently disabled for your account.</p>
-                <button className="modal-btn primary" onClick={() => go('models')}>Continue</button>
-              </>
-            )}
+          <div aria-busy={busy}>
+            {mode === 'invited' && <p>Your administrator manages shared models. You can use available models after setup, or add an approved personal provider in Settings → Providers.</p>}
+            <label className="auth-option">
+              <input type="checkbox" checked={diaryEnabled} aria-disabled={busy} onChange={e => void saveDiaryChoice(e.target.checked)} />
+              <span><strong>Enable the Diary add-on</strong><small>Saved for your account when changed. Turning it off keeps existing files.</small></span>
+            </label>
+            <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+              {diaryEnabled ? (
+                <>
+                  <p>Where should diary entries live? Server storage keeps them on this server; Nextcloud and WebDAV write to your own cloud. Skipping keeps your current storage configuration.</p>
+                  <StoragePicker
+                    onSaved={() => go('prefs')}
+                    onSkip={() => go('prefs')}
+                  />
+                </>
+              ) : (
+                <>
+                  <p>The Diary add-on is currently disabled for your account.</p>
+                  <button className="modal-btn primary" onClick={() => go('prefs')}>Continue</button>
+                </>
+              )}
+            </fieldset>
             {error && <p className="auth-error" role="alert">{error}</p>}
-          </div>
-        )}
-
-        {step === 'models' && (
-          <div>
-            <p>
-              noevia can manage local models through a model server (Lemonade). This is
-              configured through the deployment environment, not the app: set{' '}
-              <code>MODEL_MANAGER_KIND</code> and <code>MODEL_MANAGER_BASE_URL</code> in
-              your <code>.env</code> file, then restart the web container. Nothing to
-              choose here — skip unless you have already set those variables.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button className="modal-btn primary" onClick={() => go('prefs')}>Continue</button>
-            </div>
           </div>
         )}
 
         {step === 'prefs' && (
           <div>
-            <p>Choose your preferences and confirm your timezone.</p>
+            <p>Theme and palette changes apply immediately in this browser. Auto routing is saved only when you choose “Use these preferences”. Check your browser timezone below.</p>
             <label className="auth-option">
               <input type="radio" name="wiz-theme" checked={theme === 'light'} onChange={() => setTheme('light')} />
               <span><strong>Light theme</strong></span>
@@ -312,7 +285,7 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
               <input type="checkbox" checked={autoRouting} onChange={(e) => setAutoRouting(e.target.checked)} />
               <span>
                 <strong>Use Auto Fast/Smart routing for new projects</strong>
-                <small>Lets noevia pick a lighter or heavier model per message. Configure the models in the model popup later.</small>
+                <small>Lets noevia pick a lighter or heavier model per message. Choose available models beside the composer’s Send button.</small>
               </span>
             </label>
             <PalettePicker theme={theme}/>
@@ -342,7 +315,11 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
             {error && <p className="auth-error" role="alert">{error}</p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button className="modal-btn secondary" onClick={() => go('passkey')}>Skip — set up later</button>
-              <button className="modal-btn primary" disabled={!timezoneSetting} onClick={() => go('passkey')}>Use these preferences</button>
+              <button className="modal-btn primary" disabled={!timezoneSetting} onClick={() => {
+                if (autoRouting) localStorage.setItem('cowork-default-routing', 'auto');
+                else localStorage.removeItem('cowork-default-routing');
+                go('passkey');
+              }}>Use these preferences</button>
             </div>
           </div>
         )}
@@ -358,6 +335,17 @@ export function SetupWizard({ onFinished, mode = 'fresh' }: SetupWizardProps): J
               Set up later
             </button>
             <small>You can add or remove passkeys in Settings → Profile and security.</small>
+          </div>
+        )}
+
+        {accountCreated && step !== 'done' && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+            {steps.indexOf(step) > 0 && <button type="button" className="modal-btn secondary" disabled={busy}
+              onClick={() => go(steps[steps.indexOf(step) - 1])}>Back</button>}
+            <button type="button" className="modal-btn secondary" disabled={busy} onClick={() => {
+              setBusy(true);
+              void logout().then(() => window.location.reload()).catch(() => { setError('Could not sign out. Please retry.'); setBusy(false); });
+            }}>Sign out — resume later</button>
           </div>
         )}
 

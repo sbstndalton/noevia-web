@@ -3,11 +3,13 @@ import type { FormEvent, JSX, ReactNode } from 'react';
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import { acceptInvitation, completeRecovery, fetchSession, passkeyLoginOptions, passkeyLoginVerify, passkeyRegistrationOptions, passkeyRegistrationVerify, passwordLogin, setupStatus } from '../api';
 import { isIpAddressHost } from '../browser-support';
+import type { AuthUser } from '../api';
 import { SetupWizard } from './SetupWizard';
 
 type Screen = 'checking' | 'wizard' | 'wizard-resume' | 'login' | 'secure' | 'ready';
 
 export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
+  const [onboardingUser, setOnboardingUser] = useState<AuthUser | null>(null);
   const [screen, setScreen] = useState<Screen>('checking');
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -25,7 +27,7 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
       // marked complete goes back into the wizard instead of an app that may
       // not be usable yet. Pre-wizard/legacy users are onboarded by default.
       fetchSession()
-        .then((s) => (s.user.onboarded === false ? setScreen('wizard-resume') : Promise.resolve()))
+        .then((s) => { setOnboardingUser(s.user); if (s.user.onboarded === false) setScreen('wizard-resume'); })
         .then(() => {
           setScreen((cur) => (cur === 'wizard-resume' ? cur : 'ready'));
         })
@@ -44,6 +46,8 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
       if (invite) await acceptInvitation({ token: invite, username, displayName: displayName || username, password, diaryEnabled });
       else await passwordLogin(username, password);
       const session = await fetchSession();
+      setOnboardingUser(session.user);
+      window.history.replaceState({}, '', '/');
       setScreen(session.user.onboarded === false ? 'wizard-resume' : 'secure');
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not continue'); }
     finally { setBusy(false); }
@@ -57,6 +61,8 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
       const response = await startAuthentication({ optionsJSON: challenge.options });
       await passkeyLoginVerify(challenge.challengeToken, response);
       const session = await fetchSession();
+      setOnboardingUser(session.user);
+      window.history.replaceState({}, '', '/');
       setScreen(session.user.onboarded === false ? 'wizard-resume' : 'ready');
     } catch (e) {
       setError(
@@ -83,7 +89,7 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
   if (screen === 'ready') return <>{children}</>;
   if (screen === 'checking') return <main className="auth-screen"><div className="auth-card"><h1>Opening noevia…</h1></div></main>;
   if (screen === 'wizard') return <SetupWizard mode="fresh" onFinished={() => setScreen('ready')} />;
-  if (screen === 'wizard-resume') return <SetupWizard mode="resume" onFinished={() => setScreen('ready')} />;
+  if (screen === 'wizard-resume' && onboardingUser) return <SetupWizard key={onboardingUser.id} mode={onboardingUser.role === 'member' ? 'invited' : 'resume'} initialUser={onboardingUser} onFinished={() => setScreen('ready')} />;
   if (screen === 'secure') return <main className="auth-screen"><section className="auth-card">
     <div className="auth-mark" aria-hidden="true">n</div><h1>Secure your account</h1>
     <p>Passkeys are the recommended way to sign in using your device or security key.</p>

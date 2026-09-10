@@ -58,6 +58,7 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false }: StoragePi
     <div className="card-list" style={{ padding: 12, gap: 8 }}>
       <select
         className="modal-input"
+        aria-label="Diary storage type"
         value={value.kind}
         onChange={(e) => patch({ kind: e.target.value as StorageConnection['kind'] })}
       >
