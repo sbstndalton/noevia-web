@@ -556,3 +556,16 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
 .model-mtp { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 0; font-family:var(--font-ui); }
 .model-mtp small { flex-basis:100%; color:var(--text-secondary); }
 .model-mtp select { background:var(--bg-surface); color:var(--text-primary); border:1px solid var(--border); padding:4px; border-radius:6px; }
+
+/* Per-chat context budget above the fixed composer. */
+.chat-context-meter { margin: 0 auto 8px; width: min(100%, 760px); padding: 8px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-panel); font-size: 12px; }
+.chat-context-meter summary { display: flex; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none; }
+.chat-context-meter[open] { max-height: 290px; overflow-y: auto; }
+.chat-context-meter dl { margin: 8px 0; }
+.chat-context-meter dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+.chat-context-meter dd { margin: 0; font-variant-numeric: tabular-nums; }
+.chat-context-meter p { margin: 8px 0; opacity: .8; font-size: 11px; line-height: 1.4; }
+.context-stacked-bar { height: 5px; display: flex; overflow: hidden; border-radius: 4px; margin: 10px 0; background: var(--border); }
+.context-stacked-bar span { flex-shrink: 0; }
+.context-color-0 { background: #438cde; } .context-color-1 { background: #df8c43; } .context-color-2 { background: #3ba68b; } .context-color-3 { background: #888; }
+@media(max-width: 480px) { .chat-context-meter { font-size: 11px; padding: 7px 9px; } }

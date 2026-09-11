@@ -1,3 +1,4 @@
+import { ChatContext } from './ChatContext';
 import { useChatScroll } from '../useChatScroll';
 import { ReasoningControl } from './ReasoningControl';
 import { useEffect, useRef, useState } from 'react';
@@ -286,7 +287,7 @@ export function ChatView({
                         <button
                           className="msg-retry"
                           onClick={() => onRetry(chatId, m.id)}
-                          disabled={streaming}
+                          disabled={streaming || actionBusy}
                           title="Re-send your last message"
                         >
                           ↻ Retry
@@ -351,7 +352,7 @@ export function ChatView({
                     <button
                       className="msg-edit-btn"
                       onClick={() => { setEditingId(m.id); setEditDraft(m.content); }}
-                      disabled={streaming}
+                      disabled={streaming || actionBusy}
                       title="Edit this message and re-run the conversation from here"
                       aria-label="Edit and re-run from this message"
                     >
@@ -366,6 +367,7 @@ export function ChatView({
       </div>
 
       <div className="composer">
+        <ChatContext key={chatId} chatId={chatId} projectId={project?.id || null} messages={messages} streaming={streaming} onBusy={setActionBusy} />
         <div className="composer-inner chat-composer-inner">
           <textarea
             className="composer-input"
@@ -373,7 +375,7 @@ export function ChatView({
             rows={2}
             placeholder="Message noevia…"
             value={draft}
-            disabled={streaming}
+            disabled={streaming || actionBusy}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {

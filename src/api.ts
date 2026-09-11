@@ -439,7 +439,7 @@ export function saveChatHistory(chatId: string, history: HistoryEntry[]): Promis
 //   { type:'done', model } { type:'diary', decision }
 //   { type:'usage', promptTokens, completionTokens, totalTokens, tokensPerSecond }
 export async function* streamChat(
-  body: { spaceId: string; extrasEnabled?: boolean; extraContext?: string;
+  body: { spaceId: string; compactOnly?: boolean; extrasEnabled?: boolean; extraContext?: string;
     files?: Record<string,string>; entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null },
   signal?: AbortSignal,
 ): AsyncGenerator<{
@@ -477,7 +477,7 @@ export async function* streamChat(
     let message = '';
     try { const error = JSON.parse(detail); message = typeof error.error === 'string' ? error.error : ''; } catch { /* Proxy HTML is not a useful error. */ }
     throw new Error(message || (res.status === 524
-      ? 'The connection timed out. Your diary entry may still be saving; check the saved diary before sending again.'
+      ? (body.spaceId === 'diary' ? 'The connection timed out. Your diary entry may still be saving; check the saved diary before sending again.' : 'The model connection timed out. Try compacting this chat or check the backend.')
       : `Chat request failed (${res.status}). Please check the connection.`));
   }
   const reader = res.body.getReader();
@@ -500,6 +500,7 @@ export async function* streamChat(
       }
     }
   }
+  if (!completed && body.spaceId !== 'diary') throw new Error('The model connection ended before the answer completed. Partial output was preserved; compact this chat or check the backend before retrying.');
   if (!completed && body.spaceId === 'diary') throw new Error('The diary connection ended before saving was confirmed. Check the saved diary before sending again.');
   } catch (error) {
     if (body.spaceId === 'diary' && !completed) throw new Error('The diary connection ended before saving was confirmed. Check the saved diary before sending again.');
