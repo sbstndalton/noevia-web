@@ -1,3 +1,4 @@
+import { sourceRefresher } from './source-refresh';
 import { sourceRefreshIssues } from './source-status';
 import { updateThemeColor } from './appearance';
 import { ShellIcon } from './components/ShellIcon';
@@ -90,6 +91,7 @@ export default function App(): JSX.Element {
   const patchTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const pendingPatches = useRef<Record<string, Partial<Project>>>({});
   const lastSourceSync = useRef<Record<string, number>>({});
+  const pendingSourceSync = useRef(new Set<string>());
   // AbortController for the in-flight generation (chat or diary). Aborting
   // stops the client-side stream; the server's disconnect handling (Phase 1)
   // then terminates the upstream request.
@@ -243,22 +245,35 @@ export default function App(): JSX.Element {
           ? projects.find((p) => p.id === activeChatMeta.projectId) ?? null
           : null;
 
-  // Revisit storage when opening a project, without polling a whole drive or
-  // repeatedly fetching it while switching between that project's chats.
+  // Only the open project is refreshed; hidden/offline tabs and active inference wait.
   const sourceProjectId = activeProject?.id;
   const sourceFolderKey = (activeProject?.sourceFolders || []).join('\n');
+  const sourceBusy = !!activeProject?.chats.some(chat => streamingChats[chat.id]);
   useEffect(() => {
     if (!sourceProjectId || !sourceFolderKey) return;
-    const key = `${sourceProjectId}:${sourceFolderKey}`;
-    if (Date.now() - (lastSourceSync.current[key] || 0) < 60000) return;
-    lastSourceSync.current[key] = Date.now();
-    syncProjectSources(sourceProjectId)
-      .then((result) => {
+    const watcher = sourceRefresher({
+      key: `${sourceProjectId}:${sourceFolderKey}`, attempts: lastSourceSync.current,
+      pending: pendingSourceSync.current,
+      available: () => document.visibilityState === 'visible' && navigator.onLine && !sourceBusy,
+      refresh: () => syncProjectSources(sourceProjectId),
+      updated: result => {
         if (result.skipped.length) setProjectError(sourceRefreshIssues(result.skipped));
-        refreshProjects();
-      })
-      .catch((error) => setProjectError(`Sources could not be refreshed — ${error instanceof Error ? error.message : 'storage unavailable'}.`));
-  }, [sourceProjectId, sourceFolderKey, refreshProjects]);
+        void refreshProjects();
+      },
+      failed: error => setProjectError(`Sources could not be refreshed — ${error instanceof Error ? error.message : 'storage unavailable'}.`),
+    });
+    const revisit = () => { void watcher.run(); };
+    revisit();
+    const timer = window.setInterval(() => { void watcher.run(5 * 60000); }, 60000);
+    window.addEventListener('focus', revisit);
+    window.addEventListener('online', revisit);
+    document.addEventListener('visibilitychange', revisit);
+    return () => {
+      watcher.dispose(); window.clearInterval(timer);
+      window.removeEventListener('focus', revisit); window.removeEventListener('online', revisit);
+      document.removeEventListener('visibilitychange', revisit);
+    };
+  }, [sourceProjectId, sourceFolderKey, sourceBusy, refreshProjects]);
 
   const messages: Message[] = view.kind === 'chat' ? messagesByChat[view.chatId] ?? [] : [];
 

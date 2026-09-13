@@ -205,6 +205,7 @@ export function ProjectView({
                   <button className="btn btn-ghost btn-sm" disabled={syncing} onClick={()=>void updateFolders((project.sourceFolders || []).filter(x=>x!==f))} aria-label={`Unlink ${f}`}>Unlink</button>
                 </li>)}</ul>
                 <button className="btn btn-secondary btn-sm" disabled={syncing} onClick={()=>setPickingFolder(true)}>Link folder</button>
+                <p className="source-status">Linked folders refresh when you return and about every five minutes while this project is open. Refresh pauses during chat generation, while offline, or when this tab is hidden.</p>
               </details>
               <div className="source-actions">
                 <button className="btn btn-secondary btn-sm" disabled={syncing || busyDocs} onClick={()=>void updateFolders(project.sourceFolders || [])}>{syncing ? 'Refreshing…' : 'Refresh from storage'}</button>
