@@ -2,7 +2,8 @@
 const assert=require('node:assert/strict'),http=require('node:http'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{spawn,spawnSync}=require('node:child_process');
 const repo=path.resolve(__dirname,'../../..'),root=fs.mkdtempSync(path.join(os.tmpdir(),'noevia-restore-http-'));
 const origin='http://localhost:31285',diary='http://127.0.0.1:31284',provider='http://127.0.0.1:31283/v1';
-let providerCalls=0,privateKeyCalls=0,web,companion;
+let providerCalls=0,privateKeyCalls=0,web,companion,preparationStarted;
+const preparationGate=new Promise(resolve=>preparationStarted=resolve);
 const fake=http.createServer(async(req,res)=>{
  let raw='';for await(const c of req)raw+=c;const body=raw?JSON.parse(raw):{};providerCalls++;
  if(req.headers.authorization==='Bearer synthetic-restore-key')privateKeyCalls++;
@@ -11,12 +12,15 @@ const fake=http.createServer(async(req,res)=>{
  if(req.url.endsWith('/embeddings'))return res.end(JSON.stringify({data:(Array.isArray(body.input)?body.input:[body.input]).map((_,index)=>({index,embedding:[1,0,0]}))}));
  const prompt=String(body.messages?.at(-1)?.content||'');
  const content=prompt.includes('Verdict (LOG or SKIP)')?'LOG':prompt.includes('biographer')?'The companion recorded the synthetic restore test.':prompt.includes('UPDATE or NO')?'NO':'Synthetic restored provider reply.\n[LOG: ok]';
+ if(prompt.includes('SYNTHETIC-PREPARATION-INTERRUPT')&&body.stream){
+  res.setHeader('Content-Type','text/event-stream');res.write('data: '+JSON.stringify({choices:[{delta:{content:'Partial optional context'},finish_reason:null}]})+'\n\n');preparationStarted();return;
+ }
  const usage={prompt_tokens:10,completion_tokens:8,total_tokens:18};
  if(body.stream){res.setHeader('Content-Type','text/event-stream');return res.end('data: '+JSON.stringify({choices:[{delta:{content},finish_reason:null}]})+'\n\ndata: '+JSON.stringify({choices:[{delta:{},finish_reason:'stop'}],usage})+'\n\ndata: [DONE]\n\n');}
  res.end(JSON.stringify({choices:[{message:{role:'assistant',content},finish_reason:'stop'}],usage}));
 });
-function client(){const cookies=new Map();return async(url,body,method=body===undefined?'GET':'POST')=>{
- const response=await fetch(origin+url,{method,headers:{'Content-Type':'application/json',Origin:origin,Cookie:[...cookies].map(([k,v])=>k+'='+v).join('; '),'X-CSRF-Token':decodeURIComponent(cookies.get('cowork_csrf')||'')},body:body===undefined?undefined:JSON.stringify(body)});
+function client(){const cookies=new Map();return async(url,body,method=body===undefined?'GET':'POST',signal)=>{
+ const response=await fetch(origin+url,{method,signal,headers:{'Content-Type':'application/json',Origin:origin,Cookie:[...cookies].map(([k,v])=>k+'='+v).join('; '),'X-CSRF-Token':decodeURIComponent(cookies.get('cowork_csrf')||'')},body:body===undefined?undefined:JSON.stringify(body)});
  for(const value of response.headers.getSetCookie()){const part=value.split(';')[0],i=part.indexOf('=');cookies.set(part.slice(0,i),part.slice(i+1));}
  const text=await response.text();let value;try{value=JSON.parse(text);}catch{}return{status:response.status,text,body:value};
 };}
@@ -41,8 +45,26 @@ function tar(args){const result=spawnSync('tar',args,{encoding:'utf8'});assert.e
   r=await api('/api/providers',{label:'Synthetic encrypted provider',baseUrl:provider,apiKey:'synthetic-restore-key',defaultModel:'synthetic-main'});assert.equal(r.status,200,r.text);const providerId=r.body.id;
   r=await api('/api/projects',{name:'Synthetic restore project',provider:providerId,model:'synthetic-main',files:[],toolboxes:[]});assert.equal(r.status,200,r.text);const projectId=r.body.id;
   const d=new Date(),day=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  const exchange=message=>api('/api/chat',{spaceId:'diary',message,history:[],exchangeId:require('crypto').randomUUID(),sessionId:'synthetic-restore-session',entryDay:day,entryTime:new Date().toISOString()});
-  r=await exchange('SYNTHETIC-FIRST-RESTORE: I finished a disposable software test today.');assert.equal(r.status,200,r.text);assert.match(r.text,/Synthetic restored provider reply/);assert.match(r.text,/"decision"\s*:\s*"logged"/);
+  let preparationId;
+  const exchange=message=>api('/api/chat',{spaceId:'diary',message,history:[],preparationId,exchangeId:require('crypto').randomUUID(),sessionId:'synthetic-restore-session',entryDay:day,entryTime:new Date().toISOString()});
+  const firstMessage='SYNTHETIC-FIRST-RESTORE: I finished a disposable software test today.';
+  await api('/api/diary/context',{});
+  await api('/api/projects/cowork-diary-extras/config',{model:'synthetic-main',provider:providerId});
+  const cancelId=require('crypto').randomUUID(),controller=new AbortController();
+  const cancelled=api('/api/chat',{spaceId:'diary-extras',extrasEnabled:true,message:'SYNTHETIC-PREPARATION-INTERRUPT',history:[],sessionId:'synthetic-interrupt',recoveryId:cancelId,entryDay:day},'POST',controller.signal).catch(()=>null);
+  await Promise.race([preparationGate,new Promise((_,reject)=>setTimeout(()=>reject(Error('Synthetic preparation did not begin')),5000).unref())]);controller.abort();await cancelled;
+  let cancelledRecord;
+  for(let i=0;i<100;i++){cancelledRecord=(await api('/api/diary/exchanges?day='+day)).body.exchanges.find(row=>row.id===cancelId);if(cancelledRecord?.state==='uncertain')break;await new Promise(resolve=>setTimeout(resolve,20));}
+  assert.equal(cancelledRecord.state,'uncertain');assert.equal(cancelledRecord.kind,'preparation');
+  preparationId=require('crypto').randomUUID();
+  const prepBody={spaceId:'diary-extras',extrasEnabled:true,message:firstMessage,history:[],sessionId:'synthetic-restore-session',recoveryId:preparationId,entryDay:day};
+  r=await api('/api/chat',prepBody);assert.equal(r.status,200,r.text);assert.match(r.text,/Synthetic restored provider reply/);
+  assert.equal((await api('/api/chat',prepBody)).status,409);
+  let recovered=(await api('/api/diary/exchanges?day='+day)).body.exchanges;
+  assert.equal(recovered.find(row=>row.id===preparationId).kind,'preparation');assert.equal(recovered.find(row=>row.id===preparationId).state,'complete');
+  r=await exchange(firstMessage);assert.equal(r.status,200,r.text);assert.match(r.text,/Synthetic restored provider reply/);assert.match(r.text,/"decision"\s*:\s*"logged"/);
+  recovered=(await api('/api/diary/exchanges?day='+day)).body.exchanges;assert.equal(recovered.find(row=>row.kind==='capture').preparationId,preparationId);
+  preparationId=undefined;
   const before=(await api('/api/diary/today?month='+day.slice(0,7))).text;assert.match(before,/SYNTHETIC-FIRST-RESTORE/);
   await stop();
   const archive=path.join(root,'synthetic-state.tar.gz');tar(['-czf',archive,'-C',original,'web','diary']);

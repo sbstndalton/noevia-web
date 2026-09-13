@@ -1,3 +1,4 @@
+import { recoverDiaryTurns } from '../diary-server-recovery';
 import { listLocalRecovery, saveLocalRecovery, forgetLocalRecovery, restoredLocalState } from '../diary-local-recovery';
 import type { LocalRecovery, RecoveryState } from '../diary-local-recovery';
 import { ReasoningControl } from './ReasoningControl';
@@ -149,14 +150,10 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
         if(stopped || busyRef.current)return;
         const running=exchanges.some((e:{state:string})=>e.state==='running');setRecovering(running);polling=running;
         if(exchanges.length){
-          const restored:Turn[]=exchanges.flatMap((e:{message:string;content:string;reasoning:string;startedAt:number;activity:string[];state:string;decision:string;truncated?:boolean})=>[
-            {role:'user',content:e.message},
-            {role:'assistant',content:e.content,reasoning:e.reasoning,startedAt:e.startedAt,
-             activity:[...e.activity, e.state==='running'?'Still processing on the server.':e.state==='uncertain'?'Save outcome is uncertain. Check the saved diary before sending again.':e.decision==='logged'||e.decision==='ok'?'Diary entry saved.':'Conversation complete · no entry saved.',...(e.truncated?['Recovered transcript was truncated.']:[])]}
-          ]);
-          setTurns(prev=>{const existing=prev[target]||[];return existing.length===restored.length&&existing.every((t,i)=>t.role===restored[i].role&&t.content===restored[i].content)?prev:{...prev,[target]:restored};});
+          const restored = recoverDiaryTurns(exchanges);
+          setTurns(prev=>{const existing=prev[target]||[];return JSON.stringify(existing)===JSON.stringify(restored)?prev:{...prev,[target]:restored};});
         }
-        setRecoveryNotice(running?'Recovering an active exchange; no request was resent.':exchanges.some((e:{state:string})=>e.state==='uncertain')?'A previous exchange has an uncertain save outcome. Check the saved diary before resending.':'');
+        setRecoveryNotice(running?'Recovering an active exchange; no request was resent.':exchanges.some((e:{state:string;kind?:string})=>e.state==='uncertain'&&e.kind!=='preparation')?'A previous exchange has an uncertain save outcome. Check the saved diary before resending.':'');
       }catch(e){if(!stopped)setRecoveryNotice(e instanceof Error?e.message:'Recovery unavailable.');}
     };
     void recover();const timer=setInterval(()=>void recover(),5000);
@@ -309,6 +306,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     try {
       extraAbort.current = new AbortController();
       const useExtras = extrasEnabled && !!extraProject && !!((extraProject.files || []).length || (extraProject.assets || []).length || (extraProject.toolboxes || []).length);
+      const preparationId = useExtras && !folder ? randomSessionId() : undefined;
       setExtraStatus(useExtras ? 'Preparing optional context…' : '');
       const extraContext = await prepareDiaryExtras(useExtras, message, `${session.current.slice(0,36)}-${entryDay}-${entryDay}`, ev => {
         if (ev.type === 'status') { setExtraStatus(ev.text || 'Preparing optional context…'); progress(ev.text || 'Preparing optional context…'); }
@@ -320,7 +318,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
             : {name:ev.name || 'tool',args:ev.args || '',status:ev.type === 'tool_pending' ? 'pending' : undefined,approvalId:ev.id};
           patchReply({tools:[...calls]});
         }
-      }, extraAbort.current.signal);
+      }, extraAbort.current.signal, preparationId ? {recoveryId:preparationId,entryDay} : undefined);
       extraAbort.current = null;
       if (useExtras) setExtraStatus('Optional context ready · diary retrieval and capture now running');
 
@@ -330,7 +328,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       if(snapshot)await persistRecovery({interrupted:true});
       diaryStarted = true;
       for await (const ev of streamChat({spaceId:'diary', files:snapshot, extrasEnabled:useExtras, extraContext,
-        message, history, exchangeId:snapshot ? undefined : randomSessionId(), sessionId:`${session.current.slice(0,36)}-${entryDay}`, entryDay, entryTime})) {
+        message, history, preparationId, exchangeId:snapshot ? undefined : randomSessionId(), sessionId:`${session.current.slice(0,36)}-${entryDay}`, entryDay, entryTime})) {
         if (ev.type === 'error') throw new Error(ev.text || 'Diary request failed');
         if (ev.type === 'status') progress(ev.text || 'Working…');
         if (ev.type === 'reasoning') { reasoning += ev.text || ''; patchReply({reasoning}); }
