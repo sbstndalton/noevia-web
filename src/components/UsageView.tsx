@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import { fetchUsage } from '../api';
+import { UsageRates } from './UsageRates';
+import type { UsagePricing } from '../api';
+import { fetchUsage, fetchUsageRates } from '../api';
 import type { UsageSummary, UsageTotals } from '../types';
 
 function compact(n: number): string {
@@ -38,23 +40,30 @@ export function UsageView(): JSX.Element {
   const [data, setData] = useState<UsageSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [aggregate,setAggregate]=useState(false);
+  const [pricing,setPricing]=useState<UsagePricing|null>(null);
+  const [pricingError,setPricingError]=useState('');
   const [window_, setWindow] = useState<'7' | '30' | 'all'>('30');
 
   useEffect(() => {
     let live = true;
     setError(null);
     setData(null);
-    fetchUsage()
+    void fetchUsageRates().then(value=>{if(live){setPricing(value);setPricingError('');}}).catch(()=>{if(live)setPricingError('Pricing settings could not be loaded.');});
+    fetchUsage(aggregate)
       .then((d) => { if (live) setData(d); })
       .catch(() => { if (live) setError('Usage could not be loaded.'); });
     return () => { live = false; };
-  }, [attempt]);
+  }, [attempt,aggregate]);
 
-  if (error) return <><div className="settings-title"><h1>Usage &amp; activity</h1></div><p className="route-note" role="alert">{error}</p><button className="btn btn-secondary" onClick={() => setAttempt(n => n + 1)}>Retry usage</button></>;
+  if (error) return <><div className="settings-title"><h1>Usage &amp; activity</h1></div><p className="route-note" role="alert">{error}</p><button className="btn btn-secondary" onClick={() => setAttempt(n => n + 1)}>Retry usage</button>{aggregate&&<button className="btn btn-secondary" onClick={()=>setAggregate(false)}>Return to your usage</button>}</>;
   if (!data) return <><div className="settings-title"><h1>Usage &amp; activity</h1></div><p className="route-note">Loading…</p></>;
 
   const totals: UsageTotals = window_ === '7' ? data.last7 : window_ === '30' ? data.last30 : data.allTime;
-  const label = window_ === 'all' ? 'all time' : `last ${window_} days`;
+  const label = window_ === 'all' ? 'retained history' : `last ${window_} days`;
+  const cost=window_==='7'?data.costs?.last7:window_==='30'?data.costs?.last30:data.costs?.allTime;
+  const incompleteCost=cost?.amount===null||!!data.aggregate?.unreadableAccounts;
+  const money=(value:number)=>new Intl.NumberFormat(undefined,{style:'currency',currency:data.costs?.currency||'USD',maximumFractionDigits:4}).format(value);
   const busiest = Math.max(0, ...data.days.map((d) => d.input + d.output));
   const everUsed = data.allTime.replies > 0;
 
@@ -73,9 +82,14 @@ export function UsageView(): JSX.Element {
   return <>
     <div className="settings-title">
       <h1>Usage &amp; activity</h1>
-      <p>Everything you have run through noevia, counted on this server.</p>
+      <p>Provider-reported usage for ordinary chats and optional Diary tool preparation. Companion-only Diary generation and providers that omit usage are not counted.</p>
     </div>
 
+    {pricing?.admin&&<div className="usage-window" role="group" aria-label="Usage scope"><button aria-pressed={!aggregate} onClick={()=>setAggregate(false)}>Your account</button><button aria-pressed={aggregate} onClick={()=>setAggregate(true)}>All accounts</button></div>}
+    {data.aggregate&&<p className="route-note">Aggregated across {data.aggregate.accounts} current accounts. Snapshot {new Date(data.aggregate.checkedAt).toLocaleTimeString()} · cached up to 30 seconds.{data.aggregate.unreadableAccounts>0?` Incomplete: ${data.aggregate.unreadableAccounts} accounts could not be read.`:''}</p>}
+    {data.costs&&cost&&<section className="usage-section"><Stat label={`Estimated provider cost · ${label}`} value={!data.costs.configured?'Rates not configured':incompleteCost?'Incomplete estimate':money(cost.amount||0)} hint={incompleteCost?`Priced portion: ${money(cost.pricedSubtotal)}. ${cost.unpricedModels.length} models need rates; ${cost.unattributedTokens} tokens lack matching model totals.`:'Calculated at current saved rates, not a provider bill.'} /><p className="route-note">Excludes unreported usage, discounts, cached-token billing differences, hardware and electricity. Identical model names share one rate across providers.</p></section>}
+    {pricingError&&<p className="route-note" role="alert">{pricingError}</p>}
+    {pricing?.admin&&<UsageRates key={JSON.stringify(pricing)} pricing={pricing} onSaved={()=>setAttempt(value=>value+1)} />}
     {!everUsed && (
       <p className="route-note">
         No usage recorded yet. Counting started when this feature shipped, so replies generated
@@ -89,7 +103,7 @@ export function UsageView(): JSX.Element {
         <div className="usage-window" role="group" aria-label="Time window">
           {(['7', '30', 'all'] as const).map((w) => (
             <button key={w} className={window_ === w ? 'is-active' : ''} aria-pressed={window_ === w} onClick={() => setWindow(w)}>
-              {w === 'all' ? 'All time' : `${w} days`}
+              {w === 'all' ? 'Retained history' : `${w} days`}
             </button>
           ))}
         </div>
@@ -98,7 +112,7 @@ export function UsageView(): JSX.Element {
         <Stat label="Total" value={compact(totals.input + totals.output)} hint="Input and output." />
         <Stat label="Input" value={compact(totals.input)} hint="Prompt and context." />
         <Stat label="Output" value={compact(totals.output)} hint="Generated by the model." />
-        <Stat label="Replies" value={totals.replies.toLocaleString()} hint={`Messages answered, ${label}.`} />
+        <Stat label="Model responses" value={totals.replies.toLocaleString()} hint={`Provider responses, ${label}.`} />
       </div>
     </section>
 
@@ -145,13 +159,13 @@ export function UsageView(): JSX.Element {
         <Stat label="Current streak" value={`${data.currentStreak} ${data.currentStreak === 1 ? 'day' : 'days'}`} hint="Send a message today to keep it." />
         <Stat label="Longest streak" value={`${data.longestStreak} ${data.longestStreak === 1 ? 'day' : 'days'}`} />
         <Stat label="Active days" value={String(data.activeDays)} hint="Days you sent at least one message." />
-        <Stat label="Replies · all time" value={data.allTime.replies.toLocaleString()} />
+        <Stat label="Responses · retained history" value={data.allTime.replies.toLocaleString()} />
       </div>
     </section>
 
     {data.models.length > 0 && (
       <section className="usage-section">
-        <div className="usage-section-head"><div><h2>By model</h2><p>All time, busiest first.</p></div></div>
+        <div className="usage-section-head"><div><h2>By model</h2><p>Retained history, busiest first.</p></div></div>
         <div className="card-list">
           {data.models.map((m) => (
             <div className="model-row" key={m.name}>

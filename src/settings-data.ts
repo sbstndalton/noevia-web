@@ -14,6 +14,12 @@ export function parseUsage(value: unknown): UsageSummary {
       !value.models.every(model => record(model) && totals(model) && typeof model.name === 'string')) {
     throw new Error('The server returned an invalid usage response.');
   }
+  if(value.costs!==undefined){
+    const costs=value.costs;
+    if(!record(costs)||typeof costs.currency!=='string'||!/^[A-Z]{3}$/.test(costs.currency)||typeof costs.configured!=='boolean'||
+      !['allTime','last7','last30'].every(key=>{const row=costs[key];return record(row)&&(row.amount===null||count(row.amount))&&count(row.pricedSubtotal)&&count(row.pricedTokens)&&count(row.unattributedTokens)&&Array.isArray(row.unpricedModels)&&row.unpricedModels.every(name=>typeof name==='string');}))throw Error('The server returned invalid cost estimates.');
+  }
+  if(value.aggregate!==undefined&&(!record(value.aggregate)||!['accounts','unreadableAccounts','checkedAt'].every(key=>count((value.aggregate as Record<string,unknown>)[key]))))throw Error('The server returned invalid aggregate usage.');
   return value as unknown as UsageSummary;
 }
 

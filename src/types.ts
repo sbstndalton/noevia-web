@@ -220,7 +220,10 @@ export interface LiveStats {
 export interface UsageDay { day: string; input: number; output: number; replies: number }
 export interface UsageTotals { input: number; output: number; replies: number }
 export interface UsageModel { name: string; input: number; output: number; replies: number }
+export interface UsageCost { amount: number | null; pricedSubtotal: number; unpricedModels: string[]; unattributedTokens: number; pricedTokens: number }
 export interface UsageSummary {
+  costs?: {currency:string;configured:boolean;allTime:UsageCost;last7:UsageCost;last30:UsageCost};
+  aggregate?: {accounts:number;unreadableAccounts:number;checkedAt:number};
   days: UsageDay[];
   allTime: UsageTotals;
   last7: UsageTotals;
