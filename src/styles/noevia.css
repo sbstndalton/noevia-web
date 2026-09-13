@@ -575,3 +575,10 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
 .instruction-skill { padding-block: 12px; border-bottom: 1px solid var(--control-border); }
 .instruction-skills summary { cursor: pointer; overflow-wrap: anywhere; }
 .instruction-skills pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; padding: 12px; font-size: 12px; border: 1px solid var(--control-border); border-radius: 8px; }
+
+.mtp-artifact { display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:12px; white-space:normal; overflow-wrap:anywhere; }
+.mtp-artifact small { display:block; flex-basis:100%; color:var(--text-muted); }
+.model-variant-row > .model-name-group { flex-direction:column; align-items:flex-start; gap:6px; }
+.model-variant-row .model-quant { margin-left:0; }
+.model-variant-row .model-name { white-space:normal; overflow-wrap:anywhere; }
+@media(max-width:600px) { .model-variant-row { flex-wrap:wrap; } .model-variant-row > .model-name-group { flex-basis:100%; } .model-variant-row > button { margin-left:auto; } }

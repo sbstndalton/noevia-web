@@ -1,3 +1,4 @@
+import { MtpArtifact } from './MtpArtifact';
 import { MtpControl } from './MtpControl';
 import { Fragment, useEffect, useState } from 'react';
 import { useModalDialog } from './useModalDialog';
@@ -536,10 +537,11 @@ function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
               <div className="rail-label">{variants.repo}</div>
               {variants.variants.length === 0 && <p className="rail-empty">No variants listed — pull the default.</p>}
               {variants.variants.map((v) => (
-                <div key={v.id} className="model-row" style={{ padding: '8px 12px' }}>
+                <div key={v.id} className="model-row model-variant-row" style={{ padding: '8px 12px' }}>
                   <div className="model-name-group">
                     <span className="model-name">{v.label}</span>
                     {v.sizeGB != null && <span className="model-quant">{v.sizeGB} GB</span>}
+                    <MtpArtifact key={`${h.repo}/${v.id}`} repo={h.repo} variant={v.label} />
                   </div>
                   <button
                     className="popup-tab"
