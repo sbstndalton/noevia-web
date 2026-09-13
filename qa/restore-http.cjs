@@ -30,7 +30,7 @@ async function start(state){
  const log=fs.openSync(path.join(root,'services.log'),'a');
  companion=spawn(path.join(repo,'services/diary/.venv/bin/python'),['-m','uvicorn','agent.app:app','--host','127.0.0.1','--port','31284'],{cwd:path.join(repo,'services/diary'),stdio:['ignore',log,log],env:{...process.env,DIARY_CONFIG:path.join(repo,'services/diary/config/config.yaml'),CORPUS_BACKEND:'local',CORPUS_LOCAL_ROOT:path.join(state,'diary/corpus'),CORPUS_ROOT:'',DB_PATH:path.join(state,'diary/index.db'),DIARY_AUTH_TOKEN:'synthetic-diary-token',DIARY_LEGACY_USER_ID:'',DIARY_LOCAL_VOLUMES:'',LLM_BASE_URL:provider,LLM_API_KEY:'',LLM_CHAT_MODEL:'synthetic-main',LLM_EMBED_MODEL:'synthetic-embed',LLM_AUX_BASE_URL:provider,LLM_AUX_API_KEY:'',LLM_AUX_MODEL:'synthetic-main'}});
  await wait(diary+'/api/health');
- web=spawn(process.execPath,['server/index.cjs'],{cwd:path.join(repo,'apps/web'),stdio:['ignore',log,log],env:{...process.env,UI_DATA_DIR:path.join(state,'web'),UI_PORT:'31285',UI_HOST:'127.0.0.1',PUBLIC_ORIGIN:origin,LEGACY_AUTH_COMPAT:'false',INFERENCE_BASE_URL:provider,INFERENCE_API_KEY:'',MODEL_MANAGER_KIND:'none',DIARY_BASE_URL:diary,DIARY_AUTH_TOKEN:'synthetic-diary-token',DIARY_LEGACY_USER_ID:'',DIARY_LOCAL_VOLUMES:'',CORPUS_BACKEND:'local',WEBDAV_BASE_URL:'',WEBDAV_USERNAME:'',WEBDAV_PASSWORD:'',MCP_SERVERS:'',MCP_SERVER_URL:''}});
+ web=spawn(process.execPath,['server/index.cjs'],{cwd:path.join(repo,'apps/web'),stdio:['ignore',log,log],env:{...process.env,UI_DATA_DIR:path.join(state,'web'),UI_PORT:'31285',UI_HOST:'127.0.0.1',PUBLIC_ORIGIN:origin,COWORK_DAV_PORT:'31286',COWORK_DAV_SCOPE:'lan',COWORK_DAV_ORIGIN:'http://localhost:31286',LEGACY_AUTH_COMPAT:'false',INFERENCE_BASE_URL:provider,INFERENCE_API_KEY:'',MODEL_MANAGER_KIND:'none',DIARY_BASE_URL:diary,DIARY_AUTH_TOKEN:'synthetic-diary-token',DIARY_LEGACY_USER_ID:'',DIARY_LOCAL_VOLUMES:'',CORPUS_BACKEND:'local',WEBDAV_BASE_URL:'',WEBDAV_USERNAME:'',WEBDAV_PASSWORD:'',MCP_SERVERS:'',MCP_SERVER_URL:''}});
  await wait(origin+'/api/setup/status');fs.closeSync(log);
 }
 async function stop(){for(const child of [web,companion])if(child&&child.exitCode===null){child.kill('SIGTERM');await new Promise(r=>child.once('exit',r));}web=companion=null;}
@@ -80,6 +80,19 @@ function tar(args){const result=spawnSync('tar',args,{encoding:'utf8'});assert.e
   r=await api('/api/diary/file',{path:'AI Memory/restore-check.md'});const initial=r.body;
   r=await api('/api/diary/file',{...initial,content:'Synthetic version one'},'PUT');assert.equal(r.status,200,r.text);
   r=await api('/api/diary/file',{...initial,content:'Stale synthetic replacement'},'PUT');assert.equal(r.status,409,r.text);
-  console.log(JSON.stringify({result:'PASS',services:'real web and Diary',provider:'synthetic HTTP only',restoredLogin:true,restoredCorpus:true,continuedCapture:true,encryptedProviderCredential:true,staleWriteRejected:true,providerCalls}));
+  const device=(await api('/api/profile/app-passwords',{name:'Synthetic restore DAV',scope:'lan'})).body;
+  const davHeaders={Authorization:'Basic '+Buffer.from('restoreqa:'+device.password).toString('base64')};
+  const dav=(method,path,body,extra={})=>fetch('http://localhost:31286/dav/restoreqa/'+path,{method,headers:{...davHeaders,...extra},body});
+  assert.equal((await dav('MKCOL','SyntheticFolders/')).status,403);
+  assert.equal((await api('/api/profile/sharing',{scope:'lan',acknowledgeCleartext:true},'PUT')).status,200);
+  assert.equal((await dav('MKCOL','SyntheticFolders/')).status,201);
+  assert.equal((await dav('MKCOL','SyntheticFolders/')).status,405);
+  assert.equal((await dav('MKCOL','MissingParent/Child/')).status,409);
+  assert.equal((await dav('PUT','SyntheticFolders/test.md','Synthetic DAV child',{'If-None-Match':'*'})).status,201);
+  assert.equal(await (await dav('GET','SyntheticFolders/test.md')).text(),'Synthetic DAV child');
+  assert.equal((await dav('PROPFIND','SyntheticFolders/',undefined,{Depth:'1'})).status,207);
+  await api('/api/profile/app-passwords/'+device.id,undefined,'DELETE');
+  assert.equal((await dav('MKCOL','Revoked/')).status,401);
+  console.log(JSON.stringify({result:'PASS',services:'real web and Diary',provider:'synthetic HTTP only',restoredLogin:true,restoredCorpus:true,continuedCapture:true,encryptedProviderCredential:true,staleWriteRejected:true,preparationRecovery:true,davDirectoryLifecycle:true,providerCalls}));
  }finally{await stop();await new Promise(r=>fake.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});
