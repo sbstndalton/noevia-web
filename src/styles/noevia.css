@@ -569,3 +569,9 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
 .context-stacked-bar span { flex-shrink: 0; }
 .context-color-0 { background: #438cde; } .context-color-1 { background: #df8c43; } .context-color-2 { background: #3ba68b; } .context-color-3 { background: #888; }
 @media(max-width: 480px) { .chat-context-meter { font-size: 11px; padding: 7px 9px; } }
+
+/* Reviewed instruction files in project Sources. */
+.instruction-skills { margin-block: 0 24px; min-width: 0; }
+.instruction-skill { padding-block: 12px; border-bottom: 1px solid var(--control-border); }
+.instruction-skills summary { cursor: pointer; overflow-wrap: anywhere; }
+.instruction-skills pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; padding: 12px; font-size: 12px; border: 1px solid var(--control-border); border-radius: 8px; }

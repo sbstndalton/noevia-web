@@ -1,3 +1,4 @@
+import { InstructionSkills } from './InstructionSkills';
 import { ReasoningControl } from './ReasoningControl';
 import { ComposerActions } from './ComposerActions';
 import { ComposerModel } from './ComposerModel';
@@ -69,6 +70,7 @@ export function ProjectView({
   const [panel, setPanel] = useState<'instructions' | 'memory' | null>(null);
   const [tab, setTab] = useState<'chats' | 'sources'>('chats');
   const [draft, setDraft] = useState('');
+  const [skillFiles, setSkillFiles] = useState<string[]>([]);
   const [pickingFolder, setPickingFolder] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [browsing, setBrowsing] = useState(false);
@@ -184,6 +186,7 @@ export function ProjectView({
             </div>
           ) : (
             <div className="project-scroll project-sources">
+              <InstructionSkills key={project.id} projectId={project.id} updatedAt={project.updatedAt} onRefresh={onRefresh} onFiles={setSkillFiles} />
               <p className="rail-empty">
                 Reference files and images available to chats in this project.
               </p>
@@ -229,7 +232,7 @@ export function ProjectView({
                     return <li key={f.name}>
                       {f.attachment?.assetId && <img className="source-thumbnail" src={projectImageUrl(project.id, f.attachment.assetId)} alt="" />}
                       <span className="source-name" title={f.name}><ShellIcon name="file"/><span>{f.name.split('/').pop()}
-                        <small className="source-status">{f.document ? sourceStatus(f) : f.attachment?.state === 'stored' ? (f.attachment.reason || 'Original stored · reader not available yet') : f.attachment?.state === 'vision' ? 'Uploaded · image read when you send a message' : f.attachment?.state === 'partial' ? (f.attachment.reason || 'Text preview limited · original kept') : 'Text ready'}</small>
+                        <small className="source-status">{skillFiles.includes(f.name) ? 'Instruction skill · review and enable above' : f.document ? sourceStatus(f) : f.attachment?.state === 'stored' ? (f.attachment.reason || 'Original stored · reader not available yet') : f.attachment?.state === 'vision' ? 'Uploaded · image read when you send a message' : f.attachment?.state === 'partial' ? (f.attachment.reason || 'Text preview limited · original kept') : 'Text ready'}</small>
                         <small className="source-status">{f.source ? f.name : 'Stored in noevia'}{f.attachment ? ` · ${(f.attachment.bytes / 1024 / 1024).toFixed(2)} MB` : ''}</small>
                       </span></span>
                       {(f.attachment || f.document?.byteHash) && <a className="btn btn-ghost btn-sm" href={`/api/projects/${encodeURIComponent(project.id)}/${f.attachment ? 'uploads' : 'documents'}/original?name=${encodeURIComponent(f.name)}`} download>Original</a>}
