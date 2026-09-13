@@ -17,6 +17,7 @@ interface LocalFileHandle {
 }
 export interface DirectoryHandle {
   kind: 'directory'; name: string;
+  isSameEntry?(other: DirectoryHandle): Promise<boolean>;
   values(): AsyncIterable<DirectoryHandle | LocalFileHandle>;
   getDirectoryHandle(name: string, options?: { create: boolean }): Promise<DirectoryHandle>;
   getFileHandle(name: string, options?: { create: boolean }): Promise<LocalFileHandle>;

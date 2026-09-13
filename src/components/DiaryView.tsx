@@ -1,3 +1,5 @@
+import { listLocalRecovery, saveLocalRecovery, forgetLocalRecovery, restoredLocalState } from '../diary-local-recovery';
+import type { LocalRecovery, RecoveryState } from '../diary-local-recovery';
 import { ReasoningControl } from './ReasoningControl';
 import { DiaryLanding } from './DiaryLanding';
 import { ComposerActions } from './ComposerActions';
@@ -11,7 +13,7 @@ import { SendIcon } from './Icons';
 import { DiaryCalendar } from './DiaryCalendar';
 import { DiaryContextPanel } from './DiaryContextPanel';
 import { useEffect, useRef, useState } from 'react';
-import { apiFetch, deleteProjectFile, fetchDiaryMonth, fetchDiarySource, fetchStorage, streamChat } from '../api';
+import { apiFetch, fetchProfile, deleteProjectFile, fetchDiaryMonth, fetchDiarySource, fetchStorage, streamChat } from '../api';
 import type { StorageConnection } from '../api';
 import { dateInText, dayLabel, localDay, monthLabel, splitDays } from '../diary-data';
 import { directoryPicker, directoryPickerBlockedReason, listFiles, randomSessionId, readFile, saveLocal, scanLocal, syncFileChange, writeFile } from '../diary-workspace';
@@ -73,6 +75,63 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const [preview, setPreview] = useState(true);
   const [revision, setRevision] = useState(0);
   const session = useRef(randomSessionId());
+  const [recoveryOwner,setRecoveryOwner]=useState('');
+  const [localRecoveryEnabled,setLocalRecoveryEnabled]=useState(false);
+  const [savedRecoveries,setSavedRecoveries]=useState<LocalRecovery[]>([]);
+  const [localRecoveryError,setLocalRecoveryError]=useState('');
+  const recoverySession=useRef(randomSessionId());
+  const storageIdentity=JSON.stringify([storage?.kind,storage?.baseUrl,storage?.bucket,storage?.username,storage?.corpusRoot]);
+  const recoverySnapshot=useRef<RecoveryState>(null!);
+  recoverySnapshot.current={draft,day,month,turns,pendingLocal,pendingSync,editor,editText,interrupted:busy,storageIdentity};
+  useEffect(()=>{
+    let stopped=false;
+    void fetchProfile().then(async({user})=>{
+      const enabled=localStorage.getItem(`cowork-diary-recovery:${user.id}`)==='on';
+      const records=await listLocalRecovery(user.id);
+      if(!stopped){setRecoveryOwner(user.id);setLocalRecoveryEnabled(enabled);setSavedRecoveries(records);}
+    }).catch(()=>{if(!stopped)setLocalRecoveryError('Browser recovery is unavailable. Unfinished local work remains in this page only.');});
+    return()=>{stopped=true;};
+  },[]);
+  const persistRecovery=async(patch:Partial<RecoveryState>={})=>{
+    if(!localRecoveryEnabled || !recoveryOwner || !folder)return;
+    await saveLocalRecovery({id:`${recoveryOwner}:${recoverySession.current}`,owner:recoveryOwner,updatedAt:Date.now(),folder,state:{...recoverySnapshot.current,...patch}});
+  };
+  useEffect(()=>{
+    if(!localRecoveryEnabled || !folder || !recoveryOwner)return;
+    const timer=window.setTimeout(()=>{void persistRecovery().then(()=>setLocalRecoveryError('')).catch(e=>setLocalRecoveryError(String(e.message||e)));},200);
+    return()=>window.clearTimeout(timer);
+  },[localRecoveryEnabled,recoveryOwner,folder,draft,day,month,turns,pendingLocal,pendingSync,editor,editText,busy,storageIdentity]);
+  const toggleLocalRecovery=async(enabled:boolean)=>{
+    if(!recoveryOwner)return;
+    try{
+      localStorage.setItem(`cowork-diary-recovery:${recoveryOwner}`,enabled?'on':'off');
+      setLocalRecoveryEnabled(enabled);
+      if(!enabled){
+        await forgetLocalRecovery(recoveryOwner,`${recoveryOwner}:${recoverySession.current}`);
+        setSavedRecoveries(await listLocalRecovery(recoveryOwner));
+      }
+    }catch(e){setLocalRecoveryError(String(e));}
+  };
+  const restoreLocalRecovery=(record:LocalRecovery)=>{
+    if((draft.trim() || (editor && editText!==(editor.content||''))) && !window.confirm('Replace the current unsaved draft/editor with this recovered session?'))return;
+    const picker=directoryPicker();if(!picker){setError('Use a browser with writable folder access to restore this local session.');return;}
+    const selection=picker({mode:'readwrite'});
+    void run(async()=>{
+      const selected=await selection;
+      if(!selected.isSameEntry || !await selected.isSameEntry(record.folder))throw Error('Choose the original folder for this recovery. No files were changed.');
+      if(Object.keys(record.state.pendingSync).length && record.state.storageIdentity!==storageIdentity)throw Error('The saved online connection has changed. Restore that connection before recovering pending sync; no files were changed.');
+      const snapshot=await scanLocal(selected), state=restoredLocalState(record.state);
+      recoverySession.current=randomSessionId();
+      setFolder(selected);setLocalFiles(snapshot);setDraft(state.draft);setDay(state.day);setMonth(state.month);setTurns(state.turns);
+      setPendingLocal(state.pendingLocal);setPendingSync(state.pendingSync);pendingSyncRef.current=state.pendingSync;
+      setEditor(state.editor);setEditText(state.editText);setSync(false);setWizard(null);
+      setStatus('Recovered on this browser. Nothing was resent or written. Review pending saves before choosing Retry; online sync is off for new changes.');
+      if(state.interrupted)setError('The previous operation was interrupted. Its outcome is unconfirmed; check files and tool results before sending again.');
+      localStorage.setItem(`cowork-diary-recovery:${recoveryOwner}`,'on');setLocalRecoveryEnabled(true);
+      await saveLocalRecovery({id:`${recoveryOwner}:${recoverySession.current}`,owner:recoveryOwner,updatedAt:Date.now(),folder:selected,state});
+      await forgetLocalRecovery(recoveryOwner,record.id);setSavedRecoveries(await listLocalRecovery(recoveryOwner));
+    });
+  };
   const today = localDay();
   const [recovering,setRecovering]=useState(false);
   const [recoveryNotice,setRecoveryNotice]=useState('');
@@ -171,10 +230,10 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     return () => { stale = true; };
   }, [folder, localFiles, filePath, revision]);
   useEffect(() => {
-    const warn = (e: BeforeUnloadEvent) => { if (busyRef.current || pendingCount || (editor && editText !== editor.content)) { e.preventDefault(); e.returnValue = ''; } };
+    const warn = (e: BeforeUnloadEvent) => { if (busyRef.current || draft.trim() || pendingCount || (editor && editText !== editor.content)) { e.preventDefault(); e.returnValue = ''; } };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [pendingCount, editor, editText]);
+  }, [pendingCount, editor, editText, draft]);
 
   const run = async (fn: () => Promise<void>) => {
     if (busyRef.current) return;
@@ -186,6 +245,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     const remaining = { ...queue };
     for (const [path, item] of Object.entries(queue)) {
       try {
+        await persistRecovery({pendingSync:remaining,interrupted:true});
         await syncFileChange(path, item.before, item.content);
         delete remaining[path];
       } catch (e) {
@@ -200,11 +260,16 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     if (!folder) throw new Error('Local folder is no longer connected');
     const left = { ...changes };
     setPendingLocal(left);
+    await persistRecovery({pendingLocal:left,interrupted:true});
     const queue = { ...pendingSyncRef.current };
     for (const [path, item] of Object.entries(changes)) {
       // A retry accepts a file already written successfully before interruption.
       const current = await scanLocal(folder);
-      if (current[path] !== item.content) await saveLocal(folder, path, item.content, item.before);
+      // Creating a new File System Access entry precedes createWritable. A failed
+      // first write can leave that entry empty. An explicit retry may fill an
+      // empty placeholder, but never replaces differing nonempty text.
+      const expected = item.before === null && current[path] === '' ? '' : item.before;
+      if (current[path] !== item.content) await saveLocal(folder, path, item.content, expected);
       setLocalFiles(prev => ({ ...prev, [path]: item.content }));
       delete left[path]; setPendingLocal({ ...left });
       if (sync) {
@@ -218,6 +283,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const submit = () => void run(async () => {
     const message = draft.trim();
     if (!message || extraBusy || recovering) return;
+    if(folder && localRecoveryEnabled && localRecoveryError)throw Error(localRecoveryError);
     if (Object.keys(pendingLocal).length) throw new Error('Retry the pending local save before sending another entry.');
     const { entryDay, entryTime, month: entryMonth, history } = diaryExchangeTarget(day, turns);
     const displayHistory = turns[entryDay] || [];
@@ -261,6 +327,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       const snapshot = folder ? await scanLocal(folder) : undefined;
       if (snapshot) setLocalFiles(snapshot);
       let decision = '', completed = false, changes: Record<string,string> | undefined;
+      if(snapshot)await persistRecovery({interrupted:true});
       diaryStarted = true;
       for await (const ev of streamChat({spaceId:'diary', files:snapshot, extrasEnabled:useExtras, extraContext,
         message, history, exchangeId:snapshot ? undefined : randomSessionId(), sessionId:`${session.current.slice(0,36)}-${entryDay}`, entryDay, entryTime})) {
@@ -358,6 +425,8 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     <div className="diary-layout"><section className="diary-primary"><div className="diary-content-scroll" ref={scrollRef} onScroll={onScroll}>
       {inferenceUp === false && <p className="conn-banner">Inference is currently unavailable. Your saved files are still accessible.</p>}
       {error && <p className="conn-banner" role="alert">{error}</p>}
+      {localRecoveryError && <p className="conn-banner" role="alert">{localRecoveryError}</p>}
+      {!!savedRecoveries.length && !folder && <section className="diary-pending"><div><strong>Local sessions saved on this browser</strong><p>Reconnect the original folder to review unfinished work. Recovery never resends requests or writes files automatically.</p>{savedRecoveries.map(record=><div key={record.id}><span>{record.folder.name} · {new Date(record.updatedAt).toLocaleString()}</span><button className="popup-tab" disabled={busy || !storage} onClick={()=>restoreLocalRecovery(record)}>Reconnect &amp; recover</button><button className="popup-tab" disabled={busy} onClick={()=>{if(window.confirm('Remove this recovery copy from this browser? Original diary files are unchanged.'))void forgetLocalRecovery(recoveryOwner,record.id).then(()=>listLocalRecovery(recoveryOwner)).then(setSavedRecoveries).catch(e=>setError(String(e)));}}>Forget recovery</button></div>)}</div></section>}
       {pendingCount > 0 && <div className="diary-pending" role="status"><span>{Object.keys(pendingLocal).length ? 'Local save needs attention.' : `${Object.keys(pendingSync).length} file(s) waiting to sync. Local copies are safe.`}</span><button className="popup-tab" disabled={busy} onClick={()=>void run(async()=>{ if(Object.keys(pendingLocal).length) await commitLocal(pendingLocal); else await syncChanges(pendingSync); })}>Retry save / sync</button></div>}
       {!month && <DiaryLanding failed={overview.failed} ready={overview.ready} empty={emptyDiary} composer={composer} months={months} recentDays={overview.recentDays} memory={overview.memory} sources={overview.sources} busy={busy} navigate={navigate} openFile={openFile} />}
       {month && !day && <DiaryCalendar month={month} today={today} days={days} busy={busy} navigate={navigate} />}
@@ -367,13 +436,14 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       {day && <div className="diary-composer-dock">{composer}</div>}
       {status && <p className="diary-save-status" role="status">{status}</p>}
 
-    </section><DiaryContextPanel busy={busy} files={files} filePath={filePath} setFilePath={setFilePath} openFile={openFile}
+    </section><DiaryContextPanel recovery={folder && <section><label className="diary-sync-toggle"><input type="checkbox" checked={localRecoveryEnabled} disabled={busy || !recoveryOwner} onChange={e=>void toggleLocalRecovery(e.target.checked)} />Save recovery on this browser</label><p className="diary-context-note">Stores drafts, conversation and tool history, pending file saves and folder identity in this browser profile. Anyone with access to this profile may read it. Reconnect the original folder after reopening. Clearing browser data removes these copies. Turning this off removes this session’s recovery copy.</p></section>} busy={busy} files={files} filePath={filePath} setFilePath={setFilePath} openFile={openFile}
       newFile={() => {setEditor({path:'AI Memory/notes.md',content:null,version:null});setEditText('');setPreview(false);}}
       chooseStorage={() => setWizard('choose')} pendingCount={pendingCount} pendingLocal={Object.keys(pendingLocal).length > 0}
       folderName={folder?.name} savedLabel={savedLabel} corpusRoot={storage?.corpusRoot} sync={sync} setSync={setSync} disconnect={disconnect} /></div>
     {extraModels && extraProject && <ModelPopup projects={[extraProject]} activeProject={extraProject} onClose={()=>setExtraModels(false)} onProjectsChanged={()=>void refreshExtraProject()} />}
     {extraFiles && <DiaryModal title="Optional diary attachments" onClose={()=>setExtraFiles(false)}><p>Stored separately from your diary corpus. Used only while extras are on.</p>{(extraProject?.files || []).map(file=><div className="model-row" key={file.name}><span>{file.name}<small> · {file.attachment?.state || file.document?.state || 'ready'}</small></span><button className="popup-tab" disabled={busy || extraBusy} onClick={()=>void (async()=>{if(!extraProject || !window.confirm(`Delete attachment ${file.name} from storage?`))return;setExtraBusy(true);try{await deleteProjectFile(extraProject.id,file.name);await refreshExtraProject();}catch(err){setExtraStatus(String(err));}finally{setExtraBusy(false);}})()}>Delete attachment</button></div>)}</DiaryModal>}
-    {wizard && <DiaryModal title="Choose diary storage" onClose={()=>{if(!busy)setWizard(null);}}>{error&&<p className="conn-banner" role="alert">{error}</p>}{wizard==='choose'?<div className="diary-storage-options"><button className="month-card" disabled={busy} onClick={()=>setWizard('local')}><strong>Folder on this computer</strong><span>Use a local or mounted SMB folder for this session.</span></button><button className="month-card" disabled={busy || !!folder} onClick={()=>setWizard('online')}><strong>Online connection</strong><span>Nextcloud, WebDAV, or S3-compatible storage.</span></button>{folder&&<p>Return to your saved storage before changing the online connection.</p>}</div>:wizard==='local'?<div className="diary-wizard-step"><p>Select your diary folder. noevia reads its Markdown files and saves new entries there while this page is open.</p><p>To use SMB, mount the share on your computer first, then select its folder.</p><label className="diary-sync-toggle"><input type="checkbox" checked={sync} onChange={e=>setSync(e.target.checked)} />Also sync to {savedLabel}</label><p className="diary-context-note">Diary text is sent to your configured noevia/inference service to answer questions. With sync off, it is processed in memory and is not saved to your online diary. The folder permission is not stored by noevia.</p>{blockedReason==='insecure-context'&&<p role="alert">This page isn’t loaded over HTTPS (or localhost), so browsers block local folder access here for security — even in Chrome/Edge. Access noevia via HTTPS or a localhost tunnel, or choose online storage.</p>}{blockedReason==='unsupported'&&<p role="alert">Your browser does not offer writable folder access. Use Chrome/Edge or choose online storage.</p>}<button className="modal-btn primary" disabled={busy || !directoryPicker()} onClick={connectLocal}>Choose folder</button><button className="modal-btn secondary" disabled={busy} onClick={()=>setWizard('choose')}>Back</button></div>:<StoragePicker onlineOnly onSaved={value=>{setStorage(value);setWizard(null);setFilePath('');setRevision(n=>n+1);setTurns({});}} />}</DiaryModal>}
+
+    {wizard && <DiaryModal title="Choose diary storage" onClose={()=>{if(!busy)setWizard(null);}}>{error&&<p className="conn-banner" role="alert">{error}</p>}{wizard==='choose'?<div className="diary-storage-options"><button className="month-card" disabled={busy} onClick={()=>setWizard('local')}><strong>Folder on this computer</strong><span>Use a local or mounted SMB folder for this session.</span></button><button className="month-card" disabled={busy || !!folder} onClick={()=>setWizard('online')}><strong>Online connection</strong><span>Nextcloud, WebDAV, or S3-compatible storage.</span></button>{folder&&<p>Return to your saved storage before changing the online connection.</p>}</div>:wizard==='local'?<div className="diary-wizard-step"><p>Select your diary folder. noevia reads its Markdown files and saves new entries there while this page is open.</p><p>To use SMB, mount the share on your computer first, then select its folder.</p><label className="diary-sync-toggle"><input type="checkbox" checked={sync} onChange={e=>setSync(e.target.checked)} />Also sync to {savedLabel}</label><p className="diary-context-note">Diary text is sent to your configured noevia/inference service to answer questions. With sync off, it is processed in memory and is not saved to your online diary. Folder identity is stored only if you enable browser recovery; reconnecting still requires choosing the folder.</p>{blockedReason==='insecure-context'&&<p role="alert">This page isn’t loaded over HTTPS (or localhost), so browsers block local folder access here for security — even in Chrome/Edge. Access noevia via HTTPS or a localhost tunnel, or choose online storage.</p>}{blockedReason==='unsupported'&&<p role="alert">Your browser does not offer writable folder access. Use Chrome/Edge or choose online storage.</p>}<button className="modal-btn primary" disabled={busy || !directoryPicker()} onClick={connectLocal}>Choose folder</button><button className="modal-btn secondary" disabled={busy} onClick={()=>setWizard('choose')}>Back</button></div>:<StoragePicker onlineOnly onSaved={value=>{setStorage(value);setWizard(null);setFilePath('');setRevision(n=>n+1);setTurns({});}} />}</DiaryModal>}
     {editor && <DiaryModal title="Markdown viewer & editor" onClose={closeEditor}><label className="diary-editor-path">File path<input className="modal-input" value={editor.path} disabled={editor.content!==null || busy} onChange={e=>setEditor({...editor,path:e.target.value})} /></label><div className="diary-editor-tabs"><button className="popup-tab" aria-pressed={!preview} onClick={()=>setPreview(false)}>Edit Markdown</button><button className="popup-tab" aria-pressed={preview} onClick={()=>setPreview(true)}>Preview</button></div>{preview?<MarkdownPreview text={editText || 'This file is empty.'}/>:<textarea className="diary-md-input" aria-label="Markdown content" value={editText} disabled={busy} onChange={e=>setEditText(e.target.value)} spellCheck={false}/>} {error&&<p role="alert" className="conn-banner">{error}</p>}<footer><span>Changes are saved only when you choose Save.</span><button className="modal-btn secondary" disabled={busy} onClick={closeEditor}>Cancel</button><button className="modal-btn primary" disabled={busy || !editor.path} onClick={saveEditor}>{busy?'Saving…':'Save'}</button></footer></DiaryModal>}
   </main>;
 }

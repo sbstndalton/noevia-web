@@ -1,12 +1,14 @@
+import type { ReactNode } from 'react';
 import type { FileEntry } from '../diary-workspace';
 import { ShellIcon } from './ShellIcon';
 type Props = {
+  recovery?: ReactNode;
   busy: boolean; files: FileEntry[]; filePath: string; setFilePath: (path: string) => void;
   openFile: (path: string) => void; newFile: () => void; chooseStorage: () => void;
   pendingCount: number; pendingLocal: boolean; folderName?: string; savedLabel: string;
   corpusRoot?: string; sync: boolean; setSync: (sync: boolean) => void; disconnect: () => void;
 };
-export function DiaryContextPanel({ busy, files, filePath, setFilePath, openFile, newFile, chooseStorage,
+export function DiaryContextPanel({ recovery, busy, files, filePath, setFilePath, openFile, newFile, chooseStorage,
   pendingCount, pendingLocal, folderName, savedLabel, corpusRoot, sync, setSync, disconnect }: Props) {
   return <aside className="diary-context">
     <section>
@@ -34,5 +36,6 @@ export function DiaryContextPanel({ busy, files, filePath, setFilePath, openFile
         <button className="popup-tab" disabled={busy || pendingLocal} onClick={disconnect}>Return to {savedLabel}</button>
       </> : <p className="diary-context-note">Your saved connection is used when you reopen noevia.</p>}
     </section>
+    {recovery}
   </aside>;
 }

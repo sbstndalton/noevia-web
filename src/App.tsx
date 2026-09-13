@@ -1,3 +1,4 @@
+import { titleAfterSend } from './chat-title';
 import { sourceRefresher } from './source-refresh';
 import { sourceRefreshIssues } from './source-status';
 import { updateThemeColor } from './appearance';
@@ -322,7 +323,7 @@ export default function App(): JSX.Element {
       const upsert = (list: ChatMeta[]): ChatMeta[] => {
         const existing = list.find((c) => c.id === chatId);
         const meta: ChatMeta = existing
-          ? { ...existing, preview: text.slice(0, 200), updatedAt: Date.now() }
+          ? { ...existing, title: titleAfterSend(existing.title, messagesRef.current[chatId] ?? [], base, text), preview: text.slice(0, 200), updatedAt: Date.now() }
           : { id: chatId, title: text.slice(0, 80), preview: text.slice(0, 200), updatedAt: Date.now() };
         return [meta, ...list.filter((c) => c.id !== chatId)];
       };
