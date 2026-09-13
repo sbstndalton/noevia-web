@@ -74,6 +74,35 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const [revision, setRevision] = useState(0);
   const session = useRef(randomSessionId());
   const today = localDay();
+  const [recovering,setRecovering]=useState(false);
+  const [recoveryNotice,setRecoveryNotice]=useState('');
+  useEffect(()=>{
+    if(folder){setRecovering(false);setRecoveryNotice('');return;}
+    let stopped=false, polling=true;
+    const target=day || localDay();
+    const recover=async()=>{
+      if(busyRef.current){polling=true;return;}
+      if(!polling)return;
+      try{
+        const r=await apiFetch(`/api/diary/exchanges?day=${encodeURIComponent(target)}`);
+        if(!r.ok)throw Error('Conversation recovery is unavailable. Check the saved diary before resending an interrupted entry.');
+        const {exchanges}=await r.json();
+        if(stopped || busyRef.current)return;
+        const running=exchanges.some((e:{state:string})=>e.state==='running');setRecovering(running);polling=running;
+        if(exchanges.length){
+          const restored:Turn[]=exchanges.flatMap((e:{message:string;content:string;reasoning:string;startedAt:number;activity:string[];state:string;decision:string;truncated?:boolean})=>[
+            {role:'user',content:e.message},
+            {role:'assistant',content:e.content,reasoning:e.reasoning,startedAt:e.startedAt,
+             activity:[...e.activity, e.state==='running'?'Still processing on the server.':e.state==='uncertain'?'Save outcome is uncertain. Check the saved diary before sending again.':e.decision==='logged'||e.decision==='ok'?'Diary entry saved.':'Conversation complete · no entry saved.',...(e.truncated?['Recovered transcript was truncated.']:[])]}
+          ]);
+          setTurns(prev=>{const existing=prev[target]||[];return existing.length===restored.length&&existing.every((t,i)=>t.role===restored[i].role&&t.content===restored[i].content)?prev:{...prev,[target]:restored};});
+        }
+        setRecoveryNotice(running?'Recovering an active exchange; no request was resent.':exchanges.some((e:{state:string})=>e.state==='uncertain')?'A previous exchange has an uncertain save outcome. Check the saved diary before resending.':'');
+      }catch(e){if(!stopped)setRecoveryNotice(e instanceof Error?e.message:'Recovery unavailable.');}
+    };
+    void recover();const timer=setInterval(()=>void recover(),5000);
+    return()=>{stopped=true;clearInterval(timer);};
+  },[day,folder,revision]);
   const scope = day || (month ? `month:${month}` : 'home');
   const conversation = turns[scope] || [];
   const { scrollRef, onScroll, follow } = useChatScroll(scope, turns, !!day);
@@ -188,7 +217,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   };
   const submit = () => void run(async () => {
     const message = draft.trim();
-    if (!message || extraBusy) return;
+    if (!message || extraBusy || recovering) return;
     if (Object.keys(pendingLocal).length) throw new Error('Retry the pending local save before sending another entry.');
     const { entryDay, entryTime, month: entryMonth, history } = diaryExchangeTarget(day, turns);
     const displayHistory = turns[entryDay] || [];
@@ -234,7 +263,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       let decision = '', completed = false, changes: Record<string,string> | undefined;
       diaryStarted = true;
       for await (const ev of streamChat({spaceId:'diary', files:snapshot, extrasEnabled:useExtras, extraContext,
-        message, history, sessionId:`${session.current.slice(0,36)}-${entryDay}`, entryDay, entryTime})) {
+        message, history, exchangeId:snapshot ? undefined : randomSessionId(), sessionId:`${session.current.slice(0,36)}-${entryDay}`, entryDay, entryTime})) {
         if (ev.type === 'error') throw new Error(ev.text || 'Diary request failed');
         if (ev.type === 'status') progress(ev.text || 'Working…');
         if (ev.type === 'reasoning') { reasoning += ev.text || ''; patchReply({reasoning}); }
@@ -264,6 +293,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       setExtraStatus(cancelled ? 'Optional context cancelled. No diary entry was sent.' : '');
       patchReply({tools:calls.map(call => call?.status === 'pending' ? {...call,status:'denied',approvalId:undefined,args:'Optional context ended before this approval completed.'} : call)});
       if (!answered && !diaryStarted) { setDraft(message); setTurns(previous => ({ ...previous, [entryDay]: displayHistory })); }
+      if(diaryStarted && !folder)setRevision(n=>n+1);
       if (cancelled) throw new Error('Optional context cancelled. No diary entry was sent.');
       throw e;
     }
@@ -316,7 +346,9 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     </>} />
     <ComposerModel label={extrasEnabled && extraProject ? `Extras: ${extraProject.routing === 'auto' ? 'Auto' : extraProject.model || 'local model'}` : 'Diary companion'} disabled={!extrasEnabled || !extraProject || busy || extraBusy} onClick={()=>setExtraModels(true)} hint={extrasEnabled ? 'Choose the optional context model; diary capture stays unchanged' : 'Diary retrieval and capture are always active. Enable extras in + to choose an optional context model.'} />
     {extrasEnabled && extraProject && <ReasoningControl project={extraProject} disabled={busy || extraBusy} onChanged={refreshExtraProject} />}
-    <button className="send-btn" aria-label="Send diary message" disabled={busy || extraBusy || !draft.trim()} onClick={submit}><SendIcon /></button></div>
+    <button className="send-btn" aria-label="Send diary message" disabled={busy || recovering || extraBusy || !draft.trim()} onClick={submit}><SendIcon /></button></div>
+    {!folder && !day && (turns[today] || []).length > 0 && <button className="popup-tab" onClick={()=>{setMonth(today.slice(0,7));setDay(today);}}>Open today’s conversation</button>}
+    {recoveryNotice && <p className="composer-action-status" role="status">{recoveryNotice}</p>}
     {extraStatus && <p className="composer-action-status" role="status">{extraStatus}</p>}
     {busy && extraAbort.current && <button className="popup-tab" onClick={()=>extraAbort.current?.abort()}>Cancel optional context</button>}
     <p className="composer-hint">{busy ? 'Working on your diary…' : day ? `Writing to ${dayLabel(day)} · Shift + Enter for a new line` : 'Your current local date and time are used when you send.'}</p>

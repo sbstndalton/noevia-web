@@ -440,7 +440,7 @@ export function saveChatHistory(chatId: string, history: HistoryEntry[]): Promis
 //   { type:'usage', promptTokens, completionTokens, totalTokens, tokensPerSecond }
 export async function* streamChat(
   body: { spaceId: string; compactOnly?: boolean; extrasEnabled?: boolean; extraContext?: string;
-    files?: Record<string,string>; entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null },
+    exchangeId?: string; files?: Record<string,string>; entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null },
   signal?: AbortSignal,
 ): AsyncGenerator<{
   type: string;
