@@ -1207,3 +1207,11 @@ body { isolation:isolate; background:var(--bg-app); }
 /* Keep scroll-to-control and keyboard focus above the fixed telemetry row. */
 .diary-markdown-workspace { padding-bottom:calc(88px + env(safe-area-inset-bottom, 0px)); scroll-padding-block:24px calc(88px + env(safe-area-inset-bottom, 0px)); }
 .diary-workspace-export button { scroll-margin-block:16px; }
+
+.diary-workspace-import input { min-width:0; max-width:100%; min-height:44px; box-sizing:border-box; }
+.diary-workspace-import input[type="file"] { width:100%; }
+.diary-import-preview ul { max-height:240px; overflow:auto; padding-inline-start:24px; }
+.diary-import-preview { margin-block-start:12px; }
+.diary-import-preview .modal-btn { margin-block-start:12px; }
+
+.diary-workspace-import .diary-workspace-filter { margin-block:12px; }

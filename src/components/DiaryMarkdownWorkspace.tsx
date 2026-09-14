@@ -1,3 +1,4 @@
+import { DiaryWorkspaceImport } from './DiaryWorkspaceImport';
 import { apiFetch } from '../api';
 import type { FileSearchReport, FileSearchFilters } from '../diary-file-search';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
@@ -8,7 +9,7 @@ import { ShellIcon } from './ShellIcon';
 
 type Props = {
   navigationKey: number; file: DiaryFile; text: string; busy: boolean; error: string; status: string;
-  stored: DiaryFile | null; local: boolean; syncPending: boolean;
+  stored: DiaryFile | null; local: boolean; managed?: boolean; syncPending: boolean;
   files: FileEntry[]; folderPath: string; filesLoading: boolean; filesError: string;
   onText: (text: string) => void; onPath: (path: string) => void;
   onFolder: (path: string) => void; onOpen: (path: string) => void; onNew: () => void;
@@ -103,6 +104,7 @@ export function DiaryMarkdownWorkspace(p: Props) {
           {!p.local && <button className="modal-btn secondary" disabled={p.busy || exporting} onClick={()=>void downloadWorkspace()}>{exporting?'Preparing ZIP…':'Download workspace ZIP'}</button>}
           {exportStatus && <p role="status">{exportStatus}</p>}{exportError && <p role="alert">{exportError}</p>}
         </details>
+        <DiaryWorkspaceImport enabled={!p.local && !!p.managed} busy={p.busy} onImported={p.onRefresh}/>
         <details className="diary-workspace-search"><summary>Search &amp; backlinks</summary><p>Search stored Markdown in this folder and its subfolders. Up to 50 files / 4 MiB per search; unsaved text is not included.</p><form onSubmit={e=>{e.preventDefault();void search();}}><label className="diary-workspace-filter">Search text<input type="search" minLength={2} maxLength={200} required={!hasFilter} value={query} onChange={e=>setQuery(e.target.value)}/></label>
           <label className="diary-workspace-filter">From date<input type="date" value={filters.from || ''} onChange={e=>setFilters({...filters,from:e.target.value})}/></label>
           <label className="diary-workspace-filter">Through date<input type="date" min={filters.from} value={filters.to || ''} onChange={e=>setFilters({...filters,to:e.target.value})}/></label>

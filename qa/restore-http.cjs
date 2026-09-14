@@ -30,7 +30,7 @@ const fake=http.createServer(async(req,res)=>{
  res.end(JSON.stringify({choices:[{message:{role:'assistant',content},finish_reason:'stop'}],usage}));
 });
 function client(){const cookies=new Map();return async(url,body,method=body===undefined?'GET':'POST',signal)=>{
- const response=await fetch(origin+url,{method,signal,headers:{'Content-Type':'application/json',Origin:origin,Cookie:[...cookies].map(([k,v])=>k+'='+v).join('; '),'X-CSRF-Token':decodeURIComponent(cookies.get('cowork_csrf')||'')},body:body===undefined?undefined:JSON.stringify(body)});
+ const response=await fetch(origin+url,{method,signal,headers:{'Content-Type':Buffer.isBuffer(body)?'application/zip':'application/json',Origin:origin,Cookie:[...cookies].map(([k,v])=>k+'='+v).join('; '),'X-CSRF-Token':decodeURIComponent(cookies.get('cowork_csrf')||'')},body:body===undefined?undefined:Buffer.isBuffer(body)?body:JSON.stringify(body)});
  for(const value of response.headers.getSetCookie()){const part=value.split(';')[0],i=part.indexOf('=');cookies.set(part.slice(0,i),part.slice(i+1));}
  const bytes=Buffer.from(await response.arrayBuffer()),text=bytes.toString();let value;try{value=JSON.parse(text);}catch{}return{status:response.status,text,body:value,bytes};
 };}
@@ -103,6 +103,20 @@ function tar(args){const result=spawnSync('tar',args,{encoding:'utf8'});assert.e
   assert.equal(restoreZip.status,0,restoreZip.stderr);
   assert.equal(fs.readFileSync(path.join(zipDestination,'AI Memory/restore-check.md'),'utf8'),'Synthetic version one');
 
+
+  const importUrl='/api/diary/workspace-import?name=SyntheticCopy&action=';
+  const importCallsBefore=providerCalls;
+  const importPreview=await api(importUrl+'preview',exported.bytes);assert.equal(importPreview.status,200,importPreview.text);
+  assert.equal(providerCalls,importCallsBefore,'preview has no inference');
+  assert.equal((await client()(importUrl+'preview',exported.bytes)).status,401);
+  assert.equal((await api(importUrl+'preview')).status,405);
+  const applyUrl=importUrl+'apply&fingerprint='+importPreview.body.fingerprint;
+  const imported=await api(applyUrl,exported.bytes);assert.equal(imported.status,200,imported.text);
+  assert.equal(providerCalls,importCallsBefore,'apply has no inference');
+  assert.equal((await api(applyUrl,exported.bytes)).body.alreadyApplied,true);
+  const importedFile=await api('/api/diary/file',{path:'Imports/SyntheticCopy/AI Memory/restore-check.md'});
+  assert.equal(importedFile.body.content,'Synthetic version one');
+  assert.equal((await api('/api/diary/file',{path:'AI Memory/restore-check.md'})).body.content,'Synthetic version one');
 
   const device=(await api('/api/profile/app-passwords',{name:'Synthetic restore DAV',scope:'lan'})).body;
   const davHeaders={Authorization:'Basic '+Buffer.from('restoreqa:'+device.password).toString('base64')};
