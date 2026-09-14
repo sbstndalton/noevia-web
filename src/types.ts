@@ -154,6 +154,10 @@ export interface HealthState {
 }
 
 export interface InstalledModel {
+  status?: string;
+  failed?: boolean;
+  canDelete?: boolean;
+  source?: string | null;
   mtp?: {supported:boolean;enabled:boolean;reason:string};
   name: string;
   sizeGB: number | null;
@@ -205,6 +209,7 @@ export interface LiveStats {
   timeToFirstToken: number | null;
   inputTokens: number | null;
   outputTokens: number | null;
+  telemetryScope?: string | null;
   inputTokensTotal: number | null;
   outputTokensTotal: number | null;
   requestCount: number | null;

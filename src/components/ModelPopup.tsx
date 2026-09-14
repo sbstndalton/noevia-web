@@ -1,3 +1,4 @@
+import { NativeModelProfile } from './NativeModelProfile';
 import { ModelGuidance, MemoryPlanner, ModelMemoryEstimate } from './ModelGuidance';
 import { emptyMemoryPlan } from '../model-guidance';
 import type { MemoryPlan } from '../model-guidance';
@@ -438,6 +439,8 @@ function SwitchTab({
 }
 
 function DownloadTab({ onChanged, plan, onPlan }: { onChanged: () => void; plan: MemoryPlan; onPlan: (plan: MemoryPlan) => void }): JSX.Element {
+  const [canDownload,setCanDownload]=useState(false);
+  useEffect(()=>{void apiFetch('/api/models/capabilities').then(r=>r.json()).then(v=>setCanDownload(v.admin===true && v.download===true)).catch(()=>{});},[]);
   const [q, setQ] = useState('');
   const [hits, setHits] = useState<{ repo: string; name: string; downloads: number | null }[]>([]);
   const [searching, setSearching] = useState(false);
@@ -448,7 +451,7 @@ function DownloadTab({ onChanged, plan, onPlan }: { onChanged: () => void; plan:
 
   useEffect(() => {
     const t = setInterval(() => {
-      apiFetch('/api/models/downloads').then(async(r) => {if(!r.ok)throw Error('Download status unavailable');return r.json();}).then(rows=>{if(!Array.isArray(rows))throw Error('Download status invalid');setJobs(rows);}).catch(() => undefined);
+      apiFetch('/api/models/downloads').then(async(r) => {if(!r.ok)throw Error('Download status unavailable');return r.json();}).then(rows=>{if(!Array.isArray(rows))throw Error('Download status invalid');setJobs(rows);}).catch(() => setMsg('Download status unavailable. Check the router before retrying a download.'));
     }, 2500);
     return () => clearInterval(t);
   }, []);
@@ -519,10 +522,11 @@ function DownloadTab({ onChanged, plan, onPlan }: { onChanged: () => void; plan:
         />
         <button className="send-btn" onClick={() => void search()} disabled={searching}>Go</button>
       </div>
+      {!canDownload && <p className="rail-empty">An administrator manages shared downloads when model management is available.</p>}
       <details className="model-download-planner"><summary>Check memory before downloading</summary><MemoryPlanner plan={plan} onChange={onPlan}/></details>
       {msg && <p className="rail-empty" role="status">{msg}</p>}
       {jobs
-        .filter((j) => j.status && !['done', 'completed', 'success'].includes(j.status.toLowerCase()))
+        .filter((j) => j.status).slice(0,10)
         .map((j) => (
           <div key={j.id} className="model-row">
             <span className="model-dot" />
@@ -550,7 +554,7 @@ function DownloadTab({ onChanged, plan, onPlan }: { onChanged: () => void; plan:
           {variants?.repo === h.repo && (
             <div style={{ border: '1px dashed var(--border)', borderRadius: 12, padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div className="rail-label">{variants.repo}</div>
-              {variants.variants.length === 0 && <p className="rail-empty">No variants listed — pull the default.</p>}
+              {variants.variants.length === 0 && <p className="rail-empty">No unambiguous variants available for this router.</p>}
               {variants.variants.map((v) => (
                 <div key={v.id} className="model-row model-variant-row" style={{ padding: '8px 12px' }}>
                   <div className="model-name-group">
@@ -562,7 +566,7 @@ function DownloadTab({ onChanged, plan, onPlan }: { onChanged: () => void; plan:
                   <button
                     className="popup-tab"
                     style={{ border: '1px solid var(--accent-2)', color: 'var(--accent-2)' }}
-                    disabled={pulling !== null}
+                    disabled={pulling !== null || !canDownload}
                     onClick={() => void pull(v.id)}
                   >
                     {pulling === v.id ? 'starting…' : 'download'}
@@ -573,7 +577,7 @@ function DownloadTab({ onChanged, plan, onPlan }: { onChanged: () => void; plan:
                 <button
                   className="popup-tab"
                   style={{ alignSelf: 'flex-start', border: '1px solid var(--border)' }}
-                  disabled={pulling !== null}
+                  disabled={pulling !== null || !canDownload}
                   onClick={() => void pull(variants.variants[0].id)}
                 >
                   Download first listed variant ({variants.variants[0].label})
@@ -588,6 +592,7 @@ function DownloadTab({ onChanged, plan, onPlan }: { onChanged: () => void; plan:
 }
 
 function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
+  const [capabilities,setCapabilities]=useState<{kind:string;admin:boolean;presets:boolean;runtimeOptions:boolean}|null>(null);
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [modelsLoading, setModelsLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -596,7 +601,7 @@ function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
 
   const refresh = () => {
     setModelsLoading(true);setErr(null);
-    fetchInstalledModels().then(setModels).catch(() => setErr('Model manager unavailable or disabled')).finally(()=>setModelsLoading(false));
+    Promise.all([fetchInstalledModels(),apiFetch('/api/models/capabilities').then(async r=>{if(!r.ok)throw Error('Model capabilities unavailable');return r.json();})]).then(([rows,cap])=>{setModels(rows);setCapabilities(cap);}).catch(() => setErr('Model manager unavailable or disabled')).finally(()=>setModelsLoading(false));
   };
   useEffect(refresh, []);
 
@@ -619,17 +624,20 @@ function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
 
   return (
     <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div className="rail-label">Installed models — load, unload, delete</div>
+      <div className="rail-label">Installed models</div>
+      {capabilities?.kind==='llamacpp' && <p>llama.cpp loads models on demand and manages eviction. Loading another model can replace the current one. Delete removes downloaded cache files only.</p>}
       {err && <div role="alert"><p className="rail-empty">{err}</p><button className="popup-tab" disabled={modelsLoading || busy!==null} onClick={refresh}>Retry models</button></div>}
       {modelsLoading && <p role="status">Loading models…</p>}
       {!modelsLoading && !err && !models.length && <p role="status">No models are available in the model manager.</p>}
       {!modelsLoading && models.map((m) => (
-        <div key={m.name} className="model-row">
+        <div key={m.name} className="model-row native-managed-model">
           <span className={`model-dot${m.loaded ? '' : ' down'}`} />
           <div className="model-name-group">
             <span className="model-name">{m.name}</span>
             {m.sizeGB != null && <span className="model-quant">{m.sizeGB} GB</span>}
-            <MtpControl model={m} onChanged={()=>{refresh();onChanged();}} />
+            <span className="model-quant">{m.failed ? 'Failed to load' : m.status || (m.loaded?'loaded':'unloaded')}{m.source ? ` · ${m.source}` : ''}</span>
+            {capabilities?.runtimeOptions && <MtpControl model={m} onChanged={()=>{refresh();onChanged();}} />}
+            {capabilities?.kind==='llamacpp' && capabilities.admin && <NativeModelProfile model={m.name} enabled={capabilities.presets} onChanged={onChanged}/>}
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             {confirmName === m.name ? (
@@ -637,7 +645,7 @@ function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
                 <button
                   className="popup-tab"
                   style={{ border: '1px solid var(--accent)', color: 'var(--accent-text)' }}
-                  disabled={busy !== null}
+                  disabled={busy !== null || !capabilities?.admin}
                   onClick={() => void act('delete', m.name)}
                 >
                   confirm delete
@@ -651,7 +659,7 @@ function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
                 <button
                   className="popup-tab"
                   style={{ border: '1px solid var(--border)' }}
-                  disabled={busy !== null}
+                  disabled={busy !== null || !capabilities?.admin}
                   onClick={() => void act(m.loaded ? 'unload' : 'load', m.name)}
                 >
                   {busy === m.name ? '…' : m.loaded ? 'unload' : 'load'}
@@ -659,8 +667,9 @@ function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
                 <button
                   className="popup-tab"
                   style={{ border: '1px solid var(--border)', color: 'var(--accent-text)' }}
-                  disabled={busy !== null}
+                  disabled={busy !== null || !capabilities?.admin}
                   onClick={() => setConfirmName(m.name)}
+                  hidden={m.canDelete===false}
                 >
                   delete
                 </button>

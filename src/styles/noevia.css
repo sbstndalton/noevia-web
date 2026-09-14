@@ -1154,3 +1154,19 @@ body { isolation:isolate; background:var(--bg-app); }
 .diary-backup-status button { max-inline-size: 100%; white-space: normal; min-block-size: 44px; margin-block: 4px; }
 .diary-backup-status summary { cursor: pointer; padding-block: 12px; }
 .diary-backup-status summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* Native runtime profiles use the existing model dialog and semantic surfaces. */
+.native-managed-model { align-items: flex-start; flex-wrap: wrap; }
+.native-managed-model > .model-name-group { flex: 1 1 250px; min-width: 0; flex-direction: column; align-items: stretch; gap: 5px; }
+.native-model-profile { margin-block: 10px; font-size: 14px; }
+.native-model-profile summary { cursor: pointer; padding-block: 10px; }
+.native-model-profile p { line-height: 1.5; color: var(--text-secondary); }
+.native-profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.native-profile-fields label { display: flex; flex-direction: column; gap: 5px; }
+.native-profile-fields input, .native-profile-fields select { width: 100%; min-width: 0; min-height: 44px; padding: 8px; border: 1px solid var(--control-border); border-radius: 8px; color: var(--text); background: var(--bg); }
+.native-profile-fields small { font-size: 12px; overflow-wrap: anywhere; color: var(--text-secondary); }
+.native-profile-confirm { display: flex; align-items: flex-start; gap: 8px; padding-block: 12px; line-height: 1.5; }
+.native-profile-confirm input { flex: 0 0 auto; margin-top: 5px; }
+.native-profile-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.native-profile-actions button { min-height: 44px; border: 1px solid var(--control-border); }
+@media (max-width: 480px) { .native-profile-fields { grid-template-columns: 1fr; } }

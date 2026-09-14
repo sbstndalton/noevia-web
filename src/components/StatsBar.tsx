@@ -38,14 +38,14 @@ export function StatsBar({ stats }: StatsBarProps): JSX.Element {
         <span className="stats-label">in</span>
         <span className="stats-value">
           {fmtCount(stats?.inputTokens ?? null)}
-          <span className="stats-dim"> / {fmtCount(stats?.inputTokensTotal ?? null)}</span>
+          <span className="stats-dim" title={stats?.telemetryScope || undefined}> / {fmtCount(stats?.inputTokensTotal ?? null)}</span>
         </span>
       </span>
       <span className="stats-item">
         <span className="stats-label">out</span>
         <span className="stats-value">
           {fmtCount(stats?.outputTokens ?? null)}
-          <span className="stats-dim"> / {fmtCount(stats?.outputTokensTotal ?? null)}</span>
+          <span className="stats-dim" title={stats?.telemetryScope || undefined}> / {fmtCount(stats?.outputTokensTotal ?? null)}</span>
         </span>
       </span>
       <span className="stats-item">

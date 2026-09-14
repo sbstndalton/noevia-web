@@ -6,6 +6,8 @@ import type { MemoryPlan, ModelUse } from '../model-guidance';
 
 type Hardware = {source:string;cpu:string;systemGB:number|null;gpus:{id:string;name:string;capacityGB:number|null;sharedGB:number|null}[]};
 export function MemoryPlanner({plan,onChange}:{plan:MemoryPlan;onChange:(plan:MemoryPlan)=>void}) {
+  const [hardwareSupported,setHardwareSupported]=useState<boolean|null>(null);
+  useEffect(()=>{void apiFetch('/api/models/capabilities').then(r=>r.json()).then(v=>{if(typeof v.hardware==='boolean')setHardwareSupported(v.hardware);}).catch(()=>{});},[]);
   const [hardware,setHardware]=useState<Hardware|null>(null),[reading,setReading]=useState(false),[error,setError]=useState('');
   const readHardware=async()=>{
     setReading(true);setError('');
@@ -20,7 +22,8 @@ export function MemoryPlanner({plan,onChange}:{plan:MemoryPlan;onChange:(plan:Me
   };
   return <fieldset className="model-memory-planner"><legend>Inference machine memory</legend>
     <p>Use the machine running your models. Values are kept only while this model window is open.</p>
-    <button className="popup-tab" disabled={reading} onClick={()=>void readHardware()}>{reading?'Reading inference hardware…':'Read inference hardware'}</button>
+    <button className="popup-tab" disabled={reading || hardwareSupported===false} onClick={()=>void readHardware()}>{reading?'Reading inference hardware…':'Read inference hardware'}</button>
+    {hardwareSupported===false && <p>This backend does not report host memory. Enter the inference machine’s capacity and reserve manually.</p>}
     {error && <p role="alert">{error}</p>}
     {hardware && <div className="model-hardware-report"><p>{hardware.cpu || 'Inference server'}{hardware.systemGB!=null?` · ${hardware.systemGB} GB system memory reported`:''}</p>
       {hardware.systemGB!=null && <button className="popup-tab" onClick={()=>onChange({...plan,kind:'cpu',capacityGB:String(hardware.systemGB)})}>Use reported system capacity</button>}
