@@ -1053,7 +1053,7 @@ body { isolation:isolate; background:var(--bg-app); }
 .diary-workspace-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:24px; }
 .diary-workspace-heading h1 { margin:0; font-size:26px; font-weight:550; letter-spacing:-.6px; }
 .diary-workspace-heading p { margin:8px 0 0; font-size:13px; color:var(--text-secondary); }
-.diary-workspace-body { display:grid; grid-template-columns:210px minmax(0,1fr); gap:28px; }
+.diary-workspace-body { display:grid; grid-template-columns:minmax(0,1fr) 260px; gap:28px; }
 .diary-workspace-navigation { min-width:0; }
 .diary-workspace-document { min-width:0; }
 .diary-workspace-navigation details { padding-block:12px; border-bottom:1px solid var(--border); }
@@ -1111,3 +1111,20 @@ body { isolation:isolate; background:var(--bg-app); }
 .diary-search-result { width:100%; text-align:left; margin-block:8px; padding:10px; color:var(--text); background:transparent; border:1px solid var(--border); border-radius:var(--radius-control); overflow-wrap:anywhere; }
 .diary-search-result strong, .diary-search-result span { display:block; font-size:13px; }
 .diary-search-result span { margin-top:8px; color:var(--text-secondary); line-height:1.5; }
+
+/* Context belongs to the continuous back canvas, without a second glass panel. */
+.app-stack > .noevia-inspector, .project-rail, .diary-context,
+.diary-workspace-navigation {
+  background:transparent; border-left:0; box-shadow:none;
+  backdrop-filter:none; -webkit-backdrop-filter:none;
+}
+.diary-overview { grid-template-columns:minmax(0,1fr); }
+.diary-overview > section { padding:0; border:0; border-radius:0; }
+@media(max-width:1100px) {
+  .diary-layout { display:flex; flex-direction:column; overflow-y:auto; }
+  .diary-primary { flex:none; overflow:visible; min-height:65dvh; }
+  .diary-content-scroll { flex:none; overflow:visible; }
+  .diary-context { flex:none; max-height:none; overflow:visible; }
+  .diary-workspace-body { grid-template-columns:minmax(0,1fr); }
+  .diary-workspace-navigation { grid-row:auto; border-top:1px solid var(--border-subtle); }
+}

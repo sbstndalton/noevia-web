@@ -16,7 +16,16 @@ const {createFixture}=require('./diary-fixture.cjs');
  }
  return route.fulfill({json:body.path==='linked.md'?{path:'linked.md',content:'# Linked note\n[Back](note.md)',version:'linked-v1'}:{path:'note.md',content,version}});
  });
- await page.goto('http://localhost:31319');await page.getByRole('button',{name:'Diary',exact:true}).click();await page.getByRole('button',{name:'note.md',exact:true}).first().click();
+ await page.goto('http://localhost:31319');await page.getByRole('button',{name:'Diary',exact:true}).click();
+ for (const width of [375,768,1100,1440]) {
+ await page.setViewportSize({width,height:950});
+ const primary=await page.locator('.diary-primary').boundingBox(),rail=await page.locator('.diary-context').boundingBox();
+ assert.equal(await page.getByRole('button',{name:'note.md',exact:true}).count(),1,'one Diary file browser');
+ assert.ok(width>1100 ? rail.x>=primary.x+primary.width-1 : rail.y>=primary.y+primary.height-1,'Diary context sits right or below');
+ assert.equal(await page.locator('.diary-context').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
+ assert.ok(await page.locator('.diary-layout').evaluate(el=>el.scrollWidth<=el.clientWidth));
+ }
+ await page.getByRole('button',{name:'note.md',exact:true}).first().click();
  const dialog=page.getByRole('region',{name:'Markdown workspace'}),source=dialog.getByRole('textbox',{name:'Markdown content'});
  await dialog.getByRole('button',{name:'Edit Markdown',exact:true}).click();await source.fill('# My draft');
  fail=true;await dialog.getByRole('button',{name:'Save',exact:true}).click();await dialog.getByRole('alert').waitFor();assert.equal(await source.inputValue(),'# My draft');
@@ -29,6 +38,9 @@ const {createFixture}=require('./diary-fixture.cjs');
  await dialog.evaluate(el=>{el.scrollTop=0;});
  await page.waitForTimeout(350);
  assert.ok(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth));
+ const documentBox=await dialog.locator('.diary-workspace-document').boundingBox(),navigationBox=await dialog.locator('.diary-workspace-navigation').boundingBox();
+ assert.ok(width>1100 ? navigationBox.x>=documentBox.x+documentBox.width : navigationBox.y>=documentBox.y+documentBox.height,'Markdown context sits right or below');
+ assert.equal(await page.locator('.diary-context:visible').count(),0,'old context is absent from editor view');
  await page.screenshot({path:`/tmp/noevia-editor-${width}-${theme}.png`});
  }
  // Dirty navigation refuses discard, then explicit acceptance can reload.
