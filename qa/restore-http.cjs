@@ -32,7 +32,7 @@ const fake=http.createServer(async(req,res)=>{
 function client(){const cookies=new Map();return async(url,body,method=body===undefined?'GET':'POST',signal)=>{
  const response=await fetch(origin+url,{method,signal,headers:{'Content-Type':'application/json',Origin:origin,Cookie:[...cookies].map(([k,v])=>k+'='+v).join('; '),'X-CSRF-Token':decodeURIComponent(cookies.get('cowork_csrf')||'')},body:body===undefined?undefined:JSON.stringify(body)});
  for(const value of response.headers.getSetCookie()){const part=value.split(';')[0],i=part.indexOf('=');cookies.set(part.slice(0,i),part.slice(i+1));}
- const text=await response.text();let value;try{value=JSON.parse(text);}catch{}return{status:response.status,text,body:value};
+ const bytes=Buffer.from(await response.arrayBuffer()),text=bytes.toString();let value;try{value=JSON.parse(text);}catch{}return{status:response.status,text,body:value,bytes};
 };}
 async function wait(url){for(let i=0;i<1200;i++){try{const r=await fetch(url,{headers:{Authorization:'Bearer synthetic-diary-token'}});if(r.ok)return;}catch{}await new Promise(r=>setTimeout(r,50));}throw Error('Synthetic service did not start: '+url+'\n'+fs.readFileSync(path.join(root,'services.log'),'utf8')); }
 async function start(state){
@@ -90,6 +90,20 @@ function tar(args){const result=spawnSync('tar',args,{encoding:'utf8'});assert.e
   r=await api('/api/diary/file',{path:'AI Memory/restore-check.md'});const initial=r.body;
   r=await api('/api/diary/file',{...initial,content:'Synthetic version one'},'PUT');assert.equal(r.status,200,r.text);
   r=await api('/api/diary/file',{...initial,content:'Stale synthetic replacement'},'PUT');assert.equal(r.status,409,r.text);
+  // Exercise the real authenticated web-to-companion binary export route.
+  const exported=await api('/api/diary/workspace-export');assert.equal(exported.status,200,exported.text);
+  assert.equal((await api('/api/diary/workspace-export',{})).status,405);
+  assert.equal((await client()('/api/diary/workspace-export')).status,401);
+  const zipPath=path.join(root,'workspace.zip');fs.writeFileSync(zipPath,exported.bytes);
+  const verifyZip=spawnSync(path.join(repo,'services/diary/.venv/bin/python'),['-m','agent.workspace_restore',zipPath],{cwd:path.join(repo,'services/diary'),encoding:'utf8'});
+  assert.equal(verifyZip.status,0,verifyZip.stderr);const zipPreview=JSON.parse(verifyZip.stdout);
+  assert.ok(zipPreview.files.includes('AI Memory/restore-check.md'));
+  const zipDestination=path.join(root,'workspace-zip-restore');
+  const restoreZip=spawnSync(path.join(repo,'services/diary/.venv/bin/python'),['-m','agent.workspace_restore',zipPath,'--destination',zipDestination,'--fingerprint',zipPreview.fingerprint],{cwd:path.join(repo,'services/diary'),encoding:'utf8'});
+  assert.equal(restoreZip.status,0,restoreZip.stderr);
+  assert.equal(fs.readFileSync(path.join(zipDestination,'AI Memory/restore-check.md'),'utf8'),'Synthetic version one');
+
+
   const device=(await api('/api/profile/app-passwords',{name:'Synthetic restore DAV',scope:'lan'})).body;
   const davHeaders={Authorization:'Basic '+Buffer.from('restoreqa:'+device.password).toString('base64')};
   const dav=(method,path,body,extra={})=>fetch('http://localhost:31286/dav/restoreqa/'+path,{method,headers:{...davHeaders,...extra},body});
@@ -128,6 +142,6 @@ function tar(args){const result=spawnSync('tar',args,{encoding:'utf8'});assert.e
   await until(async()=>(await api('/api/diary/storage-status')).body.backup==='failed');
   assert.equal(backupObjects.get(object).toString(),'External conflicting backup');
   assert.equal((await api('/api/diary/file',{path:'AI Memory/offline-check.md'})).body.content,'Saved while remote offline');
-  console.log(JSON.stringify({result:'PASS',services:'real web and Diary',provider:'synthetic HTTP only',restoredLogin:true,restoredCorpus:true,continuedCapture:true,encryptedProviderCredential:true,staleWriteRejected:true,preparationRecovery:true,davDirectoryLifecycle:true,noBrowserBackup:true,webdavRestore:true,offlineSave:true,restartRetry:true,remoteConflictPreserved:true,backupPuts,providerCalls}));
+  console.log(JSON.stringify({result:'PASS',services:'real web and Diary',provider:'synthetic HTTP only',restoredLogin:true,restoredCorpus:true,continuedCapture:true,encryptedProviderCredential:true,staleWriteRejected:true,preparationRecovery:true,davDirectoryLifecycle:true,noBrowserBackup:true,workspaceZipRestore:true,workspaceExportAuth:true,webdavRestore:true,offlineSave:true,restartRetry:true,remoteConflictPreserved:true,backupPuts,providerCalls}));
  }finally{await stop();await new Promise(r=>fake.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});
