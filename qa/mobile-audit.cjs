@@ -108,9 +108,9 @@ async function evaluate(cdp,expression){
         if(a.smallCount)problems.push(`diary ${tag}: ${a.smallCount} sub-40px targets: ${JSON.stringify(a.small.slice(0,5))}`);
         await shot(`diary-${tag}`);
 
-        // Diary landing on phone: composer must be visible in viewport.
+        // Diary landing on phone: composer must be reachable (scrolled into view, fully inside the viewport).
         if(w<500){
-          const composer=await evaluate(cdp,`(()=>{const el=document.querySelector('[aria-label], textarea, .diary-composer textarea');const list=[...document.querySelectorAll('textarea')].map(t=>t.getBoundingClientRect());return list.length?{top:Math.min(...list.map(b=>b.top)),bottom:Math.max(...list.map(b=>b.bottom)),vh:innerHeight}:{none:true}})()`);
+          const composer=await evaluate(cdp,`(()=>{const first=document.querySelector('textarea');for(let n=first&&first.parentElement;n;n=n.parentElement){const oy=getComputedStyle(n).overflowY;if((oy==='auto'||oy==='scroll')&&n.scrollHeight>n.clientHeight)n.scrollTop=n.scrollHeight;}const list=[...document.querySelectorAll('textarea')].map(t=>t.getBoundingClientRect());return list.length?{top:Math.min(...list.map(b=>b.top)),bottom:Math.max(...list.map(b=>b.bottom)),vh:innerHeight}:{none:true}})()`);
           if(composer.bottom!==undefined&&composer.bottom>composer.vh+1)problems.push(`diary ${tag}: composer extends ${Math.round(composer.bottom-composer.vh)}px below the viewport`);
         }
         // Back to chat for the next iteration.
@@ -140,6 +140,7 @@ async function evaluate(cdp,expression){
   if(problems.length){
     console.log('MOBILE AUDIT PROBLEMS:');
     for(const p of problems)console.log(' -',p);
+    process.exitCode=1;
   } else {
     console.log('PASS mobile audit: no overflow or sub-40px targets found at the audited views/sizes');
   }

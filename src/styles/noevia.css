@@ -1123,10 +1123,7 @@ body { isolation:isolate; background:var(--bg-app); }
 .diary-overview > section { padding:0; border:0; border-radius:0; }
 @media(max-width:1100px) {
   .diary-layout { display:flex; flex-direction:column; overflow-y:auto; }
-  /* The composer must be reachable: cap the calendar section so the whole
-     column scrolls at phone heights instead of pushing the dock off-canvas. */
-  .diary-calendar-section { max-height:40dvh; overflow-y:auto; }
-  .diary-primary { flex:none; overflow:visible; min-height:auto; }
+  .diary-primary { flex:none; overflow:visible; min-height:65dvh; }
   .diary-content-scroll { flex:none; overflow:visible; }
   .diary-context { flex:none; max-height:none; overflow:visible; }
   .diary-workspace-body { grid-template-columns:minmax(0,1fr); }
@@ -1175,12 +1172,6 @@ body { isolation:isolate; background:var(--bg-app); }
 .native-profile-actions button { min-height: 44px; border: 1px solid var(--control-border); }
 @media (max-width: 480px) { .native-profile-fields { grid-template-columns: 1fr; } }
 
-/* app-stack must be able to shrink below its content height, or the Diary
-   layout's internal scroll never engages and the composer is clipped on phones. */
-.app-stack { min-height: 0; }
-.app-stack > .app-main { min-height: 0; }
-.app-stack > .diary-mount { min-height: 0; }
-
 @media (max-width: 1024px) {
   .sidebar .nav-item, .sidebar .new-chat-btn, .sidebar .chat-row .nav-item, .sidebar .proj-row .nav-item { min-height:44px; }
   .sidebar .section-label.section-toggle { min-height:44px; padding:6px 8px; }
@@ -1196,7 +1187,6 @@ body { isolation:isolate; background:var(--bg-app); }
   .composer-model { min-height:44px; }
   .chat-composer-inner > .composer-model { min-height:44px; }
   .model-pill { min-height:44px; }
-  .app-mode-switch button { min-height:44px; }
 }
 /* Keep controls reachable when the mobile keyboard reduces the visible area. */
 .app { height: var(--visible-viewport-height, 100dvh); padding-block: env(safe-area-inset-top) env(safe-area-inset-bottom); }
