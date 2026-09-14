@@ -1,4 +1,4 @@
-import type { FileSearchReport } from '../diary-file-search';
+import type { FileSearchReport, FileSearchFilters } from '../diary-file-search';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import type { DiaryFile, FileEntry } from '../diary-workspace';
 import { markdownOutline, resolveMarkdownPath } from '../diary-markdown';
@@ -11,7 +11,7 @@ type Props = {
   files: FileEntry[]; folderPath: string; filesLoading: boolean; filesError: string;
   onText: (text: string) => void; onPath: (path: string) => void;
   onFolder: (path: string) => void; onOpen: (path: string) => void; onNew: () => void;
-  onSearch: (path: string, query: string, signal: AbortSignal, kind?: 'text'|'backlinks') => Promise<FileSearchReport>;
+  onSearch: (path: string, query: string, signal: AbortSignal, kind?: 'text'|'backlinks', filters?: FileSearchFilters) => Promise<FileSearchReport>;
   onRefresh: () => void; onSave: () => void; onCompare: () => void;
   onRebase: () => void; onReload: () => void; onClose: () => void;
 };
@@ -21,16 +21,18 @@ export function DiaryMarkdownWorkspace(p: Props) {
   const [mode, setMode] = useState<'source' | 'preview' | 'split'>('split');
   const [filter, setFilter] = useState('');
   const [query,setQuery]=useState(''),[searching,setSearching]=useState(false),[searchError,setSearchError]=useState('');
+  const [filters,setFilters]=useState<FileSearchFilters>({});
+  const hasFilter=!!(filters.from || filters.to || filters.tag?.trim());
   const [report,setReport]=useState<FileSearchReport|null>(null);
   const [searchKind,setSearchKind]=useState<'text'|'backlinks'>('text');
   const searchAbort=useRef<AbortController|null>(null);
-  useEffect(()=>{setReport(null);setSearchError('');setSearching(false);return()=>{searchAbort.current?.abort();searchAbort.current=null;};},[p.folderPath,p.file.path,p.file.content]);
+  useEffect(()=>{setReport(null);setSearchError('');setSearching(false);return()=>{searchAbort.current?.abort();searchAbort.current=null;};},[p.folderPath,p.file.path,p.file.content,query,filters]);
   const search=async(kind:'text'|'backlinks'='text')=>{
     searchAbort.current?.abort();const controller=new AbortController();searchAbort.current=controller;
     setSearching(true);setSearchError('');setReport(null);setSearchKind(kind);
     const timeout=window.setTimeout(()=>controller.abort(),15000);
     try{
-      const found=await p.onSearch(kind==='backlinks'?'':p.folderPath,kind==='backlinks'?p.file.path:query,controller.signal,kind);
+      const found=await p.onSearch(kind==='backlinks'?'':p.folderPath,kind==='backlinks'?p.file.path:query,controller.signal,kind,kind==='text'?filters:undefined);
       if(!controller.signal.aborted)setReport(found);
     }catch(e){if(searchAbort.current===controller)setSearchError(controller.signal.aborted?'Search stopped. Try a smaller folder or retry.':e instanceof Error?e.message:'Search failed.');}
     finally{window.clearTimeout(timeout);if(searchAbort.current===controller)setSearching(false);}
@@ -80,7 +82,13 @@ export function DiaryMarkdownWorkspace(p: Props) {
           <div className="diary-workspace-file-actions"><button className="popup-tab" disabled={p.busy} onClick={p.onNew}>New file</button><button className="popup-tab" disabled={p.busy || p.filesLoading} onClick={p.onRefresh}>Refresh files</button></div>
           {p.filesLoading ? <p role="status">Loading files…</p> : p.filesError ? <div role="alert"><p>{p.filesError}</p><button className="popup-tab" onClick={p.onRefresh}>Retry file list</button></div> : <nav className="diary-file-list" aria-label="Markdown files">{rows.map(file=><button key={file.path} title={file.path} disabled={p.busy} aria-current={!file.isDir && file.path===p.file.path?'page':undefined} onClick={()=>file.isDir?p.onFolder(file.path):p.onOpen(file.path)}><ShellIcon name={file.isDir?'folder':'book'} size={16}/>{file.name}</button>)}{!rows.length && <p>{filter ? 'No matching files in this folder.' : 'No Markdown files in this folder.'}</p>}</nav>}
         </details>
-        <details className="diary-workspace-search"><summary>Search &amp; backlinks</summary><p>Search stored Markdown in this folder and its subfolders. Up to 50 files / 4 MiB per search; unsaved text is not included.</p><form onSubmit={e=>{e.preventDefault();void search();}}><label className="diary-workspace-filter">Search text<input type="search" minLength={2} maxLength={200} required value={query} onChange={e=>setQuery(e.target.value)}/></label><button className="popup-tab" disabled={searching || query.trim().length<2}>Search contents</button></form><button className="popup-tab" disabled={searching || !p.file.path} onClick={()=>void search('backlinks')}>Find links to this file</button><p>Backlinks scan the Diary folder within the same bounds. Inline relative Markdown links are supported; wiki links and anchors remain plain text.</p>
+        <details className="diary-workspace-search"><summary>Search &amp; backlinks</summary><p>Search stored Markdown in this folder and its subfolders. Up to 50 files / 4 MiB per search; unsaved text is not included.</p><form onSubmit={e=>{e.preventDefault();void search();}}><label className="diary-workspace-filter">Search text<input type="search" minLength={2} maxLength={200} required={!hasFilter} value={query} onChange={e=>setQuery(e.target.value)}/></label>
+          <label className="diary-workspace-filter">From date<input type="date" value={filters.from || ''} onChange={e=>setFilters({...filters,from:e.target.value})}/></label>
+          <label className="diary-workspace-filter">Through date<input type="date" min={filters.from} value={filters.to || ''} onChange={e=>setFilters({...filters,to:e.target.value})}/></label>
+          <label className="diary-workspace-filter">Hashtag<input placeholder="#tag" maxLength={81} value={filters.tag || ''} onChange={e=>setFilters({...filters,tag:e.target.value})}/></label>
+          <p>Dates match filenames beginning YYYY-MM-DD. Undated files are excluded when a date is set. Tags match whole #hashtags in prose, ignoring case and code; frontmatter tags are not included.</p>
+          <button className="popup-tab" disabled={searching || (!hasFilter && query.trim().length<2) || (query.trim().length>0 && query.trim().length<2)}>Search contents</button>
+          {hasFilter && <button type="button" className="popup-tab" onClick={()=>setFilters({})}>Clear filters</button>}</form><button className="popup-tab" disabled={searching || !p.file.path} onClick={()=>void search('backlinks')}>Find links to this file</button><p>Backlinks scan the Diary folder within the same bounds. Inline relative Markdown links are supported; wiki links and anchors remain plain text.</p>
           {searching && <p role="status">Searching stored files…</p>}{searchError && <p role="alert">{searchError}</p>}
           {report && <div><p role="status">{report.results.length} {searchKind==='backlinks'?'linking files':'matches'} · {report.scanned} files checked{report.partial?' · Partial results':''}{report.skipped?` · ${report.skipped} unreadable items`:''}</p>{report.partial && <p>Some files were not searched. Choose a smaller folder to narrow the search.</p>}{report.results.map(result=><button className="diary-search-result" key={result.path} disabled={p.busy} onClick={()=>p.onOpen(result.path)}><strong>{result.path}</strong><span>{result.snippet}</span></button>)}</div>}
         </details>

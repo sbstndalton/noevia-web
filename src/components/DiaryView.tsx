@@ -504,10 +504,10 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     {editor && <DiaryMarkdownWorkspace navigationKey={editorNavigation} file={editor} text={editText} busy={busy} error={editorError} status={editorStatus} stored={storedVersion} local={!!folder} syncPending={!!pendingSync[editor.path]}
       files={files} folderPath={filePath} filesLoading={filesLoading} filesError={filesError}
       onText={setEditText} onPath={path=>setEditor({...editor,path})} onFolder={setFilePath} onOpen={openFile} onNew={newEditor}
-      onSearch={async(path,query,signal,kind)=>{
-        if(!folder)return searchMarkdownFolder({path,query,kind,signal,list:dir=>listFiles(dir,signal),read:file=>readFile(file,signal)});
+      onSearch={async(path,query,signal,kind,filters)=>{
+        if(!folder)return searchMarkdownFolder({path,query,kind,signal,filters,list:dir=>listFiles(dir,signal),read:file=>readFile(file,signal)});
         const snapshot=await scanLocal(folder);
-        return searchMarkdownFolder({path,query,kind,signal,list:async(dir)=>{
+        return searchMarkdownFolder({path,query,kind,signal,filters,list:async(dir)=>{
           const prefix=dir?dir+'/':'',entries=new Map<string,FileEntry>();
           for(const key of Object.keys(snapshot))if(key.startsWith(prefix)){const rest=key.slice(prefix.length),name=rest.split('/')[0];entries.set(name,{path:prefix+name,name,isDir:rest.includes('/')});}
           return {files:[...entries.values()]};

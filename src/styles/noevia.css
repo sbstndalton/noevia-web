@@ -1197,3 +1197,7 @@ body { isolation:isolate; background:var(--bg-app); }
   .composer .send-btn, .diary-compose .send-btn, .composer-plus { min-width: 44px; min-height: 44px; }
   .model-dialog-panel .popup-tab { min-height: 44px; }
 }
+
+.diary-workspace-search form { display:grid; gap:12px; margin-block:12px; }
+.diary-workspace-search button { min-height:44px; }
+@media(max-width:600px) { .diary-workspace-filter input { font-size:16px; min-width:0; } }
