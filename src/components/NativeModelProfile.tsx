@@ -29,10 +29,11 @@ export function NativeModelProfile({model,enabled,onChanged,focusCalibration=fal
     } catch(e){setError(e instanceof Error?e.message:'Suggestion unavailable');}finally{setBusy(false);}
   };
   const fmt=(n:number)=>n>=1024?`${Math.round(n/1024)}k`:String(n);
-  return <details className="native-model-profile" open={focusCalibration||undefined}><summary>Native runtime profile</summary>
+  return <details className="native-model-profile" open={focusCalibration||undefined}><summary>Settings and calibration</summary>
     {!enabled ? <p>An administrator must configure shared preset storage to edit this profile.</p> : <>
-      <p>These settings affect every user of this model. Router command-line settings take precedence. Observed context per slot is checked again when you chat.</p>
       <NativeCalibration model={model} onChanged={()=>{onChanged();if(profile)void load();}} autoFocus={focusCalibration}/>
+      <h4 className="native-profile-heading">Edit settings</h4>
+      <p>These settings affect every user of this model. Router command-line settings take precedence.</p>
       {!profile && <button className="popup-tab" disabled={busy} onClick={()=>void load()}>{busy?'Reading…':'Read profile'}</button>}
       {profile && <>
         <div className="native-profile-suggest">

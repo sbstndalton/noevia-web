@@ -18,14 +18,14 @@ const {createFixture}=require('./diary-fixture.cjs');
  return route.fulfill({json:[]});
  });
  await page.goto('http://localhost:31328');await page.getByRole('button',{name:'Choose model'}).click();await page.getByRole('button',{name:'Manage',exact:true}).click();
- await page.getByText('Native runtime profile',{exact:true}).click();await page.getByRole('button',{name:'Read profile',exact:true}).click();
+ await page.getByText('Settings and calibration',{exact:true}).click();await page.getByRole('button',{name:'Read profile',exact:true}).click();
  const input=page.getByLabel('Total context allocation (tokens)');
  await page.getByRole('button',{name:'Suggest settings from model file'}).click();await page.getByText(/Suggested values filled in/).waitFor();
  assert.equal(suggested,1);assert.equal(await input.inputValue(),'131072');assert.equal(await page.getByLabel('Speculative decoding').inputValue(),'draft-mtp');
  await page.getByText('11.4 GiB',{exact:true}).first().waitFor();assert.equal(await page.getByRole('region',{name:'Memory estimate by context'}).getByRole('row').count(),5);
  assert.equal(await page.getByLabel('Maximum image tokens').count(),0);
  await input.fill('32768');
- assert.equal(await page.getByRole('button',{name:'delete',exact:true}).count(),0);assert.equal(await page.getByText('Enable MTP?',{exact:true}).count(),0);
+ await page.getByRole('button',{name:'Delete',exact:true}).click();assert.ok(await page.getByText(/cannot delete/).isVisible());await page.getByRole('button',{name:'Close',exact:true}).click();assert.equal(await page.getByText('Enable MTP?',{exact:true}).count(),0);
  const apply=page.getByRole('button',{name:'Apply profile and reload presets'});assert.equal(await apply.isEnabled(),false);await page.getByRole('checkbox',{name:/I have stopped other clients/}).check();await apply.click();await page.getByRole('alert').waitFor();assert.equal(await input.inputValue(),'32768');
  revision='two';await page.getByRole('button',{name:'Read latest; retain draft'}).click();await page.getByText(/Latest revision loaded/).waitFor();assert.equal(await input.inputValue(),'32768');conflict=false;await apply.click();await page.getByText(/Profile applied. Model remains unloaded/).waitFor();assert.equal(applied,1);
  for(const width of [375,768,1440])for(const theme of ['light','dark']){

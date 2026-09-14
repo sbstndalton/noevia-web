@@ -35,7 +35,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  assert.deepEqual(started,{model:'synthetic/new-model:Q4_K_M',promptBudgetSeconds:120,confirmPause:true});
  await page.getByText('Prompt 37% · about 58 s left').waitFor({timeout:15000});
  assert.ok(await page.getByText('Filling this context would take about 214 s, over the 120 s limit.').isVisible());
- assert.ok(await page.getByText('842 prompt tokens/s').isVisible());
+ assert.ok(await page.getByText(/Read the prompt at 842 tokens\/s/).isVisible());
  assert.ok(await page.getByText('Lowest free memory 12.1 GiB').isVisible());
  for(const width of [375,768,1440])for(const theme of ['light','dark']){
   await page.setViewportSize({width,height:900});await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);

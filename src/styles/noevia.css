@@ -1289,3 +1289,27 @@ body { isolation:isolate; background:var(--bg-app); }
 .diary-workspace-trash li { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px; overflow-wrap: anywhere; }
 .diary-workspace-trash li > span { flex-basis: 100%; }
 .diary-workspace-trash li button { min-height: 44px; white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+
+/* Manage tab: one card per installed model. */
+.model-manage { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
+.model-manage-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.model-manage-head p { margin: 4px 0 0; font-size: 13px; color: var(--text-secondary); }
+.native-profile-heading { margin: 12px 0 0; font-size: 14px; }
+.model-manage-loader { display: inline-flex; align-items: center; min-height: 44px; border: 1px solid var(--control-border); text-decoration: none; }
+.model-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--control-border); border-radius: 12px; background: var(--bg); }
+.model-card[data-state="loaded"] { border-color: var(--accent, var(--control-border)); }
+.model-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+.model-card-name { margin: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.model-card-state { flex: none; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: var(--bg-sidebar); color: var(--text-secondary); }
+.model-card[data-state="loaded"] .model-card-state { color: var(--accent-text); }
+.model-card[data-state="failed"] .model-card-state { color: var(--danger, var(--text)); }
+.model-card-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; font-size: 12px; color: var(--text-secondary); }
+.model-card-tag { padding: 0 6px; border: 1px solid var(--control-border); border-radius: 6px; }
+.model-card-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.model-card-actions > button, .model-card-confirm button, .model-card-confirm a { min-height: 44px; border: 1px solid var(--control-border); }
+.model-card-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.model-card-confirm p { flex-basis: 100%; margin: 0; }
+.model-card-confirm a { display: inline-flex; align-items: center; text-decoration: none; }
+.model-card-danger { color: var(--danger, var(--accent-text)); }
+.model-card .native-model-profile { border-top: 1px solid var(--control-border); padding-top: 4px; }
+

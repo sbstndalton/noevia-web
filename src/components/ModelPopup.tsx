@@ -598,7 +598,7 @@ function DownloadTab({ onChanged, plan, onPlan, onCalibrate }: { onChanged: () =
 }
 
 function ManageTab({ onChanged, focusModel = null }: { onChanged: () => void; focusModel?: string | null }): JSX.Element {
-  const [capabilities,setCapabilities]=useState<{kind:string;admin:boolean;presets:boolean;runtimeOptions:boolean}|null>(null);
+  const [capabilities,setCapabilities]=useState<{kind:string;admin:boolean;presets:boolean;runtimeOptions:boolean;modelLoader?:boolean}|null>(null);
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [modelsLoading, setModelsLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -627,62 +627,59 @@ function ManageTab({ onChanged, focusModel = null }: { onChanged: () => void; fo
       setConfirmName(null);
     }
   };
+  const admin = capabilities?.admin === true;
+  const native = capabilities?.kind === 'llamacpp';
+  const stateLabel = (m: InstalledModel) => m.failed ? 'Failed to load' : m.loaded ? 'Loaded' : m.status === 'loading' ? 'Loading' : 'Unloaded';
 
   return (
-    <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div className="rail-label">Installed models</div>
-      {capabilities?.kind==='llamacpp' && <p>llama.cpp loads models on demand and manages eviction. Loading another model can replace the current one. Delete removes downloaded cache files only.</p>}
+    <div className="model-manage">
+      <div className="model-manage-head">
+        <div>
+          <div className="rail-label">Installed models</div>
+          {native && <p>llama.cpp loads one model at a time and swaps on demand.</p>}
+        </div>
+        {capabilities?.modelLoader && <a className="popup-tab model-manage-loader" href="/model-loader/" target="_blank" rel="noopener">Open Model Loader</a>}
+      </div>
       {err && <div role="alert"><p className="rail-empty">{err}</p><button className="popup-tab" disabled={modelsLoading || busy!==null} onClick={refresh}>Retry models</button></div>}
       {modelsLoading && <p role="status">Loading models…</p>}
       {!modelsLoading && !err && !models.length && <p role="status">No models are available in the model manager.</p>}
       {!modelsLoading && models.map((m) => (
-        <div key={m.name} className="model-row native-managed-model">
-          <span className={`model-dot${m.loaded ? '' : ' down'}`} />
-          <div className="model-name-group">
-            <span className="model-name">{m.name}</span>
-            {m.sizeGB != null && <span className="model-quant">{m.sizeGB} GB</span>}
-            <span className="model-quant">{m.failed ? 'Failed to load' : m.status || (m.loaded?'loaded':'unloaded')}{m.source ? ` · ${m.source}` : ''}</span>
-            {capabilities?.runtimeOptions && <MtpControl model={m} onChanged={()=>{refresh();onChanged();}} />}
-            {capabilities?.kind==='llamacpp' && capabilities.admin && <NativeModelProfile model={m.name} enabled={capabilities.presets} onChanged={onChanged} focusCalibration={focusModel===m.name}/>}
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {confirmName === m.name ? (
-              <>
-                <button
-                  className="popup-tab"
-                  style={{ border: '1px solid var(--accent)', color: 'var(--accent-text)' }}
-                  disabled={busy !== null || !capabilities?.admin}
-                  onClick={() => void act('delete', m.name)}
-                >
-                  confirm delete
-                </button>
-                <button className="popup-tab" style={{ border: '1px solid var(--border)' }} onClick={() => setConfirmName(null)}>
-                  keep
-                </button>
-              </>
+        <article key={m.name} className="model-card" data-state={m.failed ? 'failed' : m.loaded ? 'loaded' : 'unloaded'} aria-label={m.name}>
+          <header className="model-card-head">
+            <h3 className="model-card-name">{m.name}</h3>
+            <span className="model-card-state">{stateLabel(m)}</span>
+          </header>
+          <p className="model-card-meta">
+            {m.sizeGB != null && <span>{m.sizeGB} GB</span>}
+            {m.maxContext != null && <span>up to {m.maxContext.toLocaleString('en-US')} tokens</span>}
+            {m.source && <span>{m.source === 'preset' ? 'model folder' : m.source === 'cache' ? 'downloaded' : m.source}</span>}
+            {m.labels.map(label => <span key={label} className="model-card-tag">{label}</span>)}
+          </p>
+          <div className="model-card-actions">
+            {confirmName === m.name ? (m.canDelete === false ? (
+              <div className="model-card-confirm" role="group" aria-label={`Delete ${m.name}`}>
+                <p>This model's files live in the model folder, which llama.cpp cannot delete. {capabilities?.modelLoader ? 'Delete them in Model Loader.' : 'Remove them from the model folder on the server.'}</p>
+                {capabilities?.modelLoader && <a className="popup-tab" href="/model-loader/models" target="_blank" rel="noopener">Open in Model Loader</a>}
+                <button className="popup-tab" onClick={() => setConfirmName(null)}>Close</button>
+              </div>
             ) : (
+              <div className="model-card-confirm" role="group" aria-label={`Delete ${m.name}`}>
+                <p>Delete the downloaded files for this model? This cannot be undone.</p>
+                <button className="popup-tab model-card-danger" disabled={busy !== null || !admin} onClick={() => void act('delete', m.name)}>{busy === m.name ? 'Deleting…' : 'Delete files'}</button>
+                <button className="popup-tab" onClick={() => setConfirmName(null)}>Keep</button>
+              </div>
+            )) : (
               <>
-                <button
-                  className="popup-tab"
-                  style={{ border: '1px solid var(--border)' }}
-                  disabled={busy !== null || !capabilities?.admin}
-                  onClick={() => void act(m.loaded ? 'unload' : 'load', m.name)}
-                >
-                  {busy === m.name ? '…' : m.loaded ? 'unload' : 'load'}
+                <button className="popup-tab" disabled={busy !== null || !admin} onClick={() => void act(m.loaded ? 'unload' : 'load', m.name)}>
+                  {busy === m.name ? 'Working…' : m.loaded ? 'Unload' : 'Load'}
                 </button>
-                <button
-                  className="popup-tab"
-                  style={{ border: '1px solid var(--border)', color: 'var(--accent-text)' }}
-                  disabled={busy !== null || !capabilities?.admin}
-                  onClick={() => setConfirmName(m.name)}
-                  hidden={m.canDelete===false}
-                >
-                  delete
-                </button>
+                {admin && <button className="popup-tab model-card-danger" disabled={busy !== null} onClick={() => setConfirmName(m.name)}>Delete</button>}
               </>
             )}
           </div>
-        </div>
+          {capabilities?.runtimeOptions && <MtpControl model={m} onChanged={()=>{refresh();onChanged();}} />}
+          {native && admin && <NativeModelProfile model={m.name} enabled={capabilities?.presets===true} onChanged={onChanged} focusCalibration={focusModel===m.name}/>}
+        </article>
       ))}
     </div>
   );
