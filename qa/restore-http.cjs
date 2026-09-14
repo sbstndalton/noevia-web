@@ -156,6 +156,6 @@ function tar(args){const result=spawnSync('tar',args,{encoding:'utf8'});assert.e
   await until(async()=>(await api('/api/diary/storage-status')).body.backup==='failed');
   assert.equal(backupObjects.get(object).toString(),'External conflicting backup');
   assert.equal((await api('/api/diary/file',{path:'AI Memory/offline-check.md'})).body.content,'Saved while remote offline');
-  console.log(JSON.stringify({result:'PASS',services:'real web and Diary',provider:'synthetic HTTP only',restoredLogin:true,restoredCorpus:true,continuedCapture:true,encryptedProviderCredential:true,staleWriteRejected:true,preparationRecovery:true,davDirectoryLifecycle:true,noBrowserBackup:true,workspaceZipRestore:true,workspaceExportAuth:true,webdavRestore:true,offlineSave:true,restartRetry:true,remoteConflictPreserved:true,backupPuts,providerCalls}));
+  console.log(JSON.stringify({result:'PASS',services:'real web and Diary',provider:'synthetic HTTP only',restoredLogin:true,restoredCorpus:true,continuedCapture:true,encryptedProviderCredential:true,staleWriteRejected:true,preparationRecovery:true,davDirectoryLifecycle:true,noBrowserBackup:true,workspaceZipRestore:true,workspaceExportAuth:true,workspaceImportRetry:true,webdavRestore:true,offlineSave:true,restartRetry:true,remoteConflictPreserved:true,backupPuts,providerCalls}));
  }finally{await stop();await new Promise(r=>fake.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

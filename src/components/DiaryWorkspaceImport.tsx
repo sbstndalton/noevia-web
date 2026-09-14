@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../api';
 
-type Preview = {fingerprint:string; destination:string; fileCount:number; bytes:number; files:string[]; directories:string[]; conflicts:string[]; duplicates:string[]};
+type Preview = {alreadyApplied?:boolean; fingerprint:string; destination:string; fileCount:number; bytes:number; files:string[]; directories:string[]; conflicts:string[]; duplicates:string[]};
 export function DiaryWorkspaceImport({enabled, busy, onImported}:{enabled:boolean; busy:boolean; onImported:()=>void}) {
   const [file,setFile]=useState<File|null>(null),[name,setName]=useState('');
   const [preview,setPreview]=useState<Preview|null>(null),[working,setWorking]=useState(false);
@@ -21,6 +21,7 @@ export function DiaryWorkspaceImport({enabled, busy, onImported}:{enabled:boolea
       const body=await response.json();
       if(!response.ok)throw Error(body.error || 'Import failed. Retry or choose a new folder.');
       if(apply){setPreview(null);setStatus(`Imported ${body.fileCount} files into ${body.destination}. Search indexing is pending.`);onImported();}
+      else if(body.alreadyApplied){setPreview(null);setStatus(`This archive was already imported into ${body.destination}. Existing files have been left intact.`);onImported();}
       else{setPreview(body);setStatus('Preview ready. Review the destination and files before applying.');}
     }catch(e){setStatus('');setError(controller.signal.aborted?'Response timed out. Retry with the same file and folder to safely check whether the import completed.':e instanceof Error?e.message:'Import failed. Retry with the same file and folder.');}
     finally{window.clearTimeout(timer);setWorking(false);}

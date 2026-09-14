@@ -14,7 +14,7 @@ const assert=require('node:assert/strict');const {createFixture}=require('./diar
   await page.route('**/api/diary/workspace-import?*',r=>{
    const url=new URL(r.request().url()),name=url.searchParams.get('name');
    if(url.searchParams.get('action')==='apply'){applies++;assert.equal(url.searchParams.get('fingerprint'),'reviewed');return r.fulfill(fail?{status:502,json:{error:'Response unavailable. Retry with the same file and folder.'}}:{json:{destination:'Imports/Copy',fileCount:2,indexPending:true}});}
-   return r.fulfill({json:{fingerprint:'reviewed',destination:'Imports/'+name,fileCount:2,bytes:12,files:['raw/synthetic.md','image.bin'],directories:['empty'],duplicates:['raw/synthetic.md'],conflicts:name==='Occupied'?['Imports/Occupied']:[]}});
+   return r.fulfill({json:{alreadyApplied:applies===2,fingerprint:'reviewed',destination:'Imports/'+name,fileCount:2,bytes:12,files:['raw/synthetic.md','image.bin'],directories:['empty'],duplicates:['raw/synthetic.md'],conflicts:name==='Occupied'?['Imports/Occupied']:[]}});
   });
   await page.goto('http://localhost:31337');await page.getByRole('button',{name:'Diary',exact:true}).click();await page.getByRole('button',{name:'synthetic.md',exact:true}).click();
   const workspace=page.getByRole('region',{name:'Markdown workspace'});await workspace.getByLabel('Markdown content',{exact:true}).fill('Unsaved synthetic draft');
@@ -24,6 +24,7 @@ const assert=require('node:assert/strict');const {createFixture}=require('./diar
   const apply=workspace.getByRole('button',{name:'Apply import to new folder',exact:true});await apply.waitFor();assert.ok(await apply.isDisabled());
   await name.fill('Copy');assert.equal(await apply.count(),0);await workspace.getByRole('button',{name:'Preview import',exact:true}).click();await apply.click();await workspace.getByRole('alert').filter({hasText:'Response unavailable'}).waitFor();
   assert.equal(applies,1);fail=false;await apply.click();await workspace.getByRole('status').filter({hasText:'Imported 2 files'}).waitFor();assert.equal(applies,2);
+  await workspace.getByRole('button',{name:'Preview import',exact:true}).click();await workspace.getByRole('status').filter({hasText:'already imported'}).waitFor();assert.equal(await apply.count(),0);assert.equal(applies,2);
   assert.equal(await workspace.getByLabel('Markdown content',{exact:true}).inputValue(),'Unsaved synthetic draft');
   const button=workspace.getByRole('button',{name:'Preview import',exact:true});await button.scrollIntoViewIfNeeded();const box=await button.boundingBox();assert.ok(box.height>=44);assert.ok(box.x>=0&&box.x+box.width<=width);assert.ok(await button.evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}));
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:`/tmp/noevia-workspace-import-${width}-${theme}.png`});await page.close();
