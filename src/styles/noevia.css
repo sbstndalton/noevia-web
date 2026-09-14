@@ -1146,3 +1146,11 @@ body { isolation:isolate; background:var(--bg-app); }
 .diary-entry-row time { font-variant-numeric:tabular-nums; }
 .diary-entry-row span, .diary-entry-list > p { color:var(--text-secondary); font-size:13px; }
 @media(max-width:500px) { .diary-calendar { gap:3px; } .calendar-day { padding:6px; height:44px; } .diary-calendar-heading h1 { font-size:22px; } }
+
+/* App-owned Diary status shares the context rail's semantic colors. */
+.diary-backup-status { min-inline-size: 0; overflow-wrap: anywhere; }
+.diary-backup-status p { margin-block: 8px; }
+.diary-backup-status details ul { max-block-size: 240px; overflow: auto; padding-inline-start: 20px; }
+.diary-backup-status button { max-inline-size: 100%; white-space: normal; min-block-size: 44px; margin-block: 4px; }
+.diary-backup-status summary { cursor: pointer; padding-block: 12px; }
+.diary-backup-status summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }

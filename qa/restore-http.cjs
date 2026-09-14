@@ -2,9 +2,19 @@
 const assert=require('node:assert/strict'),http=require('node:http'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{spawn,spawnSync}=require('node:child_process');
 const repo=path.resolve(__dirname,'../../..'),root=fs.mkdtempSync(path.join(os.tmpdir(),'noevia-restore-http-'));
 const origin='http://localhost:31285',diary='http://127.0.0.1:31284',provider='http://127.0.0.1:31283/v1';
+const backupObjects=new Map();let backupOffline=false,backupPuts=0;
 let providerCalls=0,privateKeyCalls=0,web,companion,preparationStarted;
 const preparationGate=new Promise(resolve=>preparationStarted=resolve);
 const fake=http.createServer(async(req,res)=>{
+ if(req.url.startsWith('/dav/')) {
+  const chunks=[];for await(const c of req)chunks.push(c);
+  if(backupOffline){res.writeHead(503);return res.end();}
+  const key=decodeURIComponent(req.url.slice(5));
+  if(req.method==='MKCOL'){res.writeHead(201);return res.end();}
+  if(req.method==='GET'){res.writeHead(backupObjects.has(key)?200:404);return res.end(backupObjects.get(key));}
+  if(req.method==='PUT'){assert.equal(req.headers['if-none-match'],'*');backupPuts++;if(backupObjects.has(key)){res.writeHead(412);return res.end();}backupObjects.set(key,Buffer.concat(chunks));res.writeHead(201);return res.end();}
+  res.writeHead(405);return res.end();
+ }
  let raw='';for await(const c of req)raw+=c;const body=raw?JSON.parse(raw):{};providerCalls++;
  if(req.headers.authorization==='Bearer synthetic-restore-key')privateKeyCalls++;
  res.setHeader('Content-Type','application/json');
@@ -24,7 +34,7 @@ function client(){const cookies=new Map();return async(url,body,method=body===un
  for(const value of response.headers.getSetCookie()){const part=value.split(';')[0],i=part.indexOf('=');cookies.set(part.slice(0,i),part.slice(i+1));}
  const text=await response.text();let value;try{value=JSON.parse(text);}catch{}return{status:response.status,text,body:value};
 };}
-async function wait(url){for(let i=0;i<200;i++){try{const r=await fetch(url,{headers:{Authorization:'Bearer synthetic-diary-token'}});if(r.ok)return;}catch{}await new Promise(r=>setTimeout(r,50));}throw Error('Synthetic service did not start');}
+async function wait(url){for(let i=0;i<1200;i++){try{const r=await fetch(url,{headers:{Authorization:'Bearer synthetic-diary-token'}});if(r.ok)return;}catch{}await new Promise(r=>setTimeout(r,50));}throw Error('Synthetic service did not start: '+url+'\n'+fs.readFileSync(path.join(root,'services.log'),'utf8')); }
 async function start(state){
  for(const name of ['web','diary','diary/corpus'])fs.mkdirSync(path.join(state,name),{recursive:true});
  const log=fs.openSync(path.join(root,'services.log'),'a');
@@ -93,6 +103,31 @@ function tar(args){const result=spawnSync('tar',args,{encoding:'utf8'});assert.e
   assert.equal((await dav('PROPFIND','SyntheticFolders/',undefined,{Depth:'1'})).status,207);
   await api('/api/profile/app-passwords/'+device.id,undefined,'DELETE');
   assert.equal((await dav('MKCOL','Revoked/')).status,401);
-  console.log(JSON.stringify({result:'PASS',services:'real web and Diary',provider:'synthetic HTTP only',restoredLogin:true,restoredCorpus:true,continuedCapture:true,encryptedProviderCredential:true,staleWriteRejected:true,preparationRecovery:true,davDirectoryLifecycle:true,providerCalls}));
+  // No browser, no storage-status polling: the server worker makes the backup.
+  r=await api('/api/integrations/storage',{kind:'webdav',baseUrl:'http://127.0.0.1:31283/dav/',username:'synthetic',secret:'synthetic-only',corpusRoot:'Diary'},'PUT');assert.equal(r.status,200,r.text);
+  async function until(check){for(let i=0;i<200;i++){if(await check())return;await new Promise(r=>setTimeout(r,100));}throw Error('Managed backup condition timed out');}
+  await until(()=>[...backupObjects.keys()].some(k=>k.includes('/manifests/')));
+  assert.equal((await api('/api/diary/storage-status')).body.backup,'complete');
+  assert.equal((await api('/api/diary/storage-import',{})).status,409);
+  assert.equal((await api('/api/diary/storage-status',{})).status,405);
+  const downloadRoot=path.join(root,'downloaded-webdav');fs.mkdirSync(downloadRoot);
+  for(const [key,bytes] of backupObjects){const file=path.join(downloadRoot,key);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,bytes);}
+  const manifest=[...backupObjects.keys()].find(k=>k.includes('/manifests/'));
+  const restoreResult=spawnSync(path.join(repo,'services/diary/.venv/bin/python'),['-m','agent.backup_restore',downloadRoot,path.join(downloadRoot,manifest),path.join(root,'portable-restore')],{cwd:path.join(repo,'services/diary'),encoding:'utf8'});
+  assert.equal(restoreResult.status,0,restoreResult.stderr);
+  assert.equal(fs.readFileSync(path.join(root,'portable-restore/AI Memory/restore-check.md'),'utf8'),'Synthetic version one');
+  backupOffline=true;
+  r=await api('/api/diary/file',{path:'AI Memory/offline-check.md',content:'Saved while remote offline',version:null},'PUT');assert.equal(r.status,200,r.text);
+  await until(async()=>(await api('/api/diary/storage-status')).body.backup==='failed');
+  await stop();backupOffline=false;await start(restored);api=client();
+  assert.equal((await api('/api/auth/login/password',{username:'restoreqa',password:'synthetic restore password'})).status,200);
+  await until(()=>[...backupObjects.values()].some(b=>b.toString()==='Saved while remote offline'));
+  await until(async()=>(await api('/api/diary/storage-status')).body.backup==='complete');
+  const object=[...backupObjects.keys()].find(k=>k.endsWith('/offline-check.md'));backupObjects.set(object,Buffer.from('External conflicting backup'));
+  r=await api('/api/diary/file',{path:'AI Memory/trigger.md',content:'New saved change',version:null},'PUT');assert.equal(r.status,200,r.text);
+  await until(async()=>(await api('/api/diary/storage-status')).body.backup==='failed');
+  assert.equal(backupObjects.get(object).toString(),'External conflicting backup');
+  assert.equal((await api('/api/diary/file',{path:'AI Memory/offline-check.md'})).body.content,'Saved while remote offline');
+  console.log(JSON.stringify({result:'PASS',services:'real web and Diary',provider:'synthetic HTTP only',restoredLogin:true,restoredCorpus:true,continuedCapture:true,encryptedProviderCredential:true,staleWriteRejected:true,preparationRecovery:true,davDirectoryLifecycle:true,noBrowserBackup:true,webdavRestore:true,offlineSave:true,restartRetry:true,remoteConflictPreserved:true,backupPuts,providerCalls}));
  }finally{await stop();await new Promise(r=>fake.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

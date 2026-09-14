@@ -30,6 +30,7 @@ function createFixture(port = 31239) {
     if(url.pathname==='/api/workspace')return json({projects:[],freeChats:[]});
     if(url.pathname==='/api/health')return json({inferenceUp:true,diaryUp:true});
     if(url.pathname==='/api/integrations/storage')return json({kind:'local',corpusRoot:''});
+    if(url.pathname==='/api/diary/storage-status')return json({mode:'legacy',backup:'not_configured',lastBackedUp:null});
     if(url.pathname==='/api/diary/source')return json({source:'synthetic',months:[]});
     if(url.pathname==='/api/diary/today')return json({todayLog:'',standingSections:{},memoryFiles:[]});
     if(url.pathname==='/api/diary/files')return json({files:[]});

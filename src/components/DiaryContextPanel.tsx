@@ -2,14 +2,14 @@ import type { ReactNode } from 'react';
 import type { FileEntry } from '../diary-workspace';
 import { ShellIcon } from './ShellIcon';
 type Props = {
-  recovery?: ReactNode;
+  recovery?: ReactNode; storageStatus?: ReactNode; managed?: boolean;
   filesLoading?: boolean; filesError?: string; retryFiles?: () => void;
   busy: boolean; files: FileEntry[]; filePath: string; setFilePath: (path: string) => void;
   openFile: (path: string) => void; newFile: () => void; chooseStorage: () => void;
   pendingCount: number; pendingLocal: boolean; folderName?: string; savedLabel: string;
   corpusRoot?: string; sync: boolean; setSync: (sync: boolean) => void; disconnect: () => void;
 };
-export function DiaryContextPanel({ recovery, filesLoading, filesError, retryFiles, busy, files, filePath, setFilePath, openFile, newFile, chooseStorage,
+export function DiaryContextPanel({ recovery, storageStatus, managed, filesLoading, filesError, retryFiles, busy, files, filePath, setFilePath, openFile, newFile, chooseStorage,
   pendingCount, pendingLocal, folderName, savedLabel, corpusRoot, sync, setSync, disconnect }: Props) {
   return <aside className="diary-context">
     <section>
@@ -30,14 +30,15 @@ export function DiaryContextPanel({ recovery, filesLoading, filesError, retryFil
       <p className="diary-context-note">MEMORY.md and files in AI Memory/, memory/ or context/ are included as diary reference material.</p>
     </section>
     <section>
-      <div className="diary-panel-heading"><h2>Storage location</h2><button className="popup-tab" disabled={busy || pendingCount > 0} onClick={chooseStorage}>Edit</button></div>
-      <strong>{folderName ?? savedLabel}</strong>
-      <p className="diary-storage-path">{folderName !== undefined ? 'This computer · current session' : corpusRoot || 'Diary folder'}</p>
+      <div className="diary-panel-heading"><h2>Diary storage</h2><button className="popup-tab" disabled={busy || pendingCount > 0} onClick={chooseStorage}>Edit</button></div>
+      <strong>{folderName ?? (managed ? 'noevia app storage' : savedLabel)}</strong>
+      <p className="diary-storage-path">{folderName !== undefined ? 'This computer · current session' : managed ? 'Saved on your noevia server' : corpusRoot || 'Diary folder'}</p>
       {folderName !== undefined ? <>
         <label className="diary-sync-toggle"><input type="checkbox" checked={sync} disabled={busy} onChange={e => setSync(e.target.checked)} />Also sync to {savedLabel}</label>
         <p className="diary-context-note">Applies to new changes. Pending sync remains available to retry. Reopening noevia restores {savedLabel}.</p>
         <button className="popup-tab" disabled={busy || pendingLocal} onClick={disconnect}>Return to {savedLabel}</button>
-      </> : <p className="diary-context-note">Your saved connection is used when you reopen noevia.</p>}
+      </> : null}
+      <div hidden={folderName !== undefined}>{storageStatus}</div>
     </section>
     {recovery}
   </aside>;

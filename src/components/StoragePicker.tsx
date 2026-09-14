@@ -9,18 +9,19 @@ export interface StoragePickerProps {
   /** Skip path — shown in the wizard, hidden in Settings. */
   onSkip?: () => void;
   onlineOnly?: boolean;
+  backupOnly?: boolean;
 }
 
 /** Diary storage backend picker (local / Nextcloud / generic WebDAV), shared by
  *  the setup wizard (step 3) and Settings → Diary storage. */
-export function StoragePicker({ onSaved, onSkip, onlineOnly = false }: StoragePickerProps): JSX.Element {
+export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly = false }: StoragePickerProps): JSX.Element {
   const [value, setValue] = useState<StorageConnection>({ kind: onlineOnly ? 'nextcloud' : 'local', baseUrl: '', username: '', corpusRoot: '' });
   const [loaded, setLoaded] = useState(false);
   const [secret, setSecret] = useState('');
   const [message, setMessage] = useState('');
   useEffect(() => {
     void fetchStorage()
-      .then(v => { setValue(onlineOnly && v.kind === 'local' ? { kind: 'nextcloud', baseUrl: '', username: '', corpusRoot: 'Cowork/Diary' } : v); setLoaded(true); })
+      .then(v => { setValue((onlineOnly && v.kind === 'local') || (backupOnly && v.kind === 's3') ? { kind: 'nextcloud', baseUrl: '', username: '', corpusRoot: 'Cowork/Diary' } : v); setLoaded(true); })
       .catch(() => setMessage('Could not load saved storage. Reopen this step or reload before changing it.'));
   }, []);
   const patch = (next: Partial<StorageConnection>) => setValue((v) => ({ ...v, ...next }));
@@ -57,6 +58,7 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false }: StoragePi
 
   return (
     <div className="card-list" style={{ padding: 12, gap: 8 }}>
+      {backupOnly && <p className="diary-context-note">This is your account storage connection, also used by Projects. Changing it changes their connection too. Diary backups support Nextcloud and WebDAV.</p>}
       <select
         className="modal-input"
         aria-label="Diary storage type"
@@ -67,7 +69,7 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false }: StoragePi
         {!onlineOnly && <option value="local">Server storage</option>}
         <option value="nextcloud">Nextcloud</option>
         <option value="webdav">Generic WebDAV</option>
-        <option value="s3">S3-compatible</option>
+        {!backupOnly && <option value="s3">S3-compatible</option>}
       </select>
       {value.kind !== 'local' && (
         <>

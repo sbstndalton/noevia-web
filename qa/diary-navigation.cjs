@@ -14,7 +14,7 @@ const {createFixture}=require('./diary-fixture.cjs');
     window.showDirectoryPicker=async()=>directory();
    });
    await page.goto('http://localhost:31239');await page.getByRole('button',{name:'Diary',exact:true}).click();
-   if(local){await page.getByRole('button',{name:'Edit',exact:true}).click();await page.getByRole('button',{name:'Folder on this computer'}).click();await page.getByRole('checkbox',{name:/Also sync/}).uncheck();await page.getByRole('button',{name:'Choose folder',exact:true}).click();}
+   if(local){await page.getByRole('button',{name:'Edit',exact:true}).click();await page.getByRole('button',{name:/Browser folder/}).click();await page.getByRole('checkbox',{name:/Also sync/}).uncheck();await page.getByRole('button',{name:'Choose folder',exact:true}).click();}
    const send=async message=>{await page.locator('#diary-draft').fill(message);await page.getByRole('button',{name:'Send diary message'}).click();};
    await send('first synthetic');
    await page.getByRole('heading',{name:'September 10, 2026',exact:true}).waitFor();
