@@ -3,7 +3,7 @@ import { fetchProfile, logout } from '../api';
 import { ShellIcon } from './ShellIcon';
 // The theme toggle lives in the sidebar head, where it is always visible;
 // a second copy here was the same control twice, 200px apart.
-export function AccountMenu({ onSettings }: { onSettings:()=>void }) {
+export function AccountMenu({ onSettings }: { onSettings:(section?:'general'|'usage')=>void }) {
   const [open,setOpen]=useState(false);
   const [name,setName]=useState('Your account');
   const [error,setError]=useState('');
@@ -21,7 +21,7 @@ export function AccountMenu({ onSettings }: { onSettings:()=>void }) {
   return <div className="account-area" ref={ref}>
     {open&&<div className="account-popover" aria-label="Account options"><div className="account-popover-head"><strong>{name}</strong><span>Personal workspace</span></div>
       <button onClick={()=>{setOpen(false);onSettings();}}><ShellIcon name="settings"/>Settings</button>
-      <button disabled title="Not connected in this preview"><ShellIcon name="grid"/>Usage & activity <small>Preview</small></button>
+      <button onClick={()=>{setOpen(false);onSettings('usage');}}><ShellIcon name="grid"/>Usage &amp; activity</button>
       <div className="account-divider"/>
       <button onClick={()=>void logout().then(()=>window.location.reload()).catch(()=>setError('Could not sign out. Please retry.'))}><ShellIcon name="arrow"/>Log out</button>
       {error&&<p role="alert">{error}</p>}

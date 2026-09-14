@@ -38,7 +38,7 @@ interface SidebarProps {
   onDeleteProject: (id: string) => void;
   onOpenDiary: () => void;
   diaryEnabled: boolean;
-  onOpenSettings: () => void;
+  onOpenSettings: (section?: 'general'|'usage') => void;
   health: HealthState;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;

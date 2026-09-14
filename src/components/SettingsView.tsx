@@ -37,19 +37,23 @@ export function SettingsView({ models, routes, modelsError, projects, health, st
 
 function DiaryAddonCard({ enabled, onChange }: { enabled: boolean; onChange: (enabled: boolean) => void }): JSX.Element {
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const toggle = async () => {
     const next = !enabled;
     setBusy(true);
+    setError('');
     try {
       const result = await updateFeatures(next);
       onChange(result.diaryEnabled);
+    } catch {
+      setError('Diary preference could not be confirmed. Showing the last confirmed setting. Try again or reload.');
     } finally {
       setBusy(false);
     }
   };
   return <div><div className="rail-label" style={{ marginBottom: 12 }}>Optional apps</div><div className="card-list">
     <div className="model-row"><span className={`model-dot${enabled ? '' : ' down'}`} /><div className="model-name-group"><span className="model-name">Diary</span><span className="model-quant">Private journaling, memory, and configurable corpus storage</span></div><button className="popup-tab" disabled={busy} onClick={() => void toggle()}>{busy ? 'Saving…' : enabled ? 'Disable' : 'Enable'}</button></div>
-  </div></div>;
+  </div>{error && <p className="modal-err" role="alert">{error}</p>}<p className="route-note">Saved to your account. Disabling Diary does not delete journal files.</p></div>;
 }
 
 function StorageCard(): JSX.Element {
@@ -74,17 +78,44 @@ function ProfileCard(): JSX.Element {
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [name, setName] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
-  const refresh = () => fetchProfile().then(p => { setUser(p.user); setName(p.user.displayName); setPasskeys(p.passkeys); setSessions(p.sessions ?? []); });
-  useEffect(() => { void refresh(); }, []);
-  const addKey = async () => { const c = await passkeyRegistrationOptions(); const response = await startRegistration({ optionsJSON: c.options }); await passkeyRegistrationVerify(c.challengeToken, response, `Passkey ${passkeys.length + 1}`); refresh(); };
-  if (!user) return <div><div className="rail-label">Profile</div><p className="route-note">Loading…</p></div>;
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState('');
+  const refresh = async () => {
+    const p = await fetchProfile();
+    setUser(p.user); setName(p.user.displayName); setPasskeys(p.passkeys); setSessions(p.sessions ?? []);
+  };
+  const load = async () => {
+    setLoading(true); setError('');
+    try { await refresh(); }
+    catch { setError('Profile could not be loaded. Check your connection and retry.'); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void load(); }, []);
+  const act = async (label: string, action: () => Promise<unknown>, success: string) => {
+    if (busy) return;
+    setBusy(label); setError(''); setNotice(null);
+    try {
+      await action();
+      setNotice(success);
+      try { await refresh(); }
+      catch { setError('The change succeeded, but the updated profile could not be loaded. Retry loading before making another change.'); }
+    } catch { setError(`${label} could not be confirmed.${label === 'Save name' ? ' Your draft is retained.' : ''} Check your connection, then reload to check the saved state.`); }
+    finally { setBusy(''); }
+  };
+  const addKey = async () => {
+    const c = await passkeyRegistrationOptions();
+    const response = await startRegistration({ optionsJSON: c.options });
+    await passkeyRegistrationVerify(c.challengeToken, response, `Passkey ${passkeys.length + 1}`);
+  };
+  if (!user) return <div><h2>Profile &amp; security</h2>{loading ? <p role="status">Loading profile…</p> : <><p className="modal-err" role="alert">{error}</p><button className="modal-btn secondary" onClick={() => void load()}>Retry profile</button></>}</div>;
   return <div>
     <div className="rail-label" style={{ marginBottom: 12 }}>Profile and security</div>
-    <div className="card-list">
+    <fieldset className="settings-action-group" disabled={!!busy || loading}><div className="card-list">
       <div className="model-row"><div className="auth-mark" aria-hidden="true">{user.displayName.slice(0,1).toUpperCase()}</div><div className="model-name-group"><span className="model-name">{user.username}</span><span className="model-quant">{user.role}</span></div></div>
-      <div className="model-row"><input className="modal-input" value={name} onChange={e => setName(e.target.value)} /><button className="popup-tab" onClick={() => void updateProfile(name).then(refresh)}>Save name</button></div>
-      {passkeys.map(k => <div className="model-row" key={k.id}><span className="model-dot"/><div className="model-name-group"><span className="model-name">{k.name}</span><span className="model-quant">{k.backedUp ? 'synced passkey' : k.deviceType}</span></div><button className="recents-del" onClick={() => void removePasskey(k.id).then(refresh)}>✕</button></div>)}
-      <button className="modal-btn secondary" onClick={() => void addKey().catch(() => setNotice('Passkey setup was cancelled.'))}>+ Add passkey</button>
+      <div className="model-row"><input className="modal-input" aria-label="Display name" maxLength={80} value={name} onChange={e => setName(e.target.value)} /><button className="popup-tab" disabled={!name.trim() || name.trim() === user.displayName} onClick={() => void act('Save name', () => updateProfile(name.trim()), 'Display name saved to your account.')}>Save name</button></div>
+      {passkeys.map(k => <div className="model-row" key={k.id}><span className="model-dot"/><div className="model-name-group"><span className="model-name">{k.name}</span><span className="model-quant">{k.backedUp ? 'synced passkey' : k.deviceType}</span></div><button className="recents-del" aria-label={`Remove passkey ${k.name}`} onClick={() => void act('Remove passkey', () => removePasskey(k.id), 'Passkey removed.')}>✕</button></div>)}
+      <button className="modal-btn secondary" onClick={() => void act('Passkey setup', addKey, 'Passkey added.')}>+ Add passkey</button>
       {sessions.length > 0 && sessions.map(s => (
         <div className="model-row" key={s.id}>
           <span className="model-dot" />
@@ -94,12 +125,15 @@ function ProfileCard(): JSX.Element {
               {s.ip || 'unknown IP'} · last seen {new Date(s.lastSeenAt).toLocaleString()}
             </span>
           </div>
-          <button className="recents-del" title="Revoke session" onClick={() => void revokeSession(s.id).then(refresh)}>✕</button>
+          <button className="recents-del" title="Revoke session" aria-label={`Revoke session ${sessionLabel(s.userAgent)}`} onClick={() => void act('Revoke session', () => revokeSession(s.id), 'Session revoked.')}>✕</button>
         </div>
       ))}
-      <button className="modal-btn secondary" onClick={() => void logout().then(() => window.location.reload())}>Sign out</button>
+      <button className="modal-btn secondary" onClick={() => void act('Sign out', async () => { await logout(); window.location.reload(); }, 'Signed out.')}>Sign out</button>
     </div>
-    {notice && <p className="route-note">{notice}</p>}
+    </fieldset>
+    {busy && <p role="status">{busy}…</p>}
+    {notice && <p className="route-note" role="status">{notice}</p>}
+    {error && <><p className="modal-err" role="alert">{error}</p><button className="modal-btn secondary" disabled={!!busy || loading} onClick={() => void load()}>{loading ? 'Loading…' : 'Reload profile'}</button></>}
     <AppPasswords />
   </div>;
 }
@@ -159,23 +193,31 @@ function ProvidersCard(): JSX.Element {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [adding, setAdding] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-
-  const refresh = () => {
-    fetchProviders().then((r) => setProviders(r.providers || [])).catch(() => setErr('Could not load providers'));
+  const [loading, setLoading] = useState(true);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const refresh = async () => {
+    setLoading(true); setErr(null);
+    try { const r = await fetchProviders(); setProviders(r.providers); }
+    catch { setErr('Connections could not be loaded. Check your connection and retry.'); }
+    finally { setLoading(false); }
   };
-  useEffect(refresh, []);
+  useEffect(() => { void refresh(); }, []);
 
   const remove = async (id: string) => {
+    setRemoving(id); setErr(null);
     try {
       await deleteProvider(id);
-      refresh();
+      await refresh();
     } catch {
-      setErr('delete failed');
-    }
+      setErr('Connection could not be removed. Try again.');
+    } finally { setRemoving(null); }
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {loading && <p role="status">Loading connections…</p>}
+      {!loading && !err && providers.length === 0 && <p className="route-note">No connections saved. Connect a provider to make its models available.</p>}
+      {err && <><p className="modal-err" role="alert">{err}</p><button className="modal-btn secondary" disabled={loading || !!removing} onClick={() => void refresh()}>Retry connections</button></>}
       <div className="card-list">
         {providers.map((p) => (
           <div key={p.id} className="model-row">
@@ -189,8 +231,8 @@ function ProvidersCard(): JSX.Element {
             ) : (
               <>
                 {p.apiKeyMasked && <span className="model-quant">key {p.apiKeyMasked}</span>}
-                <button className="recents-del" title="Remove provider" onClick={() => void remove(p.id)}>
-                  ✕
+                <button className="recents-del" title="Remove provider" aria-label={`Remove ${p.label}`} disabled={loading || !!removing} onClick={() => void remove(p.id)}>
+                  {removing === p.id ? 'Removing…' : '✕'}
                 </button>
               </>
             )}
@@ -211,7 +253,6 @@ function ProvidersCard(): JSX.Element {
         />
       ) : (
         <>
-          {err && <p className="modal-err">{err}</p>}
           <button className="modal-btn secondary" style={{ width: 'fit-content' }} onClick={() => setAdding(true)}>
             + Connect a provider
           </button>

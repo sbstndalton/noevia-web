@@ -1,4 +1,4 @@
-import { parseUsage, parseUsers } from './settings-data';
+import { parseUsage, parseUsers, parseProfile, parseProviders } from './settings-data';
 // API client — all calls go through the local proxy server (same origin),
 // which holds credentials server-side.
 
@@ -54,13 +54,13 @@ export const passkeyRegistrationVerify = (challengeToken: string, response: unkn
 export const acceptInvitation = (body: { token: string; username: string; displayName: string; password: string; diaryEnabled: boolean }) => postJson<{ user: AuthUser }>('/api/auth/invitations/accept', body);
 export interface PasskeyInfo { id: string; name: string; deviceType: string; backedUp: boolean; createdAt: number; lastUsedAt?: number | null }
 export interface SessionInfo { id: string; createdAt: number; lastSeenAt: number; expiresAt: number; userAgent?: string | null; ip?: string | null }
-export const fetchProfile = () => getJson<{ user: AuthUser; passkeys: PasskeyInfo[]; sessions?: SessionInfo[] }>('/api/profile');
+export const fetchProfile = () => getJson<unknown>('/api/profile').then(parseProfile);
 export const revokeSession = (id: string) => apiFetch(`/api/auth/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(r => { if (!r.ok) throw new Error('session revoke failed'); });
 export const updateProfile = (displayName: string) => apiFetch('/api/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ displayName }) }).then(r => { if (!r.ok) throw new Error('profile update failed'); return r.json(); });
 export const updateFeatures = (diaryEnabled: boolean) => putJson<{ diaryEnabled: boolean }>('/api/profile/features', { diaryEnabled });
 /** Marks the setup wizard as finished for this account (resumability gate). */
 export const completeOnboarding = () => postJson<{ onboarded: boolean }>('/api/profile/onboarding', {});
-export const removePasskey = (id: string) => apiFetch(`/api/auth/passkeys/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(r => r.json());
+export const removePasskey = (id: string) => apiFetch(`/api/auth/passkeys/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(r => { if (!r.ok) throw new Error('Passkey could not be removed'); return r.json(); });
 export const fetchUsers = () => getJson<unknown>('/api/admin/users').then(parseUsers);
 export const createInvitation = (role: 'admin' | 'member' = 'member') => postJson<{ token: string; expiresAt: number }>('/api/admin/invitations', { role });
 export const setUserDisabled = (id: string, disabled: boolean) => putJson<{ ok: true }>(`/api/admin/users/${encodeURIComponent(id)}/disabled`, { disabled });
@@ -201,7 +201,7 @@ export function fetchWorkspace(): Promise<WorkspaceInfo> {
 // ── Providers (step 9: generic OpenAI-compatible endpoints) ─────────────────
 
 export function fetchProviders(): Promise<{ providers: Provider[] }> {
-  return getJson('/api/providers');
+  return getJson<unknown>('/api/providers').then(parseProviders);
 }
 
 export function createProvider(body: { label: string; baseUrl: string; apiKey?: string; defaultModel?: string; shared?: boolean }): Promise<Provider> {

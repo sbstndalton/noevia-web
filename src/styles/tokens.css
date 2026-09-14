@@ -162,3 +162,47 @@
   --control-border: #808080;
   --border-subtle: #dedede;
 }
+
+/* Optical surfaces: decorative edges; text/focus tokens remain authoritative. */
+:root { --glass-fill:rgba(251,253,255,.66);--glass-menu:rgba(251,253,255,.92);--glass-edge:rgba(255,255,255,.95);--glass-rim:rgba(93,114,139,.25);--glass-shadow:rgba(38,58,81,.13);--glass-selected:rgba(255,255,255,.91); }
+:root[data-theme='dark'] { --glass-fill:rgba(54,64,77,.57);--glass-menu:rgba(30,37,45,.95);--glass-edge:rgba(227,240,255,.33);--glass-rim:rgba(189,217,247,.15);--glass-shadow:rgba(0,0,0,.32);--glass-selected:rgba(113,132,153,.27); }
+
+/* Shared interactive material and control geometry. */
+:root { --radius-control:12px; --radius-panel:18px; --glass-reflection:rgba(255,255,255,.32); }
+:root[data-theme='dark'] { --glass-reflection:rgba(218,238,255,.19); }
+
+/* Sage: mineral neutrals with restrained botanical accents. */
+[data-theme='light'][data-palette='sage'] {
+  --bg-app:#f4f8f5; --bg-canvas:#f4f8f5; --bg-chrome:#e9efeb;
+  --bg-surface:#ffffff; --bg-surface-hover:#e9f1ec; --bg-surface-active:#dce9e0;
+  --text-primary:#23342c; --text-secondary:#54665c; --text-muted:#54665c;
+  --accent-text:#315e50; --focus-ring:#315e50; --control-border:#738078;
+  --tint-garnet:#e6efe9; --border-subtle:#d9e3dc;
+  --glass-rim:rgba(100,151,127,.22); --glass-menu:rgba(244,250,246,.95);
+}
+[data-theme='dark'][data-palette='sage'] {
+  --bg-app:#1b2421; --bg-canvas:#1b2421; --bg-chrome:#151e1a;
+  --bg-surface:#26322c; --bg-surface-hover:#304137; --bg-surface-active:#394c41;
+  --text-primary:#e8f0ea; --text-secondary:#b1c3b7; --text-muted:#b1c3b7;
+  --accent-text:#a2d0b3; --focus-ring:#a2d0b3; --control-border:#8ba695;
+  --tint-garnet:#26382e; --border-subtle:#394b40;
+  --glass-rim:rgba(172,219,188,.19); --glass-menu:rgba(28,41,34,.96);
+}
+/* Iris: ink and porcelain with a quiet violet accent. */
+[data-theme='light'][data-palette='iris'] {
+  --bg-app:#f7f5fb; --bg-canvas:#f7f5fb; --bg-chrome:#eeebf4;
+  --bg-surface:#ffffff; --bg-surface-hover:#efebf6; --bg-surface-active:#e4ddef;
+  --text-primary:#302b3d; --text-secondary:#665d75; --text-muted:#665d75;
+  --accent-text:#644783; --focus-ring:#644783; --control-border:#82788e;
+  --tint-garnet:#eee7f3; --border-subtle:#e0dae9;
+  --glass-rim:rgba(143,124,185,.23); --glass-menu:rgba(249,246,253,.95);
+}
+[data-theme='dark'][data-palette='iris'] {
+  --bg-app:#22202b; --bg-canvas:#22202b; --bg-chrome:#1a1822;
+  --bg-surface:#302b3d; --bg-surface-hover:#3c354c; --bg-surface-active:#473d59;
+  --text-primary:#f0eaf7; --text-secondary:#c0b6d0; --text-muted:#c0b6d0;
+  --accent-text:#cbb1eb; --focus-ring:#cbb1eb; --control-border:#a298ae;
+  --tint-garnet:#372d43; --border-subtle:#473e56;
+  --glass-rim:rgba(209,187,242,.18); --glass-menu:rgba(35,30,47,.96);
+}
+:root { --glass-prism-cool:rgba(115,197,221,.17); --glass-prism-warm:rgba(200,161,212,.14); }

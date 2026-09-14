@@ -49,17 +49,19 @@ const ICONS: Record<string, string> = {
 // What used to be one navigation row each. Kept visible as a roadmap, but in
 // one place, so an empty section never looks like a broken one.
 const PLANNED: { group: string; items: string[] }[] = [
-  { group: 'Personalization', items: ['Response style', 'Custom instructions', 'Memory preferences', 'Notifications', 'Keyboard shortcuts'] },
+  { group: 'Personalization', items: ['Response style', 'Account-wide custom instructions', 'Account-wide memory preferences', 'Notifications', 'Keyboard shortcuts'] },
   { group: 'Data', items: ['Export conversations', 'Data retention', 'Import chats and projects', 'Archived conversations'] },
-  { group: 'Extensibility', items: ['Capabilities', 'Plugins', 'Skills', 'Connectors'] },
+  { group: 'Extensibility', items: ['Capability catalogue', 'Plugin management', 'Skill library', 'Connector catalogue'] },
   { group: 'Coding workspace', items: ['Coding preferences', 'Git', 'Environments', 'Worktrees', 'Hooks'] },
 ];
 
-export function SettingsShell(props: SettingsViewProps & {onClose:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void}) {
+export function SettingsShell(props: SettingsViewProps & {initialSection?:'general'|'usage';appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void}) {
   const [palette, setPalette] = useState(currentPalette);
-  const [section, setSection] = useState('general');
+  const [section, setSection] = useState<string>(props.initialSection || 'general');
   const [query, setQuery] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [profileError, setProfileError] = useState(false);
+  const [profileAttempt, setProfileAttempt] = useState(0);
   const dialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -71,11 +73,12 @@ export function SettingsShell(props: SettingsViewProps & {onClose:()=>void; them
 
   useEffect(() => {
     let live = true;
+    setProfileError(false);
     fetchProfile()
       .then((p) => { if (live) setIsAdmin(p.user.role === 'admin'); })
-      .catch(() => undefined);
+      .catch(() => { if (live) setProfileError(true); });
     return () => { live = false; };
-  }, []);
+  }, [profileAttempt]);
 
   const groups: Group[] = useMemo(
     () => [
@@ -103,6 +106,7 @@ export function SettingsShell(props: SettingsViewProps & {onClose:()=>void; them
           {group.items.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
         </optgroup>)}
       </select>
+      {profileError && <p className="route-note" role="alert">Account access could not be checked. <button className="popup-tab" onClick={() => setProfileAttempt(n => n + 1)}>Retry access</button></p>}
       <nav aria-label="Settings categories">
         {filtered.map(g => g.items.length > 0 && <section key={g.name}>
           <h2>{g.name}</h2>
@@ -123,18 +127,20 @@ export function SettingsShell(props: SettingsViewProps & {onClose:()=>void; them
           <>
             <div className="settings-title"><h1>General</h1><p>Make noevia feel like your space.</p></div>
             <section className="settings-appearance">
-              <div><h2>Appearance</h2><p>Choose a light or dark interface.</p></div>
+              <div><h2>Appearance</h2><p>Choose a mode. Each mode remembers its own palette.</p></div>
               <div className="theme-choice">{(['light', 'dark'] as const).map(t => <button className={props.theme === t ? 'is-active' : ''} aria-pressed={props.theme === t} key={t} onClick={() => props.onTheme(t)}>
                 <span className={`theme-swatch ${t}`} data-theme={t} data-palette={palette}><i/><i/><i/></span>{t === 'light' ? 'Light' : 'Dark'}
               </button>)}</div>
               <PalettePicker theme={props.theme} onChange={setPalette}/>
+              <p role={props.appearanceError ? 'alert' : 'status'} className="route-note">{props.appearanceStatus}</p>
+              {props.appearanceError && <button className="modal-btn secondary" onClick={props.retryAppearance}>Retry appearance</button>}
             </section>
           </>
         ) : section === 'usage' ? (
           <UsageView/>
         ) : section === 'planned' ? (
           <>
-            <div className="settings-title"><h1>Planned features</h1><p>Not built yet. Listed here so the rest of Settings only shows what noevia can actually do.</p></div>
+            <div className="settings-title"><h1>Planned features</h1><p>These account-wide controls are not built yet. Project instructions and reviewed instruction skills already work in each project. Connections and Diary storage have their own working categories.</p></div>
             {PLANNED.map(p => <PreviewPanel key={p.group} title={p.group} description="" items={p.items}/>)}
           </>
         ) : null}

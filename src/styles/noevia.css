@@ -588,3 +588,448 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
 .usage-rate-row .modal-input { width: 100%; box-sizing: border-box; }
 .usage-rate-row button { justify-self: start; }
 @media (max-width: 640px) { .usage-rate-row { grid-template-columns: minmax(0, 1fr); } }
+
+/* Accepted architectural material study, now shared by the real application. */
+/* Study 02: preserve app navigation and screen regions; redesign their hierarchy. */
+/* Existing six theme/palette combinations remain authoritative. */
+/* Typography carries the hierarchy; ornament does not. */
+.projects-hero h1 { font-size:52px;line-height:1.05;font-weight:600;letter-spacing:-2.4px; }
+.projects-hero-sub { font-size:13px;margin-top:14px;color:var(--text-secondary); }
+.projects-hero { align-items:center; }
+.projects-head { padding-top:38px;padding-bottom:0;margin-bottom:0;align-items:center; }
+.projects-head .seg { gap:25px;align-self:stretch; }
+.projects-head .seg button { border-radius:0;background:none;padding:18px 0;border-bottom:2px solid transparent; }
+.projects-head .seg button.is-selected { background:none;border-bottom-color:var(--text-primary);color:var(--text-primary);font-weight:600;border-radius:0; }
+.projects-head .projects-search { border:0;border-radius:0;background:none;width:210px;padding:12px 0;box-shadow:none; }
+.projects-head .projects-search:focus { outline:2px solid var(--focus-ring);outline-offset:2px; }
+.projects-grid { gap:22px;padding-top:26px; }
+.project-card { display:flex;flex-direction:column;min-height:254px;padding:25px 26px 19px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:9px;box-shadow:none;transition:border-color .16s,background .16s; }
+.project-card:hover { transform:none;box-shadow:none;background:var(--bg-surface);border-color:var(--control-border); }
+.project-card-top { display:grid;grid-template-columns:1fr 30px;row-gap:25px;align-items:start; }
+.project-badge { grid-row:1;grid-column:1;width:30px;height:30px;background:none;border:0;border-radius:0;box-shadow:none;display:flex;align-items:center;justify-content:start; }
+.project-badge svg { width:29px;height:29px;stroke-width:1.5; }
+.project-card-name { grid-column:1/-1;grid-row:2;font-size:21px;line-height:1.2;font-weight:550;letter-spacing:-.65px;overflow-wrap:anywhere; }
+.project-card-options { grid-column:2;grid-row:1; }
+.project-card-goal { font-size:13px;line-height:1.65;margin-top:12px;margin-bottom:24px; }
+.project-card-meta { margin-top:auto;padding-top:15px;border-top:1px solid var(--border-subtle);gap:13px; }
+.project-chip,.project-card-time { font-size:11px;font-variant-numeric:tabular-nums; }
+.project-card:focus-visible { outline:2px solid var(--focus-ring);outline-offset:4px; }
+/* Flat, confident controls, with consistent focus and no simulated bevels. */
+.btn,.modal-btn { border-radius:7px;font-weight:550;box-shadow:none; }
+.btn-primary,.modal-btn.primary { padding:11px 17px;min-height:42px;box-shadow:none; }
+.btn:active:not(:disabled),.modal-btn:active:not(:disabled),.send-btn:active:not(:disabled) { transform:none;opacity:.78;box-shadow:none; }
+.sidebar .nav-item,.sidebar .new-chat-btn { border-radius:6px; }
+.app-mode-switch { background:none;border:0;padding:0; }
+.app-mode-switch button { border-radius:5px;box-shadow:none; }
+.app-mode-switch button.is-selected { box-shadow:none; }
+.sidebar .project-icon { color:var(--text-secondary)!important; }
+.project-card .project-icon { color:var(--text-primary)!important; }
+.project-card:hover .project-icon { color:var(--accent-text)!important; }
+/* Writing gets its own typographic voice, in the existing reading column. */
+.diary-landing h1 { font-family:Georgia,'Times New Roman',serif;font-size:38px;line-height:1.18;font-weight:400;letter-spacing:-1.2px; }
+.diary-intro { font-size:14px;line-height:1.7; }
+.diary-overview > section { background:none;border:0;border-radius:0;padding:19px 0;border-top:1px solid var(--control-border); }
+.diary-overview > section h2 { font-size:13px;font-weight:650;letter-spacing:0; }
+.diary-overview > section h2:before { content:none; }
+.diary-file-list button { padding-left:0;line-height:1.6; }
+.diary-month-grid .month-card { border-radius:0;border-left:0;padding:20px 0;border-bottom:1px solid var(--border-subtle); }
+.diary-context { font-size:12px; }
+.composer-inner,.project-composer .composer-inner { border-radius:12px;border:1px solid var(--control-border);box-shadow:none; }
+.send-btn { box-shadow:none; }
+.project-title { font-size:38px;line-height:1.15;letter-spacing:-1.4px;font-weight:550; }
+.settings-title h1 { font-size:29px;letter-spacing:-.8px;font-weight:550; }
+.settings-shell { border-radius:12px; }
+@media(max-width:700px){.projects-hero h1{font-size:38px;letter-spacing:-1.5px}.projects-head .seg{gap:18px}.projects-head{padding-top:24px;flex-wrap:wrap}.projects-head .projects-search{flex-basis:100%;width:100%;min-width:0;margin-bottom:5px}.projects-grid{gap:16px;padding-top:20px}.project-card{min-height:228px;padding:22px}.project-card-top{row-gap:20px}.project-card-name{font-size:21px}.diary-landing h1{font-size:31px;letter-spacing:-.9px}.project-title{font-size:30px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+/* Study 03. Blur belongs on bounded surfaces, never the sidebar ancestor:
+   filtering the ancestor traps its account menu behind the app-main layer. */
+.sidebar {
+ background:radial-gradient(ellipse 260px 400px at -80px 220px,rgba(141,182,214,.25),transparent 85%),radial-gradient(ellipse 240px 380px at 210px 650px,rgba(193,160,128,.16),transparent 85%),var(--bg-chrome);
+ border-right:1px solid var(--border-subtle);
+ /* Do not add filter, backdrop-filter, transform or isolation here. */
+}
+.app-mode-switch { position:relative;padding:5px;gap:4px;border-radius:26px;border:1px solid var(--glass-edge);background:linear-gradient(125deg,rgba(255,255,255,.16),transparent 45%,rgba(255,255,255,.12)),var(--glass-fill);backdrop-filter:blur(14px) saturate(1.5);-webkit-backdrop-filter:blur(14px) saturate(1.5);box-shadow:inset 0 0 0 1px var(--glass-rim),inset 0 -2px 3px rgba(121,154,180,.12),0 6px 18px var(--glass-shadow); }
+.app-mode-switch button { position:relative;border-radius:21px;min-height:34px;box-shadow:none;transition:background .18s,box-shadow .18s; }
+.app-mode-switch button.is-selected { background:var(--glass-selected);box-shadow:inset 0 1px var(--glass-edge),0 2px 6px var(--glass-shadow); }
+.sidebar .nav-item { border-radius:9px; }
+.sidebar .chat-row.is-active .nav-item,.sidebar .nav-item.is-active { background:var(--nav-active);box-shadow:none; }
+.account-popover,.ctx-menu,.popup { background:var(--glass-menu);border:1px solid var(--glass-edge);border-radius:15px;backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);box-shadow:inset 0 0 0 1px var(--glass-rim),0 12px 30px var(--glass-shadow); }
+/* Writing and form controls remain opaque. */
+.composer-inner,.project-composer .composer-inner { background:var(--bg-surface);border:1px solid var(--control-border);border-radius:16px;box-shadow:0 4px 14px #00000008; }
+.settings-shell,.settings-navigation { background:var(--bg-app); }
+/* Restore a visible search affordance; the previous bare placeholder read as a label. */
+.projects-head .projects-search { border:1px solid var(--control-border);border-radius:8px;padding:9px 12px;margin-bottom:8px;min-height:38px; }
+@media(max-width:700px){.projects-head .projects-search{margin-top:12px}.project-card{min-height:210px}.project-card-goal{-webkit-line-clamp:3}.app-mode-switch{padding:3px;gap:3px}.app-mode-switch button{min-height:36px}}
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more){.app-mode-switch,.account-popover,.ctx-menu,.popup{background:var(--bg-surface);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;border-color:var(--control-border)}.sidebar{background:var(--bg-chrome)}}
+@supports not (backdrop-filter:blur(1px)){.app-mode-switch,.account-popover,.ctx-menu,.popup{background:var(--bg-surface)}}
+.app-mode-switch::before { content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(70px circle at var(--glass-x,20%) var(--glass-y,0%),rgba(255,255,255,.6),transparent 80%);opacity:.55; }
+[data-theme='dark'] .app-mode-switch::before { opacity:.22; }
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more){.app-mode-switch::before{display:none}}
+
+/* Material extends through the workspace without filtering menu ancestors.
+   The opaque content plane stays quiet; light collects at control boundaries. */
+.settings-shell {
+  background: var(--bg-app);
+  border: 1px solid var(--glass-edge);
+  box-shadow: inset 0 0 0 1px var(--glass-rim), 0 24px 80px var(--glass-shadow);
+}
+.settings-navigation {
+  background: radial-gradient(ellipse at 0 0, var(--glass-rim), transparent 70%), var(--bg-chrome);
+  border-right: 1px solid var(--border-subtle);
+}
+.settings-detail > header, .chat-header, .coding-header {
+  background: linear-gradient(115deg, var(--glass-rim), transparent 65%), var(--bg-app);
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: inset 0 1px var(--glass-edge);
+}
+.settings-navigation nav button.is-active {
+  background: linear-gradient(120deg, var(--glass-rim), transparent), var(--nav-active);
+  box-shadow: inset 0 1px var(--glass-edge), inset 0 0 0 1px var(--glass-rim);
+  border-radius: 10px;
+}
+.settings-detail .settings-title { margin-bottom: 30px; }
+.settings-detail .settings-title h1 { font-size: 32px; letter-spacing: -1px; }
+.settings-detail .card-list { background: transparent; border: 0; box-shadow: none; }
+.settings-detail .model-row { gap: 12px; min-width: 0; }
+.settings-detail .model-name-group { min-width: 0; }
+.settings-detail .model-quant { overflow-wrap: anywhere; }
+.settings-action-group { border: 0; padding: 0; margin: 0; min-width: 0; }
+.settings-detail .modal-input { min-width: 0; }
+.settings-detail .popup-tab, .settings-detail .modal-btn { flex-shrink: 0; }
+.settings-detail .modal-err { line-height: 1.6; }
+.settings-detail .theme-choice button, .settings-detail .palette-option,
+.settings-detail .modal-btn.secondary, .settings-detail .popup-tab,
+.coding-composer, .auth-card, .modal {
+  background: linear-gradient(125deg, var(--glass-rim), transparent 48%), var(--bg-surface);
+  box-shadow: inset 0 1px var(--glass-edge), 0 4px 16px var(--glass-shadow);
+}
+.composer-inner, .project-composer .composer-inner, .diary-compose .composer-inner {
+  background: linear-gradient(120deg, var(--glass-rim), transparent 42%), var(--bg-surface);
+  box-shadow: inset 0 1px var(--glass-edge), 0 6px 20px var(--glass-shadow);
+}
+.composer-inner:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.composer-actions-panel {
+  background: var(--glass-menu); border-color: var(--control-border);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  box-shadow: inset 0 1px var(--glass-edge), var(--shadow-pop);
+}
+.project-card { background: linear-gradient(145deg, var(--glass-rim), transparent 36%), var(--bg-surface); box-shadow: inset 0 1px var(--glass-edge); }
+.project-card:hover { background: linear-gradient(145deg, var(--glass-rim), transparent 50%), var(--bg-surface); }
+.diary-context, .project-rail, .noevia-inspector, .coding-sidebar { background: linear-gradient(160deg, var(--glass-rim), transparent 38%), var(--bg-chrome); }
+.settings-search, .settings-detail .modal-input { background: var(--bg-surface); border: 1px solid var(--control-border); }
+@media(max-width:700px) {
+  .settings-shell { border-radius: 0; border: 0; }
+  .settings-navigation { border-right: 0; border-bottom: 1px solid var(--border-subtle); }
+  .settings-detail .model-row { flex-wrap: wrap; }
+  .settings-detail .model-name-group { flex: 1 1 130px; }
+  .settings-detail .settings-title h1 { font-size: 27px; }
+  .settings-detail button, .mobile-settings-section { min-height: 44px; }
+}
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more) {
+  .settings-shell, .settings-navigation, .settings-detail > header, .chat-header, .coding-header,
+  .settings-navigation nav button.is-active, .settings-detail .theme-choice button,
+  .settings-detail .palette-option, .settings-detail .modal-btn.secondary, .settings-detail .popup-tab,
+  .coding-composer, .auth-card, .modal, .composer-inner, .project-composer .composer-inner,
+  .diary-compose .composer-inner, .composer-actions-panel, .project-card, .diary-context, .project-rail, .noevia-inspector, .coding-sidebar {
+    background: var(--bg-surface); box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+  .settings-navigation nav button.is-active { outline: 1px solid var(--control-border); }
+}
+@supports not (backdrop-filter:blur(1px)) { .composer-actions-panel { background:var(--bg-surface); } }
+
+/* Controls carry a fine optical rim; larger elevation belongs to overlays. */
+.settings-detail .modal-btn.secondary, .settings-detail .popup-tab,
+.settings-detail .theme-choice button {
+  box-shadow: inset 0 1px var(--glass-edge), inset 0 0 0 1px var(--glass-rim);
+}
+.settings-navigation nav button.is-active { backdrop-filter:blur(12px) saturate(1.3); -webkit-backdrop-filter:blur(12px) saturate(1.3); }
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more) {
+  .settings-navigation nav button.is-active { backdrop-filter:none; -webkit-backdrop-filter:none; }
+  .settings-detail .modal-btn.secondary, .settings-detail .popup-tab, .settings-detail .theme-choice button { box-shadow:none; }
+}
+
+/* Shared controls: one radius, optical edge and interaction rhythm. */
+.btn, .modal-btn, .popup-tab, .settings-back, .settings-search,
+.settings-navigation nav button, .settings-detail .modal-input,
+.reasoning-control select, .model-mtp select, .mobile-settings-section {
+  border-radius:var(--radius-control);
+}
+.btn, .modal-btn, .popup-tab {
+  min-height:38px; padding:9px 15px; font-size:13px; line-height:1.35;
+  transition:background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+}
+.btn-secondary, .modal-btn.secondary, .settings-detail .popup-tab {
+  color:var(--text-primary); border:1px solid var(--control-border);
+  background:linear-gradient(145deg,var(--glass-rim),transparent 60%),var(--bg-surface);
+  box-shadow:inset 0 1px var(--glass-edge),0 2px 5px var(--glass-shadow);
+}
+.btn-primary, .modal-btn.primary { border:1px solid transparent; }
+button:not(:disabled):hover { transition-duration:160ms; }
+.btn-secondary:hover:not(:disabled), .modal-btn.secondary:hover:not(:disabled), .settings-detail .popup-tab:hover:not(:disabled) {
+  background-color:var(--bg-surface-hover); box-shadow:inset 0 1px var(--glass-edge),0 3px 10px var(--glass-shadow);
+}
+.btn:active:not(:disabled), .modal-btn:active:not(:disabled), .popup-tab:active:not(:disabled) {
+  box-shadow:inset 0 2px 5px var(--glass-shadow); opacity:.86;
+}
+/* Existing native semantics/keyboard behavior are kept, with a custom browser
+   picker where supported. Older browsers retain their native option menu. */
+select { color:var(--text-primary); background-color:var(--bg-surface); border:1px solid var(--control-border); border-radius:var(--radius-control); padding:10px 14px; min-height:38px; font:inherit; }
+.settings-detail select { width:100%; box-sizing:border-box; }
+.settings-detail .reasoning-control select { width:auto; max-width:none; }
+@supports (appearance:base-select) {
+  select, select::picker(select) { appearance:base-select; }
+  select { background-image:linear-gradient(135deg,var(--glass-rim),transparent 65%); align-items:center; justify-content:space-between; gap:16px; }
+  select:not(.mobile-settings-section) { display:flex; }
+  select::picker-icon { content:''; width:7px; height:7px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; rotate:45deg; margin:0 3px 4px auto; flex-shrink:0; transition:rotate 180ms ease; color:var(--text-secondary); }
+  select:open::picker-icon { rotate:225deg; }
+  select::picker(select) {
+    margin-block:6px; padding:6px; border:1px solid var(--control-border); border-radius:16px;
+    background:var(--glass-menu); color:var(--text-primary); box-shadow:inset 0 1px var(--glass-edge),var(--shadow-pop);
+    animation:glass-picker-in 160ms ease-out; backdrop-filter:blur(18px) saturate(1.35); max-height:min(360px,55dvh); overflow:auto;
+  }
+  select option { padding:10px 12px; border-radius:10px; min-height:38px; white-space:normal; }
+  select option:checked { background:var(--nav-active); font-weight:550; }
+  select option:hover, select option:focus { background:var(--bg-surface-hover); }
+  select option:disabled { opacity:.5; }
+  select optgroup { padding:6px; }
+}
+.settings-detail .model-row {
+  padding:16px; border:1px solid var(--border-subtle); border-radius:14px;
+  background:var(--bg-surface); align-items:center; gap:12px; flex-wrap:nowrap;
+}
+.settings-detail .model-name-group { display:flex; flex-direction:column; align-items:flex-start; flex:1 1 0; width:auto; min-width:0; gap:5px; }
+.settings-detail .model-quant { margin:0; line-height:1.55; white-space:normal; }
+.settings-detail .card-list { gap:10px; }
+.settings-detail .route-note { font-size:13px; line-height:1.6; margin-block:12px; }
+.settings-detail .rail-label { margin-top:4px; }
+.settings-detail .settings-section-heading { align-items:flex-start; }
+.settings-detail .settings-stat-row > div, .usage-rate-row { border-radius:14px; }
+.settings-detail .preview-setting-row { border-radius:12px; padding-inline:12px; }
+.settings-detail .preview-panel { margin-bottom:28px; }
+.settings-detail .theme-choice button, .palette-choices > button { border-radius:14px; }
+.settings-shell { border-radius:20px; }
+.settings-navigation { border-radius:19px 0 0 19px; }
+.settings-detail > header { border-radius:0 19px 0 0; }
+.ctx-menu, .popup, .account-popover, .composer-actions-panel { border-radius:var(--radius-panel); }
+.ctx-menu button, .account-popover button, .popup button, .composer-actions-panel > button { border-radius:10px; }
+.diary-month-grid .month-card { border-radius:14px; }
+/* The light layer never clips menus or creates a filtered ancestor. */
+.glass-positioned { position:relative; }
+.glass-reactive:not(select):not(input):not(textarea):not(.app-mode-switch)::after {
+  content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+  background:radial-gradient(140px circle at var(--glass-x,50%) var(--glass-y,50%),var(--glass-reflection),transparent 80%);
+  opacity:0; transition:opacity 240ms ease;
+}
+.glass-reactive[data-glass-active]::after { opacity:1!important; }
+select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active], textarea.glass-reactive[data-glass-active] {
+  background-image:radial-gradient(140px circle at var(--glass-x,50%) var(--glass-y,50%),var(--glass-reflection),transparent 80%);
+}
+@media(max-width:700px) {
+  .settings-shell { border-radius:0; }
+  .settings-navigation, .settings-detail > header { border-radius:0; }
+  .settings-detail .model-row { flex-wrap:wrap; }
+  .settings-detail .model-name-group { flex:1 1 140px; }
+  .settings-detail .model-row > button { margin-left:auto; }
+  .settings-detail button, select { min-height:44px; }
+}
+@media(prefers-reduced-motion:reduce),(prefers-reduced-transparency:reduce),(prefers-contrast:more) {
+  .glass-reactive::after { display:none; }
+  select::picker(select) { backdrop-filter:none; background:var(--bg-surface); }
+}
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more) {
+  .btn-secondary, .modal-btn.secondary, .settings-detail .popup-tab, select { background:var(--bg-surface); box-shadow:none; }
+}
+
+@keyframes glass-picker-in { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+
+@media(max-width:700px) { @supports (appearance:base-select) { .mobile-settings-section { display:flex; } } }
+
+/* Optical response: a narrow moving glint, displaced cool/warm reflections and
+   an opposing edge. Content stays sharp; this is a web material, not native refraction. */
+.glass-reactive:not(select):not(input):not(textarea):not(.app-mode-switch)::after {
+  background:
+    radial-gradient(ellipse 90px 32px at var(--glass-x,50%) var(--glass-y,0%),var(--glass-edge),transparent 72%),
+    radial-gradient(ellipse 120px 60px at var(--glass-opposite-x,0%) var(--glass-opposite-y,100%),var(--glass-prism-cool),transparent 75%);
+  box-shadow:inset 0 1px var(--glass-edge),inset 0 -1px var(--glass-rim);
+}
+select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active], textarea.glass-reactive[data-glass-active] {
+  background-image:radial-gradient(ellipse 95px 25px at var(--glass-x,50%) var(--glass-y,0%),var(--glass-reflection),transparent 75%);
+}
+.palette-choices { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
+.palette-choices > button { min-width:0; width:100%; }
+
+/* A low-contrast ambient light field; only its background moves, never content. */
+.app-main, .settings-shell {
+  background-image:radial-gradient(ellipse at 22% 15%,color-mix(in srgb,var(--glass-rim) 24%,transparent),transparent 58%);
+  background-size:140% 140%;
+  animation:ambient-glass-drift 36s ease-in-out infinite alternate;
+}
+@keyframes ambient-glass-drift {
+  from { background-position:0% 10%; }
+  to { background-position:35% 30%; }
+}
+.glass-reactive[data-glass-active]::after { opacity:.4!important; }
+.app-mode-switch::before { opacity:.25; }
+@media(prefers-reduced-motion:reduce),(prefers-reduced-transparency:reduce),(prefers-contrast:more) {
+  .app-main, .settings-shell { animation:none; background-image:none; }
+}
+
+/* Only the foreground workspace animates; Settings pauses the canvas beneath it. */
+body:has(.settings-shell[open]) .app-main { animation-play-state:paused; }
+.stats-disclosure {
+  margin:12px clamp(12px,2vw,24px); margin-top:auto; padding:0;
+  border:1px solid var(--border-subtle); border-radius:18px;
+  background:color-mix(in srgb,var(--bg-chrome) 94%,black);
+  box-shadow:inset 0 1px var(--glass-rim); flex-shrink:0;
+}
+.stats-disclosure .stats-bar { padding:12px 16px; gap:12px 18px; }
+.stats-disclosure .stats-item { flex-wrap:wrap; }
+.usage-stat-grid { gap:10px; background:transparent; border:0; overflow:visible; }
+.usage-stat { min-width:0; border:1px solid var(--border-subtle); border-radius:16px; color:var(--text-primary); }
+.usage-stat-value { overflow-wrap:anywhere; }
+.usage-stat-label { text-transform:none; letter-spacing:0; font-size:12px; }
+.usage-window { flex-wrap:wrap; margin-bottom:12px; }
+.usage-window button[aria-pressed='true'] { border-color:var(--accent); background:var(--bg-surface-active); color:var(--text-primary); }
+.usage-heatmap-scroll { border:1px solid var(--border-subtle); border-radius:16px; background:var(--bg-surface); padding:16px; }
+.usage-window button { min-height:36px; padding:7px 12px; }
+.usage-heatmap-scroll:has(.usage-heatmap:empty) { display:none; }
+@media(max-width:700px) { .usage-window button { min-height:44px; } }
+
+/* One scene renders the moving light; all glass samples the same field. */
+body { isolation:isolate; background:var(--bg-app); }
+#root { position:relative; z-index:1; }
+.glass-scene { position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; }
+.settings-shell > .glass-scene { position:absolute; }
+.settings-shell > :not(.glass-scene) { position:relative; z-index:1; }
+.app-main, .settings-shell { animation:none; background-image:none; }
+.app, .app-main, .chat-shell, .chat-main { background-color:transparent; }
+.sidebar, .settings-navigation, .coding-sidebar, .diary-context {
+  background:color-mix(in srgb,var(--bg-chrome) 72%,transparent);
+}
+.settings-shell { background:var(--bg-app); }
+.settings-detail { background:transparent; }
+.composer-inner, .usage-stat, .project-card, .app-mode-switch {
+  background:color-mix(in srgb,var(--bg-surface) 68%,transparent);
+  backdrop-filter:blur(16px) saturate(1.15); -webkit-backdrop-filter:blur(16px) saturate(1.15);
+}
+.stats-disclosure { background:color-mix(in srgb,var(--bg-chrome) 78%,transparent); backdrop-filter:blur(16px); }
+.glass-reactive::after, .app-mode-switch::before { display:none!important; }
+@media(prefers-reduced-motion:reduce),(prefers-reduced-transparency:reduce),(prefers-contrast:more) {
+  .glass-scene { display:none; }
+  .composer-inner,.usage-stat,.project-card,.app-mode-switch,.stats-disclosure,.sidebar,.settings-navigation {
+    background:var(--bg-surface); backdrop-filter:none; -webkit-backdrop-filter:none;
+  }
+}
+.main, .coding-main { background:transparent; }
+.composer { background:transparent; }
+.settings-detail > header, .chat-header, .coding-header {
+  background:color-mix(in srgb,var(--bg-app) 72%,transparent);
+}
+
+/* Code uses the same continuous light field and bounded glass as Chat. */
+.coding-workspace { background:transparent; min-height:0; overflow:hidden; }
+.coding-main { min-height:0; }
+.coding-content { justify-content:flex-start; gap:0; }
+.coding-welcome { margin:auto auto 22px; }
+.coding-welcome h1 { font-size:clamp(26px,3vw,32px); }
+.coding-composer {
+  box-sizing:border-box; flex-shrink:0; margin:0 auto auto; padding:18px;
+  border:1px solid var(--control-border); border-radius:22px;
+  background:color-mix(in srgb,var(--bg-surface) 68%,transparent);
+  backdrop-filter:blur(16px) saturate(1.15); -webkit-backdrop-filter:blur(16px) saturate(1.15);
+  box-shadow:inset 0 1px var(--glass-edge),0 6px 20px var(--glass-shadow);
+}
+.coding-composer textarea {
+  box-sizing:border-box; display:block; border:0; border-radius:12px;
+  background:transparent; padding:14px 6px; min-height:110px; resize:vertical;
+  color:var(--text-primary); max-width:100%;
+}
+.coding-composer textarea:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
+.coding-composer textarea::placeholder { color:var(--text-secondary); }
+.coding-context-chips { margin:0 0 8px; }
+.coding-composer-footer { border-top:1px solid var(--border-subtle); padding-top:12px; }
+.coding-content button:disabled, .coding-connect {
+  border:1px solid var(--border-subtle); border-radius:12px; min-height:36px;
+  background:color-mix(in srgb,var(--bg-surface) 65%,transparent);
+  color:var(--text-secondary); opacity:.75;
+}
+.coding-composer .preview-footnote { margin:14px 0 0; line-height:1.6; color:var(--text-secondary); }
+.coding-side-panel {
+  box-sizing:border-box; align-self:stretch; margin:12px; padding:20px;
+  border:1px solid var(--border-subtle); border-radius:20px; overflow:auto;
+  background:color-mix(in srgb,var(--bg-chrome) 80%,transparent);
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+}
+.coding-side-panel details { padding:16px 0; }
+.coding-sidebar .shell-sidebar-head { gap:6px; flex-wrap:wrap; }
+.coding-sidebar .shell-sidebar-head > strong { white-space:nowrap; }
+.coding-sidebar .nav-item.is-active { border-radius:12px; background:var(--nav-active); box-shadow:inset 0 1px var(--glass-rim); }
+@media(max-width:700px) {
+  .coding-sidebar { flex:0 0 64px; box-sizing:border-box; }
+  .coding-content { padding:20px 12px; }
+  .coding-composer { padding:12px; border-radius:18px; }
+  .coding-side-panel { top:70px; bottom:12px; right:0; width:min(280px,calc(100vw - 88px)); margin:0 12px; }
+  .coding-header { min-height:64px; height:auto; flex-wrap:wrap; }
+  .coding-header > div { gap:6px; }
+  .coding-quick-actions { gap:6px; flex-wrap:wrap; }
+  .coding-content button:disabled { min-height:44px; }
+}
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more) {
+  .coding-composer,.coding-side-panel { background:var(--bg-surface); backdrop-filter:none; -webkit-backdrop-filter:none; }
+}
+.coding-sidebar .shell-sidebar-head { flex-wrap:nowrap; }
+.coding-sidebar .shell-sidebar-head > .preview-badge { display:none; }
+.coding-sidebar .shell-sidebar-head > button { margin-left:auto; flex-shrink:0; }
+.coding-workspace { position:relative; }
+@media(max-width:1000px) {
+  .coding-side-panel { position:absolute; top:76px; bottom:12px; right:12px; z-index:5; margin:0; width:min(280px,calc(100vw - 88px)); box-shadow:var(--shadow-pop); }
+}
+
+/* Highlight contours belong to the control, including the floating inspector. */
+.inspector-toggle, .shell-icon-button, .section-toggle { border-radius:var(--radius-control); }
+.inspector-toggle::before, .inspector-toggle::after,
+.shell-icon-button::before, .shell-icon-button::after,
+.section-toggle::before, .section-toggle::after { border-radius:inherit; }
+.chat-header .icon-btn, .chat-header .diary-home-link { border-radius:var(--radius-control); }
+
+/* Theme-aware popup material and one continuous navigation frame. */
+:root { --glass-menu:color-mix(in srgb,var(--bg-chrome) 96%,transparent); }
+:root[data-theme][data-palette] { --glass-menu:color-mix(in srgb,var(--bg-chrome) 96%,transparent); }
+.account-popover, .popup { color:var(--text-primary); background:var(--glass-menu); }
+.account-popover > button { color:var(--text-primary); }
+.account-popover > button:hover:not(:disabled) { background:var(--nav-hover); }
+.sidebar, .coding-sidebar, .settings-navigation,
+.chat-header, .coding-header, .settings-detail > header {
+  background:color-mix(in srgb,var(--bg-chrome) 82%,transparent);
+  box-shadow:none;
+}
+.sidebar, .coding-sidebar, .settings-navigation { border-right:0; }
+.chat-header, .coding-header, .settings-detail > header { border-bottom:0; }
+
+/* One contextual rail: project overview already owns its rail; chats use this one. */
+.app-stack:has(> .noevia-inspector) { display:grid; grid-template-columns:minmax(0,1fr) 280px; grid-template-rows:minmax(0,1fr) auto; }
+.app-stack > .noevia-inspector { position:static; grid-column:2; grid-row:1 / 3; width:auto; max-width:none; min-width:0; border:0; box-shadow:none; animation:none; padding:24px 18px; background:color-mix(in srgb,var(--bg-chrome) 75%,transparent); }
+.app-stack > .app-main { min-height:0; }
+.insp-section { padding:18px 0; }
+.insp-list { overflow-wrap:anywhere; }
+@media(max-width:1100px) {
+  .app-stack:has(> .noevia-inspector) { display:flex; overflow-y:auto; }
+  .app-stack:has(> .noevia-inspector) > .app-main { flex:1 0 70dvh; }
+  .app-stack > .noevia-inspector { flex:none; border-top:1px solid var(--border-subtle); }
+  .project-layout { flex-direction:column; overflow-y:auto; }
+  .project-rail { width:auto; flex:none; border:0; border-top:1px solid var(--border-subtle); padding:20px 24px; }
+  .project-main { flex:1 0 auto; min-height:65dvh; }
+}
+/* Light materials stay within the selected palette rather than blue/purple rims. */
+:root[data-theme='light'] { --glass-edge:rgba(255,255,255,.45); --glass-rim:color-mix(in srgb,var(--text-secondary) 12%,transparent); --glass-shadow:rgba(25,30,35,.06); }
+.project-sources { display:flex; flex-direction:column; gap:20px; }
+.project-sources > .rail-empty { margin:0; line-height:1.6; }
+.project-sources .project-storage-summary { margin:0; padding:18px; border:1px solid var(--border-subtle); border-radius:16px; background:color-mix(in srgb,var(--bg-surface) 80%,transparent); }
+.project-sources .source-list { list-style:none; margin:0; padding:0; }
+.project-sources .source-list li { padding:14px; margin:0 0 8px; border:1px solid var(--border-subtle); border-radius:12px; gap:12px; background:color-mix(in srgb,var(--bg-surface) 80%,transparent); }
+.project-sources .source-name { flex:1; line-height:1.5; }
+.project-sources button { border-radius:12px; }
+.project-sources { gap:14px; }
+.project-sources > * { margin-block:0; }
+.project-main:has(.project-sources) > .project-composer { display:none; }

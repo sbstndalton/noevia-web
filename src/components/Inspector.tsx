@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import type { JSX, ReactNode } from 'react';
 import type { InstalledModel, Project } from '../types';
 
@@ -26,38 +25,24 @@ function Section({
   );
 }
 
-/** The project rail. It overlays the content as a drawer, so it carries its own
- *  close control: relying on the external toggle meant that at narrow widths,
- *  where the drawer covers most of the viewport, there was no reachable way to
- *  dismiss it. Escape closes it too. */
+/** Persistent context for project chats; stacks below on narrow screens. */
 export function Inspector({
   project,
   models,
-  onClose,
   onConfigureModels,
   onEditProject,
 }: {
   project: Project | null;
   models: InstalledModel[];
-  onClose: () => void;
   onConfigureModels: () => void;
   onEditProject: (id: string) => void;
 }): JSX.Element {
-  const ref = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', key);
-    return () => document.removeEventListener('keydown', key);
-  }, [onClose]);
-
   const model = project?.model || models.find((m) => m.loaded)?.name || 'Not selected';
 
   return (
-    <aside id="noevia-inspector" className="noevia-inspector" ref={ref} aria-label="Project context">
+    <aside id="noevia-inspector" className="noevia-inspector" aria-label="Project context">
       <header className="insp-bar">
         <h2>{project ? project.name : 'Context'}</h2>
-        <button className="insp-close" onClick={onClose} aria-label="Close context panel">✕</button>
       </header>
 
       <Section

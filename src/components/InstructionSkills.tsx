@@ -8,7 +8,7 @@ export function InstructionSkills({ projectId, updatedAt, onRefresh, onFiles }: 
   useEffect(() => {
     let cancelled = false;
     setError('');
-    apiFetch(url).then(async r => { const value = await r.json(); if (!r.ok) throw Error(value.error || 'Could not load instruction skills'); if (!cancelled) { setSkills(value.skills); onFiles(value.skills.map((s: Skill) => s.file)); } })
+    apiFetch(url).then(async r => { const value = await r.json(); if (!r.ok) throw Error(value.error || 'Could not load instruction skills'); if (!Array.isArray(value.skills)) throw Error('Could not load instruction skills: invalid server response'); if (!cancelled) { setSkills(value.skills); onFiles(value.skills.map((s: Skill) => s.file)); } })
       .catch(e => { if (!cancelled) setError(e.message); });
     return () => { cancelled = true; };
   }, [url, updatedAt, onFiles]);

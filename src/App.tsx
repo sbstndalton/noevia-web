@@ -1,8 +1,7 @@
 import { titleAfterSend } from './chat-title';
 import { sourceRefresher } from './source-refresh';
 import { sourceRefreshIssues } from './source-status';
-import { updateThemeColor } from './appearance';
-import { ShellIcon } from './components/ShellIcon';
+import { useAppearance } from './useAppearance';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import {
@@ -58,15 +57,11 @@ function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function loadTheme(): 'light' | 'dark' {
-  const stored = localStorage.getItem('cowork-theme');
-  return stored === 'light' ? 'light' : 'dark';
-}
-
 export default function App(): JSX.Element {
-  const [theme, setTheme] = useState<'light' | 'dark'>(loadTheme);
+  const {theme,setTheme,appearanceStatus,appearanceError,retryAppearance} = useAppearance();
+  const [settingsSection,setSettingsSection] = useState<'general'|'usage'>('general');
+  const openSettings = (section: 'general'|'usage' = 'general') => { setSettingsSection(section); setSettingsOpen(true); };
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account'); return fresh; });
-  const [inspectorOpen, setInspectorOpen] = useState(false);
   const [appMode, setAppMode] = useState<'chat'|'code'>('chat');
   const [view, setView] = useState<View>(() => ({ kind: 'chat', chatId: `c-${uid()}`, projectId: null }));
   const [projects, setProjects] = useState<Project[]>([]);
@@ -102,11 +97,7 @@ export default function App(): JSX.Element {
     delete streamAbort.current[chatId];
   }, []);
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('cowork-theme', theme);
-    updateThemeColor();
-  }, [theme]);
+
 
   // Navigating away used to abort the generation, so stepping into another
   // chat mid-answer threw the answer away — you came back to nothing and had
@@ -745,7 +736,7 @@ export default function App(): JSX.Element {
         onDeleteProject={handleDeleteProject}
         onOpenDiary={() => setView({ kind: 'diary' })}
         diaryEnabled={diaryEnabled}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={openSettings}
         health={health}
         theme={theme}
         onToggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
@@ -802,7 +793,7 @@ export default function App(): JSX.Element {
           onStop={() => { if (view.kind === 'chat') abortStream(view.chatId); }}
           onBack={activeProject ? () => setView({ kind: 'project', id: activeProject.id }) : null}
           onOpenModels={() => setPopupOpen(true)}
-          onOpenSettings={() => setSettingsOpen(true)}
+          onOpenSettings={openSettings}
         />
       )}
 
@@ -822,8 +813,16 @@ export default function App(): JSX.Element {
 
       </div>
       <StatsBar stats={stats} />
+      {view.kind === 'chat' && activeProject && (
+        <Inspector
+          project={activeProject ?? null}
+          models={models}
+          onConfigureModels={() => setPopupOpen(true)}
+          onEditProject={setEditingProjectId}
+        />
+      )}
       </div>
-      {view.kind !== 'diary' && <button className="inspector-toggle" aria-expanded={inspectorOpen} aria-controls="noevia-inspector" aria-label={inspectorOpen?'Close context inspector':'Open context inspector'} onClick={()=>setInspectorOpen(!inspectorOpen)}><ShellIcon name="panel" size={18}/></button>}
+
       {editingProjectId && (() => {
         const p = projects.find((x) => x.id === editingProjectId);
         return p ? (
@@ -841,19 +840,13 @@ export default function App(): JSX.Element {
           <button onClick={() => setProjectError(null)} aria-label="Dismiss">✕</button>
         </div>
       )}
-      {view.kind !== 'diary' && inspectorOpen && (
-        <Inspector
-          project={activeProject ?? null}
-          models={models}
-          onClose={() => setInspectorOpen(false)}
-          onConfigureModels={() => setPopupOpen(true)}
-          onEditProject={setEditingProjectId}
-        />
-      )}
+
       </div>
-      {appMode === 'code'  && <CodingWorkspace onExit={() => setAppMode('chat')} onSettings={() => setSettingsOpen(true)} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/>}
+      {appMode === 'code'  && <CodingWorkspace onExit={() => setAppMode('chat')} onSettings={openSettings} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/>}
       {settingsOpen && (
         <SettingsShell
+          initialSection={settingsSection}
+          appearanceStatus={appearanceStatus} appearanceError={appearanceError} retryAppearance={retryAppearance}
           onClose={() => setSettingsOpen(false)}
           theme={theme}
           onTheme={setTheme}

@@ -1,5 +1,6 @@
 import type { UsageSummary } from './types';
-import type { AuthUser } from './api';
+import type { Provider } from './types';
+import type { AuthUser, PasskeyInfo, SessionInfo } from './api';
 
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object';
 const count = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
@@ -30,4 +31,22 @@ export function parseUsers(value: unknown): { users: AuthUser[] } {
     throw new Error('The server returned an invalid users response.');
   }
   return value as { users: AuthUser[] };
+}
+
+export function parseProfile(value: unknown): { user: AuthUser; passkeys: PasskeyInfo[]; sessions?: SessionInfo[] } {
+  if (!record(value) || !record(value.user) || !Array.isArray(value.passkeys) ||
+      !value.passkeys.every(k => record(k) && ['id', 'name', 'deviceType'].every(key => typeof k[key] === 'string')) ||
+      (value.sessions !== undefined && (!Array.isArray(value.sessions) || !value.sessions.every(s => record(s) && typeof s.id === 'string' && count(s.lastSeenAt))))) {
+    throw new Error('The server returned an invalid profile response.');
+  }
+  parseUsers({ users: [value.user] });
+  return value as ReturnType<typeof parseProfile>;
+}
+
+export function parseProviders(value: unknown): { providers: Provider[] } {
+  if (!record(value) || !Array.isArray(value.providers) || !value.providers.every(p =>
+    record(p) && ['id', 'label', 'baseUrl'].every(key => typeof p[key] === 'string'))) {
+    throw new Error('The server returned an invalid connections response.');
+  }
+  return value as { providers: Provider[] };
 }

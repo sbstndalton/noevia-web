@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AccountMenu } from './AccountMenu';
 import { PreviewPanel } from './PreviewPanel';
 import { ShellIcon } from './ShellIcon';
-export function CodingWorkspace({ onExit, onSettings, theme, onToggleTheme }: { onExit:()=>void;onSettings:()=>void;theme:'light'|'dark';onToggleTheme:()=>void }) {
+export function CodingWorkspace({ onExit, onSettings, theme, onToggleTheme }: { onExit:()=>void;onSettings:(section?:'general'|'usage')=>void;theme:'light'|'dark';onToggleTheme:()=>void }) {
   const [page,setPage]=useState('New task');
   const [draft,setDraft]=useState('');
   const [panel,setPanel]=useState(false);
