@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../api';
 
-type Step = { ctx: number; kind: 'load' | 'long'; status: 'running' | 'passed' | 'failed' | 'skipped'; reason?: string; seconds?: number; minAvailableGib?: number; progress?: number; etaSeconds?: number; promptPerSecond?: number };
-type Job = { id: string; model: string; promptBudgetSeconds?: number; status: 'running' | 'passed' | 'failed' | 'cancelled' | 'interrupted'; phase: string; steps: Step[]; result?: { loadCtx?: number; verifiedCtx?: number; appliedCtx?: number }; error?: string; restored?: boolean; memoryGuard?: string; memoryFloorGib?: number };
+type Step = { ctx: number; kind: 'load' | 'long'; status: 'running' | 'passed' | 'failed' | 'skipped'; reason?: string; seconds?: number; minAvailableGib?: number; progress?: number; etaSeconds?: number; promptPerSecond?: number; promptSeconds?: number };
+type Job = { id: string; model: string; promptBudgetSeconds?: number; status: 'running' | 'passed' | 'failed' | 'cancelled' | 'interrupted'; phase: string; steps: Step[]; result?: { loadCtx?: number; verifiedCtx?: number; appliedCtx?: number; loaded?: boolean }; error?: string; restored?: boolean; memoryGuard?: string; memoryFloorGib?: number };
 type HistoryEntry = { at: number; promptBudgetSeconds?: number; loadCtx?: number; verifiedCtx?: number; appliedCtx?: number; slots?: number };
 const tokens = (n: number) => n.toLocaleString('en-US');
 
@@ -48,7 +48,7 @@ export function NativeCalibration({ model, onChanged, autoFocus = false }: { mod
     {running && !mine && <p role="status">Another model ({job?.model}) is being calibrated. Chat is paused until it finishes.</p>}
     {mine && <div className="native-calibration-job" aria-live="polite">
       <p role="status"><strong>{mine.status === 'running' ? mine.phase : mine.status === 'passed' ? `Saved ${tokens(mine.result?.appliedCtx || 0)} tokens` : mine.status === 'cancelled' ? 'Cancelled' : mine.status === 'interrupted' ? 'Interrupted' : 'Calibration failed'}</strong>
-        {mine.status === 'passed' && <> · loads up to {tokens(mine.result?.loadCtx || 0)}; a full prompt fits the time limit up to {tokens(mine.result?.verifiedCtx || 0)}</>}</p>
+        {mine.status === 'passed' && <> · loads up to {tokens(mine.result?.loadCtx || 0)}; a full prompt fits the time limit up to {tokens(mine.result?.verifiedCtx || 0)}. {mine.result?.loaded ? 'The model is loaded with the new profile.' : 'The new profile is saved; the model loads on the next chat.'}</>}</p>
       {mine.error && <p role="alert">{mine.error}{mine.restored ? ' The original profile was restored.' : ''}</p>}
       {mine.status === 'cancelled' && mine.restored && <p>The original profile was restored.</p>}
       {mine.memoryGuard === 'unavailable' && <p>noevia cannot read this host's memory, so the low-memory guard is off. Failed loads still stop each step.</p>}
@@ -56,7 +56,7 @@ export function NativeCalibration({ model, onChanged, autoFocus = false }: { mod
         <thead><tr><th scope="col">Context</th><th scope="col">Test</th><th scope="col">Result</th><th scope="col">Time</th></tr></thead>
         <tbody>{mine.steps.map((step, i) => <tr key={i} data-status={step.status}>
           <td>{tokens(step.ctx)}</td><td>{step.kind === 'long' ? 'Long prompt' : 'Load'}</td>
-          <td>{step.status === 'running' ? (step.progress != null ? `Prompt ${step.progress}%${step.etaSeconds != null ? ` · about ${step.etaSeconds} s left` : ''}` : 'Running…') : step.status === 'passed' ? 'Passed' : step.status === 'skipped' ? 'Skipped' : 'Failed'}{step.reason ? <small>{step.reason}</small> : null}{step.promptPerSecond ? <small>{tokens(step.promptPerSecond)} prompt tokens/s</small> : null}{step.minAvailableGib != null ? <small>Lowest free memory {step.minAvailableGib} GiB</small> : null}</td>
+          <td>{step.status === 'running' ? (step.progress != null ? `Prompt ${step.progress}%${step.etaSeconds != null ? ` · about ${step.etaSeconds} s left` : ''}` : 'Running…') : step.status === 'passed' ? 'Passed' : step.status === 'skipped' ? 'Skipped' : 'Failed'}{step.reason ? <small>{step.reason}</small> : null}{step.promptSeconds ? <small>Full prompt in {step.promptSeconds} s</small> : null}{step.promptPerSecond ? <small>{tokens(step.promptPerSecond)} prompt tokens/s</small> : null}{step.minAvailableGib != null ? <small>Lowest free memory {step.minAvailableGib} GiB</small> : null}</td>
           <td>{step.seconds != null ? `${step.seconds}s` : ''}</td></tr>)}</tbody></table></div>}
       {mine.status === 'running' && <button className="popup-tab" disabled={busy} onClick={() => void cancel()}>{busy ? 'Cancelling…' : 'Cancel calibration'}</button>}
     </div>}
