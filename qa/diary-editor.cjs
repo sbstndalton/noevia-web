@@ -22,7 +22,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  fail=true;await dialog.getByRole('button',{name:'Save',exact:true}).click();await dialog.getByRole('alert').waitFor();assert.equal(await source.inputValue(),'# My draft');
  fail=false;content='# External edit';version='2';await dialog.getByRole('button',{name:'Save',exact:true}).click();await dialog.getByText('File changed elsewhere. Draft kept.',{exact:true}).waitFor();
  await dialog.getByRole('button',{name:'Compare stored version'}).click();await dialog.getByRole('heading',{name:'Current stored version'}).waitFor();assert.equal(await source.inputValue(),'# My draft');
- await dialog.getByRole('button',{name:'Keep draft with this save base'}).click();await source.fill('# Reconciled draft');await source.press('Control+s');await dialog.getByText('Saved',{exact:true}).first().waitFor();assert.equal(content,'# Reconciled draft');assert.ok(await dialog.isVisible());
+ await dialog.getByRole('button',{name:'Keep draft with this save base'}).click();await source.fill('# Reconciled draft');await source.press('Control+s');await dialog.getByText('Saved',{exact:true}).first().waitFor();assert.equal(content,'# Reconciled draft');assert.ok(await dialog.isVisible());await page.waitForFunction(()=>document.activeElement?.id==='diary-markdown-source');
  await dialog.getByRole('button',{name:'Source & preview',exact:true}).click();
  for(const width of [375,768,1440])for(const theme of ['light','dark']){
  await page.setViewportSize({width,height:950});await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);

@@ -378,12 +378,13 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     setDraft(''); setMonth(nextMonth); setDay(nextDay); setStatus(''); setError('');
     if (nextMonth !== month) setDays({});
   };
-  const editorOperation = async (label: string, action: () => Promise<void>) => {
+  const editorOperation = async (label: string, action: () => Promise<void>, restoreFocus = false) => {
     if (busyRef.current) return;
+    const previousFocus=document.activeElement as HTMLElement|null;
     busyRef.current=true;setBusy(true);setEditorError('');setEditorStatus(label);
     try { await action(); }
     catch(e) { setEditorError(e instanceof Error?e.message:String(e));setEditorStatus('Operation failed · draft kept'); }
-    finally {busyRef.current=false;setBusy(false);}
+    finally {busyRef.current=false;setBusy(false);if(restoreFocus)requestAnimationFrame(()=>{if(previousFocus?.isConnected && (document.activeElement===document.body || document.activeElement===previousFocus))previousFocus.focus({preventScroll:true});});}
   };
   const canLeaveEditor = () => !editor || (editor.content!==null && editText===editor.content) || window.confirm('Discard your unsaved Markdown edits?');
   const currentFile = async (path: string): Promise<DiaryFile> => folder ? {path,content:(await scanLocal(folder))[path] ?? null,version:null} : readFile(path);
@@ -431,11 +432,11 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       }
       throw e;
     }
-  });
+  }, true);
   const compareStored = () => void editorOperation('Loading stored version…', async () => {
     if (!editor) return;
     setStoredVersion(await currentFile(editor.path));setEditorStatus('Review the stored version before saving again.');
-  });
+  }, true);
   const acceptStored = (discard: boolean) => {
     if(!storedVersion || busyRef.current)return;
     if(discard && !window.confirm('Discard your draft and load the stored version?'))return;
