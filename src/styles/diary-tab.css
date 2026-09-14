@@ -94,6 +94,9 @@
 
 /* List pips take the accent, so structure reads at a glance. */
 .md-pip { color:var(--accent-text); font-weight:600; }
+.md-task-box { display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; border:1.5px solid var(--control-border); border-radius:4px; font-size:10px; line-height:1; color:var(--accent-ink); vertical-align:-2px; }
+.md-task-done .md-task-box { background:var(--nav-active); border-color:var(--control-border); }
+.md-task-done { color:var(--text-secondary); }
 
 /* Tables were unsupported and rendered as raw pipes. Wide ones scroll in
    their own container so the page body never scrolls sideways. */

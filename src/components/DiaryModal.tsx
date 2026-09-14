@@ -123,6 +123,16 @@ export function MarkdownPreview({ text, internalLink }: { text: string; internal
     }
     const bullet = /^(\s*)[-*+] (.*)$/.exec(line);
     if (bullet) {
+      // GFM task lists: a leading [ ] / [x] becomes a checkbox indicator.
+      const task = /^\[( |x|X)\] (.*)$/.exec(bullet[2]);
+      if (task) {
+        out.push(
+          <p className={`md-bullet md-task${task[1].toLowerCase() === 'x' ? ' md-task-done' : ''}`} key={i} style={bullet[1] ? { paddingInlineStart: bullet[1].length * 8 } : undefined}>
+            <span className="md-task-box" aria-hidden="true">{task[1].toLowerCase() === 'x' ? '✓' : ''}</span> {inline(task[2])}
+          </p>,
+        );
+        continue;
+      }
       out.push(<p className="md-bullet" key={i} style={bullet[1] ? { paddingInlineStart: bullet[1].length * 8 } : undefined}><span className="md-pip">•</span> {inline(bullet[2])}</p>);
       continue;
     }
