@@ -6,6 +6,9 @@ const {createFixture}=require('./diary-fixture.cjs');
  const fixture=createFixture(31331);await fixture.listen();
  const browser=await chromium.launch({headless:true,channel:'chrome'});
  const errors=[];
+ async function addContext(page){
+   await page.route('**/api/chats/*/context',route=>route.fulfill({json:{project:{id:'synthetic-mobile-context',name:'Synthetic mobile context',model:'Synthetic reasoning model with a long name',files:[],assets:[],toolboxes:['core']}}}));
+ }
  async function reachable(locator,height){
    await locator.scrollIntoViewIfNeeded();
    assert.ok(await locator.evaluate((el,h)=>{const r=el.getBoundingClientRect();const x=r.x+r.width/2,y=r.y+r.height/2;return r.width>0&&r.height>0&&x>=0&&x<innerWidth&&y>=0&&y<h&&el.contains(document.elementFromPoint(x,y));},height),'Control must be reachable inside the visible viewport');
@@ -15,7 +18,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    const page=await browser.newPage({viewport:{width,height},isMobile:width<768,hasTouch:true});
    page.on('pageerror',e=>errors.push(e.message));
    await page.addInitScript(t=>localStorage.setItem('cowork-theme',t),theme);
-   await page.goto('http://localhost:31331');
+   await addContext(page);await page.goto('http://localhost:31331');
    const composer=page.getByPlaceholder('Message noevia…');await composer.waitFor();await reachable(composer,height);
    await composer.fill('Synthetic draft retained while resizing');
    await page.getByRole('button',{name:'Choose model'}).click();
@@ -55,7 +58,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    const v=new EventTarget();Object.assign(v,{height:667,width:375,scale:1,offsetTop:0,offsetLeft:0});
    Object.defineProperty(window,'visualViewport',{value:v});
  });
- await page.goto('http://localhost:31331');
+ await addContext(page);await page.goto('http://localhost:31331');
  const composer=page.getByPlaceholder('Message noevia…');await composer.fill('Keyboard draft');
  await page.evaluate(()=>{visualViewport.height=360;visualViewport.dispatchEvent(new Event('resize'));});
  await page.waitForFunction(()=>document.documentElement.hasAttribute('data-short-viewport'));
