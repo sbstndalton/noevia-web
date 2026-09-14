@@ -14,7 +14,7 @@ export function memoryAssessment(sizeGB: number | null | undefined, plan: Memory
 }
 export type ModelUse = 'all'|'vision'|'reasoning'|'tools';
 export function matchesModelUse(labels: string[], use: ModelUse): boolean {
-  if(use==='all')return !labels.some(label=>/^(embedding|embeddings|reranking|reranker)$/i.test(label));
+  if(use==='all')return !labels.some(label=>/^(embedding|embeddings|rerank|reranking|reranker)$/i.test(label));
   const allowed={vision:/^(vision|multimodal)$/i,reasoning:/^(reasoning|thinking)$/i,tools:/^(tools|tool-use|tool_use|function-calling)$/i};
   return labels.some(label=>allowed[use].test(label));
 }

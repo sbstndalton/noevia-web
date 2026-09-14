@@ -1,4 +1,4 @@
-// Synthetic populated projects, uploads and full write arguments at touch sizes.
+// Synthetic populated projects and uploads at touch sizes; approvals: mobile-approvals.cjs.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');

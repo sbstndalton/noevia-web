@@ -9,7 +9,7 @@ const upstream=http.createServer(async(req,res)=>{
  res.setHeader('Content-Type','application/json');calls.push(req.url);
  if(req.url.endsWith('/health'))return res.end(JSON.stringify(health()));
  if(req.url.endsWith('/load')){if(fail){res.statusCode=503;return res.end('{}');}loaded=body.model_name;return res.end('{}');}
- if(req.url.endsWith('/models'))return res.end(JSON.stringify({data:[{id:'fast',downloaded:true},{id:'smart',downloaded:true}]}));
+ if(req.url.endsWith('/models'))return res.end(JSON.stringify({data:[{id:'embedding-only',downloaded:true,labels:['embeddings']},{id:'fast',downloaded:true},{id:'smart',downloaded:true}]}));
  if(req.url.endsWith('/chat/completions')){
   if(!body.stream){if(failClassifier){res.statusCode=503;return res.end('{}');}return res.end(JSON.stringify({choices:[{finish_reason:'stop',message:{content:'FAST'}}]}));}
   assert.equal(loaded,body.model);res.setHeader('Content-Type','text/event-stream');
@@ -29,6 +29,10 @@ const meter=r=>r.text.split('\n').filter(x=>x.startsWith('data: ')).map(x=>{try{
  try{
   for(let i=0;i<100;i++){try{if((await api('/api/setup/status')).status===200)break;}catch{}await new Promise(r=>setTimeout(r,50));}
   const setup=await api('/api/setup/complete',{setupCode:fs.readFileSync(path.join(dir,'first-run-setup-code'),'utf8').trim(),publicOrigin:origin,username:'contextqa',displayName:'Synthetic Context QA',password:'synthetic allocation test password',diaryEnabled:false});assert.equal(setup.status,201,setup.text);
+  loaded='embedding-only';
+  const noChat=await api('/api/chat',{spaceId:'free',chatId:'embedding-default-qa',message:'Synthetic ordinary chat',history:[]});
+  assert.equal(noChat.status,400,noChat.text);assert.match(noChat.text,/no model selected/);
+  assert.ok(!calls.some(url=>url.endsWith('/chat/completions')),'Embedding-only loaded model must not become the chat default');
   const created=await api('/api/projects',{name:'Synthetic cold model',model:'fast',toolboxes:[]});const project=created.body.project||created.body;assert.ok(project.id,created.text);
   const chat=()=>api('/api/chat',{spaceId:project.id,projectId:project.id,chatId:'cold-qa',message:'Hello',history:[]});
   calls.length=0;loaded='smart';let result=await chat();assert.equal(meter(result)?.limit,131072,result.text);assert.ok(result.text.includes('Synthetic answer.'));

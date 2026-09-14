@@ -167,6 +167,7 @@ button:disabled { opacity: .5; cursor: default; }
 .empty-state h2 { font-weight: 500; color: var(--text-primary); }
 .tool-chip, .model-name { font-family: var(--font-ui); }
 .tool-approval { border-radius: 12px; }
+.tool-approval-actions .btn { min-height: 44px; height: auto; }
 
 /* Operational metrics remain available on demand. */
 .stats-disclosure { flex-shrink: 0; padding: 0 24px 10px; font-size: 11px; color: var(--text-secondary); }

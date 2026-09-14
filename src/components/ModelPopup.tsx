@@ -1,6 +1,6 @@
 import { NativeModelProfile } from './NativeModelProfile';
 import { ModelGuidance, MemoryPlanner, ModelMemoryEstimate } from './ModelGuidance';
-import { emptyMemoryPlan } from '../model-guidance';
+import { emptyMemoryPlan, matchesModelUse } from '../model-guidance';
 import type { MemoryPlan } from '../model-guidance';
 import { MtpArtifact } from './MtpArtifact';
 import { MtpControl } from './MtpControl';
@@ -81,6 +81,8 @@ function SwitchTab({
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [modelsLoading, setModelsLoading] = useState(true);
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [capabilities, setCapabilities] = useState<{kind:string;runtimeOptions:boolean}|null>(null);
+  const chatModels = models.filter(m => matchesModelUse(m.labels, 'all'));
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [cloudModel, setCloudModel] = useState('');
@@ -92,6 +94,7 @@ function SwitchTab({
   const refresh = () => {
     setModelsLoading(true);setErr(null);
     fetchInstalledModels().then(setModels).catch(() => setErr('Model manager unavailable or disabled')).finally(()=>setModelsLoading(false));
+    apiFetch('/api/models/capabilities').then(async r => { if(!r.ok)throw Error('Capabilities unavailable'); return r.json(); }).then(setCapabilities).catch(() => setCapabilities(null));
     fetchProviders().then((r) => setProviders(r.providers || [])).catch(() => undefined);
     fetchAutoRoles().then(setAutoInfo).catch(() => undefined);
     fetchToolboxes().then((r) => { setToolboxes(r.toolboxes || []); setMcpStatus(r.mcp || null); }).catch(() => undefined);
@@ -273,7 +276,7 @@ function SwitchTab({
                 onChange={(e) => setPendingRoles((prev) => ({ ...prev, [role]: e.target.value }))}
               >
                 <option value="">{role === 'vision' ? '— none —' : '— pick a model —'}</option>
-                {!modelsLoading && models.map((m) => (
+                {!modelsLoading && chatModels.map((m) => (
                   <option key={m.name} value={m.name}>
                     {m.name}
                   </option>
@@ -398,14 +401,15 @@ function SwitchTab({
           {activeProvider ? ` via ${activeProvider.label}` : ''}
         </p>
       )}
-      {activeProvider?.managed && models.find(m=>m.name===activeProject?.model) && <MtpControl key={activeProject?.model} model={models.find(m=>m.name===activeProject?.model)!} onChanged={()=>{refresh();onChanged();}} />}
+      {activeProvider?.managed && capabilities?.runtimeOptions && models.find(m=>m.name===activeProject?.model) && <MtpControl key={activeProject?.model} model={models.find(m=>m.name===activeProject?.model)!} onChanged={()=>{refresh();onChanged();}} />}
+      {activeProvider?.managed && capabilities?.kind === 'llamacpp' && <p className="rail-empty" style={{margin:0}}>MTP is configured in the native runtime profile. Administrators can inspect it in Manage. Live acceptance appears in chat statistics after speculative decoding.</p>}
       {!activeProvider?.managed && (
         <p className="rail-empty" style={{ margin: 0 }}>
           This provider does not expose model management. Enter its model ID above;
           messages will be sent to {activeProvider?.label || 'the selected provider'}.
         </p>
       )}
-      {activeProvider?.managed && models.map((m) => (
+      {activeProvider?.managed && chatModels.map((m) => (
         <button
           key={m.name}
           className="model-row"
