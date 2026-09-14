@@ -1171,6 +1171,14 @@ body { isolation:isolate; background:var(--bg-app); }
 .native-profile-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .native-profile-actions button { min-height: 44px; border: 1px solid var(--control-border); }
 @media (max-width: 480px) { .native-profile-fields { grid-template-columns: 1fr; } }
+.native-profile-suggest { display: flex; flex-direction: column; gap: 8px; padding-block: 12px; }
+.native-profile-suggest > button { align-self: flex-start; min-height: 44px; border: 1px solid var(--control-border); }
+.native-profile-suggest ul { margin: 0; padding-inline-start: 20px; line-height: 1.5; }
+.native-profile-suggest small { color: var(--text-secondary); }
+.native-profile-estimates { max-height: 240px; overflow: auto; border: 1px solid var(--control-border); border-radius: 8px; }
+.native-profile-estimates table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.native-profile-estimates th, .native-profile-estimates td { padding: 6px 10px; text-align: start; border-bottom: 1px solid var(--control-border); }
+.native-profile-estimates thead th { position: sticky; top: 0; background: var(--bg); }
 
 @media (max-width: 1024px) {
   .sidebar .nav-item, .sidebar .new-chat-btn, .sidebar .chat-row .nav-item, .sidebar .proj-row .nav-item { min-height:44px; }
