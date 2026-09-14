@@ -1215,3 +1215,34 @@ body { isolation:isolate; background:var(--bg-app); }
 .diary-import-preview .modal-btn { margin-block-start:12px; }
 
 .diary-workspace-import .diary-workspace-filter { margin-block:12px; }
+
+/* Short screens scroll the entire rail so history and account controls cannot
+   squeeze each other out. Each group keeps its natural row height. */
+.sidebar .sidebar-history .spaces { max-height: none; }
+@media (max-height: 600px) {
+  .sidebar:not(.coding-sidebar) { overflow-y: auto; overscroll-behavior-y: contain; }
+  .sidebar:not(.coding-sidebar) > * { flex-shrink: 0; }
+  .sidebar:not(.coding-sidebar) .sidebar-history { flex: none; overflow: visible; }
+}
+[data-short-viewport] .sidebar:not(.coding-sidebar) { overflow-y: auto; overscroll-behavior-y: contain; }
+[data-short-viewport] .sidebar:not(.coding-sidebar) > * { flex-shrink: 0; }
+[data-short-viewport] .sidebar:not(.coding-sidebar) .sidebar-history { flex: none; overflow: visible; }
+@media (hover: none), (max-width: 700px) {
+  .sidebar:not(.coding-sidebar) button { min-height: 44px; min-width: 44px; }
+  .sidebar .row-action { flex-basis: 44px; width: 44px; height: 44px; }
+  .ctx-menu .ctx-item { min-height: 44px; }
+}
+@media (hover: none), (max-width: 700px) {
+  /* Keep the title legible: Pin and Archive remain available in Options. */
+  .sidebar .chat-row .row-actions .row-action:not(:last-child) { display: none; }
+  .sidebar .row-actions { position: static; opacity: 1; pointer-events: auto; }
+  .sidebar .chat-row:hover .nav-item, .sidebar .chat-row:has(:focus-visible) .nav-item,
+  .sidebar .chat-row:hover .nested-chat-title, .sidebar .chat-row:has(:focus-visible) .nested-chat-title,
+  .sidebar .proj-row:hover .project-disclosure, .sidebar .proj-row:has(:focus-visible) .project-disclosure { padding-right: 7px; }
+  .sidebar-section-head .section-options { opacity: 1; }
+}
+@media (max-width: 600px) {
+  .sidebar:not(.coding-sidebar).is-expanded { background: var(--bg-chrome); }
+}
+
+.ctx-menu { max-height: calc(var(--visible-viewport-height, 100dvh) - 16px); }

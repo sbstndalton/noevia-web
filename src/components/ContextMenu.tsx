@@ -31,13 +31,24 @@ export function ContextMenu({
   // edge — a right-click near the bottom right is the normal case, not an edge
   // case.
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    setPos({
-      x: Math.max(8, Math.min(at.x, window.innerWidth - r.width - 8)),
-      y: Math.max(8, Math.min(at.y, window.innerHeight - r.height - 8)),
-    });
+    const place = () => {
+      const el = ref.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const viewport = window.visualViewport;
+      const height = viewport && viewport.scale === 1 ? viewport.height : window.innerHeight;
+      setPos({
+        x: Math.max(8, Math.min(at.x, window.innerWidth - r.width - 8)),
+        y: Math.max(8, Math.min(at.y, height - r.height - 8)),
+      });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.visualViewport?.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.visualViewport?.removeEventListener('resize', place);
+    };
   }, [at.x, at.y]);
 
   useEffect(() => {
