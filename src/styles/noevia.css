@@ -1201,3 +1201,9 @@ body { isolation:isolate; background:var(--bg-app); }
 .diary-workspace-search form { display:grid; gap:12px; margin-block:12px; }
 .diary-workspace-search button { min-height:44px; }
 @media(max-width:600px) { .diary-workspace-filter input { font-size:16px; min-width:0; } }
+
+.diary-workspace-export { overflow-wrap: anywhere; }
+.diary-workspace-export .modal-btn { min-height: 44px; max-width: 100%; white-space: normal; }
+/* Keep scroll-to-control and keyboard focus above the fixed telemetry row. */
+.diary-markdown-workspace { padding-bottom:calc(88px + env(safe-area-inset-bottom, 0px)); scroll-padding-block:24px calc(88px + env(safe-area-inset-bottom, 0px)); }
+.diary-workspace-export button { scroll-margin-block:16px; }

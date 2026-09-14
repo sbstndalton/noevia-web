@@ -1,3 +1,4 @@
+import { apiFetch } from '../api';
 import type { FileSearchReport, FileSearchFilters } from '../diary-file-search';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import type { DiaryFile, FileEntry } from '../diary-workspace';
@@ -19,6 +20,7 @@ type Props = {
 /** Editing is a page surface. The parent retains the source across app navigation. */
 export function DiaryMarkdownWorkspace(p: Props) {
   const [mode, setMode] = useState<'source' | 'preview' | 'split'>('split');
+  const [exporting,setExporting]=useState(false),[exportError,setExportError]=useState(''),[exportStatus,setExportStatus]=useState('');
   const [filter, setFilter] = useState('');
   const [query,setQuery]=useState(''),[searching,setSearching]=useState(false),[searchError,setSearchError]=useState('');
   const [filters,setFilters]=useState<FileSearchFilters>({});
@@ -55,6 +57,20 @@ export function DiaryMarkdownWorkspace(p: Props) {
     const anchor=document.createElement('a');anchor.href=url;anchor.download=p.file.path.split('/').pop() || 'note.md';anchor.click();
     window.setTimeout(()=>URL.revokeObjectURL(url),1000);
   };
+  const downloadWorkspace=async()=>{
+    setExporting(true);setExportError('');setExportStatus('Reading and verifying stored files…');
+    const controller=new AbortController(),timer=window.setTimeout(()=>controller.abort(),300000);
+    try {
+      const response=await apiFetch('/api/diary/workspace-export',{signal:controller.signal});
+      if(!response.ok){const body=await response.json();throw Error(body.error || 'Export failed. Please retry.');}
+      if(!response.headers.get('content-type')?.startsWith('application/zip'))throw Error('Unexpected export response. Please retry.');
+      setExportStatus('Preparing download…');
+      const blob=await response.blob(),url=URL.createObjectURL(blob);
+      const anchor=document.createElement('a');anchor.href=url;anchor.download='noevia-workspace.zip';anchor.click();
+      window.setTimeout(()=>URL.revokeObjectURL(url),60000);setExportStatus('Download ready. Check your browser downloads.');
+    }catch(e){setExportStatus('');setExportError(controller.signal.aborted?'Export timed out. Retry when storage is available.':e instanceof Error?e.message:'Export failed. Please retry.');}
+    finally{window.clearTimeout(timer);setExporting(false);}
+  };
   return <section className="diary-markdown-workspace" aria-label="Markdown workspace" onKeyDown={e=>{
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='s') {
       e.preventDefault(); if (!p.busy && !p.stored && p.file.path) p.onSave();
@@ -81,6 +97,11 @@ export function DiaryMarkdownWorkspace(p: Props) {
           <label className="diary-workspace-filter">Filter this folder<input value={filter} onChange={e=>setFilter(e.target.value)} type="search" /></label>
           <div className="diary-workspace-file-actions"><button className="popup-tab" disabled={p.busy} onClick={p.onNew}>New file</button><button className="popup-tab" disabled={p.busy || p.filesLoading} onClick={p.onRefresh}>Refresh files</button></div>
           {p.filesLoading ? <p role="status">Loading files…</p> : p.filesError ? <div role="alert"><p>{p.filesError}</p><button className="popup-tab" onClick={p.onRefresh}>Retry file list</button></div> : <nav className="diary-file-list" aria-label="Markdown files">{rows.map(file=><button key={file.path} title={file.path} disabled={p.busy} aria-current={!file.isDir && file.path===p.file.path?'page':undefined} onClick={()=>file.isDir?p.onFolder(file.path):p.onOpen(file.path)}><ShellIcon name={file.isDir?'folder':'book'} size={16}/>{file.name}</button>)}{!rows.length && <p>{filter ? 'No matching files in this folder.' : 'No Markdown files in this folder.'}</p>}</nav>}
+        </details>
+        <details className="diary-workspace-export"><summary>Export workspace</summary>
+          <p>{p.local ? 'Whole-workspace ZIP export is available for saved Diary storage. This folder is already on your computer; copy it with your file manager.' : 'Download all stored files, including Markdown, attachments and empty folders, with a checksum manifest. Unsaved drafts and optional chat attachments are not included. Up to 5,000 files, 64 MiB per file and 256 MiB total.'}</p>
+          {!p.local && <button className="modal-btn secondary" disabled={p.busy || exporting} onClick={()=>void downloadWorkspace()}>{exporting?'Preparing ZIP…':'Download workspace ZIP'}</button>}
+          {exportStatus && <p role="status">{exportStatus}</p>}{exportError && <p role="alert">{exportError}</p>}
         </details>
         <details className="diary-workspace-search"><summary>Search &amp; backlinks</summary><p>Search stored Markdown in this folder and its subfolders. Up to 50 files / 4 MiB per search; unsaved text is not included.</p><form onSubmit={e=>{e.preventDefault();void search();}}><label className="diary-workspace-filter">Search text<input type="search" minLength={2} maxLength={200} required={!hasFilter} value={query} onChange={e=>setQuery(e.target.value)}/></label>
           <label className="diary-workspace-filter">From date<input type="date" value={filters.from || ''} onChange={e=>setFilters({...filters,from:e.target.value})}/></label>
