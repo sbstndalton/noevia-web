@@ -27,7 +27,7 @@ export function DiaryWorkspaceImport({enabled, busy, onImported}:{enabled:boolea
     finally{window.clearTimeout(timer);setWorking(false);}
   };
   return <details className="diary-workspace-export diary-workspace-import"><summary>Import workspace</summary>
-    <p>{enabled?'Import a noevia workspace ZIP into a new folder under Imports. Existing files and Diary settings stay intact. Up to 32 MiB per ZIP, 5,000 files and 256 MiB expanded.':'ZIP import is available for app-managed Diary storage. Browser folders and legacy storage use isolated operator restore.'}</p>
+    <p>{enabled?'Import a noevia workspace ZIP into a new folder under Imports. Existing files and Diary settings stay intact. Up to 32 MiB per ZIP, 5,000 files and 256 MiB expanded. Exported Trash records stay inside the imported folder for isolated operator recovery; they do not become active notes or entries in this Diary’s Trash.':'ZIP import is available for app-managed Diary storage. Browser folders and legacy storage use isolated operator restore.'}</p>
     {enabled && <>
       {error && <p role="alert" tabIndex={-1} ref={errorRef}>{error}</p>}
       <label className="diary-workspace-filter">Workspace ZIP<input type="file" accept=".zip,application/zip" disabled={busy || working} onChange={e=>{setFile(e.target.files?.[0] || null);invalidate();}}/></label>

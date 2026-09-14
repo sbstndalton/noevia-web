@@ -118,6 +118,22 @@ function tar(args){const result=spawnSync('tar',args,{encoding:'utf8'});assert.e
   assert.equal(importedFile.body.content,'Synthetic version one');
   assert.equal((await api('/api/diary/file',{path:'AI Memory/restore-check.md'})).body.content,'Synthetic version one');
 
+  const trashBody={action:'trash',id:require('crypto').randomUUID(),path:'Imports/SyntheticCopy/AI Memory/restore-check.md',version:importedFile.body.version};
+  const beforeTrashCalls=providerCalls;
+  assert.equal((await client()('/api/diary/workspace-trash')).status,401);
+  assert.equal((await api('/api/diary/workspace-trash',{},'PUT')).status,405);
+  const trashed=await api('/api/diary/workspace-trash',trashBody);assert.equal(trashed.status,200,trashed.text);
+  assert.equal((await api('/api/diary/workspace-trash',trashBody)).body.alreadyApplied,true);
+  assert.equal(providerCalls,beforeTrashCalls,'trash and uncertain retry have no inference');
+  assert.equal((await api('/api/diary/workspace-trash')).body.records[0].state,'trashed');
+  const trashExport=await api('/api/diary/workspace-export');assert.equal(trashExport.status,200,trashExport.text);
+  const trashZip=path.join(root,'trash.zip');fs.writeFileSync(trashZip,trashExport.bytes);
+  const trashVerify=spawnSync(path.join(repo,'services/diary/.venv/bin/python'),['-m','agent.workspace_restore',trashZip],{cwd:path.join(repo,'services/diary'),encoding:'utf8'});
+  assert.equal(trashVerify.status,0,trashVerify.stderr);assert.ok(JSON.parse(trashVerify.stdout).files.includes('.noevia-trash/'+trashBody.id+'.json'));
+  const recoveredTrash=await api('/api/diary/workspace-trash',{action:'restore',id:trashBody.id});assert.equal(recoveredTrash.status,200,recoveredTrash.text);
+  assert.equal(providerCalls,beforeTrashCalls,'restore has no inference');
+  assert.equal((await api('/api/diary/file',{path:trashBody.path})).body.content,'Synthetic version one');
+
   const device=(await api('/api/profile/app-passwords',{name:'Synthetic restore DAV',scope:'lan'})).body;
   const davHeaders={Authorization:'Basic '+Buffer.from('restoreqa:'+device.password).toString('base64')};
   const dav=(method,path,body,extra={})=>fetch('http://localhost:31286/dav/restoreqa/'+path,{method,headers:{...davHeaders,...extra},body});

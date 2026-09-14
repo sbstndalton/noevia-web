@@ -1,3 +1,4 @@
+import { DiaryWorkspaceTrash } from './DiaryWorkspaceTrash';
 import { DiaryWorkspaceImport } from './DiaryWorkspaceImport';
 import { apiFetch } from '../api';
 import type { FileSearchReport, FileSearchFilters } from '../diary-file-search';
@@ -19,7 +20,9 @@ type Props = {
 };
 
 /** Editing is a page surface. The parent retains the source across app navigation. */
-export function DiaryMarkdownWorkspace(p: Props) {
+export function DiaryMarkdownWorkspace(input: Props) {
+  const [trashWorking,setTrashWorking]=useState(false);
+  const p={...input,busy:input.busy || trashWorking};
   const [mode, setMode] = useState<'source' | 'preview' | 'split'>('split');
   const [exporting,setExporting]=useState(false),[exportError,setExportError]=useState(''),[exportStatus,setExportStatus]=useState('');
   const [filter, setFilter] = useState('');
@@ -104,6 +107,7 @@ export function DiaryMarkdownWorkspace(p: Props) {
           {!p.local && <button className="modal-btn secondary" disabled={p.busy || exporting} onClick={()=>void downloadWorkspace()}>{exporting?'Preparing ZIP…':'Download workspace ZIP'}</button>}
           {exportStatus && <p role="status">{exportStatus}</p>}{exportError && <p role="alert">{exportError}</p>}
         </details>
+        <DiaryWorkspaceTrash enabled={!p.local && !!p.managed} busy={p.busy} file={p.file} dirty={dirty || !!p.stored || p.syncPending} onWorking={setTrashWorking} onChanged={p.onRefresh}/>
         <DiaryWorkspaceImport enabled={!p.local && !!p.managed} busy={p.busy} onImported={p.onRefresh}/>
         <details className="diary-workspace-search"><summary>Search &amp; backlinks</summary><p>Search stored Markdown in this folder and its subfolders. Up to 50 files / 4 MiB per search; unsaved text is not included.</p><form onSubmit={e=>{e.preventDefault();void search();}}><label className="diary-workspace-filter">Search text<input type="search" minLength={2} maxLength={200} required={!hasFilter} value={query} onChange={e=>setQuery(e.target.value)}/></label>
           <label className="diary-workspace-filter">From date<input type="date" value={filters.from || ''} onChange={e=>setFilters({...filters,from:e.target.value})}/></label>
