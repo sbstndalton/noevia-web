@@ -74,6 +74,9 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const [editor, setEditor] = useState<DiaryFile | null>(null);
   const [editText, setEditText] = useState('');
   const [preview, setPreview] = useState(true);
+  const [splitPreview, setSplitPreview] = useState(false);
+  const [editorStatus, setEditorStatus] = useState('');
+  const [storedVersion, setStoredVersion] = useState<DiaryFile | null>(null);
   const [revision, setRevision] = useState(0);
   const session = useRef(randomSessionId());
   const [recoveryOwner,setRecoveryOwner]=useState('');
@@ -370,8 +373,9 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     if (nextMonth !== month) setDays({});
   };
   const openFile = (path: string) => void run(async () => {
+    if (editor && editText !== (editor.content || '') && !window.confirm('Discard your unsaved Markdown edits?')) return;
     const file = folder ? { path, content: (await scanLocal(folder))[path] ?? null, version: null } : await readFile(path);
-    setEditor(file); setEditText(file.content || ''); setPreview(true);
+    setEditor(file); setEditText(file.content || ''); setPreview(true); setEditorStatus(''); setStoredVersion(null);
   });
   const closeEditor = () => {
     if (busy) return;
@@ -379,10 +383,23 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     setEditor(null);
   };
   const saveEditor = () => void run(async () => {
+    if (!editor || storedVersion) return;
+    setEditorStatus('Saving…');
+    try {
+      if (folder) {
+        await commitLocal({ [editor.path]: { before: editor.content, content: editText } });
+        setEditor({ ...editor, content: editText });
+      } else setEditor(await writeFile({ ...editor, content: editText }));
+      setRevision(n => n+1); setEditorStatus('Saved');
+    } catch (e) {
+      setEditorStatus('Save failed · draft kept');
+      throw e;
+    }
+  });
+  const compareStored = () => void run(async () => {
     if (!editor) return;
-    if (folder) await commitLocal({ [editor.path]: { before: editor.content, content: editText } });
-    else await writeFile({ ...editor, content: editText });
-    setEditor(null); setRevision(n => n+1); setStatus('Markdown saved.');
+    const current = folder ? {path:editor.path, content:(await scanLocal(folder))[editor.path] ?? null, version:null} : await readFile(editor.path);
+    setStoredVersion(current); setEditorStatus('Review the stored version before saving again.');
   });
   const connectLocal = () => {
     const picker = directoryPicker();
@@ -435,13 +452,27 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       {status && <p className="diary-save-status" role="status">{status}</p>}
 
     </section><DiaryContextPanel recovery={folder && <section><label className="diary-sync-toggle"><input type="checkbox" checked={localRecoveryEnabled} disabled={busy || !recoveryOwner} onChange={e=>void toggleLocalRecovery(e.target.checked)} />Save recovery on this browser</label><p className="diary-context-note">Stores drafts, conversation and tool history, pending file saves and folder identity in this browser profile. Anyone with access to this profile may read it. Reconnect the original folder after reopening. Clearing browser data removes these copies. Turning this off removes this session’s recovery copy.</p></section>} busy={busy} files={files} filePath={filePath} setFilePath={setFilePath} openFile={openFile}
-      newFile={() => {setEditor({path:'AI Memory/notes.md',content:null,version:null});setEditText('');setPreview(false);}}
+      newFile={() => {setEditor({path:'AI Memory/notes.md',content:null,version:null});setEditText('');setPreview(false);setEditorStatus('');setStoredVersion(null);}}
       chooseStorage={() => setWizard('choose')} pendingCount={pendingCount} pendingLocal={Object.keys(pendingLocal).length > 0}
       folderName={folder?.name} savedLabel={savedLabel} corpusRoot={storage?.corpusRoot} sync={sync} setSync={setSync} disconnect={disconnect} /></div>
     {extraModels && extraProject && <ModelPopup projects={[extraProject]} activeProject={extraProject} onClose={()=>setExtraModels(false)} onProjectsChanged={()=>void refreshExtraProject()} />}
     {extraFiles && <DiaryModal title="Optional diary attachments" onClose={()=>setExtraFiles(false)}><p>Stored separately from your diary corpus. Used only while extras are on.</p>{(extraProject?.files || []).map(file=><div className="model-row" key={file.name}><span>{file.name}<small> · {file.attachment?.state || file.document?.state || 'ready'}</small></span><button className="popup-tab" disabled={busy || extraBusy} onClick={()=>void (async()=>{if(!extraProject || !window.confirm(`Delete attachment ${file.name} from storage?`))return;setExtraBusy(true);try{await deleteProjectFile(extraProject.id,file.name);await refreshExtraProject();}catch(err){setExtraStatus(String(err));}finally{setExtraBusy(false);}})()}>Delete attachment</button></div>)}</DiaryModal>}
 
     {wizard && <DiaryModal title="Choose diary storage" onClose={()=>{if(!busy)setWizard(null);}}>{error&&<p className="conn-banner" role="alert">{error}</p>}{wizard==='choose'?<div className="diary-storage-options"><button className="month-card" disabled={busy} onClick={()=>setWizard('local')}><strong>Folder on this computer</strong><span>Use a local or mounted SMB folder for this session.</span></button><button className="month-card" disabled={busy || !!folder} onClick={()=>setWizard('online')}><strong>Online connection</strong><span>Nextcloud, WebDAV, or S3-compatible storage.</span></button>{folder&&<p>Return to your saved storage before changing the online connection.</p>}</div>:wizard==='local'?<div className="diary-wizard-step"><p>Select your diary folder. noevia reads its Markdown files and saves new entries there while this page is open.</p><p>To use SMB, mount the share on your computer first, then select its folder.</p><label className="diary-sync-toggle"><input type="checkbox" checked={sync} onChange={e=>setSync(e.target.checked)} />Also sync to {savedLabel}</label><p className="diary-context-note">Diary text is sent to your configured noevia/inference service to answer questions. With sync off, it is processed in memory and is not saved to your online diary. Folder identity is stored only if you enable browser recovery; reconnecting still requires choosing the folder.</p>{blockedReason==='insecure-context'&&<p role="alert">This page isn’t loaded over HTTPS (or localhost), so browsers block local folder access here for security — even in Chrome/Edge. Access noevia via HTTPS or a localhost tunnel, or choose online storage.</p>}{blockedReason==='unsupported'&&<p role="alert">Your browser does not offer writable folder access. Use Chrome/Edge or choose online storage.</p>}<button className="modal-btn primary" disabled={busy || !directoryPicker()} onClick={connectLocal}>Choose folder</button><button className="modal-btn secondary" disabled={busy} onClick={()=>setWizard('choose')}>Back</button></div>:<StoragePicker onlineOnly onSaved={value=>{setStorage(value);setWizard(null);setFilePath('');setRevision(n=>n+1);setTurns({});}} />}</DiaryModal>}
-    {editor && <DiaryModal title="Markdown viewer & editor" onClose={closeEditor}><label className="diary-editor-path">File path<input className="modal-input" value={editor.path} disabled={editor.content!==null || busy} onChange={e=>setEditor({...editor,path:e.target.value})} /></label><div className="diary-editor-tabs"><button className="popup-tab" aria-pressed={!preview} onClick={()=>setPreview(false)}>Edit Markdown</button><button className="popup-tab" aria-pressed={preview} onClick={()=>setPreview(true)}>Preview</button></div>{preview?<MarkdownPreview text={editText || 'This file is empty.'}/>:<textarea className="diary-md-input" aria-label="Markdown content" value={editText} disabled={busy} onChange={e=>setEditText(e.target.value)} spellCheck={false}/>} {error&&<p role="alert" className="conn-banner">{error}</p>}<footer><span>Changes are saved only when you choose Save.</span><button className="modal-btn secondary" disabled={busy} onClick={closeEditor}>Cancel</button><button className="modal-btn primary" disabled={busy || !editor.path} onClick={saveEditor}>{busy?'Saving…':'Save'}</button></footer></DiaryModal>}
+    {editor && <DiaryModal title="Markdown workspace" onClose={closeEditor} className="diary-editor-workspace">
+      <div onKeyDown={e=>{if((e.metaKey || e.ctrlKey) && e.key.toLowerCase()==='s'){e.preventDefault();if(!busy && !storedVersion)saveEditor();}}}>
+        <details className="diary-workspace-files"><summary>Browse Markdown files · {filePath || 'Diary folder'}</summary><nav aria-label="Markdown files"><button className="popup-tab" disabled={busy} onClick={()=>setFilePath('')}>Diary folder</button>{filePath && <button className="popup-tab" disabled={busy} onClick={()=>setFilePath(filePath.split('/').slice(0,-1).join('/'))}>Up</button>}{files.map(file=><button className="popup-tab" key={file.path} disabled={busy} aria-current={file.path===editor.path?'page':undefined} onClick={()=>file.isDir?setFilePath(file.path):openFile(file.path)}>{file.isDir?'Folder: ':''}{file.name}</button>)}</nav></details>
+        <label className="diary-editor-path">File path<input className="modal-input" value={editor.path} disabled={editor.content!==null || busy || !!storedVersion} onChange={e=>setEditor({...editor,path:e.target.value})} /></label>
+        <div className="diary-editor-tabs"><button className="popup-tab" aria-pressed={!preview} onClick={()=>setPreview(false)}>Edit Markdown</button><button className="popup-tab" aria-pressed={preview} onClick={()=>setPreview(true)}>Preview</button><button className="popup-tab" aria-pressed={splitPreview} onClick={()=>setSplitPreview(!splitPreview)}>Source &amp; preview</button><span role="status">{busy ? 'Working…' : editText !== (editor.content || '') ? 'Unsaved changes' : editorStatus || 'No unsaved changes'}</span></div>
+        <div className="diary-editor-panes">
+          <section hidden={preview && !splitPreview}><label htmlFor="diary-markdown-source">Markdown source</label><textarea id="diary-markdown-source" className="diary-md-input" aria-label="Markdown content" value={editText} disabled={busy} onChange={e=>setEditText(e.target.value)} spellCheck={false}/></section>
+          {(preview || splitPreview) && <section aria-label="Markdown preview"><MarkdownPreview text={editText || 'This file is empty.'}/></section>}
+          {storedVersion && <section className="diary-stored-version"><h3>Current stored version</h3><p>Your draft is retained. Edit it using this version as a reference, then accept the new save base.</p><pre>{storedVersion.content ?? 'This file no longer exists.'}</pre><button className="popup-tab" disabled={busy} onClick={()=>{setEditor(storedVersion);setStoredVersion(null);setError('');setEditorStatus('New save base accepted · review your draft and Save');}}>Keep draft with this save base</button><button className="popup-tab" disabled={busy} onClick={()=>{if(window.confirm('Discard your draft and load the stored version?')){setEditor(storedVersion);setEditText(storedVersion.content || '');setStoredVersion(null);setError('');setEditorStatus('Stored version loaded');}}}>Discard draft and reload</button></section>}
+        </div>
+        {error && <p role="alert" className="conn-banner">{error}</p>}
+        <footer><span>{editorStatus || 'Explicit saves only · ⌘/Ctrl + S'}</span><button className="modal-btn secondary" disabled={busy || !!folder} onClick={compareStored}>Compare stored version</button><button className="modal-btn primary" disabled={busy || !editor.path || !!storedVersion} onClick={saveEditor}>{busy?'Saving…':'Save'}</button></footer>
+      </div>
+    </DiaryModal>}
+
   </main>;
 }

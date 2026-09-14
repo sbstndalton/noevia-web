@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-export function DiaryModal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function DiaryModal({ title, onClose, children, className = '' }: { className?: string; title: string; onClose: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => { const previous = document.activeElement as HTMLElement; ref.current?.showModal(); return () => { ref.current?.close(); previous?.focus(); }; }, []);
-  return <dialog ref={ref} className="diary-modal" aria-label={title} onCancel={e => { e.preventDefault(); onClose(); }}>
+  return <dialog ref={ref} className={`diary-modal ${className}`} aria-label={title} onCancel={e => { e.preventDefault(); onClose(); }}>
     <header><h2>{title}</h2><button className="modal-btn secondary" onClick={onClose} aria-label="Close dialog">Close</button></header>
     {children}
   </dialog>;
