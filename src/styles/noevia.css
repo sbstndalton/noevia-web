@@ -1182,9 +1182,9 @@ body { isolation:isolate; background:var(--bg-app); }
 .native-calibration { display: flex; flex-direction: column; gap: 8px; padding-block: 12px; border-bottom: 1px solid var(--control-border); }
 .native-calibration h4 { margin: 0; font-size: 14px; }
 .native-calibration > button, .native-calibration-job > button { align-self: flex-start; min-height: 44px; border: 1px solid var(--control-border); }
-.native-calibration-mode { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 8px 10px; border: 1px solid var(--control-border); border-radius: 8px; }
-.native-calibration-mode label { display: flex; align-items: flex-start; gap: 8px; min-height: 44px; line-height: 1.4; }
-.native-calibration-mode input { flex: 0 0 auto; margin-top: 3px; }
+.native-calibration-budget { display: flex; flex-direction: column; gap: 5px; }
+.native-calibration-budget select { min-height: 44px; padding: 8px; border: 1px solid var(--control-border); border-radius: 8px; color: var(--text); background: var(--bg); }
+.native-calibration-budget small { color: var(--text-secondary); }
 .native-calibration-job { display: flex; flex-direction: column; gap: 8px; }
 .native-calibration-steps { max-height: 260px; overflow: auto; border: 1px solid var(--control-border); border-radius: 8px; }
 .native-calibration-steps table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
