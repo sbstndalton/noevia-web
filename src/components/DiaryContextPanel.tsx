@@ -3,12 +3,13 @@ import type { FileEntry } from '../diary-workspace';
 import { ShellIcon } from './ShellIcon';
 type Props = {
   recovery?: ReactNode;
+  filesLoading?: boolean; filesError?: string; retryFiles?: () => void;
   busy: boolean; files: FileEntry[]; filePath: string; setFilePath: (path: string) => void;
   openFile: (path: string) => void; newFile: () => void; chooseStorage: () => void;
   pendingCount: number; pendingLocal: boolean; folderName?: string; savedLabel: string;
   corpusRoot?: string; sync: boolean; setSync: (sync: boolean) => void; disconnect: () => void;
 };
-export function DiaryContextPanel({ recovery, busy, files, filePath, setFilePath, openFile, newFile, chooseStorage,
+export function DiaryContextPanel({ recovery, filesLoading, filesError, retryFiles, busy, files, filePath, setFilePath, openFile, newFile, chooseStorage,
   pendingCount, pendingLocal, folderName, savedLabel, corpusRoot, sync, setSync, disconnect }: Props) {
   return <aside className="diary-context">
     <section>
@@ -19,10 +20,12 @@ export function DiaryContextPanel({ recovery, busy, files, filePath, setFilePath
         {filePath && <><span>/ {filePath}</span><button className="popup-tab" disabled={busy} onClick={() => setFilePath(filePath.split('/').slice(0,-1).join('/'))}>Up</button></>}
       </div>
       <div className="diary-file-list">
-        {files.map(file => <button key={file.path} disabled={busy} title={file.path} onClick={() => file.isDir ? setFilePath(file.path) : openFile(file.path)}>
+        {filesLoading && <p role="status">Loading files…</p>}
+        {filesError && <div role="alert"><p>{filesError}</p><button className="popup-tab" disabled={busy} onClick={retryFiles}>Retry file list</button></div>}
+        {!filesLoading && !filesError && files.map(file => <button key={file.path} disabled={busy} title={file.path} onClick={() => file.isDir ? setFilePath(file.path) : openFile(file.path)}>
           <ShellIcon name={file.isDir ? 'folder' : 'book'} size={16}/>{file.name}
         </button>)}
-        {!files.length && <p className="diary-intro">No Markdown files here yet.</p>}
+        {!filesLoading && !filesError && !files.length && <p className="diary-intro">No Markdown files here yet.</p>}
       </div>
       <p className="diary-context-note">MEMORY.md and files in AI Memory/, memory/ or context/ are included as diary reference material.</p>
     </section>

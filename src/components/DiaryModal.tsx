@@ -47,7 +47,7 @@ function splitRow(line: string): string[] {
 
 const TABLE_DIVIDER = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
 
-export function MarkdownPreview({ text }: { text: string }) {
+export function MarkdownPreview({ text, internalLink }: { text: string; internalLink?: (href: string) => (() => void) | undefined }) {
   // React escapes all source text. Raw HTML is deliberately never interpreted.
   // Order matters in this alternation: ** before *, so bold is not consumed by
   // the italic branch. The link branch allows one level of nested parentheses
@@ -61,7 +61,10 @@ export function MarkdownPreview({ text }: { text: string }) {
         const split = part.indexOf('](');
         const label = part.slice(1, split);
         const href = part.slice(split + 2, -1);
-        if (!SAFE_LINK.test(href)) return <span key={i}>{label} ({href})</span>;
+        if (!SAFE_LINK.test(href)) {
+          const open=internalLink?.(href);
+          return open ? <button key={i} className="diary-markdown-link" onClick={open}>{label}</button> : <span key={i}>{label} ({href})</span>;
+        }
         return <a key={i} href={href} target="_blank" rel="noopener noreferrer nofollow">{label}</a>;
       }
       if (part.startsWith('*') && part.length > 2) return <em key={i}>{part.slice(1, -1)}</em>;

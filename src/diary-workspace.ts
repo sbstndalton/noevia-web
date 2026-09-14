@@ -1,15 +1,26 @@
 import { apiFetch } from './api';
 export interface DiaryFile { path: string; content: string | null; version: string | null }
 export interface FileEntry { path: string; name: string; isDir: boolean }
-export async function diaryRequest<T>(path: string, body?: unknown, method = 'POST'): Promise<T> {
-  const r = await apiFetch('/api/diary/' + path, body === undefined ? {} : { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+export class DiaryRequestError extends Error {
+  constructor(message: string, public status: number) { super(message); this.name='DiaryRequestError'; }
+}
+export async function diaryRequest<T>(path: string, body?: unknown, method = 'POST', signal?: AbortSignal): Promise<T> {
+  const r = await apiFetch('/api/diary/' + path, body === undefined ? {signal} : { signal, method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const value = await r.json();
-  if (!r.ok) throw new Error(value.error || 'Diary request failed');
+  if (!r.ok) throw new DiaryRequestError(value.error || 'Diary request failed', r.status);
   return value;
 }
-export const listFiles = (path = '') => diaryRequest<{ files: FileEntry[] }>('files?path=' + encodeURIComponent(path));
-export const readFile = (path: string) => diaryRequest<DiaryFile>('file', { path });
-export const writeFile = (file: DiaryFile) => diaryRequest<DiaryFile>('file', file, 'PUT');
+export async function listFiles(path = '', signal?: AbortSignal): Promise<{files:FileEntry[]}> {
+  const value=await diaryRequest<{files:FileEntry[]}>('files?path='+encodeURIComponent(path),undefined,'GET',signal);
+  if(!value || !Array.isArray(value.files) || value.files.length>500 || value.files.some(f=>!f || typeof f.path!=='string' || typeof f.name!=='string' || typeof f.isDir!=='boolean'))throw Error('File list was invalid. Try refreshing this folder.');
+  return value;
+}
+function checkedFile(value: DiaryFile, path: string): DiaryFile {
+  if(!value || value.path!==path || (value.content!==null && typeof value.content!=='string') || (value.version!==null && typeof value.version!=='string'))throw Error('File response was invalid. Your draft has been kept; compare storage before retrying.');
+  return value;
+}
+export const readFile = async (path: string, signal?: AbortSignal) => checkedFile(await diaryRequest<DiaryFile>('file', { path }, 'POST', signal), path);
+export const writeFile = async (file: DiaryFile) => checkedFile(await diaryRequest<DiaryFile>('file', file, 'PUT'), file.path);
 interface LocalFileHandle {
   kind: 'file'; name: string;
   getFile(): Promise<File>;
@@ -74,15 +85,16 @@ export async function scanLocal(root: DirectoryHandle): Promise<Record<string, s
   return files;
 }
 export async function saveLocal(root: DirectoryHandle, path: string, text: string, expected: string | null): Promise<void> {
+  if (new TextEncoder().encode(text).length > 512*1024) throw new Error('Markdown file exceeds the 512 KiB editor limit.');
   const parts = path.split('/');
-  if (parts.some(p => !p || p.startsWith('.') || p.includes('\\')) || !path.toLowerCase().endsWith('.md')) throw new Error('Invalid Markdown path');
+  if (path.length>500 || /[\u0000-\u001f]/.test(path) || parts.some(p => !p || p.startsWith('.') || p.includes('\\')) || !path.toLowerCase().endsWith('.md')) throw new Error('Invalid Markdown path');
   let dir = root;
   for (const part of parts.slice(0,-1)) dir = await dir.getDirectoryHandle(part, { create: true });
   let file: LocalFileHandle | undefined;
   let current: string | null = null;
   try { file = await dir.getFileHandle(parts[parts.length-1]); current = await (await file.getFile()).text(); }
   catch (e) { if (!(e instanceof DOMException && e.name === 'NotFoundError')) throw e; }
-  if (current !== expected) throw new Error(`${path} changed on your computer. Reopen it before saving.`);
+  if (current !== expected) throw new DiaryRequestError(`${path} changed on your computer. Compare the stored version before saving.`, 409);
   file ??= await dir.getFileHandle(parts[parts.length-1], { create: true });
   const writable = await file.createWritable();
   try { await writable.write(text); await writable.close(); }

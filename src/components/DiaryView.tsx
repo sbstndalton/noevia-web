@@ -1,7 +1,9 @@
+import { searchMarkdownFolder } from '../diary-file-search';
 import { recoverDiaryTurns } from '../diary-server-recovery';
 import { listLocalRecovery, saveLocalRecovery, forgetLocalRecovery, restoredLocalState } from '../diary-local-recovery';
 import type { LocalRecovery, RecoveryState } from '../diary-local-recovery';
 import { ReasoningControl } from './ReasoningControl';
+import { DiaryMarkdownWorkspace } from './DiaryMarkdownWorkspace';
 import { DiaryLanding } from './DiaryLanding';
 import { ComposerActions } from './ComposerActions';
 import { ComposerModel } from './ComposerModel';
@@ -17,7 +19,7 @@ import { useEffect, useRef, useState } from 'react';
 import { apiFetch, fetchProfile, deleteProjectFile, fetchDiaryMonth, fetchDiarySource, fetchStorage, streamChat } from '../api';
 import type { StorageConnection } from '../api';
 import { dateInText, dayLabel, localDay, monthLabel, splitDays } from '../diary-data';
-import { directoryPicker, directoryPickerBlockedReason, listFiles, randomSessionId, readFile, saveLocal, scanLocal, syncFileChange, writeFile } from '../diary-workspace';
+import { DiaryRequestError, directoryPicker, directoryPickerBlockedReason, listFiles, randomSessionId, readFile, saveLocal, scanLocal, syncFileChange, writeFile } from '../diary-workspace';
 import type { DiaryFile, DirectoryHandle, FileEntry } from '../diary-workspace';
 import { DiaryModal, MarkdownPreview } from './DiaryModal';
 import { StoragePicker } from './StoragePicker';
@@ -73,8 +75,11 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [editor, setEditor] = useState<DiaryFile | null>(null);
   const [editText, setEditText] = useState('');
-  const [preview, setPreview] = useState(true);
-  const [splitPreview, setSplitPreview] = useState(false);
+  const [editorError, setEditorError] = useState('');
+  const [editorNavigation, setEditorNavigation] = useState(0);
+  const [filesLoading, setFilesLoading] = useState(false);
+  const [filesError, setFilesError] = useState('');
+  const [fileRevision, setFileRevision] = useState(0);
   const [editorStatus, setEditorStatus] = useState('');
   const [storedVersion, setStoredVersion] = useState<DiaryFile | null>(null);
   const [revision, setRevision] = useState(0);
@@ -218,6 +223,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   }, [folder, localFiles, month, revision, today]);
   useEffect(() => {
     let stale = false;
+    setFiles([]); setFilesError(''); setFilesLoading(true);
     if (folder) {
       const entries = new Map<string, FileEntry>();
       const prefix = filePath ? filePath + '/' : '';
@@ -225,10 +231,10 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
         const rest = path.slice(prefix.length), name = rest.split('/')[0];
         entries.set(name, { name, path: prefix+name, isDir: rest.includes('/') });
       }
-      setFiles([...entries.values()]);
-    } else void listFiles(filePath).then(r => { if (!stale) setFiles(r.files); }).catch(e => { if (!stale) setError(String(e)); });
+      setFiles([...entries.values()]); setFilesLoading(false);
+    } else void listFiles(filePath).then(r => { if (!stale) setFiles(r.files); }).catch(e => { if (!stale) setFilesError(e instanceof Error ? e.message : String(e)); }).finally(()=>{if(!stale)setFilesLoading(false);});
     return () => { stale = true; };
-  }, [folder, localFiles, filePath, revision]);
+  }, [folder, localFiles, filePath, revision, fileRevision]);
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => { if (busyRef.current || draft.trim() || pendingCount || (editor && editText !== editor.content)) { e.preventDefault(); e.returnValue = ''; } };
     window.addEventListener('beforeunload', warn);
@@ -372,35 +378,70 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     setDraft(''); setMonth(nextMonth); setDay(nextDay); setStatus(''); setError('');
     if (nextMonth !== month) setDays({});
   };
-  const openFile = (path: string) => void run(async () => {
-    if (editor && editText !== (editor.content || '') && !window.confirm('Discard your unsaved Markdown edits?')) return;
-    const file = folder ? { path, content: (await scanLocal(folder))[path] ?? null, version: null } : await readFile(path);
-    setEditor(file); setEditText(file.content || ''); setPreview(true); setEditorStatus(''); setStoredVersion(null);
-  });
-  const closeEditor = () => {
-    if (busy) return;
-    if (editor && editText !== (editor.content || '') && !window.confirm('Discard your unsaved Markdown edits?')) return;
-    setEditor(null);
+  const editorOperation = async (label: string, action: () => Promise<void>) => {
+    if (busyRef.current) return;
+    busyRef.current=true;setBusy(true);setEditorError('');setEditorStatus(label);
+    try { await action(); }
+    catch(e) { setEditorError(e instanceof Error?e.message:String(e));setEditorStatus('Operation failed · draft kept'); }
+    finally {busyRef.current=false;setBusy(false);}
   };
-  const saveEditor = () => void run(async () => {
+  const canLeaveEditor = () => !editor || (editor.content!==null && editText===editor.content) || window.confirm('Discard your unsaved Markdown edits?');
+  const currentFile = async (path: string): Promise<DiaryFile> => folder ? {path,content:(await scanLocal(folder))[path] ?? null,version:null} : readFile(path);
+  const openFile = (path: string) => {
+    if (busyRef.current || !canLeaveEditor()) return;
+    void editorOperation('Loading file…', async()=>{
+      const file=await currentFile(path);
+      setEditorNavigation(n=>n+1);setEditor(file);setEditText(file.content || '');setEditorStatus('');setStoredVersion(null);
+      setFilePath(path.split('/').slice(0,-1).join('/'));
+    });
+  };
+  const newEditor = () => {
+    if (busyRef.current || !canLeaveEditor()) return;
+    setEditorNavigation(n=>n+1);setEditor({path:(filePath?filePath+'/':'')+'notes.md',content:null,version:null});
+    setEditText('');setEditorError('');setEditorStatus('New file · not saved');setStoredVersion(null);
+  };
+  const closeEditor = () => {
+    if (busyRef.current || !canLeaveEditor()) return;
+    setEditor(null);setEditorError('');setStoredVersion(null);
+    requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('.diary-home-link')?.focus());
+  };
+  const saveEditor = () => void editorOperation('Saving…', async () => {
     if (!editor || storedVersion) return;
-    setEditorStatus('Saving…');
     try {
       if (folder) {
-        await commitLocal({ [editor.path]: { before: editor.content, content: editText } });
-        setEditor({ ...editor, content: editText });
-      } else setEditor(await writeFile({ ...editor, content: editText }));
-      setRevision(n => n+1); setEditorStatus('Saved');
-    } catch (e) {
-      setEditorStatus('Save failed · draft kept');
+        if(pendingLocal[editor.path])throw Error('An earlier capture is waiting to save this file. Return to Diary and resolve its pending save first.');
+        // Editor failures remain in editor state, separately from capture recovery.
+        // Accept an already completed write on an explicit retry only.
+        const current=await currentFile(editor.path);
+        if(current.content!==editText)await saveLocal(folder,editor.path,editText,editor.content);
+        setLocalFiles(prev=>({...prev,[editor.path]:editText}));
+        setEditor({...editor,content:editText});setEditorStatus('Saved locally');
+        if(sync){
+          const queue={...pendingSyncRef.current,[editor.path]:{before:pendingSyncRef.current[editor.path] ? pendingSyncRef.current[editor.path].before : editor.content,content:editText}};
+          pendingSyncRef.current=queue;setPendingSync(queue);
+          try{await syncChanges(queue);setEditorStatus('Saved locally and synced');}
+          catch(e){setEditorStatus('Saved locally · sync needs attention');setEditorError(e instanceof Error?e.message:String(e));}
+        }
+      } else {setEditor(await writeFile({...editor,content:editText}));setEditorStatus('Saved');}
+      setRevision(n=>n+1);
+    } catch(e) {
+      if(e instanceof DiaryRequestError && e.status===409){
+        try {setStoredVersion(await currentFile(editor.path));}
+        catch { /* The original failure stays visible; manual comparison can retry. */ }
+      }
       throw e;
     }
   });
-  const compareStored = () => void run(async () => {
+  const compareStored = () => void editorOperation('Loading stored version…', async () => {
     if (!editor) return;
-    const current = folder ? {path:editor.path, content:(await scanLocal(folder))[editor.path] ?? null, version:null} : await readFile(editor.path);
-    setStoredVersion(current); setEditorStatus('Review the stored version before saving again.');
+    setStoredVersion(await currentFile(editor.path));setEditorStatus('Review the stored version before saving again.');
   });
+  const acceptStored = (discard: boolean) => {
+    if(!storedVersion || busyRef.current)return;
+    if(discard && !window.confirm('Discard your draft and load the stored version?'))return;
+    setEditor(storedVersion);if(discard)setEditText(storedVersion.content || '');
+    setStoredVersion(null);setEditorError('');setEditorStatus(discard?'Stored version loaded':'New save base accepted · review your draft and Save');
+  };
   const connectLocal = () => {
     const picker = directoryPicker();
     if (!picker) { setError('This browser cannot edit a selected folder. Use a browser with folder access, or choose online storage.'); return; }
@@ -436,10 +477,10 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     <p className="composer-hint">{busy ? 'Working on your diary…' : day ? `Writing to ${dayLabel(day)} · Shift + Enter for a new line` : 'Your current local date and time are used when you send.'}</p>
   </div>;
   return <main className="main diary-workspace">
-    <header className="chat-header"><div className="diary-breadcrumb"><button className="diary-home-link" disabled={busy} onClick={()=>navigate(null)}>Diary</button>{month && <><span>/</span><button className="popup-tab" disabled={busy} onClick={()=>navigate(month)}>{monthLabel(month)}</button></>}{day && <span>/ {new Date(`${day}T12:00:00`).getDate()}</span>}</div><span className="diary-private">Private diary</span></header>
-    <div className="diary-layout"><section className="diary-primary"><div className="diary-content-scroll" ref={scrollRef} onScroll={onScroll}>
+    <header className="chat-header"><div className="diary-breadcrumb"><button className="diary-home-link" disabled={busy} onClick={()=>editor?closeEditor():navigate(null)}>Diary</button>{month && <><span>/</span><button className="popup-tab" disabled={busy} onClick={()=>navigate(month)}>{monthLabel(month)}</button></>}{day && <span>/ {new Date(`${day}T12:00:00`).getDate()}</span>}</div><span className="diary-private">Private diary</span></header>
+    <div className="diary-layout" style={editor?{display:'none'}:undefined}><section className="diary-primary"><div className="diary-content-scroll" ref={scrollRef} onScroll={onScroll}>
       {inferenceUp === false && <p className="conn-banner">Inference is currently unavailable. Your saved files are still accessible.</p>}
-      {error && <p className="conn-banner" role="alert">{error}</p>}
+      {error && <p className="conn-banner" role="alert">{error}</p>}{!editor && editorError && <p className="conn-banner" role="alert">{editorError}</p>}
       {localRecoveryError && <p className="conn-banner" role="alert">{localRecoveryError}</p>}
       {!!savedRecoveries.length && !folder && <section className="diary-pending"><div><strong>Local sessions saved on this browser</strong><p>Reconnect the original folder to review unfinished work. Recovery never resends requests or writes files automatically.</p>{savedRecoveries.map(record=><div key={record.id}><span>{record.folder.name} · {new Date(record.updatedAt).toLocaleString()}</span><button className="popup-tab" disabled={busy || !storage} onClick={()=>restoreLocalRecovery(record)}>Reconnect &amp; recover</button><button className="popup-tab" disabled={busy} onClick={()=>{if(window.confirm('Remove this recovery copy from this browser? Original diary files are unchanged.'))void forgetLocalRecovery(recoveryOwner,record.id).then(()=>listLocalRecovery(recoveryOwner)).then(setSavedRecoveries).catch(e=>setError(String(e)));}}>Forget recovery</button></div>)}</div></section>}
       {pendingCount > 0 && <div className="diary-pending" role="status"><span>{Object.keys(pendingLocal).length ? 'Local save needs attention.' : `${Object.keys(pendingSync).length} file(s) waiting to sync. Local copies are safe.`}</span><button className="popup-tab" disabled={busy} onClick={()=>void run(async()=>{ if(Object.keys(pendingLocal).length) await commitLocal(pendingLocal); else await syncChanges(pendingSync); })}>Retry save / sync</button></div>}
@@ -451,28 +492,27 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       {day && <div className="diary-composer-dock">{composer}</div>}
       {status && <p className="diary-save-status" role="status">{status}</p>}
 
-    </section><DiaryContextPanel recovery={folder && <section><label className="diary-sync-toggle"><input type="checkbox" checked={localRecoveryEnabled} disabled={busy || !recoveryOwner} onChange={e=>void toggleLocalRecovery(e.target.checked)} />Save recovery on this browser</label><p className="diary-context-note">Stores drafts, conversation and tool history, pending file saves and folder identity in this browser profile. Anyone with access to this profile may read it. Reconnect the original folder after reopening. Clearing browser data removes these copies. Turning this off removes this session’s recovery copy.</p></section>} busy={busy} files={files} filePath={filePath} setFilePath={setFilePath} openFile={openFile}
-      newFile={() => {setEditor({path:'AI Memory/notes.md',content:null,version:null});setEditText('');setPreview(false);setEditorStatus('');setStoredVersion(null);}}
+    </section><DiaryContextPanel filesLoading={filesLoading} filesError={filesError} retryFiles={()=>setFileRevision(n=>n+1)} recovery={folder && <section><label className="diary-sync-toggle"><input type="checkbox" checked={localRecoveryEnabled} disabled={busy || !recoveryOwner} onChange={e=>void toggleLocalRecovery(e.target.checked)} />Save recovery on this browser</label><p className="diary-context-note">Stores drafts, conversation and tool history, pending file saves and folder identity in this browser profile. Anyone with access to this profile may read it. Reconnect the original folder after reopening. Clearing browser data removes these copies. Turning this off removes this session’s recovery copy.</p></section>} busy={busy} files={files} filePath={filePath} setFilePath={setFilePath} openFile={openFile}
+      newFile={newEditor}
       chooseStorage={() => setWizard('choose')} pendingCount={pendingCount} pendingLocal={Object.keys(pendingLocal).length > 0}
       folderName={folder?.name} savedLabel={savedLabel} corpusRoot={storage?.corpusRoot} sync={sync} setSync={setSync} disconnect={disconnect} /></div>
     {extraModels && extraProject && <ModelPopup projects={[extraProject]} activeProject={extraProject} onClose={()=>setExtraModels(false)} onProjectsChanged={()=>void refreshExtraProject()} />}
     {extraFiles && <DiaryModal title="Optional diary attachments" onClose={()=>setExtraFiles(false)}><p>Stored separately from your diary corpus. Used only while extras are on.</p>{(extraProject?.files || []).map(file=><div className="model-row" key={file.name}><span>{file.name}<small> · {file.attachment?.state || file.document?.state || 'ready'}</small></span><button className="popup-tab" disabled={busy || extraBusy} onClick={()=>void (async()=>{if(!extraProject || !window.confirm(`Delete attachment ${file.name} from storage?`))return;setExtraBusy(true);try{await deleteProjectFile(extraProject.id,file.name);await refreshExtraProject();}catch(err){setExtraStatus(String(err));}finally{setExtraBusy(false);}})()}>Delete attachment</button></div>)}</DiaryModal>}
 
     {wizard && <DiaryModal title="Choose diary storage" onClose={()=>{if(!busy)setWizard(null);}}>{error&&<p className="conn-banner" role="alert">{error}</p>}{wizard==='choose'?<div className="diary-storage-options"><button className="month-card" disabled={busy} onClick={()=>setWizard('local')}><strong>Folder on this computer</strong><span>Use a local or mounted SMB folder for this session.</span></button><button className="month-card" disabled={busy || !!folder} onClick={()=>setWizard('online')}><strong>Online connection</strong><span>Nextcloud, WebDAV, or S3-compatible storage.</span></button>{folder&&<p>Return to your saved storage before changing the online connection.</p>}</div>:wizard==='local'?<div className="diary-wizard-step"><p>Select your diary folder. noevia reads its Markdown files and saves new entries there while this page is open.</p><p>To use SMB, mount the share on your computer first, then select its folder.</p><label className="diary-sync-toggle"><input type="checkbox" checked={sync} onChange={e=>setSync(e.target.checked)} />Also sync to {savedLabel}</label><p className="diary-context-note">Diary text is sent to your configured noevia/inference service to answer questions. With sync off, it is processed in memory and is not saved to your online diary. Folder identity is stored only if you enable browser recovery; reconnecting still requires choosing the folder.</p>{blockedReason==='insecure-context'&&<p role="alert">This page isn’t loaded over HTTPS (or localhost), so browsers block local folder access here for security — even in Chrome/Edge. Access noevia via HTTPS or a localhost tunnel, or choose online storage.</p>}{blockedReason==='unsupported'&&<p role="alert">Your browser does not offer writable folder access. Use Chrome/Edge or choose online storage.</p>}<button className="modal-btn primary" disabled={busy || !directoryPicker()} onClick={connectLocal}>Choose folder</button><button className="modal-btn secondary" disabled={busy} onClick={()=>setWizard('choose')}>Back</button></div>:<StoragePicker onlineOnly onSaved={value=>{setStorage(value);setWizard(null);setFilePath('');setRevision(n=>n+1);setTurns({});}} />}</DiaryModal>}
-    {editor && <DiaryModal title="Markdown workspace" onClose={closeEditor} className="diary-editor-workspace">
-      <div onKeyDown={e=>{if((e.metaKey || e.ctrlKey) && e.key.toLowerCase()==='s'){e.preventDefault();if(!busy && !storedVersion)saveEditor();}}}>
-        <details className="diary-workspace-files"><summary>Browse Markdown files · {filePath || 'Diary folder'}</summary><nav aria-label="Markdown files"><button className="popup-tab" disabled={busy} onClick={()=>setFilePath('')}>Diary folder</button>{filePath && <button className="popup-tab" disabled={busy} onClick={()=>setFilePath(filePath.split('/').slice(0,-1).join('/'))}>Up</button>}{files.map(file=><button className="popup-tab" key={file.path} disabled={busy} aria-current={file.path===editor.path?'page':undefined} onClick={()=>file.isDir?setFilePath(file.path):openFile(file.path)}>{file.isDir?'Folder: ':''}{file.name}</button>)}</nav></details>
-        <label className="diary-editor-path">File path<input className="modal-input" value={editor.path} disabled={editor.content!==null || busy || !!storedVersion} onChange={e=>setEditor({...editor,path:e.target.value})} /></label>
-        <div className="diary-editor-tabs"><button className="popup-tab" aria-pressed={!preview} onClick={()=>setPreview(false)}>Edit Markdown</button><button className="popup-tab" aria-pressed={preview} onClick={()=>setPreview(true)}>Preview</button><button className="popup-tab" aria-pressed={splitPreview} onClick={()=>setSplitPreview(!splitPreview)}>Source &amp; preview</button><span role="status">{busy ? 'Working…' : editText !== (editor.content || '') ? 'Unsaved changes' : editorStatus || 'No unsaved changes'}</span></div>
-        <div className="diary-editor-panes">
-          <section hidden={preview && !splitPreview}><label htmlFor="diary-markdown-source">Markdown source</label><textarea id="diary-markdown-source" className="diary-md-input" aria-label="Markdown content" value={editText} disabled={busy} onChange={e=>setEditText(e.target.value)} spellCheck={false}/></section>
-          {(preview || splitPreview) && <section aria-label="Markdown preview"><MarkdownPreview text={editText || 'This file is empty.'}/></section>}
-          {storedVersion && <section className="diary-stored-version"><h3>Current stored version</h3><p>Your draft is retained. Edit it using this version as a reference, then accept the new save base.</p><pre>{storedVersion.content ?? 'This file no longer exists.'}</pre><button className="popup-tab" disabled={busy} onClick={()=>{setEditor(storedVersion);setStoredVersion(null);setError('');setEditorStatus('New save base accepted · review your draft and Save');}}>Keep draft with this save base</button><button className="popup-tab" disabled={busy} onClick={()=>{if(window.confirm('Discard your draft and load the stored version?')){setEditor(storedVersion);setEditText(storedVersion.content || '');setStoredVersion(null);setError('');setEditorStatus('Stored version loaded');}}}>Discard draft and reload</button></section>}
-        </div>
-        {error && <p role="alert" className="conn-banner">{error}</p>}
-        <footer><span>{editorStatus || 'Explicit saves only · ⌘/Ctrl + S'}</span><button className="modal-btn secondary" disabled={busy || !!folder} onClick={compareStored}>Compare stored version</button><button className="modal-btn primary" disabled={busy || !editor.path || !!storedVersion} onClick={saveEditor}>{busy?'Saving…':'Save'}</button></footer>
-      </div>
-    </DiaryModal>}
+    {editor && <DiaryMarkdownWorkspace navigationKey={editorNavigation} file={editor} text={editText} busy={busy} error={editorError} status={editorStatus} stored={storedVersion} local={!!folder} syncPending={!!pendingSync[editor.path]}
+      files={files} folderPath={filePath} filesLoading={filesLoading} filesError={filesError}
+      onText={setEditText} onPath={path=>setEditor({...editor,path})} onFolder={setFilePath} onOpen={openFile} onNew={newEditor}
+      onSearch={async(path,query,signal,kind)=>{
+        if(!folder)return searchMarkdownFolder({path,query,kind,signal,list:dir=>listFiles(dir,signal),read:file=>readFile(file,signal)});
+        const snapshot=await scanLocal(folder);
+        return searchMarkdownFolder({path,query,kind,signal,list:async(dir)=>{
+          const prefix=dir?dir+'/':'',entries=new Map<string,FileEntry>();
+          for(const key of Object.keys(snapshot))if(key.startsWith(prefix)){const rest=key.slice(prefix.length),name=rest.split('/')[0];entries.set(name,{path:prefix+name,name,isDir:rest.includes('/')});}
+          return {files:[...entries.values()]};
+        },read:async(file)=>({path:file,content:snapshot[file] ?? null,version:null})});
+      }}
+      onRefresh={()=>setFileRevision(n=>n+1)} onSave={saveEditor} onCompare={compareStored} onRebase={()=>acceptStored(false)} onReload={()=>acceptStored(true)} onClose={closeEditor} />}
 
   </main>;
 }
