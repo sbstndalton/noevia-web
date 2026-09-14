@@ -12,6 +12,10 @@ const version=text=>text===null?null:createHash('sha256').update(text).digest('h
 fixture.server.on('request',async(req,res)=>{
  const url=new URL(req.url,'http://localhost');
  const json=(data,status=200)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
+ if(url.pathname==='/api/diary/today'){
+ const now=new Date(),currentMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`,month=url.searchParams.get('month')||currentMonth;
+ return json({todayLog:`# ${month}-01\n\nA synthetic entry about a quiet morning.\n\n# ${month}-02\n\nA synthetic note about a walk.\n`,standingSections:{},memoryFiles:[]});
+ }
  if(url.pathname==='/api/diary/files'){
  const path=url.searchParams.get('path')||'',prefix=path?path+'/':'',rows=new Map();
  for(const key of Object.keys(files))if(key.startsWith(prefix)){const rest=key.slice(prefix.length),name=rest.split('/')[0];rows.set(name,{name,path:prefix+name,isDir:rest.includes('/')});}

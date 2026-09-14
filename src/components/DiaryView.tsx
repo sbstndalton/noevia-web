@@ -4,7 +4,6 @@ import { listLocalRecovery, saveLocalRecovery, forgetLocalRecovery, restoredLoca
 import type { LocalRecovery, RecoveryState } from '../diary-local-recovery';
 import { ReasoningControl } from './ReasoningControl';
 import { DiaryMarkdownWorkspace } from './DiaryMarkdownWorkspace';
-import { DiaryLanding } from './DiaryLanding';
 import { ComposerActions } from './ComposerActions';
 import { ComposerModel } from './ComposerModel';
 import { ModelPopup } from './ModelPopup';
@@ -211,8 +210,8 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
         const recent = await Promise.all(source.months.map(m=>m.id).sort().reverse().slice(0,2).map(fetchDiaryMonth));
         recentDays = recent.flatMap(r => Object.keys(splitDays(r.todayLog)));
         if (stale) return;
-        if (month) {
-          const result = await fetchDiaryMonth(month);
+        {
+          const result = await fetchDiaryMonth(month || today.slice(0,7));
           if (!stale) setDays(splitDays(result.todayLog));
         }
       }
@@ -485,12 +484,11 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       {localRecoveryError && <p className="conn-banner" role="alert">{localRecoveryError}</p>}
       {!!savedRecoveries.length && !folder && <section className="diary-pending"><div><strong>Local sessions saved on this browser</strong><p>Reconnect the original folder to review unfinished work. Recovery never resends requests or writes files automatically.</p>{savedRecoveries.map(record=><div key={record.id}><span>{record.folder.name} · {new Date(record.updatedAt).toLocaleString()}</span><button className="popup-tab" disabled={busy || !storage} onClick={()=>restoreLocalRecovery(record)}>Reconnect &amp; recover</button><button className="popup-tab" disabled={busy} onClick={()=>{if(window.confirm('Remove this recovery copy from this browser? Original diary files are unchanged.'))void forgetLocalRecovery(recoveryOwner,record.id).then(()=>listLocalRecovery(recoveryOwner)).then(setSavedRecoveries).catch(e=>setError(String(e)));}}>Forget recovery</button></div>)}</div></section>}
       {pendingCount > 0 && <div className="diary-pending" role="status"><span>{Object.keys(pendingLocal).length ? 'Local save needs attention.' : `${Object.keys(pendingSync).length} file(s) waiting to sync. Local copies are safe.`}</span><button className="popup-tab" disabled={busy} onClick={()=>void run(async()=>{ if(Object.keys(pendingLocal).length) await commitLocal(pendingLocal); else await syncChanges(pendingSync); })}>Retry save / sync</button></div>}
-      {!month && <DiaryLanding failed={overview.failed} ready={overview.ready} empty={emptyDiary} composer={composer} months={months} recentDays={overview.recentDays} memory={overview.memory} sources={overview.sources} busy={busy} navigate={navigate} openFile={openFile} />}
-      {month && !day && <DiaryCalendar month={month} today={today} days={days} busy={busy} navigate={navigate} />}
+      {!day && <DiaryCalendar month={month || today.slice(0,7)} today={today} days={days} busy={busy} ready={overview.ready} failed={overview.failed} navigate={navigate} />}
       {day && <section className="diary-day"><h1>{dayLabel(day)}</h1>{days[day]?.trim() ? <details className="diary-saved-record" key={`${day}-${!!conversation.length}`} open={!conversation.length}><summary>Saved diary entry</summary><MarkdownPreview text={days[day]} /></details> : !conversation.length && <p className="diary-intro">A blank page for this day. Add something if you’d like.</p>}</section>}
       {!!conversation.length && <section className="diary-conversation" aria-live="polite" aria-busy={busy}>{conversation.map((t,i)=><article className="diary-reply" data-role={t.role} key={i}><span className="msg-sender">{t.role==='user'?'You':'Diary companion'}</span>{t.role === 'assistant' && t.activity?.length && <details className="diary-activity" open={busy && i === conversation.length - 1}><summary>{busy && i === conversation.length - 1 ? <>{t.activity.at(-1)}{t.startedAt && <> · <LiveTimer startedAt={t.startedAt} /></>}</> : 'Diary activity'}</summary><ol>{t.activity.map((label,n)=><li key={n}>{label}</li>)}</ol></details>}{!!t.tools?.length && <ToolChips calls={t.tools.filter(Boolean)} />}{t.reasoning && <ThinkingBlock text={t.reasoning} live={busy && i === conversation.length - 1 && !t.content} />}<MarkdownPreview text={t.content || (busy ? 'Working on your diary…' : '')} /></article>)}</section>}
       </div>
-      {day && <div className="diary-composer-dock">{composer}</div>}
+      <div className="diary-composer-dock">{composer}</div>
       {status && <p className="diary-save-status" role="status">{status}</p>}
 
     </section><DiaryContextPanel filesLoading={filesLoading} filesError={filesError} retryFiles={()=>setFileRevision(n=>n+1)} recovery={folder && <section><label className="diary-sync-toggle"><input type="checkbox" checked={localRecoveryEnabled} disabled={busy || !recoveryOwner} onChange={e=>void toggleLocalRecovery(e.target.checked)} />Save recovery on this browser</label><p className="diary-context-note">Stores drafts, conversation and tool history, pending file saves and folder identity in this browser profile. Anyone with access to this profile may read it. Reconnect the original folder after reopening. Clearing browser data removes these copies. Turning this off removes this session’s recovery copy.</p></section>} busy={busy} files={files} filePath={filePath} setFilePath={setFilePath} openFile={openFile}

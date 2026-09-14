@@ -16,7 +16,17 @@ const {createFixture}=require('./diary-fixture.cjs');
  }
  return route.fulfill({json:body.path==='linked.md'?{path:'linked.md',content:'# Linked note\n[Back](note.md)',version:'linked-v1'}:{path:'note.md',content,version}});
  });
+ await page.route('**/api/diary/today?*',route=>{const month=new URL(route.request().url()).searchParams.get('month');return route.fulfill({json:{todayLog:`# ${month}-01\nSynthetic first day\n# ${month}-02\nSynthetic second day`,standingSections:{},memoryFiles:[]}});});
  await page.goto('http://localhost:31319');await page.getByRole('button',{name:'Diary',exact:true}).click();
+ await page.locator('.calendar-dot').first().waitFor();
+ const capture=page.getByRole('textbox',{name:'What’s on your mind today?'});
+ await capture.fill('Synthetic retained draft');
+ await page.getByRole('button',{name:'List',exact:true}).click();
+ const dates=await page.locator('.diary-entry-row time').allTextContents();
+ assert.equal(dates.length,2);assert.deepEqual(dates,[...dates].sort().reverse());
+ assert.equal(await capture.inputValue(),'Synthetic retained draft');
+ await page.getByRole('button',{name:'Calendar',exact:true}).click();
+ assert.equal(await capture.inputValue(),'Synthetic retained draft');await capture.fill('');
  for (const width of [375,768,1100,1440]) {
  await page.setViewportSize({width,height:950});
  const primary=await page.locator('.diary-primary').boundingBox(),rail=await page.locator('.diary-context').boundingBox();
