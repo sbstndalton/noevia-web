@@ -1092,6 +1092,21 @@ body { isolation:isolate; background:var(--bg-app); }
   .diary-workspace-heading h1 { font-size:24px; }
   .diary-markdown-workspace button { min-height:44px; }
 }
+.model-guidance { padding:20px; }
+.model-guidance h2 { margin:0; font-size:22px; font-weight:550; }
+.model-guidance p, .model-memory-planner p { font-size:13px; line-height:1.65; color:var(--text-secondary); }
+.model-memory-planner { min-width:0; margin:20px 0; padding:14px; border:1px solid var(--border); border-radius:var(--radius-panel); }
+.model-memory-planner legend { padding:0 6px; font-size:14px; }
+.model-memory-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.model-memory-fields label:first-child { grid-column:1/-1; }
+.model-memory-fields label, .model-guidance-filter { display:flex; flex-direction:column; gap:8px; font-size:13px; }
+.model-memory-fields input, .model-memory-fields select, .model-guidance-filter select { width:100%; min-width:0; box-sizing:border-box; padding:10px; color:var(--text); background:var(--bg-card); border:1px solid var(--control-border); border-radius:var(--radius-control); font:inherit; }
+.model-guidance-results article { border-top:1px solid var(--border); padding:16px 0; }
+.model-guidance-results h3 { margin:0; font-size:15px; font-weight:550; overflow-wrap:anywhere; }
+.model-fit { font-size:13px; line-height:1.65; margin:8px 0; color:var(--text-secondary); }
+.model-fit strong { display:block; font-weight:550; color:var(--text); }
+.model-fit span { display:block; }
+.model-download-planner summary { cursor:pointer; padding-block:8px; font-size:14px; }
 .diary-markdown-workspace .diary-markdown-link { border:0; border-radius:4px; padding:0 2px; background:transparent; color:var(--accent-ink); text-decoration:underline; font:inherit; cursor:pointer; min-height:0; }
 .diary-search-result { width:100%; text-align:left; margin-block:8px; padding:10px; color:var(--text); background:transparent; border:1px solid var(--border); border-radius:var(--radius-control); overflow-wrap:anywhere; }
 .diary-search-result strong, .diary-search-result span { display:block; font-size:13px; }

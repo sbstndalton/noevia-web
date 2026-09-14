@@ -331,7 +331,10 @@ export function fetchHealth(): Promise<HealthState> {
 }
 
 export function fetchInstalledModels(): Promise<InstalledModel[]> {
-  return getJson('/api/models/installed');
+  return getJson<InstalledModel[]>('/api/models/installed').then(rows => {
+    if(!Array.isArray(rows) || rows.some(row=>!row || typeof row.name!=='string' || !Array.isArray(row.labels) || row.labels.some(label=>typeof label!=='string')))throw new Error('Model list was invalid. Try loading it again.');
+    return rows;
+  });
 }
 
 export function searchModels(query: string): Promise<SearchHit[]> {

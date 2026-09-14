@@ -1,3 +1,6 @@
+import { ModelGuidance, MemoryPlanner, ModelMemoryEstimate } from './ModelGuidance';
+import { emptyMemoryPlan } from '../model-guidance';
+import type { MemoryPlan } from '../model-guidance';
 import { MtpArtifact } from './MtpArtifact';
 import { MtpControl } from './MtpControl';
 import { Fragment, useEffect, useState } from 'react';
@@ -15,10 +18,11 @@ interface ModelPopupProps {
   onProjectsChanged: () => void;
 }
 
-type Tab = 'switch' | 'download' | 'manage';
+type Tab = 'switch' | 'guidance' | 'download' | 'manage';
 
 export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged }: ModelPopupProps): JSX.Element {
   const [tab, setTab] = useState<Tab>('switch');
+  const [memoryPlan, setMemoryPlan] = useState<MemoryPlan>(emptyMemoryPlan);
   const dialog = useModalDialog();
   return (
     <dialog ref={dialog} className="native-modal" aria-label="Models and tools" onCancel={(e) => { e.preventDefault(); onClose(); }}
@@ -39,15 +43,15 @@ export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', gap: 4, padding: '10px 12px', borderBottom: '1px solid var(--border)', background: 'var(--bg-sidebar)' }}>
-          {(['switch', 'download', 'manage'] as Tab[]).map((t) => (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '10px 12px', borderBottom: '1px solid var(--border)', background: 'var(--bg-sidebar)' }}>
+          {(['switch', 'guidance', 'download', 'manage'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className="popup-tab"
               style={tab === t ? { background: 'var(--bg-active)', color: 'var(--text)', fontWeight: 700 } : undefined}
             >
-              {t === 'switch' ? 'Switch model' : t === 'download' ? 'Download' : 'Manage'}
+              {t === 'switch' ? 'Switch model' : t === 'guidance' ? 'Guidance' : t === 'download' ? 'Download' : 'Manage'}
             </button>
           ))}
           <div style={{ flexGrow: 1 }} />
@@ -55,7 +59,8 @@ export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged
         </div>
         <div style={{ overflowY: 'auto', flexGrow: 1 }}>
           {tab === 'switch' && <SwitchTab projects={projects} activeProject={activeProject} onChanged={onProjectsChanged} />}
-          {tab === 'download' && <DownloadTab onChanged={onProjectsChanged} />}
+          {tab === 'guidance' && <ModelGuidance plan={memoryPlan} onChange={setMemoryPlan} />}
+          {tab === 'download' && <DownloadTab onChanged={onProjectsChanged} plan={memoryPlan} onPlan={setMemoryPlan} />}
           {tab === 'manage' && <ManageTab onChanged={onProjectsChanged} />}
         </div>
       </div>
@@ -73,6 +78,7 @@ function SwitchTab({
   onChanged: () => void;
 }): JSX.Element {
   const [models, setModels] = useState<InstalledModel[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(true);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -83,9 +89,8 @@ function SwitchTab({
   const [mcpStatus, setMcpStatus] = useState<McpStatus | null>(null);
 
   const refresh = () => {
-    fetchInstalledModels()
-      .then(setModels)
-      .catch(() => setErr('Model manager unavailable or disabled'));
+    setModelsLoading(true);setErr(null);
+    fetchInstalledModels().then(setModels).catch(() => setErr('Model manager unavailable or disabled')).finally(()=>setModelsLoading(false));
     fetchProviders().then((r) => setProviders(r.providers || [])).catch(() => undefined);
     fetchAutoRoles().then(setAutoInfo).catch(() => undefined);
     fetchToolboxes().then((r) => { setToolboxes(r.toolboxes || []); setMcpStatus(r.mcp || null); }).catch(() => undefined);
@@ -267,7 +272,7 @@ function SwitchTab({
                 onChange={(e) => setPendingRoles((prev) => ({ ...prev, [role]: e.target.value }))}
               >
                 <option value="">{role === 'vision' ? '— none —' : '— pick a model —'}</option>
-                {models.map((m) => (
+                {!modelsLoading && models.map((m) => (
                   <option key={m.name} value={m.name}>
                     {m.name}
                   </option>
@@ -363,7 +368,9 @@ function SwitchTab({
           }
         </div>
       )}
-      {err && <p className="rail-empty">{err}</p>}
+      {err && <div role="alert"><p className="rail-empty">{err}</p><button className="popup-tab" disabled={modelsLoading || busy!==null} onClick={refresh}>Retry models</button></div>}
+      {modelsLoading && <p role="status">Loading models…</p>}
+      {!modelsLoading && !err && !models.length && <p role="status">No models are available in the model manager.</p>}
       {!activeProvider?.managed && (
         <div style={{ display: 'flex', gap: 6 }}>
           <input
@@ -430,7 +437,7 @@ function SwitchTab({
   );
 }
 
-function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
+function DownloadTab({ onChanged, plan, onPlan }: { onChanged: () => void; plan: MemoryPlan; onPlan: (plan: MemoryPlan) => void }): JSX.Element {
   const [q, setQ] = useState('');
   const [hits, setHits] = useState<{ repo: string; name: string; downloads: number | null }[]>([]);
   const [searching, setSearching] = useState(false);
@@ -441,7 +448,7 @@ function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
 
   useEffect(() => {
     const t = setInterval(() => {
-      apiFetch('/api/models/downloads').then((r) => r.json()).then(setJobs).catch(() => undefined);
+      apiFetch('/api/models/downloads').then(async(r) => {if(!r.ok)throw Error('Download status unavailable');return r.json();}).then(rows=>{if(!Array.isArray(rows))throw Error('Download status invalid');setJobs(rows);}).catch(() => undefined);
     }, 2500);
     return () => clearInterval(t);
   }, []);
@@ -453,7 +460,10 @@ function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
     setMsg(null);
     try {
       const r = await apiFetch(`/api/models/search?q=${encodeURIComponent(q)}`);
-      setHits(await r.json());
+      if(!r.ok)throw Error(`Search failed (${r.status})`);
+      const result=await r.json();
+      if(!Array.isArray(result) || result.some(h=>!h || typeof h.repo!=='string'))throw Error('Invalid search response');
+      setHits(result);
     } catch {
       setMsg('search failed');
     } finally {
@@ -465,7 +475,9 @@ function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
     setMsg(null);
     try {
       const r = await apiFetch(`/api/models/variants?repo=${encodeURIComponent(repo)}`);
+      if(!r.ok)throw Error(`Variant lookup failed (${r.status})`);
       const list = await r.json();
+      if(!Array.isArray(list) || list.some(v=>!v || typeof v.id!=='string' || typeof v.label!=='string'))throw Error('Invalid variant response');
       setVariants({ repo, variants: list });
     } catch {
       setMsg('variant lookup failed');
@@ -487,6 +499,8 @@ function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
       } else {
         setMsg(`Pull failed (${r.status})`);
       }
+    } catch {
+      setMsg('Download request failed. Check download status before retrying.');
     } finally {
       setPulling(null);
     }
@@ -505,7 +519,8 @@ function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
         />
         <button className="send-btn" onClick={() => void search()} disabled={searching}>Go</button>
       </div>
-      {msg && <p className="rail-empty">{msg}</p>}
+      <details className="model-download-planner"><summary>Check memory before downloading</summary><MemoryPlanner plan={plan} onChange={onPlan}/></details>
+      {msg && <p className="rail-empty" role="status">{msg}</p>}
       {jobs
         .filter((j) => j.status && !['done', 'completed', 'success'].includes(j.status.toLowerCase()))
         .map((j) => (
@@ -541,6 +556,7 @@ function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
                   <div className="model-name-group">
                     <span className="model-name">{v.label}</span>
                     {v.sizeGB != null && <span className="model-quant">{v.sizeGB} GB</span>}
+                    <ModelMemoryEstimate sizeGB={v.sizeGB} plan={plan}/>
                     <MtpArtifact key={`${h.repo}/${v.id}`} repo={h.repo} variant={v.label} />
                   </div>
                   <button
@@ -560,7 +576,7 @@ function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
                   disabled={pulling !== null}
                   onClick={() => void pull(variants.variants[0].id)}
                 >
-                  pull recommended quant ({variants.variants[0].label})
+                  Download first listed variant ({variants.variants[0].label})
                 </button>
               )}
             </div>
@@ -573,12 +589,14 @@ function DownloadTab({ onChanged }: { onChanged: () => void }): JSX.Element {
 
 function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
   const [models, setModels] = useState<InstalledModel[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmName, setConfirmName] = useState<string | null>(null);
 
   const refresh = () => {
-    fetchInstalledModels().then(setModels).catch(() => setErr('Model manager unavailable or disabled'));
+    setModelsLoading(true);setErr(null);
+    fetchInstalledModels().then(setModels).catch(() => setErr('Model manager unavailable or disabled')).finally(()=>setModelsLoading(false));
   };
   useEffect(refresh, []);
 
@@ -602,8 +620,10 @@ function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
   return (
     <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div className="rail-label">Installed models — load, unload, delete</div>
-      {err && <p className="rail-empty">{err}</p>}
-      {models.map((m) => (
+      {err && <div role="alert"><p className="rail-empty">{err}</p><button className="popup-tab" disabled={modelsLoading || busy!==null} onClick={refresh}>Retry models</button></div>}
+      {modelsLoading && <p role="status">Loading models…</p>}
+      {!modelsLoading && !err && !models.length && <p role="status">No models are available in the model manager.</p>}
+      {!modelsLoading && models.map((m) => (
         <div key={m.name} className="model-row">
           <span className={`model-dot${m.loaded ? '' : ' down'}`} />
           <div className="model-name-group">
