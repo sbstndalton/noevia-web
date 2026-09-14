@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { apiFetch } from '../api';
+import { NativeCalibration } from './NativeCalibration';
 type Profile = {model:string;revision:string;options:Record<string,string>;defaults:Record<string,string>;fields:string[]};
 type Suggestion = {values?:Record<string,string>;rows?:{ctx:number;totalGib:number;fits:boolean}[];budgetGib?:number;estimateGib?:number;notes?:string[];error?:string;source?:string};
 const labels: Record<string,string> = {'ctx-size':'Total context allocation (tokens)',parallel:'Parallel slots','n-gpu-layers':'GPU layers','cache-type-k':'Key cache type','cache-type-v':'Value cache type','flash-attn':'Flash attention','batch-size':'Batch size','ubatch-size':'Micro batch size','cache-ram':'Prompt cache RAM (MiB)','image-max-tokens':'Maximum image tokens','spec-type':'Speculative decoding'};
 const choices: Record<string,string[]> = {'cache-type-k':['f32','f16','bf16','q8_0','q4_0','q4_1','iq4_nl','q5_0','q5_1'],'cache-type-v':['f32','f16','bf16','q8_0','q4_0','q4_1','iq4_nl','q5_0','q5_1'],'flash-attn':['on','off','auto'],'spec-type':['none','draft-mtp']};
-export function NativeModelProfile({model,enabled,onChanged}:{model:string;enabled:boolean;onChanged:()=>void}) {
+export function NativeModelProfile({model,enabled,onChanged,focusCalibration=false}:{model:string;enabled:boolean;onChanged:()=>void;focusCalibration?:boolean}) {
   const [profile,setProfile]=useState<Profile|null>(null),[draft,setDraft]=useState<Record<string,string>>({});
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[confirmed,setConfirmed]=useState(false);
   const [suggestion,setSuggestion]=useState<Suggestion|null>(null);
@@ -28,9 +29,10 @@ export function NativeModelProfile({model,enabled,onChanged}:{model:string;enabl
     } catch(e){setError(e instanceof Error?e.message:'Suggestion unavailable');}finally{setBusy(false);}
   };
   const fmt=(n:number)=>n>=1024?`${Math.round(n/1024)}k`:String(n);
-  return <details className="native-model-profile"><summary>Native runtime profile</summary>
+  return <details className="native-model-profile" open={focusCalibration||undefined}><summary>Native runtime profile</summary>
     {!enabled ? <p>An administrator must configure shared preset storage to edit this profile.</p> : <>
       <p>These settings affect every user of this model. Router command-line settings take precedence. Observed context per slot is checked again when you chat.</p>
+      <NativeCalibration model={model} onChanged={()=>{onChanged();if(profile)void load();}} autoFocus={focusCalibration}/>
       {!profile && <button className="popup-tab" disabled={busy} onClick={()=>void load()}>{busy?'Reading…':'Read profile'}</button>}
       {profile && <>
         <div className="native-profile-suggest">

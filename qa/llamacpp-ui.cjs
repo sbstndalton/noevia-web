@@ -26,7 +26,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  assert.equal(await page.getByLabel('Maximum image tokens').count(),0);
  await input.fill('32768');
  assert.equal(await page.getByRole('button',{name:'delete',exact:true}).count(),0);assert.equal(await page.getByText('Enable MTP?',{exact:true}).count(),0);
- const apply=page.getByRole('button',{name:'Apply profile and reload presets'});assert.equal(await apply.isEnabled(),false);await page.getByRole('checkbox').check();await apply.click();await page.getByRole('alert').waitFor();assert.equal(await input.inputValue(),'32768');
+ const apply=page.getByRole('button',{name:'Apply profile and reload presets'});assert.equal(await apply.isEnabled(),false);await page.getByRole('checkbox',{name:/I have stopped other clients/}).check();await apply.click();await page.getByRole('alert').waitFor();assert.equal(await input.inputValue(),'32768');
  revision='two';await page.getByRole('button',{name:'Read latest; retain draft'}).click();await page.getByText(/Latest revision loaded/).waitFor();assert.equal(await input.inputValue(),'32768');conflict=false;await apply.click();await page.getByText(/Profile applied. Model remains unloaded/).waitFor();assert.equal(applied,1);
  for(const width of [375,768,1440])for(const theme of ['light','dark']){
  await page.setViewportSize({width,height:1000});await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);

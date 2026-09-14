@@ -23,6 +23,7 @@ type Tab = 'switch' | 'guidance' | 'download' | 'manage';
 
 export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged }: ModelPopupProps): JSX.Element {
   const [tab, setTab] = useState<Tab>('switch');
+  const [calibrateModel, setCalibrateModel] = useState<string | null>(null);
   const [memoryPlan, setMemoryPlan] = useState<MemoryPlan>(emptyMemoryPlan);
   const dialog = useModalDialog();
   return (
@@ -61,8 +62,8 @@ export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged
         <div style={{ overflowY: 'auto', flexGrow: 1 }}>
           {tab === 'switch' && <SwitchTab projects={projects} activeProject={activeProject} onChanged={onProjectsChanged} />}
           {tab === 'guidance' && <ModelGuidance plan={memoryPlan} onChange={setMemoryPlan} />}
-          {tab === 'download' && <DownloadTab onChanged={onProjectsChanged} plan={memoryPlan} onPlan={setMemoryPlan} />}
-          {tab === 'manage' && <ManageTab onChanged={onProjectsChanged} />}
+          {tab === 'download' && <DownloadTab onChanged={onProjectsChanged} plan={memoryPlan} onPlan={setMemoryPlan} onCalibrate={(model)=>{setCalibrateModel(model);setTab('manage');}} />}
+          {tab === 'manage' && <ManageTab onChanged={onProjectsChanged} focusModel={calibrateModel} />}
         </div>
       </div>
     </dialog>
@@ -442,7 +443,7 @@ function SwitchTab({
   );
 }
 
-function DownloadTab({ onChanged, plan, onPlan }: { onChanged: () => void; plan: MemoryPlan; onPlan: (plan: MemoryPlan) => void }): JSX.Element {
+function DownloadTab({ onChanged, plan, onPlan, onCalibrate }: { onChanged: () => void; plan: MemoryPlan; onPlan: (plan: MemoryPlan) => void; onCalibrate: (model: string) => void }): JSX.Element {
   const [canDownload,setCanDownload]=useState(false);
   useEffect(()=>{void apiFetch('/api/models/capabilities').then(r=>r.json()).then(v=>setCanDownload(v.admin===true && v.download===true)).catch(()=>{});},[]);
   const [q, setQ] = useState('');
@@ -541,6 +542,7 @@ function DownloadTab({ onChanged, plan, onPlan }: { onChanged: () => void; plan:
                 {j.progress != null ? ` · ${Math.round(j.progress * 100)}%` : ''}
               </span>
             </div>
+            {j.status === 'completed' && canDownload && <button className="popup-tab" onClick={() => onCalibrate(j.model)}>Measure context</button>}
           </div>
         ))}
       {hits.map((h) => (
@@ -595,7 +597,7 @@ function DownloadTab({ onChanged, plan, onPlan }: { onChanged: () => void; plan:
   );
 }
 
-function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
+function ManageTab({ onChanged, focusModel = null }: { onChanged: () => void; focusModel?: string | null }): JSX.Element {
   const [capabilities,setCapabilities]=useState<{kind:string;admin:boolean;presets:boolean;runtimeOptions:boolean}|null>(null);
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [modelsLoading, setModelsLoading] = useState(true);
@@ -641,7 +643,7 @@ function ManageTab({ onChanged }: { onChanged: () => void }): JSX.Element {
             {m.sizeGB != null && <span className="model-quant">{m.sizeGB} GB</span>}
             <span className="model-quant">{m.failed ? 'Failed to load' : m.status || (m.loaded?'loaded':'unloaded')}{m.source ? ` · ${m.source}` : ''}</span>
             {capabilities?.runtimeOptions && <MtpControl model={m} onChanged={()=>{refresh();onChanged();}} />}
-            {capabilities?.kind==='llamacpp' && capabilities.admin && <NativeModelProfile model={m.name} enabled={capabilities.presets} onChanged={onChanged}/>}
+            {capabilities?.kind==='llamacpp' && capabilities.admin && <NativeModelProfile model={m.name} enabled={capabilities.presets} onChanged={onChanged} focusCalibration={focusModel===m.name}/>}
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             {confirmName === m.name ? (
