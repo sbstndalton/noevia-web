@@ -26,18 +26,18 @@ export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged
   const [memoryPlan, setMemoryPlan] = useState<MemoryPlan>(emptyMemoryPlan);
   const dialog = useModalDialog();
   return (
-    <dialog ref={dialog} className="native-modal" aria-label="Models and tools" onCancel={(e) => { e.preventDefault(); onClose(); }}
+    <dialog ref={dialog} className="native-modal model-dialog-backdrop" aria-label="Models and tools" onCancel={(e) => { e.preventDefault(); onClose(); }}
       style={{
         position: 'fixed', inset: 0, zIndex: 50,
         background: 'oklch(20% 0.02 60 / 0.35)',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-        paddingTop: 70,
+
       }}
       onClick={onClose}
     >
-      <div
+      <div className="model-dialog-panel"
         style={{
-          width: 560, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 110px)',
+          width: 560, maxWidth: 'calc(100vw - 32px)',
           background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 16,
           boxShadow: '0 18px 50px oklch(15% 0.02 60 / 0.25)', overflow: 'hidden',
           display: 'flex', flexDirection: 'column',

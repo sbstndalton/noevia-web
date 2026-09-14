@@ -1170,3 +1170,29 @@ body { isolation:isolate; background:var(--bg-app); }
 .native-profile-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .native-profile-actions button { min-height: 44px; border: 1px solid var(--control-border); }
 @media (max-width: 480px) { .native-profile-fields { grid-template-columns: 1fr; } }
+
+/* Keep controls reachable when the mobile keyboard reduces the visible area. */
+.app { height: var(--visible-viewport-height, 100dvh); padding-block: env(safe-area-inset-top) env(safe-area-inset-bottom); }
+.native-modal { height: var(--visible-viewport-height, 100dvh); }
+.model-dialog-backdrop { padding-block: clamp(8px, 7dvh, 70px) 8px; }
+.model-dialog-panel { max-height: calc(var(--visible-viewport-height, 100dvh) - clamp(8px, 7dvh, 70px) - 8px); }
+.chat-workspace.is-empty { overflow-y: auto; }
+[data-short-viewport] .chat-workspace.is-empty .transcript { display: none; }
+[data-short-viewport] .chat-workspace.is-empty .composer { margin-block: auto; padding-block: 8px; }
+[data-short-viewport] .composer-hint { display: none; }
+[data-short-viewport] .chat-header { min-height: 44px; padding-block: 8px; }
+.settings-shell { max-height: calc(var(--visible-viewport-height, 100dvh) - 16px); }
+@media (max-width: 700px), (max-height: 550px) {
+  .stats-disclosure { margin: 4px 12px max(6px, env(safe-area-inset-bottom)); border-radius: 14px; min-width: 0; }
+  .stats-disclosure .stats-bar { flex-wrap: nowrap; overflow-x: auto; padding: 10px 12px; gap: 14px; min-height: 44px; scrollbar-width: thin; }
+  .stats-disclosure .stats-item, .stats-disclosure .stats-mtp { flex: 0 0 auto; flex-wrap: nowrap; white-space: nowrap; }
+  .stats-disclosure .stats-grow, .stats-disclosure .stats-src { display: none; }
+  .model-dialog-backdrop { padding-block: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-bottom)); }
+  .model-dialog-panel { max-height: calc(var(--visible-viewport-height, 100dvh) - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+}
+@media (max-width: 700px) {
+  .settings-shell { height: var(--visible-viewport-height, 100dvh); max-height: var(--visible-viewport-height, 100dvh); }
+  .native-modal input, .native-modal select, .native-modal textarea, .settings-shell input, .settings-shell select, .settings-shell textarea { font-size: 16px; }
+  .composer .send-btn, .diary-compose .send-btn, .composer-plus { min-width: 44px; min-height: 44px; }
+  .model-dialog-panel .popup-tab { min-height: 44px; }
+}
