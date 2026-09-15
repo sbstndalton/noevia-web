@@ -7,15 +7,16 @@
     <meta name="application-name" content="noevia" />
     <meta name="description" content="noevia — a focused space for conversation, journaling, and code." />
     <meta name="theme-color" content="#1c1d20" />
+    <!-- Start the sign-in checks while the app bundle downloads; AuthGate's
+         same-origin fetches pick these responses up instead of waiting. -->
+    <link rel="preload" href="/api/setup/status" as="fetch" crossorigin />
+    <link rel="preload" href="/api/auth/session" as="fetch" crossorigin />
     <script src="/theme.js"></script>
     <script defer src="/glass.js"></script>
     <script defer src="/viewport.js"></script>
+    <script defer src="/fonts.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
-    />
   </head>
   <body>
     <div id="root"></div>

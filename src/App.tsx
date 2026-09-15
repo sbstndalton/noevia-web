@@ -2,7 +2,7 @@ import { titleAfterSend } from './chat-title';
 import { sourceRefresher } from './source-refresh';
 import { sourceRefreshIssues } from './source-status';
 import { useAppearance } from './useAppearance';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import {
   createProject,
@@ -34,12 +34,9 @@ import type {
   ToolCallView,
 } from './types';
 import { ChatView } from './components/ChatView';
-import { DiaryView } from './components/DiaryView';
 import { ModelPopup } from './components/ModelPopup';
 import { ProjectView } from './components/ProjectView';
-import { ProjectsView } from './components/ProjectsView';
-import { SettingsShell } from './components/SettingsShell';
-import { CodingWorkspace } from './components/CodingWorkspace';
+import { Coding, Diary, Projects, Settings, prefetchViewsWhenIdle } from './lazy-views';
 import { FeaturePreview } from './components/PreviewPanel';
 import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
@@ -168,16 +165,20 @@ export default function App(): JSX.Element {
     // Re-poll health so an inference outage that starts mid-session surfaces
     // in the Chat/Diary warning banners instead of only failing on send.
     const t = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
       fetchHealth().then(setHealth).catch(() => setHealth((prev) => ({ ...prev, inferenceUp: false })));
     }, 30_000);
     return () => clearInterval(t);
   }, [refreshModels, refreshProjects]);
 
-  // Live engine stats — the bottom bar refreshes in near-real-time.
+  useEffect(() => prefetchViewsWhenIdle(), []);
+
+  // Live engine stats — the bottom bar refreshes in near-real-time while the
+  // tab is visible; a background tab stops polling and catches up on return.
   useEffect(() => {
     let alive = true, pending = false;
     const tick = () => {
-      if (pending) return;
+      if (pending || document.visibilityState === 'hidden') return;
       pending = true;
       void fetchStats()
         .then((s) => alive && setStats(s))
@@ -186,9 +187,11 @@ export default function App(): JSX.Element {
     };
     tick();
     const t = setInterval(tick, 2500);
+    document.addEventListener('visibilitychange', tick);
     return () => {
       alive = false;
       clearInterval(t);
+      document.removeEventListener('visibilitychange', tick);
     };
   }, []);
 
@@ -748,13 +751,15 @@ export default function App(): JSX.Element {
 
       {view.kind === 'preview' && <FeaturePreview title={view.title}/> }
       {view.kind === 'projects' && (
-        <ProjectsView onEdit={setEditingProjectId}
-          onPatch={handlePatchProject}
-          projects={projects}
-          onOpenProject={(id) => setView({ kind: 'project', id })}
-          onCreate={handleCreateProject}
-          onDelete={handleDeleteProject}
-        />
+        <Suspense fallback={null}>
+          <Projects.View onEdit={setEditingProjectId}
+            onPatch={handlePatchProject}
+            projects={projects}
+            onOpenProject={(id) => setView({ kind: 'project', id })}
+            onCreate={handleCreateProject}
+            onDelete={handleDeleteProject}
+          />
+        </Suspense>
       )}
 
       {view.kind === 'project' && activeProject && (
@@ -798,7 +803,7 @@ export default function App(): JSX.Element {
         />
       )}
 
-      {diaryEnabled && <div className="diary-mount" style={{ display: view.kind === 'diary' ? 'contents' : 'none' }}><DiaryView inferenceUp={health.inferenceUp} /></div>}
+      {diaryEnabled && <div className="diary-mount" style={{ display: view.kind === 'diary' ? 'contents' : 'none' }}><Suspense fallback={null}><Diary.View inferenceUp={health.inferenceUp} /></Suspense></div>}
 
       {popupOpen && (
         <ModelPopup
@@ -844,9 +849,10 @@ export default function App(): JSX.Element {
       )}
 
       </div>
-      {appMode === 'code'  && <CodingWorkspace onExit={() => setAppMode('chat')} onSettings={openSettings} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/>}
+      {appMode === 'code'  && <Suspense fallback={null}><Coding.View onExit={() => setAppMode('chat')} onSettings={openSettings} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/></Suspense>}
       {settingsOpen && (
-        <SettingsShell
+        <Suspense fallback={null}>
+        <Settings.View
           initialSection={settingsSection}
           appearanceStatus={appearanceStatus} appearanceError={appearanceError} retryAppearance={retryAppearance}
           onClose={() => setSettingsOpen(false)}
@@ -864,6 +870,7 @@ export default function App(): JSX.Element {
             setDiaryEnabled(enabled);
           }}
         />
+        </Suspense>
       )}
 
     </div>

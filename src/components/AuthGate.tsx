@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import type { FormEvent, JSX, ReactNode } from 'react';
-import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
-import { acceptInvitation, completeRecovery, fetchSession, passkeyLoginOptions, passkeyLoginVerify, passkeyRegistrationOptions, passkeyRegistrationVerify, passwordLogin, setupStatus } from '../api';
+import { acceptInvitation, completeRecovery, fetchSession, passkeyLoginOptions, passkeyLoginVerify, passkeyRegistrationOptions, passkeyRegistrationVerify, passwordLogin, probeSession, setupStatus } from '../api';
 import { isIpAddressHost } from '../browser-support';
 import type { AuthUser } from '../api';
-import { SetupWizard } from './SetupWizard';
+
+// Only first-run and resumed onboarding need the wizard, and only passkey
+// actions need WebAuthn, so neither delays the sign-in screen or the app.
+const SetupWizard = lazy(() => import('./SetupWizard').then((m) => ({ default: m.SetupWizard })));
+const webauthn = () => import('@simplewebauthn/browser');
 
 type Screen = 'checking' | 'wizard' | 'wizard-resume' | 'login' | 'secure' | 'ready';
 
@@ -21,17 +24,18 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
   const recovery = new URLSearchParams(window.location.search).get('recovery');
 
   useEffect(() => {
-    setupStatus().then((s) => {
+    // Both requests start together: on a slow link each round trip counts.
+    // The session probe stays quiet on 401 — signed out is a normal answer here.
+    const session = probeSession();
+    setupStatus().then(async (s) => {
       if (!s.configured) { setScreen('wizard'); return; }
       // Resumable onboarding: an authenticated user whom onboarding hasn't
       // marked complete goes back into the wizard instead of an app that may
       // not be usable yet. Pre-wizard/legacy users are onboarded by default.
-      fetchSession()
-        .then((s) => { setOnboardingUser(s.user); if (s.user.onboarded === false) setScreen('wizard-resume'); })
-        .then(() => {
-          setScreen((cur) => (cur === 'wizard-resume' ? cur : 'ready'));
-        })
-        .catch(() => setScreen('login'));
+      const user = await session;
+      if (!user) { setScreen('login'); return; }
+      setOnboardingUser(user);
+      setScreen(user.onboarded === false ? 'wizard-resume' : 'ready');
     }).catch(() => { setError('Could not reach noevia.'); setScreen('login'); });
     const lock = () => setScreen('login');
     window.addEventListener('cowork:unauthorized', lock);
@@ -58,7 +62,7 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
     setBusy(true); setError(null);
     try {
       const challenge = await passkeyLoginOptions(username);
-      const response = await startAuthentication({ optionsJSON: challenge.options });
+      const response = await (await webauthn()).startAuthentication({ optionsJSON: challenge.options });
       await passkeyLoginVerify(challenge.challengeToken, response);
       const session = await fetchSession();
       setOnboardingUser(session.user);
@@ -80,16 +84,17 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
     setBusy(true); setError(null);
     try {
       const challenge = await passkeyRegistrationOptions();
-      const response = await startRegistration({ optionsJSON: challenge.options });
+      const response = await (await webauthn()).startRegistration({ optionsJSON: challenge.options });
       await passkeyRegistrationVerify(challenge.challengeToken, response, 'Primary passkey'); sessionStorage.setItem('cowork-new-account', '1'); setScreen('ready');
     } catch { setError('Passkey setup was cancelled or failed. You can add one later.'); }
     finally { setBusy(false); }
   };
 
   if (screen === 'ready') return <>{children}</>;
-  if (screen === 'checking') return <main className="auth-screen"><div className="auth-card"><h1>Opening noevia…</h1></div></main>;
-  if (screen === 'wizard') return <SetupWizard mode="fresh" onFinished={() => setScreen('ready')} />;
-  if (screen === 'wizard-resume' && onboardingUser) return <SetupWizard key={onboardingUser.id} mode={onboardingUser.role === 'member' ? 'invited' : 'resume'} initialUser={onboardingUser} onFinished={() => setScreen('ready')} />;
+  const opening = <main className="auth-screen"><div className="auth-card"><h1>Opening noevia…</h1></div></main>;
+  if (screen === 'checking') return opening;
+  if (screen === 'wizard') return <Suspense fallback={opening}><SetupWizard mode="fresh" onFinished={() => setScreen('ready')} /></Suspense>;
+  if (screen === 'wizard-resume' && onboardingUser) return <Suspense fallback={opening}><SetupWizard key={onboardingUser.id} mode={onboardingUser.role === 'member' ? 'invited' : 'resume'} initialUser={onboardingUser} onFinished={() => setScreen('ready')} /></Suspense>;
   if (screen === 'secure') return <main className="auth-screen"><section className="auth-card">
     <div className="auth-mark" aria-hidden="true">n</div><h1>Secure your account</h1>
     <p>Passkeys are the recommended way to sign in using your device or security key.</p>

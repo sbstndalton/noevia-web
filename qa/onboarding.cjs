@@ -45,6 +45,8 @@ async function layout(page, label) {
         const page = await context.newPage(); const errors=[];
         page.on('pageerror',e=>errors.push(e.message));
         await page.goto(origin);
+        // The wizard is a lazily loaded chunk; check its layout once it is shown.
+        await page.getByRole('button',{name:'Get started',exact:true}).waitFor();
         await layout(page,`welcome-${diaryEnabled}`);
         await page.getByRole('button',{name:'Get started',exact:true}).click();
         await page.getByRole('button',{name:diaryEnabled?'Yes, I want a diary':'Chat only',exact:true}).click();
