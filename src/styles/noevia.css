@@ -1123,8 +1123,9 @@ body { isolation:isolate; background:var(--bg-app); }
 .diary-overview > section { padding:0; border:0; border-radius:0; }
 @media(max-width:1100px) {
   .diary-layout { display:flex; flex-direction:column; overflow-y:auto; }
-  .diary-primary { flex:none; overflow:visible; min-height:65dvh; }
-  .diary-content-scroll { flex:none; overflow:visible; }
+  /* One screen tall: the conversation keeps its own scroller (streaming follow)
+     and the composer stays docked; context panels follow below. */
+  .diary-primary { flex:none; height:100%; }
   .diary-context { flex:none; max-height:none; overflow:visible; }
   .diary-workspace-body { grid-template-columns:minmax(0,1fr); }
   .diary-workspace-navigation { grid-row:auto; border-top:1px solid var(--border-subtle); }
