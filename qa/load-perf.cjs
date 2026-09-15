@@ -3,7 +3,7 @@
 // Measures cold (empty cache) and warm (reload) loads at phone and desktop sizes under
 // emulated latency/bandwidth. PERF_ORIGIN=https://… instead times an existing site up to
 // its sign-in form without credentials (no account, prompt or write is sent).
-// PERF_RUNS (default 3), PERF_RTT_MS (default 150), PERF_KBPS (default 12000).
+// PERF_RUNS (default 3), PERF_RTT_MS (default 150 locally, 0 remote), PERF_KBPS (default 12000 / 0).
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -13,8 +13,9 @@ const web = path.resolve(__dirname, '..');
 const remote = process.env.PERF_ORIGIN || '';
 const origin = remote || 'http://localhost:31241';
 const runs = Number(process.env.PERF_RUNS) || (process.env.PERF_TRACE ? 1 : 3);
-const rtt = remote ? 0 : Number(process.env.PERF_RTT_MS ?? 150);
-const kbps = remote ? 0 : Number(process.env.PERF_KBPS ?? 12000);
+// A remote origin is measured on the real network unless latency is asked for.
+const rtt = Number(process.env.PERF_RTT_MS ?? (remote ? 0 : 150));
+const kbps = Number(process.env.PERF_KBPS ?? (remote ? 0 : 12000));
 const password = 'synthetic load perf password';
 
 async function throttle(page) {
