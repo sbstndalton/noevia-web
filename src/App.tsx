@@ -59,8 +59,9 @@ function uid(): string {
 
 export default function App(): JSX.Element {
   const {theme,setTheme,appearanceStatus,appearanceError,retryAppearance} = useAppearance();
-  const [settingsSection,setSettingsSection] = useState<'general'|'usage'>('general');
-  const openSettings = (section: 'general'|'usage' = 'general') => { setSettingsSection(section); setSettingsOpen(true); };
+  const [settingsSection,setSettingsSection] = useState<'general'|'usage'|'models'>('general');
+  const openSettings = (section: 'general'|'usage'|'models' = 'general') => { setSettingsSection(section); setSettingsOpen(true); };
+  useEffect(() => { const open = () => { setSettingsSection('models'); setSettingsOpen(true); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account'); return fresh; });
   const [appMode, setAppMode] = useState<'chat'|'code'>('chat');
   const [view, setView] = useState<View>(() => ({ kind: 'chat', chatId: `c-${uid()}`, projectId: null }));
@@ -808,6 +809,7 @@ export default function App(): JSX.Element {
             refreshProjects();
             refreshModels();
           }}
+          onOpenModelSettings={() => { setPopupOpen(false); openSettings('models'); }}
         />
       )}
 

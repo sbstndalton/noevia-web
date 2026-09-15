@@ -23,10 +23,10 @@ const {createFixture}=require('./diary-fixture.cjs');
   assert.equal(await dialog.locator('select').count(),3);
   assert.ok(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth));
   await page.screenshot({path:`/tmp/noevia-native-picker-${width}-${theme}.png`});
-  await dialog.getByRole('button',{name:'Manage',exact:true}).click();await dialog.getByText('Embedding fixture',{exact:true}).waitFor();
+  await dialog.getByRole('button',{name:'Loaded models',exact:true}).click();await dialog.getByText('Embedding fixture',{exact:true}).waitFor();
   assert.equal(await dialog.getByText('Ranking fixture',{exact:true}).count(),1);
   await page.close();
  }
- assert.deepEqual(errors,[]);assert.equal(fixture.requests.length,0);console.log('PASS native cold chat picker/auto roles exclude embedding and ranking; Manage preserves both; native MTP guidance, three widths and both themes.');
+ assert.deepEqual(errors,[]);assert.equal(fixture.requests.length,0);console.log('PASS native cold chat picker/auto roles exclude embedding and ranking; Loaded models lists both; native MTP guidance, three widths and both themes.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

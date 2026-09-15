@@ -32,14 +32,15 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   assert.equal((await api(page,'/api/setup/complete',{setupCode:fs.readFileSync(path.join(dir,'first-run-setup-code'),'utf8').trim(),publicOrigin:origin,username:'adminqa',displayName:'Synthetic admin',password:'synthetic mtp password',diaryEnabled:true})).status,201);
   await api(page,'/api/profile/onboarding',{});await page.reload();
   await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();
-  await page.getByRole('button',{name:/Choose model:/}).click();await page.locator('dialog[open]').waitFor();await page.getByRole('button',{name:'Manage',exact:true}).click();
+  await page.getByRole('button',{name:/Choose model:/}).click();await page.locator('dialog[open]').waitFor();await page.getByRole('button',{name:'Model settings',exact:true}).click();
+  await page.getByRole('tab',{name:'Library',exact:true}).click();
   const control=page.getByRole('combobox',{name:'Enable MTP for Synthetic native',exact:true});await control.waitFor();
   await page.waitForFunction(()=>!document.querySelector('select[aria-label="Enable MTP for Synthetic native"]').disabled);
   await control.selectOption('yes');await page.getByRole('button',{name:'Apply and load',exact:true}).click();
   await page.waitForFunction(()=>!document.querySelector('select[aria-label="Enable MTP for Synthetic native"]').disabled);
   assert.equal(loads.length,2);assert.equal(loads[0].save_options,undefined);assert.equal(loads[1].save_options,true);assert.equal(loads[0].ctx_size,32768);assert.match(loads[0].llamacpp_args,/--tensor-split 1,1/);assert.match(loads[0].llamacpp_args,/--spec-type draft-mtp/);
   assert.equal(await page.getByRole('combobox',{name:'Enable MTP for Unsupported',exact:true}).isDisabled(),true);
-  await page.getByTitle('Close',{exact:true}).click();
+  await page.getByRole('button',{name:'Close settings',exact:true}).click();
   await page.getByRole('progressbar',{name:'MTP acceptance for Synthetic native'}).waitFor();assert.equal(await page.getByRole('progressbar').getAttribute('value'),'0.75');
   for(const diary of [false,true]){
    if(diary)await page.getByRole('button',{name:'Diary',exact:true}).click();

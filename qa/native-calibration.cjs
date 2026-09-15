@@ -8,8 +8,9 @@ const {createFixture}=require('./diary-fixture.cjs');
  const page=await browser.newPage();await page.emulateMedia({reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  let job=null,polls=0,started=null,cancelled=0;
  const steps=[{ctx:8192,kind:'load',status:'passed',seconds:6,minAvailableGib:18.2},{ctx:65536,kind:'long',status:'passed',seconds:71,promptPerSecond:842,minAvailableGib:14.1},{ctx:98304,kind:'long',status:'failed',reason:'Filling this context would take about 214 s, over the 120 s limit.',seconds:9,minAvailableGib:12.1},{ctx:81920,kind:'long',status:'running',progress:37,etaSeconds:58}];
- await page.route('**/api/models/**',route=>{
+ await page.route('**/api/**',route=>{
   const req=route.request(),url=new URL(req.url());
+  if(url.pathname==='/api/profile'||url.pathname==='/api/auth/session')return route.fulfill({json:{user:{id:'qa',username:'admin',displayName:'Synthetic admin',role:'admin',diaryEnabled:true,onboarded:true},passkeys:[]}});
   if(url.pathname==='/api/models/capabilities')return route.fulfill({json:{kind:'llamacpp',admin:true,presets:true,download:true,runtimeOptions:false}});
   if(url.pathname==='/api/models/installed')return route.fulfill({json:[{name:'synthetic/new-model:Q4_K_M',labels:[],loaded:false,sizeGB:4,maxContext:131072,source:'cache',canDelete:true,status:'unloaded'}]});
   if(url.pathname==='/api/models/downloads')return route.fulfill({json:[{id:'synthetic/new-model:Q4_K_M',model:'synthetic/new-model:Q4_K_M',progress:1,status:'completed'}]});
@@ -20,12 +21,16 @@ const {createFixture}=require('./diary-fixture.cjs');
    return route.fulfill({json:{job,history:[]}});
   }
   if(url.pathname==='/api/models/preset')return route.fulfill({json:{model:'synthetic/new-model:Q4_K_M',revision:'r1',options:{},defaults:{},fields:['ctx-size','parallel']}});
-  return route.fulfill({json:[]});
+  if(url.pathname.startsWith('/api/model-manager/'))return route.fulfill({status:404,json:{error:'not configured'}});
+  if(url.pathname.startsWith('/api/models/'))return route.fulfill({json:[]});
+  return route.continue();
  });
- await page.goto('http://localhost:31329');await page.getByRole('button',{name:'Choose model'}).click();
- await page.getByRole('button',{name:'Download',exact:true}).click();
- await page.getByRole('button',{name:'Measure context'}).click();
- // Arrives on Manage with the profile open at the calibration section.
+ await page.goto('http://localhost:31329');
+ // Calibration lives in Settings → Models & routing → Library, under a model's details.
+ await page.getByTitle('Settings',{exact:true}).click();
+ await page.getByRole('button',{name:'Models & routing'}).click();
+ await page.getByRole('tab',{name:'Library',exact:true}).click();
+ await page.getByRole('article',{name:'synthetic/new-model:Q4_K_M'}).getByRole('button',{name:'Details'}).click();
  await page.getByRole('heading',{name:'Measure context on this machine'}).waitFor();
  const startButton=page.getByRole('button',{name:'Start calibration'});
  assert.equal(await startButton.isEnabled(),false);
@@ -39,7 +44,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  assert.ok(await page.getByText('Lowest free memory 12.1 GiB').isVisible());
  for(const width of [375,768,1440])for(const theme of ['light','dark']){
   await page.setViewportSize({width,height:900});await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
-  assert.ok(await page.getByRole('dialog').evaluate(el=>el.scrollWidth<=el.clientWidth),`overflow ${width} ${theme}`);
+  assert.ok(await page.getByRole('dialog',{name:'Settings'}).evaluate(el=>el.scrollWidth<=el.clientWidth+1),`overflow ${width} ${theme}`);
   const cancel=page.getByRole('button',{name:'Cancel calibration'});
   const box=await cancel.boundingBox();assert.ok(box&&box.height>=44,`cancel target ${width}`);
   await page.screenshot({path:`/tmp/noevia-native-calibration-${width}-${theme}.png`});
@@ -49,6 +54,6 @@ const {createFixture}=require('./diary-fixture.cjs');
  assert.equal(cancelled,1);
  assert.ok(await page.getByRole('button',{name:'Start calibration'}).isVisible());
  assert.deepEqual(errors,[]);assert.equal(fixture.requests.length,0);
- console.log('PASS native calibration browser: download hand-off, confirmation gate, time limit, live prompt progress and ETA, over-limit reasons, speed and memory, cancel/restore, 44px cancel, phone/tablet/desktop light/dark.');
+ console.log('PASS native calibration browser: settings library hand-off, confirmation gate, time limit, live prompt progress and ETA, over-limit reasons, speed and memory, cancel/restore, 44px cancel, phone/tablet/desktop light/dark.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,7 +1,7 @@
 import { McpStatus } from './McpStatus';
 import DiarySharing from './DiarySharing';
 import AppPasswords from './AppPasswords';
-import { ReasoningControl } from './ReasoningControl';
+import { ModelsSettings } from './models/ModelsSettings';
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import type { HealthState, InstalledModel, LiveStats, Project, Provider, RouteRule } from '../types';
@@ -24,13 +24,13 @@ export interface SettingsViewProps {
   onDiaryEnabledChange: (enabled: boolean) => void;
 }
 
-export function SettingsView({ models, routes, modelsError, projects, health, stats, onOpenModels, diaryEnabled, onDiaryEnabledChange, section = 'profile' }: SettingsViewProps): JSX.Element {
+export function SettingsView({ models, routes, modelsError, projects, health, stats, diaryEnabled, onDiaryEnabledChange, section = 'profile' }: SettingsViewProps): JSX.Element {
   return <div className="settings-live-content">
     {section === 'profile' && <ProfileCard />}
     {section === 'users' && <UsersCard />}
     {section === 'diary' && <><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
     {section === 'providers' && <ProvidersCard />}
-    {section === 'models' && <><ReasoningControl global /><div className="settings-section-heading"><h2>Models</h2><button className="modal-btn secondary" onClick={onOpenModels}>Open model manager</button></div>{modelsError && <p role="alert" className="modal-err">{modelsError}</p>}<div className="card-list">{models.map(m=><div className="model-row" key={m.name}><span className={`model-dot${m.loaded?'':' down'}`}/><div className="model-name-group"><span className="model-name">{m.name}</span><span className="model-quant">{m.sizeGB != null ? `${m.sizeGB} GB` : ''}{m.maxContext ? ` · ${m.maxContext.toLocaleString()} context` : ''}</span></div><span className="model-role">{m.loaded?'loaded':'not loaded'}</span></div>)}</div><h2>Project routing</h2><div className="route-table">{routes.map(r=><div className="route-row" key={r.task}><span>{r.task}</span><span>→</span><span>{r.model}</span></div>)}</div><p className="route-note">{projects.length} projects. Change a project's model from its model selector.</p></>}
+    {section === 'models' && <ModelsSettings models={models} routes={routes} projects={projects} modelsError={modelsError}/>}
     {section === 'status' && <><McpStatus /><h2>Connected services</h2><div className="card-list">{[['Inference',health.inferenceUp],['Diary',diaryEnabled?health.diaryUp:null],['Project retrieval',health.ragAvailable]].map(([label,up])=><div className="model-row" key={String(label)}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?'available':up===false?'unavailable':'not available'}</span></div>)}</div><h2>Live engine</h2><div className="settings-stat-row"><div><span title="Provider-reported rate. Invalid samples and samples shorter than one estimated second are omitted.">Reported tokens / second</span><strong>{stats?.tokensPerSecond?.toFixed(1) ?? '—'}</strong></div><div><span>Requests</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${stats.vramGb.toFixed(1)} GB`:'—'}</strong></div></div></>}
   </div>;
 }

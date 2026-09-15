@@ -55,11 +55,12 @@ const PLANNED: { group: string; items: string[] }[] = [
   { group: 'Coding workspace', items: ['Coding preferences', 'Git', 'Environments', 'Worktrees', 'Hooks'] },
 ];
 
-export function SettingsShell(props: SettingsViewProps & {initialSection?:'general'|'usage';appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void}) {
+export function SettingsShell(props: SettingsViewProps & {initialSection?:'general'|'usage'|'models';appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void}) {
   const [palette, setPalette] = useState(currentPalette);
   const [section, setSection] = useState<string>(props.initialSection || 'general');
   const [query, setQuery] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [profileKnown, setProfileKnown] = useState(false);
   const [profileError, setProfileError] = useState(false);
   const [profileAttempt, setProfileAttempt] = useState(0);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -75,8 +76,8 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
     let live = true;
     setProfileError(false);
     fetchProfile()
-      .then((p) => { if (live) setIsAdmin(p.user.role === 'admin'); })
-      .catch(() => { if (live) setProfileError(true); });
+      .then((p) => { if (live) { setIsAdmin(p.user.role === 'admin'); setProfileKnown(true); } })
+      .catch(() => { if (live) { setProfileError(true); setProfileKnown(true); } });
     return () => { live = false; };
   }, [profileAttempt]);
 
@@ -91,8 +92,9 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
   // A member who was viewing an admin section (or a stale saved section) must
   // not be left staring at an empty pane.
   useEffect(() => {
-    if (!groups.some((g) => g.items.some(([id]) => id === section))) setSection('general');
-  }, [groups, section]);
+    // Wait for the profile: admin sections appear only once the role is known.
+    if (profileKnown && !groups.some((g) => g.items.some(([id]) => id === section))) setSection('general');
+  }, [groups, section, profileKnown]);
 
   const title = groups.flatMap(g => g.items).find(([id]) => id === section)?.[1] || 'Settings';
   const filtered = groups.map(g => ({ ...g, items: g.items.filter(([, label]) => label.toLowerCase().includes(query.toLowerCase())) }));

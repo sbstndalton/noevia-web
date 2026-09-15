@@ -1,10 +1,6 @@
-import { NativeModelProfile } from './NativeModelProfile';
-import { ModelGuidance, MemoryPlanner, ModelMemoryEstimate } from './ModelGuidance';
-import { emptyMemoryPlan, matchesModelUse } from '../model-guidance';
-import type { MemoryPlan } from '../model-guidance';
-import { MtpArtifact } from './MtpArtifact';
+import { matchesModelUse } from '../model-guidance';
 import { MtpControl } from './MtpControl';
-import { Fragment, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useModalDialog } from './useModalDialog';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, Provider, Toolbox } from '../types';
@@ -17,57 +13,66 @@ interface ModelPopupProps {
   activeProject: Project | null;
   onClose: () => void;
   onProjectsChanged: () => void;
+  onOpenModelSettings?: () => void;
 }
 
-type Tab = 'switch' | 'guidance' | 'download' | 'manage';
+type Tab = 'switch' | 'loaded';
 
-export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged }: ModelPopupProps): JSX.Element {
+// The chat box's quick model switcher. Full management (downloads, settings, autoconfig,
+// hardware, benchmarks) lives in Settings → Models & routing.
+export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged, onOpenModelSettings: openSettingsProp }: ModelPopupProps): JSX.Element {
   const [tab, setTab] = useState<Tab>('switch');
-  const [calibrateModel, setCalibrateModel] = useState<string | null>(null);
-  const [memoryPlan, setMemoryPlan] = useState<MemoryPlan>(emptyMemoryPlan);
+  const onOpenModelSettings = openSettingsProp || (() => { onClose(); window.dispatchEvent(new Event('noevia:open-model-settings')); });
   const dialog = useModalDialog();
   return (
     <dialog ref={dialog} className="native-modal model-dialog-backdrop" aria-label="Models and tools" onCancel={(e) => { e.preventDefault(); onClose(); }}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 50,
-        background: 'oklch(20% 0.02 60 / 0.35)',
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-
-      }}
+      style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'oklch(20% 0.02 60 / 0.35)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}
       onClick={onClose}
     >
       <div className="model-dialog-panel"
-        style={{
-          width: 560, maxWidth: 'calc(100vw - 32px)',
-          background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 16,
-          boxShadow: '0 18px 50px oklch(15% 0.02 60 / 0.25)', overflow: 'hidden',
-          display: 'flex', flexDirection: 'column',
-        }}
+        style={{ width: 560, maxWidth: 'calc(100vw - 32px)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 16, boxShadow: '0 18px 50px oklch(15% 0.02 60 / 0.25)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '10px 12px', borderBottom: '1px solid var(--border)', background: 'var(--bg-sidebar)' }}>
-          {(['switch', 'guidance', 'download', 'manage'] as Tab[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className="popup-tab"
-              style={tab === t ? { background: 'var(--bg-active)', color: 'var(--text)', fontWeight: 700 } : undefined}
-            >
-              {t === 'switch' ? 'Switch model' : t === 'guidance' ? 'Guidance' : t === 'download' ? 'Download' : 'Manage'}
+          {(['switch', 'loaded'] as Tab[]).map((t) => (
+            <button key={t} onClick={() => setTab(t)} className="popup-tab" style={tab === t ? { background: 'var(--bg-active)', color: 'var(--text)', fontWeight: 700 } : undefined}>
+              {t === 'switch' ? 'Switch model' : 'Loaded models'}
             </button>
           ))}
           <div style={{ flexGrow: 1 }} />
-          <button className="popup-tab" onClick={onClose} title="Close">✕</button>
+          <button className="popup-tab" onClick={onOpenModelSettings}>Model settings</button>
+          <button className="popup-tab" onClick={onClose} title="Close" aria-label="Close">✕</button>
         </div>
         <div style={{ overflowY: 'auto', flexGrow: 1 }}>
           {tab === 'switch' && <SwitchTab projects={projects} activeProject={activeProject} onChanged={onProjectsChanged} />}
-          {tab === 'guidance' && <ModelGuidance plan={memoryPlan} onChange={setMemoryPlan} />}
-          {tab === 'download' && <DownloadTab onChanged={onProjectsChanged} plan={memoryPlan} onPlan={setMemoryPlan} onCalibrate={(model)=>{setCalibrateModel(model);setTab('manage');}} />}
-          {tab === 'manage' && <ManageTab onChanged={onProjectsChanged} focusModel={calibrateModel} />}
+          {tab === 'loaded' && <LoadedTab onChanged={onProjectsChanged} onOpenModelSettings={onOpenModelSettings} />}
         </div>
       </div>
     </dialog>
   );
+}
+
+function LoadedTab({ onChanged, onOpenModelSettings }: { onChanged: () => void; onOpenModelSettings: () => void }): JSX.Element {
+  const [models, setModels] = useState<InstalledModel[] | null>(null), [busy, setBusy] = useState(''), [error, setError] = useState('');
+  const refresh = () => { void fetchInstalledModels().then(setModels).catch(() => setError('Models are unavailable right now.')); };
+  useEffect(refresh, []);
+  const act = async (verb: 'load' | 'unload', name: string) => {
+    setBusy(name); setError('');
+    try { const r = await apiFetch(`/api/models/${verb}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); if (!r.ok) throw Error((await r.json()).error || `${verb} failed`); refresh(); onChanged(); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Model operation failed'); } finally { setBusy(''); }
+  };
+  const rows = (models || []).filter(m => !/^[0-9a-f]{32,40}$/i.test(m.name));
+  return <div className="model-manage">
+    <p className="mm-note">The engine keeps one model loaded and swaps on demand. Loading another replaces it.</p>
+    {error && <p role="alert" className="modal-err">{error}</p>}
+    {!models && !error && <p role="status">Loading models…</p>}
+    {rows.map(m => <div key={m.name} className="model-quick-row" data-state={m.failed ? 'failed' : m.loaded ? 'loaded' : 'unloaded'}>
+      <span className={`model-dot${m.loaded ? '' : ' down'}`} />
+      <span className="model-quick-name"><strong>{m.name}</strong><small>{m.failed ? 'Failed to load' : m.loaded ? 'Loaded' : 'Unloaded'}{m.sizeGB != null ? ` · ${m.sizeGB} GB` : ''}</small></span>
+      <button className="popup-tab" disabled={busy !== ''} onClick={() => void act(m.loaded ? 'unload' : 'load', m.name)}>{busy === m.name ? 'Working…' : m.loaded ? 'Unload' : 'Load'}</button>
+    </div>)}
+    <button className="popup-tab model-manage-loader" onClick={onOpenModelSettings}>Manage models in Settings</button>
+  </div>;
 }
 
 function SwitchTab({
@@ -439,248 +444,6 @@ function SwitchTab({
         </button>
       ))}
       {projects.length === 0 && <p className="rail-empty">No projects yet.</p>}
-    </div>
-  );
-}
-
-function DownloadTab({ onChanged, plan, onPlan, onCalibrate }: { onChanged: () => void; plan: MemoryPlan; onPlan: (plan: MemoryPlan) => void; onCalibrate: (model: string) => void }): JSX.Element {
-  const [canDownload,setCanDownload]=useState(false);
-  useEffect(()=>{void apiFetch('/api/models/capabilities').then(r=>r.json()).then(v=>setCanDownload(v.admin===true && v.download===true)).catch(()=>{});},[]);
-  const [q, setQ] = useState('');
-  const [hits, setHits] = useState<{ repo: string; name: string; downloads: number | null }[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [variants, setVariants] = useState<{ repo: string; variants: { id: string; label: string; sizeGB: number | null }[] } | null>(null);
-  const [pulling, setPulling] = useState<string | null>(null);
-  const [jobs, setJobs] = useState<{ id: string; model: string; progress: number | null; status: string }[]>([]);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      apiFetch('/api/models/downloads').then(async(r) => {if(!r.ok)throw Error('Download status unavailable');return r.json();}).then(rows=>{if(!Array.isArray(rows))throw Error('Download status invalid');setJobs(rows);}).catch(() => setMsg('Download status unavailable. Check the router before retrying a download.'));
-    }, 2500);
-    return () => clearInterval(t);
-  }, []);
-
-  const search = async () => {
-    if (!q.trim()) return;
-    setSearching(true);
-    setVariants(null);
-    setMsg(null);
-    try {
-      const r = await apiFetch(`/api/models/search?q=${encodeURIComponent(q)}`);
-      if(!r.ok)throw Error(`Search failed (${r.status})`);
-      const result=await r.json();
-      if(!Array.isArray(result) || result.some(h=>!h || typeof h.repo!=='string'))throw Error('Invalid search response');
-      setHits(result);
-    } catch {
-      setMsg('search failed');
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const showVariants = async (repo: string) => {
-    setMsg(null);
-    try {
-      const r = await apiFetch(`/api/models/variants?repo=${encodeURIComponent(repo)}`);
-      if(!r.ok)throw Error(`Variant lookup failed (${r.status})`);
-      const list = await r.json();
-      if(!Array.isArray(list) || list.some(v=>!v || typeof v.id!=='string' || typeof v.label!=='string'))throw Error('Invalid variant response');
-      setVariants({ repo, variants: list });
-    } catch {
-      setMsg('variant lookup failed');
-    }
-  };
-
-  const pull = async (checkpoint: string) => {
-    setPulling(checkpoint);
-    setMsg(null);
-    try {
-      const r = await apiFetch('/api/models/pull', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ checkpoint }),
-      });
-      if (r.ok) {
-        setMsg(`Download started: ${checkpoint}`);
-        onChanged();
-      } else {
-        setMsg(`Pull failed (${r.status})`);
-      }
-    } catch {
-      setMsg('Download request failed. Check download status before retrying.');
-    } finally {
-      setPulling(null);
-    }
-  };
-
-  return (
-    <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <input
-          className="composer-input"
-          style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px' }}
-          placeholder="Search Hugging Face models…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && void search()}
-        />
-        <button className="send-btn" onClick={() => void search()} disabled={searching}>Go</button>
-      </div>
-      {!canDownload && <p className="rail-empty">An administrator manages shared downloads when model management is available.</p>}
-      <details className="model-download-planner"><summary>Check memory before downloading</summary><MemoryPlanner plan={plan} onChange={onPlan}/></details>
-      {msg && <p className="rail-empty" role="status">{msg}</p>}
-      {jobs
-        .filter((j) => j.status).slice(0,10)
-        .map((j) => (
-          <div key={j.id} className="model-row">
-            <span className="model-dot" />
-            <div className="model-name-group">
-              <span className="model-name">{j.model}</span>
-              <span className="model-quant">
-                {j.status}
-                {j.progress != null ? ` · ${Math.round(j.progress * 100)}%` : ''}
-              </span>
-            </div>
-            {j.status === 'completed' && canDownload && <button className="popup-tab" onClick={() => onCalibrate(j.model)}>Measure context</button>}
-          </div>
-        ))}
-      {hits.map((h) => (
-        <Fragment key={h.repo}>
-          <div className="model-row">
-            <span className="model-dot down" />
-            <div className="model-name-group">
-              <span className="model-name">{h.name || h.repo}</span>
-              <span className="model-quant">{h.repo}{h.downloads != null ? ` · ${h.downloads}` : ''}</span>
-            </div>
-            <button className="popup-tab" style={{ border: '1px solid var(--border)' }} onClick={() => void showVariants(h.repo)}>
-              variants
-            </button>
-          </div>
-          {variants?.repo === h.repo && (
-            <div style={{ border: '1px dashed var(--border)', borderRadius: 12, padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div className="rail-label">{variants.repo}</div>
-              {variants.variants.length === 0 && <p className="rail-empty">No unambiguous variants available for this router.</p>}
-              {variants.variants.map((v) => (
-                <div key={v.id} className="model-row model-variant-row" style={{ padding: '8px 12px' }}>
-                  <div className="model-name-group">
-                    <span className="model-name">{v.label}</span>
-                    {v.sizeGB != null && <span className="model-quant">{v.sizeGB} GB</span>}
-                    <ModelMemoryEstimate sizeGB={v.sizeGB} plan={plan}/>
-                    <MtpArtifact key={`${h.repo}/${v.id}`} repo={h.repo} variant={v.label} />
-                  </div>
-                  <button
-                    className="popup-tab"
-                    style={{ border: '1px solid var(--accent-2)', color: 'var(--accent-2)' }}
-                    disabled={pulling !== null || !canDownload}
-                    onClick={() => void pull(v.id)}
-                  >
-                    {pulling === v.id ? 'starting…' : 'download'}
-                  </button>
-                </div>
-              ))}
-              {variants.variants[0] && (
-                <button
-                  className="popup-tab"
-                  style={{ alignSelf: 'flex-start', border: '1px solid var(--border)' }}
-                  disabled={pulling !== null || !canDownload}
-                  onClick={() => void pull(variants.variants[0].id)}
-                >
-                  Download first listed variant ({variants.variants[0].label})
-                </button>
-              )}
-            </div>
-          )}
-        </Fragment>
-      ))}
-    </div>
-  );
-}
-
-function ManageTab({ onChanged, focusModel = null }: { onChanged: () => void; focusModel?: string | null }): JSX.Element {
-  const [capabilities,setCapabilities]=useState<{kind:string;admin:boolean;presets:boolean;runtimeOptions:boolean;modelLoader?:boolean}|null>(null);
-  const [models, setModels] = useState<InstalledModel[]>([]);
-  const [modelsLoading, setModelsLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [confirmName, setConfirmName] = useState<string | null>(null);
-
-  const refresh = () => {
-    setModelsLoading(true);setErr(null);
-    Promise.all([fetchInstalledModels(),apiFetch('/api/models/capabilities').then(async r=>{if(!r.ok)throw Error('Model capabilities unavailable');return r.json();})]).then(([rows,cap])=>{setModels(rows);setCapabilities(cap);}).catch(() => setErr('Model manager unavailable or disabled')).finally(()=>setModelsLoading(false));
-  };
-  useEffect(refresh, []);
-
-  const act = async (verb: 'load' | 'unload' | 'delete', name: string) => {
-    setBusy(name);
-    try {
-      const response = await apiFetch(`/api/models/${verb}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-      });
-      if (!response.ok) throw new Error((await response.json()).error || `${verb} failed`);
-      refresh();
-      onChanged();
-    } catch (error) { setErr(error instanceof Error ? error.message : 'Model operation failed'); } finally {
-      setBusy(null);
-      setConfirmName(null);
-    }
-  };
-  const admin = capabilities?.admin === true;
-  const native = capabilities?.kind === 'llamacpp';
-  const stateLabel = (m: InstalledModel) => m.failed ? 'Failed to load' : m.loaded ? 'Loaded' : m.status === 'loading' ? 'Loading' : 'Unloaded';
-
-  return (
-    <div className="model-manage">
-      <div className="model-manage-head">
-        <div>
-          <div className="rail-label">Installed models</div>
-          {native && <p>llama.cpp loads one model at a time and swaps on demand.</p>}
-        </div>
-        {capabilities?.modelLoader && <a className="popup-tab model-manage-loader" href="/model-loader/" target="_blank" rel="noopener">Open Model Loader</a>}
-      </div>
-      {err && <div role="alert"><p className="rail-empty">{err}</p><button className="popup-tab" disabled={modelsLoading || busy!==null} onClick={refresh}>Retry models</button></div>}
-      {modelsLoading && <p role="status">Loading models…</p>}
-      {!modelsLoading && !err && !models.length && <p role="status">No models are available in the model manager.</p>}
-      {!modelsLoading && models.map((m) => (
-        <article key={m.name} className="model-card" data-state={m.failed ? 'failed' : m.loaded ? 'loaded' : 'unloaded'} aria-label={m.name}>
-          <header className="model-card-head">
-            <h3 className="model-card-name">{m.name}</h3>
-            <span className="model-card-state">{stateLabel(m)}</span>
-          </header>
-          <p className="model-card-meta">
-            {m.sizeGB != null && <span>{m.sizeGB} GB</span>}
-            {m.maxContext != null && <span>up to {m.maxContext.toLocaleString('en-US')} tokens</span>}
-            {m.source && <span>{m.source === 'preset' ? 'model folder' : m.source === 'cache' ? 'downloaded' : m.source}</span>}
-            {m.labels.map(label => <span key={label} className="model-card-tag">{label}</span>)}
-          </p>
-          <div className="model-card-actions">
-            {confirmName === m.name ? (m.canDelete === false ? (
-              <div className="model-card-confirm" role="group" aria-label={`Delete ${m.name}`}>
-                <p>This model's files live in the model folder, which llama.cpp cannot delete. {capabilities?.modelLoader ? 'Delete them in Model Loader.' : 'Remove them from the model folder on the server.'}</p>
-                {capabilities?.modelLoader && <a className="popup-tab" href="/model-loader/models" target="_blank" rel="noopener">Open in Model Loader</a>}
-                <button className="popup-tab" onClick={() => setConfirmName(null)}>Close</button>
-              </div>
-            ) : (
-              <div className="model-card-confirm" role="group" aria-label={`Delete ${m.name}`}>
-                <p>Delete the downloaded files for this model? This cannot be undone.</p>
-                <button className="popup-tab model-card-danger" disabled={busy !== null || !admin} onClick={() => void act('delete', m.name)}>{busy === m.name ? 'Deleting…' : 'Delete files'}</button>
-                <button className="popup-tab" onClick={() => setConfirmName(null)}>Keep</button>
-              </div>
-            )) : (
-              <>
-                <button className="popup-tab" disabled={busy !== null || !admin} onClick={() => void act(m.loaded ? 'unload' : 'load', m.name)}>
-                  {busy === m.name ? 'Working…' : m.loaded ? 'Unload' : 'Load'}
-                </button>
-                {admin && <button className="popup-tab model-card-danger" disabled={busy !== null} onClick={() => setConfirmName(m.name)}>Delete</button>}
-              </>
-            )}
-          </div>
-          {capabilities?.runtimeOptions && <MtpControl model={m} onChanged={()=>{refresh();onChanged();}} />}
-          {native && admin && <NativeModelProfile model={m.name} enabled={capabilities?.presets===true} onChanged={onChanged} focusCalibration={focusModel===m.name}/>}
-        </article>
-      ))}
     </div>
   );
 }
