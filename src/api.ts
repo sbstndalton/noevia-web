@@ -265,7 +265,7 @@ export interface McpServerStatus {
   id: string;
   /** Mirrors the server's parser in index.cjs: `bearer` comes from a
    *  `bearer:ENV_NAME` entry and was missing here. */
-  auth: 'nextcloud' | 'bearer' | 'none';
+  auth: 'nextcloud' | 'bearer' | 'internal' | 'none';
   error: string | null;
   discovered: number;
 }
