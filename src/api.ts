@@ -408,10 +408,6 @@ export function editDiaryEntry(body: { xid: string; me: string; assistant: strin
 }
 
 export const fetchUsage = (aggregate=false) => getJson<unknown>(aggregate?'/api/usage/aggregate':'/api/usage').then(parseUsage);
-export interface UsageRate {model:string;inputPerMillion:number;outputPerMillion:number}
-export interface UsagePricing {currency:string;rates:UsageRate[];admin?:boolean}
-export const fetchUsageRates=()=>getJson<UsagePricing>('/api/usage/rates');
-export const saveUsageRates=(value:UsagePricing)=>putJson<UsagePricing>('/api/usage/rates',value);
 
 export function fetchChatHistory(chatId: string): Promise<HistoryEntry[]> {
   return getJson<{ history: HistoryEntry[] }>(

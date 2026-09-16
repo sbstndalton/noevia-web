@@ -1,32 +1,57 @@
-// Native model UI regression: no inference, model loads or real storage.
+// The chat box's model panel. No inference, no model loads, no real storage.
+//
+// The panel is deliberately minimal now: Auto or one model, plus the tools.
+// Roles, loaded/unloaded, MTP and downloads moved to Settings → Models &
+// routing, so this asserts they are ABSENT here as much as what is present.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
  const fixture=createFixture(31334);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});const errors=[];
  try{
- for(const [width,height] of [[375,360],[768,1024],[1440,900]])for(const theme of ['light','dark']){
+ for(const [width,height] of [[375,720],[768,1024],[1440,900]])for(const theme of ['light','dark']){
   const page=await browser.newPage({viewport:{width,height}});page.on('pageerror',e=>errors.push(e.message));
-  const project={id:'synthetic-native-context',name:'Synthetic',model:'Cold chat',routing:'auto',files:[],assets:[],toolboxes:[]};
+  const project={id:'synthetic-native-context',name:'Synthetic',model:'Cold chat',routing:'auto',files:[],assets:[],toolboxes:['core']};
   await page.addInitScript(t=>localStorage.setItem('cowork-theme',t),theme);
   await page.route('**/api/chats/*/context',r=>r.fulfill({json:{project}}));
   await page.route('**/api/providers',r=>r.fulfill({json:{providers:[{id:'default',label:'Native',baseUrl:'http://synthetic.invalid/v1',managed:true,isDefault:true}]}}));
   await page.route('**/api/auto-roles',r=>r.fulfill({json:{configured:true,roles:{fast:'Cold chat',smart:'Cold chat'}}}));
   await page.route('**/api/models/capabilities',r=>r.fulfill({json:{kind:'llamacpp',admin:false,presets:true,runtimeOptions:false}}));
+  await page.route('**/api/toolboxes',r=>r.fulfill({json:{toolboxes:[{id:'core',label:'Core',description:'Clock and project files.',toolCount:2,estTokens:180,source:'builtin',available:true}],mcp:{configured:false,servers:[]}}}));
   await page.route('**/api/models/installed',r=>r.fulfill({json:[{name:'Embedding fixture',labels:['embeddings'],loaded:true},{name:'Ranking fixture',labels:['reranking'],loaded:false},{name:'Cold chat',labels:[],loaded:false}]}));
-  await page.goto('http://localhost:31334');await page.getByRole('button',{name:'Choose model'}).filter({hasText:'Auto (Fast/Smart)'}).waitFor();await page.getByRole('button',{name:'Choose model'}).click();const dialog=page.getByRole('dialog');
-  await dialog.getByText(/MTP is configured in the native runtime profile/).waitFor();
-  assert.equal(await dialog.getByText(/Enable MTP/).count(),0);
-  assert.equal(await dialog.locator('.model-row').count(),1);assert.match(await dialog.locator('.model-row').innerText(),/Cold chat/);
-  assert.equal(await dialog.locator('option').filter({hasText:'Embedding fixture'}).count(),0);
-  assert.equal(await dialog.locator('option').filter({hasText:'Ranking fixture'}).count(),0);
-  assert.equal(await dialog.locator('select').count(),3);
-  assert.ok(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth));
+  // Switching to Manual is the only write the panel makes here.
+  await page.route('**/api/projects/*/config',async r=>{project.routing='manual';await r.fulfill({json:{project}});});
+
+  await page.goto('http://localhost:31334');
+  await page.getByRole('button',{name:'Choose model'}).filter({hasText:'Auto (Fast/Smart)'}).waitFor();
+  await page.getByRole('button',{name:'Choose model'}).click();
+  const dialog=page.getByRole('dialog',{name:'Model and tools'});
+  await dialog.waitFor();
+
+  // Auto: a read-only summary of where it routes, and a way to change it.
+  await dialog.getByText(/Routing to/).waitFor();
+  assert.match(await dialog.getByText(/Routing to/).innerText(),/fast: Cold chat/);
+  assert.equal(await dialog.getByRole('button',{name:'Change in model settings'}).count(),1);
+  // No role editors, no loaded/unloaded list, no MTP — those live in Settings.
+  assert.equal(await dialog.locator('select').count(),0,'a role editor is still in the chat panel');
+  assert.equal(await dialog.getByRole('button',{name:'Loaded models',exact:true}).count(),0);
+  assert.equal(await dialog.getByText(/MTP/).count(),0);
+  assert.equal(await dialog.getByRole('button',{name:'Save roles'}).count(),0);
+  // Tools stay: they are per-project and belong with the model choice.
+  assert.equal(await dialog.getByRole('checkbox',{name:/Core/}).count(),1);
+
+  // Manual: the model list, with embedding and reranking models excluded.
+  await dialog.getByRole('button',{name:/Manual/}).click();
+  await dialog.locator('.mp-model').first().waitFor();
+  assert.equal(await dialog.locator('.mp-model').count(),1);
+  assert.match(await dialog.locator('.mp-model').innerText(),/Cold chat/);
+  for(const hidden of ['Embedding fixture','Ranking fixture']) assert.equal(await dialog.getByText(hidden,{exact:true}).count(),0,`${hidden} is offered for chat`);
+
+  assert.ok(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1),`overflow at ${width} ${theme}`);
   await page.screenshot({path:`/tmp/noevia-native-picker-${width}-${theme}.png`});
-  await dialog.getByRole('button',{name:'Loaded models',exact:true}).click();await dialog.getByText('Embedding fixture',{exact:true}).waitFor();
-  assert.equal(await dialog.getByText('Ranking fixture',{exact:true}).count(),1);
   await page.close();
  }
- assert.deepEqual(errors,[]);assert.equal(fixture.requests.length,0);console.log('PASS native cold chat picker/auto roles exclude embedding and ranking; Loaded models lists both; native MTP guidance, three widths and both themes.');
+ assert.deepEqual(errors,[]);assert.equal(fixture.requests.length,0);
+ console.log('PASS chat model panel: auto summary with a settings link, manual list excluding embedding/reranking, tools kept, roles/loaded/MTP absent, three widths and both themes.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

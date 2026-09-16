@@ -67,9 +67,17 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await page.getByTitle('Settings',{exact:true}).click();
  const dialog=page.getByRole('dialog',{name:'Settings'});
  await dialog.getByRole('button',{name:'Models & routing'}).click();
- const tab=name=>dialog.getByRole('tab',{name,exact:true}).click();
- // Library
- await tab('Library');
+ // One interface now: two tabs, an always-visible Routing section, and three
+ // collapsed panels. The helpers keep the assertions below about behaviour
+ // rather than about which tab something used to live in.
+ const tab=async name=>{const back=dialog.getByRole('button',{name:'← All models'});if(await back.count())await back.click();await dialog.getByRole('tab',{name,exact:true}).click();};
+ const yours=()=>tab('Your models');
+ const discover=()=>tab('Discover');
+ const fold=async name=>{const d=dialog.locator('details.mm-fold').filter({has:page.locator(`> summary:has-text("${name}")`)});if(!await d.evaluate(el=>el.open))await d.locator('> summary').click();await page.waitForTimeout(120);};
+ const openModel=async name=>{await dialog.getByRole('article',{name}).getByRole('button',{name:'Settings'}).click();await dialog.getByRole('button',{name:'← All models'}).waitFor();};
+ const backToList=()=>dialog.getByRole('button',{name:'← All models'}).click();
+ // Your models is the default tab.
+ await yours();
  await dialog.getByRole('article',{name:'Gemma-E2B'}).waitFor();
  assert.ok(await dialog.getByText('Update available (2026-09-10)').isVisible());
  const gemma=dialog.getByRole('article',{name:'Gemma-E2B'});
@@ -103,7 +111,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await dialog.getByText(/Saved and applied. Qwen-9B was unloaded/).waitFor();
  assert.deepEqual(reloads,[{unload:false},{unload:true}]);
  // Download → Set up
- await tab('Download');
+ await discover();
  await dialog.getByRole('button',{name:/synthetic\/model-GGUF/}).click();
  await dialog.getByRole('heading',{name:'synthetic/model-GGUF'}).waitFor();
  assert.ok(await dialog.getByText('Fast: 128K').isVisible());assert.ok(await dialog.getByText(/ships a vision projector/).isVisible());
@@ -116,7 +124,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  // report are asserted here: the completion signal used to be dropped (Settings
  // never passed onModelsChanged), and every list fetched only on mount.
  extraJob={id:'j2',repo:'synthetic/other-GGUF',filename:'later-model/later-model-Q4_K_M.gguf',status:'downloading',error:null,bytes:2e9,downloaded:1e9,pct:50,speedH:'10 MB/s',etaH:'1m',parallel:true,chunks:[]};
- await tab('Download');
+ await discover();
  await dialog.getByText('later-model/later-model-Q4_K_M.gguf').waitFor();
  const installedBefore=calls.filter(c=>c==='GET /api/models/installed').length;
  // The engine now serves it, and the job reports done. Nothing is remounted:
@@ -132,7 +140,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   'a completed download did not refresh the installed-model list');
 
  // And the Library list picks it up in place, without being remounted.
- await tab('Library');
+ await yours();
  await dialog.getByRole('article',{name:'new-model-Q4_K_M'}).waitFor();
  const beforeInPlace=calls.filter(c=>c==='GET /api/models/installed').length;
  await page.evaluate(()=>window.dispatchEvent(new Event('noevia:models-changed')));
@@ -142,41 +150,48 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   'the Library tab did not refresh in place on noevia:models-changed');
  extraJob=null;extraRegistered=false;
  // Hardware
- await tab('Hardware');
+ await fold('Hardware');
  await dialog.getByText(/Unified memory: this GPU has a small dedicated area/).waitFor();
  assert.ok(await dialog.getByText('10.0 of 16.5 GiB').isVisible());assert.ok(await dialog.getByText('62%',{exact:true}).first().isVisible());
  assert.ok(await dialog.getByText(/Big-Model failed to load: The GPU ran out of memory/).isVisible());
  assert.ok(await dialog.locator('figure.viz-chart svg path.viz-line').count()>=6);
  const memChart=dialog.getByRole('figure',{name:/GPU memory of 16.5 GiB/});await memChart.locator('svg').hover({position:{x:200,y:60}});await memChart.locator('.viz-tip').waitFor();
- await dialog.getByText('Logs',{exact:true}).click();await dialog.getByLabel('Filter').fill('synthetic');await dialog.getByRole('button',{name:'Refresh'}).click();await dialog.getByText('matching synthetic line').waitFor();
+ const hw=dialog.locator('details.mm-fold').filter({has:page.locator('> summary:has-text("Hardware")')});
+ await hw.getByText('Logs',{exact:true}).click();await hw.getByLabel('Filter',{exact:true}).fill('synthetic');await hw.getByRole('button',{name:'Refresh'}).click();await hw.getByText('matching synthetic line').waitFor();
  await dialog.getByRole('button',{name:'Restart engine…'}).click();assert.ok(await dialog.getByText(/interrupts any chat in progress/).isVisible());await dialog.getByRole('button',{name:'Keep running'}).click();
  // Benchmarks
- await tab('Benchmarks');
- await dialog.getByText('Prompt suite',{exact:true}).click();
- await dialog.getByLabel('Qwen-9B',{exact:true}).first().check();
- const start=dialog.getByRole('button',{name:'Start benchmark'});assert.ok(await start.isDisabled());
- await dialog.getByLabel(/I understand chat pauses/).check();await start.click();await dialog.getByRole('alert').filter({hasText:/running|Could not start|already/i}).first().waitFor();
+ await fold('Benchmarks');
+ const bench=dialog.locator('details.mm-fold').filter({has:page.locator('> summary:has-text("Benchmarks")')});
+ await bench.getByText('Prompt suite',{exact:true}).click();
+ await bench.getByRole('checkbox',{name:'Qwen-9B',exact:true}).check();
+ const start=bench.getByRole('button',{name:'Start benchmark'});assert.ok(await start.isDisabled());
+ await bench.getByLabel(/I understand chat pauses/).check();await start.click();await bench.getByRole('alert').filter({hasText:/running|Could not start|already/i}).first().waitFor();
  assert.deepEqual(benchStarted.aliases,['Qwen-9B']);
- await dialog.getByRole('button',{name:'View'}).click();await dialog.getByRole('heading',{name:/Run 7/}).waitFor();
- assert.ok(await dialog.getByRole('figure',{name:'Generation speed: Short answer'}).isVisible());
- await dialog.getByText('Output',{exact:true}).click();await dialog.getByText('OK, synthetic.').waitFor();
- await dialog.getByRole('button',{name:'4 of 5'}).click();await dialog.getByText('Coding 4/5').waitFor();
+ await bench.getByRole('button',{name:'View'}).click();await bench.getByRole('heading',{name:/Run 7/}).waitFor();
+ assert.ok(await bench.getByRole('figure',{name:'Generation speed: Short answer'}).isVisible());
+ await bench.getByText('Output',{exact:true}).click();await bench.getByText('OK, synthetic.').waitFor();
+ await bench.getByRole('button',{name:'4 of 5'}).click();await bench.getByText('Coding 4/5').waitFor();
  // Prompts and routing
- await tab('Prompts');await dialog.getByLabel('Name').fill('Synthetic prompt');await dialog.getByLabel('Prompt',{exact:true}).fill('Say hello.');await dialog.getByRole('button',{name:'Save prompt'}).click();await dialog.getByText('Synthetic prompt').waitFor();
- await tab('Routing');await dialog.getByRole('heading',{name:'Project routing'}).waitFor();assert.ok(await dialog.getByText(/OpenWebUI integration is not needed/).isVisible());
+ await fold('Prompt library');
+ const promptPanel=dialog.locator('details.mm-fold').filter({has:page.locator('> summary:has-text("Prompt library")')});
+ await promptPanel.getByLabel('Name').fill('Synthetic prompt');await promptPanel.getByLabel('Prompt',{exact:true}).fill('Say hello.');await promptPanel.getByRole('button',{name:'Save prompt'}).click();await promptPanel.getByText('Synthetic prompt').waitFor();
+ await dialog.getByRole('heading',{name:'Routing',exact:true}).waitFor();
+ await dialog.getByText(/Per-project routing \(/).click();
+ assert.ok(await dialog.getByText(/Change a project's model from its own model selector/).isVisible());
  // Layout at phone, tablet and desktop, both themes, on the densest tabs.
  for(const width of [375,768,1440])for(const theme of ['light','dark']){
   await page.setViewportSize({width,height:900});await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
-  for(const name of ['Library','Hardware','Configure']){
-   if(width<700)await dialog.getByLabel('Model management section').selectOption({label:name});else await tab(name);
+  for(const name of ['Your models','Discover','Detail']){
+   if(name==='Detail'){await yours();await openModel('Qwen-9B');}
+   else await tab(name);
    await page.waitForTimeout(150);
    assert.ok(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1),`overflow ${name} ${width} ${theme}`);
    const small=await dialog.evaluate(el=>[...el.querySelectorAll('.mm-root button, .mm-root select')].filter(b=>{const r=b.getBoundingClientRect();return r.width&&r.height&&r.height<40&&!b.classList.contains('mm-link')}).map(b=>b.textContent.trim()).slice(0,5));
    assert.deepEqual(small,[],`small targets ${name} ${width}`);
-   await page.screenshot({path:`${shots}/noevia-models-${name.toLowerCase()}-${width}-${theme}.png`,fullPage:false});
+   await page.screenshot({path:`${shots}/noevia-models-${name.toLowerCase().replace(/ /g,'-')}-${width}-${theme}.png`,fullPage:false});
   }
  }
  assert.deepEqual(errors,[]);assert.equal(fixture.requests.length,0);
- console.log('PASS models settings: library details/delete with settings, configure autoconfig presets/vision/fill, revision conflict and apply-now reload, download search/estimates/queue/set up, hardware unified memory/tiles/charts/tooltip/diagnosis/logs/restart guard, benchmark confirm/run charts/output/rating, prompts, routing, phone/tablet/desktop light/dark.');
+ console.log('PASS models settings: unified page with Your models/Discover, search and filters, library details/delete, per-model detail autoconfig presets/vision/fill, revision conflict and apply-now reload, download search/estimates/queue/set up, hardware unified memory/tiles/charts/tooltip/diagnosis/logs/restart guard, benchmark confirm/run charts/output/rating, prompts, routing section, phone/tablet/desktop light/dark.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

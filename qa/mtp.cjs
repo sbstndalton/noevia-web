@@ -33,7 +33,7 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   await api(page,'/api/profile/onboarding',{});await page.reload();
   await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();
   await page.getByRole('button',{name:/Choose model:/}).click();await page.locator('dialog[open]').waitFor();await page.getByRole('button',{name:'Model settings',exact:true}).click();
-  await page.getByRole('tab',{name:'Library',exact:true}).click();
+  await page.getByRole('tab',{name:'Your models',exact:true}).waitFor();
   const control=page.getByRole('combobox',{name:'Enable MTP for Synthetic native',exact:true});await control.waitFor();
   await page.waitForFunction(()=>!document.querySelector('select[aria-label="Enable MTP for Synthetic native"]').disabled);
   await control.selectOption('yes');await page.getByRole('button',{name:'Apply and load',exact:true}).click();

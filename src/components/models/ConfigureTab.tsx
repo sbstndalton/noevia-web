@@ -18,7 +18,7 @@ type Measured = { n: number; gen_p50: number; gen_p25: number; gen_p75: number; 
 type Run = Measured & { instance: string; is_current: boolean; diff: Record<string, string>; rel_pct: number };
 type Auto = { error?: string; section: string; arch: string; params: string; fileBytes: number; model: string; recommendation: Rec; measured: Measured; history: Run[] };
 
-export function ConfigureTab({ initial, onSaved }: { initial?: string; onSaved: () => void }) {
+export function ConfigureTab({ initial, onSaved, onSelect }: { initial?: string; onSaved: () => void; onSelect?: (name: string) => void }) {
   const [list, setList] = useState<SectionsResponse | null>(null), [selected, setSelected] = useState(initial || ''), [error, setError] = useState('');
   const load = async () => { try { setList(await mm<SectionsResponse>('sections')); } catch (e) { setError(errorText(e, 'Model settings are unavailable.')); } };
   useEffect(() => { void load(); }, []);
@@ -28,15 +28,15 @@ export function ConfigureTab({ initial, onSaved }: { initial?: string; onSaved: 
     <p className="mm-lede">Per-model settings for the llama.cpp engine (its models.ini). Each entry's name is the model id chat uses. Changes apply the next time the model loads.</p>
     {error && <p role="alert" className="modal-err">{error}</p>}
     <div className="mm-row">
-      <label className="mm-grow">Model<select value={selected} onChange={e => setSelected(e.target.value)}>
+      <label className="mm-grow">Model<select value={selected} onChange={e => { setSelected(e.target.value); onSelect?.(e.target.value); }}>
         <option value="">Choose a model…</option>
         <optgroup label="Configured">{names.map(n => <option key={n} value={n}>{n}</option>)}</optgroup>
         {!!list?.unregistered.length && <optgroup label="Files without settings">{list.unregistered.map(n => <option key={n} value={n}>{n} (new)</option>)}</optgroup>}
         {selected && !names.includes(selected) && !list?.unregistered.includes(selected) && <option value={selected}>{selected} (new)</option>}
       </select></label>
     </div>
-    {selected && list && <SectionEditor key={selected} name={selected} row={list.sections.find(s => s.name === selected)} onChanged={async (renamed) => { await load(); if (renamed !== undefined) setSelected(renamed); onSaved(); }}/>}
-    {list && !selected && <ul className="mm-list">{list.sections.map(s => <li key={s.name}><span>{s.name}<small>{s.hasFile ? s.file : 'model file not found'}</small></span><button className="modal-btn secondary" onClick={() => setSelected(s.name)}>Edit</button></li>)}</ul>}
+    {selected && list && <SectionEditor key={selected} name={selected} row={list.sections.find(s => s.name === selected)} onChanged={async (renamed) => { await load(); if (renamed !== undefined) { setSelected(renamed); onSelect?.(renamed); } onSaved(); }}/>}
+    {list && !selected && <ul className="mm-list">{list.sections.map(s => <li key={s.name}><span>{s.name}<small>{s.hasFile ? s.file : 'model file not found'}</small></span><button className="modal-btn secondary" onClick={() => { setSelected(s.name); onSelect?.(s.name); }}>Edit</button></li>)}</ul>}
     {list && list.backups.length > 0 && <p className="mm-note">{list.backups.length} automatic backups of the settings file are kept on the server (newest {new Date(list.backups[0][1] * 1000).toLocaleString()}).</p>}
   </div>;
 }

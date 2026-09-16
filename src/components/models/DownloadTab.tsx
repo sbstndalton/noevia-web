@@ -8,15 +8,15 @@ type Group = { shardBase: string; shards: number | null; bytes: number; size: st
 type Job = { id: string; repo: string; filename: string; status: string; error: string | null; bytes: number; downloaded: number; pct: number; speedH: string; etaH: string; parallel: boolean; chunks: { index: number; pct: number; status: string }[] };
 const VERDICT: Record<string, string> = { fits: 'Fits', tight: 'Tight fit', oom: 'Needs CPU offload', impossible: 'Too large for this machine' };
 
-export function DownloadTab({ onDownloaded, onSetUp }: { onDownloaded: () => void; onSetUp: (section: string) => void }) {
-  const [q, setQ] = useState(''), [sort, setSort] = useState('downloads');
+export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'downloads' }: { onDownloaded: () => void; onSetUp: (section: string) => void; query?: string; sort?: string }) {
+  const [q, setQ] = useState(query);
   const [results, setResults] = useState<Result[] | null>(null), [searching, setSearching] = useState(false), [error, setError] = useState('');
   const [repo, setRepo] = useState<{ repo: string; groups: Group[]; gated?: string; error?: string } | null>(null), [repoBusy, setRepoBusy] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]), [message, setMessage] = useState('');
   const finished = useRef(new Set<string>());
-  const search = async () => {
+  const search = async (term = q) => {
     setSearching(true); setError('');
-    try { const v = await mm<{ results: Result[]; error?: string }>(`search?${new URLSearchParams({ q, sort, limit: '30' })}`); if (v.error) throw Error(v.error); setResults(v.results); }
+    try { const v = await mm<{ results: Result[]; error?: string }>(`search?${new URLSearchParams({ q: term, sort, limit: '30' })}`); if (v.error) throw Error(v.error); setResults(v.results); }
     catch (e) { setError(errorText(e, 'Search failed')); } finally { setSearching(false); }
   };
   const openRepo = async (id: string) => {
@@ -32,6 +32,16 @@ export function DownloadTab({ onDownloaded, onSetUp }: { onDownloaded: () => voi
     } catch {}
   };
   useEffect(() => { void search(); void refreshJobs(); }, []);
+  // Debounced so typing in the page's search box does not fire a request per
+  // keystroke at Hugging Face.
+  useEffect(() => {
+    setQ(query);
+    if (!query.trim()) return;
+    const t = setTimeout(() => { setRepo(null); void search(query); }, 400);
+    return () => clearTimeout(t);
+  }, [query]);
+  const firstSort = useRef(true);
+  useEffect(() => { if (firstSort.current) { firstSort.current = false; return; } setRepo(null); void search(); }, [sort]);
   const active = jobs.some(j => ['queued', 'downloading'].includes(j.status));
   useEffect(() => { if (!active) return; const t = setInterval(() => void refreshJobs(), 1500); return () => clearInterval(t); }, [active]);
   const download = async (body: Record<string, unknown>, label: string) => {
@@ -42,11 +52,7 @@ export function DownloadTab({ onDownloaded, onSetUp }: { onDownloaded: () => voi
   return <div className="mm-tab">
     <p className="mm-lede">Search Hugging Face for GGUF models. Each file is fetched as eight parallel parts and resumes after a restart. A model's vision projector is downloaded with it.</p>
     <HfToken/>
-    <div className="mm-row">
-      <label className="mm-grow">Search<input value={q} placeholder="e.g. qwen3.5 9b" onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void search(); }}/></label>
-      <label>Sort by<select value={sort} onChange={e => setSort(e.target.value)}><option value="downloads">Downloads</option><option value="trendingScore">Trending</option><option value="likes">Likes</option><option value="lastModified">Recently updated</option></select></label>
-      <button className="modal-btn primary" disabled={searching} onClick={() => void search()}>{searching ? 'Searching…' : 'Search'}</button>
-    </div>
+    <p className="mm-note" role="status">{searching ? 'Searching Hugging Face…' : q.trim() ? `Results for “${q.trim()}”.` : 'Type in the search box above to find a model.'}</p>
     {error && <p role="alert" className="modal-err">{error}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
     <Queue jobs={jobs} onChange={refreshJobs} onSetUp={onSetUp}/>

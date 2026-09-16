@@ -390,7 +390,6 @@ button:disabled { opacity: .5; cursor: default; }
 @media(hover:none) { .project-card-options { opacity:1; } }
 .settings-detail .settings-stat-row { padding:18px 0; border-top:1px solid var(--border); }
 .settings-detail .model-row { padding:14px 0; border-radius:0; border-bottom:1px solid var(--border); }
-.settings-detail .settings-appearance > div:first-child { border-bottom:1px solid var(--border); padding-bottom:14px; }
 
 .identity-options { position:absolute; z-index:5; top:100%; left:0; width:min(300px,calc(100vw - 72px)); max-height:55dvh; overflow:auto; box-shadow:var(--shadow-pop); }
 .project-children { font-size:13px; line-height:1.4; }
@@ -1460,3 +1459,147 @@ body { isolation:isolate; background:var(--bg-app); }
 .mm-root details > summary::-webkit-details-marker { display: none; }
 .mm-disclosure > summary::before, .mm-tier > summary::before { content: '▸'; flex: none; width: 1em; color: var(--text-secondary); }
 .mm-disclosure[open] > summary::before, .mm-tier[open] > summary::before { content: '▾'; }
+
+/* ── Chat model panel ──────────────────────────────────────────────────
+   Deliberately small: choose Auto or a model, choose the tools. Everything
+   else moved to Settings → Models & routing. Styled here rather than inline
+   because noevia.css loads last and would override inline-equivalent rules
+   set anywhere else anyway. */
+.model-dialog-backdrop { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding: 24px 16px; overflow-y: auto; }
+.mp-panel { width: 440px; max-width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-card); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22); overflow: hidden; display: flex; flex-direction: column; }
+.mp-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--bg-sidebar); }
+.mp-head h2 { flex: 1 1 auto; margin: 0; font-size: 14px; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+
+.mp-mode { display: flex; gap: 8px; }
+.mp-mode-btn { flex: 1; display: flex; flex-direction: column; gap: 2px; align-items: flex-start; padding: 9px 12px; min-height: 44px; border: 1px solid var(--control-border); border-radius: 10px; background: transparent; color: var(--text-secondary); cursor: pointer; text-align: left; font-family: var(--font-ui); }
+.mp-mode-btn strong { font-size: 13px; }
+.mp-mode-btn span { font-size: 11px; opacity: 0.85; }
+.mp-mode-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-2-soft); color: var(--text); box-shadow: inset 0 0 0 1px var(--accent); }
+.mp-mode-btn[aria-pressed="true"] span { color: var(--text-secondary); }
+.mp-mode-btn:disabled { opacity: 0.6; cursor: default; }
+
+.mp-section { display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
+.mp-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.mp-section-head .rail-label { margin: 0; }
+.mp-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.mp-field > span { font-weight: 600; color: var(--text-secondary); }
+.mp-row-end { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mp-hint { margin: 0; font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
+.mp-warn { margin: 0; font-size: 11px; color: var(--danger); line-height: 1.5; }
+.mp-note { margin: 0; font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+.mp-roles { font-variant-numeric: tabular-nums; color: var(--text); }
+.mp-link { border: 0; background: none; padding: 0; font: inherit; color: var(--accent-ink); text-decoration: underline; cursor: pointer; }
+
+.mp-models { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
+.mp-model { cursor: pointer; text-align: left; font-family: var(--font-ui); width: 100%; }
+.mp-model[aria-pressed="true"] { border-color: var(--accent); }
+
+.mp-tool { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; cursor: pointer; min-height: 44px; }
+.mp-tool > span { flex: 1; min-width: 0; }
+.mp-tool input { margin-top: 3px; flex: none; }
+.mp-tool-desc { display: block; color: var(--text-secondary); font-size: 11px; line-height: 1.45; }
+.mp-tag { font-size: 10px; margin-left: 6px; padding: 1px 5px; border-radius: 4px; background: var(--accent-2-soft); color: var(--accent-ink); }
+
+@media (max-width: 520px) {
+  .model-dialog-backdrop { padding: 0; align-items: stretch; }
+  .mp-panel { width: 100%; border-radius: 0; border: 0; min-height: 100%; }
+  .mp-mode { flex-direction: column; }
+}
+
+/* ── Models & routing: one interface ───────────────────────────────────
+   Seven tabs became "Your models" and "Discover" with a detail view, so the
+   old mobile rule that hid the tab row in favour of a <select> would now hide
+   the only navigation on the page. Two tabs fit on a phone. */
+.mm-root .mm-tabs-row { display: flex; }
+.mm-root .mm-tabs { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.mm-root .mm-tabs-row { flex: 1 1 auto; border-bottom: 0; padding-bottom: 0; }
+.mm-root .mm-tabs { border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.mm-tabs-controls { display: flex; gap: 6px; flex-wrap: wrap; }
+.mm-select select { min-height: 40px; padding: 6px 10px; border: 1px solid var(--control-border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+.mm-root .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.mm-toolbar-row { display: flex; gap: 8px; align-items: center; }
+.mm-search { flex: 1 1 auto; }
+.mm-search input { width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--control-border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; }
+
+.mm-detail-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mm-detail-head h1 { margin: 0; font-size: 20px; overflow-wrap: anywhere; }
+
+/* Real pages' worth of content that nobody opens while switching a model:
+   present, but closed. */
+.mm-fold { padding: 0; }
+.mm-fold > summary { display: flex; align-items: center; gap: 8px; padding: 14px; min-height: 44px; cursor: pointer; }
+.mm-fold > summary > span { display: flex; flex-direction: column; gap: 2px; }
+.mm-fold > summary small { color: var(--text-secondary); font-size: 12px; }
+.mm-fold-body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.mm-fold[open] > summary { border-bottom: 1px solid var(--border); }
+
+@media (max-width: 700px) {
+  .mm-root .mm-tabs { align-items: stretch; }
+  .mm-tabs-controls { width: 100%; }
+  .mm-tabs-controls .mm-select, .mm-tabs-controls select { flex: 1 1 auto; width: 100%; }
+}
+
+/* The reasoning control is sized for the chat composer, where it sits beside
+   a 32px send button. On the settings page it is an ordinary form control and
+   has to meet the same 44px target as everything else here. */
+.mm-root .reasoning-control { font-size: 12.5px; }
+.mm-root .reasoning-control select { max-width: none; min-height: 44px; width: 100%; }
+.mm-root .reasoning-control label { display: flex; flex-direction: column; gap: 4px; }
+
+/* ── Presentation preferences ──────────────────────────────────────────
+   Set on <html> by public/theme.js before paint, so switching one never
+   flashes the previous setting. Defaults are the first value, which is what
+   the app looked like before these existed. */
+:root { --font-chat: var(--font-ui); --density-scale: 1; }
+:root[data-chat-font="serif"] { --font-chat: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif; }
+:root[data-chat-font="mono"] { --font-chat: var(--font-mono); }
+.msg .bubble, .msg .assistant-card, .markdown-preview { font-family: var(--font-chat); }
+
+/* Density trims the generous vertical rhythm without touching hit targets:
+   a 44px button stays 44px, the space around it shrinks. */
+:root[data-density="compact"] { --density-scale: 0.7; }
+[data-density="compact"] .msg { gap: 4px; }
+[data-density="compact"] .chat-thread { gap: calc(18px * var(--density-scale)); }
+[data-density="compact"] .settings-detail-scroll { gap: calc(20px * var(--density-scale)); }
+[data-density="compact"] .mm-root { gap: calc(18px * var(--density-scale)); }
+[data-density="compact"] .card-list { gap: calc(10px * var(--density-scale)); }
+
+/* "System" defers to the OS setting, which the app already honours; "reduced"
+   is for people whose OS setting is off but who want it here. */
+:root[data-motion="reduced"] *, :root[data-motion="reduced"] *::before, :root[data-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ── Settings rows ─────────────────────────────────────────────────────
+   A setting is a decision: what it is on the left, the control on the right.
+   Used across General so the page reads as a list rather than a pile of
+   unrelated widgets. */
+.settings-section { display: flex; flex-direction: column; gap: 12px; }
+.settings-section > h2 { margin: 0; font-size: 15px; font-weight: 700; }
+.set-rows { display: flex; flex-direction: column; border: 1px solid var(--control-border); border-radius: 12px; overflow: hidden; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; min-height: 44px; }
+.set-row + .set-row { border-top: 1px solid var(--border); }
+.set-row-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.set-row-label { font-size: 13.5px; font-weight: 600; }
+.set-row-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+.set-row-control { flex: none; display: flex; align-items: center; gap: 8px; }
+.set-row-control select { min-height: 44px; padding: 6px 10px; border: 1px solid var(--control-border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+.set-static { font-size: 13px; color: var(--text-secondary); }
+.set-avatar { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 999px; background: var(--accent-2-soft); color: var(--accent-ink); font-weight: 700; font-size: 14px; }
+.set-name-field { display: flex; gap: 8px; align-items: center; }
+.set-rows button, .set-rows select, .set-rows input { min-height: 44px; }
+.set-name-field input { min-height: 44px; min-width: 0; width: 190px; padding: 6px 10px; border: 1px solid var(--control-border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+.set-badge { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--control-border); color: var(--text-secondary); }
+.set-badge.is-on { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-2-soft); }
+
+@media (max-width: 620px) {
+  .set-row { flex-direction: column; align-items: stretch; }
+  .set-row-control { width: 100%; }
+  .set-row-control select, .set-name-field, .set-name-field input { width: 100%; }
+  .set-row-control .theme-choice, .set-row-control .palette-picker { width: 100%; }
+}

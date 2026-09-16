@@ -1,6 +1,5 @@
-import { PalettePicker } from './PalettePicker';
+import { GeneralSettings } from './GeneralSettings';
 import { SettingsPanelBoundary } from './SettingsPanelBoundary';
-import { currentPalette } from '../appearance';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SettingsView } from './SettingsView';
 import type { SettingsViewProps } from './SettingsView';
@@ -56,7 +55,6 @@ const PLANNED: { group: string; items: string[] }[] = [
 ];
 
 export function SettingsShell(props: SettingsViewProps & {initialSection?:'general'|'usage'|'models';appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void}) {
-  const [palette, setPalette] = useState(currentPalette);
   const [section, setSection] = useState<string>(props.initialSection || 'general');
   const [query, setQuery] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -126,18 +124,8 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
         {['profile', 'users', 'diary', 'providers', 'models', 'status'].includes(section) ? (
           <SettingsView {...props} section={section}/>
         ) : section === 'general' ? (
-          <>
-            <div className="settings-title"><h1>General</h1><p>Make noevia feel like your space.</p></div>
-            <section className="settings-appearance">
-              <div><h2>Appearance</h2><p>Choose a mode. Each mode remembers its own palette.</p></div>
-              <div className="theme-choice">{(['light', 'dark'] as const).map(t => <button className={props.theme === t ? 'is-active' : ''} aria-pressed={props.theme === t} key={t} onClick={() => props.onTheme(t)}>
-                <span className={`theme-swatch ${t}`} data-theme={t} data-palette={palette}><i/><i/><i/></span>{t === 'light' ? 'Light' : 'Dark'}
-              </button>)}</div>
-              <PalettePicker theme={props.theme} onChange={setPalette}/>
-              <p role={props.appearanceError ? 'alert' : 'status'} className="route-note">{props.appearanceStatus}</p>
-              {props.appearanceError && <button className="modal-btn secondary" onClick={props.retryAppearance}>Retry appearance</button>}
-            </section>
-          </>
+          <GeneralSettings theme={props.theme} onTheme={props.onTheme} appearanceStatus={props.appearanceStatus}
+            appearanceError={props.appearanceError} retryAppearance={props.retryAppearance} />
         ) : section === 'usage' ? (
           <UsageView/>
         ) : section === 'planned' ? (

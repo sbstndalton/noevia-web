@@ -14,7 +14,10 @@ type Update = { status: string; remote: string; delta_days: number | null };
 type Detail = FileEntry & { path: string; summary: { arch: string; general: Record<string, unknown>; model: Record<string, unknown>; chat_template_features: Record<string, boolean> } };
 const BADGE: Record<string, string> = { coding: 'Coding', writing: 'Creative writing', reasoning: 'Reasoning', tools: 'Tool use', vision: 'Vision' };
 
-export function LibraryTab({ onConfigure, onChanged }: { onConfigure: (section: string) => void; onChanged: () => void }) {
+export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', filter = 'all' }: {
+  onConfigure: (section: string) => void; onChanged: () => void;
+  query?: string; sort?: 'name' | 'size' | 'modified'; filter?: 'all' | 'loaded' | 'vision' | 'unconfigured';
+}) {
   const [models, setModels] = useState<InstalledModel[] | null>(null);
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [unregistered, setUnregistered] = useState<string[]>([]);
@@ -45,7 +48,25 @@ export function LibraryTab({ onConfigure, onChanged }: { onConfigure: (section: 
     try { const v = await mm<{ checked: number; status: Record<string, Update> }>('models/check-updates', { body: {} }); setUpdates(v.status); setMessage(`Checked ${v.checked} downloaded file${v.checked === 1 ? '' : 's'} against Hugging Face.`); }
     catch (e) { setError(errorText(e, 'Update check failed')); } finally { setBusy(''); }
   };
-  const servable = (models || []).filter(m => !/^[0-9a-f]{32,40}$/i.test(m.name));
+  // Hex names are Hugging Face cache artefacts, not something anyone chose to
+  // install, and they cannot be configured usefully.
+  const installed = (models || []).filter(m => !/^[0-9a-f]{32,40}$/i.test(m.name));
+  const needle = query.trim().toLowerCase();
+  const servable = installed
+    .filter(m => !needle || m.name.toLowerCase().includes(needle))
+    .filter(m => {
+      if (filter === 'loaded') return m.loaded;
+      if (filter === 'vision') return !!fileFor(m.name)?.projector || m.labels.includes('vision');
+      // "Needs setup" means the engine lists it but no models.ini section
+      // points at a file, so it cannot actually be served.
+      if (filter === 'unconfigured') return !fileFor(m.name);
+      return true;
+    })
+    .sort((a, b) => {
+      if (sort === 'size') return (fileFor(b.name)?.bytes ?? b.sizeGB ?? 0) - (fileFor(a.name)?.bytes ?? a.sizeGB ?? 0);
+      if (sort === 'modified') return (fileFor(b.name)?.modified || '').localeCompare(fileFor(a.name)?.modified || '');
+      return a.name.localeCompare(b.name);
+    });
   const shownFiles = new Set(servable.map(m => fileFor(m.name)?.key).filter(Boolean));
   const orphanFiles = files.filter(f => !shownFiles.has(f.key));
   return <div className="mm-tab">
@@ -57,6 +78,8 @@ export function LibraryTab({ onConfigure, onChanged }: { onConfigure: (section: 
     {message && <p role="status" className="mm-note">{message}</p>}
     {filesNote && <p className="mm-note">{filesNote}</p>}
     {!models && !error && <p role="status">Loading models…</p>}
+    {models && <p className="mm-note" role="status">{servable.length} of {installed.length} {installed.length === 1 ? 'model' : 'models'}{needle ? ` matching “${query.trim()}”` : ''}{filter !== 'all' ? ' after filtering' : ''}.</p>}
+    {models && !servable.length && installed.length > 0 && <p className="mm-note">Nothing matches. Clear the search or choose All models.</p>}
     {servable.map(m => <ModelCard key={m.name} runtimeOptions={runtimeOptions} onRefresh={() => void refresh()} model={m} file={fileFor(m.name)} update={updates[fileFor(m.name)?.name || '']} busy={busy === m.name}
       onToggle={() => void act(m.loaded ? 'unload' : 'load', m.name)} onConfigure={() => onConfigure(m.name)} onDeleted={onChanged}/>)}
     {orphanFiles.length > 0 && <section className="mm-panel"><h3>Files without a model entry</h3>
