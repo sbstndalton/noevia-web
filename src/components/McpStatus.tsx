@@ -10,9 +10,11 @@ export function McpStatus() {
     return()=>{stopped=true;};
   },[attempt]);
   const servers=status?.servers||[],failed=servers.filter(server=>!!server.error).length;
-  const state=!status?'Checking…':!status.configured?'Not configured':failed===servers.length&&failed?'Unavailable':failed||servers.some(server=>server.missingCurated)?'Degraded':'Available';
+  const unconfigured=!!status&&!status.configured;
+  const state=!status?'Checking…':unconfigured?'Not configured — set MCP_SERVERS':failed===servers.length&&failed?'Unavailable':failed||servers.some(server=>server.missingCurated)?'Degraded':'Available';
   return <section><div className="settings-section-heading"><h2>Connected tools · {error?'Unknown':state}</h2><button className="popup-tab" onClick={()=>setAttempt(value=>value+1)}>Reload status</button></div>
     {error&&<p className="route-note" role="alert">{error}</p>}
+    {unconfigured&&<p className="route-note">No MCP server is configured, so only the built-in <code>core</code> toolbox is offered. Set <code>MCP_SERVERS</code> in this deployment's environment to <code>id|url|auth</code> entries. If connected tools used to appear here, the deployment's Compose file has most likely lost that variable.</p>}
     {!!servers.length&&<div className="card-list">{servers.map(server=><div className="model-row" key={server.id}>
       <span className={`model-dot${server.error||server.missingCurated?' down':''}`} />
       <div className="model-name-group"><span className="model-name">{server.id}</span><span className="model-quant">{server.error?'Catalogue unavailable':`${server.discovered} tools discovered${server.missingCurated?` · ${server.missingCurated} curated tools missing`:''}`}{server.checkedAt?` · Checked ${new Date(server.checkedAt).toLocaleTimeString()}`:''}</span></div>
