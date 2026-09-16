@@ -1,6 +1,7 @@
 import { matchesModelUse } from '../model-guidance';
+import { useModelsChanged } from '../models-changed';
 import { MtpControl } from './MtpControl';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useModalDialog } from './useModalDialog';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, Provider, Toolbox } from '../types';
@@ -54,8 +55,11 @@ export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged
 
 function LoadedTab({ onChanged, onOpenModelSettings }: { onChanged: () => void; onOpenModelSettings: () => void }): JSX.Element {
   const [models, setModels] = useState<InstalledModel[] | null>(null), [busy, setBusy] = useState(''), [error, setError] = useState('');
-  const refresh = () => { void fetchInstalledModels().then(setModels).catch(() => setError('Models are unavailable right now.')); };
-  useEffect(refresh, []);
+  const refresh = useCallback(() => { void fetchInstalledModels().then(setModels).catch(() => setError('Models are unavailable right now.')); }, []);
+  useEffect(refresh, [refresh]);
+  // The popup stays mounted across model changes made elsewhere, and reopening
+  // it did not refetch either.
+  useModelsChanged(refresh);
   const act = async (verb: 'load' | 'unload', name: string) => {
     setBusy(name); setError('');
     try { const r = await apiFetch(`/api/models/${verb}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); if (!r.ok) throw Error((await r.json()).error || `${verb} failed`); refresh(); onChanged(); }
@@ -97,15 +101,16 @@ function SwitchTab({
   const [toolboxes, setToolboxes] = useState<Toolbox[]>([]);
   const [mcpStatus, setMcpStatus] = useState<McpStatus | null>(null);
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     setModelsLoading(true);setErr(null);
     fetchInstalledModels().then(setModels).catch(() => setErr('Model manager unavailable or disabled')).finally(()=>setModelsLoading(false));
     apiFetch('/api/models/capabilities').then(async r => { if(!r.ok)throw Error('Capabilities unavailable'); return r.json(); }).then(setCapabilities).catch(() => setCapabilities(null));
     fetchProviders().then((r) => setProviders(r.providers || [])).catch(() => undefined);
     fetchAutoRoles().then(setAutoInfo).catch(() => undefined);
     fetchToolboxes().then((r) => { setToolboxes(r.toolboxes || []); setMcpStatus(r.mcp || null); }).catch(() => undefined);
-  };
-  useEffect(refresh, []);
+  }, []);
+  useEffect(refresh, [refresh]);
+  useModelsChanged(refresh);
 
   const defaultProviderId = providers.find((provider) => provider.isDefault)?.id || 'default';
   const activeProviderId = activeProject?.provider === 'lemonade' ? defaultProviderId : activeProject?.provider || defaultProviderId;

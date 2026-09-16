@@ -8,7 +8,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  try{
  const page=await browser.newPage({viewport:{width:1440,height:950}});await page.emulateMedia({reducedMotion:'reduce'});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- const calls=[];let saveAttempts=0,revision='r1',deleted=[],reloads=[],badges=[],prompts=[{id:1,name:'Short answer',body:'Reply with OK.'}],benchStarted=null;
+ const calls=[];let saveAttempts=0,revision='r1',deleted=[],reloads=[],badges=[],extraJob=null,extraRegistered=false,prompts=[{id:1,name:'Short answer',body:'Reply with OK.'}],benchStarted=null;
  const now=Date.now()/1000,hist=Array.from({length:40},(_,i)=>({ts:now-(39-i)*2,gpu_util:i%10*9,vram_used_gb:0.15,cpu_pct:40+i%5*10,mem_used_gb:1.2,shared_used_gb:6+i*0.1,temp_c:48,power_w:18+i%4,per_gpu_util:[],per_gpu_vram_used_gb:[]}));
  const hostHist=hist.map(p=>({ts:p.ts,cpu_pct:12,mem_used_gb:14.5,mem_total_gb:29,mem_available_gb:14.5}));
  const schema=[{tier:'Common',open:true,fields:[{key:'model',label:'Model file',kind:'text',choices:[],placeholder:'',help:'Model path'},{key:'ctx-size',label:'Context size',kind:'int',choices:[],placeholder:'8192',help:'Tokens'},{key:'ngl',label:'GPU layers',kind:'text',choices:[],placeholder:'999',help:''},{key:'flash-attn',label:'Flash attention',kind:'select',choices:['','on','off','auto'],placeholder:'',help:''},{key:'jinja',label:'Enable --jinja templating',kind:'bool',choices:[],placeholder:'',help:''}]},{tier:'Multimodal / vision',open:false,fields:[{key:'mmproj',label:'Projector',kind:'text',choices:[],placeholder:'',help:''}]}];
@@ -23,7 +23,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   const body=()=>{try{return req.postDataJSON();}catch{return {};}};
   if(p==='/api/profile'||p==='/api/auth/session')return json({user:{id:'qa',username:'admin',displayName:'Synthetic admin',role:'admin',diaryEnabled:true,onboarded:true},passkeys:[]});
   if(p==='/api/models/capabilities')return json({kind:'llamacpp',admin:true,presets:true,download:true,runtimeOptions:false,modelManagement:true});
-  if(p==='/api/models/installed')return json([{name:'Qwen-9B',labels:['vision'],loaded:true,sizeGB:5.6,maxContext:262144,source:'preset',canDelete:false,status:'loaded'},{name:'Gemma-E2B',labels:[],loaded:false,sizeGB:3,maxContext:131072,source:'preset',canDelete:false,status:'unloaded'}]);
+  if(p==='/api/models/installed')return json([{name:'Qwen-9B',labels:['vision'],loaded:true,sizeGB:5.6,maxContext:262144,source:'preset',canDelete:false,status:'loaded'},{name:'Gemma-E2B',labels:[],loaded:false,sizeGB:3,maxContext:131072,source:'preset',canDelete:false,status:'unloaded'},...(extraRegistered?[{name:'new-model-Q4_K_M',labels:[],loaded:false,sizeGB:2,maxContext:8192,source:'preset',canDelete:false,status:'unloaded'}]:[])]);
   if(p==='/api/models/calibration')return json({job:null,history:[]});
   if(p==='/api/models/presets/reload'){const b=body();reloads.push(b);return b.unload?json({reloaded:true,unloaded:['Qwen-9B']}):json({error:'A model is loaded.',loaded:['Qwen-9B']},409);}
   if(!p.startsWith('/api/model-manager/'))return p.startsWith('/api/models/')?json([]):route.continue();
@@ -54,7 +54,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   if(r==='settings')return json({hasToken:false,tokenHint:''});
   if(r.startsWith('search/repo'))return json({repo:'synthetic/model-GGUF',groups:[{shardBase:'model-Q4_K_M.gguf',shards:null,bytes:5e9,size:'4.7 GiB',quant:'Q4_K_M',projector:false,fit:[{name:'cowork-llama-1',verdict:'fits',ratio_pct:40}],files:[{path:'model-Q4_K_M.gguf',bytes:5e9,size:'4.7 GiB'}],estimates:[{key:'fast',label:'Fast',ctx:131072,gpu_layers:32,total_layers:32,speed_pct:100,offload:false}],nativeCtx:262144},{shardBase:'mmproj-F16.gguf',shards:null,bytes:9e8,size:'0.9 GiB',quant:null,projector:true,fit:[],files:[{path:'mmproj-F16.gguf',bytes:9e8,size:'0.9 GiB'}]}],gated:''});
   if(r.startsWith('search'))return json({results:[{id:'synthetic/model-GGUF',downloads:1234,likes:56,last_modified:'2026-09-01',pipeline_tag:'text-generation',gguf_count:4,downloaded:[]}]});
-  if(r==='downloads'&&m==='GET')return json({jobs:[{id:'j1',repo:'synthetic/model-GGUF',filename:'new-model-Q4_K_M/new-model-Q4_K_M.gguf',status:'done',error:null,bytes:2e9,downloaded:2e9,pct:100,speedH:'—',etaH:'—',parallel:true,chunks:[]}]});
+  if(r==='downloads'&&m==='GET')return json({jobs:[{id:'j1',repo:'synthetic/model-GGUF',filename:'new-model-Q4_K_M/new-model-Q4_K_M.gguf',status:'done',error:null,bytes:2e9,downloaded:2e9,pct:100,speedH:'—',etaH:'—',parallel:true,chunks:[]},...(extraJob?[extraJob]:[])]});
   if(r==='downloads'&&m==='POST')return json({queued:['model-Q4_K_M.gguf','mmproj-F16.gguf']});
   if(r==='benchmark')return json({sections:['Qwen-9B','Gemma-E2B'],sweepArgs:{},prompts,backends:['cowork-llama-1'],maxTokensDefault:3072,maxTokensCeiling:8192,job:{run_id:0,status:'idle',backend:'',total:0,done:0,current:'',error:'',unit:'requests',lines:[],pct:0,elapsed:0,eta:0,active:false},runs:[{id:7,backend:'cowork-llama-1',status:'done',started_at:now-600,finished_at:now-300,reps:3,max_tokens:512,note:''}],categories:[{key:'coding',label:'Coding'},{key:'writing',label:'Creative writing'}]});
   if(r==='benchmark/start'){benchStarted=body();return json({error:'A benchmark is already running.'},409);}
@@ -110,6 +110,37 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await dialog.getByRole('button',{name:'Download',exact:true}).click();await dialog.getByText(/Queued model-Q4_K_M.gguf and 1 companion file/).waitFor();
  await dialog.getByRole('button',{name:'Set up this model'}).click();
  await dialog.getByRole('heading',{name:'new-model-Q4_K_M',level:3}).waitFor();assert.ok(await dialog.getByText('Defaults from the model file.').isVisible());
+
+ // A finished download must reach the rest of the app WITHOUT remounting anything.
+ // Both halves of the 2026-09-15 "downloaded models don't appear until later"
+ // report are asserted here: the completion signal used to be dropped (Settings
+ // never passed onModelsChanged), and every list fetched only on mount.
+ extraJob={id:'j2',repo:'synthetic/other-GGUF',filename:'later-model/later-model-Q4_K_M.gguf',status:'downloading',error:null,bytes:2e9,downloaded:1e9,pct:50,speedH:'10 MB/s',etaH:'1m',parallel:true,chunks:[]};
+ await tab('Download');
+ await dialog.getByText('later-model/later-model-Q4_K_M.gguf').waitFor();
+ const installedBefore=calls.filter(c=>c==='GET /api/models/installed').length;
+ // The engine now serves it, and the job reports done. Nothing is remounted:
+ // the Download tab stays mounted and its own poller notices.
+ extraRegistered=true;extraJob={...extraJob,status:'done',downloaded:2e9,pct:100};
+ await dialog.getByTestId('download-setup-needed').waitFor();
+ assert.match(await dialog.getByTestId('download-setup-needed').innerText(),/not yet (a model|models) the engine can serve/);
+ // App's own model list refetched off the back of the completion — this is the
+ // assertion the suite lacked, and it fails without the noevia:models-changed wiring.
+ await page.waitForFunction(()=>true);
+ await new Promise(r=>setTimeout(r,2500));
+ assert.ok(calls.filter(c=>c==='GET /api/models/installed').length>installedBefore,
+  'a completed download did not refresh the installed-model list');
+
+ // And the Library list picks it up in place, without being remounted.
+ await tab('Library');
+ await dialog.getByRole('article',{name:'new-model-Q4_K_M'}).waitFor();
+ const beforeInPlace=calls.filter(c=>c==='GET /api/models/installed').length;
+ await page.evaluate(()=>window.dispatchEvent(new Event('noevia:models-changed')));
+ await page.waitForFunction(n=>performance.now()>=0&&n===n,beforeInPlace);
+ await new Promise(r=>setTimeout(r,500));
+ assert.ok(calls.filter(c=>c==='GET /api/models/installed').length>beforeInPlace,
+  'the Library tab did not refresh in place on noevia:models-changed');
+ extraJob=null;extraRegistered=false;
  // Hardware
  await tab('Hardware');
  await dialog.getByText(/Unified memory: this GPU has a small dedicated area/).waitFor();

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiFetch, fetchInstalledModels } from '../../api';
 import type { InstalledModel } from '../../types';
 import { MtpControl } from '../MtpControl';
 import { NativeCalibration } from '../NativeCalibration';
 import { errorText, mm, tokens } from './mm';
+import { useModelsChanged } from '../../models-changed';
 
 type FileEntry = { key: string; name: string; subdir: string; bytes: number; size: string; modified: string; sharded: boolean; parts: number;
   projector: { name: string; bytes: number } | null; sections: string[]; modelId: string; file: string;
@@ -19,7 +20,7 @@ export function LibraryTab({ onConfigure, onChanged }: { onConfigure: (section: 
   const [unregistered, setUnregistered] = useState<string[]>([]);
   const [updates, setUpdates] = useState<Record<string, Update>>({});
   const [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(''), [filesNote, setFilesNote] = useState(''), [runtimeOptions, setRuntimeOptions] = useState(false);
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     setError('');
     try {
       // The model manager adds file details; without it the engine's own list still works.
@@ -28,12 +29,15 @@ export function LibraryTab({ onConfigure, onChanged }: { onConfigure: (section: 
       setModels(installed); setFiles(local?.models || []); setUnregistered(local?.unregistered || []); setUpdates(upd.status); setRuntimeOptions(caps?.runtimeOptions === true);
       setFilesNote(local ? '' : 'File details, downloads and settings need the model management service, which is not available on this server.');
     } catch (e) { setError(errorText(e, 'The model library is unavailable.')); }
-  };
-  useEffect(() => { void refresh(); }, []);
+  }, []);
+  useEffect(() => { void refresh(); }, [refresh]);
+  // Tabs mount per selection, so a mount-only fetch left this list showing
+  // whatever was true when the tab was last opened.
+  useModelsChanged(useCallback(() => { void refresh(); }, [refresh]));
   const fileFor = (name: string) => files.find(f => f.sections.includes(name) || f.modelId === name);
   const act = async (verb: 'load' | 'unload', name: string) => {
     setBusy(name); setMessage('');
-    try { const r = await apiFetch(`/api/models/${verb}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); if (!r.ok) throw Error((await r.json()).error || `${verb} failed`); await refresh(); onChanged(); }
+    try { const r = await apiFetch(`/api/models/${verb}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); if (!r.ok) throw Error((await r.json()).error || `${verb} failed`); onChanged(); }
     catch (e) { setError(errorText(e, 'Model operation failed')); } finally { setBusy(''); }
   };
   const checkUpdates = async () => {
@@ -54,7 +58,7 @@ export function LibraryTab({ onConfigure, onChanged }: { onConfigure: (section: 
     {filesNote && <p className="mm-note">{filesNote}</p>}
     {!models && !error && <p role="status">Loading models…</p>}
     {servable.map(m => <ModelCard key={m.name} runtimeOptions={runtimeOptions} onRefresh={() => void refresh()} model={m} file={fileFor(m.name)} update={updates[fileFor(m.name)?.name || '']} busy={busy === m.name}
-      onToggle={() => void act(m.loaded ? 'unload' : 'load', m.name)} onConfigure={() => onConfigure(m.name)} onDeleted={() => { void refresh(); onChanged(); }}/>)}
+      onToggle={() => void act(m.loaded ? 'unload' : 'load', m.name)} onConfigure={() => onConfigure(m.name)} onDeleted={onChanged}/>)}
     {orphanFiles.length > 0 && <section className="mm-panel"><h3>Files without a model entry</h3>
       <p className="mm-note">These files are in the model folder but no settings point to them, so the engine cannot serve them yet.</p>
       <ul className="mm-list">{orphanFiles.map(f => <li key={f.key}><span>{f.name}<small>{f.size}{f.subdir ? ` · ${f.subdir}/` : ''}</small></span>

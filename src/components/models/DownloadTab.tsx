@@ -88,18 +88,29 @@ function RepoFiles({ repo, onClose, onDownload }: { repo: { repo: string; groups
   </section>;
 }
 
+const isModelFile = (filename: string) => filename.toLowerCase().endsWith('.gguf') && !filename.toLowerCase().includes('mmproj');
+
 function Queue({ jobs, onChange, onSetUp }: { jobs: Job[]; onChange: () => Promise<void>; onSetUp: (section: string) => void }) {
   if (!jobs.length) return null;
   const act = async (path: string) => { try { await mm(path, { body: {} }); } finally { await onChange(); } };
+  // A finished download is a FILE, not a model the engine can serve. It becomes
+  // one only once a models.ini section points at it and the preset file is
+  // reloaded. Nothing said so, so a completed download looked like it had
+  // simply not taken effect yet — the real answer to "it takes a while".
+  const awaitingSetup = jobs.filter(j => j.status === 'done' && isModelFile(j.filename));
   return <section className="mm-panel" aria-labelledby="mm-queue">
     <header className="mm-panel-head"><h3 id="mm-queue">Downloads</h3>{jobs.some(j => !['queued', 'downloading'].includes(j.status)) && <button className="modal-btn secondary" onClick={() => void act('downloads/clear')}>Clear finished</button>}</header>
+    {awaitingSetup.length > 0 && <p className="mm-note" role="status" data-testid="download-setup-needed">
+      {awaitingSetup.length === 1 ? 'This file is downloaded but not yet a model the engine can serve.' : `${awaitingSetup.length} files are downloaded but are not yet models the engine can serve.`}
+      {' '}Choose <strong>Set up this model</strong> to give it settings and add it to the Library. Setting up reloads the engine's preset file, which is refused while a model is loaded — unload it first if asked.
+    </p>}
     <ul className="mm-jobs">{jobs.map(j => <li key={j.id}>
       <div className="mm-job-head"><strong>{j.filename}</strong><span>{j.status === 'downloading' ? `${j.pct.toFixed(0)}% · ${j.speedH} · ${j.etaH} left` : j.status === 'done' ? 'Done' : j.status === 'error' ? `Failed: ${j.error || 'unknown error'}` : j.status === 'canceled' ? 'Cancelled' : 'Queued'}</span></div>
       <progress max={100} value={j.pct} aria-label={`${j.filename} progress`}/>
       {j.parallel && j.status === 'downloading' && <div className="mm-chunks" aria-label="Parallel parts">{j.chunks.map(c => <span key={c.index} title={`Part ${c.index + 1}: ${c.pct.toFixed(0)}%`}><i style={{ width: `${c.pct}%` }}/></span>)}</div>}
       <small>{bytes(j.downloaded)} of {j.bytes ? bytes(j.bytes) : 'unknown size'} · {j.repo}</small>
       {['queued', 'downloading'].includes(j.status) && <button className="popup-tab" onClick={() => void act(`downloads/${j.id}/cancel`)}>Cancel</button>}
-      {j.status === 'done' && j.filename.toLowerCase().endsWith('.gguf') && !j.filename.toLowerCase().includes('mmproj') && <button className="popup-tab" onClick={() => onSetUp(j.filename.split('/').pop()!.replace(/\.gguf$/i, '').replace(/-\d{5}-of-\d{5}$/, ''))}>Set up this model</button>}
+      {j.status === 'done' && isModelFile(j.filename) && <button className="popup-tab" onClick={() => onSetUp(j.filename.split('/').pop()!.replace(/\.gguf$/i, '').replace(/-\d{5}-of-\d{5}$/, ''))}>Set up this model</button>}
     </li>)}</ul>
   </section>;
 }

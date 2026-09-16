@@ -2,6 +2,7 @@ import { titleAfterSend } from './chat-title';
 import { sourceRefresher } from './source-refresh';
 import { sourceRefreshIssues } from './source-status';
 import { useAppearance } from './useAppearance';
+import { useModelsChanged } from './models-changed';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import {
@@ -117,6 +118,11 @@ export default function App(): JSX.Element {
       })
       .catch(() => setModelsError('Model manager unavailable or disabled.'));
   }, []);
+
+  // Settings can download, register, rename, delete, load or unload a model.
+  // The chat's own list is fetched once at start-up, so without this the header
+  // and model picker kept showing the pre-change set until a reload.
+  useModelsChanged(refreshModels);
 
   const refreshProjects = useCallback(() => {
     return fetchWorkspace()

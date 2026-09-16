@@ -5,7 +5,6 @@ import { parseUsage, parseUsers, parseProfile, parseProviders } from './settings
 import type {
   ChatMeta,
   DiaryCorpus,
-  DownloadJob,
   HealthState,
   HistoryEntry,
   InstalledModel,
@@ -264,7 +263,9 @@ export interface McpServerStatus {
   checkedAt?: number | null;
   missingCurated?: number;
   id: string;
-  auth: 'nextcloud' | 'none';
+  /** Mirrors the server's parser in index.cjs: `bearer` comes from a
+   *  `bearer:ENV_NAME` entry and was missing here. */
+  auth: 'nextcloud' | 'bearer' | 'none';
   error: string | null;
   discovered: number;
 }
@@ -359,10 +360,6 @@ export function loadModel(name: string): Promise<{ ok: true }> {
 
 export function unloadModel(name: string): Promise<{ ok: true }> {
   return postJson('/api/models/unload', { name });
-}
-
-export function fetchDownloads(): Promise<DownloadJob[]> {
-  return getJson('/api/models/downloads');
 }
 
 export function fetchDiaryCorpus(): Promise<DiaryCorpus> {

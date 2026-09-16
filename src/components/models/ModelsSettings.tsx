@@ -7,18 +7,19 @@ import { ConfigureTab } from './ConfigureTab';
 import { DownloadTab } from './DownloadTab';
 import { HardwareTab } from './HardwareTab';
 import { LibraryTab } from './LibraryTab';
+import { notifyModelsChanged } from '../../models-changed';
 
 const TABS = [['library', 'Library'], ['download', 'Download'], ['configure', 'Configure'], ['hardware', 'Hardware'], ['benchmarks', 'Benchmarks'], ['prompts', 'Prompts'], ['routing', 'Routing']] as const;
 type Tab = typeof TABS[number][0];
 
 // Settings → Models & routing: noevia's full model management (the folded-in Model
 // Loader), in noevia's own screens. The chat box keeps only a quick model switcher.
-export function ModelsSettings({ models, routes, projects, modelsError, onModelsChanged }: { models: InstalledModel[]; routes: RouteRule[]; projects: Project[]; modelsError: string | null; onModelsChanged?: () => void }): JSX.Element {
+export function ModelsSettings({ models, routes, projects, modelsError }: { models: InstalledModel[]; routes: RouteRule[]; projects: Project[]; modelsError: string | null }): JSX.Element {
   const [tab, setTab] = useState<Tab>(() => { try { const t = sessionStorage.getItem('noevia-models-tab'); return (TABS.some(([id]) => id === t) ? t : 'library') as Tab; } catch { return 'library'; } });
   const [target, setTarget] = useState<string>('');
   const go = (next: Tab) => { setTab(next); try { sessionStorage.setItem('noevia-models-tab', next); } catch { /* optional */ } };
   const configure = (name: string) => { setTarget(name); go('configure'); };
-  const changed = () => onModelsChanged?.();
+  const changed = () => notifyModelsChanged();
   return <div className="mm-root">
     <div className="settings-title"><h1>Models &amp; routing</h1><p>Download, configure, measure and route the models this server runs.</p></div>
     <nav className="mm-tabs" aria-label="Model management">
