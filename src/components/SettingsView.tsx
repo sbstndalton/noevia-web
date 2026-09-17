@@ -1,11 +1,11 @@
 import { McpStatus } from './McpStatus';
 import DiarySharing from './DiarySharing';
 import AppPasswords from './AppPasswords';
-import { ModelsSettings } from './models/ModelsSettings';
+import { ModelsSummary } from './models/ModelsSummary';
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import type { HealthState, InstalledModel, LiveStats, Project, Provider, RouteRule } from '../types';
-import { createInvitation, createRecovery, deleteProvider, deleteUser, fetchProfile, fetchProviders, fetchUsers, logout, passkeyRegistrationOptions, passkeyRegistrationVerify, removePasskey, revokeSession, setUserDisabled, updateFeatures, updateProfile } from '../api';
+import { createInvitation, createRecovery, deleteProvider, deleteUser, fetchProfile, fetchProviders, fetchUsers, logout, passkeyRegistrationOptions, passkeyRegistrationVerify, removePasskey, revokeSession, setUserDisabled, updateFeatures } from '../api';
 import type { AuthUser, PasskeyInfo, SessionInfo } from '../api';
 import { startRegistration } from '@simplewebauthn/browser';
 import { ProviderForm } from './ProviderForm';
@@ -20,17 +20,18 @@ export interface SettingsViewProps {
   health: HealthState;
   stats: LiveStats | null;
   onOpenModels: () => void;
+  onOpenModelManager: () => void;
   diaryEnabled: boolean;
   onDiaryEnabledChange: (enabled: boolean) => void;
 }
 
-export function SettingsView({ models, routes, modelsError, projects, health, stats, diaryEnabled, onDiaryEnabledChange, section = 'profile' }: SettingsViewProps): JSX.Element {
+export function SettingsView({ models, modelsError, health, stats, diaryEnabled, onDiaryEnabledChange, onOpenModelManager, section = 'profile' }: SettingsViewProps): JSX.Element {
   return <div className="settings-live-content">
-    {section === 'profile' && <ProfileCard />}
+    {section === 'security' && <SecurityCard />}
     {section === 'users' && <UsersCard />}
     {section === 'diary' && <><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
     {section === 'providers' && <ProvidersCard />}
-    {section === 'models' && <ModelsSettings models={models} routes={routes} projects={projects} modelsError={modelsError}/>}
+    {section === 'models' && <ModelsSummary models={models} modelsError={modelsError} health={health} stats={stats} onOpen={onOpenModelManager}/>}
     {section === 'status' && <><McpStatus /><h2>Connected services</h2><div className="card-list">{[['Inference',health.inferenceUp],['Diary',diaryEnabled?health.diaryUp:null],['Project retrieval',health.ragAvailable]].map(([label,up])=><div className="model-row" key={String(label)}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?'available':up===false?'unavailable':'not available'}</span></div>)}</div><h2>Live engine</h2><div className="settings-stat-row"><div><span title="Provider-reported rate. Invalid samples and samples shorter than one estimated second are omitted.">Reported tokens / second</span><strong>{stats?.tokensPerSecond?.toFixed(1) ?? '—'}</strong></div><div><span>Requests</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${stats.vramGb.toFixed(1)} GB`:'—'}</strong></div></div></>}
   </div>;
 }
@@ -72,18 +73,18 @@ function sessionLabel(ua?: string | null): string {
   return `${browser}${os ? ` · ${os}` : ''}`;
 }
 
-function ProfileCard(): JSX.Element {
+// Account security only; identity (name, username, role) is the Profile page.
+function SecurityCard(): JSX.Element {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
-  const [name, setName] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const refresh = async () => {
     const p = await fetchProfile();
-    setUser(p.user); setName(p.user.displayName); setPasskeys(p.passkeys); setSessions(p.sessions ?? []);
+    setUser(p.user); setPasskeys(p.passkeys); setSessions(p.sessions ?? []);
   };
   const load = async () => {
     setLoading(true); setError('');
@@ -100,7 +101,7 @@ function ProfileCard(): JSX.Element {
       setNotice(success);
       try { await refresh(); }
       catch { setError('The change succeeded, but the updated profile could not be loaded. Retry loading before making another change.'); }
-    } catch { setError(`${label} could not be confirmed.${label === 'Save name' ? ' Your draft is retained.' : ''} Check your connection, then reload to check the saved state.`); }
+    } catch { setError(`${label} could not be confirmed. Check your connection, then reload to check the saved state.`); }
     finally { setBusy(''); }
   };
   const addKey = async () => {
@@ -108,12 +109,10 @@ function ProfileCard(): JSX.Element {
     const response = await startRegistration({ optionsJSON: c.options });
     await passkeyRegistrationVerify(c.challengeToken, response, `Passkey ${passkeys.length + 1}`);
   };
-  if (!user) return <div><h2>Profile &amp; security</h2>{loading ? <p role="status">Loading profile…</p> : <><p className="modal-err" role="alert">{error}</p><button className="modal-btn secondary" onClick={() => void load()}>Retry profile</button></>}</div>;
+  if (!user) return <div><h2>Security</h2>{loading ? <p role="status">Loading profile…</p> : <><p className="modal-err" role="alert">{error}</p><button className="modal-btn secondary" onClick={() => void load()}>Retry profile</button></>}</div>;
   return <div>
-    <div className="rail-label" style={{ marginBottom: 12 }}>Profile and security</div>
+    <div className="settings-title"><h1>Security</h1><p>Passkeys, signed-in sessions and app passwords for {user.username}.</p></div>
     <fieldset className="settings-action-group" disabled={!!busy || loading}><div className="card-list">
-      <div className="model-row"><div className="auth-mark" aria-hidden="true">{user.displayName.slice(0,1).toUpperCase()}</div><div className="model-name-group"><span className="model-name">{user.username}</span><span className="model-quant">{user.role}</span></div></div>
-      <div className="model-row"><input className="modal-input" aria-label="Display name" maxLength={80} value={name} onChange={e => setName(e.target.value)} /><button className="popup-tab" disabled={!name.trim() || name.trim() === user.displayName} onClick={() => void act('Save name', () => updateProfile(name.trim()), 'Display name saved to your account.')}>Save name</button></div>
       {passkeys.map(k => <div className="model-row" key={k.id}><span className="model-dot"/><div className="model-name-group"><span className="model-name">{k.name}</span><span className="model-quant">{k.backedUp ? 'synced passkey' : k.deviceType}</span></div><button className="recents-del" aria-label={`Remove passkey ${k.name}`} onClick={() => void act('Remove passkey', () => removePasskey(k.id), 'Passkey removed.')}>✕</button></div>)}
       <button className="modal-btn secondary" onClick={() => void act('Passkey setup', addKey, 'Passkey added.')}>+ Add passkey</button>
       {sessions.length > 0 && sessions.map(s => (

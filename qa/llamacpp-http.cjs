@@ -43,6 +43,12 @@ const meter=r=>r.text.split('\n').filter(x=>x.startsWith('data: ')).map(x=>{try{
   loaded='smart';allocation=131072;failClassifier=true;
   result=await api('/api/chat',{spaceId:autoProject.id,projectId:autoProject.id,chatId:'auto-qa',message:'Hello',history:[]});
   assert.equal(meter(result)?.model,'fast',result.text);assert.equal(meter(result)?.limit,131072,result.text);failClassifier=false;
+  // Roles naming a model the engine no longer serves: clear 409 before any engine call, and settings name the role.
+  await api('/api/auto-roles',{fast:'gone-model',smart:'smart'},'PUT');
+  assert.deepEqual((await api('/api/auto-roles')).body.missing,[{role:'fast',model:'gone-model'}]);
+  calls.length=0;result=await api('/api/chat',{spaceId:autoProject.id,projectId:autoProject.id,chatId:'auto-stale',message:'Hello',history:[]});
+  assert.equal(result.status,409,result.text);assert.match(result.body.error,/Fast \(gone-model\)/);assert.ok(!calls.some(c=>c.endsWith('/chat/completions')),JSON.stringify(calls));
+  await api('/api/auto-roles',{fast:'fast',smart:'smart'},'PUT');assert.deepEqual((await api('/api/auto-roles')).body.missing,[]);
   loaded='smart';fail=true;result=await chat();assert.ok(result.text.includes('could not load'),result.text);assert.equal(meter(result),undefined);
   fail=false;
   assert.equal((await api('/api/models/capabilities')).body.kind,'llamacpp');
@@ -68,6 +74,6 @@ const meter=r=>r.text.split('\n').filter(x=>x.startsWith('data: ')).map(x=>{try{
   assert.equal((await api('/api/models/preset',update,'PUT')).status,409);
   assert.match(fs.readFileSync(path.join(dir,'models.ini'),'utf8'),/ctx-size = 32768/);
   assert.equal((await api('/api/models/load',{name:'fast',mtp:true})).status,400);
-  console.log('PASS native profiles/status/capabilities/privacy; real HTTP cold model load → correct 128k budget; auto routing to cold fast model; changed live 32k overrides remembered 128k; failed load blocks generation.');
+  console.log('PASS native profiles/status/capabilities/privacy; real HTTP cold model load → correct 128k budget; auto routing to cold fast model; stale roles → 409; changed live 32k overrides remembered 128k; failed load blocks generation.');
  }finally{server.kill('SIGTERM');await new Promise(r=>server.once('exit',r));await new Promise(r=>upstream.close(r));fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

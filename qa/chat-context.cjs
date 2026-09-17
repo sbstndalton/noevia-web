@@ -48,6 +48,16 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   const auto=await chat({spaceId:project.id,projectId:project.id,chatId:'auto-qa',message:'Continue',history:big});assert.ok(auto.includes('Compacting older messages'));assert.ok(auto.includes('Synthetic answer.'),auto);
   failSummary=true;const failed=await chat({spaceId:project.id,projectId:project.id,chatId:'failure-qa',message:'',compactOnly:true,history});assert.ok(failed.includes('Compaction failed'));assert.equal((await api(page,'/api/chats/failure-qa/context-window')).body.meter,null);
   failSummary=false;failStream=true;const error=await chat({spaceId:project.id,projectId:project.id,chatId:'context-qa',message:'Continue',history});assert.ok(error.includes('ran out of context space'));
+  // A long chat that fits the window reaches the model whole: nothing older than 40 messages is dropped unsummarized.
+  failStream=false;const long=Array.from({length:60},(_,i)=>({role:i%2?'assistant':'user',content:`Long chat ${i}: small synthetic turn.`}));
+  const longReply=await chat({spaceId:project.id,projectId:project.id,chatId:'long-qa',message:'What came first?',history:long});assert.ok(longReply.includes('Synthetic answer.'),longReply);
+  assert.ok(requests.at(-1).messages.some(m=>String(m.content).includes('Long chat 0:')),'the oldest turn of a long chat never reached the model');
+  // Deleting a chat removes its context state even if a reply for it finishes afterwards.
+  await api(page,'/api/freechats',{chats:[{id:'deleted-context-qa',title:'x',updatedAt:1}]});
+  await chat({spaceId:'free',chatId:'deleted-context-qa',message:'Continue',history});
+  assert.equal((await api(page,'/api/freechats/deleted-context-qa',undefined,'DELETE')).status,200);
+  await chat({spaceId:'free',chatId:'deleted-context-qa',message:'Late reply',history});
+  assert.equal((await api(page,'/api/chats/deleted-context-qa/context-window')).body.meter,null,'context state for a deleted chat was written back');
   console.log('PASS manual UI, automatic compaction, transcript retention, prefix reuse, bounded requests, failed summary and streamed context errors; responsive screenshots saved');
  }finally{await browser.close();server.kill('SIGTERM');await once(server,'exit');await new Promise(r=>upstream.close(r));fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

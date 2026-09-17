@@ -2,6 +2,13 @@ import { titleAfterSend } from './chat-title';
 import { sourceRefresher } from './source-refresh';
 import { sourceRefreshIssues } from './source-status';
 import { useAppearance } from './useAppearance';
+import { useWorkspaceChanged } from './components/data/workspace-changed';
+import { useGlobalShortcuts, OPEN_SEARCH } from './components/shortcuts/useGlobalShortcuts';
+import { ShortcutsDialog } from './components/shortcuts/ShortcutsDialog';
+import { notifyIfAway } from './components/notifications/notify';
+import { useModelsChanged } from './models-changed';
+import { modelChoiceLabel } from './model-guidance';
+import { TOOL_RESULT_LIMIT } from './components/ToolCalls';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import {
@@ -9,7 +16,7 @@ import {
   deleteChat,
   deleteFreeChat,
   deleteProject,
-  fetchChatHistory,
+  fetchChatHistoryRevision,
   fetchHealth,
   fetchInstalledModels,
   fetchProfile,
@@ -36,17 +43,21 @@ import type {
 import { ChatView } from './components/ChatView';
 import { ModelPopup } from './components/ModelPopup';
 import { ProjectView } from './components/ProjectView';
-import { Coding, Diary, Projects, Settings, prefetchViewsWhenIdle } from './lazy-views';
+import { Coding, Diary, ModelManager, Projects, Settings, prefetchViewsWhenIdle } from './lazy-views';
 import { FeaturePreview } from './components/PreviewPanel';
+import { useFeatureFlags } from './components/features/useFeatureFlags';
 import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
 import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
+import { settleToolCalls } from './tool-call-state';
+import { mergeTranscripts } from './transcript-merge';
 
 type View =
   | { kind: 'diary' }
   | { kind: 'preview'; title: string }
   | { kind: 'projects' }
+  | { kind: 'models'; model?: string }
   | { kind: 'project'; id: string }
   | { kind: 'chat'; chatId: string; projectId?: string | null };
 
@@ -55,17 +66,24 @@ function uid(): string {
 }
 
 export default function App(): JSX.Element {
-  const {theme,setTheme,appearanceStatus,appearanceError,retryAppearance} = useAppearance();
+  const {theme,preference,setTheme,setPreference,appearanceStatus,appearanceError,retryAppearance} = useAppearance();
   const [settingsSection,setSettingsSection] = useState<'general'|'usage'|'models'>('general');
   const openSettings = (section: 'general'|'usage'|'models' = 'general') => { setSettingsSection(section); setSettingsOpen(true); };
-  useEffect(() => { const open = () => { setSettingsSection('models'); setSettingsOpen(true); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
+  // `model` opens that model's tuning view directly; without it, the model list.
+  const openModelManager = (model?: string) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); };
+  useEffect(() => { const open = (e: Event) => { const model = (e as CustomEvent<{ model?: string }>).detail?.model; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account'); return fresh; });
   const [appMode, setAppMode] = useState<'chat'|'code'>('chat');
+  const featureFlags = useFeatureFlags();
+  const showPreviews = featureFlags.previews === true;
+  // Turning previews off while in Code must not leave both workspaces hidden.
+  useEffect(() => { if (!showPreviews && appMode === 'code') setAppMode('chat'); }, [showPreviews, appMode]);
   const [view, setView] = useState<View>(() => ({ kind: 'chat', chatId: `c-${uid()}`, projectId: null }));
   const [projects, setProjects] = useState<Project[]>([]);
   const [freeChats, setFreeChats] = useState<ChatMeta[]>([]);
   const [messagesByChat, setMessagesByChat] = useState<Record<string, Message[]>>({});
   const [models, setModels] = useState<InstalledModel[]>([]);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [projectError, setProjectError] = useState<string | null>(null);
   const pendingFirstSend = useRef<{ chatId: string; projectId: string; text: string } | null>(null);
@@ -90,6 +108,9 @@ export default function App(): JSX.Element {
   // stops the client-side stream; the server's disconnect handling (Phase 1)
   // then terminates the upstream request.
   const streamAbort = useRef<Record<string, AbortController>>({});
+  const sendingChats = useRef<Set<string>>(new Set());
+  const historyRevisions = useRef<Record<string, string | null>>({});
+  const historySaves = useRef<Record<string, Promise<void>>>({});
   const abortStream = useCallback((chatId: string) => {
     streamAbort.current[chatId]?.abort();
     delete streamAbort.current[chatId];
@@ -113,10 +134,16 @@ export default function App(): JSX.Element {
     fetchInstalledModels()
       .then((list) => {
         setModels(list);
+        setModelsLoaded(true);
         setModelsError(null);
       })
       .catch(() => setModelsError('Model manager unavailable or disabled.'));
   }, []);
+
+  // Settings can download, register, rename, delete, load or unload a model.
+  // The chat's own list is fetched once at start-up, so without this the header
+  // and model picker kept showing the pre-change set until a reload.
+  useModelsChanged(refreshModels);
 
   const refreshProjects = useCallback(() => {
     return fetchWorkspace()
@@ -126,6 +153,7 @@ export default function App(): JSX.Element {
       })
       .catch(() => undefined);
   }, []);
+  useWorkspaceChanged(refreshProjects);
 
   // One-time migration: fold any localStorage free-chats into the server list
   // (free chats used to live only in this browser), then retire the key.
@@ -181,7 +209,9 @@ export default function App(): JSX.Element {
       if (pending || document.visibilityState === 'hidden') return;
       pending = true;
       void fetchStats()
-        .then((s) => alive && setStats(s))
+        // The engine gauge reports nothing between requests on some backends; keep the
+        // last provider-reported rate instead of blanking a number the user just saw.
+        .then((s) => alive && setStats((prev) => ({ ...s, tokensPerSecond: s.tokensPerSecond ?? prev?.tokensPerSecond ?? null })))
         .catch(() => alive && setStats((prev) => (prev ? { ...prev, up: false, mtp: [] } : prev)))
         .finally(() => { pending = false; });
     };
@@ -201,8 +231,9 @@ export default function App(): JSX.Element {
     const id = view.chatId;
     if (loadedChats.current.has(id)) return;
     loadedChats.current.add(id);
-    fetchChatHistory(id)
-      .then((history) => {
+    fetchChatHistoryRevision(id)
+      .then(({ history, revision }) => {
+        historyRevisions.current[id] = revision;
         setMessagesByChat((prev) => ({
           ...prev,
           [id]: history.map((h) => ({
@@ -211,7 +242,7 @@ export default function App(): JSX.Element {
             content: h.content,
             senderLabel: h.model,
             reasoning: h.reasoning,
-            toolCalls: h.toolCalls,
+            toolCalls: settleToolCalls(h.toolCalls),
             stats: h.stats,
           })),
         }));
@@ -274,28 +305,42 @@ export default function App(): JSX.Element {
   const messages: Message[] = view.kind === 'chat' ? messagesByChat[view.chatId] ?? [] : [];
 
   const persist = useCallback((chatId: string, msgs: Message[]) => {
-    saveChatHistory(
-      chatId,
-      msgs
-        .filter((m) => !m.error)
-        // Reasoning, tool activity and cost are persisted too, so reopening a
-        // chat shows the same thinking block and stats it had while streaming
-        // instead of a bare answer. The server strips these before replaying
-        // history to a model, so they cost nothing in prompt tokens.
-        .map((m) => ({
-          role: m.role,
-          content: m.content,
-          model: m.senderLabel,
-          reasoning: m.reasoning || undefined,
-          toolCalls: m.toolCalls && m.toolCalls.length ? m.toolCalls : undefined,
-          stats: m.stats,
-        })),
-    ).catch(() => undefined);
+    // Reasoning, tool activity and cost are persisted too, so reopening a
+    // chat shows the same thinking block and stats it had while streaming
+    // instead of a bare answer. The server strips these before replaying
+    // history to a model, so they cost nothing in prompt tokens.
+    const entries: HistoryEntry[] = msgs.filter((m) => !m.error).map((m) => ({
+      role: m.role,
+      content: m.content,
+      model: m.senderLabel,
+      reasoning: m.reasoning || undefined,
+      toolCalls: m.toolCalls && m.toolCalls.length ? m.toolCalls : undefined,
+      stats: m.stats,
+    }));
+    // Saves for one chat run in order. If another device saved first, merge its copy with ours
+    // (nothing either side wrote is dropped), show the merged transcript, and save that.
+    const run = async () => {
+      let next = entries;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const result = await saveChatHistory(chatId, next, historyRevisions.current[chatId]);
+        if (result.ok) { historyRevisions.current[chatId] = result.revision; return; }
+        const merged = mergeTranscripts(result.conflict.history, next);
+        historyRevisions.current[chatId] = result.conflict.revision;
+        if (merged !== next) {
+          next = merged;
+          setMessagesByChat((prev) => ({ ...prev, [chatId]: merged.map((h) => ({ id: uid(), role: h.role, content: h.content, senderLabel: h.model, reasoning: h.reasoning, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats })) }));
+        }
+      }
+    };
+    historySaves.current[chatId] = (historySaves.current[chatId] || Promise.resolve()).then(run).catch(() => undefined);
   }, []);
 
   const handleSend = useCallback(
     async (chatId: string, projectId: string | null, text: string, base?: Message[]) => {
-      if (streamingChats[chatId]) return;
+      // `streamingChats` is render state, so two sends in one tick both see it false. The ref
+      // is updated synchronously and is the real guard against a duplicate generation.
+      if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
+      sendingChats.current.add(chatId);
       const userMsg: Message = { id: uid(), role: 'user', content: text };
       const existing = base ?? messagesRef.current[chatId] ?? [];
       const history: HistoryEntry[] = existing.filter(m => !m.error).map(m => ({ role: m.role, content: m.content }));
@@ -336,6 +381,7 @@ export default function App(): JSX.Element {
       }
 
       const startedAt = Date.now();
+      let failed = false;
       try {
         let acc = '';
         let reasoning = '';
@@ -372,6 +418,16 @@ export default function App(): JSX.Element {
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, reasoning } : m)),
             }));
+          } else if (ev.type === 'preamble' && ev.text) {
+            // Narration the model wrote before calling tools belongs with its
+            // thinking, not in the answer.
+            const at = acc.lastIndexOf(ev.text);
+            if (at >= 0) acc = acc.slice(0, at) + acc.slice(at + ev.text.length);
+            reasoning += (reasoning ? '\n\n' : '') + ev.text.trim();
+            setMessagesByChat((prev) => ({
+              ...prev,
+              [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, content: acc.trimStart(), reasoning } : m)),
+            }));
           } else if (ev.type === 'delta' && ev.text) {
             acc += ev.text;
             setMessagesByChat((prev) => ({
@@ -403,6 +459,7 @@ export default function App(): JSX.Element {
               status: 'pending',
               approvalId: ev.id,
             };
+            notifyIfAway('Approval needed', 'A tool is waiting for you in noevia.', `approval-${chatId}`);
             setMessagesByChat((prev) => ({
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) =>
@@ -421,6 +478,13 @@ export default function App(): JSX.Element {
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, stats } : m)),
             }));
+            // The footer's own /api/stats poll only ticks every 2.5s and its rate
+            // reflects whichever request last completed engine-wide, so a reply
+            // finishing between ticks left it showing a stale number for the rest
+            // of that window. This event carries the same provider-reported rate
+            // for the round that just finished — apply it the instant it arrives
+            // rather than waiting for the next poll to catch up.
+            setStats((prev) => (prev ? { ...prev, up: true, tokensPerSecond: ev.tokensPerSecond ?? prev.tokensPerSecond } : prev));
           } else if (ev.type === 'error') {
             throw new Error(ev.text || 'Generation failed');
           } else if (ev.type === 'tool_result' && ev.name) {
@@ -431,8 +495,9 @@ export default function App(): JSX.Element {
             const done = typeof ev.index === 'number' ? ev.index : tools.findIndex((t) => t && t.name === ev.name);
             const denied = (ev.text || '').startsWith('ERROR: the user');
             const chip = {
-              name: `${ev.name} ${denied ? '⃠' : '✓'}`,
-              args: (ev.text || '').slice(0, 120),
+              name: ev.name,
+              args: done >= 0 && tools[done] ? tools[done].args : '',
+              result: (ev.text || '').slice(0, TOOL_RESULT_LIMIT),
               status: denied ? ('denied' as const) : ('done' as const),
             };
             if (done >= 0) tools[done] = chip; else tools.push(chip);
@@ -452,11 +517,12 @@ export default function App(): JSX.Element {
             ...prev,
             [chatId]: (prev[chatId] ?? []).map((m) =>
               m.id === replyId && !m.content && !m.reasoning
-                ? { ...m, content: '(generation stopped)', senderLabel: 'Stopped' }
+                ? { ...m, content: 'Stopped before a reply was written.', senderLabel: 'Stopped' }
                 : m,
             ),
           }));
         } else {
+          failed = true;
           const detail = err instanceof Error ? err.message : 'unknown error';
           setMessagesByChat((prev) => ({
             ...prev,
@@ -466,6 +532,9 @@ export default function App(): JSX.Element {
           }));
         }
       } finally {
+        // Titles and replies stay out of the notification: lock screens are not private.
+        if (!controller.signal.aborted) notifyIfAway(failed ? 'Reply failed' : 'Reply ready', failed ? 'noevia could not finish answering.' : 'noevia finished answering.', `reply-${chatId}`);
+        sendingChats.current.delete(chatId);
         if (streamAbort.current[chatId] === controller) delete streamAbort.current[chatId];
         setStreamingChats((prev) => {
           const next = { ...prev };
@@ -473,9 +542,9 @@ export default function App(): JSX.Element {
           return next;
         });
         setMessagesByChat((prev) => {
-          const msgs = prev[chatId] ?? [];
+          const msgs = (prev[chatId] ?? []).map((m) => (m.id === replyId && m.toolCalls ? { ...m, toolCalls: settleToolCalls(m.toolCalls) } : m));
           persist(chatId, msgs);
-          return prev;
+          return { ...prev, [chatId]: msgs };
         });
       }
     },
@@ -532,6 +601,14 @@ export default function App(): JSX.Element {
     setMessagesByChat((prev) => ({ ...prev, [chatId]: [] }));
     setView({ kind: 'chat', chatId, projectId: null });
   }, []);
+
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const appleKeys = useGlobalShortcuts({
+    search: () => { setSettingsOpen(false); setAppMode('chat'); window.dispatchEvent(new Event(OPEN_SEARCH)); },
+    newChat: () => { setSettingsOpen(false); setAppMode('chat'); startFreeChat(); },
+    settings: () => openSettings(),
+    help: () => setShortcutsOpen(true),
+  });
 
   const startProjectChat = useCallback(
     (projectId: string) => {
@@ -718,10 +795,11 @@ export default function App(): JSX.Element {
 
   return (
     <div className="app">
-      <div className="regular-workspace" style={{display:appMode==='chat'?'contents':'none'}}>
+      <div className="regular-workspace" style={{display:appMode==='chat'||!showPreviews?'contents':'none'}}>
       <Sidebar
         onEnterCode={() => setAppMode('code')}
         onPreview={(title) => setView({kind:'preview',title})}
+        showPreviews={showPreviews}
         projects={projects}
         chats={allChats}
         activeView={view.kind}
@@ -749,7 +827,12 @@ export default function App(): JSX.Element {
       <div className="app-stack">
       <div className="app-main">
 
-      {view.kind === 'preview' && <FeaturePreview title={view.title}/> }
+      {view.kind === 'preview' && showPreviews && <FeaturePreview title={view.title}/> }
+      {view.kind === 'models' && (
+        <Suspense fallback={null}>
+          <ModelManager.View key={view.model || 'list'} initialModel={view.model} onBack={() => openSettings('models')} models={models} routes={routes} projects={projects} modelsError={modelsError} />
+        </Suspense>
+      )}
       {view.kind === 'projects' && (
         <Suspense fallback={null}>
           <Projects.View onEdit={setEditingProjectId}
@@ -764,7 +847,7 @@ export default function App(): JSX.Element {
 
       {view.kind === 'project' && activeProject && (
         <ProjectView
-          modelLabel={activeProject.routing === 'auto' ? 'Auto (Fast/Smart)' : activeProject.model || models.find(m => m.loaded)?.name || 'local model'}
+          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null)}
           onOpenModels={() => setPopupOpen(true)}
           project={activeProject}
           streamingChats={streamingChats}
@@ -785,11 +868,8 @@ export default function App(): JSX.Element {
           chatId={view.chatId}
           title={activeChatMeta?.title ?? (view.projectId ? 'New task' : 'New chat')}
           projectName={activeProject?.name ?? null}
-          modelLabel={
-            activeProject?.routing === 'auto'
-              ? 'Auto (Fast/Smart)'
-              : activeProject?.model ?? models.find((m) => m.loaded)?.name ?? 'local model'
-          }
+          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null)}
+          installedModels={modelsLoaded && !modelsError ? models : null}
           messages={messages}
           onEditMessage={editAndResend}
           streaming={view.kind === 'chat' ? !!streamingChats[view.chatId] : false}
@@ -814,7 +894,7 @@ export default function App(): JSX.Element {
             refreshProjects();
             refreshModels();
           }}
-          onOpenModelSettings={() => { setPopupOpen(false); openSettings('models'); }}
+          onOpenModelSettings={(model?: string) => { setPopupOpen(false); openModelManager(model); }}
         />
       )}
 
@@ -849,7 +929,8 @@ export default function App(): JSX.Element {
       )}
 
       </div>
-      {appMode === 'code'  && <Suspense fallback={null}><Coding.View onExit={() => setAppMode('chat')} onSettings={openSettings} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/></Suspense>}
+      {shortcutsOpen && <ShortcutsDialog apple={appleKeys} onClose={() => setShortcutsOpen(false)} />}
+      {appMode === 'code' && showPreviews && <Suspense fallback={null}><Coding.View onExit={() => setAppMode('chat')} onSettings={openSettings} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/></Suspense>}
       {settingsOpen && (
         <Suspense fallback={null}>
         <Settings.View
@@ -858,6 +939,8 @@ export default function App(): JSX.Element {
           onClose={() => setSettingsOpen(false)}
           theme={theme}
           onTheme={setTheme}
+          preference={preference}
+          onPreference={setPreference}
           models={models}
           routes={routes}
           modelsError={modelsError}
@@ -865,6 +948,7 @@ export default function App(): JSX.Element {
           health={health}
           stats={stats}
           onOpenModels={() => { setSettingsOpen(false); setAppMode('chat'); setPopupOpen(true); }}
+          onOpenModelManager={() => openModelManager()}
           diaryEnabled={diaryEnabled}
           onDiaryEnabledChange={(enabled) => {
             setDiaryEnabled(enabled);

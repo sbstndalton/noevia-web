@@ -39,6 +39,21 @@
 :root {
   --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
   --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+  /* Type scale (HIG text styles adapted for the web; enforced by npm run lint:design).
+     Use a role, not a pixel size. 16px is the form-field size that stops iOS zooming on focus. */
+  --text-caption2: 11px;
+  --text-caption: 12px;
+  --text-footnote: 13px;
+  --text-callout: 14px;
+  --text-body: 15px;
+  --text-input: 16px;
+  --text-headline: 17px;
+  --text-title3: 20px;
+  --text-title2: 22px;
+  --text-title1: 26px;
+  --text-large: 32px;
+  --text-display: 40px;
+  --text-hero: 52px;
   --radius-card: 14px;
   --radius-bubble: 14px;
   --radius-input: 20px;

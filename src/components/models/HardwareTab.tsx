@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { sharedMemoryRisk } from '../../model-guidance';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TimeChart } from './TimeChart';
 import { errorText, gib, mm } from './mm';
 
@@ -30,7 +31,7 @@ export function HardwareTab() {
     {error && <p role="alert" className="modal-err">{error}</p>}
     {!backends && !error && <p role="status">Reading hardware…</p>}
     {backends && !backends.length && <p role="status">No llama.cpp engine was found. Check that the model server container is running and listed for the model manager.</p>}
-    {backends?.map(b => <EngineCard key={b.name} backend={b}/>)}
+    {backends?.map(b => <EngineCard key={b.name} backend={b} hostTotalGB={hostNow?.mem_total_gb}/>)}
     <section className="mm-panel" aria-labelledby="mm-host">
       <h3 id="mm-host">This machine</h3>
       <p className="mm-note">Whole-server load, including every other service. On shared-memory GPUs this is the same memory models use.</p>
@@ -42,7 +43,10 @@ export function HardwareTab() {
   </div>;
 }
 
-function EngineCard({ backend: b }: { backend: Backend }) {
+// Docker's container states in the words the rest of the app uses.
+const ENGINE_STATUS: Record<string, string> = { exited: 'Stopped', created: 'Not started', restarting: 'Restarting', paused: 'Paused', dead: 'Failed', removing: 'Stopping' };
+
+function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; hostTotalGB?: number }) {
   const gpu = b.stats.gpu, cont = b.stats.container, pts = b.history;
   const times = pts.map(p => p.ts);
   const unified = gpu?.memory_kind === 'unified';
@@ -53,12 +57,13 @@ function EngineCard({ backend: b }: { backend: Backend }) {
     <header className="mm-panel-head">
       <div><h3 id={`mm-engine-${b.name}`}>{b.name}</h3>
         <p className="mm-note">{b.image}{b.uptime ? ` · up ${b.uptime}` : ''}{b.loaded_model ? ` · serving ${b.loaded_model}` : ' · no model loaded'}</p></div>
-      <span className={`mm-pill ${running ? 'is-good' : 'is-bad'}`}>{running ? 'Running' : b.status || 'Unknown'}</span>
+      <span className={`mm-pill ${running ? 'is-good' : 'is-bad'}`}>{running ? 'Running' : ENGINE_STATUS[b.status] || 'Unknown'}</span>
     </header>
     {b.last_restart_error && <p role="alert" className="modal-err">Last restart failed: {b.last_restart_error}</p>}
     {!b.stats.ok && <p className="mm-note">Readings unavailable: {b.stats.error}</p>}
     {gpu && <>
       <p className="mm-gpu-name"><strong>{gpu.name}</strong>{gpu.gpu_count > 1 ? ` · ${gpu.gpu_count} GPUs` : ''}</p>
+      {unified && (() => { const risk = sharedMemoryRisk({ unified, sharedTotalGB: gpu.shared_total_gb, hostTotalGB }); return risk.risky ? <p className="mm-note warn" role="alert">{risk.message}</p> : null; })()}
       {unified && <p className="mm-note">Unified memory: this GPU has a small dedicated area ({gib(gpu.vram_total_gb)}, reserved by firmware) and keeps models in memory shared with the system (up to {gib(gpu.shared_total_gb)}). Model memory is counted under shared.</p>}
       {!gpu.measured && <p className="mm-note">No live GPU readings: this llama.cpp image has no GPU monitoring tool and the kernel does not report this GPU. Only the declared memory size ({gib(gpu.vram_total_gb)}) is known, so utilisation charts are hidden.</p>}
       {gpu.measured && <div className="mm-tiles">
@@ -131,22 +136,43 @@ function TestPrompt({ name }: { name: string }) {
   </div>;
 }
 
+const LOG_BUFFER = 1000;
+
+// Follow polls the tail every two seconds rather than holding a Docker log stream
+// open per viewer through the JSON proxy; the window is bounded either way.
+// Lines arrive already scrubbed of secret-shaped strings by the model manager.
 function Logs({ name }: { name: string }) {
   const [q, setQ] = useState(''), [level, setLevel] = useState(''), [lines, setLines] = useState<string[] | null>(null), [error, setError] = useState('');
-  const load = async () => {
-    setError('');
-    try { const v = await mm<{ ok: boolean; error?: string; lines: string[] }>(`backends/${encodeURIComponent(name)}/logs?${new URLSearchParams({ q, level, tail: '600' })}`); if (!v.ok) throw Error(v.error || 'Logs unavailable'); setLines(v.lines); }
-    catch (e) { setError(errorText(e, 'Logs unavailable')); }
-  };
-  useEffect(() => { void load(); }, []);
+  const [follow, setFollow] = useState(false), [pinned, setPinned] = useState(true);
+  const box = useRef<HTMLPreElement>(null);
+  const query = useRef({ q, level });
+  query.current = { q, level };
+  const load = useCallback(async () => {
+    try {
+      const v = await mm<{ ok: boolean; error?: string; lines: string[] }>(`backends/${encodeURIComponent(name)}/logs?${new URLSearchParams({ ...query.current, tail: String(LOG_BUFFER) })}`);
+      if (!v.ok) throw Error(v.error || 'Logs unavailable');
+      setLines(v.lines.slice(-LOG_BUFFER)); setError('');
+    } catch (e) { setError(errorText(e, 'Logs unavailable')); }
+  }, [name]);
+  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (!follow) return;
+    const t = setInterval(() => { if (document.visibilityState !== 'hidden') void load(); }, 2000);
+    return () => clearInterval(t);
+  }, [follow, load]);
+  useEffect(() => { const el = box.current; if (el && pinned) el.scrollTop = el.scrollHeight; }, [lines, pinned]);
+  const onScroll = () => { const el = box.current; if (el) setPinned(el.scrollHeight - el.scrollTop - el.clientHeight < 24); };
   return <div className="mm-form">
     <div className="mm-row">
       <label>Filter<input value={q} placeholder="Text to find" onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void load(); }}/></label>
-      <label>Level<select value={level} onChange={e => setLevel(e.target.value)}><option value="">All</option><option value="warn">Warnings and errors</option><option value="error">Errors</option></select></label>
+      <label>Level<select value={level} onChange={e => { setLevel(e.target.value); query.current = { q, level: e.target.value }; void load(); }}><option value="">All</option><option value="warn">Warnings and errors</option><option value="error">Errors</option></select></label>
+      <label className="mm-check"><input type="checkbox" checked={follow} onChange={e => { setFollow(e.target.checked); if (e.target.checked) { setPinned(true); void load(); } }}/>Follow live</label>
       <button className="modal-btn secondary" onClick={() => void load()}>Refresh</button>
     </div>
     {error && <p role="alert" className="modal-err">{error}</p>}
-    {lines && <pre className="mm-log" tabIndex={0} aria-label="Engine log">{lines.length ? lines.slice(-400).join('\n') : 'No matching lines.'}</pre>}
+    {lines && <pre ref={box} onScroll={onScroll} className="mm-log" tabIndex={0} aria-label="Engine log">{lines.length ? lines.join('\n') : 'No matching lines.'}</pre>}
+    {lines && <p className="mm-note" role="status">{follow ? (pinned ? 'Following · updates every 2 s' : 'Paused while you read') : 'Not following'} · last {Math.min(lines.length, LOG_BUFFER)} lines · secrets are redacted on the server
+      {follow && !pinned && <button className="mm-link" onClick={() => setPinned(true)}> Jump to latest</button>}</p>}
   </div>;
 }
 

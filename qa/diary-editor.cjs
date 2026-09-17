@@ -1,6 +1,6 @@
 // Synthetic browser regression; no real Diary storage or model calls.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const assert=require('node:assert/strict');
+const assert=require('node:assert/strict');const {navClick}=require('./nav.cjs');
 const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
  const fixture=createFixture(31319);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});
@@ -17,7 +17,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  return route.fulfill({json:body.path==='linked.md'?{path:'linked.md',content:'# Linked note\n[Back](note.md)',version:'linked-v1'}:{path:'note.md',content,version}});
  });
  await page.route('**/api/diary/today?*',route=>{const month=new URL(route.request().url()).searchParams.get('month');return route.fulfill({json:{todayLog:`# ${month}-01\nSynthetic first day\n# ${month}-02\nSynthetic second day`,standingSections:{},memoryFiles:[]}});});
- await page.goto('http://localhost:31319');await page.getByRole('button',{name:'Diary',exact:true}).click();
+ await page.goto('http://localhost:31319');await navClick(page,'Diary');
  await page.locator('.calendar-dot').first().waitFor();
  const capture=page.getByRole('textbox',{name:'What’s on your mind today?'});
  await capture.fill('Synthetic retained draft');
@@ -76,7 +76,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  return{kind:'file',name,getFile:async()=>new File([files[name]||''],name),createWritable:async()=>{if(window.__failDisk)throw Error('Synthetic disk failure');let next;return{write:async text=>{next=text;},close:async()=>{files[name]=next;},abort:async()=>{}};}};
  }};window.showDirectoryPicker=async()=>root;
  });
- await local.goto('http://localhost:31319');await local.getByRole('button',{name:'Diary',exact:true}).click();await local.getByRole('button',{name:'Edit',exact:true}).click();await local.getByRole('button',{name:/Browser folder/}).click();await local.getByRole('checkbox',{name:/Also sync/}).uncheck();await local.getByRole('button',{name:'Choose folder',exact:true}).click();await local.getByRole('button',{name:'note.md',exact:true}).click();
+ await local.goto('http://localhost:31319');await navClick(local,'Diary');await local.getByRole('button',{name:'Edit',exact:true}).click();await local.getByRole('button',{name:/Browser folder/}).click();await local.getByRole('checkbox',{name:/Also sync/}).uncheck();await local.getByRole('button',{name:'Choose folder',exact:true}).click();await local.getByRole('button',{name:'note.md',exact:true}).click();
  const workspace=local.getByRole('region',{name:'Markdown workspace'}),input=workspace.getByRole('textbox',{name:'Markdown content'});
  await input.fill('# Local draft');await local.evaluate(()=>{window.__failDisk=true;});await workspace.getByRole('button',{name:'Save',exact:true}).click();await workspace.getByRole('alert').waitFor();assert.equal(await input.inputValue(),'# Local draft');
  await local.evaluate(()=>{window.__failDisk=false;window.__fixtureFiles['note.md']='# Other writer';});await workspace.getByRole('button',{name:'Save',exact:true}).click();await workspace.getByRole('heading',{name:'Current stored version'}).waitFor();assert.equal(await local.evaluate(()=>window.__fixtureFiles['note.md']),'# Other writer');

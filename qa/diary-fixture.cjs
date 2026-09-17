@@ -26,6 +26,8 @@ function createFixture(port = 31239) {
     if(process.env.LOCAL_RECOVERY_QA==='1' && url.pathname==='/api/qa/state'){if(body.user)syntheticUser=String(body.user);return json({requests:requests.map(r=>r.path),user:syntheticUser});}
     const user={id:syntheticUser,username:'fixture',displayName:'Synthetic diary QA',role:'member',diaryEnabled:true,onboarded:true};
     if(url.pathname==='/api/setup/status')return json({configured:true});
+    // Product default (previews off); suites that exercise the Code preview route this to true.
+    if(url.pathname==='/api/features')return json({flags:{previews:false}});
     if(['/api/auth/session','/api/profile'].includes(url.pathname))return json({user,passkeys:[]});
     if(url.pathname==='/api/workspace')return json({projects:[],freeChats:[]});
     if(url.pathname==='/api/health')return json({inferenceUp:true,diaryUp:true});
@@ -51,7 +53,25 @@ function createFixture(port = 31239) {
       event({type:'status',text:body.spaceId==='diary-extras'?'Preparing synthetic context':'Reading synthetic diary'});
       if(body.spaceId==='diary-extras') {event({type:'tool',index:0,name:'synthetic_read',args:'{}'});event({type:'tool_result',index:0,name:'synthetic_read',text:'Synthetic reference read'});}
       if(body.message==='cancel synthetic'&&body.spaceId==='diary-extras') { pending.add(res);res.on('close',()=>pending.delete(res));return; }
+      if(body.message==='pending write synthetic') {
+        event({type:'tool',index:0,name:'project_create_file',args:'{"name":"a.md","text":"synthetic"}'});
+        event({type:'tool_pending',id:'ap-synthetic-stale',index:0,name:'project_create_file',args:'{"name":"a.md","text":"synthetic"}'});
+        pending.add(res);res.on('close',()=>pending.delete(res));return;
+      }
       if(body.message==='live synthetic') { live.add(res);pending.add(res);res.on('close',()=>{live.delete(res);pending.delete(res);});return; }
+      if(body.message==='tools chat synthetic') {
+        event({type:'tool',index:0,name:'project_search',args:'{"query":"synthetic"}'});
+        event({type:'tool_result',index:0,name:'project_search',text:'Found 2 synthetic matches in notes.md'});
+        event({type:'tool',index:1,name:'write_note',args:'{"path":"a.md"}'});
+        event({type:'tool_result',index:1,name:'write_note',text:'ERROR: the user declined this action.'});
+        event({type:'delta',text:'Synthetic answer after tools'});
+        event({type:'done'});res.end();return;
+      }
+      if(body.message==='live tokens synthetic') {
+        event({type:'delta',text:'Synthetic streamed reply'});
+        event({type:'usage',promptTokens:12,completionTokens:34,totalTokens:46,tokensPerSecond:77});
+        event({type:'done'});res.end();return;
+      }
       if(body.message==='long synthetic') {
         let chunk=0;
         const timer=setInterval(()=>{
@@ -67,6 +87,10 @@ function createFixture(port = 31239) {
       },250);return;
     }
     if(url.pathname==='/api/models/installed')return json([]);
+    // Fixed baseline the footer's own poll would keep reporting forever — a
+    // test proving the live SSE 'usage' update works can't race the poll if
+    // this never changes to the value that update carries.
+    if(url.pathname==='/api/stats')return json({up:true,tokensPerSecond:11,timeToFirstToken:0.2,inputTokens:5,outputTokens:5,telemetryScope:null,inputTokensTotal:100,outputTokensTotal:200,requestCount:3,cpuPercent:10,gpuPercent:20,vramGb:4,memoryGb:8,mtp:[]});
     return json({});
   });
   return {server,requests,liveEvent:event=>{for(const res of live)res.write('data: '+JSON.stringify(event)+'\n\n');},finishLive:()=>{for(const res of live){res.write('data: {"type":"diary","decision":"skip"}\n\ndata: {"type":"done"}\n\n');res.end();}},listen:()=>new Promise(r=>server.listen(port,'127.0.0.1',r)),close:()=>{for(const res of pending)res.end();return new Promise(r=>server.close(r));}};

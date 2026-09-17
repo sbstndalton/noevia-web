@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { browseStorage, fetchStorage, readStorageFile } from '../api';
 import type { StorageEntry } from '../api';
+import { CloseButton } from './CloseButton';
 
 export interface PickedFile { name: string; content: string }
 
@@ -68,7 +69,7 @@ export function StorageFileBrowser({
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h2>Pull from your storage</h2>
-          <button className="modal-x" onClick={onClose} title="Close">✕</button>
+          <CloseButton onClick={onClose}/>
         </div>
 
         {kind === 'local' ? (
@@ -120,7 +121,7 @@ export function StorageFileBrowser({
                     className="popup-tab"
                     style={{
                       border: added.includes(e.path) ? '1px solid var(--border)' : '1px solid var(--accent)',
-                      color: added.includes(e.path) ? 'var(--text-dim, inherit)' : 'var(--accent-text)',
+                      color: added.includes(e.path) ? 'var(--text-secondary)' : 'var(--accent-text)',
                     }}
                     disabled={added.includes(e.path)}
                     onClick={() => void addFile(e)}

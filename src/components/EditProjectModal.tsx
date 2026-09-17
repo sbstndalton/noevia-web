@@ -1,8 +1,9 @@
 import { ProjectIdentityPicker } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import type { InstalledModel, Project } from '../types';
+import type { InstalledModel, Project, ProjectMode } from '../types';
 import { ShellIcon } from './ShellIcon';
+import { CloseButton } from './CloseButton';
 
 /** Project identity and behavior. Reference files are managed on Sources. */
 export function EditProjectModal({
@@ -24,6 +25,8 @@ export function EditProjectModal({
   const [instructions, setInstructions] = useState(project.instructions || '');
   const [effort, setEffort] = useState<'inherit' | 'default' | 'low' | 'high'>(project.reasoningEffort || 'inherit');
   const [model, setModel] = useState(project.model || '');
+  const [modes, setModes] = useState<ProjectMode[]>(project.modes?.length ? project.modes : ['chat']);
+  const toggleMode = (mode: ProjectMode, on: boolean) => setModes((prev) => (['chat', 'cowork', 'code'] as ProjectMode[]).filter((m) => (m === mode ? on : prev.includes(m))));
   const [addError, setAddError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -45,6 +48,7 @@ export function EditProjectModal({
         instructions,
         model,
         reasoningEffort: effort === 'inherit' ? null : effort,
+        modes,
       });
       onClose();
     } catch (e) {
@@ -61,7 +65,7 @@ export function EditProjectModal({
     >
       <header>
         <h2>Edit project</h2>
-        <button className="modal-x" onClick={onClose} aria-label="Close">✕</button>
+        <CloseButton onClick={onClose}/>
       </header>
 
       <div className="edit-project-body">
@@ -69,6 +73,15 @@ export function EditProjectModal({
           <ProjectIdentityPicker icon={icon} color={color} onChange={(i,c)=>{setIcon(i);setColor(c);}}/>
           <input aria-label="Project name" className="modal-input" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
+        <fieldset className="field project-modes">
+          <legend>Available in</legend>
+          <div className="project-mode-options">
+            {([['chat', 'Chat', ''], ['cowork', 'Cowork', 'not built yet'], ['code', 'Code', 'preview']] as [ProjectMode, string, string][]).map(([mode, label, note]) => (
+              <label key={mode} className="mm-check"><input type="checkbox" checked={modes.includes(mode)} onChange={(e) => toggleMode(mode, e.target.checked)} />{label}{note && <small> · {note}</small>}</label>
+            ))}
+          </div>
+          <small>{modes.length ? 'The project appears in these modes. Chat projects show in the sidebar and accept messages.' : 'Choose at least one mode.'}</small>
+        </fieldset>
         <label className="field">
           <span>Project instructions</span>
           <textarea className="modal-input" rows={3} value={instructions}
@@ -118,7 +131,7 @@ export function EditProjectModal({
       {addError && <p role="alert" className="modal-err project-save-error">{addError}</p>}
       <footer>
         <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" onClick={() => void save()} disabled={!name.trim() || saving}>{saving ? 'Saving…' : 'Save'}</button>
+        <button className="btn btn-primary" onClick={() => void save()} disabled={!name.trim() || !modes.length || saving}>{saving ? 'Saving…' : 'Save'}</button>
       </footer>
 
     </dialog>

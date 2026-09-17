@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch, fetchInstalledModels } from '../../api';
 import type { InstalledModel } from '../../types';
 import { MtpControl } from '../MtpControl';
 import { NativeCalibration } from '../NativeCalibration';
+import { EvidenceList } from './EvidenceList';
 import { errorText, mm, tokens } from './mm';
+import { registerNewFolderModels } from './register';
+import { useModelsChanged } from '../../models-changed';
 
 type FileEntry = { key: string; name: string; subdir: string; bytes: number; size: string; modified: string; sharded: boolean; parts: number;
   projector: { name: string; bytes: number } | null; sections: string[]; modelId: string; file: string;
@@ -13,27 +16,43 @@ type Update = { status: string; remote: string; delta_days: number | null };
 type Detail = FileEntry & { path: string; summary: { arch: string; general: Record<string, unknown>; model: Record<string, unknown>; chat_template_features: Record<string, boolean> } };
 const BADGE: Record<string, string> = { coding: 'Coding', writing: 'Creative writing', reasoning: 'Reasoning', tools: 'Tool use', vision: 'Vision' };
 
-export function LibraryTab({ onConfigure, onChanged }: { onConfigure: (section: string) => void; onChanged: () => void }) {
+export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', filter = 'all' }: {
+  onConfigure: (section: string) => void; onChanged: () => void;
+  query?: string; sort?: 'name' | 'size' | 'modified'; filter?: 'all' | 'loaded' | 'vision' | 'unconfigured';
+}) {
   const [models, setModels] = useState<InstalledModel[] | null>(null);
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [unregistered, setUnregistered] = useState<string[]>([]);
   const [updates, setUpdates] = useState<Record<string, Update>>({});
+  const [disk, setDisk] = useState<{ freeH: string; totalH: string; usedPct: number } | null>(null);
   const [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(''), [filesNote, setFilesNote] = useState(''), [runtimeOptions, setRuntimeOptions] = useState(false);
-  const refresh = async () => {
+  // The parent passes a fresh callback each render; the refresh below must stay stable.
+  const changedRef = useRef(onChanged);
+  changedRef.current = onChanged;
+  const refresh = useCallback(async () => {
     setError('');
     try {
       // The model manager adds file details; without it the engine's own list still works.
-      const [installed, local, upd, caps] = await Promise.all([fetchInstalledModels(), mm<{ models: FileEntry[]; unregistered: string[] }>('models').catch(() => null), mm<{ status: Record<string, Update> }>('models/updates').catch(() => ({ status: {} })),
-        apiFetch('/api/models/capabilities').then(r => r.json()).catch(() => ({}))]);
+      const [installed, local, upd, caps, overview] = await Promise.all([fetchInstalledModels(), mm<{ models: FileEntry[]; unregistered: string[] }>('models').catch(() => null), mm<{ status: Record<string, Update> }>('models/updates').catch(() => ({ status: {} })),
+        apiFetch('/api/models/capabilities').then(r => r.json()).catch(() => ({})), mm<{ modelsDir?: { disk?: { freeH: string; totalH: string; usedPct: number } | null } }>('overview').catch(() => null)]);
+      setDisk(overview?.modelsDir?.disk ?? null);
       setModels(installed); setFiles(local?.models || []); setUnregistered(local?.unregistered || []); setUpdates(upd.status); setRuntimeOptions(caps?.runtimeOptions === true);
+      if (local?.unregistered?.length) {
+        const synced = await registerNewFolderModels(local.unregistered);
+        if (synced.text) setMessage(synced.text);
+        if (synced.added.length) { changedRef.current(); return; }   // models-changed refetches this list
+      }
       setFilesNote(local ? '' : 'File details, downloads and settings need the model management service, which is not available on this server.');
     } catch (e) { setError(errorText(e, 'The model library is unavailable.')); }
-  };
-  useEffect(() => { void refresh(); }, []);
+  }, []);
+  useEffect(() => { void refresh(); }, [refresh]);
+  // Tabs mount per selection, so a mount-only fetch left this list showing
+  // whatever was true when the tab was last opened.
+  useModelsChanged(useCallback(() => { void refresh(); }, [refresh]));
   const fileFor = (name: string) => files.find(f => f.sections.includes(name) || f.modelId === name);
   const act = async (verb: 'load' | 'unload', name: string) => {
     setBusy(name); setMessage('');
-    try { const r = await apiFetch(`/api/models/${verb}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); if (!r.ok) throw Error((await r.json()).error || `${verb} failed`); await refresh(); onChanged(); }
+    try { const r = await apiFetch(`/api/models/${verb}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); if (!r.ok) throw Error((await r.json()).error || `${verb} failed`); onChanged(); }
     catch (e) { setError(errorText(e, 'Model operation failed')); } finally { setBusy(''); }
   };
   const checkUpdates = async () => {
@@ -41,20 +60,41 @@ export function LibraryTab({ onConfigure, onChanged }: { onConfigure: (section: 
     try { const v = await mm<{ checked: number; status: Record<string, Update> }>('models/check-updates', { body: {} }); setUpdates(v.status); setMessage(`Checked ${v.checked} downloaded file${v.checked === 1 ? '' : 's'} against Hugging Face.`); }
     catch (e) { setError(errorText(e, 'Update check failed')); } finally { setBusy(''); }
   };
-  const servable = (models || []).filter(m => !/^[0-9a-f]{32,40}$/i.test(m.name));
+  // Hex names are Hugging Face cache artefacts, not something anyone chose to
+  // install, and they cannot be configured usefully.
+  const installed = (models || []).filter(m => !/^[0-9a-f]{32,40}$/i.test(m.name));
+  const needle = query.trim().toLowerCase();
+  const servable = installed
+    .filter(m => !needle || m.name.toLowerCase().includes(needle))
+    .filter(m => {
+      if (filter === 'loaded') return m.loaded;
+      if (filter === 'vision') return !!fileFor(m.name)?.projector || m.labels.includes('vision');
+      // "Needs setup" means the engine lists it but no models.ini section
+      // points at a file, so it cannot actually be served.
+      if (filter === 'unconfigured') return !fileFor(m.name);
+      return true;
+    })
+    .sort((a, b) => {
+      if (sort === 'size') return (fileFor(b.name)?.bytes ?? b.sizeGB ?? 0) - (fileFor(a.name)?.bytes ?? a.sizeGB ?? 0);
+      if (sort === 'modified') return (fileFor(b.name)?.modified || '').localeCompare(fileFor(a.name)?.modified || '');
+      return a.name.localeCompare(b.name);
+    });
   const shownFiles = new Set(servable.map(m => fileFor(m.name)?.key).filter(Boolean));
   const orphanFiles = files.filter(f => !shownFiles.has(f.key));
   return <div className="mm-tab">
     <div className="mm-toolbar">
-      <p className="mm-lede">Everything installed on the model server. llama.cpp loads one model at a time and swaps on demand.</p>
+      <p className="mm-lede">Everything installed on the model server. llama.cpp loads models on demand and unloads the least recently used one when it reaches its limit.</p>
       <button className="modal-btn secondary" disabled={busy === 'updates'} onClick={() => void checkUpdates()}>{busy === 'updates' ? 'Checking…' : 'Check for updates'}</button>
     </div>
     {error && <p role="alert" className="modal-err">{error}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
     {filesNote && <p className="mm-note">{filesNote}</p>}
+    {disk && <p className="mm-note" data-testid="models-disk">Models folder: {disk.freeH} free of {disk.totalH} ({disk.usedPct.toFixed(0)}% used).</p>}
     {!models && !error && <p role="status">Loading models…</p>}
+    {models && <p className="mm-note" role="status">{servable.length} of {installed.length} {installed.length === 1 ? 'model' : 'models'}{needle ? ` matching “${query.trim()}”` : ''}{filter !== 'all' ? ' after filtering' : ''}.</p>}
+    {models && !servable.length && installed.length > 0 && <p className="mm-note">Nothing matches. Clear the search or choose All models.</p>}
     {servable.map(m => <ModelCard key={m.name} runtimeOptions={runtimeOptions} onRefresh={() => void refresh()} model={m} file={fileFor(m.name)} update={updates[fileFor(m.name)?.name || '']} busy={busy === m.name}
-      onToggle={() => void act(m.loaded ? 'unload' : 'load', m.name)} onConfigure={() => onConfigure(m.name)} onDeleted={() => { void refresh(); onChanged(); }}/>)}
+      onToggle={() => void act(m.loaded ? 'unload' : 'load', m.name)} onConfigure={() => onConfigure(m.name)} onDeleted={onChanged}/>)}
     {orphanFiles.length > 0 && <section className="mm-panel"><h3>Files without a model entry</h3>
       <p className="mm-note">These files are in the model folder but no settings point to them, so the engine cannot serve them yet.</p>
       <ul className="mm-list">{orphanFiles.map(f => <li key={f.key}><span>{f.name}<small>{f.size}{f.subdir ? ` · ${f.subdir}/` : ''}</small></span>
@@ -82,7 +122,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
     {file?.badges && file.badges.length > 0 && <p className="model-card-meta">{file.badges.map(b => <span key={b.category} className="model-card-tag">{BADGE[b.category] || b.category} {b.rating}/5</span>)}</p>}
     <div className="model-card-actions">
       <button className="popup-tab" disabled={busy} onClick={onToggle}>{busy ? 'Working…' : m.loaded ? 'Unload' : 'Load'}</button>
-      <button className="popup-tab" onClick={onConfigure}>Settings</button>
+      <button className="popup-tab" onClick={onConfigure}>Tune</button>
       <button className="popup-tab" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Hide details' : 'Details'}</button>
       <DeleteModel model={m} file={file} onDeleted={onDeleted}/>
     </div>
@@ -103,6 +143,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
         <div><dt>Modified</dt><dd>{detail.modified}</dd></div>
         {Object.entries(detail.summary.chat_template_features || {}).some(([, v]) => v) && <div><dt>Chat template</dt><dd>{Object.entries(detail.summary.chat_template_features).filter(([, v]) => v).map(([k]) => k.replace(/_/g, ' ')).join(', ')}</dd></div>}
       </dl>}
+      <EvidenceList model={m.name}/>
       <NativeCalibration model={m.name} onChanged={() => {}}/>
     </div>}
   </article>;

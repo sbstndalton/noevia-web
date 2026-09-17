@@ -1,26 +1,36 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../api';
-import { ctxShort, errorText, mm, tokens } from './mm';
+import { bytes, ctxShort, errorText, mm, tokens } from './mm';
+import { NativeCalibration } from '../NativeCalibration';
+import { AutoTune } from './AutoTune';
+import { dismissFolderModel } from './register';
 
 type Field = { key: string; label: string; kind: 'int' | 'text' | 'bool' | 'select'; choices: string[]; placeholder: string; help: string };
 type Tier = { tier: string; open: boolean; fields: Field[] };
 type SectionRow = { name: string; items: [string, string][]; hasFile: boolean; file: string | null; cli: string };
-type SectionsResponse = { revision: string; schema: Tier[]; sections: SectionRow[]; unregistered: string[]; backups: [string, number, number][] };
+type SectionsResponse = { revision: string; schema: Tier[]; sections: SectionRow[]; unregistered: string[]; backups: [string, number, number][]; raw?: string };
 type SectionResponse = { name: string; exists: boolean; values: Record<string, string>; extras: string; hints: string[]; revision: string; schema: Tier[] };
 type Preset = { key: string; label: string; ctx: number; n_cpu_moe: number; offload_kind: string; gpu_layers: number; total_layers: number; gpu_gb: number; kv_gb: number; speed_score: number; ngl: number };
 type Row = { ctx: number; total_ctx: number; model_gb: number; kv_gb: number; total_gb: number; fits: boolean; free_gb: number; offload_kind: string; n_cpu_moe: number; gpu_pct: number };
 type Plan = { name: string; vendor: string; vram_gb: number; rows: Row[]; max_ctx: number; fits_at_all: boolean };
 type Spec = { key: string; label: string; blurb: string; spec_type: string; needs_head: boolean };
 type Rec = { plans: Plan[]; recommended_backend: string; recommended_ctx: number; recommended_total_ctx: number; n_sessions: number; values: Record<string, string>; quirks: string[]; unavailable: string[];
-  current_diff: string[]; displaced: string[]; presets: Preset[]; frontier: Preset[]; fits_full_gpu: boolean; native_ctx: number; current_preset: string; active_preset: string;
+  current_diff: string[]; displaced: string[]; presets: Preset[]; frontier: Preset[]; fits_full_gpu: boolean; native_ctx: number; current_preset: string; active_preset: string; estimated_ctx?: number; ctx_cap_reason?: string; warnings?: string[];
   spec_profiles: Spec[]; active_spec_profile: string; current_spec_profile: string; spec_head_rel: string; error: string; vision_available: string; vision: boolean };
 type Measured = { n: number; gen_p50: number; gen_p25: number; gen_p75: number; prompt_p50: number; draft_acc_p50: number | null };
 type Run = Measured & { instance: string; is_current: boolean; diff: Record<string, string>; rel_pct: number };
 type Auto = { error?: string; section: string; arch: string; params: string; fileBytes: number; model: string; recommendation: Rec; measured: Measured; history: Run[] };
 
-export function ConfigureTab({ initial, onSaved }: { initial?: string; onSaved: () => void }) {
+export function ConfigureTab({ initial, onSaved, onSelect }: { initial?: string; onSaved: () => void; onSelect?: (name: string) => void }) {
   const [list, setList] = useState<SectionsResponse | null>(null), [selected, setSelected] = useState(initial || ''), [error, setError] = useState('');
-  const load = async () => { try { setList(await mm<SectionsResponse>('sections')); } catch (e) { setError(errorText(e, 'Model settings are unavailable.')); } };
+  const load = async () => {
+    try {
+      const v = await mm<Partial<SectionsResponse>>('sections');
+      // Opened straight from chat, this may meet a server without the model manager: say so, never crash.
+      if (!Array.isArray(v?.sections)) throw Error('Model settings are unavailable on this server.');
+      setList({ revision: v.revision || '', schema: v.schema || [], sections: v.sections, unregistered: Array.isArray(v.unregistered) ? v.unregistered : [], backups: Array.isArray(v.backups) ? v.backups : [], raw: v.raw });
+    } catch (e) { setError(errorText(e, 'Model settings are unavailable.')); }
+  };
   useEffect(() => { void load(); }, []);
   useEffect(() => { if (initial) setSelected(initial); }, [initial]);
   const names = list?.sections.map(s => s.name) || [];
@@ -28,16 +38,22 @@ export function ConfigureTab({ initial, onSaved }: { initial?: string; onSaved: 
     <p className="mm-lede">Per-model settings for the llama.cpp engine (its models.ini). Each entry's name is the model id chat uses. Changes apply the next time the model loads.</p>
     {error && <p role="alert" className="modal-err">{error}</p>}
     <div className="mm-row">
-      <label className="mm-grow">Model<select value={selected} onChange={e => setSelected(e.target.value)}>
+      <label className="mm-grow">Model<select value={selected} onChange={e => { setSelected(e.target.value); onSelect?.(e.target.value); }}>
         <option value="">Choose a model…</option>
         <optgroup label="Configured">{names.map(n => <option key={n} value={n}>{n}</option>)}</optgroup>
         {!!list?.unregistered.length && <optgroup label="Files without settings">{list.unregistered.map(n => <option key={n} value={n}>{n} (new)</option>)}</optgroup>}
         {selected && !names.includes(selected) && !list?.unregistered.includes(selected) && <option value={selected}>{selected} (new)</option>}
       </select></label>
     </div>
-    {selected && list && <SectionEditor key={selected} name={selected} row={list.sections.find(s => s.name === selected)} onChanged={async (renamed) => { await load(); if (renamed !== undefined) setSelected(renamed); onSaved(); }}/>}
-    {list && !selected && <ul className="mm-list">{list.sections.map(s => <li key={s.name}><span>{s.name}<small>{s.hasFile ? s.file : 'model file not found'}</small></span><button className="modal-btn secondary" onClick={() => setSelected(s.name)}>Edit</button></li>)}</ul>}
-    {list && list.backups.length > 0 && <p className="mm-note">{list.backups.length} automatic backups of the settings file are kept on the server (newest {new Date(list.backups[0][1] * 1000).toLocaleString()}).</p>}
+    {selected && list && <SectionEditor key={selected} name={selected} row={list.sections.find(s => s.name === selected)} onChanged={async (renamed) => { await load(); if (renamed !== undefined) { setSelected(renamed); onSelect?.(renamed); } onSaved(); }}/>}
+    {list && !selected && <ul className="mm-list">{list.sections.map(s => <li key={s.name}><span>{s.name}<small>{s.hasFile ? s.file : 'model file not found'}</small></span><button className="modal-btn secondary" onClick={() => { setSelected(s.name); onSelect?.(s.name); }}>Edit</button></li>)}</ul>}
+    {list && <details className="mm-disclosure"><summary>Raw file &amp; backups</summary><div className="mm-form">
+      <pre className="mm-raw mm-mono" aria-label="models.ini contents">{list.raw || '(empty)'}</pre>
+      {list.backups.length > 0
+        ? <><p className="mm-note">{list.backups.length} automatic backups are kept on the server, newest first. Restoring one is an operator task on the server.</p>
+          <ul className="mm-hints mm-mono">{list.backups.map(([file, mtime, size]) => <li key={file}>{file} · {new Date(mtime * 1000).toLocaleString()} · {size} B</li>)}</ul></>
+        : <p className="mm-note">No backups yet. One is created on the next save.</p>}
+    </div></details>}
   </div>;
 }
 
@@ -51,9 +67,9 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
     catch (e) { setError(errorText(e, 'Could not read these settings')); }
   };
   useEffect(() => { void read(); }, [name]);
-  const save = async () => {
+  const save = async (values = draft, extraText = extras) => {
     if (!data) return; setBusy('save'); setError(''); setMessage('');
-    try { const v = await mm<{ revision: string }>(`sections/${encodeURIComponent(name)}`, { method: 'PUT', body: { baseRevision: data.revision, values: draft, extras } }); setData({ ...data, revision: v.revision, exists: true }); await onChanged(); await apply(false); }
+    try { const v = await mm<{ revision: string }>(`sections/${encodeURIComponent(name)}`, { method: 'PUT', body: { baseRevision: data.revision, values, extras: extraText } }); setData({ ...data, revision: v.revision, exists: true }); await onChanged(); await apply(false); }
     catch (e) { if ((e as { status?: number }).status === 409) setConflict(true); setError(errorText(e, 'Save failed')); } finally { setBusy(''); }
   };
   const [pending, setPending] = useState<string[]>([]);
@@ -75,21 +91,36 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
   };
   const doDelete = async () => {
     if (!data) return; setBusy('delete'); setError('');
-    try { await mm(`sections/${encodeURIComponent(name)}?baseRevision=${data.revision}`, { method: 'DELETE' }); await apply(false); await onChanged(''); }
+    try { await mm(`sections/${encodeURIComponent(name)}?baseRevision=${data.revision}`, { method: 'DELETE' }); dismissFolderModel(name); await apply(false); await onChanged(''); }
     catch (e) { setError(errorText(e, 'Delete failed')); } finally { setBusy(''); }
   };
-  const fill = (values: Record<string, string>, displaced: string[]) => {
+  const merge = (values: Record<string, string>, displaced: string[]) => {
     const schemaKeys = new Set(data?.schema.flatMap(t => t.fields.map(f => f.key)) || []);
     const next = { ...draft };
     for (const key of displaced) if (schemaKeys.has(key)) next[key] = '';
     const extraLines = extras.split('\n').filter(line => { const k = line.split('=')[0]?.trim(); return !(k && (displaced.includes(k) || k in values)); });
     for (const [k, v] of Object.entries(values)) { if (schemaKeys.has(k)) next[k] = v; else if (v) extraLines.push(`${k} = ${v}`); }
-    setDraft(next); setExtras(extraLines.filter(Boolean).join('\n'));
+    return { next, extraText: extraLines.filter(Boolean).join('\n') };
+  };
+  const fill = (values: Record<string, string>, displaced: string[]) => {
+    const { next, extraText } = merge(values, displaced);
+    setDraft(next); setExtras(extraText);
     setMessage('Autoconfig values filled in. Review them, then save.');
   };
+  const useTuned = async (values: Record<string, string>, displaced: string[]) => {
+    const { next, extraText } = merge(values, displaced);
+    setDraft(next); setExtras(extraText);
+    await save(next, extraText);
+  };
+  const [mode, setModeState] = useState<'easy' | 'advanced'>(() => { try { return localStorage.getItem('noevia:model-settings-mode') === 'advanced' ? 'advanced' : 'easy'; } catch { return 'easy'; } });
+  const setMode = (next: 'easy' | 'advanced') => { setModeState(next); try { localStorage.setItem('noevia:model-settings-mode', next); } catch { /* optional */ } };
   if (!data) return error ? <p role="alert" className="modal-err">{error}</p> : <p role="status">Reading settings…</p>;
   return <section className="mm-panel" aria-labelledby="mm-section-title">
     <header className="mm-panel-head"><div><h3 id="mm-section-title">{name}</h3><p className="mm-note">{data.exists ? (row?.hasFile ? row.file : 'Model file not found for these settings') : 'New settings: not saved yet'}</p></div></header>
+    <div className="mm-mode" role="group" aria-label="Settings detail">
+      {(['easy', 'advanced'] as const).map(m => <button key={m} aria-pressed={mode === m} className={mode === m ? 'is-active' : ''} onClick={() => setMode(m)}>{m === 'easy' ? 'Easy' : 'Advanced'}</button>)}
+    </div>
+    {mode === 'easy' ? <EasySettings name={name} draft={draft} busy={busy !== ''} onChange={(patch) => setDraft({ ...draft, ...patch })} onUseTuned={useTuned}/> : <>
     {data.hints.length > 0 && <ul className="mm-hints">{data.hints.map(h => <li key={h}>{h}</li>)}</ul>}
     <AutoconfigPanel name={name} onFill={fill}/>
     <div className="mm-form">
@@ -99,6 +130,7 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
       </details>)}
       <label>Other options, one per line (key = value)<textarea rows={4} className="mm-mono" value={extras} onChange={e => setExtras(e.target.value)} placeholder="e.g. override-tensor = exps=CPU"/></label>
     </div>
+    </>}
     {conflict && <p role="alert" className="modal-err">The settings file changed since you opened it (another save, a calibration or an edit on the server). <button className="modal-btn secondary" onClick={() => void read()}>Reload latest</button> Your unsaved changes will be replaced.</p>}
     {error && !conflict && <p role="alert" className="modal-err">{error}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
@@ -115,6 +147,98 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
         : <button className="modal-btn secondary" onClick={() => setConfirmDelete(true)}>Remove these settings…</button>}
     </div></details>}
   </section>;
+}
+
+const SPEC_CHOICES: [string, string, string][] = [
+  ['', 'Engine default', 'Leave speculative decoding to the engine.'],
+  ['none', 'Off', 'No speculative decoding.'],
+  ['draft-mtp', 'MTP draft head', 'Uses the model\'s MTP prediction head. Tune for this machine fills in the head file when one sits beside the model.'],
+  ['ngram-simple', 'N-gram (no extra model)', 'Guesses from text already in the conversation. Helps with repetitive output.'],
+];
+const KV_CHOICES: [string, string][] = [['', 'Engine default'], ['f16', 'Full precision (f16)'], ['q8_0', 'Balanced (q8_0)'], ['q4_0', 'Smallest (q4_0)']];
+
+// Easy exposes speculative decoding and KV cache type; tuning must not override what was picked.
+const keepChoices = (draft: Record<string, string>) => Object.fromEntries(['spec-type', 'cache-type-k', 'cache-type-v'].filter(k => draft[k]).map(k => [k, draft[k]]));
+// The common path: let autoconfig size the context to this machine's memory, and
+// expose only the two choices people actually weigh. Advanced keeps every field.
+type DraftHeads = { local: string; builtinLayers: number; available: boolean; remote: { repo: string; path: string; size: number }[]; mtpBuild: string | null; repo: string | null; remoteError?: string };
+
+function EasySettings({ name, draft, busy, onChange, onUseTuned }: { name: string; draft: Record<string, string>; busy: boolean; onChange: (patch: Record<string, string>) => void; onUseTuned: (values: Record<string, string>, displaced: string[]) => Promise<void> }) {
+  const [auto, setAuto] = useState<Auto | null>(null), [tuning, setTuning] = useState(false), [error, setError] = useState('');
+  const [verified, setVerified] = useState(0), [heads, setHeads] = useState<DraftHeads | null>(null), [headNote, setHeadNote] = useState('');
+  useEffect(() => {
+    let live = true;
+    // A context measured on this machine bounds every estimate; newest measurement wins.
+    void apiFetch('/api/models/calibration?model=' + encodeURIComponent(name)).then(r => r.json()).then((v: { history?: { at: number; appliedCtx?: number; verifiedCtx?: number }[] }) => {
+      const last = (v.history || []).slice().sort((a, b) => b.at - a.at)[0];
+      if (live) setVerified(last?.verifiedCtx || last?.appliedCtx || 0);
+    }).catch(() => {});
+    // An older model manager has no such route; treat anything malformed as "unknown", never crash.
+    void mm<Partial<DraftHeads>>(`sections/${encodeURIComponent(name)}/draft-heads`).then(v => {
+      if (!live || typeof v?.available !== 'boolean') return;
+      setHeads({ local: v.local || '', builtinLayers: Number(v.builtinLayers) || 0, available: v.available, remote: Array.isArray(v.remote) ? v.remote : [], mtpBuild: v.mtpBuild || null, repo: v.repo || null });
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [name]);
+  const tune = async () => {
+    setTuning(true); setError('');
+    const spec = ({ 'draft-mtp': 'balanced', 'ngram-simple': 'ngram', none: 'off' } as Record<string, string>)[draft['spec-type'] || ''] || '';
+    const q = new URLSearchParams({ sessions: '1', spec, vision: String(Boolean(draft.mmproj)) });
+    if (verified > 0) q.set('verified_ctx', String(verified));
+    try { setAuto(await mm<Auto>(`sections/${encodeURIComponent(name)}/autoconfig?${q}`)); }
+    catch (e) { setError(errorText(e, 'Tuning failed')); } finally { setTuning(false); }
+  };
+  const downloadHead = async (path: string) => {
+    setHeadNote('');
+    try { await mm(`sections/${encodeURIComponent(name)}/draft-heads/download`, { body: { path } }); setHeadNote('Downloading the MTP head into this model\'s folder. Tune again when it finishes to turn MTP on.'); }
+    catch (e) { setHeadNote(errorText(e, 'The head could not be downloaded.')); }
+  };
+  const rec = auto?.recommendation;
+  const failure = auto?.error || rec?.error || error;
+  const kv = draft['cache-type-k'] === draft['cache-type-v'] ? draft['cache-type-k'] || '' : 'mixed';
+  const spec = SPEC_CHOICES.find(c => c[0] === (draft['spec-type'] || ''));
+  const mtpStatus = !heads ? '' : heads.local ? 'This model has an MTP draft head beside it.'
+    : heads.builtinLayers > 0 ? 'This model has MTP layers built in; no extra file is needed.'
+    : heads.remote.length ? `No MTP head here yet; ${heads.repo} publishes one.`
+    : heads.mtpBuild ? `This file has no MTP layers. An MTP build is published as ${heads.mtpBuild}.`
+    : 'No MTP head is available for this model, so speculative decoding stays off unless you pick N-gram.';
+  return <div className="mm-form mm-easy">
+    <div className="mm-easy-row">
+      <div><strong>Context</strong><p className="mm-note">{draft['ctx-size'] ? `${ctxShort(Number(draft['ctx-size']))} tokens` : 'Engine default'}. {verified > 0 ? `Measured on this machine: ${ctxShort(verified)} tokens.` : 'Not measured on this machine yet.'} Tuning estimates what fits in memory and what this machine can read in time.</p></div>
+      <button className="modal-btn secondary" disabled={tuning || busy} onClick={() => void tune()}>{tuning ? 'Estimating…' : 'Tune for this machine'}</button>
+    </div>
+    {failure && <p role="alert" className="modal-err">{failure}</p>}
+    {rec && !failure && <div className="mm-easy-result" role="status">
+      <div className="mm-easy-result-text">
+        <p>Recommended: <strong>{ctxShort(rec.recommended_ctx)} tokens</strong> on {rec.recommended_backend}{rec.fits_full_gpu ? ', entirely on the GPU' : ''}.</p>
+        {rec.ctx_cap_reason && rec.estimated_ctx ? <p className="mm-note">Memory would allow {ctxShort(rec.estimated_ctx)}; limited because {rec.ctx_cap_reason}.</p> : null}
+        {(rec.warnings || []).map((w) => <p key={w} className="mm-note mm-warn" role="note">{w}</p>)}
+      </div>
+      <button className="modal-btn primary" disabled={busy} onClick={() => void onUseTuned({ ...rec.values, ...keepChoices(draft) }, rec.displaced)}>Use and save</button>
+    </div>}
+<details className="mm-disclosure mm-easy-autotune" open>
+      <summary>Auto-tune speed <small>Measures speculative decoding and batch sizes on this machine; chat pauses while it runs.</small></summary>
+      <AutoTune model={name} onChanged={() => { setAuto(null); onChange({}); }}/>
+    </details>
+    <details className="mm-disclosure mm-easy-measure">
+      <summary>Measure context on this machine <small>Tests the real engine; chat pauses while it runs.</small></summary>
+          <NativeCalibration model={name} onChanged={() => { setAuto(null); setVerified(0); void apiFetch('/api/models/calibration?model=' + encodeURIComponent(name)).then(r => r.json()).then((v: { history?: { at: number; appliedCtx?: number; verifiedCtx?: number }[] }) => { const last = (v.history || []).slice().sort((a, b) => b.at - a.at)[0]; setVerified(last?.verifiedCtx || last?.appliedCtx || 0); }).catch(() => {}); }}/>
+    </details>
+    <label>Speculative decoding (MTP)<select value={draft['spec-type'] || ''} onChange={e => onChange({ 'spec-type': e.target.value })}>
+      {SPEC_CHOICES.map(([v, label]) => <option key={v} value={v} disabled={v === 'draft-mtp' && heads !== null && !heads.available}>{label}{v === 'draft-mtp' && heads?.available ? ' (available)' : ''}</option>)}
+      {!spec && <option value={draft['spec-type']}>{draft['spec-type']} (set in Advanced)</option>}
+    </select><small>{spec ? spec[2] : 'A custom strategy is set; change it in Advanced.'}{mtpStatus ? ` ${mtpStatus}` : ''}</small></label>
+    {heads && !heads.available && heads.remote[0] && <div className="mm-easy-row">
+      <p className="mm-note">{heads.remote[0].path} · {bytes(heads.remote[0].size)}</p>
+      <button className="modal-btn secondary" disabled={busy} onClick={() => void downloadHead(heads.remote[0].path)}>Download MTP head</button>
+    </div>}
+    {headNote && <p className="mm-note" role="status">{headNote}</p>}
+    <label>KV cache quantisation<select value={kv} onChange={e => onChange({ 'cache-type-k': e.target.value, 'cache-type-v': e.target.value })}>
+      {KV_CHOICES.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+      {kv === 'mixed' && <option value="mixed" disabled>Different K and V (set in Advanced)</option>}
+      {kv !== 'mixed' && !KV_CHOICES.some(c => c[0] === kv) && <option value={kv}>{kv}</option>}
+    </select><small>Smaller cache types fit more context in the same memory at a small quality cost.</small></label>
+  </div>;
 }
 
 function FieldInput({ field: f, value, onChange }: { field: Field; value: string; onChange: (v: string) => void }) {

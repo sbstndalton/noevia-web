@@ -18,3 +18,29 @@ export function matchesModelUse(labels: string[], use: ModelUse): boolean {
   const allowed={vision:/^(vision|multimodal)$/i,reasoning:/^(reasoning|thinking)$/i,tools:/^(tools|tool-use|tool_use|function-calling)$/i};
   return labels.some(label=>allowed[use].test(label));
 }
+
+/** Composer/header label for a project or chat's model choice. `installed` is
+ *  null while the local catalogue is unknown (not fetched, manager disabled or
+ *  failing) — only a successfully fetched list may declare a model missing.
+ *  Models on a non-default provider aren't in that catalogue, so never flagged. */
+export function modelChoiceLabel(
+  choice: { routing?: string; model?: string; provider?: string } | null | undefined,
+  installed: { name: string; loaded?: boolean }[] | null,
+): string {
+  if (choice?.routing === 'auto') return 'Auto (Fast/Smart)';
+  if (choice?.model) {
+    if (!choice.provider && installed && !installed.some(m => m.name === choice.model)) return 'No model selected';
+    return choice.model;
+  }
+  return installed?.find(m => m.loaded)?.name ?? 'local model';
+}
+
+/** On unified-memory GPUs the kernel lets the GPU borrow system RAM (GTT) outside any container
+ *  limit. When that ceiling leaves the host less than `reserveGB`, loading several models can
+ *  starve the server itself (DaServer outage, 2026-09-17). Unknown host size never warns. */
+export function sharedMemoryRisk({ unified, sharedTotalGB, hostTotalGB, reserveGB = 8 }: { unified: boolean; sharedTotalGB: number; hostTotalGB: number | null | undefined; reserveGB?: number }): { risky: boolean; leftGB: number | null; message: string } {
+  if (!unified || typeof hostTotalGB !== 'number' || !Number.isFinite(hostTotalGB) || hostTotalGB <= 0 || !(sharedTotalGB > 0)) return { risky: false, leftGB: null, message: '' };
+  const leftGB = Math.round((hostTotalGB - sharedTotalGB) * 10) / 10;
+  if (leftGB >= reserveGB) return { risky: false, leftGB, message: '' };
+  return { risky: true, leftGB, message: `The GPU may borrow up to ${Math.round(sharedTotalGB)} GiB of this machine's ${Math.round(hostTotalGB)} GiB, leaving about ${Math.max(0, leftGB)} GiB for everything else. Several loaded models can make the server unresponsive: keep one model loaded, or cap GPU shared memory (GTT) below ${Math.round(hostTotalGB - reserveGB)} GiB.` };
+}

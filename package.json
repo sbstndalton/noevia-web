@@ -7,8 +7,9 @@
     "dev": "node node_modules/vite/bin/vite.js --configLoader runner",
     "build": "node node_modules/vite/bin/vite.js build --configLoader runner",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
-    "test": "node --test server/*.test.cjs tests/*.test.cjs",
-    "start": "node server/index.cjs"
+    "test": "node --test server/*.test.cjs server/routes/*.test.cjs tests/*.test.cjs",
+    "start": "node server/index.cjs",
+    "lint:design": "node scripts/lint-design.cjs"
   },
   "dependencies": {
     "@simplewebauthn/browser": "^14.0.0",

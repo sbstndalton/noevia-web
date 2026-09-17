@@ -1,19 +1,19 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const assert=require('node:assert/strict');
+const assert=require('node:assert/strict');const {navClick}=require('./nav.cjs');
 const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
  const fixture=createFixture(31253);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});
  try {
   const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('http://localhost:31253');await page.getByRole('button',{name:'Diary',exact:true}).click();
+  await page.goto('http://localhost:31253');await navClick(page,'Diary');
   const send=async message=>{await page.locator('#diary-draft').fill(message);await page.getByRole('button',{name:'Send diary message'}).click();};
   await send('live synthetic');
   await page.locator('.thinking-body').getByText('Synthetic provider reasoning',{exact:true}).waitFor();
   assert.equal(await page.locator('.diary-conversation').getAttribute('aria-busy'),'true');
   assert.equal(await page.locator('.thinking-block').getAttribute('open'),'');
-  await page.getByRole('button',{name:'New chat',exact:true}).click();
+  await navClick(page,'New chat');
   fixture.liveEvent({type:'reasoning',text:' while viewing another chat'});
-  await page.getByRole('button',{name:'Diary',exact:true}).click();
+  await navClick(page,'Diary');
   await page.getByText('Synthetic provider reasoning while viewing another chat',{exact:true}).waitFor();
   assert.equal(fixture.requests.filter(r=>r.body.message==='live synthetic').length,1);
   fixture.liveEvent({type:'answer',text:'Synthetic final answer'});
@@ -38,11 +38,14 @@ const {createFixture}=require('./diary-fixture.cjs');
   await page.getByRole('checkbox',{name:'Extra attachments & tools'}).click();
   await page.getByText('Manage attachments (0)',{exact:true}).waitFor();await page.keyboard.press('Escape');
   await send('tools synthetic');
-  await page.locator('.diary-conversation .tool-chip').getByText('Synthetic reference read',{exact:true}).waitFor();
+  await page.locator('.diary-conversation .tool-call').first().waitFor({state:'attached'});
+  assert.match(await page.locator('.diary-conversation .tool-call .tool-call-preview').first().textContent(),/Synthetic reference read/);
   await page.waitForFunction(()=>document.querySelector('.diary-conversation').getAttribute('aria-busy')==='false');
   await send('tools again synthetic');
   await page.waitForFunction(()=>document.querySelector('.diary-conversation').getAttribute('aria-busy')==='false');
-  assert.equal(await page.locator('.diary-conversation .tool-chip').count(),2,'tool activity remains attached to its original turn');
+  assert.equal(await page.locator('.diary-conversation .tool-call').count(),2,'tool activity remains attached to its original turn');
+  // Tool calls sit under the thinking block in Diary, as in chat.
+  assert.ok(await page.locator('.diary-reply').last().evaluate(el=>{const t=el.querySelector('.thinking-block'),c=el.querySelector('.tool-calls');return !!t&&!!c&&!!(t.compareDocumentPosition(c)&Node.DOCUMENT_POSITION_FOLLOWING);}),'tool list is not under the thinking block');
   assert.deepEqual(errors,[]);
   if(process.env.QA_SCREENSHOTS)await page.screenshot({path:process.env.QA_SCREENSHOTS+'/diary-live-error.png'});
   console.log('PASS live thinking before completion, background navigation without resend, save progress, retained tool activity, sanitized 524 and interrupted stream preservation');

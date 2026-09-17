@@ -1,5 +1,5 @@
 // Real isolated noevia server and synthetic Lemonade; no production model loads.
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');const {navClick}=require('./nav.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),http=require('node:http');
 const {spawn}=require('node:child_process'),{once}=require('node:events');
 const origin='http://localhost:31255',web=path.resolve(__dirname,'..');
@@ -33,17 +33,19 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   await api(page,'/api/profile/onboarding',{});await page.reload();
   await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();
   await page.getByRole('button',{name:/Choose model:/}).click();await page.locator('dialog[open]').waitFor();await page.getByRole('button',{name:'Model settings',exact:true}).click();
-  await page.getByRole('tab',{name:'Library',exact:true}).click();
+  await page.getByRole('tab',{name:'Your models',exact:true}).waitFor();
   const control=page.getByRole('combobox',{name:'Enable MTP for Synthetic native',exact:true});await control.waitFor();
   await page.waitForFunction(()=>!document.querySelector('select[aria-label="Enable MTP for Synthetic native"]').disabled);
   await control.selectOption('yes');await page.getByRole('button',{name:'Apply and load',exact:true}).click();
   await page.waitForFunction(()=>!document.querySelector('select[aria-label="Enable MTP for Synthetic native"]').disabled);
   assert.equal(loads.length,2);assert.equal(loads[0].save_options,undefined);assert.equal(loads[1].save_options,true);assert.equal(loads[0].ctx_size,32768);assert.match(loads[0].llamacpp_args,/--tensor-split 1,1/);assert.match(loads[0].llamacpp_args,/--spec-type draft-mtp/);
   assert.equal(await page.getByRole('combobox',{name:'Enable MTP for Unsupported',exact:true}).isDisabled(),true);
-  await page.getByRole('button',{name:'Close settings',exact:true}).click();
+  await navClick(page,'New chat');
+  // The inference pill starts collapsed; MTP acceptance lives in its details.
+  const pill=page.getByRole('button',{name:/Inference/});if((await pill.getAttribute('aria-expanded'))!=='true')await pill.click();
   await page.getByRole('progressbar',{name:'MTP acceptance for Synthetic native'}).waitFor();assert.equal(await page.getByRole('progressbar').getAttribute('value'),'0.75');
   for(const diary of [false,true]){
-   if(diary)await page.getByRole('button',{name:'Diary',exact:true}).click();
+   if(diary)await navClick(page,'Diary');
    for(const width of [375,768,1440]){await page.setViewportSize({width,height:950});const footer=page.getByRole('region',{name:'Inference details'});assert.equal(await footer.isVisible(),true);assert.equal(await footer.locator('summary').count(),0);assert.ok(await footer.evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
    if(process.env.QA_SCREENSHOTS)await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/mtp-${diary}-${width}.png`});}
   }

@@ -1,6 +1,6 @@
 // Synthetic saved record plus real incremental SSE; never accesses production.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const assert=require('node:assert/strict');
+const assert=require('node:assert/strict');const {navClick}=require('./nav.cjs');
 const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
  const fixture=createFixture(31252);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});
@@ -8,7 +8,7 @@ const {createFixture}=require('./diary-fixture.cjs');
   const page=await browser.newPage({viewport:{width:1440,height:950},timezoneId:'America/New_York'});
   const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});
   await page.route('**/api/diary/today?**',route=>route.fulfill({json:{todayLog:`## ${today}\n\nSynthetic saved summary`,standingSections:{}}}));
-  await page.goto('http://localhost:31252');await page.getByRole('button',{name:'Diary',exact:true}).click();
+  await page.goto('http://localhost:31252');await navClick(page,'Diary');
   const send=async()=>{await page.locator('#diary-draft').fill('long synthetic');await page.getByRole('button',{name:'Send diary message'}).click();};
   for(const width of [1440,375]){
    await page.setViewportSize({width,height:950});await send();

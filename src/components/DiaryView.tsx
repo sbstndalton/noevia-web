@@ -9,10 +9,12 @@ import { ComposerActions } from './ComposerActions';
 import { ComposerModel } from './ComposerModel';
 import { ModelPopup } from './ModelPopup';
 import { useChatScroll } from '../useChatScroll';
-import { LiveTimer, ThinkingBlock, ToolChips } from './ChatView';
+import { LiveTimer, ThinkingBlock } from './ChatView';
+import { TOOL_RESULT_LIMIT, ToolCalls } from './ToolCalls';
 import { prepareDiaryExtras } from '../diary-extras';
 import type { Project, ToolCallView } from '../types';
 import { SendIcon } from './Icons';
+import { ComposerTextarea } from './ComposerTextarea';
 import { DiaryCalendar } from './DiaryCalendar';
 import { DiaryContextPanel } from './DiaryContextPanel';
 import { useEffect, useRef, useState } from 'react';
@@ -324,7 +326,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
         if (ev.type === 'tool' || ev.type === 'tool_pending' || ev.type === 'tool_result') {
           const index = ev.index ?? calls.length;
           calls[index] = ev.type === 'tool_result'
-            ? {name:ev.name || 'tool',args:ev.text || '',status:(ev.text || '').startsWith('ERROR: the user') ? 'denied' : 'done'}
+            ? {name:ev.name || 'tool',args:calls[index]?.args || '',result:(ev.text || '').slice(0, TOOL_RESULT_LIMIT),status:(ev.text || '').startsWith('ERROR: the user') ? 'denied' : 'done'}
             : {name:ev.name || 'tool',args:ev.args || '',status:ev.type === 'tool_pending' ? 'pending' : undefined,approvalId:ev.id};
           patchReply({tools:[...calls]});
         }
@@ -464,7 +466,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const blockedReason = wizard === 'local' ? directoryPickerBlockedReason() : null;
   const composer = <div className="diary-compose">
     <label htmlFor="diary-draft">{day ? `Add to ${dayLabel(day)}` : 'What’s on your mind today?'}</label>
-    <div className="composer-inner chat-composer-inner"><textarea id="diary-draft" className="composer-input" rows={3} placeholder={day ? 'Continue this day’s story…' : emptyDiary ? 'Write your first entry…' : 'Write about your day, or ask your diary a question…'} value={draft} disabled={busy} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();submit();} }} /><ComposerActions diary project={extrasEnabled ? extraProject : null} disabled={busy || extraBusy} onChanged={refreshExtraProject} onModels={()=>setExtraModels(true)} onBusy={setExtraBusy} onStatus={setExtraStatus} header={<>
+    <div className="composer-inner chat-composer-inner"><ComposerTextarea id="diary-draft" rows={3} placeholder={day ? 'Continue this day’s story…' : emptyDiary ? 'Write your first entry…' : 'Write about your day, or ask your diary a question…'} value={draft} disabled={busy} onValue={setDraft} onSubmit={submit} /><ComposerActions diary project={extrasEnabled ? extraProject : null} disabled={busy || extraBusy} onChanged={refreshExtraProject} onModels={()=>setExtraModels(true)} onBusy={setExtraBusy} onStatus={setExtraStatus} header={<>
       <p><strong>Diary retrieval &amp; capture</strong> · always on</p>
       <label className="composer-tool-option"><input type="checkbox" checked={extrasEnabled} disabled={busy || extraBusy} onChange={()=>void toggleExtras()} /><span>Extra attachments &amp; tools<small>Off by default. Applies while this session is open.</small></span></label>
       {extrasEnabled && <button type="button" onClick={()=>setExtraFiles(true)}>Manage attachments ({extraProject?.files.length || 0})</button>}
@@ -488,7 +490,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       {pendingCount > 0 && <div className="diary-pending" role="status"><span>{Object.keys(pendingLocal).length ? 'Local save needs attention.' : `${Object.keys(pendingSync).length} file(s) waiting to sync. Local copies are safe.`}</span><button className="popup-tab" disabled={busy} onClick={()=>void run(async()=>{ if(Object.keys(pendingLocal).length) await commitLocal(pendingLocal); else await syncChanges(pendingSync); })}>Retry save / sync</button></div>}
       {!day && <DiaryCalendar month={month || today.slice(0,7)} today={today} days={days} busy={busy} ready={overview.ready} failed={overview.failed} navigate={navigate} />}
       {day && <section className="diary-day"><h1>{dayLabel(day)}</h1>{days[day]?.trim() ? <details className="diary-saved-record" key={`${day}-${!!conversation.length}`} open={!conversation.length}><summary>Saved diary entry</summary><MarkdownPreview text={days[day]} /></details> : !conversation.length && <p className="diary-intro">A blank page for this day. Add something if you’d like.</p>}</section>}
-      {!!conversation.length && <section className="diary-conversation" aria-live="polite" aria-busy={busy}>{conversation.map((t,i)=><article className="diary-reply" data-role={t.role} key={i}><span className="msg-sender">{t.role==='user'?'You':'Diary companion'}</span>{t.role === 'assistant' && t.activity?.length && <details className="diary-activity" open={busy && i === conversation.length - 1}><summary>{busy && i === conversation.length - 1 ? <>{t.activity.at(-1)}{t.startedAt && <> · <LiveTimer startedAt={t.startedAt} /></>}</> : 'Diary activity'}</summary><ol>{t.activity.map((label,n)=><li key={n}>{label}</li>)}</ol></details>}{!!t.tools?.length && <ToolChips calls={t.tools.filter(Boolean)} />}{t.reasoning && <ThinkingBlock text={t.reasoning} live={busy && i === conversation.length - 1 && !t.content} />}<MarkdownPreview text={t.content || (busy ? 'Working on your diary…' : '')} /></article>)}</section>}
+      {!!conversation.length && <section className="diary-conversation" aria-live="polite" aria-busy={busy}>{conversation.map((t,i)=><article className="diary-reply" data-role={t.role} key={i}><span className="msg-sender">{t.role==='user'?'You':'Diary companion'}</span>{t.role === 'assistant' && t.activity?.length && <details className="diary-activity" open={busy && i === conversation.length - 1}><summary>{busy && i === conversation.length - 1 ? <>{t.activity.at(-1)}{t.startedAt && <> · <LiveTimer startedAt={t.startedAt} /></>}</> : 'Diary activity'}</summary><ol>{t.activity.map((label,n)=><li key={n}>{label}</li>)}</ol></details>}{t.reasoning && <ThinkingBlock text={t.reasoning} live={busy && i === conversation.length - 1 && !t.content} />}{!!t.tools?.length && <ToolCalls calls={t.tools.filter(Boolean)} />}<MarkdownPreview text={t.content || (busy ? 'Working on your diary…' : '')} /></article>)}</section>}
       </div>
       <div className="diary-composer-dock">{composer}</div>
       {status && <p className="diary-save-status" role="status">{status}</p>}

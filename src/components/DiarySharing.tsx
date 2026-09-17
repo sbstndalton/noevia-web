@@ -19,7 +19,7 @@ export default function DiarySharing(): JSX.Element {
       {scope!=='off' && <p className="route-note">The operator serves this on port {value.port}. noevia cannot verify who can reach that port; your proxy and network configuration determine access.</p>}
       {scope!=='off'&&value.cleartext&&<label className="route-note"><input type="checkbox" checked={ack} disabled={busy} onChange={e=>setAck(e.target.checked)}/> I understand plain HTTP sends my device password unencrypted across the network.</label>}
       <button style={{display:'block',marginTop:8}} className="modal-btn secondary" disabled={busy||scope!=='off'&&value.cleartext&&!ack} onClick={()=>void save()}>{busy?'Saving…':'Save sharing'}</button>
-      {value.scope!=='off'&&value.available&&<><p className="route-note">Use your noevia username and an app password with {value.endpointScope} scope from Profile & security.</p><input className="modal-input" aria-label="Diary sharing URL" readOnly value={value.url} onFocus={e=>e.currentTarget.select()}/></>}
+      {value.scope!=='off'&&value.available&&<><p className="route-note">Use your noevia username and an app password with {value.endpointScope} scope from Security.</p><input className="modal-input" aria-label="Diary sharing URL" readOnly value={value.url} onFocus={e=>e.currentTarget.select()}/></>}
     </>}
     {error&&<p role="alert" className="route-note">{error}</p>}
   </section>;

@@ -1,7 +1,5 @@
-import { PalettePicker } from './PalettePicker';
-import { LayoutModeControl } from './LayoutMode';
+import { AppearanceSettings, CapabilitiesSettings, ProfileSettings } from './GeneralSettings';
 import { SettingsPanelBoundary } from './SettingsPanelBoundary';
-import { currentPalette } from '../appearance';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SettingsView } from './SettingsView';
 import type { SettingsViewProps } from './SettingsView';
@@ -9,6 +7,11 @@ import { fetchProfile } from '../api';
 import { PreviewPanel } from './PreviewPanel';
 import { UsageView } from './UsageView';
 import { ShellIcon } from './ShellIcon';
+import { CloseButton } from './CloseButton';
+import { DataSettings } from './data/DataSettings';
+import { PersonalizationSettings } from './personalization/PersonalizationSettings';
+import { FeatureSettings } from './features/FeatureSettings';
+import { OffsiteBackupSettings } from './offsite-backup/OffsiteBackupSettings';
 
 type Item = [id: string, label: string];
 type Group = { name: string; items: Item[]; admin?: boolean };
@@ -23,11 +26,15 @@ type Group = { name: string; items: Item[]; admin?: boolean };
 // self-hosted single-server install: Billing (no plans or invoices to show),
 // Voice, Browser and Computer use (host-application features, not this app's).
 const PERSONAL: Item[] = [
-  ['general', 'General'],
-  ['profile', 'Profile & security'],
+  ['profile', 'Profile'],
+  ['security', 'Security'],
+  ['appearance', 'Appearance'],
+  ['personalization', 'Personalization'],
+  ['capabilities', 'Capabilities'],
   ['diary', 'Diary & storage'],
   ['providers', 'Your connections'],
   ['usage', 'Usage & activity'],
+  ['data', 'Data'],
   ['planned', 'Planned features'],
 ];
 
@@ -39,26 +46,23 @@ const ADMIN: Item[] = [
   ['users', 'Users'],
   ['models', 'Models & routing'],
   ['status', 'Service status'],
+  ['features', 'Features'],
+  ['backups', 'Off-site backups'],
 ];
 
-const ICONS: Record<string, string> = {
-  profile: 'user', users: 'user', appearance: 'sun', usage: 'grid',
-  models: 'settings', status: 'settings', providers: 'settings',
-  diary: 'folder', general: 'settings', planned: 'grid',
-};
+// Each section has its own symbol; names resolve through ShellIcon's Lucide map.
+const ICONS: Record<string, string> = Object.fromEntries(['profile','security','appearance','personalization','capabilities','diary','providers','usage','data','planned','users','models','status','features','backups'].map(id => [id, id]));
 
 // What used to be one navigation row each. Kept visible as a roadmap, but in
 // one place, so an empty section never looks like a broken one.
 const PLANNED: { group: string; items: string[] }[] = [
-  { group: 'Personalization', items: ['Response style', 'Account-wide custom instructions', 'Account-wide memory preferences', 'Notifications', 'Keyboard shortcuts'] },
-  { group: 'Data', items: ['Export conversations', 'Data retention', 'Import chats and projects', 'Archived conversations'] },
   { group: 'Extensibility', items: ['Capability catalogue', 'Plugin management', 'Skill library', 'Connector catalogue'] },
   { group: 'Coding workspace', items: ['Coding preferences', 'Git', 'Environments', 'Worktrees', 'Hooks'] },
 ];
 
-export function SettingsShell(props: SettingsViewProps & {initialSection?:'general'|'usage'|'models';appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void}) {
-  const [palette, setPalette] = useState(currentPalette);
-  const [section, setSection] = useState<string>(props.initialSection || 'general');
+export function SettingsShell(props: SettingsViewProps & {initialSection?:'general'|'usage'|'models';appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void; preference?:'light'|'dark'|'system'; onPreference?:(preference:'light'|'dark'|'system')=>void}) {
+  // 'general' is the historical name for the first page; it now opens Profile.
+  const [section, setSection] = useState<string>(!props.initialSection || props.initialSection === 'general' ? 'profile' : props.initialSection);
   const [query, setQuery] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [profileKnown, setProfileKnown] = useState(false);
@@ -94,7 +98,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
   // not be left staring at an empty pane.
   useEffect(() => {
     // Wait for the profile: admin sections appear only once the role is known.
-    if (profileKnown && !groups.some((g) => g.items.some(([id]) => id === section))) setSection('general');
+    if (profileKnown && !groups.some((g) => g.items.some(([id]) => id === section))) setSection('profile');
   }, [groups, section, profileKnown]);
 
   const title = groups.flatMap(g => g.items).find(([id]) => id === section)?.[1] || 'Settings';
@@ -121,25 +125,26 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
       </nav>
     </aside>
     <section className="settings-detail">
-      <header><span>{title}</span><button className="shell-icon-button" aria-label="Close settings" onClick={props.onClose}><ShellIcon name="close"/></button></header>
+      <header><span>{title}</span><CloseButton onClick={props.onClose} label="Close settings"/></header>
       <div className="settings-detail-scroll" key={section}>
         <SettingsPanelBoundary>
-        {['profile', 'users', 'diary', 'providers', 'models', 'status'].includes(section) ? (
+        {['security', 'users', 'diary', 'providers', 'models', 'status'].includes(section) ? (
           <SettingsView {...props} section={section}/>
-        ) : section === 'general' ? (
-          <>
-            <div className="settings-title"><h1>General</h1><p>Make noevia feel like your space.</p></div>
-            <section className="settings-appearance">
-              <div><h2>Appearance</h2><p>Choose a mode. Each mode remembers its own palette.</p></div>
-              <div className="theme-choice">{(['light', 'dark'] as const).map(t => <button className={props.theme === t ? 'is-active' : ''} aria-pressed={props.theme === t} key={t} onClick={() => props.onTheme(t)}>
-                <span className={`theme-swatch ${t}`} data-theme={t} data-palette={palette}><i/><i/><i/></span>{t === 'light' ? 'Light' : 'Dark'}
-              </button>)}</div>
-              <PalettePicker theme={props.theme} onChange={setPalette}/>
-              <p role={props.appearanceError ? 'alert' : 'status'} className="route-note">{props.appearanceStatus}</p>
-              {props.appearanceError && <button className="modal-btn secondary" onClick={props.retryAppearance}>Retry appearance</button>}
-            </section>
-            <LayoutModeControl/>
-          </>
+        ) : section === 'profile' ? (
+          <ProfileSettings />
+        ) : section === 'appearance' ? (
+          <AppearanceSettings theme={props.theme} onTheme={props.onTheme} preference={props.preference} onPreference={props.onPreference} appearanceStatus={props.appearanceStatus}
+            appearanceError={props.appearanceError} retryAppearance={props.retryAppearance} />
+        ) : section === 'features' && isAdmin ? (
+          <FeatureSettings />
+        ) : section === 'backups' && isAdmin ? (
+          <OffsiteBackupSettings />
+        ) : section === 'capabilities' ? (
+          <CapabilitiesSettings />
+        ) : section === 'personalization' ? (
+          <PersonalizationSettings />
+        ) : section === 'data' ? (
+          <DataSettings />
         ) : section === 'usage' ? (
           <UsageView/>
         ) : section === 'planned' ? (

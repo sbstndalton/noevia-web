@@ -1,5 +1,6 @@
 import type { JSX, ReactNode } from 'react';
 import type { InstalledModel, Project } from '../types';
+import { ShellIcon } from './ShellIcon';
 
 function Section({
   title,
@@ -7,7 +8,7 @@ function Section({
   children,
 }: {
   title: string;
-  action?: { label: string; onClick: () => void; aria: string };
+  action?: { icon: string; onClick: () => void; aria: string };
   children: ReactNode;
 }): JSX.Element {
   return (
@@ -15,8 +16,8 @@ function Section({
       <div className="insp-head">
         <h3>{title}</h3>
         {action && (
-          <button className="insp-action" onClick={action.onClick} aria-label={action.aria}>
-            {action.label}
+          <button className="insp-action" onClick={action.onClick} aria-label={action.aria} title={action.aria}>
+            <ShellIcon name={action.icon} size={15} />
           </button>
         )}
       </div>
@@ -47,7 +48,7 @@ export function Inspector({
 
       <Section
         title="Model"
-        action={{ label: '⚙', onClick: onConfigureModels, aria: 'Configure models and routing' }}
+        action={{ icon: 'settings', onClick: onConfigureModels, aria: 'Configure models and routing' }}
       >
         <p className="insp-value">{model}</p>
         <p className="insp-note">
@@ -59,7 +60,7 @@ export function Inspector({
         <>
           <Section
             title="Instructions"
-            action={{ label: '✎', onClick: () => onEditProject(project.id), aria: 'Edit project instructions' }}
+            action={{ icon: 'edit', onClick: () => onEditProject(project.id), aria: 'Edit project instructions' }}
           >
             {project.instructions ? (
               <p className="insp-note insp-clamp">{project.instructions}</p>
@@ -70,7 +71,7 @@ export function Inspector({
 
           <Section
             title="Sources"
-            action={{ label: '+', onClick: () => onEditProject(project.id), aria: 'Add sources' }}
+            action={{ icon: 'new', onClick: () => onEditProject(project.id), aria: 'Add sources' }}
           >
             {project.files.length ? (
               <ul className="insp-list">

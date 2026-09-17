@@ -35,12 +35,13 @@ export function ReasoningControl({ project, disabled, onChanged, global = false 
   };
   return <span className="reasoning-control">
     <label><span className={global ? '' : 'sr-only'}>{global?'Default thinking effort':'Thinking effort'}</span>
-      <select aria-label={global?'Default thinking effort':'Thinking effort'} value={value} disabled={disabled || saving || (global && !settings.admin)} onChange={e=>void save(e.target.value)}>
-        {!global && <option value="inherit">Inherit ({settings.default})</option>}
-        <option value="default">Default</option><option value="low">Low</option><option value="high">High</option>
+      <select aria-label={global?'Default thinking effort':'Thinking effort'} value={value} disabled={disabled || saving || (global && !settings.admin)} onChange={e=>void save(e.target.value)}
+        title={global ? undefined : `How much the model thinks before answering. ${settings.mode === 'real' ? 'Sent as a request parameter.' : settings.mode === 'hint' ? 'Sent as a hint.' : 'This provider decides.'} The mode used is shown with each reply.`}>
+        {global
+          ? <><option value="default">Standard</option><option value="low">Low</option><option value="high">High</option></>
+          : <><option value="inherit">Thinking: auto</option><option value="default">Thinking: standard</option><option value="low">Thinking: low</option><option value="high">Thinking: high</option></>}
       </select>
     </label>
-    {!global && <small title="Actual request mode is reported with the reply. Auto routing may select another model.">{settings.mode === 'real'?'Parameter':settings.mode === 'hint'?'Hint':'Provider default'}</small>}
     {global && <small>Applies unless a project overrides it. Local Qwen: Low turns thinking off; High turns it on. Other providers may use effort parameters or hints. High hints request an 8,192-token budget.</small>}
     {error && <span role="alert">{error}</span>}
   </span>;

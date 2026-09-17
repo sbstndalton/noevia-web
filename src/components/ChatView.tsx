@@ -3,13 +3,16 @@ import { useChatScroll } from '../useChatScroll';
 import { ReasoningControl } from './ReasoningControl';
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import type { Message, MessageStats, ToolCallView, Project } from '../types';
+import type { Message, MessageStats, Project, InstalledModel } from '../types';
 import { ChevronLeft, SendIcon, SlidersIcon } from './Icons';
 import { ComposerModel } from './ComposerModel';
 import { MarkdownPreview } from './DiaryModal';
 import { ModelPopup } from './ModelPopup';
+import { ToolCalls } from './ToolCalls';
+import { ComposerTextarea } from './ComposerTextarea';
+import { modelChoiceLabel } from '../model-guidance';
 import { ComposerActions } from './ComposerActions';
-import { apiFetch, decideToolApproval } from '../api';
+import { apiFetch } from '../api';
 
 interface ChatViewProps {
   project: Project | null;
@@ -17,6 +20,7 @@ interface ChatViewProps {
   title: string;
   projectName: string | null;
   modelLabel: string;
+  installedModels?: InstalledModel[] | null;
   messages: Message[];
   streaming: boolean;
   inferenceUp?: boolean | null;
@@ -40,7 +44,7 @@ export function ThinkingBlock({ text, live }: { text: string; live: boolean }) {
   return (
     <details className="thinking-block" open={live}>
       <summary className={live ? 'thinking-live' : undefined}>
-        {live ? 'Thinking…' : `Thought process${words ? ` · ${words} words` : ''}`}
+        {live ? 'Thinking…' : words ? `Thought for ${words} words` : 'Thought process'}
       </summary>
       <div className="thinking-body">{text}</div>
     </details>
@@ -58,7 +62,7 @@ function fmtDuration(ms: number): string {
 // agent-runner status lines the operator asked for — elapsed, tokens, rate —
 // but only renders what the provider actually reported, so a provider that
 // sends no usage chunk simply shows nothing rather than zeros.
-function MessageMeta({ stats, tools }: { stats?: MessageStats; tools?: ToolCallView[] }): JSX.Element | null {
+function MessageMeta({ stats }: { stats?: MessageStats }): JSX.Element | null {
   const parts: string[] = [];
   if (stats?.elapsedMs) parts.push(fmtDuration(stats.elapsedMs));
   if (stats?.totalTokens) {
@@ -69,7 +73,6 @@ function MessageMeta({ stats, tools }: { stats?: MessageStats; tools?: ToolCallV
     parts.push(`${stats.totalTokens} tokens${io}`);
   }
   if (stats?.tokensPerSecond) parts.push(`${stats.tokensPerSecond.toFixed(1)} tok/s`);
-  if (tools && tools.length) parts.push(`${tools.length} tool ${tools.length === 1 ? 'call' : 'calls'}`);
   if (!parts.length) return null;
   return <div className="msg-meta">{parts.join(' · ')}</div>;
 }
@@ -85,67 +88,6 @@ export function LiveTimer({ startedAt }: { startedAt: number }): JSX.Element {
   return <span>{fmtDuration(Date.now() - startedAt)}</span>;
 }
 
-export function ToolChips({ calls }: { calls: ToolCallView[] }) {
-  return (
-    <div className="tool-chips">
-      {calls.map((tc, i) => (
-        tc.status === 'pending' && tc.approvalId
-          ? <PendingToolCall key={i} call={tc} />
-          : (
-            <span key={i} className="tool-chip tool-call-chip" style={tc.status === 'denied' ? { opacity: 0.6 } : undefined}>
-              <span>⚒ {tc.name || 'tool'}</span>
-              {tc.args ? <code>{tc.args.slice(0, 80)}</code> : null}
-            </span>
-          )
-      ))}
-    </div>
-  );
-}
-
-/** A write tool waiting on the user. The arguments are shown in full and
- *  unabbreviated: this is the one moment where seeing exactly what the model
- *  proposes to do is the entire point, so truncating them here would defeat
- *  the gate. */
-function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const decide = async (decision: 'approve' | 'deny' | 'approve_all') => {
-    if (!call.approvalId || busy) return;
-    setBusy(true);
-    setErr(null);
-    try {
-      await decideToolApproval(call.approvalId, decision);
-    } catch (e) {
-      // Most likely the request timed out and the server already denied it.
-      setErr(e instanceof Error ? e.message : 'Could not send the decision');
-      setBusy(false);
-    }
-  };
-  let pretty = call.args;
-  try { pretty = JSON.stringify(JSON.parse(call.args || '{}'), null, 1); } catch { /* show it raw */ }
-  return (
-    <div className="tool-approval" role="group" aria-label={`Approval required for ${call.name}`}>
-      <span className="tool-approval-ask">
-        Allow <strong>{call.name}</strong> to run? This changes data in your account.
-      </span>
-      {/* Full, unabbreviated arguments. Seeing exactly what the model proposes
-          IS the gate — no clamp, no scroll-to-hide, no "show more". */}
-      {pretty && pretty !== '{}' && <pre className="tool-approval-args">{pretty}</pre>}
-      <div className="tool-approval-actions">
-        <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => void decide('approve')}>
-          Allow once
-        </button>
-        <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => void decide('deny')}>
-          Decline
-        </button>
-        <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => void decide('approve_all')}>
-          Allow for this chat
-        </button>
-      </div>
-      {err && <span className="modal-err tool-approval-err">{err}</span>}
-    </div>
-  );
-}
 
 export function ChatView({
   title,
@@ -153,6 +95,7 @@ export function ChatView({
   onProjectChanged,
   projectName,
   modelLabel,
+  installedModels,
   messages,
   streaming,
   inferenceUp = null,
@@ -205,7 +148,7 @@ export function ChatView({
 
 
   const openModels = () => { if (!project && freeContext) setFreeModels(true); else onOpenModels(); };
-  if (!project && freeContext) modelLabel = freeContext.routing === 'auto' ? 'Auto (Fast/Smart)' : freeContext.model || modelLabel;
+  if (!project && freeContext) modelLabel = freeContext.routing === 'auto' || freeContext.model ? modelChoiceLabel(freeContext, installedModels ?? null) : modelLabel;
   const submit = () => {
     const text = draft.trim();
     if (!text || streaming || actionBusy) return;
@@ -262,15 +205,16 @@ export function ChatView({
           const thinkingLive = streaming && isLast && m.role === 'assistant' && !m.content;
           return (
             <div key={m.id} className="msg" data-role={m.role}>
-              <span className={`msg-sender${m.role === 'assistant' ? ' is-assistant' : ''}`}>
-                {m.senderLabel ?? (m.role === 'user' ? 'You' : `Assistant · ${modelLabel}`)}
-              </span>
+              {/* The bubble side already says who spoke; only the answering model is worth showing. */}
+              {m.role === 'user'
+                ? <span className="msg-sender sr-only">You</span>
+                : <span className="msg-sender is-assistant"><span className="sr-only">Assistant · </span>{(m.senderLabel ?? modelLabel).replace(/^Assistant · /, '')}</span>}
               {m.role === 'assistant' ? (
                 <div className="assistant-card">
                   {m.reasoningMode && m.reasoningMode !== 'off' && <small className="reasoning-result">Effort: {m.reasoningEffort} · {m.reasoningMode === 'real' ? 'provider parameter' : 'best-effort hint'}</small>}
                   {m.warning && <p className="msg-warning" role="status">{m.warning}</p>}
                   {m.reasoning ? <ThinkingBlock text={m.reasoning} live={!!thinkingLive && !m.content} /> : null}
-                  {m.toolCalls && m.toolCalls.length > 0 ? <ToolChips calls={m.toolCalls} /> : null}
+                  {m.toolCalls && m.toolCalls.length > 0 ? <ToolCalls calls={m.toolCalls} /> : null}
                   {m.content ? (
                     <div className="bubble">
                       {/* Model replies are Markdown. A bare <p> showed the raw
@@ -307,7 +251,7 @@ export function ChatView({
                       {m.reasoning && !m.content ? ' · thinking…' : ` · ${m.processingStatus || 'generating…'}`}
                     </div>
                   ) : (
-                    !m.error && <MessageMeta stats={m.stats} tools={m.toolCalls} />
+                    !m.error && <MessageMeta stats={m.stats} />
                   )}
                 </div>
               ) : (
@@ -369,20 +313,14 @@ export function ChatView({
       <div className="composer">
         <ChatContext key={chatId} chatId={chatId} projectId={project?.id || null} messages={messages} streaming={streaming} onBusy={setActionBusy} />
         <div className="composer-inner chat-composer-inner">
-          <textarea
-            className="composer-input"
+          <ComposerTextarea
             aria-label="Message"
             rows={2}
             placeholder="Message noevia…"
             value={draft}
             disabled={streaming || actionBusy}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                submit();
-              }
-            }}
+            onValue={setDraft}
+            onSubmit={submit}
           />
           <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={setActionStatus} />
           <ComposerModel label={modelLabel} onClick={openModels} />
@@ -398,7 +336,7 @@ export function ChatView({
           )}
         </div>
         {actionStatus && <div className="composer-action-status" role="status">{actionStatus}</div>}
-        <div className="composer-hint">
+        <div className={`composer-hint${projectName ? '' : ' is-keyboard'}`}>
           {projectName ? `Project context from ${projectName} applied` : 'Enter to send, Shift + Enter for a new line'}
         </div>
       </div>

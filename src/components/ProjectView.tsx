@@ -2,6 +2,7 @@ import { InstructionSkills } from './InstructionSkills';
 import { ReasoningControl } from './ReasoningControl';
 import { ComposerActions } from './ComposerActions';
 import { ComposerModel } from './ComposerModel';
+import { ComposerTextarea } from './ComposerTextarea';
 import { sourceStatus } from '../source-status';
 import { FolderPicker } from './FolderPicker';
 import { ShellIcon } from './ShellIcon';
@@ -14,6 +15,9 @@ import { StorageFileBrowser } from './StorageFileBrowser';
 import { ConfirmDialog } from './ContextMenu';
 import { fileToBase64, uploadLimit } from '../sources';
 import { deleteProjectImage, projectImageUrl, uploadProjectFile, deleteProjectFile } from '../api';
+import { ResearchPanel } from './research/ResearchPanel';
+import { useResearchAccess } from './research/useResearchAccess';
+import { EmptyState } from './EmptyState';
 
 /** First free "name", "name (2)", "name (3)", … avoiding collisions. */
 function uniqueName(name: string, existing: { name: string }[]): string {
@@ -68,7 +72,9 @@ export function ProjectView({
   const [composerBusy, setComposerBusy] = useState(false);
   const [composerStatus, setComposerStatus] = useState('');
   const [panel, setPanel] = useState<'instructions' | 'memory' | null>(null);
-  const [tab, setTab] = useState<'chats' | 'sources'>('chats');
+  const [tab, setTab] = useState<'chats' | 'sources' | 'research'>('chats');
+  const researchAccess = useResearchAccess(project.id);
+  useEffect(() => { if (tab === 'research' && !researchAccess) setTab('chats'); }, [tab, researchAccess]);
   const [draft, setDraft] = useState('');
   const [skillFiles, setSkillFiles] = useState<string[]>([]);
   const [pickingFolder, setPickingFolder] = useState(false);
@@ -123,15 +129,16 @@ export function ProjectView({
   const groups = ['Documents', 'Images', 'Text', 'Other'];
   const fileGroup = (f: Project['files'][number]) => f.attachment?.group || (f.document ? 'Documents' : 'Text');
 
+  const chatEnabled = !project.modes?.length || project.modes.includes('chat');
   const send = () => {
     const text = draft.trim();
-    if (!text || composerBusy || busyDocs || syncing) return;
+    if (!chatEnabled || !text || composerBusy || busyDocs || syncing) return;
     setDraft('');
     onSendFirst(project.id, text);
   };
 
   return (
-    <div className="main">
+    <div className="main project-page">
       <div className="project-layout">
         <div className="project-main">
           <header className="project-head">
@@ -146,12 +153,17 @@ export function ProjectView({
             <button role="tab" aria-selected={tab === 'sources'} className={tab === 'sources' ? 'is-selected' : ''} onClick={() => setTab('sources')}>
               Sources{project.files.length + (project.assets || []).filter(a => !a.sourceName).length ? ` (${project.files.length + (project.assets || []).filter(a => !a.sourceName).length})` : ''}
             </button>
+            {researchAccess && <button role="tab" aria-selected={tab === 'research'} className={tab === 'research' ? 'is-selected' : ''} onClick={() => setTab('research')}>
+              Research
+            </button>}
           </div>
 
-          {tab === 'chats' ? (
+          {tab === 'research' && researchAccess ? (
+            <div className="project-scroll"><ResearchPanel projectId={project.id} onSaved={onRefresh}/></div>
+          ) : tab === 'chats' ? (
             <div className="project-scroll">
               {chats.length === 0 ? (
-                <p className="rail-empty">No chats yet — start one below.</p>
+                <EmptyState icon="chat" title="No chats yet">Ask something below to start the first chat in {project.name}. Its instructions and sources come along.</EmptyState>
               ) : (
                 <ul className="chat-index">
                   {chats.map((c) => (
@@ -251,21 +263,16 @@ export function ProjectView({
           {/* Starting a chat from the project page is the point of being here,
               so the composer is present rather than a button that empties into
               a blank chat. */}
-          <div className="project-composer">
+          {!chatEnabled && <p className="route-note" role="status">This project is not enabled for Chat. Turn Chat on under Project settings → Available in to send messages here.</p>}
+          <div className="project-composer" hidden={!chatEnabled || tab === 'research'}>
             <div className="composer-inner chat-composer-inner">
-              <textarea
-                className="composer-input"
+              <ComposerTextarea
                 rows={1}
                 aria-label={`Message ${project.name}`}
                 placeholder={`Message ${project.name}`}
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                    e.preventDefault();
-                    send();
-                  }
-                }}
+                onValue={setDraft}
+                onSubmit={send}
               />
               <ComposerActions key={project.id} project={project} disabled={composerBusy || busyDocs || syncing} onChanged={onRefresh} onModels={onOpenModels} onBusy={setComposerBusy} onStatus={setComposerStatus} />
               <ComposerModel label={modelLabel} onClick={onOpenModels} />

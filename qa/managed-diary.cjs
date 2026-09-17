@@ -1,6 +1,6 @@
 // Synthetic UI only: no private corpus or inference calls.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const assert=require('node:assert/strict');
+const assert=require('node:assert/strict');const {navClick}=require('./nav.cjs');
 const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
  const fixture=createFixture(31339);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});
@@ -13,7 +13,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    if(body.fingerprint){status={mode:'managed',backup:'pending',lastBackedUp:null};return route.fulfill({json:{imported:true,fileCount:1}});}
    return route.fulfill({json:{fingerprint:'synthetic-fingerprint',fileCount:1,bytes:12,files:[{path:'Entries/'+('long-filename-'.repeat(20))+'.md',bytes:12,sha256:'synthetic'}]}});
   });
-  await page.goto('http://localhost:31339');await page.getByRole('button',{name:'Diary',exact:true}).click();
+  await page.goto('http://localhost:31339');await navClick(page,'Diary');
   const panel=page.locator('.diary-backup-status');await panel.getByText(/Backup pending/).waitFor();
   const draft=page.getByRole('textbox',{name:'What’s on your mind today?'});await draft.fill('Unsaved synthetic draft');
   status={mode:'managed',backup:'failed',lastBackedUp:null,error:'Synthetic remote conflict; app saves are retained.'};

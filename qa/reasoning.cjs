@@ -52,7 +52,10 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   for(const theme of ['light','dark'])for(const width of [375,768,1440]){
    await admin.setViewportSize({width,height:1000});await admin.evaluate(t=>document.documentElement.dataset.theme=t,theme);
    assert.equal(await admin.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-   await admin.getByRole('combobox',{name:'Thinking effort',exact:true}).focus();
+   // Reach the control by keyboard: script focus after a mouse click correctly does not match :focus-visible.
+   await admin.locator('.composer-input').focus();
+   for(let i=0;i<6&&await admin.evaluate(()=>document.activeElement.getAttribute('aria-label')!=='Thinking effort');i++)await admin.keyboard.press('Tab');
+   assert.equal(await admin.evaluate(()=>document.activeElement.getAttribute('aria-label')),'Thinking effort');
    assert.notEqual(await admin.evaluate(()=>getComputedStyle(document.activeElement).outlineStyle),'none');
    if(process.env.QA_SCREENSHOTS)await admin.screenshot({path:`${process.env.QA_SCREENSHOTS}/effort-${theme}-${width}.png`,fullPage:true,animations:'disabled'});
   }
@@ -62,7 +65,7 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   await admin.getByRole('button',{name:'Send',exact:true}).click();
   await admin.getByText('Synthetic effort answer',{exact:true}).waitFor();
   await admin.getByText('Effort: high · best-effort hint',{exact:true}).waitFor();
-  assert.equal(requests.at(-1).max_tokens,8192);assert.equal(requests.at(-1).reasoning_effort,undefined);
+  assert.equal(requests.at(-1).max_tokens,2048,'high effort keeps the chat context reserve (25% of the default 8,192 limit), never raising it');assert.equal(requests.at(-1).reasoning_effort,undefined);
   assert.equal(requests.at(-1).messages[0].content,'Think through this step by step before answering.');
   reasoningOnly=true;
   await admin.locator('.composer-input').fill('Synthetic reasoning-only regression');

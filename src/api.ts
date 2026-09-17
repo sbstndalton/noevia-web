@@ -5,7 +5,6 @@ import { parseUsage, parseUsers, parseProfile, parseProviders } from './settings
 import type {
   ChatMeta,
   DiaryCorpus,
-  DownloadJob,
   HealthState,
   HistoryEntry,
   InstalledModel,
@@ -264,7 +263,9 @@ export interface McpServerStatus {
   checkedAt?: number | null;
   missingCurated?: number;
   id: string;
-  auth: 'nextcloud' | 'none';
+  /** Mirrors the server's parser in index.cjs: `bearer` comes from a
+   *  `bearer:ENV_NAME` entry and was missing here. */
+  auth: 'nextcloud' | 'bearer' | 'internal' | 'none';
   error: string | null;
   discovered: number;
 }
@@ -291,7 +292,7 @@ export function fetchToolboxes(): Promise<{ toolboxes: Toolbox[]; mcp: McpStatus
 
 export interface AutoRoles { fast: string; smart: string; vision?: string }
 
-export function fetchAutoRoles(): Promise<{ configured: boolean; roles: AutoRoles | null }> {
+export function fetchAutoRoles(): Promise<{ configured: boolean; roles: AutoRoles | null; missing?: { role: 'fast' | 'smart' | 'vision'; model: string }[] }> {
   return getJson('/api/auto-roles');
 }
 
@@ -361,10 +362,6 @@ export function unloadModel(name: string): Promise<{ ok: true }> {
   return postJson('/api/models/unload', { name });
 }
 
-export function fetchDownloads(): Promise<DownloadJob[]> {
-  return getJson('/api/models/downloads');
-}
-
 export function fetchDiaryCorpus(): Promise<DiaryCorpus> {
   return getJson('/api/diary/today');
 }
@@ -411,15 +408,15 @@ export function editDiaryEntry(body: { xid: string; me: string; assistant: strin
 }
 
 export const fetchUsage = (aggregate=false) => getJson<unknown>(aggregate?'/api/usage/aggregate':'/api/usage').then(parseUsage);
-export interface UsageRate {model:string;inputPerMillion:number;outputPerMillion:number}
-export interface UsagePricing {currency:string;rates:UsageRate[];admin?:boolean}
-export const fetchUsageRates=()=>getJson<UsagePricing>('/api/usage/rates');
-export const saveUsageRates=(value:UsagePricing)=>putJson<UsagePricing>('/api/usage/rates',value);
 
 export function fetchChatHistory(chatId: string): Promise<HistoryEntry[]> {
-  return getJson<{ history: HistoryEntry[] }>(
+  return fetchChatHistoryRevision(chatId).then((r) => r.history);
+}
+
+export function fetchChatHistoryRevision(chatId: string): Promise<{ history: HistoryEntry[]; revision: string | null }> {
+  return getJson<{ history: HistoryEntry[]; revision?: string }>(
     `/api/chats/${encodeURIComponent(chatId)}/history`,
-  ).then((r) => (Array.isArray(r.history) ? r.history : []));
+  ).then((r) => ({ history: Array.isArray(r.history) ? r.history : [], revision: typeof r.revision === 'string' ? r.revision : null }));
 }
 
 // ── Free (non-project) chats — server-side metas so they survive browsers ──
@@ -435,12 +432,25 @@ export function deleteFreeChat(chatId: string): Promise<{ ok: true }> {
   });
 }
 
-export function saveChatHistory(chatId: string, history: HistoryEntry[]): Promise<{ ok: true }> {
-  return postJson(`/api/chats/${encodeURIComponent(chatId)}/history`, { history });
+export type HistorySave = { ok: true; revision: string | null } | { ok: false; conflict: { history: HistoryEntry[]; revision: string } };
+/** Save a transcript. With a base revision, a concurrent save elsewhere returns the current copy to merge. */
+export async function saveChatHistory(chatId: string, history: HistoryEntry[], baseRevision?: string | null): Promise<HistorySave> {
+  const res = await apiFetch(`/api/chats/${encodeURIComponent(chatId)}/history`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(baseRevision ? { history, baseRevision } : { history }),
+  });
+  if (res.status === 409) {
+    const body = await res.json();
+    return { ok: false, conflict: { history: Array.isArray(body.history) ? body.history : [], revision: String(body.revision || '') } };
+  }
+  if (!res.ok) throw new Error(`history save failed (${res.status})`);
+  const body = await res.json().catch(() => ({}));
+  return { ok: true, revision: typeof body.revision === 'string' ? body.revision : null };
 }
 
 // Chat streams SSE events from the proxy:
 //   { type:'meta', model, chatId? } { type:'reasoning', text } { type:'delta', text }
+//   { type:'preamble', text } — delta text from a round that then called tools; move it to reasoning
 //   { type:'tool', index, name, args } — accumulated state, upsert on index
 //   { type:'tool_pending', id, index, name, args } — a WRITE tool is waiting
 //     for the user. The stream stays open and nothing runs until a decision is
