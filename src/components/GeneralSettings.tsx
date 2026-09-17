@@ -28,7 +28,21 @@ function Choice<N extends PreferenceName>({ name, options, onChange }: {
   }}>{options.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select>;
 }
 
-export function GeneralSettings({ theme, onTheme, appearanceStatus, appearanceError, retryAppearance }: {
+export function ProfileSettings(): JSX.Element {
+  return <>
+    <div className="settings-title"><h1>Profile</h1><p>Who you are here.</p></div>
+    <ProfileCard />
+  </>;
+}
+
+export function CapabilitiesSettings(): JSX.Element {
+  return <>
+    <div className="settings-title"><h1>Capabilities</h1><p>What this deployment can do for you right now.</p></div>
+    <CapabilitiesCard />
+  </>;
+}
+
+export function AppearanceSettings({ theme, onTheme, appearanceStatus, appearanceError, retryAppearance }: {
   theme: 'light' | 'dark';
   onTheme: (theme: 'light' | 'dark') => void;
   appearanceStatus?: string;
@@ -42,8 +56,7 @@ export function GeneralSettings({ theme, onTheme, appearanceStatus, appearanceEr
   const bump = () => setRevision((n) => n + 1);
 
   return <>
-    <div className="settings-title"><h1>General</h1><p>Who you are here, how noevia looks, and what this deployment can do.</p></div>
-    <ProfileCard />
+    <div className="settings-title"><h1>Appearance</h1><p>How noevia looks and moves.</p></div>
 
     <section className="settings-section">
       <h2>Preferences</h2>
@@ -74,8 +87,6 @@ export function GeneralSettings({ theme, onTheme, appearanceStatus, appearanceEr
       <p role={appearanceError ? 'alert' : 'status'} className="route-note">{appearanceStatus}</p>
       {appearanceError && <button className="modal-btn secondary" onClick={retryAppearance}>Retry appearance</button>}
     </section>
-
-    <CapabilitiesCard />
   </>;
 }
 
@@ -105,7 +116,6 @@ function ProfileCard(): JSX.Element {
   const initials = (user?.displayName || user?.username || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('');
 
   return <section className="settings-section">
-    <h2>Profile</h2>
     <div className="set-rows">
       <Row label="Avatar" description="Taken from your name. Uploading a picture is not built yet.">
         <span className="set-avatar" aria-hidden="true">{initials || '?'}</span>
@@ -127,7 +137,7 @@ function ProfileCard(): JSX.Element {
       </Row>
     </div>
     {state.message && <p className={state.error ? 'modal-err' : 'route-note'} role={state.error ? 'alert' : 'status'}>{state.message}</p>}
-    <p className="route-note">Passwords, passkeys, sessions and app passwords are in Profile &amp; security.</p>
+    <p className="route-note">Passwords, passkeys, sessions and app passwords are under Security.</p>
   </section>;
 }
 
@@ -152,7 +162,6 @@ function CapabilitiesCard(): JSX.Element {
     <span className={`set-badge${on ? ' is-on' : ''}`}>{on === null ? 'Checking…' : on ? onText : offText}</span>;
 
   return <section className="settings-section">
-    <h2>Capabilities</h2>
     <div className="set-rows">
       <Row label="Diary" description="Private journaling with its own storage and retrieval. Turn it on in Diary & storage.">
         {badge(user ? user.diaryEnabled : null, 'On', 'Off')}

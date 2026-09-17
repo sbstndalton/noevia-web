@@ -341,7 +341,7 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
             <button type="button" className="modal-btn secondary" disabled={busy} onClick={() => void finish()}>
               Set up later
             </button>
-            <small>You can add or remove passkeys in Settings → Profile and security.</small>
+            <small>You can add or remove passkeys in Settings → Security.</small>
           </div>
         )}
 

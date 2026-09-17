@@ -27,10 +27,12 @@ const {createFixture}=require('./diary-fixture.cjs');
  await page.goto('http://localhost:31356');
  await page.getByTitle('Settings',{exact:true}).click();
  const dialog=page.getByRole('dialog',{name:'Settings'});
- await dialog.getByRole('button',{name:'General',exact:true}).click();
+ // Opening Settings lands on Profile: identity only.
+ assert.equal(await dialog.getByRole('button',{name:'General',exact:true}).count(),0);
+ await dialog.getByRole('button',{name:'Profile',exact:true}).click();
 
  // ── Profile ──
- await dialog.getByRole('heading',{name:'Profile'}).waitFor();
+ await dialog.getByRole('heading',{name:'Profile',level:1}).waitFor();
  assert.equal(await dialog.getByLabel('Display name').inputValue(),'Synthetic admin');
  assert.ok(await dialog.getByText('adminqa',{exact:true}).isVisible(),'the username is not shown');
  assert.ok(await dialog.getByText('Administrator',{exact:true}).isVisible());
@@ -41,6 +43,9 @@ const {createFixture}=require('./diary-fixture.cjs');
  await dialog.getByText('Saved.',{exact:true}).waitFor();
  assert.equal(displayName,'Renamed admin');
 
+ assert.equal(await dialog.getByText('Chat font').count(),0,'appearance leaked onto Profile');
+ await dialog.getByRole('button',{name:'Appearance',exact:true}).click();
+ await dialog.getByRole('heading',{name:'Appearance',level:1}).waitFor();
  // ── Preferences actually change the page ──
  const attr=name=>page.evaluate(n=>document.documentElement.getAttribute(n),name);
  assert.equal(await attr('data-chat-font'),'sans');
@@ -63,17 +68,17 @@ const {createFixture}=require('./diary-fixture.cjs');
  assert.equal(await attr('data-motion'),'reduced');
 
  await page.getByTitle('Settings',{exact:true}).click();
- await dialog.getByRole('button',{name:'General',exact:true}).click();
+ await dialog.getByRole('button',{name:'Capabilities',exact:true}).click();
 
  // ── Capabilities report real state, and never offer to disable approvals ──
- await dialog.getByRole('heading',{name:'Capabilities'}).waitFor();
+ await dialog.getByRole('heading',{name:'Capabilities',level:1}).waitFor();
  await dialog.getByText('Available',{exact:true}).or(dialog.getByText('No index on this deployment',{exact:true})).first().waitFor();
  assert.ok(await dialog.getByText('No index on this deployment').isVisible(),'retrieval state is not reported');
  assert.ok(await dialog.getByText('Not configured',{exact:true}).isVisible(),'tool state is not reported');
  assert.ok(await dialog.getByText('Reachable',{exact:true}).isVisible());
  assert.match(await dialog.getByText(/Write approvals cannot be turned off/).innerText(),/stops for a human/);
  for(const forbidden of [/never ask/i,/always allow/i,/disable approvals/i]){
-  assert.equal(await dialog.getByText(forbidden).count(),0,`General offers ${forbidden}`);
+  assert.equal(await dialog.getByText(forbidden).count(),0,`Capabilities offers ${forbidden}`);
  }
 
  // ── Layout ──

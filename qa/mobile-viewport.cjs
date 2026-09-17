@@ -30,7 +30,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    await page.getByRole('dialog').waitFor();
    assert.ok(await page.getByRole('dialog').evaluate(el=>el.scrollWidth<=el.clientWidth),'Settings must not overflow horizontally');
    if(width<700){
-     for(const section of ['profile','diary','providers','usage','planned','general']){
+     for(const section of ['profile','security','appearance','capabilities','diary','providers','usage','planned']){
        await page.getByLabel('Settings category').selectOption(section);
        await reachable(page.getByRole('button',{name:'Close settings',exact:true}),height);
        assert.ok(await page.getByRole('dialog').evaluate(el=>el.scrollWidth<=el.clientWidth),`Settings ${section} must fit`);

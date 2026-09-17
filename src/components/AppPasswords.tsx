@@ -12,7 +12,9 @@ export default function AppPasswords(): JSX.Element {
   const refresh = async () => {
     const r = await apiFetch('/api/profile/app-passwords');
     if (!r.ok) throw Error('Could not load app passwords.');
-    setItems((await r.json()).appPasswords);
+    const body = await r.json().catch(() => null) as { appPasswords?: unknown } | null;
+    if (!Array.isArray(body?.appPasswords)) throw Error('App passwords could not be read.');
+    setItems(body.appPasswords as Credential[]);
   };
   useEffect(() => { void refresh().catch(e => setError(e.message)); }, []);
   const create = async () => {

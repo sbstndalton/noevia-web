@@ -1,4 +1,4 @@
-import { GeneralSettings } from './GeneralSettings';
+import { AppearanceSettings, CapabilitiesSettings, ProfileSettings } from './GeneralSettings';
 import { SettingsPanelBoundary } from './SettingsPanelBoundary';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SettingsView } from './SettingsView';
@@ -22,8 +22,10 @@ type Group = { name: string; items: Item[]; admin?: boolean };
 // self-hosted single-server install: Billing (no plans or invoices to show),
 // Voice, Browser and Computer use (host-application features, not this app's).
 const PERSONAL: Item[] = [
-  ['general', 'General'],
-  ['profile', 'Profile & security'],
+  ['profile', 'Profile'],
+  ['security', 'Security'],
+  ['appearance', 'Appearance'],
+  ['capabilities', 'Capabilities'],
   ['diary', 'Diary & storage'],
   ['providers', 'Your connections'],
   ['usage', 'Usage & activity'],
@@ -41,9 +43,9 @@ const ADMIN: Item[] = [
 ];
 
 const ICONS: Record<string, string> = {
-  profile: 'user', users: 'user', appearance: 'sun', usage: 'grid',
+  profile: 'user', security: 'settings', appearance: 'sun', capabilities: 'grid', users: 'user', usage: 'grid',
   models: 'settings', status: 'settings', providers: 'settings',
-  diary: 'folder', general: 'settings', planned: 'grid',
+  diary: 'folder', planned: 'grid',
 };
 
 // What used to be one navigation row each. Kept visible as a roadmap, but in
@@ -56,7 +58,8 @@ const PLANNED: { group: string; items: string[] }[] = [
 ];
 
 export function SettingsShell(props: SettingsViewProps & {initialSection?:'general'|'usage'|'models';appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void}) {
-  const [section, setSection] = useState<string>(props.initialSection || 'general');
+  // 'general' is the historical name for the first page; it now opens Profile.
+  const [section, setSection] = useState<string>(!props.initialSection || props.initialSection === 'general' ? 'profile' : props.initialSection);
   const [query, setQuery] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [profileKnown, setProfileKnown] = useState(false);
@@ -92,7 +95,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
   // not be left staring at an empty pane.
   useEffect(() => {
     // Wait for the profile: admin sections appear only once the role is known.
-    if (profileKnown && !groups.some((g) => g.items.some(([id]) => id === section))) setSection('general');
+    if (profileKnown && !groups.some((g) => g.items.some(([id]) => id === section))) setSection('profile');
   }, [groups, section, profileKnown]);
 
   const title = groups.flatMap(g => g.items).find(([id]) => id === section)?.[1] || 'Settings';
@@ -122,11 +125,15 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
       <header><span>{title}</span><CloseButton onClick={props.onClose} label="Close settings"/></header>
       <div className="settings-detail-scroll" key={section}>
         <SettingsPanelBoundary>
-        {['profile', 'users', 'diary', 'providers', 'models', 'status'].includes(section) ? (
+        {['security', 'users', 'diary', 'providers', 'models', 'status'].includes(section) ? (
           <SettingsView {...props} section={section}/>
-        ) : section === 'general' ? (
-          <GeneralSettings theme={props.theme} onTheme={props.onTheme} appearanceStatus={props.appearanceStatus}
+        ) : section === 'profile' ? (
+          <ProfileSettings />
+        ) : section === 'appearance' ? (
+          <AppearanceSettings theme={props.theme} onTheme={props.onTheme} appearanceStatus={props.appearanceStatus}
             appearanceError={props.appearanceError} retryAppearance={props.retryAppearance} />
+        ) : section === 'capabilities' ? (
+          <CapabilitiesSettings />
         ) : section === 'usage' ? (
           <UsageView/>
         ) : section === 'planned' ? (
