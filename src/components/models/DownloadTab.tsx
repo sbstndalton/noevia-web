@@ -11,12 +11,24 @@ const VERDICT: Record<string, string> = { fits: 'Fits', tight: 'Tight fit', oom:
 export function DownloadTab({ onDownloaded, onSetUp }: { onDownloaded: () => void; onSetUp: (section: string) => void }) {
   const [q, setQ] = useState(''), [sort, setSort] = useState('downloads');
   const [results, setResults] = useState<Result[] | null>(null), [searching, setSearching] = useState(false), [error, setError] = useState('');
+  // What the results on screen were actually fetched for, so the empty state can say
+  // whether nothing matched a query or the browse list itself came back empty.
+  const [shown, setShown] = useState('');
   const [repo, setRepo] = useState<{ repo: string; groups: Group[]; gated?: string; error?: string } | null>(null), [repoBusy, setRepoBusy] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]), [message, setMessage] = useState('');
   const finished = useRef(new Set<string>());
-  const search = async () => {
-    setSearching(true); setError('');
-    try { const v = await mm<{ results: Result[]; error?: string }>(`search?${new URLSearchParams({ q, sort, limit: '30' })}`); if (v.error) throw Error(v.error); setResults(v.results); }
+  // `order` is passed explicitly by the Sort by select: its own setState has not landed yet
+  // when the change handler runs, and re-sorting has to use the value the user just picked.
+  const search = async (order = sort) => {
+    const term = q.trim();
+    setSearching(true); setError(''); setRepo(null);
+    try {
+      const v = await mm<{ results: Result[]; error?: string }>(`search?${new URLSearchParams({ q: term, sort: order, limit: '30' })}`);
+      // The server answers a failed hub call with 200 and an `error` field, so a bare
+      // `v.results` check would show "nothing matched" for what is really an outage.
+      if (v.error) throw Error(v.error);
+      setResults(v.results || []); setShown(term);
+    }
     catch (e) { setError(errorText(e, 'Search failed')); } finally { setSearching(false); }
   };
   const openRepo = async (id: string) => {
@@ -44,15 +56,18 @@ export function DownloadTab({ onDownloaded, onSetUp }: { onDownloaded: () => voi
     <HfToken/>
     <div className="mm-row">
       <label className="mm-grow">Search<input value={q} placeholder="e.g. qwen3.5 9b" onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void search(); }}/></label>
-      <label>Sort by<select value={sort} onChange={e => setSort(e.target.value)}><option value="downloads">Downloads</option><option value="trendingScore">Trending</option><option value="likes">Likes</option><option value="lastModified">Recently updated</option></select></label>
+      <label>Sort by<select value={sort} onChange={e => { setSort(e.target.value); void search(e.target.value); }}><option value="downloads">Downloads</option><option value="trendingScore">Trending</option><option value="likes">Likes</option><option value="lastModified">Recently updated</option></select></label>
       <button className="modal-btn primary" disabled={searching} onClick={() => void search()}>{searching ? 'Searching…' : 'Search'}</button>
     </div>
-    {error && <p role="alert" className="modal-err">{error}</p>}
+    {error && <p role="alert" className="modal-err">{error} <button className="popup-tab" onClick={() => void search()}>Try again</button></p>}
     {message && <p role="status" className="mm-note">{message}</p>}
     <Queue jobs={jobs} onChange={refreshJobs} onSetUp={onSetUp}/>
     {repo && <RepoFiles repo={repo} onClose={() => setRepo(null)} onDownload={download}/>}
+    {!repo && results && results.length > 0 && <p className="mm-note">{shown ? `${results.length} result${results.length === 1 ? '' : 's'} for “${shown}”.` : `Most ${sort === 'likes' ? 'liked' : sort === 'lastModified' ? 'recently updated' : sort === 'trendingScore' ? 'trending' : 'downloaded'} GGUF models. Search above to narrow it down.`}</p>}
     {!repo && results && <ul className="mm-results" aria-label="Search results">
-      {results.length === 0 && <li className="mm-note">No GGUF repositories match.</li>}
+      {results.length === 0 && <li className="mm-note">{shown
+        ? `Nothing on Hugging Face matched “${shown}”. Try fewer words, or the repository owner's name.`
+        : 'Hugging Face returned no GGUF models for this sort. Search for a model by name, or try again shortly.'}</li>}
       {results.map(r => <li key={r.id}>
         <button className="mm-result-open" disabled={repoBusy === r.id} onClick={() => void openRepo(r.id)}>
           <strong>{r.id}</strong>
