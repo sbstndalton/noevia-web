@@ -509,7 +509,7 @@ export default function App(): JSX.Element {
             ...prev,
             [chatId]: (prev[chatId] ?? []).map((m) =>
               m.id === replyId && !m.content && !m.reasoning
-                ? { ...m, content: '(generation stopped)', senderLabel: 'Stopped' }
+                ? { ...m, content: 'Stopped before a reply was written.', senderLabel: 'Stopped' }
                 : m,
             ),
           }));

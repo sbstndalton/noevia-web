@@ -43,6 +43,9 @@ export function HardwareTab() {
   </div>;
 }
 
+// Docker's container states in the words the rest of the app uses.
+const ENGINE_STATUS: Record<string, string> = { exited: 'Stopped', created: 'Not started', restarting: 'Restarting', paused: 'Paused', dead: 'Failed', removing: 'Stopping' };
+
 function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; hostTotalGB?: number }) {
   const gpu = b.stats.gpu, cont = b.stats.container, pts = b.history;
   const times = pts.map(p => p.ts);
@@ -54,7 +57,7 @@ function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; hostTotalGB
     <header className="mm-panel-head">
       <div><h3 id={`mm-engine-${b.name}`}>{b.name}</h3>
         <p className="mm-note">{b.image}{b.uptime ? ` · up ${b.uptime}` : ''}{b.loaded_model ? ` · serving ${b.loaded_model}` : ' · no model loaded'}</p></div>
-      <span className={`mm-pill ${running ? 'is-good' : 'is-bad'}`}>{running ? 'Running' : b.status || 'Unknown'}</span>
+      <span className={`mm-pill ${running ? 'is-good' : 'is-bad'}`}>{running ? 'Running' : ENGINE_STATUS[b.status] || 'Unknown'}</span>
     </header>
     {b.last_restart_error && <p role="alert" className="modal-err">Last restart failed: {b.last_restart_error}</p>}
     {!b.stats.ok && <p className="mm-note">Readings unavailable: {b.stats.error}</p>}
