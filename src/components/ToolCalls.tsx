@@ -88,7 +88,8 @@ export function ToolCalls({ calls }: { calls: ToolCallView[] }): JSX.Element {
           <ol>
             {settled.map((c, i) => {
               const state = c.status === 'denied' ? 'declined' : c.status === 'done' ? 'done' : c.status === 'stopped' ? 'not run' : 'running';
-              const preview = c.result !== undefined ? oneLine(c.result) || '(empty result)' : c.args ? oneLine(c.args) : '';
+              // The result text is what the model was told; the row says what happened in plain words.
+              const preview = state === 'declined' ? 'You declined this' : state === 'not run' ? 'Stopped before it ran' : c.result !== undefined ? oneLine(c.result) || '(empty result)' : c.args ? oneLine(c.args) : '';
               return (
                 <li key={i} className={`tool-call is-${state.replace(' ', '-')}`}>
                   <details>

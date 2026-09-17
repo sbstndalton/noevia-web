@@ -205,9 +205,10 @@ export function ChatView({
           const thinkingLive = streaming && isLast && m.role === 'assistant' && !m.content;
           return (
             <div key={m.id} className="msg" data-role={m.role}>
-              <span className={`msg-sender${m.role === 'assistant' ? ' is-assistant' : ''}`}>
-                {m.senderLabel ?? (m.role === 'user' ? 'You' : `Assistant · ${modelLabel}`)}
-              </span>
+              {/* The bubble side already says who spoke; only the answering model is worth showing. */}
+              {m.role === 'user'
+                ? <span className="msg-sender sr-only">You</span>
+                : <span className="msg-sender is-assistant"><span className="sr-only">Assistant · </span>{(m.senderLabel ?? modelLabel).replace(/^Assistant · /, '')}</span>}
               {m.role === 'assistant' ? (
                 <div className="assistant-card">
                   {m.reasoningMode && m.reasoningMode !== 'off' && <small className="reasoning-result">Effort: {m.reasoningEffort} · {m.reasoningMode === 'real' ? 'provider parameter' : 'best-effort hint'}</small>}
@@ -335,7 +336,7 @@ export function ChatView({
           )}
         </div>
         {actionStatus && <div className="composer-action-status" role="status">{actionStatus}</div>}
-        <div className="composer-hint">
+        <div className={`composer-hint${projectName ? '' : ' is-keyboard'}`}>
           {projectName ? `Project context from ${projectName} applied` : 'Enter to send, Shift + Enter for a new line'}
         </div>
       </div>

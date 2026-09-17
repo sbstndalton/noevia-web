@@ -1797,3 +1797,4 @@ body { isolation:isolate; background:var(--bg-app); }
 .diary-breadcrumb .diary-home-link:hover, .diary-breadcrumb .popup-tab:hover { color: var(--text-primary); background: var(--nav-hover); }
 .diary-breadcrumb > :last-child { color: var(--text-primary); }
 .projects-grid > .empty-state-card { grid-column: 1 / -1; }
+@media (pointer: coarse) { .composer-hint.is-keyboard { display: none; } }
