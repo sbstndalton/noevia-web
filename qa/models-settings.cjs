@@ -67,6 +67,10 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   if(r.startsWith('search/repo'))return json({repo:'synthetic/model-GGUF',groups:[{shardBase:'model-Q4_K_M.gguf',shards:null,bytes:5e9,size:'4.7 GiB',quant:'Q4_K_M',projector:false,fit:[{name:'cowork-llama-1',verdict:'fits',ratio_pct:40}],files:[{path:'model-Q4_K_M.gguf',bytes:5e9,size:'4.7 GiB'}],estimates:[{key:'fast',label:'Fast',ctx:131072,gpu_layers:32,total_layers:32,speed_pct:100,offload:false}],nativeCtx:262144},{shardBase:'mmproj-F16.gguf',shards:null,bytes:9e8,size:'0.9 GiB',quant:null,projector:true,fit:[],files:[{path:'mmproj-F16.gguf',bytes:9e8,size:'0.9 GiB'}]}],gated:''});
   if(r.startsWith('search')&&!r.startsWith('search/repo')){const qs=url.search;searchQueries.push(qs);
    const wide=/showUnsuitable=true/.test(qs), all=/trustedOnly=false/.test(qs);
+   // A broad one-word query: the hub's top 30 are community fine-tunes, so the trusted
+   // default leaves nothing on screen. This is the live-instance case from the roadmap.
+   if(/q=gemma/.test(qs)&&!all)return json({results:[],budgetGb:13.5,hubUrl:'https://huggingface.co/models?filter=gguf&search=gemma&sort=trending',counts:{found:30,shown:0,hiddenUntrusted:30,hiddenUnsuitable:0}});
+   if(/q=gemma/.test(qs))return json({results:[{id:'fanclub/gemma-tune-GGUF',owner:'fanclub',downloads:12,likes:1,lastModified:'2026-09-02',ageDays:15,license:'apache-2.0',params:4,activeParams:null,moe:false,vision:false,trusted:false,suitable:true,reasons:[],options:[{path:'g-Q4_K_M.gguf',gb:3.1,quant:'Q4_K_M',shards:1,fits:true,reasons:[]}],best:{path:'g-Q4_K_M.gguf',gb:3.1,quant:'Q4_K_M',shards:1,fits:true,reasons:[]},downloaded:[]}],budgetGb:13.5,hubUrl:'https://huggingface.co/models?filter=gguf&search=gemma&sort=trending',counts:{found:30,shown:1,hiddenUntrusted:0,hiddenUnsuitable:0}});
    const rows=[{id:'synthetic/model-GGUF',owner:'synthetic',downloads:1234,likes:56,lastModified:'2026-09-01',ageDays:16,license:'apache-2.0',params:9,activeParams:null,moe:false,vision:true,trusted:true,suitable:true,reasons:[],options:[{path:'model-Q4_K_M.gguf',gb:5.2,quant:'Q4_K_M',shards:1,fits:true,reasons:[]}],best:{path:'model-Q4_K_M.gguf',gb:5.2,quant:'Q4_K_M',shards:1,fits:true,reasons:[]},downloaded:[]}];
    if(wide)rows.push({id:'stranger/huge-70B-GGUF',owner:'stranger',downloads:900000,likes:10,lastModified:'2026-09-10',ageDays:7,license:'mit',params:70,activeParams:null,moe:false,vision:false,trusted:false,suitable:false,reasons:['40.0 GB does not fit the 13.5 GB the GPU can hold'],options:[],best:null,downloaded:[]});
    return json({results:rows,budgetGb:13.5,hubUrl:'https://huggingface.co/models?filter=gguf&search=x&sort=trending',counts:{found:2,shown:rows.length,hiddenUntrusted:all?0:1,hiddenUnsuitable:wide?0:1}});}
@@ -314,6 +318,20 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    await page.screenshot({path:`${shots}/noevia-models-${name.toLowerCase().replace(/ /g,'-')}-${width}-${theme}.png`,fullPage:false});
   }
  }
+ await tab('Discover');
+ // A broad one-word query under the trusted default: the panel must not simply be empty.
+ // It says what happened AND offers the way out, without hunting for the filter that did it.
+ await dialog.getByLabel('Search models').fill('gemma');
+ await dialog.getByText(/30 hidden as untrusted publishers/).waitFor();
+ const widen=dialog.getByRole('button',{name:'Show all publishers (30)'});
+ await widen.waitFor();
+ if(process.env.QA_SCREENSHOTS){await widen.scrollIntoViewIfNeeded();await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/models-discover-empty-1440-light.png`});}
+ await widen.click();
+ await dialog.getByText(/fanclub\/gemma-tune-GGUF/).waitFor();
+ assert.match(searchQueries.at(-1),/trustedOnly=false/);
+ assert.equal(await dialog.getByRole('button',{name:'Show all publishers (30)'}).count(),0,'the way out is gone once taken');
+ if(process.env.QA_SCREENSHOTS)await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/models-discover-widened-1440-light.png`});
+
  // Back returns to the Settings summary, not to the chat.
  await page.setViewportSize({width:1440,height:950});
  await dialog.getByRole('button',{name:'Settings',exact:true}).first().click();

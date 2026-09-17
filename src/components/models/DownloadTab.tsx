@@ -98,6 +98,13 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'fit' }:
     try { const v = await mm<{ queued: string[] }>('downloads', { body: { ...body, target: saveTo } }); setMessage(`Queued ${label}${v.queued.length > 1 ? ` and ${v.queued.length - 1} companion file${v.queued.length > 2 ? 's' : ''} (vision projector or prediction head)` : ''}.`); await refreshJobs(); }
     catch (e) { setError(errorText(e, 'Download could not start')); }
   };
+  const applyFilters = (patch: Partial<Filters>) => {
+    const next = { ...filters, ...patch };
+    setFilters(next); filterRef.current = next; setRepo(null); void search();
+  };
+  // Only offer a way out for a filter that is actually hiding something right now.
+  const hiddenByTrust = filters.trustedOnly ? meta?.counts?.hiddenUntrusted || 0 : 0;
+  const hiddenByFit = filters.showUnsuitable ? 0 : meta?.counts?.hiddenUnsuitable || 0;
   return <div className="mm-tab">
     <p className="mm-lede">Search Hugging Face for GGUF models. Each file is fetched as eight parallel parts and resumes after a restart. A model's vision projector is downloaded with it.</p>
     {target && <p className="mm-note" data-testid="download-target">Downloads go to <strong className="mm-mono">{saveTo ? `${target.hostPath || target.path}/${saveTo}` : target.hostPath || target.path}</strong>{target.disk && !saveTo ? ` · ${target.disk.freeH} free` : ''}. The engine reads this whole folder; other shares appear here once they are mounted inside it.</p>}
@@ -110,9 +117,22 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'fit' }:
     {message && <p role="status" className="mm-note">{message}</p>}
     <Queue jobs={jobs} registered={registered} onChange={refreshJobs} onSetUp={onSetUp}/>
     {repo && <RepoFiles repo={repo} onClose={() => setRepo(null)} onDownload={download}/>}
-    {!repo && <SearchFilters filters={filters} meta={meta} onChange={(patch) => { const next = { ...filters, ...patch }; setFilters(next); filterRef.current = next; setRepo(null); void search(); }}/>}
+    {!repo && <SearchFilters filters={filters} meta={meta} onChange={applyFilters}/>}
     {!repo && results && <ul className="mm-results" aria-label="Search results">
-      {results.length === 0 && <li className="mm-note">{shown ? `Nothing on Hugging Face matched “${shown}” within these filters` : 'Nothing matches these filters'}{meta?.counts?.hiddenUntrusted ? `; ${meta.counts.hiddenUntrusted} hidden as untrusted publishers` : ''}{meta?.counts?.hiddenUnsuitable ? `; ${meta.counts.hiddenUnsuitable} hidden as unsuitable for this server` : ''}.</li>}
+      {results.length === 0 && <li className="mm-note">
+        {shown ? `Nothing on Hugging Face matched “${shown}” within these filters` : 'Nothing matches these filters'}
+        {meta?.counts?.hiddenUntrusted ? `; ${meta.counts.hiddenUntrusted} hidden as untrusted publishers` : ''}
+        {meta?.counts?.hiddenUnsuitable ? `; ${meta.counts.hiddenUnsuitable} hidden as unsuitable for this server` : ''}.
+        {/* A one-word query often returns thirty community fine-tunes and nothing else, so the
+            default filters hide every result. Saying so is not enough: offer the way out here,
+            where the person is looking, instead of making them find the filter that did it. */}
+        {(hiddenByTrust > 0 || hiddenByFit > 0) && <span className="mm-empty-actions">
+          {hiddenByTrust > 0 && <button type="button" className="popup-tab"
+            onClick={() => applyFilters({ trustedOnly: false })}>Show all publishers ({hiddenByTrust})</button>}
+          {hiddenByFit > 0 && <button type="button" className="popup-tab"
+            onClick={() => applyFilters({ showUnsuitable: true })}>Show models that do not fit ({hiddenByFit})</button>}
+        </span>}
+      </li>}
       {results.map(r => <li key={r.id}>
         <button className="mm-result-open" disabled={repoBusy === r.id} onClick={() => void openRepo(r.id)}>
           <strong>{r.id}</strong>

@@ -1907,3 +1907,8 @@ body { isolation:isolate; background:var(--bg-app); }
 :root[data-layout="mobile"] .mm-root .mm-tabs .mm-tabs-select, :root[data-layout="mobile"] .mm-tabs-select { display: block; width: 100%; }
 :root[data-layout="mobile"] .mm-tabs-row { display: none; }
 :root[data-layout="mobile"] .mm-root .modal-btn, :root[data-layout="mobile"] .mm-root .popup-tab { min-height: 44px; }
+
+/* The way out of an empty Discover result, beside the sentence that explains it. */
+.mm-empty-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.mm-empty-actions .popup-tab { min-height: 40px; }
+@media (pointer: coarse), (max-width: 640px) { .mm-empty-actions .popup-tab { min-height: 44px; } }
