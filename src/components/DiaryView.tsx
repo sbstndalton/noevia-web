@@ -14,6 +14,7 @@ import { TOOL_RESULT_LIMIT, ToolCalls } from './ToolCalls';
 import { prepareDiaryExtras } from '../diary-extras';
 import type { Project, ToolCallView } from '../types';
 import { SendIcon } from './Icons';
+import { ComposerTextarea } from './ComposerTextarea';
 import { DiaryCalendar } from './DiaryCalendar';
 import { DiaryContextPanel } from './DiaryContextPanel';
 import { useEffect, useRef, useState } from 'react';
@@ -465,7 +466,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const blockedReason = wizard === 'local' ? directoryPickerBlockedReason() : null;
   const composer = <div className="diary-compose">
     <label htmlFor="diary-draft">{day ? `Add to ${dayLabel(day)}` : 'What’s on your mind today?'}</label>
-    <div className="composer-inner chat-composer-inner"><textarea id="diary-draft" className="composer-input" rows={3} placeholder={day ? 'Continue this day’s story…' : emptyDiary ? 'Write your first entry…' : 'Write about your day, or ask your diary a question…'} value={draft} disabled={busy} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();submit();} }} /><ComposerActions diary project={extrasEnabled ? extraProject : null} disabled={busy || extraBusy} onChanged={refreshExtraProject} onModels={()=>setExtraModels(true)} onBusy={setExtraBusy} onStatus={setExtraStatus} header={<>
+    <div className="composer-inner chat-composer-inner"><ComposerTextarea id="diary-draft" rows={3} placeholder={day ? 'Continue this day’s story…' : emptyDiary ? 'Write your first entry…' : 'Write about your day, or ask your diary a question…'} value={draft} disabled={busy} onValue={setDraft} onSubmit={submit} /><ComposerActions diary project={extrasEnabled ? extraProject : null} disabled={busy || extraBusy} onChanged={refreshExtraProject} onModels={()=>setExtraModels(true)} onBusy={setExtraBusy} onStatus={setExtraStatus} header={<>
       <p><strong>Diary retrieval &amp; capture</strong> · always on</p>
       <label className="composer-tool-option"><input type="checkbox" checked={extrasEnabled} disabled={busy || extraBusy} onChange={()=>void toggleExtras()} /><span>Extra attachments &amp; tools<small>Off by default. Applies while this session is open.</small></span></label>
       {extrasEnabled && <button type="button" onClick={()=>setExtraFiles(true)}>Manage attachments ({extraProject?.files.length || 0})</button>}

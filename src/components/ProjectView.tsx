@@ -2,6 +2,7 @@ import { InstructionSkills } from './InstructionSkills';
 import { ReasoningControl } from './ReasoningControl';
 import { ComposerActions } from './ComposerActions';
 import { ComposerModel } from './ComposerModel';
+import { ComposerTextarea } from './ComposerTextarea';
 import { sourceStatus } from '../source-status';
 import { FolderPicker } from './FolderPicker';
 import { ShellIcon } from './ShellIcon';
@@ -255,19 +256,13 @@ export function ProjectView({
           {!chatEnabled && <p className="route-note" role="status">This project is not enabled for Chat. Turn Chat on under Project settings → Available in to send messages here.</p>}
           <div className="project-composer" hidden={!chatEnabled}>
             <div className="composer-inner chat-composer-inner">
-              <textarea
-                className="composer-input"
+              <ComposerTextarea
                 rows={1}
                 aria-label={`Message ${project.name}`}
                 placeholder={`Message ${project.name}`}
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                    e.preventDefault();
-                    send();
-                  }
-                }}
+                onValue={setDraft}
+                onSubmit={send}
               />
               <ComposerActions key={project.id} project={project} disabled={composerBusy || busyDocs || syncing} onChanged={onRefresh} onModels={onOpenModels} onBusy={setComposerBusy} onStatus={setComposerStatus} />
               <ComposerModel label={modelLabel} onClick={onOpenModels} />

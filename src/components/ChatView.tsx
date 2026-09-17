@@ -9,6 +9,7 @@ import { ComposerModel } from './ComposerModel';
 import { MarkdownPreview } from './DiaryModal';
 import { ModelPopup } from './ModelPopup';
 import { ToolCalls } from './ToolCalls';
+import { ComposerTextarea } from './ComposerTextarea';
 import { modelChoiceLabel } from '../model-guidance';
 import { ComposerActions } from './ComposerActions';
 import { apiFetch } from '../api';
@@ -312,20 +313,14 @@ export function ChatView({
       <div className="composer">
         <ChatContext key={chatId} chatId={chatId} projectId={project?.id || null} messages={messages} streaming={streaming} onBusy={setActionBusy} />
         <div className="composer-inner chat-composer-inner">
-          <textarea
-            className="composer-input"
+          <ComposerTextarea
             aria-label="Message"
             rows={2}
             placeholder="Message noevia…"
             value={draft}
             disabled={streaming || actionBusy}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                submit();
-              }
-            }}
+            onValue={setDraft}
+            onSubmit={submit}
           />
           <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={setActionStatus} />
           <ComposerModel label={modelLabel} onClick={openModels} />
