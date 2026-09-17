@@ -1710,3 +1710,22 @@ body { isolation:isolate; background:var(--bg-app); }
   .set-row-value { max-width: 58%; }
   .settings-actions .btn { flex: 1 1 auto; }
 }
+
+/* Short screens: in an empty chat the greeting gives way before the composer does, so the
+   message box and its buttons open in view (the greeting is anchored to its bottom edge). */
+.chat-workspace.is-empty .transcript { flex: 0 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+.chat-workspace.is-empty .composer { flex-shrink: 0; }
+@media (max-width: 640px) {
+  /* The header holds a title and one settings button; keep them on one row. */
+  .chat-header { flex-direction: row; align-items: center; justify-content: space-between; }
+  .chat-header .header-titles { padding-right: 0; }
+}
+/* When the visible height is short, live inference stats give way to the conversation. */
+[data-short-viewport] .stats-disclosure { display: none; }
+[data-short-viewport] .conn-banner { padding-block: 6px; font-size: 12.5px; line-height: 1.4; }
+/* Touch screens: every primary control is at least 44 x 44 px. */
+@media (pointer: coarse), (max-width: 640px) {
+  .composer-add, .send-btn, .chat-header .icon-btn, .settings-detail > header .shell-icon-button, .project-card-options { min-width: 44px; min-height: 44px; }
+  .project-tabs [role=tab], .settings-back, .project-newchat, .projects-head .projects-search, select[aria-label='Thinking effort'] { min-height: 44px; }
+  .composer-add { display: inline-grid; place-items: center; }
+}
