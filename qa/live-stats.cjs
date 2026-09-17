@@ -20,7 +20,13 @@ const {createFixture}=require('./diary-fixture.cjs');
   await page.getByText('Synthetic streamed reply',{exact:true}).waitFor();
   await page.waitForFunction(()=>document.querySelector('.stats-bar .stats-value')?.textContent==='77.0',{timeout:1000});
   assert.equal(await rate(),'77.0','footer reflects the reply\'s own usage event, not the never-changing poll');
-  console.log('PASS footer tokens/s updates from the live SSE usage event instead of waiting on the next poll tick');
+  // An engine that reports no rate between requests must not blank the last reported value.
+  await page.route('**/api/stats',r=>r.fulfill({json:{up:true,tokensPerSecond:null,timeToFirstToken:null,inputTokens:null,outputTokens:null,inputTokensTotal:1,outputTokensTotal:1,requestCount:1,cpuPercent:null,gpuPercent:null,vramGb:null,memoryGb:null,mtp:[]}}));
+  const polls=[];page.on('request',r=>{if(r.url().endsWith('/api/stats'))polls.push(1);});
+  await page.waitForFunction(()=>true);await new Promise(r=>setTimeout(r,3200));
+  assert.ok(polls.length>=1,'no poll happened');
+  assert.equal(await rate(),'77.0','a null poll blanked the last reported rate');
+  console.log('PASS footer tokens/s updates from the live SSE usage event instead of waiting on the next poll tick, and a null poll keeps the last value');
  }catch(e){
   for(const p of browser.contexts().flatMap(c=>c.pages()))console.error(await p.locator('body').innerText().catch(()=>''));
   throw e;

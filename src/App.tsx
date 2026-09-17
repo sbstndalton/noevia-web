@@ -193,7 +193,9 @@ export default function App(): JSX.Element {
       if (pending || document.visibilityState === 'hidden') return;
       pending = true;
       void fetchStats()
-        .then((s) => alive && setStats(s))
+        // The engine gauge reports nothing between requests on some backends; keep the
+        // last provider-reported rate instead of blanking a number the user just saw.
+        .then((s) => alive && setStats((prev) => ({ ...s, tokensPerSecond: s.tokensPerSecond ?? prev?.tokensPerSecond ?? null })))
         .catch(() => alive && setStats((prev) => (prev ? { ...prev, up: false, mtp: [] } : prev)))
         .finally(() => { pending = false; });
     };
@@ -383,6 +385,16 @@ export default function App(): JSX.Element {
             setMessagesByChat((prev) => ({
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, reasoning } : m)),
+            }));
+          } else if (ev.type === 'preamble' && ev.text) {
+            // Narration the model wrote before calling tools belongs with its
+            // thinking, not in the answer.
+            const at = acc.lastIndexOf(ev.text);
+            if (at >= 0) acc = acc.slice(0, at) + acc.slice(at + ev.text.length);
+            reasoning += (reasoning ? '\n\n' : '') + ev.text.trim();
+            setMessagesByChat((prev) => ({
+              ...prev,
+              [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, content: acc.trimStart(), reasoning } : m)),
             }));
           } else if (ev.type === 'delta' && ev.text) {
             acc += ev.text;

@@ -89,8 +89,8 @@ export function ModelsSettings({ models, routes, projects, modelsError }: { mode
       {tab === 'discover'
         ? <DownloadTab query={query} sort={hfSort} onDownloaded={changed} onSetUp={openModel} />
         : <>
-          <RoutingSection models={models} routes={routes} projects={projects} modelsError={modelsError} />
           <LibraryTab query={query} sort={sort} filter={filter} onConfigure={openModel} onChanged={changed} />
+          <RoutingSection models={models} routes={routes} projects={projects} modelsError={modelsError} />
           <Collapsible title="Hardware" hint="Engines, GPU and container health, logs."><HardwareTab /></Collapsible>
           <Collapsible title="Benchmarks" hint="Measured speed, and your own capability ratings."><BenchmarksTab /></Collapsible>
           <Collapsible title="Prompt library" hint="Saved system prompts used by benchmark runs."><PromptsTab /></Collapsible>

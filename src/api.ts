@@ -434,6 +434,7 @@ export function saveChatHistory(chatId: string, history: HistoryEntry[]): Promis
 
 // Chat streams SSE events from the proxy:
 //   { type:'meta', model, chatId? } { type:'reasoning', text } { type:'delta', text }
+//   { type:'preamble', text } — delta text from a round that then called tools; move it to reasoning
 //   { type:'tool', index, name, args } — accumulated state, upsert on index
 //   { type:'tool_pending', id, index, name, args } — a WRITE tool is waiting
 //     for the user. The stream stays open and nothing runs until a decision is

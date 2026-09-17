@@ -61,6 +61,10 @@ const {createFixture}=require('./diary-fixture.cjs');
   await page.setViewportSize({width:375,height:740});await toggle.click();await drawer.waitFor();
   await drawer.getByRole('button',{name:'Projects',exact:true}).first().click();await drawer.waitFor({state:'hidden'});
   await page.getByRole('heading',{name:'Projects',level:1}).waitFor();
+  // Opening Settings from the drawer's account menu closes the drawer behind it.
+  await toggle.click();await drawer.waitFor();
+  await drawer.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+  await drawer.waitFor({state:'hidden'});await page.getByRole('dialog',{name:'Settings'}).waitFor();await page.keyboard.press('Escape');
   await toggle.click();await drawer.waitFor();await page.setViewportSize({width:1440,height:900});
   await page.waitForFunction(()=>!document.querySelector('.nav-drawer-backdrop'));
   assert.ok(await page.locator('.sidebar').isVisible());assert.equal(await toggle.isVisible(),false);

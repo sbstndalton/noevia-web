@@ -133,6 +133,10 @@ export function Sidebar({
     fit(); viewport.addEventListener('resize', fit);
     return () => { viewport.removeEventListener('resize', fit); el.style.removeProperty('--drawer-height'); };
   }, [expanded, mobile]);
+  // Any navigation, including views opened from outside the sidebar (Settings →
+  // model manager), closes the drawer so it never covers what just opened.
+  useEffect(() => { setExpanded(false); }, [activeView, activeChatId, activeProjectId]);
+  const openSettings = (section?: 'general' | 'usage') => { setExpanded(false); onOpenSettings(section); };
   const trapDrawer = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!mobile || !expanded) return;
     if (e.key === 'Escape' && !e.defaultPrevented) {
@@ -469,7 +473,7 @@ export function Sidebar({
             <span className="status-text">{label}</span>
           </div>
         );
-      })()}<div className="status-row"><span className={`status-dot${health.inferenceUp === true ? ' is-up' : health.inferenceUp === false ? ' is-down' : ''}`}/><span className="status-text">{statusText(health)}</span></div><AccountMenu onSettings={onOpenSettings}/></div>
+      })()}<div className="status-row"><span className={`status-dot${health.inferenceUp === true ? ' is-up' : health.inferenceUp === false ? ' is-down' : ''}`}/><span className="status-text">{statusText(health)}</span></div><AccountMenu onSettings={openSettings}/></div>
     </div>
   </>);
 }
