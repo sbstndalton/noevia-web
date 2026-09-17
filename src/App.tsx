@@ -427,6 +427,13 @@ export default function App(): JSX.Element {
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, stats } : m)),
             }));
+            // The footer's own /api/stats poll only ticks every 2.5s and its rate
+            // reflects whichever request last completed engine-wide, so a reply
+            // finishing between ticks left it showing a stale number for the rest
+            // of that window. This event carries the same provider-reported rate
+            // for the round that just finished — apply it the instant it arrives
+            // rather than waiting for the next poll to catch up.
+            setStats((prev) => (prev ? { ...prev, up: true, tokensPerSecond: ev.tokensPerSecond ?? prev.tokensPerSecond } : prev));
           } else if (ev.type === 'error') {
             throw new Error(ev.text || 'Generation failed');
           } else if (ev.type === 'tool_result' && ev.name) {

@@ -570,11 +570,6 @@ body { margin: 0; background: var(--bg); }
 }
 .modal-head { display: flex; align-items: center; justify-content: space-between; }
 .modal-head h2 { margin: 0; font-size: 17px; font-weight: 800; }
-.modal-x {
-  background: none; border: none; cursor: pointer; color: var(--text-faint);
-  font-size: 13px; padding: 6px; border-radius: 8px; line-height: 1;
-}
-.modal-x:hover { color: var(--text); background: var(--bg-assistant); }
 .modal-label { font-size: 12.5px; font-weight: 700; color: var(--text-secondary); }
 .modal-input {
   width: 100%; border: 1px solid var(--border); border-radius: 10px;

@@ -3,6 +3,7 @@ import { useModalDialog } from './useModalDialog';
 import type { JSX } from 'react';
 import type { Project } from '../types';
 import { ShellIcon } from './ShellIcon';
+import { CloseButton } from './CloseButton';
 import { ProjectIcon, ProjectIdentityPicker } from './ProjectIdentity';
 import { ContextMenu, ConfirmDialog } from './ContextMenu';
 import { PlusIcon } from './Icons';
@@ -198,7 +199,7 @@ function CreateProjectModal({
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h2>Create a project</h2>
-          <button className="modal-x" onClick={onClose} title="Close">✕</button>
+          <CloseButton onClick={onClose}/>
         </div>
 
         <ProjectIdentityPicker icon={icon} color={color} onChange={(i,c)=>{setIcon(i);setColor(c);}}/>

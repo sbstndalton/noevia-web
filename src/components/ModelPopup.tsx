@@ -2,6 +2,7 @@ import { matchesModelUse } from '../model-guidance';
 import { useModelsChanged } from '../models-changed';
 import { useCallback, useEffect, useState } from 'react';
 import { useModalDialog } from './useModalDialog';
+import { CloseButton } from './CloseButton';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, Provider, Toolbox } from '../types';
 import type { AutoRoles, McpStatus } from '../api';
@@ -33,7 +34,7 @@ export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged
         <header className="mp-head">
           <h2>{activeProject ? activeProject.name : 'Model'}</h2>
           <button className="popup-tab" onClick={openSettings}>Model settings</button>
-          <button className="shell-icon-button" onClick={onClose} title="Close" aria-label="Close">✕</button>
+          <CloseButton onClick={onClose}/>
         </header>
         <div className="mp-body">
           <ModelChooser projects={projects} activeProject={activeProject} onChanged={onProjectsChanged} onOpenSettings={openSettings} />

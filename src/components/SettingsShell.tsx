@@ -7,6 +7,7 @@ import { fetchProfile } from '../api';
 import { PreviewPanel } from './PreviewPanel';
 import { UsageView } from './UsageView';
 import { ShellIcon } from './ShellIcon';
+import { CloseButton } from './CloseButton';
 
 type Item = [id: string, label: string];
 type Group = { name: string; items: Item[]; admin?: boolean };
@@ -118,7 +119,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
       </nav>
     </aside>
     <section className="settings-detail">
-      <header><span>{title}</span><button className="shell-icon-button" aria-label="Close settings" onClick={props.onClose}><ShellIcon name="close"/></button></header>
+      <header><span>{title}</span><CloseButton onClick={props.onClose} label="Close settings"/></header>
       <div className="settings-detail-scroll" key={section}>
         <SettingsPanelBoundary>
         {['profile', 'users', 'diary', 'providers', 'models', 'status'].includes(section) ? (

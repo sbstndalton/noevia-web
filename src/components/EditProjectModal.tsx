@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import type { InstalledModel, Project } from '../types';
 import { ShellIcon } from './ShellIcon';
+import { CloseButton } from './CloseButton';
 
 /** Project identity and behavior. Reference files are managed on Sources. */
 export function EditProjectModal({
@@ -61,7 +62,7 @@ export function EditProjectModal({
     >
       <header>
         <h2>Edit project</h2>
-        <button className="modal-x" onClick={onClose} aria-label="Close">✕</button>
+        <CloseButton onClick={onClose}/>
       </header>
 
       <div className="edit-project-body">
