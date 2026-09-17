@@ -14,7 +14,7 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'downloa
   const [results, setResults] = useState<Result[] | null>(null), [searching, setSearching] = useState(false), [error, setError] = useState('');
   const [repo, setRepo] = useState<{ repo: string; groups: Group[]; gated?: string; error?: string } | null>(null), [repoBusy, setRepoBusy] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]), [message, setMessage] = useState('');
-  const finished = useRef(new Set<string>());
+  const finished = useRef(new Set<string>()), seeded = useRef(false);
   const [targets, setTargets] = useState<{ id: string; label: string; path: string }[]>([]), [saveTo, setSaveTo] = useState('');
   useEffect(() => { void mm<{ targets: { id: string; label: string; path: string }[] }>('download-targets').then(v => setTargets(v.targets || [])).catch(() => undefined); }, []);
   const [target, setTarget] = useState<{ path: string; hostPath?: string | null; disk?: { freeH: string } | null } | null>(null);
@@ -33,6 +33,8 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'downloa
   const refreshJobs = async () => {
     try {
       const v = await mm<{ jobs: Job[] }>('downloads'); setJobs(v.jobs);
+      // Jobs already done on the first read finished earlier (possibly deleted since): never re-register them.
+      if (!seeded.current) { seeded.current = true; v.jobs.filter(j => j.status === 'done').forEach(j => finished.current.add(j.id)); }
       const done = v.jobs.filter(j => j.status === 'done' && !finished.current.has(j.id));
       if (done.length) {
         done.forEach(j => finished.current.add(j.id));

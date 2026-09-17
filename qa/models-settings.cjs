@@ -182,8 +182,9 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  assert.ok(safeDefaults.includes('later-model-Q4_K_M'));
  assert.deepEqual(reloads.at(-1),{unload:false});
  await dialog.getByText(/Registered later-model-Q4_K_M with safe defaults \(8K context, MTP draft head\)\. Qwen-9B is loaded/).waitFor();if(process.env.QA_SCREENSHOTS)await page.screenshot({path:process.env.QA_SCREENSHOTS+'/models-safe-defaults.png'});
- // A registration the manager refused leaves the manual path in place.
- assert.ok(safeDefaults.includes('new-model-Q4_K_M'));
+ // A download that was already finished before this page opened is never auto-registered
+ // again (it may have been deleted on purpose); the manual path stays.
+ assert.ok(!safeDefaults.includes('new-model-Q4_K_M'));
  assert.match(await dialog.getByTestId('download-setup-needed').innerText(),/This file is downloaded but not yet a model/);
  assert.equal(await dialog.getByRole('button',{name:'Review settings'}).count(),1);
 

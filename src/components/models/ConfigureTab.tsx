@@ -147,6 +147,8 @@ const SPEC_CHOICES: [string, string, string][] = [
 ];
 const KV_CHOICES: [string, string][] = [['', 'Engine default'], ['f16', 'Full precision (f16)'], ['q8_0', 'Balanced (q8_0)'], ['q4_0', 'Smallest (q4_0)']];
 
+// Easy exposes speculative decoding and KV cache type; tuning must not override what was picked.
+const keepChoices = (draft: Record<string, string>) => Object.fromEntries(['spec-type', 'cache-type-k', 'cache-type-v'].filter(k => draft[k]).map(k => [k, draft[k]]));
 // The common path: let autoconfig size the context to this machine's memory, and
 // expose only the two choices people actually weigh. Advanced keeps every field.
 function EasySettings({ name, draft, busy, onChange, onUseTuned }: { name: string; draft: Record<string, string>; busy: boolean; onChange: (patch: Record<string, string>) => void; onUseTuned: (values: Record<string, string>, displaced: string[]) => Promise<void> }) {
@@ -154,7 +156,7 @@ function EasySettings({ name, draft, busy, onChange, onUseTuned }: { name: strin
   const tune = async () => {
     setTuning(true); setError('');
     const spec = ({ 'draft-mtp': 'balanced', 'ngram-simple': 'ngram', none: 'off' } as Record<string, string>)[draft['spec-type'] || ''] || '';
-    try { setAuto(await mm<Auto>(`sections/${encodeURIComponent(name)}/autoconfig?${new URLSearchParams({ sessions: '1', spec })}`)); }
+    try { setAuto(await mm<Auto>(`sections/${encodeURIComponent(name)}/autoconfig?${new URLSearchParams({ sessions: '1', spec, vision: String(Boolean(draft.mmproj)) })}`)); }
     catch (e) { setError(errorText(e, 'Tuning failed')); } finally { setTuning(false); }
   };
   const rec = auto?.recommendation;
@@ -169,7 +171,7 @@ function EasySettings({ name, draft, busy, onChange, onUseTuned }: { name: strin
     {failure && <p role="alert" className="modal-err">{failure}</p>}
     {rec && !failure && <div className="mm-easy-result" role="status">
       <p>Recommended: <strong>{ctxShort(rec.recommended_ctx)} tokens</strong> on {rec.recommended_backend}{rec.fits_full_gpu ? ', entirely on the GPU' : ''}.</p>
-      <button className="modal-btn primary" disabled={busy} onClick={() => void onUseTuned(rec.values, rec.displaced)}>Use and save</button>
+      <button className="modal-btn primary" disabled={busy} onClick={() => void onUseTuned({ ...rec.values, ...keepChoices(draft) }, rec.displaced)}>Use and save</button>
     </div>}
     <label>Speculative decoding (MTP)<select value={draft['spec-type'] || ''} onChange={e => onChange({ 'spec-type': e.target.value })}>
       {SPEC_CHOICES.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
