@@ -24,10 +24,16 @@ export interface CodeTask {
   identityHash: string | null;
   result: { stopReason?: string; branch?: string; tools?: number; approvals?: number; allowed?: number; refused?: number; denied?: number } | null;
 }
+export interface Harness { id: string; label: string; version: string | null }
+export interface PreparationMode { id: string; label: string; available: boolean; reason: string }
 export interface CodeState {
-  repositories: { id: string }[]; capabilities: CodeAction[]; defaultCapabilities: CodeAction[]; tasks: CodeTask[];
+  repositories: { id: string }[]; capabilities: CodeAction[]; defaultCapabilities: CodeAction[];
+  harnesses: Harness[]; promptPreparation: PreparationMode[]; sandboxed: boolean; tasks: CodeTask[];
 }
-export interface StartTask { repository: string; prompt: string; capabilities: CodeAction[]; domains: string[] }
+export interface StartTask {
+  repository: string; prompt: string; capabilities: CodeAction[]; domains: string[];
+  harness?: string; promptPreparation?: string;
+}
 
 async function read<T>(response: Response): Promise<T> {
   let body: unknown = null;

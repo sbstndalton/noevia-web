@@ -43,7 +43,12 @@ const TASK='12345678-1234-4234-8234-123456789012';
        meta:{harness:'opencode',harnessVersion:'1.18.31',protocolVersion:1,usage:null,commands:2,failedCommands:1,turns:3,
          limitations:['The harness did not report token usage.']},identityHash:'a'.repeat(64)})];return r.fulfill({json:tasks[0]});}
      if(method==='POST'){posts.push(['start',r.request().postDataJSON()]);tasks=[task({status:'waiting_approval',approval:approval()})];return r.fulfill({status:202,json:{taskId:TASK,branch:'noevia/task-1234'}});}
-     return r.fulfill({json:{repositories:[{id:'noevia'},{id:'scratch'}],capabilities:CAPS,defaultCapabilities:['read_repository','edit_file','execute_command'],tasks}});
+     return r.fulfill({json:{repositories:[{id:'noevia'},{id:'scratch'}],capabilities:CAPS,
+       defaultCapabilities:['read_repository','edit_file','execute_command'],
+       harnesses:[{id:'opencode',label:'OpenCode',version:'1.18.31'}],
+       promptPreparation:[{id:'direct',label:'Direct',available:true,reason:'Your request goes to the model as you wrote it.'},
+         {id:'local',label:'Local architect',available:false,reason:'Not offered yet: as an architect the 4B returned 0 of 18 usable execution prompts.'}],
+       sandboxed:true,tasks}});
    });
 
    await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
@@ -54,6 +59,15 @@ const TASK='12345678-1234-4234-8234-123456789012';
    await page.evaluate(()=>window.dispatchEvent(new Event('noevia:features-changed')));
    await page.getByRole('tab',{name:'Code'}).click();
 
+   // One harness: stated as the fact it is, not a dropdown pretending to offer a choice.
+   await page.getByText('OpenCode 1.18.31').waitFor();
+   assert.equal(await page.getByRole('combobox',{name:'Harness'}).count(),0,'a one-option dropdown is a lie about choice');
+   await page.getByText(/The harness runs in the sandbox container/).waitFor();
+   // Prompt preparation offers Direct; a mode without evidence is present but not selectable.
+   const prep=page.getByLabel('Prompt preparation');
+   assert.deepEqual(await prep.locator('option').evaluateAll(os=>os.map(o=>[o.textContent,o.disabled])),
+     [['Direct',false],['Local architect — not available',true]]);
+   await page.getByText('Your request goes to the model as you wrote it.').waitFor();
    // Domains only appear once a capability needs them.
    assert.equal(await page.getByLabel('Domains it may reach').count(),0,'domains asked for without a network capability');
    await page.getByLabel('Install dependencies').check();
@@ -64,7 +78,8 @@ const TASK='12345678-1234-4234-8234-123456789012';
    if(shots)await page.screenshot({path:`${shots}/code-compose-${width}-${theme}.png`,fullPage:true});
    await page.getByRole('button',{name:'Start task'}).click();
    assert.deepEqual(posts.at(-1),['start',{repository:'scratch',prompt:'Fix the median bug',
-     capabilities:['read_repository','edit_file','execute_command','install_dependency'],domains:['registry.npmjs.org','not a domain']}]);
+     capabilities:['read_repository','edit_file','execute_command','install_dependency'],
+     harness:'opencode',promptPreparation:'direct',domains:['registry.npmjs.org','not a domain']}]);
 
    // The gate: three answers, arguments in full.
    await page.getByRole('heading',{name:'Fix the median bug'}).waitFor();

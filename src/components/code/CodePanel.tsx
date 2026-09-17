@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { cancelTask, decideTask, fetchCode, startTask } from './api';
-import type { CodeAction, CodeApproval, CodeState, CodeTask } from './api';
+import type { CodeAction, CodeApproval, CodeState, CodeTask, PreparationMode } from './api';
 import { EmptyState } from '../EmptyState';
 import { ShellIcon } from '../ShellIcon';
 import './code.css';
@@ -27,9 +27,16 @@ export function CodePanel({ projectId }: { projectId: string }): JSX.Element {
   const [repository, setRepository] = useState('');
   const [capabilities, setCapabilities] = useState<CodeAction[] | null>(null);
   const [domains, setDomains] = useState('');
+  const [harness, setHarness] = useState('');
+  const [preparation, setPreparation] = useState('direct');
 
   const load = useCallback(() => fetchCode(projectId)
-    .then(next => { setState(next); setCapabilities(current => current ?? next.defaultCapabilities); setRepository(current => current || next.repositories[0]?.id || ''); })
+    .then(next => {
+      setState(next);
+      setCapabilities(current => current ?? next.defaultCapabilities);
+      setRepository(current => current || next.repositories[0]?.id || '');
+      setHarness(current => current || next.harnesses[0]?.id || '');
+    })
     .catch(e => setError((e as Error).message)), [projectId]);
 
   useEffect(() => { load(); }, [load]);
@@ -71,6 +78,39 @@ export function CodePanel({ projectId }: { projectId: string }): JSX.Element {
         </select>
       </div>
 
+      <div className="code-choices">
+        {/* One harness per deployment today. A select holding a single option is a dropdown
+            that lies about offering a choice, so with one it reads as the fact it is — and a
+            <p> is not a labelable element, so it carries its own label text. */}
+        {state.harnesses.length > 1
+          ? <div className="code-field">
+              <label htmlFor="code-harness">Harness</label>
+              <select id="code-harness" value={harness} disabled={running || !!busy} onChange={e => setHarness(e.target.value)}>
+                {state.harnesses.map(h => <option key={h.id} value={h.id}>{h.label}{h.version ? ` ${h.version}` : ''}</option>)}
+              </select>
+            </div>
+          : <div className="code-field">
+              <p className="code-fact"><span>Harness</span>{state.harnesses[0]
+                ? `${state.harnesses[0].label}${state.harnesses[0].version ? ` ${state.harnesses[0].version}` : ''}`
+                : 'None configured on this server'}</p>
+            </div>}
+        <div className="code-field">
+          <label htmlFor="code-preparation">Prompt preparation</label>
+          <select id="code-preparation" value={preparation} disabled={running || !!busy} onChange={e => setPreparation(e.target.value)}>
+            {state.promptPreparation.map(m => <option key={m.id} value={m.id} disabled={!m.available}>
+              {m.label}{m.available ? '' : ' — not available'}</option>)}
+          </select>
+          <PreparationNote mode={state.promptPreparation.find(m => m.id === preparation)}/>
+        </div>
+      </div>
+
+      {/* Where the harness runs is a security fact, not a setting, so it is stated either way. */}
+      <p className={`code-note${state.sandboxed ? '' : ' is-error'}`}>
+        {state.sandboxed
+          ? 'The harness runs in the sandbox container: no credentials, and no network except the domains below.'
+          : 'This server runs the harness beside noevia itself. An administrator should point CODE_HARNESS_ENDPOINT at the sandbox container.'}
+      </p>
+
       <div className="code-field">
         <label htmlFor="code-prompt">What should it do?</label>
         <textarea id="code-prompt" rows={3} maxLength={8000} value={prompt} disabled={noRepositories || running || !!busy}
@@ -99,7 +139,7 @@ export function CodePanel({ projectId }: { projectId: string }): JSX.Element {
       <div className="code-actions">
         <button type="button" className="btn btn-primary" disabled={!prompt.trim() || !repository || running || !!busy}
           onClick={() => act('start', async () => {
-            await startTask(projectId, { repository, prompt, capabilities,
+            await startTask(projectId, { repository, prompt, capabilities, harness, promptPreparation: preparation,
               domains: domains.split(',').map(d => d.trim()).filter(Boolean) });
             setPrompt('');
           })}>{busy === 'start' ? 'Starting…' : 'Start task'}</button>
@@ -137,6 +177,11 @@ function TaskCard({ task, busy, onDecide, onCancel }: {
     {task.meta && !active && <TaskMeta meta={task.meta}/>}
     {active && <div className="code-actions"><button type="button" className="btn btn-secondary" onClick={onCancel} disabled={!!busy}>Cancel task</button></div>}
   </article>;
+}
+
+/** Why a preparation mode is or is not on offer — the measurement, in its own words. */
+function PreparationNote({ mode }: { mode?: PreparationMode }): JSX.Element | null {
+  return mode ? <p className="code-note">{mode.reason}</p> : null;
 }
 
 /**

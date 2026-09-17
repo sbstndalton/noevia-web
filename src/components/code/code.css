@@ -11,11 +11,15 @@
 }
 .code-field textarea { min-height: 76px; resize: vertical; }
 .code-field select:focus-visible, .code-field input:focus-visible, .code-field textarea:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.code-choices { display: flex; flex-wrap: wrap; gap: 12px 20px; }
+.code-choices > .code-field { flex: 1 1 260px; min-width: 0; }
 .code-capabilities { margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; }
 .code-capabilities legend { padding: 0 4px; font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); }
 .code-capability-list { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; }
 .code-capability { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: var(--text-footnote); }
 .code-capability input { width: 18px; height: 18px; accent-color: var(--accent); }
+.code-fact { display: flex; flex-direction: column; gap: 4px; margin: 0; font-size: var(--text-callout); }
+.code-fact > span { font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); }
 .code-note { margin: 0; font-size: var(--text-caption); line-height: 1.5; color: var(--text-secondary); }
 .code-note.is-error { color: var(--danger); }
 .code-note code { font-size: var(--text-caption2); }
@@ -45,6 +49,7 @@
 
 @media (max-width: 640px) {
   .code-compose { padding: 14px; }
+  .code-choices { flex-direction: column; gap: 12px; }
   .code-capability-list { flex-direction: column; gap: 0; }
   .code-actions .btn, .code-approval-actions .btn { width: 100%; }
 }
