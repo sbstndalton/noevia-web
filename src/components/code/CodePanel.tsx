@@ -134,8 +134,29 @@ function TaskCard({ task, busy, onDecide, onCancel }: {
     {task.result && !active && <p className="code-meta">
       {task.result.tools ?? 0} tool calls · {task.result.allowed ?? 0} allowed · {task.result.refused ?? 0} declined · {task.result.denied ?? 0} refused by noevia
     </p>}
+    {task.meta && !active && <TaskMeta meta={task.meta}/>}
     {active && <div className="code-actions"><button type="button" className="btn btn-secondary" onClick={onCancel} disabled={!!busy}>Cancel task</button></div>}
   </article>;
+}
+
+/**
+ * What the harness reported — and what it did not. The limitations are shown, not hidden: a
+ * run that could not say how many tokens it used is not evidence that it used none, and §1's
+ * whole point is showing evidence rather than a score.
+ */
+function TaskMeta({ meta }: { meta: NonNullable<CodeTask['meta']> }): JSX.Element {
+  const parts = [
+    meta.harnessVersion ? `${meta.harness || 'harness'} ${meta.harnessVersion}` : meta.harness,
+    meta.usage ? `${meta.usage.total?.toLocaleString()} tokens` : null,
+    meta.commands ? `${meta.commands} command${meta.commands === 1 ? '' : 's'}${meta.failedCommands ? `, ${meta.failedCommands} failed` : ''}` : null,
+  ].filter(Boolean);
+  return <>
+    {parts.length > 0 && <p className="code-meta">{parts.join(' · ')}</p>}
+    {meta.limitations.length > 0 && <details className="code-limitations">
+      <summary>Not reported by this harness ({meta.limitations.length})</summary>
+      <ul>{meta.limitations.map(l => <li key={l}>{l}</li>)}</ul>
+    </details>}
+  </>;
 }
 
 /**

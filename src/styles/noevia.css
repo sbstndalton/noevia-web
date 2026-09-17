@@ -1912,3 +1912,9 @@ body { isolation:isolate; background:var(--bg-app); }
 .mm-empty-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .mm-empty-actions .popup-tab { min-height: 40px; }
 @media (pointer: coarse), (max-width: 640px) { .mm-empty-actions .popup-tab { min-height: 44px; } }
+
+/* What a coding run could not say about itself. Quiet, but never hidden. */
+.code-limitations { font-size: var(--text-caption); color: var(--text-secondary); }
+.code-limitations > summary { min-height: 40px; display: flex; align-items: center; cursor: pointer; }
+.code-limitations ul { margin: 0 0 4px; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; line-height: 1.5; }
+@media (pointer: coarse), (max-width: 640px) { .code-limitations > summary { min-height: 44px; } }

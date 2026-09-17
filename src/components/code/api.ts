@@ -15,6 +15,13 @@ export interface CodeTask {
   capabilities: CodeAction[]; steps: { id: string; title: string; status: string }[];
   plan: { status: string; subQuestions: string[] } | null;
   approval: CodeApproval | null;
+  /** What the harness reported about the run — and, in `limitations`, what it did not. */
+  meta: {
+    harness: string | null; harnessVersion: string | null; protocolVersion: number | null;
+    usage: { input: number | null; output: number | null; total: number | null } | null;
+    commands: number; failedCommands: number; turns: number; limitations: string[];
+  } | null;
+  identityHash: string | null;
   result: { stopReason?: string; branch?: string; tools?: number; approvals?: number; allowed?: number; refused?: number; denied?: number } | null;
 }
 export interface CodeState {
