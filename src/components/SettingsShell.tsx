@@ -8,6 +8,7 @@ import { PreviewPanel } from './PreviewPanel';
 import { UsageView } from './UsageView';
 import { ShellIcon } from './ShellIcon';
 import { CloseButton } from './CloseButton';
+import { FeatureSettings } from './features/FeatureSettings';
 
 type Item = [id: string, label: string];
 type Group = { name: string; items: Item[]; admin?: boolean };
@@ -40,12 +41,13 @@ const ADMIN: Item[] = [
   ['users', 'Users'],
   ['models', 'Models & routing'],
   ['status', 'Service status'],
+  ['features', 'Features'],
 ];
 
 const ICONS: Record<string, string> = {
   profile: 'user', security: 'settings', appearance: 'sun', capabilities: 'grid', users: 'user', usage: 'grid',
   models: 'settings', status: 'settings', providers: 'settings',
-  diary: 'folder', planned: 'grid',
+  diary: 'folder', planned: 'grid', features: 'grid',
 };
 
 // What used to be one navigation row each. Kept visible as a roadmap, but in
@@ -132,6 +134,8 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
         ) : section === 'appearance' ? (
           <AppearanceSettings theme={props.theme} onTheme={props.onTheme} appearanceStatus={props.appearanceStatus}
             appearanceError={props.appearanceError} retryAppearance={props.retryAppearance} />
+        ) : section === 'features' && isAdmin ? (
+          <FeatureSettings />
         ) : section === 'capabilities' ? (
           <CapabilitiesSettings />
         ) : section === 'usage' ? (

@@ -26,6 +26,8 @@ interface SidebarProps {
   onNewProjectChat: (projectId: string) => void;
   onEnterCode: () => void;
   onPreview: (title: string) => void;
+  /** features.previews: show the unbuilt Scheduled/Plugins/Explore and Code surfaces. */
+  showPreviews?: boolean;
   onOpenProjects: () => void;
   onOpenProject: (id: string) => void;
   onOpenChat: (chatId: string, projectId: string | null) => void;
@@ -46,9 +48,8 @@ interface SidebarProps {
 
 // Scheduled, Plugins and Explore all route to PreviewPanel and do nothing.
 // Advertising three features that dead-end is itself what makes the product
-// feel unfinished, so they stay hidden until they execute. Flip to true to
-// restore them — the nav markup below is unchanged.
-const SHOW_PLACEHOLDER_NAV = false;
+// feel unfinished, so they stay hidden unless an admin turns on features.previews
+// (D5). The Code mode switch is gated the same way.
 
 function statusText(health: HealthState): string {
   if (health.inferenceUp) return 'Inference · online';
@@ -66,6 +67,7 @@ export function Sidebar({
   onNewProjectChat,
   onEnterCode,
   onPreview,
+  showPreviews = false,
   onOpenProjects,
   onOpenProject,
   onOpenChat,
@@ -329,7 +331,7 @@ export function Sidebar({
       }}
     >
       <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? 'Close navigation' : collapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button><button className="shell-icon-button" aria-label={theme==='dark'?'Switch to Polymetal Day':'Switch to Polymetal Night'} title={theme==='dark'?'Polymetal Day':'Polymetal Night'} onClick={onToggleTheme}><ShellIcon name="sun"/></button><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
-      <div className="app-mode-switch" aria-label="Workspace mode"><button className="is-selected" aria-pressed="true"><ShellIcon name="chat"/>Chat</button><button onClick={onEnterCode} aria-pressed="false"><ShellIcon name="code"/>Code</button></div>
+      {showPreviews && <div className="app-mode-switch" aria-label="Workspace mode"><button className="is-selected" aria-pressed="true"><ShellIcon name="chat"/>Chat</button><button onClick={onEnterCode} aria-pressed="false"><ShellIcon name="code"/>Code</button></div>}
       {searching&&<input className="shell-search" autoFocus aria-label="Search projects and chats" placeholder="Search projects and chats…" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');}}}/>}
 
       <button className="new-chat-btn" onClick={()=>{onNewChat();setExpanded(false);}} title="New chat">
@@ -348,7 +350,7 @@ export function Sidebar({
         </button>
       </div>
 
-      {SHOW_PLACEHOLDER_NAV && <nav className="shell-extra-nav" aria-label="Explore noevia">{[['Scheduled','clock'],['Plugins','plugins'],['Explore','explore']].map(([label,icon])=><button className="nav-item" key={label} onClick={()=>onPreview(label)}><ShellIcon name={icon}/><span className="nav-name">{label}</span></button>)}</nav>}
+      {showPreviews && <nav className="shell-extra-nav" aria-label="Explore noevia">{[['Scheduled','clock'],['Plugins','plugins'],['Explore','explore']].map(([label,icon])=><button className="nav-item" key={label} onClick={()=>onPreview(label)}><ShellIcon name={icon}/><span className="nav-name">{label}</span></button>)}</nav>}
       <div className="rail-tools"><button className="shell-icon-button" aria-label="Search projects and chats" onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(true);}}><ShellIcon name="search"/></button><button className="shell-icon-button" aria-label="Show pinned items" onClick={()=>{setCollapsed(false);setExpanded(true);setClosedGroups(g=>({...g,Pinned:false}));}}><ShellIcon name="pin"/></button></div>
       <div className="sidebar-history">
       {['Pinned','Projects'].map(group => {

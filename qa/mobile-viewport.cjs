@@ -7,6 +7,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  const browser=await chromium.launch({headless:true,channel:'chrome'});
  const errors=[];
  async function addContext(page){
+   await page.route('**/api/features',route=>route.fulfill({json:{flags:{previews:true}}}));
    await page.route('**/api/chats/*/context',route=>route.fulfill({json:{project:{id:'synthetic-mobile-context',name:'Synthetic mobile context',model:'Synthetic reasoning model with a long name',files:[],assets:[],toolboxes:['core']}}}));
  }
  async function reachable(locator,height){

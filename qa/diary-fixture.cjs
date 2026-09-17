@@ -26,6 +26,8 @@ function createFixture(port = 31239) {
     if(process.env.LOCAL_RECOVERY_QA==='1' && url.pathname==='/api/qa/state'){if(body.user)syntheticUser=String(body.user);return json({requests:requests.map(r=>r.path),user:syntheticUser});}
     const user={id:syntheticUser,username:'fixture',displayName:'Synthetic diary QA',role:'member',diaryEnabled:true,onboarded:true};
     if(url.pathname==='/api/setup/status')return json({configured:true});
+    // Product default (previews off); suites that exercise the Code preview route this to true.
+    if(url.pathname==='/api/features')return json({flags:{previews:false}});
     if(['/api/auth/session','/api/profile'].includes(url.pathname))return json({user,passkeys:[]});
     if(url.pathname==='/api/workspace')return json({projects:[],freeChats:[]});
     if(url.pathname==='/api/health')return json({inferenceUp:true,diaryUp:true});

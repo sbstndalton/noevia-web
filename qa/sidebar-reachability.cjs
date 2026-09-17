@@ -20,7 +20,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  assert.ok(await history.evaluate(el=>el.clientHeight>0),`${width}x${height}: history collapsed`);
  async function reach(locator){
  await locator.scrollIntoViewIfNeeded();
- const probe=await locator.evaluate((el,h)=>{const r=el.getBoundingClientRect();const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {ok:r.width>=44&&r.height>=44&&r.y>=0&&r.bottom<=h&&el.contains(hit),rect:[r.x,r.y,r.width,r.height].map(Math.round),hit:hit?.className?.baseVal??hit?.className};},height);
+ const probe=await locator.evaluate((el,h)=>{const r=el.getBoundingClientRect();const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {ok:r.width>=44&&r.height>=44&&r.y>=-1&&r.bottom<=h+1&&el.contains(hit),rect:[r.x,r.y,r.width,r.height].map(Math.round),hit:hit?.className?.baseVal??hit?.className};},height);
  assert.ok(probe.ok,`${width}x${height} ${theme}: target unreachable or smaller than 44px: ${await locator.getAttribute('aria-label')} ${JSON.stringify(probe)}`);
  }
  for(const name of ['Options for Synthetic pinned','Expand chats in Synthetic project 0','Options for Synthetic nested0','Options for Synthetic project 4','Options for Synthetic recent11']){

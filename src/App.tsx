@@ -41,6 +41,7 @@ import { ModelPopup } from './components/ModelPopup';
 import { ProjectView } from './components/ProjectView';
 import { Coding, Diary, ModelManager, Projects, Settings, prefetchViewsWhenIdle } from './lazy-views';
 import { FeaturePreview } from './components/PreviewPanel';
+import { useFeatureFlags } from './components/features/useFeatureFlags';
 import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
 import { Inspector } from './components/Inspector';
@@ -66,6 +67,10 @@ export default function App(): JSX.Element {
   useEffect(() => { const open = () => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models' }); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account'); return fresh; });
   const [appMode, setAppMode] = useState<'chat'|'code'>('chat');
+  const featureFlags = useFeatureFlags();
+  const showPreviews = featureFlags.previews === true;
+  // Turning previews off while in Code must not leave both workspaces hidden.
+  useEffect(() => { if (!showPreviews && appMode === 'code') setAppMode('chat'); }, [showPreviews, appMode]);
   const [view, setView] = useState<View>(() => ({ kind: 'chat', chatId: `c-${uid()}`, projectId: null }));
   const [projects, setProjects] = useState<Project[]>([]);
   const [freeChats, setFreeChats] = useState<ChatMeta[]>([]);
@@ -750,10 +755,11 @@ export default function App(): JSX.Element {
 
   return (
     <div className="app">
-      <div className="regular-workspace" style={{display:appMode==='chat'?'contents':'none'}}>
+      <div className="regular-workspace" style={{display:appMode==='chat'||!showPreviews?'contents':'none'}}>
       <Sidebar
         onEnterCode={() => setAppMode('code')}
         onPreview={(title) => setView({kind:'preview',title})}
+        showPreviews={showPreviews}
         projects={projects}
         chats={allChats}
         activeView={view.kind}
@@ -781,7 +787,7 @@ export default function App(): JSX.Element {
       <div className="app-stack">
       <div className="app-main">
 
-      {view.kind === 'preview' && <FeaturePreview title={view.title}/> }
+      {view.kind === 'preview' && showPreviews && <FeaturePreview title={view.title}/> }
       {view.kind === 'models' && (
         <Suspense fallback={null}>
           <ModelManager.View onBack={() => openSettings('models')} models={models} routes={routes} projects={projects} modelsError={modelsError} />
@@ -883,7 +889,7 @@ export default function App(): JSX.Element {
       )}
 
       </div>
-      {appMode === 'code'  && <Suspense fallback={null}><Coding.View onExit={() => setAppMode('chat')} onSettings={openSettings} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/></Suspense>}
+      {appMode === 'code' && showPreviews && <Suspense fallback={null}><Coding.View onExit={() => setAppMode('chat')} onSettings={openSettings} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/></Suspense>}
       {settingsOpen && (
         <Suspense fallback={null}>
         <Settings.View
