@@ -16,7 +16,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   recommended_backend:'cowork-llama-1',recommended_ctx:262144,recommended_total_ctx:262144,n_sessions:1,values:{'ctx-size':'262144',ngl:'999','flash-attn':'on',jinja:'true'},quirks:['Synthetic quirk.'],unavailable:[],current_diff:['ctx-size: 32768 → 262144'],displaced:['mmproj'],
   presets:[{key:'fast',label:'Fast',ctx:131072,n_cpu_moe:0,offload_kind:'',gpu_layers:32,total_layers:32,gpu_gb:5.5,kv_gb:2,speed_score:1,ngl:999},{key:'long-ctx',label:'Long context',ctx:262144,n_cpu_moe:0,offload_kind:'ngl',gpu_layers:30,total_layers:32,gpu_gb:5.2,kv_gb:4,speed_score:0.62,ngl:30}],
   frontier:[{key:'pt0',label:'',ctx:131072,n_cpu_moe:0,offload_kind:'',gpu_layers:32,total_layers:32,gpu_gb:5.5,kv_gb:2,speed_score:1,ngl:999},{key:'pt1',label:'',ctx:196608,n_cpu_moe:0,offload_kind:'ngl',gpu_layers:31,total_layers:32,gpu_gb:5.3,kv_gb:3,speed_score:0.8,ngl:31},{key:'pt2',label:'',ctx:262144,n_cpu_moe:0,offload_kind:'ngl',gpu_layers:30,total_layers:32,gpu_gb:5.2,kv_gb:4,speed_score:0.62,ngl:30}],
-  fits_full_gpu:false,native_ctx:262144,current_preset:'',active_preset:'fast',spec_profiles:[{key:'off',label:'Off',blurb:'No speculation.',spec_type:'',needs_head:false},{key:'balanced',label:'Balanced',blurb:'Needs a head.',spec_type:'draft-mtp',needs_head:true}],active_spec_profile:'off',current_spec_profile:'off',spec_head_rel:'',error:'',vision_available:'/models/q/mmproj.gguf',vision:true};
+  fits_full_gpu:false,native_ctx:262144,estimated_ctx:1048576,ctx_cap_reason:'prompt speed not measured yet; measure context to go higher',current_preset:'',active_preset:'fast',spec_profiles:[{key:'off',label:'Off',blurb:'No speculation.',spec_type:'',needs_head:false},{key:'balanced',label:'Balanced',blurb:'Needs a head.',spec_type:'draft-mtp',needs_head:true}],active_spec_profile:'off',current_spec_profile:'off',spec_head_rel:'',error:'',vision_available:'/models/q/mmproj.gguf',vision:true};
  await page.route('**/api/**',route=>{
   const req=route.request(),url=new URL(req.url()),p=url.pathname,m=req.method();calls.push(`${m} ${p}`);
   const json=(body,status=200)=>route.fulfill({status,json:body});
@@ -25,6 +25,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   if(p==='/api/models/capabilities')return json({kind:'llamacpp',admin:true,presets:true,download:true,runtimeOptions:false,modelManagement:true});
   if(p==='/api/models/installed')return json([{name:'Qwen-9B',labels:['vision'],loaded:true,sizeGB:5.6,maxContext:262144,source:'preset',canDelete:false,status:'loaded'},{name:'Gemma-E2B',labels:[],loaded:false,sizeGB:3,maxContext:131072,source:'preset',canDelete:false,status:'unloaded'},...(extraRegistered?[{name:'new-model-Q4_K_M',labels:[],loaded:false,sizeGB:2,maxContext:8192,source:'preset',canDelete:false,status:'unloaded'}]:[])]);
   if(p==='/api/models/calibration')return json({job:null,history:[]});
+  if(p.endsWith('/draft-heads'))return json({section:'Qwen-9B',local:'',builtinLayers:1,available:true,remote:[],mtpBuild:null,repo:null,modes:{}});
   if(p==='/api/models/presets/reload'){const b=body();reloads.push(b);return b.unload?json({reloaded:true,unloaded:['Qwen-9B']}):json({error:'A model is loaded.',loaded:['Qwen-9B']},409);}
   if(p==='/api/auto-roles'&&m==='GET')return json({configured:true,roles:{fast:'Qwen-9B',smart:'Gemma-4-E4B-it-GGUF'},missing:[{role:'smart',model:'Gemma-4-E4B-it-GGUF'}]});
   if(!p.startsWith('/api/model-manager/'))return p.startsWith('/api/models/')?json([]):route.continue();
@@ -84,7 +85,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  const yours=()=>tab('Your models');
  const discover=()=>tab('Discover');
  const fold=async name=>{const d=dialog.locator('details.mm-fold').filter({has:page.locator(`> summary:has-text("${name}")`)});if(!await d.evaluate(el=>el.open))await d.locator('> summary').click();await page.waitForTimeout(120);};
- const openModel=async name=>{await dialog.getByRole('article',{name}).getByRole('button',{name:'Settings'}).click();await dialog.getByRole('button',{name:'← All models'}).waitFor();};
+ const openModel=async name=>{await dialog.getByRole('article',{name}).getByRole('button',{name:'Tune'}).click();await dialog.getByRole('button',{name:'← All models'}).waitFor();};
  const backToList=()=>dialog.getByRole('button',{name:'← All models'}).click();
  // Your models is the default tab.
  await yours();
@@ -100,7 +101,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  assert.deepEqual(deleted,['g/Gemma-E2B.gguf']);assert.ok(calls.includes('DELETE /api/model-manager/sections/Gemma-E2B'));
  await dialog.getByRole('button',{name:'Create settings'}).first().waitFor();
  // Configure via Library → Settings
- await dialog.getByRole('article',{name:'Qwen-9B'}).getByRole('button',{name:'Settings'}).click();
+ await dialog.getByRole('article',{name:'Qwen-9B'}).getByRole('button',{name:'Tune'}).click();
  await dialog.getByRole('heading',{name:'Qwen-9B',level:3}).waitFor();
  await dialog.getByText('Raw file & backups').click();
  assert.match(await dialog.getByLabel('models.ini contents').innerText(),/\[Qwen-9B\]/);
@@ -113,9 +114,21 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  assert.equal(await dialog.getByLabel('Context size').count(),0,'the full form shows in Easy mode');
  await dialog.getByRole('button',{name:'Tune for this machine'}).click();
  await dialog.getByText(/Recommended: 256K tokens on cowork-llama-1/).waitFor();
+ // Why the recommendation is lower than memory allows, measured context on this machine, and MTP availability.
+ await dialog.getByText(/Memory would allow 1024K; limited because prompt speed not measured yet/).waitFor();
+ await dialog.getByText(/MTP layers built in/).waitFor();
+ await dialog.locator('.mm-easy-measure > summary').filter({hasText:'Measure context on this machine'}).waitFor();
  await dialog.getByLabel('KV cache quantisation').selectOption('q4_0');
  await dialog.getByLabel('Speculative decoding (MTP)').selectOption('ngram-simple');
- if(process.env.QA_SCREENSHOTS)await page.screenshot({path:process.env.QA_SCREENSHOTS+'/models-easy.png'});
+ if(process.env.QA_SCREENSHOTS){
+  for(const [w,theme] of [[1440,'light'],[1440,'dark'],[768,'light'],[768,'dark'],[375,'light'],[375,'dark']]){
+   await page.setViewportSize({width:w,height:950});await page.emulateMedia({colorScheme:theme,reducedMotion:'reduce'});
+   await dialog.getByText(/Memory would allow/).scrollIntoViewIfNeeded();if(w===1440&&theme==='light')await dialog.locator('.mm-easy-measure > summary').click();
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`easy overflow ${w}`);
+   await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/models-easy-${w}-${theme}.png`});
+  }
+  await page.setViewportSize({width:1440,height:950});await page.emulateMedia({colorScheme:'light',reducedMotion:'reduce'});
+ }
  await dialog.getByRole('button',{name:'Advanced',exact:true}).click();
  assert.equal(await page.evaluate(()=>localStorage.getItem('noevia:model-settings-mode')),'advanced');
  await dialog.getByLabel('Context size').waitFor();
@@ -183,9 +196,9 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  assert.ok(safeDefaults.includes('later-model-Q4_K_M'));
  assert.deepEqual(reloads.at(-1),{unload:false});
  await dialog.getByText(/Registered later-model-Q4_K_M with safe defaults \(8K context, MTP draft head\)\. Qwen-9B is loaded/).waitFor();if(process.env.QA_SCREENSHOTS)await page.screenshot({path:process.env.QA_SCREENSHOTS+'/models-safe-defaults.png'});
- // A download that was already finished before this page opened is never auto-registered
- // again (it may have been deleted on purpose); the manual path stays.
- assert.ok(!safeDefaults.includes('new-model-Q4_K_M'));
+ // Files that appear in the models folder are set up automatically, once per session (2026-09-17,
+ // user request); here the synthetic manager refuses, so the manual path stays and it is not retried.
+ assert.equal(safeDefaults.filter(x=>x==='new-model-Q4_K_M').length,1);
  assert.match(await dialog.getByTestId('download-setup-needed').innerText(),/This file is downloaded but not yet a model/);
  assert.equal(await dialog.getByRole('button',{name:'Review settings'}).count(),1);
 

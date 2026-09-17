@@ -57,7 +57,7 @@ type View =
   | { kind: 'diary' }
   | { kind: 'preview'; title: string }
   | { kind: 'projects' }
-  | { kind: 'models' }
+  | { kind: 'models'; model?: string }
   | { kind: 'project'; id: string }
   | { kind: 'chat'; chatId: string; projectId?: string | null };
 
@@ -69,8 +69,9 @@ export default function App(): JSX.Element {
   const {theme,preference,setTheme,setPreference,appearanceStatus,appearanceError,retryAppearance} = useAppearance();
   const [settingsSection,setSettingsSection] = useState<'general'|'usage'|'models'>('general');
   const openSettings = (section: 'general'|'usage'|'models' = 'general') => { setSettingsSection(section); setSettingsOpen(true); };
-  const openModelManager = () => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models' }); };
-  useEffect(() => { const open = () => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models' }); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
+  // `model` opens that model's tuning view directly; without it, the model list.
+  const openModelManager = (model?: string) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); };
+  useEffect(() => { const open = (e: Event) => { const model = (e as CustomEvent<{ model?: string }>).detail?.model; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account'); return fresh; });
   const [appMode, setAppMode] = useState<'chat'|'code'>('chat');
   const featureFlags = useFeatureFlags();
@@ -829,7 +830,7 @@ export default function App(): JSX.Element {
       {view.kind === 'preview' && showPreviews && <FeaturePreview title={view.title}/> }
       {view.kind === 'models' && (
         <Suspense fallback={null}>
-          <ModelManager.View onBack={() => openSettings('models')} models={models} routes={routes} projects={projects} modelsError={modelsError} />
+          <ModelManager.View key={view.model || 'list'} initialModel={view.model} onBack={() => openSettings('models')} models={models} routes={routes} projects={projects} modelsError={modelsError} />
         </Suspense>
       )}
       {view.kind === 'projects' && (
@@ -893,7 +894,7 @@ export default function App(): JSX.Element {
             refreshProjects();
             refreshModels();
           }}
-          onOpenModelSettings={() => { setPopupOpen(false); openModelManager(); }}
+          onOpenModelSettings={(model?: string) => { setPopupOpen(false); openModelManager(model); }}
         />
       )}
 
@@ -947,7 +948,7 @@ export default function App(): JSX.Element {
           health={health}
           stats={stats}
           onOpenModels={() => { setSettingsOpen(false); setAppMode('chat'); setPopupOpen(true); }}
-          onOpenModelManager={openModelManager}
+          onOpenModelManager={() => openModelManager()}
           diaryEnabled={diaryEnabled}
           onDiaryEnabledChange={(enabled) => {
             setDiaryEnabled(enabled);

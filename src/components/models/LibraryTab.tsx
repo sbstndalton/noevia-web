@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch, fetchInstalledModels } from '../../api';
 import type { InstalledModel } from '../../types';
 import { MtpControl } from '../MtpControl';
 import { NativeCalibration } from '../NativeCalibration';
 import { EvidenceList } from './EvidenceList';
 import { errorText, mm, tokens } from './mm';
+import { registerNewFolderModels } from './register';
 import { useModelsChanged } from '../../models-changed';
 
 type FileEntry = { key: string; name: string; subdir: string; bytes: number; size: string; modified: string; sharded: boolean; parts: number;
@@ -25,6 +26,9 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   const [updates, setUpdates] = useState<Record<string, Update>>({});
   const [disk, setDisk] = useState<{ freeH: string; totalH: string; usedPct: number } | null>(null);
   const [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(''), [filesNote, setFilesNote] = useState(''), [runtimeOptions, setRuntimeOptions] = useState(false);
+  // The parent passes a fresh callback each render; the refresh below must stay stable.
+  const changedRef = useRef(onChanged);
+  changedRef.current = onChanged;
   const refresh = useCallback(async () => {
     setError('');
     try {
@@ -33,6 +37,11 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
         apiFetch('/api/models/capabilities').then(r => r.json()).catch(() => ({})), mm<{ modelsDir?: { disk?: { freeH: string; totalH: string; usedPct: number } | null } }>('overview').catch(() => null)]);
       setDisk(overview?.modelsDir?.disk ?? null);
       setModels(installed); setFiles(local?.models || []); setUnregistered(local?.unregistered || []); setUpdates(upd.status); setRuntimeOptions(caps?.runtimeOptions === true);
+      if (local?.unregistered?.length) {
+        const synced = await registerNewFolderModels(local.unregistered);
+        if (synced.text) setMessage(synced.text);
+        if (synced.added.length) { changedRef.current(); return; }   // models-changed refetches this list
+      }
       setFilesNote(local ? '' : 'File details, downloads and settings need the model management service, which is not available on this server.');
     } catch (e) { setError(errorText(e, 'The model library is unavailable.')); }
   }, []);
@@ -113,7 +122,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
     {file?.badges && file.badges.length > 0 && <p className="model-card-meta">{file.badges.map(b => <span key={b.category} className="model-card-tag">{BADGE[b.category] || b.category} {b.rating}/5</span>)}</p>}
     <div className="model-card-actions">
       <button className="popup-tab" disabled={busy} onClick={onToggle}>{busy ? 'Working…' : m.loaded ? 'Unload' : 'Load'}</button>
-      <button className="popup-tab" onClick={onConfigure}>Settings</button>
+      <button className="popup-tab" onClick={onConfigure}>Tune</button>
       <button className="popup-tab" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Hide details' : 'Details'}</button>
       <DeleteModel model={m} file={file} onDeleted={onDeleted}/>
     </div>

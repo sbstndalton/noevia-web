@@ -49,6 +49,12 @@ const {createFixture}=require('./diary-fixture.cjs');
 
   assert.ok(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1),`overflow at ${width} ${theme}`);
   await page.screenshot({path:`/tmp/noevia-native-picker-${width}-${theme}.png`});
+  // Tune goes straight to that model's settings on the full model manager page.
+  const tune=dialog.getByRole('button',{name:'Tune Cold chat'});
+  assert.ok(await tune.isVisible(),`Tune not visible at ${width}`);
+  const box=await tune.boundingBox();assert.ok(box.height>=44,`Tune target ${box.height}px at ${width}`);
+  await tune.click();
+  await page.locator('.model-manager-page .mm-detail-head h1').filter({hasText:'Cold chat'}).waitFor();
   await page.close();
  }
  // A model deleted elsewhere: the composer stops naming it as the selection.
@@ -72,6 +78,6 @@ const {createFixture}=require('./diary-fixture.cjs');
   await page.close();
  }
  assert.deepEqual(errors,[]);assert.equal(fixture.requests.length,0);
- console.log('PASS chat model panel: auto summary with a settings link, manual list excluding embedding/reranking, tools kept, roles/loaded/MTP absent, three widths and both themes; deleted model reads No model selected, unreadable catalogue does not.');
+ console.log('PASS chat model panel: auto summary with a settings link, manual list excluding embedding/reranking, tools kept, roles/loaded/MTP absent, a Tune button per model opening its settings page, three widths and both themes; deleted model reads No model selected, unreadable catalogue does not.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

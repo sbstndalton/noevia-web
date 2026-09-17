@@ -28,11 +28,11 @@ const FILTERS: [ModelFilter, string][] = [['all', 'All models'], ['loaded', 'Loa
 //
 // Discover is the download flow, deliberately named for what it is rather than
 // for the mechanism — you are looking for a model you do not have yet.
-export function ModelsSettings({ models, routes, projects, modelsError }: { models: InstalledModel[]; routes: RouteRule[]; projects: Project[]; modelsError: string | null }): JSX.Element {
+export function ModelsSettings({ models, routes, projects, modelsError, initialModel = '' }: { models: InstalledModel[]; routes: RouteRule[]; projects: Project[]; modelsError: string | null; initialModel?: string }): JSX.Element {
   const [tab, setTab] = useState<'yours' | 'discover'>(() => {
     try { return sessionStorage.getItem('noevia-models-tab') === 'discover' ? 'discover' : 'yours'; } catch { return 'yours'; }
   });
-  const [open, setOpen] = useState<string>('');
+  const [open, setOpen] = useState<string>(initialModel);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<ModelSort>('name');
   const [filter, setFilter] = useState<ModelFilter>('all');

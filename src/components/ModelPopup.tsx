@@ -14,7 +14,7 @@ interface ModelPopupProps {
   activeProject: Project | null;
   onClose: () => void;
   onProjectsChanged: () => void;
-  onOpenModelSettings?: () => void;
+  onOpenModelSettings?: (model?: string) => void;
 }
 
 // The chat box's model control, and deliberately only that: pick Auto or one
@@ -27,14 +27,17 @@ interface ModelPopupProps {
 // nobody performs mid-conversation.
 export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged, onOpenModelSettings: openSettingsProp }: ModelPopupProps): JSX.Element {
   const dialog = useModalDialog();
-  const openSettings = openSettingsProp || (() => { onClose(); window.dispatchEvent(new Event('noevia:open-model-settings')); });
+  const openSettings = (model?: string) => {
+    if (openSettingsProp) return openSettingsProp(model);
+    onClose(); window.dispatchEvent(new CustomEvent('noevia:open-model-settings', { detail: { model } }));
+  };
   return (
     <dialog ref={dialog} className="native-modal model-dialog-backdrop" aria-label="Model and tools"
       onCancel={(e) => { e.preventDefault(); onClose(); }} onClick={onClose}>
       <div className="mp-panel" onClick={(e) => e.stopPropagation()}>
         <header className="mp-head">
           <h2>{activeProject ? activeProject.name : 'Model'}</h2>
-          <button className="popup-tab" onClick={openSettings}>Model settings</button>
+          <button className="popup-tab" onClick={() => openSettings()}>Model settings</button>
           <CloseButton onClick={onClose}/>
         </header>
         <div className="mp-body">
@@ -46,7 +49,7 @@ export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged
 }
 
 function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
-  projects: Project[]; activeProject: Project | null; onChanged: () => void; onOpenSettings: () => void;
+  projects: Project[]; activeProject: Project | null; onChanged: () => void; onOpenSettings: (model?: string) => void;
 }): JSX.Element {
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [modelsLoading, setModelsLoading] = useState(true);
@@ -116,7 +119,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
         {autoInfo?.configured
           ? <>Routing to <span className="mp-roles">{roleSummary(autoInfo.roles)}</span>. Harder questions go to Smart, the rest to Fast.</>
           : 'Auto has no models assigned yet, so replies fall back to the pinned model.'}
-        {' '}<button className="mp-link" onClick={onOpenSettings}>Change in model settings</button>
+        {' '}<button className="mp-link" onClick={() => onOpenSettings()}>Change in model settings</button>
       </p>
     ) : (
       <section className="mp-section">
@@ -146,17 +149,20 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
           </div>
         </> : <>
           {modelsLoading && <p role="status" className="rail-empty">Loading models…</p>}
-          {!modelsLoading && !err && !chatModels.length && <p role="status" className="rail-empty">No models installed. <button className="mp-link" onClick={onOpenSettings}>Download one</button></p>}
+          {!modelsLoading && !err && !chatModels.length && <p role="status" className="rail-empty">No models installed. <button className="mp-link" onClick={() => onOpenSettings()}>Download one</button></p>}
           <div className="mp-models">
-            {chatModels.map((m) => <button key={m.name} className="model-row mp-model" aria-pressed={activeProject.model === m.name}
-              disabled={busy !== null} onClick={() => void save(m.name, { model: m.name })}>
-              <span className={`model-dot${m.loaded ? '' : ' down'}`} />
-              <div className="model-name-group">
-                <span className="model-name">{m.name}</span>
-                {m.sizeGB != null && <span className="model-quant">{m.sizeGB} GB</span>}
-              </div>
-              <span className="model-role">{busy === m.name ? 'switching…' : activeProject.model === m.name ? 'selected' : m.loaded ? 'loaded' : ''}</span>
-            </button>)}
+            {chatModels.map((m) => <div key={m.name} className="mp-model-item">
+              <button className="model-row mp-model" aria-pressed={activeProject.model === m.name}
+                disabled={busy !== null} onClick={() => void save(m.name, { model: m.name })}>
+                <span className={`model-dot${m.loaded ? '' : ' down'}`} />
+                <div className="model-name-group">
+                  <span className="model-name">{m.name}</span>
+                  {m.sizeGB != null && <span className="model-quant">{m.sizeGB} GB</span>}
+                </div>
+                <span className="model-role">{busy === m.name ? 'switching…' : activeProject.model === m.name ? 'selected' : m.loaded ? 'loaded' : ''}</span>
+              </button>
+              <button className="popup-tab mp-tune" aria-label={`Tune ${m.name}`} onClick={() => onOpenSettings(m.name)}>Tune</button>
+            </div>)}
           </div>
         </>}
       </section>

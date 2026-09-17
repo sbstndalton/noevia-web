@@ -1496,6 +1496,9 @@ body { isolation:isolate; background:var(--bg-app); }
 .mp-models { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
 .mp-model { cursor: pointer; text-align: left; font-family: var(--font-ui); width: 100%; }
 .mp-model[aria-pressed="true"] { border-color: var(--accent); }
+.mp-model-item { display: flex; align-items: stretch; gap: 6px; }
+.mp-model-item .mp-model { flex: 1; min-width: 0; }
+.mp-tune { flex: none; min-height: 44px; align-self: center; }
 
 .mp-tool { display: flex; align-items: flex-start; gap: 8px; font-size: var(--text-caption); cursor: pointer; min-height: 44px; }
 .mp-tool > span { flex: 1; min-width: 0; }
@@ -1623,6 +1626,10 @@ body { isolation:isolate; background:var(--bg-app); }
 .mm-easy-row { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .mm-easy-row p { margin: 4px 0 0; }
 .mm-easy-result { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; }
+.mm-easy-result-text { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.mm-easy-result-text p { margin: 0; }
+.mm-easy-measure .native-calibration { font-size: var(--text-callout); }
+.mm-easy-measure .native-calibration h4 { display: none; }
 .mm-easy-result p { margin: 0; }
 .mm-raw { max-height: 320px; overflow: auto; margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: var(--text-caption); white-space: pre; }
 
@@ -1829,3 +1836,5 @@ body { isolation:isolate; background:var(--bg-app); }
 .personal-style-options input { position: absolute; opacity: 0; pointer-events: none; }
 .personal-style-label { font-size: var(--text-callout); font-weight: 600; }
 .personal-style-hint { font-size: var(--text-caption); color: var(--text-secondary); }
+.mm-easy-measure > summary { flex-wrap: wrap; }
+@media (max-width: 600px) { .mm-easy-measure > summary small { flex-basis: 100%; padding-left: calc(1em + 8px); } }

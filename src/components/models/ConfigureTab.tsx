@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../api';
-import { ctxShort, errorText, mm, tokens } from './mm';
+import { bytes, ctxShort, errorText, mm, tokens } from './mm';
+import { NativeCalibration } from '../NativeCalibration';
+import { dismissFolderModel } from './register';
 
 type Field = { key: string; label: string; kind: 'int' | 'text' | 'bool' | 'select'; choices: string[]; placeholder: string; help: string };
 type Tier = { tier: string; open: boolean; fields: Field[] };
@@ -12,7 +14,7 @@ type Row = { ctx: number; total_ctx: number; model_gb: number; kv_gb: number; to
 type Plan = { name: string; vendor: string; vram_gb: number; rows: Row[]; max_ctx: number; fits_at_all: boolean };
 type Spec = { key: string; label: string; blurb: string; spec_type: string; needs_head: boolean };
 type Rec = { plans: Plan[]; recommended_backend: string; recommended_ctx: number; recommended_total_ctx: number; n_sessions: number; values: Record<string, string>; quirks: string[]; unavailable: string[];
-  current_diff: string[]; displaced: string[]; presets: Preset[]; frontier: Preset[]; fits_full_gpu: boolean; native_ctx: number; current_preset: string; active_preset: string;
+  current_diff: string[]; displaced: string[]; presets: Preset[]; frontier: Preset[]; fits_full_gpu: boolean; native_ctx: number; current_preset: string; active_preset: string; estimated_ctx?: number; ctx_cap_reason?: string;
   spec_profiles: Spec[]; active_spec_profile: string; current_spec_profile: string; spec_head_rel: string; error: string; vision_available: string; vision: boolean };
 type Measured = { n: number; gen_p50: number; gen_p25: number; gen_p75: number; prompt_p50: number; draft_acc_p50: number | null };
 type Run = Measured & { instance: string; is_current: boolean; diff: Record<string, string>; rel_pct: number };
@@ -20,7 +22,14 @@ type Auto = { error?: string; section: string; arch: string; params: string; fil
 
 export function ConfigureTab({ initial, onSaved, onSelect }: { initial?: string; onSaved: () => void; onSelect?: (name: string) => void }) {
   const [list, setList] = useState<SectionsResponse | null>(null), [selected, setSelected] = useState(initial || ''), [error, setError] = useState('');
-  const load = async () => { try { setList(await mm<SectionsResponse>('sections')); } catch (e) { setError(errorText(e, 'Model settings are unavailable.')); } };
+  const load = async () => {
+    try {
+      const v = await mm<Partial<SectionsResponse>>('sections');
+      // Opened straight from chat, this may meet a server without the model manager: say so, never crash.
+      if (!Array.isArray(v?.sections)) throw Error('Model settings are unavailable on this server.');
+      setList({ revision: v.revision || '', schema: v.schema || [], sections: v.sections, unregistered: Array.isArray(v.unregistered) ? v.unregistered : [], backups: Array.isArray(v.backups) ? v.backups : [], raw: v.raw });
+    } catch (e) { setError(errorText(e, 'Model settings are unavailable.')); }
+  };
   useEffect(() => { void load(); }, []);
   useEffect(() => { if (initial) setSelected(initial); }, [initial]);
   const names = list?.sections.map(s => s.name) || [];
@@ -81,7 +90,7 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
   };
   const doDelete = async () => {
     if (!data) return; setBusy('delete'); setError('');
-    try { await mm(`sections/${encodeURIComponent(name)}?baseRevision=${data.revision}`, { method: 'DELETE' }); await apply(false); await onChanged(''); }
+    try { await mm(`sections/${encodeURIComponent(name)}?baseRevision=${data.revision}`, { method: 'DELETE' }); dismissFolderModel(name); await apply(false); await onChanged(''); }
     catch (e) { setError(errorText(e, 'Delete failed')); } finally { setBusy(''); }
   };
   const merge = (values: Record<string, string>, displaced: string[]) => {
@@ -151,32 +160,73 @@ const KV_CHOICES: [string, string][] = [['', 'Engine default'], ['f16', 'Full pr
 const keepChoices = (draft: Record<string, string>) => Object.fromEntries(['spec-type', 'cache-type-k', 'cache-type-v'].filter(k => draft[k]).map(k => [k, draft[k]]));
 // The common path: let autoconfig size the context to this machine's memory, and
 // expose only the two choices people actually weigh. Advanced keeps every field.
+type DraftHeads = { local: string; builtinLayers: number; available: boolean; remote: { repo: string; path: string; size: number }[]; mtpBuild: string | null; repo: string | null; remoteError?: string };
+
 function EasySettings({ name, draft, busy, onChange, onUseTuned }: { name: string; draft: Record<string, string>; busy: boolean; onChange: (patch: Record<string, string>) => void; onUseTuned: (values: Record<string, string>, displaced: string[]) => Promise<void> }) {
   const [auto, setAuto] = useState<Auto | null>(null), [tuning, setTuning] = useState(false), [error, setError] = useState('');
+  const [verified, setVerified] = useState(0), [heads, setHeads] = useState<DraftHeads | null>(null), [headNote, setHeadNote] = useState('');
+  useEffect(() => {
+    let live = true;
+    // A context measured on this machine bounds every estimate; newest measurement wins.
+    void apiFetch('/api/models/calibration?model=' + encodeURIComponent(name)).then(r => r.json()).then((v: { history?: { at: number; appliedCtx?: number; verifiedCtx?: number }[] }) => {
+      const last = (v.history || []).slice().sort((a, b) => b.at - a.at)[0];
+      if (live) setVerified(last?.verifiedCtx || last?.appliedCtx || 0);
+    }).catch(() => {});
+    // An older model manager has no such route; treat anything malformed as "unknown", never crash.
+    void mm<Partial<DraftHeads>>(`sections/${encodeURIComponent(name)}/draft-heads`).then(v => {
+      if (!live || typeof v?.available !== 'boolean') return;
+      setHeads({ local: v.local || '', builtinLayers: Number(v.builtinLayers) || 0, available: v.available, remote: Array.isArray(v.remote) ? v.remote : [], mtpBuild: v.mtpBuild || null, repo: v.repo || null });
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [name]);
   const tune = async () => {
     setTuning(true); setError('');
     const spec = ({ 'draft-mtp': 'balanced', 'ngram-simple': 'ngram', none: 'off' } as Record<string, string>)[draft['spec-type'] || ''] || '';
-    try { setAuto(await mm<Auto>(`sections/${encodeURIComponent(name)}/autoconfig?${new URLSearchParams({ sessions: '1', spec, vision: String(Boolean(draft.mmproj)) })}`)); }
+    const q = new URLSearchParams({ sessions: '1', spec, vision: String(Boolean(draft.mmproj)) });
+    if (verified > 0) q.set('verified_ctx', String(verified));
+    try { setAuto(await mm<Auto>(`sections/${encodeURIComponent(name)}/autoconfig?${q}`)); }
     catch (e) { setError(errorText(e, 'Tuning failed')); } finally { setTuning(false); }
+  };
+  const downloadHead = async (path: string) => {
+    setHeadNote('');
+    try { await mm(`sections/${encodeURIComponent(name)}/draft-heads/download`, { body: { path } }); setHeadNote('Downloading the MTP head into this model\'s folder. Tune again when it finishes to turn MTP on.'); }
+    catch (e) { setHeadNote(errorText(e, 'The head could not be downloaded.')); }
   };
   const rec = auto?.recommendation;
   const failure = auto?.error || rec?.error || error;
   const kv = draft['cache-type-k'] === draft['cache-type-v'] ? draft['cache-type-k'] || '' : 'mixed';
   const spec = SPEC_CHOICES.find(c => c[0] === (draft['spec-type'] || ''));
+  const mtpStatus = !heads ? '' : heads.local ? 'This model has an MTP draft head beside it.'
+    : heads.builtinLayers > 0 ? 'This model has MTP layers built in; no extra file is needed.'
+    : heads.remote.length ? `No MTP head here yet; ${heads.repo} publishes one.`
+    : heads.mtpBuild ? `This file has no MTP layers. An MTP build is published as ${heads.mtpBuild}.`
+    : 'No MTP head is available for this model, so speculative decoding stays off unless you pick N-gram.';
   return <div className="mm-form mm-easy">
     <div className="mm-easy-row">
-      <div><strong>Context</strong><p className="mm-note">{draft['ctx-size'] ? `${ctxShort(Number(draft['ctx-size']))} tokens` : 'Engine default'}. Tuning estimates the largest context that fits this server's GPU memory; Measure context under a model's details verifies it on the engine.</p></div>
-      <button className="modal-btn secondary" disabled={tuning || busy} onClick={() => void tune()}>{tuning ? 'Measuring…' : 'Tune for this machine'}</button>
+      <div><strong>Context</strong><p className="mm-note">{draft['ctx-size'] ? `${ctxShort(Number(draft['ctx-size']))} tokens` : 'Engine default'}. {verified > 0 ? `Measured on this machine: ${ctxShort(verified)} tokens.` : 'Not measured on this machine yet.'} Tuning estimates what fits in memory and what this machine can read in time.</p></div>
+      <button className="modal-btn secondary" disabled={tuning || busy} onClick={() => void tune()}>{tuning ? 'Estimating…' : 'Tune for this machine'}</button>
     </div>
     {failure && <p role="alert" className="modal-err">{failure}</p>}
     {rec && !failure && <div className="mm-easy-result" role="status">
-      <p>Recommended: <strong>{ctxShort(rec.recommended_ctx)} tokens</strong> on {rec.recommended_backend}{rec.fits_full_gpu ? ', entirely on the GPU' : ''}.</p>
+      <div className="mm-easy-result-text">
+        <p>Recommended: <strong>{ctxShort(rec.recommended_ctx)} tokens</strong> on {rec.recommended_backend}{rec.fits_full_gpu ? ', entirely on the GPU' : ''}.</p>
+        {rec.ctx_cap_reason && rec.estimated_ctx ? <p className="mm-note">Memory would allow {ctxShort(rec.estimated_ctx)}; limited because {rec.ctx_cap_reason}.</p> : null}
+      </div>
       <button className="modal-btn primary" disabled={busy} onClick={() => void onUseTuned({ ...rec.values, ...keepChoices(draft) }, rec.displaced)}>Use and save</button>
     </div>}
+<details className="mm-disclosure mm-easy-measure">
+      <summary>Measure context on this machine <small>Tests the real engine; chat pauses while it runs.</small></summary>
+          <NativeCalibration model={name} onChanged={() => { setAuto(null); setVerified(0); void apiFetch('/api/models/calibration?model=' + encodeURIComponent(name)).then(r => r.json()).then((v: { history?: { at: number; appliedCtx?: number; verifiedCtx?: number }[] }) => { const last = (v.history || []).slice().sort((a, b) => b.at - a.at)[0]; setVerified(last?.verifiedCtx || last?.appliedCtx || 0); }).catch(() => {}); }}/>
+    </details>
     <label>Speculative decoding (MTP)<select value={draft['spec-type'] || ''} onChange={e => onChange({ 'spec-type': e.target.value })}>
-      {SPEC_CHOICES.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+      {SPEC_CHOICES.map(([v, label]) => <option key={v} value={v} disabled={v === 'draft-mtp' && heads !== null && !heads.available}>{label}{v === 'draft-mtp' && heads?.available ? ' (available)' : ''}</option>)}
       {!spec && <option value={draft['spec-type']}>{draft['spec-type']} (set in Advanced)</option>}
-    </select><small>{spec ? spec[2] : 'A custom strategy is set; change it in Advanced.'}</small></label>
+    </select><small>{spec ? spec[2] : 'A custom strategy is set; change it in Advanced.'}{mtpStatus ? ` ${mtpStatus}` : ''}</small></label>
+    {heads && !heads.available && heads.remote[0] && <div className="mm-easy-row">
+      <p className="mm-note">{heads.remote[0].path} · {bytes(heads.remote[0].size)}</p>
+      <button className="modal-btn secondary" disabled={busy} onClick={() => void downloadHead(heads.remote[0].path)}>Download MTP head</button>
+    </div>}
+    {headNote && <p className="mm-note" role="status">{headNote}</p>}
     <label>KV cache quantisation<select value={kv} onChange={e => onChange({ 'cache-type-k': e.target.value, 'cache-type-v': e.target.value })}>
       {KV_CHOICES.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
       {kv === 'mixed' && <option value="mixed" disabled>Different K and V (set in Advanced)</option>}

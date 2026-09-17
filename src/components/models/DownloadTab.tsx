@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { bytes, ctxShort, errorText, mm, tokens } from './mm';
-import { apiFetch } from '../../api';
+import { registerSafeDefaults } from './register';
 
 type Result = { id: string; downloads: number; likes: number; last_modified: string; pipeline_tag: string | null; gguf_count: number | null; downloaded: string[] };
 type Estimate = { key: string; label: string; ctx: number; gpu_layers: number; total_layers: number; speed_pct: number; offload: boolean };
@@ -117,28 +117,6 @@ function RepoFiles({ repo, onClose, onDownload }: { repo: { repo: string; groups
 const isModelFile = (filename: string) => filename.toLowerCase().endsWith('.gguf') && !filename.toLowerCase().includes('mmproj');
 const sectionFor = (filename: string) => filename.split('/').pop()!.replace(/\.gguf$/i, '').replace(/-\d{5}-of-\d{5}$/, '');
 
-// A finished download gets conservative settings once (8k context, MTP only with a
-// draft head beside it, the GGUF's own template and sampling), then the preset file
-// is reloaded without unloading anything. A loaded model makes the reload wait; the
-// new model is still registered and is picked up once the engine reloads.
-async function registerSafeDefaults(section: string): Promise<{ registered: boolean; text: string }> {
-  let mtp = false;
-  try { mtp = (await mm<{ mtp?: boolean }>(`sections/${encodeURIComponent(section)}/safe-defaults`, { body: {} })).mtp === true; }
-  catch (e) {
-    const status = (e as { status?: number }).status;
-    if (status === 409) return { registered: true, text: '' };
-    if (status === 400) return { registered: false, text: '' };
-    return { registered: false, text: `${section} downloaded, but safe defaults were not written: ${errorText(e, 'unknown error')}. Use Set up this model.` };
-  }
-  const saved = `Registered ${section} with safe defaults (8K context${mtp ? ', MTP draft head' : ''}).`;
-  try {
-    const r = await apiFetch('/api/models/presets/reload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unload: false }) });
-    const v = await r.json().catch(() => ({})) as { loaded?: string[]; error?: string };
-    if (r.status === 409 && Array.isArray(v.loaded)) return { registered: true, text: `${saved} ${v.loaded.join(', ')} is loaded, so the engine offers it after that model is unloaded.` };
-    if (!r.ok) return { registered: true, text: `${saved} The engine did not reload yet: ${v.error || r.status}.` };
-    return { registered: true, text: `${saved} Ready to load.` };
-  } catch (e) { return { registered: true, text: `${saved} The engine did not reload yet: ${errorText(e, 'unknown error')}.` }; }
-}
 
 function Queue({ jobs, registered, onChange, onSetUp }: { jobs: Job[]; registered: Set<string>; onChange: () => Promise<void>; onSetUp: (section: string) => void }) {
   if (!jobs.length) return null;
