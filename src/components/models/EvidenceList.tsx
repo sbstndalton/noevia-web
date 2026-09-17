@@ -11,7 +11,7 @@ const STATE: Record<string, string> = {
 
 /** Evidence tied to the model's exact current configuration. Never a score. */
 export function EvidenceList({ model }: { model: string }): JSX.Element | null {
-  const [rows, setRows] = useState<Row[] | null>(null), [error, setError] = useState('');
+  const [rows, setRows] = useState<Row[] | null>(null), [error, setError] = useState(''), [checking, setChecking] = useState(false), [note, setNote] = useState('');
   useEffect(() => {
     let live = true;
     apiFetch(`/api/models/evidence?model=${encodeURIComponent(model)}`).then(async (r) => {
@@ -21,6 +21,15 @@ export function EvidenceList({ model }: { model: string }): JSX.Element | null {
     }).catch((e) => { if (live) setError(e instanceof Error ? e.message : 'Evidence unavailable'); });
     return () => { live = false; };
   }, [model]);
+  // The model manager is administrator-only, so the recheck is offered here without another role check.
+  const recheck = async () => {
+    setChecking(true); setNote('');
+    try {
+      const r = await apiFetch('/api/models/evidence/recheck', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, category: 'vision' }) });
+      const v = await r.json().catch(() => ({})); if (!r.ok) throw Error(v.error || 'Recheck failed');
+      setRows(v.categories); setNote('Image input rechecked.');
+    } catch (e) { setNote(e instanceof Error ? e.message : 'Recheck failed'); } finally { setChecking(false); }
+  };
   if (error) return <p className="mm-note" role="status">{error}</p>;
   if (!rows?.length) return null;
   return <section className="mm-evidence" aria-label={`Qualification evidence for ${model}`}>
@@ -29,6 +38,8 @@ export function EvidenceList({ model }: { model: string }): JSX.Element | null {
       <strong>{LABEL[row.category] || row.category}</strong>
       <span>{STATE[row.state] || row.state}{row.category === 'context_capacity' && row.value?.ctx ? ` · ${row.value.ctx.toLocaleString('en-US')} tokens` : ''}{row.category === 'mtp_acceptance' && typeof row.value?.rate === 'number' ? ` · ${Math.round(row.value.rate * 100)}% accepted` : ''}{row.category === 'throughput' && typeof row.value?.rate === 'number' ? ` · ${row.value.rate} tokens/s` : ''}{row.at ? ` · ${new Date(row.at).toLocaleDateString()}` : ''}</span>
       {row.limitations.length > 0 && row.state !== 'unverified' && <small>{row.limitations.join(' · ')}</small>}
+      {row.category === 'vision' && <button type="button" className="modal-btn secondary" disabled={checking} onClick={() => void recheck()} title="Sends a 1×1 test image; loads the model if it is not loaded">{checking ? 'Checking…' : 'Recheck'}</button>}
     </li>)}</ul>
+    {note && <p className="mm-note" role="status">{note}</p>}
   </section>;
 }

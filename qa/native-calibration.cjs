@@ -6,7 +6,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  const fixture=createFixture(31329);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});
  try {
  const page=await browser.newPage();await page.emulateMedia({reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
- let job=null,polls=0,started=null,cancelled=0;
+ let job=null,polls=0,started=null,cancelled=0,recheckBody=null;
  const steps=[{ctx:8192,kind:'load',status:'passed',seconds:6,minAvailableGib:18.2},{ctx:65536,kind:'long',status:'passed',seconds:71,promptPerSecond:842,minAvailableGib:14.1},{ctx:98304,kind:'long',status:'failed',reason:'Filling this context would take about 214 s, over the 120 s limit.',seconds:9,minAvailableGib:12.1},{ctx:81920,kind:'long',status:'running',progress:37,etaSeconds:58}];
  await page.route('**/api/**',route=>{
   const req=route.request(),url=new URL(req.url());
@@ -22,6 +22,7 @@ const {createFixture}=require('./diary-fixture.cjs');
   }
   if(url.pathname==='/api/models/preset')return route.fulfill({json:{model:'synthetic/new-model:Q4_K_M',revision:'r1',options:{},defaults:{},fields:['ctx-size','parallel']}});
   if(url.pathname.startsWith('/api/model-manager/'))return route.fulfill({status:404,json:{error:'not configured'}});
+  if(url.pathname==='/api/models/evidence/recheck'){recheckBody=JSON.parse(route.request().postData()||'{}');return route.fulfill({json:{model:'synthetic/new-model:Q4_K_M',tracked:true,identityHash:'h',categories:[{category:'vision',state:'verified',value:null,at:1760000000000,suite:{name:'vision-probe',version:1},limitations:['1×1 image accepted; not an accuracy test']}]}});}
   if(url.pathname==='/api/models/evidence')return route.fulfill({json:{model:'synthetic/new-model:Q4_K_M',tracked:true,identityHash:'h',categories:[{category:'context_capacity',state:'verified',value:{ctx:65536},at:1760000000000,suite:{name:'native-calibration',version:1},limitations:['prompt budget 120 s']},{category:'vision',state:'stale',value:null,at:1760000000000,suite:null,limitations:['1×1 image accepted; not an accuracy test']},{category:'mtp_acceptance',state:'unverified',value:null,at:null,suite:null,limitations:[]},{category:'throughput',state:'unavailable',value:null,at:null,suite:null,limitations:[]}]}});
   if(url.pathname.startsWith('/api/models/'))return route.fulfill({json:[]});
   return route.continue();
@@ -38,6 +39,10 @@ const {createFixture}=require('./diary-fixture.cjs');
  assert.match(await evidence.innerText(),/Context capacity\s+Verified for this configuration · 65,536 tokens/);
  assert.match(await evidence.innerText(),/Image input\s+Stale — settings or files changed since/);
  assert.match(await evidence.innerText(),/MTP acceptance\s+Not measured yet/);
+ await evidence.getByRole('button',{name:'Recheck'}).click();
+ await evidence.getByText('Image input rechecked.').waitFor();
+ assert.deepEqual(recheckBody,{model:'synthetic/new-model:Q4_K_M',category:'vision'});
+ assert.match(await evidence.innerText(),/Image input\s+Verified for this configuration/);
  const startButton=page.getByRole('button',{name:'Start calibration'});
  assert.equal(await startButton.isEnabled(),false);
  await page.getByLabel(/Longest acceptable wait/).selectOption('120');
