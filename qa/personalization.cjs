@@ -24,7 +24,7 @@ const port=31293,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'.
   assert.equal((await api('/api/account/instructions',{text:'x'.repeat(4001)},'PUT')).status,400);
   const ctx=await browser.newContext({viewport:{width:1440,height:900}});await ctx.addCookies([...cookies].map(([name,value])=>({name,value,url:origin})));
   const page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));
-  for(const [width,theme] of [[1440,'light'],[375,'dark']]){
+  for(const [width,theme] of [[1440,'light'],[1440,'dark'],[768,'light'],[768,'dark'],[375,'light'],[375,'dark']]){
    await page.setViewportSize({width,height:width<768?760:900});await page.emulateMedia({colorScheme:theme});
    await page.goto(origin);await page.waitForLoadState('networkidle');
    await page.keyboard.press((await page.evaluate(()=>/mac/i.test(navigator.platform)))?'Meta+Comma':'Control+Comma');
@@ -32,27 +32,40 @@ const port=31293,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'.
    if(width<768)await dialog.getByLabel('Settings category').selectOption('personalization');else await dialog.getByRole('button',{name:'Personalization',exact:true}).click();
    await dialog.getByRole('heading',{name:'Personalization',level:1}).waitFor();
    const box=dialog.getByLabel(/Custom instructions/);
-   if(width===1440){
+   if(width===1440&&theme==='light'){
     assert.equal(await dialog.getByRole('button',{name:'Save',exact:true}).isDisabled(),true,'nothing to save yet');
     await box.fill('Answer in British English. PERSONAL-CANARY-7.');
     await dialog.getByText('Concise',{exact:true}).click();assert.equal(await dialog.getByRole('radio',{name:/Concise/}).isChecked(),true);
     await dialog.getByRole('button',{name:'Save',exact:true}).click();
     await dialog.getByRole('status').filter({hasText:'Saved.'}).waitFor();
-   } else {assert.equal(await box.inputValue(),'Answer in British English. PERSONAL-CANARY-7.','persists across reloads');assert.equal(await dialog.getByRole('radio',{name:/Concise/}).isChecked(),true);}
+    await dialog.getByLabel(/What noevia remembers/).fill('I keep bees. MEMORY-CANARY-3\n\nI keep bees. MEMORY-CANARY-3');
+    await dialog.getByRole('switch',{name:'Use project memory'}).click();
+    await dialog.getByRole('button',{name:'Save memory'}).click();
+    await dialog.getByRole('status').filter({hasText:'New messages use this memory'}).waitFor();
+    assert.equal(await dialog.getByLabel(/What noevia remembers/).inputValue(),'I keep bees. MEMORY-CANARY-3','duplicates and blank lines dropped');
+   } else {await dialog.locator('textarea:enabled').nth(1).waitFor();assert.equal(await dialog.getByLabel(/What noevia remembers/).inputValue(),'I keep bees. MEMORY-CANARY-3');assert.equal(await dialog.getByRole('switch',{name:'Use project memory'}).isChecked(),false);assert.equal(await box.inputValue(),'Answer in British English. PERSONAL-CANARY-7.','persists across reloads');assert.equal(await dialog.getByRole('radio',{name:/Concise/}).isChecked(),true);}
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow ${width}`);
    await page.screenshot({path:`${shots}/personalization-${width}-${theme}.png`});
+   await dialog.getByRole('button',{name:'Save memory'}).scrollIntoViewIfNeeded();await page.screenshot({path:`${shots}/personalization-memory-${width}-${theme}.png`});
    await page.keyboard.press('Escape');
   }
   const project=(await api('/api/projects',{name:'Synthetic writing',model:'synthetic-model',toolboxes:[]})).body;
+  assert.equal((await api(`/api/projects/${project.id}/config`,{memories:['PROJECT-MEMORY-CANARY']})).status,200);
   let chat=await api('/api/chat',{spaceId:project.id,projectId:project.id,chatId:'c-personal-1',message:'Hello',history:[]});
   assert.equal(chat.status,200,chat.text);
   const system=seen.filter(b=>b.stream).at(-1).messages.find(m=>m.role==='system');
   assert.match(system.content,/Keep replies short[\s\S]*PERSONAL-CANARY-7/);
+  assert.match(system.content,/persistent memory[\s\S]*MEMORY-CANARY-3/);
+  assert.doesNotMatch(system.content,/PROJECT-MEMORY-CANARY/,'project memory off');
   // Clearing removes them from the next request.
   assert.equal((await api('/api/account/instructions',{text:''},'PUT')).body.text,'');
   chat=await api('/api/chat',{spaceId:project.id,projectId:project.id,chatId:'c-personal-2',message:'Hello again',history:[]});
   assert.doesNotMatch(JSON.stringify(seen.filter(b=>b.stream).at(-1).messages),/PERSONAL-CANARY-7/);
+  assert.equal((await api('/api/account/memory',{memories:[],useProjectMemories:true},'PUT')).status,200);
+  chat=await api('/api/chat',{spaceId:project.id,projectId:project.id,chatId:'c-personal-3',message:'Third',history:[]});
+  const third=JSON.stringify(seen.filter(b=>b.stream).at(-1).messages);
+  assert.match(third,/PROJECT-MEMORY-CANARY/);assert.doesNotMatch(third,/MEMORY-CANARY-3/);
   assert.deepEqual(errors,[]);
-  console.log('PASS personalization: custom instructions and response style saved in Settings, persist, reach the system message, clear removes them, 4000-char cap; 1440 light, 375 dark.');
+  console.log('PASS personalization: custom instructions, response style and account memory (project memory switch honoured) saved in Settings, persist, reach the system message, clear removes them, 4000-char cap; 375/768/1440 light and dark.');
  }finally{await browser.close();server.kill('SIGTERM');await new Promise(r=>upstream.close(r));fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

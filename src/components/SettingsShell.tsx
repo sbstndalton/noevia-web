@@ -56,7 +56,6 @@ const ICONS: Record<string, string> = Object.fromEntries(['profile','security','
 // What used to be one navigation row each. Kept visible as a roadmap, but in
 // one place, so an empty section never looks like a broken one.
 const PLANNED: { group: string; items: string[] }[] = [
-  { group: 'Personalization', items: ['Account-wide memory preferences'] },
   { group: 'Extensibility', items: ['Capability catalogue', 'Plugin management', 'Skill library', 'Connector catalogue'] },
   { group: 'Coding workspace', items: ['Coding preferences', 'Git', 'Environments', 'Worktrees', 'Hooks'] },
 ];
