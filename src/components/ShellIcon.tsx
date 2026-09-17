@@ -10,7 +10,7 @@ export const SHELL_ICONS: Record<string, string> = {
   git: 'git-branch', projects: 'library', panel: 'panel-left', user: 'user-round', down: 'chevron-down', sun: 'sun', moon: 'moon', more: 'ellipsis',
   // Settings sections: one distinct symbol each.
   profile: 'user-round', security: 'shield-check', appearance: 'palette', capabilities: 'sparkles', diary: 'notebook-pen',
-  providers: 'plug', usage: 'chart-column', planned: 'map', users: 'users', models: 'cpu', status: 'activity',
+  providers: 'plug', usage: 'chart-column', data: 'database', planned: 'map', users: 'users', models: 'cpu', status: 'activity',
   features: 'toggle-right', backups: 'cloud-upload', research: 'telescope', trash: 'trash', check: 'check',
 };
 

@@ -1798,3 +1798,4 @@ body { isolation:isolate; background:var(--bg-app); }
 .diary-breadcrumb > :last-child { color: var(--text-primary); }
 .projects-grid > .empty-state-card { grid-column: 1 / -1; }
 @media (pointer: coarse) { .composer-hint.is-keyboard { display: none; } }
+@media(max-width:700px){ .settings-detail:has(.settings-title h1) > header { display:none; } }
