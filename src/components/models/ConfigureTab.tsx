@@ -5,7 +5,7 @@ import { ctxShort, errorText, mm, tokens } from './mm';
 type Field = { key: string; label: string; kind: 'int' | 'text' | 'bool' | 'select'; choices: string[]; placeholder: string; help: string };
 type Tier = { tier: string; open: boolean; fields: Field[] };
 type SectionRow = { name: string; items: [string, string][]; hasFile: boolean; file: string | null; cli: string };
-type SectionsResponse = { revision: string; schema: Tier[]; sections: SectionRow[]; unregistered: string[]; backups: [string, number, number][] };
+type SectionsResponse = { revision: string; schema: Tier[]; sections: SectionRow[]; unregistered: string[]; backups: [string, number, number][]; raw?: string };
 type SectionResponse = { name: string; exists: boolean; values: Record<string, string>; extras: string; hints: string[]; revision: string; schema: Tier[] };
 type Preset = { key: string; label: string; ctx: number; n_cpu_moe: number; offload_kind: string; gpu_layers: number; total_layers: number; gpu_gb: number; kv_gb: number; speed_score: number; ngl: number };
 type Row = { ctx: number; total_ctx: number; model_gb: number; kv_gb: number; total_gb: number; fits: boolean; free_gb: number; offload_kind: string; n_cpu_moe: number; gpu_pct: number };
@@ -37,7 +37,13 @@ export function ConfigureTab({ initial, onSaved, onSelect }: { initial?: string;
     </div>
     {selected && list && <SectionEditor key={selected} name={selected} row={list.sections.find(s => s.name === selected)} onChanged={async (renamed) => { await load(); if (renamed !== undefined) { setSelected(renamed); onSelect?.(renamed); } onSaved(); }}/>}
     {list && !selected && <ul className="mm-list">{list.sections.map(s => <li key={s.name}><span>{s.name}<small>{s.hasFile ? s.file : 'model file not found'}</small></span><button className="modal-btn secondary" onClick={() => { setSelected(s.name); onSelect?.(s.name); }}>Edit</button></li>)}</ul>}
-    {list && list.backups.length > 0 && <p className="mm-note">{list.backups.length} automatic backups of the settings file are kept on the server (newest {new Date(list.backups[0][1] * 1000).toLocaleString()}).</p>}
+    {list && <details className="mm-disclosure"><summary>Raw file &amp; backups</summary><div className="mm-form">
+      <pre className="mm-raw mm-mono" aria-label="models.ini contents">{list.raw || '(empty)'}</pre>
+      {list.backups.length > 0
+        ? <><p className="mm-note">{list.backups.length} automatic backups are kept on the server, newest first. Restoring one is an operator task on the server.</p>
+          <ul className="mm-hints mm-mono">{list.backups.map(([file, mtime, size]) => <li key={file}>{file} · {new Date(mtime * 1000).toLocaleString()} · {size} B</li>)}</ul></>
+        : <p className="mm-note">No backups yet. One is created on the next save.</p>}
+    </div></details>}
   </div>;
 }
 

@@ -33,10 +33,11 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    {key:'g/Gemma-E2B.gguf',name:'Gemma-E2B.gguf',subdir:'g',bytes:3e9,size:'3.0 GB',modified:'2026-09-01',sharded:false,parts:1,projector:null,sections:['Gemma-E2B'],modelId:'Gemma-E2B',file:'g/Gemma-E2B.gguf',shape:{arch:'gemma4',moe:false,experts:0,active:0,label:'dense'},loadedOn:[],fit:[],badges:[]},
    {key:'n/new-model-Q4_K_M.gguf',name:'new-model-Q4_K_M.gguf',subdir:'n',bytes:2e9,size:'2.0 GB',modified:'2026-09-14',sharded:false,parts:1,projector:null,sections:[],modelId:'new-model-Q4_K_M',file:'n/new-model-Q4_K_M.gguf',shape:null,loadedOn:[],fit:[],badges:[]},
   ].filter(f=>!deleted.includes(f.key)),unregistered:['new-model-Q4_K_M'],revision});
+  if(r==='overview')return json({modelsDir:{path:'/models',exists:true,disk:{total:5e11,free:1.5e11,usedPct:70,totalH:'465.7 GB',freeH:'139.7 GB'}},models:3,sections:2,backends:[],activeDownloads:0,revision});
   if(r==='models/updates')return json({status:{'Gemma-E2B.gguf':{status:'stale',remote:'2026-09-10',delta_days:9}}});
   if(r==='models/detail')return json({key:'g/Gemma-E2B.gguf',name:'Gemma-E2B.gguf',file:'g/Gemma-E2B.gguf',modified:'2026-09-01',sharded:false,parts:1,projector:null,path:'/models/g/Gemma-E2B.gguf',summary:{arch:'gemma4',general:{params:'5.1 B',quant:'Q4_K_M'},model:{context_length:131072,block_count:35,attention_head_count:8,attention_head_count_kv:1},chat_template_features:{uses_think_tags:true}}});
   if(r==='models/delete'){deleted.push(...body().models);return json({results:[{key:body().models[0],ok:true,message:'deleted',freed:3e9,freedH:'3.0 GB'}]});}
-  if(r==='sections'&&m==='GET')return json({revision,schema,sections:[{name:'Qwen-9B',items:[['model','/models/q/Qwen-9B.gguf'],['ctx-size','32768']],hasFile:true,file:'q/Qwen-9B.gguf',cli:'llama-server -m /models/q/Qwen-9B.gguf'},{name:'Gemma-E2B',items:[],hasFile:true,file:'g/Gemma-E2B.gguf',cli:'llama-server -m g'}],unregistered:['new-model-Q4_K_M'],backups:[['models.ini.bak-1',now,100]]});
+  if(r==='sections'&&m==='GET')return json({revision,schema,sections:[{name:'Qwen-9B',items:[['model','/models/q/Qwen-9B.gguf'],['ctx-size','32768']],hasFile:true,file:'q/Qwen-9B.gguf',cli:'llama-server -m /models/q/Qwen-9B.gguf'},{name:'Gemma-E2B',items:[],hasFile:true,file:'g/Gemma-E2B.gguf',cli:'llama-server -m g'}],unregistered:['new-model-Q4_K_M'],backups:[['models.ini.bak-1',now,100]],raw:'version = 1\n\n[Qwen-9B]\nmodel = /models/q/Qwen-9B.gguf\n'});
   if(r.startsWith('sections/')&&r.endsWith('/autoconfig'))return json({section:'Qwen-9B',arch:'qwen35',params:'9.0 B',fileBytes:5.6e9,model:'/models/q/Qwen-9B.gguf',recommendation:{...rec,vision:url.searchParams.get('vision')!=='false'},measured:{n:12,gen_p50:13.7,gen_p25:12.9,gen_p75:14.2,prompt_p50:310,draft_acc_p50:null},history:[]});
   if(r.endsWith('/safe-defaults')&&m==='POST'){safeDefaults.push(decodeURIComponent(r.split('/')[1]));return r.includes('later-model')?json({ok:true,revision,mtp:true}):json({error:'Synthetic manager failure'},502);}
   if(r.startsWith('sections/')&&m==='DELETE'){revision='r-del';return json({ok:true,revision});}
@@ -87,6 +88,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await yours();
  await dialog.getByRole('article',{name:'Gemma-E2B'}).waitFor();
  assert.ok(await dialog.getByText('Update available (2026-09-10)').isVisible());
+ assert.equal(await dialog.getByTestId('models-disk').innerText(),'Models folder: 139.7 GB free of 465.7 GB (70% used).');
  const gemma=dialog.getByRole('article',{name:'Gemma-E2B'});
  await gemma.getByRole('button',{name:'Details'}).click();await gemma.getByText('gemma4',{exact:true}).waitFor();assert.ok(await gemma.getByText('5.1 B').isVisible());
  await gemma.getByRole('button',{name:'Delete',exact:true}).click();
@@ -98,6 +100,11 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  // Configure via Library → Settings
  await dialog.getByRole('article',{name:'Qwen-9B'}).getByRole('button',{name:'Settings'}).click();
  await dialog.getByRole('heading',{name:'Qwen-9B',level:3}).waitFor();
+ await dialog.getByText('Raw file & backups').click();
+ assert.match(await dialog.getByLabel('models.ini contents').innerText(),/\[Qwen-9B\]/);
+ assert.ok(await dialog.getByText(/models\.ini\.bak-1/).isVisible());
+ if(process.env.QA_SCREENSHOTS)await page.screenshot({path:process.env.QA_SCREENSHOTS+'/models-raw.png'});
+ await dialog.getByText('Raw file & backups').click();
  // Easy is the default: tune against this machine, MTP and KV cache choices only.
  await page.evaluate(()=>localStorage.removeItem('noevia:model-settings-mode'));
  assert.equal(await dialog.getByRole('button',{name:'Easy',exact:true}).getAttribute('aria-pressed'),'true');

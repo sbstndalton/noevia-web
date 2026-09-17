@@ -1620,3 +1620,4 @@ body { isolation:isolate; background:var(--bg-app); }
 .mm-easy-row p { margin: 4px 0 0; }
 .mm-easy-result { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; }
 .mm-easy-result p { margin: 0; }
+.mm-raw { max-height: 320px; overflow: auto; margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; white-space: pre; }

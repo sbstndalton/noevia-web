@@ -22,13 +22,15 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [unregistered, setUnregistered] = useState<string[]>([]);
   const [updates, setUpdates] = useState<Record<string, Update>>({});
+  const [disk, setDisk] = useState<{ freeH: string; totalH: string; usedPct: number } | null>(null);
   const [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(''), [filesNote, setFilesNote] = useState(''), [runtimeOptions, setRuntimeOptions] = useState(false);
   const refresh = useCallback(async () => {
     setError('');
     try {
       // The model manager adds file details; without it the engine's own list still works.
-      const [installed, local, upd, caps] = await Promise.all([fetchInstalledModels(), mm<{ models: FileEntry[]; unregistered: string[] }>('models').catch(() => null), mm<{ status: Record<string, Update> }>('models/updates').catch(() => ({ status: {} })),
-        apiFetch('/api/models/capabilities').then(r => r.json()).catch(() => ({}))]);
+      const [installed, local, upd, caps, overview] = await Promise.all([fetchInstalledModels(), mm<{ models: FileEntry[]; unregistered: string[] }>('models').catch(() => null), mm<{ status: Record<string, Update> }>('models/updates').catch(() => ({ status: {} })),
+        apiFetch('/api/models/capabilities').then(r => r.json()).catch(() => ({})), mm<{ modelsDir?: { disk?: { freeH: string; totalH: string; usedPct: number } | null } }>('overview').catch(() => null)]);
+      setDisk(overview?.modelsDir?.disk ?? null);
       setModels(installed); setFiles(local?.models || []); setUnregistered(local?.unregistered || []); setUpdates(upd.status); setRuntimeOptions(caps?.runtimeOptions === true);
       setFilesNote(local ? '' : 'File details, downloads and settings need the model management service, which is not available on this server.');
     } catch (e) { setError(errorText(e, 'The model library is unavailable.')); }
@@ -77,6 +79,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     {error && <p role="alert" className="modal-err">{error}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
     {filesNote && <p className="mm-note">{filesNote}</p>}
+    {disk && <p className="mm-note" data-testid="models-disk">Models folder: {disk.freeH} free of {disk.totalH} ({disk.usedPct.toFixed(0)}% used).</p>}
     {!models && !error && <p role="status">Loading models…</p>}
     {models && <p className="mm-note" role="status">{servable.length} of {installed.length} {installed.length === 1 ? 'model' : 'models'}{needle ? ` matching “${query.trim()}”` : ''}{filter !== 'all' ? ' after filtering' : ''}.</p>}
     {models && !servable.length && installed.length > 0 && <p className="mm-note">Nothing matches. Clear the search or choose All models.</p>}
