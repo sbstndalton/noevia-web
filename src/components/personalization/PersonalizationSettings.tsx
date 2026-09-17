@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch } from '../../api';
+import { NotificationSettings } from '../notifications/NotificationSettings';
 
 type Style = 'default' | 'concise' | 'detailed';
 type Saved = { text: string; style: Style; updatedAt: number | null; maxChars: number };
@@ -65,5 +66,6 @@ export function PersonalizationSettings(): JSX.Element {
       {status && <p className="route-note" role="status">{status}</p>}
       {error && <p className="modal-err" role="alert">{error}</p>}
     </section>
+    <NotificationSettings />
   </>;
 }

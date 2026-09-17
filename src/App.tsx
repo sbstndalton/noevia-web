@@ -5,6 +5,7 @@ import { useAppearance } from './useAppearance';
 import { useWorkspaceChanged } from './components/data/workspace-changed';
 import { useGlobalShortcuts, OPEN_SEARCH } from './components/shortcuts/useGlobalShortcuts';
 import { ShortcutsDialog } from './components/shortcuts/ShortcutsDialog';
+import { notifyIfAway } from './components/notifications/notify';
 import { useModelsChanged } from './models-changed';
 import { modelChoiceLabel } from './model-guidance';
 import { TOOL_RESULT_LIMIT } from './components/ToolCalls';
@@ -379,6 +380,7 @@ export default function App(): JSX.Element {
       }
 
       const startedAt = Date.now();
+      let failed = false;
       try {
         let acc = '';
         let reasoning = '';
@@ -456,6 +458,7 @@ export default function App(): JSX.Element {
               status: 'pending',
               approvalId: ev.id,
             };
+            notifyIfAway('Approval needed', 'A tool is waiting for you in noevia.', `approval-${chatId}`);
             setMessagesByChat((prev) => ({
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) =>
@@ -518,6 +521,7 @@ export default function App(): JSX.Element {
             ),
           }));
         } else {
+          failed = true;
           const detail = err instanceof Error ? err.message : 'unknown error';
           setMessagesByChat((prev) => ({
             ...prev,
@@ -527,6 +531,8 @@ export default function App(): JSX.Element {
           }));
         }
       } finally {
+        // Titles and replies stay out of the notification: lock screens are not private.
+        if (!controller.signal.aborted) notifyIfAway(failed ? 'Reply failed' : 'Reply ready', failed ? 'noevia could not finish answering.' : 'noevia finished answering.', `reply-${chatId}`);
         sendingChats.current.delete(chatId);
         if (streamAbort.current[chatId] === controller) delete streamAbort.current[chatId];
         setStreamingChats((prev) => {
