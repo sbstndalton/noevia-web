@@ -3,7 +3,7 @@ import { useChatScroll } from '../useChatScroll';
 import { ReasoningControl } from './ReasoningControl';
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import type { Message, MessageStats, ToolCallView, Project, InstalledModel } from '../types';
+import type { Message, MessageStats, Project, InstalledModel } from '../types';
 import { ChevronLeft, SendIcon, SlidersIcon } from './Icons';
 import { ComposerModel } from './ComposerModel';
 import { MarkdownPreview } from './DiaryModal';
@@ -44,7 +44,7 @@ export function ThinkingBlock({ text, live }: { text: string; live: boolean }) {
   return (
     <details className="thinking-block" open={live}>
       <summary className={live ? 'thinking-live' : undefined}>
-        {live ? 'Thinking…' : `Thought process${words ? ` · ${words} words` : ''}`}
+        {live ? 'Thinking…' : words ? `Thought for ${words} words` : 'Thought process'}
       </summary>
       <div className="thinking-body">{text}</div>
     </details>
@@ -62,7 +62,7 @@ function fmtDuration(ms: number): string {
 // agent-runner status lines the operator asked for — elapsed, tokens, rate —
 // but only renders what the provider actually reported, so a provider that
 // sends no usage chunk simply shows nothing rather than zeros.
-function MessageMeta({ stats, tools }: { stats?: MessageStats; tools?: ToolCallView[] }): JSX.Element | null {
+function MessageMeta({ stats }: { stats?: MessageStats }): JSX.Element | null {
   const parts: string[] = [];
   if (stats?.elapsedMs) parts.push(fmtDuration(stats.elapsedMs));
   if (stats?.totalTokens) {
@@ -73,7 +73,6 @@ function MessageMeta({ stats, tools }: { stats?: MessageStats; tools?: ToolCallV
     parts.push(`${stats.totalTokens} tokens${io}`);
   }
   if (stats?.tokensPerSecond) parts.push(`${stats.tokensPerSecond.toFixed(1)} tok/s`);
-  if (tools && tools.length) parts.push(`${tools.length} tool ${tools.length === 1 ? 'call' : 'calls'}`);
   if (!parts.length) return null;
   return <div className="msg-meta">{parts.join(' · ')}</div>;
 }
@@ -251,7 +250,7 @@ export function ChatView({
                       {m.reasoning && !m.content ? ' · thinking…' : ` · ${m.processingStatus || 'generating…'}`}
                     </div>
                   ) : (
-                    !m.error && <MessageMeta stats={m.stats} tools={m.toolCalls} />
+                    !m.error && <MessageMeta stats={m.stats} />
                   )}
                 </div>
               ) : (
