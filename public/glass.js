@@ -5,7 +5,9 @@
   const preference = matchMedia('(prefers-reduced-motion: reduce), (prefers-reduced-transparency: reduce), (prefers-contrast: more)');
   const canvas = document.createElement('canvas');
   canvas.className = 'glass-scene'; canvas.setAttribute('aria-hidden','true');
-  const gl = canvas.getContext('webgl', {alpha:true, premultipliedAlpha:false, antialias:false, depth:false, preserveDrawingBuffer:false});
+  // Premultiplied, clamped output: WebKit and Blink composite a non-premultiplied
+  // canvas differently, which rendered this layer far brighter on iOS.
+  const gl = canvas.getContext('webgl', {alpha:true, premultipliedAlpha:true, antialias:false, depth:false, preserveDrawingBuffer:false});
   if (!gl) return;
   const vertex = `attribute vec2 p; void main(){gl_Position=vec4(p,0.,1.);}`;
   const fragment = `precision mediump float;
@@ -36,7 +38,11 @@
         }
       }
       vec3 color=light(uv); color=mix(vec3(dot(color,vec3(.299,.587,.114))),color,dark); float strength=mix(.055,.12,dark);
-      gl_FragColor=vec4(color+rim, strength);
+      // A 5-12% gradient has only a few dozen 8-bit steps across the screen, which
+      // bands on large displays; +-half a step of screen-space noise hides them.
+      float noise=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))))-.5;
+      vec3 lit=clamp(color+rim,0.,1.)*strength+noise/255.;
+      gl_FragColor=vec4(clamp(lit,0.,strength),strength);
     }`;
   function shader(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){gl.deleteShader(s);return null;}return s;}
   const vs=shader(gl.VERTEX_SHADER,vertex),fs=shader(gl.FRAGMENT_SHADER,fragment);

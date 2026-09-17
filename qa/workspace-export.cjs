@@ -1,5 +1,5 @@
 // Synthetic download/failure and draft-preservation checks; no real Diary access.
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');const {navClick}=require('./nav.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs');const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
  const fixture=createFixture(31336);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});const errors=[];let writes=0;
@@ -12,7 +12,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');const {createFi
   await page.route('**/api/diary/file',r=>{if(r.request().method()==='PUT')writes++;return r.fulfill({json:{path:'synthetic.md',content:'# Stored synthetic',version:'v1'}});});
   let fail=true;
   await page.route('**/api/diary/workspace-export',r=>fail?r.fulfill({status:409,json:{error:'Finish pending Diary writes before exporting.'}}):r.fulfill({contentType:'application/zip',body:bytes}));
-  await page.goto('http://localhost:31336');await page.getByRole('button',{name:'Diary',exact:true}).click();await page.getByRole('button',{name:'synthetic.md',exact:true}).click();
+  await page.goto('http://localhost:31336');await navClick(page,'Diary');await page.getByRole('button',{name:'synthetic.md',exact:true}).click();
   const workspace=page.getByRole('region',{name:'Markdown workspace'});
   await workspace.getByLabel('Markdown content',{exact:true}).fill('Unsaved synthetic draft');
   await workspace.getByText('Export workspace',{exact:true}).click();const button=workspace.getByRole('button',{name:'Download workspace ZIP',exact:true});

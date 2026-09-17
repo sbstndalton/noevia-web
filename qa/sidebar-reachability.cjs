@@ -14,13 +14,14 @@ const {createFixture}=require('./diary-fixture.cjs');
  const chat=(id,pinned=false)=>({id,title:`Synthetic ${id}`,updatedAt:1000,pinned,messages:[]});
  await page.route('**/api/workspace',r=>r.fulfill({json:{projects:Array.from({length:5},(_,i)=>({id:`p${i}`,name:`Synthetic project ${i}`,pinned:i===0,updatedAt:1000,files:[],chats:[chat(`nested${i}`)]})),freeChats:[chat('pinned',true),...Array.from({length:12},(_,i)=>chat(`recent${i}`))]}}));
  await page.goto('http://localhost:31336');await page.getByPlaceholder('Message noevia…').waitFor();
- if(width<=600)await page.getByRole('button',{name:'Expand navigation',exact:true}).click();
+ if(width<=600)await page.getByRole('button',{name:'Open navigation',exact:true}).click();
  const sidebar=page.locator('.sidebar');
  const history=page.locator('.sidebar-history');
  assert.ok(await history.evaluate(el=>el.clientHeight>0),`${width}x${height}: history collapsed`);
  async function reach(locator){
  await locator.scrollIntoViewIfNeeded();
- assert.ok(await locator.evaluate((el,h)=>{const r=el.getBoundingClientRect();return r.width>=44&&r.height>=44&&r.y>=0&&r.bottom<=h&&el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));},height),`${width}x${height}: target unreachable or smaller than 44px: ${await locator.getAttribute('aria-label')}`);
+ const probe=await locator.evaluate((el,h)=>{const r=el.getBoundingClientRect();const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {ok:r.width>=44&&r.height>=44&&r.y>=0&&r.bottom<=h&&el.contains(hit),rect:[r.x,r.y,r.width,r.height].map(Math.round),hit:hit?.className?.baseVal??hit?.className};},height);
+ assert.ok(probe.ok,`${width}x${height} ${theme}: target unreachable or smaller than 44px: ${await locator.getAttribute('aria-label')} ${JSON.stringify(probe)}`);
  }
  for(const name of ['Options for Synthetic pinned','Expand chats in Synthetic project 0','Options for Synthetic nested0','Options for Synthetic project 4','Options for Synthetic recent11']){
  const target=(name.includes('nested0')?page.locator('.project-children'):page).getByRole('button',{name,exact:true});await reach(target);await target.click();
@@ -35,7 +36,37 @@ const {createFixture}=require('./diary-fixture.cjs');
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No horizontal overflow');
  await page.close();
  }
+ // Drawer contract: resizing below 600px removes the sidebar at once; one toggle opens a
+ // full-width drawer that traps focus and closes on Escape, backdrop and selection.
+ {
+  const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('http://localhost:31336');await page.getByPlaceholder('Message noevia…').waitFor();
+  const toggle=page.getByRole('button',{name:'Open navigation',exact:true});
+  assert.equal(await toggle.isVisible(),false);assert.ok(await page.locator('.sidebar').isVisible());
+  await page.setViewportSize({width:375,height:740});
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('.sidebar')).display==='none');
+  assert.ok(await toggle.isVisible());
+  const box=await toggle.boundingBox();assert.ok(box.width>=44&&box.height>=44,'toggle hit target');
+  await toggle.click();
+  const drawer=page.getByRole('dialog',{name:'Navigation'});await drawer.waitFor();
+  assert.ok(await drawer.evaluate(el=>el.getBoundingClientRect().width>=innerWidth-1),'drawer covers the phone screen');
+  assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Close navigation');
+  for(let i=0;i<40;i++){await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>!!document.activeElement?.closest('#app-navigation')),'focus left the drawer');}
+  await page.keyboard.press('Shift+Tab');assert.ok(await page.evaluate(()=>!!document.activeElement?.closest('#app-navigation')));
+  await page.keyboard.press('Escape');await drawer.waitFor({state:'hidden'});
+  assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Open navigation','focus returns to the toggle');
+  await toggle.click();await drawer.waitFor();await page.getByRole('button',{name:'Close navigation',exact:true}).click();await drawer.waitFor({state:'hidden'});
+  await page.setViewportSize({width:600,height:740});await toggle.click();await drawer.waitFor();
+  await page.locator('.nav-drawer-backdrop').click({position:{x:590,y:400}});await drawer.waitFor({state:'hidden'});
+  await page.setViewportSize({width:375,height:740});await toggle.click();await drawer.waitFor();
+  await drawer.getByRole('button',{name:'Projects',exact:true}).first().click();await drawer.waitFor({state:'hidden'});
+  await page.getByRole('heading',{name:'Projects',level:1}).waitFor();
+  await toggle.click();await drawer.waitFor();await page.setViewportSize({width:1440,height:900});
+  await page.waitForFunction(()=>!document.querySelector('.nav-drawer-backdrop'));
+  assert.ok(await page.locator('.sidebar').isVisible());assert.equal(await toggle.isVisible(),false);
+  await page.close();
+ }
  assert.deepEqual(errors,[]);assert.equal(fixture.requests.length,0);
- console.log('PASS populated sidebar: seven viewport/keyboard cases, both themes, scrolling, 44px hit targets, nested/pinned/recent/project menus and focus recovery.');
+ console.log('PASS populated sidebar: seven viewport/keyboard cases, both themes, scrolling, 44px hit targets, nested/pinned/recent/project menus and focus recovery; mobile drawer collapse on resize, focus trap/restore, Escape/close/backdrop/selection dismissal.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

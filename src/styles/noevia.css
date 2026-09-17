@@ -1621,3 +1621,32 @@ body { isolation:isolate; background:var(--bg-app); }
 .mm-easy-result { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; }
 .mm-easy-result p { margin: 0; }
 .mm-raw { max-height: 320px; overflow: auto; margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; white-space: pre; }
+
+/* Mobile navigation drawer. Below 600px the sidebar leaves the layout entirely
+   (no icon rail) and opens full-height from a single toggle. */
+.nav-drawer-toggle, .nav-drawer-backdrop { display: none; }
+@media (max-width: 600px) {
+  .nav-drawer-toggle { display: inline-flex; position: absolute; top: 8px; left: 8px; z-index: 25; width: 44px; height: 44px; align-items: center; justify-content: center; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; }
+  .sidebar:not(.coding-sidebar):not(.is-expanded) { display: none; }
+  .sidebar:not(.coding-sidebar).is-expanded {
+    display: flex; position: fixed; inset: 0 auto 0 0; z-index: 60;
+    width: min(100vw, 420px); min-width: 0; height: var(--drawer-height, 100dvh); padding: 14px 14px calc(10px + env(safe-area-inset-bottom));
+    overflow-y: auto; box-shadow: var(--shadow-pop); background: var(--bg-sidebar);
+  }
+  .sidebar.is-expanded .shell-sidebar-head { flex-direction: row; }
+  .sidebar.is-expanded .shell-icon-button, .sidebar.is-expanded .nav-item, .sidebar.is-expanded .account-trigger { min-height: 44px; }
+  .sidebar.is-expanded .shell-icon-button { min-width: 44px; }
+  .sidebar.is-expanded .rail-tools { display: none; }
+  .nav-drawer-backdrop { display: block; position: fixed; inset: 0; z-index: 55; background: rgb(0 0 0 / .45); }
+  /* The toggle sits over each page's first row; give those rows room for it. */
+  .chat-header, .project-head, .model-manager-head, .diary-header, .feature-preview-head { padding-left: 60px; }
+}
+
+/* A narrow sidebar (tablet widths, or 44px touch targets) cannot hold the wordmark
+   and three tools in one row; they spilled under the page header. Keep one row
+   (vertical space matters in landscape) and drop the wordmark, keeping the mark. */
+.sidebar:not(.coding-sidebar):not(.is-collapsed) .shell-sidebar-head { min-width: 0; }
+.sidebar:not(.coding-sidebar):not(.is-collapsed) .side-head-actions { display: flex; flex-shrink: 0; }
+@media (min-width: 601px) and (max-width: 767px), (min-width: 601px) and (max-width: 1100px) and (pointer: coarse) {
+  .sidebar:not(.coding-sidebar):not(.is-collapsed) .side-logo span { display: none; }
+}

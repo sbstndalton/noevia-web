@@ -1,5 +1,5 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const assert=require('node:assert/strict');
+const assert=require('node:assert/strict');const {navClick}=require('./nav.cjs');
 const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
  const fixture=createFixture();await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});
@@ -13,7 +13,7 @@ const {createFixture}=require('./diary-fixture.cjs');
     const directory=(prefix='')=>({kind:'directory',name:prefix||'Synthetic folder',async *values(){for(const [name,text]of Object.entries(files))yield{kind:'file',name,getFile:async()=>new File([text],name)};},getDirectoryHandle:async name=>directory(prefix+name+'/'),getFileHandle:async(name,opts)=>{const key=prefix+name;if(!(key in files)&&!opts?.create)throw new DOMException('Missing','NotFoundError');return{kind:'file',name,getFile:async()=>new File([files[key]||''],name),createWritable:async()=>({write:async text=>{files[key]=text;},close:async()=>{},abort:async()=>{}})};}});
     window.showDirectoryPicker=async()=>directory();
    });
-   await page.goto('http://localhost:31239');await page.getByRole('button',{name:'Diary',exact:true}).click();
+   await page.goto('http://localhost:31239');await navClick(page,'Diary');
    if(local){await page.getByRole('button',{name:'Edit',exact:true}).click();await page.getByRole('button',{name:/Browser folder/}).click();await page.getByRole('checkbox',{name:/Also sync/}).uncheck();await page.getByRole('button',{name:'Choose folder',exact:true}).click();}
    const send=async message=>{await page.locator('#diary-draft').fill(message);await page.getByRole('button',{name:'Send diary message'}).click();};
    await send('first synthetic');

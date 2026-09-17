@@ -1,5 +1,5 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const assert=require('node:assert/strict');
+const assert=require('node:assert/strict');const {navClick}=require('./nav.cjs');
 const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
  const fixture=createFixture(31241);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});
@@ -19,7 +19,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    if(url.pathname.endsWith('/file')){const path=route.request().postDataJSON().path;return json({path,content:files[path],version:'fixture'});}
    return route.continue();
   });
-  const open=async()=>{await page.goto('http://localhost:31241');await page.getByRole('button',{name:'Diary',exact:true}).click();};
+  const open=async()=>{await page.goto('http://localhost:31241');await navClick(page,'Diary');};
   await open();await page.getByPlaceholder('Write your first entry…').waitFor();
   assert.equal(await page.getByRole('heading',{name:'Past entries',exact:true}).count(),0);
   assert.equal(await page.locator('.diary-landing h1').count(),0);

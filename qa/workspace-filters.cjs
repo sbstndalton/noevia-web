@@ -1,5 +1,5 @@
 // Date/tag search uses only synthetic stored Markdown; no Diary inference or writes.
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');const {navClick}=require('./nav.cjs');
 const assert=require('node:assert/strict');const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
  const fixture=createFixture(31335);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});const errors=[];let writes=0;
@@ -10,7 +10,7 @@ const assert=require('node:assert/strict');const {createFixture}=require('./diar
   await page.addInitScript(t=>localStorage.setItem('cowork-theme',t),theme);
   await page.route('**/api/diary/files?*',r=>r.fulfill({json:{files:Object.keys(files).map(path=>({path,name:path,isDir:false}))}}));
   await page.route('**/api/diary/file',r=>{if(r.request().method()==='PUT')writes++;const path=r.request().postDataJSON().path;return r.fulfill({json:{path,content:files[path]??null,version:'synthetic-v1'}});});
-  await page.goto('http://localhost:31335');await page.getByRole('button',{name:'Diary',exact:true}).click();await page.getByRole('button',{name:'2024-02-29.md',exact:true}).click();
+  await page.goto('http://localhost:31335');await navClick(page,'Diary');await page.getByRole('button',{name:'2024-02-29.md',exact:true}).click();
   const workspace=page.getByRole('region',{name:'Markdown workspace'});
   await workspace.getByLabel('Markdown content',{exact:true}).fill('Unsaved draft #different');
   await workspace.getByText('Search & backlinks',{exact:true}).click();

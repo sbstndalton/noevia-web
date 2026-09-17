@@ -1,6 +1,6 @@
 // Synthetic populated projects and uploads at touch sizes; approvals: mobile-approvals.cjs.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const assert=require('node:assert/strict');
+const assert=require('node:assert/strict');const {navClick}=require('./nav.cjs');
 const {createFixture}=require('./diary-fixture.cjs');
 const longName='Synthetic-'+('unbroken-filename-'.repeat(12))+'.docx';
 const file={name:'Synthetic uploads/Documents/'+longName,source:'Synthetic uploads',content:'',attachment:{kind:'document',state:'stored',reason:'Synthetic original stored for compatibility testing.',bytes:2048,mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}};
@@ -15,7 +15,7 @@ const file={name:'Synthetic uploads/Documents/'+longName,source:'Synthetic uploa
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[project],freeChats:[]}}));
   await page.route('**/api/projects/synthetic-populated/sources/sync?background=1',r=>r.fulfill({json:{files:[],skipped:[]}}));
   await page.route('**/api/projects/synthetic-populated/skills',r=>r.fulfill({json:{skills:[]}}));
-  await page.goto('http://localhost:31332');await page.getByRole('button',{name:'Projects',exact:true}).click();
+  await page.goto('http://localhost:31332');await navClick(page,'Projects');
   await page.locator('.project-card').filter({hasText:project.name}).click();
   await page.getByRole('tab',{name:/Sources/}).click();await page.locator('.project-sources').waitFor();
   const fit=async(label)=>{

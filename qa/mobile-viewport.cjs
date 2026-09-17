@@ -14,7 +14,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    assert.ok(await locator.evaluate((el,h)=>{const r=el.getBoundingClientRect();const x=r.x+r.width/2,y=r.y+r.height/2;return r.width>0&&r.height>0&&x>=0&&x<innerWidth&&y>=0&&y<h&&el.contains(document.elementFromPoint(x,y));},height),'Control must be reachable inside the visible viewport');
  }
  try {
- for(const [width,height] of [[320,568],[375,667],[390,844],[430,932],[667,375],[768,1024],[1440,900]])for(const theme of ['light','dark']){
+ for(const [width,height] of [[320,568],[375,667],[390,844],[430,932],[640,800],[667,375],[768,1024],[1440,900]])for(const theme of ['light','dark']){
    const page=await browser.newPage({viewport:{width,height},isMobile:width<768,hasTouch:true});
    page.on('pageerror',e=>errors.push(e.message));
    await page.addInitScript(t=>localStorage.setItem('cowork-theme',t),theme);
@@ -37,6 +37,12 @@ const {createFixture}=require('./diary-fixture.cjs');
      }
    }
    await page.keyboard.press('Escape');
+   // Below 600px navigation lives in the drawer; everything else is in the sidebar.
+   const nav=async()=>{if(width<=600){await page.getByRole('button',{name:'Open navigation',exact:true}).click();await page.getByRole('dialog',{name:'Navigation'}).waitFor();}};
+   await nav();
+   await reachable(page.getByRole('button',{name:'Search projects and chats',exact:true}).first(),height);
+   if(width<=600)await page.keyboard.press('Escape');
+   await nav();
    await page.getByRole('button',{name:'Diary',exact:true}).click();
    const diary=page.locator('#diary-draft');await diary.waitFor();await reachable(diary,height);
    await diary.fill('Synthetic Diary draft');
@@ -46,9 +52,9 @@ const {createFixture}=require('./diary-fixture.cjs');
    await reachable(diary,height);assert.equal(await diary.inputValue(),'Synthetic Diary draft');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Page must not overflow horizontally');
    await page.screenshot({path:`/tmp/noevia-mobile-${width}-${theme}.png`});
-   await page.getByRole('button',{name:'Projects',exact:true}).click();
+   await nav();await page.getByRole('button',{name:'Projects',exact:true}).click();
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Projects must fit');
-   await page.getByRole('button',{name:'Code',exact:true}).click();
+   await nav();await page.getByRole('button',{name:'Code',exact:true}).click();
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Code must fit');
    await page.screenshot({path:`/tmp/noevia-mobile-code-${width}-${theme}.png`});
    await page.close();
@@ -72,6 +78,6 @@ const {createFixture}=require('./diary-fixture.cjs');
  await page.waitForFunction(()=>!document.documentElement.hasAttribute('data-short-viewport'));
  assert.equal(await composer.inputValue(),'Keyboard draft');await reachable(composer,667);
  assert.deepEqual(errors,[]);assert.equal(fixture.requests.length,0);
- console.log('PASS mobile viewport: seven phone/landscape/tablet/desktop sizes, both themes, composer/dialog reachability, settings overflow, keyboard shrink/restore, draft retention, pinch zoom.');
+ console.log('PASS mobile viewport: eight phone/landscape/tablet/desktop sizes, search reachable at each, both themes, composer/dialog reachability, settings overflow, keyboard shrink/restore, draft retention, pinch zoom.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

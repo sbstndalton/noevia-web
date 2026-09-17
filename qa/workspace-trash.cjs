@@ -1,5 +1,5 @@
 // Synthetic managed recovery UI only. No private corpus or inference.
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');const {navClick}=require('./nav.cjs');
 const assert=require('node:assert/strict');const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
  const fixture=createFixture(31338);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});const errors=[];
@@ -23,7 +23,7 @@ const assert=require('node:assert/strict');const {createFixture}=require('./diar
    if(conflict){conflict=false;return r.fulfill({status:409,json:{error:'The original path is occupied. Restore never overwrites existing data.'}});}
    record={...record,state:'restored'};trashed=false;return r.fulfill({json:record});
   });
-  await page.goto('http://localhost:31338');if(width===375)await page.addStyleTag({content:'html { font-size: 20px !important; }'});await page.getByRole('button',{name:'Diary',exact:true}).click();await page.getByRole('button',{name:'synthetic.md',exact:true}).click();
+  await page.goto('http://localhost:31338');if(width===375)await page.addStyleTag({content:'html { font-size: 20px !important; }'});await navClick(page,'Diary');await page.getByRole('button',{name:'synthetic.md',exact:true}).click();
   const workspace=page.getByRole('region',{name:'Markdown workspace'}),source=workspace.getByLabel('Markdown content',{exact:true});
   await workspace.getByText('Trash & recovery',{exact:true}).click();const move=workspace.getByRole('button',{name:'Move current file to Trash',exact:true});
   await source.fill('Unsaved synthetic draft');assert.ok(await move.isDisabled());await source.fill('# Stored synthetic');assert.ok(await move.isEnabled());
@@ -35,7 +35,7 @@ const assert=require('node:assert/strict');const {createFixture}=require('./diar
   assert.equal(await source.inputValue(),'# Stored synthetic');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   // Same path and version can be trashed again with a new operation identity.
   await move.click();await workspace.getByRole('button',{name:'Restore synthetic.md',exact:true}).waitFor();assert.notEqual(ids[2],ids[1]);
-  await page.reload();await page.getByRole('button',{name:'Diary',exact:true}).click();
+  await page.reload();await navClick(page,'Diary');
   // Open a new editor to reach recovery even when the folder has no active files.
   await page.getByRole('button',{name:'New',exact:true}).click();await page.getByText('Trash & recovery',{exact:true}).click();await page.getByRole('button',{name:'Load Trash',exact:true}).click();await page.getByRole('button',{name:'Restore synthetic.md',exact:true}).waitFor();
   await page.close();

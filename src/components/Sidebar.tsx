@@ -100,10 +100,52 @@ export function Sidebar({
   const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
   const [searching, setSearching] = useState(false);
-  // Below 600px the sidebar collapses to an icon rail, which hid the project
-  // and chat lists entirely — a free chat was then unreachable from anywhere
-  // on a phone. The rail can be expanded over the content instead.
+  // Below 600px the sidebar is gone entirely and opens as a drawer from one
+  // toggle; `expanded` is that drawer. Focus is trapped while it is open and
+  // handed back to the toggle when it closes.
   const [expanded, setExpanded] = useState(false);
+  const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 600px)').matches);
+  const drawer = useRef<HTMLDivElement>(null);
+  const toggle = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 600px)');
+    const change = () => { setMobile(query.matches); if (!query.matches) setExpanded(false); };
+    query.addEventListener('change', change);
+    return () => query.removeEventListener('change', change);
+  }, []);
+  useEffect(() => {
+    if (!mobile) { wasOpen.current = false; return; }
+    if (expanded) {
+      wasOpen.current = true;
+      drawer.current?.querySelector<HTMLElement>('.side-expand')?.focus();
+    } else if (wasOpen.current) {
+      wasOpen.current = false;
+      toggle.current?.focus();
+    }
+  }, [expanded, mobile]);
+  // A software keyboard shrinks only the visual viewport; size the drawer to it so
+  // nothing in it ends up behind the keyboard.
+  useEffect(() => {
+    const viewport = window.visualViewport, el = drawer.current;
+    if (!mobile || !expanded || !viewport || !el) return;
+    const fit = () => el.style.setProperty('--drawer-height', `${viewport.height}px`);
+    fit(); viewport.addEventListener('resize', fit);
+    return () => { viewport.removeEventListener('resize', fit); el.style.removeProperty('--drawer-height'); };
+  }, [expanded, mobile]);
+  const trapDrawer = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!mobile || !expanded) return;
+    if (e.key === 'Escape' && !e.defaultPrevented) {
+      if ((e.target as HTMLElement).closest('input, [role="menu"], dialog')) return;
+      e.preventDefault(); setExpanded(false); return;
+    }
+    if (e.key !== 'Tab' || !drawer.current) return;
+    const items = [...drawer.current.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter(el => !el.hasAttribute('disabled') && el.getClientRects().length);
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  };
   const [query, setQuery] = useState('');
   // One menu model for both entity types, opened from a right-click or the
   // hamburger. Destructive choices route through `confirm` rather than an
@@ -264,8 +306,16 @@ export function Sidebar({
                 {chatActions(c,c.projectId ?? null)}
               </div>
   );
-  return (
+  return (<>
+    <button ref={toggle} className="shell-icon-button nav-drawer-toggle" aria-label="Open navigation" aria-expanded={expanded} aria-controls="app-navigation" onClick={() => setExpanded(true)}><ShellIcon name="panel"/></button>
+    {mobile && expanded && <div className="nav-drawer-backdrop" aria-hidden="true" onClick={() => setExpanded(false)}/>}
     <div
+      ref={drawer}
+      id="app-navigation"
+      role={mobile && expanded ? 'dialog' : undefined}
+      aria-modal={mobile && expanded ? true : undefined}
+      aria-label={mobile && expanded ? 'Navigation' : undefined}
+      onKeyDown={trapDrawer}
       className={`sidebar${activeView === 'diary' ? ' diary-sidebar' : ''}${expanded ? ' is-expanded' : ''}${collapsed ? ' is-collapsed' : ''}`}
       onClick={(e) => {
         // Any navigation collapses the rail again, so the overlay never
@@ -273,7 +323,7 @@ export function Sidebar({
         if (expanded && (e.target as HTMLElement).closest('.nav-item')) setExpanded(false);
       }}
     >
-      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={collapsed || (!expanded && window.innerWidth <= 600) ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={!collapsed && (expanded || window.innerWidth > 600)} onClick={() => {if(window.innerWidth <= 600)setExpanded(!expanded);else setCollapsed(!collapsed);}}><ShellIcon name="panel"/></button><button className="shell-icon-button" aria-label={theme==='dark'?'Switch to Polymetal Day':'Switch to Polymetal Night'} title={theme==='dark'?'Polymetal Day':'Polymetal Night'} onClick={onToggleTheme}><ShellIcon name="sun"/></button><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
+      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? 'Close navigation' : collapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button><button className="shell-icon-button" aria-label={theme==='dark'?'Switch to Polymetal Day':'Switch to Polymetal Night'} title={theme==='dark'?'Polymetal Day':'Polymetal Night'} onClick={onToggleTheme}><ShellIcon name="sun"/></button><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
       <div className="app-mode-switch" aria-label="Workspace mode"><button className="is-selected" aria-pressed="true"><ShellIcon name="chat"/>Chat</button><button onClick={onEnterCode} aria-pressed="false"><ShellIcon name="code"/>Code</button></div>
       {searching&&<input className="shell-search" autoFocus aria-label="Search projects and chats" placeholder="Search projects and chats…" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');}}}/>}
 
@@ -420,5 +470,5 @@ export function Sidebar({
         );
       })()}<div className="status-row"><span className={`status-dot${health.inferenceUp === true ? ' is-up' : health.inferenceUp === false ? ' is-down' : ''}`}/><span className="status-text">{statusText(health)}</span></div><AccountMenu onSettings={onOpenSettings}/></div>
     </div>
-  );
+  </>);
 }

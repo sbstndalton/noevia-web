@@ -1,5 +1,5 @@
 // Synthetic managed import UI; no real Diary access or inference.
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');const {navClick}=require('./nav.cjs');
 const assert=require('node:assert/strict');const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
  const fixture=createFixture(31337);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});const errors=[];
@@ -16,7 +16,7 @@ const assert=require('node:assert/strict');const {createFixture}=require('./diar
    if(url.searchParams.get('action')==='apply'){applies++;assert.equal(url.searchParams.get('fingerprint'),'reviewed');return r.fulfill(fail?{status:502,json:{error:'Response unavailable. Retry with the same file and folder.'}}:{json:{destination:'Imports/Copy',fileCount:2,indexPending:true}});}
    return r.fulfill({json:{alreadyApplied:applies===2,fingerprint:'reviewed',destination:'Imports/'+name,fileCount:2,bytes:12,files:['raw/synthetic.md','image.bin'],directories:['empty'],duplicates:['raw/synthetic.md'],conflicts:name==='Occupied'?['Imports/Occupied']:[]}});
   });
-  await page.goto('http://localhost:31337');await page.getByRole('button',{name:'Diary',exact:true}).click();await page.getByRole('button',{name:'synthetic.md',exact:true}).click();
+  await page.goto('http://localhost:31337');await navClick(page,'Diary');await page.getByRole('button',{name:'synthetic.md',exact:true}).click();
   const workspace=page.getByRole('region',{name:'Markdown workspace'});await workspace.getByLabel('Markdown content',{exact:true}).fill('Unsaved synthetic draft');
   await workspace.getByText('Import workspace',{exact:true}).click();
   await workspace.getByLabel('Workspace ZIP',{exact:true}).setInputFiles({name:'synthetic.zip',mimeType:'application/zip',buffer:Buffer.from('synthetic')});
