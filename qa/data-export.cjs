@@ -38,17 +38,41 @@ function entries(buf){const out={};let at=0;while(buf.readUInt32LE(at)===0x04034
    assert.match(download.suggestedFilename(),/^noevia-conversations-\d{4}-\d{2}-\d{2}\.zip$/);
    const files=entries(fs.readFileSync(await download.path()));
    const names=Object.keys(files);
-   assert.ok(names.includes('chats/synthetic-packing-list-c-free-1.md'),names.join(', '));
+   const freeFile=names.find(n=>/^chats\/synthetic-packing-list-c-[\w-]+\.md$/.test(n));assert.ok(freeFile,names.join(', '));
    assert.ok(names.includes('projects/synthetic-battery-notes/cell-chemistry-c-proj-1.md'),names.join(', '));
-   assert.match(files['chats/synthetic-packing-list-c-free-1.md'],/## Assistant\n\nA \*\*synthetic\*\* list\./);
+   assert.match(files[freeFile],/## Assistant\n\nA \*\*synthetic\*\* list\./);
    assert.ok(!Object.values(files).some(t=>t.includes('PRIVATE-REASONING-CANARY')),'reasoning must not be exported');
    assert.equal(JSON.parse(files['conversations.json']).chats.length,2);
    await dialog.getByRole('status').filter({hasText:'Downloaded'}).waitFor();
+   if(width===1440){
+    const zipPath=path.join(dir,'export.zip');fs.copyFileSync(await download.path(),zipPath);
+    // Round trip 1: importing into the same account adds nothing.
+    await dialog.getByLabel('Conversations file').setInputFiles(zipPath);
+    await dialog.getByRole('status').filter({hasText:'Imported 0 chats. 2 were already here.'}).waitFor();
+    // Round trip 2: a deleted chat comes back under a new id and appears in the sidebar without a reload.
+    assert.ok((await api('/api/freechats/c-free-1',undefined,'DELETE')).status<300);
+    await page.reload();await page.waitForLoadState('networkidle');
+    await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+    await dialog.waitFor();await dialog.getByRole('button',{name:'Data',exact:true}).click();
+    await dialog.getByLabel('Conversations file').setInputFiles(zipPath);
+    await dialog.getByRole('status').filter({hasText:'Imported 1 chat. 1 was already here.'}).waitFor();
+    const restored=(await api('/api/workspace')).body.freeChats;
+    assert.equal(restored.length,1);assert.notEqual(restored[0].id,'c-free-1');assert.equal(restored[0].title,'Synthetic packing list');
+    assert.equal((await api(`/api/chats/${restored[0].id}/history`)).body.history[1].content,'A **synthetic** list.');
+    await page.keyboard.press('Escape');
+    await page.getByText('Synthetic packing list').first().waitFor();
+    // A file that is not an export is refused with a clear message.
+    fs.writeFileSync(path.join(dir,'bad.json'),'{"hello":1}');
+    await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+    await dialog.waitFor();await dialog.getByRole('button',{name:'Data',exact:true}).click();
+    await dialog.getByLabel('Conversations file').setInputFiles(path.join(dir,'bad.json'));
+    await dialog.getByRole('alert').filter({hasText:'Choose a conversations.json from a noevia conversations export.'}).waitFor();
+   }
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow ${width}`);
    await page.screenshot({path:`${shots}/data-export-${width}-${theme}.png`});
    await page.keyboard.press('Escape');
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS data export: Settings → Data downloads a ZIP with free and project chats as Markdown plus JSON, no reasoning text, signed-out 401; 1440 light, 375 dark.');
+  console.log('PASS data export: Settings → Data downloads a ZIP with free and project chats as Markdown plus JSON, no reasoning text, signed-out 401; import round trip (idempotent, deleted chat restored under a new id, sidebar refresh, bad file refused); 1440 light, 375 dark.');
  }finally{await browser.close();server.kill('SIGTERM');fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -2,6 +2,7 @@ import { titleAfterSend } from './chat-title';
 import { sourceRefresher } from './source-refresh';
 import { sourceRefreshIssues } from './source-status';
 import { useAppearance } from './useAppearance';
+import { useWorkspaceChanged } from './components/data/workspace-changed';
 import { useModelsChanged } from './models-changed';
 import { modelChoiceLabel } from './model-guidance';
 import { TOOL_RESULT_LIMIT } from './components/ToolCalls';
@@ -148,6 +149,7 @@ export default function App(): JSX.Element {
       })
       .catch(() => undefined);
   }, []);
+  useWorkspaceChanged(refreshProjects);
 
   // One-time migration: fold any localStorage free-chats into the server list
   // (free chats used to live only in this browser), then retire the key.

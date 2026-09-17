@@ -55,7 +55,7 @@ const ICONS: Record<string, string> = Object.fromEntries(['profile','security','
 // one place, so an empty section never looks like a broken one.
 const PLANNED: { group: string; items: string[] }[] = [
   { group: 'Personalization', items: ['Response style', 'Account-wide custom instructions', 'Account-wide memory preferences', 'Notifications', 'Keyboard shortcuts'] },
-  { group: 'Data', items: ['Data retention', 'Import chats and projects', 'Archived conversations'] },
+  { group: 'Data', items: ['Data retention', 'Archived conversations'] },
   { group: 'Extensibility', items: ['Capability catalogue', 'Plugin management', 'Skill library', 'Connector catalogue'] },
   { group: 'Coding workspace', items: ['Coding preferences', 'Git', 'Environments', 'Worktrees', 'Hooks'] },
 ];
