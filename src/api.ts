@@ -292,7 +292,7 @@ export function fetchToolboxes(): Promise<{ toolboxes: Toolbox[]; mcp: McpStatus
 
 export interface AutoRoles { fast: string; smart: string; vision?: string }
 
-export function fetchAutoRoles(): Promise<{ configured: boolean; roles: AutoRoles | null }> {
+export function fetchAutoRoles(): Promise<{ configured: boolean; roles: AutoRoles | null; missing?: { role: 'fast' | 'smart' | 'vision'; model: string }[] }> {
   return getJson('/api/auto-roles');
 }
 

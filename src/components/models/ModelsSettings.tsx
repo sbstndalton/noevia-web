@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, RouteRule } from '../../types';
-import type { AutoRoles } from '../../api';
 import { fetchAutoRoles, setAutoRoles as putAutoRoles } from '../../api';
 import { matchesModelUse, modelChoiceLabel } from '../../model-guidance';
 import { AUTO_EXPLAINED, ROLE_LABEL, roleSummary } from '../../routing-copy';
@@ -113,7 +112,7 @@ function Collapsible({ title, hint, children }: { title: string; hint: string; c
 // What Auto actually routes to. This used to be edited in the chat box, where
 // it competed with switching model — the one action people take mid-chat.
 function RoutingSection({ models, routes, projects, modelsError }: { models: InstalledModel[]; routes: RouteRule[]; projects: Project[]; modelsError: string | null }): JSX.Element {
-  const [info, setInfo] = useState<{ configured: boolean; roles: AutoRoles | null } | null>(null);
+  const [info, setInfo] = useState<Awaited<ReturnType<typeof fetchAutoRoles>> | null>(null);
   const [pending, setPending] = useState<{ fast?: string; smart?: string; vision?: string }>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -143,6 +142,7 @@ function RoutingSection({ models, routes, projects, modelsError }: { models: Ins
     <p className="mm-note">Projects set to Auto pick a model per message. Vision is optional: set it and that model describes any images, then Fast or Smart answers from the description — so the answering model does not need to see.</p>
     {modelsError && <p role="alert" className="modal-err">{modelsError}</p>}
     {!info?.configured && !error && <p className="mm-note">Auto has no models assigned yet. Pick Fast and Smart, then save.</p>}
+    {!!info?.missing?.length && <p className="mm-note warn" role="alert">Auto can't answer until you replace {info.missing.map((m) => `${ROLE_LABEL[m.role]} (${m.model})`).join(', ')}: {info.missing.length === 1 ? 'that model is' : 'those models are'} no longer installed.</p>}
     <div className="mm-form">
       {(['fast', 'smart', 'vision'] as const).map((role) => <label key={role}>
         {ROLE_LABEL[role]}

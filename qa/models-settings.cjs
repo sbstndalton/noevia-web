@@ -26,6 +26,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   if(p==='/api/models/installed')return json([{name:'Qwen-9B',labels:['vision'],loaded:true,sizeGB:5.6,maxContext:262144,source:'preset',canDelete:false,status:'loaded'},{name:'Gemma-E2B',labels:[],loaded:false,sizeGB:3,maxContext:131072,source:'preset',canDelete:false,status:'unloaded'},...(extraRegistered?[{name:'new-model-Q4_K_M',labels:[],loaded:false,sizeGB:2,maxContext:8192,source:'preset',canDelete:false,status:'unloaded'}]:[])]);
   if(p==='/api/models/calibration')return json({job:null,history:[]});
   if(p==='/api/models/presets/reload'){const b=body();reloads.push(b);return b.unload?json({reloaded:true,unloaded:['Qwen-9B']}):json({error:'A model is loaded.',loaded:['Qwen-9B']},409);}
+  if(p==='/api/auto-roles'&&m==='GET')return json({configured:true,roles:{fast:'Qwen-9B',smart:'Gemma-4-E4B-it-GGUF'},missing:[{role:'smart',model:'Gemma-4-E4B-it-GGUF'}]});
   if(!p.startsWith('/api/model-manager/'))return p.startsWith('/api/models/')?json([]):route.continue();
   const r=p.slice('/api/model-manager/'.length);
   if(r==='models')return json({models:[
@@ -239,6 +240,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await dialog.getByText('How Auto decides',{exact:true}).click();
  assert.ok(await dialog.getByText(/Auto never blocks a message/).isVisible());
  assert.equal(await dialog.locator('label').filter({hasText:'Fast — quick answers'}).count(),1);
+ assert.match(await dialog.getByRole('alert').filter({hasText:'no longer installed'}).innerText(),/Smart — harder questions \(Gemma-4-E4B-it-GGUF\)/);
  await dialog.getByText(/Per-project routing \(/).click();
  assert.ok(await dialog.getByText(/Change a project's model from its own model selector/).isVisible());
  // Layout at phone, tablet and desktop, both themes, on the densest tabs.
