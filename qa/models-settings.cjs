@@ -28,7 +28,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    {kind:'spec',id:'off',label:'Off',status:'measured',score:19.1,workloads:[{workload:'list',gen:19,drafted:0,accepted:0},{workload:'prose',gen:19.2,drafted:0,accepted:0},{workload:'code',gen:19.1,drafted:0,accepted:0}]},
    {kind:'spec',id:'mtp',label:'MTP (engine defaults)',status:'measured',score:33.4,workloads:[{workload:'list',gen:40.2,drafted:84,accepted:82},{workload:'prose',gen:23.2,drafted:144,accepted:59},{workload:'code',gen:36.9,drafted:120,accepted:96}]},
    {kind:'spec',id:'ngram',label:'N-gram',status:'rejected',reason:'Changed the deterministic list output.',score:20},
-   {kind:'prompt',id:'ubatch-1024',label:'Micro-batch 1024',status:'measured',promptPerSecond:531}],
+   {kind:'prompt',id:'ubatch-1024',label:'Micro-batch 1024',status:'measured',promptPerSecond:531,reused:true}],progress:{done:4,total:8,percent:50},
    result:{spec:'mtp',specLabel:'MTP (engine defaults)',generation:33.4,generationOff:19.1,gain:75,perWorkload:{list:'mtp',prose:'mtp',code:'mtp'},ubatch:1024,promptPerSecond:531,
     extensions:[{id:'context',action:'calibrate',from:32768,to:63720,why:'measured prompt speed (531 tokens/s) fills about 63,720 tokens within 120 s'}]},calibration:'started'}});
   if(p==='/api/models/calibration')return json({job:null,history:[]});
@@ -125,6 +125,9 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await dialog.getByText(/Memory would allow 1024K; limited because prompt speed not measured yet/).waitFor();
  await dialog.getByText(/MTP layers built in/).waitFor();
  await dialog.getByText(/Saved: MTP \(engine defaults\) at 33.4 tokens\/s \(\+75% over off\), micro-batch 1024/).waitFor();
+ assert.equal(await dialog.getByRole('progressbar').getAttribute('value'),'50','progress bar shows how far the run got');
+ await dialog.getByText('4 of 8 tests').waitFor();
+ assert.match(await dialog.getByRole('region',{name:'Auto-tune steps'}).innerText(),/measured earlier/,'reused measurements are labelled');
  await dialog.getByText(/Context can likely grow from 32,768 to about 63,720 tokens/).waitFor();
  assert.equal(await dialog.getByRole('region',{name:'Auto-tune steps'}).getByRole('row').count(),5);
  await dialog.locator('.mm-easy-measure > summary').filter({hasText:'Measure context on this machine'}).waitFor();
