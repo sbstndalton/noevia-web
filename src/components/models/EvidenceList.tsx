@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch } from '../../api';
 
-type Row = { category: string; state: string; value: { ctx?: number } | null; at: number | null; suite: { name: string; version: number } | null; limitations: string[] };
+type Row = { category: string; state: string; value: { ctx?: number; rate?: number } | null; at: number | null; suite: { name: string; version: number } | null; limitations: string[] };
 const LABEL: Record<string, string> = { context_capacity: 'Context capacity', vision: 'Image input', mtp_acceptance: 'MTP acceptance', throughput: 'Measured speed' };
 const STATE: Record<string, string> = {
   verified: 'Verified for this configuration', failed: 'Failed on this configuration', stale: 'Stale — settings or files changed since',
@@ -27,7 +27,7 @@ export function EvidenceList({ model }: { model: string }): JSX.Element | null {
     <h4>Qualification evidence</h4>
     <ul>{rows.map((row) => <li key={row.category} data-state={row.state}>
       <strong>{LABEL[row.category] || row.category}</strong>
-      <span>{STATE[row.state] || row.state}{row.category === 'context_capacity' && row.value?.ctx ? ` · ${row.value.ctx.toLocaleString('en-US')} tokens` : ''}{row.at ? ` · ${new Date(row.at).toLocaleDateString()}` : ''}</span>
+      <span>{STATE[row.state] || row.state}{row.category === 'context_capacity' && row.value?.ctx ? ` · ${row.value.ctx.toLocaleString('en-US')} tokens` : ''}{row.category === 'mtp_acceptance' && typeof row.value?.rate === 'number' ? ` · ${Math.round(row.value.rate * 100)}% accepted` : ''}{row.at ? ` · ${new Date(row.at).toLocaleDateString()}` : ''}</span>
       {row.limitations.length > 0 && row.state !== 'unverified' && <small>{row.limitations.join(' · ')}</small>}
     </li>)}</ul>
   </section>;
