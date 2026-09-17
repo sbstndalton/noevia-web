@@ -1,4 +1,5 @@
 import { PalettePicker } from './PalettePicker';
+import { LayoutModeControl } from './LayoutMode';
 import { SettingsPanelBoundary } from './SettingsPanelBoundary';
 import { currentPalette } from '../appearance';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -137,6 +138,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
               <p role={props.appearanceError ? 'alert' : 'status'} className="route-note">{props.appearanceStatus}</p>
               {props.appearanceError && <button className="modal-btn secondary" onClick={props.retryAppearance}>Retry appearance</button>}
             </section>
+            <LayoutModeControl/>
           </>
         ) : section === 'usage' ? (
           <UsageView/>
