@@ -1226,7 +1226,9 @@ body { isolation:isolate; background:var(--bg-app); }
   .model-dialog-panel { max-height: calc(var(--visible-viewport-height, 100dvh) - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
 }
 @media (max-width: 700px) {
-  .settings-shell { height: var(--visible-viewport-height, 100dvh); max-height: var(--visible-viewport-height, 100dvh); }
+  /* Pinned to the top: a dialog centred in the layout viewport would put its lower half
+     behind the keyboard once its height follows the visible viewport. */
+  .settings-shell { height: var(--visible-viewport-height, 100dvh); max-height: var(--visible-viewport-height, 100dvh); margin: 0; inset: 0 auto auto 0; width: 100%; max-width: none; }
   .native-modal input, .native-modal select, .native-modal textarea, .settings-shell input, .settings-shell select, .settings-shell textarea { font-size: 16px; }
   .composer .send-btn, .diary-compose .send-btn, .composer-plus { min-width: 44px; min-height: 44px; }
   .model-dialog-panel .popup-tab { min-height: 44px; }
@@ -1674,3 +1676,7 @@ body { isolation:isolate; background:var(--bg-app); }
 .project-mode-options { display: flex; flex-wrap: wrap; gap: 8px 18px; }
 .project-mode-options label { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; }
 .project-mode-options small { color: var(--text-muted); }
+
+/* Setup and sign-in follow the visible viewport like the app shell, so a phone keyboard
+   shrinks the screen and the focused field scrolls into view instead of sitting behind it. */
+.auth-screen { height: var(--visible-viewport-height, 100dvh); min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; place-items: safe center; align-content: safe center; }
