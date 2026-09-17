@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { bytes, ctxShort, errorText, mm, tokens } from './mm';
+import { apiFetch } from '../../api';
 
 type Result = { id: string; downloads: number; likes: number; last_modified: string; pipeline_tag: string | null; gguf_count: number | null; downloaded: string[] };
 type Estimate = { key: string; label: string; ctx: number; gpu_layers: number; total_layers: number; speed_pct: number; offload: boolean };
@@ -14,6 +15,7 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'downloa
   const [repo, setRepo] = useState<{ repo: string; groups: Group[]; gated?: string; error?: string } | null>(null), [repoBusy, setRepoBusy] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]), [message, setMessage] = useState('');
   const finished = useRef(new Set<string>());
+  const [registered, setRegistered] = useState<Set<string>>(new Set());
   const search = async (term = q) => {
     setSearching(true); setError('');
     try { const v = await mm<{ results: Result[]; error?: string }>(`search?${new URLSearchParams({ q: term, sort, limit: '30' })}`); if (v.error) throw Error(v.error); setResults(v.results); }
@@ -28,7 +30,17 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'downloa
     try {
       const v = await mm<{ jobs: Job[] }>('downloads'); setJobs(v.jobs);
       const done = v.jobs.filter(j => j.status === 'done' && !finished.current.has(j.id));
-      if (done.length) { done.forEach(j => finished.current.add(j.id)); onDownloaded(); }
+      if (done.length) {
+        done.forEach(j => finished.current.add(j.id));
+        const notes: string[] = [];
+        for (const j of done.filter(j => isModelFile(j.filename))) {
+          const note = await registerSafeDefaults(sectionFor(j.filename));
+          if (note.registered) setRegistered(prev => new Set(prev).add(j.id));
+          if (note.text) notes.push(note.text);
+        }
+        if (notes.length) setMessage(notes.join(' '));
+        onDownloaded();
+      }
     } catch {}
   };
   useEffect(() => { void search(); void refreshJobs(); }, []);
@@ -55,7 +67,7 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'downloa
     <p className="mm-note" role="status">{searching ? 'Searching Hugging Face…' : q.trim() ? `Results for “${q.trim()}”.` : 'Type in the search box above to find a model.'}</p>
     {error && <p role="alert" className="modal-err">{error}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
-    <Queue jobs={jobs} onChange={refreshJobs} onSetUp={onSetUp}/>
+    <Queue jobs={jobs} registered={registered} onChange={refreshJobs} onSetUp={onSetUp}/>
     {repo && <RepoFiles repo={repo} onClose={() => setRepo(null)} onDownload={download}/>}
     {!repo && results && <ul className="mm-results" aria-label="Search results">
       {results.length === 0 && <li className="mm-note">No GGUF repositories match.</li>}
@@ -95,15 +107,39 @@ function RepoFiles({ repo, onClose, onDownload }: { repo: { repo: string; groups
 }
 
 const isModelFile = (filename: string) => filename.toLowerCase().endsWith('.gguf') && !filename.toLowerCase().includes('mmproj');
+const sectionFor = (filename: string) => filename.split('/').pop()!.replace(/\.gguf$/i, '').replace(/-\d{5}-of-\d{5}$/, '');
 
-function Queue({ jobs, onChange, onSetUp }: { jobs: Job[]; onChange: () => Promise<void>; onSetUp: (section: string) => void }) {
+// A finished download gets conservative settings once (8k context, MTP only with a
+// draft head beside it, the GGUF's own template and sampling), then the preset file
+// is reloaded without unloading anything. A loaded model makes the reload wait; the
+// new model is still registered and is picked up once the engine reloads.
+async function registerSafeDefaults(section: string): Promise<{ registered: boolean; text: string }> {
+  let mtp = false;
+  try { mtp = (await mm<{ mtp?: boolean }>(`sections/${encodeURIComponent(section)}/safe-defaults`, { body: {} })).mtp === true; }
+  catch (e) {
+    const status = (e as { status?: number }).status;
+    if (status === 409) return { registered: true, text: '' };
+    if (status === 400) return { registered: false, text: '' };
+    return { registered: false, text: `${section} downloaded, but safe defaults were not written: ${errorText(e, 'unknown error')}. Use Set up this model.` };
+  }
+  const saved = `Registered ${section} with safe defaults (8K context${mtp ? ', MTP draft head' : ''}).`;
+  try {
+    const r = await apiFetch('/api/models/presets/reload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unload: false }) });
+    const v = await r.json().catch(() => ({})) as { loaded?: string[]; error?: string };
+    if (r.status === 409 && Array.isArray(v.loaded)) return { registered: true, text: `${saved} ${v.loaded.join(', ')} is loaded, so the engine offers it after that model is unloaded.` };
+    if (!r.ok) return { registered: true, text: `${saved} The engine did not reload yet: ${v.error || r.status}.` };
+    return { registered: true, text: `${saved} Ready to load.` };
+  } catch (e) { return { registered: true, text: `${saved} The engine did not reload yet: ${errorText(e, 'unknown error')}.` }; }
+}
+
+function Queue({ jobs, registered, onChange, onSetUp }: { jobs: Job[]; registered: Set<string>; onChange: () => Promise<void>; onSetUp: (section: string) => void }) {
   if (!jobs.length) return null;
   const act = async (path: string) => { try { await mm(path, { body: {} }); } finally { await onChange(); } };
   // A finished download is a FILE, not a model the engine can serve. It becomes
   // one only once a models.ini section points at it and the preset file is
   // reloaded. Nothing said so, so a completed download looked like it had
   // simply not taken effect yet — the real answer to "it takes a while".
-  const awaitingSetup = jobs.filter(j => j.status === 'done' && isModelFile(j.filename));
+  const awaitingSetup = jobs.filter(j => j.status === 'done' && isModelFile(j.filename) && !registered.has(j.id));
   return <section className="mm-panel" aria-labelledby="mm-queue">
     <header className="mm-panel-head"><h3 id="mm-queue">Downloads</h3>{jobs.some(j => !['queued', 'downloading'].includes(j.status)) && <button className="modal-btn secondary" onClick={() => void act('downloads/clear')}>Clear finished</button>}</header>
     {awaitingSetup.length > 0 && <p className="mm-note" role="status" data-testid="download-setup-needed">
@@ -116,7 +152,7 @@ function Queue({ jobs, onChange, onSetUp }: { jobs: Job[]; onChange: () => Promi
       {j.parallel && j.status === 'downloading' && <div className="mm-chunks" aria-label="Parallel parts">{j.chunks.map(c => <span key={c.index} title={`Part ${c.index + 1}: ${c.pct.toFixed(0)}%`}><i style={{ width: `${c.pct}%` }}/></span>)}</div>}
       <small>{bytes(j.downloaded)} of {j.bytes ? bytes(j.bytes) : 'unknown size'} · {j.repo}</small>
       {['queued', 'downloading'].includes(j.status) && <button className="popup-tab" onClick={() => void act(`downloads/${j.id}/cancel`)}>Cancel</button>}
-      {j.status === 'done' && isModelFile(j.filename) && <button className="popup-tab" onClick={() => onSetUp(j.filename.split('/').pop()!.replace(/\.gguf$/i, '').replace(/-\d{5}-of-\d{5}$/, ''))}>Set up this model</button>}
+      {j.status === 'done' && isModelFile(j.filename) && <button className="popup-tab" onClick={() => onSetUp(sectionFor(j.filename))}>{registered.has(j.id) ? 'Review settings' : 'Set up this model'}</button>}
     </li>)}</ul>
   </section>;
 }

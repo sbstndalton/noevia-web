@@ -8,7 +8,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  try{
  const page=await browser.newPage({viewport:{width:1440,height:950}});await page.emulateMedia({reducedMotion:'reduce'});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- const calls=[];let saveAttempts=0,revision='r1',deleted=[],reloads=[],badges=[],extraJob=null,extraRegistered=false,prompts=[{id:1,name:'Short answer',body:'Reply with OK.'}],benchStarted=null;
+ const calls=[];let saveAttempts=0,revision='r1',deleted=[],reloads=[],safeDefaults=[],badges=[],extraJob=null,extraRegistered=false,prompts=[{id:1,name:'Short answer',body:'Reply with OK.'}],benchStarted=null;
  const now=Date.now()/1000,hist=Array.from({length:40},(_,i)=>({ts:now-(39-i)*2,gpu_util:i%10*9,vram_used_gb:0.15,cpu_pct:40+i%5*10,mem_used_gb:1.2,shared_used_gb:6+i*0.1,temp_c:48,power_w:18+i%4,per_gpu_util:[],per_gpu_vram_used_gb:[]}));
  const hostHist=hist.map(p=>({ts:p.ts,cpu_pct:12,mem_used_gb:14.5,mem_total_gb:29,mem_available_gb:14.5}));
  const schema=[{tier:'Common',open:true,fields:[{key:'model',label:'Model file',kind:'text',choices:[],placeholder:'',help:'Model path'},{key:'ctx-size',label:'Context size',kind:'int',choices:[],placeholder:'8192',help:'Tokens'},{key:'ngl',label:'GPU layers',kind:'text',choices:[],placeholder:'999',help:''},{key:'flash-attn',label:'Flash attention',kind:'select',choices:['','on','off','auto'],placeholder:'',help:''},{key:'jinja',label:'Enable --jinja templating',kind:'bool',choices:[],placeholder:'',help:''}]},{tier:'Multimodal / vision',open:false,fields:[{key:'mmproj',label:'Projector',kind:'text',choices:[],placeholder:'',help:''}]}];
@@ -38,6 +38,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   if(r==='models/delete'){deleted.push(...body().models);return json({results:[{key:body().models[0],ok:true,message:'deleted',freed:3e9,freedH:'3.0 GB'}]});}
   if(r==='sections'&&m==='GET')return json({revision,schema,sections:[{name:'Qwen-9B',items:[['model','/models/q/Qwen-9B.gguf'],['ctx-size','32768']],hasFile:true,file:'q/Qwen-9B.gguf',cli:'llama-server -m /models/q/Qwen-9B.gguf'},{name:'Gemma-E2B',items:[],hasFile:true,file:'g/Gemma-E2B.gguf',cli:'llama-server -m g'}],unregistered:['new-model-Q4_K_M'],backups:[['models.ini.bak-1',now,100]]});
   if(r.startsWith('sections/')&&r.endsWith('/autoconfig'))return json({section:'Qwen-9B',arch:'qwen35',params:'9.0 B',fileBytes:5.6e9,model:'/models/q/Qwen-9B.gguf',recommendation:{...rec,vision:url.searchParams.get('vision')!=='false'},measured:{n:12,gen_p50:13.7,gen_p25:12.9,gen_p75:14.2,prompt_p50:310,draft_acc_p50:null},history:[]});
+  if(r.endsWith('/safe-defaults')&&m==='POST'){safeDefaults.push(decodeURIComponent(r.split('/')[1]));return r.includes('later-model')?json({ok:true,revision,mtp:true}):json({error:'Synthetic manager failure'},502);}
   if(r.startsWith('sections/')&&m==='DELETE'){revision='r-del';return json({ok:true,revision});}
   if(r.startsWith('sections/')&&m==='GET'){const name=decodeURIComponent(r.split('/')[1].split('?')[0]);return json({name,exists:name!=='new-model-Q4_K_M',values:name==='new-model-Q4_K_M'?{model:'/models/n/new-model-Q4_K_M.gguf','ctx-size':'8192'}:{model:'/models/q/Qwen-9B.gguf','ctx-size':'32768',mmproj:'/models/q/mmproj.gguf'},extras:'',hints:name==='new-model-Q4_K_M'?['Defaults from the model file.']:[],revision,schema});}
   if(r.startsWith('sections/')&&m==='PUT'){saveAttempts++;const b=body();if(saveAttempts===1)return json({error:'models.ini changed since you loaded it.'},409);assert.equal(b.baseRevision,revision);assert.equal(b.values['ctx-size'],'262144');assert.equal(b.values.mmproj,'');revision='r2';return json({ok:true,revision});}
@@ -138,6 +139,15 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await new Promise(r=>setTimeout(r,2500));
  assert.ok(calls.filter(c=>c==='GET /api/models/installed').length>installedBefore,
   'a completed download did not refresh the installed-model list');
+ // Safe defaults: the completed model file registered itself and the preset reload ran
+ // without unloading anything; the loaded model deferring it is said plainly.
+ assert.ok(safeDefaults.includes('later-model-Q4_K_M'));
+ assert.deepEqual(reloads.at(-1),{unload:false});
+ await dialog.getByText(/Registered later-model-Q4_K_M with safe defaults \(8K context, MTP draft head\)\. Qwen-9B is loaded/).waitFor();if(process.env.QA_SCREENSHOTS)await page.screenshot({path:process.env.QA_SCREENSHOTS+'/models-safe-defaults.png'});
+ // A registration the manager refused leaves the manual path in place.
+ assert.ok(safeDefaults.includes('new-model-Q4_K_M'));
+ assert.match(await dialog.getByTestId('download-setup-needed').innerText(),/This file is downloaded but not yet a model/);
+ assert.equal(await dialog.getByRole('button',{name:'Review settings'}).count(),1);
 
  // And the Library list picks it up in place, without being remounted.
  await yours();
