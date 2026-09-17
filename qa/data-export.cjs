@@ -42,7 +42,7 @@ function entries(buf){const out={};let at=0;while(buf.readUInt32LE(at)===0x04034
    assert.ok(names.includes('projects/synthetic-battery-notes/cell-chemistry-c-proj-1.md'),names.join(', '));
    assert.match(files[freeFile],/## Assistant\n\nA \*\*synthetic\*\* list\./);
    assert.ok(!Object.values(files).some(t=>t.includes('PRIVATE-REASONING-CANARY')),'reasoning must not be exported');
-   assert.equal(JSON.parse(files['conversations.json']).chats.length,2);
+   assert.equal(JSON.parse(files['conversations.json']).chats.length,width===1440?2:3);
    await dialog.getByRole('status').filter({hasText:'Downloaded'}).waitFor();
    if(width===1440){
     const zipPath=path.join(dir,'export.zip');fs.copyFileSync(await download.path(),zipPath);
@@ -80,12 +80,26 @@ function entries(buf){const out={};let at=0;while(buf.readUInt32LE(at)===0x04034
     await dialog.getByText(/^No archived chats\./).waitFor();
     const chats=(await api('/api/workspace')).body.projects.find(x=>x.id===project.id).chats;
     assert.equal(chats.find(c=>c.id==='c-proj-1').archived,false);
+    // Delete old chats: confirmation shows the count; pinned old chats are kept.
+    const old=Date.now()-120*86400000;
+    assert.ok((await api('/api/freechats',{chats:[{id:'c-old-1',title:'Ancient synthetic chat',updatedAt:old},{id:'c-old-pinned',title:'Pinned ancient chat',updatedAt:old,pinned:true}]})).status<300);
+    await dialog.getByLabel('Delete old chats',{exact:true}).selectOption('90');
+    const confirm=page.getByRole('dialog',{name:'Delete 1 old chat now?'});await confirm.waitFor();
+    await page.screenshot({path:`${shots}/data-retention-confirm-1440-light.png`});
+    await confirm.getByRole('button',{name:'Delete old chats'}).click();
+    await dialog.getByRole('status').filter({hasText:'Deleted 1 now.'}).waitFor();
+    const left=(await api('/api/workspace')).body.freeChats.map(c=>c.id);
+    assert.ok(!left.includes('c-old-1'),left.join());assert.ok(left.includes('c-old-pinned'),left.join());
+    assert.equal((await api('/api/account/retention')).body.days,90);
+    // Cancel keeps everything: switching back to Never needs no confirmation.
+    await dialog.getByLabel('Delete old chats',{exact:true}).selectOption('0');
+    await dialog.getByRole('status').filter({hasText:'Old chats are kept.'}).waitFor();
    }
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow ${width}`);
    await page.screenshot({path:`${shots}/data-export-${width}-${theme}.png`});
    await page.keyboard.press('Escape');
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS data export: Settings → Data downloads a ZIP with free and project chats as Markdown plus JSON, no reasoning text, signed-out 401; import round trip (idempotent, deleted chat restored under a new id, sidebar refresh, bad file refused); archived chats listed and restored; 1440 light, 375 dark.');
+  console.log('PASS data export: Settings → Data downloads a ZIP with free and project chats as Markdown plus JSON, no reasoning text, signed-out 401; import round trip (idempotent, deleted chat restored under a new id, sidebar refresh, bad file refused); archived chats listed and restored; delete-old-chats confirmation keeps pinned; 1440 light, 375 dark.');
  }finally{await browser.close();server.kill('SIGTERM');fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

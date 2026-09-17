@@ -4,6 +4,7 @@ import { apiFetch } from '../../api';
 import { readConversationsFile } from './readExport';
 import { notifyWorkspaceChanged } from './workspace-changed';
 import { ArchivedChats } from './ArchivedChats';
+import { RetentionSetting } from './RetentionSetting';
 
 /** Settings → Data. Export is the user's own chats; nothing here reaches other accounts. */
 export function DataSettings(): JSX.Element {
@@ -65,6 +66,7 @@ export function DataSettings(): JSX.Element {
             <button className="modal-btn secondary" disabled={busy} onClick={() => picker.current?.click()}>Import…</button>
           </div>
         </div>
+        <RetentionSetting />
       </div>
       {status && <p className="route-note" role="status">{status}</p>}
       {error && <p className="modal-err" role="alert">{error}</p>}
