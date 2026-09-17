@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import type { JSX } from 'react';
 import type { LiveStats } from '../types';
+import { Icon } from './icons/Icon';
 
 interface StatsBarProps {
   stats: LiveStats | null; // App polls /api/stats and passes it down (single poller)
@@ -17,57 +19,39 @@ function fmtCount(n: number | null): string {
   return String(Math.round(n));
 }
 
-/** Slim live readout docked at the bottom of the chat column.
- *  Purely presentational: App owns the /api/stats poll loop (one poller total). */
-export function StatsBar({ stats }: StatsBarProps): JSX.Element {
-  return (
-    <section className="stats-disclosure" aria-label="Inference details">
+const OPEN_KEY = 'noevia:stats-open';
+const readOpen = (): boolean => { try { return localStorage.getItem(OPEN_KEY) === '1'; } catch { return false; } };
 
-      <div className="stats-bar">
-      <span className={`stats-live-dot${stats?.up ? '' : ' down'}`} />
-      <span className="stats-item">
-        <span className="stats-label" title="Provider-reported rate. Invalid samples and samples shorter than one estimated second are omitted.">reported tok/s</span>
-        <span className="stats-value">{fmt(stats?.tokensPerSecond ?? null)}</span>
-      </span>
-      <span className="stats-item">
-        <span className="stats-label">TTFT</span>
-        <span className="stats-value">{fmt(stats?.timeToFirstToken ?? null, 2, 's')}</span>
-      </span>
-      <span className="stats-sep" />
-      <span className="stats-item">
-        <span className="stats-label">in</span>
-        <span className="stats-value">
-          {fmtCount(stats?.inputTokens ?? null)}
-          <span className="stats-dim" title={stats?.telemetryScope || undefined}> / {fmtCount(stats?.inputTokensTotal ?? null)}</span>
-        </span>
-      </span>
-      <span className="stats-item">
-        <span className="stats-label">out</span>
-        <span className="stats-value">
-          {fmtCount(stats?.outputTokens ?? null)}
-          <span className="stats-dim" title={stats?.telemetryScope || undefined}> / {fmtCount(stats?.outputTokensTotal ?? null)}</span>
-        </span>
-      </span>
-      <span className="stats-item">
-        <span className="stats-label">reqs</span>
-        <span className="stats-value">{fmtCount(stats?.requestCount ?? null)}</span>
-      </span>
-      <span className="stats-sep" />
-      <span className="stats-item">
-        <span className="stats-label">GPU</span>
-        <span className="stats-value">{fmt(stats?.gpuPercent ?? null, 0, '%')}</span>
-      </span>
-      <span className="stats-item">
-        <span className="stats-label">VRAM</span>
-        <span className="stats-value">{fmt(stats?.vramGb ?? null, 1, ' GB')}</span>
-      </span>
-      {(stats?.mtp || []).map(m=><span className="stats-mtp" key={m.model} title={`${m.model} · ${m.source || "backend total"}: accepted draft tokens / proposed draft tokens`}>
-        <span>MTP acceptance{m.source === 'last response' ? ' (last response)' : ''} · {m.rate == null ? 'Awaiting backend counters' : `${(m.rate*100).toFixed(1)}%`}</span>
-        <progress aria-label={`MTP acceptance for ${m.model}`} max={1} value={m.rate ?? undefined} />
-      </span>)}
-      <span className="stats-grow" />
-      <span className="stats-src">Inference</span>
-      </div>
+/** Inference status at the bottom of the workspace: a quiet pill (status + speed) that expands into
+ *  plain-language details. Purely presentational: App owns the /api/stats poll (one poller total). */
+export function StatsBar({ stats }: StatsBarProps): JSX.Element {
+  const [open, setOpen] = useState(readOpen);
+  const up = !!stats?.up;
+  const toggle = () => setOpen((value) => {
+    const next = !value;
+    try { localStorage.setItem(OPEN_KEY, next ? '1' : '0'); } catch { /* per-browser convenience only */ }
+    return next;
+  });
+  return (
+    <section className={`stats-disclosure${open ? ' is-open' : ''}`} aria-label="Inference details">
+      {open && <dl className="stats-details" id="stats-details">
+        <div><dt title="Provider-reported rate. Invalid samples and samples shorter than one estimated second are omitted.">Speed</dt><dd>{fmt(stats?.tokensPerSecond ?? null)} tokens/s</dd></div>
+        <div><dt>First token</dt><dd>{fmt(stats?.timeToFirstToken ?? null, 2, ' s')}</dd></div>
+        <div><dt title={stats?.telemetryScope || undefined}>Last reply</dt><dd>{fmtCount(stats?.inputTokens ?? null)} in · {fmtCount(stats?.outputTokens ?? null)} out</dd></div>
+        <div><dt title={stats?.telemetryScope || undefined}>Total</dt><dd>{fmtCount(stats?.inputTokensTotal ?? null)} in · {fmtCount(stats?.outputTokensTotal ?? null)} out · {fmtCount(stats?.requestCount ?? null)} requests</dd></div>
+        <div><dt>GPU</dt><dd>{fmt(stats?.gpuPercent ?? null, 0, '%')} · {fmt(stats?.vramGb ?? null, 1, ' GB')} VRAM</dd></div>
+        {(stats?.mtp || []).map(m => <div className="stats-mtp" key={m.model} title={`${m.model} · ${m.source || 'backend total'}: accepted draft tokens / proposed draft tokens`}>
+          <dt>MTP acceptance{m.source === 'last response' ? ' (last reply)' : ''}</dt>
+          <dd>{m.rate == null ? 'Awaiting backend counters' : `${(m.rate * 100).toFixed(1)}%`}<progress aria-label={`MTP acceptance for ${m.model}`} max={1} value={m.rate ?? undefined} /></dd>
+        </div>)}
+      </dl>}
+      <button type="button" className="stats-bar" aria-expanded={open} aria-controls="stats-details" onClick={toggle}
+        title={open ? 'Hide inference details' : 'Show inference details'}>
+        <span className={`stats-live-dot${up ? '' : ' down'}`} aria-hidden="true" />
+        <span className="stats-label">{up ? 'Inference' : 'Inference offline'}</span>
+        {up && <><span className="stats-value">{fmt(stats?.tokensPerSecond ?? null)}</span><span className="stats-unit">tok/s</span></>}
+        <Icon name={open ? 'chevron-down' : 'chevron-right'} size={14} />
+      </button>
     </section>
   );
 }

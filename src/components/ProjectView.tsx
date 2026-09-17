@@ -17,6 +17,7 @@ import { fileToBase64, uploadLimit } from '../sources';
 import { deleteProjectImage, projectImageUrl, uploadProjectFile, deleteProjectFile } from '../api';
 import { ResearchPanel } from './research/ResearchPanel';
 import { useResearchAccess } from './research/useResearchAccess';
+import { EmptyState } from './EmptyState';
 
 /** First free "name", "name (2)", "name (3)", … avoiding collisions. */
 function uniqueName(name: string, existing: { name: string }[]): string {
@@ -162,7 +163,7 @@ export function ProjectView({
           ) : tab === 'chats' ? (
             <div className="project-scroll">
               {chats.length === 0 ? (
-                <p className="rail-empty">No chats yet — start one below.</p>
+                <EmptyState icon="chat" title="No chats yet">Ask something below to start the first chat in {project.name}. Its instructions and sources come along.</EmptyState>
               ) : (
                 <ul className="chat-index">
                   {chats.map((c) => (

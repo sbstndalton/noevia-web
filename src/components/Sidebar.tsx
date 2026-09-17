@@ -11,7 +11,6 @@ import type { McpStatus } from '../api';
 import { ShellIcon } from './ShellIcon';
 import type { ChatMeta, HealthState, Project } from '../types';
 import {
-  BookIcon,
   Logo,
   PlusIcon,
 } from './Icons';
@@ -51,11 +50,6 @@ interface SidebarProps {
 // feel unfinished, so they stay hidden unless an admin turns on features.previews
 // (D5). The Code mode switch is gated the same way.
 
-function statusText(health: HealthState): string {
-  if (health.inferenceUp) return 'Inference · online';
-  if (health.inferenceUp === false) return 'Inference · unreachable';
-  return 'Inference · checking…';
-}
 
 export function Sidebar({
   projects,
@@ -80,7 +74,6 @@ export function Sidebar({
   onOpenDiary,
   diaryEnabled,
   onOpenSettings,
-  health,
   theme,
   onToggleTheme,
 }: SidebarProps): JSX.Element {
@@ -345,7 +338,7 @@ export function Sidebar({
           aria-label="Projects"
           onClick={onOpenProjects}
         >
-          <BookIcon />
+          <ShellIcon name="projects" size={17}/>
           <span className="nav-name">Projects</span>
         </button>
       </div>
@@ -404,7 +397,7 @@ export function Sidebar({
               aria-label="Diary"
               onClick={onOpenDiary}
             >
-              <ShellIcon name="book" size={17}/>
+              <ShellIcon name="diary" size={17}/>
               <span className="nav-name">Diary</span>
             </button>
           </nav>
@@ -475,7 +468,7 @@ export function Sidebar({
             <span className="status-text">{label}</span>
           </div>
         );
-      })()}<div className="status-row"><span className={`status-dot${health.inferenceUp === true ? ' is-up' : health.inferenceUp === false ? ' is-down' : ''}`}/><span className="status-text">{statusText(health)}</span></div><AccountMenu onSettings={openSettings}/></div>
+      })()}{/* Inference status lives in the workspace status pill and the chat banner; one place is enough. */}<AccountMenu onSettings={openSettings}/></div>
     </div>
   </>);
 }

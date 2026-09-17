@@ -3,6 +3,7 @@ import type { JSX } from 'react';
 import { cancelResearch, fetchResearch, proposePlan, savePartialResearch, startResearch } from './api';
 import type { ResearchJob, ResearchState } from './api';
 import { ShellIcon } from '../ShellIcon';
+import { EmptyState } from '../EmptyState';
 import './research.css';
 
 const ACTIVE = new Set(['queued', 'running']);
@@ -81,7 +82,7 @@ export function ResearchPanel({ projectId, onSaved }: { projectId: string; onSav
     </section>
 
     <section className="research-jobs" aria-label="Research jobs">
-      {state.jobs.length === 0 ? <p className="rail-empty">No research yet.</p> : state.jobs.map(job => <ResearchJobCard key={job.id} job={job} busy={busy}
+      {state.jobs.length === 0 ? <EmptyState icon="research" title="No research yet" compact>Ask a question above. Finished reports are saved to this project's sources.</EmptyState> : state.jobs.map(job => <ResearchJobCard key={job.id} job={job} busy={busy}
         onCancel={() => act(`cancel:${job.id}`, () => cancelResearch(projectId, job.id))}
         onSave={() => act(`save:${job.id}`, () => savePartialResearch(projectId, job.id))}/>)}
     </section>

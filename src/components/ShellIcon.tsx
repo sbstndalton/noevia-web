@@ -7,7 +7,7 @@ export const SHELL_ICONS: Record<string, string> = {
   archive: 'archive', compose: 'square-pen', file: 'file-text', edit: 'pencil', book: 'book-open', pin: 'pin',
   chat: 'message-square', code: 'code', new: 'plus', search: 'search', clock: 'clock', plugins: 'puzzle',
   explore: 'compass', settings: 'settings', folder: 'folder', arrow: 'arrow-left', close: 'x', grid: 'layout-grid',
-  git: 'git-branch', panel: 'panel-left', user: 'user-round', down: 'chevron-down', sun: 'sun', moon: 'moon', more: 'ellipsis',
+  git: 'git-branch', projects: 'library', panel: 'panel-left', user: 'user-round', down: 'chevron-down', sun: 'sun', moon: 'moon', more: 'ellipsis',
   // Settings sections: one distinct symbol each.
   profile: 'user-round', security: 'shield-check', appearance: 'palette', capabilities: 'sparkles', diary: 'notebook-pen',
   providers: 'plug', usage: 'chart-column', planned: 'map', users: 'users', models: 'cpu', status: 'activity',
