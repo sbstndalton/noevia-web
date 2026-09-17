@@ -26,10 +26,10 @@ const {createFixture}=require('./diary-fixture.cjs');
   return route.continue();
  });
  await page.goto('http://localhost:31329');
- // Calibration lives in Settings → Models & routing → Library, under a model's details.
+ // Calibration lives in the model manager page (Settings → Models & routing → Open model manager), under a model's details.
  await page.getByTitle('Settings',{exact:true}).click();
  await page.getByRole('button',{name:'Models & routing'}).click();
- await page.getByRole('tab',{name:'Library',exact:true}).click();
+ await page.getByRole('button',{name:'Open model manager'}).click();
  await page.getByRole('article',{name:'synthetic/new-model:Q4_K_M'}).getByRole('button',{name:'Details'}).click();
  await page.getByRole('heading',{name:'Measure context on this machine'}).waitFor();
  const startButton=page.getByRole('button',{name:'Start calibration'});
@@ -44,7 +44,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  assert.ok(await page.getByText('Lowest free memory 12.1 GiB').isVisible());
  for(const width of [375,768,1440])for(const theme of ['light','dark']){
   await page.setViewportSize({width,height:900});await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
-  assert.ok(await page.getByRole('dialog',{name:'Settings'}).evaluate(el=>el.scrollWidth<=el.clientWidth+1),`overflow ${width} ${theme}`);
+  assert.ok(await page.locator('.model-manager-page').evaluate(el=>el.scrollWidth<=el.clientWidth+1),`overflow ${width} ${theme}`);
   const cancel=page.getByRole('button',{name:'Cancel calibration'});
   const box=await cancel.boundingBox();assert.ok(box&&box.height>=44,`cancel target ${width}`);
   await page.screenshot({path:`/tmp/noevia-native-calibration-${width}-${theme}.png`});

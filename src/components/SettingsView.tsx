@@ -1,7 +1,7 @@
 import { McpStatus } from './McpStatus';
 import DiarySharing from './DiarySharing';
 import AppPasswords from './AppPasswords';
-import { ModelsSettings } from './models/ModelsSettings';
+import { ModelsSummary } from './models/ModelsSummary';
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import type { HealthState, InstalledModel, LiveStats, Project, Provider, RouteRule } from '../types';
@@ -20,17 +20,18 @@ export interface SettingsViewProps {
   health: HealthState;
   stats: LiveStats | null;
   onOpenModels: () => void;
+  onOpenModelManager: () => void;
   diaryEnabled: boolean;
   onDiaryEnabledChange: (enabled: boolean) => void;
 }
 
-export function SettingsView({ models, routes, modelsError, projects, health, stats, diaryEnabled, onDiaryEnabledChange, section = 'profile' }: SettingsViewProps): JSX.Element {
+export function SettingsView({ models, modelsError, health, stats, diaryEnabled, onDiaryEnabledChange, onOpenModelManager, section = 'profile' }: SettingsViewProps): JSX.Element {
   return <div className="settings-live-content">
     {section === 'profile' && <ProfileCard />}
     {section === 'users' && <UsersCard />}
     {section === 'diary' && <><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
     {section === 'providers' && <ProvidersCard />}
-    {section === 'models' && <ModelsSettings models={models} routes={routes} projects={projects} modelsError={modelsError}/>}
+    {section === 'models' && <ModelsSummary models={models} modelsError={modelsError} health={health} stats={stats} onOpen={onOpenModelManager}/>}
     {section === 'status' && <><McpStatus /><h2>Connected services</h2><div className="card-list">{[['Inference',health.inferenceUp],['Diary',diaryEnabled?health.diaryUp:null],['Project retrieval',health.ragAvailable]].map(([label,up])=><div className="model-row" key={String(label)}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?'available':up===false?'unavailable':'not available'}</span></div>)}</div><h2>Live engine</h2><div className="settings-stat-row"><div><span title="Provider-reported rate. Invalid samples and samples shorter than one estimated second are omitted.">Reported tokens / second</span><strong>{stats?.tokensPerSecond?.toFixed(1) ?? '—'}</strong></div><div><span>Requests</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${stats.vramGb.toFixed(1)} GB`:'—'}</strong></div></div></>}
   </div>;
 }

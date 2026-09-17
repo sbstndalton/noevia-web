@@ -19,7 +19,7 @@ import {
 interface SidebarProps {
   projects: Project[];
   chats: ChatMeta[];
-  activeView: 'diary' | 'settings' | 'projects' | 'project' | 'chat' | 'preview';
+  activeView: 'diary' | 'settings' | 'projects' | 'project' | 'chat' | 'preview' | 'models';
   activeProjectId: string | null;
   activeChatId: string | null;
   onNewChat: () => void;

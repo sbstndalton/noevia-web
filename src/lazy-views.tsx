@@ -45,3 +45,4 @@ export function prefetchViewsWhenIdle(): () => void {
   const id = globalThis.setTimeout(run, 1500);
   return () => globalThis.clearTimeout(id);
 }
+export const ModelManager = lazyView(() => import('./components/models/ModelManagerPage').then((m) => m.ModelManagerPage));

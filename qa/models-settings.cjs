@@ -66,8 +66,14 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  });
  await page.goto('http://localhost:31341');
  await page.getByTitle('Settings',{exact:true}).click();
- const dialog=page.getByRole('dialog',{name:'Settings'});
- await dialog.getByRole('button',{name:'Models & routing'}).click();
+ const settings=page.getByRole('dialog',{name:'Settings'});
+ await settings.getByRole('button',{name:'Models & routing'}).click();
+ // Settings keeps a summary only; managing models happens on its own page.
+ await settings.getByText(/loaded: Qwen-9B/).waitFor();
+ assert.equal(await settings.getByRole('tab',{name:'Your models'}).count(),0);
+ await settings.getByRole('button',{name:'Open model manager'}).click();
+ await settings.waitFor({state:'detached'});
+ const dialog=page.locator('.model-manager-page');await dialog.waitFor();
  // One interface now: two tabs, an always-visible Routing section, and three
  // collapsed panels. The helpers keep the assertions below about behaviour
  // rather than about which tab something used to live in.
@@ -201,7 +207,12 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    await page.screenshot({path:`${shots}/noevia-models-${name.toLowerCase().replace(/ /g,'-')}-${width}-${theme}.png`,fullPage:false});
   }
  }
+ // Back returns to the Settings summary, not to the chat.
+ await page.setViewportSize({width:1440,height:950});
+ await dialog.getByRole('button',{name:'Settings',exact:true}).first().click();
+ await page.getByRole('dialog',{name:'Settings'}).getByRole('button',{name:'Open model manager'}).waitFor();
+ if(process.env.QA_SCREENSHOTS)await page.screenshot({path:process.env.QA_SCREENSHOTS+'/models-summary.png'});
  assert.deepEqual(errors,[]);assert.equal(fixture.requests.length,0);
- console.log('PASS models settings: unified page with Your models/Discover, search and filters, library details/delete, per-model detail autoconfig presets/vision/fill, revision conflict and apply-now reload, download search/estimates/queue/set up, hardware unified memory/tiles/charts/tooltip/diagnosis/logs/restart guard, benchmark confirm/run charts/output/rating, prompts, routing section, phone/tablet/desktop light/dark.');
+ console.log('PASS models settings: Settings summary opens the full-page manager and back: unified page with Your models/Discover, search and filters, library details/delete, per-model detail autoconfig presets/vision/fill, revision conflict and apply-now reload, download search/estimates/queue/set up, hardware unified memory/tiles/charts/tooltip/diagnosis/logs/restart guard, benchmark confirm/run charts/output/rating, prompts, routing section, phone/tablet/desktop light/dark.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

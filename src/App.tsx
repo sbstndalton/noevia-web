@@ -38,7 +38,7 @@ import type {
 import { ChatView } from './components/ChatView';
 import { ModelPopup } from './components/ModelPopup';
 import { ProjectView } from './components/ProjectView';
-import { Coding, Diary, Projects, Settings, prefetchViewsWhenIdle } from './lazy-views';
+import { Coding, Diary, ModelManager, Projects, Settings, prefetchViewsWhenIdle } from './lazy-views';
 import { FeaturePreview } from './components/PreviewPanel';
 import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
@@ -49,6 +49,7 @@ type View =
   | { kind: 'diary' }
   | { kind: 'preview'; title: string }
   | { kind: 'projects' }
+  | { kind: 'models' }
   | { kind: 'project'; id: string }
   | { kind: 'chat'; chatId: string; projectId?: string | null };
 
@@ -60,7 +61,8 @@ export default function App(): JSX.Element {
   const {theme,setTheme,appearanceStatus,appearanceError,retryAppearance} = useAppearance();
   const [settingsSection,setSettingsSection] = useState<'general'|'usage'|'models'>('general');
   const openSettings = (section: 'general'|'usage'|'models' = 'general') => { setSettingsSection(section); setSettingsOpen(true); };
-  useEffect(() => { const open = () => { setSettingsSection('models'); setSettingsOpen(true); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
+  const openModelManager = () => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models' }); };
+  useEffect(() => { const open = () => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models' }); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account'); return fresh; });
   const [appMode, setAppMode] = useState<'chat'|'code'>('chat');
   const [view, setView] = useState<View>(() => ({ kind: 'chat', chatId: `c-${uid()}`, projectId: null }));
@@ -766,6 +768,11 @@ export default function App(): JSX.Element {
       <div className="app-main">
 
       {view.kind === 'preview' && <FeaturePreview title={view.title}/> }
+      {view.kind === 'models' && (
+        <Suspense fallback={null}>
+          <ModelManager.View onBack={() => openSettings('models')} models={models} routes={routes} projects={projects} modelsError={modelsError} />
+        </Suspense>
+      )}
       {view.kind === 'projects' && (
         <Suspense fallback={null}>
           <Projects.View onEdit={setEditingProjectId}
@@ -827,7 +834,7 @@ export default function App(): JSX.Element {
             refreshProjects();
             refreshModels();
           }}
-          onOpenModelSettings={() => { setPopupOpen(false); openSettings('models'); }}
+          onOpenModelSettings={() => { setPopupOpen(false); openModelManager(); }}
         />
       )}
 
@@ -878,6 +885,7 @@ export default function App(): JSX.Element {
           health={health}
           stats={stats}
           onOpenModels={() => { setSettingsOpen(false); setAppMode('chat'); setPopupOpen(true); }}
+          onOpenModelManager={openModelManager}
           diaryEnabled={diaryEnabled}
           onDiaryEnabledChange={(enabled) => {
             setDiaryEnabled(enabled);

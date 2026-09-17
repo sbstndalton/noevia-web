@@ -1603,3 +1603,11 @@ body { isolation:isolate; background:var(--bg-app); }
   .set-row-control select, .set-name-field, .set-name-field input { width: 100%; }
   .set-row-control .theme-choice, .set-row-control .palette-picker { width: 100%; }
 }
+
+/* Model manager page: full width of the workspace, same gutters as Projects. */
+.model-manager-page .settings-scroll { padding: 0 36px 40px; }
+.model-manager-head { padding: 18px 0 6px; }
+.model-manager-head .settings-back { padding-inline-start: 0; }
+.mm-summary { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+.mm-summary .card-list { align-self: stretch; }
+@media (max-width: 700px) { .model-manager-page .settings-scroll { padding: 0 16px 32px; } }
