@@ -51,9 +51,9 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
     catch (e) { setError(errorText(e, 'Could not read these settings')); }
   };
   useEffect(() => { void read(); }, [name]);
-  const save = async () => {
+  const save = async (values = draft, extraText = extras) => {
     if (!data) return; setBusy('save'); setError(''); setMessage('');
-    try { const v = await mm<{ revision: string }>(`sections/${encodeURIComponent(name)}`, { method: 'PUT', body: { baseRevision: data.revision, values: draft, extras } }); setData({ ...data, revision: v.revision, exists: true }); await onChanged(); await apply(false); }
+    try { const v = await mm<{ revision: string }>(`sections/${encodeURIComponent(name)}`, { method: 'PUT', body: { baseRevision: data.revision, values, extras: extraText } }); setData({ ...data, revision: v.revision, exists: true }); await onChanged(); await apply(false); }
     catch (e) { if ((e as { status?: number }).status === 409) setConflict(true); setError(errorText(e, 'Save failed')); } finally { setBusy(''); }
   };
   const [pending, setPending] = useState<string[]>([]);
@@ -78,18 +78,33 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
     try { await mm(`sections/${encodeURIComponent(name)}?baseRevision=${data.revision}`, { method: 'DELETE' }); await apply(false); await onChanged(''); }
     catch (e) { setError(errorText(e, 'Delete failed')); } finally { setBusy(''); }
   };
-  const fill = (values: Record<string, string>, displaced: string[]) => {
+  const merge = (values: Record<string, string>, displaced: string[]) => {
     const schemaKeys = new Set(data?.schema.flatMap(t => t.fields.map(f => f.key)) || []);
     const next = { ...draft };
     for (const key of displaced) if (schemaKeys.has(key)) next[key] = '';
     const extraLines = extras.split('\n').filter(line => { const k = line.split('=')[0]?.trim(); return !(k && (displaced.includes(k) || k in values)); });
     for (const [k, v] of Object.entries(values)) { if (schemaKeys.has(k)) next[k] = v; else if (v) extraLines.push(`${k} = ${v}`); }
-    setDraft(next); setExtras(extraLines.filter(Boolean).join('\n'));
+    return { next, extraText: extraLines.filter(Boolean).join('\n') };
+  };
+  const fill = (values: Record<string, string>, displaced: string[]) => {
+    const { next, extraText } = merge(values, displaced);
+    setDraft(next); setExtras(extraText);
     setMessage('Autoconfig values filled in. Review them, then save.');
   };
+  const useTuned = async (values: Record<string, string>, displaced: string[]) => {
+    const { next, extraText } = merge(values, displaced);
+    setDraft(next); setExtras(extraText);
+    await save(next, extraText);
+  };
+  const [mode, setModeState] = useState<'easy' | 'advanced'>(() => { try { return localStorage.getItem('noevia:model-settings-mode') === 'advanced' ? 'advanced' : 'easy'; } catch { return 'easy'; } });
+  const setMode = (next: 'easy' | 'advanced') => { setModeState(next); try { localStorage.setItem('noevia:model-settings-mode', next); } catch { /* optional */ } };
   if (!data) return error ? <p role="alert" className="modal-err">{error}</p> : <p role="status">Reading settings…</p>;
   return <section className="mm-panel" aria-labelledby="mm-section-title">
     <header className="mm-panel-head"><div><h3 id="mm-section-title">{name}</h3><p className="mm-note">{data.exists ? (row?.hasFile ? row.file : 'Model file not found for these settings') : 'New settings: not saved yet'}</p></div></header>
+    <div className="mm-mode" role="group" aria-label="Settings detail">
+      {(['easy', 'advanced'] as const).map(m => <button key={m} aria-pressed={mode === m} className={mode === m ? 'is-active' : ''} onClick={() => setMode(m)}>{m === 'easy' ? 'Easy' : 'Advanced'}</button>)}
+    </div>
+    {mode === 'easy' ? <EasySettings name={name} draft={draft} busy={busy !== ''} onChange={(patch) => setDraft({ ...draft, ...patch })} onUseTuned={useTuned}/> : <>
     {data.hints.length > 0 && <ul className="mm-hints">{data.hints.map(h => <li key={h}>{h}</li>)}</ul>}
     <AutoconfigPanel name={name} onFill={fill}/>
     <div className="mm-form">
@@ -99,6 +114,7 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
       </details>)}
       <label>Other options, one per line (key = value)<textarea rows={4} className="mm-mono" value={extras} onChange={e => setExtras(e.target.value)} placeholder="e.g. override-tensor = exps=CPU"/></label>
     </div>
+    </>}
     {conflict && <p role="alert" className="modal-err">The settings file changed since you opened it (another save, a calibration or an edit on the server). <button className="modal-btn secondary" onClick={() => void read()}>Reload latest</button> Your unsaved changes will be replaced.</p>}
     {error && !conflict && <p role="alert" className="modal-err">{error}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
@@ -115,6 +131,50 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
         : <button className="modal-btn secondary" onClick={() => setConfirmDelete(true)}>Remove these settings…</button>}
     </div></details>}
   </section>;
+}
+
+const SPEC_CHOICES: [string, string, string][] = [
+  ['', 'Engine default', 'Leave speculative decoding to the engine.'],
+  ['none', 'Off', 'No speculative decoding.'],
+  ['draft-mtp', 'MTP draft head', 'Uses the model\'s MTP prediction head. Tune for this machine fills in the head file when one sits beside the model.'],
+  ['ngram-simple', 'N-gram (no extra model)', 'Guesses from text already in the conversation. Helps with repetitive output.'],
+];
+const KV_CHOICES: [string, string][] = [['', 'Engine default'], ['f16', 'Full precision (f16)'], ['q8_0', 'Balanced (q8_0)'], ['q4_0', 'Smallest (q4_0)']];
+
+// The common path: let autoconfig size the context to this machine's memory, and
+// expose only the two choices people actually weigh. Advanced keeps every field.
+function EasySettings({ name, draft, busy, onChange, onUseTuned }: { name: string; draft: Record<string, string>; busy: boolean; onChange: (patch: Record<string, string>) => void; onUseTuned: (values: Record<string, string>, displaced: string[]) => Promise<void> }) {
+  const [auto, setAuto] = useState<Auto | null>(null), [tuning, setTuning] = useState(false), [error, setError] = useState('');
+  const tune = async () => {
+    setTuning(true); setError('');
+    const spec = ({ 'draft-mtp': 'balanced', 'ngram-simple': 'ngram', none: 'off' } as Record<string, string>)[draft['spec-type'] || ''] || '';
+    try { setAuto(await mm<Auto>(`sections/${encodeURIComponent(name)}/autoconfig?${new URLSearchParams({ sessions: '1', spec })}`)); }
+    catch (e) { setError(errorText(e, 'Tuning failed')); } finally { setTuning(false); }
+  };
+  const rec = auto?.recommendation;
+  const failure = auto?.error || rec?.error || error;
+  const kv = draft['cache-type-k'] === draft['cache-type-v'] ? draft['cache-type-k'] || '' : 'mixed';
+  const spec = SPEC_CHOICES.find(c => c[0] === (draft['spec-type'] || ''));
+  return <div className="mm-form mm-easy">
+    <div className="mm-easy-row">
+      <div><strong>Context</strong><p className="mm-note">{draft['ctx-size'] ? `${ctxShort(Number(draft['ctx-size']))} tokens` : 'Engine default'}. Tuning estimates the largest context that fits this server's GPU memory; Measure context under a model's details verifies it on the engine.</p></div>
+      <button className="modal-btn secondary" disabled={tuning || busy} onClick={() => void tune()}>{tuning ? 'Measuring…' : 'Tune for this machine'}</button>
+    </div>
+    {failure && <p role="alert" className="modal-err">{failure}</p>}
+    {rec && !failure && <div className="mm-easy-result" role="status">
+      <p>Recommended: <strong>{ctxShort(rec.recommended_ctx)} tokens</strong> on {rec.recommended_backend}{rec.fits_full_gpu ? ', entirely on the GPU' : ''}.</p>
+      <button className="modal-btn primary" disabled={busy} onClick={() => void onUseTuned(rec.values, rec.displaced)}>Use and save</button>
+    </div>}
+    <label>Speculative decoding (MTP)<select value={draft['spec-type'] || ''} onChange={e => onChange({ 'spec-type': e.target.value })}>
+      {SPEC_CHOICES.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+      {!spec && <option value={draft['spec-type']}>{draft['spec-type']} (set in Advanced)</option>}
+    </select><small>{spec ? spec[2] : 'A custom strategy is set; change it in Advanced.'}</small></label>
+    <label>KV cache quantisation<select value={kv} onChange={e => onChange({ 'cache-type-k': e.target.value, 'cache-type-v': e.target.value })}>
+      {KV_CHOICES.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+      {kv === 'mixed' && <option value="mixed" disabled>Different K and V (set in Advanced)</option>}
+      {kv !== 'mixed' && !KV_CHOICES.some(c => c[0] === kv) && <option value={kv}>{kv}</option>}
+    </select><small>Smaller cache types fit more context in the same memory at a small quality cost.</small></label>
+  </div>;
 }
 
 function FieldInput({ field: f, value, onChange }: { field: Field; value: string; onChange: (v: string) => void }) {

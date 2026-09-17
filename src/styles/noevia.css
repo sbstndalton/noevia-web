@@ -1611,3 +1611,12 @@ body { isolation:isolate; background:var(--bg-app); }
 .mm-summary { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
 .mm-summary .card-list { align-self: stretch; }
 @media (max-width: 700px) { .model-manager-page .settings-scroll { padding: 0 16px 32px; } }
+
+/* Easy / Advanced model settings */
+.mm-mode { display: inline-flex; gap: 4px; padding: 3px; border: 1px solid var(--border); border-radius: 10px; align-self: flex-start; }
+.mm-mode button { min-height: 40px; padding: 6px 16px; border: 0; border-radius: 7px; background: transparent; color: var(--text-secondary); font: inherit; cursor: pointer; }
+.mm-mode button.is-active { background: var(--bg-surface-hover, var(--bg-active)); color: var(--text); font-weight: 600; }
+.mm-easy-row { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.mm-easy-row p { margin: 4px 0 0; }
+.mm-easy-result { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; }
+.mm-easy-result p { margin: 0; }

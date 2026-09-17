@@ -98,6 +98,18 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  // Configure via Library → Settings
  await dialog.getByRole('article',{name:'Qwen-9B'}).getByRole('button',{name:'Settings'}).click();
  await dialog.getByRole('heading',{name:'Qwen-9B',level:3}).waitFor();
+ // Easy is the default: tune against this machine, MTP and KV cache choices only.
+ await page.evaluate(()=>localStorage.removeItem('noevia:model-settings-mode'));
+ assert.equal(await dialog.getByRole('button',{name:'Easy',exact:true}).getAttribute('aria-pressed'),'true');
+ assert.equal(await dialog.getByLabel('Context size').count(),0,'the full form shows in Easy mode');
+ await dialog.getByRole('button',{name:'Tune for this machine'}).click();
+ await dialog.getByText(/Recommended: 256K tokens on cowork-llama-1/).waitFor();
+ await dialog.getByLabel('KV cache quantisation').selectOption('q4_0');
+ await dialog.getByLabel('Speculative decoding (MTP)').selectOption('ngram-simple');
+ if(process.env.QA_SCREENSHOTS)await page.screenshot({path:process.env.QA_SCREENSHOTS+'/models-easy.png'});
+ await dialog.getByRole('button',{name:'Advanced',exact:true}).click();
+ assert.equal(await page.evaluate(()=>localStorage.getItem('noevia:model-settings-mode')),'advanced');
+ await dialog.getByLabel('Context size').waitFor();
  await dialog.getByText('Autoconfig: work out settings that fit this machine').click();
  await dialog.getByRole('button',{name:'Run autoconfig'}).click();
  await dialog.getByText(/recommended 256K tokens per chat/).waitFor();
@@ -117,6 +129,14 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await dialog.getByRole('button',{name:'Apply now (unloads the model)'}).click();
  await dialog.getByText(/Saved and applied. Qwen-9B was unloaded/).waitFor();
  assert.deepEqual(reloads,[{unload:false},{unload:true}]);
+ // Easy's one-step path saves the tuned values through the same revision-checked save.
+ await dialog.getByRole('button',{name:'Easy',exact:true}).click();
+ await dialog.getByRole('button',{name:'Tune for this machine'}).click();
+ const putsBefore=saveAttempts;
+ await dialog.getByRole('button',{name:'Use and save'}).click();
+ await dialog.getByText(/Qwen-9B is loaded, so the engine keeps the old settings/).waitFor();
+ assert.equal(saveAttempts,putsBefore+1);
+ await dialog.getByRole('button',{name:'Advanced',exact:true}).click();
  // Download → Set up
  await discover();
  await dialog.getByRole('button',{name:/synthetic\/model-GGUF/}).click();
