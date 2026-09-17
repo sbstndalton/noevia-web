@@ -18,7 +18,8 @@
     if (!frame) frame = requestAnimationFrame(() => {
       frame = 0;
       const { surface: node, x, y } = pending;
-      if (!node.isConnected) return;
+      // The pointer may have left while this frame was queued.
+      if (!node.isConnected || node !== active) return;
       const rect = node.getBoundingClientRect();
       const px = Math.round(x - rect.left), py = Math.round(y - rect.top);
       if (getComputedStyle(node).position === 'static') node.classList.add('glass-positioned');

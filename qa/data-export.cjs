@@ -67,12 +67,25 @@ function entries(buf){const out={};let at=0;while(buf.readUInt32LE(at)===0x04034
     await dialog.waitFor();await dialog.getByRole('button',{name:'Data',exact:true}).click();
     await dialog.getByLabel('Conversations file').setInputFiles(path.join(dir,'bad.json'));
     await dialog.getByRole('alert').filter({hasText:'Choose a conversations.json from a noevia conversations export.'}).waitFor();
+    // Archived chats: an archived project chat is listed here and Restore puts it back in the sidebar.
+    await page.keyboard.press('Escape');
+    assert.ok((await api(`/api/projects/${project.id}/chats`,{chats:[{id:'c-proj-1',title:'Cell chemistry',updatedAt:Date.now(),archived:true}]})).status<300);
+    await page.reload();await page.waitForLoadState('networkidle');
+    await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+    await dialog.waitFor();await dialog.getByRole('button',{name:'Data',exact:true}).click();
+    const archived=dialog.getByRole('list',{name:'Archived chats'});await archived.getByText('Cell chemistry').waitFor();
+    assert.match(await archived.innerText(),/Synthetic battery notes/);
+    await page.screenshot({path:`${shots}/data-archived-1440-light.png`});
+    await archived.getByRole('button',{name:'Restore Cell chemistry'}).click();
+    await dialog.getByText(/^No archived chats\./).waitFor();
+    const chats=(await api('/api/workspace')).body.projects.find(x=>x.id===project.id).chats;
+    assert.equal(chats.find(c=>c.id==='c-proj-1').archived,false);
    }
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow ${width}`);
    await page.screenshot({path:`${shots}/data-export-${width}-${theme}.png`});
    await page.keyboard.press('Escape');
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS data export: Settings → Data downloads a ZIP with free and project chats as Markdown plus JSON, no reasoning text, signed-out 401; import round trip (idempotent, deleted chat restored under a new id, sidebar refresh, bad file refused); 1440 light, 375 dark.');
+  console.log('PASS data export: Settings → Data downloads a ZIP with free and project chats as Markdown plus JSON, no reasoning text, signed-out 401; import round trip (idempotent, deleted chat restored under a new id, sidebar refresh, bad file refused); archived chats listed and restored; 1440 light, 375 dark.');
  }finally{await browser.close();server.kill('SIGTERM');fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

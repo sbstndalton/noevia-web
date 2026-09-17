@@ -1582,6 +1582,7 @@ body { isolation:isolate; background:var(--bg-app); }
    Used across General so the page reads as a list rather than a pile of
    unrelated widgets. */
 .settings-section { display: flex; flex-direction: column; gap: 12px; }
+.settings-section + .settings-section { margin-top: 28px; }
 .settings-section > h2 { margin: 0; font-size: var(--text-body); font-weight: 700; }
 .set-rows { display: flex; flex-direction: column; border: 1px solid var(--control-border); border-radius: 12px; overflow: hidden; }
 .set-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; min-height: 44px; }
@@ -1799,3 +1800,10 @@ body { isolation:isolate; background:var(--bg-app); }
 .projects-grid > .empty-state-card { grid-column: 1 / -1; }
 @media (pointer: coarse) { .composer-hint.is-keyboard { display: none; } }
 @media(max-width:700px){ .settings-detail:has(.settings-title h1) > header { display:none; } }
+.archived-chat-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.archived-chat-list li { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border-subtle); min-width: 0; }
+.archived-chat-list li:last-child { border-bottom: 0; }
+.archived-chat-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.archived-chat-title { font-size: var(--text-callout); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.archived-chat-meta { font-size: var(--text-caption); color: var(--text-secondary); }
+@media (pointer: coarse) { .archived-chat-list .modal-btn { min-height: 44px; } }
