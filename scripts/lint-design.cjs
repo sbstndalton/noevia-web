@@ -11,13 +11,15 @@
 //   type-scale     a font-size in px/rem off the type scale (tokens.css --text-*); em, % and
 //                  keywords stay allowed because they are relative to a scale step.
 //   font-weight    a weight other than 400/500/600/700 (HIG: no in-between weights).
+//   undefined-token  var(--x) where --x is defined in no stylesheet or script (a fallback such as
+//                  var(--surface, #fff) then silently pins one theme's colour).
 // Silence a deliberate case on the line itself or the line above:  /* design-lint: allow <rule> — reason */
 const fs = require('node:fs');
 const path = require('node:path');
 
 function* files(target) {
   const stat = fs.statSync(target);
-  if (stat.isFile()) { if (/\.(css|tsx)$/.test(target)) yield target; return; }
+  if (stat.isFile()) { if (/\.(css|tsx?|js)$/.test(target) && !/\.min\.js$/.test(target)) yield target; return; }
   for (const entry of fs.readdirSync(target, { withFileTypes: true })) {
     if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
     yield* files(path.join(target, entry.name));
@@ -56,14 +58,34 @@ function lint(text, file = '') {
   return findings;
 }
 
+/** Cross-file: custom properties referenced but never defined (CSS, style objects or setProperty). */
+function undefinedTokens(files) {
+  const defined = new Set();
+  for (const { text } of files) {
+    for (const m of text.matchAll(/(--[\w-]+)['"]?\s*:/g)) defined.add(m[1]);
+    for (const m of text.matchAll(/setProperty\(\s*['"`](--[\w-]+)/g)) defined.add(m[1]);
+  }
+  const findings = [];
+  for (const { file, text } of files) {
+    text.split('\n').forEach((line, i) => {
+      for (const m of line.matchAll(/var\(\s*(--[\w-]+)/g)) if (!defined.has(m[1])) findings.push({ file, line: i + 1, rule: 'undefined-token', token: m[1], message: `${m[1]} is not defined anywhere`, snippet: line.trim().slice(0, 160) });
+    });
+  }
+  return findings;
+}
+
 if (require.main === module) {
   const root = path.resolve(__dirname, '..');
-  const targets = process.argv.slice(2).length ? process.argv.slice(2) : [path.join(root, 'src')];
+  // public/ holds the scripts that set runtime tokens (viewport height, glass pointer position).
+  const targets = process.argv.slice(2).length ? process.argv.slice(2) : [path.join(root, 'src'), path.join(root, 'public')];
   const all = [];
-  for (const target of targets) for (const file of files(path.resolve(target))) all.push(...lint(fs.readFileSync(file, 'utf8'), path.relative(root, file)));
+  const sources = [];
+  for (const target of targets) for (const file of files(path.resolve(target))) sources.push({ file: path.relative(root, file), text: fs.readFileSync(file, 'utf8') });
+  for (const source of sources) all.push(...lint(source.text, source.file));
+  all.push(...undefinedTokens(sources));
   for (const f of all) console.error(`${f.file}:${f.line}  ${f.rule}  ${f.message}\n    ${f.snippet}`);
   console.log(all.length ? `design lint: ${all.length} finding${all.length === 1 ? '' : 's'}` : 'design lint: clean');
   process.exitCode = all.length ? 1 : 0;
 }
 
-module.exports = { lint, TYPE_SCALE };
+module.exports = { lint, undefinedTokens, TYPE_SCALE };

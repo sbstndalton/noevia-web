@@ -45,7 +45,7 @@ const {createFixture}=require('./diary-fixture.cjs');
 
  assert.equal(await dialog.getByText('Chat font').count(),0,'appearance leaked onto Profile');
  await dialog.getByRole('button',{name:'Appearance',exact:true}).click();
- await dialog.getByRole('heading',{name:'Appearance',level:1}).waitFor();
+ await dialog.getByRole('heading',{name:'Appearance',level:1}).waitFor(); const glassTarget=dialog.getByRole('button',{name:'Security',exact:true});await glassTarget.hover({position:{x:30,y:12}});await page.waitForTimeout(80);const glass=await glassTarget.evaluate(el=>({active:el.hasAttribute('data-glass-active'),x:el.style.getPropertyValue('--glass-x'),after:getComputedStyle(el,'::after').opacity}));assert.equal(glass.active,true,JSON.stringify(glass));assert.equal(glass.x,'30px');await page.mouse.move(5,5);
  // ── Preferences actually change the page ──
  const attr=name=>page.evaluate(n=>document.documentElement.getAttribute(n),name);
  assert.equal(await attr('data-chat-font'),'sans');

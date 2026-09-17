@@ -781,7 +781,7 @@ body { margin: 0; background: var(--bg); }
   margin-top: 22px;
   padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md, 10px);
+  border-radius: 10px;
   background: color-mix(in srgb, var(--border) 25%, transparent);
   text-align: left;
 }
@@ -868,7 +868,7 @@ button:disabled { cursor: not-allowed; }
    when a reply is slow or expensive, not part of reading the answer. */
 .msg-meta {
   font-size: var(--text-caption2);
-  color: var(--muted-ink, #6b7280);
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
 }
@@ -884,7 +884,7 @@ button:disabled { cursor: not-allowed; }
   font-size: var(--text-caption2);
   padding: 2px 8px;
   border-radius: 999px;
-  border: 1px solid var(--line, #d4d4d8);
+  border: 1px solid var(--border);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -902,12 +902,12 @@ button:disabled { cursor: not-allowed; }
   line-height: 1.6;
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid var(--accent-2, #d4d4d8);
-  background: var(--surface, #fff);
+  border: 1px solid var(--accent-2);
+  background: var(--bg-surface);
   color: inherit;
 }
 .msg-edit-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.msg-edit-actions small { color: var(--muted-ink, #6b7280); font-size: var(--text-caption2); }
+.msg-edit-actions small { color: var(--text-secondary); font-size: var(--text-caption2); }
 
 /* ── Usage & activity ─────────────────────────────────────────────────────
    Numbers first, chrome second: the stat cards carry the answer and the
