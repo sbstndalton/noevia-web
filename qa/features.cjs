@@ -17,7 +17,8 @@ const shots=process.env.QA_SCREENSHOTS||'';
    await page.route('**/api/profile',r=>r.fulfill({json:{user:{id:'qa-admin',username:'admin',displayName:'Synthetic admin',role:'admin',diaryEnabled:true,onboarded:true},passkeys:[],sessions:[]}}));
    await page.route('**/api/admin/features',r=>r.fulfill({json:{features:[
      {name:'previews',label:'Preview surfaces',description:'Show the unbuilt Scheduled, Plugins, Explore and Code previews.',enabled:previews,source:'default',locked:false,env:'NOEVIA_FEATURE_PREVIEWS'},
-     {name:'kiwix',label:'Offline Wikipedia',description:'A read-only lookup tool backed by an internal kiwix-serve.',enabled:true,source:'env',locked:true,env:'NOEVIA_FEATURE_KIWIX'}]}}));
+     {name:'kiwix',label:'Offline Wikipedia',description:'A read-only lookup tool backed by an internal kiwix-serve.',enabled:true,source:'env',locked:true,env:'NOEVIA_FEATURE_KIWIX'},
+     {name:'diaryMcpWrite',label:'Diary append tool',description:'Offer an approval-gated, append-only Diary tool through the in-app MCP server.',enabled:true,source:'admin',locked:false,env:'NOEVIA_FEATURE_DIARY_MCP_WRITE',pendingRestart:true}]}}));
    await page.route('**/api/admin/features/*',async r=>{const body=r.request().postDataJSON();saved.push(body);previews=body.enabled;
      return r.fulfill({json:{name:'previews',label:'Preview surfaces',description:'Show the unbuilt Scheduled, Plugins, Explore and Code previews.',enabled:previews,source:'admin',locked:false,env:'NOEVIA_FEATURE_PREVIEWS'}});});
    await page.goto('http://localhost:31341');
@@ -31,6 +32,7 @@ const shots=process.env.QA_SCREENSHOTS||'';
    assert.equal(await toggle.isChecked(),false);
    assert.equal(await settings.getByRole('switch',{name:'Offline Wikipedia'}).isDisabled(),true,'env-locked feature cannot be toggled');
    assert.ok(await settings.getByText('Set by the operator (NOEVIA_FEATURE_KIWIX).').isVisible());
+   assert.ok(await settings.getByText('Saved. Restart the server to apply this change.').isVisible(),'restart-wired change says it is pending');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow');
    if(shots)await page.screenshot({path:`${shots}/features-${width}-${theme}.png`});
    await toggle.click();

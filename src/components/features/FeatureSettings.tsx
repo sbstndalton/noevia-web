@@ -32,6 +32,7 @@ export function FeatureSettings(): JSX.Element {
       <div className="set-row-text">
         <span className="set-row-label" id={`feature-${f.name}`}>{f.label}</span>
         <span className="set-row-desc">{f.description}{f.locked ? ` Set by the operator (${f.env}).` : ''}</span>
+        {f.pendingRestart && <span className="set-row-desc set-row-pending" role="status">Saved. Restart the server to apply this change.</span>}
       </div>
       <div className="set-row-control">
         <input type="checkbox" role="switch" className="noevia-switch" aria-labelledby={`feature-${f.name}`} checked={f.enabled}

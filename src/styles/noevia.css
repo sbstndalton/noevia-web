@@ -1729,3 +1729,4 @@ body { isolation:isolate; background:var(--bg-app); }
   .project-tabs [role=tab], .settings-back, .project-newchat, .projects-head .projects-search, select[aria-label='Thinking effort'] { min-height: 44px; }
   .composer-add { display: inline-grid; place-items: center; }
 }
+.set-row-pending { color: var(--text-primary); font-weight: 500; }

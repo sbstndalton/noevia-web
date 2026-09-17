@@ -2,7 +2,7 @@ import { apiFetch } from '../../api';
 
 export type FeatureName = 'previews' | 'diaryMcpWrite' | 'deepResearch' | 'offsiteBackup' | 'kiwix';
 export type FeatureFlags = Partial<Record<FeatureName, boolean>>;
-export interface FeatureInfo { name: FeatureName; label: string; description: string; enabled: boolean; source: 'default' | 'env' | 'admin'; locked: boolean; env: string }
+export interface FeatureInfo { name: FeatureName; label: string; description: string; enabled: boolean; source: 'default' | 'env' | 'admin'; locked: boolean; env: string; pendingRestart?: boolean }
 
 export const FEATURES_CHANGED = 'noevia:features-changed';
 
