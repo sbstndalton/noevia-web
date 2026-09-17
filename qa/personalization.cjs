@@ -35,9 +35,10 @@ const port=31293,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'.
    if(width===1440){
     assert.equal(await dialog.getByRole('button',{name:'Save',exact:true}).isDisabled(),true,'nothing to save yet');
     await box.fill('Answer in British English. PERSONAL-CANARY-7.');
+    await dialog.getByText('Concise',{exact:true}).click();assert.equal(await dialog.getByRole('radio',{name:/Concise/}).isChecked(),true);
     await dialog.getByRole('button',{name:'Save',exact:true}).click();
     await dialog.getByRole('status').filter({hasText:'Saved.'}).waitFor();
-   } else assert.equal(await box.inputValue(),'Answer in British English. PERSONAL-CANARY-7.','persists across reloads');
+   } else {assert.equal(await box.inputValue(),'Answer in British English. PERSONAL-CANARY-7.','persists across reloads');assert.equal(await dialog.getByRole('radio',{name:/Concise/}).isChecked(),true);}
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow ${width}`);
    await page.screenshot({path:`${shots}/personalization-${width}-${theme}.png`});
    await page.keyboard.press('Escape');
@@ -46,12 +47,12 @@ const port=31293,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'.
   let chat=await api('/api/chat',{spaceId:project.id,projectId:project.id,chatId:'c-personal-1',message:'Hello',history:[]});
   assert.equal(chat.status,200,chat.text);
   const system=seen.filter(b=>b.stream).at(-1).messages.find(m=>m.role==='system');
-  assert.match(system.content,/PERSONAL-CANARY-7/);
+  assert.match(system.content,/Keep replies short[\s\S]*PERSONAL-CANARY-7/);
   // Clearing removes them from the next request.
   assert.equal((await api('/api/account/instructions',{text:''},'PUT')).body.text,'');
   chat=await api('/api/chat',{spaceId:project.id,projectId:project.id,chatId:'c-personal-2',message:'Hello again',history:[]});
   assert.doesNotMatch(JSON.stringify(seen.filter(b=>b.stream).at(-1).messages),/PERSONAL-CANARY-7/);
   assert.deepEqual(errors,[]);
-  console.log('PASS personalization: custom instructions saved in Settings, persist, reach the system message, clear removes them, 4000-char cap; 1440 light, 375 dark.');
+  console.log('PASS personalization: custom instructions and response style saved in Settings, persist, reach the system message, clear removes them, 4000-char cap; 1440 light, 375 dark.');
  }finally{await browser.close();server.kill('SIGTERM');await new Promise(r=>upstream.close(r));fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
