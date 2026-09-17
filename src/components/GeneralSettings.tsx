@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { PalettePicker } from './PalettePicker';
+import { LayoutModeChoice, layoutModeDescription } from './LayoutMode';
 import { currentPalette } from '../appearance';
 import { fetchHealth, fetchProfile, fetchToolboxes, updateProfile } from '../api';
 import type { AuthUser } from '../api';
@@ -85,9 +86,12 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
         <Row label="Motion" description="System follows your operating system's reduce-motion setting. Reduced turns animation off here regardless.">
           <Choice name="motion" onChange={bump} options={[['system', 'System'], ['reduced', 'Reduced']]} />
         </Row>
+        <Row label="Layout" description={layoutModeDescription()}>
+          <LayoutModeChoice />
+        </Row>
       </div>
       <p className="route-note">
-        Chat font, density and motion are saved on this device only — how dense you want a screen depends on the screen.
+        Chat font, density, motion and layout are saved on this device only — how dense you want a screen depends on the screen.
         {' '}Appearance follows your account.
       </p>
       <p role={appearanceError ? 'alert' : 'status'} className="route-note">{appearanceStatus}</p>

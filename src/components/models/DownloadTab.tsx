@@ -22,6 +22,9 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'fit' }:
   const [q, setQ] = useState(query);
   const [results, setResults] = useState<Result[] | null>(null), [searching, setSearching] = useState(false), [error, setError] = useState('');
   const [meta, setMeta] = useState<SearchBody | null>(null);
+  // What the results on screen were actually fetched for. The live search box runs 400ms
+  // behind, so reading `q` here would caption the old results with the new query.
+  const [shown, setShown] = useState('');
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const filterRef = useRef(filters); filterRef.current = filters;
   const [repo, setRepo] = useState<{ repo: string; groups: Group[]; gated?: string; error?: string } | null>(null), [repoBusy, setRepoBusy] = useState('');
@@ -32,8 +35,12 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'fit' }:
   const [target, setTarget] = useState<{ path: string; hostPath?: string | null; disk?: { freeH: string } | null } | null>(null);
   useEffect(() => { void mm<{ modelsDir?: { path: string; hostPath?: string | null; disk?: { freeH: string } | null } }>('overview').then(v => setTarget(v.modelsDir || null)).catch(() => undefined); }, []);
   const [registered, setRegistered] = useState<Set<string>>(new Set());
-  const search = async (term = q) => {
-    setSearching(true); setError('');
+  const search = async (raw = q) => {
+    const term = raw.trim();
+    // A new search invalidates whatever repository is expanded: its file list belongs to a
+    // result that may no longer be on screen. The sort and filter paths already did this;
+    // pressing Enter in the search box did not.
+    setSearching(true); setError(''); setRepo(null);
     const f = filterRef.current;
     const params = new URLSearchParams({ q: term, sort, limit: '40', trustedOnly: String(f.trustedOnly), showUnsuitable: String(f.showUnsuitable), moe: f.moe });
     if (f.minGb) params.set('minGb', f.minGb);
@@ -44,7 +51,9 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'fit' }:
     if (f.vision) params.set('vision', 'true');
     if (f.license.trim()) params.set('license', f.license.trim());
     if (f.owner.trim()) params.set('owner', f.owner.trim());
-    try { const v = await mm<SearchBody>(`search?${params}`); if (v.error) throw Error(v.error); setResults(v.results); setMeta(v); }
+    // The server answers a failed hub call with 200 and an `error` field, so a bare
+    // `v.results` check would read as "nothing matched" for what is really an outage.
+    try { const v = await mm<SearchBody>(`search?${params}`); if (v.error) throw Error(v.error); setResults(v.results || []); setMeta(v); setShown(term); }
     catch (e) { setError(errorText(e, 'Search failed')); } finally { setSearching(false); }
   };
   const openRepo = async (id: string) => {
@@ -95,15 +104,15 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'fit' }:
     {targets.length > 1 && <label className="mm-select mm-save-to">Save to<select value={saveTo} onChange={e => setSaveTo(e.target.value)}>{targets.map(t => <option key={t.id} value={t.id}>{t.id ? t.label : 'Models folder (default)'}</option>)}</select></label>}
     <HfToken/>
     <p className="mm-note" role="status">{searching ? 'Searching Hugging Face…'
-      : q.trim() ? `Results for “${q.trim()}”${meta?.counts ? `: ${meta.counts.shown} of ${meta.counts.found}` : ''}${meta?.budgetGb ? `, judged against ${meta.budgetGb} GB of GPU memory` : ''}.`
+      : shown ? `Results for “${shown}”${meta?.counts ? `: ${meta.counts.shown} of ${meta.counts.found}` : ''}${meta?.budgetGb ? `, judged against ${meta.budgetGb} GB of GPU memory` : ''}.`
         : 'Type in the search box above to find a model, or browse what fits this server below.'}</p>
-    {error && <p role="alert" className="modal-err">{error}</p>}
+    {error && <p role="alert" className="modal-err">{error} <button className="popup-tab" onClick={() => void search()}>Try again</button></p>}
     {message && <p role="status" className="mm-note">{message}</p>}
     <Queue jobs={jobs} registered={registered} onChange={refreshJobs} onSetUp={onSetUp}/>
     {repo && <RepoFiles repo={repo} onClose={() => setRepo(null)} onDownload={download}/>}
     {!repo && <SearchFilters filters={filters} meta={meta} onChange={(patch) => { const next = { ...filters, ...patch }; setFilters(next); filterRef.current = next; setRepo(null); void search(); }}/>}
     {!repo && results && <ul className="mm-results" aria-label="Search results">
-      {results.length === 0 && <li className="mm-note">Nothing matches these filters{meta?.counts?.hiddenUntrusted ? `; ${meta.counts.hiddenUntrusted} hidden as untrusted publishers` : ''}{meta?.counts?.hiddenUnsuitable ? `; ${meta.counts.hiddenUnsuitable} hidden as unsuitable for this server` : ''}.</li>}
+      {results.length === 0 && <li className="mm-note">{shown ? `Nothing on Hugging Face matched “${shown}” within these filters` : 'Nothing matches these filters'}{meta?.counts?.hiddenUntrusted ? `; ${meta.counts.hiddenUntrusted} hidden as untrusted publishers` : ''}{meta?.counts?.hiddenUnsuitable ? `; ${meta.counts.hiddenUnsuitable} hidden as unsuitable for this server` : ''}.</li>}
       {results.map(r => <li key={r.id}>
         <button className="mm-result-open" disabled={repoBusy === r.id} onClick={() => void openRepo(r.id)}>
           <strong>{r.id}</strong>
