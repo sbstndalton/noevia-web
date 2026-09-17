@@ -24,6 +24,13 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   if(p==='/api/profile'||p==='/api/auth/session')return json({user:{id:'qa',username:'admin',displayName:'Synthetic admin',role:'admin',diaryEnabled:true,onboarded:true},passkeys:[]});
   if(p==='/api/models/capabilities')return json({kind:'llamacpp',admin:true,presets:true,download:true,runtimeOptions:false,modelManagement:true});
   if(p==='/api/models/installed')return json([{name:'Qwen-9B',labels:['vision'],loaded:true,sizeGB:5.6,maxContext:262144,source:'preset',canDelete:false,status:'loaded'},{name:'Gemma-E2B',labels:[],loaded:false,sizeGB:3,maxContext:131072,source:'preset',canDelete:false,status:'unloaded'},...(extraRegistered?[{name:'new-model-Q4_K_M',labels:[],loaded:false,sizeGB:2,maxContext:8192,source:'preset',canDelete:false,status:'unloaded'}]:[])]);
+  if(p==='/api/models/autotune')return json({history:[],job:{id:'t1',model:'Qwen-9B',status:'passed',phase:'Done',steps:[
+   {kind:'spec',id:'off',label:'Off',status:'measured',score:19.1,workloads:[{workload:'list',gen:19,drafted:0,accepted:0},{workload:'prose',gen:19.2,drafted:0,accepted:0},{workload:'code',gen:19.1,drafted:0,accepted:0}]},
+   {kind:'spec',id:'mtp',label:'MTP (engine defaults)',status:'measured',score:33.4,workloads:[{workload:'list',gen:40.2,drafted:84,accepted:82},{workload:'prose',gen:23.2,drafted:144,accepted:59},{workload:'code',gen:36.9,drafted:120,accepted:96}]},
+   {kind:'spec',id:'ngram',label:'N-gram',status:'rejected',reason:'Changed the deterministic list output.',score:20},
+   {kind:'prompt',id:'ubatch-1024',label:'Micro-batch 1024',status:'measured',promptPerSecond:531}],
+   result:{spec:'mtp',specLabel:'MTP (engine defaults)',generation:33.4,generationOff:19.1,gain:75,perWorkload:{list:'mtp',prose:'mtp',code:'mtp'},ubatch:1024,promptPerSecond:531,
+    extensions:[{id:'context',action:'calibrate',from:32768,to:63720,why:'measured prompt speed (531 tokens/s) fills about 63,720 tokens within 120 s'}]},calibration:'started'}});
   if(p==='/api/models/calibration')return json({job:null,history:[]});
   if(p.endsWith('/draft-heads'))return json({section:'Qwen-9B',local:'',builtinLayers:1,available:true,remote:[],mtpBuild:null,repo:null,modes:{}});
   if(p==='/api/models/presets/reload'){const b=body();reloads.push(b);return b.unload?json({reloaded:true,unloaded:['Qwen-9B']}):json({error:'A model is loaded.',loaded:['Qwen-9B']},409);}
@@ -117,12 +124,19 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  // Why the recommendation is lower than memory allows, measured context on this machine, and MTP availability.
  await dialog.getByText(/Memory would allow 1024K; limited because prompt speed not measured yet/).waitFor();
  await dialog.getByText(/MTP layers built in/).waitFor();
+ await dialog.getByText(/Saved: MTP \(engine defaults\) at 33.4 tokens\/s \(\+75% over off\), micro-batch 1024/).waitFor();
+ await dialog.getByText(/Context can likely grow from 32,768 to about 63,720 tokens/).waitFor();
+ assert.equal(await dialog.getByRole('region',{name:'Auto-tune steps'}).getByRole('row').count(),5);
  await dialog.locator('.mm-easy-measure > summary').filter({hasText:'Measure context on this machine'}).waitFor();
  await dialog.getByLabel('KV cache quantisation').selectOption('q4_0');
  await dialog.getByLabel('Speculative decoding (MTP)').selectOption('ngram-simple');
  if(process.env.QA_SCREENSHOTS){
   for(const [w,theme] of [[1440,'light'],[1440,'dark'],[768,'light'],[768,'dark'],[375,'light'],[375,'dark']]){
    await page.setViewportSize({width:w,height:950});await page.emulateMedia({colorScheme:theme,reducedMotion:'reduce'});
+   await dialog.getByText(/Memory would allow/).scrollIntoViewIfNeeded();
+   await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/models-easy-top-${w}-${theme}.png`});
+   await dialog.getByRole('region',{name:'Auto-tune steps'}).scrollIntoViewIfNeeded();
+   await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/models-autotune-${w}-${theme}.png`});
    await dialog.getByText(/Memory would allow/).scrollIntoViewIfNeeded();if(w===1440&&theme==='light')await dialog.locator('.mm-easy-measure > summary').click();
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`easy overflow ${w}`);
    await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/models-easy-${w}-${theme}.png`});

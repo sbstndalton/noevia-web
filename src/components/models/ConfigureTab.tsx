@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../api';
 import { bytes, ctxShort, errorText, mm, tokens } from './mm';
 import { NativeCalibration } from '../NativeCalibration';
+import { AutoTune } from './AutoTune';
 import { dismissFolderModel } from './register';
 
 type Field = { key: string; label: string; kind: 'int' | 'text' | 'bool' | 'select'; choices: string[]; placeholder: string; help: string };
@@ -214,7 +215,11 @@ function EasySettings({ name, draft, busy, onChange, onUseTuned }: { name: strin
       </div>
       <button className="modal-btn primary" disabled={busy} onClick={() => void onUseTuned({ ...rec.values, ...keepChoices(draft) }, rec.displaced)}>Use and save</button>
     </div>}
-<details className="mm-disclosure mm-easy-measure">
+<details className="mm-disclosure mm-easy-autotune" open>
+      <summary>Auto-tune speed <small>Measures speculative decoding and batch sizes on this machine; chat pauses while it runs.</small></summary>
+      <AutoTune model={name} onChanged={() => { setAuto(null); onChange({}); }}/>
+    </details>
+    <details className="mm-disclosure mm-easy-measure">
       <summary>Measure context on this machine <small>Tests the real engine; chat pauses while it runs.</small></summary>
           <NativeCalibration model={name} onChanged={() => { setAuto(null); setVerified(0); void apiFetch('/api/models/calibration?model=' + encodeURIComponent(name)).then(r => r.json()).then((v: { history?: { at: number; appliedCtx?: number; verifiedCtx?: number }[] }) => { const last = (v.history || []).slice().sort((a, b) => b.at - a.at)[0]; setVerified(last?.verifiedCtx || last?.appliedCtx || 0); }).catch(() => {}); }}/>
     </details>

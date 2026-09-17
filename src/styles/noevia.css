@@ -1836,5 +1836,6 @@ body { isolation:isolate; background:var(--bg-app); }
 .personal-style-options input { position: absolute; opacity: 0; pointer-events: none; }
 .personal-style-label { font-size: var(--text-callout); font-weight: 600; }
 .personal-style-hint { font-size: var(--text-caption); color: var(--text-secondary); }
-.mm-easy-measure > summary { flex-wrap: wrap; }
-@media (max-width: 600px) { .mm-easy-measure > summary small { flex-basis: 100%; padding-left: calc(1em + 8px); } }
+.mm-easy-measure > summary, .mm-easy-autotune > summary { flex-wrap: wrap; }
+@media (max-width: 600px) { .mm-easy-measure > summary small, .mm-easy-autotune > summary small { flex-basis: 100%; padding-left: calc(1em + 8px); } }
+.mm-autotune { display: flex; flex-direction: column; gap: 10px; }
