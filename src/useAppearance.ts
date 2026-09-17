@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SetStateAction } from 'react';
 import { apiFetch } from './api';
-import { applyAppearance, parseAppearance, savedPalette, type Appearance, type Mode, type Palette } from './appearance';
+import { applyAppearance, parseAppearance, resolveMode, savedPalette, type Appearance, type Mode, type Palette, type Preference } from './appearance';
 
 export function useAppearance() {
-  const initial = (): Appearance => ({theme:document.documentElement.dataset.theme === 'light' ? 'light' : 'dark',light:savedPalette('light'),dark:savedPalette('dark')});
+  const initialPreference = (): Preference => {
+    const saved = document.documentElement.dataset.themePreference;
+    return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+  };
+  const initial = (): Appearance => ({theme:initialPreference(),light:savedPalette('light'),dark:savedPalette('dark')});
   const value = useRef<Appearance>(initial());
-  const [theme, renderTheme] = useState(value.current.theme);
+  const [theme, renderTheme] = useState<Mode>(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark');
+  const [preference, renderPreference] = useState<Preference>(value.current.theme);
   const [appearanceStatus,setStatus] = useState('Loading profile appearance…');
   const [appearanceError,setError] = useState(false);
   const [attempt,retry] = useState(0);
@@ -14,7 +19,12 @@ export function useAppearance() {
   const change = useRef<(patch: Partial<Appearance>) => void>(()=>{});
   useEffect(()=>{
     let active=true, ready=false, saving=false, dirty=Object.keys(pending.current).length>0;
-    const show = () => { applyAppearance(value.current); renderTheme(value.current.theme); };
+    const show = () => { applyAppearance(value.current); renderTheme(resolveMode(value.current.theme)); renderPreference(value.current.theme); };
+    // Following the system: repaint when the device switches between light and dark.
+    let media: MediaQueryList | null = null;
+    try { media = window.matchMedia?.('(prefers-color-scheme: light)') ?? null; } catch { media = null; }
+    const onSystem = () => { if (value.current.theme === 'system') show(); };
+    media?.addEventListener?.('change', onSystem);
     const save = async () => {
       if (!ready || saving || !active) return;
       saving=true;
@@ -51,7 +61,11 @@ export function useAppearance() {
         if(stored===null || dirty){dirty=true;void save();}else setStatus('Saved to your profile');
       } catch {if(active){setError(true);setStatus('Profile appearance could not be loaded. Changes stay in this browser until you retry.');}}
     })();
-    return()=>{active=false;window.removeEventListener('cowork:palette-change',onPalette);};
+    return()=>{active=false;window.removeEventListener('cowork:palette-change',onPalette);media?.removeEventListener?.('change',onSystem);};
   },[attempt]);
-  return {theme,setTheme:(next:SetStateAction<Mode>)=>change.current({theme:typeof next==='function'?next(value.current.theme):next}),appearanceStatus,appearanceError,retryAppearance:()=>retry(n=>n+1)};
+  return {theme,preference,
+    // The quick toggle flips what is on screen and pins that mode.
+    setTheme:(next:SetStateAction<Mode>)=>change.current({theme:typeof next==='function'?next(resolveMode(value.current.theme)):next}),
+    setPreference:(next:Preference)=>change.current({theme:next}),
+    appearanceStatus,appearanceError,retryAppearance:()=>retry(n=>n+1)};
 }

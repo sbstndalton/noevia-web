@@ -1,6 +1,14 @@
 export type Palette = 'warm' | 'cool' | 'neutral' | 'sage' | 'iris';
 export type Mode = 'light' | 'dark';
-export type Appearance = { theme: Mode; light: Palette; dark: Palette };
+/** What the person chose; 'system' follows the device. `data-theme` always holds the resolved Mode. */
+export type Preference = Mode | 'system';
+export type Appearance = { theme: Preference; light: Palette; dark: Palette };
+export function systemMode(): Mode {
+  try { return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; } catch { return 'dark'; }
+}
+export function resolveMode(preference: Preference): Mode {
+  return preference === 'system' ? systemMode() : preference;
+}
 export const palettes: Palette[] = ['warm', 'cool', 'neutral', 'sage', 'iris'];
 export function currentPalette(): Palette {
   const value = document.documentElement.getAttribute('data-palette');
@@ -15,7 +23,7 @@ export function savedPalette(mode: Mode): Palette {
 }
 export function parseAppearance(value: unknown): Appearance {
   const p = value as Appearance | null;
-  if (!p || !['light','dark'].includes(p.theme) || !palettes.includes(p.light) || !palettes.includes(p.dark)) throw Error('Invalid appearance response');
+  if (!p || !['light','dark','system'].includes(p.theme) || !palettes.includes(p.light) || !palettes.includes(p.dark)) throw Error('Invalid appearance response');
   return {theme:p.theme,light:p.light,dark:p.dark};
 }
 export function updateThemeColor() {
@@ -23,11 +31,13 @@ export function updateThemeColor() {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
 }
 export function applyAppearance(value: Appearance) {
-  document.documentElement.setAttribute('data-theme', value.theme);
-  document.documentElement.setAttribute('data-palette', value[value.theme]);
+  const mode = resolveMode(value.theme);
+  document.documentElement.setAttribute('data-theme', mode);
+  document.documentElement.setAttribute('data-theme-preference', value.theme);
+  document.documentElement.setAttribute('data-palette', value[mode]);
   try {
     localStorage.setItem('cowork-theme',value.theme);
-    localStorage.setItem('cowork-palette',value[value.theme]);
+    localStorage.setItem('cowork-palette',value[mode]);
     localStorage.setItem('cowork-palette-light',value.light);
     localStorage.setItem('cowork-palette-dark',value.dark);
   } catch { /* profile saving can still succeed without browser storage */ }
@@ -36,6 +46,7 @@ export function applyAppearance(value: Appearance) {
 }
 export function applyPalette(palette: Palette) {
   const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-  applyAppearance({theme,light:savedPalette('light'),dark:savedPalette('dark'),[theme]:palette});
+  const preference = (document.documentElement.getAttribute('data-theme-preference') || theme) as Preference;
+  applyAppearance({theme:['light','dark','system'].includes(preference)?preference:theme,light:savedPalette('light'),dark:savedPalette('dark'),[theme]:palette});
   window.dispatchEvent(new CustomEvent('cowork:palette-change',{detail:{mode:theme,palette}}));
 }

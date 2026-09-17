@@ -1730,3 +1730,17 @@ body { isolation:isolate; background:var(--bg-app); }
   .composer-add { display: inline-grid; place-items: center; }
 }
 .set-row-pending { color: var(--text-primary); font-weight: 500; }
+/* Settings rows whose control needs the full width (palettes): label above, control below. */
+.set-row.set-row-stacked { flex-direction: column; align-items: stretch; gap: 12px; }
+.palette-picker.is-bare { border: 0; padding: 0; margin: 0; min-width: 0; }
+/* System swatch: half light, half dark. */
+/* design-lint: allow side-tab — the swatch's thick left edge draws a miniature sidebar */
+.theme-swatch.is-system { background: linear-gradient(135deg, #f7f9fc 0 50%, #1c1d20 50% 100%); border-left-color: #8a8f99; }
+.theme-swatch.is-system i { background: #8a8f99; }
+@media (max-width: 620px) {
+  .set-row-control .theme-choice { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .set-row-control .theme-choice button { min-width: 0; width: 100%; padding: 6px; }
+  /* design-lint: allow side-tab — miniature sidebar in the phone-size swatch */
+  .set-row-control .theme-choice .theme-swatch { width: 100%; box-sizing: border-box; height: 52px; padding: 8px 6px 8px 14px; border-left-width: 10px; }
+  .set-row-control .theme-choice .theme-swatch i { width: 70%; }
+}

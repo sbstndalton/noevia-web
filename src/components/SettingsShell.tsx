@@ -46,11 +46,8 @@ const ADMIN: Item[] = [
   ['backups', 'Off-site backups'],
 ];
 
-const ICONS: Record<string, string> = {
-  profile: 'user', security: 'settings', appearance: 'sun', capabilities: 'grid', users: 'user', usage: 'grid',
-  models: 'settings', status: 'settings', providers: 'settings',
-  diary: 'folder', planned: 'grid', features: 'grid', backups: 'folder',
-};
+// Each section has its own symbol; names resolve through ShellIcon's Lucide map.
+const ICONS: Record<string, string> = Object.fromEntries(['profile','security','appearance','capabilities','diary','providers','usage','planned','users','models','status','features','backups'].map(id => [id, id]));
 
 // What used to be one navigation row each. Kept visible as a roadmap, but in
 // one place, so an empty section never looks like a broken one.
@@ -61,7 +58,7 @@ const PLANNED: { group: string; items: string[] }[] = [
   { group: 'Coding workspace', items: ['Coding preferences', 'Git', 'Environments', 'Worktrees', 'Hooks'] },
 ];
 
-export function SettingsShell(props: SettingsViewProps & {initialSection?:'general'|'usage'|'models';appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void}) {
+export function SettingsShell(props: SettingsViewProps & {initialSection?:'general'|'usage'|'models';appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void; preference?:'light'|'dark'|'system'; onPreference?:(preference:'light'|'dark'|'system')=>void}) {
   // 'general' is the historical name for the first page; it now opens Profile.
   const [section, setSection] = useState<string>(!props.initialSection || props.initialSection === 'general' ? 'profile' : props.initialSection);
   const [query, setQuery] = useState('');
@@ -134,7 +131,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
         ) : section === 'profile' ? (
           <ProfileSettings />
         ) : section === 'appearance' ? (
-          <AppearanceSettings theme={props.theme} onTheme={props.onTheme} appearanceStatus={props.appearanceStatus}
+          <AppearanceSettings theme={props.theme} onTheme={props.onTheme} preference={props.preference} onPreference={props.onPreference} appearanceStatus={props.appearanceStatus}
             appearanceError={props.appearanceError} retryAppearance={props.retryAppearance} />
         ) : section === 'features' && isAdmin ? (
           <FeatureSettings />

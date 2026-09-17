@@ -61,7 +61,7 @@ function uid(): string {
 }
 
 export default function App(): JSX.Element {
-  const {theme,setTheme,appearanceStatus,appearanceError,retryAppearance} = useAppearance();
+  const {theme,preference,setTheme,setPreference,appearanceStatus,appearanceError,retryAppearance} = useAppearance();
   const [settingsSection,setSettingsSection] = useState<'general'|'usage'|'models'>('general');
   const openSettings = (section: 'general'|'usage'|'models' = 'general') => { setSettingsSection(section); setSettingsOpen(true); };
   const openModelManager = () => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models' }); };
@@ -904,6 +904,8 @@ export default function App(): JSX.Element {
           onClose={() => setSettingsOpen(false)}
           theme={theme}
           onTheme={setTheme}
+          preference={preference}
+          onPreference={setPreference}
           models={models}
           routes={routes}
           modelsError={modelsError}

@@ -1,8 +1,13 @@
 // Runs before the application/styles load, including when storage is unavailable.
 (() => {
-  let theme = 'dark';
+  // Preference is light, dark or system (the default, following the device like other apps).
+  let preference = 'system';
   let palette = 'cool';
-  try { if (localStorage.getItem('cowork-theme') === 'light') theme = 'light'; } catch { /* use the default */ }
+  try { const saved = localStorage.getItem('cowork-theme'); if (['light', 'dark', 'system'].includes(saved)) preference = saved; } catch { /* use the default */ }
+  let systemLight = false;
+  try { systemLight = !!matchMedia('(prefers-color-scheme: light)').matches; } catch { /* no media queries: dark */ }
+  const theme = preference === 'system' ? (systemLight ? 'light' : 'dark') : preference;
+  document.documentElement.setAttribute('data-theme-preference', preference);
   try { const saved = localStorage.getItem('cowork-palette-'+theme) || localStorage.getItem('cowork-palette'); if (['warm', 'cool', 'neutral', 'sage', 'iris'].includes(saved)) palette = saved; } catch { /* use the default */ }
   document.documentElement.setAttribute('data-theme', theme);
   document.documentElement.setAttribute('data-palette', palette);
