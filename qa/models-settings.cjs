@@ -8,7 +8,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  try{
  const page=await browser.newPage({viewport:{width:1440,height:950}});await page.emulateMedia({reducedMotion:'reduce'});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- const calls=[];let saveAttempts=0,revision='r1',deleted=[],reloads=[],safeDefaults=[],badges=[],extraJob=null,extraRegistered=false,prompts=[{id:1,name:'Short answer',body:'Reply with OK.'}],benchStarted=null;
+ const calls=[];let saveAttempts=0,revision='r1',deleted=[],reloads=[],safeDefaults=[],logPolls=0,badges=[],extraJob=null,extraRegistered=false,prompts=[{id:1,name:'Short answer',body:'Reply with OK.'}],benchStarted=null;
  const now=Date.now()/1000,hist=Array.from({length:40},(_,i)=>({ts:now-(39-i)*2,gpu_util:i%10*9,vram_used_gb:0.15,cpu_pct:40+i%5*10,mem_used_gb:1.2,shared_used_gb:6+i*0.1,temp_c:48,power_w:18+i%4,per_gpu_util:[],per_gpu_vram_used_gb:[]}));
  const hostHist=hist.map(p=>({ts:p.ts,cpu_pct:12,mem_used_gb:14.5,mem_total_gb:29,mem_available_gb:14.5}));
  const schema=[{tier:'Common',open:true,fields:[{key:'model',label:'Model file',kind:'text',choices:[],placeholder:'',help:'Model path'},{key:'ctx-size',label:'Context size',kind:'int',choices:[],placeholder:'8192',help:'Tokens'},{key:'ngl',label:'GPU layers',kind:'text',choices:[],placeholder:'999',help:''},{key:'flash-attn',label:'Flash attention',kind:'select',choices:['','on','off','auto'],placeholder:'',help:''},{key:'jinja',label:'Enable --jinja templating',kind:'bool',choices:[],placeholder:'',help:''}]},{tier:'Multimodal / vision',open:false,fields:[{key:'mmproj',label:'Projector',kind:'text',choices:[],placeholder:'',help:''}]}];
@@ -47,7 +47,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    stats:{ok:true,error:null,gpu:{vendor:'vulkan',name:'AMD Radeon 880M/890M',util_pct:62,vram_used_gb:0.15,vram_total_gb:2,temp_c:48,power_w:19,gpu_count:1,cards:[],memory_kind:'unified',shared_used_gb:9.8,shared_total_gb:14.5,clock_mhz:2900,source:'sysfs',measured:true},container:{cpu_pct:55,mem_used_gb:1.2,mem_limit_gb:14}},history:hist}]});
   if(r==='host')return json({current:hostHist.at(-1),history:hostHist});
   if(r.endsWith('/diagnose'))return json({failures:[{model:'Big-Model',status:1,cause:'gpu-memory',title:'The GPU ran out of memory',advice:'Lower the context size.',evidence:['ggml_vulkan: Device memory allocation failed']}]});
-  if(r.endsWith('/logs'))return json({ok:true,lines:url.searchParams.get('q')?['matching synthetic line']:['line one','line two']});
+  if(r.endsWith('/logs')){logPolls++;return json({ok:true,lines:url.searchParams.get('q')?['matching synthetic line']:Array.from({length:60+logPolls},(_,i)=>`line ${i}`)});}
   if(r.endsWith('/restart'))return json({ok:true,message:''});
   if(r.endsWith('/test'))return json({ok:true,reply:'Synthetic reply.',model:'Qwen-9B',completion_tokens:4,elapsed_s:0.4,tokens_per_s:13.7,prompt_tokens:12});
   if(r==='prompts'&&m==='GET')return json({prompts});
@@ -201,6 +201,17 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  const memChart=dialog.getByRole('figure',{name:/GPU memory of 16.5 GiB/});await memChart.locator('svg').hover({position:{x:200,y:60}});await memChart.locator('.viz-tip').waitFor();
  const hw=dialog.locator('details.mm-fold').filter({has:page.locator('> summary:has-text("Hardware")')});
  await hw.getByText('Logs',{exact:true}).click();await hw.getByLabel('Filter',{exact:true}).fill('synthetic');await hw.getByRole('button',{name:'Refresh'}).click();await hw.getByText('matching synthetic line').waitFor();
+ // Follow: polls while enabled, stays pinned to the newest line, pauses when scrolled up.
+ await hw.getByLabel('Filter',{exact:true}).fill('');await hw.getByRole('button',{name:'Refresh'}).click();
+ const log=hw.getByLabel('Engine log');await log.getByText(/line 5\d/).first().waitFor();
+ await hw.getByLabel('Follow live').check();const before=logPolls;
+ await new Promise(r=>setTimeout(r,4500));
+ assert.ok(logPolls>=before+2,'follow did not poll');
+ assert.ok(await log.evaluate(el=>el.scrollHeight-el.scrollTop-el.clientHeight<24),'follow is not pinned to the newest line');
+ await log.evaluate(el=>{el.scrollTop=0;el.dispatchEvent(new Event('scroll'));});
+ await hw.getByText(/Paused while you read/).waitFor();
+ await hw.getByRole('button',{name:/Jump to latest/}).click();await hw.getByText(/Following · updates every 2 s/).waitFor();
+ await hw.getByLabel('Follow live').uncheck();
  await dialog.getByRole('button',{name:'Restart engine…'}).click();assert.ok(await dialog.getByText(/interrupts any chat in progress/).isVisible());await dialog.getByRole('button',{name:'Keep running'}).click();
  // Benchmarks
  await fold('Benchmarks');

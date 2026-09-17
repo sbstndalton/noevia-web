@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TimeChart } from './TimeChart';
 import { errorText, gib, mm } from './mm';
 
@@ -131,22 +131,43 @@ function TestPrompt({ name }: { name: string }) {
   </div>;
 }
 
+const LOG_BUFFER = 1000;
+
+// Follow polls the tail every two seconds rather than holding a Docker log stream
+// open per viewer through the JSON proxy; the window is bounded either way.
+// Lines arrive already scrubbed of secret-shaped strings by the model manager.
 function Logs({ name }: { name: string }) {
   const [q, setQ] = useState(''), [level, setLevel] = useState(''), [lines, setLines] = useState<string[] | null>(null), [error, setError] = useState('');
-  const load = async () => {
-    setError('');
-    try { const v = await mm<{ ok: boolean; error?: string; lines: string[] }>(`backends/${encodeURIComponent(name)}/logs?${new URLSearchParams({ q, level, tail: '600' })}`); if (!v.ok) throw Error(v.error || 'Logs unavailable'); setLines(v.lines); }
-    catch (e) { setError(errorText(e, 'Logs unavailable')); }
-  };
-  useEffect(() => { void load(); }, []);
+  const [follow, setFollow] = useState(false), [pinned, setPinned] = useState(true);
+  const box = useRef<HTMLPreElement>(null);
+  const query = useRef({ q, level });
+  query.current = { q, level };
+  const load = useCallback(async () => {
+    try {
+      const v = await mm<{ ok: boolean; error?: string; lines: string[] }>(`backends/${encodeURIComponent(name)}/logs?${new URLSearchParams({ ...query.current, tail: String(LOG_BUFFER) })}`);
+      if (!v.ok) throw Error(v.error || 'Logs unavailable');
+      setLines(v.lines.slice(-LOG_BUFFER)); setError('');
+    } catch (e) { setError(errorText(e, 'Logs unavailable')); }
+  }, [name]);
+  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (!follow) return;
+    const t = setInterval(() => { if (document.visibilityState !== 'hidden') void load(); }, 2000);
+    return () => clearInterval(t);
+  }, [follow, load]);
+  useEffect(() => { const el = box.current; if (el && pinned) el.scrollTop = el.scrollHeight; }, [lines, pinned]);
+  const onScroll = () => { const el = box.current; if (el) setPinned(el.scrollHeight - el.scrollTop - el.clientHeight < 24); };
   return <div className="mm-form">
     <div className="mm-row">
       <label>Filter<input value={q} placeholder="Text to find" onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void load(); }}/></label>
-      <label>Level<select value={level} onChange={e => setLevel(e.target.value)}><option value="">All</option><option value="warn">Warnings and errors</option><option value="error">Errors</option></select></label>
+      <label>Level<select value={level} onChange={e => { setLevel(e.target.value); query.current = { q, level: e.target.value }; void load(); }}><option value="">All</option><option value="warn">Warnings and errors</option><option value="error">Errors</option></select></label>
+      <label className="mm-check"><input type="checkbox" checked={follow} onChange={e => { setFollow(e.target.checked); if (e.target.checked) { setPinned(true); void load(); } }}/>Follow live</label>
       <button className="modal-btn secondary" onClick={() => void load()}>Refresh</button>
     </div>
     {error && <p role="alert" className="modal-err">{error}</p>}
-    {lines && <pre className="mm-log" tabIndex={0} aria-label="Engine log">{lines.length ? lines.slice(-400).join('\n') : 'No matching lines.'}</pre>}
+    {lines && <pre ref={box} onScroll={onScroll} className="mm-log" tabIndex={0} aria-label="Engine log">{lines.length ? lines.join('\n') : 'No matching lines.'}</pre>}
+    {lines && <p className="mm-note" role="status">{follow ? (pinned ? 'Following · updates every 2 s' : 'Paused while you read') : 'Not following'} · last {Math.min(lines.length, LOG_BUFFER)} lines · secrets are redacted on the server
+      {follow && !pinned && <button className="mm-link" onClick={() => setPinned(true)}> Jump to latest</button>}</p>}
   </div>;
 }
 
