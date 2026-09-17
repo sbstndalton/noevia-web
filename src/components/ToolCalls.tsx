@@ -77,7 +77,8 @@ export function ToolCalls({ calls }: { calls: ToolCallView[] }): JSX.Element {
   const settled = list.filter((c) => !(c.status === 'pending' && c.approvalId));
   const running = settled.filter((c) => !c.status || c.status === 'running').length;
   const denied = settled.filter((c) => c.status === 'denied').length;
-  const summary = [`${list.length} tool ${list.length === 1 ? 'call' : 'calls'}`, running ? `${running} running` : '', denied ? `${denied} declined` : '', pending.length ? `${pending.length} awaiting approval` : ''].filter(Boolean).join(' · ');
+  const stopped = settled.filter((c) => c.status === 'stopped').length;
+  const summary = [`${list.length} tool ${list.length === 1 ? 'call' : 'calls'}`, running ? `${running} running` : '', denied ? `${denied} declined` : '', stopped ? `${stopped} not run` : '', pending.length ? `${pending.length} awaiting approval` : ''].filter(Boolean).join(' · ');
   return (
     <div className="tool-calls-wrap">
       {pending.map((c, i) => <PendingToolCall key={`pending-${c.approvalId ?? i}`} call={c} />)}
@@ -86,13 +87,13 @@ export function ToolCalls({ calls }: { calls: ToolCallView[] }): JSX.Element {
           <summary>{summary}</summary>
           <ol>
             {settled.map((c, i) => {
-              const state = c.status === 'denied' ? 'declined' : c.status === 'done' ? 'done' : 'running';
+              const state = c.status === 'denied' ? 'declined' : c.status === 'done' ? 'done' : c.status === 'stopped' ? 'not run' : 'running';
               const preview = c.result !== undefined ? oneLine(c.result) || '(empty result)' : c.args ? oneLine(c.args) : '';
               return (
-                <li key={i} className={`tool-call is-${state}`}>
+                <li key={i} className={`tool-call is-${state.replace(' ', '-')}`}>
                   <details>
                     <summary>
-                      <span className="tool-call-state" aria-label={state}>{state === 'done' ? '✓' : state === 'declined' ? '⃠' : '…'}</span>
+                      <span className="tool-call-state" aria-label={state}>{state === 'done' ? '✓' : state === 'declined' || state === 'not run' ? '⃠' : '…'}</span>
                       <span className="tool-call-name">{c.name || 'tool'}</span>
                       {preview && <span className="tool-call-preview">{preview}</span>}
                     </summary>

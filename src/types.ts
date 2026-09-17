@@ -34,7 +34,7 @@ export interface ToolCallView {
   /** Write tools wait for a human before they run (step 16). 'pending' means
    *  the model has asked and the user has not answered yet; the id is what the
    *  approval is posted against. Reads never enter this state. */
-  status?: 'running' | 'pending' | 'done' | 'denied';
+  status?: 'running' | 'pending' | 'done' | 'denied' | 'stopped';
   approvalId?: string;
   /** What the tool returned, bounded for display and history. */
   result?: string;

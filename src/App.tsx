@@ -46,6 +46,7 @@ import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
 import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
+import { settleToolCalls } from './tool-call-state';
 
 type View =
   | { kind: 'diary' }
@@ -101,6 +102,7 @@ export default function App(): JSX.Element {
   // stops the client-side stream; the server's disconnect handling (Phase 1)
   // then terminates the upstream request.
   const streamAbort = useRef<Record<string, AbortController>>({});
+  const sendingChats = useRef<Set<string>>(new Set());
   const abortStream = useCallback((chatId: string) => {
     streamAbort.current[chatId]?.abort();
     delete streamAbort.current[chatId];
@@ -230,7 +232,7 @@ export default function App(): JSX.Element {
             content: h.content,
             senderLabel: h.model,
             reasoning: h.reasoning,
-            toolCalls: h.toolCalls,
+            toolCalls: settleToolCalls(h.toolCalls),
             stats: h.stats,
           })),
         }));
@@ -314,7 +316,10 @@ export default function App(): JSX.Element {
 
   const handleSend = useCallback(
     async (chatId: string, projectId: string | null, text: string, base?: Message[]) => {
-      if (streamingChats[chatId]) return;
+      // `streamingChats` is render state, so two sends in one tick both see it false. The ref
+      // is updated synchronously and is the real guard against a duplicate generation.
+      if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
+      sendingChats.current.add(chatId);
       const userMsg: Message = { id: uid(), role: 'user', content: text };
       const existing = base ?? messagesRef.current[chatId] ?? [];
       const history: HistoryEntry[] = existing.filter(m => !m.error).map(m => ({ role: m.role, content: m.content }));
@@ -503,6 +508,7 @@ export default function App(): JSX.Element {
           }));
         }
       } finally {
+        sendingChats.current.delete(chatId);
         if (streamAbort.current[chatId] === controller) delete streamAbort.current[chatId];
         setStreamingChats((prev) => {
           const next = { ...prev };
@@ -510,9 +516,9 @@ export default function App(): JSX.Element {
           return next;
         });
         setMessagesByChat((prev) => {
-          const msgs = prev[chatId] ?? [];
+          const msgs = (prev[chatId] ?? []).map((m) => (m.id === replyId && m.toolCalls ? { ...m, toolCalls: settleToolCalls(m.toolCalls) } : m));
           persist(chatId, msgs);
-          return prev;
+          return { ...prev, [chatId]: msgs };
         });
       }
     },

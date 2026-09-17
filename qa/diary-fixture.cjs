@@ -53,6 +53,11 @@ function createFixture(port = 31239) {
       event({type:'status',text:body.spaceId==='diary-extras'?'Preparing synthetic context':'Reading synthetic diary'});
       if(body.spaceId==='diary-extras') {event({type:'tool',index:0,name:'synthetic_read',args:'{}'});event({type:'tool_result',index:0,name:'synthetic_read',text:'Synthetic reference read'});}
       if(body.message==='cancel synthetic'&&body.spaceId==='diary-extras') { pending.add(res);res.on('close',()=>pending.delete(res));return; }
+      if(body.message==='pending write synthetic') {
+        event({type:'tool',index:0,name:'project_create_file',args:'{"name":"a.md","text":"synthetic"}'});
+        event({type:'tool_pending',id:'ap-synthetic-stale',index:0,name:'project_create_file',args:'{"name":"a.md","text":"synthetic"}'});
+        pending.add(res);res.on('close',()=>pending.delete(res));return;
+      }
       if(body.message==='live synthetic') { live.add(res);pending.add(res);res.on('close',()=>{live.delete(res);pending.delete(res);});return; }
       if(body.message==='tools chat synthetic') {
         event({type:'tool',index:0,name:'project_search',args:'{"query":"synthetic"}'});

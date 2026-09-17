@@ -114,7 +114,7 @@ async function evaluate(cdp,expression){
           if(composer.bottom!==undefined&&composer.bottom>composer.vh+1)problems.push(`diary ${tag}: composer extends ${Math.round(composer.bottom-composer.vh)}px below the viewport`);
         }
         // Back to chat for the next iteration.
-        await click('Chat');
+        await click('New chat'); // the Chat/Code switch is hidden unless features.previews is on
         await new Promise(r=>setTimeout(r,200));
       }
     }
