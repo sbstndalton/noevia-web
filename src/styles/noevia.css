@@ -22,7 +22,7 @@ input:not([type=checkbox]):not([type=radio]), textarea, select { border-color:va
   .sidebar:not(.coding-sidebar) .side-logo { padding:4px; }
   .sidebar:not(.coding-sidebar):not(.is-expanded) .side-logo span, .sidebar:not(.coding-sidebar):not(.is-expanded) .shell-sidebar-head button:not(.side-expand), .sidebar:not(.coding-sidebar):not(.is-expanded) .side-hint, .sidebar:not(.coding-sidebar):not(.is-expanded) .spaces, .sidebar:not(.coding-sidebar):not(.is-expanded) .section-label, .sidebar:not(.coding-sidebar):not(.is-expanded) .status-row { display:none; }
   .sidebar:not(.coding-sidebar):not(.is-expanded) .nav-item { justify-content:center; padding:10px 5px; }
-  .sidebar:not(.coding-sidebar):not(.is-expanded) .nav-name, .sidebar:not(.coding-sidebar):not(.is-expanded) .new-chat-btn span, .sidebar:not(.coding-sidebar):not(.is-expanded) .diary-tab-label { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+  .sidebar:not(.coding-sidebar):not(.is-expanded) .nav-name, .sidebar:not(.coding-sidebar):not(.is-expanded) .new-chat-btn span { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
   .sidebar:not(.coding-sidebar):not(.is-expanded) .app-mode-switch { flex-direction:column; }
   .sidebar:not(.coding-sidebar):not(.is-expanded) .app-mode-switch button { font-size:0; }
   .sidebar:not(.coding-sidebar) .app-mode-switch svg { width:17px; }
@@ -72,7 +72,7 @@ input:not([type=checkbox]):not([type=radio]), textarea, select { border-color:va
 .native-modal:not([open]) { display: none; }
 .native-modal::backdrop { background: transparent; }
 
-.msg-warning { color: var(--text-secondary); border-left: 3px solid var(--focus-ring); padding: 8px 12px; font-size: 13px; line-height: 1.5; }
+.msg-warning { color: var(--text-secondary); border: 1px solid var(--border); border-radius: 10px; background: var(--bg-surface); padding: 8px 12px; font-size: 13px; line-height: 1.5; }
 @media (max-width: 600px) {
   .settings-detail .model-name-group { flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; }
   .settings-detail .model-name { max-width: 100%; }
@@ -103,10 +103,6 @@ body { -webkit-font-smoothing: antialiased; }
 .app-mode-switch { background: transparent; border: 0; margin: 10px 0 2px; padding: 3px; }
 .app-mode-switch button.is-selected { background: var(--nav-active); box-shadow: none; }
 .app-mode-switch button { font-size: 12px; border-radius: 7px; }
-.diary-tab, .diary-tab.is-active { padding: 10px; border: 0; border-radius: 8px; background: transparent; }
-.diary-tab:hover { background: var(--nav-hover); }
-.diary-tab.is-active { background: var(--nav-active); }
-.diary-tab-label { color: var(--text-primary); font-size: 13px; font-weight: 500; }
 .account-trigger { border-radius: 8px; }
 .account-popover, .ctx-menu, .popup { border-radius: 12px; box-shadow: var(--shadow-pop); }
 .ctx-item, .account-popover > button { font-size: 13px; font-weight: 400; padding: 9px 10px; }
@@ -317,6 +313,7 @@ button:disabled { opacity: .5; cursor: default; }
 .palette-choices > button[aria-pressed='true'] { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .palette-choices strong { display: block; font-size: 13px; font-weight: 500; margin: 10px 4px 4px; }
 .palette-choices small { display: block; font-size: 11px; color: var(--text-secondary); margin: 0 4px 4px; line-height: 1.4; font-weight: 400; }
+/* design-lint: allow side-tab — the thick left edge draws a miniature sidebar */
 .palette-preview { height: 72px; padding: 16px 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 6px; background: var(--bg-app); border-left: 25px solid var(--bg-chrome); }
 .palette-preview i { height: 5px; border-radius: 2px; background: var(--text-secondary); width: 70%; opacity: .7; }
 .palette-preview i:last-child { width: 45%; }
@@ -324,6 +321,7 @@ button:disabled { opacity: .5; cursor: default; }
 .theme-swatch i { background: var(--text-secondary); }
 .theme-swatch.dark { background: var(--bg-app); border-left-color: var(--bg-chrome); }
 .theme-swatch.dark i { background: var(--text-secondary); }
+/* design-lint: allow side-tab — miniature sidebar at phone size */
 @media(max-width:600px) { .palette-choices { gap: 8px; }.palette-preview { border-left-width: 16px; padding: 12px 8px; height: 60px; } }
 
 /* Status lamps use brighter colors than readable success/error text. */
