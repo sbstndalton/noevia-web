@@ -206,7 +206,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  assert.ok(await dialog.getByText(/Big-Model failed to load: The GPU ran out of memory/).isVisible());
  assert.ok(await dialog.locator('figure.viz-chart svg path.viz-line').count()>=6);
  const memChart=dialog.getByRole('figure',{name:/GPU memory of 16.5 GiB/});await memChart.locator('svg').hover({position:{x:200,y:60}});await memChart.locator('.viz-tip').waitFor();
- const hw=dialog.locator('details.mm-fold').filter({has:page.locator('> summary:has-text("Hardware")')});
+ const hw=dialog.locator('details.mm-fold').filter({has:page.locator('> summary:has-text("Hardware")')}); assert.equal(await hw.getByText(/GPU may borrow/).count(),0,'no shared-memory warning with 14.5 of 29 GiB');
  await hw.getByText('Logs',{exact:true}).click();await hw.getByLabel('Filter',{exact:true}).fill('synthetic');await hw.getByRole('button',{name:'Refresh'}).click();await hw.getByText('matching synthetic line').waitFor();
  // Follow: polls while enabled, stays pinned to the newest line, pauses when scrolled up.
  await hw.getByLabel('Filter',{exact:true}).fill('');await hw.getByRole('button',{name:'Refresh'}).click();

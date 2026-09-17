@@ -34,3 +34,13 @@ export function modelChoiceLabel(
   }
   return installed?.find(m => m.loaded)?.name ?? 'local model';
 }
+
+/** On unified-memory GPUs the kernel lets the GPU borrow system RAM (GTT) outside any container
+ *  limit. When that ceiling leaves the host less than `reserveGB`, loading several models can
+ *  starve the server itself (DaServer outage, 2026-09-17). Unknown host size never warns. */
+export function sharedMemoryRisk({ unified, sharedTotalGB, hostTotalGB, reserveGB = 8 }: { unified: boolean; sharedTotalGB: number; hostTotalGB: number | null | undefined; reserveGB?: number }): { risky: boolean; leftGB: number | null; message: string } {
+  if (!unified || typeof hostTotalGB !== 'number' || !Number.isFinite(hostTotalGB) || hostTotalGB <= 0 || !(sharedTotalGB > 0)) return { risky: false, leftGB: null, message: '' };
+  const leftGB = Math.round((hostTotalGB - sharedTotalGB) * 10) / 10;
+  if (leftGB >= reserveGB) return { risky: false, leftGB, message: '' };
+  return { risky: true, leftGB, message: `The GPU may borrow up to ${Math.round(sharedTotalGB)} GiB of this machine's ${Math.round(hostTotalGB)} GiB, leaving about ${Math.max(0, leftGB)} GiB for everything else. Several loaded models can make the server unresponsive: keep one model loaded, or cap GPU shared memory (GTT) below ${Math.round(hostTotalGB - reserveGB)} GiB.` };
+}

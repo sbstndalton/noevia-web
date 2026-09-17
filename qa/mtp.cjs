@@ -41,6 +41,8 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   assert.equal(loads.length,2);assert.equal(loads[0].save_options,undefined);assert.equal(loads[1].save_options,true);assert.equal(loads[0].ctx_size,32768);assert.match(loads[0].llamacpp_args,/--tensor-split 1,1/);assert.match(loads[0].llamacpp_args,/--spec-type draft-mtp/);
   assert.equal(await page.getByRole('combobox',{name:'Enable MTP for Unsupported',exact:true}).isDisabled(),true);
   await navClick(page,'New chat');
+  // The inference pill starts collapsed; MTP acceptance lives in its details.
+  const pill=page.getByRole('button',{name:/Inference/});if((await pill.getAttribute('aria-expanded'))!=='true')await pill.click();
   await page.getByRole('progressbar',{name:'MTP acceptance for Synthetic native'}).waitFor();assert.equal(await page.getByRole('progressbar').getAttribute('value'),'0.75');
   for(const diary of [false,true]){
    if(diary)await navClick(page,'Diary');

@@ -1,3 +1,4 @@
+import { sharedMemoryRisk } from '../../model-guidance';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { TimeChart } from './TimeChart';
 import { errorText, gib, mm } from './mm';
@@ -30,7 +31,7 @@ export function HardwareTab() {
     {error && <p role="alert" className="modal-err">{error}</p>}
     {!backends && !error && <p role="status">Reading hardware…</p>}
     {backends && !backends.length && <p role="status">No llama.cpp engine was found. Check that the model server container is running and listed for the model manager.</p>}
-    {backends?.map(b => <EngineCard key={b.name} backend={b}/>)}
+    {backends?.map(b => <EngineCard key={b.name} backend={b} hostTotalGB={hostNow?.mem_total_gb}/>)}
     <section className="mm-panel" aria-labelledby="mm-host">
       <h3 id="mm-host">This machine</h3>
       <p className="mm-note">Whole-server load, including every other service. On shared-memory GPUs this is the same memory models use.</p>
@@ -42,7 +43,7 @@ export function HardwareTab() {
   </div>;
 }
 
-function EngineCard({ backend: b }: { backend: Backend }) {
+function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; hostTotalGB?: number }) {
   const gpu = b.stats.gpu, cont = b.stats.container, pts = b.history;
   const times = pts.map(p => p.ts);
   const unified = gpu?.memory_kind === 'unified';
@@ -59,6 +60,7 @@ function EngineCard({ backend: b }: { backend: Backend }) {
     {!b.stats.ok && <p className="mm-note">Readings unavailable: {b.stats.error}</p>}
     {gpu && <>
       <p className="mm-gpu-name"><strong>{gpu.name}</strong>{gpu.gpu_count > 1 ? ` · ${gpu.gpu_count} GPUs` : ''}</p>
+      {unified && (() => { const risk = sharedMemoryRisk({ unified, sharedTotalGB: gpu.shared_total_gb, hostTotalGB }); return risk.risky ? <p className="mm-note warn" role="alert">{risk.message}</p> : null; })()}
       {unified && <p className="mm-note">Unified memory: this GPU has a small dedicated area ({gib(gpu.vram_total_gb)}, reserved by firmware) and keeps models in memory shared with the system (up to {gib(gpu.shared_total_gb)}). Model memory is counted under shared.</p>}
       {!gpu.measured && <p className="mm-note">No live GPU readings: this llama.cpp image has no GPU monitoring tool and the kernel does not report this GPU. Only the declared memory size ({gib(gpu.vram_total_gb)}) is known, so utilisation charts are hidden.</p>}
       {gpu.measured && <div className="mm-tiles">
