@@ -63,7 +63,7 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
     <section className="settings-section">
       <h2>Preferences</h2>
       <div className="set-rows">
-        <Row label="Appearance" description="System follows your device's light or dark setting. Each mode remembers its own palette, and your choice follows you to other devices.">
+        <Row label="Mode" description="System follows your device's light or dark setting. Each mode remembers its own palette, and your choice follows you to other devices.">
           <div className="theme-choice">{(['system', 'light', 'dark'] as const).map((t) => {
             const chosen = (preference ?? theme) === t;
             const swatch = t === 'system' ? theme : t;

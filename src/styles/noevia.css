@@ -678,10 +678,14 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
   box-shadow: inset 0 1px var(--glass-edge);
 }
 .settings-navigation nav button.is-active {
+  /* One selection cue (HIG sidebars): the glass fill. No outline ring on top of it. */
   background: linear-gradient(120deg, var(--glass-rim), transparent), var(--nav-active);
-  box-shadow: inset 0 1px var(--glass-edge), inset 0 0 0 1px var(--glass-rim);
+  box-shadow: inset 0 1px var(--glass-edge);
   border-radius: 10px;
 }
+/* The page names itself with its own heading (and the phone category picker); a second title
+   in the bar above it only repeats the word. The bar keeps the close button. */
+.settings-detail:has(.settings-title h1) > header > span { visibility: hidden; }
 .settings-detail .settings-title { margin-bottom: 30px; }
 .settings-detail .settings-title h1 { font-size: var(--text-large); letter-spacing: -1px; }
 .settings-detail .card-list { background: transparent; border: 0; box-shadow: none; }
