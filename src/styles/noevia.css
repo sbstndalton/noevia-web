@@ -58,9 +58,6 @@ input:not([type=checkbox]):not([type=radio]), textarea, select { border-color:va
 /* A phone needs the full width for connection and storage forms. Keep every
    settings category available through a native selector above the content. */
 .mobile-settings-section { display: none; }
-.tool-call-chip { border-radius: 8px; flex-direction: column; align-items: flex-start; min-width: 0; max-width: 100%; }
-.tool-call-chip > span { white-space: nowrap; }
-.tool-call-chip code { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 600px) {
   .settings-shell { flex-direction: column; }
   .settings-navigation { width: 100%; flex-shrink: 0; padding: 10px 14px; border-right: 0; border-bottom: 1px solid var(--border); }
@@ -1650,3 +1647,20 @@ body { isolation:isolate; background:var(--bg-app); }
 @media (min-width: 601px) and (max-width: 767px), (min-width: 601px) and (max-width: 1100px) and (pointer: coarse) {
   .sidebar:not(.coding-sidebar):not(.is-collapsed) .side-logo span { display: none; }
 }
+
+/* Tool-call list under the thinking block, every mode. */
+.tool-calls-wrap { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.tool-calls { border: 1px solid var(--border-subtle); border-radius: 10px; font-size: 12.5px; min-width: 0; }
+.tool-calls > summary { cursor: pointer; padding: 8px 12px; color: var(--text-secondary); min-height: 36px; display: flex; align-items: center; }
+.tool-calls > ol { list-style: none; margin: 0; padding: 0 6px 6px; display: flex; flex-direction: column; gap: 2px; }
+.tool-call > details > summary { cursor: pointer; display: flex; gap: 8px; align-items: baseline; padding: 6px; border-radius: 6px; min-width: 0; list-style: none; }
+.tool-call > details > summary::-webkit-details-marker { display: none; }
+.tool-call > details > summary:hover { background: var(--nav-hover); }
+.tool-call-state { flex-shrink: 0; width: 14px; text-align: center; color: var(--status-good); }
+.tool-call.is-declined .tool-call-state { color: var(--text-muted); }
+.tool-call.is-running .tool-call-state { color: var(--text-secondary); }
+.tool-call-name { flex-shrink: 0; font-family: var(--font-mono); color: var(--text-primary); }
+.tool-call-preview { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
+.tool-call-label { display: block; margin: 6px 6px 2px; font-size: 11px; color: var(--text-muted); }
+.tool-call pre { margin: 0 6px 6px; padding: 8px; max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; border-radius: 6px; background: var(--bg-surface); }
+@media (pointer: coarse) { .tool-call > details > summary { min-height: 44px; align-items: center; } }

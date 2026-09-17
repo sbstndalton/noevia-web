@@ -4,6 +4,7 @@ import { sourceRefreshIssues } from './source-status';
 import { useAppearance } from './useAppearance';
 import { useModelsChanged } from './models-changed';
 import { modelChoiceLabel } from './model-guidance';
+import { TOOL_RESULT_LIMIT } from './components/ToolCalls';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import {
@@ -449,8 +450,9 @@ export default function App(): JSX.Element {
             const done = typeof ev.index === 'number' ? ev.index : tools.findIndex((t) => t && t.name === ev.name);
             const denied = (ev.text || '').startsWith('ERROR: the user');
             const chip = {
-              name: `${ev.name} ${denied ? '⃠' : '✓'}`,
-              args: (ev.text || '').slice(0, 120),
+              name: ev.name,
+              args: done >= 0 && tools[done] ? tools[done].args : '',
+              result: (ev.text || '').slice(0, TOOL_RESULT_LIMIT),
               status: denied ? ('denied' as const) : ('done' as const),
             };
             if (done >= 0) tools[done] = chip; else tools.push(chip);

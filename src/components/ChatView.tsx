@@ -8,9 +8,10 @@ import { ChevronLeft, SendIcon, SlidersIcon } from './Icons';
 import { ComposerModel } from './ComposerModel';
 import { MarkdownPreview } from './DiaryModal';
 import { ModelPopup } from './ModelPopup';
+import { ToolCalls } from './ToolCalls';
 import { modelChoiceLabel } from '../model-guidance';
 import { ComposerActions } from './ComposerActions';
-import { apiFetch, decideToolApproval } from '../api';
+import { apiFetch } from '../api';
 
 interface ChatViewProps {
   project: Project | null;
@@ -87,67 +88,6 @@ export function LiveTimer({ startedAt }: { startedAt: number }): JSX.Element {
   return <span>{fmtDuration(Date.now() - startedAt)}</span>;
 }
 
-export function ToolChips({ calls }: { calls: ToolCallView[] }) {
-  return (
-    <div className="tool-chips">
-      {calls.map((tc, i) => (
-        tc.status === 'pending' && tc.approvalId
-          ? <PendingToolCall key={i} call={tc} />
-          : (
-            <span key={i} className="tool-chip tool-call-chip" style={tc.status === 'denied' ? { opacity: 0.6 } : undefined}>
-              <span>⚒ {tc.name || 'tool'}</span>
-              {tc.args ? <code>{tc.args.slice(0, 80)}</code> : null}
-            </span>
-          )
-      ))}
-    </div>
-  );
-}
-
-/** A write tool waiting on the user. The arguments are shown in full and
- *  unabbreviated: this is the one moment where seeing exactly what the model
- *  proposes to do is the entire point, so truncating them here would defeat
- *  the gate. */
-function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const decide = async (decision: 'approve' | 'deny' | 'approve_all') => {
-    if (!call.approvalId || busy) return;
-    setBusy(true);
-    setErr(null);
-    try {
-      await decideToolApproval(call.approvalId, decision);
-    } catch (e) {
-      // Most likely the request timed out and the server already denied it.
-      setErr(e instanceof Error ? e.message : 'Could not send the decision');
-      setBusy(false);
-    }
-  };
-  let pretty = call.args;
-  try { pretty = JSON.stringify(JSON.parse(call.args || '{}'), null, 1); } catch { /* show it raw */ }
-  return (
-    <div className="tool-approval" role="group" aria-label={`Approval required for ${call.name}`}>
-      <span className="tool-approval-ask">
-        Allow <strong>{call.name}</strong> to run? This changes data in your account.
-      </span>
-      {/* Full, unabbreviated arguments. Seeing exactly what the model proposes
-          IS the gate — no clamp, no scroll-to-hide, no "show more". */}
-      {pretty && pretty !== '{}' && <pre className="tool-approval-args">{pretty}</pre>}
-      <div className="tool-approval-actions">
-        <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => void decide('approve')}>
-          Allow once
-        </button>
-        <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => void decide('deny')}>
-          Decline
-        </button>
-        <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => void decide('approve_all')}>
-          Allow for this chat
-        </button>
-      </div>
-      {err && <span className="modal-err tool-approval-err">{err}</span>}
-    </div>
-  );
-}
 
 export function ChatView({
   title,
@@ -273,7 +213,7 @@ export function ChatView({
                   {m.reasoningMode && m.reasoningMode !== 'off' && <small className="reasoning-result">Effort: {m.reasoningEffort} · {m.reasoningMode === 'real' ? 'provider parameter' : 'best-effort hint'}</small>}
                   {m.warning && <p className="msg-warning" role="status">{m.warning}</p>}
                   {m.reasoning ? <ThinkingBlock text={m.reasoning} live={!!thinkingLive && !m.content} /> : null}
-                  {m.toolCalls && m.toolCalls.length > 0 ? <ToolChips calls={m.toolCalls} /> : null}
+                  {m.toolCalls && m.toolCalls.length > 0 ? <ToolCalls calls={m.toolCalls} /> : null}
                   {m.content ? (
                     <div className="bubble">
                       {/* Model replies are Markdown. A bare <p> showed the raw

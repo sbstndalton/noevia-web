@@ -36,6 +36,8 @@ export interface ToolCallView {
    *  approval is posted against. Reads never enter this state. */
   status?: 'running' | 'pending' | 'done' | 'denied';
   approvalId?: string;
+  /** What the tool returned, bounded for display and history. */
+  result?: string;
 }
 
 export interface DocumentStatus {

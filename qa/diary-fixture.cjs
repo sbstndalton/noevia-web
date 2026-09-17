@@ -52,6 +52,14 @@ function createFixture(port = 31239) {
       if(body.spaceId==='diary-extras') {event({type:'tool',index:0,name:'synthetic_read',args:'{}'});event({type:'tool_result',index:0,name:'synthetic_read',text:'Synthetic reference read'});}
       if(body.message==='cancel synthetic'&&body.spaceId==='diary-extras') { pending.add(res);res.on('close',()=>pending.delete(res));return; }
       if(body.message==='live synthetic') { live.add(res);pending.add(res);res.on('close',()=>{live.delete(res);pending.delete(res);});return; }
+      if(body.message==='tools chat synthetic') {
+        event({type:'tool',index:0,name:'project_search',args:'{"query":"synthetic"}'});
+        event({type:'tool_result',index:0,name:'project_search',text:'Found 2 synthetic matches in notes.md'});
+        event({type:'tool',index:1,name:'write_note',args:'{"path":"a.md"}'});
+        event({type:'tool_result',index:1,name:'write_note',text:'ERROR: the user declined this action.'});
+        event({type:'delta',text:'Synthetic answer after tools'});
+        event({type:'done'});res.end();return;
+      }
       if(body.message==='live tokens synthetic') {
         event({type:'delta',text:'Synthetic streamed reply'});
         event({type:'usage',promptTokens:12,completionTokens:34,totalTokens:46,tokensPerSecond:77});

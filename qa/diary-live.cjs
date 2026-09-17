@@ -38,11 +38,14 @@ const {createFixture}=require('./diary-fixture.cjs');
   await page.getByRole('checkbox',{name:'Extra attachments & tools'}).click();
   await page.getByText('Manage attachments (0)',{exact:true}).waitFor();await page.keyboard.press('Escape');
   await send('tools synthetic');
-  await page.locator('.diary-conversation .tool-chip').getByText('Synthetic reference read',{exact:true}).waitFor();
+  await page.locator('.diary-conversation .tool-call').first().waitFor({state:'attached'});
+  assert.match(await page.locator('.diary-conversation .tool-call .tool-call-preview').first().textContent(),/Synthetic reference read/);
   await page.waitForFunction(()=>document.querySelector('.diary-conversation').getAttribute('aria-busy')==='false');
   await send('tools again synthetic');
   await page.waitForFunction(()=>document.querySelector('.diary-conversation').getAttribute('aria-busy')==='false');
-  assert.equal(await page.locator('.diary-conversation .tool-chip').count(),2,'tool activity remains attached to its original turn');
+  assert.equal(await page.locator('.diary-conversation .tool-call').count(),2,'tool activity remains attached to its original turn');
+  // Tool calls sit under the thinking block in Diary, as in chat.
+  assert.ok(await page.locator('.diary-reply').last().evaluate(el=>{const t=el.querySelector('.thinking-block'),c=el.querySelector('.tool-calls');return !!t&&!!c&&!!(t.compareDocumentPosition(c)&Node.DOCUMENT_POSITION_FOLLOWING);}),'tool list is not under the thinking block');
   assert.deepEqual(errors,[]);
   if(process.env.QA_SCREENSHOTS)await page.screenshot({path:process.env.QA_SCREENSHOTS+'/diary-live-error.png'});
   console.log('PASS live thinking before completion, background navigation without resend, save progress, retained tool activity, sanitized 524 and interrupted stream preservation');
