@@ -16,7 +16,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   recommended_backend:'cowork-llama-1',recommended_ctx:262144,recommended_total_ctx:262144,n_sessions:1,values:{'ctx-size':'262144',ngl:'999','flash-attn':'on',jinja:'true'},quirks:['Synthetic quirk.'],unavailable:[],current_diff:['ctx-size: 32768 → 262144'],displaced:['mmproj'],
   presets:[{key:'fast',label:'Fast',ctx:131072,n_cpu_moe:0,offload_kind:'',gpu_layers:32,total_layers:32,gpu_gb:5.5,kv_gb:2,speed_score:1,ngl:999},{key:'long-ctx',label:'Long context',ctx:262144,n_cpu_moe:0,offload_kind:'ngl',gpu_layers:30,total_layers:32,gpu_gb:5.2,kv_gb:4,speed_score:0.62,ngl:30}],
   frontier:[{key:'pt0',label:'',ctx:131072,n_cpu_moe:0,offload_kind:'',gpu_layers:32,total_layers:32,gpu_gb:5.5,kv_gb:2,speed_score:1,ngl:999},{key:'pt1',label:'',ctx:196608,n_cpu_moe:0,offload_kind:'ngl',gpu_layers:31,total_layers:32,gpu_gb:5.3,kv_gb:3,speed_score:0.8,ngl:31},{key:'pt2',label:'',ctx:262144,n_cpu_moe:0,offload_kind:'ngl',gpu_layers:30,total_layers:32,gpu_gb:5.2,kv_gb:4,speed_score:0.62,ngl:30}],
-  fits_full_gpu:false,native_ctx:262144,estimated_ctx:1048576,ctx_cap_reason:'prompt speed not measured yet; measure context to go higher',current_preset:'',active_preset:'fast',spec_profiles:[{key:'off',label:'Off',blurb:'No speculation.',spec_type:'',needs_head:false},{key:'balanced',label:'Balanced',blurb:'Needs a head.',spec_type:'draft-mtp',needs_head:true}],active_spec_profile:'off',current_spec_profile:'off',spec_head_rel:'',error:'',vision_available:'/models/q/mmproj.gguf',vision:true};
+  fits_full_gpu:false,native_ctx:262144,warnings:['IQ3_XXS is below Q4; on a model this size that usually costs more quality than the memory it saves.'],estimated_ctx:1048576,ctx_cap_reason:'prompt speed not measured yet; measure context to go higher',current_preset:'',active_preset:'fast',spec_profiles:[{key:'off',label:'Off',blurb:'No speculation.',spec_type:'',needs_head:false},{key:'balanced',label:'Balanced',blurb:'Needs a head.',spec_type:'draft-mtp',needs_head:true}],active_spec_profile:'off',current_spec_profile:'off',spec_head_rel:'',error:'',vision_available:'/models/q/mmproj.gguf',vision:true};
  await page.route('**/api/**',route=>{
   const req=route.request(),url=new URL(req.url()),p=url.pathname,m=req.method();calls.push(`${m} ${p}`);
   const json=(body,status=200)=>route.fulfill({status,json:body});
@@ -123,6 +123,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await dialog.getByText(/Recommended: 256K tokens on cowork-llama-1/).waitFor();
  // Why the recommendation is lower than memory allows, measured context on this machine, and MTP availability.
  await dialog.getByText(/Memory would allow 1024K; limited because prompt speed not measured yet/).waitFor();
+ await dialog.getByText(/IQ3_XXS is below Q4/).waitFor();
  await dialog.getByText(/MTP layers built in/).waitFor();
  await dialog.getByText(/Saved: MTP \(engine defaults\) at 33.4 tokens\/s \(\+75% over off\), micro-batch 1024/).waitFor();
  assert.equal(await dialog.getByRole('progressbar').getAttribute('value'),'50','progress bar shows how far the run got');

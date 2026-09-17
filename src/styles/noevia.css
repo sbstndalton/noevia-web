@@ -1841,3 +1841,4 @@ body { isolation:isolate; background:var(--bg-app); }
 .mm-autotune { display: flex; flex-direction: column; gap: 10px; }
 .mm-progress { display: flex; flex-direction: column; gap: 4px; font-size: var(--text-caption); color: var(--text-secondary); }
 .mm-progress progress { width: 100%; height: 8px; accent-color: var(--accent); }
+.mm-warn { color: var(--status-warning); }

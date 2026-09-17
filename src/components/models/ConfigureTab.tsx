@@ -15,7 +15,7 @@ type Row = { ctx: number; total_ctx: number; model_gb: number; kv_gb: number; to
 type Plan = { name: string; vendor: string; vram_gb: number; rows: Row[]; max_ctx: number; fits_at_all: boolean };
 type Spec = { key: string; label: string; blurb: string; spec_type: string; needs_head: boolean };
 type Rec = { plans: Plan[]; recommended_backend: string; recommended_ctx: number; recommended_total_ctx: number; n_sessions: number; values: Record<string, string>; quirks: string[]; unavailable: string[];
-  current_diff: string[]; displaced: string[]; presets: Preset[]; frontier: Preset[]; fits_full_gpu: boolean; native_ctx: number; current_preset: string; active_preset: string; estimated_ctx?: number; ctx_cap_reason?: string;
+  current_diff: string[]; displaced: string[]; presets: Preset[]; frontier: Preset[]; fits_full_gpu: boolean; native_ctx: number; current_preset: string; active_preset: string; estimated_ctx?: number; ctx_cap_reason?: string; warnings?: string[];
   spec_profiles: Spec[]; active_spec_profile: string; current_spec_profile: string; spec_head_rel: string; error: string; vision_available: string; vision: boolean };
 type Measured = { n: number; gen_p50: number; gen_p25: number; gen_p75: number; prompt_p50: number; draft_acc_p50: number | null };
 type Run = Measured & { instance: string; is_current: boolean; diff: Record<string, string>; rel_pct: number };
@@ -212,6 +212,7 @@ function EasySettings({ name, draft, busy, onChange, onUseTuned }: { name: strin
       <div className="mm-easy-result-text">
         <p>Recommended: <strong>{ctxShort(rec.recommended_ctx)} tokens</strong> on {rec.recommended_backend}{rec.fits_full_gpu ? ', entirely on the GPU' : ''}.</p>
         {rec.ctx_cap_reason && rec.estimated_ctx ? <p className="mm-note">Memory would allow {ctxShort(rec.estimated_ctx)}; limited because {rec.ctx_cap_reason}.</p> : null}
+        {(rec.warnings || []).map((w) => <p key={w} className="mm-note mm-warn" role="note">{w}</p>)}
       </div>
       <button className="modal-btn primary" disabled={busy} onClick={() => void onUseTuned({ ...rec.values, ...keepChoices(draft) }, rec.displaced)}>Use and save</button>
     </div>}
