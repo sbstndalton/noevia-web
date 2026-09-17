@@ -36,7 +36,7 @@ export function ModelsSettings({ models, routes, projects, modelsError, initialM
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<ModelSort>('name');
   const [filter, setFilter] = useState<ModelFilter>('all');
-  const [hfSort, setHfSort] = useState('downloads');
+  const [hfSort, setHfSort] = useState('fit');
 
   const go = (next: 'yours' | 'discover') => {
     setTab(next); setOpen('');
@@ -71,7 +71,7 @@ export function ModelsSettings({ models, routes, projects, modelsError, initialM
       {tab === 'discover' ? <div className="mm-tabs-controls">
         <label className="mm-select"><span className="sr-only">Sort Hugging Face results</span>
           <select value={hfSort} onChange={(e) => setHfSort(e.target.value)}>
-            {[['downloads', 'Downloads'], ['trendingScore', 'Trending'], ['likes', 'Likes'], ['lastModified', 'Recently updated']].map(([id, label]) => <option key={id} value={id}>Sort · {label}</option>)}
+            {[['fit', 'Best for this server'], ['trendingScore', 'Trending'], ['downloads', 'Downloads'], ['likes', 'Likes'], ['lastModified', 'Recently updated']].map(([id, label]) => <option key={id} value={id}>Sort · {label}</option>)}
           </select></label>
       </div> : <div className="mm-tabs-controls">
         <label className="mm-select"><span className="sr-only">Filter models</span>

@@ -1842,3 +1842,11 @@ body { isolation:isolate; background:var(--bg-app); }
 .mm-progress { display: flex; flex-direction: column; gap: 4px; font-size: var(--text-caption); color: var(--text-secondary); }
 .mm-progress progress { width: 100%; height: 8px; accent-color: var(--accent); }
 .mm-warn { color: var(--status-warning); }
+.mm-filters .mm-filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px 16px; padding: 4px 0 10px; }
+.mm-filters .mm-range { display: flex; gap: 6px; }
+.mm-filters .mm-range input { width: 100%; min-width: 0; }
+.mm-quant-filter { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.mm-quant-filter legend { padding: 0 4px; }
+.mm-quant-filter .mm-check { min-height: 32px; }
+.mm-filter-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-bottom: 6px; }
+.mm-result-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }

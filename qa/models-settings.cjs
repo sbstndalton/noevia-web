@@ -65,7 +65,11 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   if(r.startsWith('prompts/')&&m==='DELETE'){prompts=prompts.filter(x=>String(x.id)!==r.split('/')[1]);return json({prompts});}
   if(r==='settings')return json({hasToken:false,tokenHint:''});
   if(r.startsWith('search/repo'))return json({repo:'synthetic/model-GGUF',groups:[{shardBase:'model-Q4_K_M.gguf',shards:null,bytes:5e9,size:'4.7 GiB',quant:'Q4_K_M',projector:false,fit:[{name:'cowork-llama-1',verdict:'fits',ratio_pct:40}],files:[{path:'model-Q4_K_M.gguf',bytes:5e9,size:'4.7 GiB'}],estimates:[{key:'fast',label:'Fast',ctx:131072,gpu_layers:32,total_layers:32,speed_pct:100,offload:false}],nativeCtx:262144},{shardBase:'mmproj-F16.gguf',shards:null,bytes:9e8,size:'0.9 GiB',quant:null,projector:true,fit:[],files:[{path:'mmproj-F16.gguf',bytes:9e8,size:'0.9 GiB'}]}],gated:''});
-  if(r.startsWith('search'))return json({results:[{id:'synthetic/model-GGUF',downloads:1234,likes:56,last_modified:'2026-09-01',pipeline_tag:'text-generation',gguf_count:4,downloaded:[]}]});
+  if(r.startsWith('search')&&!r.startsWith('search/repo')){const qs=url.search;searchQueries.push(qs);
+   const wide=/showUnsuitable=true/.test(qs), all=/trustedOnly=false/.test(qs);
+   const rows=[{id:'synthetic/model-GGUF',owner:'synthetic',downloads:1234,likes:56,lastModified:'2026-09-01',ageDays:16,license:'apache-2.0',params:9,activeParams:null,moe:false,vision:true,trusted:true,suitable:true,reasons:[],options:[{path:'model-Q4_K_M.gguf',gb:5.2,quant:'Q4_K_M',shards:1,fits:true,reasons:[]}],best:{path:'model-Q4_K_M.gguf',gb:5.2,quant:'Q4_K_M',shards:1,fits:true,reasons:[]},downloaded:[]}];
+   if(wide)rows.push({id:'stranger/huge-70B-GGUF',owner:'stranger',downloads:900000,likes:10,lastModified:'2026-09-10',ageDays:7,license:'mit',params:70,activeParams:null,moe:false,vision:false,trusted:false,suitable:false,reasons:['40.0 GB does not fit the 13.5 GB the GPU can hold'],options:[],best:null,downloaded:[]});
+   return json({results:rows,budgetGb:13.5,hubUrl:'https://huggingface.co/models?filter=gguf&search=x&sort=trending',counts:{found:2,shown:rows.length,hiddenUntrusted:all?0:1,hiddenUnsuitable:wide?0:1}});}
   if(r==='downloads'&&m==='GET')return json({jobs:[{id:'j1',repo:'synthetic/model-GGUF',filename:'new-model-Q4_K_M/new-model-Q4_K_M.gguf',status:'done',error:null,bytes:2e9,downloaded:2e9,pct:100,speedH:'—',etaH:'—',parallel:true,chunks:[]},...(extraJob?[extraJob]:[])]});
   if(r==='downloads'&&m==='POST'){downloadBodies.push(body());return json({queued:['model-Q4_K_M.gguf','mmproj-F16.gguf']});}
   if(r==='benchmark')return json({sections:['Qwen-9B','Gemma-E2B'],sweepArgs:{},prompts,backends:['cowork-llama-1'],maxTokensDefault:3072,maxTokensCeiling:8192,job:{run_id:0,status:'idle',backend:'',total:0,done:0,current:'',error:'',unit:'requests',lines:[],pct:0,elapsed:0,eta:0,active:false},runs:[{id:7,backend:'cowork-llama-1',status:'done',started_at:now-600,finished_at:now-300,reps:3,max_tokens:512,note:''}],categories:[{key:'coding',label:'Coding'},{key:'writing',label:'Creative writing'}]});
@@ -91,6 +95,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  const tab=async name=>{const back=dialog.getByRole('button',{name:'← All models'});if(await back.count())await back.click();await dialog.getByRole('tab',{name,exact:true}).click();};
  const yours=()=>tab('Your models');
  const discover=()=>tab('Discover');
+ const searchQueries=[];
  const fold=async name=>{const d=dialog.locator('details.mm-fold').filter({has:page.locator(`> summary:has-text("${name}")`)});if(!await d.evaluate(el=>el.open))await d.locator('> summary').click();await page.waitForTimeout(120);};
  const openModel=async name=>{await dialog.getByRole('article',{name}).getByRole('button',{name:'Tune'}).click();await dialog.getByRole('button',{name:'← All models'}).waitFor();};
  const backToList=()=>dialog.getByRole('button',{name:'← All models'}).click();
@@ -180,6 +185,28 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  // Download → Set up
  await discover();
  assert.equal(await dialog.getByTestId('download-target').innerText(),"Downloads go to /mnt/user/ai-models · 139.7 GB free. The engine reads this whole folder; other shares appear here once they are mounted inside it.");
+ // Search results carry what the server judged: fit, size, parameters, publisher trust.
+ await dialog.getByText(/9B · dense · Q4_K_M · 5.2 GB · vision · apache-2.0/).waitFor();
+ const pills=dialog.locator('.mm-results .mm-pill');
+ assert.deepEqual(await pills.allInnerTexts(),['Trusted publisher','Fits this server']);
+ // Filters: widening shows what was hidden and why; the hub link is always available.
+ await dialog.locator('.mm-filters > summary').click();
+ assert.match(await dialog.getByText(/Trusted publishers only/).innerText(),/1 hidden/);
+ await dialog.getByLabel(/Show models that do not fit/).check();
+ await dialog.getByText('40.0 GB does not fit the 13.5 GB the GPU can hold').waitFor();
+ await dialog.getByLabel('Architecture').selectOption('moe');
+ await dialog.getByLabel(/Vision only/).check();
+ assert.match(searchQueries.at(-1),/moe=moe/);assert.match(searchQueries.at(-1),/vision=true/);
+ assert.equal(await dialog.getByRole('link',{name:/Open this search on Hugging Face/}).getAttribute('href'),'https://huggingface.co/models?filter=gguf&search=x&sort=trending');
+ await dialog.getByRole('button',{name:'Clear filters'}).click();
+ if(process.env.QA_SCREENSHOTS){await dialog.locator('.mm-filters > summary').click();
+  for(const [w,theme] of [[1440,'light'],[1440,'dark'],[768,'light'],[768,'dark'],[375,'light'],[375,'dark']]){
+   await page.setViewportSize({width:w,height:950});await page.emulateMedia({colorScheme:theme,reducedMotion:'reduce'});
+   await dialog.locator('.mm-filters').scrollIntoViewIfNeeded();
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`discover overflow ${w}`);
+   await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/models-discover-${w}-${theme}.png`});}
+  await page.setViewportSize({width:1440,height:950});await page.emulateMedia({colorScheme:'light',reducedMotion:'reduce'});
+  await dialog.locator('.mm-filters > summary').click();}
  await dialog.getByRole('button',{name:/synthetic\/model-GGUF/}).click();
  await dialog.getByRole('heading',{name:'synthetic/model-GGUF'}).waitFor();
  assert.ok(await dialog.getByText('Fast: 128K').isVisible());assert.ok(await dialog.getByText(/ships a vision projector/).isVisible());
@@ -293,6 +320,6 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await page.getByRole('dialog',{name:'Settings'}).getByRole('button',{name:'Open model manager'}).waitFor();
  if(process.env.QA_SCREENSHOTS)await page.screenshot({path:process.env.QA_SCREENSHOTS+'/models-summary.png'});
  assert.deepEqual(errors,[]);assert.equal(fixture.requests.length,0);
- console.log('PASS models settings: Settings summary opens the full-page manager and back: unified page with Your models/Discover, search and filters, library details/delete, per-model detail autoconfig presets/vision/fill, revision conflict and apply-now reload, download search/estimates/queue/set up, hardware unified memory/tiles/charts/tooltip/diagnosis/logs/restart guard, benchmark confirm/run charts/output/rating, prompts, routing section, phone/tablet/desktop light/dark.');
+ console.log('PASS models settings: Settings summary opens the full-page manager and back: unified page with Your models/Discover, search judged for this server (fit/trust badges, filters, hub link), library details/delete, per-model detail autoconfig presets/vision/fill, revision conflict and apply-now reload, download search/estimates/queue/set up, hardware unified memory/tiles/charts/tooltip/diagnosis/logs/restart guard, benchmark confirm/run charts/output/rating, prompts, routing section, phone/tablet/desktop light/dark.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

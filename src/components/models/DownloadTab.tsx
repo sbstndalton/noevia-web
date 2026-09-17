@@ -2,16 +2,28 @@ import { useEffect, useRef, useState } from 'react';
 import { bytes, ctxShort, errorText, mm, tokens } from './mm';
 import { registerSafeDefaults } from './register';
 
-type Result = { id: string; downloads: number; likes: number; last_modified: string; pipeline_tag: string | null; gguf_count: number | null; downloaded: string[] };
+type Option = { path: string; gb: number; quant: string | null; shards: number; fits: boolean; reasons: string[] };
+type Result = { id: string; owner: string; downloads: number; likes: number; lastModified: string; ageDays: number; license: string | null;
+  params: number | null; activeParams: number | null; moe: boolean; vision: boolean; trusted: boolean; suitable: boolean;
+  reasons: string[]; options: Option[]; best: Option | null; downloaded: string[] };
+type SearchBody = { results: Result[]; error?: string; budgetGb?: number; hubUrl?: string;
+  counts?: { found: number; shown: number; hiddenUntrusted: number; hiddenUnsuitable: number } };
+type Filters = { trustedOnly: boolean; showUnsuitable: boolean; maxGb: string; minGb: string; quants: string[]; minParams: string; maxParams: string; moe: string; vision: boolean; license: string; owner: string };
+const EMPTY_FILTERS: Filters = { trustedOnly: true, showUnsuitable: false, maxGb: '', minGb: '', quants: [], minParams: '', maxParams: '', moe: 'any', vision: false, license: '', owner: '' };
+const QUANT_CHOICES = ['Q4_K_M', 'Q4_K_S', 'UD-Q4_K_XL', 'Q5_K_M', 'Q6_K', 'Q8_0', 'MXFP4'];
+const paramLabel = (r: Result) => (r.params ? `${r.params}B${r.activeParams ? ` (${r.activeParams}B active)` : ''}` : null);
 type Estimate = { key: string; label: string; ctx: number; gpu_layers: number; total_layers: number; speed_pct: number; offload: boolean };
 type Group = { shardBase: string; shards: number | null; bytes: number; size: string; quant: string | null; projector: boolean;
   fit: { name: string; verdict: string; ratio_pct: number; needs_gb?: number; ceiling_gb?: number }[]; files: { path: string; bytes: number; size: string }[]; estimates?: Estimate[]; nativeCtx?: number };
 type Job = { id: string; repo: string; filename: string; status: string; error: string | null; bytes: number; downloaded: number; pct: number; speedH: string; etaH: string; parallel: boolean; chunks: { index: number; pct: number; status: string }[] };
 const VERDICT: Record<string, string> = { fits: 'Fits', tight: 'Tight fit', oom: 'Needs CPU offload', impossible: 'Too large for this machine' };
 
-export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'downloads' }: { onDownloaded: () => void; onSetUp: (section: string) => void; query?: string; sort?: string }) {
+export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'fit' }: { onDownloaded: () => void; onSetUp: (section: string) => void; query?: string; sort?: string }) {
   const [q, setQ] = useState(query);
   const [results, setResults] = useState<Result[] | null>(null), [searching, setSearching] = useState(false), [error, setError] = useState('');
+  const [meta, setMeta] = useState<SearchBody | null>(null);
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const filterRef = useRef(filters); filterRef.current = filters;
   const [repo, setRepo] = useState<{ repo: string; groups: Group[]; gated?: string; error?: string } | null>(null), [repoBusy, setRepoBusy] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]), [message, setMessage] = useState('');
   const finished = useRef(new Set<string>()), seeded = useRef(false);
@@ -22,7 +34,17 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'downloa
   const [registered, setRegistered] = useState<Set<string>>(new Set());
   const search = async (term = q) => {
     setSearching(true); setError('');
-    try { const v = await mm<{ results: Result[]; error?: string }>(`search?${new URLSearchParams({ q: term, sort, limit: '30' })}`); if (v.error) throw Error(v.error); setResults(v.results); }
+    const f = filterRef.current;
+    const params = new URLSearchParams({ q: term, sort, limit: '40', trustedOnly: String(f.trustedOnly), showUnsuitable: String(f.showUnsuitable), moe: f.moe });
+    if (f.minGb) params.set('minGb', f.minGb);
+    if (f.maxGb) params.set('maxGb', f.maxGb);
+    if (f.quants.length) params.set('quants', f.quants.join(','));
+    if (f.minParams) params.set('minParams', f.minParams);
+    if (f.maxParams) params.set('maxParams', f.maxParams);
+    if (f.vision) params.set('vision', 'true');
+    if (f.license.trim()) params.set('license', f.license.trim());
+    if (f.owner.trim()) params.set('owner', f.owner.trim());
+    try { const v = await mm<SearchBody>(`search?${params}`); if (v.error) throw Error(v.error); setResults(v.results); setMeta(v); }
     catch (e) { setError(errorText(e, 'Search failed')); } finally { setSearching(false); }
   };
   const openRepo = async (id: string) => {
@@ -72,18 +94,26 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'downloa
     {target && <p className="mm-note" data-testid="download-target">Downloads go to <strong className="mm-mono">{saveTo ? `${target.hostPath || target.path}/${saveTo}` : target.hostPath || target.path}</strong>{target.disk && !saveTo ? ` · ${target.disk.freeH} free` : ''}. The engine reads this whole folder; other shares appear here once they are mounted inside it.</p>}
     {targets.length > 1 && <label className="mm-select mm-save-to">Save to<select value={saveTo} onChange={e => setSaveTo(e.target.value)}>{targets.map(t => <option key={t.id} value={t.id}>{t.id ? t.label : 'Models folder (default)'}</option>)}</select></label>}
     <HfToken/>
-    <p className="mm-note" role="status">{searching ? 'Searching Hugging Face…' : q.trim() ? `Results for “${q.trim()}”.` : 'Type in the search box above to find a model.'}</p>
+    <p className="mm-note" role="status">{searching ? 'Searching Hugging Face…'
+      : q.trim() ? `Results for “${q.trim()}”${meta?.counts ? `: ${meta.counts.shown} of ${meta.counts.found}` : ''}${meta?.budgetGb ? `, judged against ${meta.budgetGb} GB of GPU memory` : ''}.`
+        : 'Type in the search box above to find a model, or browse what fits this server below.'}</p>
     {error && <p role="alert" className="modal-err">{error}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
     <Queue jobs={jobs} registered={registered} onChange={refreshJobs} onSetUp={onSetUp}/>
     {repo && <RepoFiles repo={repo} onClose={() => setRepo(null)} onDownload={download}/>}
+    {!repo && <SearchFilters filters={filters} meta={meta} onChange={(patch) => { const next = { ...filters, ...patch }; setFilters(next); filterRef.current = next; setRepo(null); void search(); }}/>}
     {!repo && results && <ul className="mm-results" aria-label="Search results">
-      {results.length === 0 && <li className="mm-note">No GGUF repositories match.</li>}
+      {results.length === 0 && <li className="mm-note">Nothing matches these filters{meta?.counts?.hiddenUntrusted ? `; ${meta.counts.hiddenUntrusted} hidden as untrusted publishers` : ''}{meta?.counts?.hiddenUnsuitable ? `; ${meta.counts.hiddenUnsuitable} hidden as unsuitable for this server` : ''}.</li>}
       {results.map(r => <li key={r.id}>
         <button className="mm-result-open" disabled={repoBusy === r.id} onClick={() => void openRepo(r.id)}>
           <strong>{r.id}</strong>
-          <small>{tokens(r.downloads)} downloads · {tokens(r.likes)} likes{r.gguf_count != null ? ` · ${r.gguf_count} GGUF files` : ''}{r.last_modified ? ` · updated ${r.last_modified.slice(0, 10)}` : ''}</small>
-          {r.downloaded.length > 0 && <span className="mm-pill is-good">Already downloaded</span>}
+          <small>{[paramLabel(r), r.moe ? 'mixture of experts' : r.params ? 'dense' : null, r.best ? `${r.best.quant || 'GGUF'} · ${r.best.gb} GB` : null,
+            r.vision ? 'vision' : null, r.license, `${tokens(r.downloads)} downloads`, r.ageDays <= 45 ? `updated ${r.ageDays}d ago` : r.lastModified ? `updated ${r.lastModified.slice(0, 10)}` : null].filter(Boolean).join(' · ')}</small>
+          <span className="mm-result-pills">
+            {r.trusted && <span className="mm-pill is-good">Trusted publisher</span>}
+            {r.suitable ? <span className="mm-pill is-good">Fits this server</span> : <span className="mm-pill">{r.reasons[0] || 'Not usable here'}</span>}
+            {r.downloaded.length > 0 && <span className="mm-pill is-good">Already downloaded</span>}
+          </span>
         </button>
       </li>)}
     </ul>}
@@ -166,4 +196,33 @@ function UrlImport({ onQueued, target }: { onQueued: () => void; target: string 
     <button className="modal-btn secondary" disabled={!url.trim()} onClick={() => void go()}>Queue download</button>
     {error && <p role="alert" className="modal-err">{error}</p>}
   </div></details>;
+}
+
+// Hugging Face's own filters, plus the two this server cares about: who quantised it, and whether
+// it can actually run here (roadmap D19/D20).
+function SearchFilters({ filters, meta, onChange }: { filters: Filters; meta: SearchBody | null; onChange: (patch: Partial<Filters>) => void }) {
+  const toggleQuant = (quant: string) => onChange({ quants: filters.quants.includes(quant) ? filters.quants.filter(x => x !== quant) : [...filters.quants, quant] });
+  const active = filters.quants.length + (filters.minGb ? 1 : 0) + (filters.maxGb ? 1 : 0) + (filters.minParams ? 1 : 0) + (filters.maxParams ? 1 : 0) + (filters.moe !== 'any' ? 1 : 0) + (filters.vision ? 1 : 0) + (filters.license ? 1 : 0) + (filters.owner ? 1 : 0);
+  return <details className="mm-disclosure mm-filters" open={active > 0}>
+    <summary>Filters <small>{active ? `${active} active` : 'size, parameters, architecture, licence, publisher'}</small></summary>
+    <div className="mm-filter-grid">
+      <label className="mm-check"><input type="checkbox" checked={filters.trustedOnly} onChange={e => onChange({ trustedOnly: e.target.checked })}/>Trusted publishers only{meta?.counts?.hiddenUntrusted ? ` (${meta.counts.hiddenUntrusted} hidden)` : ''}</label>
+      <label className="mm-check"><input type="checkbox" checked={filters.showUnsuitable} onChange={e => onChange({ showUnsuitable: e.target.checked })}/>Show models that do not fit this server{meta?.counts?.hiddenUnsuitable ? ` (${meta.counts.hiddenUnsuitable} hidden)` : ''}</label>
+      <label className="mm-check"><input type="checkbox" checked={filters.vision} onChange={e => onChange({ vision: e.target.checked })}/>Vision only</label>
+      <label className="mm-select">Architecture<select value={filters.moe} onChange={e => onChange({ moe: e.target.value })}>
+        <option value="any">Any</option><option value="moe">Mixture of experts</option><option value="dense">Dense</option>
+      </select></label>
+      <label className="mm-select">File size (GB)<span className="mm-range"><input inputMode="decimal" placeholder="min" value={filters.minGb} onChange={e => onChange({ minGb: e.target.value })}/><input inputMode="decimal" placeholder="max" value={filters.maxGb} onChange={e => onChange({ maxGb: e.target.value })}/></span></label>
+      <label className="mm-select">Parameters (B)<span className="mm-range"><input inputMode="decimal" placeholder="min" value={filters.minParams} onChange={e => onChange({ minParams: e.target.value })}/><input inputMode="decimal" placeholder="max" value={filters.maxParams} onChange={e => onChange({ maxParams: e.target.value })}/></span></label>
+      <label className="mm-select">Licence<input placeholder="apache, mit…" value={filters.license} onChange={e => onChange({ license: e.target.value })}/></label>
+      <label className="mm-select">Publisher<input placeholder="unsloth, ibm-granite…" value={filters.owner} onChange={e => onChange({ owner: e.target.value })}/></label>
+      <fieldset className="mm-quant-filter"><legend className="set-row-label">Quantisation</legend>
+        {QUANT_CHOICES.map(quant => <label key={quant} className="mm-check"><input type="checkbox" checked={filters.quants.includes(quant)} onChange={() => toggleQuant(quant)}/>{quant}</label>)}
+      </fieldset>
+    </div>
+    <div className="mm-filter-actions">
+      <button className="modal-btn secondary" onClick={() => onChange(EMPTY_FILTERS)}>Clear filters</button>
+      <a className="mm-link" href={meta?.hubUrl || 'https://huggingface.co/models?filter=gguf&sort=trending'} target="_blank" rel="noopener noreferrer">Open this search on Hugging Face ↗</a>
+    </div>
+  </details>;
 }
