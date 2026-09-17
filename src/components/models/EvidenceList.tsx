@@ -27,7 +27,7 @@ export function EvidenceList({ model }: { model: string }): JSX.Element | null {
     <h4>Qualification evidence</h4>
     <ul>{rows.map((row) => <li key={row.category} data-state={row.state}>
       <strong>{LABEL[row.category] || row.category}</strong>
-      <span>{STATE[row.state] || row.state}{row.category === 'context_capacity' && row.value?.ctx ? ` · ${row.value.ctx.toLocaleString('en-US')} tokens` : ''}{row.category === 'mtp_acceptance' && typeof row.value?.rate === 'number' ? ` · ${Math.round(row.value.rate * 100)}% accepted` : ''}{row.at ? ` · ${new Date(row.at).toLocaleDateString()}` : ''}</span>
+      <span>{STATE[row.state] || row.state}{row.category === 'context_capacity' && row.value?.ctx ? ` · ${row.value.ctx.toLocaleString('en-US')} tokens` : ''}{row.category === 'mtp_acceptance' && typeof row.value?.rate === 'number' ? ` · ${Math.round(row.value.rate * 100)}% accepted` : ''}{row.category === 'throughput' && typeof row.value?.rate === 'number' ? ` · ${row.value.rate} tokens/s` : ''}{row.at ? ` · ${new Date(row.at).toLocaleDateString()}` : ''}</span>
       {row.limitations.length > 0 && row.state !== 'unverified' && <small>{row.limitations.join(' · ')}</small>}
     </li>)}</ul>
   </section>;
