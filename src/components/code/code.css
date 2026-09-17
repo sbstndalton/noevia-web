@@ -1,0 +1,50 @@
+/* Code mode panel (spec-agent-execution §3). Plain CSS, semantic tokens only. */
+.code-panel { display: flex; flex-direction: column; gap: 20px; padding-bottom: 24px; }
+.code-compose { display: flex; flex-direction: column; gap: 12px; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--bg-surface); }
+.code-heading h2 { margin: 0 0 4px; font-size: var(--text-input); font-weight: 600; }
+.code-heading p { margin: 0; font-size: var(--text-footnote); line-height: 1.5; color: var(--text-secondary); max-width: 62ch; }
+.code-field { display: flex; flex-direction: column; gap: 6px; }
+.code-field > label { font-size: var(--text-caption); font-weight: 600; }
+.code-field select, .code-field input, .code-field textarea {
+  width: 100%; box-sizing: border-box; min-height: 44px; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--control-border); background: var(--bg); color: var(--text); font: inherit; font-size: var(--text-callout); line-height: 1.5;
+}
+.code-field textarea { min-height: 76px; resize: vertical; }
+.code-field select:focus-visible, .code-field input:focus-visible, .code-field textarea:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.code-capabilities { margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; }
+.code-capabilities legend { padding: 0 4px; font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); }
+.code-capability-list { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; }
+.code-capability { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: var(--text-footnote); }
+.code-capability input { width: 18px; height: 18px; accent-color: var(--accent); }
+.code-note { margin: 0; font-size: var(--text-caption); line-height: 1.5; color: var(--text-secondary); }
+.code-note.is-error { color: var(--danger); }
+.code-note code { font-size: var(--text-caption2); }
+.code-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.code-actions .btn { min-height: 44px; }
+
+.code-tasks { display: flex; flex-direction: column; gap: 10px; }
+.code-task { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-card); }
+.code-task header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.code-task h3 { margin: 0; font-size: var(--text-callout); font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.code-status { flex: none; font-size: var(--text-caption2); padding: 2px 8px; border-radius: var(--radius-pill); border: 1px solid var(--border); color: var(--text-secondary); }
+.code-task.is-running .code-status, .code-task.is-queued .code-status { border-color: var(--accent); color: var(--text); }
+.code-task.is-waiting_approval .code-status { border-color: var(--accent); color: var(--text); font-weight: 600; }
+.code-task.is-failed .code-status, .code-task.is-interrupted .code-status { border-color: var(--danger); color: var(--danger); }
+.code-meta, .code-stage { margin: 0; font-size: var(--text-caption); color: var(--text-secondary); overflow-wrap: anywhere; }
+
+/* The approval card. Deliberately plain and unmissable: the arguments are the point. */
+.code-approval { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--accent); border-radius: 10px; background: var(--bg); }
+.code-approval-title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--text-footnote); font-weight: 600; overflow-wrap: anywhere; }
+.code-approval-args {
+  margin: 0; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-surface);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--text-caption2); line-height: 1.5;
+  white-space: pre-wrap; overflow-wrap: anywhere; max-height: 40vh; overflow-y: auto;
+}
+.code-approval-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.code-approval-actions .btn { min-height: 44px; flex: 1 1 auto; }
+
+@media (max-width: 640px) {
+  .code-compose { padding: 14px; }
+  .code-capability-list { flex-direction: column; gap: 0; }
+  .code-actions .btn, .code-approval-actions .btn { width: 100%; }
+}

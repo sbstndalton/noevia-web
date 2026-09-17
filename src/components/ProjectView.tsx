@@ -17,6 +17,8 @@ import { fileToBase64, uploadLimit } from '../sources';
 import { deleteProjectImage, projectImageUrl, uploadProjectFile, deleteProjectFile } from '../api';
 import { ResearchPanel } from './research/ResearchPanel';
 import { useResearchAccess } from './research/useResearchAccess';
+import { CodePanel } from './code/CodePanel';
+import { useCodeAccess } from './code/useCodeAccess';
 import { EmptyState } from './EmptyState';
 
 /** First free "name", "name (2)", "name (3)", … avoiding collisions. */
@@ -72,9 +74,11 @@ export function ProjectView({
   const [composerBusy, setComposerBusy] = useState(false);
   const [composerStatus, setComposerStatus] = useState('');
   const [panel, setPanel] = useState<'instructions' | 'memory' | null>(null);
-  const [tab, setTab] = useState<'chats' | 'sources' | 'research'>('chats');
+  const [tab, setTab] = useState<'chats' | 'sources' | 'research' | 'code'>('chats');
   const researchAccess = useResearchAccess(project.id);
+  const codeAccess = useCodeAccess(project.id);
   useEffect(() => { if (tab === 'research' && !researchAccess) setTab('chats'); }, [tab, researchAccess]);
+  useEffect(() => { if (tab === 'code' && !codeAccess) setTab('chats'); }, [tab, codeAccess]);
   const [draft, setDraft] = useState('');
   const [skillFiles, setSkillFiles] = useState<string[]>([]);
   const [pickingFolder, setPickingFolder] = useState(false);
@@ -156,9 +160,14 @@ export function ProjectView({
             {researchAccess && <button role="tab" aria-selected={tab === 'research'} className={tab === 'research' ? 'is-selected' : ''} onClick={() => setTab('research')}>
               Research
             </button>}
+            {codeAccess && <button role="tab" aria-selected={tab === 'code'} className={tab === 'code' ? 'is-selected' : ''} onClick={() => setTab('code')}>
+              Code
+            </button>}
           </div>
 
-          {tab === 'research' && researchAccess ? (
+          {tab === 'code' && codeAccess ? (
+            <div className="project-scroll"><CodePanel projectId={project.id}/></div>
+          ) : tab === 'research' && researchAccess ? (
             <div className="project-scroll"><ResearchPanel projectId={project.id} onSaved={onRefresh}/></div>
           ) : tab === 'chats' ? (
             <div className="project-scroll">
