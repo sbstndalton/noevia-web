@@ -1680,3 +1680,13 @@ body { isolation:isolate; background:var(--bg-app); }
 /* Setup and sign-in follow the visible viewport like the app shell, so a phone keyboard
    shrinks the screen and the focused field scrolls into view instead of sitting behind it. */
 .auth-screen { height: var(--visible-viewport-height, 100dvh); min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; place-items: safe center; align-content: safe center; }
+
+.mm-evidence { margin: 12px 0; }
+.mm-evidence h4 { margin: 0 0 6px; font-size: 13px; }
+.mm-evidence ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.mm-evidence li { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--border-subtle); border-radius: 8px; font-size: 12.5px; }
+.mm-evidence li span { color: var(--text-secondary); }
+.mm-evidence li small { color: var(--text-muted); }
+.mm-evidence li[data-state="verified"] span { color: var(--status-good); }
+.mm-evidence li[data-state="failed"] span { color: var(--status-bad, var(--danger)); }
+.mm-evidence li[data-state="stale"] span { color: var(--status-warn, var(--status-warning)); }

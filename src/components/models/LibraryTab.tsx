@@ -3,6 +3,7 @@ import { apiFetch, fetchInstalledModels } from '../../api';
 import type { InstalledModel } from '../../types';
 import { MtpControl } from '../MtpControl';
 import { NativeCalibration } from '../NativeCalibration';
+import { EvidenceList } from './EvidenceList';
 import { errorText, mm, tokens } from './mm';
 import { useModelsChanged } from '../../models-changed';
 
@@ -133,6 +134,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
         <div><dt>Modified</dt><dd>{detail.modified}</dd></div>
         {Object.entries(detail.summary.chat_template_features || {}).some(([, v]) => v) && <div><dt>Chat template</dt><dd>{Object.entries(detail.summary.chat_template_features).filter(([, v]) => v).map(([k]) => k.replace(/_/g, ' ')).join(', ')}</dd></div>}
       </dl>}
+      <EvidenceList model={m.name}/>
       <NativeCalibration model={m.name} onChanged={() => {}}/>
     </div>}
   </article>;
