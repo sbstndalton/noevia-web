@@ -1703,3 +1703,12 @@ body { isolation:isolate; background:var(--bg-app); }
 .noevia-switch:disabled { opacity: .5; cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) { .noevia-switch, .noevia-switch::after { transition: none; } }
 @media (max-width: 620px) { .set-row.set-row-inline { flex-direction: row; align-items: center; } }
+.set-row-value { font-size: 13px; color: var(--text-secondary); text-align: right; overflow-wrap: anywhere; max-width: 60%; }
+.set-row-value.is-error { color: var(--danger); }
+.settings-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.settings-actions .btn { min-height: 40px; }
+@media (max-width: 620px) {
+  .set-row.set-row-inline { align-items: flex-start; }
+  .set-row-value { max-width: 58%; }
+  .settings-actions .btn { flex: 1 1 auto; }
+}
