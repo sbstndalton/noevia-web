@@ -16,7 +16,9 @@ const {createFixture}=require('./diary-fixture.cjs');
   await page.route('**/api/chats/*/context',r=>r.fulfill({json:{project}}));
   await page.route('**/api/providers',r=>r.fulfill({json:{providers:[{id:'default',label:'Native',baseUrl:'http://synthetic.invalid/v1',managed:true,isDefault:true}]}}));
   await page.route('**/api/auto-roles',r=>r.fulfill({json:{configured:true,roles:{fast:'Cold chat',smart:'Cold chat'}}}));
-  await page.route('**/api/models/capabilities',r=>r.fulfill({json:{kind:'llamacpp',admin:false,presets:true,runtimeOptions:false}}));
+  // Admin with the model manager at 1440 light; a member elsewhere (no Tune button).
+  const admin=width===1440&&theme==='light';
+  await page.route('**/api/models/capabilities',r=>r.fulfill({json:{kind:'llamacpp',admin,presets:true,runtimeOptions:false,modelManagement:admin}}));
   await page.route('**/api/toolboxes',r=>r.fulfill({json:{toolboxes:[{id:'core',label:'Core',description:'Clock and project files.',toolCount:2,estTokens:180,source:'builtin',available:true}],mcp:{configured:false,servers:[]}}}));
   await page.route('**/api/models/installed',r=>r.fulfill({json:[{name:'Embedding fixture',labels:['embeddings'],loaded:true},{name:'Ranking fixture',labels:['reranking'],loaded:false},{name:'Cold chat',labels:[],loaded:false}]}));
   // Switching to Manual is the only write the panel makes here.
@@ -51,10 +53,13 @@ const {createFixture}=require('./diary-fixture.cjs');
   await page.screenshot({path:`/tmp/noevia-native-picker-${width}-${theme}.png`});
   // Tune goes straight to that model's settings on the full model manager page.
   const tune=dialog.getByRole('button',{name:'Tune Cold chat'});
-  assert.ok(await tune.isVisible(),`Tune not visible at ${width}`);
-  const box=await tune.boundingBox();assert.ok(box.height>=44,`Tune target ${box.height}px at ${width}`);
-  await tune.click();
-  await page.locator('.model-manager-page .mm-detail-head h1').filter({hasText:'Cold chat'}).waitFor();
+  if(!admin){assert.equal(await tune.count(),0,`member sees Tune at ${width} ${theme}`);}
+  else{
+   await tune.waitFor();
+   const box=await tune.boundingBox();assert.ok(box.height>=44,`Tune target ${box.height}px at ${width}`);
+   await tune.click();
+   await page.locator('.model-manager-page .mm-detail-head h1').filter({hasText:'Cold chat'}).waitFor();
+  }
   await page.close();
  }
  // A model deleted elsewhere: the composer stops naming it as the selection.

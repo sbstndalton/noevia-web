@@ -38,7 +38,7 @@ const shots=process.env.QA_SCREENSHOTS||'';
    await toggle.click();
    await page.waitForFunction(()=>document.querySelector('[role=switch][aria-labelledby=feature-previews]')?.checked===true);
    assert.deepEqual(saved,[{enabled:true}]);
-   await settings.getByRole('button',{name:'Close settings'}).click();
+   {const close=settings.getByRole('button',{name:'Close settings'});await (await close.isVisible()?close:settings.getByRole('button',{name:'Back to app'})).click();} // phones hide the detail bar (0d269fa)
    await page.locator('.app-mode-switch').first().waitFor({state:'attached'});
    await page.close();
   }

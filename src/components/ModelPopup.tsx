@@ -7,7 +7,7 @@ import { CloseButton } from './CloseButton';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, Provider, Toolbox } from '../types';
 import type { AutoRoles, McpStatus } from '../api';
-import { fetchAutoRoles, fetchInstalledModels, fetchProviders, fetchToolboxes, saveProjectConfig } from '../api';
+import { apiFetch, fetchAutoRoles, fetchInstalledModels, fetchProviders, fetchToolboxes, saveProjectConfig } from '../api';
 
 interface ModelPopupProps {
   projects: Project[];
@@ -60,12 +60,15 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [cloudModel, setCloudModel] = useState('');
+  // Tuning lives on the admin-only model manager; members would only reach an "unavailable" page.
+  const [canTune, setCanTune] = useState(false);
 
   const refresh = useCallback(() => {
     setModelsLoading(true); setErr(null);
     fetchInstalledModels().then(setModels).catch(() => setErr('Model manager unavailable or disabled')).finally(() => setModelsLoading(false));
     fetchProviders().then((r) => setProviders(r.providers || [])).catch(() => undefined);
     fetchAutoRoles().then(setAutoInfo).catch(() => undefined);
+    apiFetch('/api/models/capabilities').then((r) => r.json()).then((c: { modelManagement?: boolean }) => setCanTune(c?.modelManagement === true)).catch(() => setCanTune(false));
     fetchToolboxes().then((r) => { setToolboxes(r.toolboxes || []); setMcpStatus(r.mcp || null); }).catch(() => undefined);
   }, []);
   useEffect(refresh, [refresh]);
@@ -161,7 +164,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
                 </div>
                 <span className="model-role">{busy === m.name ? 'switching…' : activeProject.model === m.name ? 'selected' : m.loaded ? 'loaded' : ''}</span>
               </button>
-              <button className="popup-tab mp-tune" aria-label={`Tune ${m.name}`} onClick={() => onOpenSettings(m.name)}>Tune</button>
+              {canTune && <button className="popup-tab mp-tune" aria-label={`Tune ${m.name}`} onClick={() => onOpenSettings(m.name)}>Tune</button>}
             </div>)}
           </div>
         </>}

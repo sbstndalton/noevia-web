@@ -51,7 +51,7 @@ function fakeS3(objects){
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow');
    if(shots)await page.screenshot({path:`${shots}/offsite-${width}-${theme}.png`});
    if(width===1440&&theme==='light'){await settings.getByRole('button',{name:'Back up now'}).click();await settings.getByRole('button',{name:'Back up now'}).waitFor();}
-   await settings.getByRole('button',{name:'Close settings'}).click();
+   {const close=settings.getByRole('button',{name:'Close settings'});await (await close.isVisible()?close:settings.getByRole('button',{name:'Back to app'})).click();} // phones hide the detail bar (0d269fa)
   }
   assert.deepEqual(errors,[]);
   console.log('PASS offsite backup: real app, fake S3, encrypted objects without plaintext or names, run + retention + restore test, admin settings page 375/768/1440 light/dark.');
