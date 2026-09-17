@@ -3,6 +3,8 @@ import { sourceRefresher } from './source-refresh';
 import { sourceRefreshIssues } from './source-status';
 import { useAppearance } from './useAppearance';
 import { useWorkspaceChanged } from './components/data/workspace-changed';
+import { useGlobalShortcuts, OPEN_SEARCH } from './components/shortcuts/useGlobalShortcuts';
+import { ShortcutsDialog } from './components/shortcuts/ShortcutsDialog';
 import { useModelsChanged } from './models-changed';
 import { modelChoiceLabel } from './model-guidance';
 import { TOOL_RESULT_LIMIT } from './components/ToolCalls';
@@ -593,6 +595,14 @@ export default function App(): JSX.Element {
     setView({ kind: 'chat', chatId, projectId: null });
   }, []);
 
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const appleKeys = useGlobalShortcuts({
+    search: () => { setSettingsOpen(false); setAppMode('chat'); window.dispatchEvent(new Event(OPEN_SEARCH)); },
+    newChat: () => { setSettingsOpen(false); setAppMode('chat'); startFreeChat(); },
+    settings: () => openSettings(),
+    help: () => setShortcutsOpen(true),
+  });
+
   const startProjectChat = useCallback(
     (projectId: string) => {
       const chatId = `c-${uid()}`;
@@ -912,6 +922,7 @@ export default function App(): JSX.Element {
       )}
 
       </div>
+      {shortcutsOpen && <ShortcutsDialog apple={appleKeys} onClose={() => setShortcutsOpen(false)} />}
       {appMode === 'code' && showPreviews && <Suspense fallback={null}><Coding.View onExit={() => setAppMode('chat')} onSettings={openSettings} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/></Suspense>}
       {settingsOpen && (
         <Suspense fallback={null}>

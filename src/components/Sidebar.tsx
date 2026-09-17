@@ -95,6 +95,8 @@ export function Sidebar({
   const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
   const [searching, setSearching] = useState(false);
+  // ⌘K / Ctrl+K from anywhere (components/shortcuts): open the rail and its search field.
+  useEffect(() => { const open = () => { setCollapsed(false); setExpanded(true); setSearching(true); }; window.addEventListener('noevia:open-search', open); return () => window.removeEventListener('noevia:open-search', open); }, []);
   // Below 600px the sidebar is gone entirely and opens as a drawer from one
   // toggle; `expanded` is that drawer. Focus is trapped while it is open and
   // handed back to the toggle when it closes.

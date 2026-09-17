@@ -1807,3 +1807,11 @@ body { isolation:isolate; background:var(--bg-app); }
 .archived-chat-title { font-size: var(--text-callout); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .archived-chat-meta { font-size: var(--text-caption); color: var(--text-secondary); }
 @media (pointer: coarse) { .archived-chat-list .modal-btn { min-height: 44px; } }
+.shortcuts-dialog { width: min(440px, calc(100vw - 32px)); }
+.shortcuts-dialog .modal-head { margin-bottom: 4px; }
+.shortcuts-list { margin: 0; padding: 0; display: flex; flex-direction: column; }
+.shortcuts-list > div { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--border-subtle); }
+.shortcuts-list > div:last-child { border-bottom: 0; }
+.shortcuts-list dt { font-size: var(--text-callout); }
+.shortcuts-list dd { margin: 0; }
+.shortcuts-list kbd { font-family: var(--font-ui); font-size: var(--text-caption); padding: 2px 8px; border-radius: 6px; border: 1px solid var(--control-border); background: var(--bg-surface); white-space: nowrap; }
