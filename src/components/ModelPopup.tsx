@@ -2,6 +2,7 @@ import { matchesModelUse } from '../model-guidance';
 import { useModelsChanged } from '../models-changed';
 import { useCallback, useEffect, useState } from 'react';
 import { useModalDialog } from './useModalDialog';
+import { roleSummary } from '../routing-copy';
 import { CloseButton } from './CloseButton';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, Provider, Toolbox } from '../types';
@@ -100,8 +101,6 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
     return <p className="rail-empty">{projects.length ? 'Open a project to choose its model.' : 'No projects yet.'}</p>;
   }
 
-  const roleSummary = (['fast', 'smart', 'vision'] as const)
-    .map((r) => `${r}: ${autoInfo?.roles?.[r] || 'not set'}`).join(' · ');
 
   return <>
     <div className="mp-mode" role="group" aria-label="How this project picks a model">
@@ -115,7 +114,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
     {auto ? (
       <p className="mp-note">
         {autoInfo?.configured
-          ? <>Routing to <span className="mp-roles">{roleSummary}</span>.</>
+          ? <>Routing to <span className="mp-roles">{roleSummary(autoInfo.roles)}</span>. Harder questions go to Smart, the rest to Fast.</>
           : 'Auto has no models assigned yet, so replies fall back to the pinned model.'}
         {' '}<button className="mp-link" onClick={onOpenSettings}>Change in model settings</button>
       </p>

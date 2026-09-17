@@ -30,7 +30,7 @@ const {createFixture}=require('./diary-fixture.cjs');
 
   // Auto: a read-only summary of where it routes, and a way to change it.
   await dialog.getByText(/Routing to/).waitFor();
-  assert.match(await dialog.getByText(/Routing to/).innerText(),/fast: Cold chat/);
+  assert.match(await dialog.getByText(/Routing to/).innerText(),/Fast: Cold chat/);
   assert.equal(await dialog.getByRole('button',{name:'Change in model settings'}).count(),1);
   // No role editors, no loaded/unloaded list, no MTP — those live in Settings.
   assert.equal(await dialog.locator('select').count(),0,'a role editor is still in the chat panel');

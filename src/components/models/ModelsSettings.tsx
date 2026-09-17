@@ -3,7 +3,8 @@ import type { JSX } from 'react';
 import type { InstalledModel, Project, RouteRule } from '../../types';
 import type { AutoRoles } from '../../api';
 import { fetchAutoRoles, setAutoRoles as putAutoRoles } from '../../api';
-import { matchesModelUse } from '../../model-guidance';
+import { matchesModelUse, modelChoiceLabel } from '../../model-guidance';
+import { AUTO_EXPLAINED, ROLE_LABEL, roleSummary } from '../../routing-copy';
 import { ReasoningControl } from '../ReasoningControl';
 import { BenchmarksTab, PromptsTab } from './BenchmarksTab';
 import { ConfigureTab } from './ConfigureTab';
@@ -144,7 +145,7 @@ function RoutingSection({ models, routes, projects, modelsError }: { models: Ins
     {!info?.configured && !error && <p className="mm-note">Auto has no models assigned yet. Pick Fast and Smart, then save.</p>}
     <div className="mm-form">
       {(['fast', 'smart', 'vision'] as const).map((role) => <label key={role}>
-        {role === 'fast' ? 'Fast' : role === 'smart' ? 'Smart' : 'Vision (optional)'}
+        {ROLE_LABEL[role]}
         <select value={valueFor(role)} disabled={busy} onChange={(e) => setPending((prev) => ({ ...prev, [role]: e.target.value }))}>
           <option value="">{role === 'vision' ? '— none —' : '— pick a model —'}</option>
           {chatModels.map((m) => <option key={m.name} value={m.name}>{m.name}{m.loaded ? ' · loaded' : ''}</option>)}
@@ -163,9 +164,22 @@ function RoutingSection({ models, routes, projects, modelsError }: { models: Ins
     <ReasoningControl global />
 
     <details className="mm-disclosure">
+      <summary>How Auto decides</summary>
+      <ol className="mm-hints">{AUTO_EXPLAINED.map((line) => <li key={line}>{line}</li>)}</ol>
+    </details>
+
+    <details className="mm-disclosure">
       <summary>Per-project routing ({projects.length} {projects.length === 1 ? 'project' : 'projects'})</summary>
       <div className="mm-form">
-        <div className="route-table">{routes.map((r) => <div className="route-row" key={r.task}><span>{r.task}</span><span>→</span><span>{r.model}</span></div>)}</div>
+        {projects.length ? <table className="mm-table route-projects">
+          <thead><tr><th scope="col">Project</th><th scope="col">Picks the model</th><th scope="col">Model</th></tr></thead>
+          <tbody>{projects.map((p) => <tr key={p.id}>
+            <td>{p.name}</td>
+            <td>{p.routing === 'auto' ? 'Auto' : 'Manual'}</td>
+            <td>{p.routing === 'auto' ? (info?.configured ? roleSummary(info.roles) : 'Auto not configured — uses the loaded model') : modelChoiceLabel(p, modelsError ? null : models)}</td>
+          </tr>)}</tbody>
+        </table> : <p className="mm-note">No projects yet.</p>}
+        {routes.some((r) => r.task === 'Diary app') && <p className="mm-note">Diary: its own sidecar pipeline, not Auto.</p>}
         <p className="route-note">Change a project's model from its own model selector. {models.filter((m) => m.loaded).length ? `Loaded now: ${models.filter((m) => m.loaded).map((m) => m.name).join(', ')}.` : 'No model is loaded right now.'}</p>
       </div>
     </details>

@@ -230,6 +230,9 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  const promptPanel=dialog.locator('details.mm-fold').filter({has:page.locator('> summary:has-text("Prompt library")')});
  await promptPanel.getByLabel('Name').fill('Synthetic prompt');await promptPanel.getByLabel('Prompt',{exact:true}).fill('Say hello.');await promptPanel.getByRole('button',{name:'Save prompt'}).click();await promptPanel.getByText('Synthetic prompt').waitFor();
  await dialog.getByRole('heading',{name:'Routing',exact:true}).waitFor();
+ await dialog.getByText('How Auto decides',{exact:true}).click();
+ assert.ok(await dialog.getByText(/Auto never blocks a message/).isVisible());
+ assert.equal(await dialog.locator('label').filter({hasText:'Fast — quick answers'}).count(),1);
  await dialog.getByText(/Per-project routing \(/).click();
  assert.ok(await dialog.getByText(/Change a project's model from its own model selector/).isVisible());
  // Layout at phone, tablet and desktop, both themes, on the densest tabs.

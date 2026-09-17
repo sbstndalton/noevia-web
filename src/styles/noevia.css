@@ -1636,7 +1636,11 @@ body { isolation:isolate; background:var(--bg-app); }
   .sidebar.is-expanded .rail-tools { display: none; }
   .nav-drawer-backdrop { display: block; position: fixed; inset: 0; z-index: 55; background: rgb(0 0 0 / .45); }
   /* The toggle sits over each page's first row; give those rows room for it. */
-  .chat-header, .project-head, .model-manager-head, .diary-header, .feature-preview-head { padding-left: 60px; }
+  .chat-header, .diary-header { padding-left: 60px; }
+  /* Pages without a fixed header row scroll; start their scroll area below the
+     toggle so content never slides underneath it. */
+  .main.projects-workspace, .main.model-manager-page, .main.feature-preview, .main.project-page { padding-top: 60px; }
+  .model-manager-head { padding-top: 0; }
 }
 
 /* A narrow sidebar (tablet widths, or 44px touch targets) cannot hold the wordmark

@@ -133,7 +133,7 @@ export function ProjectView({
   };
 
   return (
-    <div className="main">
+    <div className="main project-page">
       <div className="project-layout">
         <div className="project-main">
           <header className="project-head">
