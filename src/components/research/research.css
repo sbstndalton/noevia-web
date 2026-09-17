@@ -1,0 +1,38 @@
+/* Deep research panel (D12). Imported by ResearchPanel's host; plain CSS, tokens only. */
+.research-panel { display: flex; flex-direction: column; gap: 20px; padding-bottom: 24px; }
+.research-compose { display: flex; flex-direction: column; gap: 10px; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--bg-surface); }
+.research-heading h2 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
+.research-heading p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text-secondary); max-width: 62ch; }
+.research-budget { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.research-budget li { font-size: 12px; padding: 3px 9px; border-radius: var(--radius-pill); border: 1px solid var(--border); color: var(--text-secondary); }
+.research-label { font-size: 12.5px; font-weight: 600; }
+.research-question { width: 100%; box-sizing: border-box; min-height: 76px; resize: vertical; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--control-border); background: var(--bg); color: var(--text); font: inherit; font-size: 14px; line-height: 1.5; }
+.research-question:focus-visible, .research-plan input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.research-plan { margin: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.research-plan legend { padding: 0 4px; font-size: 12.5px; font-weight: 600; color: var(--text-secondary); }
+.research-plan ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
+.research-plan li { display: flex; align-items: center; gap: 6px; }
+.research-plan input { flex: 1; min-width: 0; min-height: 40px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--control-border); background: var(--bg); color: var(--text); font: inherit; font-size: 13.5px; }
+.research-plan-actions, .research-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.research-actions { justify-content: flex-end; }
+.research-actions .btn, .research-plan-actions .btn { min-height: 40px; }
+.research-note { margin: 0; font-size: 12.5px; color: var(--text-secondary); }
+.research-note.is-error { color: var(--danger); }
+.research-jobs { display: flex; flex-direction: column; gap: 10px; }
+.research-job { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-card); }
+.research-job header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.research-job h3 { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.research-status { flex: none; font-size: 11.5px; padding: 2px 8px; border-radius: var(--radius-pill); border: 1px solid var(--border); color: var(--text-secondary); }
+.research-job.is-running .research-status, .research-job.is-queued .research-status { border-color: var(--accent); color: var(--text); }
+.research-job.is-failed .research-status, .research-job.is-interrupted .research-status { border-color: var(--danger); color: var(--danger); }
+.research-job progress { width: 100%; height: 6px; accent-color: var(--accent); }
+.research-stage, .research-meta { margin: 0; font-size: 12.5px; color: var(--text-secondary); overflow-wrap: anywhere; }
+.research-files { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+.research-files li { display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+.research-report summary { cursor: pointer; font-size: 12.5px; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+.research-report pre { margin: 6px 0 0; max-height: 420px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-ui); font-size: 13px; line-height: 1.55; padding: 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--border); }
+@media (max-width: 600px) {
+  .research-compose { padding: 14px; }
+  .research-actions { justify-content: stretch; }
+  .research-actions .btn { flex: 1 1 auto; }
+}

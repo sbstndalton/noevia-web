@@ -15,6 +15,8 @@ import { StorageFileBrowser } from './StorageFileBrowser';
 import { ConfirmDialog } from './ContextMenu';
 import { fileToBase64, uploadLimit } from '../sources';
 import { deleteProjectImage, projectImageUrl, uploadProjectFile, deleteProjectFile } from '../api';
+import { ResearchPanel } from './research/ResearchPanel';
+import { useResearchAccess } from './research/useResearchAccess';
 
 /** First free "name", "name (2)", "name (3)", … avoiding collisions. */
 function uniqueName(name: string, existing: { name: string }[]): string {
@@ -69,7 +71,9 @@ export function ProjectView({
   const [composerBusy, setComposerBusy] = useState(false);
   const [composerStatus, setComposerStatus] = useState('');
   const [panel, setPanel] = useState<'instructions' | 'memory' | null>(null);
-  const [tab, setTab] = useState<'chats' | 'sources'>('chats');
+  const [tab, setTab] = useState<'chats' | 'sources' | 'research'>('chats');
+  const researchAccess = useResearchAccess(project.id);
+  useEffect(() => { if (tab === 'research' && !researchAccess) setTab('chats'); }, [tab, researchAccess]);
   const [draft, setDraft] = useState('');
   const [skillFiles, setSkillFiles] = useState<string[]>([]);
   const [pickingFolder, setPickingFolder] = useState(false);
@@ -148,9 +152,14 @@ export function ProjectView({
             <button role="tab" aria-selected={tab === 'sources'} className={tab === 'sources' ? 'is-selected' : ''} onClick={() => setTab('sources')}>
               Sources{project.files.length + (project.assets || []).filter(a => !a.sourceName).length ? ` (${project.files.length + (project.assets || []).filter(a => !a.sourceName).length})` : ''}
             </button>
+            {researchAccess && <button role="tab" aria-selected={tab === 'research'} className={tab === 'research' ? 'is-selected' : ''} onClick={() => setTab('research')}>
+              Research
+            </button>}
           </div>
 
-          {tab === 'chats' ? (
+          {tab === 'research' && researchAccess ? (
+            <div className="project-scroll"><ResearchPanel projectId={project.id} onSaved={onRefresh}/></div>
+          ) : tab === 'chats' ? (
             <div className="project-scroll">
               {chats.length === 0 ? (
                 <p className="rail-empty">No chats yet — start one below.</p>
@@ -254,7 +263,7 @@ export function ProjectView({
               so the composer is present rather than a button that empties into
               a blank chat. */}
           {!chatEnabled && <p className="route-note" role="status">This project is not enabled for Chat. Turn Chat on under Project settings → Available in to send messages here.</p>}
-          <div className="project-composer" hidden={!chatEnabled}>
+          <div className="project-composer" hidden={!chatEnabled || tab === 'research'}>
             <div className="composer-inner chat-composer-inner">
               <ComposerTextarea
                 rows={1}
