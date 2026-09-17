@@ -9,6 +9,7 @@ import { UsageView } from './UsageView';
 import { ShellIcon } from './ShellIcon';
 import { CloseButton } from './CloseButton';
 import { DataSettings } from './data/DataSettings';
+import { PersonalizationSettings } from './personalization/PersonalizationSettings';
 import { FeatureSettings } from './features/FeatureSettings';
 import { OffsiteBackupSettings } from './offsite-backup/OffsiteBackupSettings';
 
@@ -28,6 +29,7 @@ const PERSONAL: Item[] = [
   ['profile', 'Profile'],
   ['security', 'Security'],
   ['appearance', 'Appearance'],
+  ['personalization', 'Personalization'],
   ['capabilities', 'Capabilities'],
   ['diary', 'Diary & storage'],
   ['providers', 'Your connections'],
@@ -49,12 +51,12 @@ const ADMIN: Item[] = [
 ];
 
 // Each section has its own symbol; names resolve through ShellIcon's Lucide map.
-const ICONS: Record<string, string> = Object.fromEntries(['profile','security','appearance','capabilities','diary','providers','usage','data','planned','users','models','status','features','backups'].map(id => [id, id]));
+const ICONS: Record<string, string> = Object.fromEntries(['profile','security','appearance','personalization','capabilities','diary','providers','usage','data','planned','users','models','status','features','backups'].map(id => [id, id]));
 
 // What used to be one navigation row each. Kept visible as a roadmap, but in
 // one place, so an empty section never looks like a broken one.
 const PLANNED: { group: string; items: string[] }[] = [
-  { group: 'Personalization', items: ['Response style', 'Account-wide custom instructions', 'Account-wide memory preferences', 'Notifications'] },
+  { group: 'Personalization', items: ['Response style', 'Account-wide memory preferences', 'Notifications'] },
   { group: 'Data', items: ['Data retention'] },
   { group: 'Extensibility', items: ['Capability catalogue', 'Plugin management', 'Skill library', 'Connector catalogue'] },
   { group: 'Coding workspace', items: ['Coding preferences', 'Git', 'Environments', 'Worktrees', 'Hooks'] },
@@ -141,6 +143,8 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
           <OffsiteBackupSettings />
         ) : section === 'capabilities' ? (
           <CapabilitiesSettings />
+        ) : section === 'personalization' ? (
+          <PersonalizationSettings />
         ) : section === 'data' ? (
           <DataSettings />
         ) : section === 'usage' ? (

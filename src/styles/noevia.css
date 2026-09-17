@@ -1815,3 +1815,8 @@ body { isolation:isolate; background:var(--bg-app); }
 .shortcuts-list dt { font-size: var(--text-callout); }
 .shortcuts-list dd { margin: 0; }
 .shortcuts-list kbd { font-family: var(--font-ui); font-size: var(--text-caption); padding: 2px 8px; border-radius: 6px; border: 1px solid var(--control-border); background: var(--bg-surface); white-space: nowrap; }
+.personal-instructions { display: flex; flex-direction: column; gap: 6px; }
+.personal-instructions textarea { font: inherit; font-size: var(--text-body); line-height: 1.55; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--control-border); background: var(--bg-surface); color: var(--text); resize: vertical; min-height: 140px; }
+.personal-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.personal-count { font-size: var(--text-caption); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+@media (pointer: coarse) { .personal-instructions textarea { font-size: var(--text-input); } }

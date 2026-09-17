@@ -31,7 +31,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    await page.getByRole('dialog').waitFor();
    assert.ok(await page.getByRole('dialog').evaluate(el=>el.scrollWidth<=el.clientWidth),'Settings must not overflow horizontally');
    if(width<700){
-     for(const section of ['profile','security','appearance','capabilities','diary','providers','usage','data','planned']){
+     for(const section of ['profile','security','appearance','personalization','capabilities','diary','providers','usage','data','planned']){
        await page.getByLabel('Settings category').selectOption(section);
        // Phones close Settings with "Back to app"; the detail bar's X is hidden when the page has a heading.
        await reachable(page.getByRole('button',{name:'Back to app',exact:true}),height);
