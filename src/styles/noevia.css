@@ -1321,7 +1321,7 @@ body { isolation:isolate; background:var(--bg-app); }
 :root[data-theme="dark"] .mm-root { --viz-1: #3987e5; --viz-2: #d95926; --viz-3: #199e70; }
 .mm-tabs-select { display: none; min-height: 44px; padding: 10px 14px; border: 1px solid var(--control-border); border-radius: var(--radius-control); color: var(--text-primary); background: var(--bg-surface); }
 .mm-tabs-row { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px; }
-.mm-tabs-row button { min-height: 38px; padding: 9px 15px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--text-footnote); line-height: 1.35; cursor: pointer; }
+.mm-tabs-row button { min-height: 40px; padding: 9px 15px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--text-footnote); line-height: 1.35; cursor: pointer; }
 .mm-tabs-row button:hover { background: var(--bg-surface-hover); color: var(--text-primary); }
 .mm-tabs-row button.is-active { background: var(--nav-active); color: var(--text-primary); font-weight: 600; }
 @media (max-width: 700px) { .mm-tabs-select { display: block; width: 100%; } .mm-tabs-row { display: none; } }
@@ -1451,7 +1451,9 @@ body { isolation:isolate; background:var(--bg-app); }
 /* Buttons here follow the shell: 38px on a pointer device, 44px touch targets below the
    mobile breakpoint, same as `.settings-detail button`. Pinning 44px everywhere made every
    control in Models visibly taller than the same control in Profile or Providers. */
-.mm-root .modal-btn, .mm-root .popup-tab { min-height: 38px; }
+/* 40px is the floor for a hit target on this page at any width; `qa/models-settings` checks
+   it on every tab, and the phone minimum below raises these to 44. */
+.mm-root .modal-btn, .mm-root .popup-tab { min-height: 40px; }
 @media (max-width: 700px) { .mm-root .modal-btn, .mm-root .popup-tab { min-height: 44px; } }
 .mm-root { --status-good: #1a7f45; --status-warn: #9a6400; --status-bad: #c42b2b; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mm-root { --status-good: #4cc27f; --status-warn: #e0a53a; --status-bad: #ff7b72; } }
@@ -1744,6 +1746,9 @@ body { isolation:isolate; background:var(--bg-app); }
 @media (pointer: coarse), (max-width: 640px) {
   .composer-add, .send-btn, .chat-header .icon-btn, .settings-detail > header .shell-icon-button, .project-card-options { min-width: 44px; min-height: 44px; }
   .project-tabs [role=tab], .settings-back, .project-newchat, .projects-head .projects-search, select[aria-label='Thinking effort'] { min-height: 44px; }
+  /* The model manager keeps its tab row on a phone (the `.mm-root` rule overrides the
+     narrow-width switch to a select), so its tabs and buttons need the touch minimum too. */
+  .mm-root .mm-tabs-row button, .mm-root .mm-select select, .mm-root .modal-btn, .mm-root .popup-tab { min-height: 44px; }
   .composer-add { display: inline-grid; place-items: center; }
 }
 .set-row-pending { color: var(--text-primary); font-weight: 500; }

@@ -7,7 +7,7 @@ type Step = { kind: 'spec' | 'prompt'; id: string; label: string; status: string
 type Extension = { id: string; action: string; why: string; from?: number; to?: number };
 type Result = { spec: string; specLabel: string; generation: number; generationOff: number; gain: number; perWorkload: Record<string, string>;
   ubatch: number | null; promptPerSecond: number | null; extensions: Extension[]; loaded?: boolean };
-type Job = { id: string; model: string; status: string; phase: string; steps: Step[]; result?: Result; error?: string; restored?: boolean; calibration?: string; extendContext?: boolean;
+type Job = { id: string; model: string; status: string; phase: string; steps: Step[]; result?: Result; error?: string; restored?: boolean; resume?: boolean; resumed?: boolean; calibration?: string; extendContext?: boolean;
   progress?: { done: number; total: number; percent: number } };
 type Past = Result & { at: number };
 
@@ -47,7 +47,8 @@ export function AutoTune({ model, onChanged }: { model: string; onChanged: () =>
     <p className="mm-note">Tries speculative decoding (off, MTP drafts, n-gram) and batch sizes on this machine, keeps the fastest setting that gives the same answers, then can measure the longest context that still reads in time.</p>
     {last && !running && <p className="mm-note" role="status">Last tuned {new Date(last.at).toLocaleString()}: <strong>{last.specLabel}</strong>, {last.generation} tokens/s ({last.gain >= 0 ? '+' : ''}{last.gain}% vs off){last.ubatch ? `, micro-batch ${last.ubatch}` : ''}.</p>}
     {mine && <div aria-live="polite">
-      <p className="mm-note"><strong>{mine.status === 'running' ? mine.phase : mine.status === 'passed' ? 'Tuned' : mine.status === 'cancelled' ? 'Cancelled' : 'Failed'}</strong>{mine.error ? ` — ${mine.error}` : ''}{mine.restored ? ' The original settings were restored.' : ''}</p>
+      <p className="mm-note"><strong>{mine.status === 'running' ? mine.phase : mine.status === 'passed' ? 'Tuned' : mine.status === 'cancelled' ? 'Cancelled' : 'Failed'}</strong>{mine.error ? ` — ${mine.error}` : ''}{mine.restored ? ' The original settings were restored.' : ''}
+        {mine.resume && mine.resumed === false ? ' No earlier measurements were reusable, so everything is being measured again.' : ''}</p>
       {mine.progress && <label className="mm-progress">
         <span className="sr-only">Auto-tune progress</span>
         <progress value={mine.progress.percent} max={100}/>
