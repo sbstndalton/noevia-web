@@ -74,7 +74,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   const orphanFiles = files.filter(f => !shownFiles.has(f.key));
   return <div className="mm-tab">
     <div className="mm-toolbar">
-      <p className="mm-lede">Everything installed on the model server. llama.cpp loads one model at a time and swaps on demand.</p>
+      <p className="mm-lede">Everything installed on the model server. llama.cpp loads models on demand and unloads the least recently used one when it reaches its limit.</p>
       <button className="modal-btn secondary" disabled={busy === 'updates'} onClick={() => void checkUpdates()}>{busy === 'updates' ? 'Checking…' : 'Check for updates'}</button>
     </div>
     {error && <p role="alert" className="modal-err">{error}</p>}

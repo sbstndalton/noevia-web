@@ -8,6 +8,9 @@
 //                  "generated UI" accent. Blockquotes are exempt (a quotation rule is typography).
 //   overshoot-ease cubic-bezier control points outside 0..1 on the y axis (bounce/elastic motion).
 //   gradient-text  background-clip: text.
+//   type-scale     a font-size in px/rem off the type scale (tokens.css --text-*); em, % and
+//                  keywords stay allowed because they are relative to a scale step.
+//   font-weight    a weight other than 400/500/600/700 (HIG: no in-between weights).
 // Silence a deliberate case on the line itself or the line above:  /* design-lint: allow <rule> — reason */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -20,6 +23,10 @@ function* files(target) {
     yield* files(path.join(target, entry.name));
   }
 }
+
+// Mirrors the --text-* tokens in src/styles/tokens.css (HIG text styles, sized for the web).
+const TYPE_SCALE = new Set([11, 12, 13, 14, 15, 16, 17, 20, 22, 26, 32, 40, 52]);
+const WEIGHTS = new Set(['400', '500', '600', '700', 'normal', 'bold', 'inherit']);
 
 function lint(text, file = '') {
   const findings = [];
@@ -39,6 +46,12 @@ function lint(text, file = '') {
       if (y1 < 0 || y1 > 1 || y2 < 0 || y2 > 1) push('overshoot-ease', `${m[0]} overshoots; use an ease-out curve`);
     }
     for (const _ of line.matchAll(/background-clip\s*:\s*text/g)) push('gradient-text', 'gradient text');
+    for (const m of line.matchAll(/(?<![-\w])font-size\s*:\s*([\d.]+)(px|rem)\b/g)) {
+      if (m[2] === 'rem' || !TYPE_SCALE.has(Number(m[1]))) push('type-scale', `${m[1]}${m[2]} is off the type scale; use a --text-* token`);
+    }
+    for (const m of line.matchAll(/(?<![-\w])font-weight\s*:\s*([\w]+)/g)) {
+      if (!WEIGHTS.has(m[1])) push('font-weight', `weight ${m[1]}; use 400, 500, 600 or 700`);
+    }
   });
   return findings;
 }
@@ -53,4 +66,4 @@ if (require.main === module) {
   process.exitCode = all.length ? 1 : 0;
 }
 
-module.exports = { lint };
+module.exports = { lint, TYPE_SCALE };

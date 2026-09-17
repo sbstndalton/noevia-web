@@ -45,7 +45,7 @@ function JobProgress({ job, onCancel }: { job: Job; onCancel: () => Promise<void
     <header className="mm-panel-head"><h3 id="mm-job">{job.active ? 'Benchmark running' : `Last benchmark: ${job.status}`}</h3>{job.active && <button className="modal-btn secondary" onClick={() => void onCancel()}>Stop after this request</button>}</header>
     <progress max={Math.max(1, job.total)} value={job.done} aria-label="Benchmark progress"/>
     <p className="mm-note">{job.done} of {job.total} {job.unit}{job.current ? ` · ${job.current}` : ''} · {ago(job.elapsed)} elapsed{job.eta ? ` · about ${ago(job.eta)} left` : ''}</p>
-    {job.active && <p className="mm-note">Chat and other models wait while this runs: the engine holds one model at a time.</p>}
+    {job.active && <p className="mm-note">Chat may wait or swap models while this runs.</p>}
     {job.error && <p role="alert" className="modal-err">{job.error}</p>}
     {job.lines.length > 0 && <pre className="mm-log">{job.lines.slice(-10).join('\n')}</pre>}
   </section>;
