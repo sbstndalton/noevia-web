@@ -410,9 +410,13 @@ export function editDiaryEntry(body: { xid: string; me: string; assistant: strin
 export const fetchUsage = (aggregate=false) => getJson<unknown>(aggregate?'/api/usage/aggregate':'/api/usage').then(parseUsage);
 
 export function fetchChatHistory(chatId: string): Promise<HistoryEntry[]> {
-  return getJson<{ history: HistoryEntry[] }>(
+  return fetchChatHistoryRevision(chatId).then((r) => r.history);
+}
+
+export function fetchChatHistoryRevision(chatId: string): Promise<{ history: HistoryEntry[]; revision: string | null }> {
+  return getJson<{ history: HistoryEntry[]; revision?: string }>(
     `/api/chats/${encodeURIComponent(chatId)}/history`,
-  ).then((r) => (Array.isArray(r.history) ? r.history : []));
+  ).then((r) => ({ history: Array.isArray(r.history) ? r.history : [], revision: typeof r.revision === 'string' ? r.revision : null }));
 }
 
 // ── Free (non-project) chats — server-side metas so they survive browsers ──
@@ -428,8 +432,20 @@ export function deleteFreeChat(chatId: string): Promise<{ ok: true }> {
   });
 }
 
-export function saveChatHistory(chatId: string, history: HistoryEntry[]): Promise<{ ok: true }> {
-  return postJson(`/api/chats/${encodeURIComponent(chatId)}/history`, { history });
+export type HistorySave = { ok: true; revision: string | null } | { ok: false; conflict: { history: HistoryEntry[]; revision: string } };
+/** Save a transcript. With a base revision, a concurrent save elsewhere returns the current copy to merge. */
+export async function saveChatHistory(chatId: string, history: HistoryEntry[], baseRevision?: string | null): Promise<HistorySave> {
+  const res = await apiFetch(`/api/chats/${encodeURIComponent(chatId)}/history`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(baseRevision ? { history, baseRevision } : { history }),
+  });
+  if (res.status === 409) {
+    const body = await res.json();
+    return { ok: false, conflict: { history: Array.isArray(body.history) ? body.history : [], revision: String(body.revision || '') } };
+  }
+  if (!res.ok) throw new Error(`history save failed (${res.status})`);
+  const body = await res.json().catch(() => ({}));
+  return { ok: true, revision: typeof body.revision === 'string' ? body.revision : null };
 }
 
 // Chat streams SSE events from the proxy:

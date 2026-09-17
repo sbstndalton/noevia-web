@@ -12,7 +12,7 @@ import {
   deleteChat,
   deleteFreeChat,
   deleteProject,
-  fetchChatHistory,
+  fetchChatHistoryRevision,
   fetchHealth,
   fetchInstalledModels,
   fetchProfile,
@@ -47,6 +47,7 @@ import { EditProjectModal } from './components/EditProjectModal';
 import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
 import { settleToolCalls } from './tool-call-state';
+import { mergeTranscripts } from './transcript-merge';
 
 type View =
   | { kind: 'diary' }
@@ -103,6 +104,8 @@ export default function App(): JSX.Element {
   // then terminates the upstream request.
   const streamAbort = useRef<Record<string, AbortController>>({});
   const sendingChats = useRef<Set<string>>(new Set());
+  const historyRevisions = useRef<Record<string, string | null>>({});
+  const historySaves = useRef<Record<string, Promise<void>>>({});
   const abortStream = useCallback((chatId: string) => {
     streamAbort.current[chatId]?.abort();
     delete streamAbort.current[chatId];
@@ -222,8 +225,9 @@ export default function App(): JSX.Element {
     const id = view.chatId;
     if (loadedChats.current.has(id)) return;
     loadedChats.current.add(id);
-    fetchChatHistory(id)
-      .then((history) => {
+    fetchChatHistoryRevision(id)
+      .then(({ history, revision }) => {
+        historyRevisions.current[id] = revision;
         setMessagesByChat((prev) => ({
           ...prev,
           [id]: history.map((h) => ({
@@ -295,23 +299,34 @@ export default function App(): JSX.Element {
   const messages: Message[] = view.kind === 'chat' ? messagesByChat[view.chatId] ?? [] : [];
 
   const persist = useCallback((chatId: string, msgs: Message[]) => {
-    saveChatHistory(
-      chatId,
-      msgs
-        .filter((m) => !m.error)
-        // Reasoning, tool activity and cost are persisted too, so reopening a
-        // chat shows the same thinking block and stats it had while streaming
-        // instead of a bare answer. The server strips these before replaying
-        // history to a model, so they cost nothing in prompt tokens.
-        .map((m) => ({
-          role: m.role,
-          content: m.content,
-          model: m.senderLabel,
-          reasoning: m.reasoning || undefined,
-          toolCalls: m.toolCalls && m.toolCalls.length ? m.toolCalls : undefined,
-          stats: m.stats,
-        })),
-    ).catch(() => undefined);
+    // Reasoning, tool activity and cost are persisted too, so reopening a
+    // chat shows the same thinking block and stats it had while streaming
+    // instead of a bare answer. The server strips these before replaying
+    // history to a model, so they cost nothing in prompt tokens.
+    const entries: HistoryEntry[] = msgs.filter((m) => !m.error).map((m) => ({
+      role: m.role,
+      content: m.content,
+      model: m.senderLabel,
+      reasoning: m.reasoning || undefined,
+      toolCalls: m.toolCalls && m.toolCalls.length ? m.toolCalls : undefined,
+      stats: m.stats,
+    }));
+    // Saves for one chat run in order. If another device saved first, merge its copy with ours
+    // (nothing either side wrote is dropped), show the merged transcript, and save that.
+    const run = async () => {
+      let next = entries;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const result = await saveChatHistory(chatId, next, historyRevisions.current[chatId]);
+        if (result.ok) { historyRevisions.current[chatId] = result.revision; return; }
+        const merged = mergeTranscripts(result.conflict.history, next);
+        historyRevisions.current[chatId] = result.conflict.revision;
+        if (merged !== next) {
+          next = merged;
+          setMessagesByChat((prev) => ({ ...prev, [chatId]: merged.map((h) => ({ id: uid(), role: h.role, content: h.content, senderLabel: h.model, reasoning: h.reasoning, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats })) }));
+        }
+      }
+    };
+    historySaves.current[chatId] = (historySaves.current[chatId] || Promise.resolve()).then(run).catch(() => undefined);
   }, []);
 
   const handleSend = useCallback(
