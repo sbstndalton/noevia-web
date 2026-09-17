@@ -1664,3 +1664,9 @@ body { isolation:isolate; background:var(--bg-app); }
 .tool-call-label { display: block; margin: 6px 6px 2px; font-size: 11px; color: var(--text-muted); }
 .tool-call pre { margin: 0 6px 6px; padding: 8px; max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; border-radius: 6px; background: var(--bg-surface); }
 @media (pointer: coarse) { .tool-call > details > summary { min-height: 44px; align-items: center; } }
+
+.project-modes { border: 0; margin: 0; padding: 0; }
+.project-modes legend { padding: 0; margin-bottom: 6px; }
+.project-mode-options { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.project-mode-options label { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; }
+.project-mode-options small { color: var(--text-muted); }

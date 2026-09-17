@@ -202,7 +202,8 @@ export function Sidebar({
   };
 
   const sortedProjects = orderedProjects(projects,order);
-  const visibleProjects = sortedProjects.filter(p=>p.name.toLowerCase().includes(query.toLowerCase()));
+  // The chat sidebar lists projects enabled for Chat; the Projects page lists all of them.
+  const visibleProjects = sortedProjects.filter(p=>(!p.modes?.length || p.modes.includes('chat')) && p.name.toLowerCase().includes(query.toLowerCase()));
   const visibleChats = recentChats(chats).filter(c=>(c.title || '').toLowerCase().includes(query.toLowerCase()));
   const manualItems = (p: Project): MenuItem[] => {
     if(order.sort!=='manual')return [];

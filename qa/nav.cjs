@@ -6,6 +6,8 @@ async function navClick(page, name) {
     await toggle.click();
     await page.getByRole('dialog', { name: 'Navigation' }).waitFor();
   }
-  await page.locator('.sidebar').getByRole('button', { name, exact: true }).first().click();
+  const sidebar = page.locator('.sidebar');
+  const entry = sidebar.getByRole('button', { name, exact: true }).and(page.locator('.nav-item'));
+  await (await entry.count() ? entry : sidebar.getByRole('button', { name, exact: true })).first().click();
 }
 module.exports = { navClick };

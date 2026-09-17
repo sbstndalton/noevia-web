@@ -71,6 +71,8 @@ export interface ProjectAsset {
   bytes: number;
 }
 
+export type ProjectMode = 'chat' | 'cowork' | 'code';
+
 export interface Project {
   reasoningEffort?: 'default' | 'low' | 'high' | null;
   icon?: string;
@@ -94,6 +96,8 @@ export interface Project {
   /** Image sources. Stored as bytes on the server, not inline. */
   assets?: ProjectAsset[];
   toolboxes?: string[]; // step 14: named tool sets offered to the model; defaults to ['core']
+  /** App modes this project appears in; the server migrates older projects to ['chat']. */
+  modes?: ProjectMode[];
   chats: ChatMeta[];
   createdAt: number;
   updatedAt: number;

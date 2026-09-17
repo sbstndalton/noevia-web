@@ -111,6 +111,7 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
                 <div className="project-card-meta">
                   <span className="project-chip">{p.chats.length} {p.chats.length === 1 ? 'chat' : 'chats'}</span>
                   {p.files.length > 0 && <span className="project-chip">{p.files.length} {p.files.length === 1 ? 'file' : 'files'}</span>}
+                  {p.modes?.length && (p.modes.length > 1 || p.modes[0] !== 'chat') ? <span className="project-chip" aria-label={`Available in ${p.modes.join(', ')}`}>{p.modes.map((m) => m === 'chat' ? 'Chat' : m === 'cowork' ? 'Cowork' : 'Code').join(' · ')}</span> : null}
                   <span className="project-card-time">{timeAgo(p.updatedAt)}</span>
                   {p.archived && (
                     <button

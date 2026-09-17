@@ -123,9 +123,10 @@ export function ProjectView({
   const groups = ['Documents', 'Images', 'Text', 'Other'];
   const fileGroup = (f: Project['files'][number]) => f.attachment?.group || (f.document ? 'Documents' : 'Text');
 
+  const chatEnabled = !project.modes?.length || project.modes.includes('chat');
   const send = () => {
     const text = draft.trim();
-    if (!text || composerBusy || busyDocs || syncing) return;
+    if (!chatEnabled || !text || composerBusy || busyDocs || syncing) return;
     setDraft('');
     onSendFirst(project.id, text);
   };
@@ -251,7 +252,8 @@ export function ProjectView({
           {/* Starting a chat from the project page is the point of being here,
               so the composer is present rather than a button that empties into
               a blank chat. */}
-          <div className="project-composer">
+          {!chatEnabled && <p className="route-note" role="status">This project is not enabled for Chat. Turn Chat on under Project settings → Available in to send messages here.</p>}
+          <div className="project-composer" hidden={!chatEnabled}>
             <div className="composer-inner chat-composer-inner">
               <textarea
                 className="composer-input"
