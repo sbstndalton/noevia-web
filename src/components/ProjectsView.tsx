@@ -8,6 +8,7 @@ import { ProjectIcon, ProjectIdentityPicker } from './ProjectIdentity';
 import { ContextMenu, ConfirmDialog } from './ContextMenu';
 import { PlusIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
+import { EmptyState } from './EmptyState';
 import { readTextSources, describeRejection } from '../sources';
 
 interface ProjectsViewProps {
@@ -51,9 +52,10 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
           <p className="projects-hero-sub">
             {projects.length === 0
               ? 'Keep related chats and files together.'
-              : `${projects.length} ${projects.length === 1 ? 'workspace' : 'workspaces'} · ${chatCount} ${chatCount === 1 ? 'chat' : 'chats'}`}
+              : `${projects.length} ${projects.length === 1 ? 'project' : 'projects'} · ${chatCount} ${chatCount === 1 ? 'chat' : 'chats'}`}
           </p></div>
-          <button className="btn btn-primary" onClick={() => setCreating(true)}><PlusIcon /><span>New project</span></button>
+          {/* With no projects the empty state carries the one primary action. */}
+          {projects.length > 0 && <button className="btn btn-primary" onClick={() => setCreating(true)}><PlusIcon /><span>New project</span></button>}
         </div>
         <div className="projects-head">
           <div className="seg" role="tablist" aria-label="Project list">
@@ -75,20 +77,17 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
         </div>
 
         {projects.length === 0 ? (
-          <div className="empty-state" style={{ minHeight: 320 }}>
-            <h2>No projects yet</h2>
-            <p>
-              Keep your chats, files, and instructions in one place.
-              Create a project to get started.
-            </p>
-          </div>
+          <EmptyState icon="folder" title="No projects yet"
+            action={<button className="btn btn-primary" onClick={() => setCreating(true)}><PlusIcon /><span>New project</span></button>}>
+            A project keeps chats, files and instructions together.
+          </EmptyState>
         ) : (
           <div className="projects-grid">
             {visibleProjects.length === 0 && (
-              <div className="empty-state" role="status">
-                <h2>{query.trim() ? 'No matching projects' : 'No archived projects'}</h2>
-                <p>{query.trim() ? 'Try a different name or clear the filter.' : 'Archived projects will appear here.'}</p>
-              </div>
+              <EmptyState compact icon={query.trim() ? 'search' : 'archive'} title={query.trim() ? 'No matching projects' : 'No archived projects'}
+                action={query.trim() ? <button className="modal-btn secondary" onClick={() => setQuery('')}>Clear filter</button> : undefined}>
+                {query.trim() ? `Nothing is named “${query.trim()}”.` : 'Projects you archive appear here.'}
+              </EmptyState>
             )}
             {visibleProjects              .map((p) => (
               <div

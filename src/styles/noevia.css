@@ -1796,3 +1796,4 @@ body { isolation:isolate; background:var(--bg-app); }
 .diary-breadcrumb .diary-home-link, .diary-breadcrumb .popup-tab { display: inline-flex; align-items: center; font: inherit; font-size: var(--text-callout); font-weight: 500; line-height: 1.2; color: var(--text-secondary); background: transparent; border: 0; box-shadow: none; padding: 6px 6px; border-radius: 8px; white-space: nowrap; }
 .diary-breadcrumb .diary-home-link:hover, .diary-breadcrumb .popup-tab:hover { color: var(--text-primary); background: var(--nav-hover); }
 .diary-breadcrumb > :last-child { color: var(--text-primary); }
+.projects-grid > .empty-state-card { grid-column: 1 / -1; }
