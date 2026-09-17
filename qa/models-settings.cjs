@@ -8,7 +8,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  try{
  const page=await browser.newPage({viewport:{width:1440,height:950}});await page.emulateMedia({reducedMotion:'reduce'});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- const calls=[];let saveAttempts=0,revision='r1',deleted=[],reloads=[],safeDefaults=[],logPolls=0,badges=[],extraJob=null,extraRegistered=false,prompts=[{id:1,name:'Short answer',body:'Reply with OK.'}],benchStarted=null;
+ const calls=[];let saveAttempts=0,revision='r1',deleted=[],reloads=[],safeDefaults=[],downloadBodies=[],logPolls=0,badges=[],extraJob=null,extraRegistered=false,prompts=[{id:1,name:'Short answer',body:'Reply with OK.'}],benchStarted=null;
  const now=Date.now()/1000,hist=Array.from({length:40},(_,i)=>({ts:now-(39-i)*2,gpu_util:i%10*9,vram_used_gb:0.15,cpu_pct:40+i%5*10,mem_used_gb:1.2,shared_used_gb:6+i*0.1,temp_c:48,power_w:18+i%4,per_gpu_util:[],per_gpu_vram_used_gb:[]}));
  const hostHist=hist.map(p=>({ts:p.ts,cpu_pct:12,mem_used_gb:14.5,mem_total_gb:29,mem_available_gb:14.5}));
  const schema=[{tier:'Common',open:true,fields:[{key:'model',label:'Model file',kind:'text',choices:[],placeholder:'',help:'Model path'},{key:'ctx-size',label:'Context size',kind:'int',choices:[],placeholder:'8192',help:'Tokens'},{key:'ngl',label:'GPU layers',kind:'text',choices:[],placeholder:'999',help:''},{key:'flash-attn',label:'Flash attention',kind:'select',choices:['','on','off','auto'],placeholder:'',help:''},{key:'jinja',label:'Enable --jinja templating',kind:'bool',choices:[],placeholder:'',help:''}]},{tier:'Multimodal / vision',open:false,fields:[{key:'mmproj',label:'Projector',kind:'text',choices:[],placeholder:'',help:''}]}];
@@ -33,7 +33,8 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    {key:'g/Gemma-E2B.gguf',name:'Gemma-E2B.gguf',subdir:'g',bytes:3e9,size:'3.0 GB',modified:'2026-09-01',sharded:false,parts:1,projector:null,sections:['Gemma-E2B'],modelId:'Gemma-E2B',file:'g/Gemma-E2B.gguf',shape:{arch:'gemma4',moe:false,experts:0,active:0,label:'dense'},loadedOn:[],fit:[],badges:[]},
    {key:'n/new-model-Q4_K_M.gguf',name:'new-model-Q4_K_M.gguf',subdir:'n',bytes:2e9,size:'2.0 GB',modified:'2026-09-14',sharded:false,parts:1,projector:null,sections:[],modelId:'new-model-Q4_K_M',file:'n/new-model-Q4_K_M.gguf',shape:null,loadedOn:[],fit:[],badges:[]},
   ].filter(f=>!deleted.includes(f.key)),unregistered:['new-model-Q4_K_M'],revision});
-  if(r==='overview')return json({modelsDir:{path:'/models',exists:true,disk:{total:5e11,free:1.5e11,usedPct:70,totalH:'465.7 GB',freeH:'139.7 GB'}},models:3,sections:2,backends:[],activeDownloads:0,revision});
+  if(r==='download-targets')return json({targets:[{id:'',label:'Models folder',path:'/models'},{id:'archive',label:'archive',path:'/models/archive'}]});
+  if(r==='overview')return json({modelsDir:{path:'/models',hostPath:'/mnt/user/ai-models',exists:true,disk:{total:5e11,free:1.5e11,usedPct:70,totalH:'465.7 GB',freeH:'139.7 GB'}},models:3,sections:2,backends:[],activeDownloads:0,revision});
   if(r==='models/updates')return json({status:{'Gemma-E2B.gguf':{status:'stale',remote:'2026-09-10',delta_days:9}}});
   if(r==='models/detail')return json({key:'g/Gemma-E2B.gguf',name:'Gemma-E2B.gguf',file:'g/Gemma-E2B.gguf',modified:'2026-09-01',sharded:false,parts:1,projector:null,path:'/models/g/Gemma-E2B.gguf',summary:{arch:'gemma4',general:{params:'5.1 B',quant:'Q4_K_M'},model:{context_length:131072,block_count:35,attention_head_count:8,attention_head_count_kv:1},chat_template_features:{uses_think_tags:true}}});
   if(r==='models/delete'){deleted.push(...body().models);return json({results:[{key:body().models[0],ok:true,message:'deleted',freed:3e9,freedH:'3.0 GB'}]});}
@@ -57,7 +58,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   if(r.startsWith('search/repo'))return json({repo:'synthetic/model-GGUF',groups:[{shardBase:'model-Q4_K_M.gguf',shards:null,bytes:5e9,size:'4.7 GiB',quant:'Q4_K_M',projector:false,fit:[{name:'cowork-llama-1',verdict:'fits',ratio_pct:40}],files:[{path:'model-Q4_K_M.gguf',bytes:5e9,size:'4.7 GiB'}],estimates:[{key:'fast',label:'Fast',ctx:131072,gpu_layers:32,total_layers:32,speed_pct:100,offload:false}],nativeCtx:262144},{shardBase:'mmproj-F16.gguf',shards:null,bytes:9e8,size:'0.9 GiB',quant:null,projector:true,fit:[],files:[{path:'mmproj-F16.gguf',bytes:9e8,size:'0.9 GiB'}]}],gated:''});
   if(r.startsWith('search'))return json({results:[{id:'synthetic/model-GGUF',downloads:1234,likes:56,last_modified:'2026-09-01',pipeline_tag:'text-generation',gguf_count:4,downloaded:[]}]});
   if(r==='downloads'&&m==='GET')return json({jobs:[{id:'j1',repo:'synthetic/model-GGUF',filename:'new-model-Q4_K_M/new-model-Q4_K_M.gguf',status:'done',error:null,bytes:2e9,downloaded:2e9,pct:100,speedH:'—',etaH:'—',parallel:true,chunks:[]},...(extraJob?[extraJob]:[])]});
-  if(r==='downloads'&&m==='POST')return json({queued:['model-Q4_K_M.gguf','mmproj-F16.gguf']});
+  if(r==='downloads'&&m==='POST'){downloadBodies.push(body());return json({queued:['model-Q4_K_M.gguf','mmproj-F16.gguf']});}
   if(r==='benchmark')return json({sections:['Qwen-9B','Gemma-E2B'],sweepArgs:{},prompts,backends:['cowork-llama-1'],maxTokensDefault:3072,maxTokensCeiling:8192,job:{run_id:0,status:'idle',backend:'',total:0,done:0,current:'',error:'',unit:'requests',lines:[],pct:0,elapsed:0,eta:0,active:false},runs:[{id:7,backend:'cowork-llama-1',status:'done',started_at:now-600,finished_at:now-300,reps:3,max_tokens:512,note:''}],categories:[{key:'coding',label:'Coding'},{key:'writing',label:'Creative writing'}]});
   if(r==='benchmark/start'){benchStarted=body();return json({error:'A benchmark is already running.'},409);}
   if(r.startsWith('benchmark/runs/'))return json({run:{id:7,backend:'cowork-llama-1',status:'done',started_at:now-600},variants:[{alias:'Qwen-9B',load_ms:9000}],results:[{id:1,alias:'Qwen-9B',prompt_name:'Short answer',rep:1,cold:0,contended:0,err:'',ttft_ms:480,ttft_answer_ms:480,total_ms:900,prompt_n:12,gen_n:40,gen_tps:13.7,draft_acc:null,peak_vram_json:'[9.8]',truncated:0,response_text:'OK, synthetic.'}],sweeps:[],badges:{'Qwen-9B':badges},
@@ -146,10 +147,14 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await dialog.getByRole('button',{name:'Advanced',exact:true}).click();
  // Download → Set up
  await discover();
+ assert.equal(await dialog.getByTestId('download-target').innerText(),"Downloads go to /mnt/user/ai-models · 139.7 GB free. The engine reads this whole folder; other shares appear here once they are mounted inside it.");
  await dialog.getByRole('button',{name:/synthetic\/model-GGUF/}).click();
  await dialog.getByRole('heading',{name:'synthetic/model-GGUF'}).waitFor();
  assert.ok(await dialog.getByText('Fast: 128K').isVisible());assert.ok(await dialog.getByText(/ships a vision projector/).isVisible());
- await dialog.getByRole('button',{name:'Download',exact:true}).click();await dialog.getByText(/Queued model-Q4_K_M.gguf and 1 companion file/).waitFor();
+ await dialog.getByLabel('Save to').selectOption('archive');
+ assert.match(await dialog.getByTestId('download-target').innerText(),/\/mnt\/user\/ai-models\/archive/);
+ await dialog.getByRole('button',{name:'Download',exact:true}).click();
+ assert.equal(downloadBodies.at(-1).target,'archive');await dialog.getByText(/Queued model-Q4_K_M.gguf and 1 companion file/).waitFor();
  await dialog.getByRole('button',{name:'Set up this model'}).click();
  await dialog.getByRole('heading',{name:'new-model-Q4_K_M',level:3}).waitFor();assert.ok(await dialog.getByText('Defaults from the model file.').isVisible());
 

@@ -15,6 +15,10 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'downloa
   const [repo, setRepo] = useState<{ repo: string; groups: Group[]; gated?: string; error?: string } | null>(null), [repoBusy, setRepoBusy] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]), [message, setMessage] = useState('');
   const finished = useRef(new Set<string>());
+  const [targets, setTargets] = useState<{ id: string; label: string; path: string }[]>([]), [saveTo, setSaveTo] = useState('');
+  useEffect(() => { void mm<{ targets: { id: string; label: string; path: string }[] }>('download-targets').then(v => setTargets(v.targets || [])).catch(() => undefined); }, []);
+  const [target, setTarget] = useState<{ path: string; hostPath?: string | null; disk?: { freeH: string } | null } | null>(null);
+  useEffect(() => { void mm<{ modelsDir?: { path: string; hostPath?: string | null; disk?: { freeH: string } | null } }>('overview').then(v => setTarget(v.modelsDir || null)).catch(() => undefined); }, []);
   const [registered, setRegistered] = useState<Set<string>>(new Set());
   const search = async (term = q) => {
     setSearching(true); setError('');
@@ -58,11 +62,13 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'downloa
   useEffect(() => { if (!active) return; const t = setInterval(() => void refreshJobs(), 1500); return () => clearInterval(t); }, [active]);
   const download = async (body: Record<string, unknown>, label: string) => {
     setMessage(''); setError('');
-    try { const v = await mm<{ queued: string[] }>('downloads', { body }); setMessage(`Queued ${label}${v.queued.length > 1 ? ` and ${v.queued.length - 1} companion file${v.queued.length > 2 ? 's' : ''} (vision projector or prediction head)` : ''}.`); await refreshJobs(); }
+    try { const v = await mm<{ queued: string[] }>('downloads', { body: { ...body, target: saveTo } }); setMessage(`Queued ${label}${v.queued.length > 1 ? ` and ${v.queued.length - 1} companion file${v.queued.length > 2 ? 's' : ''} (vision projector or prediction head)` : ''}.`); await refreshJobs(); }
     catch (e) { setError(errorText(e, 'Download could not start')); }
   };
   return <div className="mm-tab">
     <p className="mm-lede">Search Hugging Face for GGUF models. Each file is fetched as eight parallel parts and resumes after a restart. A model's vision projector is downloaded with it.</p>
+    {target && <p className="mm-note" data-testid="download-target">Downloads go to <strong className="mm-mono">{saveTo ? `${target.hostPath || target.path}/${saveTo}` : target.hostPath || target.path}</strong>{target.disk && !saveTo ? ` · ${target.disk.freeH} free` : ''}. The engine reads this whole folder; other shares appear here once they are mounted inside it.</p>}
+    {targets.length > 1 && <label className="mm-select mm-save-to">Save to<select value={saveTo} onChange={e => setSaveTo(e.target.value)}>{targets.map(t => <option key={t.id} value={t.id}>{t.id ? t.label : 'Models folder (default)'}</option>)}</select></label>}
     <HfToken/>
     <p className="mm-note" role="status">{searching ? 'Searching Hugging Face…' : q.trim() ? `Results for “${q.trim()}”.` : 'Type in the search box above to find a model.'}</p>
     {error && <p role="alert" className="modal-err">{error}</p>}
@@ -79,7 +85,7 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'downloa
         </button>
       </li>)}
     </ul>}
-    <UrlImport onQueued={() => void refreshJobs()}/>
+    <UrlImport target={saveTo} onQueued={() => void refreshJobs()}/>
   </div>;
 }
 
@@ -171,9 +177,9 @@ function HfToken() {
     </div></details>;
 }
 
-function UrlImport({ onQueued }: { onQueued: () => void }) {
+function UrlImport({ onQueued, target }: { onQueued: () => void; target: string }) {
   const [url, setUrl] = useState(''), [name, setName] = useState(''), [error, setError] = useState('');
-  const go = async () => { setError(''); try { await mm('downloads', { body: { url, filename: name } }); setUrl(''); setName(''); onQueued(); } catch (e) { setError(errorText(e, 'Could not queue the URL')); } };
+  const go = async () => { setError(''); try { await mm('downloads', { body: { url, filename: name, target } }); setUrl(''); setName(''); onQueued(); } catch (e) { setError(errorText(e, 'Could not queue the URL')); } };
   return <details className="mm-disclosure"><summary>Download from a direct URL</summary><div className="mm-form">
     <label>File URL<input value={url} placeholder="https://…/model.gguf" onChange={e => setUrl(e.target.value)}/></label>
     <label>Save as (optional)<input value={name} placeholder="model-Q4_K_M.gguf" onChange={e => setName(e.target.value)}/></label>
