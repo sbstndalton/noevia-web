@@ -3,6 +3,7 @@ import { sourceRefresher } from './source-refresh';
 import { sourceRefreshIssues } from './source-status';
 import { useAppearance } from './useAppearance';
 import { useModelsChanged } from './models-changed';
+import { modelChoiceLabel } from './model-guidance';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import {
@@ -67,6 +68,7 @@ export default function App(): JSX.Element {
   const [freeChats, setFreeChats] = useState<ChatMeta[]>([]);
   const [messagesByChat, setMessagesByChat] = useState<Record<string, Message[]>>({});
   const [models, setModels] = useState<InstalledModel[]>([]);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [projectError, setProjectError] = useState<string | null>(null);
   const pendingFirstSend = useRef<{ chatId: string; projectId: string; text: string } | null>(null);
@@ -114,6 +116,7 @@ export default function App(): JSX.Element {
     fetchInstalledModels()
       .then((list) => {
         setModels(list);
+        setModelsLoaded(true);
         setModelsError(null);
       })
       .catch(() => setModelsError('Model manager unavailable or disabled.'));
@@ -777,7 +780,7 @@ export default function App(): JSX.Element {
 
       {view.kind === 'project' && activeProject && (
         <ProjectView
-          modelLabel={activeProject.routing === 'auto' ? 'Auto (Fast/Smart)' : activeProject.model || models.find(m => m.loaded)?.name || 'local model'}
+          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null)}
           onOpenModels={() => setPopupOpen(true)}
           project={activeProject}
           streamingChats={streamingChats}
@@ -798,11 +801,8 @@ export default function App(): JSX.Element {
           chatId={view.chatId}
           title={activeChatMeta?.title ?? (view.projectId ? 'New task' : 'New chat')}
           projectName={activeProject?.name ?? null}
-          modelLabel={
-            activeProject?.routing === 'auto'
-              ? 'Auto (Fast/Smart)'
-              : activeProject?.model ?? models.find((m) => m.loaded)?.name ?? 'local model'
-          }
+          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null)}
+          installedModels={modelsLoaded && !modelsError ? models : null}
           messages={messages}
           onEditMessage={editAndResend}
           streaming={view.kind === 'chat' ? !!streamingChats[view.chatId] : false}

@@ -3,11 +3,12 @@ import { useChatScroll } from '../useChatScroll';
 import { ReasoningControl } from './ReasoningControl';
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import type { Message, MessageStats, ToolCallView, Project } from '../types';
+import type { Message, MessageStats, ToolCallView, Project, InstalledModel } from '../types';
 import { ChevronLeft, SendIcon, SlidersIcon } from './Icons';
 import { ComposerModel } from './ComposerModel';
 import { MarkdownPreview } from './DiaryModal';
 import { ModelPopup } from './ModelPopup';
+import { modelChoiceLabel } from '../model-guidance';
 import { ComposerActions } from './ComposerActions';
 import { apiFetch, decideToolApproval } from '../api';
 
@@ -17,6 +18,7 @@ interface ChatViewProps {
   title: string;
   projectName: string | null;
   modelLabel: string;
+  installedModels?: InstalledModel[] | null;
   messages: Message[];
   streaming: boolean;
   inferenceUp?: boolean | null;
@@ -153,6 +155,7 @@ export function ChatView({
   onProjectChanged,
   projectName,
   modelLabel,
+  installedModels,
   messages,
   streaming,
   inferenceUp = null,
@@ -205,7 +208,7 @@ export function ChatView({
 
 
   const openModels = () => { if (!project && freeContext) setFreeModels(true); else onOpenModels(); };
-  if (!project && freeContext) modelLabel = freeContext.routing === 'auto' ? 'Auto (Fast/Smart)' : freeContext.model || modelLabel;
+  if (!project && freeContext) modelLabel = freeContext.routing === 'auto' || freeContext.model ? modelChoiceLabel(freeContext, installedModels ?? null) : modelLabel;
   const submit = () => {
     const text = draft.trim();
     if (!text || streaming || actionBusy) return;

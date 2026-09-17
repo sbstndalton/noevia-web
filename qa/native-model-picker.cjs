@@ -51,7 +51,27 @@ const {createFixture}=require('./diary-fixture.cjs');
   await page.screenshot({path:`/tmp/noevia-native-picker-${width}-${theme}.png`});
   await page.close();
  }
+ // A model deleted elsewhere: the composer stops naming it as the selection.
+ {
+  const page=await browser.newPage({viewport:{width:1440,height:900}});page.on('pageerror',e=>errors.push(e.message));
+  const project={id:'synthetic-native-context',name:'Synthetic',model:'Cold chat',routing:'manual',files:[],assets:[],toolboxes:['core']};
+  let installed=[{name:'Cold chat',labels:[],loaded:false}];
+  await page.route('**/api/chats/*/context',r=>r.fulfill({json:{project}}));
+  await page.route('**/api/models/installed',r=>r.fulfill({json:installed}));
+  await page.goto('http://localhost:31334');
+  await page.getByRole('button',{name:'Choose model'}).filter({hasText:'Cold chat'}).waitFor();
+  installed=[];
+  await page.evaluate(()=>window.dispatchEvent(new Event('noevia:models-changed')));
+  await page.getByRole('button',{name:'Choose model'}).filter({hasText:'No model selected'}).waitFor();
+  await page.screenshot({path:'/tmp/noevia-native-picker-deleted.png'});
+  // An unreadable catalogue must not claim the model is gone.
+  await page.unroute('**/api/models/installed');
+  await page.route('**/api/models/installed',r=>r.fulfill({status:502,json:{error:'synthetic outage'}}));
+  await page.reload();
+  await page.getByRole('button',{name:'Choose model'}).filter({hasText:'Cold chat'}).waitFor();
+  await page.close();
+ }
  assert.deepEqual(errors,[]);assert.equal(fixture.requests.length,0);
- console.log('PASS chat model panel: auto summary with a settings link, manual list excluding embedding/reranking, tools kept, roles/loaded/MTP absent, three widths and both themes.');
+ console.log('PASS chat model panel: auto summary with a settings link, manual list excluding embedding/reranking, tools kept, roles/loaded/MTP absent, three widths and both themes; deleted model reads No model selected, unreadable catalogue does not.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

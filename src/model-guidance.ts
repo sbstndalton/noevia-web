@@ -18,3 +18,19 @@ export function matchesModelUse(labels: string[], use: ModelUse): boolean {
   const allowed={vision:/^(vision|multimodal)$/i,reasoning:/^(reasoning|thinking)$/i,tools:/^(tools|tool-use|tool_use|function-calling)$/i};
   return labels.some(label=>allowed[use].test(label));
 }
+
+/** Composer/header label for a project or chat's model choice. `installed` is
+ *  null while the local catalogue is unknown (not fetched, manager disabled or
+ *  failing) — only a successfully fetched list may declare a model missing.
+ *  Models on a non-default provider aren't in that catalogue, so never flagged. */
+export function modelChoiceLabel(
+  choice: { routing?: string; model?: string; provider?: string } | null | undefined,
+  installed: { name: string; loaded?: boolean }[] | null,
+): string {
+  if (choice?.routing === 'auto') return 'Auto (Fast/Smart)';
+  if (choice?.model) {
+    if (!choice.provider && installed && !installed.some(m => m.name === choice.model)) return 'No model selected';
+    return choice.model;
+  }
+  return installed?.find(m => m.loaded)?.name ?? 'local model';
+}
