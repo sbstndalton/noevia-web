@@ -237,7 +237,24 @@
    icon-only buttons 1–2px high and icons beside text off their line. Icon-only buttons
    centre a block SVG with no line box; icons beside text centre on it. Flex and grid
    controls, which already centre their children, are unaffected. */
+/* Only true icon-only buttons are centred: CSS cannot see text nodes, so "the SVG is the
+   only child element" also matched icon + text buttons and pushed their icon to the middle
+   (user review, 2026-09-18). Icon-only buttons carry an aria-label; icon + text buttons keep
+   their icon at the start and only centre it vertically on the text. */
 :is(button, summary, [role='button']) > svg { flex-shrink: 0; vertical-align: middle; }
-:is(button, [role='button']):has(> svg:only-child) { line-height: 0; }
-:is(button, [role='button']) > svg:only-child { display: block; margin: auto; }
-.coding-composer-footer button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+:is(button, [role='button'])[aria-label]:has(> svg:only-child) { line-height: 0; }
+:is(button, [role='button'])[aria-label] > svg:only-child { display: block; margin: auto; }
+.coding-composer-footer button { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ── Row options on hover, like ChatGPT's (user review, 2026-09-18) ────────────
+   The options were laid over the end of the title on a transparent background, so the
+   title showed through them. They are now in the row's own flow: hidden until the row is
+   hovered or focused, then the title makes room and ends in an ellipsis. Touch screens,
+   which have no hover, always show them (noevia.css). */
+@media (hover: hover) {
+  .app .sidebar.pane :is(.proj-row, .chat-row) .row-actions { position: static; display: none; opacity: 1; background: none; pointer-events: auto; flex: none; }
+  .app .sidebar.pane :is(.proj-row, .chat-row):is(:hover, :has(:focus-visible), :has([aria-expanded='true'])) .row-actions { display: flex; }
+  .app .sidebar.pane :is(.proj-row, .chat-row) > :is(button, .nav-item, .project-disclosure, .nested-chat-title):not(.row-action) { min-width: 0; flex: 1 1 auto; }
+}
+/* One hover highlight per row (the row's), not a second, darker one on the title alone. */
+.app .sidebar.pane :is(.proj-row, .chat-row) :is(.nav-item, .project-disclosure, .nested-chat-title):hover { background: transparent; }

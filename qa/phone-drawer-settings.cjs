@@ -29,7 +29,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
    const plugins=page.getByRole('button',{name:'Plugins',exact:true});await plugins.scrollIntoViewIfNeeded();
    await plugins.evaluate((el,t)=>{const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);if(!el.contains(hit))throw Error(t+': Plugins covered by '+(hit?.className||hit?.tagName));},`${tag} ${label}`);};
   await open();await drawer.waitFor();await check('from chat');
-  const opts=page.getByRole('button',{name:'Options for Synthetic recent7',exact:true});await opts.scrollIntoViewIfNeeded();
+  const orow=page.locator('.chat-row').filter({hasText:'Synthetic recent7'});await orow.scrollIntoViewIfNeeded();if(!touch)await orow.hover();const opts=page.getByRole('button',{name:'Options for Synthetic recent7',exact:true});
   const before=await page.locator('.sidebar').evaluate(el=>el.scrollTop);await opts.click();
   const menu=page.getByRole('menu');await menu.waitFor();
   const m=await menu.evaluate(el=>{const r=el.getBoundingClientRect();const items=[...el.querySelectorAll('[role=menuitem]')].map(i=>{const q=i.getBoundingClientRect();return i.contains(document.elementFromPoint(q.x+q.width/2,q.y+q.height/2));});return {r:[r.left,r.top,r.right,r.bottom,innerWidth,innerHeight],inside:r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight,items};});
@@ -223,7 +223,14 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.deepEqual((await menu.getByRole('menuitemradio').allInnerTexts()).map(t=>t.split('\n')[0]),['Auto','Low','Standard','High']);
   await menu.getByRole('menuitemradio',{name:/^High/}).click();await menu.waitFor({state:'hidden'});
   await page.waitForFunction(()=>true);assert.deepEqual(saved.at(-1),{reasoningEffort:'high'},'choosing High saves it');
-  assert.deepEqual(await centred(),[],'icon-only buttons are centred');assert.deepEqual(await glyphs(),[],'no text-glyph icons');
+  assert.deepEqual(await centred(),[],'icon-only buttons are centred');
+  assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('button')].filter(b=>{const s=b.querySelector(':scope > svg');return s&&b.innerText.trim()&&getComputedStyle(s).display==='block'&&getComputedStyle(s).marginLeft!=='0px';}).map(b=>b.innerText.trim())),[],'icon + text buttons keep the icon at the start');assert.deepEqual(await glyphs(),[],'no text-glyph icons');
+  // Hover options sit beside the title, like ChatGPT's, never over it.
+  await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[],freeChats:[{id:'h0',title:'Synthetic chat with a deliberately long title that must fade',updatedAt:2,messages:[]}]}}));
+  await page.reload();await page.getByPlaceholder('Message noevia…').waitFor();
+  const hrow=page.locator('.chat-row').first();await hrow.hover();
+  const ov=await hrow.evaluate(el=>{const l=el.querySelector('.sidebar-label').getBoundingClientRect(),a=el.querySelector('.row-actions').getBoundingClientRect();return {shown:a.width>0,overlap:l.right-a.left};});
+  assert.ok(ov.shown&&ov.overlap<=0.5,`hover options never cover the title ${JSON.stringify(ov)}`);
   await page.getByRole('button',{name:'Collapse navigation',exact:true}).click();
   await page.getByRole('button',{name:'Code',exact:true}).first().click();await page.getByPlaceholder(/Describe a task/).waitFor();
   assert.ok(await page.locator('.coding-sidebar').evaluate(e=>e.classList.contains('is-collapsed')),'Code keeps a closed sidebar closed');
@@ -233,6 +240,6 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.close();
  }
  assert.deepEqual(errors,[]);
- console.log('PASS phone drawer: full drawer from Diary, Diary with the top destinations, only the account row pinned, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop the sidebar is one scrolling plane with every chat, in each material; collapsed, it is an icon-only rail with the avatar at the bottom that survives a reload and expands from its empty space; light/dark is in the account menu with Search beside the account, the menu opens in full from the rail, and Code never blanks while loading; the composer + is a centred SVG without a duplicate model entry, Thinking is a menu of levels, a closed sidebar stays closed across Chat and Code, and no icon is a text glyph.');
+ console.log('PASS phone drawer: full drawer from Diary, Diary with the top destinations, only the account row pinned, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop the sidebar is one scrolling plane with every chat, in each material; collapsed, it is an icon-only rail with the avatar at the bottom that survives a reload and expands from its empty space; light/dark is in the account menu with Search beside the account, the menu opens in full from the rail, and Code never blanks while loading; the composer + is a centred SVG without a duplicate model entry, Thinking is a menu of levels, a closed sidebar stays closed across Chat and Code, and no icon is a text glyph; icon + text buttons keep their icon at the start and hover options never cover a title.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
