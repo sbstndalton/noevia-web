@@ -19,7 +19,7 @@ export function AccountMenu({ onSettings }: { onSettings:(section?:'general'|'us
     return()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',key);};
   },[open]);
   return <div className="account-area" ref={ref}>
-    {open&&<div className="account-popover" aria-label="Account options"><div className="account-popover-head"><strong>{name}</strong><span>Personal workspace</span></div>
+    {open&&<div className="account-popover overlay" aria-label="Account options"><div className="account-popover-head"><strong>{name}</strong><span>Personal workspace</span></div>
       <button onClick={()=>{setOpen(false);onSettings();}}><ShellIcon name="settings"/>Settings</button>
       <button onClick={()=>{setOpen(false);onSettings('usage');}}><ShellIcon name="grid"/>Usage &amp; activity</button>
       <div className="account-divider"/>

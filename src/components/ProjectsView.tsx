@@ -92,7 +92,7 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
             {visibleProjects              .map((p) => (
               <div
                 key={p.id}
-                className="project-card"
+                className="project-card surface"
                 onClick={() => onOpenProject(p.id)}
                 role="button"
                 tabIndex={0}
@@ -196,7 +196,7 @@ function CreateProjectModal({
 
   return (
     <dialog ref={dialog} className="modal-overlay native-modal" aria-label="Create a project" onCancel={(e) => { e.preventDefault(); onClose(); }} onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-card aero dialog-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h2>Create a project</h2>
           <CloseButton onClick={onClose}/>

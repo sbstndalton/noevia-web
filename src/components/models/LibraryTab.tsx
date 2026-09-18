@@ -108,7 +108,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
   const state = m.failed ? 'failed' : m.loaded ? 'loaded' : 'unloaded';
   useEffect(() => { if (open && file && !detail) void mm<Detail>(`models/detail?key=${encodeURIComponent(file.key)}`).then(setDetail).catch(() => {}); }, [open, file, detail]);
   const model = detail?.summary?.model || {};
-  return <article className="model-card" data-state={state} aria-label={m.name}>
+  return <article className="model-card surface" data-state={state} aria-label={m.name}>
     <header className="model-card-head"><h3 className="model-card-name">{m.name}</h3><span className="model-card-state">{m.failed ? 'Failed to load' : m.loaded ? 'Loaded' : 'Unloaded'}</span></header>
     <p className="model-card-meta">
       {(file?.size || m.sizeGB != null) && <span>{file?.size || `${m.sizeGB} GB`}</span>}

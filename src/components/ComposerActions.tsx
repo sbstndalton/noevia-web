@@ -84,7 +84,7 @@ export function ComposerActions({ project, disabled, onChanged, onModels, onBusy
   }}>
     <button ref={trigger} type="button" className="composer-add" aria-label="Add files and tools" aria-expanded={open} aria-controls={panelId} disabled={disabled || saving} onClick={() => setOpen(!open)}>+</button>
     <input ref={input} hidden type="file" multiple onChange={event => { const files = Array.from(event.target.files || []); event.target.value = ''; void upload(files); }} />
-    {open && <div id={panelId} className="composer-actions-panel" style={menuLayout} role="region" aria-label="Files and tools">
+    {open && <div id={panelId} className="composer-actions-panel overlay" style={menuLayout} role="region" aria-label="Files and tools">
       {header}
       <span className="composer-menu-label">{diary ? 'Optional diary context' : chatOnly ? 'Add to chat' : 'Add to project'}</span>
       <button type="button" disabled={!project} onClick={() => input.current?.click()}>＋ <span>Files and photos<small>25 MB · PDF reduction up to 60 MB · {diary ? 'separate attachment storage' : chatOnly ? 'saved with this chat' : 'saved to project storage'}</small></span></button>

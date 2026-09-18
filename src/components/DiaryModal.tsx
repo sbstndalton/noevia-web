@@ -4,7 +4,7 @@ import { CloseButton } from './CloseButton';
 export function DiaryModal({ title, onClose, children, className = '' }: { className?: string; title: string; onClose: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => { const previous = document.activeElement as HTMLElement; ref.current?.showModal(); return () => { ref.current?.close(); previous?.focus(); }; }, []);
-  return <dialog ref={ref} className={`diary-modal ${className}`} aria-label={title} onCancel={e => { e.preventDefault(); onClose(); }}>
+  return <dialog ref={ref} className={`diary-modal aero dialog-sheet ${className}`} aria-label={title} onCancel={e => { e.preventDefault(); onClose(); }}>
     <header><h2>{title}</h2><CloseButton onClick={onClose} label="Close dialog"/></header>
     {children}
   </dialog>;

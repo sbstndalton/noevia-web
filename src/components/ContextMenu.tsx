@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
+import { ShellIcon } from './ShellIcon';
 
 export interface MenuItem {
   label: string;
@@ -8,6 +9,8 @@ export interface MenuItem {
   danger?: boolean;
   separator?: boolean;
   icon?: ReactNode;
+  /** A choice in a set of choices: rendered as a checked menu item, not as a label prefix. */
+  selected?: boolean;
 }
 
 /** A menu anchored to a viewport point. Position is fixed because the sidebar
@@ -79,15 +82,19 @@ export function ContextMenu({
   }, []);
 
   return (
-    <div className="ctx-menu" role="menu" ref={ref} style={{ top: pos.y, left: pos.x }}>
+    <div className="ctx-menu overlay" role="menu" ref={ref} style={{ top: pos.y, left: pos.x }}>
       {items.map((it, i) => (
         <button
           key={i}
-          role="menuitem"
+          role={it.selected === undefined ? 'menuitem' : 'menuitemradio'}
+          aria-checked={it.selected === undefined ? undefined : it.selected}
           className={`ctx-item${it.danger ? ' is-danger' : ''}${it.separator ? ' has-separator' : ''}`}
           onClick={() => { onClose(); it.onSelect(); }}
         >
-          {it.icon}<span>{it.label}</span>
+          {/* Every row keeps the symbol column, so labels line up whether or not this
+              particular item has one. */}
+          {it.icon ?? (it.selected ? <ShellIcon name="check"/> : <span className="ctx-item-gap" aria-hidden="true"/>)}
+          <span>{it.label}</span>
         </button>
       ))}
     </div>
@@ -123,7 +130,7 @@ export function ConfirmDialog({
   }, []);
   return (
     <dialog
-      className="confirm-dialog"
+      className="confirm-dialog aero dialog-sheet"
       ref={ref}
       aria-label={title}
       onCancel={(e) => { e.preventDefault(); onCancel(); }}

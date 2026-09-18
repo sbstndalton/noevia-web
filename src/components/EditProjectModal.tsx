@@ -58,7 +58,7 @@ export function EditProjectModal({
 
   return (
     <dialog
-      className="edit-project-modal"
+      className="edit-project-modal aero dialog-sheet"
       ref={ref}
       aria-label={`Edit ${project.name}`}
       onCancel={(e) => { e.preventDefault(); onClose(); }}

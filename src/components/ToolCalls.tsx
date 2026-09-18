@@ -2,6 +2,11 @@ import type { JSX } from 'react';
 import type { ToolCallView } from '../types';
 import { useState } from 'react';
 import { decideToolApproval } from '../api';
+import { ShellIcon } from './ShellIcon';
+
+/** One drawn symbol per outcome — the list used ✓ and ⃠, which render differently on
+ *  every platform and are not part of the icon set. */
+const STATE_ICON: Record<string, string> = { done: 'check', declined: 'ban', 'not run': 'ban', running: 'refresh-cw' };
 
 export const TOOL_RESULT_LIMIT = 4000;
 
@@ -94,7 +99,7 @@ export function ToolCalls({ calls }: { calls: ToolCallView[] }): JSX.Element {
                 <li key={i} className={`tool-call is-${state.replace(' ', '-')}`}>
                   <details>
                     <summary>
-                      <span className="tool-call-state" aria-label={state}>{state === 'done' ? '✓' : state === 'declined' || state === 'not run' ? '⃠' : '…'}</span>
+                      <span className="tool-call-state" role="img" aria-label={state}><ShellIcon name={STATE_ICON[state]} size={14}/></span>
                       <span className="tool-call-name">{c.name || 'tool'}</span>
                       {preview && <span className="tool-call-preview">{preview}</span>}
                     </summary>

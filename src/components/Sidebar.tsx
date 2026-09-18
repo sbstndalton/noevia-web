@@ -209,7 +209,7 @@ export function Sidebar({
     const index=peers.findIndex(x=>x.id===p.id);
     return [-1,1].flatMap(direction=>{
       const neighbor=peers[index+direction];
-      return neighbor ? [{label:direction<0?'Move up':'Move down',onSelect:()=>setOrder(prev=>({...prev,order:moveProject(sortedProjects.map(x=>x.id),p.id,neighbor.id)}))}] : [];
+      return neighbor ? [{label:direction<0?'Move up':'Move down',icon:<ShellIcon name={direction<0?'arrow-up':'arrow-down'}/>,onSelect:()=>setOrder(prev=>({...prev,order:moveProject(sortedProjects.map(x=>x.id),p.id,neighbor.id)}))}] : [];
     });
   };
 
@@ -220,6 +220,7 @@ export function Sidebar({
     { icon:<ShellIcon name="pin"/>, separator:true, label: p.pinned ? 'Unpin' : 'Pin', onSelect: () => onPatchProject(p.id, { pinned: !p.pinned }) },
     {
       label: 'Archive',
+      icon:<ShellIcon name="archive"/>,
       onSelect: () =>
         setConfirm({
           title: `Archive ${p.name}?`,
@@ -230,6 +231,7 @@ export function Sidebar({
     },
     {
       label: 'Delete project',
+      icon:<ShellIcon name="trash"/>,
       danger: true,
       onSelect: () =>
         setConfirm({
@@ -243,14 +245,16 @@ export function Sidebar({
   ];
 
   const chatMenu = (c: ChatMeta): MenuItem[] => [
-    { label: c.pinned ? 'Unpin' : 'Pin', onSelect: () => onPatchChat(c.projectId ?? null, c.id, { pinned: !c.pinned }) },
-    { label: 'Rename', onSelect: () => startRename(c.id, c.title || '', menu?.source) },
+    { label: c.pinned ? 'Unpin' : 'Pin', icon:<ShellIcon name="pin"/>, onSelect: () => onPatchChat(c.projectId ?? null, c.id, { pinned: !c.pinned }) },
+    { label: 'Rename', icon:<ShellIcon name="edit"/>, onSelect: () => startRename(c.id, c.title || '', menu?.source) },
     {
       label: 'Archive',
+      icon:<ShellIcon name="archive"/>,
       onSelect: () => onPatchChat(c.projectId ?? null, c.id, { archived: true }),
     },
     {
       label: 'Delete chat',
+      icon:<ShellIcon name="trash"/>,
       danger: true,
       onSelect: () =>
         setConfirm({
@@ -418,8 +422,8 @@ export function Sidebar({
         );
       })()}
       {sorting && <ContextMenu at={sorting} onClose={()=>setSorting(null)} items={[
-        {label:`${order.sort==='recent'?'✓ ':''}Last used`,onSelect:()=>setOrder(prev=>({...prev,sort:'recent'}))},
-        {label:`${order.sort==='manual'?'✓ ':''}Manual order`,onSelect:()=>setOrder(prev=>({...prev,sort:'manual',order:prev.order.length ? prev.order : sortedProjects.map(p=>p.id)}))},
+        {label:'Last used',selected:order.sort==='recent',onSelect:()=>setOrder(prev=>({...prev,sort:'recent'}))},
+        {label:'Manual order',selected:order.sort==='manual',onSelect:()=>setOrder(prev=>({...prev,sort:'manual',order:prev.order.length ? prev.order : sortedProjects.map(p=>p.id)}))},
       ]}/>}
       {menu && (
         <ContextMenu

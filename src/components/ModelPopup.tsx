@@ -34,7 +34,7 @@ export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged
   return (
     <dialog ref={dialog} className="native-modal model-dialog-backdrop" aria-label="Model and tools"
       onCancel={(e) => { e.preventDefault(); onClose(); }} onClick={onClose}>
-      <div className="mp-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="mp-panel aero dialog-sheet" onClick={(e) => e.stopPropagation()}>
         <header className="mp-head">
           <h2>{activeProject ? activeProject.name : 'Model'}</h2>
           <button className="popup-tab" onClick={() => openSettings()}>Model settings</button>
