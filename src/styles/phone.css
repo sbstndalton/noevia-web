@@ -391,3 +391,18 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
   .app .sidebar.pane .chat-row > .nav-item { gap: calc(44px - var(--row-inset) - 18px + var(--row-gap)); }
 }
 .app .sidebar.pane .proj-row > .project-expand > svg { margin: 0; }
+
+/* ── The composer shows focus, not the text area inside it (user review, 2026-09-18) ──
+   Text fields always match :focus-visible, so the global focus outline drew a square ring
+   inside the rounded composer. The composer itself takes a soft accent ring instead. */
+/* !important: noevia.css sets the global :focus-visible ring with !important. */
+.app :is(.composer-inner, .coding-composer) :is(.composer-input, textarea):is(:focus, :focus-visible) { outline: none !important; box-shadow: none; }
+.composer-inner.pane:has(:is(.composer-input, textarea):focus-visible) { box-shadow: 0 0 0 2px color-mix(in srgb, var(--md-primary) 45%, transparent), var(--shadow-2); }
+.coding-composer:has(textarea:focus-visible) { box-shadow: 0 0 0 2px color-mix(in srgb, var(--md-primary) 45%, transparent); }
+
+/* ── Software keyboard (user review, 2026-09-18) ────────────────────────────────
+   When a field is focused iOS shrinks the visible viewport and also scrolls the page up by
+   visualViewport.offsetTop. The app already shrank to the visible height; it now also moves
+   down by that offset (viewport.js), so it covers exactly what is visible instead of sliding
+   half off the top and leaving a blank band where the keyboard is. */
+.app { position: relative; top: var(--visible-viewport-top, 0px); }
