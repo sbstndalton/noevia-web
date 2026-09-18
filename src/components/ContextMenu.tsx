@@ -12,6 +12,8 @@ export interface MenuItem {
   icon?: ReactNode;
   /** A choice in a set of choices: rendered as a checked menu item, not as a label prefix. */
   selected?: boolean;
+  /** A second, muted line under the label (Claude's model menu: name, then what it is for). */
+  description?: string;
 }
 
 /** A menu anchored to a viewport point. Position is fixed because the sidebar
@@ -24,10 +26,15 @@ export function ContextMenu({
   at,
   items,
   onClose,
+  placement = 'below',
+  label,
 }: {
   at: { x: number; y: number };
   items: MenuItem[];
   onClose: () => void;
+  /** 'above' opens upward from `at` (a composer control near the bottom of the screen). */
+  placement?: 'below' | 'above';
+  label?: string;
 }): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState(at);
@@ -43,9 +50,10 @@ export function ContextMenu({
       const r = el.getBoundingClientRect();
       const viewport = window.visualViewport;
       const height = viewport && viewport.scale === 1 ? viewport.height : window.innerHeight;
+      const y = placement === 'above' ? at.y - r.height - 6 : at.y;
       setPos({
         x: Math.max(8, Math.min(at.x, window.innerWidth - r.width - 8)),
-        y: Math.max(8, Math.min(at.y, height - r.height - 8)),
+        y: Math.max(8, Math.min(y, height - r.height - 8)),
       });
     };
     place();
@@ -55,7 +63,7 @@ export function ContextMenu({
       window.removeEventListener('resize', place);
       window.visualViewport?.removeEventListener('resize', place);
     };
-  }, [at.x, at.y]);
+  }, [at.x, at.y, placement]);
 
   useEffect(() => {
     const down = (e: PointerEvent) => {
@@ -85,7 +93,7 @@ export function ContextMenu({
   }, []);
 
   return createPortal(
-    <div className="ctx-menu overlay" role="menu" ref={ref} style={{ top: pos.y, left: pos.x }}>
+    <div className={`ctx-menu overlay${items.some((it) => it.description) ? ' has-descriptions' : ''}`} role="menu" aria-label={label} ref={ref} style={{ top: pos.y, left: pos.x, visibility: pos === at && placement === 'above' ? 'hidden' : undefined }}>
       {items.map((it, i) => (
         <button
           key={i}
@@ -96,8 +104,9 @@ export function ContextMenu({
         >
           {/* Every row keeps the symbol column, so labels line up whether or not this
               particular item has one. */}
-          {it.icon ?? (it.selected ? <ShellIcon name="check"/> : <span className="ctx-item-gap" aria-hidden="true"/>)}
-          <span>{it.label}</span>
+          {it.description
+            ? <><span className="ctx-item-text">{it.label}<small>{it.description}</small></span><span className="ctx-item-check" aria-hidden="true">{it.selected && <ShellIcon name="check"/>}</span></>
+            : <>{it.icon ?? (it.selected ? <ShellIcon name="check"/> : <span className="ctx-item-gap" aria-hidden="true"/>)}<span>{it.label}</span></>}
         </button>
       ))}
     </div>,

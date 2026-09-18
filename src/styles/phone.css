@@ -172,3 +172,72 @@
 @media (pointer: coarse) { .app .sidebar.pane .side-footer-row .side-footer-search { width: 44px; height: 44px; } }
 /* The collapsed rail keeps its own Search at the top; the footer holds only the avatar. */
 @media (min-width: 601px) { .app .sidebar.pane.is-collapsed .side-footer-search { display: none; } .app .sidebar.pane.is-collapsed .side-footer-row { justify-content: center; } .app .sidebar.pane.is-collapsed .side-footer-row .account-area { flex: none; } }
+
+/* ── Composer controls (user review with Claude open, 2026-09-18) ────────────
+   Clickable things are liquid glass (the + joins the send button); the menus they open are
+   small aero overlays (.overlay). Icon-only controls are square with the SVG centred on a
+   grid, never a text glyph sitting on a baseline. */
+.composer-add.glass { display: inline-grid; place-items: center; width: 36px; height: 36px; min-width: 36px; padding: 0; border-radius: 50%; line-height: 0; color: var(--text-secondary); }
+.composer-add.glass > svg { display: block; }
+@media (pointer: coarse) { .composer-add.glass { width: 44px; height: 44px; min-width: 44px; } }
+.composer-actions-panel { padding: 6px; }
+.composer-actions-panel .composer-menu-row {
+  display: grid; grid-template-columns: 18px minmax(0, 1fr) 18px; align-items: center; column-gap: 10px;
+  width: 100%; min-height: 36px; padding: 6px 10px; border: 0; border-radius: var(--radius-sm);
+  background: none; color: var(--text-primary); font: inherit; font-size: var(--text-callout); text-align: left; cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+.composer-actions-panel .composer-menu-row > svg { color: var(--text-secondary); }
+.composer-actions-panel .composer-menu-row small { display: block; margin-top: 1px; font-size: var(--text-caption); color: var(--text-secondary); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.composer-actions-panel .composer-menu-row:hover:not(:disabled), .composer-actions-panel .composer-menu-row:focus-visible { background: var(--nav-hover); outline: none; }
+.composer-actions-panel .composer-menu-row:disabled { opacity: .45; cursor: default; }
+.composer-actions-panel .composer-menu-check { display: grid; place-items: center; color: var(--md-primary); }
+.composer-actions-panel .composer-menu-divider { height: 1px; margin: 6px 10px; background: var(--border-subtle); }
+.composer-actions-panel .composer-menu-label { padding: 6px 10px 2px; font-size: var(--text-caption); font-weight: 500; color: var(--text-secondary); }
+.composer-actions-panel .composer-menu-note { margin: 4px 10px 6px; font-size: var(--text-caption); color: var(--text-secondary); line-height: 1.45; }
+@media (pointer: coarse) { .composer-actions-panel .composer-menu-row { min-height: 44px; } }
+/* Thinking: a glass pill matching the model pill beside it — the setting, then its level muted. */
+.reasoning-control.is-menu { flex-direction: row; align-items: center; }
+.app .reasoning-pill.glass {
+  display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 4px 10px 4px 12px;
+  border-radius: var(--radius-pill); color: var(--text-primary); font: inherit; font-size: var(--text-footnote); white-space: nowrap; line-height: 1;
+}
+.app .reasoning-pill .reasoning-pill-value { color: var(--text-secondary); }
+.app .reasoning-pill > svg { display: block; color: var(--text-secondary); transition: transform var(--duration-fast) var(--ease-standard); }
+.app .reasoning-pill[aria-expanded='true'] > svg { transform: rotate(180deg); }
+@media (pointer: coarse) { .app .reasoning-pill.glass { min-height: 44px; } }
+/* Two-line menu rows (label + what it is for), a check on the right: Claude's model menu. */
+.ctx-menu.has-descriptions { min-width: 260px; max-width: 300px; }
+.ctx-menu.has-descriptions .ctx-item { display: grid; grid-template-columns: minmax(0, 1fr) 18px; align-items: center; column-gap: 12px; min-height: 48px; padding: 7px 10px; }
+.ctx-menu.has-descriptions .ctx-item-text { display: block; font-size: var(--text-callout); color: var(--text-primary); }
+.ctx-menu.has-descriptions .ctx-item-text small { display: block; margin-top: 2px; font-size: var(--text-caption); color: var(--text-secondary); line-height: 1.35; }
+.ctx-menu.has-descriptions .ctx-item-check { display: grid; place-items: center; color: var(--md-primary); }
+.ctx-menu.has-descriptions .ctx-item[aria-checked='true'] { background: var(--nav-hover); }
+
+/* Code workspace sidebar: the same collapse as chat's, sharing its remembered state. */
+.coding-sidebar .shell-sidebar-head { display: flex; align-items: center; gap: var(--space-2); }
+.coding-sidebar .shell-sidebar-head .side-expand { margin-left: auto; flex: none; }
+@media (min-width: 601px) {
+  .coding-sidebar.is-collapsed { width: 60px; min-width: 60px; padding: var(--space-3) 0; align-items: center; overflow: hidden; gap: 4px; cursor: e-resize; }
+  .coding-sidebar.is-collapsed :is(button, a) { cursor: pointer; }
+  .coding-sidebar.is-collapsed :is(.shell-sidebar-head strong, .preview-badge, .coding-projects, .coding-recents, .nav-item > span, .account-name, .account-trigger > svg) { display: none; }
+  .coding-sidebar.is-collapsed .shell-sidebar-head { justify-content: center; padding: 0 0 var(--space-2); }
+  .coding-sidebar.is-collapsed .shell-sidebar-head .side-expand { margin: 0; }
+  .coding-sidebar.is-collapsed nav { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
+  .coding-sidebar.is-collapsed :is(.side-expand, .nav-item) { width: 40px; height: 40px; min-height: 40px; padding: 0; justify-content: center; border-radius: var(--radius-md); }
+  .coding-sidebar.is-collapsed .app-mode-switch { display: flex; flex-direction: column; gap: 4px; width: 40px; padding: 0; margin: 0; border: 0; background: none; box-shadow: none; }
+  .coding-sidebar.is-collapsed .app-mode-switch button { width: 40px; height: 40px; min-height: 40px; padding: 0; justify-content: center; border: 0; border-radius: var(--radius-md); background: transparent; box-shadow: none; font-size: 0; }
+  .coding-sidebar.is-collapsed .app-mode-switch button.is-selected { background: var(--nav-active); }
+  .coding-sidebar.is-collapsed .account-area { margin-top: auto; display: flex; justify-content: center; }
+  .coding-sidebar.is-collapsed .account-trigger { width: 40px; height: 40px; padding: 0; justify-content: center; }
+}
+
+/* ── Icons in controls (user review, 2026-09-18: "some of them aren't centred") ──────
+   An inline SVG sits on the text baseline and gains descender space below it, which put
+   icon-only buttons 1–2px high and icons beside text off their line. Icon-only buttons
+   centre a block SVG with no line box; icons beside text centre on it. Flex and grid
+   controls, which already centre their children, are unaffected. */
+:is(button, summary, [role='button']) > svg { flex-shrink: 0; vertical-align: middle; }
+:is(button, [role='button']):has(> svg:only-child) { line-height: 0; }
+:is(button, [role='button']) > svg:only-child { display: block; margin: auto; }
+.coding-composer-footer button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }

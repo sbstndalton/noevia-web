@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ShellIcon } from '../ShellIcon';
 import { ago, errorText, mm, tokens } from './mm';
 
 type Prompt = { id: number; name: string; body: string };
@@ -141,7 +142,7 @@ function RateModel({ alias, runId, categories, badges, onChange }: { alias: stri
   return <div className="mm-rate">
     <strong>{alias}</strong>
     <span className="mm-badges">{badges.length ? badges.map(b => <span key={b.category} className="model-card-tag">{categories.find(c => c.key === b.category)?.label || b.category} {b.rating}/5
-      <button className="mm-link" aria-label={`Clear ${b.category} rating`} onClick={() => void mm(`badges?alias=${encodeURIComponent(alias)}&category=${b.category}`, { method: 'DELETE' }).then(onChange)}>×</button></span>) : <small>Not rated</small>}</span>
+      <button className="mm-link" aria-label={`Clear ${b.category} rating`} onClick={() => void mm(`badges?alias=${encodeURIComponent(alias)}&category=${b.category}`, { method: 'DELETE' }).then(onChange)}><ShellIcon name="close" size={14}/></button></span>) : <small>Not rated</small>}</span>
     <div className="mm-row">
       <label>Good at<select value={category} onChange={e => setCategory(e.target.value)}>{categories.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}</select></label>
       <label className="mm-grow">Note<input value={note} onChange={e => setNote(e.target.value)} placeholder="Optional"/></label>

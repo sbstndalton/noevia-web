@@ -198,7 +198,41 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   }
   await page.close();
  }
+
+ // Composer like Claude's: the + is a centred SVG and its menu no longer repeats the model;
+ // Thinking is a menu of levels. A closed sidebar stays closed across Chat ⇄ Code. No
+ // control uses a text glyph as its icon, and icon-only buttons are centred.
+ {
+  const page=await browser.newPage({viewport:{width:1360,height:820},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/api/features',r=>r.fulfill({json:{flags:{previews:true}}}));
+  await page.route('**/api/reasoning-settings*',r=>r.fulfill({json:{default:'default',effort:'default',mode:'hint',admin:true}}));
+  const saved=[];await page.route('**/api/projects/q0/config',r=>{saved.push(r.request().postDataJSON());return r.fulfill({json:{ok:true}});});
+  await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[{id:'q0',name:'Synthetic project q0',updatedAt:1000,files:[],assets:[],memories:[],instructions:'',goal:'',sourceFolders:[],chats:[],toolboxes:['core'],createdAt:1}],freeChats:[]}}));
+  await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
+  const centred=()=>page.evaluate(()=>[...document.querySelectorAll('button')].filter(b=>b.getBoundingClientRect().width>4&&!b.innerText.trim()&&b.querySelectorAll('svg').length===1).map(b=>{const r=b.getBoundingClientRect(),q=b.querySelector('svg').getBoundingClientRect();return {l:b.getAttribute('aria-label'),dx:Math.abs((q.left+q.width/2)-(r.left+r.width/2)),dy:Math.abs((q.top+q.height/2)-(r.top+r.height/2))};}).filter(x=>x.dx>1||x.dy>1));
+  const glyphs=()=>page.evaluate(()=>[...document.querySelectorAll('button, summary')].map(b=>b.innerText.trim()).filter(t=>/^[+＋✕×›‹→←↑↓◇▾]/.test(t)||/[✕×›◇▾]$/.test(t)));
+  await page.getByRole('button',{name:'Projects',exact:true}).first().click();await page.locator('.project-card').first().click();
+  const plus=page.getByRole('button',{name:'Add files and tools'});await plus.waitFor();
+  assert.equal(await plus.locator('svg').count(),1,'the + is an SVG');assert.equal((await plus.innerText()).trim(),'');
+  await plus.click();const panel=page.getByRole('region',{name:'Files and tools'});await panel.waitFor();
+  assert.equal(await panel.getByText(/model and routing/i).count(),0,'the + menu does not repeat the model control');
+  assert.ok(await panel.getByRole('button',{name:/Add files or photos/}).count(),'files first');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'Thinking effort',exact:true}).click();
+  const menu=page.getByRole('menu',{name:'Thinking effort'});await menu.waitFor();
+  assert.deepEqual((await menu.getByRole('menuitemradio').allInnerTexts()).map(t=>t.split('\n')[0]),['Auto','Low','Standard','High']);
+  await menu.getByRole('menuitemradio',{name:/^High/}).click();await menu.waitFor({state:'hidden'});
+  await page.waitForFunction(()=>true);assert.deepEqual(saved.at(-1),{reasoningEffort:'high'},'choosing High saves it');
+  assert.deepEqual(await centred(),[],'icon-only buttons are centred');assert.deepEqual(await glyphs(),[],'no text-glyph icons');
+  await page.getByRole('button',{name:'Collapse navigation',exact:true}).click();
+  await page.getByRole('button',{name:'Code',exact:true}).first().click();await page.getByPlaceholder(/Describe a task/).waitFor();
+  assert.ok(await page.locator('.coding-sidebar').evaluate(e=>e.classList.contains('is-collapsed')),'Code keeps a closed sidebar closed');
+  assert.deepEqual(await glyphs(),[],'no text-glyph icons in Code');
+  await page.getByRole('button',{name:'Chat',exact:true}).first().click();await page.getByPlaceholder(/Message/).first().waitFor();
+  assert.ok(await page.locator('.sidebar:not(.coding-sidebar)').evaluate(e=>e.classList.contains('is-collapsed')),'and Chat again');
+  await page.close();
+ }
  assert.deepEqual(errors,[]);
- console.log('PASS phone drawer: full drawer from Diary, Diary with the top destinations, only the account row pinned, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop the sidebar is one scrolling plane with every chat, in each material; collapsed, it is an icon-only rail with the avatar at the bottom that survives a reload and expands from its empty space; light/dark is in the account menu with Search beside the account, the menu opens in full from the rail, and Code never blanks while loading.');
+ console.log('PASS phone drawer: full drawer from Diary, Diary with the top destinations, only the account row pinned, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop the sidebar is one scrolling plane with every chat, in each material; collapsed, it is an icon-only rail with the avatar at the bottom that survives a reload and expands from its empty space; light/dark is in the account menu with Search beside the account, the menu opens in full from the rail, and Code never blanks while loading; the composer + is a centred SVG without a duplicate model entry, Thinking is a menu of levels, a closed sidebar stays closed across Chat and Code, and no icon is a text glyph.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

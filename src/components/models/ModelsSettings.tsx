@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ShellIcon } from '../ShellIcon';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, RouteRule } from '../../types';
 import { fetchAutoRoles, setAutoRoles as putAutoRoles } from '../../api';
@@ -47,7 +48,7 @@ export function ModelsSettings({ models, routes, projects, modelsError, initialM
 
   if (open) return <div className="mm-root">
     <div className="mm-detail-head">
-      <button className="modal-btn secondary" onClick={() => setOpen('')}>← All models</button>
+      <button className="modal-btn secondary" onClick={() => setOpen('')}><ShellIcon name="left" size={16}/>All models</button>
       <h1>{open}</h1>
     </div>
     <ConfigureTab initial={open} onSaved={changed} onSelect={setOpen} />

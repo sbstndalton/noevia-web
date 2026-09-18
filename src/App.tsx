@@ -1,4 +1,5 @@
 import { titleAfterSend } from './chat-title';
+import { ShellIcon } from './components/ShellIcon';
 import { sourceRefresher } from './source-refresh';
 import { sourceRefreshIssues } from './source-status';
 import { useAppearance } from './useAppearance';
@@ -1009,7 +1010,7 @@ export default function App(): JSX.Element {
       {projectError && (
         <div className="save-error" role="alert">
           <span>{projectError}</span>
-          <button onClick={() => setProjectError(null)} aria-label="Dismiss">✕</button>
+          <button onClick={() => setProjectError(null)} aria-label="Dismiss"><ShellIcon name="close" size={16}/></button>
         </div>
       )}
 

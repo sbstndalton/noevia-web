@@ -256,7 +256,7 @@ function CreateProjectModal({
                   className="modal-file-x"
                   onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
                 >
-                  ✕
+                  <ShellIcon name="close" size={16}/>
                 </button>
               </span>
             ))}

@@ -18,7 +18,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    await navClick(page,'Projects');await page.locator('.project-card').first().waitFor();
    found.push(...await measure(page,'.project-card-options, .projects-search'));
    await page.locator('.project-card').first().click();await page.getByRole('tab',{name:/Chats/}).waitFor();
-   found.push(...await measure(page,'.project-tabs [role=tab], .composer-add, .project-newchat, select[aria-label="Thinking effort"]'));
+   found.push(...await measure(page,'.project-tabs [role=tab], .composer-add, .project-newchat, [aria-label="Thinking effort"]'));
    // A reload returns to where you were, so recovering by reloading lands back on the
    // project rather than on a chat; go through the account menu instead.
    await page.getByTitle('Settings',{exact:true}).first().click().catch(async()=>{

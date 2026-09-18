@@ -198,7 +198,7 @@ export function ProjectView({
                         aria-label={`Delete ${c.title || 'chat'}`}
                         onClick={() => onDeleteChat(project.id, c.id)}
                       >
-                        ✕
+                        <ShellIcon name="close" size={16}/>
                       </button>
                     </li>
                   ))}

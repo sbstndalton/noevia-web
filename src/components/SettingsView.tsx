@@ -1,4 +1,5 @@
 import { McpStatus } from './McpStatus';
+import { ShellIcon } from './ShellIcon';
 import DiarySharing from './DiarySharing';
 import AppPasswords from './AppPasswords';
 import { ModelsSummary } from './models/ModelsSummary';
@@ -119,8 +120,8 @@ function SecurityCard(): JSX.Element {
   return <div>
     <div className="settings-title"><h1>Security and login</h1><p>Passkeys, signed-in sessions and app passwords for {user.username}.</p></div>
     <fieldset className="settings-action-group" disabled={!!busy || loading}><div className="card-list">
-      {passkeys.map(k => <div className="model-row" key={k.id}><span className="model-dot"/><div className="model-name-group"><span className="model-name">{k.name}</span><span className="model-quant">{k.backedUp ? 'synced passkey' : k.deviceType}</span></div><button className="recents-del" aria-label={`Remove passkey ${k.name}`} onClick={() => void act('Remove passkey', () => removePasskey(k.id), 'Passkey removed.')}>✕</button></div>)}
-      <button className="modal-btn secondary" onClick={() => void act('Passkey setup', addKey, 'Passkey added.')}>+ Add passkey</button>
+      {passkeys.map(k => <div className="model-row" key={k.id}><span className="model-dot"/><div className="model-name-group"><span className="model-name">{k.name}</span><span className="model-quant">{k.backedUp ? 'synced passkey' : k.deviceType}</span></div><button className="recents-del" aria-label={`Remove passkey ${k.name}`} onClick={() => void act('Remove passkey', () => removePasskey(k.id), 'Passkey removed.')}><ShellIcon name="close" size={16}/></button></div>)}
+      <button className="modal-btn secondary" onClick={() => void act('Passkey setup', addKey, 'Passkey added.')}><ShellIcon name="plus" size={16}/>Add passkey</button>
       {sessions.length > 0 && sessions.map(s => (
         <div className="model-row" key={s.id}>
           <span className="model-dot" />
@@ -130,7 +131,7 @@ function SecurityCard(): JSX.Element {
               {s.ip || 'unknown IP'} · last seen {new Date(s.lastSeenAt).toLocaleString()}
             </span>
           </div>
-          <button className="recents-del" title="Revoke session" aria-label={`Revoke session ${sessionLabel(s.userAgent)}`} onClick={() => void act('Revoke session', () => revokeSession(s.id), 'Session revoked.')}>✕</button>
+          <button className="recents-del" title="Revoke session" aria-label={`Revoke session ${sessionLabel(s.userAgent)}`} onClick={() => void act('Revoke session', () => revokeSession(s.id), 'Session revoked.')}><ShellIcon name="close" size={16}/></button>
         </div>
       ))}
       <button className="modal-btn secondary" onClick={() => void act('Sign out', async () => { await logout(); window.location.reload(); }, 'Signed out.')}>Sign out</button>
@@ -184,8 +185,8 @@ function UsersCard(): JSX.Element {
     <div className="rail-label" style={{ marginBottom: 12 }}>Users</div>
     <div className="card-list">
       {users.length === 0 && <p className="route-note">No users returned by the server.</p>}
-      {users.map(u => <div className="model-row" key={u.id}><div className="model-name-group"><span className="model-name">{u.displayName}</span><span className="model-quant">@{u.username} · {u.role}{u.disabled ? ' · disabled' : ''}</span></div>{u.id !== user.id && <><button className="popup-tab" onClick={() => void setUserDisabled(u.id, !u.disabled).then(refresh)}>{u.disabled ? 'Enable' : 'Disable'}</button><button className="popup-tab" onClick={() => void createRecovery(u.id).then(async r => { await navigator.clipboard.writeText(`${window.location.origin}/?recovery=${r.token}`); setNotice('Recovery link copied.'); })}>Recovery</button><button className="recents-del" title="Delete user" onClick={() => { const typed = window.prompt(`Type ${u.username} to permanently delete this noevia account. Remote corpus files will be preserved.`); if (typed === u.username) void deleteUser(u.id, typed).then(refresh); }}>✕</button></>}</div>)}
-      <button className="modal-btn secondary" onClick={() => void invite()}>+ Copy invitation link</button>
+      {users.map(u => <div className="model-row" key={u.id}><div className="model-name-group"><span className="model-name">{u.displayName}</span><span className="model-quant">@{u.username} · {u.role}{u.disabled ? ' · disabled' : ''}</span></div>{u.id !== user.id && <><button className="popup-tab" onClick={() => void setUserDisabled(u.id, !u.disabled).then(refresh)}>{u.disabled ? 'Enable' : 'Disable'}</button><button className="popup-tab" onClick={() => void createRecovery(u.id).then(async r => { await navigator.clipboard.writeText(`${window.location.origin}/?recovery=${r.token}`); setNotice('Recovery link copied.'); })}>Recovery</button><button className="recents-del" title="Delete user" onClick={() => { const typed = window.prompt(`Type ${u.username} to permanently delete this noevia account. Remote corpus files will be preserved.`); if (typed === u.username) void deleteUser(u.id, typed).then(refresh); }}><ShellIcon name="close" size={16}/></button></>}</div>)}
+      <button className="modal-btn secondary" onClick={() => void invite()}><ShellIcon name="plus" size={16}/>Copy invitation link</button>
     </div>
     {notice && <p className="route-note">{notice}</p>}
   </div>;
@@ -237,7 +238,7 @@ function ProvidersCard(): JSX.Element {
               <>
                 {p.apiKeyMasked && <span className="model-quant">key {p.apiKeyMasked}</span>}
                 <button className="recents-del" title="Remove provider" aria-label={`Remove ${p.label}`} disabled={loading || !!removing} onClick={() => void remove(p.id)}>
-                  {removing === p.id ? 'Removing…' : '✕'}
+                  {removing === p.id ? 'Removing…' : <ShellIcon name="close" size={16}/>}
                 </button>
               </>
             )}
@@ -259,7 +260,7 @@ function ProvidersCard(): JSX.Element {
       ) : (
         <>
           <button className="modal-btn secondary" style={{ width: 'fit-content' }} onClick={() => setAdding(true)}>
-            + Connect a provider
+            <ShellIcon name="plus" size={16}/>Connect a provider
           </button>
           <p className="route-note">
             Any OpenAI-compatible /chat/completions endpoint works (Anthropic, OpenAI,

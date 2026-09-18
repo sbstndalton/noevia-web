@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { ShellIcon } from './ShellIcon';
 import { apiFetch, streamChat } from '../api';
 import type { Message } from '../types';
 type Meter = { historyCount:number; model:string; limit:number; limitSource:string; used:number; reserve:number; safety:number; threshold:number; parts:{name:string;tokens:number}[]; compactedAt:number|null; covered:number };
@@ -15,7 +16,7 @@ export function ChatContext({chatId,projectId,messages,streaming,onBusy}:{chatId
  const last=messages.at(-1),live=streaming&&last?.role==='assistant'?Math.ceil((last.reasoning?.length||0)/3):0,extra=messages.filter(m=>!m.error&&m.content).slice(meter?.historyCount??messages.length).reduce((n,m)=>n+Math.ceil(new TextEncoder().encode(m.content).length/3)+12,0),used=(meter?.used||0)+live+extra,percent=meter?Math.min(100,Math.round(100*used/meter.limit)):0;
  // Nothing to measure in an empty chat; the meter appears with the first message.
  if(!messages.length && !meter)return null;
- return <details className="chat-context-meter"><summary><span>Context window</span><span>{meter?`~${fmt(used)} / ${fmt(meter.limit)} (${percent}%)`:'Calculated when you send'} ▾</span></summary>
+ return <details className="chat-context-meter"><summary><span>Context window</span><span>{meter?`~${fmt(used)} / ${fmt(meter.limit)} (${percent}%)`:'Calculated when you send'}<ShellIcon name="down" size={14}/></span></summary>
  {meter&&<><div className="context-stacked-bar" role="meter" aria-label="Estimated chat context used" aria-valuemin={0} aria-valuemax={meter.limit} aria-valuenow={Math.min(used,meter.limit)}>{meter.parts.map((p,i)=><span key={p.name} className={`context-color-${i}`} style={{width:`${p.tokens/meter.limit*100}%`}}/>)}<span className="context-color-3" style={{width:`${(meter.reserve+meter.safety)/meter.limit*100}%`}}/></div>
  <dl>{[...meter.parts,{name:'Thinking & answer reserve',tokens:meter.reserve},{name:'Estimation safety buffer',tokens:meter.safety},{name:'Free space',tokens:Math.max(0,meter.limit-used-meter.reserve-meter.safety)}].map(p=><div key={p.name}><dt>{p.name}</dt><dd>~{fmt(p.tokens)}</dd></div>)}</dl><p>{meter.model} · {meter.limitSource}. Estimates of the prepared request, not account totals.{live>0?' Live output estimated separately.':''}</p><p>Automatic compaction above ~{Math.round(meter.threshold/meter.limit*100)}% input usage; remaining space is reserved for generation and estimation error.</p>{meter.compactedAt&&<p>{meter.covered} older messages summarized. Full transcript retained.</p>}</>}
  {!meter&&<p>Includes messages, instructions, sources and tools. The configured model limit is checked before each request.</p>}

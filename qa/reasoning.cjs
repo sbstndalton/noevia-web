@@ -44,11 +44,12 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   assert.equal((await api(member,'/api/reasoning-settings?projectId='+project.id)).status,404);
   assert.equal((await api(member,'/api/projects/'+project.id+'/config',{reasoningEffort:'low'})).status,404);
   await admin.reload();await admin.getByText('Synthetic effort',{exact:true}).first().click();
-  await admin.getByRole('combobox',{name:'Thinking effort',exact:true}).selectOption('low');
-  await admin.waitForFunction(()=>document.querySelector('select[aria-label="Thinking effort"]').value==='low'&&!document.querySelector('select[aria-label="Thinking effort"]').disabled);
+  // The composer control is a menu button (release after 91a89ba): pick the level from its menu.
+  await admin.getByRole('button',{name:'Thinking effort',exact:true}).click();await admin.getByRole('menuitemradio',{name:/^Low/}).click();
+  await admin.waitForFunction(()=>/Low/.test(document.querySelector('[aria-label="Thinking effort"]').innerText)&&!document.querySelector('[aria-label="Thinking effort"]').disabled);
   assert.equal((await api(admin,'/api/reasoning-settings?projectId='+project.id)).body.effort,'low');
   await admin.reload();await admin.getByText('Synthetic effort',{exact:true}).first().click();
-  assert.equal(await admin.getByRole('combobox',{name:'Thinking effort',exact:true}).inputValue(),'low');
+  await admin.getByRole('button',{name:'Thinking effort',exact:true}).waitFor();assert.match(await admin.getByRole('button',{name:'Thinking effort',exact:true}).innerText(),/Low/);
   for(const theme of ['light','dark'])for(const width of [375,768,1440]){
    await admin.setViewportSize({width,height:1000});await admin.evaluate(t=>document.documentElement.dataset.theme=t,theme);
    assert.equal(await admin.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
@@ -59,8 +60,8 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
    assert.notEqual(await admin.evaluate(()=>getComputedStyle(document.activeElement).outlineStyle),'none');
    if(process.env.QA_SCREENSHOTS)await admin.screenshot({path:`${process.env.QA_SCREENSHOTS}/effort-${theme}-${width}.png`,fullPage:true,animations:'disabled'});
   }
-  await admin.getByRole('combobox',{name:'Thinking effort',exact:true}).selectOption('high');
-  await admin.waitForFunction(()=>document.querySelector('select[aria-label="Thinking effort"]').value==='high'&&!document.querySelector('select[aria-label="Thinking effort"]').disabled);
+  await admin.getByRole('button',{name:'Thinking effort',exact:true}).click();await admin.getByRole('menuitemradio',{name:/^High/}).click();
+  await admin.waitForFunction(()=>/High/.test(document.querySelector('[aria-label="Thinking effort"]').innerText)&&!document.querySelector('[aria-label="Thinking effort"]').disabled);
   await admin.locator('.composer-input').fill('Synthetic effort QA question');
   await admin.getByRole('button',{name:'Send',exact:true}).click();
   await admin.getByText('Synthetic effort answer',{exact:true}).waitFor();

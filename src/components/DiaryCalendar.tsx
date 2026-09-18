@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ShellIcon } from './ShellIcon';
 import { calendarDays, dayLabel, localDay, monthLabel } from '../diary-data';
 type Props = { month: string; today: string; days: Record<string,string>; busy: boolean; ready?: boolean; failed?: boolean; navigate: (month: string, day?: string) => void };
 export function DiaryCalendar({ month, today, days, busy, ready = true, failed = false, navigate }: Props) {
@@ -15,9 +16,9 @@ export function DiaryCalendar({ month, today, days, busy, ready = true, failed =
       <button className="popup-tab" aria-pressed={view==='list'} onClick={()=>setView('list')}>List</button>
     </div>
     <div className="diary-calendar-heading">
-      <button className="popup-tab" disabled={busy} aria-label="Previous month" onClick={() => moveMonth(-1)}>←</button>
+      <button className="popup-tab" disabled={busy} aria-label="Previous month" onClick={() => moveMonth(-1)}><ShellIcon name="left" size={18}/></button>
       <h1>{monthLabel(month)}</h1>
-      <button className="popup-tab" disabled={busy || month >= today.slice(0,7)} aria-label="Next month" onClick={() => moveMonth(1)}>→</button>
+      <button className="popup-tab" disabled={busy || month >= today.slice(0,7)} aria-label="Next month" onClick={() => moveMonth(1)}><ShellIcon name="right" size={18}/></button>
     </div>
     <p>{view==='calendar' ? 'Choose a day to read or add an entry.' : 'Entries for this month · newest first.'}</p>
     {!ready && <p role="status">{failed ? 'Entries could not be loaded.' : 'Loading entries…'}</p>}
