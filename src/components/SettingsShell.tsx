@@ -12,6 +12,7 @@ import { DataSettings } from './data/DataSettings';
 import { PersonalizationSettings } from './personalization/PersonalizationSettings';
 import { FeatureSettings } from './features/FeatureSettings';
 import { OffsiteBackupSettings } from './offsite-backup/OffsiteBackupSettings';
+import { WebAddressSettings } from './web-address/WebAddressSettings';
 
 type Item = [id: string, label: string];
 type Group = { name: string; items: Item[]; admin?: boolean };
@@ -36,6 +37,7 @@ const PERSONAL: Group[] = [
 // is a courtesy, never the access control.
 const ADMIN: Group = { name: 'Server', admin: true, items: [
   ['users', 'Users'],
+  ['address', 'Web address'],
   ['models', 'Models & routing'],
   ['features', 'Features'],
   ['backups', 'Backups'],
@@ -45,7 +47,7 @@ const ADMIN: Group = { name: 'Server', admin: true, items: [
 const LATER: Group = { name: 'Coming later', items: [['planned', 'Planned features']] };
 
 // Each section has its own symbol; names resolve through ShellIcon's Lucide map.
-const ICONS: Record<string, string> = Object.fromEntries(['profile','security','appearance','personalization','capabilities','diary','providers','usage','data','planned','users','models','status','features','backups'].map(id => [id, id]));
+const ICONS: Record<string, string> = Object.fromEntries(['profile','security','appearance','personalization','capabilities','diary','providers','usage','data','planned','users','models','status','features','backups','address'].map(id => [id, id]));
 
 // What used to be one navigation row each. Kept visible as a roadmap, but in
 // one place, so an empty section never looks like a broken one.
@@ -125,6 +127,8 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
             appearanceError={props.appearanceError} retryAppearance={props.retryAppearance} />
         ) : section === 'features' && isAdmin ? (
           <FeatureSettings />
+        ) : section === 'address' && isAdmin ? (
+          <WebAddressSettings/>
         ) : section === 'backups' && isAdmin ? (
           <OffsiteBackupSettings />
         ) : section === 'capabilities' ? (

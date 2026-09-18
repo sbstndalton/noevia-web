@@ -11,7 +11,7 @@ export const SHELL_ICONS: Record<string, string> = {
   // Settings sections: one distinct symbol each.
   profile: 'user-round', security: 'shield-check', appearance: 'palette', personalization: 'sliders-horizontal', capabilities: 'sparkles', diary: 'notebook-pen',
   providers: 'plug', usage: 'chart-column', data: 'database', planned: 'map', users: 'users', models: 'cpu', status: 'activity',
-  features: 'toggle-right', backups: 'cloud-upload', research: 'telescope', trash: 'trash', check: 'check',
+  features: 'toggle-right', backups: 'cloud-upload', address: 'globe', research: 'telescope', trash: 'trash', check: 'check',
 };
 
 export function ShellIcon({ name, size = 18 }: { name: string; size?: number }): JSX.Element {

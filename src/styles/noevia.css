@@ -1927,3 +1927,10 @@ body { isolation:isolate; background:var(--bg-app); }
 .gdrive-note .btn { margin-top: 8px; text-decoration: none; }
 .gdrive-code { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px; }
 .gdrive-code output { font-family: ui-monospace, monospace; font-size: var(--text-title2, 1.5rem); font-weight: 700; letter-spacing: 0.08em; padding: 8px 16px; border: 1px solid var(--control-border); border-radius: 10px; background: var(--bg); }
+
+/* Settings → Web address */
+.web-address-form { margin-top: 24px; }
+.web-address-field { display: flex; flex-wrap: wrap; gap: 8px; }
+.web-address-field input { flex: 1 1 240px; min-width: 0; min-height: 44px; padding: 6px 12px; border: 1px solid var(--control-border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+.web-address-field .btn, .web-address-form > .btn { min-height: 44px; }
+.web-address-form > .btn { align-self: flex-start; }
