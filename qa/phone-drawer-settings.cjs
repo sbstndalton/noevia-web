@@ -74,19 +74,6 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.close();
  }
 
- // Desktop: each list keeps its heading in view while it scrolls.
- for(const theme of ['light','dark'])for(const material of ['liquid','soft']){
-  const page=await browser.newPage({viewport:{width:1360,height:729},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
-  await page.addInitScript(([t,m])=>{localStorage.setItem('cowork-theme',t);localStorage.setItem('noevia:material',m);},[theme,material]);
-  const chat=(id,pinned=false)=>({id,title:`Synthetic ${id}`,updatedAt:1000,pinned,messages:[]});
-  await page.route('**/api/workspace',r=>r.fulfill({json:{projects:Array.from({length:6},(_,i)=>({id:`p${i}`,name:`Synthetic project ${i}`,updatedAt:1000,files:[],chats:[]})),freeChats:[chat('pinned',true),chat('pinned2',true),chat('pinned3',true),...Array.from({length:14},(_,i)=>chat(`recent${i}`))]}}));
-  await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
-  const res=await page.evaluate(()=>[...document.querySelectorAll('.sidebar .side-scroll')].map(el=>{el.scrollTop=el.scrollHeight;const head=el.querySelector(':scope > .sidebar-section-head, :scope > .section-label');const a=head.getBoundingClientRect(),b=el.getBoundingClientRect();const hit=document.elementFromPoint(a.x+20,a.y+a.height/2);return {list:el.className.split(' ').pop(),scrolled:el.scrollTop>0,headVisible:Math.abs(a.top-b.top)<=1&&head.contains(hit)};}));
-  for(const r of res)if(r.scrolled)assert.ok(r.headVisible,`${theme} ${material}: ${r.list} heading stays in view ${JSON.stringify(r)}`);
-  assert.ok(res.some(r=>r.scrolled),'at least one list scrolls at this height');
-  await page.screenshot({path:`${out}/desktop-sticky-heads-${theme}-${material}.png`});await page.close();
- }
-
  // Touch: every Settings field is 16px (iOS zooms below that); Material's four options stay
  // on screen at 320px; Projects counts only active projects and its filter spans the row.
  for(const [w,h] of [[320,568],[390,844]]){
@@ -135,21 +122,29 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.close();
  }
 
- // Desktop, short window: no list collapses to its heading alone (found live in M3).
+ // Desktop, short window: the sidebar is one scrolling plane — no nested scrollers, every
+ // chat rendered, the last one reachable by scrolling the sidebar itself, Diary pinned.
  for(const material of ['liquid','material','soft']){
   const page=await browser.newPage({viewport:{width:1400,height:729},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(m=>{localStorage.setItem('noevia:material',m);localStorage.setItem('cowork-theme','dark');},material);
   const chat=(id,pinned=false)=>({id,title:`Synthetic ${id}`,updatedAt:1000,pinned,messages:[]});
   await page.route('**/api/features',r=>r.fulfill({json:{flags:{previews:true}}}));
   await page.route('**/api/toolboxes',r=>r.fulfill({json:{toolboxes:[],mcp:{configured:true,discovered:176,servers:[{id:'a'},{id:'b'},{id:'c'}]}}}));
-  await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[0,1].map(i=>({id:`p${i}`,name:`Synthetic project ${i}`,updatedAt:1000,files:[],chats:[]})),freeChats:[chat('pinned',true),chat('pinned2',true),...Array.from({length:12},(_,i)=>chat(`recent${i}`))]}}));
+  await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[0,1,2].map(i=>({id:`p${i}`,name:`Synthetic project ${i}`,updatedAt:1000,files:[],chats:[]})),freeChats:[chat('pinned',true),chat('pinned2',true),...Array.from({length:16},(_,i)=>chat(`recent${i}`))]}}));
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
-  const lists=await page.evaluate(()=>[...document.querySelectorAll('.sidebar .side-scroll')].map(el=>{const b=el.getBoundingClientRect(),head=el.querySelector(':scope > .sidebar-section-head, :scope > .section-label').getBoundingClientRect();
-   const rows=[...el.querySelectorAll('.proj-row, .chat-row')].filter(r=>{const q=r.getBoundingClientRect();return q.top>=head.bottom-1&&q.bottom<=b.bottom+1;});return {list:el.className.split(' ').pop(),visibleRows:rows.length};}));
-  for(const l of lists)assert.ok(l.visibleRows>=1,`${material}: ${l.list} shows at least one full row ${JSON.stringify(lists)}`);
+  const r=await page.evaluate(async()=>{const side=document.querySelector('.sidebar');
+   const nested=[...side.querySelectorAll('*')].filter(e=>/(auto|scroll)/.test(getComputedStyle(e).overflowY)&&e.scrollHeight>e.clientHeight+1).map(e=>e.className.toString());
+   const rows=side.querySelectorAll('.recent-children .chat-row').length;
+   side.scrollTop=side.scrollHeight;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+   const last=[...side.querySelectorAll('.recent-children .chat-row')].at(-1).getBoundingClientRect(),diary=side.querySelector('.side-permanent').getBoundingClientRect(),sb=side.getBoundingClientRect();
+   return {sideScrolls:getComputedStyle(side).overflowY==='auto'&&side.scrollHeight>side.clientHeight,nested,rows,lastAboveDiary:last.bottom<=diary.top+1,diaryAtBottom:sb.bottom-diary.bottom<120};});
+  assert.ok(r.sideScrolls,`${material}: the sidebar itself scrolls ${JSON.stringify(r)}`);
+  assert.deepEqual(r.nested,[],`${material}: no nested scrollers`);
+  assert.equal(r.rows,16,`${material}: every recent chat is in the sidebar`);
+  assert.ok(r.lastAboveDiary&&r.diaryAtBottom,`${material}: last chat reachable above the pinned Diary ${JSON.stringify(r)}`);
   await page.close();
  }
  assert.deepEqual(errors,[]);
- console.log('PASS phone drawer: full drawer from Diary, measured sticky footer, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; desktop list headings stay in view while their list scrolls; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop every sidebar list shows at least one row in each material.');
+ console.log('PASS phone drawer: full drawer from Diary, measured sticky footer, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop the sidebar is one scrolling plane with every chat, in each material.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

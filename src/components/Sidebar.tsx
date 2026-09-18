@@ -394,7 +394,7 @@ export function Sidebar({
           <div className="divider" />
           <div className="spaces side-scroll side-scroll-chats">
             <button className="section-label section-toggle" aria-expanded={!closedGroups.Chats} onClick={()=>setClosedGroups(g=>({...g,Chats:!g.Chats}))}>Recent chats</button>
-            {(!closedGroups.Chats || query) && <div className="recent-children">{visibleChats.filter(c=>!c.pinned).slice(0,12).map(renderChat)}</div>}
+            {(!closedGroups.Chats || query) && <div className="recent-children">{visibleChats.filter(c=>!c.pinned).map(renderChat)}</div>}
 
           </div>
         </>
