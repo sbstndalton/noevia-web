@@ -28,14 +28,15 @@
   function filter(w, h, r) {
     const key = `${w}x${h}r${r}`;
     if (cache.has(key)) return cache.get(key);
-    const depth = Math.max(3, Math.min(10, Math.round(Math.min(w, h) / 5)));
-    const strength = Math.min(48, Math.round(Math.min(w, h) * 0.9));
+    const depth = Math.max(3, Math.min(12, Math.round(Math.min(w, h) * 0.22)));
+    // Gentle on small controls so text under a sliding thumb stays readable; the centre stays clear.
+    const strength = Math.max(6, Math.min(22, Math.round(Math.min(w, h) * 0.38)));
     const channel = (scale, matrix, result) => `<feDisplacementMap in="SourceGraphic" in2="m" scale="${scale}" xChannelSelector="R" yChannelSelector="G"/><feColorMatrix type="matrix" values="${matrix}" result="${result}"/>`;
     const url = 'url("data:image/svg+xml;utf8,' + encodeURIComponent(
       `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><filter id="lens" color-interpolation-filters="sRGB">` +
       `<feImage x="0" y="0" width="${w}" height="${h}" href="${map(w, h, r, depth)}" result="m"/>` +
-      channel(strength + 4, '1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0', 'r') +
-      channel(strength + 2, '0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0', 'g') +
+      channel(strength + 2, '1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0', 'r') +
+      channel(strength + 1, '0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0', 'g') +
       channel(strength, '0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0', 'b') +
       `<feBlend in="r" in2="g" mode="screen"/><feBlend in2="b" mode="screen"/></filter></svg>`) + '#lens")';
     if (cache.size > 64) cache.clear();
