@@ -19,11 +19,19 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
   const [loaded, setLoaded] = useState(false);
   const [secret, setSecret] = useState('');
   const [message, setMessage] = useState('');
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  // The fields stay locked until the saved connection is known, so an edit can't overwrite
+  // settings that simply hadn't loaded yet. Say so, and don't wait forever.
   useEffect(() => {
-    void fetchStorage()
-      .then(v => { setValue((onlineOnly && v.kind === 'local') || (backupOnly && v.kind === 's3') ? { kind: 'nextcloud', baseUrl: '', username: '', corpusRoot: 'Cowork/Diary' } : v); setLoaded(true); })
-      .catch(() => setMessage('Could not load saved storage. Reopen this step or reload before changing it.'));
-  }, []);
+    let live = true;
+    setLoadFailed(false); setMessage('');
+    const timeout = new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('timeout')), 10000));
+    void Promise.race([fetchStorage(), timeout])
+      .then(v => { if (!live) return; setValue((onlineOnly && v.kind === 'local') || (backupOnly && v.kind === 's3') ? { kind: 'nextcloud', baseUrl: '', username: '', corpusRoot: 'Cowork/Diary' } : v); setLoaded(true); })
+      .catch(() => { if (live) setLoadFailed(true); });
+    return () => { live = false; };
+  }, [attempt]);
   const patch = (next: Partial<StorageConnection>) => setValue((v) => ({ ...v, ...next }));
 
   const connectNextcloud = async () => {
@@ -58,6 +66,9 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
 
   return (
     <div className="card-list" style={{ padding: 12, gap: 8 }}>
+      {!loaded && !loadFailed && <p className="route-note" role="status">Loading your saved storage connection…</p>}
+      {loadFailed && <div role="alert"><p className="route-note">Your saved storage connection couldn’t be loaded, so these fields are locked to avoid overwriting it. The server may be busy or unreachable.</p>
+        <button type="button" className="modal-btn secondary" onClick={() => setAttempt(n => n + 1)}>Try again</button></div>}
       {backupOnly && <p className="diary-context-note">This is your account storage connection, also used by Projects. Changing it changes their connection too. Diary backups support Nextcloud and WebDAV.</p>}
       <select
         className="modal-input"
