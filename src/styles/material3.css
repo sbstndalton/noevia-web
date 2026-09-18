@@ -217,3 +217,13 @@
    above keep 48px. Headings sit tight to their list. */
 [data-material='material'] .app .sidebar.pane :is(.proj-row, .chat-row) :is(.nav-item, .project-disclosure, .nested-chat-title) { min-height: 40px; }
 [data-material='material'] .app .sidebar.pane .sidebar-history .section-label { margin-block: var(--space-2) var(--space-1); }
+
+/* Collapsed: an M3 navigation rail — the FAB at the top, 56px, icon-only destinations
+   with a 56×32 pill indicator. */
+@media (min-width: 601px) {
+  [data-material='material'] .app .sidebar.pane.is-collapsed { width: 80px; min-width: 80px; }
+  [data-material='material'] .app .sidebar.pane.is-collapsed .new-chat-btn.glass { width: 56px; height: 56px; border-radius: 16px; }
+  [data-material='material'] .app .sidebar.pane.is-collapsed .side-nav .nav-item { width: 56px; height: 32px; min-height: 32px; margin-block: 6px; border-radius: 999px; }
+  [data-material='material'] .app .sidebar.pane.is-collapsed .app-mode-switch { width: 56px; }
+  [data-material='material'] .app .sidebar.pane.is-collapsed .app-mode-switch button { width: 100%; }
+}

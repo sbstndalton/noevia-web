@@ -88,7 +88,9 @@ export function Sidebar({
     return ()=>{active=false;};
   },[]);
   useEffect(()=>{if(orderKey)try{localStorage.setItem(orderKey,JSON.stringify(order));}catch{/* Keep working without persistence. */}},[order,orderKey]);
-  const [collapsed, setCollapsed] = useState(false);
+  // Remembered on this device, as ChatGPT does: a reload keeps the rail collapsed.
+  const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('noevia:sidebar-collapsed') === '1'; } catch { return false; } });
+  useEffect(() => { try { localStorage.setItem('noevia:sidebar-collapsed', collapsed ? '1' : '0'); } catch { /* per-device convenience only */ } }, [collapsed]);
   const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
   const [searching, setSearching] = useState(false);
@@ -337,6 +339,8 @@ export function Sidebar({
         // Any navigation collapses the rail again, so the overlay never
         // stays over the thing it just navigated to.
         if (expanded && (e.target as HTMLElement).closest('.nav-item')) setExpanded(false);
+        // As in ChatGPT, the empty part of the collapsed rail is itself the expand target.
+        if (collapsed && !mobile && !(e.target as HTMLElement).closest('button, a, input')) setCollapsed(false);
       }}
     >
       <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? 'Close navigation' : collapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button><button className="shell-icon-button" aria-label={theme==='dark'?'Switch to light mode':'Switch to dark mode'} title={theme==='dark'?'Light mode':'Dark mode'} onClick={onToggleTheme}><ShellIcon name={theme==="dark"?"sun":"moon"}/></button><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>

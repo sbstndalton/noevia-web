@@ -144,7 +144,32 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.ok(r.lastAboveFooter&&r.footerAtBottom&&r.diaryInNav,`${material}: last chat reachable above the pinned account row; Diary in the top destinations ${JSON.stringify(r)}`);
   await page.close();
  }
+
+ // Collapsed desktop rail, like ChatGPT's: icons only, equal 40px (M3: its rail), no lists,
+ // headings or status text, the avatar at the bottom edge.
+ for(const material of ['liquid','material','soft']){
+  const page=await browser.newPage({viewport:{width:1400,height:800},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(m=>localStorage.setItem('noevia:material',m),material);
+  await page.route('**/api/toolboxes',r=>r.fulfill({json:{toolboxes:[],mcp:{configured:true,discovered:176,servers:[{id:'a'}]}}}));
+  await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[{id:'p0',name:'Synthetic project 0',updatedAt:1000,files:[],chats:[]}],freeChats:[{id:'c0',title:'Synthetic c0',updatedAt:1,pinned:true,messages:[]},{id:'c1',title:'Synthetic c1',updatedAt:1,messages:[]}]}}));
+  await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
+  await page.getByRole('button',{name:'Collapse navigation',exact:true}).click();await page.waitForTimeout(300);
+  const r=await page.evaluate(()=>{const s=document.querySelector('.sidebar'),sb=s.getBoundingClientRect(),vis=e=>{const q=e.getBoundingClientRect();return q.width>0&&q.height>0&&q.left<sb.right&&q.right>sb.left;};
+   const leaks=[...s.querySelectorAll('.sidebar-history, .section-label, .mcp-row, .nav-name, .side-logo span')].filter(vis).map(e=>e.className);
+   const icons=[...s.querySelectorAll('.side-nav .nav-item, .rail-tools .shell-icon-button, .side-expand')].filter(vis).map(e=>{const q=e.getBoundingClientRect();return [Math.round(q.width),Math.round(q.height)];});
+   const acct=s.querySelector('.account-trigger').getBoundingClientRect();return {w:Math.round(sb.width),leaks,icons,acctAtBottom:sb.bottom-acct.bottom<40,noOverflow:s.scrollWidth<=s.clientWidth+1};});
+  assert.deepEqual(r.leaks,[],`${material}: collapsed rail shows no lists or text ${JSON.stringify(r)}`);
+  assert.ok(r.icons.length>=5&&r.icons.every(([w,h])=>(material==="material"||w===h)&&h>=32)&&r.acctAtBottom&&r.noOverflow,`${material}: icon rail with the avatar at the bottom ${JSON.stringify(r)}`);
+  await page.reload();await page.getByPlaceholder('Message noevia…').waitFor();
+  assert.ok(await page.locator('.sidebar').evaluate(s=>s.classList.contains('is-collapsed')),`${material}: collapsed survives a reload`);
+  const sb=await page.locator('.sidebar').boundingBox();await page.mouse.click(sb.x+sb.width/2,sb.y+sb.height*0.7);
+  assert.ok(await page.locator('.sidebar').evaluate(s=>!s.classList.contains('is-collapsed')),`${material}: clicking the empty rail expands it`);
+  await page.getByRole('button',{name:'Collapse navigation',exact:true}).click();
+  await page.getByRole('button',{name:'Search projects and chats'}).last().click();
+  assert.ok(await page.locator('.sidebar').evaluate(s=>!s.classList.contains('is-collapsed')),`${material}: rail Search opens the sidebar`);
+  await page.close();
+ }
  assert.deepEqual(errors,[]);
- console.log('PASS phone drawer: full drawer from Diary, Diary with the top destinations, only the account row pinned, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop the sidebar is one scrolling plane with every chat, in each material.');
+ console.log('PASS phone drawer: full drawer from Diary, Diary with the top destinations, only the account row pinned, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop the sidebar is one scrolling plane with every chat, in each material; collapsed, it is an icon-only rail with the avatar at the bottom that survives a reload and expands from its empty space.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

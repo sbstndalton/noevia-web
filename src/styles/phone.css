@@ -130,3 +130,32 @@
   .app .sidebar.pane .side-footer { position: static; backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
 [data-short-viewport] .app .sidebar.pane .side-footer { position: static; backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+/* ── Collapsed rail, like ChatGPT's (user review, 2026-09-18) ───────────────
+   One column of equal icon buttons: expand, the Chat/Code switch, New chat, Search,
+   Projects, Diary, Plugins, Pinned — and the avatar at the bottom. No lists, headings
+   or status text; the plane rules above must not bring them back. */
+@media (min-width: 601px) {
+  .app .sidebar.pane.is-collapsed { width: 60px; min-width: 60px; padding: var(--space-3) 0; align-items: center; overflow: hidden; gap: 4px; }
+  .app .sidebar.pane.is-collapsed :is(.sidebar-history, .section-label, .side-hint, .mcp-row, .side-logo, .shell-search) { display: none; }
+  .app .sidebar.pane.is-collapsed .shell-sidebar-head { padding: 0 0 var(--space-2); justify-content: center; }
+  .app .sidebar.pane.is-collapsed .side-head-actions { display: flex; }
+  .app .sidebar.pane.is-collapsed .side-head-actions > :not(.side-expand) { display: none; }
+  .app .sidebar.pane.is-collapsed :is(.side-nav, .rail-tools) { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
+  .app .sidebar.pane.is-collapsed .rail-tools { order: 3; }
+  .app .sidebar.pane.is-collapsed .side-nav { order: 4; }
+  .app .sidebar.pane.is-collapsed .side-footer { order: 10; }
+  .app .sidebar.pane.is-collapsed .shell-sidebar-head { order: 0; }
+  .app .sidebar.pane.is-collapsed .app-mode-switch { order: 1; }
+  .app .sidebar.pane.is-collapsed .new-chat-btn { order: 2; }
+  /* Every icon button is the same 40px square, centred. */
+  .app .sidebar.pane.is-collapsed :is(.side-expand, .rail-tools .shell-icon-button, .side-nav .nav-item, .new-chat-btn.glass) {
+    width: 40px; height: 40px; min-height: 40px; padding: 0; margin: 0; justify-content: center; border-radius: var(--radius-md);
+  }
+  .app .sidebar.pane.is-collapsed .app-mode-switch { width: 40px; padding: 2px; margin: 0; overflow: hidden; }
+  .app .sidebar.pane.is-collapsed .app-mode-switch button { width: 36px; min-height: 34px; padding: 0; justify-content: center; }
+  .app .sidebar.pane.is-collapsed .side-footer { position: static; margin-top: auto; min-height: 0; width: 100%; border-top: 0; padding: var(--space-2) 0 0; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; display: flex; justify-content: center; }
+  .app .sidebar.pane.is-collapsed .account-trigger { width: 40px; height: 40px; padding: 0; justify-content: center; }
+}
+/* The empty rail expands on click (Sidebar.tsx); the cursor says so, as in ChatGPT. */
+@media (min-width: 601px) { .app .sidebar.pane.is-collapsed { cursor: e-resize; } .app .sidebar.pane.is-collapsed :is(button, a) { cursor: pointer; } }
