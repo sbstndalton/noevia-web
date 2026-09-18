@@ -40,7 +40,7 @@ const TASK='12345678-1234-4234-8234-123456789012';
      if(url.pathname.endsWith('/cancel')){tasks=[task({status:'cancelled',stage:null,approval:null,
        result:{branch:'noevia/task-1234',tools:4,approvals:2,allowed:1,refused:1,denied:0},
        // A harness that reported some of itself and not the rest: both halves must show.
-       meta:{harness:'opencode',harnessVersion:'1.18.31',protocolVersion:1,usage:null,commands:2,failedCommands:1,turns:3,
+       meta:{harness:'opencode',harnessVersion:'1.18.31',protocolVersion:1,usage:null,context:{used:8012,size:24576,percent:33},commands:2,failedCommands:1,messageChunks:3,
          limitations:['The harness did not report token usage.']},identityHash:'a'.repeat(64)})];return r.fulfill({json:tasks[0]});}
      if(method==='POST'){posts.push(['start',r.request().postDataJSON()]);tasks=[task({status:'waiting_approval',approval:approval()})];return r.fulfill({status:202,json:{taskId:TASK,branch:'noevia/task-1234'}});}
      return r.fulfill({json:{repositories:[{id:'noevia'},{id:'scratch'}],capabilities:CAPS,
@@ -116,7 +116,7 @@ const TASK='12345678-1234-4234-8234-123456789012';
    await page.getByRole('button',{name:'Cancel task'}).click();
    await page.getByText('4 tool calls · 1 allowed · 1 declined · 0 refused by noevia').waitFor();
    // What it reported, and — just as visibly — what it did not.
-   await page.getByText('opencode 1.18.31 · 2 commands, 1 failed').waitFor();
+   await page.getByText('opencode 1.18.31 · context 33% of 24,576 · 2 commands, 1 failed').waitFor();
    await page.getByText('Not reported by this harness (1)').click();
    await page.getByText('The harness did not report token usage.').waitFor();
    assert.deepEqual(posts.map(p=>p[1]).slice(1),['approve','deny']);

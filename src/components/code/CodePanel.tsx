@@ -193,6 +193,8 @@ function TaskMeta({ meta }: { meta: NonNullable<CodeTask['meta']> }): JSX.Elemen
   const parts = [
     meta.harnessVersion ? `${meta.harness || 'harness'} ${meta.harnessVersion}` : meta.harness,
     meta.usage ? `${meta.usage.total?.toLocaleString()} tokens` : null,
+    // Context used is its own measurement; a harness can report it and not token usage.
+    meta.context ? `context ${meta.context.percent}% of ${meta.context.size.toLocaleString()}` : null,
     meta.commands ? `${meta.commands} command${meta.commands === 1 ? '' : 's'}${meta.failedCommands ? `, ${meta.failedCommands} failed` : ''}` : null,
   ].filter(Boolean);
   return <>

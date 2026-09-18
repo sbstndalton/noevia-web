@@ -19,7 +19,9 @@ export interface CodeTask {
   meta: {
     harness: string | null; harnessVersion: string | null; protocolVersion: number | null;
     usage: { input: number | null; output: number | null; total: number | null } | null;
-    commands: number; failedCommands: number; turns: number; limitations: string[];
+    /** How full the model's window got — not the same thing as tokens spent. */
+    context: { used: number; size: number; percent: number } | null;
+    commands: number; failedCommands: number; messageChunks: number; limitations: string[];
   } | null;
   identityHash: string | null;
   result: { stopReason?: string; branch?: string; tools?: number; approvals?: number; allowed?: number; refused?: number; denied?: number } | null;
