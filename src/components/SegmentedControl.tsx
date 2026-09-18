@@ -1,14 +1,9 @@
 import { useLayoutEffect, useRef, type JSX, type KeyboardEvent } from 'react';
 
-// A radio group drawn as one track with a glass thumb that slides to the chosen option
-// (materials.css .glass-seg). In the liquid material the thumb refracts the labels while
-// it travels; `.is-moving` marks that window. Arrow keys move the choice, as in a radio group.
-export function SegmentedControl<T extends string>({ label, value, options, onChange }: {
-  label: string; value: T; options: [T, string][]; onChange: (value: T) => void;
-}): JSX.Element {
+/** Keeps a track's glass thumb over its checked option, and marks the travel window. */
+export function useSegmentThumb(deps: unknown[]) {
   const track = useRef<HTMLDivElement>(null);
   const timer = useRef<number>(0);
-
   useLayoutEffect(() => {
     const node = track.current;
     if (!node) return;
@@ -22,16 +17,29 @@ export function SegmentedControl<T extends string>({ label, value, options, onCh
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(place);
     observer?.observe(node);
     return () => observer?.disconnect();
-  }, [value, options.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+  const moving = () => {
+    const node = track.current;
+    if (!node) return;
+    node.classList.add('is-moving');
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => node.classList.remove('is-moving'), 380);
+  };
+  return { track, moving };
+}
+
+// A radio group drawn as one track with a glass thumb that slides to the chosen option
+// (materials.css .glass-seg). In the liquid material the thumb refracts the labels while
+// it travels; `.is-moving` marks that window. Arrow keys move the choice, as in a radio group.
+export function SegmentedControl<T extends string>({ label, value, options, onChange }: {
+  label: string; value: T; options: [T, string][]; onChange: (value: T) => void;
+}): JSX.Element {
+  const { track, moving } = useSegmentThumb([value, options.length]);
 
   const choose = (next: T) => {
     if (next === value) return;
-    const node = track.current;
-    if (node) {
-      node.classList.add('is-moving');
-      window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => node.classList.remove('is-moving'), 380);
-    }
+    moving();
     onChange(next);
   };
   const onKey = (event: KeyboardEvent<HTMLDivElement>) => {

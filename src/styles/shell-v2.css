@@ -1,0 +1,195 @@
+/* UI overhaul release 2 — the shell. Loads after noevia.css and before materials.css, so the
+   materials still decide fill, edge and shadow while this file decides layout and motion.
+   Anatomy (docs/ui-samples/foundation.html): a canvas with two framed panes, the sidebar and
+   the workspace. Settings takes the workspace's place instead of floating over it. */
+
+/* ── Frame ──────────────────────────────────────────────────────────────── */
+.app { gap: var(--space-2); padding: var(--space-2); background: transparent; box-sizing: border-box; }
+.app > .regular-workspace { display: contents; }
+.app .app-stack.pane { position: relative; overflow: hidden; border-radius: var(--radius-xl); isolation: isolate; }
+.app .app-stack.pane > .app-main { border-radius: inherit; background: transparent; }
+.app .app-main > .main, .app .app-main > .chat-view, .app .app-main .main { background: transparent; }
+
+/* ── Sidebar pane ───────────────────────────────────────────────────────── */
+.app .sidebar.pane { width: 264px; padding: var(--space-3) var(--space-2) var(--space-2); gap: var(--space-1); border-radius: var(--radius-xl); overflow: hidden; }
+.app .sidebar.pane .shell-sidebar-head { padding: var(--space-1) var(--space-1) var(--space-3) var(--space-2); }
+.app .sidebar.pane .side-logo { gap: var(--space-2); padding: 0; }
+.app .sidebar.pane .side-logo span { font-size: var(--text-headline); font-weight: 600; letter-spacing: var(--tracking-title); }
+.app .sidebar.pane .shell-icon-button { width: 30px; height: 30px; border-radius: var(--radius-sm); color: var(--text-secondary);
+  transition: background-color var(--duration-instant) var(--ease-standard), color var(--duration-instant) var(--ease-standard); }
+.app .sidebar.pane .shell-icon-button:hover { background: var(--nav-hover); color: var(--text-primary); }
+
+/* New chat: the one glass control in the sidebar. */
+.app .sidebar.pane .new-chat-btn.glass { justify-content: flex-start; gap: var(--space-2); min-height: 38px; margin: 0 0 var(--space-3);
+  padding: 8px 12px; border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--text-callout); font-weight: 500; }
+.app .sidebar.pane .new-chat-btn.glass span { font-size: var(--text-callout); font-weight: 500; color: inherit; }
+.app .sidebar.pane .new-chat-btn.glass svg { stroke: currentColor; }
+
+.app .sidebar.pane .side-nav { display: flex; flex-direction: column; gap: 1px; }
+.app .sidebar.pane .nav-item { min-height: 34px; padding: 6px 10px; gap: 10px; border-radius: var(--radius-sm); color: var(--text-secondary); font-size: var(--text-callout);
+  transition: background-color var(--duration-instant) var(--ease-standard), color var(--duration-instant) var(--ease-standard); }
+.app .sidebar.pane .nav-item .nav-name { font-size: var(--text-callout); font-weight: 400; color: inherit; }
+.app .sidebar.pane .nav-item:hover { background: var(--nav-hover); color: var(--text-primary); }
+.app .sidebar.pane .nav-item.is-active, .app .sidebar.pane .side-nav .nav-item[aria-current='page'] { background: var(--selected); color: var(--on-selected); box-shadow: none; }
+.app .sidebar.pane .nav-item.is-active .nav-name { font-weight: 500; color: inherit; }
+.app .sidebar.pane .section-label, .app .sidebar.pane .sidebar-history .section-label { margin: var(--space-5) 10px var(--space-1); padding: 0; font-size: var(--text-caption); font-weight: 500;
+  letter-spacing: var(--tracking-caption); color: var(--text-secondary); text-transform: none; }
+.app .sidebar.pane .proj-row, .app .sidebar.pane .chat-row { border-radius: var(--radius-sm); }
+.app .sidebar.pane .proj-row:hover, .app .sidebar.pane .chat-row:hover, .app .sidebar.pane .proj-row:has(:focus-visible), .app .sidebar.pane .chat-row:has(:focus-visible) { background: var(--nav-hover); }
+.app .sidebar.pane .proj-row.is-active, .app .sidebar.pane .chat-row.is-active { background: var(--selected); }
+.app .sidebar.pane .proj-row.is-active .nav-item, .app .sidebar.pane .chat-row.is-active .nav-item { background: transparent; color: var(--on-selected); box-shadow: none; }
+.app .sidebar.pane .row-actions { background: transparent; }
+.app .sidebar.pane .divider { opacity: 0; margin: 0; }
+.app .sidebar.pane .side-footer { margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--border-subtle); }
+.app .sidebar.pane .account-trigger { border-radius: var(--radius-md); padding: 6px 8px; }
+.app .sidebar.pane .account-trigger:hover, .app .sidebar.pane .account-trigger[aria-expanded='true'] { background: var(--nav-hover); }
+.app .sidebar.pane .shell-avatar { width: 26px; height: 26px; background: var(--md-tertiary-container); color: var(--md-on-tertiary-container); }
+
+/* Collapsed rail (desktop). */
+@media (min-width: 601px) {
+  .app .sidebar.pane.is-collapsed { width: 60px; min-width: 60px; padding: var(--space-3) 7px; }
+  .app .sidebar.pane.is-collapsed .shell-sidebar-head { padding: 0 0 var(--space-3); justify-content: center; }
+  .app .sidebar.pane.is-collapsed .new-chat-btn.glass { justify-content: center; padding: 8px 0; }
+  .app .sidebar.pane.is-collapsed .nav-item { justify-content: center; }
+}
+@media (min-width: 601px) and (max-width: 1000px) { .app .sidebar.pane:not(.is-collapsed) { width: 232px; } }
+
+/* ── Settings stage: takes the workspace's place ────────────────────────── */
+.settings-stage { position: absolute; inset: 0; z-index: 40; display: grid; grid-template-columns: 240px minmax(0, 1fr); border-radius: inherit;
+  border: 0; box-shadow: none; animation: stage-in var(--duration-slow) var(--ease-out) both; transform-origin: 30% 50%; }
+.settings-stage.is-closing { animation: stage-out 240ms var(--ease-in) both; pointer-events: none; }
+/* What was there steps back as Settings arrives, and returns when it leaves. */
+.app-stack.has-settings > .app-main { animation: work-out var(--duration-slow) var(--ease-out) both; }
+.app-stack.has-settings:has(.settings-stage.is-closing) > .app-main { animation: work-in 240ms var(--ease-out) both; }
+@keyframes stage-in { from { opacity: 0; transform: translateX(28px) scale(.99); clip-path: inset(0 0 0 8% round var(--radius-xl)); } to { opacity: 1; transform: none; clip-path: inset(0 round var(--radius-xl)); } }
+@keyframes stage-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(28px) scale(.99); } }
+@keyframes work-out { from { opacity: 1; transform: none; filter: none; visibility: visible; } to { opacity: 0; transform: scale(.97); filter: blur(6px); visibility: hidden; } }
+@keyframes work-in { from { opacity: 0; transform: scale(.97); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+
+.settings-stage .settings-navigation { width: auto; display: flex; flex-direction: column; min-height: 0; padding: var(--space-4) var(--space-2); border: 0; border-right: 1px solid var(--border-subtle); background: transparent; }
+.settings-stage .settings-nav-head { display: none; }
+.settings-stage .settings-search { margin: 0 var(--space-1) var(--space-2); padding: 7px 10px; gap: 8px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-secondary); }
+.settings-stage .settings-search input { font-size: var(--text-footnote); }
+.settings-stage .settings-search:focus-within { border-color: var(--focus-ring); }
+.settings-stage .settings-navigation nav { overflow-y: auto; min-height: 0; padding: 0; }
+.settings-stage .settings-navigation nav section h2 { margin: var(--space-5) 10px var(--space-1); font-size: var(--text-caption); font-weight: 500; letter-spacing: var(--tracking-caption); color: var(--text-secondary); }
+.settings-stage .settings-navigation nav button { gap: 10px; min-height: 32px; margin: 1px 0; padding: 6px 10px; border-radius: var(--radius-sm); color: var(--text-secondary); font-size: var(--text-callout); font-weight: 400;
+  transition: background-color var(--duration-instant) var(--ease-standard), color var(--duration-instant) var(--ease-standard); }
+.settings-stage .settings-navigation nav button > svg:last-child { display: none; }
+.settings-stage .settings-navigation nav button:hover { background: var(--nav-hover); color: var(--text-primary); }
+.settings-stage .settings-navigation nav button.is-active { background: var(--selected); color: var(--on-selected); font-weight: 500; box-shadow: none; }
+.settings-stage .settings-detail { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.settings-stage .settings-detail > header { position: absolute; top: var(--space-3); right: var(--space-3); z-index: 2; height: auto; padding: 0; border: 0; background: none; }
+.settings-stage .settings-detail > header > span, .settings-stage .settings-list-back { display: none; }
+.settings-stage .settings-detail-scroll { flex: 1; overflow-y: auto; padding: var(--space-10) var(--space-12) var(--space-16); animation: page-in var(--duration-base) var(--ease-out) both; }
+.settings-stage .settings-detail-scroll > * { max-width: 760px; }
+@keyframes page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* Tablet: a narrower list. */
+@media (max-width: 1000px) {
+  .settings-stage { grid-template-columns: 208px minmax(0, 1fr); }
+  .settings-stage .settings-detail-scroll { padding: var(--space-8) var(--space-6) var(--space-12); }
+}
+
+/* ── Phone: one pane at a time ──────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .settings-stage { grid-template-columns: 1fr; border-radius: 0; }
+  .settings-stage[data-view='list'] .settings-detail, .settings-stage[data-view='detail'] .settings-navigation { display: none; }
+  .settings-stage .settings-navigation { border-right: 0; padding: calc(env(safe-area-inset-top) + var(--space-2)) var(--space-3) var(--space-4); }
+  .settings-stage .settings-nav-head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: 0 0 var(--space-3); }
+  .settings-stage .settings-back { min-height: 44px; padding: 0 var(--space-2); margin-left: calc(-1 * var(--space-2)); color: var(--md-primary); font-size: var(--text-callout); }
+  .settings-stage .settings-nav-title { margin: 0; font-family: var(--font-display); font-size: var(--text-title1); font-weight: 600; letter-spacing: var(--tracking-title); }
+  .settings-stage .settings-search { margin: 0 0 var(--space-2); min-height: 44px; }
+  .settings-stage .settings-navigation nav button { min-height: 48px; font-size: var(--text-body); color: var(--text-primary); }
+  .settings-stage .settings-navigation nav button > svg:last-child { display: block; margin-left: auto; color: var(--text-secondary); }
+  .settings-stage .settings-navigation nav button.is-active { background: transparent; color: var(--text-primary); font-weight: 400; }
+  .settings-stage .settings-detail > header { position: sticky; top: 0; right: auto; display: flex; align-items: center; gap: var(--space-2); min-height: 52px;
+    padding: env(safe-area-inset-top) var(--space-2) 0; background: color-mix(in srgb, var(--bg-app) 86%, transparent); backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4); border-bottom: 1px solid var(--border-subtle); }
+  .settings-stage .settings-detail > header > span { display: block; flex: 1; text-align: center; font-weight: 600; font-size: var(--text-headline); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .settings-stage .settings-list-back { display: inline-flex; }
+  .settings-stage .settings-detail > header .shell-icon-button { width: 44px; height: 44px; }
+  .settings-stage .settings-detail { overflow-y: auto; }
+  .settings-stage .settings-detail-scroll { overflow: visible; padding: var(--space-4) var(--space-4) calc(var(--space-12) + env(safe-area-inset-bottom)); animation-name: push-in; }
+  .settings-stage[data-view='list'] .settings-navigation { animation: pop-in var(--duration-base) var(--ease-out) both; }
+  @keyframes push-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+  @keyframes pop-in { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+  /* On a phone Settings rises as a sheet. */
+  .settings-stage { animation-name: sheet-rise; }
+  .settings-stage.is-closing { animation-name: sheet-fall; }
+  @keyframes sheet-rise { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes sheet-fall { from { transform: none; opacity: 1; } to { transform: translateY(40px); opacity: 0; } }
+}
+
+@media (max-width: 600px) {
+  .app { padding: 0; gap: 0; }
+  .app .app-stack.pane { border-radius: 0; border-width: 0; box-shadow: none; }
+  /* The drawer is a floating pane that slides in from the edge. */
+  .app .sidebar.pane:not(.coding-sidebar).is-expanded { inset: 8px auto 8px 8px; width: min(84vw, 320px); height: calc(var(--drawer-height, 100dvh) - 16px);
+    border-radius: var(--radius-2xl); padding: calc(env(safe-area-inset-top) + var(--space-3)) var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
+    animation: drawer-in var(--duration-slow) var(--ease-out) both; }
+  .app .sidebar.pane.is-expanded .nav-item, .app .sidebar.pane.is-expanded .new-chat-btn.glass { min-height: 44px; }
+  .app .sidebar.pane.is-expanded .shell-icon-button { width: 44px; height: 44px; }
+  .nav-drawer-backdrop { background: color-mix(in srgb, var(--md-surface-dim) 35%, transparent); backdrop-filter: blur(2px) saturate(1.1); -webkit-backdrop-filter: blur(2px) saturate(1.1); animation: fade-in var(--duration-base) var(--ease-standard) both; }
+  :root:not([data-theme='light']) .nav-drawer-backdrop { background: rgba(0, 0, 6, .45); }
+  .nav-drawer-toggle { border-radius: var(--radius-md); background: var(--pane-fill); border-color: var(--pane-edge); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  @keyframes drawer-in { from { transform: translateX(calc(-100% - 16px)); } to { transform: none; } }
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-stage, .settings-stage.is-closing, .settings-stage .settings-detail-scroll, .app-stack.has-settings > .app-main, .app .sidebar.pane.is-expanded { animation: none !important; }
+}
+html[data-motion='reduced'] .settings-stage, html[data-motion='reduced'] .settings-stage .settings-detail-scroll,
+html[data-motion='reduced'] .app-stack.has-settings > .app-main, html[data-motion='reduced'] .app .sidebar.pane.is-expanded { animation: none !important; }
+
+/* Settings has its own back and close controls; the drawer toggle must not sit on them. */
+.app:has(.settings-stage:not(.is-closing)) .nav-drawer-toggle { display: none; }
+
+/* ── Workspace chrome inside the pane ───────────────────────────────────── */
+/* Headers sit on the pane itself; the pane is the chrome now. */
+.app .app-stack.pane .chat-header, .app .app-stack.pane .diary-header { background: transparent; box-shadow: none; border: 0; }
+.app .app-stack.pane .stats-bar { background: transparent; }
+
+/* Composer: a pane of its own with glass controls (sample: project composer). */
+.app .composer-inner.pane { border-radius: var(--radius-xl); padding: var(--space-4) var(--space-4) var(--space-3); outline: 0; }
+.app .composer-inner.pane:focus-within { box-shadow: var(--pane-highlight), var(--shadow-3), 0 0 0 3px color-mix(in srgb, var(--md-primary) 18%, transparent); }
+.app .composer-inner.pane textarea { background: transparent; }
+.app .send-btn.glass { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--md-on-primary); border-color: transparent; }
+.app .send-btn.glass:disabled { opacity: .45; }
+.app .send-btn.glass svg { stroke: currentColor; }
+.app .model-pill.composer-model.glass { min-height: 30px; padding: 4px 12px; border-radius: var(--radius-pill); color: var(--text-primary); font-size: var(--text-footnote); font-weight: 500; background-color: transparent; }
+@media (max-width: 600px) { .app .send-btn.glass { width: 44px; height: 44px; } .app .model-pill.composer-model.glass { min-height: 44px; } }
+@media (max-width: 700px) { .app .settings-stage .settings-detail > header { display: flex; } }
+
+/* Settings replaces the workspace: what it covers is hidden, not just faded, so reduced motion
+   (no animation) never shows the two layered. */
+.app-stack.has-settings > :not(.settings-stage) { visibility: hidden; }
+.app-stack.has-settings:has(.settings-stage.is-closing) > :not(.settings-stage) { visibility: visible; }
+.settings-stage { background: transparent; }
+@media (max-width: 700px) {
+  .app .settings-stage .settings-navigation nav, .app .settings-stage .settings-navigation .settings-search { display: flex; }
+  .app .settings-stage .settings-navigation nav { flex-direction: column; }
+  .settings-stage .settings-back, .settings-stage .settings-back:hover { background: transparent; }
+}
+
+/* ── Contextual right panel (project context) ───────────────────────────── */
+/* Sits inside the workspace pane as its own surface, like the sample's context card. */
+@media (min-width: 901px) {
+  .app .app-stack.pane:has(> .noevia-inspector) { grid-template-columns: minmax(0, 1fr) 304px; }
+  .app .app-stack.pane .noevia-inspector { position: relative; inset: auto; align-self: start; width: auto; margin: var(--space-3) var(--space-3) var(--space-3) 0;
+    max-height: calc(100% - var(--space-6)); overflow: auto; padding: var(--space-2) 0; background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-1); }
+}
+.app .noevia-inspector .insp-bar { background: transparent; border: 0; padding: var(--space-3) var(--space-5) var(--space-2); font-size: var(--text-callout); font-weight: 600; }
+.app .noevia-inspector .insp-section { padding: var(--space-4) var(--space-5); border-top: 1px solid var(--border-subtle); }
+.app .noevia-inspector .insp-head { font-size: var(--text-callout); font-weight: 600; color: var(--text-primary); }
+.app .noevia-inspector :is(.insp-note, .insp-empty) { color: var(--text-secondary); font-size: var(--text-footnote); line-height: var(--leading-snug); }
+.app .noevia-inspector .insp-action { border-radius: var(--radius-sm); }
+.app .noevia-inspector .insp-action:hover { background: var(--nav-hover); }
+[data-material='soft'] .app .app-stack.pane .noevia-inspector { border-color: transparent; background: var(--bg-app); box-shadow: -3px -3px 8px var(--soft-hi), 3px 3px 8px var(--soft-lo); }
+
+/* Tablet widths are touch widths: sidebar rows keep 44px targets. */
+@media (max-width: 1024px) {
+  .app .sidebar.pane .nav-item, .app .sidebar.pane .new-chat-btn.glass, .app .sidebar.pane .account-trigger { min-height: 44px; }
+  .app .model-pill.composer-model.glass, .app :is(.btn, .modal-btn, .popup-tab) { min-height: 44px; }
+}

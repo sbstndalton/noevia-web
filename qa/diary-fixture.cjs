@@ -4,6 +4,11 @@ function createFixture(port = 31239) {
   let syntheticUser='synthetic-diary-only';
   const requests = [], pending = new Set(), live = new Set();
   const extraProject={id:'__diary-context',name:'Extras',model:'synthetic',files:[],assets:[],toolboxes:['core']};
+  // Settings → Connectors: a synthetic Google Drive that connects a moment after Connect.
+  const drive={state:'disconnected',email:null,backup:null,modes:{drive_search_files:'allow',drive_read_file:'allow',drive_get_metadata:'allow',drive_list_recent:'allow',drive_create_file:'ask',drive_update_file:'ask',drive_trash_file:'ask'}};
+  const driveLabels={drive_search_files:'Search files',drive_read_file:'Read file content',drive_get_metadata:'Get file metadata',drive_list_recent:'List recent files',drive_create_file:'Create file',drive_update_file:'Update file',drive_trash_file:'Trash file'};
+  const driveView=()=>({id:'gdrive',name:'Google Drive',configured:true,state:drive.state,email:drive.email,userCode:drive.state==='pending'?'WDJB-MJHT':undefined,verificationUrl:drive.state==='pending'?'about:blank#google-device':undefined,backup:drive.backup,
+    tools:Object.keys(driveLabels).map(name=>({name,label:driveLabels[name],write:!/search|read|metadata|recent/.test(name),mode:drive.modes[name]}))});
   const server = http.createServer(async (req,res) => {
     const url = new URL(req.url,'http://localhost');
     if (!url.pathname.startsWith('/api/')) {
@@ -86,6 +91,10 @@ function createFixture(port = 31239) {
         event({type:'done'});res.end();
       },250);return;
     }
+    if(url.pathname==='/api/connectors')return json({connectors:[driveView()]});
+    if(url.pathname==='/api/connectors/gdrive/connect'){drive.state='pending';setTimeout(()=>{drive.state='connected';drive.email='synthetic@example.com';},1500);return json(driveView());}
+    if(url.pathname==='/api/connectors/gdrive/disconnect'){drive.state='disconnected';drive.email=null;return json(driveView());}
+    if(url.pathname==='/api/connectors/gdrive/policy'){const write=body.tools.some(t=>!/search|read|metadata|recent/.test(t));if(body.mode==='allow'&&write)return json({error:'Writes always ask first, so they cannot be set to Always allow.'},400);for(const t of body.tools)drive.modes[t]=body.mode;return json(driveView());}
     if(url.pathname==='/api/models/installed')return json([]);
     // Fixed baseline the footer's own poll would keep reporting forever — a
     // test proving the live SSE 'usage' update works can't race the poll if

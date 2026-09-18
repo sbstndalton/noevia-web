@@ -22,7 +22,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   for(const theme of ['light','dark']){await page.emulateMedia({colorScheme:theme});await page.screenshot({path:`${shots}/shortcuts-1440-${theme}.png`});}
   await page.keyboard.press('Escape');await help.waitFor({state:'detached'});
   // Settings opens and closes.
-  await page.keyboard.press(`${mod}+Comma`);const settings=page.getByRole('dialog',{name:'Settings'});await settings.waitFor();
+  await page.keyboard.press(`${mod}+Comma`);const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
   assert.equal(await settings.getByText('Keyboard shortcuts',{exact:true}).count(),0,'no longer listed as planned');
   await page.keyboard.press('Escape');await settings.waitFor({state:'hidden'});
   // Search opens the rail's field with focus, even from inside the message box.

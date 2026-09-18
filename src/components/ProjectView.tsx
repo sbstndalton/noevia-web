@@ -274,7 +274,7 @@ export function ProjectView({
               a blank chat. */}
           {!chatEnabled && <p className="route-note" role="status">This project is not enabled for Chat. Turn Chat on under Project settings → Available in to send messages here.</p>}
           <div className="project-composer" hidden={!chatEnabled || tab === 'research'}>
-            <div className="composer-inner chat-composer-inner">
+            <div className="composer-inner chat-composer-inner pane">
               <ComposerTextarea
                 rows={1}
                 aria-label={`Message ${project.name}`}
@@ -286,7 +286,7 @@ export function ProjectView({
               <ComposerActions key={project.id} project={project} disabled={composerBusy || busyDocs || syncing} onChanged={onRefresh} onModels={onOpenModels} onBusy={setComposerBusy} onStatus={setComposerStatus} />
               <ComposerModel label={modelLabel} onClick={onOpenModels} />
           <ReasoningControl project={project} disabled={composerBusy || busyDocs || syncing} onChanged={onRefresh} />
-              <button className="send-btn" onClick={send} disabled={!draft.trim() || composerBusy || busyDocs || syncing} title="Send" aria-label="Send">
+              <button className="send-btn glass glass-lens is-primary is-press" onClick={send} disabled={!draft.trim() || composerBusy || busyDocs || syncing} title="Send" aria-label="Send">
                 <SendIcon />
               </button>
             </div>

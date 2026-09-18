@@ -1,0 +1,213 @@
+/* UI overhaul release 2 — primitives. One look for every button, field, select, switch, row
+   and badge, whichever older class a screen still uses (.btn, .modal-btn, .popup-tab,
+   .modal-input, .noevia-switch, .set-row). Loads after noevia.css and shell-v2.css, before
+   materials.css, which adds each material's depth on top. Anatomy: docs/ui-samples. */
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+:is(.btn, .modal-btn, .popup-tab) {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 34px; height: auto; padding: 6px 14px; border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong); background: var(--bg-surface); color: var(--text-primary);
+  font: inherit; font-size: var(--text-footnote); font-weight: 500; line-height: 1.2; cursor: pointer; box-shadow: var(--shadow-1);
+  transition: background-color var(--duration-instant) var(--ease-standard), border-color var(--duration-instant) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard), transform var(--duration-instant) var(--ease-standard);
+}
+:is(.btn, .modal-btn, .popup-tab):hover:not(:disabled) { background: var(--bg-surface-hover); color: var(--text-primary); box-shadow: var(--shadow-1); }
+:is(.btn, .modal-btn, .popup-tab):active:not(:disabled) { transform: scale(.97); opacity: 1; }
+:is(.btn, .modal-btn, .popup-tab):disabled { opacity: .5; cursor: default; }
+:is(.btn, .modal-btn, .popup-tab):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+:is(.btn, .modal-btn) svg { flex: none; }
+
+/* Primary: the one filled action in a group. */
+:is(.btn-primary, .modal-btn.primary) {
+  border-color: transparent; background: var(--md-primary); color: var(--md-on-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 1px 2px var(--glass-shadow), 0 6px 14px -8px color-mix(in srgb, var(--md-primary) 60%, transparent);
+  padding-inline: 16px;
+}
+:is(.btn-primary, .modal-btn.primary):hover:not(:disabled) { background: color-mix(in srgb, var(--md-primary) 88%, var(--md-on-primary)); color: var(--md-on-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 1px 2px var(--glass-shadow), 0 8px 18px -8px color-mix(in srgb, var(--md-primary) 70%, transparent); }
+:is(.btn-secondary, .modal-btn.secondary, .popup-tab) { background: var(--bg-surface); color: var(--text-primary); }
+.btn-ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--text-secondary); }
+.btn-ghost:hover:not(:disabled) { background: var(--nav-hover); box-shadow: none; }
+:is(.btn-danger, .model-card-danger) { color: var(--danger); }
+.btn.btn-danger { border-color: transparent; background: var(--danger); color: var(--on-danger); }
+.btn.btn-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 88%, black); color: var(--on-danger); }
+.btn-sm, .popup-tab { min-height: 30px; padding: 4px 12px; font-size: var(--text-footnote); }
+.btn-icon { width: 34px; padding: 0; }
+.popup-tab.is-active, .popup-tab[aria-pressed='true'], .popup-tab[aria-selected='true'] { background: var(--selected); color: var(--on-selected); border-color: transparent; }
+
+/* The same buttons inside Settings (the old rules there were more specific). */
+.settings-detail :is(.btn, .modal-btn, .popup-tab) { background-image: none; }
+.settings-detail :is(.modal-btn.secondary, .popup-tab, .btn-secondary) { background: var(--bg-surface); box-shadow: var(--shadow-1); }
+.settings-detail :is(.modal-btn.primary, .btn-primary) { background: var(--md-primary); color: var(--md-on-primary); }
+
+/* ── Fields and selects ─────────────────────────────────────────────────── */
+:is(.modal-input, .settings-detail input[type='text'], .settings-detail input[type='url'], .settings-detail input[type='email'], .settings-detail input[type='password'],
+  .settings-detail input[type='number'], .settings-detail input[type='search'], .settings-detail textarea) {
+  min-height: 36px; padding: 7px 12px; border-radius: var(--radius-md); border: 1px solid var(--border-strong);
+  background: var(--bg-surface); color: var(--text-primary); font: inherit; font-size: var(--text-callout); box-shadow: inset 0 1px 2px rgba(var(--shadow-rgb), .06);
+  transition: border-color var(--duration-instant) var(--ease-standard), box-shadow var(--duration-instant) var(--ease-standard);
+}
+:is(.modal-input, .settings-detail input, .settings-detail textarea):focus { outline: none; border-color: var(--md-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--md-primary) 22%, transparent); }
+.settings-detail .settings-search input, .settings-detail .project-name-field .modal-input { box-shadow: none; }
+
+/* Native selects drawn like the sample's select: a bordered pill-ish box with a chevron. */
+.settings-detail select:not(.mobile-settings-section), .modal select, select.modal-input {
+  appearance: none; -webkit-appearance: none; min-height: 34px; padding: 6px 32px 6px 12px; border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong); color: var(--text-primary); font: inherit; font-size: var(--text-footnote); cursor: pointer;
+  background: var(--bg-surface) no-repeat right 10px center / 14px 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  box-shadow: var(--shadow-1);
+}
+.settings-detail select:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+/* A select wrapped in a label.select draws its own chevron. */
+label.select { position: relative; display: inline-flex; align-items: center; }
+label.select > select { appearance: none; -webkit-appearance: none; min-height: 34px; padding: 6px 32px 6px 12px; border-radius: var(--radius-md); border: 1px solid var(--border-strong);
+  background: var(--bg-surface); color: var(--text-primary); font: inherit; font-size: var(--text-footnote); font-weight: 500; cursor: pointer; box-shadow: var(--shadow-1); }
+.settings-detail label.select > select { background-image: none; }
+label.select > svg { position: absolute; right: 10px; pointer-events: none; color: var(--text-secondary); }
+
+/* ── Switches: checkbox switches match the glass switch ─────────────────── */
+.noevia-switch, .settings-detail .set-row-control input[type='checkbox']:not(.plain) {
+  appearance: none; -webkit-appearance: none; position: relative; flex: none; width: 52px; height: 32px; min-height: 32px !important; margin: 0;
+  border-radius: var(--radius-pill); border: 0; background: var(--md-surface-container-highest); box-shadow: inset 0 1px 3px rgba(var(--shadow-rgb), .18); cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+.noevia-switch::after, .settings-detail .set-row-control input[type='checkbox']:not(.plain)::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .25), inset 0 1px 0 rgba(255, 255, 255, .8); transition: transform var(--duration-fast) var(--ease-spring);
+}
+.noevia-switch:checked, .settings-detail .set-row-control input[type='checkbox']:not(.plain):checked { background: var(--md-primary); border-color: transparent; }
+.noevia-switch:checked::after, .settings-detail .set-row-control input[type='checkbox']:not(.plain):checked::after { transform: translateX(20px); background: #fff; }
+.noevia-switch:active::after { width: 32px; }
+.noevia-switch:checked:active::after { transform: translateX(14px); }
+.noevia-switch:disabled { opacity: .5; cursor: default; }
+.noevia-switch:focus-visible, .settings-detail .set-row-control input[type='checkbox']:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* ── Settings pages ─────────────────────────────────────────────────────── */
+.settings-stage .settings-title { margin: 0 0 var(--space-6); }
+.settings-stage .settings-title h1, .settings-stage .connector-page h1 { margin: 0; font-family: var(--font-display); font-size: var(--text-title1); font-weight: 600; letter-spacing: var(--tracking-title); line-height: var(--leading-tight); }
+.settings-stage .settings-title p, .settings-stage .lede { margin: var(--space-2) 0 0; max-width: 64ch; color: var(--text-secondary); font-size: var(--text-callout); line-height: var(--leading-body); }
+.settings-stage .lede-tight { margin-top: calc(-1 * var(--space-1)); margin-bottom: var(--space-3); }
+.settings-stage h2:not(.settings-navigation h2) { margin: var(--space-10) 0 var(--space-3); font-size: var(--text-headline); font-weight: 600; letter-spacing: var(--tracking-title); }
+.settings-stage .rail-label { margin: var(--space-8) 0 var(--space-3); font-size: var(--text-headline); }
+
+/* A group of rows is one surface; rows divide with hairlines. */
+.settings-stage .set-rows, .settings-stage .group { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); box-shadow: var(--shadow-1); overflow: hidden; }
+.settings-stage .set-rows + .set-rows { margin-top: var(--space-4); }
+.settings-stage .set-row, .settings-stage .group > .row, .settings-stage .group .row { display: flex; align-items: center; gap: var(--space-6); min-height: 64px; padding: var(--space-4) var(--space-5); margin: 0; border: 0; }
+.settings-stage .set-row + .set-row, .settings-stage .group .row + .row { border-top: 1px solid var(--border-subtle); }
+.settings-stage :is(.set-row-text, .row-text) { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.settings-stage :is(.set-row-label, .row-label) { font-size: var(--text-callout); font-weight: 500; color: var(--text-primary); }
+.settings-stage :is(.set-row-desc, .row-desc) { font-size: var(--text-footnote); color: var(--text-secondary); line-height: var(--leading-snug); }
+.settings-stage .set-row-control { display: flex; align-items: center; gap: var(--space-2); flex: none; }
+.settings-stage .set-row-value { color: var(--text-secondary); font-size: var(--text-footnote); text-align: right; }
+.settings-stage .preview-setting-row { padding: var(--space-4) 0; }
+
+/* Theme tiles: the sample's three previews. */
+.settings-stage .theme-choice { gap: var(--space-3); margin: 0; }
+.settings-stage .theme-choice button { padding: 0; border: 0; background: none; box-shadow: none; color: var(--text-secondary); font-size: var(--text-footnote); text-align: left; }
+.settings-stage .theme-choice button .theme-swatch { border-radius: var(--radius-md); outline: 1px solid var(--border-strong); margin-bottom: 6px; }
+.settings-stage .theme-choice button.is-active { outline: 0; color: var(--text-primary); font-weight: 500; }
+.settings-stage .theme-choice button.is-active .theme-swatch { outline: 2px solid var(--md-primary); outline-offset: 2px; }
+
+/* ── Badges and chips ───────────────────────────────────────────────────── */
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: var(--radius-pill); font-size: var(--text-caption); font-weight: 500; line-height: 1.6; white-space: nowrap; }
+.badge.ok { background: var(--md-success-container); color: var(--md-on-success-container); }
+.badge.warn { background: var(--md-warning-container); color: var(--md-on-warning-container); }
+.badge.danger { background: var(--md-error-container); color: var(--md-on-error-container); }
+.badge.count { background: var(--md-surface-container-highest); color: var(--text-secondary); }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: var(--radius-pill); border: 1px solid var(--border-subtle); background: var(--bg-surface);
+  color: var(--text-primary); font: inherit; font-size: var(--text-footnote); cursor: pointer; transition: background-color var(--duration-instant) var(--ease-standard), border-color var(--duration-instant) var(--ease-standard); }
+.chip:hover { background: var(--bg-surface-hover); border-color: var(--border-strong); }
+.chip:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.chip > svg { color: var(--text-secondary); transition: transform var(--duration-fast) var(--ease-out); }
+.chip:hover > svg { transform: translateX(2px); }
+
+/* ── Connectors ─────────────────────────────────────────────────────────── */
+.connector-list { display: flex; flex-direction: column; gap: var(--space-2); }
+.connector-card { display: flex; align-items: center; gap: var(--space-4); width: 100%; padding: var(--space-4) var(--space-5); text-align: left; font: inherit; color: var(--text-primary); cursor: pointer;
+  transition: background-color var(--duration-instant) var(--ease-standard), transform var(--duration-instant) var(--ease-standard); }
+button.connector-card:hover { background: var(--bg-surface-hover); }
+button.connector-card:active { transform: scale(.995); }
+button.connector-card:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.connector-card > svg:last-child { margin-left: auto; color: var(--text-secondary); }
+.connector-card.is-later { cursor: default; opacity: .72; }
+.connector-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.connector-text b { font-size: var(--text-callout); font-weight: 600; }
+.connector-text small { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--text-secondary); font-size: var(--text-footnote); }
+.logo { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 12px; background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary); }
+
+.crumb-link { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 6px; margin-left: -6px; border: 0; border-radius: var(--radius-sm); background: none;
+  color: var(--text-secondary); font: inherit; font-size: var(--text-footnote); cursor: pointer; }
+.crumb-link:hover { color: var(--text-primary); background: var(--nav-hover); }
+.conn-head { display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-4); }
+.conn-title { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.conn-head .actions { margin-left: auto; display: flex; gap: var(--space-2); align-items: center; }
+.connector-page .backup { margin-top: var(--space-6); }
+.connector-page .group + .group { margin-top: var(--space-3); }
+.connector-page > .group:first-of-type { margin-top: var(--space-6); }
+.suggest { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.gdrive-code-value { font-family: var(--font-mono); font-size: var(--text-title2); font-weight: 600; letter-spacing: .08em; padding: 4px 12px; border-radius: var(--radius-md); background: var(--md-surface-container-high); font-variant-numeric: tabular-nums; }
+.confirm-strip { display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-4); padding: var(--space-4) var(--space-5); }
+.confirm-strip p { margin: 4px 0 0; color: var(--text-secondary); font-size: var(--text-footnote); }
+.confirm-actions { display: flex; gap: var(--space-2); margin-left: auto; flex: none; }
+
+.perm-group { margin-top: var(--space-3); }
+.perm-head { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3); }
+.perm-toggle { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 34px; padding: 0 8px; border: 0; border-radius: var(--radius-sm); background: none; color: var(--text-primary); font: inherit; cursor: pointer; }
+.perm-toggle:hover { background: var(--nav-hover); }
+.perm-toggle b { font-size: var(--text-callout); font-weight: 600; }
+.perm-toggle > svg { color: var(--text-secondary); }
+.perm-head .select { margin-left: auto; }
+.tool { display: flex; align-items: center; gap: var(--space-3); padding: 10px var(--space-5); border-top: 1px solid var(--border-subtle); font-size: var(--text-callout); }
+.tool > span:first-child { flex: 1; min-width: 0; }
+.permission-control.glass-seg > button { min-width: 36px; min-height: 28px; padding: 3px 9px; }
+.permission-control.glass-seg > button[aria-disabled='true'] { opacity: .35; cursor: not-allowed; }
+.permission-control.glass-seg > button.allow[aria-checked='true'] { color: var(--status-connected); }
+.permission-control.glass-seg > button.ask[aria-checked='true'] { color: var(--status-approval); }
+.permission-control.glass-seg > button.block[aria-checked='true'] { color: var(--status-danger); }
+
+@media (max-width: 700px) {
+  .settings-stage .set-row, .settings-stage .group .row { flex-wrap: wrap; gap: var(--space-3); padding: var(--space-4); }
+  .settings-stage :is(.set-row-text, .row-text) { flex-basis: 100%; }
+  .settings-stage .set-row:has(> .set-row-control > .noevia-switch) .set-row-text, .settings-stage .row:has(> .glass-switch) .row-text { flex-basis: 0; }
+  :is(.btn, .modal-btn, .popup-tab), label.select > select, .settings-detail select:not(.mobile-settings-section) { min-height: 44px; }
+  .settings-stage .glass-seg > button { min-height: 38px; padding-inline: 16px; }
+  .permission-control.glass-seg > button { min-width: 44px; min-height: 40px; }
+  .tool { padding: 8px var(--space-4); }
+  .conn-head { flex-wrap: wrap; } .conn-head .actions { margin-left: 0; width: 100%; }
+  .perm-head { flex-wrap: wrap; } .perm-head .select { margin-left: 0; }
+  .confirm-strip { flex-direction: column; align-items: stretch; } .confirm-actions { margin-left: 0; }
+  .chip { min-height: 44px; }
+  .settings-stage .theme-choice { width: 100%; } .settings-stage .theme-choice button { flex: 1; }
+}
+
+/* Soft material: controls are pressed out of the surface instead of bordered. */
+[data-material='soft'] :is(.btn, .modal-btn, .popup-tab):not(.btn-primary):not(.primary):not(.btn-ghost):not(.btn-danger) {
+  border-color: transparent; background: var(--bg-app); box-shadow: -3px -3px 7px var(--soft-hi), 3px 3px 7px var(--soft-lo);
+}
+[data-material='soft'] :is(.btn, .modal-btn, .popup-tab):not(.btn-primary):not(.primary):not(.btn-ghost):active:not(:disabled) { box-shadow: inset 2px 2px 5px var(--soft-lo), inset -2px -2px 5px var(--soft-hi); transform: none; }
+[data-material='soft'] :is(.modal-input, label.select > select, .settings-detail select:not(.mobile-settings-section), .settings-detail input[type='text'], .settings-detail input[type='url'], .settings-detail input[type='email'], .settings-detail input[type='password'], .settings-detail input[type='number'], .settings-detail textarea) {
+  border-color: transparent; background-color: var(--bg-app); box-shadow: inset 2px 2px 5px var(--soft-lo), inset -2px -2px 5px var(--soft-hi);
+}
+[data-material='soft'] .noevia-switch:not(:checked), [data-material='soft'] .settings-detail .set-row-control input[type='checkbox']:not(.plain):not(:checked) { background: var(--bg-app); box-shadow: inset 2px 2px 5px var(--soft-lo), inset -2px -2px 5px var(--soft-hi); }
+[data-material='soft'] .chip, [data-material='soft'] .logo { border-color: transparent; background: var(--bg-app); box-shadow: -2px -2px 5px var(--soft-hi), 2px 2px 5px var(--soft-lo); }
+/* Material 3: flat tonal controls, no borders. */
+[data-material='material'] :is(.btn-secondary, .modal-btn.secondary, .popup-tab) { border-color: var(--md-outline-variant); box-shadow: none; background: transparent; color: var(--md-primary); }
+[data-material='material'] :is(.btn, .modal-btn) { border-radius: var(--radius-pill); }
+[data-material='material'] .btn-primary, [data-material='material'] .modal-btn.primary { box-shadow: none; }
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  :is(.btn, .modal-btn, .popup-tab, .chip) { box-shadow: none; border-color: var(--control-border); }
+}
+
+/* Touch screens of any width (landscape phones, tablets): every target is at least 44px. */
+@media (pointer: coarse) {
+  :is(.btn, .modal-btn, .popup-tab, .chip, .crumb-link, .perm-toggle), label.select > select, .settings-detail select:not(.mobile-settings-section) { min-height: 44px; }
+  .app .sidebar.pane .nav-item, .app .sidebar.pane .new-chat-btn.glass, .app .sidebar.pane .account-trigger, .settings-stage .settings-navigation nav button, .settings-stage .settings-back { min-height: 44px; }
+  .app .sidebar.pane .shell-icon-button, .settings-stage .shell-icon-button { width: 44px; height: 44px; }
+  .permission-control.glass-seg > button { min-width: 44px; min-height: 44px; }
+  .settings-stage .glass-seg > button { min-height: 44px; }
+  .noevia-switch, .settings-detail .set-row-control input[type='checkbox']:not(.plain) { outline-offset: 8px; }
+}

@@ -1,3 +1,4 @@
+import { SegmentedControl } from './SegmentedControl';
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 
@@ -30,11 +31,8 @@ export function LayoutModeChoice(): JSX.Element | null {
 
   if (!api()) return null;
   const choose = (next: LayoutMode) => { api()?.set(next); setMode(next); };
-  return <div className="theme-choice">
-    {OPTIONS.map(([id, label]) => <button key={id} className={mode === id ? 'is-active' : ''} aria-pressed={mode === id} onClick={() => choose(id)}>
-      {label}{id === 'auto' ? ` · ${device === 'mobile' ? 'phone' : 'desktop'}` : ''}
-    </button>)}
-  </div>;
+  return <SegmentedControl label="Layout" value={mode} onChange={choose}
+    options={OPTIONS.map(([id, label]) => [id, `${label}${id === 'auto' ? ` · ${device === 'mobile' ? 'phone' : 'desktop'}` : ''}`])}/>;
 }
 
 /** What the picker does here depends on the device, so the description is not static. */

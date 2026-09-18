@@ -25,7 +25,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  });
  await page.goto('http://localhost:31347');
  await page.getByTitle('Settings',{exact:true}).click();
- const dialog=page.getByRole('dialog',{name:'Settings'});
+ const dialog=page.getByRole('region',{name:'Settings'});
  await dialog.getByRole('button',{name:'Status'}).click();
 
  // Unconfigured: the heading names the variable, and the note explains that a

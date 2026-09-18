@@ -1,6 +1,6 @@
 import { AppearanceSettings, CapabilitiesSettings, ProfileSettings } from './GeneralSettings';
 import { SettingsPanelBoundary } from './SettingsPanelBoundary';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SettingsView } from './SettingsView';
 import type { SettingsViewProps } from './SettingsView';
 import { fetchProfile } from '../api';
@@ -13,22 +13,23 @@ import { PersonalizationSettings } from './personalization/PersonalizationSettin
 import { FeatureSettings } from './features/FeatureSettings';
 import { OffsiteBackupSettings } from './offsite-backup/OffsiteBackupSettings';
 import { WebAddressSettings } from './web-address/WebAddressSettings';
+import { ConnectorsSettings } from './connectors/ConnectorsSettings';
 
 type Item = [id: string, label: string];
 type Group = { name: string; items: Item[]; admin?: boolean };
 
-// Grouped the way people look for things: who you are, how noevia behaves for
-// you, what it is connected to, and — for administrators — the server itself.
-// Sections that only ever had placeholder content are listed together under
-// "Planned" so the navigation describes what noevia can actually do today.
+// Grouped the way people look for things: who you are, how noevia behaves for you, what it
+// is connected to, and — for administrators — the server itself. Sections that only ever had
+// placeholder content are listed together under "Coming later" so the navigation describes
+// what noevia can actually do today.
 //
-// Removed outright rather than deferred, because they cannot apply to a
-// self-hosted single-server install: Billing (no plans or invoices to show),
-// Voice, Browser and Computer use (host-application features, not this app's).
+// Removed outright rather than deferred, because they cannot apply to a self-hosted
+// single-server install: Billing (no plans or invoices to show), Browser and Computer use
+// (host-application features, not this app's).
 const PERSONAL: Group[] = [
   { name: 'Account', items: [['profile', 'Profile'], ['security', 'Security'], ['usage', 'Usage & activity'], ['data', 'Data']] },
   { name: 'Preferences', items: [['appearance', 'Appearance'], ['personalization', 'Personalization'], ['capabilities', 'Capabilities']] },
-  { name: 'Connections', items: [['providers', 'AI providers'], ['diary', 'Diary & storage']] },
+  { name: 'Customize', items: [['connectors', 'Connectors'], ['providers', 'AI providers'], ['diary', 'Diary & storage']] },
 ];
 
 // Deployment-wide. The navigation hides these from members, but that is
@@ -47,31 +48,67 @@ const ADMIN: Group = { name: 'Server', admin: true, items: [
 const LATER: Group = { name: 'Coming later', items: [['planned', 'Planned features']] };
 
 // Each section has its own symbol; names resolve through ShellIcon's Lucide map.
-const ICONS: Record<string, string> = Object.fromEntries(['profile','security','appearance','personalization','capabilities','diary','providers','usage','data','planned','users','models','status','features','backups','address'].map(id => [id, id]));
+const ICONS: Record<string, string> = Object.fromEntries(['profile','security','appearance','personalization','capabilities','diary','providers','usage','data','planned','users','models','status','features','backups','address','connectors'].map(id => [id, id]));
 
 // What used to be one navigation row each. Kept visible as a roadmap, but in
 // one place, so an empty section never looks like a broken one.
 const PLANNED: { group: string; items: string[] }[] = [
-  { group: 'Extensibility', items: ['Capability catalogue', 'Plugin management', 'Skill library', 'Connector catalogue'] },
+  { group: 'Extensibility', items: ['Capability catalogue', 'Plugin management', 'Skill library', 'Nextcloud and custom MCP connectors'] },
   { group: 'Coding workspace', items: ['Coding preferences', 'Git', 'Environments', 'Worktrees', 'Hooks'] },
 ];
 
-export function SettingsShell(props: SettingsViewProps & {initialSection?:'general'|'usage'|'models';appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void; preference?:'light'|'dark'|'system'; onPreference?:(preference:'light'|'dark'|'system')=>void}) {
-  // 'general' is the historical name for the first page; it now opens Profile.
-  const [section, setSection] = useState<string>(!props.initialSection || props.initialSection === 'general' ? 'profile' : props.initialSection);
+const PHONE = '(max-width: 700px)';
+const phone = () => typeof window !== 'undefined' && window.matchMedia(PHONE).matches;
+const reducedMotion = () => typeof window !== 'undefined' && (document.documentElement.dataset.motion === 'reduced' || window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+export type SettingsSection = 'general' | 'usage' | 'models' | 'connectors';
+
+export function SettingsShell(props: SettingsViewProps & {initialSection?:SettingsSection;appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; onStartChat?:(prompt:string)=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void; preference?:'light'|'dark'|'system'; onPreference?:(preference:'light'|'dark'|'system')=>void}) {
+  // 'general' is the historical name for the first page; it now opens Profile. Anything that is
+  // not a section name (a click event handed through by mistake) counts as no choice.
+  const named = typeof props.initialSection === 'string' && props.initialSection !== 'general' ? props.initialSection : null;
+  const [section, setSection] = useState<string>(named || 'profile');
+  // Phones show the list and a page as two screens; a named section opens straight on its page.
+  const [view, setView] = useState<'list' | 'detail'>(() => named || !phone() ? 'detail' : 'list');
+  const [closing, setClosing] = useState(false);
   const [query, setQuery] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [profileKnown, setProfileKnown] = useState(false);
   const [profileError, setProfileError] = useState(false);
   const [profileAttempt, setProfileAttempt] = useState(0);
-  const dialog = useRef<HTMLDialogElement>(null);
+  const stage = useRef<HTMLElement>(null);
+  const onClose = useRef(props.onClose);
+  onClose.current = props.onClose;
+
+  // Settings takes the chat's place rather than floating over it: focus moves in, and goes back
+  // to whatever opened it when it leaves.
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    stage.current?.querySelector<HTMLElement>('[aria-current="page"], .settings-navigation nav button')?.focus({ preventScroll: true });
+    return () => { if (previous?.isConnected) previous.focus({ preventScroll: true }); };
+  }, []);
+
+  // Leaving plays the entrance backwards, then hands control back.
+  const closeTimer = useRef(0);
+  const close = useCallback(() => {
+    if (reducedMotion()) { onClose.current(); return; }
+    setClosing(true);
+    closeTimer.current = window.setTimeout(() => onClose.current(), 240);
+  }, []);
+  // Replaced by a new Settings mid-exit: this one's exit must not close its successor.
+  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
 
   useEffect(() => {
-    const previous = document.activeElement as HTMLElement;
-    const node = dialog.current;
-    node?.showModal();
-    return () => { node?.close(); previous?.focus(); };
-  }, []);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest('dialog, [role="menu"], [role="listbox"]')) return;
+      e.preventDefault();
+      close();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [close]);
 
   useEffect(() => {
     let live = true;
@@ -93,29 +130,32 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
 
   const title = groups.flatMap(g => g.items).find(([id]) => id === section)?.[1] || 'Settings';
   const filtered = groups.map(g => ({ ...g, items: g.items.filter(([, label]) => label.toLowerCase().includes(query.toLowerCase())) }));
+  const open = (id: string) => { setSection(id); setView('detail'); stage.current?.querySelector('.settings-detail-scroll')?.scrollTo(0, 0); };
 
-  return <dialog ref={dialog} className="settings-shell" aria-label="Settings" onCancel={e => { e.preventDefault(); props.onClose(); }}>
+  return <section ref={stage} className={`settings-stage${closing ? ' is-closing' : ''}`} data-view={view} role="region" aria-label="Settings">
     <aside className="settings-navigation">
-      <button className="settings-back" onClick={props.onClose}><ShellIcon name="arrow"/>Back to app</button>
-      <div className="settings-search"><ShellIcon name="search" size={16}/><input aria-label="Search settings" placeholder="Search settings…" value={query} onChange={e => setQuery(e.target.value)}/></div>
-      <select className="mobile-settings-section" aria-label="Settings category" value={section} onChange={(e) => setSection(e.target.value)}>
-        {groups.map((group) => <optgroup key={group.name} label={group.name}>
-          {group.items.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-        </optgroup>)}
-      </select>
+      <div className="settings-nav-head">
+        <button className="settings-back" onClick={close}><ShellIcon name="arrow"/>Back to app</button>
+        <h1 className="settings-nav-title">Settings</h1>
+      </div>
+      <div className="settings-search"><ShellIcon name="search" size={16}/><input aria-label="Search settings" placeholder="Search settings" value={query} onChange={e => setQuery(e.target.value)}/></div>
       {profileError && <p className="route-note" role="alert">Account access could not be checked. <button className="popup-tab" onClick={() => setProfileAttempt(n => n + 1)}>Retry access</button></p>}
       <nav aria-label="Settings categories">
         {filtered.map(g => g.items.length > 0 && <section key={g.name}>
           <h2>{g.name}</h2>
-          {g.items.map(([id, label]) => <button key={id} aria-current={section === id ? 'page' : undefined} className={section === id ? 'is-active' : ''} onClick={() => setSection(id)}>
-            <ShellIcon name={ICONS[id] || 'settings'} size={17}/><span>{label}</span>
+          {g.items.map(([id, label]) => <button key={id} aria-current={section === id ? 'page' : undefined} className={section === id ? 'is-active' : ''} onClick={() => open(id)}>
+            <ShellIcon name={ICONS[id] || 'settings'} size={17}/><span>{label}</span><ShellIcon name="chevron-right" size={16}/>
           </button>)}
         </section>)}
         {filtered.every(g => !g.items.length) && <p className="preview-footnote">No matching settings.</p>}
       </nav>
     </aside>
-    <section className="settings-detail">
-      <header><span>{title}</span><CloseButton onClick={props.onClose} label="Close settings"/></header>
+    <section className="settings-detail" aria-label={title}>
+      <header>
+        <button className="shell-icon-button settings-list-back" onClick={() => setView('list')} aria-label="All settings"><ShellIcon name="chevron-left"/></button>
+        <span>{title}</span>
+        <CloseButton onClick={close} label="Close settings"/>
+      </header>
       <div className="settings-detail-scroll" key={section}>
         <SettingsPanelBoundary>
         {['security', 'users', 'diary', 'providers', 'models', 'status'].includes(section) ? (
@@ -131,6 +171,8 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
           <WebAddressSettings/>
         ) : section === 'backups' && isAdmin ? (
           <OffsiteBackupSettings />
+        ) : section === 'connectors' ? (
+          <ConnectorsSettings isAdmin={isAdmin} onStartChat={props.onStartChat}/>
         ) : section === 'capabilities' ? (
           <CapabilitiesSettings />
         ) : section === 'personalization' ? (
@@ -148,5 +190,5 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
         </SettingsPanelBoundary>
       </div>
     </section>
-  </dialog>;
+  </section>;
 }

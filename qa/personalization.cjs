@@ -28,8 +28,8 @@ const port=31293,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'.
    await page.setViewportSize({width,height:width<768?760:900});await page.emulateMedia({colorScheme:theme});
    await page.goto(origin);await page.waitForLoadState('networkidle');
    await page.keyboard.press((await page.evaluate(()=>/mac/i.test(navigator.platform)))?'Meta+Comma':'Control+Comma');
-   const dialog=page.getByRole('dialog',{name:'Settings'});await dialog.waitFor();
-   if(width<768)await dialog.getByLabel('Settings category').selectOption('personalization');else await dialog.getByRole('button',{name:'Personalization',exact:true}).click();
+   const dialog=page.getByRole('region',{name:'Settings'});await dialog.waitFor();
+   await dialog.getByRole('button',{name:'Personalization',exact:true}).click();
    await dialog.getByRole('heading',{name:'Personalization',level:1}).waitFor();
    const box=dialog.getByLabel(/Custom instructions/);
    if(width===1440&&theme==='light'){

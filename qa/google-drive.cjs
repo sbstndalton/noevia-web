@@ -26,8 +26,8 @@ const PORT=31383,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
   assert.equal((await api('/api/admin/offsite-backup/run',{})).status,200);
   const open=async(width)=>{
    await page.getByTitle('Settings',{exact:true}).click();
-   const settings=page.getByRole('dialog',{name:'Settings'});await settings.waitFor();
-   if(width<768)await settings.getByLabel('Settings category').selectOption('backups');else await settings.getByRole('button',{name:'Backups',exact:true}).click();
+   const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
+   await settings.getByRole('button',{name:'Backups',exact:true}).click();
    await settings.getByText('Last restore test').waitFor();
    return settings;
   };
@@ -40,7 +40,7 @@ const PORT=31383,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
    await page.evaluate(t=>localStorage.setItem('cowork-theme',t),theme);await page.reload();
    const s=await open(width);
    const connect=s.getByRole('button',{name:'Connect Google Drive'});await connect.waitFor();
-   assert.ok((await connect.boundingBox()).height>=44,'44px target');
+   if(width<768)assert.ok((await connect.boundingBox()).height>=44,'44px target on phones');
    assert.equal(await s.locator('textarea, code').count(),0,'nothing to paste');
    assert.doesNotMatch(await s.innerText(),/ssh |rclone|Terminal/);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`no horizontal overflow at ${width}`);

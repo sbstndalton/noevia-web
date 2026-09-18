@@ -466,14 +466,14 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const blockedReason = wizard === 'local' ? directoryPickerBlockedReason() : null;
   const composer = <div className="diary-compose">
     <label htmlFor="diary-draft">{day ? `Add to ${dayLabel(day)}` : 'What’s on your mind today?'}</label>
-    <div className="composer-inner chat-composer-inner"><ComposerTextarea id="diary-draft" rows={3} placeholder={day ? 'Continue this day’s story…' : emptyDiary ? 'Write your first entry…' : 'Write about your day, or ask your diary a question…'} value={draft} disabled={busy} onValue={setDraft} onSubmit={submit} /><ComposerActions diary project={extrasEnabled ? extraProject : null} disabled={busy || extraBusy} onChanged={refreshExtraProject} onModels={()=>setExtraModels(true)} onBusy={setExtraBusy} onStatus={setExtraStatus} header={<>
+    <div className="composer-inner chat-composer-inner pane"><ComposerTextarea id="diary-draft" rows={3} placeholder={day ? 'Continue this day’s story…' : emptyDiary ? 'Write your first entry…' : 'Write about your day, or ask your diary a question…'} value={draft} disabled={busy} onValue={setDraft} onSubmit={submit} /><ComposerActions diary project={extrasEnabled ? extraProject : null} disabled={busy || extraBusy} onChanged={refreshExtraProject} onModels={()=>setExtraModels(true)} onBusy={setExtraBusy} onStatus={setExtraStatus} header={<>
       <p><strong>Diary retrieval &amp; capture</strong> · always on</p>
       <label className="composer-tool-option"><input type="checkbox" checked={extrasEnabled} disabled={busy || extraBusy} onChange={()=>void toggleExtras()} /><span>Extra attachments &amp; tools<small>Off by default. Applies while this session is open.</small></span></label>
       {extrasEnabled && <button type="button" onClick={()=>setExtraFiles(true)}>Manage attachments ({extraProject?.files.length || 0})</button>}
     </>} />
     <ComposerModel label={extrasEnabled && extraProject ? `Extras: ${extraProject.routing === 'auto' ? 'Auto' : extraProject.model || 'local model'}` : 'Diary companion'} disabled={!extrasEnabled || !extraProject || busy || extraBusy} onClick={()=>setExtraModels(true)} hint={extrasEnabled ? 'Choose the optional context model; diary capture stays unchanged' : 'Diary retrieval and capture are always active. Enable extras in + to choose an optional context model.'} />
     {extrasEnabled && extraProject && <ReasoningControl project={extraProject} disabled={busy || extraBusy} onChanged={refreshExtraProject} />}
-    <button className="send-btn" aria-label="Send diary message" disabled={busy || recovering || extraBusy || !draft.trim()} onClick={submit}><SendIcon /></button></div>
+    <button className="send-btn glass glass-lens is-primary is-press" aria-label="Send diary message" disabled={busy || recovering || extraBusy || !draft.trim()} onClick={submit}><SendIcon /></button></div>
     {!folder && !day && (turns[today] || []).length > 0 && <button className="popup-tab" onClick={()=>{setMonth(today.slice(0,7));setDay(today);}}>Open today’s conversation</button>}
     {recoveryNotice && <p className="composer-action-status" role="status">{recoveryNotice}</p>}
     {extraStatus && <p className="composer-action-status" role="status">{extraStatus}</p>}

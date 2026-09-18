@@ -312,7 +312,7 @@ export function ChatView({
 
       <div className="composer">
         <ChatContext key={chatId} chatId={chatId} projectId={project?.id || null} messages={messages} streaming={streaming} onBusy={setActionBusy} />
-        <div className="composer-inner chat-composer-inner">
+        <div className="composer-inner chat-composer-inner pane">
           <ComposerTextarea
             aria-label="Message"
             rows={2}
@@ -326,11 +326,11 @@ export function ChatView({
           <ComposerModel label={modelLabel} onClick={openModels} />
           <ReasoningControl project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} />
           {streaming ? (
-            <button className="send-btn" onClick={onStop} title="Stop generating">
+            <button className="send-btn glass glass-lens is-primary is-press" onClick={onStop} title="Stop generating">
               <span aria-hidden="true">&#9632;</span>
             </button>
           ) : (
-            <button className="send-btn" onClick={submit} disabled={!draft.trim() || actionBusy} title="Send">
+            <button className="send-btn glass glass-lens is-primary is-press" onClick={submit} disabled={!draft.trim() || actionBusy} title="Send">
               <SendIcon />
             </button>
           )}

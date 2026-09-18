@@ -10,10 +10,7 @@ import { fetchToolboxes, fetchProfile } from '../api';
 import type { McpStatus } from '../api';
 import { ShellIcon } from './ShellIcon';
 import type { ChatMeta, HealthState, Project } from '../types';
-import {
-  Logo,
-  PlusIcon,
-} from './Icons';
+import { Logo } from './Icons';
 
 interface SidebarProps {
   projects: Project[];
@@ -39,7 +36,7 @@ interface SidebarProps {
   onDeleteProject: (id: string) => void;
   onOpenDiary: () => void;
   diaryEnabled: boolean;
-  onOpenSettings: (section?: 'general'|'usage') => void;
+  onOpenSettings: (section?: 'general'|'usage'|'connectors') => void;
   health: HealthState;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
@@ -133,7 +130,7 @@ export function Sidebar({
   // Any navigation, including views opened from outside the sidebar (Settings →
   // model manager), closes the drawer so it never covers what just opened.
   useEffect(() => { setExpanded(false); }, [activeView, activeChatId, activeProjectId]);
-  const openSettings = (section?: 'general' | 'usage') => { setExpanded(false); onOpenSettings(section); };
+  const openSettings = (section?: 'general' | 'usage' | 'connectors') => { setExpanded(false); onOpenSettings(section); };
   const trapDrawer = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!mobile || !expanded) return;
     if (e.key === 'Escape' && !e.defaultPrevented) {
@@ -318,32 +315,47 @@ export function Sidebar({
       aria-modal={mobile && expanded ? true : undefined}
       aria-label={mobile && expanded ? 'Navigation' : undefined}
       onKeyDown={trapDrawer}
-      className={`sidebar${activeView === 'diary' ? ' diary-sidebar' : ''}${expanded ? ' is-expanded' : ''}${collapsed ? ' is-collapsed' : ''}`}
+      className={`sidebar pane${activeView === 'diary' ? ' diary-sidebar' : ''}${expanded ? ' is-expanded' : ''}${collapsed ? ' is-collapsed' : ''}`}
       onClick={(e) => {
         // Any navigation collapses the rail again, so the overlay never
         // stays over the thing it just navigated to.
         if (expanded && (e.target as HTMLElement).closest('.nav-item')) setExpanded(false);
       }}
     >
-      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? 'Close navigation' : collapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button><button className="shell-icon-button" aria-label={theme==='dark'?'Switch to Polymetal Day':'Switch to Polymetal Night'} title={theme==='dark'?'Polymetal Day':'Polymetal Night'} onClick={onToggleTheme}><ShellIcon name={theme==="dark"?"sun":"moon"}/></button><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
+      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? 'Close navigation' : collapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button><button className="shell-icon-button" aria-label={theme==='dark'?'Switch to light mode':'Switch to dark mode'} title={theme==='dark'?'Light mode':'Dark mode'} onClick={onToggleTheme}><ShellIcon name={theme==="dark"?"sun":"moon"}/></button><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
       {showPreviews && <div className="app-mode-switch" aria-label="Workspace mode"><button className="is-selected" aria-pressed="true"><ShellIcon name="chat"/>Chat</button><button onClick={onEnterCode} aria-pressed="false"><ShellIcon name="code"/>Code</button></div>}
       {searching&&<input className="shell-search" autoFocus aria-label="Search projects and chats" placeholder="Search projects and chats…" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');}}}/>}
 
-      <button className="new-chat-btn" onClick={()=>{onNewChat();setExpanded(false);}} title="New chat">
-        <PlusIcon />
+      <button className="new-chat-btn glass glass-lens" onClick={()=>{onNewChat();setExpanded(false);}} title="New chat">
+        <ShellIcon name="compose" size={17}/>
         <span>New chat</span>
       </button>
 
-      <div className="side-nav">
+      <nav className="side-nav" aria-label="Primary">
         <button
           className={`nav-item${activeView === 'projects' ? ' is-active' : ''}`}
           aria-label="Projects"
+          aria-current={activeView === 'projects' ? 'page' : undefined}
           onClick={onOpenProjects}
         >
-          <ShellIcon name="projects" size={17}/>
+          <ShellIcon name="folder" size={17}/>
           <span className="nav-name">Projects</span>
         </button>
-      </div>
+        {/* The diary is its own space, not another project. */}
+        {diaryEnabled && <button
+          className={`nav-item${activeView === 'diary' ? ' is-active' : ''}`}
+          aria-label="Diary"
+          aria-current={activeView === 'diary' ? 'page' : undefined}
+          onClick={onOpenDiary}
+        >
+          <ShellIcon name="diary" size={17}/>
+          <span className="nav-name">Diary</span>
+        </button>}
+        <button className="nav-item" aria-label="Customize" onClick={() => openSettings('connectors')}>
+          <ShellIcon name="connectors" size={17}/>
+          <span className="nav-name">Customize</span>
+        </button>
+      </nav>
 
       {showPreviews && <nav className="shell-extra-nav" aria-label="Explore noevia">{[['Scheduled','clock'],['Plugins','plugins'],['Explore','explore']].map(([label,icon])=><button className="nav-item" key={label} onClick={()=>onPreview(label)}><ShellIcon name={icon}/><span className="nav-name">{label}</span></button>)}</nav>}
       <div className="rail-tools"><button className="shell-icon-button" aria-label="Search projects and chats" onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(true);}}><ShellIcon name="search"/></button><button className="shell-icon-button" aria-label="Show pinned items" onClick={()=>{setCollapsed(false);setExpanded(true);setClosedGroups(g=>({...g,Pinned:false}));}}><ShellIcon name="pin"/></button></div>
@@ -387,24 +399,6 @@ export function Sidebar({
       )}
 
       </div>
-
-      {/* The diary is its own space, not another project — it keeps a separate
-          area above the footer rather than sitting in the Projects nav. */}
-      {diaryEnabled && (
-        <>
-          <div className="divider" />
-          <nav className="side-diary" aria-label="Diary">
-            <button
-              className={`nav-item${activeView === 'diary' ? ' is-active' : ''}`}
-              aria-label="Diary"
-              onClick={onOpenDiary}
-            >
-              <ShellIcon name="diary" size={17}/>
-              <span className="nav-name">Diary</span>
-            </button>
-          </nav>
-        </>
-      )}
 
       <div className="divider" />
 

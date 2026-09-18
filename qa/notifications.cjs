@@ -33,7 +33,7 @@ const port=31295,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'.
   await page.goto(origin);await page.waitForLoadState('networkidle');
   // Opt in.
   await page.keyboard.press((await page.evaluate(()=>/mac/i.test(navigator.platform)))?'Meta+Comma':'Control+Comma');
-  const dialog=page.getByRole('dialog',{name:'Settings'});await dialog.waitFor();
+  const dialog=page.getByRole('region',{name:'Settings'});await dialog.waitFor();
   await dialog.getByRole('button',{name:'Personalization',exact:true}).click();
   const toggle=dialog.getByRole('switch',{name:'Background notifications'});
   assert.equal(await toggle.isChecked(),false,'off by default');

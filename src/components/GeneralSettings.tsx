@@ -59,30 +59,36 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
   const bump = () => setRevision((n) => n + 1);
 
   return <>
-    <div className="settings-title"><h1>Appearance</h1><p>How noevia looks and moves.</p></div>
+    <div className="settings-title"><h1>Appearance</h1><p>How noevia looks and moves on this device. Theme and material follow you to your other devices.</p></div>
 
     <section className="settings-section">
-      <h2>Preferences</h2>
+      <h2>Theme</h2>
       <div className="set-rows">
-        <Row label="Mode" description="System follows your device's light or dark setting. Your choice follows you to other devices.">
-          <div className="theme-choice">{(['system', 'light', 'dark'] as const).map((t) => {
+        <div className="set-row">
+          <div className="theme-choice" role="group" aria-label="Mode">{(['system', 'light', 'dark'] as const).map((t) => {
             const chosen = (preference ?? theme) === t;
             const swatch = t === 'system' ? theme : t;
             return <button className={chosen ? 'is-active' : ''} aria-pressed={chosen} key={t} onClick={() => (onPreference ? onPreference(t) : t !== 'system' && onTheme(t))}>
               <span className={`theme-swatch ${swatch}${t === 'system' ? ' is-system' : ''}`} data-theme={swatch}><i /><i /><i /></span>{t === 'system' ? 'System' : t === 'light' ? 'Light' : 'Dark'}
             </button>;
           })}</div>
-        </Row>
-        <Row label="Chat font" description="The typeface for messages. The rest of the interface is unchanged.">
-          <Choice name="chatFont" onChange={bump} options={[['sans', 'Sans (default)'], ['serif', 'Serif'], ['mono', 'Monospace']]} />
-        </Row>
-        <Row label="Material" description="How controls and panels are drawn. Soft shapes everything with light and shadow. Liquid glass bends what is behind it (Chrome and Edge; elsewhere it is frosted). Glassmorphism is frosted without bending. Material 3 is flat, tonal Android style.">
+        </div>
+      </div>
+      <h2>Material</h2>
+      <div className="set-rows">
+        <Row label="Material" description="Liquid glass bends what is behind it (Chrome and Edge; elsewhere it is frosted). Glassmorphism is frosted without bending. Soft shapes everything with light and shadow instead of glass. Material 3 is flat and tonal.">
           <Choice name="material" segmented="Material" onChange={bump} options={[['soft', 'Soft'], ['liquid', 'Liquid glass'], ['glass', 'Glassmorphism'], ['material', 'Material 3']]} />
         </Row>
-        <Row label="Density" description="Compact tightens the spacing around things without shrinking anything you tap.">
+      </div>
+      <h2>Reading and motion</h2>
+      <div className="set-rows">
+        <Row label="Chat font" description="The typeface for messages. The rest of the interface keeps the system font.">
+          <Choice name="chatFont" onChange={bump} options={[['sans', 'Sans (default)'], ['serif', 'Serif'], ['mono', 'Monospace']]} />
+        </Row>
+        <Row label="Density" description="Compact tightens spacing without shrinking anything you tap.">
           <Choice name="density" segmented="Density" onChange={bump} options={[['comfortable', 'Comfortable'], ['compact', 'Compact']]} />
         </Row>
-        <Row label="Motion" description="System follows your operating system's reduce-motion setting. Reduced turns animation off here regardless.">
+        <Row label="Motion" description="Reduced keeps state changes and drops movement, in streaming replies too.">
           <Choice name="motion" segmented="Motion" onChange={bump} options={[['system', 'System'], ['reduced', 'Reduced']]} />
         </Row>
         <Row label="Layout" description={layoutModeDescription()}>

@@ -42,7 +42,9 @@ const origin='http://localhost:31261',web=path.resolve(__dirname,'..'),shots=pro
   // ── Settings with the keyboard open ──
   await page.getByRole('button',{name:'Open navigation',exact:true}).click();
   await page.waitForTimeout(400);await page.screenshot({path:`${shots}/noevia-mobile-before-account.png`});await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
-  const settings=page.getByRole('dialog',{name:'Settings'});await settings.waitFor();
+  const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
+  // Phones open Settings on its list; Profile is one tap in.
+  await settings.getByRole('button',{name:'Profile',exact:true}).click();
   const name=settings.getByLabel('Display name');await name.focus();await keyboard(360);
   await reach(name,'Settings display name (keyboard)',360);await reach(settings.getByRole('button',{name:'Save',exact:true}),'Settings save (keyboard)',360);
   await page.screenshot({path:`${shots}/noevia-mobile-settings-keyboard.png`});

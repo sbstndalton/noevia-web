@@ -44,6 +44,7 @@ import { ChatView } from './components/ChatView';
 import { ModelPopup } from './components/ModelPopup';
 import { ProjectView } from './components/ProjectView';
 import { Coding, Diary, ModelManager, Projects, Settings, prefetchViewsWhenIdle } from './lazy-views';
+import type { SettingsSection } from './components/SettingsShell';
 import { FeaturePreview } from './components/PreviewPanel';
 import { useFeatureFlags } from './components/features/useFeatureFlags';
 import { Sidebar } from './components/Sidebar';
@@ -67,8 +68,10 @@ function uid(): string {
 
 export default function App(): JSX.Element {
   const {theme,preference,setTheme,setPreference,appearanceStatus,appearanceError,retryAppearance} = useAppearance();
-  const [settingsSection,setSettingsSection] = useState<'general'|'usage'|'models'>('general');
-  const openSettings = (section: 'general'|'usage'|'models' = 'general') => { setSettingsSection(section); setSettingsOpen(true); };
+  const [settingsSection,setSettingsSection] = useState<SettingsSection>('general');
+  // Each open is a fresh Settings: reopening while the last one is still animating out replaces it.
+  const [settingsKey, setSettingsKey] = useState(0);
+  const openSettings = (section: SettingsSection = 'general') => { setSettingsSection(section); setSettingsKey((k) => k + 1); setAppMode('chat'); setSettingsOpen(true); };
   // `model` opens that model's tuning view directly; without it, the model list.
   const openModelManager = (model?: string) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); };
   useEffect(() => { const open = (e: Event) => { const model = (e as CustomEvent<{ model?: string }>).detail?.model; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
@@ -86,7 +89,7 @@ export default function App(): JSX.Element {
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [projectError, setProjectError] = useState<string | null>(null);
-  const pendingFirstSend = useRef<{ chatId: string; projectId: string; text: string } | null>(null);
+  const pendingFirstSend = useRef<{ chatId: string; projectId: string | null; text: string } | null>(null);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthState>({ inferenceUp: null, diaryUp: null });
   const [stats, setStats] = useState<LiveStats | null>(null);
@@ -602,6 +605,17 @@ export default function App(): JSX.Element {
     setView({ kind: 'chat', chatId, projectId: null });
   }, []);
 
+  // A prompt suggestion (Settings → Connectors) starts a new chat and sends it once that chat is on screen.
+  const startFreeChatWith = useCallback((text: string) => {
+    const chatId = `c-${uid()}`;
+    loadedChats.current.add(chatId);
+    pendingFirstSend.current = { chatId, projectId: null, text };
+    setMessagesByChat((prev) => ({ ...prev, [chatId]: [] }));
+    setSettingsOpen(false);
+    setAppMode('chat');
+    setView({ kind: 'chat', chatId, projectId: null });
+  }, []);
+
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const appleKeys = useGlobalShortcuts({
     search: () => { setSettingsOpen(false); setAppMode('chat'); window.dispatchEvent(new Event(OPEN_SEARCH)); },
@@ -824,7 +838,7 @@ export default function App(): JSX.Element {
         onToggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
       />
 
-      <div className="app-stack">
+      <div className={`app-stack pane${settingsOpen ? ' has-settings' : ''}`}>
       <div className="app-main">
 
       {view.kind === 'preview' && showPreviews && <FeaturePreview title={view.title}/> }
@@ -879,7 +893,7 @@ export default function App(): JSX.Element {
           onStop={() => { if (view.kind === 'chat') abortStream(view.chatId); }}
           onBack={activeProject ? () => setView({ kind: 'project', id: activeProject.id }) : null}
           onOpenModels={() => setPopupOpen(true)}
-          onOpenSettings={openSettings}
+          onOpenSettings={() => openSettings()}
         />
       )}
 
@@ -899,6 +913,33 @@ export default function App(): JSX.Element {
       )}
 
       </div>
+      {settingsOpen && (
+        <Suspense fallback={null}>
+        <Settings.View
+          key={settingsKey}
+          initialSection={settingsSection}
+          appearanceStatus={appearanceStatus} appearanceError={appearanceError} retryAppearance={retryAppearance}
+          onClose={() => setSettingsOpen(false)}
+          onStartChat={startFreeChatWith}
+          theme={theme}
+          onTheme={setTheme}
+          preference={preference}
+          onPreference={setPreference}
+          models={models}
+          routes={routes}
+          modelsError={modelsError}
+          projects={projects}
+          health={health}
+          stats={stats}
+          onOpenModels={() => { setSettingsOpen(false); setAppMode('chat'); setPopupOpen(true); }}
+          onOpenModelManager={() => openModelManager()}
+          diaryEnabled={diaryEnabled}
+          onDiaryEnabledChange={(enabled) => {
+            setDiaryEnabled(enabled);
+          }}
+        />
+        </Suspense>
+      )}
       <StatsBar stats={stats} />
       {view.kind === 'chat' && activeProject && (
         <Inspector
@@ -930,32 +971,7 @@ export default function App(): JSX.Element {
 
       </div>
       {shortcutsOpen && <ShortcutsDialog apple={appleKeys} onClose={() => setShortcutsOpen(false)} />}
-      {appMode === 'code' && showPreviews && <Suspense fallback={null}><Coding.View onExit={() => setAppMode('chat')} onSettings={openSettings} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/></Suspense>}
-      {settingsOpen && (
-        <Suspense fallback={null}>
-        <Settings.View
-          initialSection={settingsSection}
-          appearanceStatus={appearanceStatus} appearanceError={appearanceError} retryAppearance={retryAppearance}
-          onClose={() => setSettingsOpen(false)}
-          theme={theme}
-          onTheme={setTheme}
-          preference={preference}
-          onPreference={setPreference}
-          models={models}
-          routes={routes}
-          modelsError={modelsError}
-          projects={projects}
-          health={health}
-          stats={stats}
-          onOpenModels={() => { setSettingsOpen(false); setAppMode('chat'); setPopupOpen(true); }}
-          onOpenModelManager={() => openModelManager()}
-          diaryEnabled={diaryEnabled}
-          onDiaryEnabledChange={(enabled) => {
-            setDiaryEnabled(enabled);
-          }}
-        />
-        </Suspense>
-      )}
+      {appMode === 'code' && showPreviews && <Suspense fallback={null}><Coding.View onExit={() => setAppMode('chat')} onSettings={() => openSettings()} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/></Suspense>}
 
     </div>
   );

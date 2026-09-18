@@ -20,7 +20,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    await page.locator('.project-card').first().click();await page.getByRole('tab',{name:/Chats/}).waitFor();
    found.push(...await measure(page,'.project-tabs [role=tab], .composer-add, .project-newchat, select[aria-label="Thinking effort"]'));
    await page.getByTitle('Settings',{exact:true}).first().click().catch(async()=>{await page.goto('http://localhost:31394');await page.getByTitle('Settings',{exact:true}).click();});
-   const dialog=page.getByRole('dialog',{name:'Settings'});await dialog.waitFor();
+   const dialog=page.getByRole('region',{name:'Settings'});await dialog.waitFor();
    found.push(...await measure(page,'.settings-back, .settings-detail > header .shell-icon-button'));
    const small=found.filter(f=>f.w<44||f.h<44).map(f=>`${f.sel} "${f.label}" ${f.w}x${f.h}`);
    assert.ok(found.length>=7,`too few controls measured at ${width}: ${found.length}`);

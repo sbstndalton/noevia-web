@@ -44,8 +44,8 @@ function fakeS3(objects){
    await page.setViewportSize({width,height:width<768?812:900});
    await page.evaluate(t=>localStorage.setItem('cowork-theme',t),theme);await page.reload();
    await page.getByTitle('Settings',{exact:true}).click();
-   const settings=page.getByRole('dialog',{name:'Settings'});await settings.waitFor();
-   if(width<768)await settings.getByLabel('Settings category').selectOption('backups');else await settings.getByRole('button',{name:'Backups',exact:true}).click();
+   const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
+   await settings.getByRole('button',{name:'Backups',exact:true}).click();
    await settings.getByText('Last restore test').waitFor();
    await settings.getByText(/files verified/).waitFor();
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow');

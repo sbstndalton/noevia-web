@@ -49,7 +49,8 @@ const {createFixture}=require('./diary-fixture.cjs');
   const box=await toggle.boundingBox();assert.ok(box.width>=44&&box.height>=44,'toggle hit target');
   await toggle.click();
   const drawer=page.getByRole('dialog',{name:'Navigation'});await drawer.waitFor();
-  assert.ok(await drawer.evaluate(el=>el.getBoundingClientRect().width>=innerWidth-1),'drawer covers the phone screen');
+  // The drawer is a floating pane (release 2): most of the screen, with the page visible at its edge.
+  assert.ok(await drawer.evaluate(el=>el.getBoundingClientRect().width>=Math.min(innerWidth*0.8,300)),'drawer spans most of the phone screen');
   assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Close navigation');
   for(let i=0;i<40;i++){await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>!!document.activeElement?.closest('#app-navigation')),'focus left the drawer');}
   await page.keyboard.press('Shift+Tab');assert.ok(await page.evaluate(()=>!!document.activeElement?.closest('#app-navigation')));
@@ -64,7 +65,7 @@ const {createFixture}=require('./diary-fixture.cjs');
   // Opening Settings from the drawer's account menu closes the drawer behind it.
   await toggle.click();await drawer.waitFor();
   await drawer.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
-  await drawer.waitFor({state:'hidden'});await page.getByRole('dialog',{name:'Settings'}).waitFor();await page.keyboard.press('Escape');
+  await drawer.waitFor({state:'hidden'});await page.getByRole('region',{name:'Settings'}).waitFor();await page.keyboard.press('Escape');
   await toggle.click();await drawer.waitFor();await page.setViewportSize({width:1440,height:900});
   await page.waitForFunction(()=>!document.querySelector('.nav-drawer-backdrop'));
   assert.ok(await page.locator('.sidebar').isVisible());assert.equal(await toggle.isVisible(),false);

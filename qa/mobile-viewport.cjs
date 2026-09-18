@@ -28,19 +28,21 @@ const {createFixture}=require('./diary-fixture.cjs');
    await reachable(dialog.getByTitle('Close',{exact:true}),height);
    await dialog.getByTitle('Close',{exact:true}).click();
    await page.getByTitle('Settings',{exact:true}).click();
-   await page.getByRole('dialog').waitFor();
-   assert.ok(await page.getByRole('dialog').evaluate(el=>el.scrollWidth<=el.clientWidth),'Settings must not overflow horizontally');
+   const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
+   assert.ok(await settings.evaluate(el=>el.scrollWidth<=el.clientWidth),'Settings must not overflow horizontally');
    if(width<700){
-     for(const section of ['profile','security','appearance','personalization','capabilities','diary','providers','usage','data','planned']){
-       await page.getByLabel('Settings category').selectOption(section);
-       // Phones close Settings with "Back to app"; the detail bar's X is hidden when the page has a heading.
-       await reachable(page.getByRole('button',{name:'Back to app',exact:true}),height);
-       assert.ok(await page.getByRole('dialog').evaluate(el=>el.scrollWidth<=el.clientWidth),`Settings ${section} must fit`);
+     // Phones show the list, then each page with a back arrow and a close button.
+     for(const section of ['Profile','Security','Appearance','Personalization','Capabilities','Connectors','Diary & storage','AI providers','Usage & activity','Data','Planned features']){
+       await settings.getByRole('button',{name:section,exact:true}).click();
+       await reachable(settings.getByRole('button',{name:'Close settings'}),height);
+       assert.ok(await settings.evaluate(el=>el.scrollWidth<=el.clientWidth),`Settings ${section} must fit`);
+       await settings.getByRole('button',{name:'All settings'}).click();
      }
+     await reachable(settings.getByRole('button',{name:'Back to app',exact:true}),height);
    }
    await page.keyboard.press('Escape');
    // Below 600px navigation lives in the drawer; everything else is in the sidebar.
-   const nav=async()=>{if(width<=600){await page.getByRole('button',{name:'Open navigation',exact:true}).click();await page.getByRole('dialog',{name:'Navigation'}).waitFor();}};
+   const nav=async()=>{if(width<=600){await page.getByRole('button',{name:'Open navigation',exact:true}).click();await page.getByRole('dialog',{name:'Navigation'}).waitFor();await page.waitForFunction(()=>!document.getAnimations().some(a=>a.playState==='running'&&a.effect?.getTiming().iterations!==Infinity));}}; // the drawer slides in
    await nav();
    await reachable(page.getByRole('button',{name:'Search projects and chats',exact:true}).first(),height);
    if(width<=600)await page.keyboard.press('Escape');

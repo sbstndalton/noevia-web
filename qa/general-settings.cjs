@@ -26,7 +26,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  });
  await page.goto('http://localhost:31356');
  await page.getByTitle('Settings',{exact:true}).click();
- const dialog=page.getByRole('dialog',{name:'Settings'});
+ const dialog=page.getByRole('region',{name:'Settings'});
  // Opening Settings lands on Profile: identity only.
  assert.equal(await dialog.getByRole('button',{name:'General',exact:true}).count(),0);
  await dialog.getByRole('button',{name:'Profile',exact:true}).click();

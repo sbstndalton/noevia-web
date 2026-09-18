@@ -14,6 +14,7 @@ function startFakeGoogle({ port = 0, autoApprove = false } = {}) {
   const body = (req) => new Promise((r) => { const c = []; req.on('data', (d) => c.push(d)); req.on('end', () => r(Buffer.concat(c))); });
   const send = (res, status, obj) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
   let base = '';
+  const view = (f) => ({ id: f.id, name: f.name, mimeType: f.mimeType, size: String(f.body.length), trashed: f.trashed, modifiedTime: f.modifiedTime, webViewLink: `https://drive.google.com/file/d/${f.id}/view` });
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     const raw = await body(req);
@@ -60,9 +61,9 @@ ${waiting ? `<p>noevia is asking for access to files it creates in your Drive. C
       const parts = raw.toString('latin1').split(`--${boundary}`);
       const meta = JSON.parse(parts[1].split('\r\n\r\n')[1]);
       const data = Buffer.from(parts[2].split('\r\n\r\n').slice(1).join('\r\n\r\n').replace(/\r\n$/, ''), 'latin1');
-      const f = { id: id(), name: meta.name, parents: meta.parents, body: data, trashed: false };
+      const f = { id: id(), name: meta.name, parents: meta.parents || ['root'], mimeType: meta.mimeType || 'application/octet-stream', body: data, trashed: false, modifiedTime: new Date().toISOString() };
       files.set(f.id, f); state.uploads++;
-      return send(res, 200, { id: f.id });
+      return send(res, 200, view(f));
     }
     if (url.pathname === '/drive/files' && req.method === 'POST') {
       const meta = JSON.parse(raw.toString()); const f = { id: id(), ...meta, parents: meta.parents || ['root'], trashed: false, body: Buffer.alloc(0) };
@@ -71,17 +72,35 @@ ${waiting ? `<p>noevia is asking for access to files it creates in your Drive. C
     if (url.pathname === '/drive/files' && req.method === 'GET') {
       const q = url.searchParams.get('q') || '';
       let list = [...files.values()].filter((f) => !f.trashed);
-      const byName = /name='([^']+)'/.exec(q), inParent = /'([^']+)' in parents/.exec(q);
+      const byName = /name='([^']+)'/.exec(q), inParent = /'([^']+)' in parents/.exec(q), contains = /name contains '((?:[^'\\]|\\.)*)'/.exec(q);
       if (byName) list = list.filter((f) => f.name === byName[1] && f.mimeType === 'application/vnd.google-apps.folder');
       if (inParent) list = list.filter((f) => f.parents?.includes(inParent[1]));
-      return send(res, 200, { files: list.map((f) => ({ id: f.id, name: f.name, size: String(f.body.length) })) });
+      if (contains) { const needle = contains[1].replace(/\\(.)/g, '$1').toLowerCase(); list = list.filter((f) => f.name.toLowerCase().includes(needle) || f.body.toString('utf8').toLowerCase().includes(needle)); }
+      if (/modifiedTime desc/.test(url.searchParams.get('orderBy') || '')) list.sort((a, b) => String(b.modifiedTime).localeCompare(String(a.modifiedTime)));
+      list = list.slice(0, Number(url.searchParams.get('pageSize')) || list.length);
+      return send(res, 200, { files: list.map(view) });
+    }
+    const exported = /^\/drive\/files\/([^/]+)\/export$/.exec(url.pathname);
+    if (exported) {
+      const f = files.get(decodeURIComponent(exported[1]));
+      if (!f || f.trashed) return send(res, 404, { error: { code: 404 } });
+      res.writeHead(200, { 'Content-Type': url.searchParams.get('mimeType') || 'text/plain' }); return res.end(f.body);
     }
     const one = /^\/drive\/files\/([^/]+)$/.exec(url.pathname);
     if (one) {
       const f = files.get(decodeURIComponent(one[1]));
       if (!f) return send(res, 404, { error: { code: 404 } });
       if (req.method === 'DELETE') { files.delete(f.id); state.deletes++; res.writeHead(204); return res.end(); }
-      return send(res, 200, { id: f.id, trashed: f.trashed });
+      if (req.method === 'PATCH') { const meta = JSON.parse(raw.toString() || '{}'); if (meta.trashed !== undefined) f.trashed = !!meta.trashed; f.modifiedTime = new Date().toISOString(); return send(res, 200, view(f)); }
+      if (url.searchParams.get('alt') === 'media') { res.writeHead(200, { 'Content-Type': f.mimeType || 'application/octet-stream' }); return res.end(f.body); }
+      return send(res, 200, view(f));
+    }
+    const media = /^\/upload\/files\/([^/]+)$/.exec(url.pathname);
+    if (media && req.method === 'PATCH') {
+      const f = files.get(decodeURIComponent(media[1]));
+      if (!f) return send(res, 404, { error: { code: 404 } });
+      f.body = raw; f.modifiedTime = new Date().toISOString(); state.updates = (state.updates || 0) + 1;
+      return send(res, 200, view(f));
     }
     send(res, 404, { error: 'not found' });
   });
