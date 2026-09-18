@@ -212,3 +212,8 @@
 /* Project rows line their icon and name up with the pinned and chat rows. */
 [data-material='material'] .app .sidebar.pane .proj-row .project-expand { margin-left: 8px; }
 [data-material='material'] .app .sidebar.pane .proj-row .project-disclosure { padding-left: 6px; }
+
+/* List rows under the headings are one-line list items (40px); the primary destinations
+   above keep 48px. Headings sit tight to their list. */
+[data-material='material'] .app .sidebar.pane :is(.proj-row, .chat-row) :is(.nav-item, .project-disclosure, .nested-chat-title) { min-height: 40px; }
+[data-material='material'] .app .sidebar.pane .sidebar-history .section-label { margin-block: var(--space-2) var(--space-1); }

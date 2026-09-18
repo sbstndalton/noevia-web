@@ -134,7 +134,22 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.equal(m.fabRadius,'16px');assert.ok(parseFloat(m.active)>=20,`${theme} M3: active destination is a pill`);assert.equal(m.composerRadius,'28px');assert.match(m.font,/^Roboto/);
   await page.close();
  }
+
+ // Desktop, short window: no list collapses to its heading alone (found live in M3).
+ for(const material of ['liquid','material','soft']){
+  const page=await browser.newPage({viewport:{width:1400,height:729},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(m=>{localStorage.setItem('noevia:material',m);localStorage.setItem('cowork-theme','dark');},material);
+  const chat=(id,pinned=false)=>({id,title:`Synthetic ${id}`,updatedAt:1000,pinned,messages:[]});
+  await page.route('**/api/features',r=>r.fulfill({json:{flags:{previews:true}}}));
+  await page.route('**/api/toolboxes',r=>r.fulfill({json:{toolboxes:[],mcp:{configured:true,discovered:176,servers:[{id:'a'},{id:'b'},{id:'c'}]}}}));
+  await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[0,1].map(i=>({id:`p${i}`,name:`Synthetic project ${i}`,updatedAt:1000,files:[],chats:[]})),freeChats:[chat('pinned',true),chat('pinned2',true),...Array.from({length:12},(_,i)=>chat(`recent${i}`))]}}));
+  await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
+  const lists=await page.evaluate(()=>[...document.querySelectorAll('.sidebar .side-scroll')].map(el=>{const b=el.getBoundingClientRect(),head=el.querySelector(':scope > .sidebar-section-head, :scope > .section-label').getBoundingClientRect();
+   const rows=[...el.querySelectorAll('.proj-row, .chat-row')].filter(r=>{const q=r.getBoundingClientRect();return q.top>=head.bottom-1&&q.bottom<=b.bottom+1;});return {list:el.className.split(' ').pop(),visibleRows:rows.length};}));
+  for(const l of lists)assert.ok(l.visibleRows>=1,`${material}: ${l.list} shows at least one full row ${JSON.stringify(lists)}`);
+  await page.close();
+ }
  assert.deepEqual(errors,[]);
- console.log('PASS phone drawer: full drawer from Diary, measured sticky footer, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; desktop list headings stay in view while their list scrolls; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto.');
+ console.log('PASS phone drawer: full drawer from Diary, measured sticky footer, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; desktop list headings stay in view while their list scrolls; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop every sidebar list shows at least one row in each material.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -102,6 +102,9 @@
 /* Each list keeps its heading in view while it scrolls, so two scrolled lists never run
    together unlabelled. (Below 700px the drawer scrolls as one and they scroll with it.) */
 @media (min-width: 701px) {
+  /* A list may shrink, but never to its heading alone: each keeps room for one row. */
+  .app .sidebar.pane .sidebar-history :is(.side-scroll-projects, .side-scroll-pinned) { min-height: min(40%, 84px); }
+  .app .sidebar.pane .sidebar-history .side-scroll-chats { min-height: min(40%, 84px); }
   .app .sidebar.pane .sidebar-history .side-scroll > :is(.sidebar-section-head, .section-label):first-child {
     position: sticky; top: 0; z-index: 1; background: var(--pane-fill);
     backdrop-filter: blur(var(--pane-blur)); -webkit-backdrop-filter: blur(var(--pane-blur));
