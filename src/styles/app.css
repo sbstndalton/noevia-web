@@ -59,7 +59,7 @@ body { margin: 0; background: var(--bg); }
   border: none;
   border-radius: 10px;
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
@@ -505,7 +505,7 @@ body { margin: 0; background: var(--bg); }
   display: flex; align-items: center; gap: 8px;
   padding: 9px 16px; border-radius: var(--radius-card);
   background: var(--accent); border: none; cursor: pointer;
-  font-family: var(--font-ui); color: #fff; font-size: var(--text-footnote); font-weight: 700;
+  font-family: var(--font-ui); color: var(--on-accent); font-size: var(--text-footnote); font-weight: 700;
 }
 .new-project-btn:hover { filter: brightness(1.05); }
 
@@ -608,9 +608,9 @@ body { margin: 0; background: var(--bg); }
 .btn:disabled, .modal-btn:disabled { opacity: 0.5; cursor: default; }
 .btn:focus-visible, .modal-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .btn-primary {
-  background: var(--accent-garnet); color: #fff;
+  background: var(--accent-garnet); color: var(--on-accent);
 }
-.btn-primary:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--tint-garnet), 0 0 14px rgba(148,37,55,0.35); }
+.btn-primary:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--tint-garnet); }
 .btn-secondary {
   background: var(--bg-surface); color: var(--text-secondary); border: 1px solid var(--border);
 }
@@ -621,8 +621,8 @@ body { margin: 0; background: var(--bg); }
 .btn-ghost:hover:not(:disabled) { background: var(--bg-surface-hover); color: var(--text); }
 .btn-icon { width: 34px; height: 34px; padding: 0; }
 
-.modal-btn.primary { background: var(--accent-garnet); color: #fff; }
-.modal-btn.primary:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--tint-garnet), 0 0 14px rgba(148,37,55,0.35); }
+.modal-btn.primary { background: var(--accent-garnet); color: var(--on-accent); }
+.modal-btn.primary:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--tint-garnet); }
 .modal-btn.secondary { background: var(--bg-surface); color: var(--text-secondary); border: 1px solid var(--border); }
 .modal-btn.secondary:hover:not(:disabled) { background: var(--bg-surface-hover); color: var(--text); }
 
@@ -1015,12 +1015,12 @@ button:disabled { cursor: not-allowed; }
 }
 .composer-hint { max-width: 820px; margin-inline: auto; }
 .send-btn {
-  border-radius: 50%; background: var(--accent-garnet); color: #fff;
+  border-radius: 50%; background: var(--accent-garnet); color: var(--on-accent);
   display: flex; align-items: center; justify-content: center;
   transition: box-shadow var(--duration-fast) var(--ease-spring),
               transform var(--duration-fast) var(--ease-spring);
 }
-.send-btn:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--tint-garnet), 0 0 14px rgba(148,37,55,.35); }
+.send-btn:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--tint-garnet); }
 .send-btn:active:not(:disabled) { transform: scale(0.94); }
 
 /* ── Inspector as a slide-over ────────────────────────────────────────────
@@ -1188,7 +1188,7 @@ button:disabled { cursor: not-allowed; }
 .confirm-dialog h2 { margin: 0 0 8px; font-size: var(--text-headline); }
 .confirm-dialog p { margin: 0 0 20px; font-size: var(--text-footnote); line-height: 1.6; color: var(--text-secondary); }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
-.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger { background: var(--danger); color: var(--on-danger); }
 .btn-danger:hover:not(:disabled) { filter: brightness(1.08); }
 
 /* The row hover card: what a project is working from, without opening it. */

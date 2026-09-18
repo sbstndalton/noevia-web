@@ -302,27 +302,12 @@ button:disabled { opacity: .5; cursor: default; }
   .sidebar:not(.is-expanded):not(.coding-sidebar) .side-diary { margin-top: auto; }
 }
 
-.palette-picker { border: 0; padding: 0; margin: 28px 0 0; min-width: 0; }
-.palette-picker legend { font-size: var(--text-body); font-weight: 500; padding: 0; }
-.palette-picker > p { font-size: var(--text-caption); color: var(--text-secondary); line-height: 1.6; margin: 8px 0 16px; }
-.palette-choices { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
-.palette-choices > button, .auth-card .palette-choices > button {
-  min-width: 0; padding: 8px; border: 1px solid var(--border); border-radius: 11px;
-  background: transparent; color: var(--text-primary); text-align: left; cursor: pointer;
-}
-.palette-choices > button[aria-pressed='true'] { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.palette-choices strong { display: block; font-size: var(--text-footnote); font-weight: 500; margin: 10px 4px 4px; }
-.palette-choices small { display: block; font-size: var(--text-caption2); color: var(--text-secondary); margin: 0 4px 4px; line-height: 1.4; font-weight: 400; }
 /* design-lint: allow side-tab — the thick left edge draws a miniature sidebar */
-.palette-preview { height: 72px; padding: 16px 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 6px; background: var(--bg-app); border-left: 25px solid var(--bg-chrome); }
-.palette-preview i { height: 5px; border-radius: 2px; background: var(--text-secondary); width: 70%; opacity: .7; }
-.palette-preview i:last-child { width: 45%; }
 .theme-swatch { background: var(--bg-app); border-left-color: var(--bg-chrome); }
 .theme-swatch i { background: var(--text-secondary); }
 .theme-swatch.dark { background: var(--bg-app); border-left-color: var(--bg-chrome); }
 .theme-swatch.dark i { background: var(--text-secondary); }
 /* design-lint: allow side-tab — miniature sidebar at phone size */
-@media(max-width:600px) { .palette-choices { gap: 8px; }.palette-preview { border-left-width: 16px; padding: 12px 8px; height: 60px; } }
 
 /* Status lamps use brighter colors than readable success/error text. */
 .status-dot, .stats-live-dot, .model-dot {
@@ -855,27 +840,12 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active], textarea.glass-reactive[data-glass-active] {
   background-image:radial-gradient(ellipse 95px 25px at var(--glass-x,50%) var(--glass-y,0%),var(--glass-reflection),transparent 75%);
 }
-.palette-choices { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
-.palette-choices > button { min-width:0; width:100%; }
 
-/* A low-contrast ambient light field; only its background moves, never content. */
-.app-main, .settings-shell {
-  background-image:radial-gradient(ellipse at 22% 15%,color-mix(in srgb,var(--glass-rim) 24%,transparent),transparent 58%);
-  background-size:140% 140%;
-  animation:ambient-glass-drift 36s ease-in-out infinite alternate;
-}
-@keyframes ambient-glass-drift {
-  from { background-position:0% 10%; }
-  to { background-position:35% 30%; }
-}
 .glass-reactive[data-glass-active]::after { opacity:.4!important; }
 .app-mode-switch::before { opacity:.25; }
 @media(prefers-reduced-motion:reduce),(prefers-reduced-transparency:reduce),(prefers-contrast:more) {
-  .app-main, .settings-shell { animation:none; background-image:none; }
 }
 
-/* Only the foreground workspace animates; Settings pauses the canvas beneath it. */
-body:has(.settings-shell[open]) .app-main { animation-play-state:paused; }
 .stats-disclosure {
   margin:12px clamp(12px,2vw,24px); margin-top:auto; padding:0;
   border:1px solid var(--border-subtle); border-radius:18px;
@@ -895,13 +865,7 @@ body:has(.settings-shell[open]) .app-main { animation-play-state:paused; }
 .usage-heatmap-scroll:has(.usage-heatmap:empty) { display:none; }
 @media(max-width:700px) { .usage-window button { min-height:44px; } }
 
-/* One scene renders the moving light; all glass samples the same field. */
-body { isolation:isolate; background:var(--bg-app); }
-#root { position:relative; z-index:1; }
-.glass-scene { position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; }
-.settings-shell > .glass-scene { position:absolute; }
-.settings-shell > :not(.glass-scene) { position:relative; z-index:1; }
-.app-main, .settings-shell { animation:none; background-image:none; }
+/* The canvas atmosphere lives in materials.css. */
 .app, .app-main, .chat-shell, .chat-main { background-color:transparent; }
 .sidebar, .settings-navigation, .coding-sidebar, .diary-context {
   background:color-mix(in srgb,var(--bg-chrome) 72%,transparent);
@@ -915,7 +879,6 @@ body { isolation:isolate; background:var(--bg-app); }
 .stats-disclosure { background:color-mix(in srgb,var(--bg-chrome) 78%,transparent); backdrop-filter:blur(16px); }
 .glass-reactive::after, .app-mode-switch::before { display:none!important; }
 @media(prefers-reduced-motion:reduce),(prefers-reduced-transparency:reduce),(prefers-contrast:more) {
-  .glass-scene { display:none; }
   .composer-inner,.usage-stat,.project-card,.app-mode-switch,.stats-disclosure,.sidebar,.settings-navigation {
     background:var(--bg-surface); backdrop-filter:none; -webkit-backdrop-filter:none;
   }
@@ -993,8 +956,6 @@ body { isolation:isolate; background:var(--bg-app); }
 .chat-header .icon-btn, .chat-header .diary-home-link { border-radius:var(--radius-control); }
 
 /* Theme-aware popup material and one continuous navigation frame. */
-:root { --glass-menu:color-mix(in srgb,var(--bg-chrome) 96%,transparent); }
-:root[data-theme][data-palette] { --glass-menu:color-mix(in srgb,var(--bg-chrome) 96%,transparent); }
 .account-popover, .popup { color:var(--text-primary); background:var(--glass-menu); }
 .account-popover > button { color:var(--text-primary); }
 .account-popover > button:hover:not(:disabled) { background:var(--nav-hover); }
@@ -1021,7 +982,6 @@ body { isolation:isolate; background:var(--bg-app); }
   .project-main { flex:1 0 auto; min-height:65dvh; }
 }
 /* Light materials stay within the selected palette rather than blue/purple rims. */
-:root[data-theme='light'] { --glass-edge:rgba(255,255,255,.45); --glass-rim:color-mix(in srgb,var(--text-secondary) 12%,transparent); --glass-shadow:rgba(25,30,35,.06); }
 .project-sources { display:flex; flex-direction:column; gap:20px; }
 .project-sources > .rail-empty { margin:0; line-height:1.6; }
 .project-sources .project-storage-summary { margin:0; padding:18px; border:1px solid var(--border-subtle); border-radius:16px; background:color-mix(in srgb,var(--bg-surface) 80%,transparent); }
@@ -1316,9 +1276,7 @@ body { isolation:isolate; background:var(--bg-app); }
 
 
 /* ---- Models & routing (model management) ---- */
-.mm-root { --viz-1: #2a78d6; --viz-2: #eb6834; --viz-3: #1baf7a; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mm-root { --viz-1: #3987e5; --viz-2: #d95926; --viz-3: #199e70; } }
-:root[data-theme="dark"] .mm-root { --viz-1: #3987e5; --viz-2: #d95926; --viz-3: #199e70; }
+.mm-root { --viz-1: var(--md-primary); --viz-2: var(--md-tertiary); --viz-3: var(--md-success); display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .mm-tabs-select { display: none; min-height: 44px; padding: 10px 14px; border: 1px solid var(--control-border); border-radius: var(--radius-control); color: var(--text-primary); background: var(--bg-surface); }
 .mm-tabs-row { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px; }
 .mm-tabs-row button { min-height: 40px; padding: 9px 15px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--text-footnote); line-height: 1.35; cursor: pointer; }
@@ -1455,9 +1413,7 @@ body { isolation:isolate; background:var(--bg-app); }
    it on every tab, and the phone minimum below raises these to 44. */
 .mm-root .modal-btn, .mm-root .popup-tab { min-height: 40px; }
 @media (max-width: 700px) { .mm-root .modal-btn, .mm-root .popup-tab { min-height: 44px; } }
-.mm-root { --status-good: #1a7f45; --status-warn: #9a6400; --status-bad: #c42b2b; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mm-root { --status-good: #4cc27f; --status-warn: #e0a53a; --status-bad: #ff7b72; } }
-:root[data-theme="dark"] .mm-root { --status-good: #4cc27f; --status-warn: #e0a53a; --status-bad: #ff7b72; }
+.mm-root { --status-warn: var(--status-warning); --status-bad: var(--status-danger); }
 .mm-root .mm-pill.is-good { color: var(--status-good); border-color: currentColor; }
 .mm-root .mm-pill.is-warn { color: var(--status-warn); border-color: currentColor; }
 .mm-root .mm-pill.is-bad { color: var(--status-bad); border-color: currentColor; }
@@ -1754,7 +1710,6 @@ body { isolation:isolate; background:var(--bg-app); }
 .set-row-pending { color: var(--text-primary); font-weight: 500; }
 /* Settings rows whose control needs the full width (palettes): label above, control below. */
 .set-row.set-row-stacked { flex-direction: column; align-items: stretch; gap: 12px; }
-.palette-picker.is-bare { border: 0; padding: 0; margin: 0; min-width: 0; }
 /* System swatch: half light, half dark. */
 /* design-lint: allow side-tab — the swatch's thick left edge draws a miniature sidebar */
 .theme-swatch.is-system { background: linear-gradient(135deg, #f7f9fc 0 50%, #1c1d20 50% 100%); border-left-color: #8a8f99; }

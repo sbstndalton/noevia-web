@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import { PalettePicker } from './PalettePicker';
 import { LayoutModeChoice, layoutModeDescription } from './LayoutMode';
-import { currentPalette } from '../appearance';
 import { fetchHealth, fetchProfile, fetchToolboxes, updateProfile } from '../api';
 import type { AuthUser } from '../api';
 import type { HealthState } from '../types';
@@ -52,7 +50,6 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
   appearanceError?: boolean;
   retryAppearance?: () => void;
 }): JSX.Element {
-  const [palette, setPalette] = useState(currentPalette);
   // Bumped whenever a preference changes, so anything measuring the page
   // re-reads it rather than showing a stale value.
   const [, setRevision] = useState(0);
@@ -64,19 +61,15 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
     <section className="settings-section">
       <h2>Preferences</h2>
       <div className="set-rows">
-        <Row label="Mode" description="System follows your device's light or dark setting. Each mode remembers its own palette, and your choice follows you to other devices.">
+        <Row label="Mode" description="System follows your device's light or dark setting. Your choice follows you to other devices.">
           <div className="theme-choice">{(['system', 'light', 'dark'] as const).map((t) => {
             const chosen = (preference ?? theme) === t;
             const swatch = t === 'system' ? theme : t;
             return <button className={chosen ? 'is-active' : ''} aria-pressed={chosen} key={t} onClick={() => (onPreference ? onPreference(t) : t !== 'system' && onTheme(t))}>
-              <span className={`theme-swatch ${swatch}${t === 'system' ? ' is-system' : ''}`} data-theme={swatch} data-palette={palette}><i /><i /><i /></span>{t === 'system' ? 'System' : t === 'light' ? 'Light' : 'Dark'}
+              <span className={`theme-swatch ${swatch}${t === 'system' ? ' is-system' : ''}`} data-theme={swatch}><i /><i /><i /></span>{t === 'system' ? 'System' : t === 'light' ? 'Light' : 'Dark'}
             </button>;
           })}</div>
         </Row>
-        <div className="set-row set-row-stacked">
-          <div className="set-row-text"><span className="set-row-label">Palette</span><span className="set-row-desc">For {theme} mode, the one on screen now. The other mode keeps its own palette.</span></div>
-          <PalettePicker theme={theme} onChange={setPalette} bare />
-        </div>
         <Row label="Chat font" description="The typeface for messages. The rest of the interface is unchanged.">
           <Choice name="chatFont" onChange={bump} options={[['sans', 'Sans (default)'], ['serif', 'Serif'], ['mono', 'Monospace']]} />
         </Row>

@@ -9,14 +9,14 @@
 /* New chat is the sidebar's one primary action, so it carries the accent
    rather than dissolving into the panel. */
 .sidebar .new-chat-btn {
-  background:var(--accent-garnet); color:#fff; justify-content:center;
+  background:var(--accent-garnet); color:var(--on-accent); justify-content:center;
   border-radius:9px; min-height:37px;
   transition:box-shadow var(--duration-fast) var(--ease-spring),
              transform var(--duration-fast) var(--ease-spring);
 }
-.sidebar .new-chat-btn:hover { background:var(--accent-garnet); box-shadow:0 0 0 3px var(--tint-garnet), 0 0 14px rgba(148,37,55,.35); }
+.sidebar .new-chat-btn:hover { background:var(--accent-garnet); box-shadow:0 0 0 3px var(--tint-garnet); }
 .sidebar .new-chat-btn:active { transform:scale(0.97); }
-.sidebar .new-chat-btn span { font-weight:500; color:#fff; }
+.sidebar .new-chat-btn span { font-weight:500; color:var(--on-accent); }
 .sidebar .new-chat-btn svg { stroke:#fff; }
 
 /* Small tracked uppercase is what makes a sidebar read as structured. */

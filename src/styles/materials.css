@@ -1,0 +1,88 @@
+/* Materials and browser surfaces (UI overhaul release 1). Loads after noevia.css.
+   Layer 0 canvas · Layer 1 structural pane (Aero/UniFi) · Layer 3 liquid glass control ·
+   Layer 4 overlay. Components opt in with a class; nothing here restyles a component. */
+
+/* Layer 0 — the canvas: a still, faint atmosphere of the primary and tertiary hues. */
+body { background: var(--canvas-atmosphere), var(--bg-app); background-attachment: fixed; }
+#root { position: relative; z-index: 1; }
+
+/* Layer 1 — structural panes: calm, near-opaque, a thin light-catching edge, no glow. */
+.pane {
+  background: var(--pane-fill);
+  border: 1px solid var(--pane-edge);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--pane-highlight), var(--shadow-2);
+  backdrop-filter: blur(var(--pane-blur)) saturate(1.15);
+  -webkit-backdrop-filter: blur(var(--pane-blur)) saturate(1.15);
+}
+
+/* Layer 2 — content surfaces: flat, bordered, barely lifted. */
+.surface {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+
+/* Layer 3 — liquid glass for foreground controls only. Everywhere: tint, blur, a bright
+   top rim and a darker lower rim, a specular sheen. Chromium adds real edge refraction
+   through public/lens.js (`.glass-lens` + html[data-lens]). */
+.glass {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(var(--glass-tint), var(--glass-tint)), var(--glass-fill);
+  border: 1px solid var(--glass-rim);
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge),
+    inset 0 -1px 0 color-mix(in srgb, var(--glass-rim) 70%, transparent),
+    0 1px 2px var(--glass-shadow),
+    0 8px 20px -10px var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.7) brightness(1.04);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.7) brightness(1.04);
+  transition: box-shadow var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), transform var(--duration-instant) var(--ease-standard);
+}
+.glass::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(180deg, var(--glass-specular), transparent 46%);
+  opacity: .55;
+}
+html[data-lens='svg'] .glass-lens {
+  backdrop-filter: var(--lens, none) blur(calc(var(--glass-blur) * .35)) saturate(1.8) brightness(1.05);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.7);
+}
+.glass:hover { background-color: var(--glass-selected); }
+.glass:active { transform: scale(.98); }
+.glass[aria-pressed='true'], .glass[aria-selected='true'], .glass[aria-current='page'] {
+  background: linear-gradient(var(--glass-tint), var(--glass-tint)), var(--glass-selected);
+  color: var(--text-primary);
+}
+.glass.is-primary {
+  --glass-tint: color-mix(in srgb, var(--md-primary) 86%, transparent);
+  color: var(--on-accent);
+}
+
+/* Layer 4 — overlays: menus, popovers, modals. The strongest separation in the stack. */
+.overlay {
+  background: var(--glass-menu);
+  border: 1px solid var(--pane-edge);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--pane-highlight), var(--shadow-4);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+}
+
+/* Focus stays visible over any material: a primary ring separated by a canvas-coloured gap. */
+:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.glass:focus-visible, .pane :focus-visible { outline-offset: 2px; box-shadow: 0 0 0 5px color-mix(in srgb, var(--bg-app) 80%, transparent); }
+
+/* Browser surfaces carry the palette too. */
+::selection { background: var(--selection); color: var(--text-primary); }
+:root { caret-color: var(--md-primary); accent-color: var(--md-primary); scrollbar-color: color-mix(in srgb, var(--md-outline) 55%, transparent) transparent; }
+a { text-underline-offset: .18em; }
+.tabular, time, td { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .pane, .glass, .overlay, html[data-lens='svg'] .glass-lens { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .glass::before { display: none; }
+  body { background: var(--bg-app); }
+}

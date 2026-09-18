@@ -1,4 +1,3 @@
-import { PalettePicker } from './PalettePicker';
 import { applyAppearance, savedPalette } from '../appearance';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
@@ -310,7 +309,7 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
 
         {step === 'prefs' && (
           <div>
-            <p>Theme and palette changes apply immediately in this browser. Auto routing is saved only when you choose “Use these preferences”. Check your browser timezone below.</p>
+            <p>Theme changes apply immediately in this browser. Auto routing is saved only when you choose “Use these preferences”. Check your browser timezone below.</p>
             <label className="auth-option">
               <input type="radio" name="wiz-theme" checked={theme === 'light'} onChange={() => setTheme('light')} />
               <span><strong>Light theme</strong></span>
@@ -319,7 +318,6 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
               <input type="radio" name="wiz-theme" checked={theme === 'dark'} onChange={() => setTheme('dark')} />
               <span><strong>Dark theme</strong></span>
             </label>
-            <PalettePicker theme={theme}/>
             <label className="auth-option">
               <input type="checkbox" checked={autoRouting} onChange={(e) => setAutoRouting(e.target.checked)} />
               <span>

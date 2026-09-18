@@ -56,11 +56,10 @@ const PORT=31384,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
   await page.getByText('Google Drive is connected as backup-owner@example.com.').waitFor({timeout:20000});
   await page.getByRole('button',{name:'Continue',exact:true}).click();
   await page.getByRole('heading',{name:'Preferences'}).waitFor();
-  // Regression: in light mode, picking palettes kept switching the page to dark.
+  // One noevia palette since the 2026-09-18 overhaul: choosing light stays light, no palette picker.
   await page.getByLabel('Light theme').check();
-  for(const p of ['Warm','Neutral','Sage'])await page.getByRole('button',{name:`${p} palette`}).click();
-  assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'light','stays light while choosing palettes');
-  assert.equal(await page.evaluate(()=>document.documentElement.dataset.palette),'sage');
+  assert.equal(await page.getByRole('button',{name:/ palette$/}).count(),0,'no palette picker');
+  assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'light','stays light');
   assert.ok(await page.getByLabel('Light theme').isChecked());
   assert.deepEqual(errors,[]);
   console.log('PASS wizard backup: admin sees a one-button Google Drive step (375/768/1440 light/dark), nothing to paste, skip works, connecting opens Google in a new tab, shows the code and confirms by itself after approval; light mode stays light while picking palettes.');

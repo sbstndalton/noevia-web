@@ -2,7 +2,7 @@
 // noevia.css reads --glass-x/--glass-y and an opposing reflection; this script only sets them on
 // the control under a precise pointer. Nothing runs on touch or with reduced motion.
 (() => {
-  const SURFACES = '.app-mode-switch, .btn-secondary, .modal-btn.secondary, .popup-tab, .settings-navigation nav button, .theme-choice button, .palette-option, select';
+  const SURFACES = '.glass, .app-mode-switch, .btn-secondary, .modal-btn.secondary, .popup-tab, .settings-navigation nav button, .theme-choice button, .palette-option, select';
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const coarse = matchMedia('(pointer: coarse)');
   let frame = 0, pending = null, active = null;
