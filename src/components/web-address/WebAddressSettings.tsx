@@ -52,7 +52,7 @@ export function WebAddressSettings(): JSX.Element {
           <input id="web-address" type="text" inputMode="url" autoComplete="off" spellCheck={false} value={value} placeholder="https://noevia.example.com" onChange={(e) => { setValue(e.target.value); setSaved(''); }}/>
           <button type="submit" className="btn btn-primary" disabled={busy || !value.trim()}>{busy ? 'Checking…' : 'Check and save'}</button>
         </div>
-        <p className="gdrive-note">noevia first opens the new address itself to make sure it reaches this server. After the change, everyone signs in again at the new address. Passkeys are tied to an address, so add a new one in Security afterwards; passwords keep working.</p>
+        <p className="gdrive-note">noevia first opens the new address itself to make sure it reaches this server. After the change, everyone signs in again at the new address. Existing passkeys keep working there in Chrome, Edge and Safari (the old address must stay routed to this server); in Firefox, sign in with your password.</p>
         {error && <p className="route-note" role="alert">{error}</p>}
         {unreachable && <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => void save(true)}>Save anyway</button>}
         {saved && <p className="route-note" role="status">Saved. noevia now lives at <strong>{saved}</strong>.{moved && <> <a href={saved}>Open it there</a> and sign in.</>}</p>}
