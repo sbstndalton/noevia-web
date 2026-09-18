@@ -73,7 +73,20 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.ok(await page.locator('.stats-live-dot.unknown').count()>0,'neutral dot while unknown');
   await page.close();
  }
+
+ // Desktop: each list keeps its heading in view while it scrolls.
+ for(const theme of ['light','dark'])for(const material of ['liquid','soft']){
+  const page=await browser.newPage({viewport:{width:1360,height:729},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(([t,m])=>{localStorage.setItem('cowork-theme',t);localStorage.setItem('noevia:material',m);},[theme,material]);
+  const chat=(id,pinned=false)=>({id,title:`Synthetic ${id}`,updatedAt:1000,pinned,messages:[]});
+  await page.route('**/api/workspace',r=>r.fulfill({json:{projects:Array.from({length:6},(_,i)=>({id:`p${i}`,name:`Synthetic project ${i}`,updatedAt:1000,files:[],chats:[]})),freeChats:[chat('pinned',true),chat('pinned2',true),chat('pinned3',true),...Array.from({length:14},(_,i)=>chat(`recent${i}`))]}}));
+  await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
+  const res=await page.evaluate(()=>[...document.querySelectorAll('.sidebar .side-scroll')].map(el=>{el.scrollTop=el.scrollHeight;const head=el.querySelector(':scope > .sidebar-section-head, :scope > .section-label');const a=head.getBoundingClientRect(),b=el.getBoundingClientRect();const hit=document.elementFromPoint(a.x+20,a.y+a.height/2);return {list:el.className.split(' ').pop(),scrolled:el.scrollTop>0,headVisible:Math.abs(a.top-b.top)<=1&&head.contains(hit)};}));
+  for(const r of res)if(r.scrolled)assert.ok(r.headVisible,`${theme} ${material}: ${r.list} heading stays in view ${JSON.stringify(r)}`);
+  assert.ok(res.some(r=>r.scrolled),'at least one list scrolls at this height');
+  await page.screenshot({path:`${out}/desktop-sticky-heads-${theme}-${material}.png`});await page.close();
+ }
  assert.deepEqual(errors,[]);
- console.log('PASS phone drawer: full drawer from Diary, measured sticky footer, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading.');
+ console.log('PASS phone drawer: full drawer from Diary, measured sticky footer, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; desktop list headings stay in view while their list scrolls.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
