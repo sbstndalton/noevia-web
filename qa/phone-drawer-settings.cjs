@@ -62,7 +62,18 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   const hex=primary.replace('#','');assert.equal(ring,`rgb(${parseInt(hex.slice(0,2),16)}, ${parseInt(hex.slice(2,4),16)}, ${parseInt(hex.slice(4,6),16)})`,`${w} ${theme} ${accent}: ring follows accent`);
   await page.close();
  }
+
+ // Before the first stats reading the strip is neutral, not a red "Inference offline".
+ {
+  const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,isMobile:true});page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/api/stats',()=>{});
+  await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
+  const label=await page.locator('.stats-label').first().innerText();
+  assert.notEqual(label,'Inference offline','no reading yet is not an outage');
+  assert.ok(await page.locator('.stats-live-dot.unknown').count()>0,'neutral dot while unknown');
+  await page.close();
+ }
  assert.deepEqual(errors,[]);
- console.log('PASS phone drawer: full drawer from Diary, measured sticky footer, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent.');
+ console.log('PASS phone drawer: full drawer from Diary, measured sticky footer, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

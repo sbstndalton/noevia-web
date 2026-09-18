@@ -748,6 +748,7 @@ body { margin: 0; background: var(--bg); }
   animation: statspulse 2.5s ease-in-out infinite; flex-shrink: 0;
 }
 .stats-live-dot.down { background: var(--text-off); animation: none; }
+.stats-live-dot.unknown { background: var(--border-strong); animation: none; }
 @keyframes statspulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 .stats-item { display: inline-flex; align-items: baseline; gap: 5px; }
 .stats-label {

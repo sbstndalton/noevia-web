@@ -48,6 +48,9 @@ export function StatsBar({ stats, modelLabel }: StatsBarProps): JSX.Element {
   const phone = usePhone();
   const [userOpen, setUserOpen] = useState(readOpen);
   const up = !!stats?.up;
+  // No reading yet (first poll in flight, or the page opened in the background, where the
+  // poll waits): say nothing is known rather than report an outage that has not happened.
+  const unknown = stats === null;
   const open = phone ? userOpen : true;
   const toggle = () => setUserOpen((value) => {
     const next = !value;
@@ -58,8 +61,8 @@ export function StatsBar({ stats, modelLabel }: StatsBarProps): JSX.Element {
   // wide row does not, because the Speed pair is right there.
   const status = (withSpeed: boolean) => (
     <>
-      <span className={`stats-live-dot${up ? '' : ' down'}`} aria-hidden="true" />
-      <span className="stats-label">{up ? (modelLabel || 'Inference') : 'Inference offline'}</span>
+      <span className={`stats-live-dot${up ? '' : unknown ? ' unknown' : ' down'}`} aria-hidden="true" />
+      <span className="stats-label">{up || unknown ? (modelLabel || 'Inference') : 'Inference offline'}</span>
       {up && withSpeed && <span className="stats-value">{fmt(stats?.tokensPerSecond ?? null)}<span className="stats-unit"> tok/s</span></span>}
     </>
   );
