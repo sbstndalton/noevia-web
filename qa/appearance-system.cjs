@@ -28,7 +28,8 @@ const shots=process.env.QA_SCREENSHOTS||'';
    assert.deepEqual(await mode(),['light','light'],'a pinned mode ignores the device');
    await system.click();await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
    assert.equal(puts.at(-1).theme,'system');
-   await page.reload();await page.getByPlaceholder('Message noevia…').waitFor();
+   // A reload returns to where you were, so Settings is still open on the Appearance page.
+   await page.reload();await d.waitFor();await d.getByRole('heading',{name:'Appearance',level:1}).waitFor();
    assert.deepEqual(await mode(),['dark','system'],'System survives a reload before React');
    await ctx.close();
   }

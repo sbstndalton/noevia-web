@@ -176,7 +176,6 @@ dialog.confirm-dialog.dialog-sheet { width: min(420px, calc(100vw - 32px)); }
    A banner states the problem and the recovery on one line. Its colour comes
    from the status role, and it is a full hairline border, never a side rule. */
 .conn-banner {
-  display: flex; align-items: center; gap: var(--space-2);
   max-width: 860px; margin: var(--space-2) auto; padding: var(--space-3) var(--space-4);
   border: 1px solid color-mix(in srgb, var(--status-warning) 45%, transparent);
   border-radius: var(--radius-md);

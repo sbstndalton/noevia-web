@@ -31,7 +31,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  await page.screenshot({path:`/tmp/noevia-sidebar-${width}x${height}-${theme}-${name.split(' ').at(-1)}.png`});
  if(name.endsWith('recent11')){await menu.getByRole('menuitem',{name:'Rename',exact:true}).click();const input=page.locator('.proj-rename-input');await input.waitFor();assert.equal(await input.inputValue(),'Synthetic recent11');await input.press('Escape');}else{await page.keyboard.press('Escape');await reach(target);}
  } }
- assert.ok(await sidebar.evaluate(el=>el.scrollTop>0||el.querySelector('.sidebar-history').scrollTop>0),'Populated navigation must actually scroll');
+ assert.ok(await sidebar.evaluate(el=>el.scrollTop>0||[...el.querySelectorAll('.sidebar-history, .side-scroll')].some(x=>x.scrollTop>0)),'Populated navigation must actually scroll');
  await reach(page.getByRole('button',{name:'Diary',exact:true}));
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No horizontal overflow');
  await page.close();

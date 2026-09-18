@@ -290,9 +290,9 @@ export function fetchToolboxes(): Promise<{ toolboxes: Toolbox[]; mcp: McpStatus
   return getJson('/api/toolboxes');
 }
 
-export interface AutoRoles { fast: string; smart: string; vision?: string }
+export interface AutoRoles { fast: string; smart: string; vision?: string; code?: string }
 
-export function fetchAutoRoles(): Promise<{ configured: boolean; roles: AutoRoles | null; missing?: { role: 'fast' | 'smart' | 'vision'; model: string }[] }> {
+export function fetchAutoRoles(): Promise<{ configured: boolean; roles: AutoRoles | null; missing?: { role: 'fast' | 'smart' | 'vision' | 'code'; model: string }[] }> {
   return getJson('/api/auto-roles');
 }
 

@@ -7,6 +7,39 @@ import type { AuthUser } from '../api';
 import type { HealthState } from '../types';
 import { readPreference, writePreference } from '../preferences';
 import type { PreferenceName } from '../preferences';
+import { applyPalette, currentPalette, palettes } from '../appearance';
+import type { Palette } from '../appearance';
+
+/** The accent palettes, restored at the user's request (2026-09-18). Each name says what
+ *  it looks like rather than what it is called internally. */
+const PALETTE_LABELS: Record<Palette, string> = {
+  iris: 'Iris', warm: 'Warm', cool: 'Cool', neutral: 'Neutral', sage: 'Sage',
+};
+
+/** A live preview: the tiles carry the palette attribute themselves, so each swatch is
+ *  drawn by the same tokens the app would use — never a hard-coded approximation. The
+ *  mode has to travel with it, because the generated dark block is written as
+ *  `:not([data-theme='light'])` and would otherwise match a tile that names no mode. */
+function AccentChoice({ mode }: { mode: 'light' | 'dark' }): JSX.Element {
+  const [chosen, setChosen] = useState<Palette>(() => currentPalette());
+  useEffect(() => {
+    const sync = () => setChosen(currentPalette());
+    window.addEventListener('cowork:appearance', sync);
+    return () => window.removeEventListener('cowork:appearance', sync);
+  }, []);
+  return <div className="accent-choice" role="radiogroup" aria-label="Accent">
+    {palettes.map((name) => <button
+      key={name}
+      role="radio"
+      aria-checked={chosen === name}
+      className={`accent-tile${chosen === name ? ' is-active' : ''}`}
+      onClick={() => { applyPalette(name); setChosen(name); }}
+    >
+      <span className="accent-swatch" data-palette={name} data-theme={mode} aria-hidden="true"><i /><i /><i /></span>
+      {PALETTE_LABELS[name]}
+    </button>)}
+  </div>;
+}
 
 // One row: what the setting is on the left, the control on the right. Used for
 // every preference and capability here so the page reads as a list of
@@ -73,6 +106,13 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
             </button>;
           })}</div>
         </div>
+      </div>
+      <h2>Accent</h2>
+      <div className="set-rows">
+        <div className="set-row">
+          <div className="set-row-text"><span className="set-row-label">Accent</span><span className="set-row-desc">The colour noevia uses for selection, links and the send button. Each one is checked for contrast in both light and dark.</span></div>
+        </div>
+        <div className="set-row"><AccentChoice mode={theme} /></div>
       </div>
       <h2>Material</h2>
       <div className="set-rows">

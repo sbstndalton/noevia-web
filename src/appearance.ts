@@ -9,10 +9,11 @@ export function systemMode(): Mode {
 export function resolveMode(preference: Preference): Mode {
   return preference === 'system' ? systemMode() : preference;
 }
-export const palettes: Palette[] = ['warm', 'cool', 'neutral', 'sage', 'iris'];
+/** Iris is the noevia default; the rest re-hue the same tone ladder (scripts/palette.cjs). */
+export const palettes: Palette[] = ['iris', 'warm', 'cool', 'neutral', 'sage'];
 export function currentPalette(): Palette {
   const value = document.documentElement.getAttribute('data-palette');
-  return palettes.includes(value as Palette) ? value as Palette : 'cool';
+  return palettes.includes(value as Palette) ? value as Palette : 'iris';
 }
 export function savedPalette(mode: Mode): Palette {
   try {

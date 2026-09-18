@@ -37,7 +37,11 @@ const origin='http://localhost:31261',web=path.resolve(__dirname,'..'),shots=pro
    if(!(await next.count())){await page.screenshot({path:`${shots}/noevia-mobile-wizard-stuck.png`});break;}
    await reach(next,`wizard step ${step} next`);await next.click();await page.waitForTimeout(300);
   }
-  await page.goto(origin);await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();
+  await page.goto(origin);
+  // A new account lands in Settings, and a reload now returns there; close it to reach the chat.
+  const openSettings=page.getByRole('region',{name:'Settings'});
+  if(await openSettings.isVisible().catch(()=>false)){await page.keyboard.press('Escape');await openSettings.waitFor({state:'hidden'});}
+  await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();
 
   // ── Settings with the keyboard open ──
   await page.getByRole('button',{name:'Open navigation',exact:true}).click();
@@ -65,8 +69,14 @@ const origin='http://localhost:31261',web=path.resolve(__dirname,'..'),shots=pro
   // ── Code preview, portrait and landscape ──
   for(const [w,h] of [[375,667],[667,375]]){
    await page.setViewportSize({width:w,height:h});await keyboard(h);
-   await page.goto(origin);await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();
+   await page.goto(origin);
+   // A reload returns to the project created above, so ask for a chat explicitly.
    if(w<=600)await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+   if(!(await page.getByRole('textbox',{name:'Message',exact:true}).isVisible().catch(()=>false))){
+    await page.locator('.sidebar').getByRole('button',{name:'New chat',exact:true}).click();
+    if(w<=600)await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+   }
+   await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();
    await page.locator('.sidebar').getByRole('button',{name:'Code',exact:true}).click();
    await page.locator('.coding-main').waitFor();await fits(`code ${w}x${h}`);
    const back=page.locator('.coding-sidebar').getByRole('button',{name:'Chat',exact:true});

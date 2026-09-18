@@ -113,7 +113,7 @@ function Collapsible({ title, hint, children }: { title: string; hint: string; c
 // it competed with switching model — the one action people take mid-chat.
 function RoutingSection({ models, routes, projects, modelsError }: { models: InstalledModel[]; routes: RouteRule[]; projects: Project[]; modelsError: string | null }): JSX.Element {
   const [info, setInfo] = useState<Awaited<ReturnType<typeof fetchAutoRoles>> | null>(null);
-  const [pending, setPending] = useState<{ fast?: string; smart?: string; vision?: string }>({});
+  const [pending, setPending] = useState<{ fast?: string; smart?: string; vision?: string; code?: string }>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState('');
@@ -123,15 +123,15 @@ function RoutingSection({ models, routes, projects, modelsError }: { models: Ins
   // Embedding and reranking models cannot answer a chat, so they are never
   // offered for a role — picking one produces a model that 400s every request.
   const chatModels = models.filter((m) => matchesModelUse(m.labels, 'all'));
-  const valueFor = (role: 'fast' | 'smart' | 'vision') => pending[role] ?? info?.roles?.[role] ?? '';
+  const valueFor = (role: 'fast' | 'smart' | 'vision' | 'code') => pending[role] ?? info?.roles?.[role] ?? '';
 
   const save = async () => {
-    const fast = valueFor('fast').trim(), smart = valueFor('smart').trim(), vision = valueFor('vision').trim();
+    const fast = valueFor('fast').trim(), smart = valueFor('smart').trim(), vision = valueFor('vision').trim(), code = valueFor('code').trim();
     if (!fast || !smart) { setError('Auto needs both a fast and a smart model.'); return; }
     setBusy(true); setError(''); setSaved('');
     try {
-      await putAutoRoles({ fast, smart, vision });
-      setPending({}); setInfo({ configured: true, roles: { fast, smart, ...(vision ? { vision } : {}) } });
+      await putAutoRoles({ fast, smart, vision, code });
+      setPending({}); setInfo({ configured: true, roles: { fast, smart, ...(vision ? { vision } : {}), ...(code ? { code } : {}) } });
       setSaved('Saved. Models load on demand.');
     } catch (e) { setError(e instanceof Error ? e.message : 'The change could not be saved.'); }
     finally { setBusy(false); }
@@ -139,15 +139,15 @@ function RoutingSection({ models, routes, projects, modelsError }: { models: Ins
 
   return <section className="mm-panel">
     <div className="mm-panel-head"><h3>Routing</h3></div>
-    <p className="mm-note">Projects set to Auto pick a model per message. Vision is optional: set it and that model describes any images, then Fast or Smart answers from the description — so the answering model does not need to see.</p>
+    <p className="mm-note">Projects set to Auto pick a model per message. Vision and Code are optional. Set Vision and that model describes any images, then Fast or Smart answers from the description — so the answering model does not need to see. Set Code and coding work goes there instead of Smart.</p>
     {modelsError && <p role="alert" className="modal-err">{modelsError}</p>}
     {!info?.configured && !error && <p className="mm-note">Auto has no models assigned yet. Pick Fast and Smart, then save.</p>}
     {!!info?.missing?.length && <p className="mm-note warn" role="alert">Auto can't answer until you replace {info.missing.map((m) => `${ROLE_LABEL[m.role]} (${m.model})`).join(', ')}: {info.missing.length === 1 ? 'that model is' : 'those models are'} no longer installed.</p>}
     <div className="mm-form">
-      {(['fast', 'smart', 'vision'] as const).map((role) => <label key={role}>
+      {(['fast', 'smart', 'vision', 'code'] as const).map((role) => <label key={role}>
         {ROLE_LABEL[role]}
         <select value={valueFor(role)} disabled={busy} onChange={(e) => setPending((prev) => ({ ...prev, [role]: e.target.value }))}>
-          <option value="">{role === 'vision' ? '— none —' : '— pick a model —'}</option>
+          <option value="">{role === 'vision' || role === 'code' ? '— none —' : '— pick a model —'}</option>
           {chatModels.map((m) => <option key={m.name} value={m.name}>{m.name}{m.loaded ? ' · loaded' : ''}</option>)}
           {/* A role can name a model that is no longer installed; keep it
               selectable so saving does not silently drop it. */}

@@ -15,10 +15,14 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    await page.goto('http://localhost:31415');await page.getByPlaceholder('Message noevia…').waitFor();
    await page.evaluate(()=>fetch('/api/connectors/gdrive/disconnect',{method:'POST'}));
    if(await page.getByRole('button',{name:'Open navigation',exact:true}).isVisible())await page.getByRole('button',{name:'Open navigation',exact:true}).click();
-   await page.getByRole('button',{name:'Customize',exact:true}).click();
+   // Customize left the sidebar at the user's request (review of ab2720a): Connectors is
+   // reached through the account menu, under Settings → Customize.
+   await page.locator('.account-trigger').click();
+   await page.locator('.account-popover button').first().click();
    const s=page.getByRole('region',{name:'Settings'});await s.waitFor();
    // Settings takes the workspace's place: the chat underneath is hidden, not layered.
    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.app-main')).visibility==='hidden');
+   await s.getByRole('button',{name:'Connectors',exact:true}).click();
    await s.getByRole('heading',{name:'Connectors',level:1}).waitFor();
    assert.equal(await s.getByText('Coming later',{exact:true}).count()>=2,true,'unbuilt connectors say so');
    await s.getByRole('button',{name:'Google Drive'}).click();

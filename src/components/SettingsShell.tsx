@@ -57,13 +57,14 @@ const PLANNED: { group: string; items: string[] }[] = [
   { group: 'Coding workspace', items: ['Coding preferences', 'Git', 'Environments', 'Worktrees', 'Hooks'] },
 ];
 
-const PHONE = '(max-width: 700px)';
+// Kept in step with the single-pane breakpoint in shell-v2.css.
+const PHONE = '(max-width: 820px)';
 const phone = () => typeof window !== 'undefined' && window.matchMedia(PHONE).matches;
 const reducedMotion = () => typeof window !== 'undefined' && (document.documentElement.dataset.motion === 'reduced' || window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 export type SettingsSection = 'general' | 'usage' | 'models' | 'connectors';
 
-export function SettingsShell(props: SettingsViewProps & {initialSection?:SettingsSection;appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; onStartChat?:(prompt:string)=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void; preference?:'light'|'dark'|'system'; onPreference?:(preference:'light'|'dark'|'system')=>void}) {
+export function SettingsShell(props: SettingsViewProps & {initialSection?:SettingsSection|string;onSection?:(id:string)=>void;appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; onStartChat?:(prompt:string)=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void; preference?:'light'|'dark'|'system'; onPreference?:(preference:'light'|'dark'|'system')=>void}) {
   // 'general' is the historical name for the first page; it now opens Profile. Anything that is
   // not a section name (a click event handed through by mistake) counts as no choice.
   const named = typeof props.initialSection === 'string' && props.initialSection !== 'general' ? props.initialSection : null;
@@ -130,7 +131,11 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
 
   const title = groups.flatMap(g => g.items).find(([id]) => id === section)?.[1] || 'Settings';
   const filtered = groups.map(g => ({ ...g, items: g.items.filter(([, label]) => label.toLowerCase().includes(query.toLowerCase())) }));
-  const open = (id: string) => { setSection(id); setView('detail'); stage.current?.querySelector('.settings-detail-scroll')?.scrollTo(0, 0); };
+  const open = (id: string) => { setSection(id); props.onSection?.(id); setView('detail'); stage.current?.querySelector('.settings-detail-scroll')?.scrollTo(0, 0); };
+  // Report the opening page too, so a reload returns to the page you were reading and not
+  // to the top of the list (user review of `ab2720a`, 2026-09-18).
+  const report = props.onSection;
+  useEffect(() => { report?.(section); }, [report, section]);
 
   return <section ref={stage} className={`settings-stage${closing ? ' is-closing' : ''}`} data-view={view} role="region" aria-label="Settings">
     <aside className="settings-navigation">

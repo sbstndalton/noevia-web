@@ -11,6 +11,7 @@ import './styles/noevia.css';
 import './styles/shell-v2.css';
 import './styles/primitives.css';
 import './styles/overlays.css';
+import './styles/phone.css';
 import './styles/materials.css';
 
 createRoot(document.getElementById('root')!).render(

@@ -345,29 +345,14 @@ export function Sidebar({
           <ShellIcon name="folder" size={17}/>
           <span className="nav-name">Projects</span>
         </button>
-        {/* The diary is its own space, not another project. */}
-        {diaryEnabled && <button
-          className={`nav-item${activeView === 'diary' ? ' is-active' : ''}`}
-          aria-label="Diary"
-          aria-current={activeView === 'diary' ? 'page' : undefined}
-          onClick={onOpenDiary}
-        >
-          <ShellIcon name="diary" size={17}/>
-          <span className="nav-name">Diary</span>
-        </button>}
-        <button className="nav-item" aria-label="Customize" onClick={() => openSettings('connectors')}>
-          <ShellIcon name="connectors" size={17}/>
-          <span className="nav-name">Customize</span>
-        </button>
       </nav>
 
-      {showPreviews && <nav className="shell-extra-nav" aria-label="Explore noevia">{[['Scheduled','clock'],['Plugins','plugins'],['Explore','explore']].map(([label,icon])=><button className="nav-item" key={label} onClick={()=>onPreview(label)}><ShellIcon name={icon}/><span className="nav-name">{label}</span></button>)}</nav>}
       <div className="rail-tools"><button className="shell-icon-button" aria-label="Search projects and chats" onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(true);}}><ShellIcon name="search"/></button><button className="shell-icon-button" aria-label="Show pinned items" onClick={()=>{setCollapsed(false);setExpanded(true);setClosedGroups(g=>({...g,Pinned:false}));}}><ShellIcon name="pin"/></button></div>
       <div className="sidebar-history">
-      {['Pinned','Projects'].map(group => {
+      {['Projects','Pinned'].map(group => {
         const entries = visibleProjects.filter(p=>group==='Pinned'?p.pinned:!p.pinned);
         if(group==='Pinned' && !entries.length && !visibleChats.some(c=>c.pinned))return null;
-        return <div className="spaces" key={group}>
+        return <div className={`spaces side-scroll side-scroll-${group.toLowerCase()}`} key={group}>
           <div className="sidebar-section-head"><button className="section-label section-toggle" aria-label={`${group} section`} aria-expanded={!closedGroups[group]} onClick={()=>setClosedGroups(g=>({...g,[group]:!g[group]}))}>{group}</button>{group==='Projects' && <button className="row-action section-options" aria-label="Project ordering" aria-haspopup="menu" onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setSorting({x:r.left,y:r.bottom+4});}}><ShellIcon name="more" size={20}/></button>}</div>
           {group==='Pinned' && (!closedGroups[group] || query) && visibleChats.filter(c=>c.pinned).map(renderChat)}
           {(!closedGroups[group] || query) && entries.map(p=><div className="project-branch" key={p.id}>
@@ -394,7 +379,7 @@ export function Sidebar({
       {visibleChats.some(c=>!c.pinned) && (
         <>
           <div className="divider" />
-          <div className="spaces">
+          <div className="spaces side-scroll side-scroll-chats">
             <button className="section-label section-toggle" aria-expanded={!closedGroups.Chats} onClick={()=>setClosedGroups(g=>({...g,Chats:!g.Chats}))}>Recent chats</button>
             {(!closedGroups.Chats || query) && <div className="recent-children">{visibleChats.filter(c=>!c.pinned).slice(0,12).map(renderChat)}</div>}
 
@@ -404,7 +389,21 @@ export function Sidebar({
 
       </div>
 
-      <div className="divider" />
+      <nav className="side-permanent" aria-label="Spaces">
+        {diaryEnabled && <button
+          className={`nav-item${activeView === 'diary' ? ' is-active' : ''}`}
+          aria-label="Diary"
+          aria-current={activeView === 'diary' ? 'page' : undefined}
+          onClick={onOpenDiary}
+        >
+          <ShellIcon name="diary" size={17}/>
+          <span className="nav-name">Diary</span>
+        </button>}
+        {showPreviews && <button className="nav-item" aria-label="Plugins" onClick={()=>onPreview('Plugins')}>
+          <ShellIcon name="plugins" size={17}/>
+          <span className="nav-name">Plugins</span>
+        </button>}
+      </nav>
 
       {hover && (() => {
         const p = projects.find((x) => x.id === hover.id);

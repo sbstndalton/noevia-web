@@ -8,8 +8,15 @@
   const theme = preference === 'system' ? (systemLight ? 'light' : 'dark') : preference;
   document.documentElement.setAttribute('data-theme-preference', preference);
   document.documentElement.setAttribute('data-theme', theme);
-  // One noevia palette since the 2026-09-18 overhaul; stored palette names are ignored.
-  document.documentElement.setAttribute('data-palette', 'noevia');
+  // The accent palette, applied before paint like the theme so there is no flash of
+  // the wrong accent. Iris is noevia's own; the rest re-hue the same tone ladder.
+  const accents = ['iris', 'warm', 'cool', 'neutral', 'sage'];
+  let palette = 'iris';
+  try {
+    const saved = localStorage.getItem('cowork-palette-' + theme) || localStorage.getItem('cowork-palette');
+    if (accents.includes(saved)) palette = saved;
+  } catch { /* use the default */ }
+  document.documentElement.setAttribute('data-palette', palette);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f9f9ff' : '#151519');
   for (const [key, attribute, allowed] of [
     ['noevia:chat-font', 'data-chat-font', ['sans', 'serif', 'mono']],

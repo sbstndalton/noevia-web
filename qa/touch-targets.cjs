@@ -19,7 +19,15 @@ const {createFixture}=require('./diary-fixture.cjs');
    found.push(...await measure(page,'.project-card-options, .projects-search'));
    await page.locator('.project-card').first().click();await page.getByRole('tab',{name:/Chats/}).waitFor();
    found.push(...await measure(page,'.project-tabs [role=tab], .composer-add, .project-newchat, select[aria-label="Thinking effort"]'));
-   await page.getByTitle('Settings',{exact:true}).first().click().catch(async()=>{await page.goto('http://localhost:31394');await page.getByTitle('Settings',{exact:true}).click();});
+   // A reload returns to where you were, so recovering by reloading lands back on the
+   // project rather than on a chat; go through the account menu instead.
+   await page.getByTitle('Settings',{exact:true}).first().click().catch(async()=>{
+    // The account menu lives in the rail, which is a drawer at phone widths.
+    const toggle=page.getByRole('button',{name:'Open navigation',exact:true});
+    if(await toggle.isVisible().catch(()=>false))await toggle.click();
+    await page.locator('.account-trigger').click();
+    await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+   });
    const dialog=page.getByRole('region',{name:'Settings'});await dialog.waitFor();
    found.push(...await measure(page,'.settings-back, .settings-detail > header .shell-icon-button'));
    const small=found.filter(f=>f.w<44||f.h<44).map(f=>`${f.sel} "${f.label}" ${f.w}x${f.h}`);

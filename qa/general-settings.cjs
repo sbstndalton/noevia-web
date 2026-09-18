@@ -67,7 +67,8 @@ const {createFixture}=require('./diary-fixture.cjs');
  assert.equal(await attr('data-density'),'compact');
  assert.equal(await attr('data-motion'),'reduced');
 
- await page.getByTitle('Settings',{exact:true}).click();
+ // The reload restored Settings rather than dropping to a new chat, so it is still open.
+ await dialog.waitFor();
  await dialog.getByRole('button',{name:'Capabilities',exact:true}).click();
 
  // ── Capabilities report real state, and never offer to disable approvals ──
