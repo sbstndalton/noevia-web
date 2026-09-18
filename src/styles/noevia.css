@@ -1918,3 +1918,13 @@ body { isolation:isolate; background:var(--bg-app); }
 .code-limitations > summary { min-height: 40px; display: flex; align-items: center; cursor: pointer; }
 .code-limitations ul { margin: 0 0 4px; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; line-height: 1.5; }
 @media (pointer: coarse), (max-width: 640px) { .code-limitations > summary { min-height: 44px; } }
+
+/* Connect Google Drive: numbered steps with a copyable command each (Backups and the wizard). */
+.gdrive-connect { margin-top: 24px; }
+.gdrive-setup ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 16px; line-height: 1.5; }
+.gdrive-setup li > div { margin-top: 8px; }
+.gdrive-command { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; min-width: 0; }
+.gdrive-command textarea { flex: 1; min-width: 0; min-height: 44px; resize: none; field-sizing: content; max-height: 9.5em; padding: 10px 12px; border: 1px solid var(--control-border); border-radius: 8px; background: var(--bg); color: var(--text); font-family: ui-monospace, monospace; font-size: var(--text-caption); line-height: 1.45; word-break: break-all; }
+.gdrive-command button, .gdrive-setup button { min-height: 44px; flex: none; }
+.gdrive-reconnect { margin-top: 20px; }
+.gdrive-reconnect summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }

@@ -16,39 +16,33 @@ import { OffsiteBackupSettings } from './offsite-backup/OffsiteBackupSettings';
 type Item = [id: string, label: string];
 type Group = { name: string; items: Item[]; admin?: boolean };
 
-// Two audiences, following the Personal/Administration split Nextcloud uses:
-// things you change about your own account, and things that change the
-// deployment for everyone. Sections that only ever had placeholder content are
-// no longer nav rows of their own — they are listed together under "Planned"
-// so the navigation describes what noevia can actually do today.
+// Grouped the way people look for things: who you are, how noevia behaves for
+// you, what it is connected to, and — for administrators — the server itself.
+// Sections that only ever had placeholder content are listed together under
+// "Planned" so the navigation describes what noevia can actually do today.
 //
 // Removed outright rather than deferred, because they cannot apply to a
 // self-hosted single-server install: Billing (no plans or invoices to show),
 // Voice, Browser and Computer use (host-application features, not this app's).
-const PERSONAL: Item[] = [
-  ['profile', 'Profile'],
-  ['security', 'Security'],
-  ['appearance', 'Appearance'],
-  ['personalization', 'Personalization'],
-  ['capabilities', 'Capabilities'],
-  ['diary', 'Diary & storage'],
-  ['providers', 'Your connections'],
-  ['usage', 'Usage & activity'],
-  ['data', 'Data'],
-  ['planned', 'Planned features'],
+const PERSONAL: Group[] = [
+  { name: 'Account', items: [['profile', 'Profile'], ['security', 'Security'], ['usage', 'Usage & activity'], ['data', 'Data']] },
+  { name: 'Preferences', items: [['appearance', 'Appearance'], ['personalization', 'Personalization'], ['capabilities', 'Capabilities']] },
+  { name: 'Connections', items: [['providers', 'AI providers'], ['diary', 'Diary & storage']] },
 ];
 
 // Deployment-wide. The navigation hides these from members, but that is
 // presentation only — the server independently returns 403 on the routes
 // behind them (users, model mutations, shared providers), so hiding the entry
 // is a courtesy, never the access control.
-const ADMIN: Item[] = [
+const ADMIN: Group = { name: 'Server', admin: true, items: [
   ['users', 'Users'],
   ['models', 'Models & routing'],
-  ['status', 'Service status'],
   ['features', 'Features'],
-  ['backups', 'Off-site backups'],
-];
+  ['backups', 'Backups'],
+  ['status', 'Service status'],
+] };
+
+const LATER: Group = { name: 'Coming later', items: [['planned', 'Planned features']] };
 
 // Each section has its own symbol; names resolve through ShellIcon's Lucide map.
 const ICONS: Record<string, string> = Object.fromEntries(['profile','security','appearance','personalization','capabilities','diary','providers','usage','data','planned','users','models','status','features','backups'].map(id => [id, id]));
@@ -86,13 +80,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:'gener
     return () => { live = false; };
   }, [profileAttempt]);
 
-  const groups: Group[] = useMemo(
-    () => [
-      { name: 'Personal', items: PERSONAL },
-      ...(isAdmin ? [{ name: 'Administration', items: ADMIN, admin: true }] : []),
-    ],
-    [isAdmin],
-  );
+  const groups: Group[] = useMemo(() => [...PERSONAL, ...(isAdmin ? [ADMIN] : []), LATER], [isAdmin]);
 
   // A member who was viewing an admin section (or a stale saved section) must
   // not be left staring at an empty pane.

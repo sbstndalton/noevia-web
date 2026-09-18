@@ -12,7 +12,7 @@ const PORT=31383,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
  const keyFile=path.join(root,'backup.key');fs.writeFileSync(keyFile,crypto.randomBytes(32).toString('hex'),{mode:0o600});
  const report=(o)=>fs.writeFileSync(path.join(store,'.mirror-status.json'),JSON.stringify(o));
  const server=spawn(process.execPath,['server/index.cjs'],{cwd:web,stdio:'ignore',env:{...process.env,UI_DATA_DIR:data,UI_PORT:String(PORT),UI_HOST:'127.0.0.1',PUBLIC_ORIGIN:origin,LEGACY_AUTH_COMPAT:'false',MODEL_MANAGER_KIND:'none',INFERENCE_BASE_URL:'http://127.0.0.1:1',DIARY_BASE_URL:'http://127.0.0.1:1',DIARY_AUTH_TOKEN:'synthetic-only',MCP_SERVERS:'',MCP_SERVER_URL:'',
-  NOEVIA_FEATURE_OFFSITE_BACKUP:'true',OFFSITE_BACKUP_DIR:store,OFFSITE_BACKUP_MIRROR:'Google Drive',OFFSITE_BACKUP_KEY_FILE:keyFile}});
+  NOEVIA_FEATURE_OFFSITE_BACKUP:'true',OFFSITE_BACKUP_DIR:store,OFFSITE_BACKUP_MIRROR:'Google Drive',OFFSITE_BACKUP_SSH_HOST:'backup-host',OFFSITE_BACKUP_KEY_FILE:keyFile}});
  const browser=await chromium.launch({headless:true,channel:'chrome'});const errors=[];
  try{
   for(let i=0;i<200;i++){try{if((await fetch(origin+'/api/setup/status')).ok)break;}catch{}await new Promise(r=>setTimeout(r,50));}
@@ -27,7 +27,7 @@ const PORT=31383,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
   const open=async(width)=>{
    await page.getByTitle('Settings',{exact:true}).click();
    const settings=page.getByRole('dialog',{name:'Settings'});await settings.waitFor();
-   if(width<768)await settings.getByLabel('Settings category').selectOption('backups');else await settings.getByRole('button',{name:'Off-site backups',exact:true}).click();
+   if(width<768)await settings.getByLabel('Settings category').selectOption('backups');else await settings.getByRole('button',{name:'Backups',exact:true}).click();
    await settings.getByText('Last restore test').waitFor();
    return settings;
   };
@@ -45,11 +45,18 @@ const PORT=31383,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
    await page.setViewportSize({width,height:width<768?812:900});
    await page.evaluate(t=>localStorage.setItem('cowork-theme',t),theme);await page.reload();
    s=await open(width);
-   const row=s.getByText(/^Not connected\. Finish the one-time Google sign-in/);
+   const row=s.getByText(/^Not connected\. Follow the steps below/);
    await row.waitFor();
    assert.match(await row.innerText(),/backups stay on this server only/);
    assert.ok(await row.evaluate(el=>el.classList.contains('is-error')),'not connected is shown as a problem, not as information');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`no horizontal overflow at ${width}`);
+   // The steps are on the page itself: one paste for the key, one for the Google sign-in.
+   const connect=s.getByRole('heading',{name:'Connect Google Drive'});await connect.waitFor();
+   assert.match(await s.getByLabel('Command to show the backup key').inputValue(),/^ssh backup-host cat \/mnt\/docker\/appdata\/cowork\/config\/offsite-backup\.key$/);
+   const cmd=await s.getByLabel('Command to connect Google Drive').inputValue();
+   assert.match(cmd,/rclone authorize "drive"/);assert.match(cmd,/ssh backup-host "/);assert.match(cmd,/rclone config create gdrive drive scope=drive\.file/);
+   for(const b of await s.locator('.gdrive-setup button').all())assert.ok((await b.boundingBox()).height>=44,'44px targets');
+   await connect.scrollIntoViewIfNeeded();
    if(shots)await page.screenshot({path:`${shots}/offsite-mirror-not-connected-${width}-${theme}.png`});
    await close(s);
   }
@@ -59,6 +66,8 @@ const PORT=31383,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
   report({state:'ok',at:Date.now(),message:'Copied 1 snapshots.'});
   s=await open(1440);
   const ok=s.getByText(/^Connected · last copied /);await ok.waitFor();
+  assert.equal(await s.getByRole('heading',{name:'Connect Google Drive'}).count(),0,'connected: the steps fold away');
+  await s.getByText('Reconnect Google Drive').waitFor();
   assert.equal(await ok.evaluate(el=>el.classList.contains('is-error')),false);
   if(shots)await page.screenshot({path:`${shots}/offsite-mirror-connected-1440-light.png`});
   await close(s);
@@ -78,7 +87,8 @@ const PORT=31383,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
   // Nothing about the host's rclone ever reaches the browser.
   const status=(await api('/api/admin/offsite-backup')).body;
   assert.deepEqual(Object.keys(status.mirror).sort(),['at','message','state']);
+  assert.deepEqual(Object.keys(status.connect).sort(),['keyFile','rcloneConfig','script','sshHost'],'host paths and an SSH name only');
   assert.deepEqual(errors,[]);
-  console.log('PASS offsite mirror: never-run, not connected (375/768/1440 light/dark, shown as a problem), connected, stale after two days, failed; only state, time and message reach the browser.');
+  console.log('PASS offsite mirror: never-run, not connected (375/768/1440 light/dark, shown as a problem, with copyable key and sign-in commands), connected, stale after two days, failed; only state, time and message reach the browser.');
  }finally{await browser.close();server.kill('SIGKILL');fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

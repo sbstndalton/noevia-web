@@ -11,17 +11,22 @@ import {
   logout,
   updateFeatures,
   setupStatus,
+  apiFetch,
 } from '../api';
 import type { AuthUser } from '../api';
 import { classifyOrigin, isIpAddressHost } from '../browser-support';
 import { timezoneEnvSetting } from '../setup-timezone';
 import { ProviderForm } from './ProviderForm';
 import { StorageChoice } from './StorageChoice';
+import { GoogleDriveSetup } from './offsite-backup/GoogleDriveSetup';
+import type { ConnectInfo } from './offsite-backup/GoogleDriveSetup';
 import { ReasoningControl } from './ReasoningControl';
 
-type Step = 'welcome' | 'choice' | 'account' | 'provider' | 'diary' | 'prefs' | 'passkey' | 'done';
+type Step = 'welcome' | 'choice' | 'account' | 'provider' | 'diary' | 'backup' | 'prefs' | 'passkey' | 'done';
 
-const STEP_ORDER: Step[] = ['welcome', 'choice', 'account', 'provider', 'diary', 'prefs', 'passkey'];
+const STEP_ORDER: Step[] = ['welcome', 'choice', 'account', 'provider', 'diary', 'backup', 'prefs', 'passkey'];
+
+interface BackupState { connect: ConnectInfo | null; mirror: { state: string } | null }
 
 // Same wording the server returns for a rejected origin, so blocking the
 // submit client-side reads identically to hitting the server check.
@@ -34,6 +39,7 @@ const STEP_TITLES: Record<Step, string> = {
   account: 'Create the administrator',
   provider: 'Connect an inference provider',
   diary: 'Set up the diary',
+  backup: 'Back up to Google Drive',
   prefs: 'Preferences',
   passkey: 'Secure your account',
   done: 'Setup complete',
@@ -53,8 +59,19 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
   const [step, setStep] = useState<Step>(mode === 'fresh' ? 'welcome' : mode === 'invited' ? 'diary' : 'provider');
   const [accountCreated, setAccountCreated] = useState(mode !== 'fresh');
   const heading = useRef<HTMLHeadingElement>(null);
-  const steps = STEP_ORDER.filter(s => !['account','welcome','choice'].includes(s) && (mode !== 'invited' || s !== 'provider'));
-  const visibleSteps = mode === 'fresh' ? STEP_ORDER : steps;
+  // Backups are deployment-wide, so only an administrator sees the step, and only when the
+  // server has off-site backups turned on with a folder the host mirrors to Google Drive.
+  const [backup, setBackup] = useState<BackupState | null>(null);
+  const [checkingBackup, setCheckingBackup] = useState(false);
+  const loadBackup = useCallback(() => apiFetch('/api/admin/offsite-backup')
+    .then(r => (r.ok ? r.json() : null))
+    .then((s: (BackupState & { enabled: boolean }) | null) => setBackup(s?.enabled && s.connect ? s : null))
+    .catch(() => setBackup(null)), []);
+  useEffect(() => { if (accountCreated && mode !== 'invited') void loadBackup(); }, [accountCreated, mode, loadBackup]);
+  const order = STEP_ORDER.filter(s => s !== 'backup' || backup);
+  const steps = order.filter(s => !['account','welcome','choice'].includes(s) && (mode !== 'invited' || s !== 'provider'));
+  const visibleSteps = mode === 'fresh' ? order : steps;
+  const afterDiary: Step = backup ? 'backup' : 'prefs';
   const stepNumber = step === 'done' ? visibleSteps.length : visibleSteps.indexOf(step) + 1;
   useEffect(() => { heading.current?.focus(); }, [step]);
   const [error, setError] = useState<string | null>(null);
@@ -255,7 +272,7 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
 
         {step === 'diary' && (
           <div aria-busy={busy}>
-            {mode === 'invited' && <p>Your administrator manages shared models. You can use available models after setup, or add an approved personal provider in Settings → Your connections.</p>}
+            {mode === 'invited' && <p>Your administrator manages shared models. You can use available models after setup, or add an approved personal provider in Settings → AI providers.</p>}
             <label className="auth-option">
               <input type="checkbox" checked={diaryEnabled} aria-disabled={busy} onChange={e => void saveDiaryChoice(e.target.checked)} />
               <span><strong>Enable the Diary add-on</strong><small>Saved for your account when changed. Turning it off keeps existing files.</small></span>
@@ -263,16 +280,30 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
             <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
               {diaryEnabled ? (
                 <>
-                  <StorageChoice onContinue={() => go('prefs')}/>
+                  <StorageChoice onContinue={() => go(afterDiary)}/>
                 </>
               ) : (
                 <>
                   <p>The Diary add-on is currently disabled for your account.</p>
-                  <button className="modal-btn primary" onClick={() => go('prefs')}>Continue</button>
+                  <button className="modal-btn primary" onClick={() => go(afterDiary)}>Continue</button>
                 </>
               )}
             </fieldset>
             {error && <p className="auth-error" role="alert">{error}</p>}
+          </div>
+        )}
+
+        {step === 'backup' && backup?.connect && (
+          <div>
+            <p>Every night noevia makes an encrypted copy of everything on this server — accounts, projects, chats, settings and the Diary. Connect Google Drive so a copy also lives somewhere other than this server. Google only ever sees scrambled files.</p>
+            {backup.mirror?.state === 'ok' || backup.mirror?.state === 'waiting'
+              ? <p role="status"><strong>Google Drive is connected.</strong> Copies run nightly at 02:45.</p>
+              : <GoogleDriveSetup connect={backup.connect} checking={checkingBackup} onCheck={() => { setCheckingBackup(true); void loadBackup().finally(() => setCheckingBackup(false)); }}/>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+              {backup.mirror?.state === 'ok' || backup.mirror?.state === 'waiting'
+                ? <button className="modal-btn primary" onClick={() => go('prefs')}>Continue</button>
+                : <button className="modal-btn secondary" onClick={() => go('prefs')}>Skip — set up later in Settings</button>}
+            </div>
           </div>
         )}
 
