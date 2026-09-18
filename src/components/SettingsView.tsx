@@ -101,7 +101,13 @@ function SecurityCard(): JSX.Element {
       setNotice(success);
       try { await refresh(); }
       catch { setError('The change succeeded, but the updated profile could not be loaded. Retry loading before making another change.'); }
-    } catch { setError(`${label} could not be confirmed. Check your connection, then reload to check the saved state.`); }
+    } catch (e) {
+      // A browser refusal (cancelled, wrong address, unsupported) is not a connection problem.
+      const name = (e as Error)?.name;
+      if (name === 'NotAllowedError' || name === 'AbortError') setError(`${label} was cancelled or timed out. Nothing was changed.`);
+      else if (name === 'SecurityError' || name === 'InvalidStateError' || name === 'NotSupportedError') setError(`${label} was refused by the browser: ${(e as Error).message}`);
+      else setError(`${label} could not be confirmed. Check your connection, then reload to check the saved state.`);
+    }
     finally { setBusy(''); }
   };
   const addKey = async () => {
