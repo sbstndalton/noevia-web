@@ -209,9 +209,7 @@
   [data-material='material'] .settings-stage .settings-navigation nav button, [data-material='material'] .settings-stage .settings-navigation nav button.is-active { border-radius: 0; background: transparent; color: var(--md-on-surface); min-height: 56px; }
 }
 
-/* Project rows line their icon and name up with the pinned and chat rows. */
-[data-material='material'] .app .sidebar.pane .proj-row .project-expand { margin-left: 8px; }
-[data-material='material'] .app .sidebar.pane .proj-row .project-disclosure { padding-left: 6px; }
+/* Project and chat rows share one geometry: phone.css --row-inset / --row-gap. */
 
 /* List rows under the headings are one-line list items (40px); the primary destinations
    above keep 48px. Headings sit tight to their list. */

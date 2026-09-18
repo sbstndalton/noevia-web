@@ -209,7 +209,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   const saved=[];await page.route('**/api/projects/q0/config',r=>{saved.push(r.request().postDataJSON());return r.fulfill({json:{ok:true}});});
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[{id:'q0',name:'Synthetic project q0',updatedAt:1000,files:[],assets:[],memories:[],instructions:'',goal:'',sourceFolders:[],chats:[],toolboxes:['core'],createdAt:1}],freeChats:[]}}));
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
-  const centred=()=>page.evaluate(()=>[...document.querySelectorAll('button')].filter(b=>b.getBoundingClientRect().width>4&&!b.innerText.trim()&&b.querySelectorAll('svg').length===1).map(b=>{const r=b.getBoundingClientRect(),q=b.querySelector('svg').getBoundingClientRect();return {l:b.getAttribute('aria-label'),dx:Math.abs((q.left+q.width/2)-(r.left+r.width/2)),dy:Math.abs((q.top+q.height/2)-(r.top+r.height/2))};}).filter(x=>x.dx>1||x.dy>1));
+  const centred=()=>page.evaluate(()=>[...document.querySelectorAll('button:not(.project-expand)')].filter(b=>b.getBoundingClientRect().width>4&&!b.innerText.trim()&&b.querySelectorAll('svg').length===1).map(b=>{const r=b.getBoundingClientRect(),q=b.querySelector('svg').getBoundingClientRect();return {l:b.getAttribute('aria-label'),dx:Math.abs((q.left+q.width/2)-(r.left+r.width/2)),dy:Math.abs((q.top+q.height/2)-(r.top+r.height/2))};}).filter(x=>x.dx>1||x.dy>1));
   const glyphs=()=>page.evaluate(()=>[...document.querySelectorAll('button, summary')].map(b=>b.innerText.trim()).filter(t=>/^[+＋✕×›‹→←↑↓◇▾]/.test(t)||/[✕×›◇▾]$/.test(t)));
   await page.getByRole('button',{name:'Projects',exact:true}).first().click();await page.locator('.project-card').first().click();
   const plus=page.getByRole('button',{name:'Add files and tools'});await plus.waitFor();
@@ -287,7 +287,39 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.equal(await phone.locator('.coding-sidebar').evaluate(e=>e.classList.contains('is-open')),false,'switching to Code closes the drawer');
   await phone.close();
  }
+
+ // Visual pass on real device layouts (iPhone user agent → data-layout="mobile"): the Settings
+ // list is full width with readable labels; the composer row fits at 375px; project and chat
+ // rows start their icons and titles on one line in every material.
+ {
+  const iphone='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+  const page=await browser.newPage({viewport:{width:375,height:812},hasTouch:true,isMobile:true,userAgent:iphone});page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/api/reasoning-settings*',r=>r.fulfill({json:{default:'default',effort:'default',mode:'hint',admin:true}}));
+  await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[{id:'v0',name:'Finances',updatedAt:1000,files:[],assets:[],memories:[],instructions:'',goal:'',sourceFolders:[],chats:[],toolboxes:['core'],createdAt:1}],freeChats:[]}}));
+  await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
+  assert.equal(await page.evaluate(()=>document.documentElement.dataset.layout),'mobile','iPhone gets the mobile layout');
+  await page.getByRole('button',{name:'Open navigation',exact:true}).click();await page.getByRole('button',{name:'Projects',exact:true}).first().click();await page.locator('.project-card').first().click();
+  await page.locator('.composer-inner').first().waitFor();
+  const spill=await page.evaluate(()=>{const c=document.querySelector('.composer-inner').getBoundingClientRect();return [...document.querySelectorAll('.composer-inner button')].filter(b=>{const q=b.getBoundingClientRect();return q.width&&(q.right>c.right-1||q.left<c.left+1);}).map(b=>b.getAttribute('aria-label'));});
+  assert.deepEqual(spill,[],'composer controls stay inside the composer at 375px');
+  await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+  await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();await page.locator('.settings-navigation nav button').first().waitFor();
+  const list=await page.evaluate(()=>{const n=document.querySelector('.settings-navigation'),b=n.querySelector('nav button');return {w:Math.round(n.getBoundingClientRect().width),fs:parseFloat(getComputedStyle(b).fontSize)};});
+  assert.ok(list.w>=370&&list.fs>=15,`Settings list is full width with readable labels on an iPhone ${JSON.stringify(list)}`);
+  await page.close();
+ }
+ for(const material of ['liquid','material','soft','glass']){
+  const page=await browser.newPage({viewport:{width:1280,height:800}});
+  await page.addInitScript(m=>localStorage.setItem('noevia:material',m),material);
+  await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[{id:'r0',name:'Pinned project',pinned:true,updatedAt:1,files:[],chats:[],createdAt:1},{id:'r1',name:'Finances',updatedAt:1,files:[],chats:[],createdAt:1}],freeChats:[{id:'rc',title:'Testing',updatedAt:2,messages:[]}]}}));
+  await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
+  const edges=await page.evaluate(()=>{const S=document.querySelector('.sidebar').getBoundingClientRect().left;return [...document.querySelectorAll('.proj-row, .chat-row')].map(r=>[Math.round(r.querySelector('svg').getBoundingClientRect().left-S),Math.round(r.querySelector('.sidebar-label').getBoundingClientRect().left-S)]);});
+  assert.equal(new Set(edges.map(e=>e.join())).size,1,`${material}: project and chat rows share one icon and title edge ${JSON.stringify(edges)}`);
+  const head=await page.evaluate(()=>{const h=[...document.querySelectorAll('.sidebar-section-head')].find(x=>x.querySelector('.section-options'));const l=h.querySelector('.section-label').getBoundingClientRect(),o=h.querySelector('.section-options').getBoundingClientRect();return Math.abs((o.top+o.height/2)-(l.top+l.height/2));});
+  assert.ok(head<=1,`${material}: a heading's options button lines up with its label (${head}px)`);
+  await page.close();
+ }
  assert.deepEqual(errors,[]);
- console.log('PASS phone drawer: full drawer from Diary, Diary in the bottom bar, only the account row pinned, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop the sidebar is one scrolling plane with every chat, in each material; collapsed, it is an icon-only rail with the avatar at the bottom that survives a reload and expands from its empty space; light/dark is in the account menu with Search beside the account, the menu opens in full from the rail, and Code never blanks while loading; the composer + is a centred SVG without a duplicate model entry, Thinking is a menu of levels, a closed sidebar stays closed across Chat and Code, and no icon is a text glyph; icon + text buttons keep their icon at the start and hover options never cover a title; Diary is in the bottom bar, the Chat/Code thumb slides both ways, project colours show in the sidebar and on cards, and the phone Code drawer opens and closes; the mode switch is a small track in the header row, the phone drawer is full width with search on top, and switching mode closes it.');
+ console.log('PASS phone drawer: full drawer from Diary, Diary in the bottom bar, only the account row pinned, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop the sidebar is one scrolling plane with every chat, in each material; collapsed, it is an icon-only rail with the avatar at the bottom that survives a reload and expands from its empty space; light/dark is in the account menu with Search beside the account, the menu opens in full from the rail, and Code never blanks while loading; the composer + is a centred SVG without a duplicate model entry, Thinking is a menu of levels, a closed sidebar stays closed across Chat and Code, and no icon is a text glyph; icon + text buttons keep their icon at the start and hover options never cover a title; Diary is in the bottom bar, the Chat/Code thumb slides both ways, project colours show in the sidebar and on cards, and the phone Code drawer opens and closes; the mode switch is a small track in the header row, the phone drawer is full width with search on top, and switching mode closes it; on an iPhone Settings is a full-width list, the composer fits at 375px, and rows and headings line up in every material.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

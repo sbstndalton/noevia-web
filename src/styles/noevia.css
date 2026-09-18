@@ -1850,9 +1850,10 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
   width: min(100%, 430px); border-inline: 1px solid var(--border-subtle); overflow: hidden;
 }
 :root[data-layout="mobile"] .settings-shell { width: 100%; height: 100%; border-radius: 0; border: 0; }
-:root[data-layout="mobile"] .settings-navigation { width: 155px; padding: 10px 7px; border-right: 0; border-bottom: 1px solid var(--border-subtle); border-radius: 0; }
-:root[data-layout="mobile"] .settings-navigation nav button { font-size: var(--text-caption2); gap: 6px; padding: 9px 6px; }
-:root[data-layout="mobile"] .settings-navigation nav button svg { display: none; }
+/* Settings on a phone is single-pane (a full-width list opening full-screen pages). These
+   rules drew the old two-column phone layout — a 155px column of 11px labels without icons —
+   and pinned the list narrow on real phones (visual pass, 2026-09-18). */
+:root[data-layout="mobile"] .settings-navigation { width: 100%; border-right: 0; border-radius: 0; }
 :root[data-layout="mobile"] .settings-detail > header { padding: 12px 16px; border-radius: 0; }
 :root[data-layout="mobile"] .settings-detail-scroll { padding: 22px 16px; }
 :root[data-layout="mobile"] .settings-detail .settings-title h1 { font-size: var(--text-title1); }

@@ -85,8 +85,11 @@
 .app .sidebar.pane > * { flex-shrink: 0; }
 .app .sidebar.pane .sidebar-history { display: flex; flex-direction: column; gap: 0; flex: none; overflow: visible; margin-bottom: var(--space-3); }
 .app .sidebar.pane .sidebar-history .side-scroll { overflow: visible; max-height: none; }
-.app .sidebar.pane .sidebar-history .side-scroll > .section-label:first-child,
-.app .sidebar.pane .sidebar-history .side-scroll > .sidebar-section-head:first-child .section-label { margin-top: var(--space-4); }
+/* The gap above a list heading belongs to its row, so a heading's options button lines up
+   with its label (it sat 6px high when the margin was on the label alone). */
+.app .sidebar.pane .sidebar-history .side-scroll > .section-label:first-child { margin-top: var(--space-4); }
+.app .sidebar.pane .sidebar-history .side-scroll > .sidebar-section-head:first-child { margin-top: var(--space-4); display: flex; align-items: center; }
+.app .sidebar.pane .sidebar-history .side-scroll > .sidebar-section-head:first-child .section-label { margin-top: 0; margin-bottom: 0; }
 /* Recent chats are a flat list like the others: no indent, no tree line. */
 .app .sidebar.pane .recent-children { margin-left: 0; padding-left: 0; border-left: 0; }
 /* The account row holds the bottom edge; short content leaves it at the bottom too. */
@@ -356,3 +359,35 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
   .app .sidebar.pane.is-expanded .shell-search { width: 100%; min-height: 44px; margin: var(--space-2) 0; }
 }
 @media (min-width: 601px) { :is(.app .sidebar.pane, .coding-sidebar).is-collapsed .shell-sidebar-head .app-mode-switch.is-compact > button { display: grid; } }
+
+/* Composer row at phone width (visual pass, 2026-09-18): the end columns were a fixed 32px
+   while touch sizing makes the + and send buttons 44px, so send spilled past the edge at 375px.
+   Columns size to their buttons; on a narrow phone Thinking shows only its level. */
+.composer-inner.chat-composer-inner { grid-template-columns: auto minmax(0, 1fr) auto; }
+.chat-composer-inner:has(> .reasoning-control) { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+.chat-composer-inner > .composer-model { min-width: 0; max-width: 100%; }
+@media (max-width: 430px) {
+  .composer-inner.chat-composer-inner { column-gap: 6px; }
+  .app .reasoning-pill > span:first-child { display: none; }
+  .app .reasoning-pill.glass { padding-inline: 10px 8px; }
+}
+
+/* ── One row geometry for projects and chats (visual pass, 2026-09-18) ─────────
+   Project rows put their icon in its own button, chat rows inside the title button; each had
+   its own padding, so names started 3–11px apart. Both now use the same inset, an 18px icon
+   and the same gap, so every title in the sidebar starts on one line. */
+.app .sidebar.pane { --row-inset: 10px; --row-gap: 10px; }
+[data-material='material'] .app .sidebar.pane { --row-inset: 16px; --row-gap: 12px; }
+.app .sidebar.pane .chat-row > .nav-item { padding-left: var(--row-inset); gap: var(--row-gap); }
+.app .sidebar.pane :is(.chat-row, .proj-row) svg:first-child:not(.row-action svg) { width: 18px; height: 18px; }
+.app .sidebar.pane .proj-row > .project-expand { margin: 0; padding: 0 0 0 var(--row-inset); width: calc(var(--row-inset) + 18px); min-width: 0; justify-content: flex-start; background: none; }
+.app .sidebar.pane .proj-row > .project-disclosure { padding-left: var(--row-gap); }
+[data-material='material'] .app .sidebar.pane .proj-row .project-expand { margin-left: 0; }
+[data-material='material'] .app .sidebar.pane .proj-row .project-disclosure { padding-left: var(--row-gap); }
+/* On touch the project icon button keeps a full 44px target; chat rows add the same extra space
+   after their icon, so every title still starts on one line. */
+@media (pointer: coarse) {
+  .app .sidebar.pane .proj-row > .project-expand { width: 44px; min-width: 44px; }
+  .app .sidebar.pane .chat-row > .nav-item { gap: calc(44px - var(--row-inset) - 18px + var(--row-gap)); }
+}
+.app .sidebar.pane .proj-row > .project-expand > svg { margin: 0; }
