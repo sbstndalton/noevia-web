@@ -224,6 +224,7 @@
   [data-material='material'] .app .sidebar.pane.is-collapsed { width: 80px; min-width: 80px; }
   [data-material='material'] .app .sidebar.pane.is-collapsed .new-chat-btn.glass { width: 56px; height: 56px; border-radius: 16px; }
   [data-material='material'] .app .sidebar.pane.is-collapsed .side-nav .nav-item { width: 56px; height: 32px; min-height: 32px; margin-block: 6px; border-radius: 999px; }
-  [data-material='material'] .app .sidebar.pane.is-collapsed .app-mode-switch { width: 56px; }
-  [data-material='material'] .app .sidebar.pane.is-collapsed .app-mode-switch button { width: 100%; }
+  [data-material='material'] .app .sidebar.pane.is-collapsed .app-mode-switch { width: 56px; border: 0; }
+  [data-material='material'] .app .sidebar.pane.is-collapsed .app-mode-switch button { width: 56px; height: 32px; min-height: 32px; border-radius: 999px; border: 0; }
+  [data-material='material'] .app .sidebar.pane.is-collapsed .app-mode-switch button.is-selected { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
 }

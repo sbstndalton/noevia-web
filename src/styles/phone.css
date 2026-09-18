@@ -152,10 +152,23 @@
   .app .sidebar.pane.is-collapsed :is(.side-expand, .rail-tools .shell-icon-button, .side-nav .nav-item, .new-chat-btn.glass) {
     width: 40px; height: 40px; min-height: 40px; padding: 0; margin: 0; justify-content: center; border-radius: var(--radius-md);
   }
-  .app .sidebar.pane.is-collapsed .app-mode-switch { width: 40px; padding: 2px; margin: 0; overflow: hidden; }
-  .app .sidebar.pane.is-collapsed .app-mode-switch button { width: 36px; min-height: 34px; padding: 0; justify-content: center; }
+  /* Chat/Code in the rail: two stacked icon buttons like the rest, the chosen one tinted —
+     no track, whose raised pill was wider than the rail and spilled over its edge. */
+  .app .sidebar.pane.is-collapsed .app-mode-switch { display: flex; flex-direction: column; gap: 4px; width: 40px; padding: 0; margin: 0; border: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; }
+  .app .sidebar.pane.is-collapsed .app-mode-switch button { width: 40px; height: 40px; min-height: 40px; padding: 0; justify-content: center; border: 0; border-radius: var(--radius-md); background: transparent; box-shadow: none; }
+  .app .sidebar.pane.is-collapsed .app-mode-switch button.is-selected { background: var(--nav-active); color: var(--text-primary); }
+  .app .sidebar.pane.is-collapsed .app-mode-switch .glass-thumb { display: none; }
   .app .sidebar.pane.is-collapsed .side-footer { position: static; margin-top: auto; min-height: 0; width: 100%; border-top: 0; padding: var(--space-2) 0 0; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; display: flex; justify-content: center; }
   .app .sidebar.pane.is-collapsed .account-trigger { width: 40px; height: 40px; padding: 0; justify-content: center; }
 }
 /* The empty rail expands on click (Sidebar.tsx); the cursor says so, as in ChatGPT. */
 @media (min-width: 601px) { .app .sidebar.pane.is-collapsed { cursor: e-resize; } .app .sidebar.pane.is-collapsed :is(button, a) { cursor: pointer; } }
+
+/* ── Account row with Search beside it, as in Claude (user review, 2026-09-18) ── */
+.app .sidebar.pane .side-footer-row { display: flex; align-items: center; gap: var(--space-1); width: 100%; }
+.app .sidebar.pane .side-footer-row .account-area { flex: 1; min-width: 0; }
+.app .sidebar.pane .side-footer-row .side-footer-search { flex: none; width: 36px; height: 36px; border-radius: var(--radius-sm); color: var(--text-secondary); background: transparent; }
+.app .sidebar.pane .side-footer-row .side-footer-search:hover { background: var(--nav-hover); color: var(--text-primary); }
+@media (pointer: coarse) { .app .sidebar.pane .side-footer-row .side-footer-search { width: 44px; height: 44px; } }
+/* The collapsed rail keeps its own Search at the top; the footer holds only the avatar. */
+@media (min-width: 601px) { .app .sidebar.pane.is-collapsed .side-footer-search { display: none; } .app .sidebar.pane.is-collapsed .side-footer-row { justify-content: center; } .app .sidebar.pane.is-collapsed .side-footer-row .account-area { flex: none; } }

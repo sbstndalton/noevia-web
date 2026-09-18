@@ -343,7 +343,7 @@ export function Sidebar({
         if (collapsed && !mobile && !(e.target as HTMLElement).closest('button, a, input')) setCollapsed(false);
       }}
     >
-      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? 'Close navigation' : collapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button><button className="shell-icon-button" aria-label={theme==='dark'?'Switch to light mode':'Switch to dark mode'} title={theme==='dark'?'Light mode':'Dark mode'} onClick={onToggleTheme}><ShellIcon name={theme==="dark"?"sun":"moon"}/></button><button className="shell-icon-button" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
+      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? 'Close navigation' : collapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div></div>
       {showPreviews && <div className="app-mode-switch" aria-label="Workspace mode"><button className="is-selected" aria-pressed="true"><ShellIcon name="chat"/>Chat</button><button onClick={onEnterCode} aria-pressed="false"><ShellIcon name="code"/>Code</button></div>}
       {searching&&<input className="shell-search" autoFocus aria-label="Search projects and chats" placeholder="Search projects and chats…" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');}}}/>}
 
@@ -484,7 +484,7 @@ export function Sidebar({
             <span className="status-text">{label}</span>
           </div>
         );
-      })()}{/* Inference status lives in the workspace status pill and the chat banner; one place is enough. */}<AccountMenu onSettings={openSettings}/></div>
+      })()}{/* Inference status lives in the workspace status pill and the chat banner; one place is enough. */}<div className="side-footer-row"><AccountMenu onSettings={openSettings} theme={theme} onToggleTheme={onToggleTheme}/>{/* Search sits beside the account, as in Claude. */}<button className="shell-icon-button side-footer-search" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
     </div>
   </>);
 }

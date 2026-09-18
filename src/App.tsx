@@ -9,7 +9,7 @@ import { notifyIfAway } from './components/notifications/notify';
 import { useModelsChanged } from './models-changed';
 import { modelChoiceLabel } from './model-guidance';
 import { TOOL_RESULT_LIMIT } from './components/ToolCalls';
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import {
   createProject,
@@ -78,6 +78,11 @@ export default function App(): JSX.Element {
   useEffect(() => { const open = (e: Event) => { const model = (e as CustomEvent<{ model?: string }>).detail?.model; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account'); return fresh || !!readLastPlace()?.settings; });
   const [appMode, setAppMode] = useState<'chat'|'code'>('chat');
+  // The Code workspace is a lazy chunk. Hiding the chat the moment Code was chosen left a
+  // blank page until the chunk resolved (user review, 2026-09-18), so the chat stays on
+  // screen until the Code workspace has mounted, and the two swap before paint.
+  const [codeShown, setCodeShown] = useState(false);
+  useEffect(() => { if (appMode !== 'code') setCodeShown(false); }, [appMode]);
   const featureFlags = useFeatureFlags();
   const showPreviews = featureFlags.previews === true;
   // Turning previews off while in Code must not leave both workspaces hidden.
@@ -847,7 +852,7 @@ export default function App(): JSX.Element {
 
   return (
     <div className="app">
-      <div className="regular-workspace" style={{display:appMode==='chat'||!showPreviews?'contents':'none'}}>
+      <div className="regular-workspace" style={{display:appMode==='chat'||!showPreviews||!codeShown?'contents':'none'}}>
       <Sidebar
         onEnterCode={() => setAppMode('code')}
         onPreview={(title) => setView({kind:'preview',title})}
@@ -1010,8 +1015,14 @@ export default function App(): JSX.Element {
 
       </div>
       {shortcutsOpen && <ShortcutsDialog apple={appleKeys} onClose={() => setShortcutsOpen(false)} />}
-      {appMode === 'code' && showPreviews && <Suspense fallback={null}><Coding.View onExit={() => setAppMode('chat')} onSettings={() => openSettings()} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/></Suspense>}
+      {appMode === 'code' && showPreviews && <Suspense fallback={null}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View onExit={() => setAppMode('chat')} onSettings={() => openSettings()} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
 
     </div>
   );
+}
+
+/** Tells its parent, before paint, that the lazy view beside it has mounted. */
+function MountedSignal({ onMounted }: { onMounted: () => void }): null {
+  useLayoutEffect(() => { onMounted(); }, [onMounted]);
+  return null;
 }

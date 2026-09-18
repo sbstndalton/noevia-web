@@ -169,7 +169,36 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.ok(await page.locator('.sidebar').evaluate(s=>!s.classList.contains('is-collapsed')),`${material}: rail Search opens the sidebar`);
   await page.close();
  }
+
+ // Like Claude: the light/dark switch is in the account menu and Search sits beside the
+ // account; the menu opens in full from the collapsed rail; Code never blanks while loading.
+ for(const collapsedRail of [false,true]){
+  const page=await browser.newPage({viewport:{width:1400,height:800},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(c=>{localStorage.setItem('cowork-theme','light');localStorage.setItem('noevia:sidebar-collapsed',c?'1':'0');},collapsedRail);
+  await page.route('**/api/features',r=>r.fulfill({json:{flags:{previews:true}}}));
+  await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
+  assert.equal(await page.locator('.shell-sidebar-head [aria-label*="mode"]').count(),0,'no theme button in the sidebar head');
+  if(!collapsedRail){const g=await page.evaluate(()=>{const a=document.querySelector('.side-footer-row .account-trigger').getBoundingClientRect(),q=document.querySelector('.side-footer-row .side-footer-search').getBoundingClientRect();return {sameRow:Math.abs((a.top+a.height/2)-(q.top+q.height/2))<4,right:q.left>=a.right-1};});assert.ok(g.sameRow&&g.right,`Search beside the account ${JSON.stringify(g)}`);}
+  await page.getByRole('button',{name:/Account menu for/}).click();
+  const menu=page.locator('.account-popover');await menu.waitFor();
+  const inView=await menu.evaluate(el=>{const r=el.getBoundingClientRect();return [...el.querySelectorAll('button')].every(b=>{const q=b.getBoundingClientRect();return b.contains(document.elementFromPoint(q.x+q.width/2,q.y+q.height/2));})&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;});
+  assert.ok(inView,`${collapsedRail?'collapsed':'expanded'}: account menu fully visible and clickable`);
+  await menu.getByRole('button',{name:'Dark mode',exact:true}).click();
+  assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'dark','the account menu switches the theme');
+  await menu.getByRole('button',{name:'Light mode',exact:true}).waitFor();
+  await page.keyboard.press('Escape');
+  if(!collapsedRail){
+   await page.addInitScript(()=>{window.requestIdleCallback=()=>0;});
+   await page.route('**/assets/CodingWorkspace-*.js',async r=>{await new Promise(x=>setTimeout(x,600));await r.continue();});
+   await page.reload();await page.getByPlaceholder('Message noevia…').waitFor();
+   await page.evaluate(()=>{window.__frames=[];const probe=()=>{window.__frames.push(document.body.innerText.trim().length>20&&!!document.querySelector('.regular-workspace:not([style*="none"]) *, .code-mount:not([style*="none"]) *')?1:0);if(window.__frames.length<120)requestAnimationFrame(probe);};requestAnimationFrame(probe);});
+   await page.getByRole('button',{name:'Code',exact:true}).first().click();
+   await page.getByPlaceholder(/Describe a task/).waitFor();
+   const blank=await page.evaluate(()=>window.__frames.filter(x=>!x).length);assert.equal(blank,0,'entering Code never shows a blank frame');
+  }
+  await page.close();
+ }
  assert.deepEqual(errors,[]);
- console.log('PASS phone drawer: full drawer from Diary, Diary with the top destinations, only the account row pinned, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop the sidebar is one scrolling plane with every chat, in each material; collapsed, it is an icon-only rail with the avatar at the bottom that survives a reload and expands from its empty space.');
+ console.log('PASS phone drawer: full drawer from Diary, Diary with the top destinations, only the account row pinned, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop the sidebar is one scrolling plane with every chat, in each material; collapsed, it is an icon-only rail with the avatar at the bottom that survives a reload and expands from its empty space; light/dark is in the account menu with Search beside the account, the menu opens in full from the rail, and Code never blanks while loading.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
