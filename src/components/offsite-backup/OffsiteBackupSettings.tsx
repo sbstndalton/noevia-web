@@ -7,6 +7,19 @@ interface Status {
   lastBackup: { at: number; id: string; files: number; uploadedBytes: number } | null;
   lastVerify: { at?: number; verifiedAt: number; id: string; files: number } | null;
   lastError: { at: number; during: string; message: string } | null; snapshots: number | null;
+  /** The host's copy to Google Drive, as its sync script last reported it. Null for S3 targets. */
+  mirror: { state: 'ok' | 'not-connected' | 'waiting' | 'refused' | 'failed' | 'stale' | 'unknown'; at: number | null; message: string } | null;
+}
+
+/** Plain words for the mirror, and whether it needs someone's attention. */
+function mirrorText(m: NonNullable<Status['mirror']>): { value: string; tone?: 'error' } {
+  switch (m.state) {
+    case 'ok': return { value: `Connected · last copied ${when(m.at)}` };
+    case 'not-connected': return { value: 'Not connected. Finish the one-time Google sign-in in a terminal on the server (deploy/offsite/README.md). Until then, backups stay on this server only.', tone: 'error' };
+    case 'waiting': return { value: 'Connected · waiting for the first backup before copying.' };
+    case 'unknown': return { value: 'Not checked yet · the copy runs nightly at 02:45.' };
+    default: return { value: `${m.message}${m.at ? ` (${when(m.at)})` : ''}`, tone: 'error' };
+  }
 }
 
 const when = (ms?: number | null) => (ms ? new Date(ms).toLocaleString() : 'Never');
@@ -36,6 +49,7 @@ export function OffsiteBackupSettings(): JSX.Element {
       {status.reason && <p className="route-note" role="status">{status.reason}</p>}
       <div className="set-rows">
         <Row label="Destination" value={status.destination || 'Not configured'}/>
+        {status.mirror && <Row label="Google Drive" {...mirrorText(status.mirror)}/>}
         <Row label="Schedule" value={status.schedule}/>
         <Row label="Retention" value={status.retention}/>
         <Row label="Snapshots kept" value={status.snapshots === null ? 'Unknown until the first run' : String(status.snapshots)}/>
