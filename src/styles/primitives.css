@@ -109,7 +109,9 @@ label.select > svg { position: absolute; right: 10px; pointer-events: none; colo
 .settings-stage .theme-choice button { padding: 0; border: 0; background: none; box-shadow: none; color: var(--text-secondary); font-size: var(--text-footnote); text-align: left; }
 .settings-stage .theme-choice button .theme-swatch { border-radius: var(--radius-md); outline: 1px solid var(--border-strong); margin-bottom: 6px; }
 .settings-stage .theme-choice button.is-active { outline: 0; color: var(--text-primary); font-weight: 500; }
-.settings-stage .theme-choice button.is-active .theme-swatch { outline: 2px solid var(--md-primary); outline-offset: 2px; }
+/* Resolved on the button, outside the swatch's own data-theme, so the ring follows the chosen accent. */
+.settings-stage .theme-choice button { --theme-ring: var(--md-primary); }
+.settings-stage .theme-choice button.is-active .theme-swatch { outline: 2px solid var(--theme-ring); outline-offset: 2px; }
 
 /* ── Badges and chips ───────────────────────────────────────────────────── */
 .badge { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: var(--radius-pill); font-size: var(--text-caption); font-weight: 500; line-height: 1.6; white-space: nowrap; }
@@ -167,6 +169,10 @@ button.connector-card:focus-visible { outline: 2px solid var(--focus-ring); outl
 .permission-control.glass-seg > button.allow[aria-checked='true'] { color: var(--status-connected); }
 .permission-control.glass-seg > button.ask[aria-checked='true'] { color: var(--status-approval); }
 .permission-control.glass-seg > button.block[aria-checked='true'] { color: var(--status-danger); }
+
+/* Below 620px a row stacks (noevia.css) while align-items stays centre, which shrank each
+   label to its text and centred it: every row started at a different indent. */
+@media (max-width: 620px) { .settings-stage .set-row > .set-row-text { align-self: stretch; } }
 
 @media (max-width: 700px) {
   .settings-stage .set-row, .settings-stage .group .row { flex-wrap: wrap; gap: var(--space-3); padding: var(--space-4); }

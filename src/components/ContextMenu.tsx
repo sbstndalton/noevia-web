@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { JSX, ReactNode } from 'react';
 import { ShellIcon } from './ShellIcon';
 
@@ -14,7 +15,9 @@ export interface MenuItem {
 }
 
 /** A menu anchored to a viewport point. Position is fixed because the sidebar
- *  lists are overflow-y:auto and would clip an absolutely-positioned dropdown.
+ *  lists are overflow-y:auto and would clip an absolutely-positioned dropdown,
+ *  and it renders into <body>: the phone drawer's transform and backdrop-filter
+ *  make it the containing block for fixed children, which offset and clipped it.
  *  Opened from either a right-click or a hamburger button — both callers hand
  *  us a point, so there is one implementation rather than two. */
 export function ContextMenu({
@@ -32,8 +35,8 @@ export function ContextMenu({
 
   // Flip back inside the viewport rather than letting the menu run off the
   // edge — a right-click near the bottom right is the normal case, not an edge
-  // case.
-  useEffect(() => {
+  // case. Before paint, so the unclamped position never flashes.
+  useLayoutEffect(() => {
     const place = () => {
       const el = ref.current;
       if (!el) return;
@@ -81,7 +84,7 @@ export function ContextMenu({
     ref.current?.querySelector<HTMLButtonElement>('button')?.focus();
   }, []);
 
-  return (
+  return createPortal(
     <div className="ctx-menu overlay" role="menu" ref={ref} style={{ top: pos.y, left: pos.x }}>
       {items.map((it, i) => (
         <button
@@ -97,7 +100,8 @@ export function ContextMenu({
           <span>{it.label}</span>
         </button>
       ))}
-    </div>
+    </div>,
+    document.body,
   );
 }
 

@@ -303,10 +303,11 @@ button:disabled { opacity: .5; cursor: default; }
 }
 
 /* design-lint: allow side-tab — the thick left edge draws a miniature sidebar */
-.theme-swatch { background: var(--bg-app); border-left-color: var(--bg-chrome); }
-.theme-swatch i { background: var(--text-secondary); }
-.theme-swatch.dark { background: var(--bg-app); border-left-color: var(--bg-chrome); }
-.theme-swatch.dark i { background: var(--text-secondary); }
+/* Each swatch carries data-theme, so the raw --md-* roles resolve to the theme it
+   previews. The semantic tokens (--bg-app…) are resolved once on :root and would
+   paint both swatches in whichever theme is active. */
+.theme-swatch, .theme-swatch.dark { background: var(--md-surface); border-left-color: var(--md-surface-container-low); }
+.theme-swatch i, .theme-swatch.dark i { background: var(--md-on-surface-variant); }
 /* design-lint: allow side-tab — miniature sidebar at phone size */
 
 /* Status lamps use brighter colors than readable success/error text. */

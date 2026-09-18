@@ -102,6 +102,19 @@ export function Sidebar({
   const drawer = useRef<HTMLDivElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
+  const footer = useRef<HTMLDivElement>(null);
+  // On a phone Diary sticks exactly one footer above the bottom edge. The footer's height
+  // depends on what it holds (the MCP line, the account row), so measure it, not assume it.
+  useEffect(() => {
+    const el = footer.current, side = drawer.current;
+    if (!el || !side || typeof ResizeObserver === 'undefined') return;
+    // A closed drawer is display:none and measures 0; keep the last real height instead.
+    const sync = () => { const h = Math.ceil(el.getBoundingClientRect().height); if (h > 0) side.style.setProperty('--side-foot-h', `${h}px`); };
+    const observer = new ResizeObserver(sync);
+    observer.observe(el);
+    sync();
+    return () => observer.disconnect();
+  }, [expanded]);
   useEffect(() => {
     const query = window.matchMedia('(max-width: 600px)');
     const change = () => { setMobile(query.matches); if (!query.matches) setExpanded(false); };
@@ -446,7 +459,7 @@ export function Sidebar({
         />
       )}
 
-      <div className="side-footer">{mcp?.configured && (() => {
+      <div className="side-footer" ref={footer}>{mcp?.configured && (() => {
         // With several servers, one being down is a partial outage, not an
         // outage — say which, rather than reporting the whole integration dead.
         const servers = mcp.servers ?? [];
