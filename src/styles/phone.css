@@ -254,7 +254,66 @@
 @media (hover: hover) {
   .app .sidebar.pane :is(.proj-row, .chat-row) .row-actions { position: static; display: none; opacity: 1; background: none; pointer-events: auto; flex: none; }
   .app .sidebar.pane :is(.proj-row, .chat-row):is(:hover, :has(:focus-visible), :has([aria-expanded='true'])) .row-actions { display: flex; }
-  .app .sidebar.pane :is(.proj-row, .chat-row) > :is(button, .nav-item, .project-disclosure, .nested-chat-title):not(.row-action) { min-width: 0; flex: 1 1 auto; }
+  .app .sidebar.pane :is(.proj-row, .chat-row) > :is(button, .nav-item, .project-disclosure, .nested-chat-title):not(.row-action):not(.project-expand) { min-width: 0; flex: 1 1 auto; }
+  .app .sidebar.pane .proj-row > .project-expand { flex: none; }
 }
 /* One hover highlight per row (the row's), not a second, darker one on the title alone. */
 .app .sidebar.pane :is(.proj-row, .chat-row) :is(.nav-item, .project-disclosure, .nested-chat-title):hover { background: transparent; }
+
+/* Code sidebar on a phone: an icon rail whose toggle opens it as a drawer over the page. */
+@media (max-width: 600px) {
+  .coding-sidebar.is-open {
+    position: fixed; z-index: 40; inset: calc(8px + env(safe-area-inset-top)) auto calc(8px + env(safe-area-inset-bottom)) 8px;
+    width: min(84vw, 320px); padding: var(--space-3); border-radius: var(--radius-2xl); box-shadow: var(--shadow-4);
+    background: var(--pane-fill); backdrop-filter: blur(var(--pane-blur)); -webkit-backdrop-filter: blur(var(--pane-blur));
+    overflow-y: auto; animation: drawer-in var(--duration-slow) var(--ease-out) both;
+  }
+  .coding-sidebar.is-open :is(.shell-sidebar-head > strong, .shell-sidebar-head > .preview-badge, .coding-projects, .coding-recents, .account-name) { display: revert; }
+  .coding-sidebar.is-open .nav-item > span { display: inline; }
+  .coding-sidebar.is-open .nav-item { justify-content: flex-start; padding: 10px 12px; min-height: 44px; }
+  .coding-sidebar.is-open .app-mode-switch { flex-direction: row; }
+  .coding-sidebar.is-open .app-mode-switch button { font-size: var(--text-caption); }
+  .coding-drawer-backdrop { display: block; position: fixed; inset: 0; z-index: 39; }
+}
+/* The chat drawer's toggle clears the notch/status bar: the page uses viewport-fit=cover. */
+@media (max-width: 600px) { .nav-drawer-toggle { top: calc(8px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left)); } }
+
+/* Diary in the bottom bar, beside Search (user review, 2026-09-18): the same quiet 36px icon
+   button, tinted while the Diary is open. On the collapsed rail it sits above the avatar. */
+.app .sidebar.pane .side-footer-row .side-footer-diary { flex: none; width: 36px; height: 36px; border-radius: var(--radius-sm); color: var(--text-secondary); background: transparent; }
+.app .sidebar.pane .side-footer-row .side-footer-diary:hover { background: var(--nav-hover); color: var(--text-primary); }
+.app .sidebar.pane .side-footer-row .side-footer-diary.is-active { background: var(--nav-active); color: var(--text-primary); }
+@media (pointer: coarse) { .app .sidebar.pane .side-footer-row .side-footer-diary { width: 44px; height: 44px; } }
+@media (min-width: 601px) {
+  .app .sidebar.pane.is-collapsed .side-footer-row { flex-direction: column-reverse; gap: 6px; }
+  .app .sidebar.pane.is-collapsed .side-footer-diary { width: 40px; height: 40px; border-radius: var(--radius-md); }
+}
+
+/* ── Chat ⇄ Code: the liquid-glass thumb (ModeSwitch.tsx) ──────────────────────
+   The same thumb as the segmented controls (materials.css .glass-seg): it slides on the
+   spring curve and refracts (the SVG lens) while it travels. The selected button no longer
+   draws its own pill; the thumb is the pill. */
+.app-mode-switch.has-thumb { position: relative; isolation: isolate; }
+.app-mode-switch.has-thumb > .glass-thumb {
+  position: absolute; z-index: 0; left: 0; top: 0; width: var(--thumb-w, 0); height: var(--thumb-h, 0);
+  transform: translate(var(--thumb-x, 0), var(--thumb-y, 0)); border-radius: var(--radius-pill); pointer-events: none;
+  --glass-fill: color-mix(in srgb, var(--md-surface-container-lowest) 55%, transparent); --glass-tint: transparent;
+  backdrop-filter: saturate(1.5) brightness(1.06); -webkit-backdrop-filter: saturate(1.5) brightness(1.06);
+  transition: transform var(--duration-slow) var(--ease-spring), width var(--duration-slow) var(--ease-spring), height var(--duration-slow) var(--ease-spring), scale var(--duration-fast) var(--ease-spring);
+}
+.app-mode-switch.has-thumb.is-settling > .glass-thumb { transition: none; }
+html[data-lens='svg'] .app-mode-switch.has-thumb.is-moving > .glass-thumb, html[data-lens='svg'] .app-mode-switch.has-thumb:active > .glass-thumb { backdrop-filter: var(--lens, none) saturate(1.8) brightness(1.06); }
+.app-mode-switch.has-thumb:active > .glass-thumb { scale: 1.06 1.12; }
+.app-mode-switch.has-thumb > button { position: relative; z-index: 1; }
+.app-mode-switch.has-thumb > button.is-selected { background: transparent; box-shadow: none; }
+[data-material='glass'] .app-mode-switch.has-thumb > .glass-thumb { --glass-fill: color-mix(in srgb, var(--md-surface-container-lowest) 16%, transparent); border: 1px solid rgba(255, 255, 255, .22); backdrop-filter: blur(14px) saturate(130%); -webkit-backdrop-filter: blur(14px) saturate(130%); }
+[data-material='soft'] .app-mode-switch.has-thumb > .glass-thumb { background: var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: -3px -3px 7px var(--soft-hi), 3px 3px 7px var(--soft-lo); }
+/* M3 segmented buttons do not slide: the tonal fill stays on the selected segment. */
+[data-material='material'] .app-mode-switch.has-thumb > .glass-thumb { display: none; }
+[data-material='material'] .app-mode-switch.has-thumb > button.is-selected { background: var(--md-secondary-container); }
+@media (prefers-reduced-motion: reduce) { .app-mode-switch.has-thumb > .glass-thumb { transition: none; } }
+html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transition: none; }
+@media (min-width: 601px) { .coding-sidebar.is-collapsed .app-mode-switch .glass-thumb { display: none; } }
+/* A project's own icon and colour wherever it is named (user review, 2026-09-18). */
+.crumb-back .project-icon { flex: none; }
+.chat-workspace h2 .project-icon { display: inline-block; vertical-align: -0.12em; margin: 0 .22em 0 .12em; }

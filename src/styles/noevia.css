@@ -602,9 +602,10 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
 .app-mode-switch { background:none;border:0;padding:0; }
 .app-mode-switch button { border-radius:5px;box-shadow:none; }
 .app-mode-switch button.is-selected { box-shadow:none; }
-.sidebar .project-icon { color:var(--text-secondary)!important; }
-.project-card .project-icon { color:var(--text-primary)!important; }
-.project-card:hover .project-icon { color:var(--accent-text)!important; }
+/* Fallbacks for a project without a colour; a chosen colour (inline on the icon) always wins,
+   in the sidebar and on cards too (user review, 2026-09-18). */
+.sidebar .project-icon { color:var(--text-secondary); }
+.project-card .project-icon { color:var(--text-primary); }
 /* Writing gets its own typographic voice, in the existing reading column. */
 .diary-landing h1 { font-family:Georgia,'Times New Roman',serif;font-size:var(--text-display);line-height:1.18;font-weight:400;letter-spacing:-1.2px; }
 .diary-intro { font-size:var(--text-callout);line-height:1.7; }

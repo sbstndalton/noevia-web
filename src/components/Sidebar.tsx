@@ -4,6 +4,7 @@ import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { AccountMenu } from './AccountMenu';
+import { ModeSwitch } from './ModeSwitch';
 import { ContextMenu, ConfirmDialog } from './ContextMenu';
 import type { MenuItem } from './ContextMenu';
 import { fetchToolboxes, fetchProfile } from '../api';
@@ -344,7 +345,7 @@ export function Sidebar({
       }}
     >
       <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? 'Close navigation' : collapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div></div>
-      {showPreviews && <div className="app-mode-switch" aria-label="Workspace mode"><button className="is-selected" aria-pressed="true"><ShellIcon name="chat"/>Chat</button><button onClick={onEnterCode} aria-pressed="false"><ShellIcon name="code"/>Code</button></div>}
+      {showPreviews && <ModeSwitch mode="chat" onCode={onEnterCode}/>}
       {searching&&<input className="shell-search" autoFocus aria-label="Search projects and chats" placeholder="Search projects and chats…" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');}}}/>}
 
       <button className="new-chat-btn glass glass-lens" onClick={()=>{onNewChat();setExpanded(false);}} title="New chat">
@@ -362,17 +363,8 @@ export function Sidebar({
           <ShellIcon name="folder" size={17}/>
           <span className="nav-name">Projects</span>
         </button>
-        {/* Diary and Plugins live with the other destinations at the top, as in ChatGPT:
-            the whole rail is one scrolling plane and only the account row stays pinned. */}
-        {diaryEnabled && <button
-          className={`nav-item${activeView === 'diary' ? ' is-active' : ''}`}
-          aria-label="Diary"
-          aria-current={activeView === 'diary' ? 'page' : undefined}
-          onClick={onOpenDiary}
-        >
-          <ShellIcon name="diary" size={17}/>
-          <span className="nav-name">Diary</span>
-        </button>}
+        {/* Plugins stays with the destinations. Diary is a permanent space, so it lives in the
+            bottom bar beside Search: always one tap away, never in the way (user review). */}
         {showPreviews && <button className="nav-item" aria-label="Plugins" onClick={()=>onPreview('Plugins')}>
           <ShellIcon name="plugins" size={17}/>
           <span className="nav-name">Plugins</span>
@@ -484,7 +476,7 @@ export function Sidebar({
             <span className="status-text">{label}</span>
           </div>
         );
-      })()}{/* Inference status lives in the workspace status pill and the chat banner; one place is enough. */}<div className="side-footer-row"><AccountMenu onSettings={openSettings} theme={theme} onToggleTheme={onToggleTheme}/>{/* Search sits beside the account, as in Claude. */}<button className="shell-icon-button side-footer-search" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
+      })()}{/* Inference status lives in the workspace status pill and the chat banner; one place is enough. */}<div className="side-footer-row"><AccountMenu onSettings={openSettings} theme={theme} onToggleTheme={onToggleTheme}/>{diaryEnabled && <button className={`shell-icon-button side-footer-diary${activeView === 'diary' ? ' is-active' : ''}`} aria-label="Diary" title="Diary" aria-current={activeView === 'diary' ? 'page' : undefined} onClick={() => { onOpenDiary(); setExpanded(false); }}><ShellIcon name="diary"/></button>}{/* Search sits beside the account, as in Claude. */}<button className="shell-icon-button side-footer-search" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
     </div>
   </>);
 }

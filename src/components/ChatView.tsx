@@ -1,6 +1,7 @@
 import { ChatContext } from './ChatContext';
 import { useChatScroll } from '../useChatScroll';
 import { ReasoningControl } from './ReasoningControl';
+import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import type { Message, MessageStats, Project, InstalledModel } from '../types';
@@ -167,6 +168,7 @@ export function ChatView({
               <>
                 <button className="crumb-back" onClick={onBack} title={`Back to ${projectName}`}>
                   <ChevronLeft />
+                  {project && <ProjectIcon project={project} size={15}/>}
                   <span>{projectName}</span>
                 </button>
                 <span className="crumb-sep">/</span>
@@ -192,7 +194,7 @@ export function ChatView({
       <div className="transcript" ref={scrollRef} onScroll={onScroll}>
         {messages.length === 0 && (
           <div className="empty-state">
-            <h2>{projectName ? `Let’s work on ${projectName}` : 'What’s on your mind?'}</h2>
+            <h2>{projectName ? <>Let’s work on {project && <ProjectIcon project={project} size={26}/>}{projectName}</> : 'What’s on your mind?'}</h2>
             <p>
               {projectName
                 ? `Your project’s files and instructions are ready.`

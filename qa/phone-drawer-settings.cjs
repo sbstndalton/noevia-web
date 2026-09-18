@@ -22,7 +22,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   const drawer=page.getByRole('dialog',{name:'Navigation'});
   const layout=()=>page.evaluate(()=>{const s=document.querySelector('.sidebar'),p=s.querySelector('.side-nav').getBoundingClientRect(),f=s.querySelector('.side-footer').getBoundingClientRect(),b=s.getBoundingClientRect();
     const sticky=getComputedStyle(s.querySelector('.side-footer')).position==='sticky';
-    return {sticky,overlap:Math.min(0,p.bottom-f.top),diaryInNav:!!s.querySelector('.side-nav [aria-label=Diary]'),gapBelowFooter:b.bottom-f.bottom,labels:[...s.querySelectorAll('.nav-name')].filter(n=>n.getBoundingClientRect().width>2).length,lists:s.querySelectorAll('.side-scroll').length&&getComputedStyle(s.querySelector('.side-scroll')).display!=='none'};});
+    return {sticky,overlap:Math.min(0,p.bottom-f.top),diaryInNav:!!s.querySelector('.side-footer-row [aria-label=Diary]'),gapBelowFooter:b.bottom-f.bottom,labels:[...s.querySelectorAll('.nav-name')].filter(n=>n.getBoundingClientRect().width>2).length,lists:s.querySelectorAll('.side-scroll').length&&getComputedStyle(s.querySelector('.side-scroll')).display!=='none'};});
   const check=async(label)=>{const l=await layout();
    assert.ok(l.labels>=2&&l.lists&&l.diaryInNav,`${tag} ${label}: drawer shows labels and lists ${JSON.stringify(l)}`);
    if(l.sticky){assert.ok(l.overlap<=1,`${tag} ${label}: top destinations under the footer ${JSON.stringify(l)}`);assert.ok(l.gapBelowFooter<=1,`${tag} ${label}: rows show below the footer ${JSON.stringify(l)}`);}
@@ -137,11 +137,11 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
    const rows=side.querySelectorAll('.recent-children .chat-row').length;
    side.scrollTop=side.scrollHeight;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
    const last=[...side.querySelectorAll('.recent-children .chat-row')].at(-1).getBoundingClientRect(),foot=side.querySelector('.side-footer').getBoundingClientRect(),sb=side.getBoundingClientRect();
-   return {sideScrolls:getComputedStyle(side).overflowY==='auto'&&side.scrollHeight>side.clientHeight,nested,rows,lastAboveFooter:last.bottom<=foot.top+1,footerAtBottom:sb.bottom-foot.bottom<=1,diaryInNav:!!side.querySelector('.side-nav [aria-label=Diary]')};});
+   return {sideScrolls:getComputedStyle(side).overflowY==='auto'&&side.scrollHeight>side.clientHeight,nested,rows,lastAboveFooter:last.bottom<=foot.top+1,footerAtBottom:sb.bottom-foot.bottom<=1,diaryInNav:!!side.querySelector('.side-footer-row [aria-label=Diary]')};});
   assert.ok(r.sideScrolls,`${material}: the sidebar itself scrolls ${JSON.stringify(r)}`);
   assert.deepEqual(r.nested,[],`${material}: no nested scrollers`);
   assert.equal(r.rows,16,`${material}: every recent chat is in the sidebar`);
-  assert.ok(r.lastAboveFooter&&r.footerAtBottom&&r.diaryInNav,`${material}: last chat reachable above the pinned account row; Diary in the top destinations ${JSON.stringify(r)}`);
+  assert.ok(r.lastAboveFooter&&r.footerAtBottom&&r.diaryInNav,`${material}: last chat reachable above the pinned account row; Diary in the bottom bar ${JSON.stringify(r)}`);
   await page.close();
  }
 
@@ -156,7 +156,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.getByRole('button',{name:'Collapse navigation',exact:true}).click();await page.waitForTimeout(300);
   const r=await page.evaluate(()=>{const s=document.querySelector('.sidebar'),sb=s.getBoundingClientRect(),vis=e=>{const q=e.getBoundingClientRect();return q.width>0&&q.height>0&&q.left<sb.right&&q.right>sb.left;};
    const leaks=[...s.querySelectorAll('.sidebar-history, .section-label, .mcp-row, .nav-name, .side-logo span')].filter(vis).map(e=>e.className);
-   const icons=[...s.querySelectorAll('.side-nav .nav-item, .rail-tools .shell-icon-button, .side-expand')].filter(vis).map(e=>{const q=e.getBoundingClientRect();return [Math.round(q.width),Math.round(q.height)];});
+   const icons=[...s.querySelectorAll('.side-nav .nav-item, .rail-tools .shell-icon-button, .side-expand, .side-footer-diary')].filter(vis).map(e=>{const q=e.getBoundingClientRect();return [Math.round(q.width),Math.round(q.height)];});
    const acct=s.querySelector('.account-trigger').getBoundingClientRect();return {w:Math.round(sb.width),leaks,icons,acctAtBottom:sb.bottom-acct.bottom<40,noOverflow:s.scrollWidth<=s.clientWidth+1};});
   assert.deepEqual(r.leaks,[],`${material}: collapsed rail shows no lists or text ${JSON.stringify(r)}`);
   assert.ok(r.icons.length>=5&&r.icons.every(([w,h])=>(material==="material"||w===h)&&h>=32)&&r.acctAtBottom&&r.noOverflow,`${material}: icon rail with the avatar at the bottom ${JSON.stringify(r)}`);
@@ -239,7 +239,45 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.ok(await page.locator('.sidebar:not(.coding-sidebar)').evaluate(e=>e.classList.contains('is-collapsed')),'and Chat again');
   await page.close();
  }
+
+ // Diary in the bottom bar; the Chat/Code thumb slides both ways; project colours everywhere
+ // with the icon beside its name; the phone Code drawer opens and closes from its toggle.
+ {
+  const page=await browser.newPage({viewport:{width:1300,height:760}});page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/api/features',r=>r.fulfill({json:{flags:{previews:true}}}));
+  const proj={id:'k0',name:'Coloured',icon:'chart',color:'#64b888',updatedAt:1000,files:[],assets:[],memories:[],instructions:'',goal:'',sourceFolders:[],chats:[],toolboxes:['core'],createdAt:1};
+  await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[proj],freeChats:[]}}));
+  await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
+  assert.equal(await page.locator('.side-footer-row [aria-label="Diary"]').count(),1,'Diary sits in the bottom bar');
+  assert.equal(await page.locator('.side-nav [aria-label="Diary"]').count(),0,'and not in the top destinations');
+  const green='rgb(100, 184, 136)';
+  assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('.sidebar .project-icon')].map(e=>getComputedStyle(e).color)),[green],'sidebar icon uses the project colour');
+  const lay=await page.locator('.proj-row').first().evaluate(r=>{const i=r.querySelector('.project-expand').getBoundingClientRect(),l=r.querySelector('.sidebar-label').getBoundingClientRect(),q=r.getBoundingClientRect();return {iconAtStart:i.left-q.left<24,nameNextToIcon:l.left-i.right<16};});
+  assert.ok(lay.iconAtStart&&lay.nameNextToIcon,`project row keeps icon and name together at the start ${JSON.stringify(lay)}`);
+  await page.getByRole('button',{name:'Projects',exact:true}).first().click();await page.locator('.project-card .project-icon').first().waitFor();
+  const cards=await page.evaluate(()=>[...document.querySelectorAll('.project-card .project-icon')].map(e=>getComputedStyle(e).color));
+  assert.deepEqual(cards,[green],`card icon uses the project colour ${JSON.stringify(cards)}`);
+  const track=async sel=>{const xs=[];for(let i=0;i<14;i++){xs.push(await page.evaluate(q=>{const t=document.querySelector(q);return t&&t.getBoundingClientRect().width?Math.round(t.getBoundingClientRect().left):null;},sel));await page.waitForTimeout(35);}return xs.filter(x=>x!==null);};
+  await page.getByRole('button',{name:'Code',exact:true}).first().click();
+  const toCode=await track('.coding-sidebar .app-mode-switch > .glass-thumb');
+  assert.ok(new Set(toCode).size>=3,`the thumb slides to Code ${toCode}`);
+  await page.getByRole('button',{name:'Chat',exact:true}).first().click();
+  const toChat=await track('.sidebar:not(.coding-sidebar) .app-mode-switch > .glass-thumb');
+  assert.ok(new Set(toChat).size>=3,`and back to Chat ${toChat}`);
+  await page.close();
+  const phone=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,isMobile:true});phone.on('pageerror',e=>errors.push(e.message));
+  await phone.route('**/api/features',r=>r.fulfill({json:{flags:{previews:true}}}));
+  await phone.goto('http://localhost:31377');await phone.getByPlaceholder('Message noevia…').waitFor();
+  await phone.getByRole('button',{name:'Open navigation',exact:true}).tap();await phone.getByRole('button',{name:'Code',exact:true}).first().tap();await phone.getByPlaceholder(/Describe a task/).waitFor();
+  const cw=()=>phone.locator('.coding-sidebar').evaluate(e=>Math.round(e.getBoundingClientRect().width));
+  assert.ok(await cw()<80,'Code on a phone starts as a rail');
+  await phone.locator('.coding-sidebar').getByRole('button',{name:'Open navigation',exact:true}).tap();
+  assert.ok(await cw()>250,'its toggle opens the drawer');
+  await phone.locator('.coding-sidebar').getByRole('button',{name:'Close navigation',exact:true}).tap();
+  assert.ok(await cw()<80,'and closes it');
+  await phone.close();
+ }
  assert.deepEqual(errors,[]);
- console.log('PASS phone drawer: full drawer from Diary, Diary with the top destinations, only the account row pinned, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop the sidebar is one scrolling plane with every chat, in each material; collapsed, it is an icon-only rail with the avatar at the bottom that survives a reload and expands from its empty space; light/dark is in the account menu with Search beside the account, the menu opens in full from the rail, and Code never blanks while loading; the composer + is a centred SVG without a duplicate model entry, Thinking is a menu of levels, a closed sidebar stays closed across Chat and Code, and no icon is a text glyph; icon + text buttons keep their icon at the start and hover options never cover a title.');
+ console.log('PASS phone drawer: full drawer from Diary, Diary in the bottom bar, only the account row pinned, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop the sidebar is one scrolling plane with every chat, in each material; collapsed, it is an icon-only rail with the avatar at the bottom that survives a reload and expands from its empty space; light/dark is in the account menu with Search beside the account, the menu opens in full from the rail, and Code never blanks while loading; the composer + is a centred SVG without a duplicate model entry, Thinking is a menu of levels, a closed sidebar stays closed across Chat and Code, and no icon is a text glyph; icon + text buttons keep their icon at the start and hover options never cover a title; Diary is in the bottom bar, the Chat/Code thumb slides both ways, project colours show in the sidebar and on cards, and the phone Code drawer opens and closes.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
