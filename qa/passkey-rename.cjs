@@ -1,13 +1,14 @@
 // A passkey made before a web address change must not block adding or using passkeys at the new
 // address (the live bug: "The RP ID cowork.daserver.work is invalid for this domain").
-// Real app, Chrome's virtual authenticator, two loopback names: old.localhost → new.localhost.
+// Real app, Chrome's virtual authenticator, two loopback names: old.localhost → new.localhost,
+// with WEBAUTHN_RP_ID pinned to the old name as on the live server.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {spawn}=require('node:child_process');
 const PORT=31385,OLD=`http://old.localhost:${PORT}`,NEW=`http://new.localhost:${PORT}`,web=path.resolve(__dirname,'..');
 (async()=>{
  const data=fs.mkdtempSync(path.join(os.tmpdir(),'noevia-passkey-qa-'));
- const server=spawn(process.execPath,['server/index.cjs'],{cwd:web,stdio:'ignore',env:{...process.env,UI_DATA_DIR:data,UI_PORT:String(PORT),UI_HOST:'127.0.0.1',PUBLIC_ORIGIN:OLD,LEGACY_AUTH_COMPAT:'false',MODEL_MANAGER_KIND:'none',INFERENCE_BASE_URL:'http://127.0.0.1:1',DIARY_BASE_URL:'http://127.0.0.1:1',DIARY_AUTH_TOKEN:'synthetic-only',MCP_SERVERS:'',MCP_SERVER_URL:''}});
+ const server=spawn(process.execPath,['server/index.cjs'],{cwd:web,stdio:'ignore',env:{...process.env,UI_DATA_DIR:data,UI_PORT:String(PORT),UI_HOST:'127.0.0.1',PUBLIC_ORIGIN:OLD,WEBAUTHN_RP_ID:'old.localhost',LEGACY_AUTH_COMPAT:'false',MODEL_MANAGER_KIND:'none',INFERENCE_BASE_URL:'http://127.0.0.1:1',DIARY_BASE_URL:'http://127.0.0.1:1',DIARY_AUTH_TOKEN:'synthetic-only',MCP_SERVERS:'',MCP_SERVER_URL:''}});
  const browser=await chromium.launch({headless:true,channel:'chrome',args:['--host-resolver-rules=MAP *.localhost 127.0.0.1']});
  try{
   for(let i=0;i<200;i++){try{if((await fetch(`http://127.0.0.1:${PORT}/api/setup/status`)).ok)break;}catch{}await new Promise(r=>setTimeout(r,50));}
