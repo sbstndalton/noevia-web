@@ -172,7 +172,18 @@ button.connector-card:focus-visible { outline: 2px solid var(--focus-ring); outl
 
 /* Below 620px a row stacks (noevia.css) while align-items stays centre, which shrank each
    label to its text and centred it: every row started at a different indent. */
-@media (max-width: 620px) { .settings-stage .set-row > .set-row-text { align-self: stretch; } }
+@media (max-width: 620px) {
+  .settings-stage .set-row > :is(.set-row-text, .accent-choice, .theme-choice) { align-self: stretch; }
+  /* Three theme previews share the row instead of wrapping the third onto its own line. */
+  .settings-stage .theme-choice { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .settings-stage .theme-choice button { min-width: 0; }
+  /* design-lint: allow side-tab — the left edge draws the preview's sidebar */
+  .settings-stage .theme-choice .theme-swatch { width: 100%; box-sizing: border-box; height: 56px; padding: 10px 8px 10px 14px; border-left-width: 10px; }
+  .settings-stage .theme-choice .theme-swatch i { width: 70%; max-width: 60px; }
+  /* Five accents in one row of equal tiles, rather than three and then two. */
+  .settings-stage .accent-choice { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }
+  .settings-stage .accent-choice .accent-tile { width: auto; min-width: 0; }
+}
 
 @media (max-width: 700px) {
   .settings-stage .set-row, .settings-stage .group .row { flex-wrap: wrap; gap: var(--space-3); padding: var(--space-4); }
@@ -188,6 +199,8 @@ button.connector-card:focus-visible { outline: 2px solid var(--focus-ring); outl
   .chip { min-height: 44px; }
   .settings-stage .theme-choice { width: 100%; } .settings-stage .theme-choice button { flex: 1; }
 }
+/* Four options (Material) fit a 375px phone at this inset; at 320px the track scrolls. */
+@media (max-width: 400px) { .settings-stage .glass-seg > button { padding-inline: 10px; } }
 
 /* Soft material: controls are pressed out of the surface instead of bordered. */
 [data-material='soft'] :is(.btn, .modal-btn, .popup-tab):not(.btn-primary):not(.primary):not(.btn-ghost):not(.btn-danger) {

@@ -7,15 +7,18 @@
    input size; nothing else about the type scale changes, and the desktop
    sizes are untouched. */
 @media (pointer: coarse) {
+  /* !important because this is a platform rule, not a style: component rules that set a
+     smaller size on a select or a named field are more specific, and each one of them
+     brought the zoom back (found live: Security, Data, Appearance, Diary & storage). */
   input, textarea, select,
   .modal-input, .settings-search input, .composer-input,
   .settings-detail :is(input, textarea, select) {
-    font-size: var(--text-input);
+    font-size: var(--text-input) !important;
   }
   /* A field that is only ever read (a code display, a copy box) keeps its size:
      it is not focusable for editing, so it cannot trigger the zoom. */
   input[readonly]:not([type='text']), input[type='range'], input[type='checkbox'], input[type='radio'], input[type='color'] {
-    font-size: inherit;
+    font-size: inherit !important;
   }
 }
 

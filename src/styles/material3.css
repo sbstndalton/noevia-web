@@ -1,0 +1,214 @@
+/* Material 3, component by component (user review, 2026-09-18: "Material design doesn't
+   actually look like material3"). materials.css only re-tinted the shared surfaces, so the
+   sidebar, composer, menus, fields, cards and type kept the Soft/glass shapes in M3
+   colours. This layer gives each component its M3 counterpart. Scoped entirely to
+   [data-material='material'] and loaded last; the other materials are untouched.
+
+   Mapping: sidebar → navigation drawer; New chat → extended FAB; composer → search-bar
+   container; send → filled icon button; model/thinking → assist chips; menus → M3 menu;
+   project cards → elevated cards; Settings groups → list in a filled container; inputs →
+   outlined text fields; Projects tabs → primary tabs; dialogs → basic dialog / bottom
+   sheet; segmented buttons get the selected check. Type is Roboto on the M3 scale. */
+
+[data-material='material'] {
+  --m3-font: 'Roboto', 'Roboto Flex', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* M3 elevation levels (key + ambient shadow). */
+  --m3-elev-1: 0 1px 2px rgba(0, 0, 0, .3), 0 1px 3px 1px rgba(0, 0, 0, .15);
+  --m3-elev-2: 0 1px 2px rgba(0, 0, 0, .3), 0 2px 6px 2px rgba(0, 0, 0, .15);
+  --m3-elev-3: 0 1px 3px rgba(0, 0, 0, .3), 0 4px 8px 3px rgba(0, 0, 0, .15);
+  /* State layers are the content colour at these opacities. */
+  --m3-hover: 8%;
+  --m3-press: 10%;
+  --font-ui: var(--m3-font);
+  --font-display: var(--m3-font);
+}
+[data-material='material'] body { font-family: var(--m3-font); letter-spacing: .01em; }
+
+/* ── Type: M3 headings are regular weight with open tracking, not heavy and tight. ── */
+[data-material='material'] :is(h1, .projects-hero h1, .settings-title h1, .settings-detail h1) { font-weight: 400; letter-spacing: 0; }
+[data-material='material'] .projects-hero h1 { font-size: var(--text-title1); }
+[data-material='material'] :is(h2, h3) { font-weight: 500; letter-spacing: 0; }
+[data-material='material'] .empty-title, [data-material='material'] .chat-empty h1, [data-material='material'] .new-chat-landing h1 { font-weight: 400; letter-spacing: 0; }
+
+/* ── Layout surfaces: the drawer sits on surface-container-low, content on surface. ── */
+[data-material='material'] body, [data-material='material'] .app { background: var(--md-surface); }
+[data-material='material'] .app .sidebar.pane {
+  background: var(--md-surface-container-low); border: 0; box-shadow: none; border-radius: 16px;
+}
+[data-material='material'] .app .app-stack.pane { background: var(--md-surface); border: 0; box-shadow: none; }
+@media (max-width: 600px) {
+  /* Modal navigation drawer: level 1, 16px on the open edge. */
+  [data-material='material'] .app .sidebar.pane:not(.coding-sidebar).is-expanded {
+    background: var(--md-surface-container-low); box-shadow: var(--m3-elev-1); border-radius: 0 16px 16px 0;
+  }
+  [data-material='material'] .nav-drawer-backdrop { background: rgba(0, 0, 0, .32); backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+/* Sticky pieces inside the drawer take the drawer's own colour, not the page's. */
+[data-material='material'] .app .sidebar.pane .sidebar-history .side-scroll > :is(.sidebar-section-head, .section-label):first-child,
+[data-material='material'] .app .sidebar.pane :is(.side-permanent, .side-footer) { background: var(--md-surface-container-low); backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+/* ── Navigation drawer destinations: 56px, pill active indicator, label-large. ── */
+[data-material='material'] .app .sidebar.pane .nav-item,
+[data-material='material'] .app .sidebar.pane :is(.project-disclosure, .nested-chat-title) {
+  min-height: 48px; border-radius: 999px; padding: 0 16px; gap: 12px;
+  color: var(--md-on-surface-variant); font-size: var(--text-callout); font-weight: 500;
+}
+[data-material='material'] .app .sidebar.pane .nav-item .nav-name { font-size: var(--text-callout); font-weight: 500; }
+[data-material='material'] .app .sidebar.pane :is(.proj-row, .chat-row) { border-radius: 999px; }
+[data-material='material'] .app .sidebar.pane :is(.nav-item, .proj-row, .chat-row):hover { background: color-mix(in srgb, var(--md-on-surface) var(--m3-hover), transparent); }
+[data-material='material'] .app .sidebar.pane :is(.nav-item.is-active, .side-nav .nav-item[aria-current='page'], .proj-row.is-active, .chat-row.is-active) {
+  background: var(--md-secondary-container); color: var(--md-on-secondary-container);
+}
+[data-material='material'] .app .sidebar.pane :is(.proj-row.is-active, .chat-row.is-active) .nav-item { color: var(--md-on-secondary-container); }
+/* Section headlines are title-small in on-surface-variant. */
+[data-material='material'] .app .sidebar.pane .section-label {
+  font-size: var(--text-callout); font-weight: 500; letter-spacing: .01em; text-transform: none; color: var(--md-on-surface-variant); padding-inline: 16px 0;
+}
+[data-material='material'] .app .sidebar.pane .side-permanent, [data-material='material'] .app .sidebar.pane .side-footer { border-top-color: var(--md-outline-variant); }
+[data-material='material'] .app .sidebar.pane .recent-children { border-left-color: transparent; }
+
+/* ── New chat: extended FAB — 56px, 16px corners, primary container, level 3. ── */
+[data-material='material'] .app .sidebar.pane .new-chat-btn.glass {
+  min-height: 56px; padding: 0 20px 0 16px; gap: 12px; border-radius: 16px;
+  background: var(--md-primary-container); color: var(--md-on-primary-container); box-shadow: var(--m3-elev-3);
+}
+[data-material='material'] .app .sidebar.pane .new-chat-btn.glass span { font-size: var(--text-callout); font-weight: 500; }
+[data-material='material'] .app .sidebar.pane .new-chat-btn.glass:hover {
+  background: color-mix(in srgb, var(--md-on-primary-container) var(--m3-hover), var(--md-primary-container)); box-shadow: var(--m3-elev-3), 0 2px 4px rgba(0, 0, 0, .12);
+}
+[data-material='material'] .app .sidebar.pane .new-chat-btn.glass:active { background: color-mix(in srgb, var(--md-on-primary-container) var(--m3-press), var(--md-primary-container)); }
+[data-material='material'] .app .sidebar.pane.is-collapsed .new-chat-btn.glass { padding: 0; justify-content: center; }
+
+/* Chat / Code switch in the drawer: a two-segment M3 segmented button. */
+[data-material='material'] .app-mode-switch { background: transparent; border: 1px solid var(--md-outline); border-radius: 999px; padding: 0; gap: 0; box-shadow: none; overflow: hidden; }
+[data-material='material'] .app-mode-switch button { border-radius: 0; min-height: 40px; color: var(--md-on-surface); font-weight: 500; background: transparent; box-shadow: none; }
+[data-material='material'] .app-mode-switch button + button { border-left: 1px solid var(--md-outline); }
+[data-material='material'] .app-mode-switch button.is-selected { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+
+/* ── Composer: search-bar container — surface-container-high, 28px, no outline. ── */
+[data-material='material'] .composer-inner.pane, [data-material='material'] .chat-composer-inner.pane {
+  background: var(--md-surface-container-high); border: 0; border-radius: 28px; box-shadow: none;
+}
+[data-material='material'] .composer-inner.pane:focus-within { box-shadow: inset 0 0 0 2px var(--md-primary); }
+/* Send: filled icon button — 40px circle in primary; disabled is on-surface at 12%/38%. */
+[data-material='material'] .send-btn.glass {
+  width: 40px; height: 40px; min-height: 40px; border-radius: 50%; background: var(--md-primary); color: var(--md-on-primary); box-shadow: none;
+}
+[data-material='material'] .send-btn.glass:hover:not(:disabled) { background: color-mix(in srgb, var(--md-on-primary) var(--m3-hover), var(--md-primary)); box-shadow: var(--m3-elev-1); }
+[data-material='material'] .send-btn.glass:disabled { background: color-mix(in srgb, var(--md-on-surface) 12%, transparent); color: color-mix(in srgb, var(--md-on-surface) 38%, transparent); opacity: 1; }
+/* Add: standard icon button. */
+[data-material='material'] .composer-add { background: transparent; border: 0; box-shadow: none; color: var(--md-on-surface-variant); border-radius: 50%; }
+[data-material='material'] .composer-add:hover { background: color-mix(in srgb, var(--md-on-surface-variant) var(--m3-hover), transparent); }
+/* Model and thinking: assist chips — 32px, 8px corners, outline-variant. */
+[data-material='material'] .model-pill.glass, [data-material='material'] .composer :is(select[aria-label='Thinking effort']) {
+  min-height: 32px; border-radius: 8px; background: transparent; color: var(--md-on-surface);
+  border: 1px solid var(--md-outline-variant); box-shadow: none; font-weight: 500;
+}
+[data-material='material'] .model-pill.glass:hover { background: color-mix(in srgb, var(--md-on-surface) var(--m3-hover), transparent); }
+
+/* ── Messages: the user's turn is a tonal bubble; replies sit on the surface. ── */
+[data-material='material'] .msg[data-role='user'] .msg-user-row, [data-material='material'] .msg-user .msg-user-row {
+  background: var(--md-secondary-container); color: var(--md-on-secondary-container); border: 0; box-shadow: none; border-radius: 20px 20px 4px 20px;
+}
+[data-material='material'] .msg[data-role='user'] .msg-user-row > p { color: var(--md-on-secondary-container); }
+[data-material='material'] .tool-approval {
+  background: var(--md-surface-container-low); border: 1px solid var(--md-outline-variant); border-radius: 12px; box-shadow: none;
+}
+[data-material='material'] .tool-approval-args { background: var(--md-surface-container-highest); border: 0; border-radius: 8px; }
+
+/* ── Menus: surface-container, level 2, 4px corners, 48px items with label-large. ── */
+[data-material='material'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel) {
+  background: var(--md-surface-container); border: 0; border-radius: 4px; box-shadow: var(--m3-elev-2);
+  padding: 8px 0; backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+[data-material='material'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel) :is(button, .ctx-item) {
+  min-height: 48px; border-radius: 0; padding: 0 12px; color: var(--md-on-surface); font-size: var(--text-callout); font-weight: 400;
+}
+[data-material='material'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel) :is(button, .ctx-item):hover { background: color-mix(in srgb, var(--md-on-surface) var(--m3-hover), transparent); }
+[data-material='material'] .ctx-menu .ctx-item.has-separator { border-top: 1px solid var(--md-outline-variant); margin-top: 8px; }
+[data-material='material'] .ctx-menu .ctx-item.is-danger { color: var(--md-error); }
+
+/* ── Cards ── */
+[data-material='material'] .project-card {
+  background: var(--md-surface-container-low); border: 0; border-radius: 12px; box-shadow: var(--m3-elev-1);
+}
+[data-material='material'] .project-card:hover { box-shadow: var(--m3-elev-2); background: color-mix(in srgb, var(--md-on-surface) var(--m3-hover), var(--md-surface-container-low)); }
+[data-material='material'] .settings-stage :is(.set-rows, .group) { background: var(--md-surface-container-low); border: 0; border-radius: 12px; box-shadow: none; }
+[data-material='material'] .settings-stage :is(.set-row + .set-row, .group .row + .row) { border-top-color: var(--md-outline-variant); }
+[data-material='material'] .empty-state { background: transparent; border: 0; box-shadow: none; }
+
+/* ── Outlined text fields: 4px corners, outline, 2px primary on focus. ── */
+[data-material='material'] :is(.modal-input, .projects-head .projects-search, .set-name-field input, .settings-detail input:not([type=checkbox]):not([type=radio]):not([type=range]), .settings-detail textarea, .settings-detail select, label.select > select, .shell-search) {
+  background: transparent; border: 1px solid var(--md-outline); border-radius: 4px; box-shadow: none; color: var(--md-on-surface); min-height: 48px; padding-inline: 16px;
+}
+[data-material='material'] :is(.modal-input, .projects-head .projects-search, .set-name-field input, .settings-detail input, .settings-detail textarea, .settings-detail select, label.select > select, .shell-search):focus {
+  outline: none; border-color: var(--md-primary); box-shadow: inset 0 0 0 1px var(--md-primary);
+}
+
+/* ── Projects tabs: M3 primary tabs — primary label, 3px indicator with rounded top. ── */
+[data-material='material'] .projects-head .seg button { color: var(--md-on-surface-variant); font-weight: 500; border-bottom: 0; position: relative; }
+[data-material='material'] .projects-head .seg button.is-selected { color: var(--md-primary); border-bottom: 0; }
+[data-material='material'] .projects-head .seg button.is-selected::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--md-primary);
+}
+[data-material='material'] .projects-head { border-bottom-color: var(--md-outline-variant); }
+
+/* ── Buttons: filled, tonal, outlined, text — 40px pills with label-large. ── */
+[data-material='material'] :is(.btn, .modal-btn) { min-height: 40px; padding-inline: 24px; font-size: var(--text-callout); font-weight: 500; letter-spacing: .01em; }
+[data-material='material'] :is(.btn-primary, .modal-btn.primary) { background: var(--md-primary); color: var(--md-on-primary); border: 0; }
+[data-material='material'] :is(.btn-primary, .modal-btn.primary):hover { background: color-mix(in srgb, var(--md-on-primary) var(--m3-hover), var(--md-primary)); box-shadow: var(--m3-elev-1); }
+[data-material='material'] :is(.btn-secondary, .modal-btn.secondary, .popup-tab) { background: transparent; border: 1px solid var(--md-outline); color: var(--md-primary); }
+[data-material='material'] :is(.btn-secondary, .modal-btn.secondary, .popup-tab):hover { background: color-mix(in srgb, var(--md-primary) var(--m3-hover), transparent); }
+[data-material='material'] .btn-danger { background: var(--md-error); color: var(--md-on-error); border: 0; }
+
+/* ── Dialogs and sheets: 28px, surface-container-high, headline-small, no border. ── */
+[data-material='material'] :is(.confirm-dialog.aero, .mp-panel.aero, .dialog-sheet.aero) {
+  background: var(--md-surface-container-high); border: 0; border-radius: 28px; box-shadow: var(--m3-elev-3);
+}
+[data-material='material'] :is(.confirm-dialog, .dialog-sheet) h2 { font-size: var(--text-title2); font-weight: 400; color: var(--md-on-surface); }
+[data-material='material'] :is(.confirm-dialog, .dialog-sheet) p { color: var(--md-on-surface-variant); }
+[data-material='material'] dialog.dialog-sheet::backdrop, [data-material='material'] dialog:has(> .dialog-sheet)::backdrop { background: rgba(0, 0, 0, .32); backdrop-filter: none; -webkit-backdrop-filter: none; }
+@media (max-width: 700px) {
+  /* Bottom sheet: surface-container-low, 28px top corners, 32×4 drag handle. */
+  [data-material='material'] :is(.confirm-dialog.aero, .mp-panel.aero, .dialog-sheet.aero) { background: var(--md-surface-container-low); border-radius: 28px 28px 0 0; }
+  [data-material='material'] :is(.confirm-dialog, .dialog-sheet)::before, [data-material='material'] .dialog-grabber {
+    width: 32px; height: 4px; border-radius: 2px; background: var(--md-on-surface-variant); opacity: .4;
+  }
+}
+
+/* ── Segmented buttons: 40px, selected segment shows a check before its label. ── */
+[data-material='material'] .glass-seg { border-radius: 999px; }
+[data-material='material'] .glass-seg > button { min-height: 40px; font-size: var(--text-callout); }
+[data-material='material'] .glass-seg > button[aria-checked='true']::before {
+  content: ''; display: inline-block; width: 18px; height: 18px; margin: 0 6px -4px -4px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* ── Chips and banners ── */
+/* Card metadata ("2 chats · 14 files") is supporting text, not a chip. */
+[data-material='material'] .project-chip { border: 0; background: none; padding: 0; color: var(--md-on-surface-variant); }
+[data-material='material'] :is(.chip, .tool-chip) { border-radius: 8px; border: 1px solid var(--md-outline-variant); background: transparent; color: var(--md-on-surface-variant); }
+[data-material='material'] .conn-banner { background: var(--md-surface-container-high); border: 0; border-radius: 12px; box-shadow: none; color: var(--md-on-surface); }
+
+/* ── Inference strip: a plain row on the surface. ── */
+[data-material='material'] .stats-disclosure { background: transparent; border: 0; box-shadow: none; }
+[data-material='material'] .stats-bar { background: var(--md-surface-container); border: 0; border-radius: 999px; box-shadow: none; }
+
+/* Settings search: one outlined field (the container holds the icon and the input). */
+[data-material='material'] .settings-stage .settings-search { background: transparent; border: 1px solid var(--md-outline); border-radius: 4px; box-shadow: none; min-height: 48px; }
+[data-material='material'] .settings-stage .settings-search:focus-within { border-color: var(--md-primary); box-shadow: inset 0 0 0 1px var(--md-primary); }
+[data-material='material'] .settings-stage .settings-search input { border: 0; background: transparent; box-shadow: none; outline: none; min-height: 0; padding-inline: 0; }
+
+/* Settings navigation is a navigation drawer too: pill destinations, tonal active. */
+[data-material='material'] .settings-stage .settings-navigation nav button { border-radius: 999px; min-height: 48px; padding-inline: 16px; color: var(--md-on-surface-variant); font-weight: 500; }
+[data-material='material'] .settings-stage .settings-navigation nav button:hover { background: color-mix(in srgb, var(--md-on-surface) var(--m3-hover), transparent); }
+[data-material='material'] .settings-stage .settings-navigation nav button.is-active { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+@media (max-width: 819px) {
+  /* Single-pane Settings is a list, not a drawer: rows, no active pill. */
+  [data-material='material'] .settings-stage .settings-navigation nav button, [data-material='material'] .settings-stage .settings-navigation nav button.is-active { border-radius: 0; background: transparent; color: var(--md-on-surface); min-height: 56px; }
+}
+
+/* Project rows line their icon and name up with the pinned and chat rows. */
+[data-material='material'] .app .sidebar.pane .proj-row .project-expand { margin-left: 8px; }
+[data-material='material'] .app .sidebar.pane .proj-row .project-disclosure { padding-left: 6px; }

@@ -103,6 +103,11 @@ a { text-underline-offset: .18em; }
   transition: color var(--duration-fast) var(--ease-standard);
 }
 .glass-seg > button[aria-checked='true'] { color: var(--text-primary); font-weight: 500; }
+/* A track wider than its row (Material's four options on a 320px phone) scrolls sideways
+   instead of running off the screen; the thumb rides along inside it. */
+.glass-seg { max-width: 100%; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; overscroll-behavior-x: contain; }
+.glass-seg::-webkit-scrollbar { display: none; }
+.glass-seg > button { flex: none; white-space: nowrap; }
 .glass-seg > .glass-thumb {
   position: absolute; z-index: 1; top: 3px; bottom: 3px; left: 0; width: var(--thumb-w);
   transform: translateX(var(--thumb-x)); border-radius: var(--radius-pill); pointer-events: none;

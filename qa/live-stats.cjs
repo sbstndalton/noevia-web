@@ -11,14 +11,16 @@ const {createFixture}=require('./diary-fixture.cjs');
  try{
   const page=await browser.newPage();
   await page.goto('http://localhost:31257');
-  const rate=()=>page.locator('.stats-bar .stats-value').first().innerText();
+  // Desktop: the strip is one always-open row; the rate is the Speed pair (release 3).
+  const speed=()=>document.querySelector('#stats-details dd')?.textContent?.replace(' tokens/s','');
+  const rate=()=>page.evaluate(speed);
   await page.getByRole('region',{name:'Inference details'}).waitFor();
-  await page.waitForFunction(()=>document.querySelector('.stats-bar .stats-value')?.textContent==='11.0');
+  await page.waitForFunction(()=>document.querySelector('#stats-details dd')?.textContent==='11.0 tokens/s');
   assert.equal(await rate(),'11.0','footer starts from the polled engine-wide snapshot');
   await page.getByRole('textbox',{name:'Message',exact:true}).fill('live tokens synthetic');
   await page.keyboard.press('Enter');
   await page.getByText('Synthetic streamed reply',{exact:true}).waitFor();
-  await page.waitForFunction(()=>document.querySelector('.stats-bar .stats-value')?.textContent==='77.0',{timeout:1000});
+  await page.waitForFunction(()=>document.querySelector('#stats-details dd')?.textContent==='77.0 tokens/s',{timeout:1000});
   assert.equal(await rate(),'77.0','footer reflects the reply\'s own usage event, not the never-changing poll');
   // An engine that reports no rate between requests must not blank the last reported value.
   await page.route('**/api/stats',r=>r.fulfill({json:{up:true,tokensPerSecond:null,timeToFirstToken:null,inputTokens:null,outputTokens:null,inputTokensTotal:1,outputTokensTotal:1,requestCount:1,cpuPercent:null,gpuPercent:null,vramGb:null,memoryGb:null,mtp:[]}}));

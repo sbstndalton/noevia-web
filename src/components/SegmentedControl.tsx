@@ -12,10 +12,19 @@ export function useSegmentThumb(deps: unknown[]) {
       if (!on) return;
       node.style.setProperty('--thumb-w', `${on.offsetWidth}px`);
       node.style.setProperty('--thumb-x', `${on.offsetLeft}px`);
+      // A track that scrolls (too wide for its row) keeps the chosen option in view.
+      if (node.scrollWidth > node.clientWidth) {
+        const left = on.offsetLeft, right = left + on.offsetWidth;
+        if (left < node.scrollLeft) node.scrollLeft = left;
+        else if (right > node.scrollLeft + node.clientWidth) node.scrollLeft = right - node.clientWidth;
+      }
     };
     place();
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(place);
     observer?.observe(node);
+    // The options too: a scrolling track keeps its width while a label grows (a web font
+    // arriving, the M3 check on the chosen option), and the thumb must follow it.
+    node.querySelectorAll('button').forEach((b) => observer?.observe(b));
     return () => observer?.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);

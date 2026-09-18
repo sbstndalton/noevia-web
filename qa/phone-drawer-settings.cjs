@@ -86,7 +86,55 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.ok(res.some(r=>r.scrolled),'at least one list scrolls at this height');
   await page.screenshot({path:`${out}/desktop-sticky-heads-${theme}-${material}.png`});await page.close();
  }
+
+ // Touch: every Settings field is 16px (iOS zooms below that); Material's four options stay
+ // on screen at 320px; Projects counts only active projects and its filter spans the row.
+ for(const [w,h] of [[320,568],[390,844]]){
+  const page=await browser.newPage({viewport:{width:w,height:h},hasTouch:true,isMobile:true,reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+  const proj=(i,archived=false)=>({id:`q${i}`,name:`Synthetic project ${i}`,archived,updatedAt:1000,files:[],chats:[{id:`qc${i}`,title:'c',updatedAt:1,messages:[]}]});
+  await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[proj(0),proj(1),proj(2,true),proj(3,true)],freeChats:[]}}));
+  await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
+  await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+  await page.getByRole('dialog',{name:'Navigation'}).getByRole('button',{name:'Projects',exact:true}).first().click();
+  await page.getByRole('heading',{name:'Projects',level:1}).waitFor();
+  assert.match(await page.locator('.projects-hero-sub').innerText(),/^2 projects · 2 chats$/,`${w}: headline counts active projects`);
+  const fr=await page.evaluate(()=>{const f=document.querySelector('.projects-search').getBoundingClientRect(),c=document.querySelector('.project-card').getBoundingClientRect();return Math.abs(f.right-c.right);});
+  assert.ok(fr<=1,`${w}: filter spans the row like the cards (${fr}px short)`);
+  await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+  await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+  for(const name of ['Security','Data','Appearance','Diary & storage']){
+   await page.locator('.settings-navigation nav button').filter({hasText:name}).first().click();await page.locator('.settings-detail').waitFor();
+   const small=await page.evaluate(()=>[...document.querySelectorAll('.settings-detail :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea,select)')].filter(e=>e.offsetParent&&parseFloat(getComputedStyle(e).fontSize)<16).map(e=>(e.getAttribute('aria-label')||e.tagName)+' '+getComputedStyle(e).fontSize));
+   assert.deepEqual(small,[],`${w} ${name}: fields under 16px on touch`);
+   if(name==='Appearance'){const seg=page.getByRole('radiogroup',{name:'Material'});await seg.getByRole('radio',{name:'Material 3'}).click();await page.waitForTimeout(300);
+    const g=await seg.evaluate(t=>{const q=t.getBoundingClientRect(),on=t.querySelector('[aria-checked="true"]').getBoundingClientRect(),th=t.querySelector('.glass-thumb').getBoundingClientRect();return {inScreen:q.left>=0&&q.right<=innerWidth,onVisible:on.left>=q.left-1&&on.right<=q.right+1,thumb:Math.abs(th.left-on.left)<=1};});
+    assert.ok(g.inScreen&&g.onVisible&&g.thumb,`${w}: Material track fits, shows the choice, thumb on it ${JSON.stringify(g)}`);
+    await seg.getByRole('radio',{name:'Soft'}).click();}
+   await page.getByRole('button',{name:'All settings',exact:true}).click();
+  }
+  await page.close();
+ }
+
+ // Material 3: sticky pieces match the drawer (no bands), New chat is an extended FAB in
+ // primary-container, the active destination is a pill, the composer a 28px container.
+ for(const theme of ['light','dark']){
+  const page=await browser.newPage({viewport:{width:1360,height:729},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(t=>{localStorage.setItem('cowork-theme',t);localStorage.setItem('noevia:material','material');},theme);
+  const chat=(id,pinned=false)=>({id,title:`Synthetic ${id}`,updatedAt:1000,pinned,messages:[]});
+  await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[{id:'p0',name:'Synthetic project 0',updatedAt:1000,files:[],chats:[]}],freeChats:[chat('pinned',true),...Array.from({length:14},(_,i)=>chat(`recent${i}`))]}}));
+  await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
+  await page.getByRole('button',{name:'Projects',exact:true}).first().click();
+  const m=await page.evaluate(()=>{const cs=e=>getComputedStyle(e),q=s=>document.querySelector(s),side=q('.sidebar');const root=cs(document.documentElement);
+   const heads=[...side.querySelectorAll('.side-scroll > :is(.sidebar-section-head, .section-label):first-child, .side-permanent, .side-footer')].map(e=>cs(e).backgroundColor);
+   return {side:cs(side).backgroundColor,heads,fab:cs(q('.new-chat-btn')).backgroundColor,fabRadius:cs(q('.new-chat-btn')).borderTopLeftRadius,
+    primaryContainer:root.getPropertyValue('--md-primary-container').trim(),active:cs(q('.side-nav .nav-item[aria-current=page]')).borderTopLeftRadius,
+    composerRadius:cs(q('.composer-inner')).borderTopLeftRadius,font:cs(document.body).fontFamily};});
+  for(const h of m.heads)assert.equal(h,m.side,`${theme} M3: sticky sidebar pieces share the drawer colour ${JSON.stringify(m)}`);
+  const hex=m.primaryContainer.replace('#','');assert.equal(m.fab,`rgb(${parseInt(hex.slice(0,2),16)}, ${parseInt(hex.slice(2,4),16)}, ${parseInt(hex.slice(4,6),16)})`,`${theme} M3: New chat is primary-container`);
+  assert.equal(m.fabRadius,'16px');assert.ok(parseFloat(m.active)>=20,`${theme} M3: active destination is a pill`);assert.equal(m.composerRadius,'28px');assert.match(m.font,/^Roboto/);
+  await page.close();
+ }
  assert.deepEqual(errors,[]);
- console.log('PASS phone drawer: full drawer from Diary, measured sticky footer, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; desktop list headings stay in view while their list scrolls.');
+ console.log('PASS phone drawer: full drawer from Diary, measured sticky footer, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; desktop list headings stay in view while their list scrolls; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

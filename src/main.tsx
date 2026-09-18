@@ -13,6 +13,7 @@ import './styles/primitives.css';
 import './styles/overlays.css';
 import './styles/phone.css';
 import './styles/materials.css';
+import './styles/material3.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
