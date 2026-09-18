@@ -1,7 +1,8 @@
 'use strict';
 // A stand-in for Google's device sign-in and the Drive v3 API, just enough of both for noevia's
 // backend: device/code, token (device and refresh grants), revoke, files list/get/create/delete,
-// and multipart upload. Approve a pending sign-in with POST /__approve (or ?deny=1).
+// and multipart upload. Approve a pending sign-in at GET /device (a stand-in for
+// google.com/device with Allow and Deny buttons), or with POST /__approve (or ?deny=1).
 // Used by server/gdrive.test.cjs, qa/wizard-backup.cjs and local test instances. Never real data.
 const http = require('node:http');
 const crypto = require('node:crypto');
@@ -12,15 +13,32 @@ function startFakeGoogle({ port = 0, autoApprove = false } = {}) {
   const id = () => crypto.randomBytes(8).toString('hex');
   const body = (req) => new Promise((r) => { const c = []; req.on('data', (d) => c.push(d)); req.on('end', () => r(Buffer.concat(c))); });
   const send = (res, status, obj) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
+  let base = '';
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     const raw = await body(req);
     const form = Object.fromEntries(new URLSearchParams(raw.toString()));
-    if (url.pathname === '/__approve') { if (url.searchParams.get('deny')) state.denied = true; else state.approved = true; return send(res, 200, {}); }
+    if (url.pathname === '/device' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      const waiting = state.device && !state.approved && !state.denied;
+      return res.end(`<!doctype html><meta name="viewport" content="width=device-width"><title>Fake Google sign-in</title>
+<body style="font:16px system-ui;max-width:420px;margin:60px auto;padding:0 16px">
+<h1 style="font-size:22px">Fake Google (test only)</h1>
+${waiting ? `<p>noevia is asking for access to files it creates in your Drive. Code: <b>WDJB-MJHT</b></p>
+<form method="post" action="/__approve" style="display:flex;gap:8px"><button style="min-height:44px;padding:0 20px">Allow</button>
+<button formaction="/__approve?deny=1" style="min-height:44px;padding:0 20px">Deny</button></form>`
+  : `<p>${state.approved ? 'Allowed. You can close this tab and go back to noevia.' : state.denied ? 'Denied. You can close this tab.' : 'No sign-in is waiting. Click Connect Google Drive in noevia first.'}</p>`}</body>`);
+    }
+    if (url.pathname === '/__approve') {
+      if (url.searchParams.get('deny')) state.denied = true; else state.approved = true;
+      if ((req.headers['content-type'] || '').includes('form')) { res.writeHead(303, { Location: '/device' }); return res.end(); }
+      return send(res, 200, {});
+    }
+    if (false) { if (url.searchParams.get('deny')) state.denied = true; else state.approved = true; return send(res, 200, {}); }
     if (url.pathname === '/device/code') {
       if (!/drive\.file/.test(form.scope)) return send(res, 400, { error: 'invalid_scope' });
       state.device = id(); state.approved = autoApprove; state.denied = false;
-      return send(res, 200, { device_code: state.device, user_code: 'WDJB-MJHT', verification_url: 'https://www.google.com/device', expires_in: 1800, interval: 1 });
+      return send(res, 200, { device_code: state.device, user_code: 'WDJB-MJHT', verification_url: process.env.FAKE_GOOGLE_REAL_URL ? 'https://www.google.com/device' : `${base}/device`, expires_in: 1800, interval: 1 });
     }
     if (url.pathname === '/token') {
       if (form.grant_type === 'refresh_token') {
@@ -68,7 +86,7 @@ function startFakeGoogle({ port = 0, autoApprove = false } = {}) {
     send(res, 404, { error: 'not found' });
   });
   return new Promise((resolve) => server.listen(port, '127.0.0.1', () => {
-    const base = `http://127.0.0.1:${server.address().port}`;
+    base = `http://localhost:${server.address().port}`;
     resolve({ base, env: { GOOGLE_OAUTH_CLIENT_ID: 'fake-client', GOOGLE_OAUTH_CLIENT_SECRET: 'fake-secret', GOOGLE_OAUTH_BASE_URL: base, GOOGLE_DRIVE_API_BASE_URL: `${base}/drive`, GOOGLE_DRIVE_UPLOAD_BASE_URL: `${base}/upload` },
       files, state, approve: () => { state.approved = true; }, deny: () => { state.denied = true; }, close: () => new Promise((r) => server.close(r)) });
   }));

@@ -55,7 +55,7 @@ const PORT=31383,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
   await s.getByRole('button',{name:'Connect Google Drive'}).click();
   const code=s.getByLabel('Google sign-in code');await code.waitFor();
   assert.equal(await code.innerText(),'WDJB-MJHT');
-  assert.equal(await s.getByRole('link',{name:'Open Google'}).getAttribute('href'),'https://www.google.com/device');
+  assert.match(await s.getByRole('link',{name:'Open Google'}).getAttribute('href'),/\/device$/);
   if(shots)await page.screenshot({path:`${shots}/gdrive-pending-1440-light.png`});
   google.approve();
   await s.getByText(/^Connected · /).waitFor({timeout:20000});
