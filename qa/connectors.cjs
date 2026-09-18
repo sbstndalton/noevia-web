@@ -45,7 +45,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    assert.ok(await s.evaluate(el=>el.scrollWidth<=el.clientWidth+1),`no overflow ${width} ${theme}`);
    await page.screenshot({path:`${shots}/noevia-connectors-${width}-${theme}.png`});
    if(phone){
-    await s.getByRole('button',{name:'All settings'}).click();await s.getByRole('button',{name:'Appearance',exact:true}).waitFor();
+    await s.getByRole('button',{name:'All settings'}).click();await s.getByRole('button',{name:'General',exact:true}).waitFor();
     await s.getByRole('button',{name:'Back to app',exact:true}).click();
    }else{
     // A prompt suggestion starts a new chat with it.

@@ -117,7 +117,7 @@ function SecurityCard(): JSX.Element {
   };
   if (!user) return <div><h2>Security</h2>{loading ? <p role="status">Loading profile…</p> : <><p className="modal-err" role="alert">{error}</p><button className="modal-btn secondary" onClick={() => void load()}>Retry profile</button></>}</div>;
   return <div>
-    <div className="settings-title"><h1>Security</h1><p>Passkeys, signed-in sessions and app passwords for {user.username}.</p></div>
+    <div className="settings-title"><h1>Security and login</h1><p>Passkeys, signed-in sessions and app passwords for {user.username}.</p></div>
     <fieldset className="settings-action-group" disabled={!!busy || loading}><div className="card-list">
       {passkeys.map(k => <div className="model-row" key={k.id}><span className="model-dot"/><div className="model-name-group"><span className="model-name">{k.name}</span><span className="model-quant">{k.backedUp ? 'synced passkey' : k.deviceType}</span></div><button className="recents-del" aria-label={`Remove passkey ${k.name}`} onClick={() => void act('Remove passkey', () => removePasskey(k.id), 'Passkey removed.')}>✕</button></div>)}
       <button className="modal-btn secondary" onClick={() => void act('Passkey setup', addKey, 'Passkey added.')}>+ Add passkey</button>

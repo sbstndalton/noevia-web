@@ -26,10 +26,22 @@ type Group = { name: string; items: Item[]; admin?: boolean };
 // Removed outright rather than deferred, because they cannot apply to a self-hosted
 // single-server install: Billing (no plans or invoices to show), Browser and Computer use
 // (host-application features, not this app's).
+// Organised like ChatGPT's settings (user review, 2026-09-18): one flat list with no group
+// headings, General first and Account last, using only pages noevia actually has. Section
+// ids are unchanged so saved places and deep links keep working; only labels and order moved.
 const PERSONAL: Group[] = [
-  { name: 'Account', items: [['profile', 'Profile'], ['security', 'Security'], ['usage', 'Usage & activity'], ['data', 'Data']] },
-  { name: 'Preferences', items: [['appearance', 'Appearance'], ['personalization', 'Personalization'], ['capabilities', 'Capabilities']] },
-  { name: 'Customize', items: [['connectors', 'Connectors'], ['providers', 'AI providers'], ['diary', 'Diary & storage']] },
+  { name: '', items: [
+    ['appearance', 'General'],
+    ['personalization', 'Personalization'],
+    ['capabilities', 'Capabilities'],
+    ['connectors', 'Connectors'],
+    ['providers', 'AI providers'],
+    ['usage', 'Usage'],
+    ['data', 'Data controls'],
+    ['diary', 'Diary & storage'],
+    ['security', 'Security and login'],
+    ['profile', 'Account'],
+  ] },
 ];
 
 // Deployment-wide. The navigation hides these from members, but that is
@@ -68,7 +80,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   // 'general' is the historical name for the first page; it now opens Profile. Anything that is
   // not a section name (a click event handed through by mistake) counts as no choice.
   const named = typeof props.initialSection === 'string' && props.initialSection !== 'general' ? props.initialSection : null;
-  const [section, setSection] = useState<string>(named || 'profile');
+  const [section, setSection] = useState<string>(named || 'appearance');
   // Phones show the list and a page as two screens; a named section opens straight on its page.
   const [view, setView] = useState<'list' | 'detail'>(() => named || !phone() ? 'detail' : 'list');
   const [closing, setClosing] = useState(false);
@@ -126,7 +138,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   // not be left staring at an empty pane.
   useEffect(() => {
     // Wait for the profile: admin sections appear only once the role is known.
-    if (profileKnown && !groups.some((g) => g.items.some(([id]) => id === section))) setSection('profile');
+    if (profileKnown && !groups.some((g) => g.items.some(([id]) => id === section))) setSection('appearance');
   }, [groups, section, profileKnown]);
 
   const title = groups.flatMap(g => g.items).find(([id]) => id === section)?.[1] || 'Settings';
@@ -147,7 +159,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
       {profileError && <p className="route-note" role="alert">Account access could not be checked. <button className="popup-tab" onClick={() => setProfileAttempt(n => n + 1)}>Retry access</button></p>}
       <nav aria-label="Settings categories">
         {filtered.map(g => g.items.length > 0 && <section key={g.name}>
-          <h2>{g.name}</h2>
+          {g.name && <h2>{g.name}</h2>}
           {g.items.map(([id, label]) => <button key={id} aria-current={section === id ? 'page' : undefined} className={section === id ? 'is-active' : ''} onClick={() => open(id)}>
             <ShellIcon name={ICONS[id] || 'settings'} size={17}/><span>{label}</span><ShellIcon name="chevron-right" size={16}/>
           </button>)}

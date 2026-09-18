@@ -18,7 +18,7 @@ const shots=process.env.QA_SCREENSHOTS||'';
    await page.emulateMedia({colorScheme:'dark'});await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
    await page.getByTitle('Settings',{exact:true}).click();
    const d=page.getByRole('region',{name:'Settings'});await d.waitFor();
-   await d.getByRole('button',{name:'Appearance',exact:true}).click();
+   await d.getByRole('button',{name:'General',exact:true}).click();
    const system=d.getByRole('button',{name:'System'});await system.waitFor();
    assert.equal(await system.getAttribute('aria-pressed'),'true');
    if(shots)await page.screenshot({path:`${shots}/appearance-system-${width}.png`});
@@ -29,7 +29,7 @@ const shots=process.env.QA_SCREENSHOTS||'';
    await system.click();await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
    assert.equal(puts.at(-1).theme,'system');
    // A reload returns to where you were, so Settings is still open on the Appearance page.
-   await page.reload();await d.waitFor();await d.getByRole('heading',{name:'Appearance',level:1}).waitFor();
+   await page.reload();await d.waitFor();await d.getByRole('heading',{name:'General',level:1}).waitFor();
    assert.deepEqual(await mode(),['dark','system'],'System survives a reload before React');
    await ctx.close();
   }

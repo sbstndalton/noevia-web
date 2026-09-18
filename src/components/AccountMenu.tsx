@@ -21,7 +21,7 @@ export function AccountMenu({ onSettings }: { onSettings:(section?:'general'|'us
   return <div className="account-area" ref={ref}>
     {open&&<div className="account-popover overlay" aria-label="Account options"><div className="account-popover-head"><strong>{name}</strong><span>Personal workspace</span></div>
       <button onClick={()=>{setOpen(false);onSettings();}}><ShellIcon name="settings"/>Settings</button>
-      <button onClick={()=>{setOpen(false);onSettings('usage');}}><ShellIcon name="grid"/>Usage &amp; activity</button>
+      <button onClick={()=>{setOpen(false);onSettings('usage');}}><ShellIcon name="grid"/>Usage</button>
       <div className="account-divider"/>
       <button onClick={()=>void logout().then(()=>window.location.reload()).catch(()=>setError('Could not sign out. Please retry.'))}><ShellIcon name="arrow"/>Log out</button>
       {error&&<p role="alert">{error}</p>}

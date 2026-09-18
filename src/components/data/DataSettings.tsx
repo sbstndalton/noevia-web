@@ -52,7 +52,7 @@ export function DataSettings(): JSX.Element {
   };
 
   return <>
-    <div className="settings-title"><h1>Data</h1><p>Take your conversations with you, or bring them back.</p></div>
+    <div className="settings-title"><h1>Data controls</h1><p>Take your conversations with you, or bring them back.</p></div>
     <section className="settings-section">
       <div className="set-rows">
         <div className="set-row">

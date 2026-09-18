@@ -33,7 +33,7 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   assert.equal((await api(member,'/api/auth/login/password',{username:'memberqa',password:minted.body.password})).status,401);
   await member.reload();
   await member.getByRole('button',{name:/Account menu for/}).click();await member.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
-  await member.getByRole('button',{name:'Security',exact:true}).click();
+  await member.getByRole('button',{name:'Security and login',exact:true}).click();
   await member.getByRole('region',{name:'App passwords'}).waitFor();
   await member.getByLabel('Device name',{exact:true}).fill('Synthetic laptop');
   await member.getByLabel('Credential scope',{exact:true}).selectOption('public');
@@ -50,7 +50,7 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   await member.getByRole('button',{name:'Dismiss password'}).click(); assert.equal(await input.count(),0);
   await member.getByRole('button',{name:'Revoke Synthetic laptop',exact:true}).click();
   await member.getByRole('button',{name:'Revoke Synthetic laptop',exact:true}).waitFor({state:'detached'});
-  await member.reload();await member.getByRole('button',{name:/Account menu for/}).click();await member.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();await member.getByRole('button',{name:'Security',exact:true}).click();
+  await member.reload();await member.getByRole('button',{name:/Account menu for/}).click();await member.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();await member.getByRole('button',{name:'Security and login',exact:true}).click();
   assert.equal(await member.getByLabel('New app password',{exact:true}).count(),0);
   assert.equal((await api(member,'/api/profile/app-passwords')).body.appPasswords.length,1);
   console.log('PASS app-password lifecycle, CSRF, tenant isolation, app auth refusal and responsive UI');

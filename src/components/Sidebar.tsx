@@ -377,7 +377,7 @@ export function Sidebar({
 
       <div className="rail-tools"><button className="shell-icon-button" aria-label="Search projects and chats" onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(true);}}><ShellIcon name="search"/></button><button className="shell-icon-button" aria-label="Show pinned items" onClick={()=>{setCollapsed(false);setExpanded(true);setClosedGroups(g=>({...g,Pinned:false}));}}><ShellIcon name="pin"/></button></div>
       <div className="sidebar-history">
-      {['Projects','Pinned'].map(group => {
+      {['Pinned','Projects'].map(group => {
         const entries = visibleProjects.filter(p=>group==='Pinned'?p.pinned:!p.pinned);
         if(group==='Pinned' && !entries.length && !visibleChats.some(c=>c.pinned))return null;
         return <div className={`spaces side-scroll side-scroll-${group.toLowerCase()}`} key={group}>

@@ -65,7 +65,7 @@ function Choice<N extends PreferenceName>({ name, options, onChange, segmented }
 
 export function ProfileSettings(): JSX.Element {
   return <>
-    <div className="settings-title"><h1>Profile</h1><p>Who you are here.</p></div>
+    <div className="settings-title"><h1>Account</h1><p>Who you are here.</p></div>
     <ProfileCard />
   </>;
 }
@@ -92,7 +92,7 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
   const bump = () => setRevision((n) => n + 1);
 
   return <>
-    <div className="settings-title"><h1>Appearance</h1><p>How noevia looks and moves on this device. Theme and material follow you to your other devices.</p></div>
+    <div className="settings-title"><h1>General</h1><p>How noevia looks and moves on this device. Theme and material follow you to your other devices.</p></div>
 
     <section className="settings-section">
       <h2>Theme</h2>
@@ -192,7 +192,7 @@ function ProfileCard(): JSX.Element {
       </Row>
     </div>
     {state.message && <p className={state.error ? 'modal-err' : 'route-note'} role={state.error ? 'alert' : 'status'}>{state.message}</p>}
-    <p className="route-note">Passwords, passkeys, sessions and app passwords are under Security.</p>
+    <p className="route-note">Passwords, passkeys, sessions and app passwords are under Security and login.</p>
   </section>;
 }
 

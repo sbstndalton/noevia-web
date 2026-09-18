@@ -56,8 +56,8 @@ export function UsageView(): JSX.Element {
     return () => { live = false; };
   }, [attempt,aggregate]);
 
-  if (error) return <><div className="settings-title"><h1>Usage &amp; activity</h1></div><p className="route-note" role="alert">{error}</p><button className="btn btn-secondary" onClick={() => setAttempt(n => n + 1)}>Retry usage</button>{aggregate&&<button className="btn btn-secondary" onClick={()=>setAggregate(false)}>Return to your usage</button>}</>;
-  if (!data) return <><div className="settings-title"><h1>Usage &amp; activity</h1></div><p className="route-note">Loading…</p></>;
+  if (error) return <><div className="settings-title"><h1>Usage</h1></div><p className="route-note" role="alert">{error}</p><button className="btn btn-secondary" onClick={() => setAttempt(n => n + 1)}>Retry usage</button>{aggregate&&<button className="btn btn-secondary" onClick={()=>setAggregate(false)}>Return to your usage</button>}</>;
+  if (!data) return <><div className="settings-title"><h1>Usage</h1></div><p className="route-note">Loading…</p></>;
 
   const totals: UsageTotals = window_ === '7' ? data.last7 : window_ === '30' ? data.last30 : data.allTime;
   const label = window_ === 'all' ? 'retained history' : `last ${window_} days`;
@@ -78,7 +78,7 @@ export function UsageView(): JSX.Element {
 
   return <>
     <div className="settings-title">
-      <h1>Usage &amp; activity</h1>
+      <h1>Usage</h1>
       <p>Provider-reported usage for ordinary chats and optional Diary tool preparation. Companion-only Diary generation and providers that omit usage are not counted.</p>
     </div>
 

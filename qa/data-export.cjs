@@ -31,8 +31,8 @@ function entries(buf){const out={};let at=0;while(buf.readUInt32LE(at)===0x04034
    const nav=page.getByRole('button',{name:'Open navigation',exact:true});if(await nav.isVisible().catch(()=>false))await nav.click();
    await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
    const dialog=page.getByRole('region',{name:'Settings'});await dialog.waitFor();
-   await dialog.getByRole('button',{name:'Data',exact:true}).click();
-   await dialog.getByRole('heading',{name:'Data',level:1}).waitFor();
+   await dialog.getByRole('button',{name:'Data controls',exact:true}).click();
+   await dialog.getByRole('heading',{name:'Data controls',level:1}).waitFor();
    assert.equal(await dialog.getByText('Export conversations',{exact:true}).count(),1);
    const [download]=await Promise.all([page.waitForEvent('download'),dialog.getByRole('button',{name:'Export',exact:true}).click()]);
    assert.match(download.suggestedFilename(),/^noevia-conversations-\d{4}-\d{2}-\d{2}\.zip$/);
@@ -53,7 +53,7 @@ function entries(buf){const out={};let at=0;while(buf.readUInt32LE(at)===0x04034
     assert.ok((await api('/api/freechats/c-free-1',undefined,'DELETE')).status<300);
     await page.reload();await page.waitForLoadState('networkidle');
     await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
-    await dialog.waitFor();await dialog.getByRole('button',{name:'Data',exact:true}).click();
+    await dialog.waitFor();await dialog.getByRole('button',{name:'Data controls',exact:true}).click();
     await dialog.getByLabel('Conversations file').setInputFiles(zipPath);
     await dialog.getByRole('status').filter({hasText:'Imported 1 chat. 1 was already here.'}).waitFor();
     const restored=(await api('/api/workspace')).body.freeChats;
@@ -64,7 +64,7 @@ function entries(buf){const out={};let at=0;while(buf.readUInt32LE(at)===0x04034
     // A file that is not an export is refused with a clear message.
     fs.writeFileSync(path.join(dir,'bad.json'),'{"hello":1}');
     await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
-    await dialog.waitFor();await dialog.getByRole('button',{name:'Data',exact:true}).click();
+    await dialog.waitFor();await dialog.getByRole('button',{name:'Data controls',exact:true}).click();
     await dialog.getByLabel('Conversations file').setInputFiles(path.join(dir,'bad.json'));
     await dialog.getByRole('alert').filter({hasText:'Choose a conversations.json from a noevia conversations export.'}).waitFor();
     // Archived chats: an archived project chat is listed here and Restore puts it back in the sidebar.
@@ -72,7 +72,7 @@ function entries(buf){const out={};let at=0;while(buf.readUInt32LE(at)===0x04034
     assert.ok((await api(`/api/projects/${project.id}/chats`,{chats:[{id:'c-proj-1',title:'Cell chemistry',updatedAt:Date.now(),archived:true}]})).status<300);
     await page.reload();await page.waitForLoadState('networkidle');
     await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
-    await dialog.waitFor();await dialog.getByRole('button',{name:'Data',exact:true}).click();
+    await dialog.waitFor();await dialog.getByRole('button',{name:'Data controls',exact:true}).click();
     const archived=dialog.getByRole('list',{name:'Archived chats'});await archived.getByText('Cell chemistry').waitFor();
     assert.match(await archived.innerText(),/Synthetic battery notes/);
     await page.screenshot({path:`${shots}/data-archived-1440-light.png`});

@@ -51,10 +51,10 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
   await page.getByRole('button',{name:'Open navigation',exact:true}).click();
   await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
-  await page.getByRole('button',{name:'Profile',exact:true}).first().click();await page.locator('.settings-detail .set-row-label').first().waitFor();
+  await page.getByRole('button',{name:'Account',exact:true}).first().click();await page.locator('.settings-detail .set-row-label').first().waitFor();
   const lefts=await page.evaluate(()=>[...document.querySelectorAll('.settings-detail .set-row-label')].map(e=>Math.round(e.getBoundingClientRect().left)));
   assert.equal(new Set(lefts).size,1,`${w} ${theme}: Profile labels share one edge ${lefts}`);
-  await page.getByRole('button',{name:'All settings',exact:true}).click();await page.getByRole('button',{name:'Appearance',exact:true}).first().click();await page.locator('.theme-swatch').first().waitFor();
+  await page.getByRole('button',{name:'All settings',exact:true}).click();await page.getByRole('button',{name:'General',exact:true}).first().click();await page.locator('.theme-swatch').first().waitFor();
   const lum=c=>{const [r,g,b]=c.match(/\d+/g).map(Number);return (r+g+b)/3;};
   const [light,dark]=await page.evaluate(()=>[...document.querySelectorAll('.theme-swatch:not(.is-system)')].map(e=>getComputedStyle(e).backgroundColor));
   assert.ok(lum(light)>180&&lum(dark)<80,`${w} ${theme}: previews show their own theme ${light} ${dark}`);
@@ -89,11 +89,11 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.ok(fr<=1,`${w}: filter spans the row like the cards (${fr}px short)`);
   await page.getByRole('button',{name:'Open navigation',exact:true}).click();
   await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
-  for(const name of ['Security','Data','Appearance','Diary & storage']){
+  for(const name of ['Security and login','Data controls','General','Diary & storage']){
    await page.locator('.settings-navigation nav button').filter({hasText:name}).first().click();await page.locator('.settings-detail').waitFor();
    const small=await page.evaluate(()=>[...document.querySelectorAll('.settings-detail :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea,select)')].filter(e=>e.offsetParent&&parseFloat(getComputedStyle(e).fontSize)<16).map(e=>(e.getAttribute('aria-label')||e.tagName)+' '+getComputedStyle(e).fontSize));
    assert.deepEqual(small,[],`${w} ${name}: fields under 16px on touch`);
-   if(name==='Appearance'){const seg=page.getByRole('radiogroup',{name:'Material'});await seg.getByRole('radio',{name:'Material 3'}).click();await page.waitForTimeout(300);
+   if(name==='General'){const seg=page.getByRole('radiogroup',{name:'Material'});await seg.getByRole('radio',{name:'Material 3'}).click();await page.waitForTimeout(300);
     const g=await seg.evaluate(t=>{const q=t.getBoundingClientRect(),on=t.querySelector('[aria-checked="true"]').getBoundingClientRect(),th=t.querySelector('.glass-thumb').getBoundingClientRect();return {inScreen:q.left>=0&&q.right<=innerWidth,onVisible:on.left>=q.left-1&&on.right<=q.right+1,thumb:Math.abs(th.left-on.left)<=1};});
     assert.ok(g.inScreen&&g.onVisible&&g.thumb,`${w}: Material track fits, shows the choice, thumb on it ${JSON.stringify(g)}`);
     await seg.getByRole('radio',{name:'Soft'}).click();}

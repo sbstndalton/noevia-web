@@ -103,7 +103,7 @@
 .app .sidebar.pane.is-expanded .side-footer { padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom)); }
 [data-material='soft'] .app .sidebar.pane .side-footer { background: var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; }
 
-/* ── The accent palettes (Settings → Appearance) ───────────────────────────
+/* ── The accent palettes (Settings → General) ───────────────────────────
    Each tile carries its own `data-palette`, so the swatch is drawn by the very
    tokens that palette would apply — a preview, not an approximation. */
 .accent-choice { display: flex; flex-wrap: wrap; gap: var(--space-3); }

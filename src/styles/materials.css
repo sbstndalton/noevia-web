@@ -173,7 +173,7 @@ html[data-lens='svg'] .glass-seg.is-moving > .glass-thumb, html[data-lens='svg']
   .glass-switch:active > .knob { --glass-fill: rgba(255, 255, 255, .94); }
 }
 
-/* ── Material modes (Settings → Appearance → Material; html[data-material]) ─────────
+/* ── Material modes (Settings → General → Material; html[data-material]) ─────────
    liquid           · real refraction, inner glow, hover lift and tilt on glass buttons.
    glass            · glassmorphism: frosted blur, white rim and inset highlight, two
                       reflection gradients, no distortion (every browser).

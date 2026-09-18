@@ -29,10 +29,10 @@ const {createFixture}=require('./diary-fixture.cjs');
  const dialog=page.getByRole('region',{name:'Settings'});
  // Opening Settings lands on Profile: identity only.
  assert.equal(await dialog.getByRole('button',{name:'General',exact:true}).count(),0);
- await dialog.getByRole('button',{name:'Profile',exact:true}).click();
+ await dialog.getByRole('button',{name:'Account',exact:true}).click();
 
  // ── Profile ──
- await dialog.getByRole('heading',{name:'Profile',level:1}).waitFor();
+ await dialog.getByRole('heading',{name:'Account',level:1}).waitFor();
  assert.equal(await dialog.getByLabel('Display name').inputValue(),'Synthetic admin');
  assert.ok(await dialog.getByText('adminqa',{exact:true}).isVisible(),'the username is not shown');
  assert.ok(await dialog.getByText('Administrator',{exact:true}).isVisible());
@@ -44,8 +44,8 @@ const {createFixture}=require('./diary-fixture.cjs');
  assert.equal(displayName,'Renamed admin');
 
  assert.equal(await dialog.getByText('Chat font').count(),0,'appearance leaked onto Profile');
- await dialog.getByRole('button',{name:'Appearance',exact:true}).click();
- await dialog.getByRole('heading',{name:'Appearance',level:1}).waitFor(); const glassTarget=dialog.getByRole('button',{name:'Security',exact:true});await glassTarget.hover({position:{x:30,y:12}});await page.waitForTimeout(80);const glass=await glassTarget.evaluate(el=>({active:el.hasAttribute('data-glass-active'),x:el.style.getPropertyValue('--glass-x'),after:getComputedStyle(el,'::after').opacity}));assert.equal(glass.active,true,JSON.stringify(glass));assert.equal(glass.x,'30px');await page.mouse.move(5,5);
+ await dialog.getByRole('button',{name:'General',exact:true}).click();
+ await dialog.getByRole('heading',{name:'General',level:1}).waitFor(); const glassTarget=dialog.getByRole('button',{name:'Security and login',exact:true});await glassTarget.hover({position:{x:30,y:12}});await page.waitForTimeout(80);const glass=await glassTarget.evaluate(el=>({active:el.hasAttribute('data-glass-active'),x:el.style.getPropertyValue('--glass-x'),after:getComputedStyle(el,'::after').opacity}));assert.equal(glass.active,true,JSON.stringify(glass));assert.equal(glass.x,'30px');await page.mouse.move(5,5);
  // ── Preferences actually change the page ──
  const attr=name=>page.evaluate(n=>document.documentElement.getAttribute(n),name);
  assert.equal(await attr('data-chat-font'),'sans');

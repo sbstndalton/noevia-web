@@ -22,7 +22,7 @@ const PORT=31385,OLD=`http://old.localhost:${PORT}`,NEW=`http://new.localhost:${
   const addPasskeyInSettings=async()=>{
    await page.getByTitle('Settings',{exact:true}).click();
    const s=page.getByRole('region',{name:'Settings'});await s.waitFor();
-   await s.getByRole('button',{name:'Security',exact:true}).click();
+   await s.getByRole('button',{name:'Security and login',exact:true}).click();
    await s.getByRole('button',{name:'+ Add passkey'}).click();
    await s.getByText('Passkey added.').waitFor({timeout:15000});
    await s.getByRole('button',{name:'Close settings'}).click();
