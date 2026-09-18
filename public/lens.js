@@ -63,7 +63,7 @@
       if (resize) resize.observe(node);
     });
   }
-  function active() { return chromium && !calm.matches; }
+  function active() { return chromium && !calm.matches && (root.getAttribute('data-material') || 'liquid') === 'liquid'; }
   function sync() {
     if (active()) { root.setAttribute('data-lens', 'svg'); scan(); } else root.removeAttribute('data-lens');
   }
@@ -71,6 +71,7 @@
   if (!chromium) return;
   sync();
   calm.addEventListener('change', sync);
+  new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-material'] });
   let queued = false;
   new MutationObserver(() => { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; scan(); }); })
     .observe(document.body, { subtree: true, childList: true });

@@ -15,6 +15,7 @@
     ['noevia:chat-font', 'data-chat-font', ['sans', 'serif', 'mono']],
     ['noevia:density', 'data-density', ['comfortable', 'compact']],
     ['noevia:motion', 'data-motion', ['system', 'reduced']],
+    ['noevia:material', 'data-material', ['liquid', 'glass', 'soft']],
   ]) {
     let value = allowed[0];
     try { const saved = localStorage.getItem(key); if (allowed.includes(saved)) value = saved; } catch { /* use the default */ }

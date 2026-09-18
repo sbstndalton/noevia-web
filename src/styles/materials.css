@@ -130,6 +130,8 @@ html[data-lens='svg'] .glass-seg.is-moving > .glass-thumb, html[data-lens='svg']
   transition: transform var(--duration-slow) var(--ease-spring), width var(--duration-fast) var(--ease-spring), background-color var(--duration-fast) var(--ease-standard);
 }
 .glass-switch[aria-checked='true'] > .knob { transform: translateX(22px); }
+/* 44px hit area around the 30px track (HIG touch target). */
+.glass-switch::before { content: ''; position: absolute; inset: -7px -2px; }
 /* Pressed: the knob stretches and clears into a lens over the track. */
 .glass-switch:active > .knob { width: 36px; --glass-fill: rgba(255, 255, 255, .16); }
 .glass-switch[aria-checked='true']:active > .knob { transform: translateX(12px); }
@@ -164,4 +166,76 @@ html[data-lens='svg'] .glass-seg.is-moving > .glass-thumb, html[data-lens='svg']
   .aero { background: var(--md-surface-container-low); backdrop-filter: none; -webkit-backdrop-filter: none; }
   .aero::before { display: none; }
   .glass-switch:active > .knob { --glass-fill: rgba(255, 255, 255, .94); }
+}
+
+/* ── Material modes (Settings → Appearance → Material; html[data-material]) ─────────
+   liquid (default) · real refraction, inner glow, hover lift and tilt on glass buttons.
+   glass            · glassmorphism: frosted blur, white rim and inset highlight, two
+                      reflection gradients, no distortion (every browser).
+   soft             · neumorphism: opaque, same colour as the canvas, shaped only by a
+                      paired light and dark shadow from the top left; pressed = inset.
+   Values follow the Aether CSS generators and nikdelvin/liquid-glass, adapted to tokens. */
+
+/* Liquid: inner glow (Aether) and a hover lift with a slight tilt toward the pointer. */
+:root:not([data-material]) .glass, [data-material='liquid'] .glass {
+  box-shadow:
+    inset 0 0 20px -6px rgba(255, 255, 255, .55),
+    inset 0 1px 0 var(--glass-edge),
+    inset 0 -1px 0 color-mix(in srgb, var(--glass-rim) 70%, transparent),
+    0 1px 2px var(--glass-shadow),
+    0 10px 24px -10px var(--glass-shadow);
+}
+.glass.is-press, .glass-press {
+  transition: transform var(--duration-fast) var(--ease-spring), box-shadow var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard);
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  :root:not([data-material]) .glass.is-press:hover, [data-material='liquid'] .glass.is-press:hover {
+    transform: perspective(400px) rotateX(calc(var(--tilt-y, 0) * 1deg)) rotateY(calc(var(--tilt-x, 0) * 1deg)) scale(1.04);
+  }
+}
+.glass.is-press:active { transform: scale(.95); }
+
+/* Glassmorphism. */
+[data-material='glass'] .glass, [data-material='glass'] .glass-seg > .glass-thumb {
+  --glass-fill: color-mix(in srgb, var(--md-surface-container-lowest) 16%, transparent);
+  border: 1px solid rgba(255, 255, 255, .22);
+  backdrop-filter: blur(14px) saturate(130%); -webkit-backdrop-filter: blur(14px) saturate(130%);
+  box-shadow: 2px 6px 28px 0 rgba(var(--shadow-rgb), .2), inset 0 0 4px 2px rgba(255, 255, 255, .3);
+}
+[data-material='glass'] .glass::before {
+  opacity: 1;
+  background: linear-gradient(to left top, rgba(255, 255, 255, .15), transparent 50%), linear-gradient(to bottom, rgba(255, 255, 255, .09), transparent);
+}
+/* Only liquid glass lays its thumb over the labels (to refract them); frosted and soft
+   thumbs sit beneath, so the chosen label stays sharp. */
+[data-material='glass'] .glass-seg > .glass-thumb, [data-material='soft'] .glass-seg > .glass-thumb { z-index: 0; }
+[data-material='glass'] .glass-seg > button, [data-material='soft'] .glass-seg > button { z-index: 1; }
+[data-material='glass'] .pane { --pane-blur: 18px; --pane-fill: color-mix(in srgb, var(--md-surface-container-low) 62%, transparent); box-shadow: inset 0 0 4px 1px rgba(255, 255, 255, .12), var(--shadow-3); }
+[data-material='glass'] .glass-switch > .knob { --glass-fill: rgba(255, 255, 255, .9); }
+
+/* Soft (neumorphism). Shadows are the only edge, so they follow the mode: a lighter
+   highlight in light, a faint one in dark where pure white would glow. */
+[data-material='soft'] { --soft-hi: rgba(255, 255, 255, .9); --soft-lo: rgba(var(--shadow-rgb), .16); --soft-d: 6px; --soft-b: 14px; }
+:root:not([data-theme='light'])[data-material='soft'] { --soft-hi: rgba(255, 255, 255, .07); --soft-lo: rgba(0, 0, 4, .75); }
+[data-material='soft'] body { background: var(--bg-app); }
+[data-material='soft'] .pane, [data-material='soft'] .surface, [data-material='soft'] .aero {
+  background: var(--bg-app); border-color: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: calc(var(--soft-d) * -1) calc(var(--soft-d) * -1) var(--soft-b) var(--soft-hi), var(--soft-d) var(--soft-d) var(--soft-b) var(--soft-lo);
+}
+[data-material='soft'] .aero::before { display: none; }
+[data-material='soft'] .glass, [data-material='soft'] .glass-seg > .glass-thumb {
+  background: var(--bg-app); border-color: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: -3px -3px 7px var(--soft-hi), 3px 3px 7px var(--soft-lo);
+}
+[data-material='soft'] .glass::before { display: none; }
+[data-material='soft'] .glass.is-primary { background: var(--md-primary); }
+/* Wells: segmented tracks and switch tracks are pressed into the surface. */
+[data-material='soft'] .glass-seg, [data-material='soft'] .glass-switch:not([aria-checked='true']) {
+  background: var(--bg-app);
+  box-shadow: inset 3px 3px 6px var(--soft-lo), inset -3px -3px 6px var(--soft-hi);
+}
+[data-material='soft'] .glass-switch > .knob { background: var(--bg-app); box-shadow: -2px -2px 5px var(--soft-hi), 2px 2px 5px var(--soft-lo); }
+[data-material='soft'] .glass-switch:active > .knob { --glass-fill: var(--bg-app); }
+[data-material='soft'] .glass:active, [data-material='soft'] .glass[aria-pressed='true'] {
+  box-shadow: inset 3px 3px 6px var(--soft-lo), inset -3px -3px 6px var(--soft-hi);
 }

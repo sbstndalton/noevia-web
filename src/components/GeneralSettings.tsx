@@ -73,6 +73,9 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
         <Row label="Chat font" description="The typeface for messages. The rest of the interface is unchanged.">
           <Choice name="chatFont" onChange={bump} options={[['sans', 'Sans (default)'], ['serif', 'Serif'], ['mono', 'Monospace']]} />
         </Row>
+        <Row label="Material" description="How controls and panels are drawn. Liquid glass bends what is behind it (Chrome and Edge; other browsers get frosted glass). Glassmorphism is frosted without bending. Soft shapes everything with shadow instead of glass.">
+          <Choice name="material" onChange={bump} options={[['liquid', 'Liquid glass'], ['glass', 'Glassmorphism'], ['soft', 'Soft']]} />
+        </Row>
         <Row label="Density" description="Compact tightens the spacing around things without shrinking anything you tap.">
           <Choice name="density" onChange={bump} options={[['comfortable', 'Comfortable'], ['compact', 'Compact']]} />
         </Row>
