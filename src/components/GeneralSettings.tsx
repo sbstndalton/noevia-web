@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
+import { SegmentedControl } from './SegmentedControl';
 import { LayoutModeChoice, layoutModeDescription } from './LayoutMode';
 import { fetchHealth, fetchProfile, fetchToolboxes, updateProfile } from '../api';
 import type { AuthUser } from '../api';
@@ -17,10 +18,12 @@ function Row({ label, description, children }: { label: string; description: str
   </div>;
 }
 
-function Choice<N extends PreferenceName>({ name, options, onChange }: {
-  name: N; options: [string, string][]; onChange: () => void;
+function Choice<N extends PreferenceName>({ name, options, onChange, segmented }: {
+  name: N; options: [string, string][]; onChange: () => void; segmented?: string;
 }): JSX.Element {
   const [value, setValue] = useState(() => readPreference(name));
+  if (segmented) return <SegmentedControl label={segmented} value={value as string} options={options}
+    onChange={(next) => { setValue(next as typeof value); writePreference(name, next as typeof value); onChange(); }} />;
   return <select aria-label={name} value={value} onChange={(e) => {
     const next = e.target.value as typeof value;
     setValue(next); writePreference(name, next); onChange();
@@ -73,14 +76,14 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
         <Row label="Chat font" description="The typeface for messages. The rest of the interface is unchanged.">
           <Choice name="chatFont" onChange={bump} options={[['sans', 'Sans (default)'], ['serif', 'Serif'], ['mono', 'Monospace']]} />
         </Row>
-        <Row label="Material" description="How controls and panels are drawn. Liquid glass bends what is behind it (Chrome and Edge; other browsers get frosted glass). Glassmorphism is frosted without bending. Soft shapes everything with shadow instead of glass.">
-          <Choice name="material" onChange={bump} options={[['liquid', 'Liquid glass'], ['glass', 'Glassmorphism'], ['soft', 'Soft']]} />
+        <Row label="Material" description="How controls and panels are drawn. Soft shapes everything with light and shadow. Liquid glass bends what is behind it (Chrome and Edge; elsewhere it is frosted). Glassmorphism is frosted without bending. Material 3 is flat, tonal Android style.">
+          <Choice name="material" segmented="Material" onChange={bump} options={[['soft', 'Soft'], ['liquid', 'Liquid glass'], ['glass', 'Glassmorphism'], ['material', 'Material 3']]} />
         </Row>
         <Row label="Density" description="Compact tightens the spacing around things without shrinking anything you tap.">
-          <Choice name="density" onChange={bump} options={[['comfortable', 'Comfortable'], ['compact', 'Compact']]} />
+          <Choice name="density" segmented="Density" onChange={bump} options={[['comfortable', 'Comfortable'], ['compact', 'Compact']]} />
         </Row>
         <Row label="Motion" description="System follows your operating system's reduce-motion setting. Reduced turns animation off here regardless.">
-          <Choice name="motion" onChange={bump} options={[['system', 'System'], ['reduced', 'Reduced']]} />
+          <Choice name="motion" segmented="Motion" onChange={bump} options={[['system', 'System'], ['reduced', 'Reduced']]} />
         </Row>
         <Row label="Layout" description={layoutModeDescription()}>
           <LayoutModeChoice />

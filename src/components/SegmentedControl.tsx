@@ -1,0 +1,52 @@
+import { useLayoutEffect, useRef, type JSX, type KeyboardEvent } from 'react';
+
+// A radio group drawn as one track with a glass thumb that slides to the chosen option
+// (materials.css .glass-seg). In the liquid material the thumb refracts the labels while
+// it travels; `.is-moving` marks that window. Arrow keys move the choice, as in a radio group.
+export function SegmentedControl<T extends string>({ label, value, options, onChange }: {
+  label: string; value: T; options: [T, string][]; onChange: (value: T) => void;
+}): JSX.Element {
+  const track = useRef<HTMLDivElement>(null);
+  const timer = useRef<number>(0);
+
+  useLayoutEffect(() => {
+    const node = track.current;
+    if (!node) return;
+    const place = () => {
+      const on = node.querySelector<HTMLElement>('[aria-checked="true"]');
+      if (!on) return;
+      node.style.setProperty('--thumb-w', `${on.offsetWidth}px`);
+      node.style.setProperty('--thumb-x', `${on.offsetLeft}px`);
+    };
+    place();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(place);
+    observer?.observe(node);
+    return () => observer?.disconnect();
+  }, [value, options.length]);
+
+  const choose = (next: T) => {
+    if (next === value) return;
+    const node = track.current;
+    if (node) {
+      node.classList.add('is-moving');
+      window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => node.classList.remove('is-moving'), 380);
+    }
+    onChange(next);
+  };
+  const onKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
+    if (!step) return;
+    event.preventDefault();
+    const index = options.findIndex(([id]) => id === value);
+    const next = options[(index + step + options.length) % options.length][0];
+    choose(next);
+    requestAnimationFrame(() => track.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus());
+  };
+
+  return <div ref={track} className="glass-seg" role="radiogroup" aria-label={label} onKeyDown={onKey}>
+    {options.map(([id, text]) => <button key={id} type="button" role="radio" aria-checked={id === value}
+      tabIndex={id === value ? 0 : -1} onClick={() => choose(id)}>{text}</button>)}
+    <span className="glass-thumb glass glass-lens" aria-hidden="true" />
+  </div>;
+}

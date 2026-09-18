@@ -12,7 +12,7 @@ export const PREFERENCES = {
   chatFont: { key: 'noevia:chat-font', attribute: 'data-chat-font', values: ['sans', 'serif', 'mono'] as const },
   density: { key: 'noevia:density', attribute: 'data-density', values: ['comfortable', 'compact'] as const },
   motion: { key: 'noevia:motion', attribute: 'data-motion', values: ['system', 'reduced'] as const },
-  material: { key: 'noevia:material', attribute: 'data-material', values: ['liquid', 'glass', 'soft'] as const },
+  material: { key: 'noevia:material', attribute: 'data-material', values: ['soft', 'liquid', 'glass', 'material'] as const },
 };
 
 export type PreferenceName = keyof typeof PREFERENCES;

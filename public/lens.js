@@ -63,7 +63,7 @@
       if (resize) resize.observe(node);
     });
   }
-  function active() { return chromium && !calm.matches && (root.getAttribute('data-material') || 'liquid') === 'liquid'; }
+  function active() { return chromium && !calm.matches && root.getAttribute('data-material') === 'liquid'; }
   function sync() {
     if (active()) { root.setAttribute('data-lens', 'svg'); scan(); } else root.removeAttribute('data-lens');
   }
