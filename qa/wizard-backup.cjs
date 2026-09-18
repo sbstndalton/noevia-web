@@ -47,14 +47,22 @@ const PORT=31384,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
   // Connect from the wizard: code, approval, and the step confirms by itself.
   await page.setViewportSize({width:1440,height:900});
   await toBackupStep();
-  await page.getByRole('button',{name:'Connect Google Drive'}).click();
+  // Google's page opens in a new tab by itself, pointed at the sign-in address.
+  const [googleTab]=await Promise.all([page.context().waitForEvent('page'),page.getByRole('button',{name:'Connect Google Drive'}).click()]);
   await page.getByLabel('Google sign-in code').waitFor();
+  await googleTab.waitForURL(/\/device$/);await googleTab.getByText('Code: WDJB-MJHT').waitFor();await googleTab.close();
   if(shots)await page.screenshot({path:`${shots}/wizard-backup-pending-1440.png`,fullPage:true});
   google.approve();
   await page.getByText('Google Drive is connected as backup-owner@example.com.').waitFor({timeout:20000});
   await page.getByRole('button',{name:'Continue',exact:true}).click();
   await page.getByRole('heading',{name:'Preferences'}).waitFor();
+  // Regression: in light mode, picking palettes kept switching the page to dark.
+  await page.getByLabel('Light theme').check();
+  for(const p of ['Warm','Neutral','Sage'])await page.getByRole('button',{name:`${p} palette`}).click();
+  assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'light','stays light while choosing palettes');
+  assert.equal(await page.evaluate(()=>document.documentElement.dataset.palette),'sage');
+  assert.ok(await page.getByLabel('Light theme').isChecked());
   assert.deepEqual(errors,[]);
-  console.log('PASS wizard backup: admin sees a one-button Google Drive step (375/768/1440 light/dark), nothing to paste, skip works, connecting shows the code and confirms by itself after approval.');
+  console.log('PASS wizard backup: admin sees a one-button Google Drive step (375/768/1440 light/dark), nothing to paste, skip works, connecting opens Google in a new tab, shows the code and confirms by itself after approval; light mode stays light while picking palettes.');
  }finally{await browser.close();server.kill('SIGKILL');await google.close();fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

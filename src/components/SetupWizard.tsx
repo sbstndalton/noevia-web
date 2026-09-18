@@ -1,5 +1,5 @@
 import { PalettePicker } from './PalettePicker';
-import { updateThemeColor } from '../appearance';
+import { applyAppearance, savedPalette } from '../appearance';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { startRegistration } from '@simplewebauthn/browser';
@@ -93,9 +93,10 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
   const timezoneSetting = timezoneEnvSetting(timezone);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('cowork-theme', theme);
-    updateThemeColor();
+    // Through applyAppearance, so the saved preference and data-theme-preference follow the
+    // choice too. Setting only data-theme left the preference stale, and picking a palette then
+    // re-applied that stale mode: light was ticked while the page turned dark.
+    applyAppearance({ theme, light: savedPalette('light'), dark: savedPalette('dark') });
   }, [theme]);
 
   useEffect(() => {
@@ -318,6 +319,7 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
               <input type="radio" name="wiz-theme" checked={theme === 'dark'} onChange={() => setTheme('dark')} />
               <span><strong>Dark theme</strong></span>
             </label>
+            <PalettePicker theme={theme}/>
             <label className="auth-option">
               <input type="checkbox" checked={autoRouting} onChange={(e) => setAutoRouting(e.target.checked)} />
               <span>
@@ -325,7 +327,6 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
                 <small>Lets noevia pick a lighter or heavier model per message. Choose available models beside the composer’s Send button.</small>
               </span>
             </label>
-            <PalettePicker theme={theme}/>
             {mode !== 'invited' && <div style={{marginBlock:16}}><ReasoningControl global/><small>Changing the thinking default saves immediately for this deployment. Members inherit it unless a project overrides it.</small></div>}
             <label htmlFor="wiz-timezone">Your timezone</label>
             <input
