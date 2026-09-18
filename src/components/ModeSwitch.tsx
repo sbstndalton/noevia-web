@@ -10,7 +10,7 @@ let lastMode: Mode | null = null;
 
 /** Chat ⇄ Code, with the liquid-glass thumb the other segmented controls use: it slides to
  *  the chosen mode and refracts while it travels (user review, 2026-09-18). */
-export function ModeSwitch({ mode, onChat, onCode }: { mode: Mode; onChat?: () => void; onCode?: () => void }): JSX.Element {
+export function ModeSwitch({ mode, onChat, onCode, compact = false }: { mode: Mode; onChat?: () => void; onCode?: () => void; compact?: boolean }): JSX.Element {
   const track = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const node = track.current;
@@ -50,10 +50,10 @@ export function ModeSwitch({ mode, onChat, onCode }: { mode: Mode; onChat?: () =
     return () => { cancelAnimationFrame(frame); window.clearTimeout(timer); observer?.disconnect(); };
   }, [mode]);
   return (
-    <div ref={track} className="app-mode-switch has-thumb" role="group" aria-label="Workspace mode">
+    <div ref={track} className={`app-mode-switch has-thumb${compact ? ' is-compact' : ''}`} role="group" aria-label="Workspace mode">
       <span className="glass-thumb glass glass-lens" aria-hidden="true" />
-      <button type="button" data-mode="chat" className={mode === 'chat' ? 'is-selected' : ''} aria-pressed={mode === 'chat'} onClick={mode === 'chat' ? undefined : onChat}><ShellIcon name="chat"/>Chat</button>
-      <button type="button" data-mode="code" className={mode === 'code' ? 'is-selected' : ''} aria-pressed={mode === 'code'} onClick={mode === 'code' ? undefined : onCode}><ShellIcon name="code"/>Code</button>
+      <button type="button" data-mode="chat" className={mode === 'chat' ? 'is-selected' : ''} aria-pressed={mode === 'chat'} aria-label="Chat" title="Chat" onClick={mode === 'chat' ? undefined : onChat}><ShellIcon name="chat" size={compact ? 16 : 18}/>{!compact && 'Chat'}</button>
+      <button type="button" data-mode="code" className={mode === 'code' ? 'is-selected' : ''} aria-pressed={mode === 'code'} aria-label="Code" title="Code" onClick={mode === 'code' ? undefined : onCode}><ShellIcon name="code" size={compact ? 16 : 18}/>{!compact && 'Code'}</button>
     </div>
   );
 }

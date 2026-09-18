@@ -344,9 +344,9 @@ export function Sidebar({
         if (collapsed && !mobile && !(e.target as HTMLElement).closest('button, a, input')) setCollapsed(false);
       }}
     >
-      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? 'Close navigation' : collapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div></div>
-      {showPreviews && <ModeSwitch mode="chat" onCode={onEnterCode}/>}
-      {searching&&<input className="shell-search" autoFocus aria-label="Search projects and chats" placeholder="Search projects and chats…" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');}}}/>}
+      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? 'Close navigation' : collapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div>{/* Like Claude's: a small icon-only Chat/Code switch at the end of the header row. Switching
+          closes the phone drawer, so the new mode is what you see. */}{showPreviews && <ModeSwitch compact mode="chat" onCode={() => { setExpanded(false); onEnterCode(); }}/>}</div>
+      {/* On a phone the drawer always shows the search field under its header, as Claude's does. */}{(searching || (mobile && expanded))&&<input className="shell-search" autoFocus={searching} aria-label="Search projects and chats" placeholder="Search projects and chats…" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');}}}/>}
 
       <button className="new-chat-btn glass glass-lens" onClick={()=>{onNewChat();setExpanded(false);}} title="New chat">
         <ShellIcon name="compose" size={17}/>

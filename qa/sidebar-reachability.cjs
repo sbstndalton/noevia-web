@@ -58,7 +58,9 @@ const {createFixture}=require('./diary-fixture.cjs');
   assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Open navigation','focus returns to the toggle');
   await toggle.click();await drawer.waitFor();await page.getByRole('button',{name:'Close navigation',exact:true}).click();await drawer.waitFor({state:'hidden'});
   await page.setViewportSize({width:600,height:740});await toggle.click();await drawer.waitFor();
-  await page.locator('.nav-drawer-backdrop').click({position:{x:590,y:400}});await drawer.waitFor({state:'hidden'});
+  // The phone drawer is full width, like Claude's, so there is no backdrop to tap: its close
+  // button in the header dismisses it.
+  await drawer.getByRole('button',{name:'Close navigation',exact:true}).click();await drawer.waitFor({state:'hidden'});
   await page.setViewportSize({width:375,height:740});await toggle.click();await drawer.waitFor();
   await drawer.getByRole('button',{name:'Projects',exact:true}).first().click();await drawer.waitFor({state:'hidden'});
   await page.getByRole('heading',{name:'Projects',level:1}).waitFor();
