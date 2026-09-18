@@ -1919,12 +1919,11 @@ body { isolation:isolate; background:var(--bg-app); }
 .code-limitations ul { margin: 0 0 4px; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; line-height: 1.5; }
 @media (pointer: coarse), (max-width: 640px) { .code-limitations > summary { min-height: 44px; } }
 
-/* Connect Google Drive: numbered steps with a copyable command each (Backups and the wizard). */
+/* Connect Google Drive (Backups and the wizard): one button, then the code Google asks for. */
 .gdrive-connect { margin-top: 24px; }
-.gdrive-setup ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 16px; line-height: 1.5; }
-.gdrive-setup li > div { margin-top: 8px; }
-.gdrive-command { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; min-width: 0; }
-.gdrive-command textarea { flex: 1; min-width: 0; min-height: 44px; resize: none; field-sizing: content; max-height: 9.5em; padding: 10px 12px; border: 1px solid var(--control-border); border-radius: 8px; background: var(--bg); color: var(--text); font-family: ui-monospace, monospace; font-size: var(--text-caption); line-height: 1.45; word-break: break-all; }
-.gdrive-command button, .gdrive-setup button { min-height: 44px; flex: none; }
-.gdrive-reconnect { margin-top: 20px; }
-.gdrive-reconnect summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }
+.gdrive-note { color: var(--text-secondary); font-size: var(--text-footnote); line-height: 1.5; }
+.gdrive-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.gdrive-actions .btn, .gdrive-code .btn, .gdrive-note .btn { min-height: 44px; display: inline-flex; align-items: center; }
+.gdrive-note .btn { margin-top: 8px; text-decoration: none; }
+.gdrive-code { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px; }
+.gdrive-code output { font-family: ui-monospace, monospace; font-size: var(--text-title2, 1.5rem); font-weight: 700; letter-spacing: 0.08em; padding: 8px 16px; border: 1px solid var(--control-border); border-radius: 10px; background: var(--bg); }

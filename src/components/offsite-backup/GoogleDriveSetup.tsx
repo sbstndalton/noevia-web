@@ -1,60 +1,86 @@
-import { useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
+import { apiFetch } from '../../api';
 
-export interface ConnectInfo { sshHost: string | null; script: string; keyFile: string; rcloneConfig: string }
+/** What the server says about Google Drive. Tokens never leave the server. */
+export interface GoogleState {
+  configured: boolean;
+  state: 'not-configured' | 'disconnected' | 'pending' | 'connected' | 'error';
+  message?: string;
+  userCode?: string; verificationUrl?: string; expiresAt?: number;
+  email?: string | null;
+  copy?: { state: 'ok' | 'waiting' | 'refused' | 'failed' | 'stale' | 'unknown'; at: number | null; message: string } | null;
+}
 
-/** How the admin reaches the server over SSH. Unraid logs in as root; a configured alias wins. */
-export const sshTarget = (c: ConnectInfo) => c.sshHost || `root@${window.location.hostname}`;
+const when = (ms?: number | null) => (ms ? new Date(ms).toLocaleString() : 'never');
+
+async function post(url: string): Promise<void> {
+  const r = await apiFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Request failed (${r.status})`);
+}
+
+/** The copy's result in plain words, and whether it needs attention. */
+export function copyText(g: GoogleState): { value: string; tone?: 'error' } {
+  const c = g.copy;
+  if (!c || c.state === 'unknown') return { value: 'Connected · the first copy is on its way.' };
+  if (c.state === 'ok') return { value: `Connected · last copied ${when(c.at)}` };
+  if (c.state === 'waiting') return { value: 'Connected · waiting for the first backup.' };
+  return { value: `${c.message}${c.at ? ` (${when(c.at)})` : ''}`, tone: 'error' };
+}
 
 /**
- * The one-time Google sign-in, as a single paste for a Mac or Linux terminal.
- *
- * It runs on the admin's own computer because Google sends the browser back to localhost:53682
- * there. The token goes straight into the server's rclone config over SSH — never on screen,
- * never in shell history, and never through noevia (D23). It creates the `gdrive` remote if it
- * is missing, then runs the first copy so the page can confirm it worked.
+ * Connect Google Drive with one button. The server starts Google's device sign-in and waits for
+ * approval in the background; this only shows the code and refreshes until Google says yes.
+ * Shared by the setup wizard and Settings → Backups.
  */
-export function connectCommand(c: ConnectInfo): string {
-  const host = sshTarget(c);
-  const unwrap = `import sys,json,base64;t=open(sys.argv[1]).read();b=t.split('--->')[-1].split('<---')[0].strip();d=None if b.startswith('{') else json.loads(base64.urlsafe_b64decode(b+'='*(-len(b)%4)));tok=b if d is None else d.get('token',d);tok=tok if isinstance(tok,str) else json.dumps(tok);json.loads(tok)['access_token'];print(tok)`;
-  const remote = `export RCLONE_CONFIG=${c.rcloneConfig}; mkdir -p \\$(dirname \\$RCLONE_CONFIG); rclone listremotes 2>/dev/null | grep -qx gdrive: || rclone config create gdrive drive scope=drive.file --non-interactive >/dev/null; rclone config update gdrive token '$TOKEN' config_refresh_token=false --non-interactive >/dev/null && bash ${c.script}`;
-  return `command -v rclone >/dev/null || brew install rclone; F=$(mktemp); rclone authorize "drive" "eyJzY29wZSI6ImRyaXZlLmZpbGUifQ" >"$F"; TOKEN=$(python3 -c "${unwrap}" "$F" 2>/dev/null); if [ -n "$TOKEN" ]; then ssh ${host} "${remote}"; else echo "Could not read the token. Close any ssh -L tunnel on port 53682 and try again."; fi; rm -f "$F"; unset TOKEN F`;
-}
-
-export const keyCommand = (c: ConnectInfo) => `ssh ${sshTarget(c)} cat ${c.keyFile}`;
-
-/** Steps to connect Google Drive. Shared by the setup wizard and Settings → Backups. */
-export function GoogleDriveSetup({ connect, onCheck, checking }: { connect: ConnectInfo; onCheck: () => void; checking?: boolean }): JSX.Element {
-  return <div className="gdrive-setup">
-    <ol>
-      <li>
-        <strong>Save your backup key.</strong> Without it, the copy on Google Drive can never be opened, not even by you.
-        Run this in Terminal on your Mac and put the line it prints into your password manager, then clear the terminal.
-        <Command text={keyCommand(connect)} label="Command to show the backup key"/>
-      </li>
-      <li>
-        <strong>Sign in to Google.</strong> Paste this into Terminal on your Mac (not in an SSH session). Your browser opens; choose your account and click Allow.
-        noevia only gets access to the files it creates, and never sees your password.
-        <Command text={connectCommand(connect)} label="Command to connect Google Drive"/>
-      </li>
-      <li>
-        <strong>Check it worked.</strong> When the terminal says <code>OK mirrored</code>, check here.
-        <div><button type="button" className="btn btn-secondary" disabled={checking} onClick={onCheck}>{checking ? 'Checking…' : 'Check connection'}</button></div>
-      </li>
-    </ol>
-  </div>;
-}
-
-function Command({ text, label }: { text: string; label: string }): JSX.Element {
-  const box = useRef<HTMLTextAreaElement>(null);
-  const [copied, setCopied] = useState('');
-  const copy = async () => {
-    try { await navigator.clipboard.writeText(text); setCopied('Copied'); }
-    catch { box.current?.select(); setCopied('Selected — press ⌘C'); }
-    window.setTimeout(() => setCopied(''), 2500);
+export function GoogleDriveConnect({ google, onChange }: { google: GoogleState; onChange: () => Promise<unknown> | void }): JSX.Element {
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
+  const act = async (label: string, url: string) => {
+    setBusy(label); setError('');
+    try { await post(url); } catch (e) { setError((e as Error).message); } finally { setBusy(''); await onChange(); }
   };
-  return <div className="gdrive-command">
-    <textarea ref={box} readOnly aria-label={label} value={text} rows={text.length > 120 ? 4 : 1} spellCheck={false} onFocus={(e) => e.currentTarget.select()}/>
-    <button type="button" className="btn btn-secondary" onClick={() => void copy()}>{copied || 'Copy'}</button>
+  // While Google waits for approval, check every few seconds so the page turns green by itself.
+  useEffect(() => {
+    if (google.state !== 'pending') return;
+    const t = window.setInterval(() => { void onChange(); }, 3000);
+    return () => window.clearInterval(t);
+  }, [google.state, onChange]);
+
+  if (google.state === 'not-configured') return <p className="gdrive-note">Google Drive isn’t available in this version of noevia.</p>;
+
+  if (google.state === 'pending') return <div className="gdrive-pending" aria-live="polite">
+    <p>Open <a href={google.verificationUrl} target="_blank" rel="noreferrer">{google.verificationUrl?.replace(/^https?:\/\//, '')}</a> on any device, sign in to Google, and enter this code:</p>
+    <div className="gdrive-code">
+      <output aria-label="Google sign-in code">{google.userCode}</output>
+      <button type="button" className="btn btn-secondary" onClick={() => { void navigator.clipboard?.writeText(google.userCode || '').then(() => setCopied(true), () => undefined); }}>{copied ? 'Copied' : 'Copy code'}</button>
+    </div>
+    <p className="gdrive-note">Waiting for you to click Allow… This page updates by itself.</p>
+    <div className="gdrive-actions">
+      <a className="btn btn-primary" href={google.verificationUrl} target="_blank" rel="noreferrer">Open Google</a>
+      <button type="button" className="btn btn-secondary" disabled={!!busy} onClick={() => void act('cancel', '/api/admin/offsite-backup/google/disconnect')}>Cancel</button>
+    </div>
   </div>;
+
+  if (google.state === 'connected') return <div className="gdrive-connected">
+    {error && <p className="route-note" role="alert">{error}</p>}
+    <div className="gdrive-actions">
+      <button type="button" className="btn btn-secondary" disabled={!!busy} onClick={() => void act('copy', '/api/admin/offsite-backup/copy')}>{busy === 'copy' ? 'Copying…' : 'Copy to Drive now'}</button>
+      <button type="button" className="btn btn-secondary" disabled={!!busy} onClick={() => void act('disconnect', '/api/admin/offsite-backup/google/disconnect')}>Disconnect</button>
+    </div>
+  </div>;
+
+  return <div className="gdrive-start">
+    {(google.message || error) && <p className="route-note" role="alert">{error || google.message}</p>}
+    <p className="gdrive-note">noevia only gets access to the files it creates in your Drive. Everything is encrypted before it leaves this server.</p>
+    <div className="gdrive-actions">
+      <button type="button" className="btn btn-primary" disabled={!!busy} onClick={() => void act('connect', '/api/admin/offsite-backup/google/connect')}>{busy === 'connect' ? 'Starting…' : 'Connect Google Drive'}</button>
+    </div>
+  </div>;
+}
+
+/** The backup key as a file, for a password manager. */
+export function RecoveryKeyLink(): JSX.Element {
+  return <a className="btn btn-secondary" href="/api/admin/offsite-backup/recovery-key" download>Download recovery key</a>;
 }

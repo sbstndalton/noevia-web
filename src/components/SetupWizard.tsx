@@ -18,15 +18,15 @@ import { classifyOrigin, isIpAddressHost } from '../browser-support';
 import { timezoneEnvSetting } from '../setup-timezone';
 import { ProviderForm } from './ProviderForm';
 import { StorageChoice } from './StorageChoice';
-import { GoogleDriveSetup } from './offsite-backup/GoogleDriveSetup';
-import type { ConnectInfo } from './offsite-backup/GoogleDriveSetup';
+import { GoogleDriveConnect, RecoveryKeyLink } from './offsite-backup/GoogleDriveSetup';
+import type { GoogleState } from './offsite-backup/GoogleDriveSetup';
 import { ReasoningControl } from './ReasoningControl';
 
 type Step = 'welcome' | 'choice' | 'account' | 'provider' | 'diary' | 'backup' | 'prefs' | 'passkey' | 'done';
 
 const STEP_ORDER: Step[] = ['welcome', 'choice', 'account', 'provider', 'diary', 'backup', 'prefs', 'passkey'];
 
-interface BackupState { connect: ConnectInfo | null; mirror: { state: string } | null }
+interface BackupState { ready: boolean; google: GoogleState | null }
 
 // Same wording the server returns for a rejected origin, so blocking the
 // submit client-side reads identically to hitting the server check.
@@ -60,12 +60,11 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
   const [accountCreated, setAccountCreated] = useState(mode !== 'fresh');
   const heading = useRef<HTMLHeadingElement>(null);
   // Backups are deployment-wide, so only an administrator sees the step, and only when the
-  // server has off-site backups turned on with a folder the host mirrors to Google Drive.
+  // server has backups turned on with a folder and Google sign-in available.
   const [backup, setBackup] = useState<BackupState | null>(null);
-  const [checkingBackup, setCheckingBackup] = useState(false);
   const loadBackup = useCallback(() => apiFetch('/api/admin/offsite-backup')
     .then(r => (r.ok ? r.json() : null))
-    .then((s: (BackupState & { enabled: boolean }) | null) => setBackup(s?.enabled && s.connect ? s : null))
+    .then((s: (BackupState & { enabled: boolean }) | null) => setBackup(s?.enabled && s.google?.configured ? s : null))
     .catch(() => setBackup(null)), []);
   useEffect(() => { if (accountCreated && mode !== 'invited') void loadBackup(); }, [accountCreated, mode, loadBackup]);
   const order = STEP_ORDER.filter(s => s !== 'backup' || backup);
@@ -293,14 +292,15 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
           </div>
         )}
 
-        {step === 'backup' && backup?.connect && (
+        {step === 'backup' && backup?.google && (
           <div>
-            <p>Every night noevia makes an encrypted copy of everything on this server — accounts, projects, chats, settings and the Diary. Connect Google Drive so a copy also lives somewhere other than this server. Google only ever sees scrambled files.</p>
-            {backup.mirror?.state === 'ok' || backup.mirror?.state === 'waiting'
-              ? <p role="status"><strong>Google Drive is connected.</strong> Copies run nightly at 02:45.</p>
-              : <GoogleDriveSetup connect={backup.connect} checking={checkingBackup} onCheck={() => { setCheckingBackup(true); void loadBackup().finally(() => setCheckingBackup(false)); }}/>}
+            <p>Every night noevia makes an encrypted copy of everything on this server — accounts, projects, chats, settings and the Diary. Connect Google Drive so a copy also lives somewhere safe if this server fails. Google only ever sees scrambled files.</p>
+            {backup.google.state === 'connected'
+              ? <p role="status"><strong>Google Drive is connected{backup.google.email ? ` as ${backup.google.email}` : ''}.</strong> Copies run every night.</p>
+              : <GoogleDriveConnect google={backup.google} onChange={loadBackup}/>}
+            {backup.ready && <p className="gdrive-note">Also download your recovery key and keep it in a password manager: without it, no backup can be opened. <RecoveryKeyLink/></p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-              {backup.mirror?.state === 'ok' || backup.mirror?.state === 'waiting'
+              {backup.google.state === 'connected'
                 ? <button className="modal-btn primary" onClick={() => go('prefs')}>Continue</button>
                 : <button className="modal-btn secondary" onClick={() => go('prefs')}>Skip — set up later in Settings</button>}
             </div>

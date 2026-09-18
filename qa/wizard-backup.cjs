@@ -1,16 +1,18 @@
-// The setup wizard offers Google Drive backups to an administrator when the server has a folder
-// destination that the host mirrors. Steps are copyable commands; skipping is always possible;
-// once connected the step just confirms it. Real app, synthetic account; no Google, no rclone.
+// The setup wizard offers Google Drive backups to an administrator: one Connect button, the code
+// Google asks for, and a green confirmation once approved. Skipping is always possible.
+// Real app, fake Google (qa/fake-google.cjs), synthetic account.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
 const {spawn}=require('node:child_process');
+const {startFakeGoogle}=require('./fake-google.cjs');
 const PORT=31384,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'..'),shots=process.env.QA_SCREENSHOTS||'';
 (async()=>{
+ const google=await startFakeGoogle();
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'noevia-wizard-backup-qa-')),data=path.join(root,'data'),store=path.join(root,'offsite');
  fs.mkdirSync(data);fs.mkdirSync(store);
  const keyFile=path.join(root,'backup.key');fs.writeFileSync(keyFile,crypto.randomBytes(32).toString('hex'),{mode:0o600});
  const server=spawn(process.execPath,['server/index.cjs'],{cwd:web,stdio:'ignore',env:{...process.env,UI_DATA_DIR:data,UI_PORT:String(PORT),UI_HOST:'127.0.0.1',PUBLIC_ORIGIN:origin,LEGACY_AUTH_COMPAT:'false',MODEL_MANAGER_KIND:'none',INFERENCE_BASE_URL:'http://127.0.0.1:1',DIARY_BASE_URL:'http://127.0.0.1:1',DIARY_AUTH_TOKEN:'synthetic-only',MCP_SERVERS:'',MCP_SERVER_URL:'',
-  NOEVIA_FEATURE_OFFSITE_BACKUP:'true',OFFSITE_BACKUP_DIR:store,OFFSITE_BACKUP_MIRROR:'Google Drive',OFFSITE_BACKUP_KEY_FILE:keyFile}});
+  NOEVIA_FEATURE_OFFSITE_BACKUP:'true',OFFSITE_BACKUP_DIR:store,OFFSITE_BACKUP_KEY_FILE:keyFile,...google.env}});
  const browser=await chromium.launch({headless:true,channel:'chrome'});const errors=[];
  try{
   for(let i=0;i<200;i++){try{if((await fetch(origin+'/api/setup/status')).ok)break;}catch{}await new Promise(r=>setTimeout(r,50));}
@@ -28,28 +30,31 @@ const PORT=31384,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
    await page.getByRole('heading',{name:'Back up to Google Drive'}).waitFor();
   };
 
-  // Not connected: both commands are there, targets are big enough, and it can be skipped.
+  // Not connected: one button, nothing to paste; skipping works.
   for(const width of [375,768,1440])for(const theme of ['light','dark']){
    await page.setViewportSize({width,height:width<768?812:900});
    await page.evaluate(t=>localStorage.setItem('cowork-theme',t),theme);
    await toBackupStep();
-   assert.match(await page.getByLabel('Command to show the backup key').inputValue(),/^ssh root@localhost cat /,'falls back to root@ the page host');
-   assert.match(await page.getByLabel('Command to connect Google Drive').inputValue(),/rclone authorize "drive"/);
-   for(const b of await page.locator('.gdrive-setup button').all())assert.ok((await b.boundingBox()).height>=44,'44px targets');
+   const connect=page.getByRole('button',{name:'Connect Google Drive'});
+   assert.ok((await connect.boundingBox()).height>=44,'44px target');
+   assert.equal(await page.locator('textarea').count(),0,'nothing to paste');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`no horizontal overflow at ${width}`);
    if(shots)await page.screenshot({path:`${shots}/wizard-backup-${width}-${theme}.png`,fullPage:true});
   }
   await page.getByRole('button',{name:'Skip — set up later in Settings',exact:true}).click();
   await page.getByRole('heading',{name:'Preferences'}).waitFor();
 
-  // "Check connection" picks up the host's report without leaving the step.
+  // Connect from the wizard: code, approval, and the step confirms by itself.
+  await page.setViewportSize({width:1440,height:900});
   await toBackupStep();
-  fs.writeFileSync(path.join(store,'.mirror-status.json'),JSON.stringify({state:'ok',at:Date.now(),message:'Copied 1 snapshots.'}));
-  await page.getByRole('button',{name:'Check connection'}).click();
-  await page.getByText('Google Drive is connected.').waitFor();
+  await page.getByRole('button',{name:'Connect Google Drive'}).click();
+  await page.getByLabel('Google sign-in code').waitFor();
+  if(shots)await page.screenshot({path:`${shots}/wizard-backup-pending-1440.png`,fullPage:true});
+  google.approve();
+  await page.getByText('Google Drive is connected as backup-owner@example.com.').waitFor({timeout:20000});
   await page.getByRole('button',{name:'Continue',exact:true}).click();
   await page.getByRole('heading',{name:'Preferences'}).waitFor();
   assert.deepEqual(errors,[]);
-  console.log('PASS wizard backup: admin sees the Google Drive step (375/768/1440 light/dark), copyable key and sign-in commands, skip works, Check connection confirms once the host reports ok.');
- }finally{await browser.close();server.kill('SIGKILL');fs.rmSync(root,{recursive:true,force:true});}
+  console.log('PASS wizard backup: admin sees a one-button Google Drive step (375/768/1440 light/dark), nothing to paste, skip works, connecting shows the code and confirms by itself after approval.');
+ }finally{await browser.close();server.kill('SIGKILL');await google.close();fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
