@@ -20,12 +20,12 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
   const tag=`${w}x${h}-${theme}`;const open=()=>page.getByRole('button',{name:'Open navigation',exact:true}).click();
   const drawer=page.getByRole('dialog',{name:'Navigation'});
-  const layout=()=>page.evaluate(()=>{const s=document.querySelector('.sidebar'),p=s.querySelector('.side-permanent').getBoundingClientRect(),f=s.querySelector('.side-footer').getBoundingClientRect(),b=s.getBoundingClientRect();
+  const layout=()=>page.evaluate(()=>{const s=document.querySelector('.sidebar'),p=s.querySelector('.side-nav').getBoundingClientRect(),f=s.querySelector('.side-footer').getBoundingClientRect(),b=s.getBoundingClientRect();
     const sticky=getComputedStyle(s.querySelector('.side-footer')).position==='sticky';
-    return {sticky,overlap:p.bottom-f.top,gapBelowFooter:b.bottom-f.bottom,labels:[...s.querySelectorAll('.nav-name')].filter(n=>n.getBoundingClientRect().width>2).length,lists:s.querySelectorAll('.side-scroll').length&&getComputedStyle(s.querySelector('.side-scroll')).display!=='none'};});
+    return {sticky,overlap:Math.min(0,p.bottom-f.top),diaryInNav:!!s.querySelector('.side-nav [aria-label=Diary]'),gapBelowFooter:b.bottom-f.bottom,labels:[...s.querySelectorAll('.nav-name')].filter(n=>n.getBoundingClientRect().width>2).length,lists:s.querySelectorAll('.side-scroll').length&&getComputedStyle(s.querySelector('.side-scroll')).display!=='none'};});
   const check=async(label)=>{const l=await layout();
-   assert.ok(l.labels>=2&&l.lists,`${tag} ${label}: drawer shows labels and lists ${JSON.stringify(l)}`);
-   if(l.sticky){assert.ok(l.overlap<=1,`${tag} ${label}: Diary pane under the footer ${JSON.stringify(l)}`);assert.ok(l.gapBelowFooter<=1,`${tag} ${label}: rows show below the footer ${JSON.stringify(l)}`);}
+   assert.ok(l.labels>=2&&l.lists&&l.diaryInNav,`${tag} ${label}: drawer shows labels and lists ${JSON.stringify(l)}`);
+   if(l.sticky){assert.ok(l.overlap<=1,`${tag} ${label}: top destinations under the footer ${JSON.stringify(l)}`);assert.ok(l.gapBelowFooter<=1,`${tag} ${label}: rows show below the footer ${JSON.stringify(l)}`);}
    const plugins=page.getByRole('button',{name:'Plugins',exact:true});await plugins.scrollIntoViewIfNeeded();
    await plugins.evaluate((el,t)=>{const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);if(!el.contains(hit))throw Error(t+': Plugins covered by '+(hit?.className||hit?.tagName));},`${tag} ${label}`);};
   await open();await drawer.waitFor();await check('from chat');
@@ -136,15 +136,15 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
    const nested=[...side.querySelectorAll('*')].filter(e=>/(auto|scroll)/.test(getComputedStyle(e).overflowY)&&e.scrollHeight>e.clientHeight+1).map(e=>e.className.toString());
    const rows=side.querySelectorAll('.recent-children .chat-row').length;
    side.scrollTop=side.scrollHeight;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-   const last=[...side.querySelectorAll('.recent-children .chat-row')].at(-1).getBoundingClientRect(),diary=side.querySelector('.side-permanent').getBoundingClientRect(),sb=side.getBoundingClientRect();
-   return {sideScrolls:getComputedStyle(side).overflowY==='auto'&&side.scrollHeight>side.clientHeight,nested,rows,lastAboveDiary:last.bottom<=diary.top+1,diaryAtBottom:sb.bottom-diary.bottom<120};});
+   const last=[...side.querySelectorAll('.recent-children .chat-row')].at(-1).getBoundingClientRect(),foot=side.querySelector('.side-footer').getBoundingClientRect(),sb=side.getBoundingClientRect();
+   return {sideScrolls:getComputedStyle(side).overflowY==='auto'&&side.scrollHeight>side.clientHeight,nested,rows,lastAboveFooter:last.bottom<=foot.top+1,footerAtBottom:sb.bottom-foot.bottom<=1,diaryInNav:!!side.querySelector('.side-nav [aria-label=Diary]')};});
   assert.ok(r.sideScrolls,`${material}: the sidebar itself scrolls ${JSON.stringify(r)}`);
   assert.deepEqual(r.nested,[],`${material}: no nested scrollers`);
   assert.equal(r.rows,16,`${material}: every recent chat is in the sidebar`);
-  assert.ok(r.lastAboveDiary&&r.diaryAtBottom,`${material}: last chat reachable above the pinned Diary ${JSON.stringify(r)}`);
+  assert.ok(r.lastAboveFooter&&r.footerAtBottom&&r.diaryInNav,`${material}: last chat reachable above the pinned account row; Diary in the top destinations ${JSON.stringify(r)}`);
   await page.close();
  }
  assert.deepEqual(errors,[]);
- console.log('PASS phone drawer: full drawer from Diary, measured sticky footer, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop the sidebar is one scrolling plane with every chat, in each material.');
+ console.log('PASS phone drawer: full drawer from Diary, Diary with the top destinations, only the account row pinned, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Material 3 has no sticky bands, an extended FAB, pill destinations, a 28px composer and Roboto; on a short desktop the sidebar is one scrolling plane with every chat, in each material.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

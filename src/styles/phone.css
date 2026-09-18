@@ -77,42 +77,31 @@
   .app .chat-workspace .composer-inner.pane { padding: 10px 10px 8px; }
 }
 
-/* ── The sidebar is one scrolling plane (user review, 2026-09-18) ───────────
-   Earlier the three lists each scrolled on their own; on a short window that left
-   rows hidden inside small scrollers. Now the whole rail scrolls as one surface at
-   every width, every project and chat is in it, and Diary plus the account stay put
-   at the bottom edge so a permanent space is always one tap away. */
-.app .sidebar.pane { overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; scroll-padding-bottom: calc(var(--side-foot-h) + 56px); }
+/* ── The sidebar is one scrolling plane, like ChatGPT's (user review, 2026-09-18) ──
+   Top destinations (New chat, Projects, Diary, Plugins), then Projects, Pinned and
+   Recent chats as flat labelled lists, all in one surface that scrolls together. Only
+   the account row stays pinned to the bottom edge. No nested scrollers, no tree lines. */
+.app .sidebar.pane { overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; scroll-padding-bottom: calc(var(--side-foot-h) + 16px); }
 .app .sidebar.pane > * { flex-shrink: 0; }
-.app .sidebar.pane .sidebar-history { display: flex; flex-direction: column; gap: var(--space-1); flex: none; overflow: visible; }
+.app .sidebar.pane .sidebar-history { display: flex; flex-direction: column; gap: 0; flex: none; overflow: visible; margin-bottom: var(--space-3); }
 .app .sidebar.pane .sidebar-history .side-scroll { overflow: visible; max-height: none; }
 .app .sidebar.pane .sidebar-history .side-scroll > .section-label:first-child,
-.app .sidebar.pane .sidebar-history .side-scroll > .sidebar-section-head:first-child .section-label { margin-top: var(--space-2); }
-.app .sidebar.pane .side-permanent {
-  display: flex; flex-direction: column; gap: 1px; flex: none;
-  margin-top: var(--space-2); padding-top: var(--space-2);
-  border-top: 1px solid var(--border-subtle);
-}
-/* Diary and the account hold the bottom edge while the rest scrolls past. The footer
-   holds the floor; Diary sits exactly one (measured) footer above it. */
+.app .sidebar.pane .sidebar-history .side-scroll > .sidebar-section-head:first-child .section-label { margin-top: var(--space-4); }
+/* Recent chats are a flat list like the others: no indent, no tree line. */
+.app .sidebar.pane .recent-children { margin-left: 0; padding-left: 0; border-left: 0; }
+/* The account row holds the bottom edge; short content leaves it at the bottom too. */
 .app .sidebar.pane { --side-foot-h: 60px; }
-.app .sidebar.pane .side-permanent, .app .sidebar.pane .side-footer {
-  position: sticky; z-index: 1;
-  background: var(--pane-fill); backdrop-filter: blur(var(--pane-blur));
-  -webkit-backdrop-filter: blur(var(--pane-blur));
-}
-/* Diary sits at the end of the content when it fits, and sticks when it does not. */
-.app .sidebar.pane .side-permanent { bottom: var(--side-foot-h); margin-top: auto; }
-.app .sidebar.pane .sidebar-history { margin-bottom: var(--space-3); }
 .app .sidebar.pane .side-footer {
-  bottom: 0; min-height: 60px; margin-top: 0; padding-bottom: env(safe-area-inset-bottom);
+  position: sticky; bottom: 0; z-index: 1; margin-top: auto;
+  min-height: 60px; padding-bottom: env(safe-area-inset-bottom);
   border-top: 1px solid var(--border-subtle);
+  background: var(--pane-fill); backdrop-filter: blur(var(--pane-blur)); -webkit-backdrop-filter: blur(var(--pane-blur));
 }
 /* The footer owns the rail's bottom inset, so nothing scrolls past underneath it. */
 .app .sidebar.pane:not(.coding-sidebar):not(.is-collapsed) { padding-bottom: 0; }
 .app .sidebar.pane:not(.coding-sidebar):not(.is-collapsed) .side-footer { padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom)); }
 .app .sidebar.pane.is-expanded .side-footer { padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom)); }
-[data-material='soft'] .app .sidebar.pane :is(.side-permanent, .side-footer) { background: var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; }
+[data-material='soft'] .app .sidebar.pane .side-footer { background: var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; }
 
 /* ── The accent palettes (Settings → Appearance) ───────────────────────────
    Each tile carries its own `data-palette`, so the swatch is drawn by the very
@@ -138,6 +127,6 @@
 /* A short screen has no room to reserve two rows at the bottom: the sticky panes would
    sit on top of the list they are meant to sit below. There, everything scrolls. */
 @media (max-height: 600px) {
-  .app .sidebar.pane :is(.side-permanent, .side-footer) { position: static; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .app .sidebar.pane .side-footer { position: static; backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
-[data-short-viewport] .app .sidebar.pane :is(.side-permanent, .side-footer) { position: static; backdrop-filter: none; -webkit-backdrop-filter: none; }
+[data-short-viewport] .app .sidebar.pane .side-footer { position: static; backdrop-filter: none; -webkit-backdrop-filter: none; }

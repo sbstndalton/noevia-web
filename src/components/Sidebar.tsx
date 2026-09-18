@@ -358,6 +358,21 @@ export function Sidebar({
           <ShellIcon name="folder" size={17}/>
           <span className="nav-name">Projects</span>
         </button>
+        {/* Diary and Plugins live with the other destinations at the top, as in ChatGPT:
+            the whole rail is one scrolling plane and only the account row stays pinned. */}
+        {diaryEnabled && <button
+          className={`nav-item${activeView === 'diary' ? ' is-active' : ''}`}
+          aria-label="Diary"
+          aria-current={activeView === 'diary' ? 'page' : undefined}
+          onClick={onOpenDiary}
+        >
+          <ShellIcon name="diary" size={17}/>
+          <span className="nav-name">Diary</span>
+        </button>}
+        {showPreviews && <button className="nav-item" aria-label="Plugins" onClick={()=>onPreview('Plugins')}>
+          <ShellIcon name="plugins" size={17}/>
+          <span className="nav-name">Plugins</span>
+        </button>}
       </nav>
 
       <div className="rail-tools"><button className="shell-icon-button" aria-label="Search projects and chats" onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(true);}}><ShellIcon name="search"/></button><button className="shell-icon-button" aria-label="Show pinned items" onClick={()=>{setCollapsed(false);setExpanded(true);setClosedGroups(g=>({...g,Pinned:false}));}}><ShellIcon name="pin"/></button></div>
@@ -402,21 +417,6 @@ export function Sidebar({
 
       </div>
 
-      <nav className="side-permanent" aria-label="Spaces">
-        {diaryEnabled && <button
-          className={`nav-item${activeView === 'diary' ? ' is-active' : ''}`}
-          aria-label="Diary"
-          aria-current={activeView === 'diary' ? 'page' : undefined}
-          onClick={onOpenDiary}
-        >
-          <ShellIcon name="diary" size={17}/>
-          <span className="nav-name">Diary</span>
-        </button>}
-        {showPreviews && <button className="nav-item" aria-label="Plugins" onClick={()=>onPreview('Plugins')}>
-          <ShellIcon name="plugins" size={17}/>
-          <span className="nav-name">Plugins</span>
-        </button>}
-      </nav>
 
       {hover && (() => {
         const p = projects.find((x) => x.id === hover.id);
