@@ -72,7 +72,7 @@ async function layout(page, label) {
             if(route.request().method()==='GET')return route.fulfill({status:500,json:{error:'Synthetic load failure'}});
             return route.continue();
           });
-          await external.click();await page.getByText('Could not load saved storage.',{exact:false}).waitFor();
+          await external.click();await page.getByText('Your saved storage connection couldn’t be loaded',{exact:false}).waitFor();
           assert.equal(await page.getByRole('button',{name:'Grant Nextcloud access',exact:true}).isDisabled(),true);
           await page.unroute('**/api/integrations/storage');await host.click();await external.click();
           await page.waitForFunction(()=>document.querySelector('select[aria-label="Diary storage type"]')?.value==='webdav');
