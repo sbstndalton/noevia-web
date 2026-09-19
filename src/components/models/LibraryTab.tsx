@@ -7,6 +7,7 @@ import { EvidenceList } from './EvidenceList';
 import { errorText, mm, tokens } from './mm';
 import { registerNewFolderModels } from './register';
 import { useModelsChanged } from '../../models-changed';
+import { MiddleTruncate } from '../MiddleTruncate';
 
 type FileEntry = { key: string; name: string; subdir: string; bytes: number; size: string; modified: string; sharded: boolean; parts: number;
   projector: { name: string; bytes: number } | null; sections: string[]; modelId: string; file: string;
@@ -25,24 +26,30 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   const [unregistered, setUnregistered] = useState<string[]>([]);
   const [updates, setUpdates] = useState<Record<string, Update>>({});
   const [disk, setDisk] = useState<{ freeH: string; totalH: string; usedPct: number } | null>(null);
+  const [scanned, setScanned] = useState(false);
   const [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(''), [filesNote, setFilesNote] = useState(''), [runtimeOptions, setRuntimeOptions] = useState(false);
   // The parent passes a fresh callback each render; the refresh below must stay stable.
   const changedRef = useRef(onChanged);
   changedRef.current = onChanged;
+  // The engine's list answers in milliseconds; the file scan behind it can take seconds. Show the
+  // list as soon as it arrives and let file details, updates and disk space fill in after.
   const refresh = useCallback(async () => {
     setError('');
+    const listed = fetchInstalledModels().then((installed) => { setModels(installed); return installed; });
+    const local = mm<{ models: FileEntry[]; unregistered: string[] }>('models').catch(() => null);
+    void mm<{ status: Record<string, Update> }>('models/updates').then((u) => setUpdates(u.status)).catch(() => undefined);
+    void apiFetch('/api/models/capabilities').then(r => r.json()).then((caps) => setRuntimeOptions(caps?.runtimeOptions === true)).catch(() => undefined);
+    void mm<{ modelsDir?: { disk?: { freeH: string; totalH: string; usedPct: number } | null } }>('overview').then((o) => setDisk(o?.modelsDir?.disk ?? null)).catch(() => undefined);
     try {
-      // The model manager adds file details; without it the engine's own list still works.
-      const [installed, local, upd, caps, overview] = await Promise.all([fetchInstalledModels(), mm<{ models: FileEntry[]; unregistered: string[] }>('models').catch(() => null), mm<{ status: Record<string, Update> }>('models/updates').catch(() => ({ status: {} })),
-        apiFetch('/api/models/capabilities').then(r => r.json()).catch(() => ({})), mm<{ modelsDir?: { disk?: { freeH: string; totalH: string; usedPct: number } | null } }>('overview').catch(() => null)]);
-      setDisk(overview?.modelsDir?.disk ?? null);
-      setModels(installed); setFiles(local?.models || []); setUnregistered(local?.unregistered || []); setUpdates(upd.status); setRuntimeOptions(caps?.runtimeOptions === true);
-      if (local?.unregistered?.length) {
-        const synced = await registerNewFolderModels(local.unregistered);
+      await listed;
+      const scan = await local;
+      setFiles(scan?.models || []); setUnregistered(scan?.unregistered || []); setScanned(true);
+      if (scan?.unregistered?.length) {
+        const synced = await registerNewFolderModels(scan.unregistered);
         if (synced.text) setMessage(synced.text);
         if (synced.added.length) { changedRef.current(); return; }   // models-changed refetches this list
       }
-      setFilesNote(local ? '' : 'File details, downloads and settings need the model management service, which is not available on this server.');
+      setFilesNote(scan ? '' : 'File details, downloads and settings need the model management service, which is not available on this server.');
     } catch (e) { setError(errorText(e, 'The model library is unavailable.')); }
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
@@ -82,19 +89,20 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   const shownFiles = new Set(servable.map(m => fileFor(m.name)?.key).filter(Boolean));
   const orphanFiles = files.filter(f => !shownFiles.has(f.key));
   return <div className="mm-tab">
-    <div className="mm-toolbar">
-      <p className="mm-lede">Everything installed on the model server. llama.cpp loads models on demand and unloads the least recently used one when it reaches its limit.</p>
-      <button className="modal-btn secondary" disabled={busy === 'updates'} onClick={() => void checkUpdates()}>{busy === 'updates' ? 'Checking…' : 'Check for updates'}</button>
+    <div className="mm-library-bar">
+      <p className="mm-note" role="status">{models ? <>{servable.length} of {installed.length} {installed.length === 1 ? 'model' : 'models'}{needle ? ` matching “${query.trim()}”` : ''}{filter !== 'all' ? ' after filtering' : ''}</> : 'Loading models…'}
+        {disk && <> · <span data-testid="models-disk">Models folder: {disk.freeH} free of {disk.totalH} ({disk.usedPct.toFixed(0)}% used).</span></>}
+        {models && !scanned && <span className="mm-scanning"> · Reading model files…</span>}</p>
+      <button className="btn btn-secondary btn-sm" disabled={busy === 'updates'} onClick={() => void checkUpdates()}>{busy === 'updates' ? 'Checking…' : 'Check for updates'}</button>
     </div>
     {error && <p role="alert" className="modal-err">{error}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
     {filesNote && <p className="mm-note">{filesNote}</p>}
-    {disk && <p className="mm-note" data-testid="models-disk">Models folder: {disk.freeH} free of {disk.totalH} ({disk.usedPct.toFixed(0)}% used).</p>}
-    {!models && !error && <p role="status">Loading models…</p>}
-    {models && <p className="mm-note" role="status">{servable.length} of {installed.length} {installed.length === 1 ? 'model' : 'models'}{needle ? ` matching “${query.trim()}”` : ''}{filter !== 'all' ? ' after filtering' : ''}.</p>}
     {models && !servable.length && installed.length > 0 && <p className="mm-note">Nothing matches. Clear the search or choose All models.</p>}
+    <div className="model-grid">
     {servable.map(m => <ModelCard key={m.name} runtimeOptions={runtimeOptions} onRefresh={() => void refresh()} model={m} file={fileFor(m.name)} update={updates[fileFor(m.name)?.name || '']} busy={busy === m.name}
       onToggle={() => void act(m.loaded ? 'unload' : 'load', m.name)} onConfigure={() => onConfigure(m.name)} onDeleted={onChanged}/>)}
+    </div>
     {orphanFiles.length > 0 && <section className="mm-panel"><h3>Files without a model entry</h3>
       <p className="mm-note">These files are in the model folder but no settings point to them, so the engine cannot serve them yet.</p>
       <ul className="mm-list">{orphanFiles.map(f => <li key={f.key}><span>{f.name}<small>{f.size}{f.subdir ? ` · ${f.subdir}/` : ''}</small></span>
@@ -108,8 +116,8 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
   const state = m.failed ? 'failed' : m.loaded ? 'loaded' : 'unloaded';
   useEffect(() => { if (open && file && !detail) void mm<Detail>(`models/detail?key=${encodeURIComponent(file.key)}`).then(setDetail).catch(() => {}); }, [open, file, detail]);
   const model = detail?.summary?.model || {};
-  return <article className="model-card surface" data-state={state} aria-label={m.name}>
-    <header className="model-card-head"><h3 className="model-card-name">{m.name}</h3><span className="model-card-state">{m.failed ? 'Failed to load' : m.loaded ? 'Loaded' : 'Unloaded'}</span></header>
+  return <article className={`model-card surface${open ? ' is-open' : ''}`} data-state={state} aria-label={m.name}>
+    <header className="model-card-head"><h3 className="model-card-name"><MiddleTruncate text={m.name}/></h3><span className="model-card-state">{m.failed ? 'Failed to load' : m.loaded ? 'Loaded' : 'Unloaded'}</span></header>
     <p className="model-card-meta">
       {(file?.size || m.sizeGB != null) && <span>{file?.size || `${m.sizeGB} GB`}</span>}
       {m.maxContext != null && <span>trained for {tokens(m.maxContext)} tokens</span>}

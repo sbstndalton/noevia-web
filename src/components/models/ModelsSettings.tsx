@@ -57,17 +57,16 @@ export function ModelsSettings({ models, routes, projects, modelsError, initialM
   return <div className="mm-root">
     <div className="settings-title"><h1>Models &amp; routing</h1><p>Download, configure, measure and route the models this server runs.</p></div>
 
-    <div className="mm-toolbar-row">
-      <div className="mm-search">
-        <input aria-label="Search models" placeholder={tab === 'yours' ? 'Search your models…' : 'Search Hugging Face…'}
-          value={query} onChange={(e) => setQuery(e.target.value)} />
-      </div>
-    </div>
-
-    <nav className="mm-tabs" aria-label="Model management">
+    {/* One toolbar: which list, a search, and that list's filters (user review, 2026-09-19). */}
+    <nav className="mm-tabs mm-toolbar-one" aria-label="Model management">
       <div className="mm-tabs-row" role="tablist">
         {([['yours', 'Your models'], ['discover', 'Discover']] as const).map(([id, label]) =>
           <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-active' : ''} onClick={() => go(id)}>{label}</button>)}
+      </div>
+      <div className="mm-search mm-search-inline">
+        <ShellIcon name="search" size={16}/>
+        <input aria-label="Search models" placeholder={tab === 'yours' ? 'Search your models…' : 'Search Hugging Face…'}
+          value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
       {tab === 'discover' ? <div className="mm-tabs-controls">
         <label className="mm-select"><span className="sr-only">Sort Hugging Face results</span>

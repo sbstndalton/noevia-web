@@ -595,3 +595,50 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 /* The chosen mode reads clearly in both themes: same accent tint as the chosen model. */
 .mp-mode-btn[aria-pressed="true"] { background: var(--accent-2-soft, var(--nav-active)) !important; color: var(--text-primary); }
 .mp-mode-btn[aria-pressed="true"] strong { color: var(--accent-ink, var(--text-primary)); }
+
+/* ── Models page: cards side by side (user review, 2026-09-19) ──
+   Up to three per row, two when narrower, one on a phone; a card with its details open takes
+   the whole row so its facts have room. */
+.model-grid { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(max(280px, calc((100% - 2 * var(--space-3)) / 3)), 1fr)); align-items: start; }
+.model-grid > .model-card.is-open { grid-column: 1 / -1; }
+.model-grid > .model-card { min-width: 0; height: 100%; box-sizing: border-box; }
+.model-card-head { align-items: center; }
+.model-card-name { min-width: 0; flex: 1; font-size: var(--text-callout); }
+.model-card-name .mid-trunc { max-width: 100%; }
+.model-card-meta { gap: 2px 10px; }
+.model-card-actions { margin-top: auto; gap: 6px; }
+.model-card-actions > button { min-height: 36px; padding: 6px 12px; }
+.model-card-actions > button:first-child { background: var(--accent-2-soft, var(--nav-active)); border-color: transparent; font-weight: 600; }
+.model-card-actions > .model-card-danger { margin-left: auto; border-color: transparent; background: transparent; color: var(--danger, #c0392b); }
+@media (pointer: coarse) { .model-card-actions > button { min-height: 44px; } }
+.model-card .mtp-control, .model-card > .mm-row { font-size: var(--text-footnote); }
+/* The page's summary line and its one action share a row. */
+.mm-library-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3); }
+.mm-library-bar .mm-note { margin: 0; }
+.mm-scanning { color: var(--text-tertiary, var(--text-secondary)); }
+/* Models page toolbar: tabs, search and filters on one line, wrapping cleanly when narrow. */
+.mm-toolbar-one { display: flex !important; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding-bottom: var(--space-3); border-bottom: 1px solid var(--border-subtle); margin-bottom: var(--space-3); }
+.mm-toolbar-one .mm-tabs-row { display: flex !important; flex: none; border-bottom: 0 !important; padding: 3px !important; border-radius: 12px; background: var(--nav-hover); gap: 2px; }
+.mm-toolbar-one .mm-tabs-row button { min-height: 34px; padding: 6px 14px; border-radius: 9px; }
+.mm-toolbar-one .mm-tabs-row button.is-active { background: var(--bg-app); box-shadow: var(--shadow-1); }
+.mm-toolbar-one .mm-tabs-select { display: none !important; }
+.mm-search-inline { flex: 1 1 220px; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px; min-height: 40px; border: 1px solid var(--control-border); border-radius: 12px; background: var(--bg-app); color: var(--text-secondary); }
+.mm-search-inline input { flex: 1; min-width: 0; border: 0 !important; outline: none; background: transparent; box-shadow: none !important; padding: 0 !important; min-height: 38px; font: inherit; color: var(--text-primary); }
+.mm-search-inline:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.mm-search-inline input:focus-visible { outline: none !important; }
+.mm-toolbar-one .mm-tabs-controls { display: flex; gap: 6px; flex: none; }
+.mm-toolbar-one .mm-select select { min-height: 40px; width: auto !important; padding: 6px 30px 6px 12px; font-size: var(--text-footnote); }
+@media (max-width: 719px) {
+  .mm-toolbar-one .mm-search-inline { flex-basis: 100%; order: -1; }
+  .mm-toolbar-one .mm-tabs-controls { flex: 1; justify-content: flex-end; }
+  .mm-toolbar-one .mm-select { min-width: 0; }
+  .mm-toolbar-one .mm-select select { max-width: 100%; }
+}
+@media (pointer: coarse) { .mm-search-inline, .mm-toolbar-one .mm-select select, .mm-toolbar-one .mm-tabs-row button { min-height: 44px; } .mm-search-inline input { font-size: 16px; } }
+@media (max-width: 519px) {
+  .mm-toolbar-one .mm-tabs-row { flex: 1 1 100%; display: grid !important; grid-template-columns: 1fr 1fr; }
+  .mm-toolbar-one .mm-tabs-controls { flex: 1 1 100%; display: grid; grid-template-columns: 1fr 1fr; }
+  .mm-toolbar-one .mm-select, .mm-toolbar-one .mm-select select { width: 100% !important; }
+}
+/* Every control on the models page is at least 40px tall (44px on touch). */
+.mm-toolbar-one .mm-tabs-row button, .model-card-actions > button, .mm-library-bar .btn { min-height: 40px; }
