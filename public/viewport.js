@@ -3,10 +3,14 @@
 (() => {
   const root = document.documentElement;
   const viewport = window.visualViewport;
-  let frame = 0;
+  let frame = 0, settle = 0;
   function update() {
     frame = 0;
-    if (viewport && Math.abs(viewport.scale - 1) > 0.01) return;
+    // While zoomed, leave the layout alone; but keep checking, because iOS sends its last
+    // event while the zoom is still animating back to 1 and then goes quiet, which left the
+    // page at its zoomed-in size (user review, 2026-09-19).
+    clearTimeout(settle);
+    if (viewport && Math.abs(viewport.scale - 1) > 0.01) { settle = setTimeout(schedule, 250); return; }
     const height = Math.round(viewport ? viewport.height : window.innerHeight);
     if (height <= 0) return;
     // iOS scrolls the document to lift a focused field above the keyboard, and can leave it
@@ -18,6 +22,7 @@
     // visible part of the screen.
     root.style.setProperty('--visible-viewport-top', `${Math.max(0, Math.round((viewport && viewport.offsetTop) || 0))}px`);
     root.toggleAttribute('data-short-viewport', height <= 550);
+    window.dispatchEvent(new Event('noevia:viewport'));
   }
   function schedule() {
     if (!frame) frame = requestAnimationFrame(update);

@@ -77,6 +77,10 @@ export function startFitToViewport(): void {
   const resize = new ResizeObserver(fitAll);
   resize.observe(document.documentElement);
   window.visualViewport?.addEventListener('resize', fitAll);
+  // viewport.js announces each settled size, including the one after a zoom finishes.
+  window.addEventListener('noevia:viewport', fitAll);
+  window.addEventListener('resize', fitAll);
+  window.addEventListener('orientationchange', () => setTimeout(fitAll, 300));
   // Content changes (a page opens, a section expands, fonts load). Our own zoom writes are
   // style changes, which are ignored, so fitting never feeds itself.
   new MutationObserver((records) => {
