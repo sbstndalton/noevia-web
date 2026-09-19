@@ -14,7 +14,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  const chat=(id,pinned=false)=>({id,title:`Synthetic ${id}`,updatedAt:1000,pinned,messages:[]});
  await page.route('**/api/workspace',r=>r.fulfill({json:{projects:Array.from({length:5},(_,i)=>({id:`p${i}`,name:`Synthetic project ${i}`,pinned:i===0,updatedAt:1000,files:[],chats:[chat(`nested${i}`)]})),freeChats:[chat('pinned',true),...Array.from({length:12},(_,i)=>chat(`recent${i}`))]}}));
  await page.goto('http://localhost:31336');await page.getByPlaceholder('Message noevia…').waitFor();
- if(width<=600)await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+ if(width<520)await page.getByRole('button',{name:'Open navigation',exact:true}).click();
  const sidebar=page.locator('.sidebar');
  const history=page.locator('.sidebar-history');
  assert.ok(await history.evaluate(el=>el.clientHeight>0),`${width}x${height}: history collapsed`);
@@ -57,7 +57,7 @@ const {createFixture}=require('./diary-fixture.cjs');
   await page.keyboard.press('Escape');await drawer.waitFor({state:'hidden'});
   assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Open navigation','focus returns to the toggle');
   await toggle.click();await drawer.waitFor();await page.getByRole('button',{name:'Close navigation',exact:true}).click();await drawer.waitFor({state:'hidden'});
-  await page.setViewportSize({width:600,height:740});await toggle.click();await drawer.waitFor();
+  await page.setViewportSize({width:500,height:740});await toggle.click();await drawer.waitFor(); // the drawer ends at 519px (was 600)
   // The phone drawer is full width, like Claude's, so there is no backdrop to tap: its close
   // button in the header dismisses it.
   await drawer.getByRole('button',{name:'Close navigation',exact:true}).click();await drawer.waitFor({state:'hidden'});

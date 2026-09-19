@@ -23,7 +23,7 @@ const PORT=31385,OLD=`http://old.localhost:${PORT}`,NEW=`http://new.localhost:${
    await page.getByTitle('Settings',{exact:true}).click();
    const s=page.getByRole('region',{name:'Settings'});await s.waitFor();
    await s.getByRole('button',{name:'Security and login',exact:true}).click();
-   await s.getByRole('button',{name:'+ Add passkey'}).click();
+   await s.getByRole('button',{name:'Add passkey',exact:true}).click();
    await s.getByText('Passkey added.').waitFor({timeout:15000});
    await s.getByRole('button',{name:'Close settings'}).click();
   };

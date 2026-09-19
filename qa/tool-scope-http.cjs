@@ -8,7 +8,7 @@ const {startFakeGoogle}=require('./fake-google.cjs');
 const port=31426,llmPort=31427,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'..'),shots=process.env.QA_SCREENSHOTS||'/tmp';
 
 
-const offered=[];
+const offered=[],systems=[];
 // Two-dimensional embeddings: anything about Drive/files points one way, everything else the other.
 const vec=t=>/drive/i.test(t)?[1,0.05]:[0.05,1];
 function startModel(){
@@ -18,7 +18,7 @@ function startModel(){
     if(req.url.endsWith('/models'))return json({data:[{id:'synthetic-model'}]});
     const body=raw?JSON.parse(raw):{};
     if(req.url.endsWith('/embeddings'))return json({data:[].concat(body.input).map((t,i)=>({index:i,embedding:vec(String(t))}))});
-    const names=(body.tools||[]).map(t=>t.function.name);offered.push(names);
+    const names=(body.tools||[]).map(t=>t.function.name);offered.push(names);systems.push((body.messages||[]).filter(m=>m.role==='system').map(m=>String(m.content)).join('\n'));
     const last=body.messages.at(-1);const user=[...body.messages].reverse().find(m=>m.role==='user');const text=String(user?.content||'');
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const chunk=(delta,finish=null)=>res.write(`data: ${JSON.stringify({choices:[{index:0,delta,finish_reason:finish}]})}\n\n`);
@@ -74,7 +74,34 @@ function startModel(){
   assert.ok(rounds[0].includes('more_tools')&&!rounds[0].some(n=>!n.startsWith('drive_')&&n!=='more_tools'),`first round is Drive only ${rounds[0]}`);
   assert.ok(rounds.at(-1).some(n=>!n.startsWith('drive_')&&n!=='more_tools'),'after asking, Core is offered');
   assert.match(await page.locator('.tool-scope').last().innerText(),/Using: all tools/);
+  // Skill auto-loading: an enabled skill whose description matches the message has its reviewed
+  // body in the prompt, and the reply says so; an unrelated message gets only the index.
+  const skillBody='SKILL-BODY-CANARY: list the three newest files first.';
+  const sp=(await admin('/api/projects',{name:'Skill QA',model:'synthetic-model',files:[{name:'drive-report/SKILL.md',content:`---\nname: Drive report\ndescription: Summarise the files in my Google Drive\n---\n${skillBody}`}]})).body;
+  const route=`/api/projects/${sp.id}/instruction-skills`;const listed=(await admin(route)).body.skills[0];
+  assert.equal((await admin(route,{file:listed.file,hash:listed.hash,enabled:true},'PUT')).status,200);
+  await page.reload();await page.getByPlaceholder(/Message/).first().waitFor();
+  const askIn=async(text)=>{await page.locator('.sidebar').getByText('Skill QA',{exact:true}).hover();await page.getByRole('button',{name:'New chat in Skill QA'}).click({force:true});
+    const box=page.getByRole('textbox',{name:/Message/}).first();await box.fill(text);await box.press('Enter');};
+  const sys=()=>systems.at(-1)||'';
+  await askIn('Summarise my drive please');await page.getByText(/Offered \d+ tools/).last().waitFor();
+  assert.ok(sys().includes('SKILL-BODY-CANARY'),'matched skill body is in the prompt');
+  await page.locator('.tool-scope',{hasText:'Skill: Drive report'}).last().waitFor();
+  await askIn('Tell me a joke');await page.waitForFunction(n=>document.querySelectorAll('.msg[data-role=assistant]').length>=1,1);await page.waitForTimeout(800);
+  assert.ok(!sys().includes('SKILL-BODY-CANARY')&&sys().includes('Drive report'),'unrelated message: index only');
+  await page.screenshot({path:`${shots}/noevia-skill-scope.png`});
+  // Plugins → Skills → Add to project: a real published skill (read-only fetch of one SKILL.md)
+  // lands in the project needing review, not enabled.
+  await page.getByRole('button',{name:'Plugins',exact:true}).click();await page.getByRole('radio',{name:'Skills',exact:true}).click();
+  await page.route('**/api/plugins/directory*',r=>r.fulfill({json:{source:{label:'fixture',home:'https://github.com/anthropics/skills'},items:[{id:'frontend-design',name:'Frontend design',publisher:'Anthropic',description:'',version:'',url:'https://github.com/anthropics/skills',remote:false}]}}));
+  await page.getByRole('radio',{name:'MCP servers',exact:true}).click();await page.getByRole('radio',{name:'Skills',exact:true}).click();
+  await page.getByRole('button',{name:'Add Frontend design to a project'}).click();
+  await page.getByLabel('Project for Frontend design').selectOption({label:'Skill QA'});await page.getByRole('button',{name:'Add',exact:true}).click();
+  await page.getByText(/Added to Skill QA/).waitFor({timeout:20000});
+  const after=(await admin(route)).body.skills.find(s=>s.file==='frontend-design/SKILL.md');
+  assert.ok(after&&after.valid,`installed skill is valid ${JSON.stringify(after&&after.error)}`);assert.equal(after.status,'review','arrives needing review, not enabled');
+  await page.screenshot({path:`${shots}/noevia-skill-add.png`});
   assert.deepEqual(errors,[]);
-  console.log('PASS tool scope: a Drive request is offered only Drive and says "Using: Google Drive"; the model can ask once for the rest of the project\'s tools.');
+  console.log('PASS tool scope: a Drive request is offered only Drive and says "Using: Google Drive"; the model can ask once for the rest of the project\'s tools; a matching enabled skill is loaded and labelled, an unrelated message gets only the index; a published skill added from Plugins arrives needing review.');
  }finally{await browser.close();server.kill();model.close();await google.close();fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exit(1);});

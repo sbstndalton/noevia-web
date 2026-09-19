@@ -42,11 +42,11 @@ const {createFixture}=require('./diary-fixture.cjs');
    }
    await page.keyboard.press('Escape');
    // Below 600px navigation lives in the drawer; everything else is in the sidebar.
-   const nav=async()=>{if(width<=600){await page.getByRole('button',{name:'Open navigation',exact:true}).click();await page.getByRole('dialog',{name:'Navigation'}).waitFor();await page.waitForFunction(()=>!document.getAnimations().some(a=>a.playState==='running'&&a.effect?.getTiming().iterations!==Infinity));}}; // the drawer slides in
+   const nav=async()=>{if(width<520){await page.getByRole('button',{name:'Open navigation',exact:true}).click();await page.getByRole('dialog',{name:'Navigation'}).waitFor();await page.waitForFunction(()=>!document.getAnimations().some(a=>a.playState==='running'&&a.effect?.getTiming().iterations!==Infinity));}}; // the drawer slides in
    await nav();
    // On a phone search is the field under the drawer's header (like Claude's); elsewhere a button.
-   await reachable(width<=600?page.getByRole('textbox',{name:'Search projects and chats',exact:true}):page.getByRole('button',{name:'Search projects and chats',exact:true}).first(),height);
-   if(width<=600)await page.keyboard.press('Escape');
+   await reachable(width<520?page.getByRole('textbox',{name:'Search projects and chats',exact:true}):page.getByRole('button',{name:'Search projects and chats',exact:true}).first(),height);
+   if(width<520)await page.keyboard.press('Escape');
    await nav();
    await page.getByRole('button',{name:'Diary',exact:true}).click();
    const diary=page.locator('#diary-draft');await diary.waitFor();await reachable(diary,height);

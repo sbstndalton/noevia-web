@@ -476,6 +476,7 @@ export async function* streamChat(
   reasoning?: string;
   reasoningEffort?: string;
   route?: string;
+  // 'skills_scope' uses `text`: the skills auto-loaded for this reply.
   // 'tools_scope' uses `text`: the toolboxes offered for this reply ('' when not narrowed). // 'fast' | 'smart' when Auto routing picked the model (step 12)
   // 'usage' event: provider-reported totals for the finished reply.
   promptTokens?: number;

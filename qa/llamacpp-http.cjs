@@ -10,7 +10,7 @@ const upstream=http.createServer(async(req,res)=>{
  if(req.url.startsWith('/props')){assert.equal(new URL(req.url,'http://fixture').searchParams.get('autoload'),'false');return res.end(JSON.stringify({default_generation_settings:{n_ctx:loaded==='fast'?allocation:32768},total_slots:4,build_info:'b10920-synthetic'}));}
  if(req.url.endsWith('/load')){if(fail){res.statusCode=503;return res.end('{}');}loaded=body.model;return res.end('{}');}
  if(req.url==='/models'||req.url==='/models?reload=1')return res.end(JSON.stringify({data:['fast','smart'].map(id=>({id,source:'preset',can_remove:false,status:{value:id===loaded?'loaded':'unloaded',args:['PRIVATE_CANARY']},meta:{n_ctx_train:262144}}))}));
- if(req.url==='/models/unload'){loaded='';return res.end('{}');}
+ if(req.url==='/models/unload'){if(!body.model||body.model===loaded)loaded='';return res.end('{}');}
  if(req.url==='/models' && req.method==='POST')return res.end('{}');
  if(req.url.endsWith('/chat/completions')){
   if(!body.stream){if(failClassifier){res.statusCode=503;return res.end('{}');}return res.end(JSON.stringify({choices:[{finish_reason:'stop',message:{content:'FAST'}}]}));}
@@ -69,6 +69,9 @@ const meter=r=>r.text.split('\n').filter(x=>x.startsWith('data: ')).map(x=>{try{
   const installed=await api('/api/models/installed');assert.ok(!installed.text.includes('PRIVATE_CANARY'));assert.equal(installed.body[0].canDelete,false);
   const profile=await api('/api/models/preset?model=fast');assert.equal(profile.status,200,profile.text);
   const update={model:'fast',baseRevision:profile.body.revision,options:{'ctx-size':'32768'},confirmReload:true};
+  // A model is loaded: the preset cannot change under it. (The failed load above already
+  // unloaded the other chat model first, so load one explicitly.)
+  fail=false;loaded='smart';
   assert.equal((await api('/api/models/preset',update,'PUT')).status,409);
   loaded='';assert.equal((await api('/api/models/preset',update,'PUT')).status,200);
   assert.equal((await api('/api/models/preset',update,'PUT')).status,409);

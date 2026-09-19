@@ -18,12 +18,12 @@ const {createFixture}=require('./diary-fixture.cjs');
    await page.route('**/api/projects/*/skills',r=>r.fulfill({json:{skills:[]}}));
    await page.goto('http://localhost:31259');await page.getByPlaceholder('Message noevia…').waitFor();
    // Chat sidebar: only Chat-enabled projects.
-   if(width<=600){await page.getByRole('button',{name:'Open navigation',exact:true}).click();}
+   if(width<520){await page.getByRole('button',{name:'Open navigation',exact:true}).click();}
    const side=page.locator('.sidebar');
    await side.getByRole('button',{name:'Open Random questions',exact:true}).waitFor();
    assert.equal(await side.getByRole('button',{name:'Open HomeLab',exact:true}).count(),1);
    assert.equal(await side.getByRole('button',{name:'Open C++ practice',exact:true}).count(),0,'code-only project listed in the chat sidebar');
-   if(width<=600)await page.keyboard.press('Escape');
+   if(width<520)await page.keyboard.press('Escape');
    // Projects page: every project, with where it is available.
    await navClick(page,'Projects');
    await page.locator('.project-card').filter({hasText:'C++ practice'}).first().getByLabel('Available in code').waitFor();

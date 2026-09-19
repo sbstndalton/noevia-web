@@ -1,4 +1,5 @@
 import { matchesModelUse } from '../model-guidance';
+import { MiddleTruncate } from './MiddleTruncate';
 import { useModelsChanged } from '../models-changed';
 import { useCallback, useEffect, useState } from 'react';
 import { useModalDialog } from './useModalDialog';
@@ -75,6 +76,9 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
   useModelsChanged(refresh);
 
   const chatModels = models.filter((m) => matchesModelUse(m.labels, 'all'));
+  // A long catalogue gets a filter; a handful of models does not need one.
+  const [modelQuery, setModelQuery] = useState('');
+  const shownModels = chatModels.filter((m) => m.name.toLowerCase().includes(modelQuery.trim().toLowerCase()));
   const defaultProviderId = providers.find((p) => p.isDefault)?.id || 'default';
   const activeProviderId = activeProject?.provider === 'lemonade' ? defaultProviderId : activeProject?.provider || defaultProviderId;
   const activeProvider = providers.find((p) => p.id === activeProviderId);
@@ -153,13 +157,15 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
         </> : <>
           {modelsLoading && <p role="status" className="rail-empty">Loading models…</p>}
           {!modelsLoading && !err && !chatModels.length && <p role="status" className="rail-empty">No models installed. <button className="mp-link" onClick={() => onOpenSettings()}>Download one</button></p>}
+          {chatModels.length > 6 && <div className="settings-search mp-model-search"><input type="search" aria-label="Filter models" placeholder="Filter models" value={modelQuery} onChange={(e) => setModelQuery(e.target.value)}/></div>}
+          {modelQuery && !shownModels.length && <p role="status" className="rail-empty">No model matches “{modelQuery}”.</p>}
           <div className="mp-models">
-            {chatModels.map((m) => <div key={m.name} className="mp-model-item">
+            {shownModels.map((m) => <div key={m.name} className="mp-model-item">
               <button className="model-row mp-model" aria-pressed={activeProject.model === m.name}
                 disabled={busy !== null} onClick={() => void save(m.name, { model: m.name })}>
                 <span className={`model-dot${m.loaded ? '' : ' down'}`} />
                 <div className="model-name-group">
-                  <span className="model-name">{m.name}</span>
+                  <MiddleTruncate className="model-name" text={m.name}/>
                   {m.sizeGB != null && <span className="model-quant">{m.sizeGB} GB</span>}
                 </div>
                 <span className="model-role">{busy === m.name ? 'switching…' : activeProject.model === m.name ? 'selected' : m.loaded ? 'loaded' : ''}</span>

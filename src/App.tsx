@@ -471,6 +471,8 @@ export default function App(): JSX.Element {
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, senderLabel: `Assistant · Auto (${ev.route})` } : m)),
             }));
+          } else if (ev.type === 'skills_scope') {
+            setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, skillScope: ev.text || undefined } : m) }));
           } else if (ev.type === 'tools_scope') {
             setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, toolScope: ev.text || undefined } : m) }));
           } else if (ev.type === 'status' && ev.text) {
@@ -910,9 +912,9 @@ export default function App(): JSX.Element {
 
       <div className={`app-stack pane${settingsOpen ? ' has-settings' : ''}`}>
       <div className="app-main" ref={appMain}>
-      {appMode === 'code' && showPreviews && <Suspense fallback={null}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
+      {appMode === 'code' && showPreviews && <Suspense fallback={null}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
       <div className="chat-views" style={{display:appMode==='code'&&showPreviews&&codeShown?'none':'contents'}}>
-      {view.kind === 'plugins' && <PluginsView onStartChat={startFreeChatWith}/>}
+      {view.kind === 'plugins' && <PluginsView onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/>}
 
       {view.kind === 'preview' && showPreviews && <FeaturePreview title={view.title}/> }
       {view.kind === 'models' && (

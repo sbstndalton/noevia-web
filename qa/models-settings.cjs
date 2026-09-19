@@ -96,13 +96,13 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  // One interface now: two tabs, an always-visible Routing section, and three
  // collapsed panels. The helpers keep the assertions below about behaviour
  // rather than about which tab something used to live in.
- const tab=async name=>{const back=dialog.getByRole('button',{name:'← All models'});if(await back.count())await back.click();await dialog.getByRole('tab',{name,exact:true}).click();};
+ const tab=async name=>{const back=dialog.locator('.modal-btn').filter({hasText:'All models'});if(await back.count())await back.click();await dialog.getByRole('tab',{name,exact:true}).click();};
  const yours=()=>tab('Your models');
  const discover=()=>tab('Discover');
  const searchQueries=[];
  const fold=async name=>{const d=dialog.locator('details.mm-fold').filter({has:page.locator(`> summary:has-text("${name}")`)});if(!await d.evaluate(el=>el.open))await d.locator('> summary').click();await page.waitForTimeout(120);};
- const openModel=async name=>{await dialog.getByRole('article',{name}).getByRole('button',{name:'Tune'}).click();await dialog.getByRole('button',{name:'← All models'}).waitFor();};
- const backToList=()=>dialog.getByRole('button',{name:'← All models'}).click();
+ const openModel=async name=>{await dialog.getByRole('article',{name}).getByRole('button',{name:'Tune'}).click();await dialog.locator('.modal-btn').filter({hasText:'All models'}).waitFor();};
+ const backToList=()=>dialog.locator('.modal-btn').filter({hasText:'All models'}).click();
  // Your models is the default tab.
  await yours();
  await dialog.getByRole('article',{name:'Gemma-E2B'}).waitFor();

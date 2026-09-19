@@ -6,12 +6,13 @@ import { SegmentedControl } from '../SegmentedControl';
 import { ConnectorsSettings } from '../connectors/ConnectorsSettings';
 
 type Tab = 'connected' | 'mcp' | 'skills';
-interface Item { id: string; name: string; publisher: string; description: string; version: string; url: string; remote: boolean }
+interface Item { id: string; name: string; publisher: string; description: string; version: string; url: string; remote: boolean; installable?: boolean; notInstallable?: string }
+interface Added { id: string; registryName: string; title: string; toolCount: number | null; error: string | null }
 
 /** Plugins: the integrations you use (Google Drive and friends) plus a read-only directory of
  *  MCP servers and skills other people publish. Connecting moved here from Settings
  *  (user review, 2026-09-19); off-site backups still use the same Drive connection. */
-export function PluginsView({ onStartChat, embedded = false }: { onStartChat?: (prompt: string) => void; embedded?: boolean }): JSX.Element {
+export function PluginsView({ onStartChat, embedded = false, projects = [], onProjectsChanged }: { onStartChat?: (prompt: string) => void; embedded?: boolean; projects?: { id: string; name: string }[]; onProjectsChanged?: () => void }): JSX.Element {
   const [tab, setTab] = useState<Tab>('connected');
   const [isAdmin, setIsAdmin] = useState(false);
   useEffect(() => { let live = true; fetchProfile().then((p) => { if (live) setIsAdmin(p.user.role === 'admin'); }).catch(() => undefined); return () => { live = false; }; }, []);
@@ -23,12 +24,14 @@ export function PluginsView({ onStartChat, embedded = false }: { onStartChat?: (
     </header>
     {tab === 'connected'
       ? <div className="plugins-connected"><ConnectorsSettings hideTitle isAdmin={isAdmin} onStartChat={onStartChat}/></div>
-      : <Directory key={tab} kind={tab}/>}
+      : <Directory key={tab} kind={tab} projects={projects} onProjectsChanged={onProjectsChanged} isAdmin={isAdmin}/>}
   </div>;
   return embedded ? body : <main className="main plugins-view">{body}</main>;
 }
 
-function Directory({ kind }: { kind: 'mcp' | 'skills' }): JSX.Element {
+function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp' | 'skills'; projects: { id: string; name: string }[]; onProjectsChanged?: () => void; isAdmin: boolean }): JSX.Element {
+  const [added, setAdded] = useState<Added[]>([]);
+  useEffect(() => { if (kind !== 'mcp' || !isAdmin) return; apiFetch('/api/admin/mcp-directory').then((r) => r.json()).then((d) => setAdded(d.servers || [])).catch(() => undefined); }, [kind, isAdmin]);
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<Item[] | null>(null);
   const [error, setError] = useState('');
@@ -47,8 +50,8 @@ function Directory({ kind }: { kind: 'mcp' | 'skills' }): JSX.Element {
   return <section className="plugins-directory" aria-label={kind === 'mcp' ? 'MCP servers' : 'Skills'}>
     <div className="settings-search plugins-search"><ShellIcon name="search" size={16}/><input aria-label={kind === 'mcp' ? 'Search MCP servers' : 'Search skills'} placeholder={kind === 'mcp' ? 'Search MCP servers' : 'Search skills'} value={query} onChange={(e) => setQuery(e.target.value)}/></div>
     <p className="plugins-note">{kind === 'mcp'
-      ? 'Published by their authors in the public MCP registry, not reviewed by noevia. Adding a server from here is coming later; for now an administrator adds MCP servers to the server configuration.'
-      : 'Skills published by Anthropic. Skills work inside a project: add a skill’s SKILL.md to the project’s files and enable it under the project’s instruction skills.'}
+      ? (isAdmin ? 'Published by their authors in the public MCP registry, not reviewed by noevia. Administrators can add hosted servers: each becomes a toolbox a project has to choose, it never receives your passwords, and every one of its tools asks before it runs.' : 'Published by their authors in the public MCP registry, not reviewed by noevia. An administrator can add hosted servers for everyone on this noevia.')
+      : 'Skills published by Anthropic. Add one to a project and it arrives switched off: review it in the project’s instruction skills, then enable it. Only the written instructions are copied; scripts a skill bundles are never downloaded or run.'}
       {source && <> Source: <a href={source.home} target="_blank" rel="noreferrer noopener">{source.label}</a>.</>}</p>
     {error && <p className="route-note" role="alert">{error} <button className="btn btn-secondary btn-sm" onClick={() => setAttempt((n) => n + 1)}>Try again</button></p>}
     {items === null ? <p className="plugins-note" aria-live="polite">Loading…</p> : !error && items.length === 0 ? <p className="plugins-note">Nothing matches “{query}”.</p> : null}
@@ -60,8 +63,69 @@ function Directory({ kind }: { kind: 'mcp' | 'skills' }): JSX.Element {
           {i.publisher && <small className="plugin-publisher">{i.publisher}{i.version && ` · v${i.version}`}{i.remote && ' · hosted'}</small>}
           {i.description && <small>{i.description}</small>}
         </span>
-        {i.url && <a className="btn btn-secondary btn-sm plugin-card-link" href={i.url} target="_blank" rel="noreferrer noopener" aria-label={`View ${i.name}`}>View</a>}
+        <span className="plugin-card-actions">
+          {i.url && <a className="btn btn-secondary btn-sm plugin-card-link" href={i.url} target="_blank" rel="noreferrer noopener" aria-label={`View ${i.name}`}>View</a>}
+          {kind === 'skills' && <AddSkill skill={i} projects={projects} onAdded={onProjectsChanged}/>}
+          {kind === 'mcp' && isAdmin && <AddServer item={i} added={added.find((a) => a.registryName === i.id)} onChange={setAdded}/>}
+        </span>
       </li>)}
     </ul>
   </section>;
+}
+
+/** Add one published skill to a chosen project. It arrives needing review, never enabled. */
+function AddSkill({ skill, projects, onAdded }: { skill: Item; projects: { id: string; name: string }[]; onAdded?: () => void }): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const [project, setProject] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
+  if (!projects.length) return <button className="btn btn-secondary btn-sm plugin-card-link" disabled title="Create a project first">Add to project</button>;
+  if (!open) return <span className="plugin-add"><button className="btn btn-secondary btn-sm plugin-card-link" aria-label={`Add ${skill.name} to a project`} onClick={() => { setOpen(true); setNote(null); }}>Add to project</button>{note && <small role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</small>}</span>;
+  const add = async () => {
+    setBusy(true); setNote(null);
+    try {
+      const r = await apiFetch(`/api/projects/${encodeURIComponent(project)}/skills/install`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ skill: skill.id }) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || 'Could not add the skill.');
+      const name = projects.find((p) => p.id === project)?.name || 'the project';
+      setNote({ text: `Added to ${name}. Review and enable it in the project’s instruction skills.` });
+      setOpen(false); onAdded?.();
+    } catch (e) { setNote({ text: (e as Error).message, error: true }); } finally { setBusy(false); }
+  };
+  return <span className="plugin-add">
+    <select aria-label={`Project for ${skill.name}`} value={project} onChange={(e) => setProject(e.target.value)} disabled={busy}>
+      <option value="">Choose a project…</option>
+      {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+    </select>
+    <button className="btn btn-primary btn-sm" disabled={!project || busy} onClick={() => void add()}>{busy ? 'Adding…' : 'Add'}</button>
+    <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)} disabled={busy}>Cancel</button>
+    {note && <small role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</small>}
+  </span>;
+}
+
+/** Administrators add or remove a hosted server from the registry. The server re-reads its URL from
+ *  the registry, checks it is public, and makes sure it answers before saving. */
+function AddServer({ item, added, onChange }: { item: Item; added?: Added; onChange: (servers: Added[]) => void }): JSX.Element | null {
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
+  const call = async (method: 'POST' | 'DELETE') => {
+    setBusy(true); setNote(null);
+    try {
+      const r = await apiFetch(method === 'POST' ? '/api/admin/mcp-directory' : `/api/admin/mcp-directory/${encodeURIComponent(added!.id)}`,
+        { method, headers: { 'Content-Type': 'application/json' }, body: method === 'POST' ? JSON.stringify({ registryName: item.id }) : undefined });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || 'That did not work.');
+      onChange(data.servers || []);
+      setNote({ text: method === 'POST' ? `Added with ${data.server?.toolCount ?? 0} tools. Choose it under a project’s Tools to use it.` : 'Removed.' });
+    } catch (e) { setNote({ text: (e as Error).message, error: true }); } finally { setBusy(false); }
+  };
+  const msg = note && <small role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</small>;
+  if (added) return <span className="plugin-add">
+    <span className="badge ok">{added.error ? 'Not answering' : `Added · ${added.toolCount ?? '…'} tools`}</span>
+    <button className="btn btn-ghost btn-sm" disabled={busy} aria-label={`Remove ${item.name}`} onClick={() => void call('DELETE')}>{busy ? 'Removing…' : 'Remove'}</button>{msg}
+  </span>;
+  if (!item.installable) return <span className="plugin-add"><small>{item.notInstallable || 'Cannot be added'}</small></span>;
+  return <span className="plugin-add">
+    <button className="btn btn-secondary btn-sm plugin-card-link" disabled={busy} aria-label={`Add ${item.name} to noevia`} onClick={() => void call('POST')}>{busy ? 'Checking…' : 'Add'}</button>{msg}
+  </span>;
 }

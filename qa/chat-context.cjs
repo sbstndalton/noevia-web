@@ -41,7 +41,7 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   const meter=(await api(page,'/api/chats/context-qa/context-window')).body.meter;assert.equal(meter.covered,8);assert.equal(meter.limit,32768);
   assert.deepEqual((await api(page,'/api/chats/context-qa/history')).body.history,history);
   for(const width of [375,768,1440]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'overflow '+width);await page.screenshot({path:'/tmp/noevia-context-'+width+'.png'});}
-  await page.getByRole('button',{name:/Switch to (light|dark) mode/}).click();await page.screenshot({path:'/tmp/noevia-context-light.png'});
+  await page.locator('.side-footer .account-trigger').click();await page.getByRole('button',{name:/^(Light|Dark) mode$/}).click();await page.screenshot({path:'/tmp/noevia-context-light.png'});
   const chat=async(body)=>page.evaluate(async body=>{const csrf=decodeURIComponent(document.cookie.split(';').map(s=>s.trim()).find(s=>s.startsWith('cowork_csrf='))?.slice(12)||'');const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify(body)});return r.text();},body);
   const normal=await chat({spaceId:project.id,projectId:project.id,chatId:'context-qa',message:'Continue',history});assert.ok(normal.includes('Synthetic answer.'));assert.ok(requests.at(-1).messages.some(m=>m.content.includes('Earlier conversation summary')));
   const big=Array.from({length:30},(_,i)=>({role:i%2?'assistant':'user',content:'Synthetic record '+i+' '+('Fact. '.repeat(700))}));

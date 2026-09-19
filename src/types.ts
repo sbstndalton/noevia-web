@@ -13,6 +13,8 @@ export interface Message {
   warning?: string;
   /** Toolboxes the router picked for this reply, shown as "Using: …". */
   toolScope?: string;
+  /** Skills auto-loaded for this reply because the message matched them. */
+  skillScope?: string;
   processingStatus?: string;
   stats?: MessageStats;
   /** Set when this message was edited and the exchange re-run from here. */

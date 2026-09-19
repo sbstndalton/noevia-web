@@ -340,7 +340,7 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .app-mode-switch.is-compact > .glass-thumb { border-radius: 5px; }
 [data-material='material'] .app-mode-switch.is-compact { border: 1px solid var(--md-outline); border-radius: 999px; padding: 0; background: transparent; }
 [data-material='material'] .app-mode-switch.is-compact > button { border-radius: 0; height: 26px; }
-@media (pointer: coarse) { .app-mode-switch.is-compact { height: 36px; } .app-mode-switch.is-compact > button { width: 44px; height: 34px; } }
+@media (pointer: coarse) { .app-mode-switch.is-compact { height: 40px; } .app-mode-switch.is-compact > button { width: 44px; height: 36px; } }
 /* Collapsed rail: the header stacks, and the switch runs down under the expand button. */
 @media (min-width: 520px) {
   :is(.app .sidebar.pane, .coding-sidebar).is-collapsed .shell-sidebar-head { flex-direction: column; gap: 6px; }
@@ -490,3 +490,24 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 @media (min-height: 760px) { .app .coding-content, .main.plugins-view { justify-content: safe center; } }
 /* "Using: Drive, Tasks": which toolboxes the router offered for this reply. */
 .tool-scope { display: block; margin: 0 0 4px; color: var(--text-tertiary, var(--text-secondary)); font-size: var(--text-caption, 12px); }
+
+/* Long model names keep their start and their size/quantization ending; the middle gives way. */
+.mid-trunc { display: inline-flex; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; }
+.mid-trunc-head { flex: 0 1 auto; min-width: 1.5em; overflow: hidden; text-overflow: ellipsis; }
+.mid-trunc-tail { flex: none; }
+.model-pill .mid-trunc.model-pill-label { overflow: hidden; }
+.model-name.mid-trunc { display: inline-flex; }
+.mp-model-search { margin: 0 0 var(--space-2); }
+.mp-model-search input { width: 100%; }
+/* Calibration start/cancel are consequential actions: keep them 44px, not the generic 30px tab. */
+.native-calibration .popup-tab { min-height: 44px; }
+.mp-model .model-quant, .mp-model .model-role { white-space: nowrap; flex: none; }
+.mp-model-search input { border: 0; outline: none; background: transparent; box-shadow: none; padding: 0; min-height: 0; }
+.mp-model-search:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.mp-model-search input:focus, .mp-model-search input:focus-visible { outline: none !important; box-shadow: none !important; }
+.plugin-card-actions { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; align-self: center; }
+.plugin-add { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; max-width: 260px; }
+.plugin-add select { min-width: 0; max-width: 100%; flex: 1 1 140px; }
+.plugin-add small { flex-basis: 100%; text-align: right; color: var(--text-secondary); }
+.plugin-add .plugin-add-error { color: var(--status-danger); }
+@media (max-width: 519px) { .plugin-card { flex-wrap: wrap; } .plugin-card-actions { flex-basis: 100%; align-items: stretch; } .plugin-add { max-width: none; justify-content: stretch; } }

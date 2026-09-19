@@ -123,7 +123,7 @@ async function evaluate(cdp,expression){
     for(let i=0;i<100;i++){await new Promise(r=>setTimeout(r,100));if(await evaluate(cdp,`!!document.querySelector('button')`))break;}
     await evaluate(cdp,`window.__qaAlertFired=false;window.alert=()=>{window.__qaAlertFired=true;};true`);
     console.error('step: shell ready');
-    const click=name=>evaluate(cdp,`(()=>{for(const b of document.querySelectorAll('button'))if(b.textContent.trim()===${JSON.stringify(name)})return b.click(),true;throw new Error('no button '+${JSON.stringify(name)})})()`);
+    const click=name=>evaluate(cdp,`(()=>{for(const b of document.querySelectorAll('button'))if(b.textContent.trim()===${JSON.stringify(name)}||b.getAttribute('aria-label')===${JSON.stringify(name)})return b.click(),true;throw new Error('no button '+${JSON.stringify(name)})})()`);
     const waitFor=expr=>evaluate(cdp,`(async()=>{for(let i=0;i<100;i++){if(${expr})return true;await new Promise(r=>setTimeout(r,100));}throw new Error('timeout waiting');})()`);
 
     await click('Diary');
