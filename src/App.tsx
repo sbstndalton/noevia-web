@@ -47,6 +47,7 @@ import { ProjectView } from './components/ProjectView';
 import { Coding, Diary, ModelManager, Projects, Settings, prefetchViewsWhenIdle } from './lazy-views';
 import type { SettingsSection } from './components/SettingsShell';
 import { FeaturePreview } from './components/PreviewPanel';
+import { PluginsView } from './components/plugins/PluginsView';
 import { useFeatureFlags } from './components/features/useFeatureFlags';
 import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
@@ -60,6 +61,7 @@ type View =
   | { kind: 'diary' }
   | { kind: 'preview'; title: string }
   | { kind: 'projects' }
+  | { kind: 'plugins' }
   | { kind: 'models'; model?: string }
   | { kind: 'project'; id: string }
   | { kind: 'chat'; chatId: string; projectId?: string | null };
@@ -73,12 +75,29 @@ export default function App(): JSX.Element {
   const [settingsSection,setSettingsSection] = useState<string>(() => readLastPlace()?.settings ?? 'general');
   // Each open is a fresh Settings: reopening while the last one is still animating out replaces it.
   const [settingsKey, setSettingsKey] = useState(0);
-  const openSettings = (section: SettingsSection = 'general') => { setSettingsSection(section); setSettingsKey((k) => k + 1); setAppMode('chat'); setSettingsOpen(true); };
+  const openSettings = (section: SettingsSection = 'general') => {
+    // Connecting services moved to Plugins (user review, 2026-09-19); old links land there.
+    if (section === 'connectors') { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'plugins' }); return; }
+    setSettingsSection(section); setSettingsKey((k) => k + 1); setSettingsOpen(true); };
   // `model` opens that model's tuning view directly; without it, the model list.
   const openModelManager = (model?: string) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); };
   useEffect(() => { const open = (e: Event) => { const model = (e as CustomEvent<{ model?: string }>).detail?.model; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account'); return fresh || !!readLastPlace()?.settings; });
   const [appMode, setAppMode] = useState<'chat'|'code'>('chat');
+  // The Code page is chosen in the shared sidebar, so it lives here rather than in the workspace.
+  const [codePage, setCodePage] = useState('New task');
+  // Chat ⇄ Code plays a short entrance on the page, as Claude does, instead of cutting in one frame.
+  const appMain = useRef<HTMLDivElement>(null);
+  const firstMode = useRef(true);
+  useEffect(() => {
+    if (firstMode.current) { firstMode.current = false; return; }
+    const el = appMain.current;
+    if (!el) return;
+    el.classList.remove('mode-enter'); void el.offsetWidth; el.classList.add('mode-enter');
+    const done = () => el.classList.remove('mode-enter');
+    el.addEventListener('animationend', done, { once: true });
+    return () => el.removeEventListener('animationend', done);
+  }, [appMode]);
   // The Code workspace is a lazy chunk. Hiding the chat the moment Code was chosen left a
   // blank page until the chunk resolved (user review, 2026-09-18), so the chat stays on
   // screen until the Code workspace has mounted, and the two swap before paint.
@@ -853,9 +872,14 @@ export default function App(): JSX.Element {
 
   return (
     <div className="app">
-      <div className="regular-workspace" style={{display:appMode==='chat'||!showPreviews||!codeShown?'contents':'none'}}>
+      <div className="regular-workspace" style={{display:'contents'}}>
       <Sidebar
+        mode={appMode==='code'&&showPreviews?'code':'chat'}
+        codePage={codePage}
+        onCodePage={setCodePage}
         onEnterCode={() => setAppMode('code')}
+        onEnterChat={() => setAppMode('chat')}
+        onOpenPlugins={() => { setAppMode('chat'); setView({ kind: 'plugins' }); }}
         onPreview={(title) => setView({kind:'preview',title})}
         showPreviews={showPreviews}
         projects={projects}
@@ -883,7 +907,10 @@ export default function App(): JSX.Element {
       />
 
       <div className={`app-stack pane${settingsOpen ? ' has-settings' : ''}`}>
-      <div className="app-main">
+      <div className="app-main" ref={appMain}>
+      {appMode === 'code' && showPreviews && <Suspense fallback={null}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
+      <div className="chat-views" style={{display:appMode==='code'&&showPreviews&&codeShown?'none':'contents'}}>
+      {view.kind === 'plugins' && <PluginsView onStartChat={startFreeChatWith}/>}
 
       {view.kind === 'preview' && showPreviews && <FeaturePreview title={view.title}/> }
       {view.kind === 'models' && (
@@ -955,6 +982,7 @@ export default function App(): JSX.Element {
           onOpenModelSettings={(model?: string) => { setPopupOpen(false); openModelManager(model); }}
         />
       )}
+      </div>
 
       </div>
       {settingsOpen && (
@@ -986,7 +1014,7 @@ export default function App(): JSX.Element {
         </Suspense>
       )}
       <StatsBar stats={stats} modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null)} />
-      {view.kind === 'chat' && activeProject && (
+      {view.kind === 'chat' && activeProject && appMode === 'chat' && (
         <Inspector
           project={activeProject ?? null}
           models={models}
@@ -1016,7 +1044,6 @@ export default function App(): JSX.Element {
 
       </div>
       {shortcutsOpen && <ShortcutsDialog apple={appleKeys} onClose={() => setShortcutsOpen(false)} />}
-      {appMode === 'code' && showPreviews && <Suspense fallback={null}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View onExit={() => setAppMode('chat')} onSettings={() => openSettings()} theme={theme} onToggleTheme={() => setTheme(t=>t==='light'?'dark':'light')}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
 
     </div>
   );

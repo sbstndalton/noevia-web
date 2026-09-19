@@ -34,7 +34,6 @@ const PERSONAL: Group[] = [
     ['appearance', 'General'],
     ['personalization', 'Personalization'],
     ['capabilities', 'Capabilities'],
-    ['connectors', 'Connectors'],
     ['providers', 'AI providers'],
     ['usage', 'Usage'],
     ['data', 'Data controls'],
@@ -65,7 +64,7 @@ const ICONS: Record<string, string> = Object.fromEntries(['profile','security','
 // What used to be one navigation row each. Kept visible as a roadmap, but in
 // one place, so an empty section never looks like a broken one.
 const PLANNED: { group: string; items: string[] }[] = [
-  { group: 'Extensibility', items: ['Capability catalogue', 'Plugin management', 'Skill library', 'Nextcloud and custom MCP connectors'] },
+  { group: 'Extensibility', items: ['Capability catalogue', 'Adding MCP servers from the directory', 'Nextcloud connector'] },
   { group: 'Coding workspace', items: ['Coding preferences', 'Git', 'Environments', 'Worktrees', 'Hooks'] },
 ];
 

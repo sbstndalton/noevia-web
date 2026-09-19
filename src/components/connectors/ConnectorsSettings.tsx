@@ -51,7 +51,7 @@ const stateBadge = (d: Drive) => d.state === 'connected'
   : <span className="badge count">Not connected</span>;
 
 /** Settings → Connectors: what noevia can reach on your behalf, and what each tool may do. */
-export function ConnectorsSettings({ isAdmin, onStartChat }: { isAdmin: boolean; onStartChat?: (prompt: string) => void }): JSX.Element {
+export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false }: { isAdmin: boolean; onStartChat?: (prompt: string) => void; hideTitle?: boolean }): JSX.Element {
   const [drive, setDrive] = useState<Drive | null>(null);
   const [page, setPage] = useState<'list' | 'gdrive'>('list');
   const [error, setError] = useState('');
@@ -61,7 +61,7 @@ export function ConnectorsSettings({ isAdmin, onStartChat }: { isAdmin: boolean;
   if (page === 'gdrive' && drive) return <DrivePage drive={drive} isAdmin={isAdmin} onBack={() => setPage('list')} onChange={setDrive} reload={load} onStartChat={onStartChat}/>;
 
   return <>
-    <div className="settings-title"><h1>Connectors</h1><p>Services noevia can use on your behalf. Each connection is yours alone: other people on this server never reach it.</p></div>
+    {!hideTitle && <div className="settings-title"><h1>Connectors</h1><p>Services noevia can use on your behalf. Each connection is yours alone: other people on this server never reach it.</p></div>}
     {error && <p className="route-note" role="alert">{error} <button className="btn btn-secondary btn-sm" onClick={() => void load()}>Try again</button></p>}
     <div className="connector-list">
       <button className="connector-card surface" onClick={() => setPage('gdrive')} disabled={!drive} aria-label="Google Drive">

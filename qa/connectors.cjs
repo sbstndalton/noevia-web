@@ -15,15 +15,9 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    await page.goto('http://localhost:31415');await page.getByPlaceholder('Message noevia…').waitFor();
    await page.evaluate(()=>fetch('/api/connectors/gdrive/disconnect',{method:'POST'}));
    if(await page.getByRole('button',{name:'Open navigation',exact:true}).isVisible())await page.getByRole('button',{name:'Open navigation',exact:true}).click();
-   // Customize left the sidebar at the user's request (review of ab2720a): Connectors is
-   // reached through the account menu, under Settings → Customize.
-   await page.locator('.account-trigger').click();
-   await page.locator('.account-popover button').first().click();
-   const s=page.getByRole('region',{name:'Settings'});await s.waitFor();
-   // Settings takes the workspace's place: the chat underneath is hidden, not layered.
-   await page.waitForFunction(()=>getComputedStyle(document.querySelector('.app-main')).visibility==='hidden');
-   await s.getByRole('button',{name:'Connectors',exact:true}).click();
-   await s.getByRole('heading',{name:'Connectors',level:1}).waitFor();
+   // Connectors moved from Settings to the Plugins page (user review, 2026-09-19).
+   await page.getByRole('button',{name:'Plugins',exact:true}).click();
+   const s=page.locator('.plugins-page');await s.getByRole('heading',{name:'Plugins',level:1}).waitFor();
    assert.equal(await s.getByText('Coming later',{exact:true}).count()>=2,true,'unbuilt connectors say so');
    await s.getByRole('button',{name:'Google Drive'}).click();
    const [tab]=await Promise.all([page.context().waitForEvent('page',{timeout:3000}).catch(()=>null),s.getByRole('button',{name:'Connect Google Drive'}).click()]);await tab?.close();
@@ -44,20 +38,13 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    assert.equal(small,0,`targets ${width}`);
    assert.ok(await s.evaluate(el=>el.scrollWidth<=el.clientWidth+1),`no overflow ${width} ${theme}`);
    await page.screenshot({path:`${shots}/noevia-connectors-${width}-${theme}.png`});
-   if(phone){
-    await s.getByRole('button',{name:'All settings'}).click();await s.getByRole('button',{name:'General',exact:true}).waitFor();
-    await s.getByRole('button',{name:'Back to app',exact:true}).click();
-   }else{
-    // A prompt suggestion starts a new chat with it.
-    await s.getByRole('button',{name:/List the files you have saved/}).click();
-    await s.waitFor({state:'detached'});
-    await page.getByText('List the files you have saved to my Google Drive').first().waitFor();
-   }
-   await page.getByRole('region',{name:'Settings'}).waitFor({state:'detached'});
-   assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.app-main')).visibility),'visible');
+   // A prompt suggestion starts a new chat with it.
+   await s.getByRole('button',{name:/List the files you have saved/}).click();
+   await s.waitFor({state:'detached'});
+   await page.getByText('List the files you have saved to my Google Drive').first().waitFor();
    await page.close();
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS connectors: list with unbuilt connectors marked, Drive connect by code turns green by itself, writes cannot be allowed, block and group-wide changes, prompt suggestion starts a chat, Settings replaces the workspace; 1440/768/390 light/dark.');
+  console.log('PASS connectors: list with unbuilt connectors marked, Drive connect by code turns green by itself, writes cannot be allowed, block and group-wide changes, prompt suggestion starts a chat, on the Plugins page; 1440/768/390 light/dark.');
  }finally{await browser.close();await fixture.close?.();}
 })().catch(e=>{console.error(e);process.exit(1);});

@@ -233,10 +233,10 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.ok(ov.shown&&ov.overlap<=0.5,`hover options never cover the title ${JSON.stringify(ov)}`);
   await page.getByRole('button',{name:'Collapse navigation',exact:true}).click();
   await page.getByRole('button',{name:'Code',exact:true}).first().click();await page.getByPlaceholder(/Describe a task/).waitFor();
-  assert.ok(await page.locator('.coding-sidebar').evaluate(e=>e.classList.contains('is-collapsed')),'Code keeps a closed sidebar closed');
+  assert.ok(await page.locator('.sidebar.pane[data-mode=code]').evaluate(e=>e.classList.contains('is-collapsed')),'Code keeps a closed sidebar closed');
   assert.deepEqual(await glyphs(),[],'no text-glyph icons in Code');
   await page.getByRole('button',{name:'Chat',exact:true}).first().click();await page.getByPlaceholder(/Message/).first().waitFor();
-  assert.ok(await page.locator('.sidebar:not(.coding-sidebar)').evaluate(e=>e.classList.contains('is-collapsed')),'and Chat again');
+  assert.ok(await page.locator('.sidebar.pane[data-mode=chat]').evaluate(e=>e.classList.contains('is-collapsed')),'and Chat again');
   await page.close();
  }
 
@@ -259,32 +259,27 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.deepEqual(cards,[green],`card icon uses the project colour ${JSON.stringify(cards)}`);
   const track=async sel=>{const xs=[];for(let i=0;i<14;i++){xs.push(await page.evaluate(q=>{const t=document.querySelector(q);return t&&t.getBoundingClientRect().width?Math.round(t.getBoundingClientRect().left):null;},sel));await page.waitForTimeout(35);}return xs.filter(x=>x!==null);};
   await page.getByRole('button',{name:'Code',exact:true}).first().click();
-  const toCode=await track('.coding-sidebar .app-mode-switch > .glass-thumb');
+  const toCode=await track('.sidebar.pane .app-mode-switch > .glass-thumb');
   assert.ok(new Set(toCode).size>=3,`the thumb slides to Code ${toCode}`);
   await page.getByRole('button',{name:'Chat',exact:true}).first().click();
-  const toChat=await track('.sidebar:not(.coding-sidebar) .app-mode-switch > .glass-thumb');
+  const toChat=await track('.sidebar.pane .app-mode-switch > .glass-thumb');
   assert.ok(new Set(toChat).size>=3,`and back to Chat ${toChat}`);
   await page.close();
   const phone=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,isMobile:true});phone.on('pageerror',e=>errors.push(e.message));
   await phone.route('**/api/features',r=>r.fulfill({json:{flags:{previews:true}}}));
   await phone.goto('http://localhost:31377');await phone.getByPlaceholder('Message noevia…').waitFor();
   await phone.getByRole('button',{name:'Open navigation',exact:true}).tap();await phone.getByRole('button',{name:'Code',exact:true}).first().tap();await phone.getByPlaceholder(/Describe a task/).waitFor();
-  const cw=()=>phone.locator('.coding-sidebar').evaluate(e=>Math.round(e.getBoundingClientRect().width));
-  assert.ok(await cw()<80,'Code on a phone starts as a rail');
-  await phone.locator('.coding-sidebar').getByRole('button',{name:'Open navigation',exact:true}).tap();
-  assert.ok(await cw()>250,'its toggle opens the drawer');
-  await phone.locator('.coding-sidebar').getByRole('button',{name:'Close navigation',exact:true}).tap();
-  assert.ok(await cw()<80,'and closes it');
-  // Like Claude's: switching mode from the drawer closes it, the switch is a small icon track
-  // at the end of the header row, and the phone drawer is full width with search on top.
-  await phone.locator('.coding-sidebar').getByRole('button',{name:'Open navigation',exact:true}).tap();
+  // Code shares the chat drawer (user review, 2026-09-19): the same toggle opens it, with Code's destinations.
+  await phone.getByRole('button',{name:'Open navigation',exact:true}).tap();
+  const cd=phone.getByRole('dialog',{name:'Navigation'});await cd.getByRole('button',{name:'Pull requests'}).waitFor();
+  assert.equal(await phone.locator('.coding-sidebar').count(),0,'no separate Code sidebar');
   await phone.getByRole('button',{name:'Chat',exact:true}).tap();await phone.getByPlaceholder('Message noevia…').waitFor();
-  assert.equal(await phone.locator('.sidebar:not(.coding-sidebar)').evaluate(e=>e.classList.contains('is-expanded')),false,'switching to Chat leaves the drawer closed');
+  assert.equal(await phone.locator('.sidebar.pane').evaluate(e=>e.classList.contains('is-expanded')),false,'switching to Chat leaves the drawer closed');
   await phone.getByRole('button',{name:'Open navigation',exact:true}).tap();
   const d=await phone.evaluate(()=>{const s=document.querySelector('.sidebar.is-expanded'),h=s.querySelector('.shell-sidebar-head'),sw=h.querySelector('.app-mode-switch.is-compact'),logo=h.querySelector('.side-logo');const r=s.getBoundingClientRect(),q=sw.getBoundingClientRect(),l=logo.getBoundingClientRect();return {fullWidth:Math.round(r.width)>=innerWidth-1,switchAfterLogo:q.left>l.right,switchH:Math.round(q.height),search:!!s.querySelector('.shell-search')};});
   assert.ok(d.fullWidth&&d.switchAfterLogo&&d.search&&d.switchH<=40,`phone drawer like Claude's ${JSON.stringify(d)}`);
   await phone.getByRole('button',{name:'Code',exact:true}).tap();await phone.getByPlaceholder(/Describe a task/).waitFor();
-  assert.equal(await phone.locator('.coding-sidebar').evaluate(e=>e.classList.contains('is-open')),false,'switching to Code closes the drawer');
+  assert.equal(await phone.locator('.sidebar.pane').evaluate(e=>e.classList.contains('is-expanded')),false,'switching to Code closes the drawer');
   await phone.close();
  }
 

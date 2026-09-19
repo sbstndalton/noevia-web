@@ -150,7 +150,7 @@
   .app .sidebar.pane.is-collapsed .side-footer { order: 10; }
   .app .sidebar.pane.is-collapsed .shell-sidebar-head { order: 0; }
   .app .sidebar.pane.is-collapsed .app-mode-switch { order: 1; }
-  .app .sidebar.pane.is-collapsed .new-chat-btn { order: 2; }
+  .app .sidebar.pane.is-collapsed .side-new { order: 2; }
   /* Every icon button is the same 40px square, centred. */
   .app .sidebar.pane.is-collapsed :is(.side-expand, .rail-tools .shell-icon-button, .side-nav .nav-item, .new-chat-btn.glass) {
     width: 40px; height: 40px; min-height: 40px; padding: 0; margin: 0; justify-content: center; border-radius: var(--radius-md);
@@ -411,3 +411,72 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
    Only on phones and tablets: a desktop's phone-layout preview frames the app in the page. */
 :root:not([data-device='desktop']), :root:not([data-device='desktop']) body { overflow: hidden; overscroll-behavior: none; }
 :root:not([data-device='desktop']) .app { position: fixed; left: 0; right: 0; top: var(--visible-viewport-top, 0px); height: var(--visible-viewport-height, 100dvh); }
+
+/* ── One sidebar for Chat and Code (user review, 2026-09-19) ─────────────────
+   New chat (New task in Code) floats over the list as it scrolls, as in ChatGPT: the
+   list slides underneath it on the same material as the account row at the bottom. */
+.app .sidebar.pane .side-new {
+  position: sticky; top: calc(-1 * var(--space-3)); z-index: 2;
+  margin-top: calc(-1 * var(--space-1)); padding-top: var(--space-1);
+  background: var(--pane-fill); backdrop-filter: blur(var(--pane-blur)); -webkit-backdrop-filter: blur(var(--pane-blur));
+  box-shadow: calc(-1 * var(--space-4)) 0 0 var(--pane-fill), var(--space-4) 0 0 var(--pane-fill);
+}
+.app .sidebar.pane .side-new .new-chat-btn.glass { width: 100%; }
+[data-material='soft'] .app .sidebar.pane .side-new { background: var(--bg-app); box-shadow: calc(-1 * var(--space-4)) 0 0 var(--bg-app), var(--space-4) 0 0 var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.app .sidebar.pane.is-collapsed .side-new { position: static; margin: 0; padding: 0; background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; display: flex; justify-content: center; width: 100%; }
+.app .sidebar.pane.is-collapsed .side-new .new-chat-btn.glass { width: 40px; }
+[data-material='material'] .app .sidebar.pane.is-collapsed .side-new .new-chat-btn.glass { width: 56px; }
+.app .sidebar.pane .coding-history .side-hint { margin: 0; padding: 2px 2px 0; color: var(--text-secondary); font-size: var(--text-footnote); line-height: 1.4; }
+
+/* Collapsed rail: the name of whatever is under the pointer, beside it (ChatGPT). */
+.rail-tip {
+  position: fixed; z-index: 60; transform: translateY(-50%); pointer-events: none;
+  padding: 5px 9px; border-radius: var(--radius-sm); max-width: 260px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  background: var(--text-primary); color: var(--bg-app);
+  font-size: var(--text-footnote); font-weight: 500; line-height: 1.3;
+  box-shadow: var(--shadow-pop); animation: rail-tip-in 120ms var(--ease-out) both;
+}
+@keyframes rail-tip-in { from { opacity: 0; transform: translate(-3px, -50%); } }
+
+/* Chat ⇄ Code: the page eases in rather than cutting in one frame (Claude does this). */
+.app-stack:not(.has-settings) > .app-main.mode-enter { animation: mode-enter 240ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+@keyframes mode-enter { from { opacity: 0; transform: translateY(4px); } }
+@keyframes mode-fade { from { opacity: 0; } }
+/* Reduced motion keeps a gentle cross-fade rather than cutting. */
+@media (prefers-reduced-motion: reduce) { .app-stack:not(.has-settings) > .app-main.mode-enter { animation: mode-fade 160ms ease both; } .rail-tip { animation: none; } }
+:root[data-motion='reduced'] .app-stack:not(.has-settings) > .app-main.mode-enter { animation: mode-fade 160ms ease both; }
+:root[data-motion='reduced'] .rail-tip { animation: none; }
+/* Moving from one rail item to the next swaps the name instantly, as native tooltips do. */
+.rail-tip.is-warm { animation: none; }
+/* A soft edge where the list slides under New chat, not a hard cut. */
+.app .sidebar.pane:not(.is-collapsed) .side-new::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 10px; pointer-events: none; background: linear-gradient(var(--pane-fill), transparent); }
+[data-material='soft'] .app .sidebar.pane:not(.is-collapsed) .side-new::after { background: linear-gradient(var(--bg-app), transparent); }
+
+/* The Code page now sits in the shared shell, beside the shared sidebar. */
+.app-main > .code-mount .coding-workspace, .app-main .coding-workspace { flex: 1; min-height: 0; height: auto; }
+
+/* ── Plugins ── */
+.plugins-view { overflow-y: auto; }
+.plugins-page { width: min(760px, 100%); margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-8); display: flex; flex-direction: column; gap: var(--space-4); box-sizing: border-box; }
+.plugins-head h1 { margin: 0 0 var(--space-1); font-size: var(--text-title1); }
+.plugins-head p { margin: 0 0 var(--space-4); color: var(--text-secondary); }
+.plugins-note { margin: 0; color: var(--text-secondary); font-size: var(--text-footnote); line-height: 1.45; }
+.plugins-search { margin: 0; }
+.plugin-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: var(--space-3); }
+.plugin-card { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); min-width: 0; }
+.plugin-card-icon { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--radius-md); background: var(--nav-hover); color: var(--text-secondary); }
+.plugin-card-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.plugin-card-text b { font-weight: 600; overflow-wrap: anywhere; }
+.plugin-card-text small { color: var(--text-secondary); font-size: var(--text-footnote); line-height: 1.4; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.plugin-card-text .plugin-publisher { -webkit-line-clamp: 1; }
+.plugin-card-link { flex: none; align-self: center; }
+@media (pointer: coarse) { .plugin-card-link { min-height: 44px; display: inline-flex; align-items: center; } }
+.coding-content .plugins-page { padding-top: 0; }
+/* Phone: the drawer toggle floats over each page's first row; Code and Plugins leave it room. */
+@media (max-width: 600px) {
+  .app .coding-header { padding-left: 64px; padding-right: 12px; height: 60px; }
+  .app .coding-header .preview-badge { display: none; }
+  .app .coding-content { padding: 16px 16px 20px; }
+  .main.plugins-view .plugins-page { padding-top: 64px; }
+}
