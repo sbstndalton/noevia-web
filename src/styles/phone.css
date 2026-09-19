@@ -405,4 +405,9 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
    visualViewport.offsetTop. The app already shrank to the visible height; it now also moves
    down by that offset (viewport.js), so it covers exactly what is visible instead of sliding
    half off the top and leaving a blank band where the keyboard is. */
-.app { position: relative; top: var(--visible-viewport-top, 0px); }
+/* The shell is fixed to the visible viewport and the document itself cannot scroll, so iOS
+   has nothing to push up when the keyboard opens (the approach reported to hold on current
+   iOS; see stackoverflow.com/q/38619762). viewport.js keeps the height and offset in step.
+   Only on phones and tablets: a desktop's phone-layout preview frames the app in the page. */
+:root:not([data-device='desktop']), :root:not([data-device='desktop']) body { overflow: hidden; overscroll-behavior: none; }
+:root:not([data-device='desktop']) .app { position: fixed; left: 0; right: 0; top: var(--visible-viewport-top, 0px); height: var(--visible-viewport-height, 100dvh); }

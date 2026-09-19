@@ -330,6 +330,9 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.evaluate(()=>window.__kb(460,180));await page.waitForTimeout(150);
   const a=await page.evaluate(()=>{const r=document.querySelector('.app').getBoundingClientRect();return [Math.round(r.top),Math.round(r.height)];});
   assert.deepEqual(a,[180,460],'with the keyboard open the app covers exactly the visible area');
+  assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.app')).position),'fixed','on a phone the shell is fixed, so iOS has no document to push up');
+  await page.evaluate(()=>{document.body.style.minHeight='2000px';window.scrollTo(0,300);});await ta.blur();await ta.focus();await page.waitForTimeout(150);
+  assert.equal(await page.evaluate(()=>window.scrollY),0,'a document scroll from the keyboard is reset');
   await page.close();
  }
  assert.deepEqual(errors,[]);
