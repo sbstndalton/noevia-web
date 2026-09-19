@@ -471,6 +471,8 @@ export default function App(): JSX.Element {
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, senderLabel: `Assistant · Auto (${ev.route})` } : m)),
             }));
+          } else if (ev.type === 'tools_scope') {
+            setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, toolScope: ev.text || undefined } : m) }));
           } else if (ev.type === 'status' && ev.text) {
             setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, processingStatus: ev.text } : m) }));
           } else if (ev.type === 'warning' && ev.text) {

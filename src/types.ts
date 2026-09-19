@@ -11,6 +11,8 @@ export interface Message {
   toolCalls?: ToolCallView[];
   error?: boolean;
   warning?: string;
+  /** Toolboxes the router picked for this reply, shown as "Using: …". */
+  toolScope?: string;
   processingStatus?: string;
   stats?: MessageStats;
   /** Set when this message was edited and the exchange re-run from here. */

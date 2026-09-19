@@ -488,3 +488,5 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
   :root:not([data-device='desktop']) .app .chat-workspace.is-empty .empty-state { flex-grow: 0; }
 }
 @media (min-height: 760px) { .app .coding-content, .main.plugins-view { justify-content: safe center; } }
+/* "Using: Drive, Tasks": which toolboxes the router offered for this reply. */
+.tool-scope { display: block; margin: 0 0 4px; color: var(--text-tertiary, var(--text-secondary)); font-size: var(--text-caption, 12px); }

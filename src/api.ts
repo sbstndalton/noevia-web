@@ -475,7 +475,8 @@ export async function* streamChat(
   decision?: string;
   reasoning?: string;
   reasoningEffort?: string;
-  route?: string; // 'fast' | 'smart' when Auto routing picked the model (step 12)
+  route?: string;
+  // 'tools_scope' uses `text`: the toolboxes offered for this reply ('' when not narrowed). // 'fast' | 'smart' when Auto routing picked the model (step 12)
   // 'usage' event: provider-reported totals for the finished reply.
   promptTokens?: number;
   completionTokens?: number;

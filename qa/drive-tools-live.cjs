@@ -14,6 +14,8 @@ const offered=[];
 function startModel(){
   const server=http.createServer(async(req,res)=>{
     let raw='';for await(const c of req)raw+=c;
+    // No embedding model here: the tool router must fall back to every selected toolbox.
+    if(req.url.endsWith('/embeddings')){res.writeHead(404);return res.end('no embedding model');}
     if(req.url.endsWith('/models')){res.writeHead(200,{'Content-Type':'application/json'});return res.end(JSON.stringify({data:[{id:'synthetic-model'}]}));}
     const body=raw?JSON.parse(raw):{};const names=(body.tools||[]).map(t=>t.function.name);offered.push(names);
     const last=body.messages.at(-1);const user=[...body.messages].reverse().find(m=>m.role==='user');const text=String(user?.content||'');
