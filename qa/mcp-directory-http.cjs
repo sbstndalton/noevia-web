@@ -9,14 +9,27 @@ const {startFakeGoogle}=require('./fake-google.cjs');
 const port=31436,llmPort=31437,regPort=31438,mcpPort=31439,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'..'),shots=process.env.QA_SCREENSHOTS||'/tmp';
 const NAME='io.github.synthetic/forecast';process.env.NOEVIA_QA_ALLOW_LOOPBACK_MCP='1'; // mcpItems runs here too
 let calls=0;const offered=[];
-function startRegistry(){const s=http.createServer((req,res)=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify({servers:[{server:{name:NAME,title:'Synthetic forecast',description:'A synthetic weather server',version:'1.0.0',remotes:[{type:'streamable-http',url:`http://127.0.0.1:${mcpPort}/mcp`}]}},{server:{name:'io.github.synthetic/local-only',description:'Runs locally',packages:[{}]}},{server:{name:'io.github.synthetic/keyed',title:'Synthetic keyed',description:'Needs an API key',remotes:[{type:'streamable-http',url:`http://127.0.0.1:${mcpPort}/keyed/mcp`,headers:[{name:'Authorization',description:'Your synthetic API key',isRequired:true,isSecret:true,value:'Bearer {api_key}'}]}]}}]}));});return new Promise(r=>s.listen(regPort,'127.0.0.1',()=>r(s)));}
-let keyedAuth=[];
-function startRemote(){const s=http.createServer(async(req,res)=>{let raw='';for await(const c of req)raw+=c;const m=raw?JSON.parse(raw):{};
+function startRegistry(){const s=http.createServer((req,res)=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify({servers:[{server:{name:NAME,title:'Synthetic forecast',description:'A synthetic weather server',version:'1.0.0',remotes:[{type:'streamable-http',url:`http://127.0.0.1:${mcpPort}/mcp`}]}},{server:{name:'io.github.synthetic/local-only',description:'Runs locally',packages:[{}]}},{server:{name:'io.github.synthetic/keyed',title:'Synthetic keyed',description:'Needs an API key',remotes:[{type:'streamable-http',url:`http://127.0.0.1:${mcpPort}/keyed/mcp`,headers:[{name:'Authorization',description:'Your synthetic API key',isRequired:true,isSecret:true,value:'Bearer {api_key}'}]}]}},{server:{name:'io.github.synthetic/oauth',title:'Synthetic oauth',description:'Signs in with OAuth',remotes:[{type:'streamable-http',url:`http://127.0.0.1:${mcpPort}/oauth/mcp`}]}}]}));});return new Promise(r=>s.listen(regPort,'127.0.0.1',()=>r(s)));}
+let keyedAuth=[];const oauthCalls=[];const codes=new Map();let issued=0;
+const crypto=require('node:crypto');
+function startRemote(){const s=http.createServer(async(req,res)=>{let raw='';for await(const c of req)raw+=c;let m={};try{m=raw?JSON.parse(raw):{};}catch{m={};}
+  const U=new URL(req.url,'http://x'),base=`http://127.0.0.1:${mcpPort}`;
+  const sendJson=(o,st=200)=>{res.statusCode=st;res.setHeader('Content-Type','application/json');res.end(JSON.stringify(o));};
+  if(U.pathname==='/.well-known/oauth-protected-resource/oauth/mcp')return sendJson({resource:`${base}/oauth/mcp`,authorization_servers:[`${base}/as`]});
+  if(U.pathname==='/.well-known/oauth-authorization-server/as')return sendJson({issuer:`${base}/as`,authorization_endpoint:`${base}/as/authorize`,token_endpoint:`${base}/as/token`,registration_endpoint:`${base}/as/register`,code_challenge_methods_supported:['S256']});
+  if(U.pathname==='/as/register')return sendJson({client_id:'synthetic-client'},201);
+  if(U.pathname==='/as/authorize'){const code='C'+Math.random().toString(36).slice(2);codes.set(code,U.searchParams.get('code_challenge'));res.statusCode=302;res.setHeader('Location',`${U.searchParams.get('redirect_uri')}?code=${code}&state=${U.searchParams.get('state')}`);return res.end();}
+  if(U.pathname==='/as/token'){const q=new URLSearchParams(raw);const ch=codes.get(q.get('code'));if(!ch||crypto.createHash('sha256').update(q.get('code_verifier')||'').digest('base64url')!==ch)return sendJson({error:'invalid_grant'},400);codes.delete(q.get('code'));return sendJson({access_token:`TOKEN-${++issued}`,expires_in:3600});}
+  if(U.pathname==='/oauth/mcp'){const a=req.headers.authorization||'';if(!/^Bearer TOKEN-\d+$/.test(a)){res.statusCode=401;res.setHeader('WWW-Authenticate',`Bearer resource_metadata="${base}/.well-known/oauth-protected-resource/oauth/mcp"`);return res.end();}
+    if(m.method==='tools/call')oauthCalls.push(a);}
+  const oauthPath=U.pathname==='/oauth/mcp';
   const keyed=req.url.startsWith('/keyed');if(keyed){keyedAuth.push(req.headers.authorization||'');if(!['Bearer SYNTH-KEY-1','Bearer SYNTH-KEY-2'].includes(req.headers.authorization)){res.statusCode=401;return res.end('unauthorized');}}
   if(m.id===undefined){res.statusCode=202;return res.end();}
   res.setHeader('Content-Type','application/json');res.setHeader('mcp-session-id','synthetic-session');
   const reply=(result)=>res.end(JSON.stringify({jsonrpc:'2.0',id:m.id,result}));
   if(m.method==='initialize')return reply({protocolVersion:'2025-06-18',capabilities:{tools:{}},serverInfo:{name:'synthetic',version:'1'}});
+  if(m.method==='tools/list'&&oauthPath)return reply({tools:[{name:'synthetic_my_notes',description:'List my synthetic notes',inputSchema:{type:'object',properties:{}}}]});
+  if(m.method==='tools/call'&&oauthPath)return reply({content:[{type:'text',text:`NOTES for ${req.headers.authorization}`}]});
   if(m.method==='tools/list'&&keyed)return reply({tools:[{name:'synthetic_secret_lookup',description:'Look up a synthetic secret record',inputSchema:{type:'object',properties:{}}}]});
   if(m.method==='tools/list')return reply({tools:[{name:'synthetic_forecast',description:'Weather forecast for a city',inputSchema:{type:'object',properties:{city:{type:'string'}},required:['city']},annotations:{readOnlyHint:true}}]});
   if(m.method==='tools/call'){calls++;return reply({content:[{type:'text',text:`FORECAST-CANARY for ${m.params?.arguments?.city}`}]});}
@@ -30,7 +43,8 @@ function startModel(){
     const last=body.messages.at(-1);
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const chunk=(delta,finish=null)=>res.write(`data: ${JSON.stringify({choices:[{index:0,delta,finish_reason:finish}]})}\n\n`);
-    if(last.role!=='tool'&&names.includes('synthetic_forecast')){chunk({role:'assistant',tool_calls:[{index:0,id:'call-1',type:'function',function:{name:'synthetic_forecast',arguments:JSON.stringify({city:'Oslo'})}}]});chunk({},'tool_calls');}
+    if(last.role!=='tool'&&names.includes('synthetic_my_notes')){chunk({role:'assistant',tool_calls:[{index:0,id:'call-n',type:'function',function:{name:'synthetic_my_notes',arguments:'{}'}}]});chunk({},'tool_calls');}
+    else if(last.role!=='tool'&&names.includes('synthetic_forecast')){chunk({role:'assistant',tool_calls:[{index:0,id:'call-1',type:'function',function:{name:'synthetic_forecast',arguments:JSON.stringify({city:'Oslo'})}}]});chunk({},'tool_calls');}
     else chunk({role:'assistant',content:last.role==='tool'?`Tool said: ${String(last.content).slice(0,60)}`:'No forecast tool was offered.'}),chunk({},'stop');
     res.end('data: [DONE]\n\n');
   });
@@ -108,7 +122,47 @@ function startModel(){
   assert.ok(keyedAuth.length&&keyedAuth.every(a=>a==='Bearer SYNTH-KEY-2'),`new key used ${keyedAuth}`);
   assert.equal((await other('/api/admin/mcp-directory/'+keyedId+'/keys',{headers:{Authorization:'x'}},'PUT')).status,403,'members cannot change keys');
   assert.equal((await admin(`/api/admin/mcp-directory/${keyedId}`,undefined,'DELETE')).status,200);
+  // OAuth: the admin adds a sign-in server (a new tab signs in and comes back); tools are listed
+  // with the admin's sign-in. A member is not offered them until they sign in with their own
+  // account, and each account's calls carry its own token.
+  await page.getByRole('button',{name:'Plugins',exact:true}).click();await page.getByRole('radio',{name:'MCP servers'}).click();
+  const [tab]=await Promise.all([page.context().waitForEvent('page'),page.getByRole('button',{name:'Add Synthetic oauth to noevia'}).click()]);
+  await tab.getByText('Signed in').waitFor({timeout:20000});await tab.close().catch(()=>{});
+  await page.getByText(/Signed in\. 1 tools available/).waitFor({timeout:30000});
+  const oauthId=(await admin('/api/admin/mcp-directory')).body.servers.find(x=>x.oauth).id;
+  // Member: project with the box, but no sign-in yet → not offered.
+  const mctx=await browser.newContext({viewport:{width:1280,height:900}});
+  const {cookies:mc}=await other('/api/connectors');await mctx.addCookies([...mc].map(([name,value])=>({name,value,url:origin})));
+  assert.ok((await other('/api/projects',{name:'Member OAuth',model:'synthetic-model',toolboxes:['core',oauthId]})).status<300);
+  await other('/api/profile/onboarding',{});
+  const mp=await mctx.newPage();mp.on('pageerror',e=>errors.push(e.message));await mp.goto(origin);
+  const mset=mp.getByRole('region',{name:'Settings'});await mset.or(mp.locator('.sidebar').getByText('Member OAuth',{exact:true})).first().waitFor();
+  if(await mset.isVisible().catch(()=>false)){await mp.keyboard.press('Escape');await mset.waitFor({state:'detached'});}
+  await mp.locator('.sidebar').getByText('Member OAuth',{exact:true}).waitFor({timeout:10000}).catch(async e=>{await mp.screenshot({path:'/tmp/noevia-shots/member-land.png'});throw e;});
+  const mask=async(text)=>{await mp.locator('.sidebar').getByText('Member OAuth',{exact:true}).hover();await mp.getByRole('button',{name:'New chat in Member OAuth'}).click({force:true});const b=mp.getByRole('textbox',{name:/Message/}).first();await b.fill(text);await b.press('Enter');};
+  const b0=offered.length;await mask('Show my notes');await mp.getByText('No forecast tool was offered.').last().waitFor();
+  assert.ok(offered.slice(b0).every(n=>!n.includes('synthetic_my_notes')),'not offered before the member signs in');
+  await mp.getByRole('button',{name:'Plugins',exact:true}).click();
+  const [mtab]=await Promise.all([mctx.waitForEvent('page'),mp.getByRole('button',{name:'Sign in to Synthetic oauth'}).click()]);
+  await mtab.getByText('Signed in').waitFor({timeout:20000});await mtab.close().catch(()=>{});
+  await mp.getByRole('button',{name:'Disconnect Synthetic oauth'}).waitFor({timeout:20000});
+  await mp.screenshot({path:`${shots}/noevia-mcp-oauth-member.png`});
+  await mask('Show my notes please');const mcard=mp.locator('.tool-approval');await mcard.waitFor();await mcard.getByRole('button',{name:'Allow once'}).click();
+  await mp.getByText(/Tool said: NOTES for Bearer TOKEN-/).last().waitFor();
+  const memberToken=oauthCalls.at(-1);
+  // The admin's own call uses the admin's token, not the member's.
+  assert.ok((await admin('/api/projects',{name:'Admin OAuth',model:'synthetic-model',toolboxes:['core',oauthId]})).status<300);
+  await page.reload();await page.locator('.sidebar').getByText('Admin OAuth',{exact:true}).waitFor();
+  await page.locator('.sidebar').getByText('Admin OAuth',{exact:true}).hover();await page.getByRole('button',{name:'New chat in Admin OAuth'}).click({force:true});
+  const ab=page.getByRole('textbox',{name:/Message/}).first();await ab.fill('Show my notes');await ab.press('Enter');
+  const acard=page.locator('.tool-approval');await acard.waitFor();await acard.getByRole('button',{name:'Allow once'}).click();
+  await page.getByText(/Tool said: NOTES for Bearer TOKEN-/).last().waitFor();
+  assert.notEqual(oauthCalls.at(-1),memberToken,'each account calls with its own token');
+  // Removing the server drops every account's sign-in.
+  assert.equal((await admin(`/api/admin/mcp-directory/${oauthId}`,undefined,'DELETE')).status,200);
+  assert.deepEqual((await other('/api/mcp-oauth/servers')).body.servers,[]);
+  await mctx.close();
   assert.deepEqual(errors,[]);
-  console.log('PASS mcp directory: admin adds a hosted server from the registry after it answers; local-only servers are browse-only; members get 403; its tool asks before running even when marked read-only, then runs; removing it withdraws the tool; a keyed server refuses a wrong key before saving, stores the key without ever returning it, sends it, and can change it.');
+  console.log('PASS mcp directory: admin adds a hosted server from the registry after it answers; local-only servers are browse-only; members get 403; its tool asks before running even when marked read-only, then runs; removing it withdraws the tool; a keyed server refuses a wrong key before saving, stores the key without ever returning it, sends it, and can change it; an OAuth server is added through a sign-in tab, is offered to a member only after their own sign-in, and each account calls with its own token.');
  }finally{await browser.close();server.kill();model.close();registry.close();remote.close();await google.close();fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exit(1);});

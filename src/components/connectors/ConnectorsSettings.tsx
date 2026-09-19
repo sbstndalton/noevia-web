@@ -75,7 +75,7 @@ export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false }: 
       </div>
       <div className="connector-card surface is-later" aria-disabled="true">
         <span className="logo"><ShellIcon name="server" size={22}/></span>
-        <span className="connector-text"><b>Custom MCP server</b><small>Add any MCP server by its URL. <span className="badge count">Coming later</span></small></span>
+        <span className="connector-text"><b>MCP servers</b><small>Administrators add hosted servers from Plugins → MCP servers. Ones that need your own sign-in are listed below.</small></span>
       </div>
     </div>
   </>;

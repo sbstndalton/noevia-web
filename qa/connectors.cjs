@@ -18,7 +18,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    // Connectors moved from Settings to the Plugins page (user review, 2026-09-19).
    await page.getByRole('button',{name:'Plugins',exact:true}).click();
    const s=page.locator('.plugins-page');await s.getByRole('heading',{name:'Plugins',level:1}).waitFor();
-   assert.equal(await s.getByText('Coming later',{exact:true}).count()>=2,true,'unbuilt connectors say so');
+   assert.equal(await s.getByText('Coming later',{exact:true}).count()>=1,true,'unbuilt connectors say so');
    await s.getByRole('button',{name:'Google Drive'}).click();
    const [tab]=await Promise.all([page.context().waitForEvent('page',{timeout:3000}).catch(()=>null),s.getByRole('button',{name:'Connect Google Drive'}).click()]);await tab?.close();
    await s.getByText('WDJB-MJHT').waitFor();

@@ -8,7 +8,14 @@ import { ConnectorsSettings } from '../connectors/ConnectorsSettings';
 type Tab = 'connected' | 'mcp' | 'skills';
 interface Item { id: string; name: string; publisher: string; description: string; version: string; url: string; remote: boolean; installable?: boolean; notInstallable?: string; needsKey?: boolean; headers?: KeyHeader[] }
 interface KeyHeader { name: string; required: boolean; secret: boolean; description: string; template: string | null }
-interface Added { id: string; registryName: string; title: string; toolCount: number | null; error: string | null; keyHeaders?: string[] }
+interface Added { id: string; registryName: string; title: string; toolCount: number | null; error: string | null; keyHeaders?: string[]; oauth?: boolean }
+
+/** Open the sign-in in a new tab from inside the click (or the browser blocks it), then point it at the URL. */
+async function signInTab(get: () => Promise<string | null>): Promise<boolean> {
+  const tab = window.open('about:blank', '_blank');
+  try { const url = await get(); if (tab && url) { tab.opener = null; tab.location.href = url; return true; } tab?.close(); return false; }
+  catch (e) { tab?.close(); throw e; }
+}
 
 /** Plugins: the integrations you use (Google Drive and friends) plus a read-only directory of
  *  MCP servers and skills other people publish. Connecting moved here from Settings
@@ -24,7 +31,7 @@ export function PluginsView({ onStartChat, embedded = false, projects = [], onPr
       <SegmentedControl label="Plugins" value={tab} onChange={setTab} options={[['connected', 'Connected'], ['mcp', 'MCP servers'], ['skills', 'Skills']]}/>
     </header>
     {tab === 'connected'
-      ? <div className="plugins-connected"><ConnectorsSettings hideTitle isAdmin={isAdmin} onStartChat={onStartChat}/></div>
+      ? <div className="plugins-connected"><ConnectorsSettings hideTitle isAdmin={isAdmin} onStartChat={onStartChat}/><SignInServers/></div>
       : <Directory key={tab} kind={tab} projects={projects} onProjectsChanged={onProjectsChanged} isAdmin={isAdmin}/>}
   </div>;
   return embedded ? body : <main className="main plugins-view">{body}</main>;
@@ -118,12 +125,26 @@ function AddServer({ item, added, onChange }: { item: Item; added?: Added; onCha
     try {
       const url = method === 'POST' ? '/api/admin/mcp-directory' : method === 'PUT' ? `/api/admin/mcp-directory/${encodeURIComponent(added!.id)}/keys` : `/api/admin/mcp-directory/${encodeURIComponent(added!.id)}`;
       const payload = method === 'POST' ? { registryName: item.id, headers: values } : method === 'PUT' ? { headers: values } : undefined;
-      const r = await apiFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: payload ? JSON.stringify(payload) : undefined });
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.error || 'That did not work.');
+      let data: any = {};
+      let status = 0;
+      const send = async () => { const r = await apiFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: payload ? JSON.stringify(payload) : undefined }); status = r.status; data = await r.json().catch(() => ({})); if (!r.ok) throw new Error(data.error || 'That did not work.'); return data.signIn || null; };
+      // Adding may turn out to need a sign-in; the tab has to open inside this click.
+      if (method === 'POST' && !fields.length) await signInTab(send); else await send();
+      if (status === 202) { onChange(data.servers || []); setNote({ text: 'Finish signing in in the new tab. The server’s tools appear here once you have.' }); pollAdded(); return; }
       onChange(data.servers || []); setForm(false); setValues({});
       setNote({ text: method === 'POST' ? `Added with ${data.server?.toolCount ?? 0} tools. Choose it under a project’s Tools to use it.` : method === 'PUT' ? 'Key updated.' : 'Removed.' });
     } catch (e) { setNote({ text: (e as Error).message, error: true }); } finally { setBusy(false); }
+  };
+  // After an OAuth add, wait for the admin's sign-in to land and the tools to be listed.
+  const pollAdded = () => {
+    let n = 0;
+    const t = window.setInterval(async () => {
+      n++;
+      const d = await apiFetch('/api/admin/mcp-directory').then((r) => r.json()).catch(() => null);
+      const me = d?.servers?.find((x: Added) => x.registryName === item.id);
+      if (d?.servers) onChange(d.servers);
+      if ((me && me.toolCount) || n > 60) { window.clearInterval(t); if (me?.toolCount) setNote({ text: `Signed in. ${me.toolCount} tools available; choose it under a project’s Tools. Everyone else signs in with their own account from Plugins → Connected.` }); }
+    }, 3000);
   };
   const msg = note && <small role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</small>;
   const keyForm = (submitLabel: string, method: 'POST' | 'PUT') => <form className="plugin-key-form" onSubmit={(e) => { e.preventDefault(); void call(method); }}>
@@ -138,8 +159,10 @@ function AddServer({ item, added, onChange }: { item: Item; added?: Added; onCha
     <span className="plugin-key-actions"><button className="btn btn-primary btn-sm" disabled={busy}>{busy ? 'Checking…' : submitLabel}</button><button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => { setForm(false); setValues({}); }}>Cancel</button></span>
   </form>;
   if (added) return <span className="plugin-add">
-    <span className="badge ok">{added.error ? 'Not answering' : `Added · ${added.toolCount ?? '…'} tools`}</span>
+    <span className="badge ok">{added.error ? (added.oauth ? 'Waiting for sign-in' : 'Not answering') : `Added · ${added.toolCount ?? '…'} tools`}</span>
     {added.keyHeaders?.length ? <span className="badge count">Key set</span> : null}
+    {added.oauth && <span className="badge count">Each person signs in</span>}
+    {added.oauth && added.error && <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => void signInTab(async () => { const r = await apiFetch(`/api/mcp-oauth/${encodeURIComponent(added.id)}/connect`, { method: 'POST' }); const d = await r.json(); if (!r.ok) { setNote({ text: d.error || 'Could not start sign-in.', error: true }); return null; } pollAdded(); return d.signIn; })}>Sign in</button>}
     {fields.length > 0 && !form && <button className="btn btn-ghost btn-sm" disabled={busy} aria-label={`Change key for ${item.name}`} onClick={() => setForm(true)}>Change key</button>}
     <button className="btn btn-ghost btn-sm" disabled={busy} aria-label={`Remove ${item.name}`} onClick={() => void call('DELETE')}>{busy && !form ? 'Removing…' : 'Remove'}</button>
     {form && keyForm('Save key', 'PUT')}{msg}
@@ -150,4 +173,41 @@ function AddServer({ item, added, onChange }: { item: Item; added?: Added; onCha
     {item.needsKey && <span className="badge count">Needs a key</span>}
     <button className="btn btn-secondary btn-sm plugin-card-link" disabled={busy} aria-label={`Add ${item.name} to noevia`} onClick={() => (fields.length ? setForm(true) : void call('POST'))}>{busy ? 'Checking…' : 'Add'}</button>{msg}
   </span>;
+}
+
+/** Plugins → Connected: MCP servers that need each person's own sign-in. */
+function SignInServers(): JSX.Element | null {
+  const [servers, setServers] = useState<{ id: string; title: string; connected: boolean }[]>([]);
+  const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
+  const load = () => apiFetch('/api/mcp-oauth/servers').then((r) => r.json()).then((d) => setServers(d.servers || [])).catch(() => undefined);
+  useEffect(() => { void load(); }, []);
+  if (!servers.length) return null;
+  const connect = (id: string) => void signInTab(async () => {
+    const r = await apiFetch(`/api/mcp-oauth/${encodeURIComponent(id)}/connect`, { method: 'POST' }); const d = await r.json().catch(() => ({}));
+    if (!r.ok) { setNote({ text: d.error || 'Could not start sign-in.', error: true }); return null; }
+    setNote({ text: 'Finish signing in in the new tab.' });
+    let n = 0; const t = window.setInterval(async () => {
+      n++;
+      const d = await apiFetch('/api/mcp-oauth/servers').then((r) => r.json()).catch(() => null);
+      if (d?.servers) setServers(d.servers);
+      if (d?.servers?.find((x: { id: string; connected: boolean }) => x.id === id)?.connected) { window.clearInterval(t); setNote({ text: 'Signed in.' }); }
+      else if (n > 60) window.clearInterval(t);
+    }, 3000);
+    return d.signIn;
+  }).catch((e) => setNote({ text: (e as Error).message, error: true }));
+  const disconnect = async (id: string) => { await apiFetch(`/api/mcp-oauth/${encodeURIComponent(id)}`, { method: 'DELETE' }); setNote({ text: 'Disconnected.' }); void load(); };
+  return <section className="sign-in-servers" aria-label="MCP servers you sign in to">
+    <h2>MCP servers you sign in to</h2>
+    <p className="plugins-note">Your own account on each service. Its tools appear in projects that chose the server once you are signed in, and every call asks first.</p>
+    <ul className="plugin-grid">
+      {servers.map((s) => <li key={s.id} className="plugin-card surface">
+        <span className="plugin-card-icon"><ShellIcon name="server" size={20}/></span>
+        <span className="plugin-card-text"><b>{s.title}</b><small>{s.connected ? 'Signed in' : 'Not signed in'}</small></span>
+        <span className="plugin-card-actions">{s.connected
+          ? <button className="btn btn-ghost btn-sm" aria-label={`Disconnect ${s.title}`} onClick={() => void disconnect(s.id)}>Disconnect</button>
+          : <button className="btn btn-secondary btn-sm" aria-label={`Sign in to ${s.title}`} onClick={() => connect(s.id)}>Sign in</button>}</span>
+      </li>)}
+    </ul>
+    {note && <small role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</small>}
+  </section>;
 }
