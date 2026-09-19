@@ -71,7 +71,7 @@ async function evaluate(cdp,expression){
     await cdp.send('Page.enable');
     await cdp.send('Page.navigate',{url:`http://localhost:${PORT}/`});
     for(let i=0;i<100;i++){await new Promise(r=>setTimeout(r,100));if(await evaluate(cdp,`!!document.querySelector('button')`))break;}
-    const click=name=>evaluate(cdp,`(()=>{for(const b of document.querySelectorAll('button'))if(b.textContent.trim()===${JSON.stringify(name)})return b.click(),true;throw new Error('no button '+${JSON.stringify(name)})})()`);
+    const click=name=>evaluate(cdp,`(()=>{for(const b of document.querySelectorAll('button'))if(b.textContent.trim()===${JSON.stringify(name)}||b.getAttribute('aria-label')===${JSON.stringify(name)})return b.click(),true;throw new Error('no button '+${JSON.stringify(name)})})()`);
     const audit=()=>{
       return evaluate(cdp,`(()=>{
         const de=document.documentElement;
@@ -123,7 +123,7 @@ async function evaluate(cdp,expression){
     await click('Diary');
     await new Promise(r=>setTimeout(r,300));
     await click('Edit');
-    const click2=name=>evaluate(cdp,`(()=>{for(const b of document.querySelectorAll('button'))if(b.textContent.trim()===${JSON.stringify(name)})return b.click(),true;throw new Error('no button '+${JSON.stringify(name)})})()`);
+    const click2=name=>evaluate(cdp,`(()=>{for(const b of document.querySelectorAll('button'))if(b.textContent.trim()===${JSON.stringify(name)}||b.getAttribute('aria-label')===${JSON.stringify(name)})return b.click(),true;throw new Error('no button '+${JSON.stringify(name)})})()`);
     for(const theme of ['light','dark']){
       await cdp.send('Emulation.setDeviceMetricsOverride',{width:320,height:568,deviceScaleFactor:2,mobile:true});
       await evaluate(cdp,`document.documentElement.setAttribute('data-theme','${theme}');true`);

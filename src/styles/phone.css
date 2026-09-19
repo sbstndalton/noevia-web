@@ -511,3 +511,20 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .plugin-add small { flex-basis: 100%; text-align: right; color: var(--text-secondary); }
 .plugin-add .plugin-add-error { color: var(--status-danger); }
 @media (max-width: 519px) { .plugin-card { flex-wrap: wrap; } .plugin-card-actions { flex-basis: 100%; align-items: stretch; } .plugin-add { max-width: none; justify-content: stretch; } }
+.plugin-key-form { flex-basis: 100%; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.plugin-key-form label { display: flex; flex-direction: column; gap: 3px; }
+.plugin-key-form label > span { font-weight: 600; font-size: var(--text-footnote); }
+.plugin-key-form label > small, .plugin-key-note { color: var(--text-secondary); font-size: var(--text-caption, 12px); text-align: left !important; }
+.plugin-key-form input { min-height: 36px; padding: 6px 10px; border: 1px solid var(--control-border); border-radius: var(--radius-control, 8px); background: var(--bg-surface); color: var(--text-primary); font: inherit; }
+.plugin-key-actions { display: flex; gap: 6px; justify-content: flex-end; }
+@media (pointer: coarse) { .plugin-key-form input { min-height: 44px; font-size: 16px; } }
+.plugin-card:has(.plugin-key-form) { flex-wrap: wrap; }
+.plugin-card:has(.plugin-key-form) .plugin-card-actions { flex-basis: 100%; align-items: stretch; }
+.plugin-card:has(.plugin-key-form) .plugin-add { max-width: none; }
+/* A card's name keeps room: its actions and notes shrink and wrap instead of crushing the text. */
+.plugin-grid { align-items: start; }
+.plugin-card { flex-wrap: wrap; }
+.plugin-card-text { flex: 1 1 180px; }
+.plugin-card-actions { flex: 0 1 auto; max-width: 100%; }
+.plugin-card-actions .plugin-add small { max-width: 220px; }
+.plugin-card-actions .plugin-key-form small { max-width: none; }

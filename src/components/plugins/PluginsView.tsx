@@ -6,8 +6,9 @@ import { SegmentedControl } from '../SegmentedControl';
 import { ConnectorsSettings } from '../connectors/ConnectorsSettings';
 
 type Tab = 'connected' | 'mcp' | 'skills';
-interface Item { id: string; name: string; publisher: string; description: string; version: string; url: string; remote: boolean; installable?: boolean; notInstallable?: string }
-interface Added { id: string; registryName: string; title: string; toolCount: number | null; error: string | null }
+interface Item { id: string; name: string; publisher: string; description: string; version: string; url: string; remote: boolean; installable?: boolean; notInstallable?: string; needsKey?: boolean; headers?: KeyHeader[] }
+interface KeyHeader { name: string; required: boolean; secret: boolean; description: string; template: string | null }
+interface Added { id: string; registryName: string; title: string; toolCount: number | null; error: string | null; keyHeaders?: string[] }
 
 /** Plugins: the integrations you use (Google Drive and friends) plus a read-only directory of
  *  MCP servers and skills other people publish. Connecting moved here from Settings
@@ -108,24 +109,45 @@ function AddSkill({ skill, projects, onAdded }: { skill: Item; projects: { id: s
 function AddServer({ item, added, onChange }: { item: Item; added?: Added; onChange: (servers: Added[]) => void }): JSX.Element | null {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
-  const call = async (method: 'POST' | 'DELETE') => {
+  // The key form: shown before adding a server that needs one, or to change a key later.
+  const [form, setForm] = useState(false);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const fields = item.headers || [];
+  const call = async (method: 'POST' | 'DELETE' | 'PUT') => {
     setBusy(true); setNote(null);
     try {
-      const r = await apiFetch(method === 'POST' ? '/api/admin/mcp-directory' : `/api/admin/mcp-directory/${encodeURIComponent(added!.id)}`,
-        { method, headers: { 'Content-Type': 'application/json' }, body: method === 'POST' ? JSON.stringify({ registryName: item.id }) : undefined });
+      const url = method === 'POST' ? '/api/admin/mcp-directory' : method === 'PUT' ? `/api/admin/mcp-directory/${encodeURIComponent(added!.id)}/keys` : `/api/admin/mcp-directory/${encodeURIComponent(added!.id)}`;
+      const payload = method === 'POST' ? { registryName: item.id, headers: values } : method === 'PUT' ? { headers: values } : undefined;
+      const r = await apiFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: payload ? JSON.stringify(payload) : undefined });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || 'That did not work.');
-      onChange(data.servers || []);
-      setNote({ text: method === 'POST' ? `Added with ${data.server?.toolCount ?? 0} tools. Choose it under a project’s Tools to use it.` : 'Removed.' });
+      onChange(data.servers || []); setForm(false); setValues({});
+      setNote({ text: method === 'POST' ? `Added with ${data.server?.toolCount ?? 0} tools. Choose it under a project’s Tools to use it.` : method === 'PUT' ? 'Key updated.' : 'Removed.' });
     } catch (e) { setNote({ text: (e as Error).message, error: true }); } finally { setBusy(false); }
   };
   const msg = note && <small role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</small>;
+  const keyForm = (submitLabel: string, method: 'POST' | 'PUT') => <form className="plugin-key-form" onSubmit={(e) => { e.preventDefault(); void call(method); }}>
+    {fields.map((h) => <label key={h.name}>
+      <span>{h.name}{h.required ? '' : ' (optional)'}</span>
+      {h.description && <small>{h.description}</small>}
+      <input type={h.secret ? 'password' : 'text'} autoComplete="off" spellCheck={false} required={h.required}
+        placeholder={h.template ? h.template.replace(/\{([^}]+)\}/, '$1') : ''} value={values[h.name] || ''}
+        onChange={(e) => setValues((v) => ({ ...v, [h.name]: e.target.value }))}/>
+    </label>)}
+    <small className="plugin-key-note">Stored encrypted on this server and sent only to this MCP server. Everyone who uses its toolbox uses this key.</small>
+    <span className="plugin-key-actions"><button className="btn btn-primary btn-sm" disabled={busy}>{busy ? 'Checking…' : submitLabel}</button><button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => { setForm(false); setValues({}); }}>Cancel</button></span>
+  </form>;
   if (added) return <span className="plugin-add">
     <span className="badge ok">{added.error ? 'Not answering' : `Added · ${added.toolCount ?? '…'} tools`}</span>
-    <button className="btn btn-ghost btn-sm" disabled={busy} aria-label={`Remove ${item.name}`} onClick={() => void call('DELETE')}>{busy ? 'Removing…' : 'Remove'}</button>{msg}
+    {added.keyHeaders?.length ? <span className="badge count">Key set</span> : null}
+    {fields.length > 0 && !form && <button className="btn btn-ghost btn-sm" disabled={busy} aria-label={`Change key for ${item.name}`} onClick={() => setForm(true)}>Change key</button>}
+    <button className="btn btn-ghost btn-sm" disabled={busy} aria-label={`Remove ${item.name}`} onClick={() => void call('DELETE')}>{busy && !form ? 'Removing…' : 'Remove'}</button>
+    {form && keyForm('Save key', 'PUT')}{msg}
   </span>;
   if (!item.installable) return <span className="plugin-add"><small>{item.notInstallable || 'Cannot be added'}</small></span>;
+  if (form) return <span className="plugin-add">{keyForm('Add', 'POST')}{msg}</span>;
   return <span className="plugin-add">
-    <button className="btn btn-secondary btn-sm plugin-card-link" disabled={busy} aria-label={`Add ${item.name} to noevia`} onClick={() => void call('POST')}>{busy ? 'Checking…' : 'Add'}</button>{msg}
+    {item.needsKey && <span className="badge count">Needs a key</span>}
+    <button className="btn btn-secondary btn-sm plugin-card-link" disabled={busy} aria-label={`Add ${item.name} to noevia`} onClick={() => (fields.length ? setForm(true) : void call('POST'))}>{busy ? 'Checking…' : 'Add'}</button>{msg}
   </span>;
 }
