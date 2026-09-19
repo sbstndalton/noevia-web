@@ -75,7 +75,7 @@ const reducedMotion = () => typeof window !== 'undefined' && (document.documentE
 
 export type SettingsSection = 'general' | 'usage' | 'models' | 'connectors';
 
-export function SettingsShell(props: SettingsViewProps & {initialSection?:SettingsSection|string;onSection?:(id:string)=>void;appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; onStartChat?:(prompt:string)=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void; preference?:'light'|'dark'|'system'; onPreference?:(preference:'light'|'dark'|'system')=>void}) {
+export function SettingsShell(props: SettingsViewProps & {initialSection?:SettingsSection|string;onSection?:(id:string)=>void;appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; onClosing?:()=>void; onStartChat?:(prompt:string)=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void; preference?:'light'|'dark'|'system'; onPreference?:(preference:'light'|'dark'|'system')=>void}) {
   // 'general' is the historical name for the first page; it now opens Profile. Anything that is
   // not a section name (a click event handed through by mistake) counts as no choice.
   const named = typeof props.initialSection === 'string' && props.initialSection !== 'general' ? props.initialSection : null;
@@ -102,7 +102,12 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
 
   // Leaving plays the entrance backwards, then hands control back.
   const closeTimer = useRef(0);
+  const onClosing = useRef(props.onClosing);
+  onClosing.current = props.onClosing;
   const close = useCallback(() => {
+    // Forget Settings as the place to return to at once, not after the exit animation: a reload
+    // in those 240ms reopened it (found by qa/google-drive, 2026-09-19).
+    onClosing.current?.();
     if (reducedMotion()) { onClose.current(); return; }
     setClosing(true);
     closeTimer.current = window.setTimeout(() => onClose.current(), 240);

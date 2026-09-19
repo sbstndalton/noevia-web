@@ -42,7 +42,8 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   assert.equal(await page.getByRole('combobox',{name:'Enable MTP for Unsupported',exact:true}).isDisabled(),true);
   await navClick(page,'New chat');
   // The inference pill starts collapsed; MTP acceptance lives in its details.
-  const pill=page.getByRole('button',{name:/Inference/});if((await pill.getAttribute('aria-expanded'))!=='true')await pill.click();
+  // Wide screens show the details with no control; phones reveal them from the bar.
+  const pill=page.getByRole('region',{name:'Inference details'}).locator('button.stats-bar');if(await pill.count()&&(await pill.getAttribute('aria-expanded'))!=='true')await pill.click();
   await page.getByRole('progressbar',{name:'MTP acceptance for Synthetic native'}).waitFor();assert.equal(await page.getByRole('progressbar').getAttribute('value'),'0.75');
   for(const diary of [false,true]){
    if(diary)await navClick(page,'Diary');

@@ -995,6 +995,7 @@ export default function App(): JSX.Element {
           onSection={setSettingsSection}
           appearanceStatus={appearanceStatus} appearanceError={appearanceError} retryAppearance={retryAppearance}
           onClose={() => setSettingsOpen(false)}
+          onClosing={() => { if (view.kind !== 'preview') writeLastPlace({ user: accountId, view, settings: null }); }}
           onStartChat={startFreeChatWith}
           theme={theme}
           onTheme={setTheme}
