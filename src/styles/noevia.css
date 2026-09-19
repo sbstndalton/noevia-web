@@ -1461,7 +1461,8 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .mp-model[aria-pressed="true"] { border-color: var(--accent); }
 .mp-model-item { display: flex; align-items: stretch; gap: 6px; }
 .mp-model-item .mp-model { flex: 1; min-width: 0; }
-.mp-tune { flex: none; min-height: 44px; align-self: center; }
+/* Scoped to the row so the later generic .popup-tab (30px, primitives.css) cannot shrink it. */
+.mp-model-item .mp-tune { flex: none; min-height: 44px; align-self: center; }
 
 .mp-tool { display: flex; align-items: flex-start; gap: 8px; font-size: var(--text-caption); cursor: pointer; min-height: 44px; }
 .mp-tool > span { flex: 1; min-width: 0; }
