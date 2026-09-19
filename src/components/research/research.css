@@ -31,7 +31,7 @@
 .research-files li { display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
 .research-report summary { cursor: pointer; font-size: var(--text-caption); font-weight: 600; min-height: 32px; display: flex; align-items: center; }
 .research-report pre { margin: 6px 0 0; max-height: 420px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-ui); font-size: var(--text-footnote); line-height: 1.55; padding: 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--border); }
-@media (max-width: 600px) {
+@media (max-width: 519px) {
   .research-compose { padding: 14px; }
   .research-actions { justify-content: stretch; }
   .research-actions .btn { flex: 1 1 auto; }

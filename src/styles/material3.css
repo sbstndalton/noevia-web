@@ -36,7 +36,7 @@
   background: var(--md-surface-container-low); border: 0; box-shadow: none; border-radius: 16px;
 }
 [data-material='material'] .app .app-stack.pane { background: var(--md-surface); border: 0; box-shadow: none; }
-@media (max-width: 600px) {
+@media (max-width: 519px) {
   /* Modal navigation drawer: level 1, 16px on the open edge. */
   [data-material='material'] .app .sidebar.pane:not(.coding-sidebar).is-expanded {
     background: var(--md-surface-container-low); box-shadow: var(--m3-elev-1); border-radius: 0 16px 16px 0;
@@ -218,7 +218,7 @@
 
 /* Collapsed: an M3 navigation rail — the FAB at the top, 56px, icon-only destinations
    with a 56×32 pill indicator. */
-@media (min-width: 601px) {
+@media (min-width: 520px) {
   [data-material='material'] .app .sidebar.pane.is-collapsed { width: 80px; min-width: 80px; }
   [data-material='material'] .app .sidebar.pane.is-collapsed .new-chat-btn.glass { width: 56px; height: 56px; border-radius: 16px; }
   [data-material='material'] .app .sidebar.pane.is-collapsed .side-nav .nav-item { width: 56px; height: 32px; min-height: 32px; margin-block: 6px; border-radius: 999px; }

@@ -46,13 +46,13 @@
 .app .sidebar.pane .shell-avatar { width: 26px; height: 26px; background: var(--md-tertiary-container); color: var(--md-on-tertiary-container); }
 
 /* Collapsed rail (desktop). */
-@media (min-width: 601px) {
+@media (min-width: 520px) {
   .app .sidebar.pane.is-collapsed { width: 60px; min-width: 60px; padding: var(--space-3) 7px; }
   .app .sidebar.pane.is-collapsed .shell-sidebar-head { padding: 0 0 var(--space-3); justify-content: center; }
   .app .sidebar.pane.is-collapsed .new-chat-btn.glass { justify-content: center; padding: 8px 0; }
   .app .sidebar.pane.is-collapsed .nav-item { justify-content: center; }
 }
-@media (min-width: 601px) and (max-width: 1000px) { .app .sidebar.pane:not(.is-collapsed) { width: 232px; } }
+@media (min-width: 520px) and (max-width: 1000px) { .app .sidebar.pane:not(.is-collapsed) { width: 232px; } }
 
 /* ── Settings stage: takes the workspace's place ────────────────────────── */
 .settings-stage { position: absolute; inset: 0; z-index: 40; display: grid; grid-template-columns: 240px minmax(0, 1fr); border-radius: inherit;
@@ -120,7 +120,7 @@
   @keyframes sheet-fall { from { transform: none; opacity: 1; } to { transform: translateY(40px); opacity: 0; } }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 519px) {
   .app { padding: 0; gap: 0; }
   .app .app-stack.pane { border-radius: 0; border-width: 0; box-shadow: none; }
   /* The drawer is a floating pane that slides in from the edge. */
@@ -158,7 +158,7 @@ html[data-motion='reduced'] .app-stack.has-settings > .app-main, html[data-motio
 .app .send-btn.glass:disabled { opacity: .45; }
 .app .send-btn.glass svg { stroke: currentColor; }
 .app .model-pill.composer-model.glass { min-height: 30px; padding: 4px 12px; border-radius: var(--radius-pill); color: var(--text-primary); font-size: var(--text-footnote); font-weight: 500; background-color: transparent; }
-@media (max-width: 600px) { .app .send-btn.glass { width: 44px; height: 44px; } .app .model-pill.composer-model.glass { min-height: 44px; } }
+@media (max-width: 519px) { .app .send-btn.glass { width: 44px; height: 44px; } .app .model-pill.composer-model.glass { min-height: 44px; } }
 @media (max-width: 700px) { .app .settings-stage .settings-detail > header { display: flex; } }
 
 /* Settings replaces the workspace: what it covers is hidden, not just faded, so reduced motion

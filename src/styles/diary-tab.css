@@ -116,7 +116,7 @@
 .diary-wizard-step button { margin-right:10px; }
 @media(max-width:1100px) { .diary-layout { grid-template-columns:minmax(0,1fr) 245px; } .diary-primary { padding:24px; } .diary-context { padding:24px 16px; } }
 @media(max-width:800px) { .diary-layout { display:block; } .diary-context { border-left:0; border-top:1px solid var(--border); padding:24px; } .diary-landing { margin:32px auto 24px; } .diary-calendar { gap:5px; } .calendar-day { padding:8px; border-radius:9px; } .diary-primary { padding:20px 16px 32px; } .diary-modal { padding:18px; } .diary-storage-options { grid-template-columns:1fr; } .diary-private { display:none; } }
-@media(max-width:600px) {
+@media(max-width: 519px) {
   /* The legacy Diary icon rail. The open phone drawer is the full sidebar wherever it is opened. */
   .sidebar.diary-sidebar:not(.is-expanded) { width:64px; padding:14px 8px; }
   .diary-sidebar:not(.is-expanded) .spaces, .diary-sidebar:not(.is-expanded) .recents, .diary-sidebar:not(.is-expanded) .divider { display:none; }

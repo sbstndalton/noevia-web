@@ -16,7 +16,7 @@ input:not([type=checkbox]):not([type=radio]), textarea, select { border-color:va
 .auth-mark { font-size:var(--text-title3); }.side-logo { letter-spacing:-.6px; }
 .noevia-inspector { position:absolute; inset:0 0 0 auto; width:min(320px,86vw); z-index:20; padding:0; background:var(--bg-surface); border-left:1px solid var(--border); box-shadow:var(--shadow-pop); overflow:auto; font-size:var(--text-footnote); }
 
-@media(max-width:600px) {
+@media(max-width: 519px) {
   .sidebar:not(.coding-sidebar) { width:60px; min-width:60px; padding:12px 6px; }
   .sidebar:not(.coding-sidebar).is-expanded { position:absolute; inset:0 auto 0 0; z-index:30; width:min(272px,82vw); min-width:0; padding:18px 12px 10px; box-shadow:var(--shadow-pop); }
   .sidebar:not(.coding-sidebar) .side-logo { padding:4px; }
@@ -57,7 +57,7 @@ input:not([type=checkbox]):not([type=radio]), textarea, select { border-color:va
 /* A phone needs the full width for connection and storage forms. Keep every
    settings category available through a native selector above the content. */
 .mobile-settings-section { display: none; }
-@media (max-width: 600px) {
+@media (max-width: 519px) {
   .settings-shell { flex-direction: column; }
   .settings-navigation { width: 100%; flex-shrink: 0; padding: 10px 14px; border-right: 0; border-bottom: 1px solid var(--border); }
   .settings-navigation .settings-back { margin: 0 0 8px; }
@@ -72,13 +72,13 @@ input:not([type=checkbox]):not([type=radio]), textarea, select { border-color:va
 .native-modal::backdrop { background: transparent; }
 
 .msg-warning { color: var(--text-secondary); border: 1px solid var(--border); border-radius: 10px; background: var(--bg-surface); padding: 8px 12px; font-size: var(--text-footnote); line-height: 1.5; }
-@media (max-width: 600px) {
+@media (max-width: 519px) {
   .settings-detail .model-name-group { flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; }
   .settings-detail .model-name { max-width: 100%; }
   .settings-detail .model-quant { overflow-wrap: anywhere; }
 }
 
-@media (max-width: 600px) { .diary-sidebar .shell-sidebar-head .side-expand { display: inline-flex; } }
+@media (max-width: 519px) { .diary-sidebar .shell-sidebar-head .side-expand { display: inline-flex; } }
 
 /* Workspace refresh: quiet navigation, a continuous canvas, and a single
    control scale. Keep these shared rules here, after component styles. */
@@ -251,7 +251,7 @@ button:disabled { opacity: .5; cursor: default; }
   .project-rail { width: 100%; border-left: 0; border-top: 1px solid var(--border); padding: 20px; }
   .settings-shell { width: 100%; height: 100dvh; border-radius: 0; }
 }
-@media (max-width: 600px) {
+@media (max-width: 519px) {
   .app-main { margin: 0; }
   .sidebar:not(.coding-sidebar) { padding-top: 12px; }
   .projects-workspace .settings-scroll { padding: 0 20px; }
@@ -296,7 +296,7 @@ button:disabled { opacity: .5; cursor: default; }
 .msg[data-role='user'] .msg-user-row { max-width: 100%; background: var(--bg-surface-hover); border-radius: 18px; }
 .assistant-card .msg-meta { border: 0; font-family: var(--font-ui); margin-top: 8px; }
 @media (max-width: 900px) { .project-rail { display: flex; } }
-@media (max-width: 600px) {
+@media (max-width: 519px) {
   .sidebar:not(.is-expanded):not(.coding-sidebar) .sidebar-history { display: none; }
   .sidebar:not(.is-expanded):not(.coding-sidebar) .side-diary { margin-top: auto; }
 }
@@ -356,7 +356,7 @@ button:disabled { opacity: .5; cursor: default; }
 @keyframes menu-enter { from {opacity:0;transform:translateY(-3px)} to {opacity:1;transform:translateY(0)} }
 .rail-tools { display:none; }
 .sidebar .side-expand { display:inline-flex; }
-@media(min-width:601px) {
+@media(min-width: 520px) {
   .sidebar.is-collapsed { width:60px; min-width:60px; padding:14px 7px; }
   .sidebar.is-collapsed .side-logo, .sidebar.is-collapsed .shell-sidebar-head button:not(.side-expand), .sidebar.is-collapsed .sidebar-history, .sidebar.is-collapsed .status-row, .sidebar.is-collapsed .account-name, .sidebar.is-collapsed .account-trigger > svg { display:none; }
   .sidebar.is-collapsed .nav-name, .sidebar.is-collapsed .new-chat-btn span { display:none; }
@@ -366,7 +366,7 @@ button:disabled { opacity: .5; cursor: default; }
   .sidebar.is-collapsed .side-diary { margin-top:auto; }
   .sidebar.is-collapsed .rail-tools { display:grid; justify-content:center; }
 }
-@media(max-width:600px) { .sidebar:not(.is-expanded) .rail-tools { display:grid; justify-content:center; } }
+@media(max-width: 519px) { .sidebar:not(.is-expanded) .rail-tools { display:grid; justify-content:center; } }
 @media(hover:none) { .project-card-options { opacity:1; } }
 .settings-detail .settings-stat-row { padding:18px 0; border-top:1px solid var(--border); }
 .settings-detail .model-row { padding:14px 0; border-radius:0; border-bottom:1px solid var(--border); }
@@ -455,7 +455,7 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
 /* Source extraction state belongs to the source row, not the navigation. */
 .source-status { display: block; white-space: normal; overflow-wrap: anywhere; font-size: var(--text-caption); line-height: 1.4; margin-top: 0.25rem; }
 .source-name > span { min-width: 0; white-space: normal; }
-@media (max-width: 600px) {
+@media (max-width: 519px) {
   .source-list li { flex-wrap: wrap; }
   .source-list .source-name { flex-basis: 100%; }
 }
@@ -505,7 +505,7 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
 .chat-composer-inner > .reasoning-control { grid-column: 3; grid-row: 2; align-self: center; }
 .chat-composer-inner:has(> .reasoning-control) > .send-btn { grid-column: 4; }
 .reasoning-result { display: block; color: var(--text-secondary); margin: 6px 0; }
-@media(max-width:600px) { .chat-composer-inner > .reasoning-control select { max-width: 80px; } }
+@media(max-width: 519px) { .chat-composer-inner > .reasoning-control select { max-width: 80px; } }
 .reasoning-control .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* Diary conversation and composer have independent layout; only content scrolls. */
@@ -561,7 +561,7 @@ dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur
 .model-variant-row > .model-name-group { flex-direction:column; align-items:flex-start; gap:6px; }
 .model-variant-row .model-quant { margin-left:0; }
 .model-variant-row .model-name { white-space:normal; overflow-wrap:anywhere; }
-@media(max-width:600px) { .model-variant-row { flex-wrap:wrap; } .model-variant-row > .model-name-group { flex-basis:100%; } .model-variant-row > button { margin-left:auto; } }
+@media(max-width: 519px) { .model-variant-row { flex-wrap:wrap; } .model-variant-row > .model-name-group { flex-basis:100%; } .model-variant-row > button { margin-left:auto; } }
 
 .usage-rate-row { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); gap: 12px; border: 1px solid var(--border); margin-block: 16px; padding: 14px; min-width: 0; }
 .usage-rate-row label { min-width: 0; }
@@ -1199,7 +1199,7 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 
 .diary-workspace-search form { display:grid; gap:12px; margin-block:12px; }
 .diary-workspace-search button { min-height:44px; }
-@media(max-width:600px) { .diary-workspace-filter input { font-size:var(--text-input); min-width:0; } }
+@media(max-width: 519px) { .diary-workspace-filter input { font-size:var(--text-input); min-width:0; } }
 
 .diary-workspace-export { overflow-wrap: anywhere; }
 .diary-workspace-export .modal-btn { min-height: 44px; max-width: 100%; white-space: normal; }
@@ -1240,7 +1240,7 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
   .sidebar .proj-row:hover .project-disclosure, .sidebar .proj-row:has(:focus-visible) .project-disclosure { padding-right: 7px; }
   .sidebar-section-head .section-options { opacity: 1; }
 }
-@media (max-width: 600px) {
+@media (max-width: 519px) {
   .sidebar:not(.coding-sidebar).is-expanded { background: var(--bg-chrome); }
 }
 
@@ -1599,7 +1599,7 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 /* Mobile navigation drawer. Below 600px the sidebar leaves the layout entirely
    (no icon rail) and opens full-height from a single toggle. */
 .nav-drawer-toggle, .nav-drawer-backdrop { display: none; }
-@media (max-width: 600px) {
+@media (max-width: 519px) {
   .nav-drawer-toggle { display: inline-flex; position: absolute; top: 8px; left: 8px; z-index: 25; width: 44px; height: 44px; align-items: center; justify-content: center; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; }
   .sidebar:not(.coding-sidebar):not(.is-expanded) { display: none; }
   .sidebar:not(.coding-sidebar).is-expanded {
@@ -1625,7 +1625,7 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
    (vertical space matters in landscape) and drop the wordmark, keeping the mark. */
 .sidebar:not(.coding-sidebar):not(.is-collapsed) .shell-sidebar-head { min-width: 0; }
 .sidebar:not(.coding-sidebar):not(.is-collapsed) .side-head-actions { display: flex; flex-shrink: 0; }
-@media (min-width: 601px) and (max-width: 767px), (min-width: 601px) and (max-width: 1100px) and (pointer: coarse) {
+@media (min-width: 520px) and (max-width: 767px), (min-width: 520px) and (max-width: 1100px) and (pointer: coarse) {
   .sidebar:not(.coding-sidebar):not(.is-collapsed) .side-logo span { display: none; }
 }
 
@@ -1802,7 +1802,7 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .personal-style-label { font-size: var(--text-callout); font-weight: 600; }
 .personal-style-hint { font-size: var(--text-caption); color: var(--text-secondary); }
 .mm-easy-measure > summary, .mm-easy-autotune > summary { flex-wrap: wrap; }
-@media (max-width: 600px) { .mm-easy-measure > summary small, .mm-easy-autotune > summary small { flex-basis: 100%; padding-left: calc(1em + 8px); } }
+@media (max-width: 519px) { .mm-easy-measure > summary small, .mm-easy-autotune > summary small { flex-basis: 100%; padding-left: calc(1em + 8px); } }
 .mm-autotune { display: flex; flex-direction: column; gap: 10px; }
 .mm-progress { display: flex; flex-direction: column; gap: 4px; font-size: var(--text-caption); color: var(--text-secondary); }
 .mm-progress progress { width: 100%; height: 8px; accent-color: var(--accent); }

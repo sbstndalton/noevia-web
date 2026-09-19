@@ -111,7 +111,7 @@ export function Sidebar({
   // toggle; `expanded` is that drawer. Focus is trapped while it is open and
   // handed back to the toggle when it closes.
   const [expanded, setExpanded] = useState(false);
-  const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 600px)').matches);
+  const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 519px)').matches);
   const drawer = useRef<HTMLDivElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
@@ -129,7 +129,7 @@ export function Sidebar({
     return () => observer.disconnect();
   }, [expanded]);
   useEffect(() => {
-    const query = window.matchMedia('(max-width: 600px)');
+    const query = window.matchMedia('(max-width: 519px)');
     const change = () => { setMobile(query.matches); if (!query.matches) setExpanded(false); };
     query.addEventListener('change', change);
     return () => query.removeEventListener('change', change);

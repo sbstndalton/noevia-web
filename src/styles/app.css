@@ -1400,7 +1400,7 @@ button:disabled { cursor: not-allowed; }
 /* The expand control only exists while the rail is collapsed. Qualified
    because .shell-icon-button sets display in a later stylesheet. */
 .shell-icon-button.side-expand { display: none; }
-@media (max-width: 600px) {
+@media (max-width: 519px) {
   .app { position: relative; }
   .shell-icon-button.side-expand { display: inline-flex; }
   .sidebar.is-expanded .spaces { max-height: 46vh; }
