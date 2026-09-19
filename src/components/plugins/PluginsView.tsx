@@ -8,7 +8,7 @@ import { ConnectorsSettings } from '../connectors/ConnectorsSettings';
 type Tab = 'connected' | 'mcp' | 'skills';
 interface Item { id: string; name: string; publisher: string; description: string; version: string; url: string; remote: boolean; installable?: boolean; notInstallable?: string; needsKey?: boolean; headers?: KeyHeader[] }
 interface KeyHeader { name: string; required: boolean; secret: boolean; description: string; template: string | null }
-interface Added { id: string; registryName: string; title: string; toolCount: number | null; error: string | null; keyHeaders?: string[]; oauth?: boolean; redirectUri?: string; oauthClient?: { manual: boolean; clientId: string | null; hasSecret: boolean; redirectUri: string; issuer: string } | null }
+interface Added { id: string; registryName: string; title: string; toolCount: number | null; error: string | null; keyHeaders?: string[]; oauth?: boolean; personal?: boolean; redirectUri?: string; oauthClient?: { manual: boolean; clientId: string | null; hasSecret: boolean; redirectUri: string; issuer: string } | null }
 
 /** Open the sign-in in a new tab from inside the click (or the browser blocks it), then point it at the URL. */
 const tools = (n: number | null | undefined) => `${n ?? '…'} tool${n === 1 ? '' : 's'}`;
@@ -33,7 +33,7 @@ export function PluginsView({ onStartChat, embedded = false, projects = [], onPr
       <SegmentedControl label="Plugins" value={tab} onChange={setTab} options={[['connected', 'Connected'], ['mcp', 'MCP servers'], ['skills', 'Skills']]}/>
     </header>
     {tab === 'connected'
-      ? <div className="plugins-connected"><ConnectorsSettings hideTitle isAdmin={isAdmin} onStartChat={onStartChat}/><SignInServers/></div>
+      ? <div className="plugins-connected"><ConnectorsSettings hideTitle isAdmin={isAdmin} onStartChat={onStartChat}/><SignInServers/><KeyServers/></div>
       : <Directory key={tab} kind={tab} projects={projects} onProjectsChanged={onProjectsChanged} isAdmin={isAdmin}/>}
   </div>;
   return embedded ? body : <main className="main plugins-view">{body}</main>;
@@ -121,6 +121,7 @@ function AddServer({ item, added, onChange }: { item: Item; added?: Added; onCha
   // The key form: shown before adding a server that needs one, or to change a key later.
   const [form, setForm] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [keyMode, setKeyMode] = useState<'shared' | 'personal'>('personal');
   const fields = item.headers || [];
   // A sign-in service that needs a hand-registered app: where to register, and the app's ID/secret.
   const [appForm, setAppForm] = useState<{ issuer?: string; redirectUri?: string } | null>(null);
@@ -140,8 +141,9 @@ function AddServer({ item, added, onChange }: { item: Item; added?: Added; onCha
   const call = async (method: 'POST' | 'DELETE' | 'PUT') => {
     setBusy(true); setNote(null);
     try {
-      const url = method === 'POST' ? '/api/admin/mcp-directory' : method === 'PUT' ? `/api/admin/mcp-directory/${encodeURIComponent(added!.id)}/keys` : `/api/admin/mcp-directory/${encodeURIComponent(added!.id)}`;
-      const payload = method === 'POST' ? { registryName: item.id, headers: values } : method === 'PUT' ? { headers: values } : undefined;
+      // A personal server's key is the admin's own, changed like anyone else's.
+      const url = method === 'POST' ? '/api/admin/mcp-directory' : method === 'PUT' ? (added?.personal ? `/api/mcp-keys/${encodeURIComponent(added!.id)}` : `/api/admin/mcp-directory/${encodeURIComponent(added!.id)}/keys`) : `/api/admin/mcp-directory/${encodeURIComponent(added!.id)}`;
+      const payload = method === 'POST' ? { registryName: item.id, headers: values, keyMode } : method === 'PUT' ? { headers: values } : undefined;
       let data: any = {};
       let status = 0;
       const send = async () => { const r = await apiFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: payload ? JSON.stringify(payload) : undefined }); status = r.status; data = await r.json().catch(() => ({})); if (!r.ok) throw new Error(data.error || 'That did not work.'); return data.signIn || null; };
@@ -173,7 +175,11 @@ function AddServer({ item, added, onChange }: { item: Item; added?: Added; onCha
         placeholder={h.template ? h.template.replace(/\{([^}]+)\}/, '$1') : ''} value={values[h.name] || ''}
         onChange={(e) => setValues((v) => ({ ...v, [h.name]: e.target.value }))}/>
     </label>)}
-    <small className="plugin-key-note">Stored encrypted on this server and sent only to this MCP server. Everyone who uses its toolbox uses this key.</small>
+    {method === 'POST' && <fieldset className="plugin-key-mode"><legend>Who uses this key</legend>
+      <label><input type="radio" name={`mode-${item.id}`} checked={keyMode === 'personal'} onChange={() => setKeyMode('personal')}/> Each person uses their own key <small>(yours is used to list the tools; others add theirs in Plugins → Connected)</small></label>
+      <label><input type="radio" name={`mode-${item.id}`} checked={keyMode === 'shared'} onChange={() => setKeyMode('shared')}/> Everyone uses this key</label>
+    </fieldset>}
+    <small className="plugin-key-note">Stored encrypted on this server and sent only to this MCP server. {method === 'POST' ? (keyMode === 'shared' ? 'Everyone who uses its toolbox uses this key.' : 'Only you use this key.') : added?.personal ? 'This is your own key.' : 'Everyone who uses its toolbox uses this key.'}</small>
     <span className="plugin-key-actions"><button className="btn btn-primary btn-sm" disabled={busy}>{busy ? 'Checking…' : submitLabel}</button><button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => { setForm(false); setValues({}); }}>Cancel</button></span>
   </form>;
   const appFormView = (id: string) => appForm && <form className="plugin-key-form" onSubmit={(e) => { e.preventDefault(); saveApp(id); }}>
@@ -186,7 +192,8 @@ function AddServer({ item, added, onChange }: { item: Item; added?: Added; onCha
   </form>;
   if (added) return <span className="plugin-add">
     <span className="badge ok">{added.error ? (added.oauth ? 'Waiting for sign-in' : 'Not answering') : `Added · ${tools(added.toolCount)}`}</span>
-    {added.keyHeaders?.length ? <span className="badge count">Key set</span> : null}
+    {added.keyHeaders?.length ? <span className="badge count">Shared key set</span> : null}
+    {added.personal && <span className="badge count">Each person adds a key</span>}
     {added.oauth && <span className="badge count">Each person signs in</span>}
     {added.oauth && added.oauthClient?.manual && <span className="badge count">App: {added.oauthClient.clientId}</span>}
     {added.oauth && !appForm && (!added.oauthClient || added.oauthClient.manual) && <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => { setClientId(added.oauthClient?.clientId || ''); setAppForm({ issuer: added.oauthClient?.issuer, redirectUri: added.redirectUri }); }}>{added.oauthClient ? 'App settings' : 'Set up app'}</button>}
@@ -235,6 +242,51 @@ function SignInServers(): JSX.Element | null {
         <span className="plugin-card-actions">{s.connected
           ? <button className="btn btn-ghost btn-sm" aria-label={`Disconnect ${s.title}`} onClick={() => void disconnect(s.id)}>Disconnect</button>
           : <button className="btn btn-secondary btn-sm" aria-label={`Sign in to ${s.title}`} onClick={() => connect(s.id)}>Sign in</button>}</span>
+      </li>)}
+    </ul>
+    {note && <small role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</small>}
+  </section>;
+}
+
+/** Plugins → Connected: servers where each person adds their own key. */
+function KeyServers(): JSX.Element | null {
+  const [servers, setServers] = useState<{ id: string; title: string; headers: KeyHeader[]; hasKey: boolean }[]>([]);
+  const [open, setOpen] = useState<string | null>(null);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
+  const load = () => apiFetch('/api/mcp-keys/servers').then((r) => r.json()).then((d) => setServers(d.servers || [])).catch(() => undefined);
+  useEffect(() => { void load(); }, []);
+  if (!servers.length) return null;
+  const save = async (id: string) => {
+    setBusy(true); setNote(null);
+    try {
+      const r = await apiFetch(`/api/mcp-keys/${encodeURIComponent(id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ headers: values }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'The key was not accepted.');
+      setOpen(null); setValues({}); setNote({ text: 'Key saved. Its tools now appear in projects that chose this server.' }); void load();
+    } catch (e) { setNote({ text: (e as Error).message, error: true }); } finally { setBusy(false); }
+  };
+  const remove = async (id: string) => { await apiFetch(`/api/mcp-keys/${encodeURIComponent(id)}`, { method: 'DELETE' }); setNote({ text: 'Key removed.' }); void load(); };
+  return <section className="sign-in-servers" aria-label="MCP servers that use your own key">
+    <h2>MCP servers that use your own key</h2>
+    <p className="plugins-note">Your own key for each service, stored encrypted and used only for your requests. Its tools appear in projects that chose the server once you have added it, and every call asks first.</p>
+    <ul className="plugin-grid">
+      {servers.map((s) => <li key={s.id} className="plugin-card surface">
+        <span className="plugin-card-icon"><ShellIcon name="server" size={20}/></span>
+        <span className="plugin-card-text"><b>{s.title}</b><small>{s.hasKey ? 'Your key is set' : 'No key yet'}</small></span>
+        <span className="plugin-card-actions">
+          {open !== s.id && <span className="plugin-add">
+            <button className="btn btn-secondary btn-sm" aria-label={`${s.hasKey ? 'Change' : 'Add'} your key for ${s.title}`} onClick={() => { setOpen(s.id); setValues({}); setNote(null); }}>{s.hasKey ? 'Change key' : 'Add key'}</button>
+            {s.hasKey && <button className="btn btn-ghost btn-sm" aria-label={`Remove your key for ${s.title}`} onClick={() => void remove(s.id)}>Remove key</button>}
+          </span>}
+          {open === s.id && <form className="plugin-key-form" onSubmit={(e) => { e.preventDefault(); void save(s.id); }}>
+            {s.headers.map((h) => <label key={h.name}><span>{h.name}{h.required ? '' : ' (optional)'}</span>{h.description && <small>{h.description}</small>}
+              <input type={h.secret ? 'password' : 'text'} autoComplete="off" spellCheck={false} required={h.required} placeholder={h.template ? h.template.replace(/\{([^}]+)\}/, '$1') : ''}
+                value={values[h.name] || ''} onChange={(e) => setValues((v) => ({ ...v, [h.name]: e.target.value }))}/></label>)}
+            <span className="plugin-key-actions"><button className="btn btn-primary btn-sm" disabled={busy}>{busy ? 'Checking…' : 'Save key'}</button><button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setOpen(null)}>Cancel</button></span>
+          </form>}
+        </span>
       </li>)}
     </ul>
     {note && <small role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</small>}

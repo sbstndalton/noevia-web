@@ -38,6 +38,7 @@ function startRemote(){const s=http.createServer(async(req,res)=>{let raw='';for
   if(m.method==='tools/list'&&manualPath)return reply({tools:[{name:'synthetic_manual_tool',description:'A tool behind a hand-registered app',inputSchema:{type:'object',properties:{}}}]});
   if(m.method==='tools/list'&&oauthPath)return reply({tools:[{name:'synthetic_my_notes',description:'List my synthetic notes',inputSchema:{type:'object',properties:{}}}]});
   if(m.method==='tools/call'&&oauthPath)return reply({content:[{type:'text',text:`NOTES for ${req.headers.authorization}`}]});
+  if(m.method==='tools/call'&&keyed)return reply({content:[{type:'text',text:`RECORD for ${req.headers.authorization}`}]});
   if(m.method==='tools/list'&&keyed)return reply({tools:[{name:'synthetic_secret_lookup',description:'Look up a synthetic secret record',inputSchema:{type:'object',properties:{}}}]});
   if(m.method==='tools/list')return reply({tools:[{name:'synthetic_forecast',description:'Weather forecast for a city',inputSchema:{type:'object',properties:{city:{type:'string'}},required:['city']},annotations:{readOnlyHint:true}}]});
   if(m.method==='tools/call'){calls++;return reply({content:[{type:'text',text:`FORECAST-CANARY for ${m.params?.arguments?.city}`}]});}
@@ -51,7 +52,8 @@ function startModel(){
     const last=body.messages.at(-1);
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const chunk=(delta,finish=null)=>res.write(`data: ${JSON.stringify({choices:[{index:0,delta,finish_reason:finish}]})}\n\n`);
-    if(last.role!=='tool'&&names.includes('synthetic_my_notes')){chunk({role:'assistant',tool_calls:[{index:0,id:'call-n',type:'function',function:{name:'synthetic_my_notes',arguments:'{}'}}]});chunk({},'tool_calls');}
+    if(last.role!=='tool'&&names.includes('synthetic_secret_lookup')){chunk({role:'assistant',tool_calls:[{index:0,id:'call-k',type:'function',function:{name:'synthetic_secret_lookup',arguments:'{}'}}]});chunk({},'tool_calls');}
+    else if(last.role!=='tool'&&names.includes('synthetic_my_notes')){chunk({role:'assistant',tool_calls:[{index:0,id:'call-n',type:'function',function:{name:'synthetic_my_notes',arguments:'{}'}}]});chunk({},'tool_calls');}
     else if(last.role!=='tool'&&names.includes('synthetic_forecast')){chunk({role:'assistant',tool_calls:[{index:0,id:'call-1',type:'function',function:{name:'synthetic_forecast',arguments:JSON.stringify({city:'Oslo'})}}]});chunk({},'tool_calls');}
     else chunk({role:'assistant',content:last.role==='tool'?`Tool said: ${String(last.content).slice(0,60)}`:'No forecast tool was offered.'}),chunk({},'stop');
     res.end('data: [DONE]\n\n');
@@ -114,13 +116,14 @@ function startModel(){
   await page.getByRole('button',{name:'Plugins',exact:true}).click();await page.getByRole('radio',{name:'MCP servers'}).click();
   await page.getByText('Needs a key').waitFor();
   await page.getByRole('button',{name:'Add Synthetic keyed to noevia'}).click();
+  await page.getByLabel('Everyone uses this key').check();
   const keyField=page.getByLabel(/Authorization/);await keyField.fill('WRONG');await page.getByRole('button',{name:'Add',exact:true}).click();
   await page.getByText(/did not accept that key/).waitFor({timeout:20000});
   assert.equal((await admin('/api/admin/mcp-directory')).body.servers.length,0,'nothing saved on a wrong key');
   await keyField.fill('SYNTH-KEY-1');await page.getByRole('button',{name:'Add',exact:true}).click();
   await page.getByText(/Added with 1 tool\b/).waitFor({timeout:20000});
   const listed=await admin('/api/admin/mcp-directory');
-  assert.ok(!JSON.stringify(listed.body).includes('SYNTH-KEY'),'the key never comes back');assert.deepEqual(listed.body.servers[0].keyHeaders,['Authorization']);
+  assert.ok(!JSON.stringify(listed.body).includes('SYNTH-KEY'),'the key never comes back');assert.deepEqual(listed.body.servers[0].keyHeaders,['Authorization']);assert.equal(listed.body.servers[0].personal,false);
   await page.screenshot({path:`${shots}/noevia-mcp-directory-key.png`});
   const keyedId=listed.body.servers[0].id;
   const direct=await admin(`/api/projects`,{name:'Keyed QA',model:'synthetic-model',toolboxes:['core',keyedId]});assert.ok(direct.status<300);
@@ -130,6 +133,36 @@ function startModel(){
   assert.ok(keyedAuth.length&&keyedAuth.every(a=>a==='Bearer SYNTH-KEY-2'),`new key used ${keyedAuth}`);
   assert.equal((await other('/api/admin/mcp-directory/'+keyedId+'/keys',{headers:{Authorization:'x'}},'PUT')).status,403,'members cannot change keys');
   assert.equal((await admin(`/api/admin/mcp-directory/${keyedId}`,undefined,'DELETE')).status,200);
+  // Per-person keys: the admin's key lists the tools; a member is offered them only after adding
+  // their own key (a wrong one is refused), and each account's calls carry its own key.
+  await page.reload();await page.locator('.sidebar').waitFor();
+  await page.getByRole('button',{name:'Plugins',exact:true}).click();await page.getByRole('radio',{name:'MCP servers'}).click();
+  await page.getByRole('button',{name:'Add Synthetic keyed to noevia'}).click();
+  await page.getByLabel(/Each person uses their own key/).check();await page.getByLabel(/Authorization/).fill('SYNTH-KEY-1');await page.getByRole('button',{name:'Add',exact:true}).click();
+  await page.getByText(/Added with 1 tool\b/).last().waitFor({timeout:20000});
+  const pRow=(await admin('/api/admin/mcp-directory')).body.servers.find(x=>x.registryName==='io.github.synthetic/keyed');
+  assert.equal(pRow.personal,true);assert.deepEqual(pRow.keyHeaders,[],'no shared key');
+  assert.ok((await other('/api/projects',{name:'Member Keys',model:'synthetic-model',toolboxes:['core',pRow.id]})).status<300);
+  await other('/api/profile/onboarding',{});
+  const kctx=await browser.newContext({viewport:{width:1280,height:900}});
+  const {cookies:kc}=await other('/api/connectors');await kctx.addCookies([...kc].map(([name,value])=>({name,value,url:origin})));
+  const kp=await kctx.newPage();kp.on('pageerror',e=>errors.push(e.message));await kp.goto(origin);
+  const kset=kp.getByRole('region',{name:'Settings'});await kset.or(kp.locator('.sidebar').getByText('Member Keys',{exact:true})).first().waitFor();
+  if(await kset.isVisible().catch(()=>false)){await kp.keyboard.press('Escape');await kset.waitFor({state:'detached'});}
+  const kask=async(text)=>{await kp.locator('.sidebar').getByText('Member Keys',{exact:true}).hover();await kp.getByRole('button',{name:'New chat in Member Keys'}).click({force:true});const b=kp.getByRole('textbox',{name:/Message/}).first();await b.fill(text);await b.press('Enter');};
+  const k0=offered.length;await kask('Look up my record');await kp.getByText('No forecast tool was offered.').last().waitFor();
+  assert.ok(offered.slice(k0).every(n=>!n.includes('synthetic_secret_lookup')),'not offered before the member adds a key');
+  await kp.getByRole('button',{name:'Plugins',exact:true}).click();
+  await kp.getByRole('button',{name:'Add your key for Synthetic keyed'}).click();await kp.getByLabel(/Authorization/).fill('WRONG');await kp.getByRole('button',{name:'Save key'}).click();
+  await kp.getByText(/did not accept that key/).waitFor({timeout:20000});
+  await kp.getByLabel(/Authorization/).fill('SYNTH-KEY-2');await kp.getByRole('button',{name:'Save key'}).click();
+  await kp.getByText(/Key saved/).waitFor({timeout:20000});
+  await kp.screenshot({path:`${shots}/noevia-mcp-personal-key.png`});
+  await kask('Look up my record please');const kcard=kp.locator('.tool-approval');await kcard.waitFor();await kcard.getByRole('button',{name:'Allow once'}).click();
+  await kp.getByText(/Tool said: RECORD for Bearer SYNTH-KEY-2/).last().waitFor();
+  assert.ok(!JSON.stringify((await other('/api/mcp-keys/servers')).body).includes('SYNTH-KEY'),'a key never comes back');
+  await kctx.close();
+  assert.equal((await admin(`/api/admin/mcp-directory/${pRow.id}`,undefined,'DELETE')).status,200);
   // OAuth: the admin adds a sign-in server (a new tab signs in and comes back); tools are listed
   // with the admin's sign-in. A member is not offered them until they sign in with their own
   // account, and each account's calls carry its own token.
@@ -191,6 +224,6 @@ function startModel(){
   assert.equal((await other(`/api/admin/mcp-directory/${manualId}/oauth-client`,{clientId:'x'},'PUT')).status,403,'members cannot set the app');
   assert.equal((await admin(`/api/admin/mcp-directory/${manualId}`,undefined,'DELETE')).status,200);
   assert.deepEqual(errors,[]);
-  console.log('PASS mcp directory: admin adds a hosted server from the registry after it answers; local-only servers are browse-only; members get 403; its tool asks before running even when marked read-only, then runs; removing it withdraws the tool; a keyed server refuses a wrong key before saving, stores the key without ever returning it, sends it, and can change it; an OAuth server is added through a sign-in tab, is offered to a member only after their own sign-in, and each account calls with its own token; a service without self-registration takes a hand-registered app (wrong secret refused, secret never returned).');
+  console.log('PASS mcp directory: admin adds a hosted server from the registry after it answers; local-only servers are browse-only; members get 403; its tool asks before running even when marked read-only, then runs; removing it withdraws the tool; a keyed server refuses a wrong key before saving, stores the key without ever returning it, sends it, and can change it; an OAuth server is added through a sign-in tab, is offered to a member only after their own sign-in, and each account calls with its own token; a per-person key server lists tools with the admin key and offers them to a member only with their own key; a service without self-registration takes a hand-registered app (wrong secret refused, secret never returned).');
  }finally{await browser.close();server.kill();model.close();registry.close();remote.close();await google.close();fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exit(1);});

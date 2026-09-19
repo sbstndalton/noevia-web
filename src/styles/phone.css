@@ -533,3 +533,8 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .plugin-copy { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .plugin-copy code { flex: 1; min-width: 0; overflow-wrap: anywhere; padding: 6px 8px; border-radius: var(--radius-sm); background: var(--nav-hover); font-size: var(--text-footnote); }
 .plugin-card-actions .plugin-add small[role] { text-align: left; }
+.plugin-key-mode { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.plugin-key-mode legend { font-weight: 600; font-size: var(--text-footnote); margin-bottom: 2px; }
+.plugin-key-mode label { flex-direction: row !important; align-items: baseline; gap: 6px !important; font-size: var(--text-footnote); }
+.plugin-key-mode small { color: var(--text-secondary); }
+
