@@ -902,7 +902,8 @@ export default function App(): JSX.Element {
         onPatchProject={handlePatchProject}
         onEditProject={setEditingProjectId}
         onDeleteProject={handleDeleteProject}
-        onOpenDiary={() => setView({ kind: 'diary' })}
+        // Diary is its own space: from Code it switches back to the chat shell and opens it (user review, 2026-09-19).
+        onOpenDiary={() => { setAppMode('chat'); setView({ kind: 'diary' }); }}
         diaryEnabled={diaryEnabled}
         onOpenSettings={openSettings}
         health={health}

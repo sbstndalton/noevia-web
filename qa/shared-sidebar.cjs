@@ -44,6 +44,12 @@ const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit
   assert.equal(await page.locator('.shell-sidebar-head .app-mode-switch').count(),1,'mode switch sits in the sidebar header');
   await page.getByRole('button',{name:'Pull requests'}).click();await page.locator('.coding-header',{hasText:'Pull requests'}).waitFor();
   await page.screenshot({path:`${out}/shared-${theme}-code.png`});
+  // Diary from Code opens the Diary space, not the Code page (user review, 2026-09-19).
+  await page.locator('.side-footer-row').getByRole('button',{name:'Diary',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('.sidebar.pane')?.dataset.mode==='chat'&&!document.querySelector('.coding-workspace'));
+  assert.ok(await page.locator('.diary-mount').evaluate(el=>getComputedStyle(el).display!=='none'),'Diary is showing');
+  // Back to Code returns to the page it was on.
+  await page.getByRole('button',{name:'Code',exact:true}).click();await page.locator('.coding-header',{hasText:'Pull requests'}).waitFor();
   // Settings from Code returns to Code.
   await page.locator('.side-footer .account-trigger').click();await page.getByRole('button',{name:'Settings',exact:true}).click();
   await page.getByRole('region',{name:'Settings'}).waitFor();
@@ -57,7 +63,7 @@ const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit
   await page.getByRole('button',{name:'Scheduled'}).hover();
   const tip=page.getByRole('tooltip');await tip.waitFor();assert.equal(await tip.textContent(),'Scheduled');
   await page.screenshot({path:`${out}/shared-${theme}-collapsed-tip.png`});
-  await page.getByRole('button',{name:'Chat',exact:true}).click();await page.getByRole('heading',{name:'Plugins'}).waitFor();
+  await page.getByRole('button',{name:'Chat',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.sidebar.pane')?.dataset.mode==='chat');
   await page.getByRole('button',{name:'Projects',exact:true}).hover();await page.waitForFunction(()=>document.querySelector('.rail-tip')?.textContent==='Projects');
   await page.getByRole('button',{name:'Expand navigation'}).click();
   await page.close();}

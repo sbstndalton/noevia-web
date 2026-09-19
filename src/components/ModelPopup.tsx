@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useModalDialog } from './useModalDialog';
 import { roleSummary } from '../routing-copy';
 import { CloseButton } from './CloseButton';
+import { ShellIcon } from './ShellIcon';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, Provider, Toolbox } from '../types';
 import type { AutoRoles, McpStatus } from '../api';
@@ -37,8 +38,8 @@ export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged
       onCancel={(e) => { e.preventDefault(); onClose(); }} onClick={onClose}>
       <div className="mp-panel aero dialog-sheet" onClick={(e) => e.stopPropagation()}>
         <header className="mp-head">
-          <h2>{activeProject ? activeProject.name : 'Model'}</h2>
-          <button className="popup-tab" onClick={() => openSettings()}>Model settings</button>
+          <h2><small>Model and tools</small>{activeProject ? activeProject.name : 'Model'}</h2>
+          <button className="btn btn-ghost btn-sm mp-settings" onClick={() => openSettings()}><ShellIcon name="settings" size={16}/>Model settings</button>
           <CloseButton onClick={onClose}/>
         </header>
         <div className="mp-body">
@@ -112,7 +113,9 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
   }
 
 
-  return <>
+  return <div className="mp-grid">
+    <section className="mp-col mp-col-model" aria-label="Model">
+    <h3 className="mp-col-title">Model</h3>
     <div className="mp-mode" role="group" aria-label="How this project picks a model">
       {([['auto', 'Auto', 'picks a model per message'], ['manual', 'Manual', 'one pinned model']] as const).map(([mode, label, hint]) =>
         <button key={mode} className="mp-mode-btn" aria-pressed={(mode === 'auto') === auto} disabled={busy !== null}
@@ -129,7 +132,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
         {' '}<button className="mp-link" onClick={() => onOpenSettings()}>Change in model settings</button>
       </p>
     ) : (
-      <section className="mp-section">
+      <div className="mp-model-area">
         {providers.length > 1 && <label className="mp-field">
           <span>Provider</span>
           <select className="modal-input" value={activeProviderId} disabled={busy !== null}
@@ -168,20 +171,26 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
                   <MiddleTruncate className="model-name" text={m.name}/>
                   {m.sizeGB != null && <span className="model-quant">{m.sizeGB} GB</span>}
                 </div>
-                <span className="model-role">{busy === m.name ? 'switching…' : activeProject.model === m.name ? 'selected' : m.loaded ? 'loaded' : ''}</span>
+                <span className="model-role">{busy === m.name ? 'switching…' : activeProject.model === m.name ? <><ShellIcon name="check" size={15}/>Selected</> : m.loaded ? 'Loaded' : ''}</span>
               </button>
-              {canTune && <button className="popup-tab mp-tune" aria-label={`Tune ${m.name}`} onClick={() => onOpenSettings(m.name)}>Tune</button>}
+              {canTune && <button className="shell-icon-button mp-tune" aria-label={`Tune ${m.name}`} title="Tune this model" onClick={() => onOpenSettings(m.name)}><ShellIcon name="personalization" size={17}/></button>}
             </div>)}
           </div>
         </>}
-      </section>
+      </div>
     )}
 
-    {toolboxes.length > 0 && <section className="mp-section">
+    </section>
+    {toolboxes.length > 0 && <section className="mp-col mp-col-tools" aria-label="Tools">
       <div className="mp-section-head">
-        <span className="rail-label">Tools</span>
+        <h3 className="mp-col-title">Tools</h3>
         <span className="mp-hint">{selectedTools} enabled · ~{selectedTokens} tokens per message</span>
       </div>
+      {/* How much of the model's tool budget the chosen toolboxes use. */}
+      <div className={`mp-budget${overBudget ? ' is-over' : ''}`} role="meter" aria-label="Tool budget used" aria-valuemin={0} aria-valuemax={budget} aria-valuenow={Math.min(selectedTokens, budget)}>
+        <span style={{ width: `${Math.min(100, Math.round((selectedTokens / budget) * 100))}%` }}/>
+      </div>
+      <div className="mp-tool-list">
       {toolboxes.map((box) => {
         const on = selectedBoxes.includes(box.id);
         return <label key={box.id} className="mp-tool">
@@ -195,6 +204,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
           </span>
         </label>;
       })}
+      </div>
       <p className={overBudget ? 'mp-warn' : 'mp-hint'}>
         {overBudget
           ? `Over budget for ${activeProject.model || 'this model'} (~${budget} tokens). Tools past the limit are dropped in selection order — untick a box, or use a larger model.`
@@ -203,5 +213,5 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
       </p>
       {mcpStatus?.configured && mcpStatus.error && <p className="mp-warn">MCP server unreachable: {mcpStatus.error}. Its toolboxes are unavailable until it recovers.</p>}
     </section>}
-  </>;
+  </div>;
 }
