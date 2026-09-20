@@ -642,3 +642,27 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 }
 /* Every control on the models page is at least 40px tall (44px on touch). */
 .mm-toolbar-one .mm-tabs-row button, .model-card-actions > button, .mm-library-bar .btn { min-height: 40px; }
+
+/* ── Routing panel (user review, 2026-09-20: wasted width, cramped spacing) ──
+   The four roles sit two to a row while there is room, and each block below is
+   separated the same way instead of running together under the save button. */
+.route-roles { display: grid !important; grid-template-columns: 1fr; gap: var(--space-3) var(--space-4); align-items: start; }
+/* Two to a row: Fast beside Smart, then the two optional roles. */
+@media (min-width: 720px) { .route-roles { grid-template-columns: 1fr 1fr; } }
+.route-roles > label { min-width: 0; }
+.route-roles select { width: 100%; }
+.mm-panel .mm-actions { margin-top: var(--space-1); }
+/* "Default thinking effort" is its own setting, not part of the save row. */
+.mm-subsection { margin-top: var(--space-2); padding-top: var(--space-4); border-top: 1px solid var(--border-subtle); }
+.mm-subsection .reasoning-control { display: block; max-width: 520px; }
+.mm-subsection .reasoning-control label { display: flex; flex-direction: column; gap: 4px; }
+.mm-subsection .reasoning-control label > span { font-weight: 600; font-size: var(--text-footnote); }
+.mm-subsection .reasoning-control select { width: 100%; }
+.mm-subsection + .mm-disclosure { border-top: 0; }
+/* The disclosure rows read as one list: equal height, equal padding, one divider each. */
+.mm-panel > .mm-disclosure { margin-top: 0; padding: var(--space-3) 0 0; }
+.mm-panel > .mm-disclosure > summary { min-height: 44px; }
+.mm-panel > .mm-disclosure[open] { padding-bottom: var(--space-2); }
+/* Panels and folds down the page are spaced alike. */
+.mm-root { gap: var(--space-3); }
+.mm-root > .mm-fold > summary { min-height: 56px; padding: var(--space-1) 0; }

@@ -143,7 +143,7 @@ function RoutingSection({ models, routes, projects, modelsError }: { models: Ins
     {modelsError && <p role="alert" className="modal-err">{modelsError}</p>}
     {!info?.configured && !error && <p className="mm-note">Auto has no models assigned yet. Pick Fast and Smart, then save.</p>}
     {!!info?.missing?.length && <p className="mm-note warn" role="alert">Auto can't answer until you replace {info.missing.map((m) => `${ROLE_LABEL[m.role]} (${m.model})`).join(', ')}: {info.missing.length === 1 ? 'that model is' : 'those models are'} no longer installed.</p>}
-    <div className="mm-form">
+    <div className="mm-form route-roles">
       {(['fast', 'smart', 'vision', 'code'] as const).map((role) => <label key={role}>
         {ROLE_LABEL[role]}
         <select value={valueFor(role)} disabled={busy} onChange={(e) => setPending((prev) => ({ ...prev, [role]: e.target.value }))}>
@@ -161,7 +161,7 @@ function RoutingSection({ models, routes, projects, modelsError }: { models: Ins
       {error && <span role="alert" className="modal-err">{error}</span>}
     </div>
 
-    <ReasoningControl global />
+    <div className="mm-subsection"><ReasoningControl global /></div>
 
     <details className="mm-disclosure">
       <summary>How Auto decides</summary>
