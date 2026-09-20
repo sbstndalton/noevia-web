@@ -1,0 +1,15 @@
+{
+  "name": "noevia",
+  "short_name": "noevia",
+  "description": "A self-hosted workspace for project-aware chat and a durable diary.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f6fd",
+  "theme_color": "#4f56ab",
+  "icons": [
+    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any" },
+    { "src": "/apple-touch-icon.png", "type": "image/png", "sizes": "180x180" },
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "maskable" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ]
+}

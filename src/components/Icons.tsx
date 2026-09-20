@@ -4,8 +4,8 @@ import { Icon } from './icons/Icon';
 export function Logo(): JSX.Element {
   return (
     <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <rect x="1" y="1" width="12" height="12" rx="3.5" fill="var(--accent)" />
-      <rect x="9" y="9" width="12" height="12" rx="3.5" fill="var(--accent-2)" opacity="0.9" />
+      <rect x="1" y="1" width="12" height="12" rx="3.5" fill="color-mix(in srgb, var(--accent) 45%, var(--bg-app))" />
+      <rect x="9" y="9" width="12" height="12" rx="3.5" fill="var(--accent)" />
     </svg>
   );
 }

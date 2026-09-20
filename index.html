@@ -6,7 +6,13 @@
     <title>noevia</title>
     <meta name="application-name" content="noevia" />
     <meta name="description" content="noevia — a focused space for conversation, journaling, and code." />
-    <meta name="theme-color" content="#151519" />
+    <!-- Light and dark get their own colour so the browser chrome matches the page. -->
+    <meta name="theme-color" content="#f7f6fd" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#151519" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-title" content="noevia" />
     <!-- Start the sign-in checks while the app bundle downloads; AuthGate's
          same-origin fetches pick these responses up instead of waiting. -->
     <link rel="preload" href="/api/setup/status" as="fetch" crossorigin />

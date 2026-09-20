@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22" role="img" aria-label="noevia">
+  <!-- Two rounded squares, offset: the back one lighter so the overlap reads as depth.
+       Fixed colours on purpose — a favicon cannot follow the app's accent palette. -->
+  <rect x="1" y="1" width="12" height="12" rx="3.5" fill="#9aa0e4"/>
+  <rect x="9" y="9" width="12" height="12" rx="3.5" fill="#4f56ab"/>
+</svg>

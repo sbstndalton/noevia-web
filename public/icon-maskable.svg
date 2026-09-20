@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-label="noevia">
+  <!-- Home-screen icon: the mark on a solid ground, inside the safe area iOS and Android crop to. -->
+  <rect width="180" height="180" fill="#f7f6fd"/>
+  <g transform="translate(45 45) scale(4.09)">
+    <rect x="1" y="1" width="12" height="12" rx="3.5" fill="#9aa0e4"/>
+    <rect x="9" y="9" width="12" height="12" rx="3.5" fill="#4f56ab"/>
+  </g>
+</svg>
