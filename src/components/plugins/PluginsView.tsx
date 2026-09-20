@@ -8,7 +8,7 @@ import { ConnectorsSettings } from '../connectors/ConnectorsSettings';
 type Tab = 'connected' | 'mcp' | 'skills';
 interface Item { id: string; name: string; publisher: string; description: string; version: string; url: string; remote: boolean; installable?: boolean; notInstallable?: string; needsKey?: boolean; headers?: KeyHeader[] }
 interface KeyHeader { name: string; required: boolean; secret: boolean; description: string; template: string | null }
-interface Added { id: string; registryName: string; title: string; toolCount: number | null; error: string | null; keyHeaders?: string[]; oauth?: boolean; personal?: boolean; redirectUri?: string; oauthClient?: { manual: boolean; clientId: string | null; hasSecret: boolean; redirectUri: string; issuer: string } | null }
+interface Added { id: string; registryName: string; title: string; declaredHeaders?: KeyHeader[]; toolCount: number | null; error: string | null; keyHeaders?: string[]; oauth?: boolean; personal?: boolean; redirectUri?: string; oauthClient?: { manual: boolean; clientId: string | null; hasSecret: boolean; redirectUri: string; issuer: string } | null }
 
 /** Open the sign-in in a new tab from inside the click (or the browser blocks it), then point it at the URL. */
 const tools = (n: number | null | undefined) => `${n ?? '…'} tool${n === 1 ? '' : 's'}`;
@@ -64,7 +64,17 @@ function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp'
       : 'Skills published by Anthropic. Add one to a project and it arrives switched off: review it in the project’s instruction skills, then enable it. Only the written instructions are copied; scripts a skill bundles are never downloaded or run.'}
       {source && <> Source: <a href={source.home} target="_blank" rel="noreferrer noopener">{source.label}</a>.</>}</p>
     {error && <p className="route-note" role="alert">{error} <button className="btn btn-secondary btn-sm" onClick={() => setAttempt((n) => n + 1)}>Try again</button></p>}
+    {kind === 'mcp' && isAdmin && <AddByUrl onChange={setAdded}/>}
     {items === null ? <p className="plugins-note" aria-live="polite">Loading…</p> : !error && items.length === 0 ? <p className="plugins-note">Nothing matches “{query}”.</p> : null}
+    {/* Servers added by URL have no registry entry of their own; list them here so they can be
+        managed (user roadmap: custom MCP server by URL). */}
+    {kind === 'mcp' && isAdmin && added.some((a) => a.registryName.startsWith('url:')) && <ul className="plugin-grid">
+      {added.filter((a) => a.registryName.startsWith('url:')).map((a) => <li key={a.id} className="plugin-card surface">
+        <span className="plugin-card-icon"><ShellIcon name="server" size={20}/></span>
+        <span className="plugin-card-text"><b>{a.title}</b><small className="plugin-publisher">Added by URL</small><small>{a.registryName.slice(4)}</small></span>
+        <span className="plugin-card-actions"><AddServer item={{ id: a.registryName, name: a.title, publisher: '', description: '', version: '', url: '', remote: true, installable: true, headers: a.declaredHeaders }} added={a} onChange={setAdded}/></span>
+      </li>)}
+    </ul>}
     <ul className="plugin-grid">
       {items?.map((i) => <li key={i.id} className="plugin-card surface">
         <span className="plugin-card-icon"><ShellIcon name={kind === 'mcp' ? 'server' : 'sparkles'} size={20}/></span>
@@ -291,4 +301,41 @@ function KeyServers(): JSX.Element | null {
     </ul>
     {note && <small role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</small>}
   </section>;
+}
+
+/** Administrators add any MCP server by its address, with an optional sign-in header. */
+function AddByUrl({ onChange }: { onChange: (servers: Added[]) => void }): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ title: '', url: '', headerName: '', headerValue: '', keyMode: 'personal' as 'personal' | 'shared' });
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
+  const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const submit = () => void signInTab(async () => {
+    setBusy(true); setNote(null);
+    try {
+      const r = await apiFetch('/api/admin/mcp-directory/custom', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setNote({ text: d.error || 'That did not work.', error: true }); return null; }
+      onChange(d.servers || []);
+      if (d.signIn) { setNote({ text: 'Finish signing in in the new tab.' }); return d.signIn; }
+      if (d.needsClient) { setNote({ text: 'This server needs an app registered by hand. Use “Set up app” on its card below.', error: true }); setOpen(false); return null; }
+      setNote({ text: `Added with ${tools(d.server?.toolCount ?? 0)}. Choose it under a project’s Tools.` });
+      setOpen(false); setForm({ title: '', url: '', headerName: '', headerValue: '', keyMode: 'personal' });
+      return null;
+    } finally { setBusy(false); }
+  }).catch((e) => setNote({ text: (e as Error).message, error: true }));
+  if (!open) return <p className="plugins-note"><button className="btn btn-secondary btn-sm" onClick={() => { setOpen(true); setNote(null); }}>Add a server by URL</button>{note && <> <span role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</span></>}</p>;
+  return <form className="plugin-key-form plugin-url-form" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+    <label><span>Name</span><input required value={form.title} onChange={set('title')} placeholder="What this server is"/></label>
+    <label><span>Address</span><input required type="url" inputMode="url" autoComplete="off" spellCheck={false} value={form.url} onChange={set('url')} placeholder="https://example.com/mcp"/></label>
+    <label><span>Sign-in header (optional)</span><input autoComplete="off" spellCheck={false} value={form.headerName} onChange={set('headerName')} placeholder="Authorization"/></label>
+    {form.headerName && <label><span>Its value</span><input type="password" autoComplete="off" value={form.headerValue} onChange={set('headerValue')} placeholder="Bearer …"/></label>}
+    {form.headerName && <fieldset className="plugin-key-mode"><legend>Who uses this key</legend>
+      <label><input type="radio" name="url-mode" checked={form.keyMode === 'personal'} onChange={() => setForm((f) => ({ ...f, keyMode: 'personal' }))}/> Each person uses their own key</label>
+      <label><input type="radio" name="url-mode" checked={form.keyMode === 'shared'} onChange={() => setForm((f) => ({ ...f, keyMode: 'shared' }))}/> Everyone uses this key</label>
+    </fieldset>}
+    <small className="plugin-key-note">noevia checks the address is a public https host and that the server answers before saving it. If it asks for a sign-in instead, you will be sent to sign in. It becomes its own toolbox, gets no passwords, and every one of its tools asks before it runs.</small>
+    <span className="plugin-key-actions"><button className="btn btn-primary btn-sm" disabled={busy}>{busy ? 'Checking…' : 'Add server'}</button><button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setOpen(false)}>Cancel</button></span>
+    {note && <small role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</small>}
+  </form>;
 }

@@ -223,7 +223,25 @@ function startModel(){
   assert.equal(manualRow.toolCount,1);assert.deepEqual([manualRow.oauthClient.manual,manualRow.oauthClient.clientId,manualRow.oauthClient.hasSecret],[true,'manual-client',true]);
   assert.equal((await other(`/api/admin/mcp-directory/${manualId}/oauth-client`,{clientId:'x'},'PUT')).status,403,'members cannot set the app');
   assert.equal((await admin(`/api/admin/mcp-directory/${manualId}`,undefined,'DELETE')).status,200);
+  // Add by URL: the same checks as a directory entry, plus a rejected private address.
+  await page.reload();await page.locator('.sidebar').waitFor();
+  await page.getByRole('button',{name:'Plugins',exact:true}).click();await page.getByRole('radio',{name:'MCP servers'}).click();
+  await page.getByRole('button',{name:'Add a server by URL'}).click();
+  const fill=async(name,url,header,value)=>{await page.getByLabel('Name',{exact:true}).fill(name);await page.getByLabel('Address',{exact:true}).fill(url);
+    await page.getByLabel(/Sign-in header/).fill(header||'');if(header)await page.getByLabel('Its value',{exact:true}).fill(value||'');};
+  await fill('Private probe','https://127.0.0.1/mcp');await page.getByRole('button',{name:'Add server'}).click();
+  await page.getByText(/address must be an https URL|not a public host/).waitFor({timeout:20000});
+  await fill('By URL',`http://127.0.0.1:${mcpPort}/keyed/mcp`,'Authorization','Bearer SYNTH-KEY-1');
+  await page.getByLabel(/Each person uses their own key/).check();
+  await page.getByRole('button',{name:'Add server'}).click();
+  await page.getByText(/Added with 1 tool\b/).last().waitFor({timeout:20000});
+  const byUrl=(await admin('/api/admin/mcp-directory')).body.servers.find(x=>x.registryName.startsWith('url:'));
+  assert.ok(byUrl&&byUrl.personal&&byUrl.title==='By URL',`saved by URL ${JSON.stringify(byUrl&&[byUrl.title,byUrl.personal])}`);
+  assert.ok(!JSON.stringify((await admin('/api/admin/mcp-directory')).body).includes('SYNTH-KEY'),'the key never comes back');
+  await page.getByText('Added by URL').waitFor();
+  assert.equal((await other('/api/admin/mcp-directory/custom',{title:'x',url:'https://x.example/mcp'},'POST')).status,403,'members cannot add by URL');
+  assert.equal((await admin(`/api/admin/mcp-directory/${byUrl.id}`,undefined,'DELETE')).status,200);
   assert.deepEqual(errors,[]);
-  console.log('PASS mcp directory: admin adds a hosted server from the registry after it answers; local-only servers are browse-only; members get 403; its tool asks before running even when marked read-only, then runs; removing it withdraws the tool; a keyed server refuses a wrong key before saving, stores the key without ever returning it, sends it, and can change it; an OAuth server is added through a sign-in tab, is offered to a member only after their own sign-in, and each account calls with its own token; a per-person key server lists tools with the admin key and offers them to a member only with their own key; a service without self-registration takes a hand-registered app (wrong secret refused, secret never returned).');
+  console.log('PASS mcp directory: admin adds a hosted server from the registry after it answers; local-only servers are browse-only; members get 403; its tool asks before running even when marked read-only, then runs; removing it withdraws the tool; a keyed server refuses a wrong key before saving, stores the key without ever returning it, sends it, and can change it; an OAuth server is added through a sign-in tab, is offered to a member only after their own sign-in, and each account calls with its own token; a per-person key server lists tools with the admin key and offers them to a member only with their own key; a service without self-registration takes a hand-registered app (wrong secret refused, secret never returned); a server can be added by URL with its own key, and a private address is refused.');
  }finally{await browser.close();server.kill();model.close();registry.close();remote.close();await google.close();fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exit(1);});
