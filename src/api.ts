@@ -9,7 +9,6 @@ import type {
   HistoryEntry,
   InstalledModel,
   LiveStats,
-  ModelVariant,
   Project,
   Provider,
   SearchHit,
