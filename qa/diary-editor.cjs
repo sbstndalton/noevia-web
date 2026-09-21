@@ -95,6 +95,19 @@ const {createFixture}=require('./diary-fixture.cjs');
  await source.press('Escape');
  assert.equal(await suggestions.count(),0);
  assert.equal(await source.inputValue(),'Link to [[wiki]][[');
+ // A note's properties are shown as properties, and its body starts after them.
+ await source.fill('---\ntitle: A quiet morning\ntags: [walk, river]\nmystery line\n---\n# Body\n\nText.');
+ await dialog.getByRole('button',{name:'Preview',exact:true}).click();
+ const properties=dialog.locator('.markdown-properties');
+ await properties.waitFor();
+ assert.deepEqual(await properties.locator('dt').allInnerTexts(),['title','tags','']);
+ assert.deepEqual((await properties.locator('dd').allInnerTexts()).slice(0,2),['A quiet morning','walk, river']);
+ assert.match(await properties.locator('dd').last().innerText(),/mystery line/,'a line it cannot read is shown, not dropped');
+ await dialog.getByRole('heading',{name:'Body'}).waitFor();
+ assert.equal(await dialog.getByText('---',{exact:true}).count(),0,'the block itself is not left in the body');
+ if(process.env.QA_SCREENSHOTS)await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/diary-properties.png`});
+ await dialog.getByRole('button',{name:'Edit Markdown',exact:true}).click();
+
  // Back to the draft the preview assertions above were made against.
  await source.fill(wikiDraft);
  await dialog.getByRole('button',{name:'Source & preview',exact:true}).click();

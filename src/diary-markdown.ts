@@ -144,3 +144,70 @@ export function wikiLinkNameFor(path: string, root: string, all: string[]): stri
   });
   return sameName.length > 1 ? withoutExtension : base;
 }
+
+/**
+ * The YAML block a note may open with. Obsidian calls these properties and shows them as a
+ * small table; noevia used to render the whole block as body text, so a vault opened here
+ * began with three dashes and a list of keys pretending to be prose.
+ *
+ * A deliberately small subset of YAML — scalars, `[a, b]` and `- a` lists — because that is
+ * what notes actually contain, and because guessing at the rest would mean showing something
+ * the file does not say. Anything it cannot read stays in `unparsed`, shown as written.
+ */
+export type Frontmatter = {
+  fields: { key: string; values: string[] }[];
+  unparsed: string[];
+  /** Offset in the source where the body begins, so nothing has to be rewritten. */
+  bodyStart: number;
+};
+
+export function readFrontmatter(text: string): Frontmatter | null {
+  const match = /^---\r?\n([\s\S]*?)\r?\n(---|\.\.\.)[ \t]*(\r?\n|$)/.exec(text);
+  if (!match) return null;
+  const fields: { key: string; values: string[] }[] = [];
+  const unparsed: string[] = [];
+  let current: { key: string; values: string[] } | null = null;
+  for (const line of match[1].split(/\r?\n/)) {
+    if (!line.trim() || /^\s*#/.test(line)) continue;
+    const item = /^\s*-\s+(.*)$/.exec(line);
+    if (item && current) { const value = scalar(item[1]); if (value) current.values.push(value); continue; }
+    const pair = /^([A-Za-z0-9_][\w .-]{0,80}):[ \t]*(.*)$/.exec(line);
+    if (!pair) { unparsed.push(line.trim().slice(0, 200)); current = null; continue; }
+    const rest = pair[2].trim();
+    const inline = /^\[(.*)\]$/.exec(rest);
+    const values = inline
+      ? inline[1].split(',').map((part) => scalar(part)).filter(Boolean)
+      : rest ? [scalar(rest)].filter(Boolean) : [];
+    current = { key: pair[1].trim(), values };
+    fields.push(current);
+    if (fields.length >= 60) break;
+  }
+  return { fields, unparsed, bodyStart: match[0].length };
+}
+
+/** One YAML scalar, unquoted. No type guessing: a note's properties are shown, not computed. */
+function scalar(raw: string): string {
+  const value = String(raw).trim();
+  const quoted = /^(['"])([\s\S]*)\1$/.exec(value);
+  return (quoted ? quoted[2] : value).trim().slice(0, 300);
+}
+
+/**
+ * Tags written in frontmatter, which is where Obsidian puts them. `tags: [a, b]`, a block list,
+ * or a single `tag:`; a leading "#" is optional there and is dropped, as Obsidian does.
+ */
+export function frontmatterTags(text: string): string[] {
+  const front = readFrontmatter(text);
+  if (!front) return [];
+  const out: string[] = [];
+  for (const field of front.fields) {
+    if (!/^tags?$/i.test(field.key)) continue;
+    for (const value of field.values) {
+      for (const part of value.split(/[,\s]+/)) {
+        const tag = part.replace(/^#/, '').trim().toLocaleLowerCase();
+        if (/^[\p{L}\p{N}_][\p{L}\p{N}_/-]{0,79}$/u.test(tag)) out.push(tag);
+      }
+    }
+  }
+  return [...new Set(out)];
+}

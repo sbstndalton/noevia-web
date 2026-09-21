@@ -1,11 +1,14 @@
-import { markdownFileLinks, markdownWikiLinks, resolveMarkdownPath, wikiLinkCandidates } from './diary-markdown';
+import { frontmatterTags, markdownFileLinks, markdownWikiLinks, resolveMarkdownPath, wikiLinkCandidates } from './diary-markdown';
 import type { DiaryFile, FileEntry } from './diary-workspace';
 
 export type FileSearchFilters = {from?:string;to?:string;tag?:string};
 function validDay(day:string):boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isFinite(Date.parse(day+'T00:00:00Z')) && new Date(day+'T00:00:00Z').toISOString().slice(0,10)===day;
 }
-/** Explicit hashtag syntax in prose; do not treat fenced/inline code as tags. */
+/**
+ * Tags a file carries: #hashtags in prose, and the `tags:` property, which is where a vault
+ * written in Obsidian keeps them. Code is not prose, in a fence or in backticks.
+ */
 export function markdownTags(text:string):string[] {
   const lines=text.replace(/^---\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)\s*(?:\r?\n|$)/,'').split('\n');
   let fence='';
@@ -15,7 +18,8 @@ export function markdownTags(text:string):string[] {
     if(token){fence=token;return false;}
     return true;
   }).join('\n').replace(/(`+)[\s\S]*?\1/g,'');
-  return [...new Set([...prose.matchAll(/(?:^|\s)#([\p{L}\p{N}_][\p{L}\p{N}_/-]*)/gu)].map(m=>m[1].toLocaleLowerCase()))];
+  return [...new Set([...frontmatterTags(text),
+    ...[...prose.matchAll(/(?:^|\s)#([\p{L}\p{N}_][\p{L}\p{N}_/-]*)/gu)].map(m=>m[1].toLocaleLowerCase())])];
 }
 export type FileSearchResult = {path:string;snippet:string};
 export type FileSearchReport = {results:FileSearchResult[];scanned:number;partial:boolean;skipped:number};

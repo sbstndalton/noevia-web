@@ -165,7 +165,7 @@ export function DiaryMarkdownWorkspace(input: Props) {
               </li>)}
             </ul>}
           </section>
-          {mode!=='source' && <section aria-label="Markdown preview" aria-busy={p.text!==deferredText}><h2 className="diary-pane-label">Preview</h2><MarkdownPreview text={deferredText || 'This file is empty.'} internalLink={href=>{const path=resolveMarkdownPath(p.file.path,href);return path ? ()=>p.onOpen(path) : undefined;}}
+          {mode!=='source' && <section aria-label="Markdown preview" aria-busy={p.text!==deferredText}><h2 className="diary-pane-label">Preview</h2><MarkdownPreview text={deferredText || 'This file is empty.'} properties internalLink={href=>{const path=resolveMarkdownPath(p.file.path,href);return path ? ()=>p.onOpen(path) : undefined;}}
           wikiLink={link=>{
             // A heading link with no file before the "#" points inside this file; there is
             // nothing to open, so it reads as text rather than as a link that does nothing.
@@ -197,7 +197,7 @@ export function DiaryMarkdownWorkspace(input: Props) {
           <label className="diary-workspace-filter">From date<input type="date" value={filters.from || ''} onChange={e=>setFilters({...filters,from:e.target.value})}/></label>
           <label className="diary-workspace-filter">Through date<input type="date" min={filters.from} value={filters.to || ''} onChange={e=>setFilters({...filters,to:e.target.value})}/></label>
           <label className="diary-workspace-filter">Hashtag<input placeholder="#tag" maxLength={81} value={filters.tag || ''} onChange={e=>setFilters({...filters,tag:e.target.value})}/></label>
-          <p>Dates match filenames beginning YYYY-MM-DD. Undated files are excluded when a date is set. Tags match whole #hashtags in prose, ignoring case and code; frontmatter tags are not included.</p>
+          <p>Dates match filenames beginning YYYY-MM-DD. Undated files are excluded when a date is set. Tags match whole #hashtags in prose and the <code>tags:</code> property, ignoring case and code.</p>
           <button className="popup-tab" disabled={searching || (!hasFilter && query.trim().length<2) || (query.trim().length>0 && query.trim().length<2)}>Search contents</button>
           {hasFilter && <button type="button" className="popup-tab" onClick={()=>setFilters({})}>Clear filters</button>}</form><button className="popup-tab" disabled={searching || !p.file.path} onClick={()=>void search('backlinks')}>Find links to this file</button><p>Backlinks scan the Diary folder within the same bounds. Relative Markdown links and Obsidian-style <code>[[wiki links]]</code> both count; anchors are ignored, so a link to a heading still finds the file.</p>
           {searching && <p role="status">Searching stored files…</p>}{searchError && <p role="alert">{searchError}</p>}

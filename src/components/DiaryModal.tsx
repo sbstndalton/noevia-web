@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { CloseButton } from './CloseButton';
+import { readFrontmatter } from '../diary-markdown';
 export function DiaryModal({ title, onClose, children, className = '' }: { className?: string; title: string; onClose: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => { const previous = document.activeElement as HTMLElement; ref.current?.showModal(); return () => { ref.current?.close(); previous?.focus(); }; }, []);
@@ -48,12 +49,15 @@ function splitRow(line: string): string[] {
 
 const TABLE_DIVIDER = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
 
-export function MarkdownPreview({ text, internalLink, wikiLink }: {
+export function MarkdownPreview({ text, internalLink, wikiLink, properties = false }: {
   text: string;
   internalLink?: (href: string) => (() => void) | undefined;
   /** Obsidian-style `[[links]]`. Parsed only where a surface knows how to open one, so text
    *  that merely contains double brackets keeps rendering exactly as it did. */
   wikiLink?: (link: { target: string; heading: string | null; alias: string | null }) => (() => void) | undefined;
+  /** Show a leading YAML block as properties instead of as body text. Off by default: a chat
+   *  message that opens with three dashes is not a note with properties. */
+  properties?: boolean;
 }) {
   // React escapes all source text. Raw HTML is deliberately never interpreted.
   // Order matters in this alternation: ** before *, so bold is not consumed by
@@ -94,8 +98,23 @@ export function MarkdownPreview({ text, internalLink, wikiLink }: {
       return part;
     });
 
-  const lines = text.replace(/<!--[^]*?-->/g, '').split('\n');
+  // The note's properties, shown as what they are. The body is rendered from after the block,
+  // so nothing is rewritten and nothing is shown twice.
+  const front = properties ? readFrontmatter(text) : null;
+  const source = front ? text.slice(front.bodyStart) : text;
+  const lines = source.replace(/<!--[^]*?-->/g, '').split('\n');
   const out: ReactNode[] = [];
+  if (front && (front.fields.length || front.unparsed.length)) {
+    out.push(<dl className="markdown-properties" key="properties" aria-label="Properties">
+      {front.fields.map((field, i) => <Fragment key={`${field.key}-${i}`}>
+        <dt>{field.key}</dt>
+        <dd>{field.values.length ? field.values.join(', ') : <span className="markdown-property-empty">empty</span>}</dd>
+      </Fragment>)}
+      {/* Lines this reader does not understand are shown as written rather than dropped: the
+          file says something, and hiding it would be the one unforgivable thing here. */}
+      {front.unparsed.map((line, i) => <Fragment key={`raw-${i}`}><dt/><dd><code>{line}</code></dd></Fragment>)}
+    </dl>);
+  }
 
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
