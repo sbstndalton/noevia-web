@@ -201,7 +201,15 @@ export function DiaryMarkdownWorkspace(input: Props) {
           <button className="popup-tab" disabled={searching || (!hasFilter && query.trim().length<2) || (query.trim().length>0 && query.trim().length<2)}>Search contents</button>
           {hasFilter && <button type="button" className="popup-tab" onClick={()=>setFilters({})}>Clear filters</button>}</form><button className="popup-tab" disabled={searching || !p.file.path} onClick={()=>void search('backlinks')}>Find links to this file</button><p>Backlinks scan the Diary folder within the same bounds. Relative Markdown links and Obsidian-style <code>[[wiki links]]</code> both count; anchors are ignored, so a link to a heading still finds the file.</p>
           {searching && <p role="status">Searching stored files…</p>}{searchError && <p role="alert">{searchError}</p>}
-          {report && <div><p role="status">{report.results.length} {searchKind==='backlinks'?'linking files':'matches'} · {report.scanned} files checked{report.partial?' · Partial results':''}{report.skipped?` · ${report.skipped} unreadable items`:''}</p>{report.partial && <p>Some files were not searched. Choose a smaller folder to narrow the search.</p>}{report.results.map(result=><button className="diary-search-result" key={result.path} disabled={p.busy} onClick={()=>p.onOpen(result.path)}><strong>{result.path}</strong><span>{result.snippet}</span></button>)}</div>}
+          {report && <div><p role="status">{report.results.length} {searchKind==='backlinks'?'linking files':'matches'} · {report.scanned} files checked{report.partial?' · Partial results':''}{report.skipped?` · ${report.skipped} unreadable items`:''}</p>{report.partial && <p>Some files were not searched. Choose a smaller folder to narrow the search.</p>}{report.results.map(result=><button className="diary-search-result" key={result.path} disabled={p.busy} onClick={()=>p.onOpen(result.path)}><strong>{result.path}</strong><span>{result.snippet}</span></button>)}
+            {/* Notes that name this one without linking it. Shown, never rewritten: turning a
+                mention into a link is an edit to someone's note, and edits here are explicit. */}
+            {searchKind==='backlinks' && report.mentions && <section className="diary-mentions" aria-label="Unlinked mentions">
+              <h3>Unlinked mentions ({report.mentions.length})</h3>
+              {report.mentions.length===0
+                ? <p>No other note names this one without linking it.</p>
+                : report.mentions.map(result=><button className="diary-search-result" key={result.path} disabled={p.busy} onClick={()=>p.onOpen(result.path)}><strong>{result.path}</strong><span>{result.snippet}</span></button>)}
+            </section>}</div>}
         </details>
         <details className="diary-workspace-outline"><summary>Outline ({outline.length})</summary>{outline.length ? outline.map(item=><button key={item.offset} className="popup-tab" onClick={()=>jump(item.offset)}>{item.label}</button>) : <p>Add Markdown headings to navigate this file.</p>}</details>
       </aside>

@@ -1930,3 +1930,7 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 @keyframes mm-activity-dots { from { width: 0; } to { width: 1.2em; } }
 @media (prefers-reduced-motion: reduce) { .mm-activity-cursor::after { animation: none; width: auto; } }
 .mm-activity-details summary { cursor: pointer; font-size: var(--text-footnote); color: var(--text-secondary); margin-top: var(--space-2); }
+
+.diary-mentions { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--border-subtle); }
+.diary-mentions h3 { margin: 0 0 var(--space-2); font-size: var(--text-footnote); font-weight: 600; color: var(--text-secondary); }
+.diary-mentions p { margin: 0; font-size: var(--text-caption); color: var(--text-faint); }

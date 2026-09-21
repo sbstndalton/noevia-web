@@ -67,6 +67,8 @@ const {createFixture}=require('./diary-fixture.cjs');
  await dialog.getByText('Search & backlinks',{exact:true}).click();await dialog.getByLabel('Search text',{exact:true}).fill('Reconciled');await dialog.getByRole('button',{name:'Search contents',exact:true}).click();await dialog.getByText('1 matches · 3 files checked',{exact:true}).waitFor();await dialog.getByRole('button',{name:'Find links to this file'}).click();
  // One relative Markdown link and one written as an Obsidian [[wiki link]]; both count.
  await dialog.getByText('2 linking files · 3 files checked',{exact:true}).waitFor();
+ // Mentions without a link are reported beside the backlinks, never rewritten into links.
+ await dialog.getByRole('region',{name:'Unlinked mentions'}).getByRole('heading',{name:/Unlinked mentions \(\d+\)/}).waitFor();
  // Obsidian-style links: rendered, opened, and counted as backlinks. A vault written in
  // [[links]] used to show them as literal text and find none of them.
  const wikiDraft='# Wiki\nA plain [[linked]], an aliased [[linked|the other note]], a heading [[linked#Top]],\nan absent [[nowhere]] and `[[code]]`.';
