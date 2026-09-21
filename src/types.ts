@@ -91,7 +91,7 @@ export interface Project {
   files: ProjectFile[];
   model?: string; // unset until picked; server defaults to the loaded model
   provider?: string; // unset = the server-configured default provider
-  routing?: 'manual' | 'auto'; // default 'manual'; 'auto' = Fast/Smart per-message routing
+  routing?: 'manual' | 'auto'; // default 'auto'; 'auto' = Fast/Smart per-message routing
   pinned?: boolean;
   archived?: boolean;
   /** Storage folders whose text files are pulled in as sources on sync. */
