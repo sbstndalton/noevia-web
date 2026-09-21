@@ -113,3 +113,34 @@ export function wikiLinkCandidates(base: string, root: string, target: string): 
   const beside = resolveMarkdownPath(base, withExtension);
   return [...new Set([fromRoot, beside].filter((p): p is string => !!p))];
 }
+
+/**
+ * The `[[` a person is in the middle of typing, if the caret is inside one. Used to offer the
+ * files they could mean: writing a link by hand means remembering an exact name, which is the
+ * part of linking that people stop doing.
+ *
+ * Returns where the name starts (just after the brackets) and what has been typed so far.
+ */
+export function wikiLinkQueryAt(text: string, caret: number): { start: number; query: string } | null {
+  const lineStart = text.lastIndexOf('\n', Math.max(0, caret - 1)) + 1;
+  const before = text.slice(lineStart, caret);
+  const open = before.lastIndexOf('[[');
+  if (open === -1) return null;
+  const query = before.slice(open + 2);
+  // Already closed, or spilling past what a name can be: not a link in progress.
+  if (query.includes(']]') || query.includes('[')) return null;
+  if (query.length > 120) return null;
+  return { start: lineStart + open + 2, query };
+}
+
+/** How a link to this file should read: its own name when that is unambiguous, else its path. */
+export function wikiLinkNameFor(path: string, root: string, all: string[]): string {
+  const relative = root && path.startsWith(`${root}/`) ? path.slice(root.length + 1) : path;
+  const withoutExtension = relative.replace(/\.md$/i, '');
+  const base = withoutExtension.split('/').pop() || withoutExtension;
+  const sameName = all.filter((other) => {
+    const otherRelative = root && other.startsWith(`${root}/`) ? other.slice(root.length + 1) : other;
+    return (otherRelative.replace(/\.md$/i, '').split('/').pop() || '') === base;
+  });
+  return sameName.length > 1 ? withoutExtension : base;
+}

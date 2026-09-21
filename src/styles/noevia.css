@@ -1881,3 +1881,23 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .web-address-field input { flex: 1 1 240px; min-width: 0; min-height: 44px; padding: 6px 12px; border: 1px solid var(--control-border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
 .web-address-field .btn, .web-address-form > .btn { min-height: 44px; }
 .web-address-form > .btn { align-self: flex-start; }
+
+/* The list of files a half-typed [[ could mean. Anchored to the source pane, not the caret:
+   a caret-following popup in a textarea needs a mirrored copy of the text to measure, and
+   the list is short enough that the bottom of the editor is where the eye already is. */
+.diary-source-pane { position: relative; }
+/* Read out, not drawn: the list beside it already says this to anyone who can see it. */
+.diary-wiki-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.diary-wiki-suggestions {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; margin: 0; padding: 4px;
+  list-style: none; max-height: 40%; overflow-y: auto;
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--bg-surface); box-shadow: var(--shadow-card);
+}
+.diary-wiki-suggestions button {
+  display: flex; gap: var(--space-3); align-items: baseline; width: 100%; text-align: left;
+  border: 0; border-radius: 8px; padding: 6px 8px; background: none; color: var(--text);
+  font: inherit; font-size: var(--text-footnote); cursor: pointer;
+}
+.diary-wiki-suggestions button:hover, .diary-wiki-suggestions button.is-active { background: var(--nav-hover); }
+.diary-wiki-suggestions span { color: var(--text-secondary); font-size: var(--text-caption2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

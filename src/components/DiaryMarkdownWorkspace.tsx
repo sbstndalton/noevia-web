@@ -4,7 +4,7 @@ import { apiFetch } from '../api';
 import type { FileSearchReport, FileSearchFilters } from '../diary-file-search';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import type { DiaryFile, FileEntry } from '../diary-workspace';
-import { markdownOutline, resolveMarkdownPath, wikiLinkCandidates } from '../diary-markdown';
+import { markdownOutline, resolveMarkdownPath, wikiLinkCandidates, wikiLinkNameFor, wikiLinkQueryAt } from '../diary-markdown';
 import { MarkdownPreview } from './DiaryModal';
 import { ShellIcon } from './ShellIcon';
 
@@ -45,6 +45,47 @@ export function DiaryMarkdownWorkspace(input: Props) {
   };
   const heading = useRef<HTMLHeadingElement>(null);
   const source = useRef<HTMLTextAreaElement>(null);
+
+  // Typing `[[` offers the files in this folder. Linking by hand means remembering an exact
+  // name, and that is the part of linking people quietly stop doing.
+  const [suggest,setSuggest]=useState<{start:number;query:string;active:number}|null>(null);
+  const names=useMemo(()=>{
+    const paths=p.files.filter(f=>!f.isDir && /\.md$/i.test(f.path)).map(f=>f.path);
+    return paths.map(path=>({path,name:wikiLinkNameFor(path,p.folderPath,paths)}));
+  },[p.files,p.folderPath]);
+  const matches=useMemo(()=>{
+    if(!suggest)return [];
+    const query=suggest.query.trim().toLocaleLowerCase();
+    return names
+      .filter(n=>n.path!==p.file.path && (!query || n.name.toLocaleLowerCase().includes(query)))
+      .slice(0,8);
+  },[suggest,names,p.file.path]);
+  const closeSuggest=()=>setSuggest(null);
+  const updateSuggest=(element:HTMLTextAreaElement)=>{
+    const found=element.selectionStart===element.selectionEnd
+      ? wikiLinkQueryAt(element.value,element.selectionStart) : null;
+    setSuggest(found ? {start:found.start,query:found.query,active:0} : null);
+  };
+  // Where the caret goes once the inserted text has rendered. Not a frame callback: the caret
+  // would then be restored after whatever the writer typed next, and a keystroke that arrived
+  // in between would be measured against the old position.
+  const [caretAfterInsert,setCaretAfterInsert]=useState<number|null>(null);
+  useEffect(()=>{
+    if(caretAfterInsert===null)return;
+    const element=source.current;
+    setCaretAfterInsert(null);
+    if(!element)return;
+    element.focus();
+    element.setSelectionRange(caretAfterInsert,caretAfterInsert);
+  },[caretAfterInsert,p.text]);
+  const accept=(name:string)=>{
+    const element=source.current;
+    if(!element || !suggest)return;
+    const caret=element.selectionStart;
+    p.onText(`${element.value.slice(0,suggest.start)}${name}]]${element.value.slice(caret)}`);
+    closeSuggest();
+    setCaretAfterInsert(suggest.start+name.length+2);
+  };
   const deferredText = useDeferredValue(p.text);
   const outline = useMemo(() => markdownOutline(deferredText), [deferredText]);
   const dirty = p.file.content === null || p.text !== p.file.content;
@@ -89,7 +130,41 @@ export function DiaryMarkdownWorkspace(input: Props) {
         {p.error && <p className="conn-banner" role="alert">{p.error}</p>}
         {p.syncPending && <p className="conn-banner">Local copy saved. Online sync needs attention; use Retry save / sync in Diary to retry the existing guarded sync.</p>}
         <div className="diary-editor-panes">
-          <section hidden={mode==='preview'}><label htmlFor="diary-markdown-source">Markdown source</label><textarea ref={source} id="diary-markdown-source" className="diary-md-input" aria-label="Markdown content" value={p.text} disabled={p.busy} onChange={e=>p.onText(e.target.value)} spellCheck={false}/></section>
+          <section hidden={mode==='preview'} className="diary-source-pane"><label htmlFor="diary-markdown-source">Markdown source</label>
+            <textarea ref={source} id="diary-markdown-source" className="diary-md-input" aria-label="Markdown content"
+              value={p.text} disabled={p.busy} spellCheck={false}
+              // Deliberately still a textarea: `role="combobox"` would replace the role this
+              // control has had all along, and writing Markdown is what it is for. The
+              // suggestions are an offer beside it, announced politely, not a form control.
+              aria-describedby={matches.length?'diary-wiki-suggestions-status':undefined}
+              onChange={e=>{p.onText(e.target.value);updateSuggest(e.currentTarget);}}
+              onSelect={e=>updateSuggest(e.currentTarget)}
+              onBlur={closeSuggest}
+              onKeyDown={e=>{
+                if(!matches.length)return;
+                if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeSuggest();return;}
+                if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+                  e.preventDefault();
+                  setSuggest(current=>current?{...current,active:(current.active+(e.key==='ArrowDown'?1:matches.length-1))%matches.length}:current);
+                  return;
+                }
+                if(e.key==='Enter'||e.key==='Tab'){
+                  e.preventDefault();
+                  accept(matches[Math.min(suggest?.active ?? 0,matches.length-1)].name);
+                }
+              }}/>
+            {matches.length>0 && <p id="diary-wiki-suggestions-status" className="diary-wiki-status" role="status">
+              {matches.length} {matches.length===1?'file':'files'} match; arrow keys to choose, Enter to insert, Escape to dismiss.
+            </p>}
+            {matches.length>0 && <ul className="diary-wiki-suggestions" id="diary-wiki-suggestions" role="listbox" aria-label="Files you could link to">
+              {matches.map((match,i)=><li key={match.path} id={`diary-wiki-option-${i}`} role="option" aria-selected={i===(suggest?.active ?? 0)}>
+                {/* Mouse down, not click: blur would close the list before a click landed. */}
+                <button type="button" className={i===(suggest?.active ?? 0)?'is-active':''} onMouseDown={e=>{e.preventDefault();accept(match.name);}}>
+                  <strong>{match.name}</strong>{match.name!==match.path && <span>{match.path}</span>}
+                </button>
+              </li>)}
+            </ul>}
+          </section>
           {mode!=='source' && <section aria-label="Markdown preview" aria-busy={p.text!==deferredText}><h2 className="diary-pane-label">Preview</h2><MarkdownPreview text={deferredText || 'This file is empty.'} internalLink={href=>{const path=resolveMarkdownPath(p.file.path,href);return path ? ()=>p.onOpen(path) : undefined;}}
           wikiLink={link=>{
             // A heading link with no file before the "#" points inside this file; there is

@@ -77,6 +77,29 @@ const {createFixture}=require('./diary-fixture.cjs');
  assert.equal(await dialog.getByRole('button',{name:'nowhere',exact:true}).count(),0,'a link to a file that is not here is not a button');
  await dialog.getByText('nowhere',{exact:true}).waitFor();
  assert.equal(await dialog.getByRole('button',{name:'code',exact:true}).count(),0,'inline code stays code');
+ // Typing `[[` offers the files in this folder, chosen with the keyboard or the mouse.
+ await dialog.getByRole('button',{name:'Edit Markdown',exact:true}).click();
+ await source.fill('Link to ');
+ await source.press('BracketLeft');await source.press('BracketLeft');
+ const suggestions=dialog.getByRole('listbox',{name:'Files you could link to'});
+ await suggestions.waitFor();
+ assert.equal(await suggestions.getByRole('option').count(),2,'every other Markdown file in the folder, and not this one');
+ await source.type('wi');
+ await page.waitForFunction(()=>document.querySelectorAll('#diary-wiki-suggestions [role=option]').length===1);
+ await source.press('Enter');
+ assert.equal(await source.inputValue(),'Link to [[wiki]]','accepting closes the brackets for you');
+ assert.equal(await suggestions.count(),0,'the list closes once a file is chosen');
+ // Escape leaves the half-typed link exactly as it was.
+ await source.press('BracketLeft');await source.press('BracketLeft');
+ await suggestions.waitFor();
+ await source.press('Escape');
+ assert.equal(await suggestions.count(),0);
+ assert.equal(await source.inputValue(),'Link to [[wiki]][[');
+ // Back to the draft the preview assertions above were made against.
+ await source.fill(wikiDraft);
+ await dialog.getByRole('button',{name:'Source & preview',exact:true}).click();
+ await dialog.getByRole('button',{name:'the other note',exact:true}).waitFor();
+
  // Opening one navigates, with the same unsaved-draft prompt an ordinary link gets.
  const accept=d=>d.accept();page.on('dialog',accept);
  await dialog.getByRole('button',{name:'the other note',exact:true}).click();
