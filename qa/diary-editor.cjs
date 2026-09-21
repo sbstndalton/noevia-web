@@ -6,7 +6,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  const fixture=createFixture(31319);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});
  try {
  const page=await browser.newPage();await page.emulateMedia({reducedMotion:'reduce'});let content='# Synthetic note',version='1',fail=false,failList=false;
- await page.route('**/api/diary/files?*',route=>route.fulfill(failList?{status:503,json:{error:'Synthetic listing unavailable'}}:{json:{files:[{path:'note.md',name:'note.md',isDir:false},{path:'linked.md',name:'linked.md',isDir:false}]}}));
+ await page.route('**/api/diary/files?*',route=>route.fulfill(failList?{status:503,json:{error:'Synthetic listing unavailable'}}:{json:{files:[{path:'note.md',name:'note.md',isDir:false},{path:'linked.md',name:'linked.md',isDir:false},{path:'wiki.md',name:'wiki.md',isDir:false}]}}));
  await page.route('**/api/diary/file',async route=>{
  const request=route.request(),body=request.postDataJSON();
  if(request.method()==='PUT'){
@@ -14,7 +14,10 @@ const {createFixture}=require('./diary-fixture.cjs');
  if(body.version!==version)return route.fulfill({status:409,json:{error:'File changed elsewhere. Draft kept.'}});
  content=body.content;version=String(Number(version)+1);
  }
- return route.fulfill({json:body.path==='linked.md'?{path:'linked.md',content:'# Linked note\n[Back](note.md)',version:'linked-v1'}:{path:'note.md',content,version}});
+ if(body.path==='linked.md')return route.fulfill({json:{path:'linked.md',content:'# Linked note\n[Back](note.md)',version:'linked-v1'}});
+   // Links to note.md only in the Obsidian spelling, so backlinks that miss wiki links miss it.
+   if(body.path==='wiki.md')return route.fulfill({json:{path:'wiki.md',content:'# Wiki note\nSee [[note]] and [[note#Later|later today]].',version:'wiki-v1'}});
+   return route.fulfill({json:{path:'note.md',content,version}});
  });
  await page.route('**/api/diary/today?*',route=>{const month=new URL(route.request().url()).searchParams.get('month');return route.fulfill({json:{todayLog:`# ${month}-01\nSynthetic first day\n# ${month}-02\nSynthetic second day`,standingSections:{},memoryFiles:[]}});});
  await page.goto('http://localhost:31319');await navClick(page,'Diary');
@@ -61,7 +64,29 @@ const {createFixture}=require('./diary-fixture.cjs');
  // Listing errors hide old rows and support an explicit retry.
  failList=true;await dialog.getByRole('button',{name:'Refresh files'}).click();await dialog.getByText('Synthetic listing unavailable',{exact:true}).waitFor();assert.equal(await dialog.getByRole('navigation',{name:'Markdown files'}).count(),0);
  failList=false;await dialog.getByRole('button',{name:'Retry file list'}).click();await dialog.getByRole('button',{name:'note.md',exact:true}).waitFor();
- await dialog.getByText('Search & backlinks',{exact:true}).click();await dialog.getByLabel('Search text',{exact:true}).fill('Reconciled');await dialog.getByRole('button',{name:'Search contents',exact:true}).click();await dialog.getByText('1 matches · 2 files checked',{exact:true}).waitFor();await dialog.getByRole('button',{name:'Find links to this file'}).click();await dialog.getByText('1 linking files · 2 files checked',{exact:true}).waitFor();
+ await dialog.getByText('Search & backlinks',{exact:true}).click();await dialog.getByLabel('Search text',{exact:true}).fill('Reconciled');await dialog.getByRole('button',{name:'Search contents',exact:true}).click();await dialog.getByText('1 matches · 3 files checked',{exact:true}).waitFor();await dialog.getByRole('button',{name:'Find links to this file'}).click();
+ // One relative Markdown link and one written as an Obsidian [[wiki link]]; both count.
+ await dialog.getByText('2 linking files · 3 files checked',{exact:true}).waitFor();
+ // Obsidian-style links: rendered, opened, and counted as backlinks. A vault written in
+ // [[links]] used to show them as literal text and find none of them.
+ const wikiDraft='# Wiki\nA plain [[linked]], an aliased [[linked|the other note]], a heading [[linked#Top]],\nan absent [[nowhere]] and `[[code]]`.';
+ await source.fill(wikiDraft);
+ await dialog.getByRole('button',{name:'Preview',exact:true}).click();
+ await dialog.getByRole('button',{name:'the other note',exact:true}).waitFor();
+ assert.equal(await dialog.getByRole('button',{name:'linked',exact:true}).count(),2,'the plain link and the heading link both open the file');
+ assert.equal(await dialog.getByRole('button',{name:'nowhere',exact:true}).count(),0,'a link to a file that is not here is not a button');
+ await dialog.getByText('nowhere',{exact:true}).waitFor();
+ assert.equal(await dialog.getByRole('button',{name:'code',exact:true}).count(),0,'inline code stays code');
+ // Opening one navigates, with the same unsaved-draft prompt an ordinary link gets.
+ const accept=d=>d.accept();page.on('dialog',accept);
+ await dialog.getByRole('button',{name:'the other note',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('.diary-editor-path input')?.value==='linked.md');
+ await dialog.getByRole('button',{name:'note.md',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('.diary-editor-path input')?.value==='note.md');
+ page.off('dialog',accept);
+ await dialog.getByRole('button',{name:'Source & preview',exact:true}).click();
+ await source.waitFor();
+
  // Export contains the unsaved source verbatim and does not save it to storage.
  const linkDraft='---\ntitle: Portable\n---\n# Links\n[Open linked](linked.md)\n[Unsafe](javascript:bad.md)';await source.fill(linkDraft);
  const downloaded=page.waitForEvent('download');await dialog.getByRole('button',{name:'Download Markdown'}).click();const file=await downloaded;assert.equal(require('node:fs').readFileSync(await file.path(),'utf8'),linkDraft);assert.equal(content,'# Reconciled draft');

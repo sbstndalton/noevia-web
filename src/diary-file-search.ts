@@ -1,4 +1,4 @@
-import { markdownFileLinks, resolveMarkdownPath } from './diary-markdown';
+import { markdownFileLinks, markdownWikiLinks, resolveMarkdownPath, wikiLinkCandidates } from './diary-markdown';
 import type { DiaryFile, FileEntry } from './diary-workspace';
 
 export type FileSearchFilters = {from?:string;to?:string;tag?:string};
@@ -60,7 +60,12 @@ export async function searchMarkdownFolder(options: {
         bytes+=new TextEncoder().encode(text).length;
         if(bytes>4*1024*1024)return {results,scanned,partial:true,skipped};
         if(tag && !markdownTags(text).includes(tag))continue;
-        const link=options.kind==='backlinks'?markdownFileLinks(text).find(link=>resolveMarkdownPath(file.path,link.href)===options.query):null;
+        // Both ways of pointing at a file count. A diary kept in Obsidian is written in
+        // `[[wiki links]]`, and finding none of them made "what links here" quietly wrong.
+        const link=options.kind==='backlinks'
+          ? (markdownFileLinks(text).find(link=>resolveMarkdownPath(file.path,link.href)===options.query)
+            || markdownWikiLinks(text).find(link=>link.target && wikiLinkCandidates(file.path,options.path,link.target).includes(options.query)))
+          : null;
         const match=options.kind==='backlinks'?(link?.offset ?? -1):text.toLocaleLowerCase().indexOf(query);
         if(match>=0)results.push({path:file.path,snippet:text.slice(Math.max(0,match-70),match+(link?.length ?? query.length)+140)});
       }catch{if(options.signal?.aborted)throw Error('Search cancelled.');skipped++;}

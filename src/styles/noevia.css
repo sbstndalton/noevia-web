@@ -1056,6 +1056,9 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .model-fit span { display:block; }
 .model-download-planner summary { cursor:pointer; padding-block:8px; font-size:var(--text-callout); }
 .diary-markdown-workspace .diary-markdown-link { border:0; border-radius:4px; padding:0 2px; background:transparent; color:var(--accent-ink); text-decoration:underline; font:inherit; cursor:pointer; min-height:0; }
+/* A [[wiki link]] to a file that is not in this folder: shown as the writer wrote it, marked
+   as unresolved rather than made into a button that would open nothing. */
+.diary-markdown-workspace .diary-markdown-link-missing { color:var(--text-secondary); text-decoration:underline dotted; text-underline-offset:2px; cursor:help; }
 .diary-search-result { width:100%; text-align:left; margin-block:8px; padding:10px; color:var(--text); background:transparent; border:1px solid var(--border); border-radius:var(--radius-control); overflow-wrap:anywhere; }
 .diary-search-result strong, .diary-search-result span { display:block; font-size:var(--text-footnote); }
 .diary-search-result span { margin-top:8px; color:var(--text-secondary); line-height:1.5; }

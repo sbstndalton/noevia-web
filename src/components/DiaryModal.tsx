@@ -48,15 +48,37 @@ function splitRow(line: string): string[] {
 
 const TABLE_DIVIDER = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
 
-export function MarkdownPreview({ text, internalLink }: { text: string; internalLink?: (href: string) => (() => void) | undefined }) {
+export function MarkdownPreview({ text, internalLink, wikiLink }: {
+  text: string;
+  internalLink?: (href: string) => (() => void) | undefined;
+  /** Obsidian-style `[[links]]`. Parsed only where a surface knows how to open one, so text
+   *  that merely contains double brackets keeps rendering exactly as it did. */
+  wikiLink?: (link: { target: string; heading: string | null; alias: string | null }) => (() => void) | undefined;
+}) {
   // React escapes all source text. Raw HTML is deliberately never interpreted.
   // Order matters in this alternation: ** before *, so bold is not consumed by
   // the italic branch. The link branch allows one level of nested parentheses
   // so that URLs like .../Foo_(bar) survive — [^)\s]+ stopped at the first
   // ")" and truncated the href mid-URL.
   const inline = (line: string) =>
-    line.split(/(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g).map((part, i) => {
+    line.split(wikiLink
+      ? /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[\[[^\[\]\n]*\]\]|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g
+      : /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g).map((part, i) => {
       if (part.startsWith('**')) return <strong key={i}>{part.slice(2, -2)}</strong>;
+      if (wikiLink && part.startsWith('[[') && part.endsWith(']]')) {
+        const body = part.slice(2, -2);
+        const bar = body.indexOf('|');
+        const raw = bar === -1 ? body : body.slice(0, bar);
+        const alias = bar === -1 ? null : body.slice(bar + 1).trim();
+        const hash = raw.indexOf('#');
+        const target = (hash === -1 ? raw : raw.slice(0, hash)).trim();
+        const heading = hash === -1 ? null : raw.slice(hash + 1).trim() || null;
+        const label = alias || (heading && !target ? heading : target) || part;
+        const open = wikiLink({ target, heading, alias });
+        return open
+          ? <button key={i} className="diary-markdown-link" onClick={open}>{label}</button>
+          : <span key={i} className="diary-markdown-link-missing" title="No file of that name here">{label}</span>;
+      }
       if (part.startsWith('`')) return <code key={i}>{part.slice(1, -1)}</code>;
       if (part.startsWith('[')) {
         const split = part.indexOf('](');

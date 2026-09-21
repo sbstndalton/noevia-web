@@ -4,7 +4,7 @@ import { apiFetch } from '../api';
 import type { FileSearchReport, FileSearchFilters } from '../diary-file-search';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import type { DiaryFile, FileEntry } from '../diary-workspace';
-import { markdownOutline, resolveMarkdownPath } from '../diary-markdown';
+import { markdownOutline, resolveMarkdownPath, wikiLinkCandidates } from '../diary-markdown';
 import { MarkdownPreview } from './DiaryModal';
 import { ShellIcon } from './ShellIcon';
 
@@ -90,7 +90,16 @@ export function DiaryMarkdownWorkspace(input: Props) {
         {p.syncPending && <p className="conn-banner">Local copy saved. Online sync needs attention; use Retry save / sync in Diary to retry the existing guarded sync.</p>}
         <div className="diary-editor-panes">
           <section hidden={mode==='preview'}><label htmlFor="diary-markdown-source">Markdown source</label><textarea ref={source} id="diary-markdown-source" className="diary-md-input" aria-label="Markdown content" value={p.text} disabled={p.busy} onChange={e=>p.onText(e.target.value)} spellCheck={false}/></section>
-          {mode!=='source' && <section aria-label="Markdown preview" aria-busy={p.text!==deferredText}><h2 className="diary-pane-label">Preview</h2><MarkdownPreview text={deferredText || 'This file is empty.'} internalLink={href=>{const path=resolveMarkdownPath(p.file.path,href);return path ? ()=>p.onOpen(path) : undefined;}} /></section>}
+          {mode!=='source' && <section aria-label="Markdown preview" aria-busy={p.text!==deferredText}><h2 className="diary-pane-label">Preview</h2><MarkdownPreview text={deferredText || 'This file is empty.'} internalLink={href=>{const path=resolveMarkdownPath(p.file.path,href);return path ? ()=>p.onOpen(path) : undefined;}}
+          wikiLink={link=>{
+            // A heading link with no file before the "#" points inside this file; there is
+            // nothing to open, so it reads as text rather than as a link that does nothing.
+            if(!link.target)return undefined;
+            const candidates=wikiLinkCandidates(p.file.path,p.folderPath,link.target);
+            const here=new Set(p.files.filter(f=>!f.isDir).map(f=>f.path));
+            const path=candidates.find(c=>here.has(c)) || (p.filesLoading ? candidates[0] : undefined);
+            return path ? ()=>p.onOpen(path) : undefined;
+          }} /></section>}
         </div>
         {p.stored && <section className="diary-stored-version"><h2>Current stored version</h2><p>Your draft is retained above. Reconcile it with this source, then accept the reviewed version as the next save base. The next save checks the reviewed version again.</p><pre>{p.stored.content ?? 'This file no longer exists.'}</pre><div className="diary-workspace-file-actions"><button className="modal-btn secondary" disabled={p.busy} onClick={p.onRebase}>Keep draft with this save base</button><button className="modal-btn secondary" disabled={p.busy} onClick={p.onReload}>Discard draft and reload</button></div></section>}
         <footer className="diary-workspace-save"><button className="modal-btn secondary" onClick={downloadDraft}>Download Markdown</button><span>{p.status || '⌘/Ctrl + S to save'}</span><button className="modal-btn secondary" disabled={p.busy} onClick={p.onCompare}>Compare stored version</button><button className="modal-btn primary" disabled={p.busy || !p.file.path || !!p.stored} onClick={p.onSave}>{p.busy?'Working…':'Save'}</button></footer>
@@ -115,7 +124,7 @@ export function DiaryMarkdownWorkspace(input: Props) {
           <label className="diary-workspace-filter">Hashtag<input placeholder="#tag" maxLength={81} value={filters.tag || ''} onChange={e=>setFilters({...filters,tag:e.target.value})}/></label>
           <p>Dates match filenames beginning YYYY-MM-DD. Undated files are excluded when a date is set. Tags match whole #hashtags in prose, ignoring case and code; frontmatter tags are not included.</p>
           <button className="popup-tab" disabled={searching || (!hasFilter && query.trim().length<2) || (query.trim().length>0 && query.trim().length<2)}>Search contents</button>
-          {hasFilter && <button type="button" className="popup-tab" onClick={()=>setFilters({})}>Clear filters</button>}</form><button className="popup-tab" disabled={searching || !p.file.path} onClick={()=>void search('backlinks')}>Find links to this file</button><p>Backlinks scan the Diary folder within the same bounds. Inline relative Markdown links are supported; wiki links and anchors remain plain text.</p>
+          {hasFilter && <button type="button" className="popup-tab" onClick={()=>setFilters({})}>Clear filters</button>}</form><button className="popup-tab" disabled={searching || !p.file.path} onClick={()=>void search('backlinks')}>Find links to this file</button><p>Backlinks scan the Diary folder within the same bounds. Relative Markdown links and Obsidian-style <code>[[wiki links]]</code> both count; anchors are ignored, so a link to a heading still finds the file.</p>
           {searching && <p role="status">Searching stored files…</p>}{searchError && <p role="alert">{searchError}</p>}
           {report && <div><p role="status">{report.results.length} {searchKind==='backlinks'?'linking files':'matches'} · {report.scanned} files checked{report.partial?' · Partial results':''}{report.skipped?` · ${report.skipped} unreadable items`:''}</p>{report.partial && <p>Some files were not searched. Choose a smaller folder to narrow the search.</p>}{report.results.map(result=><button className="diary-search-result" key={result.path} disabled={p.busy} onClick={()=>p.onOpen(result.path)}><strong>{result.path}</strong><span>{result.snippet}</span></button>)}</div>}
         </details>
