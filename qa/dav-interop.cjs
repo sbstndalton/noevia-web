@@ -51,6 +51,13 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   step('rclone deletefile (DELETE to Trash)',true,rclone('deletefile','nv:copied.md'));
   step('rclone sync folder',true,rclone('sync',local,'nv:synced'));
   step('rclone purge folder (DELETE folder)',true,rclone('purge','nv:work'));
+  // Overwrite an existing file the way rclone does (no If-Match): its previous bytes land in Trash.
+  fs.writeFileSync(path.join(local,'notes.md'),'# Notes, edited by rclone\n');
+  step('rclone copyto overwrite (unconditional PUT)',true,rclone('copyto',path.join(local,'notes.md'),'nv:notes.md'));
+  const trash=(await api(admin,'/api/diary/workspace-trash')).body?.records||[];
+  results.push({name:'overwritten version kept in Trash',pass:trash.some(r=>/^notes \(replaced .*\)\.md$/.test(r.path)),detail:trash.map(r=>r.path).join(', ')});
+  fs.writeFileSync(path.join(local,'INDEX.md'),'# clobbered\n');
+  step('rclone overwrite protected INDEX.md refused',false,rclone('copyto','--retries','1',path.join(local,'INDEX.md'),'nv:INDEX.md'));
   step('rclone deletefile protected INDEX.md refused',false,rclone('deletefile','nv:INDEX.md'));
   step('rclone moveto protected INDEX.md refused',false,rclone('moveto','nv:INDEX.md','nv:moved-index.md'));
   const indexAfter=await (await fetch(`${dav}/dav/interop/INDEX.md`,{headers:auth})).text();
