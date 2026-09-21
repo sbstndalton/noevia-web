@@ -8,7 +8,7 @@ type Extension = { id: string; action: string; why: string; from?: number; to?: 
 type Result = { spec: string; specLabel: string; generation: number; generationOff: number; gain: number; perWorkload: Record<string, string>;
   ubatch: number | null; promptPerSecond: number | null; extensions: Extension[]; loaded?: boolean };
 type Job = { id: string; model: string; status: string; phase: string; steps: Step[]; result?: Result; error?: string; restored?: boolean; resume?: boolean; resumed?: boolean; calibration?: string; extendContext?: boolean;
-  progress?: { done: number; total: number; percent: number } };
+  progress?: { done: number; total: number; percent: number }; startedAt?: number; log?: { at: number; text: string }[] };
 type Past = Result & { at: number };
 
 const acceptance = (w: { drafted: number; accepted: number }) => (w.drafted ? `${Math.round((w.accepted / w.drafted) * 100)}%` : '—');
@@ -28,7 +28,9 @@ export function AutoTune({ model, onChanged }: { model: string; onChanged: () =>
   const running = job?.status === 'running';
   useEffect(() => {
     if (!running) return;
-    const timer = setInterval(() => { void refresh().then((next) => { if (next && next.status !== 'running' && done.current !== next.id) { done.current = next.id; onChanged(); } }).catch(() => {}); }, 2000);
+    // Every second while running: the activity log is only useful if a line appears when the
+    // thing it describes happens, not two seconds later in a batch.
+    const timer = setInterval(() => { void refresh().then((next) => { if (next && next.status !== 'running' && done.current !== next.id) { done.current = next.id; onChanged(); } }).catch(() => {}); }, 1000);
     return () => clearInterval(timer);
   }, [running]);
   const start = async () => {
@@ -54,6 +56,11 @@ export function AutoTune({ model, onChanged }: { model: string; onChanged: () =>
         <progress value={mine.progress.percent} max={100}/>
         <span aria-hidden="true">{mine.progress.done} of {mine.progress.total} tests{mine.status === 'cancelled' ? ' — measurements so far are kept; starting again continues from here' : ''}</span>
       </label>}
+      {mine.log && mine.log.length > 0 && (running
+        ? <ActivityLog lines={mine.log} startedAt={mine.startedAt ?? mine.log[0].at} live/>
+        : <details className="mm-activity-details"><summary>What it did ({mine.log.length} lines)</summary>
+            <ActivityLog lines={mine.log} startedAt={mine.startedAt ?? mine.log[0].at}/>
+          </details>)}
       {mine.steps.length > 0 && <div className="mm-table-wrap" role="region" aria-label="Auto-tune steps" tabIndex={0}><table className="mm-table">
         <thead><tr><th>Test</th><th>Result</th><th>Tokens/s</th><th>Drafts accepted</th></tr></thead>
         <tbody>{mine.steps.map((s, i) => <tr key={i}>
@@ -82,4 +89,30 @@ export function AutoTune({ model, onChanged }: { model: string; onChanged: () =>
     </>}
     {error && <p role="alert" className="modal-err">{error}</p>}
   </div>;
+}
+
+const clock = (ms: number) => { const total = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`; };
+
+/**
+ * What auto-tune is doing right now, line by line. A run is minutes of a progress bar that can
+ * sit still for a whole minute while the engine loads; without this, a person watching sees a
+ * frozen screen and reasonably concludes nothing is happening.
+ *
+ * It follows the newest line unless the reader has scrolled up to look at an older one.
+ */
+function ActivityLog({ lines, startedAt, live = false }: { lines: { at: number; text: string }[]; startedAt: number; live?: boolean }): JSX.Element {
+  const box = useRef<HTMLOListElement>(null);
+  const following = useRef(true);
+  useEffect(() => {
+    const el = box.current;
+    if (el && following.current) el.scrollTop = el.scrollHeight;
+  }, [lines.length]);
+  return <ol ref={box} className="mm-activity" role="log" aria-label="What auto-tune is doing" aria-live={live ? 'polite' : 'off'}
+    tabIndex={0}
+    onScroll={(e) => { const el = e.currentTarget; following.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24; }}>
+    {lines.map((line, i) => <li key={i} className={line.text.startsWith('— ') ? 'is-heading' : line.text.startsWith('still ') ? 'is-waiting' : undefined}>
+      <time>{clock(line.at - startedAt)}</time><span>{line.text}</span>
+    </li>)}
+    {live && <li className="is-now" aria-hidden="true"><time>{clock(Date.now() - startedAt)}</time><span className="mm-activity-cursor">working</span></li>}
+  </ol>;
 }

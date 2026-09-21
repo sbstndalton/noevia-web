@@ -30,7 +30,10 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    {kind:'spec',id:'ngram',label:'N-gram',status:'rejected',reason:'Changed the deterministic list output.',score:20},
    {kind:'prompt',id:'ubatch-1024',label:'Micro-batch 1024',status:'measured',promptPerSecond:531,reused:true}],progress:{done:4,total:8,percent:50},
    result:{spec:'mtp',specLabel:'MTP (engine defaults)',generation:33.4,generationOff:19.1,gain:75,perWorkload:{list:'mtp',prose:'mtp',code:'mtp'},ubatch:1024,promptPerSecond:531,
-    extensions:[{id:'context',action:'calibrate',from:32768,to:63720,why:'measured prompt speed (531 tokens/s) fills about 63,720 tokens within 120 s'}]},calibration:'started'}});
+    extensions:[{id:'context',action:'calibrate',from:32768,to:63720,why:'measured prompt speed (531 tokens/s) fills about 63,720 tokens within 120 s'}]},calibration:'started',
+   startedAt:1000,log:[{at:1000,text:'Starting auto-tune for Qwen-9B'},{at:2000,text:'— MTP (engine defaults) —'},{at:2100,text:'Settings: spec-type draft-mtp'},
+    {at:2200,text:'Loading Qwen-9B into the engine'},{at:7200,text:'still loading · 5s'},{at:14000,text:'Loaded in 12s'},{at:30000,text:'list: 40.2 tokens/s, 98% of 84 drafts accepted'},
+    {at:95000,text:'Done — the tuned profile is loaded and ready'}]}});
   if(p==='/api/models/calibration')return json({job:null,history:[]});
   if(p.endsWith('/draft-heads'))return json({section:'Qwen-9B',local:'',builtinLayers:1,available:true,remote:[],mtpBuild:null,repo:null,modes:{}});
   if(p==='/api/models/presets/reload'){const b=body();reloads.push(b);return b.unload?json({reloaded:true,unloaded:['Qwen-9B']}):json({error:'A model is loaded.',loaded:['Qwen-9B']},409);}
@@ -138,6 +141,15 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  assert.equal(await dialog.getByRole('progressbar').getAttribute('value'),'50','progress bar shows how far the run got');
  await dialog.getByText('4 of 8 tests').waitFor();
  assert.match(await dialog.getByRole('region',{name:'Auto-tune steps'}).innerText(),/measured earlier/,'reused measurements are labelled');
+ // A finished run keeps its account of itself, folded away so the result is what you see first.
+ const account=dialog.locator('.mm-activity-details');
+ await account.locator('summary').filter({hasText:'What it did (8 lines)'}).click();
+ const tuneLog=dialog.getByRole('log',{name:'What auto-tune is doing'});
+ assert.match(await tuneLog.innerText(),/0:13\s+Loaded in 12s/,'each line is timed from the start of the run');
+ assert.match(await tuneLog.innerText(),/Settings: spec-type draft-mtp/,'the settings a test wrote are stated');
+ assert.equal(await tuneLog.locator('li.is-heading').count(),1,'a test name reads as a heading');
+ if(process.env.QA_SCREENSHOTS)await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/models-autotune-log.png`});
+ await account.locator('summary').click();
  await dialog.getByText(/Context can likely grow from 32,768 to about 63,720 tokens/).waitFor();
  assert.equal(await dialog.getByRole('region',{name:'Auto-tune steps'}).getByRole('row').count(),5);
  await dialog.locator('.mm-easy-measure > summary').filter({hasText:'Measure context on this machine'}).waitFor();
