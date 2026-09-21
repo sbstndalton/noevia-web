@@ -35,7 +35,11 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   await api(page,`/api/projects/${project.id}/chats`,{chats:[{id:'context-qa',title:'Context QA'}]});
   await api(page,'/api/chats/context-qa/history',{history});
   await api(page,'/api/profile/onboarding',{});await page.reload();await page.getByRole('button',{name:'Open Synthetic Context',exact:true}).waitFor();const expand=page.getByRole('button',{name:'Expand chats in Synthetic Context',exact:true});if(await expand.isVisible())await expand.click();await page.getByRole('button',{name:'Context QA',exact:true}).first().click();
-  await page.getByText('Context window',{exact:true}).click();
+  // A long chat that has never been measured still offers compaction; the collapsed meter is a
+  // quiet line, so it is opened where a person would click it.
+  const meterLine=page.locator('.chat-context-meter summary');
+  assert.match(await meterLine.innerText(),/Not measured yet/);
+  await meterLine.click();
   await page.getByRole('button',{name:'Compact chat',exact:true}).click();
   await page.getByText('Compacted. Full transcript retained.',{exact:false}).waitFor();
   const meter=(await api(page,'/api/chats/context-qa/context-window')).body.meter;assert.equal(meter.covered,8);assert.equal(meter.limit,32768);

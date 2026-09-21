@@ -45,7 +45,8 @@ export function ThinkingBlock({ text, live }: { text: string; live: boolean }) {
   return (
     <details className="thinking-block" open={live}>
       <summary className={live ? 'thinking-live' : undefined}>
-        {live ? 'Thinking…' : words ? `Thought for ${words} words` : 'Thought process'}
+        {/* One thinks for a time, not for words; what is known here is the length. */}
+        {live ? 'Thinking…' : words ? `Thought · ${words.toLocaleString()} ${words === 1 ? 'word' : 'words'}` : 'Thought process'}
       </summary>
       <div className="thinking-body">{text}</div>
     </details>
