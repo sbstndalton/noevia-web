@@ -11,7 +11,6 @@ import type {
   LiveStats,
   Project,
   Provider,
-  SearchHit,
   Toolbox,
   WorkspaceInfo,
 } from './types';
@@ -317,14 +316,6 @@ export function fetchInstalledModels(): Promise<InstalledModel[]> {
     if(!Array.isArray(rows) || rows.some(row=>!row || typeof row.name!=='string' || !Array.isArray(row.labels) || row.labels.some(label=>typeof label!=='string')))throw new Error('Model list was invalid. Try loading it again.');
     return rows;
   });
-}
-
-export function searchModels(query: string): Promise<SearchHit[]> {
-  return getJson(`/api/models/search?q=${encodeURIComponent(query)}`);
-}
-
-export function deleteModel(name: string): Promise<{ ok: true }> {
-  return postJson('/api/models/delete', { name });
 }
 
 export function fetchDiarySource(): Promise<{ source: string; months: { id: string; label: string }[] }> {

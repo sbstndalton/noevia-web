@@ -176,18 +176,6 @@ export interface InstalledModel {
   suggested: boolean;
 }
 
-export interface SearchHit {
-  repo: string;
-  name: string;
-  downloads?: number;
-}
-
-export interface ModelVariant {
-  id: string;
-  label: string;
-  sizeGB?: number | null;
-}
-
 export interface DiaryCorpus {
   todayLog: string;
   standing: string;
