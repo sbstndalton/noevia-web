@@ -153,10 +153,6 @@ export interface WorkspaceInfo {
   freeChats?: ChatMeta[];
 }
 
-export interface ChatMetaOnly {
-  chats: ChatMeta[];
-}
-
 export interface HealthState {
   inferenceUp: boolean | null;
   /** One-release compatibility field returned by older/newer mixed deployments. */
@@ -192,21 +188,9 @@ export interface ModelVariant {
   sizeGB?: number | null;
 }
 
-export interface DownloadJob {
-  id: string;
-  model: string;
-  progress: number | null;
-  status: string;
-}
-
 export interface DiaryCorpus {
   todayLog: string;
   standing: string;
-}
-
-export interface DiaryMonth {
-  id: string;
-  label: string;
 }
 
 export interface RouteRule {

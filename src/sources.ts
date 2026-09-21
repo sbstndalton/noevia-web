@@ -26,7 +26,6 @@ export const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
 export const uploadLimit = (name: string) => /\.pdf$/i.test(name) ? 60 * 1024 * 1024 : MAX_DOCUMENT_BYTES;
 export const isDocumentFile = (name: string) =>
   DOCUMENT_EXTENSIONS.some((e) => name.toLowerCase().endsWith(e));
-export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 export const isImageFile = (file: File) => IMAGE_MIME.includes(file.type.toLowerCase());
 
 /** base64 without the data: prefix, read in one pass. */

@@ -1,6 +1,5 @@
 /** Transparent planning estimates, not hardware detection or runtime qualification. */
 export type MemoryPlan = { capacityGB: string; reserveGB: string; kind: 'gpu' | 'unified' | 'cpu' };
-export const emptyMemoryPlan: MemoryPlan = {capacityGB:'',reserveGB:'4',kind:'gpu'};
 export type MemoryAssessment = {state:'unknown'|'over'|'tight'|'room'; label:string; detail:string; remainingGB:number|null};
 export function memoryAssessment(sizeGB: number | null | undefined, plan: MemoryPlan): MemoryAssessment {
   const capacity=Number(plan.capacityGB), reserve=Number(plan.reserveGB);

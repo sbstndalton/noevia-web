@@ -73,12 +73,6 @@ export const startNextcloud = (baseUrl: string) => postJson<{ flowId: string; lo
 export const pollNextcloud = (flowId: string, corpusRoot: string) => postJson<StorageConnection & { pending?: boolean }>('/api/integrations/storage/nextcloud/poll', { flowId, corpusRoot });
 export interface StorageEntry { name: string; path: string; isDir: boolean; size: number | null; ext: string }
 export const browseStorage = (path: string) => getJson<{ entries: StorageEntry[] }>(`/api/integrations/storage/files${path ? `/${path.split('/').map(encodeURIComponent).join('/')}` : ''}`);
-/** Upload one image as a project source. Sent as base64 because the server
- *  takes JSON everywhere else; the cap is enforced on both ends. */
-export const uploadProjectImage = (id: string, body: { name: string; mime: string; dataBase64: string }) =>
-  postJson<{ asset: { id: string; name: string; mime: string; bytes: number } }>(
-    `/api/projects/${encodeURIComponent(id)}/assets`, body);
-
 export const deleteProjectImage = (id: string, assetId: string) =>
   apiFetch(`/api/projects/${encodeURIComponent(id)}/assets/${encodeURIComponent(assetId)}`, { method: 'DELETE' })
     .then((r) => { if (!r.ok) throw new Error('could not remove that image'); });
@@ -126,12 +120,6 @@ export const deleteProjectFile = (id: string, path: string) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path }),
   }).then(async (r) => { if (!r.ok) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error || 'could not delete'); });
-
-/** Upload a document (PDF). The server extracts its text and stores it as an
- *  ordinary source. */
-export const uploadProjectDocument = (id: string, body: { name: string; dataBase64: string }) =>
-  postJson<{ name: string; pages: number; characters: number; truncated: boolean }>(
-    `/api/projects/${encodeURIComponent(id)}/documents?background=1`, body);
 
 /** Re-read every attached folder and refresh the project's sources from it. */
 export const syncProjectSources = (id: string) =>
@@ -300,12 +288,6 @@ export function setAutoRoles(roles: AutoRoles): Promise<{ configured: boolean }>
   return putJson('/api/auto-roles', roles);
 }
 
-export function fetchProjectChats(projectId: string): Promise<ChatMeta[]> {
-  return getJson<{ chats: ChatMeta[] }>(
-    `/api/projects/${encodeURIComponent(projectId)}/chats`,
-  ).then((r) => (Array.isArray(r.chats) ? r.chats : []));
-}
-
 export function saveProjectChats(projectId: string, chats: ChatMeta[]): Promise<{ ok: true }> {
   return postJson(`/api/projects/${encodeURIComponent(projectId)}/chats`, { chats });
 }
@@ -342,76 +324,19 @@ export function searchModels(query: string): Promise<SearchHit[]> {
   return getJson(`/api/models/search?q=${encodeURIComponent(query)}`);
 }
 
-export function fetchVariants(repo: string): Promise<ModelVariant[]> {
-  return getJson(`/api/models/variants?repo=${encodeURIComponent(repo)}`);
-}
-
-export function pullModel(checkpoint: string): Promise<{ jobId: string }> {
-  return postJson('/api/models/pull', { checkpoint });
-}
-
 export function deleteModel(name: string): Promise<{ ok: true }> {
   return postJson('/api/models/delete', { name });
-}
-
-export function loadModel(name: string): Promise<{ ok: true }> {
-  return postJson('/api/models/load', { name });
-}
-
-export function unloadModel(name: string): Promise<{ ok: true }> {
-  return postJson('/api/models/unload', { name });
-}
-
-export function fetchDiaryCorpus(): Promise<DiaryCorpus> {
-  return getJson('/api/diary/today');
 }
 
 export function fetchDiarySource(): Promise<{ source: string; months: { id: string; label: string }[] }> {
   return getJson('/api/diary/source');
 }
 
-export interface ExternalSourceFile {
-  name: string;
-  rel_path: string;
-  size: number;
-  date: string | null;
-  date_source: 'filename' | 'mtime' | 'unavailable';
-}
-
-export interface ExternalSourcesScan {
-  configured: boolean;
-  sources: {
-    path: string;
-    exists: boolean;
-    error?: string;
-    files: ExternalSourceFile[];
-    total: number;
-    truncated: boolean;
-  }[];
-  total: number;
-}
-
-export function fetchExternalSources(): Promise<ExternalSourcesScan> {
-  return getJson('/api/diary/external-sources');
-}
-
-export function importExternalFile(sourcePath: string, relPath: string): Promise<{ imported: boolean; day: string }> {
-  return postJson('/api/diary/external-sources/import', { sourcePath, relPath });
-}
-
 export function fetchDiaryMonth(monthId: string): Promise<DiaryCorpus> {
   return getJson(`/api/diary/today?month=${encodeURIComponent(monthId)}`);
 }
 
-export function editDiaryEntry(body: { xid: string; me: string; assistant: string; month?: string | null }): Promise<{ ok: boolean; document: string; day: string }> {
-  return postJson('/api/diary/entries/edit', body);
-}
-
 export const fetchUsage = (aggregate=false) => getJson<unknown>(aggregate?'/api/usage/aggregate':'/api/usage').then(parseUsage);
-
-export function fetchChatHistory(chatId: string): Promise<HistoryEntry[]> {
-  return fetchChatHistoryRevision(chatId).then((r) => r.history);
-}
 
 export function fetchChatHistoryRevision(chatId: string): Promise<{ history: HistoryEntry[]; revision: string | null }> {
   return getJson<{ history: HistoryEntry[]; revision?: string }>(
