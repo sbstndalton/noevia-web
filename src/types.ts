@@ -8,6 +8,8 @@ export interface Message {
   reasoningMode?: string;
   reasoningEffort?: string;
   reasoning?: string;
+  /** How long the model thought before its answer began, measured on this client. */
+  reasoningMs?: number;
   toolCalls?: ToolCallView[];
   error?: boolean;
   warning?: string;
@@ -141,6 +143,7 @@ export interface HistoryEntry {
   // cost. The server stores these opaquely and strips everything but
   // role/content before the history is replayed to a model.
   reasoning?: string;
+  reasoningMs?: number;
   toolCalls?: ToolCallView[];
   stats?: MessageStats;
 }

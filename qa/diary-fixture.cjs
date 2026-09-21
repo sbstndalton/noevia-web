@@ -65,6 +65,12 @@ function createFixture(port = 31239) {
         pending.add(res);res.on('close',()=>pending.delete(res));return;
       }
       if(body.message==='live synthetic') { live.add(res);pending.add(res);res.on('close',()=>{live.delete(res);pending.delete(res);});return; }
+      if(body.message==='slow thinking synthetic') {
+        // About two seconds of thinking before the first word of the answer.
+        event({type:'reasoning',text:'Weighing the synthetic options carefully.'});
+        setTimeout(()=>{event({type:'delta',text:'Synthetic considered answer'});event({type:'done'});res.end();},2200);
+        return;
+      }
       if(body.message==='tools chat synthetic') {
         event({type:'tool',index:0,name:'project_search',args:'{"query":"synthetic"}'});
         event({type:'tool_result',index:0,name:'project_search',text:'Found 2 synthetic matches in notes.md'});

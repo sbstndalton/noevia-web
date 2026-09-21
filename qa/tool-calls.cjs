@@ -12,6 +12,16 @@ const {createFixture}=require('./diary-fixture.cjs');
    await page.goto('http://localhost:31258');
    await page.getByRole('textbox',{name:'Message',exact:true}).fill('tools chat synthetic');await page.keyboard.press('Enter');
    await page.getByText('Synthetic answer after tools',{exact:true}).waitFor();
+   // Thinking is labelled with how long it took, measured as it streamed.
+   if(width===1440&&theme==='light'){
+    await page.getByRole('textbox',{name:'Message',exact:true}).fill('slow thinking synthetic');await page.keyboard.press('Enter');
+    await page.getByText('Synthetic considered answer',{exact:true}).waitFor();
+    const label=(await page.locator('.thinking-block > summary').last().innerText()).trim();
+    assert.match(label,/^Thought for [23]s$/,`thinking time: ${label}`);
+    await page.getByRole('button',{name:'New chat',exact:true}).first().click();
+    await page.getByRole('textbox',{name:'Message',exact:true}).fill('tools chat synthetic');await page.keyboard.press('Enter');
+    await page.getByText('Synthetic answer after tools',{exact:true}).waitFor();
+   }
    const list=page.locator('.msg .tool-calls, .tool-calls').last();
    await list.waitFor();
    assert.equal(await list.evaluate(el=>el.open),false,'finished tool list should be collapsed');

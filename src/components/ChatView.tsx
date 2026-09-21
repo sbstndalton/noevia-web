@@ -35,7 +35,14 @@ interface ChatViewProps {
   onOpenSettings: () => void;
 }
 
-export function ThinkingBlock({ text, live }: { text: string; live: boolean }) {
+/** "12s", "1m 05s": how long the thinking took, the way people say it. */
+export function thinkingDuration(ms: number): string {
+  const seconds = Math.max(1, Math.round(ms / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, '0')}s`;
+}
+
+export function ThinkingBlock({ text, live, ms }: { text: string; live: boolean; ms?: number }) {
   // Open while the model is still thinking so the reasoning is visible as it
   // streams, then collapsed once the answer lands — the answer is what you
   // want to read, with the reasoning one click away. `open` is uncontrolled
@@ -45,8 +52,9 @@ export function ThinkingBlock({ text, live }: { text: string; live: boolean }) {
   return (
     <details className="thinking-block" open={live}>
       <summary className={live ? 'thinking-live' : undefined}>
-        {/* One thinks for a time, not for words; what is known here is the length. */}
-        {live ? 'Thinking…' : words ? `Thought · ${words.toLocaleString()} ${words === 1 ? 'word' : 'words'}` : 'Thought process'}
+        {/* A time when this client saw the thinking happen; otherwise (an older chat, another
+            device) the length, which is what is known. One thinks for a time, not for words. */}
+        {live ? 'Thinking…' : ms ? `Thought for ${thinkingDuration(ms)}` : words ? `Thought · ${words.toLocaleString()} ${words === 1 ? 'word' : 'words'}` : 'Thought process'}
       </summary>
       <div className="thinking-body">{text}</div>
     </details>
@@ -217,7 +225,7 @@ export function ChatView({
                   {m.reasoningMode && m.reasoningMode !== 'off' && <small className="reasoning-result">Effort: {m.reasoningEffort} · {m.reasoningMode === 'real' ? 'provider parameter' : 'best-effort hint'}</small>}
                   {m.warning && <p className="msg-warning" role="status">{m.warning}</p>}
                   {(m.toolScope || m.skillScope) && <small className="tool-scope" title="What noevia gave the model for this reply">{m.toolScope && <>Using: {m.toolScope}</>}{m.toolScope && m.skillScope && ' · '}{m.skillScope && <>Skill: {m.skillScope}</>}</small>}
-                  {m.reasoning ? <ThinkingBlock text={m.reasoning} live={!!thinkingLive && !m.content} /> : null}
+                  {m.reasoning ? <ThinkingBlock text={m.reasoning} ms={m.reasoningMs} live={!!thinkingLive && !m.content} /> : null}
                   {m.toolCalls && m.toolCalls.length > 0 ? <ToolCalls calls={m.toolCalls} /> : null}
                   {m.content ? (
                     <div className="bubble">

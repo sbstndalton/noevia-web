@@ -308,6 +308,7 @@ export default function App(): JSX.Element {
             content: h.content,
             senderLabel: h.model,
             reasoning: h.reasoning,
+            reasoningMs: h.reasoningMs,
             toolCalls: settleToolCalls(h.toolCalls),
             stats: h.stats,
           })),
@@ -380,6 +381,7 @@ export default function App(): JSX.Element {
       content: m.content,
       model: m.senderLabel,
       reasoning: m.reasoning || undefined,
+      reasoningMs: m.reasoningMs,
       toolCalls: m.toolCalls && m.toolCalls.length ? m.toolCalls : undefined,
       stats: m.stats,
     }));
@@ -394,7 +396,7 @@ export default function App(): JSX.Element {
         historyRevisions.current[chatId] = result.conflict.revision;
         if (merged !== next) {
           next = merged;
-          setMessagesByChat((prev) => ({ ...prev, [chatId]: merged.map((h) => ({ id: uid(), role: h.role, content: h.content, senderLabel: h.model, reasoning: h.reasoning, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats })) }));
+          setMessagesByChat((prev) => ({ ...prev, [chatId]: merged.map((h) => ({ id: uid(), role: h.role, content: h.content, senderLabel: h.model, reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats })) }));
         }
       }
     };
@@ -451,6 +453,15 @@ export default function App(): JSX.Element {
       try {
         let acc = '';
         let reasoning = '';
+        // Thinking time: from the first thought to the first word of the answer. Measured here
+        // because it is what the person waited through; the engine's own timings cover tokens.
+        let thinkStart = 0, thought = false;
+        const endThinking = () => {
+          if (!thinkStart || thought) return;
+          thought = true;
+          const ms = Math.round(performance.now() - thinkStart);
+          setMessagesByChat((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, reasoningMs: ms } : m)) }));
+        };
         const tools: ToolCallView[] = [];
         for await (const ev of streamChat(
           {
@@ -483,6 +494,7 @@ export default function App(): JSX.Element {
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, warning: ev.text } : m)),
             }));
           } else if (ev.type === 'reasoning' && ev.text) {
+            if (!thinkStart) thinkStart = performance.now();
             reasoning += ev.text;
             setMessagesByChat((prev) => ({
               ...prev,
@@ -499,12 +511,15 @@ export default function App(): JSX.Element {
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, content: acc.trimStart(), reasoning } : m)),
             }));
           } else if (ev.type === 'delta' && ev.text) {
+            if (ev.text.trim()) endThinking();
             acc += ev.text;
             setMessagesByChat((prev) => ({
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, content: acc } : m)),
             }));
           } else if (ev.type === 'tool') {
+            // Deciding to use a tool is where the thinking before it ends.
+            endThinking();
             // One tool call arrives as many deltas (the name once, then the
             // arguments a few characters at a time). The server sends the
             // accumulated state keyed by index, so slot it in rather than
