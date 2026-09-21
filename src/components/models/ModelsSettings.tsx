@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { ShellIcon } from '../ShellIcon';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, RouteRule } from '../../types';
-import { fetchAutoRoles, setAutoRoles as putAutoRoles } from '../../api';
+import { fetchAutoRoles, setAutoRoles as putAutoRoles, fetchRoutingDefault, putRoutingDefault } from '../../api';
+import { SegmentedControl } from '../SegmentedControl';
 import { matchesModelUse, modelChoiceLabel } from '../../model-guidance';
 import { AUTO_EXPLAINED, ROLE_LABEL, roleSummary } from '../../routing-copy';
 import { ReasoningControl } from '../ReasoningControl';
@@ -136,7 +137,8 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
     finally { setBusy(false); }
   };
 
-  return <><section className="mm-panel">
+  return <><DefaultModeSection />
+  <section className="mm-panel">
     <div className="mm-panel-head"><h3>Routing</h3></div>
     <p className="mm-note">Projects set to Auto pick a model per message. Vision and Code are optional. Set Vision and that model describes any images, then Fast or Smart answers from the description — so the answering model does not need to see. Set Code and coding work goes there instead of Smart.</p>
     {modelsError && <p role="alert" className="modal-err">{modelsError}</p>}
@@ -172,6 +174,35 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
     <div className="mm-panel-head"><h3>Thinking</h3></div>
     <ReasoningControl global />
   </section></>;
+}
+
+// The mode a new project starts in. Switching existing projects is a separate, explicit button:
+// changing the default alone never rewrites a project someone set by hand.
+function DefaultModeSection(): JSX.Element {
+  const [mode, setMode] = useState<'auto' | 'manual' | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState('');
+  const [error, setError] = useState('');
+  useEffect(() => { let live = true; fetchRoutingDefault().then((v) => { if (live) setMode(v.routing); }).catch(() => { if (live) setError('The default mode could not be loaded.'); }); return () => { live = false; }; }, []);
+  const save = async (next: 'auto' | 'manual', applyToExisting: boolean) => {
+    setBusy(true); setError(''); setStatus('');
+    try {
+      const r = await putRoutingDefault(next, applyToExisting);
+      setMode(r.routing);
+      setStatus(applyToExisting ? (r.updated ? `Switched ${r.updated} ${r.updated === 1 ? 'project' : 'projects'} to ${next === 'auto' ? 'Auto' : 'Manual'}.` : 'Every project already uses this mode.') : 'Saved. New projects start this way.');
+    } catch (e) { setError(e instanceof Error ? e.message : 'The change could not be saved.'); }
+    finally { setBusy(false); }
+  };
+  return <section className="mm-panel">
+    <div className="mm-panel-head"><h3>Default model mode</h3></div>
+    <p className="mm-note">How new projects pick their model. Auto chooses Fast or Smart per message; Manual keeps one pinned model. Any project can still be changed from its own model selector.</p>
+    {mode && <SegmentedControl label="Default model mode" value={mode} options={[['auto', 'Auto'], ['manual', 'Manual']]} onChange={(next) => { if (!busy) void save(next, false); }} />}
+    <div className="mm-actions">
+      <button className="modal-btn secondary" disabled={busy || !mode} onClick={() => mode && void save(mode, true)}>{busy ? 'Saving…' : `Switch existing projects to ${mode === 'manual' ? 'Manual' : 'Auto'}`}</button>
+      {status && <span role="status" className="mm-note">{status}</span>}
+      {error && <span role="alert" className="modal-err">{error}</span>}
+    </div>
+  </section>;
 }
 
 // Which model each project ends up using. Read-only here on purpose: a project's model is

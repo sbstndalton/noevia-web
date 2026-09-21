@@ -282,6 +282,10 @@ export function fetchAutoRoles(): Promise<{ configured: boolean; roles: AutoRole
   return getJson('/api/auto-roles');
 }
 
+export const fetchRoutingDefault = () => getJson<{ routing: 'auto' | 'manual' }>('/api/routing-default');
+export const putRoutingDefault = (routing: 'auto' | 'manual', applyToExisting = false) =>
+  putJson<{ routing: 'auto' | 'manual'; updated: number }>('/api/routing-default', { routing, applyToExisting });
+
 export function setAutoRoles(roles: AutoRoles): Promise<{ configured: boolean }> {
   return putJson('/api/auto-roles', roles);
 }

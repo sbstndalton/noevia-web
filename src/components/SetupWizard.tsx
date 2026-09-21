@@ -11,6 +11,7 @@ import {
   updateFeatures,
   setupStatus,
   apiFetch,
+  putRoutingDefault,
 } from '../api';
 import type { AuthUser } from '../api';
 import { classifyOrigin, isIpAddressHost } from '../browser-support';
@@ -87,7 +88,7 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     localStorage.getItem('cowork-theme') === 'light' ? 'light' : 'dark',
   );
-  const [autoRouting, setAutoRouting] = useState(() => localStorage.getItem('cowork-default-routing') !== 'manual');
+  const [autoRouting, setAutoRouting] = useState(true);
   const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
   const timezoneSetting = timezoneEnvSetting(timezone);
 
@@ -353,7 +354,7 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button className="modal-btn secondary" onClick={() => go('passkey')}>Skip — set up later</button>
               <button className="modal-btn primary" disabled={!timezoneSetting} onClick={() => {
-                localStorage.setItem('cowork-default-routing', autoRouting ? 'auto' : 'manual');
+                void putRoutingDefault(autoRouting ? 'auto' : 'manual').catch(() => undefined); // changeable later in Models → Routing
                 go('passkey');
               }}>Use these preferences</button>
             </div>

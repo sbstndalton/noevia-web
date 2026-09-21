@@ -748,10 +748,8 @@ export default function App(): JSX.Element {
 
   const handleCreateProject = useCallback(
     async (body: { icon?: string; color?: string; name: string; goal: string; instructions: string; files: ProjectFile[] }) => {
-      // New projects default to Auto Fast/Smart unless the setup wizard opted out.
-      const defaultRouting =
-        localStorage.getItem('cowork-default-routing') === 'manual' ? ('manual' as const) : ('auto' as const);
-      const project = await createProject({ ...body, routing: defaultRouting });
+      // No routing sent: the server applies the default from Models → Routing.
+      const project = await createProject(body);
       refreshProjects();
       setView({ kind: 'project', id: project.id });
     },

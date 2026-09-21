@@ -8,7 +8,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  try{
  const page=await browser.newPage({viewport:{width:1440,height:950}});await page.emulateMedia({reducedMotion:'reduce'});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- const calls=[];let saveAttempts=0,revision='r1',deleted=[],reloads=[],safeDefaults=[],downloadBodies=[],logPolls=0,badges=[],extraJob=null,extraRegistered=false,prompts=[{id:1,name:'Short answer',body:'Reply with OK.'}],benchStarted=null;
+ const calls=[],routingPuts=[];let routingDefault='auto';let saveAttempts=0,revision='r1',deleted=[],reloads=[],safeDefaults=[],downloadBodies=[],logPolls=0,badges=[],extraJob=null,extraRegistered=false,prompts=[{id:1,name:'Short answer',body:'Reply with OK.'}],benchStarted=null;
  const now=Date.now()/1000,hist=Array.from({length:40},(_,i)=>({ts:now-(39-i)*2,gpu_util:i%10*9,vram_used_gb:0.15,cpu_pct:40+i%5*10,mem_used_gb:1.2,shared_used_gb:6+i*0.1,temp_c:48,power_w:18+i%4,per_gpu_util:[],per_gpu_vram_used_gb:[]}));
  const hostHist=hist.map(p=>({ts:p.ts,cpu_pct:12,mem_used_gb:14.5,mem_total_gb:29,mem_available_gb:14.5}));
  const schema=[{tier:'Common',open:true,fields:[{key:'model',label:'Model file',kind:'text',choices:[],placeholder:'',help:'Model path'},{key:'ctx-size',label:'Context size',kind:'int',choices:[],placeholder:'8192',help:'Tokens'},{key:'ngl',label:'GPU layers',kind:'text',choices:[],placeholder:'999',help:''},{key:'flash-attn',label:'Flash attention',kind:'select',choices:['','on','off','auto'],placeholder:'',help:''},{key:'jinja',label:'Enable --jinja templating',kind:'bool',choices:[],placeholder:'',help:''}]},{tier:'Multimodal / vision',open:false,fields:[{key:'mmproj',label:'Projector',kind:'text',choices:[],placeholder:'',help:''}]}];
@@ -37,6 +37,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   if(p==='/api/models/calibration')return json({job:null,history:[]});
   if(p.endsWith('/draft-heads'))return json({section:'Qwen-9B',local:'',builtinLayers:1,available:true,remote:[],mtpBuild:null,repo:null,modes:{}});
   if(p==='/api/models/presets/reload'){const b=body();reloads.push(b);return b.unload?json({reloaded:true,unloaded:['Qwen-9B']}):json({error:'A model is loaded.',loaded:['Qwen-9B']},409);}
+  if(p==='/api/routing-default'){if(m==='PUT'){const b=body();routingPuts.push(b);routingDefault=b.routing;return json({routing:b.routing,updated:b.applyToExisting?2:0});}return json({routing:routingDefault});}
   if(p==='/api/auto-roles'&&m==='GET')return json({configured:true,roles:{fast:'Qwen-9B',smart:'Gemma-4-E4B-it-GGUF'},missing:[{role:'smart',model:'Gemma-4-E4B-it-GGUF'}]});
   if(!p.startsWith('/api/model-manager/'))return p.startsWith('/api/models/')?json([]):route.continue();
   const r=p.slice('/api/model-manager/'.length);
@@ -311,6 +312,12 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  const promptPanel=dialog.locator('[role=tabpanel]');
  await promptPanel.getByLabel('Name').fill('Synthetic prompt');await promptPanel.getByLabel('Prompt',{exact:true}).fill('Say hello.');await promptPanel.getByRole('button',{name:'Save prompt'}).click();await promptPanel.getByText('Synthetic prompt').waitFor();
  await tab('Routing');await dialog.getByRole('heading',{name:'Routing',exact:true}).waitFor();
+ await dialog.getByRole('heading',{name:'Default model mode',exact:true}).waitFor();
+ await dialog.getByRole('radio',{name:'Manual'}).click();await dialog.getByText('Saved. New projects start this way.').waitFor();
+ assert.deepEqual(routingPuts.pop(),{routing:'manual',applyToExisting:false});
+ await dialog.getByRole('radio',{name:'Auto'}).click();await dialog.getByText('Saved. New projects start this way.').waitFor();
+ await dialog.getByRole('button',{name:'Switch existing projects to Auto'}).click();await dialog.getByText('Switched 2 projects to Auto.').waitFor();
+ assert.deepEqual(routingPuts.pop(),{routing:'auto',applyToExisting:true});
  await dialog.getByText('How Auto decides',{exact:true}).click();
  assert.ok(await dialog.getByText(/Auto never blocks a message/).isVisible());
  assert.equal(await dialog.locator('label').filter({hasText:'Fast — quick answers'}).count(),1);
