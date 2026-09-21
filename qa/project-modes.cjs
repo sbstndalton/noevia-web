@@ -37,17 +37,22 @@ const {createFixture}=require('./diary-fixture.cjs');
    await navClick(page,'Projects');
    await page.locator('.project-card').filter({hasText:'C++ practice'}).first().locator('.project-card-options').click();await page.getByRole('menuitem',{name:'Project settings'}).click();
    const dialog=page.getByRole('dialog',{name:'Edit C++ practice'});await dialog.waitFor();
-   await dialog.getByRole('checkbox',{name:/Code/}).uncheck();
+   await dialog.getByRole('checkbox',{name:/^Code/}).uncheck();
    assert.ok(await dialog.getByRole('button',{name:'Save',exact:true}).isDisabled(),'saving with no modes must be impossible');
    await dialog.getByText('Choose at least one mode.').waitFor();
-   await dialog.getByRole('checkbox',{name:/Chat/}).check();await dialog.getByRole('checkbox',{name:/Code/}).check();
+   await dialog.getByRole('checkbox',{name:/^Chat/}).check();await dialog.getByRole('checkbox',{name:/^Code/}).check();
+   // With Chat and Code both on, sharing appears, off by default.
+   const intoCode=dialog.getByRole('checkbox',{name:/Code tasks see this project/}),intoChat=dialog.getByRole('checkbox',{name:/Chats see recent Code tasks/});
+   assert.equal(await intoCode.isChecked(),false);assert.equal(await intoChat.isChecked(),false);
+   await intoCode.check();
    assert.ok(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1),'dialog overflows');
    if(process.env.QA_SCREENSHOTS)await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/project-modes-dialog-${width}-${theme}.png`});
    await dialog.getByRole('button',{name:'Save',exact:true}).click();await dialog.waitFor({state:'hidden'});
    assert.deepEqual(patches.at(-1).modes,['chat','code']);
+   assert.deepEqual(patches.at(-1).sharedContext,{chat:false,code:true});
    await page.close();
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS project modes: chat sidebar filter, all projects with availability chips, code-only notice, settings toggle with at-least-one guard, 375/1440 light/dark.');
+  console.log('PASS project modes: chat sidebar filter, all projects with availability chips, code-only notice, settings toggle with at-least-one guard, shared-context toggles off by default, 375/1440 light/dark.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -27,6 +27,8 @@ export function EditProjectModal({
   const [model, setModel] = useState(project.model || '');
   const [modes, setModes] = useState<ProjectMode[]>(project.modes?.length ? project.modes : ['chat']);
   const toggleMode = (mode: ProjectMode, on: boolean) => setModes((prev) => (['chat', 'cowork', 'code'] as ProjectMode[]).filter((m) => (m === mode ? on : prev.includes(m))));
+  const [shared, setShared] = useState({ chat: project.sharedContext?.chat === true, code: project.sharedContext?.code === true });
+  const bothModes = modes.includes('chat') && modes.includes('code');
   const [addError, setAddError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -49,6 +51,8 @@ export function EditProjectModal({
         model,
         reasoningEffort: effort === 'inherit' ? null : effort,
         modes,
+        // Sharing only means something across two modes; with one, it is saved off.
+        sharedContext: bothModes ? shared : { chat: false, code: false },
       });
       onClose();
     } catch (e) {
@@ -82,6 +86,14 @@ export function EditProjectModal({
           </div>
           <small>{modes.length ? 'The project appears in these modes. Chat projects show in the sidebar and accept messages.' : 'Choose at least one mode.'}</small>
         </fieldset>
+        {bothModes && <fieldset className="field project-modes">
+          <legend>Shared context</legend>
+          <div className="project-mode-options">
+            <label className="mm-check"><input type="checkbox" checked={shared.code} onChange={(e) => setShared((s) => ({ ...s, code: e.target.checked }))} />Code tasks see this project<small> · goal, instructions, memories, recent chat titles</small></label>
+            <label className="mm-check"><input type="checkbox" checked={shared.chat} onChange={(e) => setShared((s) => ({ ...s, chat: e.target.checked }))} />Chats see recent Code tasks<small> · what was asked and how it ended</small></label>
+          </div>
+          <small>Off by default. Nothing leaves your account; Code still asks before every action.</small>
+        </fieldset>}
         <label className="field">
           <span>Project instructions</span>
           <textarea className="modal-input" rows={3} value={instructions}

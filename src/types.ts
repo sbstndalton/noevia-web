@@ -104,6 +104,8 @@ export interface Project {
   toolboxes?: string[]; // step 14: named tool sets offered to the model; defaults to ['core']
   /** App modes this project appears in; the server migrates older projects to ['chat']. */
   modes?: ProjectMode[];
+  /** Which modes receive the others' context (shared-context.cjs); both off by default. */
+  sharedContext?: { chat: boolean; code: boolean };
   chats: ChatMeta[];
   createdAt: number;
   updatedAt: number;
