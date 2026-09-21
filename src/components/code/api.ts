@@ -30,7 +30,9 @@ export interface Harness { id: string; label: string; version: string | null }
 export interface PreparationMode { id: string; label: string; available: boolean; reason: string }
 export interface CodeState {
   repositories: { id: string }[]; capabilities: CodeAction[]; defaultCapabilities: CodeAction[];
-  harnesses: Harness[]; promptPreparation: PreparationMode[]; sandboxed: boolean; tasks: CodeTask[];
+  harnesses: Harness[]; promptPreparation: PreparationMode[]; sandboxed: boolean;
+  /** False when the server has no egress proxy: a task can then have no network at all. */
+  network?: boolean; tasks: CodeTask[];
 }
 export interface StartTask {
   repository: string; prompt: string; capabilities: CodeAction[]; domains: string[];

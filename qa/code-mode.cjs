@@ -20,7 +20,7 @@ const TASK='12345678-1234-4234-8234-123456789012';
    await page.route('**/api/features',r=>r.fulfill({json:{flags}}));
 
    const CAPS=['read_repository','edit_file','execute_command','install_dependency','network','delete','git_push'];
-   const posts=[];let tasks=[];
+   const posts=[];let tasks=[];let online=false;
    // The long, untruncated arguments the card must show in full.
    const longCommand='npm run build -- --target=production --flag='+('x'.repeat(300));
    const approval=(over={})=>({id:'a1',action:'edit_file',title:'Edit src/median.js',kind:'edit',command:'',paths:['/work/src/median.js'],
@@ -48,7 +48,7 @@ const TASK='12345678-1234-4234-8234-123456789012';
        harnesses:[{id:'opencode',label:'OpenCode',version:'1.18.31'}],
        promptPreparation:[{id:'direct',label:'Direct',available:true,reason:'Your request goes to the model as you wrote it.'},
          {id:'local',label:'Local architect',available:false,reason:'Not offered yet: as an architect the 4B returned 0 of 18 usable execution prompts.'}],
-       sandboxed:true,tasks}});
+       sandboxed:true,network:online,tasks}});
    });
 
    await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
@@ -58,6 +58,20 @@ const TASK='12345678-1234-4234-8234-123456789012';
    flags={codeHarness:true};
    await page.evaluate(()=>window.dispatchEvent(new Event('noevia:features-changed')));
    await page.getByRole('tab',{name:'Code'}).click();
+
+   // The Code tab has its own way to start something; the chat composer is not left underneath.
+   await page.getByText('OpenCode 1.18.31').waitFor();
+   assert.equal(await page.getByRole('textbox',{name:'Message Battery notes'}).isVisible(),false,'a chat composer under the Code tab');
+   // Without the egress proxy, network and installs are shown unavailable, with the reason, and
+   // never sent: offering them would promise a network the task will not get.
+   assert.ok(await page.getByLabel('Reach the network').isDisabled());
+   assert.ok(await page.getByLabel('Install dependencies').isDisabled());
+   await page.getByText(/need the egress proxy, which this server does not run/).waitFor();
+   await page.getByText('The harness runs in the sandbox container: no credentials, and no network at all.').waitFor();
+   assert.equal(await page.getByLabel('Domains it may reach').count(),0);
+   // With the proxy, they are offered; switching tabs reloads what the server says.
+   online=true;
+   await page.getByRole('tab',{name:/Chats/}).click();await page.getByRole('tab',{name:'Code'}).click();
 
    // One harness: stated as the fact it is, not a dropdown pretending to offer a choice.
    await page.getByText('OpenCode 1.18.31').waitFor();

@@ -57,7 +57,11 @@ export function CodePanel({ projectId }: { projectId: string }): JSX.Element {
     (list || []).includes(action) ? (list || []).filter(a => a !== action) : [...(list || []), action]);
 
   if (!state || !capabilities) return <div className="code-panel"><p className="code-note">{error || 'Loading Code mode…'}</p></div>;
-  const needsDomains = capabilities.includes('network') || capabilities.includes('install_dependency');
+  // Network and installs only mean something where the egress proxy exists; elsewhere they are
+  // shown, unavailable, with the reason, rather than offered and then silently not granted.
+  const online = state.network === true;
+  const needsNetwork = (action: CodeAction) => action === 'network' || action === 'install_dependency';
+  const needsDomains = online && (capabilities.includes('network') || capabilities.includes('install_dependency'));
   const noRepositories = state.repositories.length === 0;
 
   return <div className="code-panel">
@@ -107,7 +111,9 @@ export function CodePanel({ projectId }: { projectId: string }): JSX.Element {
       {/* Where the harness runs is a security fact, not a setting, so it is stated either way. */}
       <p className={`code-note${state.sandboxed ? '' : ' is-error'}`}>
         {state.sandboxed
-          ? 'The harness runs in the sandbox container: no credentials, and no network except the domains below.'
+          ? online
+            ? 'The harness runs in the sandbox container: no credentials, and no network except the domains below.'
+            : 'The harness runs in the sandbox container: no credentials, and no network at all.'
           : 'This server runs the harness beside noevia itself. An administrator should point CODE_HARNESS_ENDPOINT at the sandbox container.'}
       </p>
 
@@ -122,11 +128,15 @@ export function CodePanel({ projectId }: { projectId: string }): JSX.Element {
         <legend>What this task may do</legend>
         <p className="code-note">Anything left off is refused outright, without asking you. Anything on still stops at an approval.</p>
         <div className="code-capability-list">
-          {state.capabilities.map(action => <label key={action} className="code-capability">
-            <input type="checkbox" checked={capabilities.includes(action)} disabled={running || !!busy} onChange={() => toggle(action)}/>
-            <span>{ACTION_LABEL[action]}</span>
-          </label>)}
+          {state.capabilities.map(action => {
+            const unavailable = !online && needsNetwork(action);
+            return <label key={action} className={`code-capability${unavailable ? ' is-unavailable' : ''}`}>
+              <input type="checkbox" checked={!unavailable && capabilities.includes(action)} disabled={unavailable || running || !!busy} onChange={() => toggle(action)}/>
+              <span>{ACTION_LABEL[action]}</span>
+            </label>;
+          })}
         </div>
+        {!online && <p className="code-note">Reaching the network and installing dependencies need the egress proxy, which this server does not run, so a task here works offline with what the repository already has.</p>}
       </fieldset>
 
       {needsDomains && <div className="code-field">
@@ -139,7 +149,7 @@ export function CodePanel({ projectId }: { projectId: string }): JSX.Element {
       <div className="code-actions">
         <button type="button" className="btn btn-primary" disabled={!prompt.trim() || !repository || running || !!busy}
           onClick={() => act('start', async () => {
-            await startTask(projectId, { repository, prompt, capabilities, harness, promptPreparation: preparation,
+            await startTask(projectId, { repository, prompt, capabilities: capabilities.filter(a => online || !needsNetwork(a)), harness, promptPreparation: preparation,
               domains: domains.split(',').map(d => d.trim()).filter(Boolean) });
             setPrompt('');
           })}>{busy === 'start' ? 'Starting…' : 'Start task'}</button>

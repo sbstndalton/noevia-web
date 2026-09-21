@@ -321,7 +321,9 @@ export function ProjectView({
               so the composer is present rather than a button that empties into
               a blank chat. */}
           {!chatEnabled && <p className="route-note" role="status">This project is not enabled for Chat. Turn Chat on under Project settings → Available in to send messages here.</p>}
-          <div className="project-composer" hidden={!chatEnabled || tab === 'research'}>
+          {/* Research and Code each have their own way to start something; a chat composer
+              under them is a second, unrelated send button taking half the height. */}
+          <div className="project-composer" hidden={!chatEnabled || tab === 'research' || tab === 'code'}>
             {/* What rides along with the next message, stated before it is sent
                 rather than discovered afterwards. Each chip opens what it counts. */}
             <ul className="composer-context-chips" aria-label="Context sent with every message in this project">
