@@ -350,7 +350,7 @@ export default function App(): JSX.Element {
       available: () => document.visibilityState === 'visible' && navigator.onLine && !sourceBusy,
       refresh: () => syncProjectSources(sourceProjectId),
       updated: result => {
-        if (result.skipped.length) setProjectError(sourceRefreshIssues(result.skipped));
+        if (result.skipped?.length) setProjectError(sourceRefreshIssues(result.skipped));
         void refreshProjects();
       },
       failed: error => setProjectError(`Sources could not be refreshed — ${error instanceof Error ? error.message : 'storage unavailable'}.`),
@@ -939,6 +939,7 @@ export default function App(): JSX.Element {
         <ProjectView
           modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null)}
           onOpenModels={() => setPopupOpen(true)}
+          onEdit={() => setEditingProjectId(activeProject.id)}
           project={activeProject}
           streamingChats={streamingChats}
           onRefresh={refreshProjects}

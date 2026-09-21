@@ -44,7 +44,23 @@ interface ProjectViewProps {
   streamingChats: Record<string, true>;
   onRefresh: () => void | Promise<void>;
   onOpenModels: () => void;
+  onEdit: () => void;
   modelLabel: string;
+}
+
+/** Documents noevia itself produced in this project. Only deep-research
+ *  reports are generated today; the `.sources.json` sidecar rides along with
+ *  its report rather than listing as an output of its own. */
+function outputsOf(project: Project): { name: string; base: string; date: string; sources?: string }[] {
+  const names = new Set(project.files.map((f) => f.name));
+  return project.files
+    .filter((f) => /^Research \d{4}-\d{2}-\d{2} .+\.md$/.test(f.name.split('/').pop() || ''))
+    .map((f) => {
+      const base = (f.name.split('/').pop() || f.name).replace(/\.md$/, '');
+      const sidecar = f.name.replace(/\.md$/, '.sources.json');
+      return { name: f.name, base, date: base.slice(9, 19), sources: names.has(sidecar) ? sidecar : undefined };
+    })
+    .sort((a, b) => b.base.localeCompare(a.base));
 }
 
 function timeAgo(ts: number): string {
@@ -69,11 +85,12 @@ export function ProjectView({
   streamingChats,
   onRefresh,
   onOpenModels,
+  onEdit,
   modelLabel,
 }: ProjectViewProps): JSX.Element {
   const [composerBusy, setComposerBusy] = useState(false);
   const [composerStatus, setComposerStatus] = useState('');
-  const [panel, setPanel] = useState<'instructions' | 'memory' | null>(null);
+  const [panel, setPanel] = useState<'instructions' | 'memory' | 'context' | null>(null);
   const [tab, setTab] = useState<'chats' | 'sources' | 'research' | 'code'>('chats');
   const researchAccess = useResearchAccess(project.id);
   const codeAccess = useCodeAccess(project.id);
@@ -133,6 +150,9 @@ export function ProjectView({
   const groups = ['Documents', 'Images', 'Text', 'Other'];
   const fileGroup = (f: Project['files'][number]) => f.attachment?.group || (f.document ? 'Documents' : 'Text');
 
+  const sourceCount = project.files.length + (project.assets || []).filter((a) => !a.sourceName).length;
+  const linkedFolders = (project.sourceFolders || []).filter((f) => f !== project.projectFolder);
+  const outputs = outputsOf(project);
   const chatEnabled = !project.modes?.length || project.modes.includes('chat');
   const send = () => {
     const text = draft.trim();
@@ -146,8 +166,14 @@ export function ProjectView({
       <div className="project-layout">
         <div className="project-main">
           <header className="project-head">
-            <h1 className="project-title"><ProjectIcon project={project} size={30}/>{project.name}</h1>
-            {project.goal && <p className="project-goal">{project.goal}</p>}
+            <div className="project-head-main">
+              <h1 className="project-title"><ProjectIcon project={project} size={30}/>{project.name}</h1>
+              {project.goal && <p className="project-goal">{project.goal}</p>}
+            </div>
+            <div className="project-head-actions">
+              {chatEnabled && <button className="btn btn-secondary btn-sm" onClick={() => onNewChat(project.id)}>New chat</button>}
+              <button className="btn btn-secondary btn-sm" onClick={onEdit}>Project settings</button>
+            </div>
           </header>
 
           <div className="seg project-tabs" role="tablist" aria-label="Project">
@@ -171,6 +197,28 @@ export function ProjectView({
             <div className="project-scroll"><ResearchPanel projectId={project.id} onSaved={onRefresh}/></div>
           ) : tab === 'chats' ? (
             <div className="project-scroll">
+              {/* Outputs are documents noevia made here, not files you uploaded,
+                  so they sit above the chats rather than among the sources. */}
+              {outputs.length > 0 && (
+                <section className="project-outputs" aria-label="Outputs">
+                  <h2 className="rail-label">Outputs ({outputs.length})</h2>
+                  <ul className="output-row">
+                    {outputs.slice(0, 8).map((o) => (
+                      <li key={o.name}>
+                        <a className="output-card surface" href={`/api/projects/${encodeURIComponent(project.id)}/documents/original?name=${encodeURIComponent(o.name)}`} download>
+                          <ShellIcon name="file"/>
+                          <span className="output-name">{o.base.slice(20) || o.base}</span>
+                          <span className="output-meta">Research report · {o.date}</span>
+                        </a>
+                        {o.sources && (
+                          <a className="output-sources" href={`/api/projects/${encodeURIComponent(project.id)}/documents/original?name=${encodeURIComponent(o.sources)}`} download>Sources</a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              {chats.length > 0 && <h2 className="rail-label">Recent chats</h2>}
               {chats.length === 0 ? (
                 <EmptyState icon="chat" title="No chats yet">Ask something below to start the first chat in {project.name}. Its instructions and sources come along.</EmptyState>
               ) : (
@@ -274,6 +322,32 @@ export function ProjectView({
               a blank chat. */}
           {!chatEnabled && <p className="route-note" role="status">This project is not enabled for Chat. Turn Chat on under Project settings → Available in to send messages here.</p>}
           <div className="project-composer" hidden={!chatEnabled || tab === 'research'}>
+            {/* What rides along with the next message, stated before it is sent
+                rather than discovered afterwards. Each chip opens what it counts. */}
+            <ul className="composer-context-chips" aria-label="Context sent with every message in this project">
+              <li>
+                <button type="button" className="chip" onClick={() => setPanel(panel === 'instructions' ? null : 'instructions')}>
+                  Instructions{project.instructions ? '' : ' · none yet'}
+                </button>
+              </li>
+              <li>
+                <button type="button" className="chip" onClick={() => setPanel(panel === 'memory' ? null : 'memory')}>
+                  Memory · {project.memories.length}
+                </button>
+              </li>
+              <li>
+                <button type="button" className="chip" onClick={() => setTab('sources')}>
+                  Sources · {sourceCount}
+                </button>
+              </li>
+              {linkedFolders.length > 0 && (
+                <li>
+                  <button type="button" className="chip" onClick={() => setTab('sources')}>
+                    Linked folders · {linkedFolders.length}
+                  </button>
+                </li>
+              )}
+            </ul>
             <div className="composer-inner chat-composer-inner pane">
               <ComposerTextarea
                 rows={1}
@@ -328,7 +402,30 @@ export function ProjectView({
             />
           )}
 
-          <RailRow label="Sources" hint={`${project.files.length + (project.assets || []).filter(a => !a.sourceName).length}`} onClick={() => setTab('sources')} />
+          <RailRow label="Sources" hint={`${sourceCount}`} onClick={() => setTab('sources')} />
+
+          <RailRow
+            label="Context"
+            hint={panel === 'context' ? 'Hide' : 'Show'}
+            onClick={() => setPanel(panel === 'context' ? null : 'context')}
+          />
+          {panel === 'context' && (
+            <div className="rail-context">
+              <p><span>Model</span><span>{modelLabel}</span></p>
+              <p><span>Thinking</span><span>{project.reasoningEffort && project.reasoningEffort !== 'default' ? project.reasoningEffort : 'Default'}</span></p>
+              <p><span>Toolboxes</span><span>{(project.toolboxes || ['core']).join(', ')}</span></p>
+              <p><span>Upload folder</span><span>{project.projectFolder || 'Created on first upload'}</span></p>
+              <p><span>Linked folders</span><span>{linkedFolders.length}</span></p>
+              <p><span>Outputs</span><span>{outputs.length}</span></p>
+            </div>
+          )}
+
+          {/* Listed because the sample's project screen has it; it does nothing
+              yet, and says so rather than pretending. */}
+          <div className="rail-row-btn is-unavailable" aria-disabled="true">
+            <span className="rail-row-label">Scheduled</span>
+            <span className="rail-row-hint">Not yet available</span>
+          </div>
 
           <p className="rail-empty" style={{ marginTop: 10 }}>
             Instructions, sources, and memory ride along with every chat in this project.

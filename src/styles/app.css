@@ -1351,9 +1351,37 @@ button:disabled { cursor: not-allowed; }
    composer pinned at the bottom — rather than one long scrolling page, so
    the composer stays reachable however many chats a project has. */
 .project-main { display: flex; flex-direction: column; overflow: hidden; padding: 26px 32px 20px; }
-.project-head { flex-shrink: 0; }
+.project-head { flex-shrink: 0; display: flex; align-items: flex-start; gap: var(--space-4); }
+.project-head-main { flex: 1; min-width: 0; }
+.project-head-actions { display: flex; gap: var(--space-2); flex-shrink: 0; }
 .project-head .project-title { margin: 0; }
 .project-head .project-goal { margin: 6px 0 0; color: var(--text-secondary); font-size: var(--text-footnote); }
+
+/* Outputs: documents noevia produced here. A single scrolling row keeps the
+   chats below the fold reachable when a project has many reports. */
+.project-outputs { margin-bottom: var(--space-5); }
+.output-row { list-style: none; margin: 0 calc(var(--space-2) * -1); padding: var(--space-2); display: flex; gap: var(--space-3); overflow-x: auto; }
+.output-row li { display: flex; flex-direction: column; gap: 4px; flex: 0 0 210px; }
+.output-card {
+  display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px var(--space-2);
+  padding: var(--space-3); border-radius: var(--radius-lg); border: 1px solid var(--border-subtle);
+  color: var(--text); text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-spring);
+}
+.output-card:hover { background: var(--bg-surface-hover); }
+.output-card > svg { grid-row: span 2; color: var(--text-secondary); }
+.output-name { font-size: var(--text-footnote); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.output-meta { font-size: var(--text-caption2); color: var(--text-secondary); }
+.output-sources { align-self: flex-start; margin-left: var(--space-3); font-size: var(--text-caption2); color: var(--text-secondary); }
+
+.composer-context-chips { list-style: none; margin: 0 0 var(--space-3); padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.composer-context-chips .chip { font-size: var(--text-caption); }
+
+.rail-context { margin: 4px 0 12px; font-size: var(--text-caption); color: var(--text-secondary); }
+.rail-context p { display: flex; justify-content: space-between; gap: var(--space-3); margin: 0 0 6px; }
+.rail-context p > span:last-child { color: var(--text); text-align: right; overflow-wrap: anywhere; }
+.rail-row-btn.is-unavailable { cursor: default; opacity: 0.6; }
+.rail-row-btn.is-unavailable:hover { border-color: var(--border); }
 .project-tabs { flex-shrink: 0; align-self: flex-start; margin: 18px 0 12px; }
 .project-scroll { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; }
 
@@ -1395,7 +1423,12 @@ button:disabled { cursor: not-allowed; }
 }
 .project-newchat:hover { color: var(--text); text-decoration: underline; }
 
-@media (max-width: 640px) { .project-main { padding: 20px 16px 14px; } }
+@media (max-width: 640px) { .project-main { padding: 20px 16px 14px; }
+  /* Side by side, the actions squeeze the title to one letter per line. */
+  .project-head { flex-direction: column; align-items: stretch; gap: var(--space-3); }
+  .project-head-actions { flex-wrap: wrap; }
+  .output-row li { flex-basis: 190px; }
+}
 
 /* The expand control only exists while the rail is collapsed. Qualified
    because .shell-icon-button sets display in a later stylesheet. */
