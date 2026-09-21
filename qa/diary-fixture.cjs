@@ -1,5 +1,6 @@
 // Isolated UI fixture: every API is synthetic, no inference/storage/network calls.
 const http = require('node:http'), fs = require('node:fs'), path = require('node:path');
+const fixtureNcModes={};
 function createFixture(port = 31239) {
   let syntheticUser='synthetic-diary-only';
   const requests = [], pending = new Set(), live = new Set();
@@ -91,7 +92,15 @@ function createFixture(port = 31239) {
         event({type:'done'});res.end();
       },250);return;
     }
-    if(url.pathname==='/api/connectors')return json({connectors:[driveView()]});
+    const ncTools=['nc_notes_search','nc_notes_create','nc_calendar_list_events'];
+    const ncModes=fixtureNcModes;
+    const ncView=()=>({id:'nextcloud',name:'Nextcloud',configured:true,state:'connected',account:'synthetic',baseUrl:'https://cloud.example.test/',message:'',
+      boxes:[{id:'nextcloud-notes',label:'Nextcloud Notes',toolCount:2},{id:'nextcloud-calendar',label:'Calendar',toolCount:1}],
+      tools:ncTools.map(name=>({name,label:name,write:/create|update|delete/.test(name),mode:ncModes[name]||(/create|update|delete/.test(name)?'ask':'allow')}))});
+    if(url.pathname==='/api/connectors')return json({connectors:[driveView(),ncView()]});
+    if(url.pathname==='/api/connectors/nextcloud/policy'){const write=body.tools.some(t=>/create|update|delete/.test(t));
+      if(body.mode==='allow'&&write)return json({error:'Writes always ask first, so they cannot be set to Always allow.'},400);
+      for(const t of body.tools)ncModes[t]=body.mode;return json(ncView());}
     if(url.pathname==='/api/connectors/gdrive/connect'){drive.state='pending';setTimeout(()=>{drive.state='connected';drive.email='synthetic@example.com';},1500);return json(driveView());}
     if(url.pathname==='/api/connectors/gdrive/disconnect'){drive.state='disconnected';drive.email=null;return json(driveView());}
     if(url.pathname==='/api/connectors/gdrive/policy'){const write=body.tools.some(t=>!/search|read|metadata|recent/.test(t));if(body.mode==='allow'&&write)return json({error:'Writes always ask first, so they cannot be set to Always allow.'},400);for(const t of body.tools)drive.modes[t]=body.mode;return json(driveView());}

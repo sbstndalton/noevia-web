@@ -18,7 +18,21 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    // Connectors moved from Settings to the Plugins page (user review, 2026-09-19).
    await page.getByRole('button',{name:'Plugins',exact:true}).click();
    const s=page.locator('.plugins-page');await s.getByRole('heading',{name:'Plugins',level:1}).waitFor();
-   assert.equal(await s.getByText('Coming later',{exact:true}).count()>=1,true,'unbuilt connectors say so');
+   // Every connector on this page is real now; the list names each one and its state.
+   await s.getByRole('button',{name:'Nextcloud'}).waitFor();
+   for(const name of ['Google Drive','Nextcloud'])assert.equal(await s.getByRole('button',{name}).count(),1,`${name} is listed`);
+   assert.equal(await s.locator('.connector-card').filter({hasText:'MCP servers'}).count(),1,'MCP servers is listed');
+   // Nextcloud is a real connector page now: its state, its toolboxes and its permissions.
+   await s.getByRole('button',{name:'Nextcloud'}).click();
+   await s.getByRole('heading',{name:'Nextcloud',level:1}).waitFor();
+   await s.getByText(/Connected as synthetic/).first().waitFor();
+   await s.getByText(/Nextcloud Notes \(2\)/).waitFor();
+   assert.match(await s.getByText(/Settings → Diary/).innerText(),/Diary/,'it points at where Nextcloud is connected');
+   const ncCreate=s.getByRole('radiogroup',{name:'nc_notes_create permission'});
+   assert.equal(await ncCreate.getByRole('radio',{name:/Always allow/}).getAttribute('aria-disabled'),'true','a write cannot be allowed');
+   await s.getByRole('radiogroup',{name:'nc_notes_search permission'}).getByRole('radio',{name:'Blocked'}).click();
+   await s.getByRole('radiogroup',{name:'nc_notes_search permission'}).getByRole('radio',{name:'Blocked',checked:true}).waitFor();
+   await s.getByRole('button',{name:'Connectors',exact:true}).click();
    await s.getByRole('button',{name:'Google Drive'}).click();
    const [tab]=await Promise.all([page.context().waitForEvent('page',{timeout:3000}).catch(()=>null),s.getByRole('button',{name:'Connect Google Drive'}).click()]);await tab?.close();
    await s.getByText('WDJB-MJHT').waitFor();
@@ -45,6 +59,6 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    await page.close();
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS connectors: list with unbuilt connectors marked, Drive connect by code turns green by itself, writes cannot be allowed, block and group-wide changes, prompt suggestion starts a chat, on the Plugins page; 1440/768/390 light/dark.');
+  console.log('PASS connectors: Drive and Nextcloud both real pages, Drive connect by code turns green by itself, writes cannot be allowed, block and group-wide changes, prompt suggestion starts a chat, on the Plugins page; 1440/768/390 light/dark.');
  }finally{await browser.close();await fixture.close?.();}
 })().catch(e=>{console.error(e);process.exit(1);});

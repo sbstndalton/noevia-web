@@ -7,6 +7,14 @@ import { MODE_LABEL, PermissionControl } from './PermissionControl';
 import type { ToolMode } from './PermissionControl';
 
 interface Tool { name: string; label: string; write: boolean; mode: ToolMode }
+interface Nextcloud {
+  id: 'nextcloud'; name: string; configured: boolean;
+  state: 'not-configured' | 'disconnected' | 'connected' | 'error';
+  account: string | null; baseUrl: string | null; message: string;
+  boxes: { id: string; label: string; toolCount: number }[];
+  tools: Tool[];
+}
+
 interface Drive {
   id: 'gdrive'; name: string; configured: boolean;
   state: 'not-configured' | 'disconnected' | 'pending' | 'connected' | 'error';
@@ -53,11 +61,17 @@ const stateBadge = (d: Drive) => d.state === 'connected'
 /** Settings → Connectors: what noevia can reach on your behalf, and what each tool may do. */
 export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false }: { isAdmin: boolean; onStartChat?: (prompt: string) => void; hideTitle?: boolean }): JSX.Element {
   const [drive, setDrive] = useState<Drive | null>(null);
-  const [page, setPage] = useState<'list' | 'gdrive'>('list');
+  const [nc, setNc] = useState<Nextcloud | null>(null);
+  const [page, setPage] = useState<'list' | 'gdrive' | 'nextcloud'>('list');
   const [error, setError] = useState('');
-  const load = useCallback(() => call<{ connectors: Drive[] }>('/api/connectors').then((r) => { setDrive(r.connectors[0]); setError(''); }).catch((e) => setError((e as Error).message)), []);
+  const load = useCallback(() => call<{ connectors: (Drive | Nextcloud)[] }>('/api/connectors').then((r) => {
+    setDrive(r.connectors.find((c) => c.id === 'gdrive') as Drive);
+    setNc((r.connectors.find((c) => c.id === 'nextcloud') as Nextcloud) || null);
+    setError('');
+  }).catch((e) => setError((e as Error).message)), []);
   useEffect(() => { void load(); }, [load]);
 
+  if (page === 'nextcloud' && nc) return <NextcloudPage nc={nc} onBack={() => setPage('list')} onChange={setNc}/>;
   if (page === 'gdrive' && drive) return <DrivePage drive={drive} isAdmin={isAdmin} onBack={() => setPage('list')} onChange={setDrive} reload={load} onStartChat={onStartChat}/>;
 
   return <>
@@ -69,10 +83,15 @@ export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false }: 
         <span className="connector-text"><b>Google Drive</b><small>Search, read and save files. {drive ? stateBadge(drive) : <span className="badge count">Loading…</span>}</small></span>
         <ShellIcon name="chevron-right" size={18}/>
       </button>
-      <div className="connector-card surface is-later" aria-disabled="true">
+      {nc && <button className="connector-card surface" onClick={() => setPage('nextcloud')} aria-label="Nextcloud">
         <span className="logo"><ShellIcon name="hard-drive" size={22}/></span>
-        <span className="connector-text"><b>Nextcloud</b><small>Files, notes and calendar on your Nextcloud. <span className="badge count">Coming later</span></small></span>
-      </div>
+        <span className="connector-text"><b>Nextcloud</b><small>Notes, files, calendar, tasks and more from your Nextcloud. {nc.state === 'connected'
+          ? <span className="badge ok"><ShellIcon name="check" size={13}/>Connected as {nc.account}</span>
+          : nc.state === 'error' ? <span className="badge danger">Needs attention</span>
+          : nc.state === 'not-configured' ? <span className="badge count">Not available</span>
+          : <span className="badge count">Not connected</span>}</small></span>
+        <ShellIcon name="chevron-right" size={18}/>
+      </button>}
       <div className="connector-card surface is-later" aria-disabled="true">
         <span className="logo"><ShellIcon name="server" size={22}/></span>
         <span className="connector-text"><b>MCP servers</b><small>Administrators add servers from the MCP directory or by URL, in Plugins → MCP servers. Ones that need your own sign-in or key are listed below.</small></span>
@@ -190,4 +209,44 @@ function PermGroup({ title, tools, busy, setMode }: { title: string; tools: Tool
       <PermissionControl tool={t.label} value={t.mode} write={t.write} busy={busy.startsWith('policy')} onChange={(m) => setMode([t.name], m)}/>
     </div>)}</div>}
   </section>;
+}
+
+/** Settings → Connectors → Nextcloud. It has no connect button of its own: the tools use the
+ *  account's storage connection, so this page says what that allows and owns what each tool may do. */
+function NextcloudPage({ nc, onBack, onChange }: { nc: Nextcloud; onBack: () => void; onChange: (n: Nextcloud) => void }): JSX.Element {
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+  const setMode = async (tools: string[], mode: ToolMode) => {
+    setBusy(`policy:${tools.join(',')}`); setError('');
+    try { onChange(await call<Nextcloud>('/api/connectors/nextcloud/policy', 'PUT', { tools, mode })); }
+    catch (e) { setError((e as Error).message); } finally { setBusy(''); }
+  };
+  const groups: [string, Tool[]][] = [['Read-only tools', nc.tools.filter((t) => !t.write)], ['Write and delete tools', nc.tools.filter((t) => t.write)]];
+  return <div className="connector-page">
+    <button className="crumb-link" onClick={onBack}><ShellIcon name="arrow"/>Connectors</button>
+    <div className="conn-head">
+      <span className="logo"><ShellIcon name="hard-drive" size={24}/></span>
+      <div className="conn-title"><h1>Nextcloud</h1>
+        {nc.state === 'connected' ? <span className="badge ok"><ShellIcon name="check" size={13}/>Connected as {nc.account}</span>
+          : nc.state === 'error' ? <span className="badge danger">Needs attention</span>
+          : nc.state === 'not-configured' ? <span className="badge count">Not available</span>
+          : <span className="badge count">Not connected</span>}
+      </div>
+    </div>
+    <p className="lede">Your own Nextcloud, reached with the connection you set under <b>Settings → Diary &amp; storage</b>. noevia sends your app password only to that address, only for your requests, and only to the server an administrator listed.</p>
+    {(error || nc.message) && <p className="route-note" role={error || nc.state === 'error' ? 'alert' : 'status'}>{error || nc.message}</p>}
+    {nc.baseUrl && <div className="group surface"><div className="row">
+      <div className="row-text"><span className="row-label">Address</span><span className="row-desc">{nc.baseUrl}</span></div>
+    </div></div>}
+    {nc.boxes.length > 0 && <div className="group surface"><div className="row">
+      <div className="row-text"><span className="row-label">Toolboxes it offers</span>
+        <span className="row-desc">{nc.boxes.map((b) => `${b.label} (${b.toolCount})`).join(' · ')}. A project chooses which of these it uses.</span></div>
+    </div></div>}
+    {nc.tools.length > 0 && <>
+      <h2>Tool permissions</h2>
+      <p className="lede lede-tight">Choose when noevia may use each tool. Writes always show you what will change before they run.</p>
+      {groups.map(([title, tools]) => tools.length > 0 && <PermGroup key={title} title={title} tools={tools} busy={busy} setMode={(t, m) => void setMode(t, m)}/>)}
+      {nc.state !== 'connected' && <p className="preview-footnote">These apply as soon as Nextcloud is connected.</p>}
+    </>}
+  </div>;
 }
