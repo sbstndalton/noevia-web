@@ -303,8 +303,11 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  assert.ok(await dialog.getByText(/Auto never blocks a message/).isVisible());
  assert.equal(await dialog.locator('label').filter({hasText:'Fast — quick answers'}).count(),1);
  assert.match(await dialog.getByRole('alert').filter({hasText:'no longer installed'}).innerText(),/Smart — harder questions \(Gemma-4-E4B-it-GGUF\)/);
- await dialog.getByText(/Per-project routing \(/).click();
+ await tab('Projects');
+ await dialog.getByRole('heading',{name:/Per-project routing \(/}).waitFor();
  assert.ok(await dialog.getByText(/Change a project's model from its own model selector/).isVisible());
+ await tab('Routing');
+ assert.ok(await dialog.getByRole('heading',{name:'Thinking',exact:true}).isVisible(),'thinking is its own panel');
  // Layout at phone, tablet and desktop, both themes, on the densest tabs.
  for(const width of [375,768,1440])for(const theme of ['light','dark']){
   await page.setViewportSize({width,height:900});await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);

@@ -15,12 +15,12 @@ import { notifyModelsChanged } from '../../models-changed';
 
 export type ModelSort = 'name' | 'size' | 'modified';
 export type ModelFilter = 'all' | 'loaded' | 'vision' | 'unconfigured';
-export type Tab = 'yours' | 'discover' | 'routing' | 'hardware' | 'benchmarks' | 'prompts';
+export type Tab = 'yours' | 'discover' | 'routing' | 'projects' | 'hardware' | 'benchmarks' | 'prompts';
 
 // One tab bar for the whole page. Your models and Discover are the two anyone opens while
 // switching a model; the rest are their own pages' worth of content.
 const TABS: [Tab, string][] = [
-  ['yours', 'Your models'], ['discover', 'Discover'], ['routing', 'Routing'],
+  ['yours', 'Your models'], ['discover', 'Discover'], ['routing', 'Routing'], ['projects', 'Projects'],
   ['hardware', 'Hardware'], ['benchmarks', 'Benchmarks'], ['prompts', 'Prompts'],
 ];
 
@@ -99,7 +99,8 @@ export function ModelsSettings({ models, routes, projects, modelsError, initialM
     <div role="tabpanel" aria-label={TABS.find(([id]) => id === tab)?.[1]}>
       {tab === 'yours' && <LibraryTab query={query} sort={sort} filter={filter} onConfigure={openModel} onChanged={changed} />}
       {tab === 'discover' && <DownloadTab query={query} sort={hfSort} onDownloaded={changed} onSetUp={openModel} />}
-      {tab === 'routing' && <RoutingSection models={models} routes={routes} projects={projects} modelsError={modelsError} />}
+      {tab === 'routing' && <RoutingSection models={models} modelsError={modelsError} />}
+      {tab === 'projects' && <ProjectRoutingSection models={models} routes={routes} projects={projects} modelsError={modelsError} />}
       {tab === 'hardware' && <section className="mm-panel"><div className="mm-panel-head"><h3>Hardware</h3></div><p className="mm-note">Engines, GPU and container health, logs.</p><HardwareTab /></section>}
       {tab === 'benchmarks' && <section className="mm-panel"><div className="mm-panel-head"><h3>Benchmarks</h3></div><p className="mm-note">Measured speed, and your own capability ratings.</p><BenchmarksTab /></section>}
       {tab === 'prompts' && <section className="mm-panel"><div className="mm-panel-head"><h3>Prompt library</h3></div><p className="mm-note">Saved system prompts used by benchmark runs.</p><PromptsTab /></section>}
@@ -109,7 +110,7 @@ export function ModelsSettings({ models, routes, projects, modelsError, initialM
 
 // What Auto actually routes to. This used to be edited in the chat box, where
 // it competed with switching model — the one action people take mid-chat.
-function RoutingSection({ models, routes, projects, modelsError }: { models: InstalledModel[]; routes: RouteRule[]; projects: Project[]; modelsError: string | null }): JSX.Element {
+function RoutingSection({ models, modelsError }: { models: InstalledModel[]; modelsError: string | null }): JSX.Element {
   const [info, setInfo] = useState<Awaited<ReturnType<typeof fetchAutoRoles>> | null>(null);
   const [pending, setPending] = useState<{ fast?: string; smart?: string; vision?: string; code?: string }>({});
   const [busy, setBusy] = useState(false);
@@ -135,7 +136,7 @@ function RoutingSection({ models, routes, projects, modelsError }: { models: Ins
     finally { setBusy(false); }
   };
 
-  return <section className="mm-panel">
+  return <><section className="mm-panel">
     <div className="mm-panel-head"><h3>Routing</h3></div>
     <p className="mm-note">Projects set to Auto pick a model per message. Vision and Code are optional. Set Vision and that model describes any images, then Fast or Smart answers from the description — so the answering model does not need to see. Set Code and coding work goes there instead of Smart.</p>
     {modelsError && <p role="alert" className="modal-err">{modelsError}</p>}
@@ -159,27 +160,39 @@ function RoutingSection({ models, routes, projects, modelsError }: { models: Ins
       {error && <span role="alert" className="modal-err">{error}</span>}
     </div>
 
-    <div className="mm-subsection"><ReasoningControl global /></div>
-
     <details className="mm-disclosure">
       <summary>How Auto decides</summary>
       <ol className="mm-hints">{AUTO_EXPLAINED.map((line) => <li key={line}>{line}</li>)}</ol>
     </details>
+  </section>
 
-    <details className="mm-disclosure">
-      <summary>Per-project routing ({projects.length} {projects.length === 1 ? 'project' : 'projects'})</summary>
-      <div className="mm-form">
-        {projects.length ? <table className="mm-table route-projects">
-          <thead><tr><th scope="col">Project</th><th scope="col">Picks the model</th><th scope="col">Model</th></tr></thead>
-          <tbody>{projects.map((p) => <tr key={p.id}>
-            <td>{p.name}</td>
-            <td>{p.routing === 'auto' ? 'Auto' : 'Manual'}</td>
-            <td>{p.routing === 'auto' ? (info?.configured ? roleSummary(info.roles) : 'Auto not configured — uses the loaded model') : modelChoiceLabel(p, modelsError ? null : models)}</td>
-          </tr>)}</tbody>
-        </table> : <p className="mm-note">No projects yet.</p>}
-        {routes.some((r) => r.task === 'Diary app') && <p className="mm-note">Diary: its own sidecar pipeline, not Auto.</p>}
-        <p className="route-note">Change a project's model from its own model selector. {models.filter((m) => m.loaded).length ? `Loaded now: ${models.filter((m) => m.loaded).map((m) => m.name).join(', ')}.` : 'No model is loaded right now.'}</p>
-      </div>
-    </details>
+  {/* Thinking is a separate setting that happens to live beside routing: its own panel, so the
+      routing form is one thing to read (user review, 2026-09-20). */}
+  <section className="mm-panel">
+    <div className="mm-panel-head"><h3>Thinking</h3></div>
+    <ReasoningControl global />
+  </section></>;
+}
+
+// Which model each project ends up using. Read-only here on purpose: a project's model is
+// changed from the project itself. Its own tab since 2026-09-21 — it is a list about projects,
+// not a setting about routing.
+function ProjectRoutingSection({ models, routes, projects, modelsError }: {
+  models: InstalledModel[]; routes: RouteRule[]; projects: Project[]; modelsError: string | null;
+}): JSX.Element {
+  const [info, setInfo] = useState<Awaited<ReturnType<typeof fetchAutoRoles>> | null>(null);
+  useEffect(() => { let live = true; fetchAutoRoles().then((v) => { if (live) setInfo(v); }).catch(() => undefined); return () => { live = false; }; }, []);
+  return <section className="mm-panel">
+    <div className="mm-panel-head"><h3>Per-project routing ({projects.length} {projects.length === 1 ? 'project' : 'projects'})</h3></div>
+    {projects.length ? <table className="mm-table route-projects">
+      <thead><tr><th scope="col">Project</th><th scope="col">Picks the model</th><th scope="col">Model</th></tr></thead>
+      <tbody>{projects.map((p) => <tr key={p.id}>
+        <td>{p.name}</td>
+        <td>{p.routing === 'auto' ? 'Auto' : 'Manual'}</td>
+        <td>{p.routing === 'auto' ? (info?.configured ? roleSummary(info.roles) : 'Auto not configured — uses the loaded model') : modelChoiceLabel(p, modelsError ? null : models)}</td>
+      </tr>)}</tbody>
+    </table> : <p className="mm-note">No projects yet.</p>}
+    {routes.some((r) => r.task === 'Diary app') && <p className="mm-note">Diary: its own sidecar pipeline, not Auto.</p>}
+    <p className="route-note">Change a project's model from its own model selector. {models.filter((m) => m.loaded).length ? `Loaded now: ${models.filter((m) => m.loaded).map((m) => m.name).join(', ')}.` : 'No model is loaded right now.'}</p>
   </section>;
 }

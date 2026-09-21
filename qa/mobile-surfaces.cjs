@@ -43,7 +43,17 @@ const origin='http://localhost:31261',web=path.resolve(__dirname,'..'),shots=pro
   const openSettings=page.getByRole('region',{name:'Settings'});
   // Settings is a lazy chunk: wait for whichever screen arrives first, not just the one already there.
   await openSettings.or(page.getByRole('textbox',{name:'Message',exact:true})).first().waitFor();
-  if(await openSettings.isVisible().catch(()=>false)){await page.keyboard.press('Escape');await openSettings.waitFor({state:'detached'});}
+  // Escape can land while the lazy Settings chunk is still settling focus, so press the close
+  // control when it is there and only fall back to the key.
+  if(await openSettings.isVisible().catch(()=>false)){
+   for(let attempt=0;attempt<3;attempt++){
+    const close=page.getByRole('button',{name:'Close settings'});
+    if(await close.isVisible().catch(()=>false))await close.click().catch(()=>{});
+    else await page.keyboard.press('Escape');
+    if(await openSettings.waitFor({state:'detached',timeout:5000}).then(()=>true).catch(()=>false))break;
+   }
+   await openSettings.waitFor({state:'detached'});
+  }
   await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();
 
   // ── Settings with the keyboard open ──
