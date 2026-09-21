@@ -36,6 +36,32 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   assert.equal((await send({action:'write',path:'../outside.md',version:null,content:'bad'})).status,400);assert.equal(puts,2);
   assert.equal((await api(page,'/api/profile/diary-connectors/'+minted.body.id,undefined,'DELETE')).status,200);
   assert.equal((await send({action:'read',path:'entry.md'})).status,401);
-  console.log('PASS real connector authentication, browser-origin refusal, live reads/versioned writes, stale conflict, path scope and revocation');
+
+  // The same thing again, but made the way a person makes one: in Settings, not with a script
+  // on the server. The credential is shown once and works; revoking it in the UI stops it.
+  await api(page,'/api/profile/onboarding',{});
+  await page.reload();
+  await page.getByPlaceholder('Message noevia…').waitFor();
+  await page.getByRole('button',{name:/Account menu for/}).locator('visible=true').first().click();
+  await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+  await page.getByRole('button',{name:'Diary & storage',exact:true}).locator('visible=true').first().click();
+  const section=page.locator('section[aria-label="Diary connectors"]');
+  await section.waitFor();
+  await section.getByText('No app is connected.').waitFor();
+  await section.getByLabel('Name this connector').fill('Diary on my phone');
+  await section.getByRole('button',{name:'Add connector'}).click();
+  const shown=await section.getByLabel('Connector credential').inputValue();
+  assert.match(shown,/^nv_diary_[a-f0-9]{32}\./,'the credential is shown once, in full');
+  assert.equal(await section.getByLabel('Connector address').inputValue(),origin+'/api/diary-connector');
+  assert.equal((await send({action:'read',path:'entry.md'},shown)).status,200,'a connector made in the UI works');
+  if(process.env.QA_SCREENSHOTS)await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/diary-connectors.png`});
+  await section.getByRole('button',{name:'Done'}).click();
+  assert.equal(await section.getByLabel('Connector credential').count(),0,'it is not left on screen afterwards');
+  await section.getByRole('button',{name:'Revoke'}).click();
+  await page.getByRole('button',{name:'Revoke',exact:true}).last().click();
+  await section.getByText('No app is connected.').waitFor();
+  assert.equal((await send({action:'read',path:'entry.md'},shown)).status,401,'revoking in the UI takes effect immediately');
+
+  console.log('PASS real connector authentication, browser-origin refusal, live reads/versioned writes, stale conflict, path scope, revocation, and the in-app flow that replaces the admin script: created in Settings, credential shown once, works, revoked in one click.');
  }finally{await browser.close();server.kill('SIGTERM');await once(server,'exit');await new Promise(r=>upstream.close(r));fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

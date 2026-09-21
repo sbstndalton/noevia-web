@@ -1,6 +1,7 @@
 import { McpStatus } from './McpStatus';
 import { ShellIcon } from './ShellIcon';
 import DiarySharing from './DiarySharing';
+import DiaryConnectors from './DiaryConnectors';
 import AppPasswords from './AppPasswords';
 import { ModelsSummary } from './models/ModelsSummary';
 import { useEffect, useState } from 'react';
@@ -63,6 +64,7 @@ function StorageCard(): JSX.Element {
     <div className="rail-label" style={{ marginBottom: 12 }}>Diary storage</div>
     <StoragePicker />
     <DiarySharing />
+    <DiaryConnectors />
   </div>;
 }
 

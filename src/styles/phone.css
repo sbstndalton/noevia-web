@@ -276,7 +276,6 @@
   .coding-sidebar.is-open .nav-item { justify-content: flex-start; padding: 10px 12px; min-height: 44px; }
   .coding-sidebar.is-open .app-mode-switch { flex-direction: row; }
   .coding-sidebar.is-open .app-mode-switch button { font-size: var(--text-caption); }
-  .coding-drawer-backdrop { display: block; position: fixed; inset: 0; z-index: 39; }
 }
 /* The chat drawer's toggle clears the notch/status bar: the page uses viewport-fit=cover. */
 @media (max-width: 519px) { .nav-drawer-toggle { top: calc(8px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left)); } }
