@@ -506,6 +506,16 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     {editor && <DiaryMarkdownWorkspace navigationKey={editorNavigation} file={editor} text={editText} busy={busy} error={editorError} status={editorStatus} stored={storedVersion} managed={storageMode === 'managed'} local={!!folder} syncPending={!!pendingSync[editor.path]}
       files={files} folderPath={filePath} filesLoading={filesLoading} filesError={filesError}
       onText={setEditText} onPath={path=>setEditor({...editor,path})} onFolder={setFilePath} onOpen={openFile} onNew={newEditor}
+      listTemplates={async()=>{
+        // The Templates folder at the Diary's root, Obsidian's convention. Its absence is the
+        // normal case and means no templates, not an error.
+        const isTemplate=(path:string)=>/^Templates\/[^/]+\.md$/i.test(path);
+        if(folder){const snapshot=await scanLocal(folder);return Object.entries(snapshot).filter(([path,content])=>isTemplate(path)&&typeof content==='string').slice(0,20).map(([path,content])=>({path,content:String(content)}));}
+        const listing=await listFiles('Templates').catch(()=>null);
+        const paths=(listing?.files||[]).filter(f=>!f.isDir && isTemplate(f.path)).slice(0,20).map(f=>f.path);
+        const read=await Promise.all(paths.map(path=>readFile(path).then(f=>({path,content:f.content ?? ''})).catch(()=>null)));
+        return read.filter((t):t is {path:string;content:string}=>!!t && !!t.content);
+      }}
       onSearch={async(path,query,signal,kind,filters)=>{
         if(!folder)return searchMarkdownFolder({path,query,kind,signal,filters,list:dir=>listFiles(dir,signal),read:file=>readFile(file,signal)});
         const snapshot=await scanLocal(folder);

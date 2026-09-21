@@ -211,3 +211,23 @@ export function frontmatterTags(text: string): string[] {
   }
   return [...new Set(out)];
 }
+
+/**
+ * Fill a template the way Obsidian's core Templates plugin does: `{{date}}`, `{{time}}` and
+ * `{{title}}`, with an optional format for date and time (`{{date:YYYY-MM-DD}}`). Anything else
+ * in braces is left exactly as written — a template is the owner's text, not a program.
+ */
+export function fillTemplate(template: string, { title, now = new Date() }: { title: string; now?: Date }): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const tokens: Record<string, string> = {
+    YYYY: String(now.getFullYear()), MM: pad(now.getMonth() + 1), DD: pad(now.getDate()),
+    HH: pad(now.getHours()), mm: pad(now.getMinutes()),
+  };
+  const format = (pattern: string) => pattern.replace(/YYYY|MM|DD|HH|mm/g, (t) => tokens[t]);
+  return template.replace(/\{\{\s*(date|time|title)(?::([^}]*))?\s*\}\}/gi, (_, name: string, pattern?: string) => {
+    const key = name.toLowerCase();
+    if (key === 'title') return title;
+    if (key === 'date') return format(pattern?.trim() || 'YYYY-MM-DD');
+    return format(pattern?.trim() || 'HH:mm');
+  });
+}

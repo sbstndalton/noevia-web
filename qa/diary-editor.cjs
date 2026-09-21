@@ -6,7 +6,11 @@ const {createFixture}=require('./diary-fixture.cjs');
  const fixture=createFixture(31319);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});
  try {
  const page=await browser.newPage();await page.emulateMedia({reducedMotion:'reduce'});let content='# Synthetic note',version='1',fail=false,failList=false;
- await page.route('**/api/diary/files?*',route=>route.fulfill(failList?{status:503,json:{error:'Synthetic listing unavailable'}}:{json:{files:[{path:'note.md',name:'note.md',isDir:false},{path:'linked.md',name:'linked.md',isDir:false},{path:'wiki.md',name:'wiki.md',isDir:false}]}}));
+ await page.route('**/api/diary/files?*',route=>{
+  // The Templates folder, Obsidian's convention, holds one daily template.
+  if(new URL(route.request().url()).searchParams.get('path')==='Templates')return route.fulfill({json:{files:[{path:'Templates/Daily.md',name:'Daily.md',isDir:false}]}});
+  return route.fulfill(failList?{status:503,json:{error:'Synthetic listing unavailable'}}:{json:{files:[{path:'note.md',name:'note.md',isDir:false},{path:'linked.md',name:'linked.md',isDir:false},{path:'wiki.md',name:'wiki.md',isDir:false}]}});
+ });
  await page.route('**/api/diary/file',async route=>{
  const request=route.request(),body=request.postDataJSON();
  if(request.method()==='PUT'){
@@ -14,6 +18,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  if(body.version!==version)return route.fulfill({status:409,json:{error:'File changed elsewhere. Draft kept.'}});
  content=body.content;version=String(Number(version)+1);
  }
+ if(body.path==='Templates/Daily.md')return route.fulfill({json:{path:'Templates/Daily.md',content:'# {{title}}\n\nWritten {{date}}.\n\n## Today\n',version:'t1'}});
  if(body.path==='linked.md')return route.fulfill({json:{path:'linked.md',content:'# Linked note\n[Back](note.md)',version:'linked-v1'}});
    // Links to note.md only in the Obsidian spelling, so backlinks that miss wiki links miss it.
    if(body.path==='wiki.md')return route.fulfill({json:{path:'wiki.md',content:'# Wiki note\nSee [[note]] and [[note#Later|later today]].',version:'wiki-v1'}});
@@ -130,6 +135,16 @@ const {createFixture}=require('./diary-fixture.cjs');
  const downloaded=page.waitForEvent('download');await dialog.getByRole('button',{name:'Download Markdown'}).click();const file=await downloaded;assert.equal(require('node:fs').readFileSync(await file.path(),'utf8'),linkDraft);assert.equal(content,'# Reconciled draft');
  await dialog.getByRole('button',{name:'Preview',exact:true}).click();assert.equal(await dialog.getByRole('button',{name:'Unsafe',exact:true}).count(),0);
  page.once('dialog',d=>d.accept());await dialog.getByRole('button',{name:'Open linked',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.diary-editor-path input')?.value==='linked.md');
+ // A new, empty file offers the Templates folder; choosing one fills it without saving.
+ await dialog.getByRole('button',{name:'New file',exact:true}).click();
+ const templateRow=dialog.getByRole('group',{name:'Start from a template'});
+ await templateRow.getByRole('button',{name:'Daily',exact:true}).click();
+ await dialog.getByRole('button',{name:'Edit Markdown',exact:true}).click();
+ const today=new Date(),stamp=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+ assert.equal(await source.inputValue(),`# notes\n\nWritten ${stamp}.\n\n## Today\n`,'title and date filled in, the rest as written');
+ assert.equal(await templateRow.count(),0,'once the file has text it is not offered again: that would overwrite it');
+ assert.equal(content,'# Reconciled draft','choosing a template saves nothing');
+ page.once('dialog',d=>d.accept());
  await dialog.getByRole('button',{name:'Back to Diary'}).click();
  // A separate in-memory folder exercises local conflict handling, never a disk corpus.
  const local=await browser.newPage();await local.addInitScript(()=>{

@@ -4,7 +4,7 @@ import { apiFetch } from '../api';
 import type { FileSearchReport, FileSearchFilters } from '../diary-file-search';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import type { DiaryFile, FileEntry } from '../diary-workspace';
-import { markdownOutline, resolveMarkdownPath, wikiLinkCandidates, wikiLinkNameFor, wikiLinkQueryAt } from '../diary-markdown';
+import { fillTemplate, markdownOutline, resolveMarkdownPath, wikiLinkCandidates, wikiLinkNameFor, wikiLinkQueryAt } from '../diary-markdown';
 import { MarkdownPreview } from './DiaryModal';
 import { ShellIcon } from './ShellIcon';
 
@@ -15,6 +15,8 @@ type Props = {
   onText: (text: string) => void; onPath: (path: string) => void;
   onFolder: (path: string) => void; onOpen: (path: string) => void; onNew: () => void;
   onSearch: (path: string, query: string, signal: AbortSignal, kind?: 'text'|'backlinks', filters?: FileSearchFilters) => Promise<FileSearchReport>;
+  /** Markdown files in the Diary's Templates folder, the convention Obsidian uses. */
+  listTemplates?: () => Promise<{ path: string; content: string }[]>;
   onRefresh: () => void; onSave: () => void; onCompare: () => void;
   onRebase: () => void; onReload: () => void; onClose: () => void;
 };
@@ -49,6 +51,22 @@ export function DiaryMarkdownWorkspace(input: Props) {
   // Typing `[[` offers the files in this folder. Linking by hand means remembering an exact
   // name, and that is the part of linking people quietly stop doing.
   const [suggest,setSuggest]=useState<{start:number;query:string;active:number}|null>(null);
+
+  // A new, still-empty file can start from a template in the Diary's Templates folder. Only
+  // offered then: filling a file that already has text would be overwriting it.
+  const fresh=p.file.content===null && !p.text;
+  const [templates,setTemplates]=useState<{path:string;content:string}[]|null>(null);
+  useEffect(()=>{
+    if(!fresh || !p.listTemplates){setTemplates(null);return;}
+    let live=true;
+    p.listTemplates().then(list=>{if(live)setTemplates(list);}).catch(()=>{if(live)setTemplates([]);});
+    return()=>{live=false;};
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[fresh,p.file.path]);
+  const useTemplate=(content:string)=>{
+    const title=(p.file.path.split('/').pop()||'').replace(/\.md$/i,'');
+    p.onText(fillTemplate(content,{title}));
+  };
   const names=useMemo(()=>{
     const paths=p.files.filter(f=>!f.isDir && /\.md$/i.test(f.path)).map(f=>f.path);
     return paths.map(path=>({path,name:wikiLinkNameFor(path,p.folderPath,paths)}));
@@ -129,6 +147,12 @@ export function DiaryMarkdownWorkspace(input: Props) {
         <p className="diary-editor-state" role="status">{p.busy ? p.status || 'Working…' : p.error ? 'Save or load needs attention · draft kept' : dirty ? 'Unsaved changes' : p.status || 'No unsaved changes'}</p>
         {p.error && <p className="conn-banner" role="alert">{p.error}</p>}
         {p.syncPending && <p className="conn-banner">Local copy saved. Online sync needs attention; use Retry save / sync in Diary to retry the existing guarded sync.</p>}
+        {fresh && templates && templates.length>0 && <div className="diary-template-row" role="group" aria-label="Start from a template">
+          <span>Start from</span>
+          {templates.map(t=><button key={t.path} type="button" className="popup-tab" disabled={p.busy} onClick={()=>useTemplate(t.content)}>
+            {(t.path.split('/').pop()||t.path).replace(/\.md$/i,'')}
+          </button>)}
+        </div>}
         <div className="diary-editor-panes">
           <section hidden={mode==='preview'} className="diary-source-pane"><label htmlFor="diary-markdown-source">Markdown source</label>
             <textarea ref={source} id="diary-markdown-source" className="diary-md-input" aria-label="Markdown content"
