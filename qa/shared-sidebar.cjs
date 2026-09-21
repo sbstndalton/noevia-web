@@ -14,7 +14,7 @@ const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit
   const chat=(id,pinned=false)=>({id,title:`Synthetic ${id}`,updatedAt:1000,pinned,messages:[]});
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:Array.from({length:6},(_,i)=>({id:`p${i}`,name:`Synthetic project ${i}`,updatedAt:1000,files:[],chats:[]})),freeChats:Array.from({length:30},(_,i)=>chat(`recent${i}`))}}));
   await page.route('**/api/features',r=>r.fulfill({json:{flags:{previews:true}}}));
-  await page.route('**/api/plugins/directory*',r=>{const kind=new URL(r.request().url()).searchParams.get('kind');r.fulfill({json:{source:{label:'fixture',home:'https://example.com'},items:kind==='skills'?[{id:'pdf',name:'Pdf',publisher:'Anthropic',description:'',version:'',url:'https://github.com/anthropics/skills',remote:false}]:[{id:'io.github.x/fixture',name:'fixture-server',publisher:'io.github.x',description:'A synthetic MCP server',version:'1.0.0',url:'https://github.com/x/fixture',remote:true}]}});});
+  await page.route('**/api/plugins/directory*',r=>{const u=new URL(r.request().url()),kind=u.searchParams.get('kind');if(u.searchParams.get('starters')==='1')return r.fulfill({json:{source:{label:'fixture',home:'https://example.com'},items:kind==='skills'?[{id:'docx',name:'Docx',publisher:'Anthropic',description:'',version:'',url:'https://github.com/anthropics/skills',remote:false,why:'Create and edit Word documents.'}]:[{id:'ai.exa/exa',name:'exa',publisher:'ai.exa',description:'',version:'1',url:'https://exa.ai',remote:true,installable:true,why:'Web search and page reading.'}]}});r.fulfill({json:{source:{label:'fixture',home:'https://example.com'},items:kind==='skills'?[{id:'pdf',name:'Pdf',publisher:'Anthropic',description:'',version:'',url:'https://github.com/anthropics/skills',remote:false}]:[{id:'io.github.x/fixture',name:'fixture-server',publisher:'io.github.x',description:'A synthetic MCP server',version:'1.0.0',url:'https://github.com/x/fixture',remote:true}]}});});
   await page.goto('http://localhost:31378');await page.getByPlaceholder('Message noevia…').waitFor();return page;};
  try{
   // ── Desktop ──
@@ -34,6 +34,8 @@ const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit
   await page.getByRole('button',{name:'Google Drive'}).waitFor();
   await page.getByRole('radio',{name:'MCP servers'}).click();await page.getByText('fixture-server').waitFor();
   await page.getByRole('radio',{name:'Skills',exact:true}).click();await page.getByText('Pdf',{exact:true}).waitFor();
+  const starters=page.getByRole('region',{name:'Recommended by noevia'});await starters.getByText('Create and edit Word documents.').waitFor();
+  await page.getByRole('textbox',{name:'Search skills'}).fill('pd');await starters.waitFor({state:'hidden'});await page.getByRole('textbox',{name:'Search skills'}).fill('');
   await page.screenshot({path:`${out}/shared-${theme}-plugins.png`});
   // Code mode uses the same sidebar element.
   const before=await side.elementHandle();

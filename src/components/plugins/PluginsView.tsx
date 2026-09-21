@@ -6,7 +6,7 @@ import { SegmentedControl } from '../SegmentedControl';
 import { ConnectorsSettings } from '../connectors/ConnectorsSettings';
 
 type Tab = 'connected' | 'mcp' | 'skills';
-interface Item { id: string; name: string; publisher: string; description: string; version: string; url: string; remote: boolean; installable?: boolean; notInstallable?: string; needsKey?: boolean; headers?: KeyHeader[] }
+interface Item { why?: string; id: string; name: string; publisher: string; description: string; version: string; url: string; remote: boolean; installable?: boolean; notInstallable?: string; needsKey?: boolean; headers?: KeyHeader[] }
 interface KeyHeader { name: string; required: boolean; secret: boolean; description: string; template: string | null }
 interface Added { id: string; registryName: string; title: string; declaredHeaders?: KeyHeader[]; toolCount: number | null; error: string | null; keyHeaders?: string[]; oauth?: boolean; personal?: boolean; redirectUri?: string; oauthClient?: { manual: boolean; clientId: string | null; hasSecret: boolean; redirectUri: string; issuer: string } | null }
 
@@ -47,6 +47,14 @@ function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp'
   const [error, setError] = useState('');
   const [source, setSource] = useState<{ label: string; home: string } | null>(null);
   const [attempt, setAttempt] = useState(0);
+  // noevia's curated starters (server/plugin-starters.json): a failure just hides the row.
+  const [starters, setStarters] = useState<Item[]>([]);
+  useEffect(() => {
+    let live = true;
+    apiFetch(`/api/plugins/directory?kind=${kind}&starters=1`).then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (live) setStarters(d?.items ?? []); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [kind]);
   useEffect(() => {
     let live = true;
     const t = window.setTimeout(() => {
@@ -57,6 +65,20 @@ function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp'
     }, query ? 300 : 0);
     return () => { live = false; window.clearTimeout(t); };
   }, [kind, query, attempt]);
+  const card = (i: Item, starter = false) => <li key={(starter ? 'starter:' : '') + i.id} className="plugin-card surface">
+        <span className="plugin-card-icon"><ShellIcon name={kind === 'mcp' ? 'server' : 'sparkles'} size={20}/></span>
+        <span className="plugin-card-text">
+          <b>{i.name}</b>
+          {i.publisher && <small className="plugin-publisher">{i.publisher}{i.version && ` · v${i.version}`}{i.remote && ' · hosted'}</small>}
+          {i.why && <small className="plugin-why">{i.why}</small>}
+          {i.description && <small>{i.description}</small>}
+        </span>
+        <span className="plugin-card-actions">
+          {i.url && <a className="btn btn-secondary btn-sm plugin-card-link" href={i.url} target="_blank" rel="noreferrer noopener" aria-label={`View ${i.name}`}>View</a>}
+          {kind === 'skills' && <AddSkill skill={i} projects={projects} onAdded={onProjectsChanged}/>}
+          {kind === 'mcp' && isAdmin && <AddServer item={i} added={added.find((a) => a.registryName === i.id)} onChange={setAdded}/>}
+        </span>
+</li>;
   return <section className="plugins-directory" aria-label={kind === 'mcp' ? 'MCP servers' : 'Skills'}>
     <div className="settings-search plugins-search"><ShellIcon name="search" size={16}/><input aria-label={kind === 'mcp' ? 'Search MCP servers' : 'Search skills'} placeholder={kind === 'mcp' ? 'Search MCP servers' : 'Search skills'} value={query} onChange={(e) => setQuery(e.target.value)}/></div>
     <p className="plugins-note">{kind === 'mcp'
@@ -75,20 +97,13 @@ function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp'
         <span className="plugin-card-actions"><AddServer item={{ id: a.registryName, name: a.title, publisher: '', description: '', version: '', url: '', remote: true, installable: true, headers: a.declaredHeaders }} added={a} onChange={setAdded}/></span>
       </li>)}
     </ul>}
+    {!query && starters.length > 0 && <section className="plugins-starters" aria-label="Recommended by noevia">
+      <h2 className="plugins-subhead">Recommended by noevia</h2>
+      <ul className="plugin-grid">{starters.map((i) => card(i, true))}</ul>
+    </section>}
+    {!query && starters.length > 0 && items && items.length > 0 && <h2 className="plugins-subhead">{kind === 'mcp' ? 'All MCP servers' : 'All skills'}</h2>}
     <ul className="plugin-grid">
-      {items?.map((i) => <li key={i.id} className="plugin-card surface">
-        <span className="plugin-card-icon"><ShellIcon name={kind === 'mcp' ? 'server' : 'sparkles'} size={20}/></span>
-        <span className="plugin-card-text">
-          <b>{i.name}</b>
-          {i.publisher && <small className="plugin-publisher">{i.publisher}{i.version && ` · v${i.version}`}{i.remote && ' · hosted'}</small>}
-          {i.description && <small>{i.description}</small>}
-        </span>
-        <span className="plugin-card-actions">
-          {i.url && <a className="btn btn-secondary btn-sm plugin-card-link" href={i.url} target="_blank" rel="noreferrer noopener" aria-label={`View ${i.name}`}>View</a>}
-          {kind === 'skills' && <AddSkill skill={i} projects={projects} onAdded={onProjectsChanged}/>}
-          {kind === 'mcp' && isAdmin && <AddServer item={i} added={added.find((a) => a.registryName === i.id)} onChange={setAdded}/>}
-        </span>
-      </li>)}
+      {items?.map((i) => card(i))}
     </ul>
   </section>;
 }

@@ -469,6 +469,9 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .plugin-card-text b { font-weight: 600; overflow-wrap: anywhere; }
 .plugin-card-text small { color: var(--text-secondary); font-size: var(--text-footnote); line-height: 1.4; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .plugin-card-text .plugin-publisher { -webkit-line-clamp: 1; }
+.plugin-card-text .plugin-why { color: var(--text-primary); -webkit-line-clamp: 2; }
+.plugins-subhead { margin: var(--space-3) 0 0; font-size: var(--text-headline); font-weight: 600; }
+.plugins-directory, .plugins-starters { display: flex; flex-direction: column; gap: var(--space-3); }
 .plugin-card-link { flex: none; align-self: center; }
 @media (pointer: coarse) { .plugin-card-link { min-height: 44px; display: inline-flex; align-items: center; } }
 .coding-content .plugins-page { padding-top: 0; }
