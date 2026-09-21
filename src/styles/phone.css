@@ -635,8 +635,12 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
   .mm-toolbar-one .mm-select select { max-width: 100%; }
 }
 @media (pointer: coarse) { .mm-search-inline, .mm-toolbar-one .mm-select select, .mm-toolbar-one .mm-tabs-row button { min-height: 44px; } .mm-search-inline input { font-size: 16px; } }
+/* Six tabs: they stay one row and scroll sideways rather than wrapping into a block. */
+.mm-toolbar-one .mm-tabs-row { flex: 0 1 auto; max-width: 100%; flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
+.mm-toolbar-one .mm-tabs-row::-webkit-scrollbar { display: none; }
+.mm-toolbar-one .mm-tabs-row button { flex: none; scroll-snap-align: start; white-space: nowrap; }
 @media (max-width: 519px) {
-  .mm-toolbar-one .mm-tabs-row { flex: 1 1 100%; display: grid !important; grid-template-columns: 1fr 1fr; }
+  .mm-toolbar-one .mm-tabs-row { flex: 1 1 100%; display: flex !important; }
   .mm-toolbar-one .mm-tabs-controls { flex: 1 1 100%; display: grid; grid-template-columns: 1fr 1fr; }
   .mm-toolbar-one .mm-select, .mm-toolbar-one .mm-select select { width: 100% !important; }
 }

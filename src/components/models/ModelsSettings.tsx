@@ -15,6 +15,14 @@ import { notifyModelsChanged } from '../../models-changed';
 
 export type ModelSort = 'name' | 'size' | 'modified';
 export type ModelFilter = 'all' | 'loaded' | 'vision' | 'unconfigured';
+export type Tab = 'yours' | 'discover' | 'routing' | 'hardware' | 'benchmarks' | 'prompts';
+
+// One tab bar for the whole page. Your models and Discover are the two anyone opens while
+// switching a model; the rest are their own pages' worth of content.
+const TABS: [Tab, string][] = [
+  ['yours', 'Your models'], ['discover', 'Discover'], ['routing', 'Routing'],
+  ['hardware', 'Hardware'], ['benchmarks', 'Benchmarks'], ['prompts', 'Prompts'],
+];
 
 const SORTS: [ModelSort, string][] = [['name', 'Name'], ['size', 'Size'], ['modified', 'Recently updated']];
 const FILTERS: [ModelFilter, string][] = [['all', 'All models'], ['loaded', 'Loaded'], ['vision', 'Vision'], ['unconfigured', 'Needs setup']];
@@ -30,8 +38,11 @@ const FILTERS: [ModelFilter, string][] = [['all', 'All models'], ['loaded', 'Loa
 // Discover is the download flow, deliberately named for what it is rather than
 // for the mechanism — you are looking for a model you do not have yet.
 export function ModelsSettings({ models, routes, projects, modelsError, initialModel = '' }: { models: InstalledModel[]; routes: RouteRule[]; projects: Project[]; modelsError: string | null; initialModel?: string }): JSX.Element {
-  const [tab, setTab] = useState<'yours' | 'discover'>(() => {
-    try { return sessionStorage.getItem('noevia-models-tab') === 'discover' ? 'discover' : 'yours'; } catch { return 'yours'; }
+  // Six places rather than one long scroll: routing, hardware, benchmarks and the prompt
+  // library were stacked under the model list, where nothing was findable (user review,
+  // 2026-09-20).
+  const [tab, setTab] = useState<Tab>(() => {
+    try { const saved = sessionStorage.getItem('noevia-models-tab') as Tab | null; return saved && TABS.some(([id]) => id === saved) ? saved : 'yours'; } catch { return 'yours'; }
   });
   const [open, setOpen] = useState<string>(initialModel);
   const [query, setQuery] = useState('');
@@ -39,7 +50,7 @@ export function ModelsSettings({ models, routes, projects, modelsError, initialM
   const [filter, setFilter] = useState<ModelFilter>('all');
   const [hfSort, setHfSort] = useState('fit');
 
-  const go = (next: 'yours' | 'discover') => {
+  const go = (next: Tab) => {
     setTab(next); setOpen('');
     try { sessionStorage.setItem('noevia-models-tab', next); } catch { /* optional */ }
   };
@@ -60,20 +71,20 @@ export function ModelsSettings({ models, routes, projects, modelsError, initialM
     {/* One toolbar: which list, a search, and that list's filters (user review, 2026-09-19). */}
     <nav className="mm-tabs mm-toolbar-one" aria-label="Model management">
       <div className="mm-tabs-row" role="tablist">
-        {([['yours', 'Your models'], ['discover', 'Discover']] as const).map(([id, label]) =>
+        {TABS.map(([id, label]) =>
           <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-active' : ''} onClick={() => go(id)}>{label}</button>)}
       </div>
-      <div className="mm-search mm-search-inline">
+      {(tab === 'yours' || tab === 'discover') && <div className="mm-search mm-search-inline">
         <ShellIcon name="search" size={16}/>
         <input aria-label="Search models" placeholder={tab === 'yours' ? 'Search your models…' : 'Search Hugging Face…'}
           value={query} onChange={(e) => setQuery(e.target.value)} />
-      </div>
+      </div>}
       {tab === 'discover' ? <div className="mm-tabs-controls">
         <label className="mm-select"><span className="sr-only">Sort Hugging Face results</span>
           <select value={hfSort} onChange={(e) => setHfSort(e.target.value)}>
             {[['fit', 'Best for this server'], ['trendingScore', 'Trending'], ['downloads', 'Downloads'], ['likes', 'Likes'], ['lastModified', 'Recently updated']].map(([id, label]) => <option key={id} value={id}>Sort · {label}</option>)}
           </select></label>
-      </div> : <div className="mm-tabs-controls">
+      </div> : tab === 'yours' ? <div className="mm-tabs-controls">
         <label className="mm-select"><span className="sr-only">Filter models</span>
           <select value={filter} onChange={(e) => setFilter(e.target.value as ModelFilter)}>
             {FILTERS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
@@ -82,31 +93,18 @@ export function ModelsSettings({ models, routes, projects, modelsError, initialM
           <select value={sort} onChange={(e) => setSort(e.target.value as ModelSort)}>
             {SORTS.map(([id, label]) => <option key={id} value={id}>Sort · {label}</option>)}
           </select></label>
-      </div>}
+      </div> : null}
     </nav>
 
-    <div role="tabpanel" aria-label={tab === 'yours' ? 'Your models' : 'Discover'}>
-      {tab === 'discover'
-        ? <DownloadTab query={query} sort={hfSort} onDownloaded={changed} onSetUp={openModel} />
-        : <>
-          <LibraryTab query={query} sort={sort} filter={filter} onConfigure={openModel} onChanged={changed} />
-          <RoutingSection models={models} routes={routes} projects={projects} modelsError={modelsError} />
-          <Collapsible title="Hardware" hint="Engines, GPU and container health, logs."><HardwareTab /></Collapsible>
-          <Collapsible title="Benchmarks" hint="Measured speed, and your own capability ratings."><BenchmarksTab /></Collapsible>
-          <Collapsible title="Prompt library" hint="Saved system prompts used by benchmark runs."><PromptsTab /></Collapsible>
-        </>}
+    <div role="tabpanel" aria-label={TABS.find(([id]) => id === tab)?.[1]}>
+      {tab === 'yours' && <LibraryTab query={query} sort={sort} filter={filter} onConfigure={openModel} onChanged={changed} />}
+      {tab === 'discover' && <DownloadTab query={query} sort={hfSort} onDownloaded={changed} onSetUp={openModel} />}
+      {tab === 'routing' && <RoutingSection models={models} routes={routes} projects={projects} modelsError={modelsError} />}
+      {tab === 'hardware' && <section className="mm-panel"><div className="mm-panel-head"><h3>Hardware</h3></div><p className="mm-note">Engines, GPU and container health, logs.</p><HardwareTab /></section>}
+      {tab === 'benchmarks' && <section className="mm-panel"><div className="mm-panel-head"><h3>Benchmarks</h3></div><p className="mm-note">Measured speed, and your own capability ratings.</p><BenchmarksTab /></section>}
+      {tab === 'prompts' && <section className="mm-panel"><div className="mm-panel-head"><h3>Prompt library</h3></div><p className="mm-note">Saved system prompts used by benchmark runs.</p><PromptsTab /></section>}
     </div>
   </div>;
-}
-
-// Hardware, benchmarks and the prompt library are real pages' worth of content
-// that nobody opens while switching a model, so they stay on this page but
-// closed. Collapsed rather than moved: "one interface" was the point.
-function Collapsible({ title, hint, children }: { title: string; hint: string; children: JSX.Element }): JSX.Element {
-  return <details className="mm-panel mm-fold">
-    <summary><span><strong>{title}</strong><small>{hint}</small></span></summary>
-    <div className="mm-fold-body">{children}</div>
-  </details>;
 }
 
 // What Auto actually routes to. This used to be edited in the chat box, where

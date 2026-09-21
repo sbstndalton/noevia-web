@@ -93,14 +93,14 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await settings.getByRole('button',{name:'Open model manager'}).click();
  await settings.waitFor({state:'detached'});
  const dialog=page.locator('.model-manager-page');await dialog.waitFor();
- // One interface now: two tabs, an always-visible Routing section, and three
+ // One interface now: one tab bar — Your models, Discover, Routing, Hardware, Benchmarks,
  // collapsed panels. The helpers keep the assertions below about behaviour
  // rather than about which tab something used to live in.
  const tab=async name=>{const back=dialog.locator('.modal-btn').filter({hasText:'All models'});if(await back.count())await back.click();await dialog.getByRole('tab',{name,exact:true}).click();};
  const yours=()=>tab('Your models');
  const discover=()=>tab('Discover');
  const searchQueries=[];
- const fold=async name=>{const d=dialog.locator('details.mm-fold').filter({has:page.locator(`> summary:has-text("${name}")`)});if(!await d.evaluate(el=>el.open))await d.locator('> summary').click();await page.waitForTimeout(120);};
+ const fold=async name=>{await tab(name==='Prompt library'?'Prompts':name);};
  const openModel=async name=>{await dialog.getByRole('article',{name}).getByRole('button',{name:'Tune'}).click();await dialog.locator('.modal-btn').filter({hasText:'All models'}).waitFor();};
  const backToList=()=>dialog.locator('.modal-btn').filter({hasText:'All models'}).click();
  // Your models is the default tab.
@@ -268,7 +268,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  assert.ok(await dialog.getByText(/Big-Model failed to load: The GPU ran out of memory/).isVisible());
  assert.ok(await dialog.locator('figure.viz-chart svg path.viz-line').count()>=6);
  const memChart=dialog.getByRole('figure',{name:/GPU memory of 16.5 GiB/});await memChart.locator('svg').hover({position:{x:200,y:60}});await memChart.locator('.viz-tip').waitFor();
- const hw=dialog.locator('details.mm-fold').filter({has:page.locator('> summary:has-text("Hardware")')}); assert.equal(await hw.getByText(/GPU may borrow/).count(),0,'no shared-memory warning with 14.5 of 29 GiB');
+ const hw=dialog.locator('[role=tabpanel]'); assert.equal(await hw.getByText(/GPU may borrow/).count(),0,'no shared-memory warning with 14.5 of 29 GiB');
  await hw.getByText('Logs',{exact:true}).click();await hw.getByLabel('Filter',{exact:true}).fill('synthetic');await hw.getByRole('button',{name:'Refresh'}).click();await hw.getByText('matching synthetic line').waitFor();
  // Follow: polls while enabled, stays pinned to the newest line, pauses when scrolled up.
  await hw.getByLabel('Filter',{exact:true}).fill('');await hw.getByRole('button',{name:'Refresh'}).click();
@@ -284,7 +284,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await dialog.getByRole('button',{name:'Restart engine…'}).click();assert.ok(await dialog.getByText(/interrupts any chat in progress/).isVisible());await dialog.getByRole('button',{name:'Keep running'}).click();
  // Benchmarks
  await fold('Benchmarks');
- const bench=dialog.locator('details.mm-fold').filter({has:page.locator('> summary:has-text("Benchmarks")')});
+ const bench=dialog.locator('[role=tabpanel]');
  await bench.getByText('Prompt suite',{exact:true}).click();
  await bench.getByRole('checkbox',{name:'Qwen-9B',exact:true}).check();
  const start=bench.getByRole('button',{name:'Start benchmark'});assert.ok(await start.isDisabled());
@@ -296,9 +296,9 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await bench.getByRole('button',{name:'4 of 5'}).click();await bench.getByText('Coding 4/5').waitFor();
  // Prompts and routing
  await fold('Prompt library');
- const promptPanel=dialog.locator('details.mm-fold').filter({has:page.locator('> summary:has-text("Prompt library")')});
+ const promptPanel=dialog.locator('[role=tabpanel]');
  await promptPanel.getByLabel('Name').fill('Synthetic prompt');await promptPanel.getByLabel('Prompt',{exact:true}).fill('Say hello.');await promptPanel.getByRole('button',{name:'Save prompt'}).click();await promptPanel.getByText('Synthetic prompt').waitFor();
- await dialog.getByRole('heading',{name:'Routing',exact:true}).waitFor();
+ await tab('Routing');await dialog.getByRole('heading',{name:'Routing',exact:true}).waitFor();
  await dialog.getByText('How Auto decides',{exact:true}).click();
  assert.ok(await dialog.getByText(/Auto never blocks a message/).isVisible());
  assert.equal(await dialog.locator('label').filter({hasText:'Fast — quick answers'}).count(),1);
