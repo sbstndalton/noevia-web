@@ -929,6 +929,7 @@ button:disabled { cursor: not-allowed; }
 .usage-stat { background: var(--bg-surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
 .usage-stat-label { font-size: var(--text-caption2); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); }
 .usage-stat-value { font-size: var(--text-title1); font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.usage-stat-value.is-name { font-size: var(--text-title3); line-height: 1.25; }
 .usage-stat-hint { font-size: var(--text-caption2); color: var(--text-secondary); }
 
 /* The grid is column-major: each column a week, each row a weekday. */

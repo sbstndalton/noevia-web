@@ -24,12 +24,21 @@ function level(tokens: number, busiest: number): number {
   return 1;
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }): JSX.Element {
+function Stat({ label, value, hint, name }: { label: string; value: string; hint?: string; name?: boolean }): JSX.Element {
   return <div className="usage-stat">
     <span className="usage-stat-label">{label}</span>
-    <strong className="usage-stat-value">{value}</strong>
+    {/* A model id is a name, not a figure: at headline size it wraps to three
+        lines and dwarfs the numbers beside it. */}
+    <strong className={`usage-stat-value${name ? ' is-name' : ''}`}>{value}</strong>
     {hint && <span className="usage-stat-hint">{hint}</span>}
   </div>;
+}
+
+/** 14 → "2 pm". The hour a person recognises, not a 24-hour bucket index. */
+function hourLabel(hour: number): string {
+  const suffix = hour < 12 ? 'am' : 'pm';
+  const shown = hour % 12 === 0 ? 12 : hour % 12;
+  return `${shown} ${suffix}`;
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -63,6 +72,7 @@ export function UsageView(): JSX.Element {
   const label = window_ === 'all' ? 'retained history' : `last ${window_} days`;
   const busiest = Math.max(0, ...data.days.map((d) => d.input + d.output));
   const everUsed = data.allTime.replies > 0;
+  const toolCalls = data.tools.reduce((sum, t) => sum + t.calls, 0);
 
   // Column-major weeks so the grid reads left-to-right in time, like a
   // contribution graph: each column is a week, each row a weekday.
@@ -150,12 +160,29 @@ export function UsageView(): JSX.Element {
 
     <section className="usage-section">
       <div className="usage-stat-grid">
+        <Stat label="Peak hour" value={data.peakHour ? hourLabel(data.peakHour.hour) : '—'} hint={data.peakHour ? `${data.peakHour.replies.toLocaleString()} ${data.peakHour.replies === 1 ? 'reply' : 'replies'}, ${data.timeZone}.` : 'Recorded from the first reply after this shipped.'} />
+        <Stat label="Favourite model" value={data.models[0]?.name || '—'} hint={data.models[0] ? `${compact(data.models[0].input + data.models[0].output)} tokens, retained history.` : undefined} name />
+        <Stat label="Tool calls" value={compact(toolCalls)} hint={toolCalls ? `${data.tools.length} ${data.tools.length === 1 ? 'tool' : 'tools'} used.` : 'Counted from the first tool run after this shipped.'} />
         <Stat label="Current streak" value={`${data.currentStreak} ${data.currentStreak === 1 ? 'day' : 'days'}`} hint="Send a message today to keep it." />
         <Stat label="Longest streak" value={`${data.longestStreak} ${data.longestStreak === 1 ? 'day' : 'days'}`} />
         <Stat label="Active days" value={String(data.activeDays)} hint="Days you sent at least one message." />
         <Stat label="Responses · retained history" value={data.allTime.replies.toLocaleString()} />
       </div>
     </section>
+
+    {data.tools.length > 0 && (
+      <section className="usage-section">
+        <div className="usage-section-head"><div><h2>Tools</h2><p>Calls the model made, retained history, busiest first. Failed calls are counted too.</p></div></div>
+        <div className="card-list">
+          {data.tools.map((t) => (
+            <div className="model-row" key={t.name}>
+              <div className="model-name-group"><span className="model-name">{t.name}</span></div>
+              <span className="model-role">{t.calls.toLocaleString()} {t.calls === 1 ? 'call' : 'calls'}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
 
     {data.models.length > 0 && (
       <section className="usage-section">

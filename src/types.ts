@@ -245,6 +245,11 @@ export interface UsageSummary {
   currentStreak: number;
   longestStreak: number;
   models: UsageModel[];
+  /** Tools the model actually ran, busiest first. Empty before any ran. */
+  tools: { name: string; calls: number }[];
+  /** Replies per hour of the server's local clock, 0–23. */
+  hours: number[];
+  peakHour: { hour: number; replies: number } | null;
   retentionDays: number;
   timeZone: string;
 }
