@@ -52,6 +52,7 @@ const ADMIN: Group = { name: 'Server', admin: true, items: [
   ['address', 'Web address'],
   ['models', 'Models & routing'],
   ['features', 'Features'],
+  ['experimental', 'Experimental'],
   ['backups', 'Backups'],
   ['status', 'Service status'],
 ] };
@@ -186,8 +187,8 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
         ) : section === 'appearance' ? (
           <AppearanceSettings theme={props.theme} onTheme={props.onTheme} preference={props.preference} onPreference={props.onPreference} appearanceStatus={props.appearanceStatus}
             appearanceError={props.appearanceError} retryAppearance={props.retryAppearance} />
-        ) : section === 'features' && isAdmin ? (
-          <FeatureSettings />
+        ) : (section === 'features' || section === 'experimental') && isAdmin ? (
+          <FeatureSettings key={section} experimental={section === 'experimental'} />
         ) : section === 'address' && isAdmin ? (
           <WebAddressSettings/>
         ) : section === 'backups' && isAdmin ? (
