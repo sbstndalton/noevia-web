@@ -1794,6 +1794,7 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .mm-easy-measure > summary, .mm-easy-autotune > summary { flex-wrap: wrap; }
 @media (max-width: 519px) { .mm-easy-measure > summary small, .mm-easy-autotune > summary small { flex-basis: 100%; padding-left: calc(1em + 8px); } }
 .mm-autotune { display: flex; flex-direction: column; gap: 10px; }
+.mm-autotune .mm-cancel-action { margin-block: var(--space-3); }
 .mm-progress { display: flex; flex-direction: column; gap: 4px; font-size: var(--text-caption); color: var(--text-secondary); }
 .mm-progress progress { width: 100%; height: 8px; accent-color: var(--accent); }
 .mm-warn { color: var(--status-warning); }
