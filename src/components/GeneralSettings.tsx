@@ -112,8 +112,8 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
           <div className="set-row-text"><span className="set-row-label">Accent</span><span className="set-row-desc">Colour for selections, links and the send button.</span></div>
           <AccentChoice mode={theme} />
         </div>
-        <Row label="Material" description="Soft uses light and shadow. Glassmorphism adds frost; Liquid glass adds refraction where supported. Material 3 uses flat, tonal surfaces.">
-          <Choice name="material" segmented="Material" onChange={bump} options={[['soft', 'Soft'], ['liquid', 'Liquid glass'], ['glass', 'Glassmorphism'], ['material', 'Material 3']]} />
+        <Row label="Material" description="Soft uses gentle depth. Liquid glass adds translucent controls. Material 3 uses tonal surfaces and clear state changes.">
+          <Choice name="material" segmented="Material" onChange={bump} options={[['soft', 'Soft'], ['liquid', 'Liquid glass'], ['material', 'Material 3']]} />
         </Row>
       </div>
       <h2>Reading and motion</h2>

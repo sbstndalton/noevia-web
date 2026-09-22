@@ -199,7 +199,7 @@ button.connector-card:focus-visible { outline: 2px solid var(--focus-ring); outl
   .chip { min-height: 44px; }
   .settings-stage .theme-choice { width: 100%; } .settings-stage .theme-choice button { flex: 1; }
 }
-/* Four options (Material) fit a 375px phone at this inset; at 320px the track scrolls. */
+/* Material choices share the same inset and wrap safely on narrow phones. */
 @media (max-width: 400px) { .settings-stage .glass-seg > button { padding-inline: 10px; } }
 
 /* Soft material: controls are pressed out of the surface instead of bordered. */

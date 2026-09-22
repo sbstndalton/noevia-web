@@ -43,6 +43,7 @@ async function layout(page, label) {
         for (let i=0;i<100;i++) { try { if ((await fetch(origin+'/api/setup/status')).ok) break; } catch {} await new Promise(r=>setTimeout(r,50)); }
         const context = await browser.newContext(); contexts.push(context);
         const page = await context.newPage(); const errors=[];
+        await page.addInitScript(material=>localStorage.setItem('noevia:material',material),process.env.QA_MATERIAL||'soft');
         page.on('pageerror',e=>errors.push(e.message));
         await page.goto(origin);
         // The wizard is a lazily loaded chunk; check its layout once it is shown.

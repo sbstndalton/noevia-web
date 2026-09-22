@@ -30,7 +30,7 @@
     if (cache.has(key)) return cache.get(key);
     const depth = Math.max(3, Math.min(12, Math.round(Math.min(w, h) * 0.22)));
     // Gentle on small controls so text under a sliding thumb stays readable; the centre stays clear.
-    const strength = Math.max(6, Math.min(22, Math.round(Math.min(w, h) * 0.38)));
+    const strength = Math.max(3, Math.min(10, Math.round(Math.min(w, h) * 0.18)));
     const channel = (scale, matrix, result) => `<feDisplacementMap in="SourceGraphic" in2="m" scale="${scale}" xChannelSelector="R" yChannelSelector="G"/><feColorMatrix type="matrix" values="${matrix}" result="${result}"/>`;
     const url = 'url("data:image/svg+xml;utf8,' + encodeURIComponent(
       `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><filter id="lens" color-interpolation-filters="sRGB">` +
@@ -45,6 +45,7 @@
   }
 
   function fit(node) {
+    if (!active()) return;
     const box = node.getBoundingClientRect();
     const w = Math.round(box.width), h = Math.round(box.height);
     if (!w || !h) return;
@@ -53,9 +54,10 @@
   }
 
   const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver((entries) => entries.forEach((e) => fit(e.target)));
-  const seen = new WeakSet();
+  const seen = new Set();
   function scan() {
     if (!active()) return;
+    for (const node of seen) { if (!node.isConnected) { resize?.unobserve(node); seen.delete(node); } }
     document.querySelectorAll('.glass-lens').forEach((node) => {
       if (seen.has(node)) return;
       seen.add(node);
@@ -63,15 +65,15 @@
       if (resize) resize.observe(node);
     });
   }
-  function active() { return chromium && !calm.matches && root.getAttribute('data-material') === 'liquid'; }
+  function active() { return chromium && !calm.matches && root.getAttribute('data-motion') !== 'reduced' && root.getAttribute('data-material') === 'liquid'; }
   function sync() {
-    if (active()) { root.setAttribute('data-lens', 'svg'); scan(); } else root.removeAttribute('data-lens');
+    if (active()) { root.setAttribute('data-lens', 'svg'); scan(); } else { root.removeAttribute('data-lens'); resize?.disconnect(); seen.clear(); }
   }
 
   if (!chromium) return;
   sync();
   calm.addEventListener('change', sync);
-  new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-material'] });
+  new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-material', 'data-motion'] });
   let queued = false;
   new MutationObserver(() => { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; scan(); }); })
     .observe(document.body, { subtree: true, childList: true });

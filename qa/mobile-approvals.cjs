@@ -8,7 +8,7 @@ const args=JSON.stringify({path:'Synthetic/'+ 'long-path-'.repeat(35),content:'B
  try{
  for(const [width,height] of [[320,568],[375,667],[390,360],[667,375],[768,1024],[1440,900]])for(const theme of ['light','dark']){
   const page=await browser.newPage({viewport:{width,height},isMobile:width<768,hasTouch:true});page.on('pageerror',e=>errors.push(e.message));
-  await page.addInitScript(t=>localStorage.setItem('cowork-theme',t),theme);
+  await page.addInitScript(({theme,material})=>{localStorage.setItem('cowork-theme',theme);localStorage.setItem('noevia:material',material);},{theme,material:process.env.QA_MATERIAL||'soft'});
   await page.route('**/api/chats/*/context',r=>r.fulfill({json:{project:{id:'synthetic-approval-context',name:'Synthetic',model:'synthetic',files:[],assets:[],toolboxes:['core']}}}));
   const decisions=[];let fail=true;
   await page.route('**/api/tool-approvals/*',r=>{decisions.push(r.request().postDataJSON().decision);return r.fulfill(fail?{status:503,json:{error:'Synthetic decision unavailable; retry.'}}:{json:{ok:true}});});

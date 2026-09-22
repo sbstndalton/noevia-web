@@ -157,7 +157,7 @@
   box-shadow: var(--m3-elev-2); background: color-mix(in srgb, var(--md-on-surface) var(--m3-hover), var(--md-surface-container-low));
 }
 [data-material='material'] .settings-stage :is(.set-rows, .group) {
-  background: var(--md-surface-container-low); border-color: transparent; border-radius: 12px; box-shadow: none;
+  background: transparent; border-color: transparent; border-radius: 12px; box-shadow: none;
 }
 [data-material='material'] .settings-stage :is(.set-row + .set-row, .group .row + .row) {
   border-top-color: var(--md-outline-variant);
@@ -182,7 +182,7 @@
   color: var(--md-primary); border-bottom-color: transparent;
 }
 [data-material='material'] .projects-head .seg button.is-selected::after {
-  content: ''; position: absolute; left: 0; right: 0; bottom: 0; border-radius: 3px 3px 0 0; background: var(--md-primary);
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; block-size: 3px; border-radius: 3px 3px 0 0; background: var(--md-primary);
 }
 [data-material='material'] .projects-head {
   border-bottom-color: var(--md-outline-variant);
@@ -302,3 +302,51 @@
 
 /* A multi-row track keeps the shared corner geometry instead of becoming an oval. */
 [data-material='material'] .glass-seg[data-wrapped='true'] { border-radius: var(--radius-lg); }
+
+/* Finish the role mapping across shared surfaces; no optical effects leak from Liquid. */
+[data-material='material'] :is(.overlay, .stats-bar, .stats-disclosure, .usage-stat, .project-card, .app-mode-switch, .glass, .pane, .aero) {
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+[data-material='material'] :is(.glass, .app-mode-switch, .glass-reactive)::after,
+[data-material='material'] .app-mode-switch::before { display: none !important; }
+[data-material='material'] .settings-stage .settings-navigation { background: var(--md-surface-container-low); }
+[data-material='material'] :is(.settings-detail, .diary-context) { background: var(--md-surface); }
+[data-material='material'] .usage-stat { background: var(--md-surface-container-low); box-shadow: none; }
+[data-material='material'] .overlay { background: var(--md-surface-container); box-shadow: var(--m3-elev-2); }
+
+/* Segments use a stable selected fill and separators, not a floating glass capsule. */
+[data-material='material'] .glass-seg > .glass-thumb { visibility: hidden; box-shadow: none; }
+[data-material='material'] .glass-seg > button { border-radius: 0; }
+[data-material='material'] .glass-seg > button:first-of-type { border-start-start-radius: var(--radius-pill); border-end-start-radius: var(--radius-pill); }
+[data-material='material'] .glass-seg > button:last-of-type { border-start-end-radius: var(--radius-pill); border-end-end-radius: var(--radius-pill); }
+[data-material='material'] .glass-seg > button + button { box-shadow: -1px 0 0 var(--md-outline); }
+[data-material='material'] .glass-seg > button[aria-checked='true'] { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+[data-material='material'] .glass-seg > button[aria-checked='true']:hover { background: color-mix(in srgb, var(--md-on-secondary-container) var(--m3-hover), var(--md-secondary-container)); }
+[data-material='material'] .glass-seg[data-wrapped='true'] > button { border-radius: var(--radius-sm); box-shadow: none; }
+
+/* State layers use the on-color of the actual container, including primary actions. */
+[data-material='material'] :is(.glass, .glass.is-press, .glass-press):active { transform: none; }
+[data-material='material'] :is(.glass.is-primary, .btn-primary, .modal-btn.primary, .send-btn.glass):active:not(:disabled) {
+  background: color-mix(in srgb, var(--md-on-primary) var(--m3-press), var(--md-primary)); color: var(--md-on-primary); box-shadow: none;
+}
+[data-material='material'] .app .sidebar.pane .new-chat-btn.glass:active {
+  background: color-mix(in srgb, var(--md-on-primary-container) var(--m3-press), var(--md-primary-container)); color: var(--md-on-primary-container);
+}
+[data-material='material'] .glass-seg > button:active { background: color-mix(in srgb, var(--md-on-surface) var(--m3-press), transparent); }
+[data-material='material'] .glass-seg > button[aria-checked='true']:active { background: color-mix(in srgb, var(--md-on-secondary-container) var(--m3-press), var(--md-secondary-container)); }
+[data-material='material'] :is(.btn-primary, .btn-secondary, .modal-btn, .glass):disabled {
+  background: color-mix(in srgb, var(--md-on-surface) 12%, transparent); color: color-mix(in srgb, var(--md-on-surface) 38%, transparent); box-shadow: none; opacity: 1;
+}
+[data-material='material'] .glass-switch:active > .knob { background: var(--md-on-surface-variant); }
+[data-material='material'] .glass-switch[aria-checked='true']:active > .knob { background: var(--md-primary-container); }
+[data-material='material'] .glass-switch > .knob::before { display: none; }
+[data-material='material'] .glass-switch:disabled { opacity: .38; }
+
+@media (prefers-contrast: more) {
+  [data-material='material'] :is(.glass-seg, .glass-switch, .btn-secondary) { outline: 1px solid var(--control-border); outline-offset: 0; }
+}
+
+[data-material='material'] .app .sidebar.pane .side-new {
+  background: var(--md-surface-container-low); backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+[data-material='material'] .nav-drawer-toggle { background: var(--md-surface-container-high); }

@@ -34,6 +34,6 @@ export function PermissionControl({ tool, value, write, busy, onChange }: {
         aria-label={label} title={label} aria-disabled={locked || undefined} tabIndex={value === mode ? 0 : -1}
         onClick={() => choose(mode)}><ShellIcon name={icon} size={15}/></button>;
     })}
-    <span className="glass-thumb glass glass-lens" aria-hidden="true"/>
+    <span className="glass-thumb glass" aria-hidden="true"/>
   </div>;
 }

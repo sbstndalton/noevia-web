@@ -74,7 +74,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.close();
  }
 
- // Touch: every Settings field is 16px (iOS zooms below that); Material's four options stay
+ // Touch: every Settings field is 16px (iOS zooms below that); Material's three options stay
  // on screen at 320px; Projects counts only active projects and its filter spans the row.
  for(const [w,h] of [[320,568],[390,844]]){
   const page=await browser.newPage({viewport:{width:w,height:h},hasTouch:true,isMobile:true,reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
@@ -303,7 +303,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.ok(list.w>=370&&list.fs>=15,`Settings list is full width with readable labels on an iPhone ${JSON.stringify(list)}`);
   await page.close();
  }
- for(const material of ['liquid','material','soft','glass']){
+ for(const material of ['liquid','material','soft']){
   const page=await browser.newPage({viewport:{width:1280,height:800}});
   await page.addInitScript(m=>localStorage.setItem('noevia:material',m),material);
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[{id:'r0',name:'Pinned project',pinned:true,updatedAt:1,files:[],chats:[],createdAt:1},{id:'r1',name:'Finances',updatedAt:1,files:[],chats:[],createdAt:1}],freeChats:[{id:'rc',title:'Testing',updatedAt:2,messages:[]}]}}));

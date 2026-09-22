@@ -53,7 +53,8 @@ const {createFixture}=require('./diary-fixture.cjs');
 
  assert.equal(await dialog.getByText('Chat font').count(),0,'appearance leaked onto Profile');
  await dialog.getByRole('button',{name:'General',exact:true}).click();
- await dialog.getByRole('heading',{name:'General',level:1}).waitFor(); const glassTarget=dialog.getByRole('button',{name:'Security and login',exact:true});await glassTarget.hover({position:{x:30,y:12}});await page.waitForTimeout(80);const glass=await glassTarget.evaluate(el=>({active:el.hasAttribute('data-glass-active'),x:el.style.getPropertyValue('--glass-x'),after:getComputedStyle(el,'::after').opacity}));assert.equal(glass.active,true,JSON.stringify(glass));assert.equal(glass.x,'30px');await page.mouse.move(5,5);
+ await dialog.getByRole('heading',{name:'General',level:1}).waitFor(); const glassTarget=dialog.getByRole('button',{name:'Security and login',exact:true});await glassTarget.hover({position:{x:30,y:12}});await page.waitForTimeout(80);assert.equal(await glassTarget.getAttribute('data-glass-active'),null,'Soft navigation does not acquire glass effects');await page.mouse.move(5,5);
+
  // ── Preferences actually change the page ──
  const attr=name=>page.evaluate(n=>document.documentElement.getAttribute(n),name);
  assert.equal(await attr('data-chat-font'),'sans');

@@ -42,8 +42,7 @@ export function useSegmentThumb(deps: unknown[]) {
 }
 
 // A radio group drawn as one track with a glass thumb that slides to the chosen option
-// (materials.css .glass-seg). In the liquid material the thumb refracts the labels while
-// it travels; `.is-moving` marks that window. Arrow keys move the choice, as in a radio group.
+// (materials.css .glass-seg). The indicator moves behind readable labels; `.is-moving` marks that window. Arrow keys move the choice, as in a radio group.
 export function SegmentedControl<T extends string>({ label, value, options, onChange }: {
   label: string; value: T; options: [T, string][]; onChange: (value: T) => void;
 }): JSX.Element {
@@ -67,6 +66,6 @@ export function SegmentedControl<T extends string>({ label, value, options, onCh
   return <div ref={track} className="glass-seg" role="radiogroup" aria-label={label} onKeyDown={onKey}>
     {options.map(([id, text]) => <button key={id} type="button" role="radio" aria-checked={id === value}
       tabIndex={id === value ? 0 : -1} onClick={() => choose(id)}>{text}</button>)}
-    <span className="glass-thumb glass glass-lens" aria-hidden="true" />
+    <span className="glass-thumb glass" aria-hidden="true" />
   </div>;
 }

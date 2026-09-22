@@ -12,7 +12,7 @@ const TASK='12345678-1234-4234-8234-123456789012';
  try{
   for(const [width,height] of [[375,812],[768,1024],[1440,900]])for(const theme of ['light','dark']){
    const page=await browser.newPage({viewport:{width,height},isMobile:width<768,hasTouch:width<768});page.on('pageerror',e=>errors.push(e.message));
-   await page.addInitScript(t=>localStorage.setItem('cowork-theme',t),theme);
+   await page.addInitScript(({theme,material})=>{localStorage.setItem('cowork-theme',theme);localStorage.setItem('noevia:material',material);},{theme,material:process.env.QA_MATERIAL||'soft'});
    const base={goal:'',instructions:'',memories:[],files:[],assets:[],chats:[],toolboxes:['core'],createdAt:1000,updatedAt:1000,modes:['chat']};
    await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[{...base,id:'p1',name:'Battery notes'}],freeChats:[]}}));
    await page.route('**/api/projects/*/skills',r=>r.fulfill({json:{skills:[]}}));
