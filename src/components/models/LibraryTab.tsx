@@ -8,6 +8,7 @@ import { errorText, mm, tokens } from './mm';
 import { registerNewFolderModels } from './register';
 import { useModelsChanged } from '../../models-changed';
 import { MiddleTruncate } from '../MiddleTruncate';
+import { AutoTune } from './AutoTune';
 
 type FileEntry = { key: string; name: string; subdir: string; bytes: number; size: string; modified: string; sharded: boolean; parts: number;
   projector: { name: string; bytes: number } | null; sections: string[]; modelId: string; file: string;
@@ -27,6 +28,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   const [updates, setUpdates] = useState<Record<string, Update>>({});
   const [disk, setDisk] = useState<{ freeH: string; totalH: string; usedPct: number } | null>(null);
   const [scanned, setScanned] = useState(false);
+  const [canTune, setCanTune] = useState(false), [showTune, setShowTune] = useState(false);
   const [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(''), [filesNote, setFilesNote] = useState(''), [runtimeOptions, setRuntimeOptions] = useState(false);
   // The parent passes a fresh callback each render; the refresh below must stay stable.
   const changedRef = useRef(onChanged);
@@ -38,7 +40,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     const listed = fetchInstalledModels().then((installed) => { setModels(installed); return installed; });
     const local = mm<{ models: FileEntry[]; unregistered: string[] }>('models').catch(() => null);
     void mm<{ status: Record<string, Update> }>('models/updates').then((u) => setUpdates(u.status)).catch(() => undefined);
-    void apiFetch('/api/models/capabilities').then(r => r.json()).then((caps) => setRuntimeOptions(caps?.runtimeOptions === true)).catch(() => undefined);
+    void apiFetch('/api/models/capabilities').then(r => r.json()).then((caps) => { setRuntimeOptions(caps?.runtimeOptions === true); setCanTune(caps?.admin === true && caps?.autotune === true); }).catch(() => undefined);
     void mm<{ modelsDir?: { disk?: { freeH: string; totalH: string; usedPct: number } | null } }>('overview').then((o) => setDisk(o?.modelsDir?.disk ?? null)).catch(() => undefined);
     try {
       await listed;
@@ -94,7 +96,9 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
         {disk && <> · <span data-testid="models-disk">Models folder: {disk.freeH} free of {disk.totalH} ({disk.usedPct.toFixed(0)}% used).</span></>}
         {models && !scanned && <span className="mm-scanning"> · Reading model files…</span>}</p>
       <button className="btn btn-secondary btn-sm" disabled={busy === 'updates'} onClick={() => void checkUpdates()}>{busy === 'updates' ? 'Checking…' : 'Check for updates'}</button>
+      {canTune && <button className="btn btn-secondary btn-sm" aria-expanded={showTune} aria-controls="library-autotune" onClick={() => setShowTune(v => !v)}>Tune untuned models</button>}
     </div>
+    {showTune && <section className="mm-panel" id="library-autotune"><h3>Automatic tuning</h3><AutoTune onChanged={onChanged}/></section>}
     {error && <p role="alert" className="modal-err">{error}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
     {filesNote && <p className="mm-note">{filesNote}</p>}
