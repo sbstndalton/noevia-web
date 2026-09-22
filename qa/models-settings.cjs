@@ -140,7 +140,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await dialog.getByText(/MTP layers built in/).waitFor();
  await dialog.getByText(/Saved: MTP \(engine defaults\) at 33.4 tokens\/s \(\+75% over off\), micro-batch 1024/).waitFor();
  assert.equal(await dialog.getByRole('progressbar').getAttribute('value'),'50','progress bar shows how far the run got');
- await dialog.getByText('4 of 8 tests').waitFor();
+ await dialog.getByText('50% of this model').waitFor();
  assert.match(await dialog.getByRole('region',{name:'Auto-tune steps'}).innerText(),/measured earlier/,'reused measurements are labelled');
  // A finished run keeps its account of itself, folded away so the result is what you see first.
  const account=dialog.locator('.mm-activity-details');

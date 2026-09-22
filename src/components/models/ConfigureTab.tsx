@@ -120,7 +120,7 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
     <div className="mm-mode" role="group" aria-label="Settings detail">
       {(['easy', 'advanced'] as const).map(m => <button key={m} aria-pressed={mode === m} className={mode === m ? 'is-active' : ''} onClick={() => setMode(m)}>{m === 'easy' ? 'Easy' : 'Advanced'}</button>)}
     </div>
-    {mode === 'easy' ? <EasySettings name={name} draft={draft} busy={busy !== ''} onChange={(patch) => setDraft({ ...draft, ...patch })} onUseTuned={useTuned}/> : <>
+    {mode === 'easy' ? <EasySettings name={name} draft={draft} busy={busy !== ''} onChange={(patch) => setDraft({ ...draft, ...patch })} onUseTuned={useTuned} onAutoApplied={() => { void read(); void onChanged(); }}/> : <>
     {data.hints.length > 0 && <ul className="mm-hints">{data.hints.map(h => <li key={h}>{h}</li>)}</ul>}
     <AutoconfigPanel name={name} onFill={fill}/>
     <div className="mm-form">
@@ -163,7 +163,7 @@ const keepChoices = (draft: Record<string, string>) => Object.fromEntries(['spec
 // expose only the two choices people actually weigh. Advanced keeps every field.
 type DraftHeads = { local: string; builtinLayers: number; available: boolean; remote: { repo: string; path: string; size: number }[]; mtpBuild: string | null; repo: string | null; remoteError?: string };
 
-function EasySettings({ name, draft, busy, onChange, onUseTuned }: { name: string; draft: Record<string, string>; busy: boolean; onChange: (patch: Record<string, string>) => void; onUseTuned: (values: Record<string, string>, displaced: string[]) => Promise<void> }) {
+function EasySettings({ name, draft, busy, onChange, onUseTuned, onAutoApplied }: { name: string; draft: Record<string, string>; busy: boolean; onChange: (patch: Record<string, string>) => void; onUseTuned: (values: Record<string, string>, displaced: string[]) => Promise<void>; onAutoApplied: () => void }) {
   const [auto, setAuto] = useState<Auto | null>(null), [tuning, setTuning] = useState(false), [error, setError] = useState('');
   const [verified, setVerified] = useState(0), [heads, setHeads] = useState<DraftHeads | null>(null), [headNote, setHeadNote] = useState('');
   useEffect(() => {
@@ -217,8 +217,8 @@ function EasySettings({ name, draft, busy, onChange, onUseTuned }: { name: strin
       <button className="modal-btn primary" disabled={busy} onClick={() => void onUseTuned({ ...rec.values, ...keepChoices(draft) }, rec.displaced)}>Use and save</button>
     </div>}
 <details className="mm-disclosure mm-easy-autotune" open>
-      <summary>Auto-tune speed <small>Measures speculative decoding and batch sizes on this machine; chat pauses while it runs.</small></summary>
-      <AutoTune model={name} onChanged={() => { setAuto(null); onChange({}); }}/>
+      <summary>Auto-tune and apply <small>Measures context, KV cache, drafting and batch size together; chat pauses while it runs.</small></summary>
+      <AutoTune model={name} onChanged={() => { setAuto(null); onAutoApplied(); }}/>
     </details>
     <details className="mm-disclosure mm-easy-measure">
       <summary>Measure context on this machine <small>Tests the real engine; chat pauses while it runs.</small></summary>
