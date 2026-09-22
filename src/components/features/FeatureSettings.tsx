@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { FEATURES_CHANGED, fetchFeatureSettings, saveFeature } from './api';
 import type { FeatureInfo } from './api';
+import { DecisionServiceSettings } from './DecisionServiceSettings';
 
 export function FeatureSettings({ experimental = false }: { experimental?: boolean }): JSX.Element {
   const [features, setFeatures] = useState<FeatureInfo[] | null>(null);
@@ -28,6 +29,7 @@ export function FeatureSettings({ experimental = false }: { experimental?: boole
     <div className="settings-title"><h1>{experimental ? 'Experimental' : 'Features'}</h1><p>{experimental ? 'Try alternative application logic for everyone on this server. Each experiment describes the behavior it changes. Turn it off to restore the existing logic. These experiments are not quality-validated.' : "Optional capabilities for everyone on this server. All start off. A feature set by the operator in the deployment configuration can't be changed here."}</p></div>
     {error && <p className="route-note" role="alert">{error}</p>}
     {!features && !error && <p className="preview-footnote">Loading…</p>}
+    {experimental && <DecisionServiceSettings onSaved={async () => { setFeatures(await fetchFeatureSettings()); window.dispatchEvent(new Event(FEATURES_CHANGED)); }} />}
     {features && <div className="set-rows feature-settings">{features.filter(f => !!f.experimental === experimental).map(f => <div className="set-row set-row-inline" key={f.name}>
       <div className="set-row-text">
         <span className="set-row-label" id={`feature-${f.name}`}>{f.label}</span>
