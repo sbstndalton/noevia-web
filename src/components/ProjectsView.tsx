@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { useModalDialog } from './useModalDialog';
 import type { JSX } from 'react';
 import type { Project } from '../types';
@@ -33,6 +33,9 @@ function timeAgo(ts: number): string {
 
 export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDelete, onEdit }: ProjectsViewProps): JSX.Element {
   const [creating, setCreating] = useState(false);
+  const tabsId = useId();
+  const searchRef = useRef<HTMLInputElement>(null);
+  const clearFilter = () => { setQuery(''); searchRef.current?.focus(); };
   const [menu, setMenu] = useState<{project: Project; at:{x:number;y:number}} | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -60,15 +63,22 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
           {projects.length > 0 && <button className="btn btn-primary" onClick={() => setCreating(true)}><PlusIcon /><span>New project</span></button>}
         </div>
         <div className="projects-head">
-          <div className="seg" role="tablist" aria-label="Project list">
-            <button role="tab" aria-selected={tab === 'active'} className={tab === 'active' ? 'is-selected' : ''} onClick={() => setTab('active')}>
+          <div className="seg" role="tablist" aria-label="Project list" onKeyDown={e => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+            e.preventDefault();
+            const next = e.key === 'Home' ? 'active' : e.key === 'End' ? 'archived' : tab === 'active' ? 'archived' : 'active';
+            setTab(next);
+            e.currentTarget.querySelector<HTMLButtonElement>(`[data-project-tab="${next}"]`)?.focus();
+          }}>
+            <button role="tab" id={`${tabsId}-active`} data-project-tab="active" aria-controls={`${tabsId}-panel`} tabIndex={tab === 'active' ? 0 : -1} aria-selected={tab === 'active'} className={tab === 'active' ? 'is-selected' : ''} onClick={() => setTab('active')}>
               Your projects
             </button>
-            <button role="tab" aria-selected={tab === 'archived'} className={tab === 'archived' ? 'is-selected' : ''} onClick={() => setTab('archived')}>
+            <button role="tab" id={`${tabsId}-archived`} data-project-tab="archived" aria-controls={`${tabsId}-panel`} tabIndex={tab === 'archived' ? 0 : -1} aria-selected={tab === 'archived'} className={tab === 'archived' ? 'is-selected' : ''} onClick={() => setTab('archived')}>
               Archived{archivedCount ? ` (${archivedCount})` : ''}
             </button>
           </div>
           <input
+            ref={searchRef}
             className="projects-search"
             type="search"
             aria-label="Filter projects"
@@ -78,6 +88,7 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
           />
         </div>
 
+        <div role="tabpanel" id={`${tabsId}-panel`} aria-labelledby={`${tabsId}-${tab}`}>
         {projects.length === 0 ? (
           <EmptyState icon="folder" title="No projects yet"
             action={<button className="btn btn-primary" onClick={() => setCreating(true)}><PlusIcon /><span>New project</span></button>}>
@@ -86,34 +97,25 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
         ) : (
           <div className="projects-grid">
             {visibleProjects.length === 0 && (
-              <EmptyState compact icon={query.trim() ? 'search' : 'archive'} title={query.trim() ? 'No matching projects' : 'No archived projects'}
-                action={query.trim() ? <button className="modal-btn secondary" onClick={() => setQuery('')}>Clear filter</button> : undefined}>
-                {query.trim() ? `Nothing is named “${query.trim()}”.` : 'Projects you archive appear here.'}
+              <EmptyState compact icon={query.trim() ? 'search' : 'archive'} title={query.trim() ? 'No matching projects' : tab === 'archived' ? 'No archived projects' : 'No active projects'}
+                action={query.trim() ? <button className="modal-btn secondary" onClick={clearFilter}>Clear filter</button> : tab === 'active' ? <button className="modal-btn secondary" onClick={() => setTab('archived')}>View archived projects</button> : undefined}>
+                {query.trim() ? `No project names or descriptions match “${query.trim()}”.` : tab === 'archived' ? 'Projects you archive appear here.' : 'Your projects are archived. Open the archive to restore one, or create a new project.'}
               </EmptyState>
             )}
-            {visibleProjects              .map((p) => (
-              <div
-                key={p.id}
-                className="project-card surface"
-                onClick={() => onOpenProject(p.id)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.target !== e.currentTarget) return;
-                  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenProject(p.id); }
-                }}
-              >
+            {visibleProjects.map((p) => (
+              <article key={p.id} className="project-card surface">
                 <div className="project-card-top">
                   <span className="project-badge" aria-hidden="true"><ProjectIcon project={p} size={24}/></span>
-                  <span className="project-card-name">{p.name}</span>
-                  <button className="project-card-options" aria-label={`Project options for ${p.name}`} onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setMenu({project:p,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="explore"/></button>
+                  <h2 className="project-card-name"><button className="project-card-open" onClick={() => onOpenProject(p.id)} aria-label={`Open project ${p.name}`}>{p.name}</button></h2>
+                  <button className="project-card-options" aria-label={`Project options for ${p.name}`} onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setMenu({project:p,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more"/></button>
                 </div>
                 {p.goal && <p className="project-card-goal">{p.goal}</p>}
                 <div className="project-card-meta">
+                  {p.pinned && <span className="project-card-pin"><ShellIcon name="pin" size={14}/>Pinned</span>}
                   <span className="project-chip">{p.chats.length} {p.chats.length === 1 ? 'chat' : 'chats'}</span>
                   {p.files.length > 0 && <span className="project-chip">{p.files.length} {p.files.length === 1 ? 'file' : 'files'}</span>}
                   {p.modes?.length && (p.modes.length > 1 || p.modes[0] !== 'chat') ? <span className="project-chip" aria-label={`Available in ${p.modes.join(', ')}`}>{p.modes.map((m) => m === 'chat' ? 'Chat' : m === 'cowork' ? 'Cowork' : 'Code').join(' · ')}</span> : null}
-                  <span className="project-card-time">{timeAgo(p.updatedAt)}</span>
+                  <time className="project-card-time" dateTime={new Date(p.updatedAt).toISOString()} title={`Updated ${new Date(p.updatedAt).toLocaleString()}`}>{timeAgo(p.updatedAt)}</time>
                   {p.archived && (
                     <button
                       className="btn btn-secondary btn-sm"
@@ -123,10 +125,11 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
                     </button>
                   )}
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         )}
+        </div>
       </div>
 
       {menu && <ContextMenu at={menu.at} onClose={()=>setMenu(null)} items={[

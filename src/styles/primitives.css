@@ -270,3 +270,19 @@ button.connector-card:focus-visible { outline: 2px solid var(--focus-ring); outl
 .settings-stage .appearance-section .set-row-desc { max-width: 64ch; line-height: var(--leading-body); }
 .settings-stage .appearance-section .theme-choice { padding: var(--space-1); }
 .settings-stage .appearance-section .accent-choice { padding: var(--space-1); }
+
+/* Project library: a native primary action and independent secondary actions.
+   The stretched title button keeps the whole card clickable without nesting buttons. */
+.projects-workspace .project-card { position: relative; min-height: 192px; padding: var(--space-5); }
+.projects-workspace .project-card-top { grid-template-columns: auto minmax(0, 1fr) 44px; align-items: center; gap: var(--space-3); }
+.projects-workspace .project-card-name { grid-column: 2; grid-row: 1; margin: 0; font-size: var(--text-body); line-height: var(--leading-snug); letter-spacing: normal; white-space: normal; overflow: visible; }
+.project-card-open { padding: 0; border: 0; background: transparent; box-shadow: none; text-align: left; font: inherit; color: inherit; white-space: normal; overflow-wrap: anywhere; cursor: pointer; }
+.project-card-open::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.project-card-open:focus-visible { outline: none; }
+.project-card:has(.project-card-open:focus-visible) { outline: 2px solid var(--focus-ring); outline-offset: 4px; }
+.projects-workspace .project-card-options { grid-column: 3; grid-row: 1; display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; opacity: 1; }
+.projects-workspace .project-card-options, .projects-workspace .project-card-meta button { position: relative; z-index: 1; }
+.projects-workspace .project-card-options:hover { color: var(--text-primary); background: var(--nav-hover); }
+.projects-workspace .project-card-goal { margin-top: var(--space-3); margin-bottom: var(--space-5); }
+.project-card-pin { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--text-caption2); color: var(--text-secondary); }
+.projects-workspace .project-card-meta { gap: var(--space-3); }

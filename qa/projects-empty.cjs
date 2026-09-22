@@ -36,7 +36,7 @@ const port=31288,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'.
   await page.setViewportSize({width:1440,height:900});await openProjects();
   await page.getByLabel('Filter projects').fill('zzz-nothing');
   const none=page.locator('.empty-state-card').filter({hasText:'No matching projects'});await none.waitFor();
-  assert.match(await none.innerText(),/Nothing is named “zzz-nothing”\./);
+  assert.match(await none.innerText(),/No project names or descriptions match “zzz-nothing”\./);
   await page.screenshot({path:`${shots}/projects-no-match-1440.png`});
   await none.getByRole('button',{name:'Clear filter'}).click();
   await page.getByText('Synthetic battery notes').first().waitFor();
