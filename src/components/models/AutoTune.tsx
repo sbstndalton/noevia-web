@@ -65,7 +65,7 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
         <progress value={mine.progress.percent} max={100}/>
         <span aria-hidden="true">{mine.progress.percent}% of this model{mine.status === 'cancelled' ? ' — start again to remeasure' : ''}</span>
       </label>}
-      {running && <button className="modal-btn secondary" disabled={busy} onClick={() => void cancel()}>{busy ? 'Cancelling…' : 'Cancel auto-tune'}</button>}
+      {running && <button className="modal-btn secondary mm-cancel-action" disabled={busy} onClick={() => void cancel()}>{busy ? 'Cancelling…' : 'Cancel auto-tune'}</button>}
       {mine.log && mine.log.length > 0 && (running
         ? <ActivityLog lines={mine.log} startedAt={mine.startedAt ?? mine.log[0].at} live/>
         : <details className="mm-activity-details"><summary>What it did ({mine.log.length} lines)</summary>
