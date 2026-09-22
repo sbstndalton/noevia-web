@@ -337,8 +337,8 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 }
 .app-mode-switch.is-compact > button.is-selected { color: var(--text-primary); }
 .app-mode-switch.is-compact > .glass-thumb { border-radius: 5px; }
-[data-material='material'] .app-mode-switch.is-compact { border: 1px solid var(--md-outline); border-radius: 999px; padding: 0; background: transparent; }
-[data-material='material'] .app-mode-switch.is-compact > button { border-radius: 0; height: 26px; }
+[data-material='material'] .app-mode-switch.is-compact { border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px var(--md-outline); }
+[data-material='material'] .app-mode-switch.is-compact > button { border-radius: 0; }
 @media (pointer: coarse) { .app-mode-switch.is-compact { height: 40px; } .app-mode-switch.is-compact > button { width: 44px; height: 36px; } }
 /* Collapsed rail: the header stacks, and the switch runs down under the expand button. */
 @media (min-width: 520px) {
@@ -376,13 +376,11 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
    its own padding, so names started 3–11px apart. Both now use the same inset, an 18px icon
    and the same gap, so every title in the sidebar starts on one line. */
 .app .sidebar.pane { --row-inset: 10px; --row-gap: 10px; }
-[data-material='material'] .app .sidebar.pane { --row-inset: 16px; --row-gap: 12px; }
 .app .sidebar.pane .chat-row > .nav-item { padding-left: var(--row-inset); gap: var(--row-gap); }
 .app .sidebar.pane :is(.chat-row, .proj-row) svg:first-child:not(.row-action svg) { width: 18px; height: 18px; }
 .app .sidebar.pane .proj-row > .project-expand { margin: 0; padding: 0 0 0 var(--row-inset); width: calc(var(--row-inset) + 18px); min-width: 0; justify-content: flex-start; background: none; }
 .app .sidebar.pane .proj-row > .project-disclosure { padding-left: var(--row-gap); }
-[data-material='material'] .app .sidebar.pane .proj-row .project-expand { margin-left: 0; }
-[data-material='material'] .app .sidebar.pane .proj-row .project-disclosure { padding-left: var(--row-gap); }
+
 /* On touch the project icon button keeps a full 44px target; chat rows add the same extra space
    after their icon, so every title still starts on one line. */
 @media (pointer: coarse) {
@@ -424,7 +422,6 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 [data-material='soft'] .app .sidebar.pane .side-new { background: var(--bg-app); box-shadow: calc(-1 * var(--space-4)) 0 0 var(--bg-app), var(--space-4) 0 0 var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .app .sidebar.pane.is-collapsed .side-new { position: static; margin: 0; padding: 0; background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; display: flex; justify-content: center; width: 100%; }
 .app .sidebar.pane.is-collapsed .side-new .new-chat-btn.glass { width: 40px; }
-[data-material='material'] .app .sidebar.pane.is-collapsed .side-new .new-chat-btn.glass { width: 56px; }
 .app .sidebar.pane .coding-history .side-hint { margin: 0; padding: 2px 2px 0; color: var(--text-secondary); font-size: var(--text-footnote); line-height: 1.4; }
 
 /* Collapsed rail: the name of whatever is under the pointer, beside it (ChatGPT). */
