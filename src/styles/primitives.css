@@ -231,11 +231,13 @@ button.connector-card:focus-visible { outline: 2px solid var(--focus-ring); outl
   .noevia-switch, .settings-detail .set-row-control input[type='checkbox']:not(.plain) { outline-offset: 8px; }
 }
 
-/* Panels can be narrow even in wide windows. Wrap by available content width. */
+/* Descriptions sit above controls at every width. Only compact on/off switches
+   share a line with their label; panel width never squeezes text beside a selector. */
 .settings-stage .set-row:not(.set-row-stacked), .settings-stage .group .row { flex-direction: row; flex-wrap: wrap; }
 .settings-stage :is(.set-row-text, .row-text) {
-  flex: 1 1 16rem;
-  min-width: min(100%, 16rem);
+  flex: 1 0 100%;
+  min-width: 0;
+  width: 100%;
   overflow-wrap: anywhere;
 }
 .settings-stage .set-row-control {

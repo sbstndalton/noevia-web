@@ -41,7 +41,7 @@ function AccentChoice({ mode }: { mode: 'light' | 'dark' }): JSX.Element {
   </div>;
 }
 
-// One row: what the setting is on the left, the control on the right. Used for
+// One row: the label and description above the control at every width. Used for
 // every preference and capability here so the page reads as a list of
 // decisions rather than a pile of unrelated widgets.
 function Row({ label, description, children }: { label: string; description: string; children: JSX.Element }): JSX.Element {
