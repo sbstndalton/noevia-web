@@ -350,3 +350,13 @@
   background: var(--md-surface-container-low); backdrop-filter: none; -webkit-backdrop-filter: none;
 }
 [data-material='material'] .nav-drawer-toggle { background: var(--md-surface-container-high); }
+
+/* Native checkbox switches use the same tonal roles as the React switch. */
+[data-material='material'] .noevia-switch,
+[data-material='material'] .settings-detail .set-row-control input[type='checkbox']:not(.plain) {
+  box-shadow: inset 0 0 0 2px var(--md-outline);
+}
+[data-material='material'] .noevia-switch:checked,
+[data-material='material'] .settings-detail .set-row-control input[type='checkbox']:not(.plain):checked { box-shadow: none; }
+[data-material='material'] .noevia-switch::after,
+[data-material='material'] .settings-detail .set-row-control input[type='checkbox']:not(.plain)::after { box-shadow: none; }

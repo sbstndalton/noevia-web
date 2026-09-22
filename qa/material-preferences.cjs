@@ -11,6 +11,8 @@ const {createFixture}=require('./diary-fixture.cjs');
    page.on('pageerror',e=>errors.push(e.message));
    await page.addInitScript(theme=>localStorage.setItem('cowork-theme',theme),theme);
    await page.route('**/api/profile/appearance',r=>r.fulfill({json:{theme,light:'iris',dark:'iris'}}));
+   await page.route('**/api/account/instructions',r=>r.fulfill({json:{text:'',style:'default',updatedAt:null,maxChars:4000}}));
+   await page.route('**/api/account/memory',r=>r.fulfill({json:{memories:[],useProjectMemories:true,updatedAt:null,maxItems:50,maxItemChars:300}}));
    await page.goto('http://localhost:31452');await page.getByPlaceholder('Message noevia…').waitFor();
    await page.getByTitle('Settings',{exact:true}).click();
    const settings=page.getByRole('region',{name:'Settings',exact:true});
@@ -29,6 +31,18 @@ const {createFixture}=require('./diary-fixture.cjs');
     assert.equal(await material.locator('.glass-thumb').evaluate(e=>getComputedStyle(e).backdropFilter),'none','selected labels never refract');
     await material.getByRole('radio',{name,exact:true}).focus();await page.keyboard.press('Tab');
     assert.ok(await page.evaluate(()=>{const s=getComputedStyle(document.activeElement);return s.outlineStyle!=='none'&&parseFloat(s.outlineWidth)>=2;}),'visible keyboard focus');
+    await settings.getByRole('button',{name:'Personalization',exact:true}).click();
+    const toggle=settings.getByRole('switch',{name:'Use project memory',exact:true});await toggle.waitFor();
+    for(const checked of [true,false]){
+     await toggle.setChecked(checked);await page.waitForTimeout(250);
+     const contrast=await toggle.evaluate(e=>{
+      const luminance=color=>{const rgb=color.match(/[\d.]+/g).slice(0,3).map(Number).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;});return .2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2];};
+      const track=luminance(getComputedStyle(e).backgroundColor),knob=luminance(getComputedStyle(e,'::after').backgroundColor);
+      return (Math.max(track,knob)+.05)/(Math.min(track,knob)+.05);
+     });
+     assert.ok(contrast>=3,`${name} ${theme} switch ${checked?'on':'off'} contrast ${contrast}`);
+    }
+    await settings.getByRole('button',{name:'General',exact:true}).click();await material.waitFor();
    }
    await material.getByRole('radio',{name:'Liquid glass',exact:true}).click();
    await motion.getByRole('radio',{name:'Reduced',exact:true}).click();
@@ -52,6 +66,6 @@ const {createFixture}=require('./diary-fixture.cjs');
    await page.close();
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS dynamic materials, visible focus, no label refraction, app/OS reduced motion, reduced transparency and increased contrast; both themes.');
+  console.log('PASS dynamic materials, switch knob/track contrast at least 3:1, visible focus, no label refraction, app/OS reduced motion, reduced transparency and increased contrast; both themes.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
