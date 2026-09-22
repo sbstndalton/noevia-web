@@ -1934,6 +1934,30 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .diary-mentions { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--border-subtle); }
 .diary-mentions h3 { margin: 0 0 var(--space-2); font-size: var(--text-footnote); font-weight: 600; color: var(--text-secondary); }
 .diary-mentions p { margin: 0; font-size: var(--text-caption); color: var(--text-faint); }
+/* Local graph (components/diary-graph): one hop around the open file. Lines say direction by
+   style, not colour alone: solid = links out, dashed = links in, heavier = both ways. */
+.diary-local-graph-figure { margin: var(--space-3) 0 0; }
+.diary-local-graph-figure svg { display: block; width: 100%; max-width: 360px; margin-inline: auto; height: auto; overflow: visible; }
+.graph-edge { stroke: var(--text-faint); stroke-width: 1.4; }
+.graph-edge-in { stroke-dasharray: 4 3; }
+.graph-edge-both { stroke-width: 2.4; stroke: var(--text-secondary); }
+.graph-node circle { fill: var(--bg-surface); stroke: var(--text-secondary); stroke-width: 1.4; }
+.graph-node-self circle { fill: var(--accent); stroke: var(--accent); }
+.graph-node text { fill: var(--text-secondary); font: 500 9px/1 var(--font-ui); pointer-events: none; }
+.graph-node-self text { fill: var(--text); font-weight: 600; }
+.graph-self-chip { fill: var(--bg-surface); stroke: var(--border-subtle); stroke-width: 1; }
+.graph-node[role="button"] { cursor: pointer; }
+.graph-node[role="button"]:hover circle { stroke: var(--accent); stroke-width: 2; }
+.graph-node[role="button"]:focus { outline: none; }
+.graph-node[role="button"]:focus-visible circle { stroke: var(--focus-ring, var(--accent)); stroke-width: 3; }
+.diary-local-graph-figure figcaption { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); justify-content: center; margin-top: var(--space-2); font-size: var(--text-caption); color: var(--text-secondary); }
+.graph-key::before { content: ""; display: inline-block; width: 18px; margin-right: 6px; vertical-align: middle; border-top: 1.5px solid var(--text-secondary); }
+.graph-key-in::before { border-top-style: dashed; }
+.graph-list { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
+.graph-list h3 { margin: 0 0 var(--space-1); font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); }
+.graph-list section { display: flex; flex-wrap: wrap; gap: var(--space-1); align-items: baseline; }
+.graph-list h3 { flex-basis: 100%; }
+.graph-list button { min-height: 32px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Offered only while a new file is empty: which template, if any, to begin from. */
 .diary-template-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: var(--space-2) 0; font-size: var(--text-footnote); }

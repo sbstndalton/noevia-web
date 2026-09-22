@@ -7,6 +7,7 @@ import type { DiaryFile, FileEntry } from '../diary-workspace';
 import { fillTemplate, markdownOutline, resolveMarkdownPath, wikiLinkCandidates, wikiLinkNameFor, wikiLinkQueryAt } from '../diary-markdown';
 import { MarkdownPreview } from './DiaryModal';
 import { ShellIcon } from './ShellIcon';
+import { LocalGraph } from './diary-graph/LocalGraph';
 
 type Props = {
   navigationKey: number; file: DiaryFile; text: string; busy: boolean; error: string; status: string;
@@ -235,6 +236,7 @@ export function DiaryMarkdownWorkspace(input: Props) {
                 : report.mentions.map(result=><button className="diary-search-result" key={result.path} disabled={p.busy} onClick={()=>p.onOpen(result.path)}><strong>{result.path}</strong><span>{result.snippet}</span></button>)}
             </section>}</div>}
         </details>
+        <LocalGraph path={p.file.path} text={p.text} root={p.folderPath} busy={p.busy} onSearch={p.onSearch} onOpen={p.onOpen}/>
         <details className="diary-workspace-outline"><summary>Outline ({outline.length})</summary>{outline.length ? outline.map(item=><button key={item.offset} className="popup-tab" onClick={()=>jump(item.offset)}>{item.label}</button>) : <p>Add Markdown headings to navigate this file.</p>}</details>
       </aside>
     </div>
