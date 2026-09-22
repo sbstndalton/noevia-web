@@ -230,3 +230,31 @@ button.connector-card:focus-visible { outline: 2px solid var(--focus-ring); outl
   .settings-stage .glass-seg > button { min-height: 44px; }
   .noevia-switch, .settings-detail .set-row-control input[type='checkbox']:not(.plain) { outline-offset: 8px; }
 }
+
+/* Panels can be narrow even in wide windows. Wrap by available content width. */
+.settings-stage .set-row:not(.set-row-stacked), .settings-stage .group .row { flex-direction: row; flex-wrap: wrap; }
+.settings-stage :is(.set-row-text, .row-text) {
+  flex: 1 1 16rem;
+  min-width: min(100%, 16rem);
+  overflow-wrap: anywhere;
+}
+.settings-stage .set-row-control {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+.settings-stage .set-row-control > :is(select, input, .glass-seg, .set-name-field) {
+  min-width: 0;
+  max-width: 100%;
+}
+.settings-stage .set-row:has(> .set-row-control > .noevia-switch) .set-row-text,
+.settings-stage .row:has(> .glass-switch) .row-text {
+  flex: 1 1 12rem;
+  min-width: min(100%, 12rem);
+}
+.settings-stage .set-row-value { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.coding-composer-footer, .coding-composer-footer > div { flex-wrap: wrap; min-width: 0; }
+.coding-composer-footer button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+
+.settings-stage .set-row-stacked > .set-row-text { flex: none; }

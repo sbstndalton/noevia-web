@@ -103,14 +103,13 @@ a { text-underline-offset: .18em; }
   transition: color var(--duration-fast) var(--ease-standard);
 }
 .glass-seg > button[aria-checked='true'] { color: var(--text-primary); font-weight: 500; }
-/* A track wider than its row (Material's four options on a 320px phone) scrolls sideways
-   instead of running off the screen; the thumb rides along inside it. */
-.glass-seg { max-width: 100%; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; overscroll-behavior-x: contain; }
-.glass-seg::-webkit-scrollbar { display: none; }
-.glass-seg > button { flex: none; white-space: nowrap; }
+/* Keep all choices visible inside narrow panels, including desktop sidebars. */
+.glass-seg { max-width: 100%; min-width: 0; flex-wrap: wrap; }
+.glass-seg[data-wrapped='true'] { border-radius: var(--radius-lg); }
+.glass-seg > button { flex: 0 1 auto; min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 .glass-seg > .glass-thumb {
-  position: absolute; z-index: 1; top: 3px; bottom: 3px; left: 0; width: var(--thumb-w);
-  transform: translateX(var(--thumb-x)); border-radius: var(--radius-pill); pointer-events: none;
+  position: absolute; z-index: 1; top: 0; left: 0; width: var(--thumb-w); height: var(--thumb-h, calc(100% - 6px));
+  transform: translate(var(--thumb-x), var(--thumb-y, 3px)); border-radius: var(--radius-pill); pointer-events: none;
   --glass-fill: color-mix(in srgb, var(--md-surface-container-lowest) 26%, transparent);
   --glass-tint: transparent;
   transition: transform var(--duration-slow) var(--ease-spring), width var(--duration-slow) var(--ease-spring), scale var(--duration-fast) var(--ease-spring);
@@ -274,7 +273,7 @@ html[data-lens='svg'] .glass-seg.is-moving > .glass-thumb, html[data-lens='svg']
 [data-material='material'] .glass-seg > button[aria-checked='true'] { color: var(--md-on-secondary-container); }
 [data-material='material'] .glass-seg > button:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); }
 [data-material='material'] .glass-seg > .glass-thumb {
-  z-index: 0; top: 0; bottom: 0; border-radius: 0; scale: none;
+  z-index: 0; top: 0; bottom: auto; border-radius: 0; scale: none;
   background: var(--md-secondary-container); backdrop-filter: none; -webkit-backdrop-filter: none; border: 0;
 }
 [data-material='material'] .glass-switch {

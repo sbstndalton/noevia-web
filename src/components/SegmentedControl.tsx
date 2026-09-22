@@ -12,6 +12,9 @@ export function useSegmentThumb(deps: unknown[]) {
       if (!on) return;
       node.style.setProperty('--thumb-w', `${on.offsetWidth}px`);
       node.style.setProperty('--thumb-x', `${on.offsetLeft}px`);
+      node.style.setProperty('--thumb-y', `${on.offsetTop}px`);
+      node.style.setProperty('--thumb-h', `${on.offsetHeight}px`);
+      node.dataset.wrapped = String([...node.querySelectorAll<HTMLElement>('button')].some(button => button.offsetTop !== node.querySelector<HTMLElement>('button')?.offsetTop));
       // A track that scrolls (too wide for its row) keeps the chosen option in view.
       if (node.scrollWidth > node.clientWidth) {
         const left = on.offsetLeft, right = left + on.offsetWidth;
