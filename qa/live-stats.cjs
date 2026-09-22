@@ -12,6 +12,11 @@ const fs=require('node:fs'),path=require('node:path');
   await context.addInitScript(()=>{
    const nativeFetch=window.fetch.bind(window),encoder=new TextEncoder();
    const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});
+   let liveStream=null;
+   window.__syntheticLiveStats={
+    first(){if(!liveStream)return false;liveStream.event({type:'telemetry',phase:'streaming',model:'synthetic-live-model',timeToFirstToken:.42});liveStream.event({type:'delta',text:'Synthetic live reply'});return true;},
+    finish(){if(!liveStream)return false;liveStream.event({type:'usage',phase:'streaming',model:'synthetic-live-model',promptTokens:12,completionTokens:34,totalTokens:46,tokensPerSecond:77,timeToFirstToken:.42,drafted:40,accepted:32});liveStream.event({type:'telemetry',phase:'complete',model:'synthetic-live-model',timeToFirstToken:.42});liveStream.event({type:'done',model:'synthetic-live-model'});liveStream.controller.close();liveStream=null;return true;},
+   };
    const user={id:'synthetic-live-user',username:'fixture',displayName:'Synthetic live stats',role:'member',diaryEnabled:false,onboarded:true};
    window.fetch=async(input,init={})=>{
     const url=new URL(typeof input==='string'?input:input.url,location.href),p=url.pathname;
@@ -21,13 +26,9 @@ const fs=require('node:fs'),path=require('node:path');
      if(body.message!=='live telemetry synthetic')return json({error:'unexpected synthetic message'},400);
      const stream=new ReadableStream({start(controller){
       const event=value=>controller.enqueue(encoder.encode(`data: ${JSON.stringify(value)}\n\n`));
+      liveStream={controller,event};
       event({type:'meta',model:'synthetic-live-model'});
       event({type:'telemetry',phase:'waiting',model:'synthetic-live-model'});
-      setTimeout(()=>{event({type:'telemetry',phase:'streaming',model:'synthetic-live-model',timeToFirstToken:.42});event({type:'delta',text:'Synthetic live reply'});},120);
-      setTimeout(()=>{
-       event({type:'usage',phase:'streaming',model:'synthetic-live-model',promptTokens:12,completionTokens:34,totalTokens:46,tokensPerSecond:77,timeToFirstToken:.42,drafted:40,accepted:32});
-       event({type:'telemetry',phase:'complete',model:'synthetic-live-model',timeToFirstToken:.42});event({type:'done',model:'synthetic-live-model'});controller.close();
-      },700);
      }});
      return new Response(stream,{status:200,headers:{'Content-Type':'text/event-stream'}});
     }
@@ -72,9 +73,11 @@ const fs=require('node:fs'),path=require('node:path');
   await page.keyboard.press('Enter');
   await region.getByText('synthetic-live-model · Generating',{exact:true}).waitFor();
   assert.equal(await value('speed'),'Measuring…');assert.equal(await value('first-token'),'Waiting…');assert.equal(await label('reply'),'Current reply');
+  assert.equal(await page.evaluate(()=>window.__syntheticLiveStats.first()),true);
   await page.locator('[data-stat="first-token"] dd').filter({hasText:'0.42 s'}).waitFor();
   await page.getByText('Synthetic live reply',{exact:true}).waitFor();
   assert.equal(await value('reply'),'Awaiting provider usage…');
+  assert.equal(await page.evaluate(()=>window.__syntheticLiveStats.finish()),true);
   await page.locator('[data-stat="speed"] dd').filter({hasText:'77.0 tokens/s'}).waitFor();
   assert.equal(await value('first-token'),'0.42 s');assert.equal(await label('reply'),'Last reply');assert.equal(await value('reply'),'12 in · 34 out');assert.equal(await value('mtp'),'80.0%');
 
