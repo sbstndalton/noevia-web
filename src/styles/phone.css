@@ -46,10 +46,15 @@
 .stats-disclosure.is-wide .stats-details dt::after { content: ''; }
 .stats-disclosure.is-wide .stats-details .stats-mtp { flex-basis: 100%; }
 .stats-disclosure.is-wide .stats-details .stats-mtp progress { display: inline-block; width: 120px; margin: 0 0 0 6px; }
-/* A separator between the pairs costs no height and stops the row reading as one sentence. */
+/* A separator between the pairs costs no height and stops the row reading as one sentence.
+   It sits in the gap to each pair's left; clipping the list's left edge hides the one on
+   whichever pair starts a wrapped line, so no line ever begins with a stray dot. */
 .stats-disclosure.is-wide > * + * { position: relative; }
-.stats-disclosure.is-wide .stats-details > div + div::before {
-  content: '·'; margin-right: var(--space-2); color: var(--md-outline);
+.stats-disclosure.is-wide .stats-details { clip-path: inset(-8px -8px -8px 0); }
+.stats-disclosure.is-wide .stats-details > div { position: relative; }
+.stats-disclosure.is-wide .stats-details > div::before {
+  content: '·'; position: absolute; left: calc(var(--space-4) / -2); transform: translateX(-50%);
+  color: var(--md-outline);
 }
 
 @media (max-width: 700px) {

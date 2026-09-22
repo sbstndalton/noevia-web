@@ -83,7 +83,7 @@ const fs=require('node:fs'),path=require('node:path');
 
   await page.waitForTimeout(3200);
   assert.equal(await value('speed'),'77.0 tokens/s');assert.equal(await value('reply'),'12 in · 34 out');
-  const shots=process.env.LIVE_STATS_SCREENSHOTS;
+  const shots=process.env.LIVE_STATS_SCREENSHOTS||process.env.QA_SCREENSHOTS;
   if(shots){
    fs.mkdirSync(shots,{recursive:true});
    for(const theme of ['light','dark'])for(const width of [375,768,1440]){
