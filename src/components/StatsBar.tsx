@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import type { LiveStats } from '../types';
+import type { LiveStats, ReplyTelemetry } from '../types';
 import { Icon } from './icons/Icon';
 
 interface StatsBarProps {
   stats: LiveStats | null; // App polls /api/stats and passes it down (single poller)
+  /** Exact, request-local facts from the currently visible chat's SSE stream. */
+  reply?: ReplyTelemetry | null;
   /** What the composer says it will send to — so the strip names the model that answered. */
   modelLabel?: string;
 }
@@ -44,13 +46,28 @@ function usePhone(): boolean {
 /** Inference status under the composer: on a phone a single line (status, model, speed) that
  *  expands into plain-language details; on a desktop the same details, always open, laid out
  *  across the width instead of stacked. Purely presentational: App owns the /api/stats poll. */
-export function StatsBar({ stats, modelLabel }: StatsBarProps): JSX.Element {
+export function StatsBar({ stats, reply, modelLabel }: StatsBarProps): JSX.Element {
   const phone = usePhone();
   const [userOpen, setUserOpen] = useState(readOpen);
-  const up = !!stats?.up;
+  const active = reply?.phase === 'waiting' || reply?.phase === 'streaming';
+  // A completed external-provider reply is valid even when the separately
+  // polled native engine is down. Do not relabel that reply as offline.
+  const up = active || reply?.phase === 'complete' || !!stats?.up;
   // No reading yet (first poll in flight, or the page opened in the background, where the
   // poll waits): say nothing is known rather than report an outage that has not happened.
-  const unknown = stats === null;
+  const unknown = stats === null && !active;
+  const displayModel = reply?.model || modelLabel || 'Inference';
+  // Once this chat has request-local telemetry, never substitute an
+  // engine-wide sample that may belong to another request or account.
+  const replyRate = reply ? reply.tokensPerSecond : stats?.tokensPerSecond ?? null;
+  const firstToken = reply ? reply.timeToFirstToken : stats?.timeToFirstToken ?? null;
+  const replyInput = reply ? reply.inputTokens : stats?.inputTokens ?? null;
+  const replyOutput = reply ? reply.outputTokens : stats?.outputTokens ?? null;
+  const mtp = reply?.mtp.length
+    ? reply.mtp
+    : reply
+      ? (stats?.mtp || []).filter((sample) => sample.source !== 'last response')
+      : (stats?.mtp || []);
   const open = phone ? userOpen : true;
   const toggle = () => setUserOpen((value) => {
     const next = !value;
@@ -62,19 +79,35 @@ export function StatsBar({ stats, modelLabel }: StatsBarProps): JSX.Element {
   const status = (withSpeed: boolean) => (
     <>
       <span className={`stats-live-dot${up ? '' : unknown ? ' unknown' : ' down'}`} aria-hidden="true" />
-      <span className="stats-label">{up || unknown ? (modelLabel || 'Inference') : 'Inference offline'}</span>
-      {up && withSpeed && <span className="stats-value">{fmt(stats?.tokensPerSecond ?? null)}<span className="stats-unit"> tok/s</span></span>}
+      <span className="stats-label">{active ? `${displayModel} · Generating` : up || unknown ? displayModel : 'Inference offline'}</span>
+      {(up || replyRate != null) && withSpeed && <span className="stats-value">{active && replyRate == null ? 'Measuring…' : fmt(replyRate)}{replyRate != null && <span className="stats-unit"> tok/s</span>}</span>}
     </>
   );
+  const replyCounts = replyInput == null && replyOutput == null
+    ? (active ? 'Awaiting provider usage…' : 'Not reported')
+    : `${fmtCount(replyInput)} in · ${fmtCount(replyOutput)} out`;
+  const totalParts = [
+    stats?.inputTokensTotal == null ? null : `${fmtCount(stats.inputTokensTotal)} in`,
+    stats?.outputTokensTotal == null ? null : `${fmtCount(stats.outputTokensTotal)} out`,
+    stats?.requestCount == null ? null : `${fmtCount(stats.requestCount)} requests`,
+  ].filter(Boolean);
+  const gpuParts = [
+    stats?.gpuPercent == null ? null : fmt(stats.gpuPercent, 0, '%'),
+    stats?.vramGb == null ? null : `${fmt(stats.vramGb, 1, ' GB')} VRAM`,
+  ].filter(Boolean);
+  const replyLabel = active ? 'Current reply' : reply?.phase === 'stopped' ? 'Stopped reply' : reply?.phase === 'error' ? 'Failed reply' : 'Last reply';
+  const liveAnnouncement = active
+    ? `${displayModel} is generating. ${firstToken == null ? 'Waiting for first output.' : 'First output received.'}`
+    : reply?.phase === 'complete' ? 'Reply telemetry updated.' : reply?.phase === 'stopped' ? 'Reply stopped.' : reply?.phase === 'error' ? 'Reply failed.' : '';
   const details = (
     <dl className="stats-details" id="stats-details">
-      <div><dt title="Provider-reported rate. Invalid samples and samples shorter than one estimated second are omitted.">Speed</dt><dd>{fmt(stats?.tokensPerSecond ?? null)} tokens/s</dd></div>
-      <div><dt>First token</dt><dd>{fmt(stats?.timeToFirstToken ?? null, 2, ' s')}</dd></div>
-      <div><dt title={stats?.telemetryScope || undefined}>Last reply</dt><dd>{fmtCount(stats?.inputTokens ?? null)} in · {fmtCount(stats?.outputTokens ?? null)} out</dd></div>
-      <div><dt title={stats?.telemetryScope || undefined}>Total</dt><dd>{fmtCount(stats?.inputTokensTotal ?? null)} in · {fmtCount(stats?.outputTokensTotal ?? null)} out · {fmtCount(stats?.requestCount ?? null)} requests</dd></div>
-      <div><dt>GPU</dt><dd>{fmt(stats?.gpuPercent ?? null, 0, '%')} · {fmt(stats?.vramGb ?? null, 1, ' GB')} VRAM</dd></div>
-      {(stats?.mtp || []).map(m => <div className="stats-mtp" key={m.model} title={`${m.model} · ${m.source || 'backend total'}: accepted draft tokens / proposed draft tokens`}>
-        <dt>MTP acceptance{m.source === 'last response' ? ' (last reply)' : ''}</dt>
+      <div data-stat="speed"><dt title="Provider-reported generation rate for this chat reply. It appears only when the provider supplies final timings.">Speed</dt><dd>{active && replyRate == null ? 'Measuring…' : replyRate == null ? 'Not reported' : `${fmt(replyRate)} tokens/s`}</dd></div>
+      <div data-stat="first-token"><dt title="Server-observed time from request handling through routing, preparation and provider prefill to the first real output.">First token</dt><dd>{firstToken == null ? (active ? 'Waiting…' : 'Not reported') : fmt(firstToken, 2, ' s')}</dd></div>
+      <div data-stat="reply"><dt title="Provider-reported tokens, cumulative across every model round in this tool-loop exchange.">{replyLabel}</dt><dd>{replyCounts}</dd></div>
+      <div data-stat="total"><dt title={stats?.telemetryScope || 'Engine-scoped counters; availability depends on the backend.'}>Engine total</dt><dd>{totalParts.length ? totalParts.join(' · ') : 'Unavailable from engine'}</dd></div>
+      <div data-stat="gpu"><dt>GPU</dt><dd>{gpuParts.length ? gpuParts.join(' · ') : 'Unavailable from engine'}</dd></div>
+      {mtp.map(m => <div className="stats-mtp" data-stat="mtp" key={m.model} title={`${m.model} · ${m.source || 'backend total'}: accepted draft tokens / proposed draft tokens`}>
+        <dt>MTP acceptance{m.source === 'last response' ? (active ? ' (current reply)' : ' (last reply)') : ' (engine total)'}</dt>
         <dd>{m.rate == null ? 'Awaiting backend counters' : `${(m.rate * 100).toFixed(1)}%`}<progress aria-label={`MTP acceptance for ${m.model}`} max={1} value={m.rate ?? undefined} /></dd>
       </div>)}
     </dl>
@@ -84,6 +117,7 @@ export function StatsBar({ stats, modelLabel }: StatsBarProps): JSX.Element {
   if (!phone) {
     return (
       <section className="stats-disclosure is-open is-wide" aria-label="Inference details">
+        <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveAnnouncement}</span>
         <p className="stats-bar stats-bar-static">{status(false)}</p>
         {details}
       </section>
@@ -92,6 +126,7 @@ export function StatsBar({ stats, modelLabel }: StatsBarProps): JSX.Element {
 
   return (
     <section className={`stats-disclosure${open ? ' is-open' : ''}`} aria-label="Inference details">
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveAnnouncement}</span>
       <button type="button" className="stats-bar" aria-expanded={open} aria-controls="stats-details" onClick={toggle}
         title={open ? 'Hide inference details' : 'Show inference details'}>
         {status(true)}

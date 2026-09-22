@@ -9,6 +9,7 @@ import { ShortcutsDialog } from './components/shortcuts/ShortcutsDialog';
 import { notifyIfAway } from './components/notifications/notify';
 import { useModelsChanged } from './models-changed';
 import { modelChoiceLabel } from './model-guidance';
+import { applyReplyTelemetry, beginReplyTelemetry, finishReplyTelemetry } from './reply-telemetry';
 import { TOOL_RESULT_LIMIT } from './components/ToolCalls';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
@@ -39,6 +40,7 @@ import type {
   Message,
   Project,
   ProjectFile,
+  ReplyTelemetry,
   ToolCallView,
 } from './types';
 import { ChatView } from './components/ChatView';
@@ -124,6 +126,10 @@ export default function App(): JSX.Element {
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthState>({ inferenceUp: null, diaryUp: null });
   const [stats, setStats] = useState<LiveStats | null>(null);
+  // Reply telemetry is per chat. Engine polling is deliberately kept in
+  // `stats`: parallel chats and other tenants must not overwrite the current
+  // chat's first-token time, token counts or provider-reported speed.
+  const [replyTelemetryByChat, setReplyTelemetryByChat] = useState<Record<string, ReplyTelemetry>>({});
   // Per chat, not global. A generation now continues while you look at
   // something else, so "is something streaming" is only ever a question about
   // a particular chat — and one chat working must not lock the composer of
@@ -267,17 +273,15 @@ export default function App(): JSX.Element {
     if (stale) setView({ kind: 'chat', chatId: `c-${uid()}`, projectId: null });
   }, [workspaceLoaded, projects]);
 
-  // Live engine stats — the bottom bar refreshes in near-real-time while the
-  // tab is visible; a background tab stops polling and catches up on return.
+  // Engine-wide totals and hardware are a background snapshot. Request-local
+  // values arrive over the chat SSE stream and never wait on this poll.
   useEffect(() => {
     let alive = true, pending = false;
     const tick = () => {
       if (pending || document.visibilityState === 'hidden') return;
       pending = true;
       void fetchStats()
-        // The engine gauge reports nothing between requests on some backends; keep the
-        // last provider-reported rate instead of blanking a number the user just saw.
-        .then((s) => alive && setStats((prev) => ({ ...s, tokensPerSecond: s.tokensPerSecond ?? prev?.tokensPerSecond ?? null })))
+        .then((s) => alive && setStats(s))
         .catch(() => alive && setStats((prev) => (prev ? { ...prev, up: false, mtp: [] } : prev)))
         .finally(() => { pending = false; });
     };
@@ -422,6 +426,7 @@ export default function App(): JSX.Element {
         ],
       }));
       setStreamingChats((prev) => ({ ...prev, [chatId]: true }));
+      setReplyTelemetryByChat((prev) => ({ ...prev, [chatId]: beginReplyTelemetry() }));
       const controller = new AbortController();
       streamAbort.current[chatId] = controller;
 
@@ -450,6 +455,7 @@ export default function App(): JSX.Element {
 
       const startedAt = Date.now();
       let failed = false;
+      let streamCompleted = false;
       try {
         let acc = '';
         let reasoning = '';
@@ -476,6 +482,22 @@ export default function App(): JSX.Element {
           if (ev.type === 'meta' && ev.reasoning) {
             window.dispatchEvent(new Event('cowork-reasoning-updated'));
             setMessagesByChat(prev => ({...prev,[chatId]:(prev[chatId] ?? []).map(m => m.id === replyId ? {...m,reasoningMode:ev.reasoning,reasoningEffort:ev.reasoningEffort} : m)}));
+          }
+          if (ev.type === 'meta' && ev.model) {
+            setReplyTelemetryByChat((prev) => ({
+              ...prev,
+              [chatId]: applyReplyTelemetry(prev[chatId], { model: ev.model }),
+            }));
+          }
+          if (ev.type === 'telemetry') {
+            setReplyTelemetryByChat((prev) => ({
+              ...prev,
+              [chatId]: applyReplyTelemetry(prev[chatId], {
+                phase: ev.phase,
+                model: ev.model,
+                timeToFirstToken: ev.timeToFirstToken,
+              }),
+            }));
           }
           if (ev.type === 'meta' && ev.route) {
             setMessagesByChat((prev) => ({
@@ -553,23 +575,38 @@ export default function App(): JSX.Element {
             }));
           } else if (ev.type === 'usage') {
             const stats = {
-              promptTokens: ev.promptTokens,
-              completionTokens: ev.completionTokens,
-              totalTokens: ev.totalTokens,
-              tokensPerSecond: ev.tokensPerSecond,
+              promptTokens: ev.promptTokens ?? undefined,
+              completionTokens: ev.completionTokens ?? undefined,
+              totalTokens: ev.totalTokens ?? undefined,
+              tokensPerSecond: ev.tokensPerSecond ?? undefined,
               elapsedMs: Date.now() - startedAt,
             };
             setMessagesByChat((prev) => ({
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, stats } : m)),
             }));
-            // The footer's own /api/stats poll only ticks every 2.5s and its rate
-            // reflects whichever request last completed engine-wide, so a reply
-            // finishing between ticks left it showing a stale number for the rest
-            // of that window. This event carries the same provider-reported rate
-            // for the round that just finished — apply it the instant it arrives
-            // rather than waiting for the next poll to catch up.
-            setStats((prev) => (prev ? { ...prev, up: true, tokensPerSecond: ev.tokensPerSecond ?? prev.tokensPerSecond } : prev));
+            setReplyTelemetryByChat((prev) => ({
+              ...prev,
+              [chatId]: applyReplyTelemetry(prev[chatId], {
+                phase: 'streaming', model: ev.model,
+                promptTokens: ev.promptTokens,
+                completionTokens: ev.completionTokens,
+                totalTokens: ev.totalTokens,
+                tokensPerSecond: ev.tokensPerSecond,
+                timeToFirstToken: ev.timeToFirstToken,
+                drafted: ev.drafted,
+                accepted: ev.accepted,
+              }),
+            }));
+            // Totals are engine-scoped, so reconcile them separately without
+            // letting that response replace this chat's request-local facts.
+            void fetchStats().then(setStats).catch(() => undefined);
+          } else if (ev.type === 'done') {
+            streamCompleted = true;
+            setReplyTelemetryByChat((prev) => ({
+              ...prev,
+              [chatId]: finishReplyTelemetry(prev[chatId], 'complete'),
+            }));
           } else if (ev.type === 'error') {
             throw new Error(ev.text || 'Generation failed');
           } else if (ev.type === 'tool_result' && ev.name) {
@@ -617,6 +654,13 @@ export default function App(): JSX.Element {
           }));
         }
       } finally {
+        setReplyTelemetryByChat((prev) => ({
+          ...prev,
+          [chatId]: finishReplyTelemetry(
+            prev[chatId],
+            controller.signal.aborted ? 'stopped' : failed || !streamCompleted ? 'error' : 'complete',
+          ),
+        }));
         // Titles and replies stay out of the notification: lock screens are not private.
         if (!controller.signal.aborted) notifyIfAway(failed ? 'Reply failed' : 'Reply ready', failed ? 'noevia could not finish answering.' : 'noevia finished answering.', `reply-${chatId}`);
         sendingChats.current.delete(chatId);
@@ -1033,7 +1077,11 @@ export default function App(): JSX.Element {
         />
         </Suspense>
       )}
-      <StatsBar stats={stats} modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null)} />
+      <StatsBar
+        stats={stats}
+        reply={view.kind === 'chat' ? replyTelemetryByChat[view.chatId] || null : null}
+        modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null)}
+      />
       {view.kind === 'chat' && activeProject && appMode === 'chat' && (
         <Inspector
           project={activeProject ?? null}

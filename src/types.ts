@@ -206,6 +206,20 @@ export interface LiveStats {
   memoryGb: number | null;
 }
 
+/** Request-local telemetry for one chat reply. Unlike LiveStats, these values
+ * come from that reply's SSE stream, so an engine-wide poll cannot replace
+ * them with another account's request or with an unavailable native gauge. */
+export interface ReplyTelemetry {
+  phase: 'waiting' | 'streaming' | 'complete' | 'stopped' | 'error';
+  model: string | null;
+  timeToFirstToken: number | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  totalTokens: number | null;
+  tokensPerSecond: number | null;
+  mtp: { model: string; source: 'last response'; rate: number; drafted: number; accepted: number }[];
+}
+
 /** Aggregate usage for the signed-in user, from GET /api/usage. Days are a
  *  dense series (zeros included) covering the retention window, oldest first,
  *  so the heat map can render straight from it. */

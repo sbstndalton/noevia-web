@@ -375,7 +375,9 @@ export async function saveChatHistory(chatId: string, history: HistoryEntry[], b
 //     for the user. The stream stays open and nothing runs until a decision is
 //     posted to /api/tool-approvals/:id.
 //   { type:'done', model } { type:'diary', decision }
-//   { type:'usage', promptTokens, completionTokens, totalTokens, tokensPerSecond }
+//   { type:'telemetry', phase, model?, timeToFirstToken? }
+//   { type:'usage', cumulative prompt/completion/total tokens, provider rate,
+//     first-token time and optional MTP accepted/drafted counts }
 export async function* streamChat(
   body: { spaceId: string; compactOnly?: boolean; extrasEnabled?: boolean; extraContext?: string;
     exchangeId?: string; recoveryId?: string; preparationId?: string; files?: Record<string,string>; entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null },
@@ -395,13 +397,18 @@ export async function* streamChat(
   reasoning?: string;
   reasoningEffort?: string;
   route?: string;
+  phase?: 'waiting' | 'streaming' | 'complete';
   // 'skills_scope' uses `text`: the skills auto-loaded for this reply.
   // 'tools_scope' uses `text`: the toolboxes offered for this reply ('' when not narrowed). // 'fast' | 'smart' when Auto routing picked the model (step 12)
-  // 'usage' event: provider-reported totals for the finished reply.
-  promptTokens?: number;
-  completionTokens?: number;
-  totalTokens?: number;
-  tokensPerSecond?: number;
+  // Request-local telemetry. Usage values are cumulative across the reply's
+  // tool rounds; null means the provider did not report that measurement.
+  promptTokens?: number | null;
+  completionTokens?: number | null;
+  totalTokens?: number | null;
+  tokensPerSecond?: number | null;
+  timeToFirstToken?: number | null;
+  drafted?: number | null;
+  accepted?: number | null;
 }> {
   const res = await apiFetch(body.files ? '/api/diary/local-exchange' : '/api/chat', {
     method: 'POST',
