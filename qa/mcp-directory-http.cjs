@@ -82,7 +82,7 @@ function startModel(){
   const ctx=await browser.newContext({viewport:{width:1440,height:900}});
   const {cookies}=await admin('/api/connectors');await ctx.addCookies([...cookies].map(([name,value])=>({name,value,url:origin})));
   const page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));
-  await page.route('**/api/plugins/directory*',async r=>{const res=await fetch(`http://127.0.0.1:${regPort}/v0/servers`);const d=await res.json();
+  await page.route('**/api/plugins/directory*',async r=>{if(r.request().url().includes('starters=1'))return r.fulfill({json:{items:[]}});const res=await fetch(`http://127.0.0.1:${regPort}/v0/servers`);const d=await res.json();
     const {mcpItems}=require('../server/routes/plugin-directory.cjs');r.fulfill({json:{source:{label:'fixture',home:'https://example.com'},items:mcpItems(d)}});});
   await page.goto(origin);await page.getByPlaceholder('Message noevia…').waitFor();
   await page.getByRole('button',{name:'Plugins',exact:true}).click();await page.getByRole('radio',{name:'MCP servers'}).click();

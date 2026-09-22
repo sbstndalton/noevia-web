@@ -93,7 +93,7 @@ function startModel(){
   // Plugins → Skills → Add to project: a real published skill (read-only fetch of one SKILL.md)
   // lands in the project needing review, not enabled.
   await page.getByRole('button',{name:'Plugins',exact:true}).click();await page.getByRole('radio',{name:'Skills',exact:true}).click();
-  await page.route('**/api/plugins/directory*',r=>r.fulfill({json:{source:{label:'fixture',home:'https://github.com/anthropics/skills'},items:[{id:'frontend-design',name:'Frontend design',publisher:'Anthropic',description:'',version:'',url:'https://github.com/anthropics/skills',remote:false}]}}));
+  await page.route('**/api/plugins/directory*',r=>r.request().url().includes('starters=1')?r.fulfill({json:{items:[]}}):r.fulfill({json:{source:{label:'fixture',home:'https://github.com/anthropics/skills'},items:[{id:'frontend-design',name:'Frontend design',publisher:'Anthropic',description:'',version:'',url:'https://github.com/anthropics/skills',remote:false}]}}));
   await page.getByRole('radio',{name:'MCP servers',exact:true}).click();await page.getByRole('radio',{name:'Skills',exact:true}).click();
   await page.getByRole('button',{name:'Add Frontend design to a project'}).click();
   await page.getByLabel('Project for Frontend design').selectOption({label:'Skill QA'});await page.getByRole('button',{name:'Add',exact:true}).click();
