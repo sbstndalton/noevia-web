@@ -51,13 +51,13 @@ function Row({ label, description, children }: { label: string; description: str
   </div>;
 }
 
-function Choice<N extends PreferenceName>({ name, options, onChange, segmented }: {
-  name: N; options: [string, string][]; onChange: () => void; segmented?: string;
+function Choice<N extends PreferenceName>({ name, options, onChange, segmented, label }: {
+  name: N; options: [string, string][]; onChange: () => void; segmented?: string; label?: string;
 }): JSX.Element {
   const [value, setValue] = useState(() => readPreference(name));
   if (segmented) return <SegmentedControl label={segmented} value={value as string} options={options}
     onChange={(next) => { setValue(next as typeof value); writePreference(name, next as typeof value); onChange(); }} />;
-  return <select aria-label={name} value={value} onChange={(e) => {
+  return <select aria-label={label || name} value={value} onChange={(e) => {
     const next = e.target.value as typeof value;
     setValue(next); writePreference(name, next); onChange();
   }}>{options.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select>;
@@ -94,10 +94,11 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
   return <>
     <div className="settings-title"><h1>General</h1><p>How noevia looks and moves on this device. Theme and material follow you to your other devices.</p></div>
 
-    <section className="settings-section">
-      <h2>Theme</h2>
+    <section className="settings-section appearance-section">
+      <h2>Appearance</h2>
       <div className="set-rows">
         <div className="set-row">
+          <div className="set-row-text"><span className="set-row-label">Theme</span><span className="set-row-desc">Choose a light or dark canvas, or follow your device.</span></div>
           <div className="theme-choice" role="group" aria-label="Mode">{(['system', 'light', 'dark'] as const).map((t) => {
             const chosen = (preference ?? theme) === t;
             const swatch = t === 'system' ? theme : t;
@@ -106,24 +107,19 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
             </button>;
           })}</div>
         </div>
-      </div>
-      <h2>Accent</h2>
-      <div className="set-rows">
+
         <div className="set-row">
-          <div className="set-row-text"><span className="set-row-label">Accent</span><span className="set-row-desc">The colour noevia uses for selection, links and the send button. Each one is checked for contrast in both light and dark.</span></div>
+          <div className="set-row-text"><span className="set-row-label">Accent</span><span className="set-row-desc">Colour for selections, links and the send button.</span></div>
+          <AccentChoice mode={theme} />
         </div>
-        <div className="set-row"><AccentChoice mode={theme} /></div>
-      </div>
-      <h2>Material</h2>
-      <div className="set-rows">
-        <Row label="Material" description="Liquid glass bends what is behind it (Chrome and Edge; elsewhere it is frosted). Glassmorphism is frosted without bending. Soft shapes everything with light and shadow instead of glass. Material 3 is flat and tonal.">
+        <Row label="Material" description="Soft uses light and shadow. Glassmorphism adds frost; Liquid glass adds refraction where supported. Material 3 uses flat, tonal surfaces.">
           <Choice name="material" segmented="Material" onChange={bump} options={[['soft', 'Soft'], ['liquid', 'Liquid glass'], ['glass', 'Glassmorphism'], ['material', 'Material 3']]} />
         </Row>
       </div>
       <h2>Reading and motion</h2>
       <div className="set-rows">
         <Row label="Chat font" description="The typeface for messages. The rest of the interface keeps the system font.">
-          <Choice name="chatFont" onChange={bump} options={[['sans', 'Sans (default)'], ['serif', 'Serif'], ['mono', 'Monospace']]} />
+          <Choice name="chatFont" label="Chat font" onChange={bump} options={[['sans', 'Sans (default)'], ['serif', 'Serif'], ['mono', 'Monospace']]} />
         </Row>
         <Row label="Density" description="Compact tightens spacing without shrinking anything you tap.">
           <Choice name="density" segmented="Density" onChange={bump} options={[['comfortable', 'Comfortable'], ['compact', 'Compact']]} />

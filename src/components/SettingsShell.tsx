@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SettingsView } from './SettingsView';
 import type { SettingsViewProps } from './SettingsView';
 import { fetchProfile } from '../api';
-import { PreviewPanel } from './PreviewPanel';
 import { UsageView } from './UsageView';
 import { ShellIcon } from './ShellIcon';
 import { CloseButton } from './CloseButton';
@@ -18,23 +17,13 @@ import { ConnectorsSettings } from './connectors/ConnectorsSettings';
 type Item = [id: string, label: string];
 type Group = { name: string; items: Item[]; admin?: boolean };
 
-// Grouped the way people look for things: who you are, how noevia behaves for you, what it
-// is connected to, and — for administrators — the server itself. Sections that only ever had
-// placeholder content are listed together under "Coming later" so the navigation describes
-// what noevia can actually do today.
-//
-// Removed outright rather than deferred, because they cannot apply to a self-hosted
-// single-server install: Billing (no plans or invoices to show), Browser and Computer use
-// (host-application features, not this app's).
-// Organised like ChatGPT's settings (user review, 2026-09-18): one flat list with no group
-// headings, General first and Account last, using only pages noevia actually has. Section
-// ids are unchanged so saved places and deep links keep working; only labels and order moved.
+// Preserve section IDs for saved places. Personal preferences come first;
+// connections and deployment controls have their own visible groups.
 const PERSONAL: Group[] = [
   { name: '', items: [
     ['appearance', 'General'],
     ['personalization', 'Personalization'],
     ['capabilities', 'Capabilities'],
-    ['providers', 'AI providers'],
     ['usage', 'Usage'],
     ['data', 'Data controls'],
     ['diary', 'Diary & storage'],
@@ -57,17 +46,10 @@ const ADMIN: Group = { name: 'Server', admin: true, items: [
   ['status', 'Service status'],
 ] };
 
-const LATER: Group = { name: 'Coming later', items: [['planned', 'Planned features']] };
+const CONNECTIONS: Group = { name: 'Connections', items: [['connectors', 'Connectors'], ['providers', 'AI providers']] };
 
 // Each section has its own symbol; names resolve through ShellIcon's Lucide map.
 const ICONS: Record<string, string> = Object.fromEntries(['profile','security','appearance','personalization','capabilities','diary','providers','usage','data','planned','users','models','status','features','backups','address','connectors'].map(id => [id, id]));
-
-// What used to be one navigation row each. Kept visible as a roadmap, but in
-// one place, so an empty section never looks like a broken one.
-const PLANNED: { group: string; items: string[] }[] = [
-  { group: 'Extensibility', items: ['Capability catalogue', 'Adding MCP servers from the directory', 'Nextcloud connector'] },
-  { group: 'Coding workspace', items: ['Coding preferences', 'Git', 'Environments', 'Worktrees', 'Hooks'] },
-];
 
 // Kept in step with the single-pane breakpoint in shell-v2.css.
 const PHONE = '(max-width: 820px)';
@@ -77,7 +59,7 @@ const reducedMotion = () => typeof window !== 'undefined' && (document.documentE
 export type SettingsSection = 'general' | 'usage' | 'models' | 'connectors';
 
 export function SettingsShell(props: SettingsViewProps & {initialSection?:SettingsSection|string;onSection?:(id:string)=>void;appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; onClosing?:()=>void; onStartChat?:(prompt:string)=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void; preference?:'light'|'dark'|'system'; onPreference?:(preference:'light'|'dark'|'system')=>void}) {
-  // 'general' is the historical name for the first page; it now opens Profile. Anything that is
+  // 'general' is the historical name for the first page; it now opens Appearance. Anything that is
   // not a section name (a click event handed through by mistake) counts as no choice.
   const named = typeof props.initialSection === 'string' && props.initialSection !== 'general' ? props.initialSection : null;
   const [section, setSection] = useState<string>(named || 'appearance');
@@ -137,7 +119,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
     return () => { live = false; };
   }, [profileAttempt]);
 
-  const groups: Group[] = useMemo(() => [...PERSONAL, ...(isAdmin ? [ADMIN] : []), LATER], [isAdmin]);
+  const groups: Group[] = useMemo(() => [...PERSONAL, CONNECTIONS, ...(isAdmin ? [ADMIN] : [])], [isAdmin]);
 
   // A member who was viewing an admin section (or a stale saved section) must
   // not be left staring at an empty pane.
@@ -147,8 +129,20 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   }, [groups, section, profileKnown]);
 
   const title = groups.flatMap(g => g.items).find(([id]) => id === section)?.[1] || 'Settings';
-  const filtered = groups.map(g => ({ ...g, items: g.items.filter(([, label]) => label.toLowerCase().includes(query.toLowerCase())) }));
-  const open = (id: string) => { setSection(id); props.onSection?.(id); setView('detail'); stage.current?.querySelector('.settings-detail-scroll')?.scrollTo(0, 0); };
+  const filtered = groups.map(g => ({ ...g, items: g.items.filter(([, label]) => label.toLowerCase().includes(query.trim().toLowerCase())) }));
+  const open = (id: string) => { setSection(id); props.onSection?.(id); setView('detail'); };
+  // On narrow screens the navigation disappears. Move focus into the new page
+  // so keyboard and screen-reader users do not lose their place.
+  useEffect(() => {
+    if (view !== 'detail') return;
+    stage.current?.querySelector('.settings-detail-scroll')?.scrollTo(0, 0);
+    if (phone()) stage.current?.querySelector<HTMLElement>('.settings-detail-scroll')?.focus({ preventScroll: true });
+  }, [section, view]);
+  const showList = () => {
+    setView('list');
+    window.requestAnimationFrame(() => stage.current?.querySelector<HTMLElement>('[aria-current="page"]')?.focus({ preventScroll: true }));
+  };
+  const clearSearch = () => { setQuery(''); stage.current?.querySelector<HTMLInputElement>('.settings-search input')?.focus(); };
   // Report the opening page too, so a reload returns to the page you were reading and not
   // to the top of the list (user review of `ab2720a`, 2026-09-18).
   const report = props.onSection;
@@ -160,7 +154,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
         <button className="settings-back" onClick={close}><ShellIcon name="arrow"/>Back to app</button>
         <h1 className="settings-nav-title">Settings</h1>
       </div>
-      <div className="settings-search"><ShellIcon name="search" size={16}/><input aria-label="Search settings" placeholder="Search settings" value={query} onChange={e => setQuery(e.target.value)}/></div>
+      <div className="settings-search"><ShellIcon name="search" size={16}/><input aria-label="Search settings" placeholder="Search settings" value={query} onChange={e => setQuery(e.target.value)}/>{query && <button className="settings-search-clear" onClick={clearSearch} aria-label="Clear settings search"><ShellIcon name="close" size={16}/></button>}</div>
       {profileError && <p className="route-note" role="alert">Account access could not be checked. <button className="popup-tab" onClick={() => setProfileAttempt(n => n + 1)}>Retry access</button></p>}
       <nav aria-label="Settings categories">
         {filtered.map(g => g.items.length > 0 && <section key={g.name}>
@@ -169,16 +163,16 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
             <ShellIcon name={ICONS[id] || 'settings'} size={17}/><span>{label}</span><ShellIcon name="chevron-right" size={16}/>
           </button>)}
         </section>)}
-        {filtered.every(g => !g.items.length) && <p className="preview-footnote">No matching settings.</p>}
+        {filtered.every(g => !g.items.length) && <div className="settings-search-empty" role="status"><strong>No matching settings</strong><p>Try a different name or browse all settings.</p><button className="btn btn-secondary" onClick={clearSearch}>Clear search</button></div>}
       </nav>
     </aside>
     <section className="settings-detail" aria-label={title}>
       <header>
-        <button className="shell-icon-button settings-list-back" onClick={() => setView('list')} aria-label="All settings"><ShellIcon name="chevron-left"/></button>
+        <button className="shell-icon-button settings-list-back" onClick={showList} aria-label="All settings"><ShellIcon name="chevron-left"/></button>
         <span>{title}</span>
         <CloseButton onClick={close} label="Close settings"/>
       </header>
-      <div className="settings-detail-scroll" key={section}>
+      <div className="settings-detail-scroll" key={section} tabIndex={-1} aria-label={title}>
         <SettingsPanelBoundary>
         {['security', 'users', 'diary', 'providers', 'models', 'status'].includes(section) ? (
           <SettingsView {...props} section={section}/>
@@ -203,11 +197,6 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
           <DataSettings />
         ) : section === 'usage' ? (
           <UsageView/>
-        ) : section === 'planned' ? (
-          <>
-            <div className="settings-title"><h1>Planned features</h1><p>These account-wide controls are not built yet. Project instructions and reviewed instruction skills already work in each project. Connections and Diary storage have their own working categories.</p></div>
-            {PLANNED.map(p => <PreviewPanel key={p.group} title={p.group} description="" items={p.items}/>)}
-          </>
         ) : null}
         </SettingsPanelBoundary>
       </div>
