@@ -260,3 +260,13 @@ button.connector-card:focus-visible { outline: 2px solid var(--focus-ring); outl
 .coding-composer-footer button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 
 .settings-stage .set-row-stacked > .set-row-text { flex: none; }
+
+/* Appearance is one sequence of decisions, with quiet dividers like the
+   settings references. Keep saved material skins and shared control geometry. */
+.settings-stage .appearance-section > h2:first-child { margin-top: 0; }
+.settings-stage .appearance-section > .set-rows { background: transparent; border: 0; border-radius: 0; box-shadow: none; overflow: visible; }
+.settings-stage .appearance-section .set-row { padding: var(--space-5) 0; gap: var(--space-3); }
+.settings-stage .appearance-section .set-row:first-child { padding-top: var(--space-2); }
+.settings-stage .appearance-section .set-row-desc { max-width: 64ch; line-height: var(--leading-body); }
+.settings-stage .appearance-section .theme-choice { padding: var(--space-1); }
+.settings-stage .appearance-section .accent-choice { padding: var(--space-1); }

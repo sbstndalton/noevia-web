@@ -27,13 +27,21 @@ const {createFixture}=require('./diary-fixture.cjs');
  await page.goto('http://localhost:31356');
  await page.getByTitle('Settings',{exact:true}).click();
  const dialog=page.getByRole('region',{name:'Settings'});
- // Opening Settings lands on Profile: identity only.
- assert.equal(await dialog.getByRole('button',{name:'General',exact:true}).count(),0);
+ // Opening Settings lands on General; Account keeps identity separate.
+ await dialog.getByRole('button',{name:'General',exact:true}).waitFor();
+ await dialog.getByLabel('Search settings').fill('  connectors  ');
+ await dialog.getByRole('button',{name:'Connectors',exact:true}).click();
+ await dialog.getByRole('heading',{name:'Connectors',exact:true}).waitFor();
+ await dialog.getByLabel('Search settings').fill('no-such-setting');
+ await dialog.getByText('No matching settings',{exact:true}).waitFor();
+ await dialog.getByRole('button',{name:'Clear search',exact:true}).click();
+ assert.ok(await dialog.getByLabel('Search settings').evaluate(el=>el===document.activeElement));
+ assert.equal(await dialog.getByRole('button',{name:'Planned features',exact:true}).count(),0);
  await dialog.getByRole('button',{name:'Account',exact:true}).click();
 
  // ── Profile ──
  await dialog.getByRole('heading',{name:'Account',level:1}).waitFor();
- assert.equal(await dialog.getByLabel('Display name').inputValue(),'Synthetic admin');
+ await page.waitForFunction(()=>document.querySelector('[aria-label="Display name"]')?.value==='Synthetic admin');
  assert.ok(await dialog.getByText('adminqa',{exact:true}).isVisible(),'the username is not shown');
  assert.ok(await dialog.getByText('Administrator',{exact:true}).isVisible());
  // Save is inert until the name actually changes, so an accidental click is a no-op.
@@ -51,7 +59,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  assert.equal(await attr('data-chat-font'),'sans');
  assert.equal(await attr('data-density'),'comfortable');
  assert.equal(await attr('data-motion'),'system');
- await dialog.getByLabel('chatFont').selectOption('serif');
+ await dialog.getByLabel('Chat font').selectOption('serif');
  await dialog.getByRole('radiogroup',{name:'Density'}).getByRole('radio',{name:'Compact'}).click();
  await dialog.getByRole('radiogroup',{name:'Motion'}).getByRole('radio',{name:'Reduced'}).click();
  assert.equal(await attr('data-chat-font'),'serif');

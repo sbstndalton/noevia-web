@@ -67,13 +67,23 @@
 @keyframes work-in { from { opacity: 0; transform: scale(.97); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
 
 .settings-stage .settings-navigation { width: auto; display: flex; flex-direction: column; min-height: 0; padding: var(--space-4) var(--space-2); border: 0; border-right: 1px solid var(--border-subtle); background: transparent; }
-.settings-stage .settings-nav-head { display: none; }
+.settings-stage .settings-nav-head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: 0 var(--space-2) var(--space-4); }
+.settings-stage .settings-nav-title { margin: 0; font-family: var(--font-display); font-size: var(--text-title2); font-weight: 600; letter-spacing: var(--tracking-title); }
+.settings-stage .settings-back { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; color: var(--text-secondary); font-size: var(--text-footnote); }
+.settings-stage .settings-back:hover { color: var(--text-primary); }
+.settings-stage .settings-search-clear { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; min-height: 44px; margin: -7px -10px -7px 0; color: var(--text-secondary); border-radius: var(--radius-md); }
+.settings-stage .settings-search-clear:hover { color: var(--text-primary); background: var(--nav-hover); }
+.settings-stage .settings-search input { min-width: 0; width: 100%; }
+.settings-stage .settings-search-empty { padding: var(--space-4) var(--space-2); font-size: var(--text-footnote); color: var(--text-secondary); }
+.settings-stage .settings-search-empty strong { color: var(--text-primary); font-weight: 500; }
+.settings-stage .settings-search-empty p { line-height: var(--leading-body); margin: var(--space-2) 0 var(--space-4); }
+.settings-stage .settings-detail-scroll:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -4px; }
 .settings-stage .settings-search { margin: 0 var(--space-1) var(--space-2); padding: 7px 10px; gap: 8px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-secondary); }
 .settings-stage .settings-search input { font-size: var(--text-footnote); }
 .settings-stage .settings-search:focus-within { border-color: var(--focus-ring); }
 .settings-stage .settings-navigation nav { overflow-y: auto; min-height: 0; padding: 0; }
 .settings-stage .settings-navigation nav section h2 { margin: var(--space-5) 10px var(--space-1); font-size: var(--text-caption); font-weight: 500; letter-spacing: var(--tracking-caption); color: var(--text-secondary); }
-.settings-stage .settings-navigation nav button { gap: 10px; min-height: 32px; margin: 1px 0; padding: 6px 10px; border-radius: var(--radius-sm); color: var(--text-secondary); font-size: var(--text-callout); font-weight: 400;
+.settings-stage .settings-navigation nav button { gap: 10px; min-height: 44px; margin: 1px 0; padding: 6px 10px; border-radius: var(--radius-sm); color: var(--text-secondary); font-size: var(--text-callout); font-weight: 400;
   transition: background-color var(--duration-instant) var(--ease-standard), color var(--duration-instant) var(--ease-standard); }
 .settings-stage .settings-navigation nav button > svg:last-child { display: none; }
 .settings-stage .settings-navigation nav button:hover { background: var(--nav-hover); color: var(--text-primary); }
