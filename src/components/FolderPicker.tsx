@@ -24,23 +24,31 @@ export function FolderPicker({
   const [path, setPath] = useState('');
   const [entries, setEntries] = useState<StorageEntry[]>([]);
   const [busy, setBusy] = useState(true);
+  const [loadedPath, setLoadedPath] = useState<string | null>(null);
+  const saving = useRef(false);
+  const [savingFolder, setSavingFolder] = useState(false);
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [reload, setReload] = useState(0);
 
   useEffect(() => {
+    let stale = false;
     setBusy(true);
     setError('');
+    setLoadedPath(null);
     browseStorage(path)
-      .then((r) => setEntries(r.entries.filter((e) => e.isDir)))
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Could not list that folder'))
-      .finally(() => setBusy(false));
+      .then((r) => { if (!stale) { setEntries(r.entries.filter((e) => e.isDir)); setLoadedPath(path); } })
+      .catch((e: unknown) => { if (!stale) setError(e instanceof Error ? e.message : 'Could not list that folder'); })
+      .finally(() => { if (!stale) setBusy(false); });
+    return () => { stale = true; };
   }, [path, reload]);
 
   const makeFolder = async () => {
     const name = newName.trim();
-    if (!name) return;
+    if (!name || busy || saving.current) return;
+    saving.current = true;
+    setSavingFolder(true);
     setBusy(true);
     setError('');
     try {
@@ -52,7 +60,7 @@ export function FolderPicker({
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create that folder');
       setBusy(false);
-    }
+    } finally { saving.current = false; setSavingFolder(false); }
   };
 
   const up = () => setPath(path.split('/').slice(0, -1).join('/'));
@@ -60,19 +68,19 @@ export function FolderPicker({
   return (
     <dialog ref={dialog} className="folder-picker aero dialog-sheet" aria-label="Choose a folder" onCancel={e=>{e.preventDefault();onClose();}}>
       <header>
-        <button className="btn btn-ghost btn-sm" onClick={up} disabled={!path}><ShellIcon name="arrow-up" size={16}/>Up</button>
+        <button className="btn btn-ghost btn-sm" onClick={up} disabled={!path || savingFolder}><ShellIcon name="arrow-up" size={16}/>Up</button>
         <code>{path ? `/${path}` : '/ (all files)'}</code>
         <button className="btn btn-ghost btn-sm" onClick={onClose}>Cancel</button>
       </header>
-      {error && <p className="modal-err">{error}</p>}
-      {busy && <p className="insp-empty">Loading…</p>}
-      {!busy && entries.length === 0 && (
+      {error && <p className="modal-err" role="alert">{error} <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setReload(n => n + 1)}>Retry</button></p>}
+      {busy && <p className="insp-empty" role="status">Loading…</p>}
+      {!busy && loadedPath === path && entries.length === 0 && (
         <p className="insp-empty">No sub-folders here. Link this folder, create one, or go up.</p>
       )}
       <ul className="folder-list">
-        {entries.map((e) => (
+        {(loadedPath === path && !busy ? entries : []).map((e) => (
           <li key={e.path}>
-            <button className="folder-open" onClick={() => setPath(e.path)}>📁 {e.name}</button>
+            <button className="folder-open" disabled={savingFolder} onClick={() => setPath(e.path)}>📁 {e.name}</button>
           </li>
         ))}
       </ul>
@@ -95,8 +103,8 @@ export function FolderPicker({
           </>
         ) : (
           <>
-            <button className="btn btn-secondary btn-sm" onClick={() => setCreating(true)}>New folder</button>
-            <button className="btn btn-primary btn-sm" onClick={() => onPick(path)} disabled={!path}>
+            <button className="btn btn-secondary btn-sm" disabled={busy || loadedPath !== path} onClick={() => setCreating(true)}>New folder</button>
+            <button className="btn btn-primary btn-sm" onClick={() => onPick(path)} disabled={!path || busy || loadedPath !== path}>
               Link {path ? `“${path.split('/').pop()}”` : 'this folder'}
             </button>
           </>
