@@ -116,6 +116,11 @@ export default function App(): JSX.Element {
   const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [freeChats, setFreeChats] = useState<ChatMeta[]>([]);
+  const projectsRef = useRef(projects);
+  const freeChatsRef = useRef(freeChats);
+  projectsRef.current = projects;
+  freeChatsRef.current = freeChats;
+  const chatMetaSaves = useRef(new Map<string, Promise<void>>());
   const [messagesByChat, setMessagesByChat] = useState<Record<string, Message[]>>({});
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [modelsLoaded, setModelsLoaded] = useState(false);
@@ -191,8 +196,12 @@ export default function App(): JSX.Element {
     return fetchWorkspace()
       .then((w) => {
         if (request !== workspaceRequest.current) return;
-        setProjects((w.projects || []).map((p) => ({ ...p, ...pendingPatches.current[p.id] })));
-        setFreeChats(Array.isArray(w.freeChats) ? w.freeChats : []);
+        const nextProjects = (w.projects || []).map((p) => ({ ...p, ...pendingPatches.current[p.id] }));
+        const nextFreeChats = Array.isArray(w.freeChats) ? w.freeChats : [];
+        projectsRef.current = nextProjects;
+        freeChatsRef.current = nextFreeChats;
+        setProjects(nextProjects);
+        setFreeChats(nextFreeChats);
         setWorkspaceLoaded(true);
       })
       .catch(() => undefined);
@@ -835,24 +844,48 @@ export default function App(): JSX.Element {
     [refreshProjects],
   );
 
-  // Rename / pin / archive on a chat meta. Chats live either inside their
-  // project or in the free-chats list, and each has its own save endpoint, so
-  // the projectId decides which list is rewritten.
+  // A metadata POST contains the whole list. Save one action at a time per list,
+  // reading the latest list only when that action reaches the head of the queue.
+  // Keep the UI at its confirmed state until the save succeeds; a failed save
+  // then needs no rollback or workspace fetch (which can fail at the same time).
   const handlePatchChat = useCallback(
     (projectId: string | null, chatId: string, patch: Partial<ChatMeta>) => {
-      if (projectId) {
-        const project = projects.find((p) => p.id === projectId);
-        if (!project) return;
-        const next = (project.chats || []).map((c) => (c.id === chatId ? { ...c, ...patch } : c));
-        setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, chats: next } : p)));
-        saveProjectChats(projectId, next).then(() => refreshProjects()).catch(() => undefined);
-      } else {
-        const next = freeChats.map((c) => (c.id === chatId ? { ...c, ...patch } : c));
-        setFreeChats(next);
-        saveFreeChats(next).then(() => refreshProjects()).catch(() => undefined);
-      }
+      const key = projectId === null ? 'free' : `project:${projectId}`;
+      // The chat-list endpoints store at most 120 title characters.
+      const savedPatch = typeof patch.title === 'string' ? { ...patch, title: patch.title.slice(0, 120) } : patch;
+      const save = async () => {
+        const list = projectId === null
+          ? freeChatsRef.current
+          : projectsRef.current.find((p) => p.id === projectId)?.chats;
+        if (!list?.some((c) => c.id === chatId)) return;
+        const next = list.map((c) => (c.id === chatId ? { ...c, ...savedPatch } : c));
+        try {
+          if (projectId === null) await saveFreeChats(next);
+          else await saveProjectChats(projectId, next);
+          // A workspace GET that began before this save may carry the old meta.
+          workspaceRequest.current += 1;
+          // A workspace refresh or chat send may have changed other fields while
+          // this request was in flight. Apply only this action to the latest list.
+          if (projectId === null) {
+            freeChatsRef.current = freeChatsRef.current.map((c) => (c.id === chatId ? { ...c, ...savedPatch } : c));
+            setFreeChats((prev) => prev.map((c) => (c.id === chatId ? { ...c, ...savedPatch } : c)));
+          } else {
+            projectsRef.current = projectsRef.current.map((p) => p.id === projectId
+              ? { ...p, chats: (p.chats || []).map((c) => (c.id === chatId ? { ...c, ...savedPatch } : c)) }
+              : p);
+            setProjects((prev) => prev.map((p) => p.id === projectId
+              ? { ...p, chats: (p.chats || []).map((c) => (c.id === chatId ? { ...c, ...savedPatch } : c)) }
+              : p));
+          }
+        } catch (e) {
+          setProjectError(`Chat change did not save — ${e instanceof Error ? e.message : 'the server rejected it'}. Try again.`);
+        }
+      };
+      const pending = (chatMetaSaves.current.get(key) || Promise.resolve()).then(save);
+      chatMetaSaves.current.set(key, pending);
+      void pending.finally(() => { if (chatMetaSaves.current.get(key) === pending) chatMetaSaves.current.delete(key); });
     },
-    [projects, freeChats, refreshProjects],
+    [],
   );
 
   // Saving the project settings dialog. Unlike the debounced rail edits this
