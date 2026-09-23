@@ -18,6 +18,7 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
   const id = useId();
   const [value, setValue] = useState<StorageConnection>({ kind: onlineOnly ? 'nextcloud' : 'local', baseUrl: '', username: '', corpusRoot: '' });
   const [loaded, setLoaded] = useState(false);
+  const [loadedKind, setLoadedKind] = useState<StorageConnection['kind'] | null>(null);
   const [secret, setSecret] = useState('');
   const [message, setMessage] = useState('');
   const [loadFailed, setLoadFailed] = useState(false);
@@ -29,7 +30,15 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
     setLoadFailed(false); setMessage('');
     const timeout = new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('timeout')), 10000));
     void Promise.race([fetchStorage(), timeout])
-      .then(v => { if (!live) return; setValue((onlineOnly && v.kind === 'local') || (backupOnly && v.kind === 's3') ? { kind: 'nextcloud', baseUrl: '', username: '', corpusRoot: 'Cowork/Diary' } : v); setLoaded(true); })
+      .then(v => {
+        if (!live) return;
+        const next = (onlineOnly && v.kind === 'local') || (backupOnly && v.kind === 's3')
+          ? { kind: 'nextcloud', baseUrl: '', username: '', corpusRoot: 'Cowork/Diary' } as StorageConnection
+          : v;
+        setValue(next);
+        setLoadedKind(next.kind);
+        setLoaded(true);
+      })
       .catch(() => { if (live) setLoadFailed(true); });
     return () => { live = false; };
   }, [attempt]);
@@ -56,12 +65,13 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
   const save = async () => {
     const saved = await saveStorage({ ...value, secret });
     setValue(saved);
+    setLoadedKind(saved.kind);
     setSecret('');
     setMessage('Storage saved.');
     onSaved?.(saved);
   };
   const test = async () => {
-    await testStorage({ ...value, secret, useSavedSecret: !!value.secretConfigured && !secret });
+    await testStorage({ ...value, secret, useSavedSecret: value.kind === loadedKind && !!value.secretConfigured && !secret });
     setMessage('Connection successful.');
   };
 
@@ -136,12 +146,12 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
             disabled={!loaded}
             className="modal-input"
             type="password"
-            aria-describedby={value.secretConfigured ? `${id}-secret-help` : undefined}
+            aria-describedby={value.kind === loadedKind && value.secretConfigured ? `${id}-secret-help` : undefined}
             placeholder={value.kind === 's3' ? 'Secret access key' : 'App password'}
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
           />
-          {value.secretConfigured && <p id={`${id}-secret-help`} className="route-note">A secret is saved. Leave blank to test with it on the same server.</p>}
+          {value.kind === loadedKind && value.secretConfigured && <p id={`${id}-secret-help`} className="route-note">A secret is saved. Leave blank to test with it on the same server.</p>}
         </>
       )}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

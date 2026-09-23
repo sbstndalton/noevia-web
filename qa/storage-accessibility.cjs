@@ -14,7 +14,10 @@ const assert=require('node:assert/strict');
     await page.route('**/api/**', async route=>{
       const path=new URL(route.request().url()).pathname;
       let body={}; let status=200;
-      if(path==='/api/integrations/storage') body={kind,baseUrl:'https://storage.example/dav',username:'synthetic-user',corpusRoot:'Notes',bucket:'synthetic',secretConfigured:true};
+      if(path==='/api/integrations/storage'){
+        if(failure==='load'){status=502;body={error:'Synthetic storage load failure'};}
+        else body={kind,baseUrl:'https://storage.example/dav',username:'synthetic-user',corpusRoot:'Notes',bucket:'synthetic',secretConfigured:true};
+      }
       else if(path.endsWith('/test')){tested=route.request().postDataJSON();body={ok:true};}
       else if(path.endsWith('/files')){body={entries:[{name:'note.md',path:'note.md',isDir:false,size:10}]};if(failure==='browse'){status=502;body={error:'Synthetic browse failure'};}}
       else if(path.endsWith('/file')){status=502;body={error:'Synthetic read failure'};}
@@ -32,13 +35,20 @@ const assert=require('node:assert/strict');
         await page.getByRole('button',{name:'Test',exact:true}).click();
         await page.getByText('Connection successful.').waitFor();
         assert.equal(tested.baseUrl,'https://storage.example/edited');assert.equal(tested.useSavedSecret,true);assert.equal(tested.secret,'');
+        if(kind==='webdav'){
+          await page.getByLabel('Storage type',{exact:true}).selectOption('s3');
+          assert.equal(await page.getByText('A secret is saved. Leave blank to test with it on the same server.',{exact:true}).count(),0);
+          await page.getByRole('button',{name:'Test',exact:true}).click();
+          await page.getByText('Connection successful.').waitFor();
+          assert.equal(tested.useSavedSecret,false);
+        }
       }
       for(const width of [375,768,1440])for(const theme of ['light','dark']){
         await page.setViewportSize({width,height:900});await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       }
     }
-    for(failure of ['', 'browse']){
+    for(failure of ['', 'browse', 'load']){
       const trigger=page.getByRole('button',{name:'Browse storage'});await trigger.click();
       const dialog=page.getByRole('dialog',{name:'Pull from your storage'});await dialog.waitFor();
       assert.ok(await dialog.evaluate(el=>el.contains(document.activeElement)));
@@ -46,7 +56,10 @@ const assert=require('node:assert/strict');
       assert.ok(await dialog.evaluate(el=>el.contains(document.activeElement)));
       await dialog.getByRole('button',{name:'Close',exact:true}).focus();await page.keyboard.press('Shift+Tab');
       assert.ok(await dialog.evaluate(el=>el.contains(document.activeElement)));
-      if(failure==='browse')await dialog.getByRole('alert').filter({hasText:'Synthetic browse failure'}).waitFor();
+      if(failure==='load'){
+        await dialog.getByRole('alert').filter({hasText:'Could not load your storage connection'}).waitFor();
+        assert.equal(await dialog.getByRole('button',{name:'Root',exact:true}).count(),0);
+      } else if(failure==='browse')await dialog.getByRole('alert').filter({hasText:'Synthetic browse failure'}).waitFor();
       else{await dialog.getByRole('button',{name:'add',exact:true}).click();await dialog.getByRole('alert').filter({hasText:'Synthetic read failure'}).waitFor();}
       await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});
       assert.ok(await trigger.evaluate(el=>document.activeElement===el));

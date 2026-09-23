@@ -89,7 +89,9 @@ export function StorageFileBrowser({
           <CloseButton onClick={onClose}/>
         </div>
 
-        {kind === 'local' ? (
+        {kind === null && error ? (
+          <p className="modal-err" role="alert">{error}</p>
+        ) : kind === 'local' ? (
           <p className="route-note">
             No external storage is connected. Connect Nextcloud, WebDAV, or an
             S3-compatible bucket in Settings → Diary storage, then pull text
