@@ -10,7 +10,7 @@ export default function DiarySharing(): JSX.Element {
     catch(e){setError(e instanceof Error?e.message:'Could not save sharing.');}finally{setBusy(false);}
   };
   return <section aria-label="Diary file sharing" style={{marginTop:24}}><div className="rail-label">Diary file sharing</div>
-    <p className="route-note">Share server-held Markdown files with a device app password. Supports listing, reading, saving, folder creation, move/rename, copy within your Diary, and Trash-backed deletion. Overwriting an ordinary file keeps its previous contents in Trash; protected files require a matching version. Locking is not supported. Client compatibility varies: Finder and Windows mounting have not been verified.</p>
+    <p className="route-note">Share server-held Markdown files with a device app password. Supports listing, reading, saving, folder creation, move/rename, copy within your Diary, and Trash-backed deletion. Overwriting an ordinary file without a version (If-Match) keeps its previous contents in Trash; protected files require a matching version. Locking is not supported. Client compatibility varies: Finder and Windows mounting have not been verified.</p>
     {value && <>
       <p className="route-note">Current access: {value.scope === 'off' ? 'Off' : value.scope === 'lan' ? 'LAN endpoint' : 'Public HTTPS'}.</p>
       {!value.available && <p className="route-note">{value.reason} Sharing stays off.</p>}

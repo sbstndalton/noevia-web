@@ -15,6 +15,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    if(name==='Coding')await page.getByRole('button',{name:'Code',exact:true}).click();
    const status=page.getByRole('status').filter({hasText:'Loading '+name+'…'});
    await status.waitFor();assert.equal(await page.locator('.view-loading:visible').count(),1);
+   if(name==='Coding')assert.equal(await page.locator('.chat-views').evaluate(el=>getComputedStyle(el).display),'none','Coding loading replaces the previous chat view');
    assert.ok(await page.locator('#app-navigation').isVisible(), name + ': navigation remains visible');
    release();await status.waitFor({state:'hidden'});await page.close();
   }
