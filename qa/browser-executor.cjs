@@ -5,10 +5,11 @@
 // nothing leaves this machine. The evil server counts every hit, WebSocket upgrades included, so
 // "never reached" is measured, not inferred.
 // Proves: a submit disguised as "Show details" asks; Decline sends nothing; Allow sends the real
-// secret to the right site while no result, card or log ever contains it; a secret bound to
-// another site is refused; subresources, redirects and links to other hosts are blocked; only
-// given files upload; downloads land in the task's directory; Enter in a form asks; a WebSocket
-// to another host never connects.
+// secret to the right site while no result, card, screenshot or log ever contains it; a secret
+// bound to another site is refused; approval is invalidated when its target or origin changes;
+// subresources, redirects and links to other hosts are blocked; only given files upload;
+// downloads land in the task's directory; Enter in a form asks; a WebSocket to another host never
+// connects.
 const http = require('node:http'), fs = require('node:fs'), os = require('node:os'), path = require('node:path'), assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { createBrowserExecutor } = require('../server/browser-executor.cjs');
@@ -26,7 +27,8 @@ const FIXTURES = {
     <a id="report" href="/report.csv">Report</a>
     <form id="order" method="post" action="/order">
       <input id="user" name="user" type="text" aria-label="User">
-      <input id="pass" name="pass" type="password" aria-label="Password">
+      <input id="pass" name="pass" type="password" aria-label="Password" oninput="document.getElementById('echo').textContent=this.value">
+      <div id="echo"></div>
       <input id="note" name="note" type="text" aria-label="Note">
       <button id="disguised" aria-label="Show details">Show details</button>
     </form>
@@ -48,6 +50,7 @@ const FIXTURES = {
   '/popup': page('<p>popup</p><script>setTimeout(() => window.close(), 300)</script>'),
   '/frame': page('<input id="x" type="text" aria-label="Frame field">'),
   '/ws': page('<p id="w">socket</p><script>try { new WebSocket("EVIL_WS/socket"); } catch {}</script>'),
+  '/revalidate': page('<form method="post" action="/changed"><button id="approve-target" aria-label="Approve target">Approve target</button></form>'),
 };
 
 async function main() {
@@ -89,9 +92,10 @@ async function main() {
     allowedPorts: [shop.address().port, evil.address().port] });
   await new Promise((r) => egress.server.listen(0, '127.0.0.1', r));
   const grant = egress.grant({ taskId: 'qa-job', domains: ['shop.example.test', 'partner.example.test'] });
+  let launchedBrowser = null, approvalHook = null;
   const executor = createBrowserExecutor({
-    launch: () => chromium.launch({ channel: process.env.QA_CHANNEL || undefined }),
-    askApproval: async (card) => { cards.push(card); return answers.shift() || 'deny'; },
+    launch: async () => { launchedBrowser = await chromium.launch({ channel: process.env.QA_CHANNEL || undefined }); return launchedBrowser; },
+    askApproval: async (card) => { cards.push(card); await approvalHook?.(card); return answers.shift() || 'deny'; },
     secrets: { shop_password: { value: SECRET, domains: ['shop.example.test'] }, bank: { value: 'bank-synthetic-1', domains: ['bank.example.test'] } },
     log: (entry) => logs.push(entry),
     timeoutMs: 5000,
@@ -120,6 +124,13 @@ async function main() {
   check('typing into a field needs no approval', () => assert.equal(r.status, 'done'));
   r = await act({ type: 'type', selector: '#pass', text: '{{secret:shop_password}}' });
   check('a secret bound to this site is typed', () => assert.equal(r.status, 'done'));
+  r = await act({ type: 'extract', selector: '#echo' });
+  check('the synthetic page echoes the typed secret into ordinary page content', () => assert.equal(r.evidence.text, '{{secret:shop_password}}'));
+  r = await act({ type: 'screenshot' });
+  check('screenshots are omitted after secret entry because arbitrary page pixels may echo it', () => {
+    assert.equal(r.evidence.screenshot, undefined); assert.equal(r.evidence.screenshotOmitted, true);
+    assert.match(r.evidence.screenshotOmissionReason, /handled a secret/);
+  });
   r = await act({ type: 'type', selector: '#note', text: 'pin {{secret:bank}}' });
   check("another site's secret is refused, not typed", () => assert.equal(r.status, 'blocked') || assert.match(r.reason, /not for shop\.example\.test/));
 
@@ -127,8 +138,9 @@ async function main() {
   answers = ['deny'];
   r = await act({ type: 'click', selector: '#disguised', text: 'just shows details' });
   check('a submit disguised as "Show details" asks', () => assert.equal(cards.at(-1).action, 'click') || assert.match(cards.at(-1).reason, /Submits a form/));
-  check('the card carries the origin, the real element and a screenshot', () => {
-    const c = cards.at(-1); assert.equal(c.origin, SHOP); assert.equal(c.element.tag, 'button'); assert.equal(c.element.formMethod, 'post'); assert.ok(c.screenshot && c.screenshot.length > 100);
+  check('the card carries the origin and real element, and explains why its screenshot is omitted', () => {
+    const c = cards.at(-1); assert.equal(c.origin, SHOP); assert.equal(c.element.tag, 'button'); assert.equal(c.element.formMethod, 'post');
+    assert.equal(c.screenshot, undefined); assert.equal(c.screenshotOmitted, true); assert.match(c.screenshotOmissionReason, /handled a secret/);
   });
   check('Decline sends nothing', () => assert.equal(r.status, 'blocked') || assert.equal(posts.length, 0));
 
@@ -213,6 +225,35 @@ async function main() {
   await new Promise((res) => setTimeout(res, 1200));
   r = await act({ type: 'extract', selector: '#lab' });
   check('a popup that closes itself leaves the session usable', () => assert.equal(r.status, 'done'));
+
+  r = await act({ type: 'navigate', url: SHOP + '/revalidate' });
+  const postsBeforeReplacement = posts.length;
+  approvalHook = async () => {
+    const browserPage = launchedBrowser.contexts().at(-1).pages().at(-1);
+    await browserPage.evaluate(() => {
+      const old = document.querySelector('#approve-target');
+      old.replaceWith(old.cloneNode(true));
+    });
+  };
+  answers = ['approve'];
+  r = await act({ type: 'click', selector: '#approve-target' });
+  approvalHook = null;
+  check('approval is invalidated if the site replaces the exact target while the user decides', () => {
+    assert.equal(r.status, 'blocked'); assert.match(r.reason, /approved target changed/); assert.equal(posts.length, postsBeforeReplacement);
+  });
+
+  r = await act({ type: 'navigate', url: SHOP + '/revalidate' });
+  const postsBeforeOriginChange = posts.length;
+  approvalHook = async () => {
+    const browserPage = launchedBrowser.contexts().at(-1).pages().at(-1);
+    await browserPage.goto(PARTNER + '/frame');
+  };
+  answers = ['approve'];
+  r = await act({ type: 'click', selector: '#approve-target' });
+  approvalHook = null;
+  check('approval is invalidated if the page origin changes while the user decides', () => {
+    assert.equal(r.status, 'blocked'); assert.match(r.reason, /page changed/); assert.equal(posts.length, postsBeforeOriginChange);
+  });
 
   check('the secret appears in no result, card or log', () => {
     const everything = JSON.stringify({ cards: cards.map(({ screenshot, ...c }) => c), logs, state: executor.state(s) });
