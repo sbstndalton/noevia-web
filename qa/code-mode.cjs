@@ -38,7 +38,8 @@ const TASK='12345678-1234-4234-8234-123456789012';
        return r.fulfill({json:{ok:true}});
      }
      if(url.pathname.endsWith('/cancel')){tasks=[task({status:'cancelled',stage:null,approval:null,
-       result:{branch:'noevia/task-1234',tools:4,approvals:2,allowed:1,refused:1,denied:0},
+       result:{branch:'noevia/task-1234',tools:4,approvals:2,allowed:1,refused:1,denied:0,
+         network:{allowed:3,refused:2,hosts:[{host:'github.com',allowed:0,refused:2,reason:'host is not on this task’s list'},{host:'pypi.org',allowed:3,refused:0,reason:null}]}},
        // A harness that reported some of itself and not the rest: both halves must show.
        meta:{harness:'opencode',harnessVersion:'1.18.31',protocolVersion:1,usage:null,context:{used:8012,size:24576,percent:33},commands:2,failedCommands:1,messageChunks:3,
          limitations:['The harness did not report token usage.']},identityHash:'a'.repeat(64)})];return r.fulfill({json:tasks[0]});}
@@ -129,6 +130,10 @@ const TASK='12345678-1234-4234-8234-123456789012';
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow (long command)');
    await page.getByRole('button',{name:'Cancel task'}).click();
    await page.getByText('4 tool calls · 1 allowed · 1 declined · 0 refused by noevia').waitFor();
+   // Where it went through the egress proxy, and where it was refused (by name, so the next task can ask).
+   await page.getByText('Reached pypi.org (3)').waitFor();
+   await page.getByText(/^Refused github\.com \(2\)\. A task reaches only the domains it names/).waitFor();
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow (network note)');
    // What it reported, and — just as visibly — what it did not.
    await page.getByText('opencode 1.18.31 · context 33% of 24,576 · 2 commands, 1 failed').waitFor();
    await page.getByText('Not reported by this harness (1)').click();
@@ -139,6 +144,6 @@ const TASK='12345678-1234-4234-8234-123456789012';
    await page.close();
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS code-mode: tab hidden until the feature, repository/capability/domain choices, three approval answers with untruncated arguments, no standing allow for deletes, long commands shown whole, cancel; 375/768/1440 light/dark.');
+  console.log('PASS code-mode: tab hidden until the feature, repository/capability/domain choices, three approval answers with untruncated arguments, no standing allow for deletes, long commands shown whole, cancel, network hosts reached and refused; 375/768/1440 light/dark.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

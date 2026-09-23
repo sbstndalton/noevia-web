@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch } from '../../api';
 import { ShellIcon } from '../ShellIcon';
@@ -64,15 +64,29 @@ export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false }: 
   const [nc, setNc] = useState<Nextcloud | null>(null);
   const [page, setPage] = useState<'list' | 'gdrive' | 'nextcloud'>('list');
   const [error, setError] = useState('');
-  const load = useCallback(() => call<{ connectors: (Drive | Nextcloud)[] }>('/api/connectors').then((r) => {
-    setDrive(r.connectors.find((c) => c.id === 'gdrive') as Drive);
-    setNc((r.connectors.find((c) => c.id === 'nextcloud') as Nextcloud) || null);
+  const request = useRef(0);
+  const invalidateLoads = useCallback(() => { ++request.current; }, []);
+  const updateDrive = useCallback((next: Drive) => {
+    invalidateLoads();
+    setDrive(next);
     setError('');
-  }).catch((e) => setError((e as Error).message)), []);
-  useEffect(() => { void load(); }, [load]);
+  }, [invalidateLoads]);
+  const load = useCallback(async () => {
+    const current = ++request.current;
+    try {
+      const r = await call<{ connectors: (Drive | Nextcloud)[] }>('/api/connectors');
+      if (current !== request.current) return;
+      setDrive(r.connectors.find((c) => c.id === 'gdrive') as Drive);
+      setNc((r.connectors.find((c) => c.id === 'nextcloud') as Nextcloud) || null);
+      setError('');
+    } catch (e) {
+      if (current === request.current) setError((e as Error).message);
+    }
+  }, []);
+  useEffect(() => { void load(); return invalidateLoads; }, [load, invalidateLoads]);
 
   if (page === 'nextcloud' && nc) return <NextcloudPage nc={nc} onBack={() => setPage('list')} onChange={setNc}/>;
-  if (page === 'gdrive' && drive) return <DrivePage drive={drive} isAdmin={isAdmin} onBack={() => setPage('list')} onChange={setDrive} reload={load} onStartChat={onStartChat}/>;
+  if (page === 'gdrive' && drive) return <DrivePage drive={drive} isAdmin={isAdmin} onBack={() => { invalidateLoads(); setPage('list'); }} onChange={updateDrive} onActionStart={invalidateLoads} reload={load} onStartChat={onStartChat}/>;
 
   return <>
     {!hideTitle && <div className="settings-title"><h1>Connectors</h1><p>Services noevia can use on your behalf. Each connection is yours alone: other people on this server never reach it.</p></div>}
@@ -100,22 +114,23 @@ export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false }: 
   </>;
 }
 
-function DrivePage({ drive, isAdmin, onBack, onChange, reload, onStartChat }: {
-  drive: Drive; isAdmin: boolean; onBack: () => void; onChange: (d: Drive) => void; reload: () => Promise<unknown>; onStartChat?: (prompt: string) => void;
+function DrivePage({ drive, isAdmin, onBack, onChange, onActionStart, reload, onStartChat }: {
+  drive: Drive; isAdmin: boolean; onBack: () => void; onChange: (d: Drive) => void; onActionStart: () => void; reload: () => Promise<unknown>; onStartChat?: (prompt: string) => void;
 }): JSX.Element {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [confirmOff, setConfirmOff] = useState(false);
   const act = async (label: string, work: () => Promise<Drive>) => {
+    onActionStart();
     setBusy(label); setError('');
     try { onChange(await work()); } catch (e) { setError((e as Error).message); } finally { setBusy(''); }
   };
   // Waiting on Google: refresh until the approval lands, so the page turns green by itself.
   useEffect(() => {
-    if (drive.state !== 'pending') return;
+    if (drive.state !== 'pending' || busy) return;
     const t = window.setInterval(() => { void reload(); }, 3000);
     return () => window.clearInterval(t);
-  }, [drive.state, reload]);
+  }, [drive.state, busy, reload]);
 
   const connect = () => act('connect', async () => {
     // Open the tab inside the click, or the browser blocks it as a pop-up.
