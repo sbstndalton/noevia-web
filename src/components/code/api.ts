@@ -24,7 +24,8 @@ export interface CodeTask {
     commands: number; failedCommands: number; messageChunks: number; limitations: string[];
   } | null;
   identityHash: string | null;
-  result: { stopReason?: string; branch?: string; tools?: number; approvals?: number; allowed?: number; refused?: number; denied?: number } | null;
+  result: { stopReason?: string; branch?: string; tools?: number; approvals?: number; allowed?: number; refused?: number; denied?: number;
+    network?: NetworkActivity } | null;
 }
 export interface Harness { id: string; label: string; version: string | null }
 export interface PreparationMode { id: string; label: string; available: boolean; reason: string }
@@ -53,3 +54,9 @@ export const startTask = (projectId: string, body: StartTask) => post(base(proje
 export const cancelTask = (projectId: string, id: string) => post(`${base(projectId)}/${id}/cancel`).then(r => read<CodeTask>(r));
 export const decideTask = (projectId: string, id: string, decision: 'approve' | 'approve_all' | 'deny') =>
   post(`${base(projectId)}/${id}/approve`, { decision }).then(r => read<{ ok: true }>(r));
+
+/** What a networked task reached through the egress proxy, and what it was refused, by host. */
+export type NetworkActivity = {
+  allowed: number; refused: number;
+  hosts: { host: string; allowed: number; refused: number; reason: string | null }[];
+};
