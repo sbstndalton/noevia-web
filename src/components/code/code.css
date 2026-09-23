@@ -36,6 +36,13 @@
 .code-task.is-waiting_approval .code-status { border-color: var(--accent); color: var(--text); font-weight: 600; }
 .code-task.is-failed .code-status, .code-task.is-interrupted .code-status { border-color: var(--danger); color: var(--danger); }
 .code-meta, .code-stage { margin: 0; font-size: var(--text-caption); color: var(--text-secondary); overflow-wrap: anywhere; }
+.code-plan { min-width: 0; max-height: min(40vh, 22rem); overflow: auto; padding: 10px 12px; border-radius: 10px; background: var(--bg-surface); }
+.code-plan:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.code-plan h4 { margin: 0 0 6px; font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); }
+.code-plan ul { margin: 8px 0 0; padding-left: 20px; font-size: var(--text-footnote); line-height: 1.5; }
+.code-plan li { overflow-wrap: anywhere; }
+.code-plan li + li { margin-top: 6px; }
+.code-plan-note { margin: 0; font-size: var(--text-caption2); line-height: 1.5; color: var(--text-secondary); }
 .code-output { min-width: 0; max-height: min(40vh, 22rem); overflow: auto; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px; background: var(--bg-surface); }
 .code-output:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .code-output h4 { margin: 0; font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); }

@@ -231,6 +231,14 @@ function TaskCard({ task, busy, onDecide, onCancel }: {
     {task.error && <p className="code-note is-error">{task.error}</p>}
     {task.approval && <ApprovalCard approval={task.approval} busy={busy.startsWith('decide:')} onDecide={onDecide}/>}
     {active && <div className="code-actions"><button type="button" className="btn btn-secondary" onClick={onCancel} disabled={!!busy}>Cancel task</button></div>}
+    {task.plan && <section className="code-plan" role="region" aria-label="Reported plan" tabIndex={0}>
+      <h4>Last reported plan</h4>
+      <p className="code-plan-note">Reported as {task.plan.status}.</p>
+      {task.plan.truncated && <p className="code-plan-note">Some plan text was shortened.</p>}
+      {task.plan.status !== 'skipped' && (task.plan.subQuestions.length
+        ? <ul>{task.plan.subQuestions.map((entry, index) => <li key={index}>{entry}</li>)}</ul>
+        : <p className="code-plan-note">No entries were reported.</p>)}
+    </section>}
     {task.assistantOutput?.text && <section className="code-output" role="region" aria-label="Assistant output" tabIndex={0}>
       <h4>Assistant output</h4>
       {task.assistantOutput.truncated && <p className="code-output-note">Showing the first 32 KiB of output.</p>}
