@@ -79,11 +79,10 @@ const PORT=31383,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
    assert.equal(await s.locator('.gdrive-pending').getByRole('alert').count(),1);
    assert.ok(await cancel.isEnabled(),'Cancel can be retried');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`no horizontal overflow after failure at ${width}`);
-   await close(s);
+   if(width!==1440 || theme!=='dark')await close(s);
   }
   assert.equal(failedCancels,6);
   await page.unroute('**/api/admin/offsite-backup/google/disconnect');
-  s=await open(1440);
   await s.getByRole('button',{name:'Cancel'}).click();
   await s.getByRole('button',{name:'Connect Google Drive'}).waitFor();
   assert.equal(await s.getByRole('alert').count(),0,'successful retry clears the error');
@@ -111,6 +110,6 @@ const PORT=31383,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
   assert.equal(google.state.revoked.length,1);
   await close(s);
   assert.deepEqual(errors,[]);
-  console.log('PASS google drive: one-button connect with no commands (375/768/1440 light/dark), code shown, turns green by itself after approval, every encrypted object copied, recovery key download, no token in the page, failed Cancel alert and successful retry at 375/768/1440 light/dark, disconnect revokes.');
+  console.log('PASS google drive: one-button connect with no commands (375/768/1440 light/dark), code shown, turns green by itself after approval, every encrypted object copied, recovery key download, no token in the page, failed Cancel alert at 375/768/1440 light/dark and successful retry, disconnect revokes.');
  }finally{await browser.close();server.kill('SIGKILL');await google.close();fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
