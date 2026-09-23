@@ -1794,7 +1794,27 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .mm-easy-measure > summary, .mm-easy-autotune > summary { flex-wrap: wrap; }
 @media (max-width: 519px) { .mm-easy-measure > summary small, .mm-easy-autotune > summary small { flex-basis: 100%; padding-left: calc(1em + 8px); } }
 .mm-autotune { display: flex; flex-direction: column; gap: 10px; }
-.mm-autotune .mm-cancel-action { margin-block: var(--space-3); }
+.mm-autotune-status { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding-block: 4px 10px; }
+.mm-autotune-status .mm-note { margin: 0; }
+.mm-autotune-status .mm-progress { align-self: stretch; width: 100%; }
+.mm-autotune-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 12px; }
+.mm-autotune .mm-cancel-action { margin-top: 4px; }
+.mm-autotune-models, .mm-autotune-phases { display: flex; flex-direction: column; gap: 6px; }
+.mm-autotune-model, .mm-autotune-phase { min-width: 0; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--bg-surface); }
+.mm-autotune-model > summary, .mm-autotune-phase > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-height: 44px; padding: 8px 12px; cursor: pointer; overflow-wrap: anywhere; list-style: none; }
+.mm-autotune-model > summary::marker, .mm-autotune-phase > summary::marker { content: ''; }
+.mm-autotune-model > summary::-webkit-details-marker, .mm-autotune-phase > summary::-webkit-details-marker { display: none; }
+.mm-autotune-model > summary::before, .mm-autotune-phase > summary::before { content: ''; flex: none; width: 9px; height: 10px; background: currentColor; clip-path: polygon(0 0, 25% 0, 75% 50%, 25% 100%, 0 100%, 50% 50%); transform: rotate(0deg); transition: transform 160ms ease; }
+.mm-autotune-model[open] > summary::before, .mm-autotune-phase[open] > summary::before { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .mm-autotune-model > summary::before, .mm-autotune-phase > summary::before { transition: none; } }
+.mm-autotune-model > summary span, .mm-autotune-phase > summary span, .mm-autotune-phase > summary small { margin-left: 8px; color: var(--text-secondary); font-size: var(--text-caption); font-weight: 400; }
+.mm-autotune-model > summary:focus-visible, .mm-autotune-phase > summary:focus-visible, .mm-autotune-help > summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 8px; }
+.mm-autotune-phases { list-style: none; margin: 0; padding: 0 10px 10px; }
+.mm-autotune-phase .mm-table-wrap { margin: 0 8px 8px; }
+.mm-autotune-model .mm-easy-result { margin: 0 10px 10px; }
+.mm-autotune-help { border-top: 1px solid var(--border-subtle); padding-top: 8px; }
+.mm-autotune-help > summary { min-height: 44px; cursor: pointer; }
+.mm-autotune-help .mm-note { margin: 0 0 8px; }
 .mm-progress { display: flex; flex-direction: column; gap: 4px; font-size: var(--text-caption); color: var(--text-secondary); }
 .mm-progress progress { width: 100%; height: 8px; accent-color: var(--accent); }
 .mm-warn { color: var(--status-warning); }
