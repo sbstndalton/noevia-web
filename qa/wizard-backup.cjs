@@ -52,6 +52,35 @@ const PORT=31384,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
   await page.getByLabel('Google sign-in code').waitFor();
   await googleTab.waitForURL(/\/device$/);await googleTab.getByText('Code: WDJB-MJHT').waitFor();await googleTab.close();
   if(shots)await page.screenshot({path:`${shots}/wizard-backup-pending-1440.png`,fullPage:true});
+
+  // The shared pending view must expose a failed Cancel in the wizard too.
+  let failedCancels=0;
+  await page.route('**/api/admin/offsite-backup/google/disconnect',route=>{
+   failedCancels++;
+   return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Synthetic Cancel failure'})});
+  });
+  for(const width of [375,768,1440])for(const theme of ['light','dark']){
+   await page.setViewportSize({width,height:width<768?812:900});
+   await page.evaluate(t=>localStorage.setItem('cowork-theme',t),theme);
+   await toBackupStep();
+   await page.getByLabel('Google sign-in code').waitFor();
+   const cancel=page.getByRole('button',{name:'Cancel'});
+   await cancel.focus();
+   assert.ok(await cancel.evaluate(el=>document.activeElement===el),'Cancel can receive keyboard focus');
+   await page.keyboard.press('Enter');
+   await page.locator('.gdrive-pending').getByRole('alert').getByText('Synthetic Cancel failure').waitFor();
+   await page.waitForFunction(()=>!document.querySelector('.gdrive-pending .gdrive-actions button')?.disabled);
+   assert.equal(await page.locator('.gdrive-pending').getByRole('alert').count(),1);
+   assert.ok(await cancel.isEnabled(),'Cancel can be retried');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`no horizontal overflow after failure at ${width}`);
+  }
+  assert.equal(failedCancels,6);
+  await page.unroute('**/api/admin/offsite-backup/google/disconnect');
+  await page.getByRole('button',{name:'Cancel'}).click();
+  await page.getByRole('button',{name:'Connect Google Drive'}).waitFor();
+  assert.equal(await page.getByRole('alert').count(),0,'successful retry clears the error');
+  const [retryTab]=await Promise.all([page.context().waitForEvent('page'),page.getByRole('button',{name:'Connect Google Drive'}).click()]);
+  await page.getByLabel('Google sign-in code').waitFor();await retryTab.close();
   google.approve();
   await page.getByText('Google Drive is connected as backup-owner@example.com.').waitFor({timeout:20000});
   await page.getByRole('button',{name:'Continue',exact:true}).click();
@@ -62,6 +91,6 @@ const PORT=31384,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
   assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'light','stays light');
   assert.ok(await page.getByLabel('Light theme').isChecked());
   assert.deepEqual(errors,[]);
-  console.log('PASS wizard backup: admin sees a one-button Google Drive step (375/768/1440 light/dark), nothing to paste, skip works, connecting opens Google in a new tab, shows the code and confirms by itself after approval; light mode stays light while picking palettes.');
+  console.log('PASS wizard backup: admin sees a one-button Google Drive step (375/768/1440 light/dark), nothing to paste, skip works, connecting opens Google in a new tab, shows the code, reports failed Cancel at 375/768/1440 light/dark, and confirms by itself after retry and approval; light mode stays light while picking palettes.');
  }finally{await browser.close();server.kill('SIGKILL');await google.close();fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
