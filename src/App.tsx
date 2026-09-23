@@ -185,9 +185,13 @@ export default function App(): JSX.Element {
   // and model picker kept showing the pre-change set until a reload.
   useModelsChanged(refreshModels);
 
+  const workspaceRequest = useRef(0);
+  useEffect(() => () => { workspaceRequest.current += 1; }, []);
   const refreshProjects = useCallback(() => {
+    const request = ++workspaceRequest.current;
     return fetchWorkspace()
       .then((w) => {
+        if (request !== workspaceRequest.current) return;
         setProjects((w.projects || []).map((p) => ({ ...p, ...pendingPatches.current[p.id] })));
         setFreeChats(Array.isArray(w.freeChats) ? w.freeChats : []);
         setWorkspaceLoaded(true);
