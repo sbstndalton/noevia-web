@@ -4,7 +4,7 @@ import DiarySharing from './DiarySharing';
 import DiaryConnectors from './DiaryConnectors';
 import AppPasswords from './AppPasswords';
 import { ModelsSummary } from './models/ModelsSummary';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import type { HealthState, InstalledModel, LiveStats, Project, Provider, RouteRule } from '../types';
 import { createInvitation, createRecovery, deleteProvider, deleteUser, fetchProfile, fetchProviders, fetchUsers, logout, passkeyRegistrationOptions, passkeyRegistrationVerify, removePasskey, revokeSession, setUserDisabled, updateFeatures } from '../api';
@@ -154,43 +154,98 @@ function SecurityCard(): JSX.Element {
 function UsersCard(): JSX.Element {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [users, setUsers] = useState<AuthUser[]>([]);
-  const [notice, setNotice] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
-  const refresh = async () => {
-    setLoading(true);
-    setError(null);
-    setDenied(false);
+  const pending = useRef(new Set<string>());
+  const [busy, setBusy] = useState<Record<string, string>>({});
+  const [feedback, setFeedback] = useState<Record<string, { error?: string; notice?: string; link?: string }>>({});
+  const listRequest = useRef(0);
+  const refreshUsers = async () => {
+    const request = ++listRequest.current;
+    const result = await fetchUsers();
+    if (request === listRequest.current) { setUsers(result.users); setError(null); }
+  };
+  const load = async () => {
+    setLoading(true); setError(null);
     try {
       const profile = await fetchProfile();
       setUser(profile.user);
-      if (profile.user.role !== 'admin') { setDenied(true); return; }
-      const result = await fetchUsers();
-      setUsers(result.users);
+      setDenied(profile.user.role !== 'admin');
+      if (profile.user.role === 'admin') await refreshUsers();
     } catch {
       setError('Users could not be loaded. Please try again.');
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { void load(); }, []);
+  const act = async (key: string, label: string, action: () => Promise<unknown>, success: string, reload = true, globalSuccess = false) => {
+    // Ref closes the gap before React renders the disabled controls.
+    if (pending.current.has(key)) return;
+    pending.current.add(key);
+    setBusy(prev => ({ ...prev, [key]: label }));
+    setFeedback(prev => ({ ...prev, [key]: {} }));
+    setNotice('');
+    try {
+      await action();
+      if (reload) {
+        if (globalSuccess) setNotice(success);
+        else setFeedback(prev => ({ ...prev, [key]: { notice: success } }));
+        try { await refreshUsers(); }
+        catch { setError('The change succeeded, but the updated users could not be loaded. Reload users to confirm the saved state.'); }
+      }
+    } catch (e) {
+      const message = e instanceof Error && e.message ? e.message : `${label} could not be confirmed. Reload users to check the saved state, then try again.`;
+      setFeedback(prev => ({ ...prev, [key]: { error: message } }));
     } finally {
-      setLoading(false);
+      pending.current.delete(key);
+      setBusy(prev => { const next = { ...prev }; delete next[key]; return next; });
     }
   };
-  useEffect(() => { void refresh(); }, []);
-  const invite = async () => {
-    const x = await createInvitation();
-    await navigator.clipboard.writeText(`${window.location.origin}/?invite=${encodeURIComponent(x.token)}`);
-    setNotice('Single-use invitation copied. It expires in 24 hours.');
+  const copyLink = async (key: string, link: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setFeedback(prev => ({ ...prev, [key]: { notice: `${label} copied.`, link } }));
+    } catch {
+      setFeedback(prev => ({ ...prev, [key]: { error: `${label} was created, but copying failed. Copy the link below or try copying again.`, link } }));
+    }
   };
-  if (error) return <div><h2>Users</h2><p className="route-note" role="alert">{error}</p><button className="btn btn-secondary" onClick={() => void refresh()}>Retry users</button></div>;
-  if (loading || !user) return <div><div className="rail-label">Users</div><p className="route-note">Loading…</p></div>;
+  const createLink = (key: string, recoveryId?: string) => act(key, recoveryId ? 'Create recovery link' : 'Create invitation', async () => {
+    const result = recoveryId ? await createRecovery(recoveryId) : await createInvitation();
+    const link = `${window.location.origin}/?${recoveryId ? 'recovery' : 'invite'}=${encodeURIComponent(result.token)}`;
+    await copyLink(key, link, recoveryId ? 'Recovery link' : 'Single-use invitation (expires in 24 hours)');
+  }, '', false);
+  const actionFeedback = (key: string) => {
+    const value = feedback[key];
+    return <>
+      {busy[key] && <p className="route-note" role="status">{busy[key]}…</p>}
+      {value?.error && <p className="modal-err" role="alert">{value.error}</p>}
+      {value?.notice && <p className="route-note" role="status">{value.notice}</p>}
+      {value?.link && <div>
+        <label className="field">Created link<input className="modal-input" readOnly value={value.link} onFocus={e => e.currentTarget.select()} /></label>
+        <button className="popup-tab" disabled={!!busy[key]} onClick={() => void copyLink(key, value.link!, key === 'invitation' ? 'Invitation link' : 'Recovery link')}>Copy link again</button>
+      </div>}
+    </>;
+  };
+  if (!user) return <div><h2>Users</h2>{loading ? <p role="status">Loading users…</p> : <><p className="route-note" role="alert">{error}</p><button className="btn btn-secondary" onClick={() => void load()}>Retry users</button></>}</div>;
   if (denied) return <div><div className="rail-label">Users</div><p className="route-note">Administrator access is required to manage accounts.</p></div>;
   return <div>
     <div className="rail-label" style={{ marginBottom: 12 }}>Users</div>
+    {notice && <p className="route-note" role="status">{notice}</p>}
     <div className="card-list">
-      {users.length === 0 && <p className="route-note">No users returned by the server.</p>}
-      {users.map(u => <div className="model-row" key={u.id}><div className="model-name-group"><span className="model-name">{u.displayName}</span><span className="model-quant">@{u.username} · {u.role}{u.disabled ? ' · disabled' : ''}</span></div>{u.id !== user.id && <><button className="popup-tab" onClick={() => void setUserDisabled(u.id, !u.disabled).then(refresh)}>{u.disabled ? 'Enable' : 'Disable'}</button><button className="popup-tab" onClick={() => void createRecovery(u.id).then(async r => { await navigator.clipboard.writeText(`${window.location.origin}/?recovery=${r.token}`); setNotice('Recovery link copied.'); })}>Recovery</button><button className="recents-del" title="Delete user" onClick={() => { const typed = window.prompt(`Type ${u.username} to permanently delete this noevia account. Remote corpus files will be preserved.`); if (typed === u.username) void deleteUser(u.id, typed).then(refresh); }}><ShellIcon name="close" size={16}/></button></>}</div>)}
-      <button className="modal-btn secondary" onClick={() => void invite()}><ShellIcon name="plus" size={16}/>Copy invitation link</button>
+      {users.length === 0 && !loading && <p className="route-note">No users returned by the server.</p>}
+      {users.map(u => <div key={u.id}>
+        <div className="model-row"><div className="model-name-group"><span className="model-name">{u.displayName}</span><span className="model-quant">@{u.username} · {u.role}{u.disabled ? ' · disabled' : ''}</span></div>{u.id !== user.id && <>
+          <button className="popup-tab" disabled={!!busy[u.id] || loading} onClick={() => void act(u.id, u.disabled ? 'Enable account' : 'Disable account', () => setUserDisabled(u.id, !u.disabled), 'Account updated.')}>{u.disabled ? 'Enable' : 'Disable'}</button>
+          <button className="popup-tab" disabled={!!busy[u.id] || loading} onClick={() => void createLink(u.id, u.id)}>Recovery</button>
+          <button className="recents-del" title="Delete user" aria-label={`Delete user ${u.username}`} disabled={!!busy[u.id] || loading} onClick={() => { const typed = window.prompt(`Type ${u.username} to permanently delete this noevia account. Remote corpus files will be preserved.`); if (typed === u.username) void act(u.id, 'Delete account', () => deleteUser(u.id, typed), 'Account deleted.', true, true); }}><ShellIcon name="close" size={16}/></button>
+        </>}</div>{actionFeedback(u.id)}
+      </div>)}
+      <button className="modal-btn secondary" disabled={!!busy.invitation || loading} onClick={() => void createLink('invitation')}><ShellIcon name="plus" size={16}/>Copy invitation link</button>
+      {actionFeedback('invitation')}
     </div>
-    {notice && <p className="route-note">{notice}</p>}
+    {error && <p className="modal-err" role="alert">{error}</p>}
+    <button className="popup-tab" disabled={loading || Object.keys(busy).length > 0} onClick={() => void load()}>{loading ? 'Loading…' : 'Reload users'}</button>
   </div>;
 }
 
