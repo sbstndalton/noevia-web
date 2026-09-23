@@ -68,6 +68,7 @@ export function GoogleDriveConnect({ google, onChange }: { google: GoogleState; 
   if (google.state === 'not-configured') return <p className="gdrive-note">Google Drive isn’t available in this version of noevia.</p>;
 
   if (google.state === 'pending') return <div className="gdrive-pending" aria-live="polite">
+    {error && <p className="route-note" role="alert">{error}</p>}
     <p>Google’s sign-in page opened in a new tab. Sign in there and enter this code (or open <a href={google.verificationUrl} target="_blank" rel="noreferrer">{google.verificationUrl?.replace(/^https?:\/\//, '')}</a> on any device):</p>
     <div className="gdrive-code">
       <output aria-label="Google sign-in code">{google.userCode}</output>

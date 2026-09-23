@@ -57,6 +57,38 @@ const PORT=31383,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
   assert.equal(await code.innerText(),'WDJB-MJHT');
   assert.match(await s.getByRole('link',{name:'Open Google'}).getAttribute('href'),/\/device$/);
   if(shots)await page.screenshot({path:`${shots}/gdrive-pending-1440-light.png`});
+
+  // A failed Cancel must be announced while sign-in stays pending, at each layout and theme.
+  await close(s);
+  let failedCancels=0;
+  await page.route('**/api/admin/offsite-backup/google/disconnect',route=>{
+   failedCancels++;
+   return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Synthetic Cancel failure'})});
+  });
+  for(const width of [375,768,1440])for(const theme of ['light','dark']){
+   await page.setViewportSize({width,height:width<768?812:900});
+   await page.evaluate(t=>localStorage.setItem('cowork-theme',t),theme);await page.reload();
+   s=await open(width);
+   await s.getByLabel('Google sign-in code').waitFor();
+   const cancel=s.getByRole('button',{name:'Cancel'});
+   await cancel.focus();
+   assert.ok(await cancel.evaluate(el=>document.activeElement===el),'Cancel can receive keyboard focus');
+   await page.keyboard.press('Enter');
+   await s.locator('.gdrive-pending').getByRole('alert').getByText('Synthetic Cancel failure').waitFor();
+   await page.waitForFunction(()=>!document.querySelector('.gdrive-pending .gdrive-actions button')?.disabled);
+   assert.equal(await s.locator('.gdrive-pending').getByRole('alert').count(),1);
+   assert.ok(await cancel.isEnabled(),'Cancel can be retried');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`no horizontal overflow after failure at ${width}`);
+   await close(s);
+  }
+  assert.equal(failedCancels,6);
+  await page.unroute('**/api/admin/offsite-backup/google/disconnect');
+  s=await open(1440);
+  await s.getByRole('button',{name:'Cancel'}).click();
+  await s.getByRole('button',{name:'Connect Google Drive'}).waitFor();
+  assert.equal(await s.getByRole('alert').count(),0,'successful retry clears the error');
+  await s.getByRole('button',{name:'Connect Google Drive'}).click();
+  await s.getByLabel('Google sign-in code').waitFor();
   google.approve();
   await s.getByText(/^Connected · /).waitFor({timeout:20000});
   await s.getByText('backup-owner@example.com').waitFor();
@@ -79,6 +111,6 @@ const PORT=31383,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
   assert.equal(google.state.revoked.length,1);
   await close(s);
   assert.deepEqual(errors,[]);
-  console.log('PASS google drive: one-button connect with no commands (375/768/1440 light/dark), code shown, turns green by itself after approval, every encrypted object copied, recovery key download, no token in the page, disconnect revokes.');
+  console.log('PASS google drive: one-button connect with no commands (375/768/1440 light/dark), code shown, turns green by itself after approval, every encrypted object copied, recovery key download, no token in the page, failed Cancel alert and successful retry at 375/768/1440 light/dark, disconnect revokes.');
  }finally{await browser.close();server.kill('SIGKILL');await google.close();fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
