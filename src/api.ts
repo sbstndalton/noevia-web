@@ -66,7 +66,7 @@ export const deleteUser = (id: string, username: string) => apiFetch(`/api/admin
 export interface StorageConnection { kind: 'local' | 'nextcloud' | 'webdav' | 's3'; baseUrl: string; bucket?: string; username: string; corpusRoot: string; secretConfigured?: boolean }
 export const fetchStorage = () => getJson<StorageConnection>('/api/integrations/storage');
 export const saveStorage = (body: StorageConnection & { secret?: string }) => putJson<StorageConnection>('/api/integrations/storage', body);
-export const testStorage = (body: Partial<StorageConnection> & { secret?: string; useSaved?: boolean }) => postJson<{ ok: true }>('/api/integrations/storage/test', body);
+export const testStorage = (body: Partial<StorageConnection> & { secret?: string; useSavedSecret?: boolean }) => postJson<{ ok: true }>('/api/integrations/storage/test', body);
 export const startNextcloud = (baseUrl: string) => postJson<{ flowId: string; loginUrl: string; expiresAt: number }>('/api/integrations/storage/nextcloud/start', { baseUrl });
 export const pollNextcloud = (flowId: string, corpusRoot: string) => postJson<StorageConnection & { pending?: boolean }>('/api/integrations/storage/nextcloud/poll', { flowId, corpusRoot });
 export interface StorageEntry { name: string; path: string; isDir: boolean; size: number | null; ext: string }
