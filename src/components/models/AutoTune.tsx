@@ -83,12 +83,32 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   const shownModels = (mine?.models || []).filter(item => !model || item.model === model);
   const last = history[0];
   const complete = shownModels.reduce((sum, item) => sum + item.phases.filter(phase => phase.status === 'passed').length, 0);
+  const resumable = !!mine?.models && ['cancelled', 'interrupted', 'failed'].includes(mine.status);
+  const actions = !running && <div className="mm-autotune-actions">
+    <label className="mm-check"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />Chat pauses while each model is tuned. I have stopped Diary background jobs and other programs that use the model server.</label>
+    <div className="mm-actions">
+      {resumable && <button className="modal-btn primary" disabled={busy || !confirmed} onClick={() => void mutate('/api/models/autotune/resume', { confirmPause: confirmed })}>{busy ? 'Resuming…' : 'Resume auto-tune'}</button>}
+      <button className={'modal-btn ' + (resumable ? 'secondary' : 'primary')} disabled={busy || !confirmed || (!model && !scan?.models.length)} onClick={() => void mutate('/api/models/autotune', { model, confirmPause: confirmed, untuned: !model })}>{busy ? 'Starting…' : model ? 'Auto-tune and apply' : 'Tune untuned models and apply'}</button>
+    </div>
+  </div>;
   return <div className="mm-autotune">
-    <p className="mm-note">Tunes one model at a time: KV cache, context size, drafting, then batch size. Each measured setting is saved before the next begins. Three quality probes and long-context recall are smoke tests, not a general quality guarantee.</p>
-    <p className="mm-note">Chat pauses during each model and becomes available between models. If chat is active, tuning waits for it to finish. Each context test has a 120-second prompt budget.</p>
     {!model && scan && !running && <p className="mm-note" role="status">{scan.models.length} model{scan.models.length === 1 ? '' : 's'} need tuning{scan.models.length ? ': ' + scan.models.join(', ') : '.'} {scan.skipped.length} skipped (already tuned or not configured for chat).</p>}
     {last && !running && <p className="mm-note" role="status">Last tuned {new Date(last.at).toLocaleString()}: <strong>{last.specLabel}</strong>, {last.generation} tokens/s{last.kv ? ', ' + last.kv + ' KV, ' + last.context?.toLocaleString() + ' context' : ''}{last.ubatch ? ', micro-batch ' + last.ubatch : ''}.</p>}
-    {mine && <div aria-live="polite">
+    {mine && <div>
+      <div className="mm-autotune-status" aria-live="polite">
+        <p className="mm-note"><strong>{mine.status === 'running' ? mine.phase : mine.status === 'passed' ? 'Tuned' : mine.status === 'cancelled' ? 'Cancelled' : mine.status === 'interrupted' ? 'Interrupted' : 'Failed'}</strong>{mine.error ? ' — ' + mine.error : ''}</p>
+        {mine.queueProgress && <p className="mm-note">Models completed: {mine.queueProgress.done} of {mine.queueProgress.total}. {running ? 'Now tuning ' + mine.model + '.' : ''}</p>}
+        {mine.models && <label className="mm-progress"><span className="sr-only">Auto-tune progress</span>
+          <progress value={complete} max={Math.max(1, shownModels.length * 4)}/><span aria-hidden="true">{complete} of {shownModels.length * 4} settings saved</span>
+        </label>}
+        {running && <button className="modal-btn secondary mm-cancel-action" disabled={busy} onClick={() => void mutate('/api/models/autotune/cancel')}>{busy ? 'Cancelling…' : 'Cancel auto-tune'}</button>}
+      </div>
+      {actions}
+      {mine.log && mine.log.length > 0 && (running
+        ? <ActivityLog lines={mine.log} startedAt={mine.startedAt ?? mine.log[0].at} live/>
+        : <details className="mm-activity-details"><summary>What it did ({mine.log.length} lines)</summary>
+            <ActivityLog lines={mine.log} startedAt={mine.startedAt ?? mine.log[0].at}/>
+          </details>)}
       {!mine.models && <div>
         {mine.queue && <ul className="mm-list" aria-label="Auto-tune queue">{mine.queue.map(item => <li key={item.model}>{item.model} · {item.status}{item.error ? ' — ' + item.error : ''}</li>)}</ul>}
         {mine.steps && mine.steps.length > 0 && <div className="mm-table-wrap" role="region" aria-label="Auto-tune steps" tabIndex={0}><table className="mm-table"><thead><tr><th>Test</th><th>State</th></tr></thead>
@@ -96,42 +116,33 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
         {mine.result && <p className="mm-note">Saved: {mine.result.specLabel}, {mine.result.generation} tokens/s.</p>}
         {mine.status === 'interrupted' && <p className="mm-note">This older run cannot resume. Start a new tune after reviewing its settings.</p>}
       </div>}
-      <div aria-label="Auto-tune models">{shownModels.map(item => <section key={item.model} className="mm-panel" aria-label={item.model}>
-        <h4>{item.model} <small>{item.status}{item.error ? ' — ' + item.error : ''}</small></h4>
-        <ol className="mm-list" aria-label={item.model + ' phases'}>{item.phases.map(phase => <li key={phase.id}>
-          <span><strong>{phase.label}</strong><small>{phase.status}{phase.reason ? ' — ' + phase.reason : ''}</small>
-            {phase.value && <small>Saved: {savedSummary(phase.value)}</small>}</span>
+      <div className="mm-autotune-models" aria-label="Auto-tune models">{shownModels.map(item => <details key={item.model} className="mm-autotune-model" open={item.status === 'running' || item.status === 'failed' || item.status === 'interrupted'}>
+        <summary><strong>{item.model}</strong><span>{item.status}{item.error ? ' — ' + item.error : ''}</span></summary>
+        <ol className="mm-autotune-phases" aria-label={item.model + ' phases'}>{item.phases.map(phase => <li key={phase.id}>
+          <details className="mm-autotune-phase" open={phase.status === 'running' || phase.status === 'failed' || phase.status === 'interrupted'}>
+            <summary><strong>{phase.label}</strong><span>{phase.status}{phase.reason ? ' — ' + phase.reason : ''}</span>
+              {phase.value && <small>Saved: {savedSummary(phase.value)}</small>}</summary>
           {phase.steps.length > 0 && <div className="mm-table-wrap" role="region" aria-label={item.model + ' ' + phase.label + ' steps'} tabIndex={0}><table className="mm-table">
             <thead><tr><th>Test</th><th>State</th><th>Measured</th></tr></thead>
             <tbody>{phase.steps.map(row => <tr key={row.id}><td>{row.label}</td><td>{row.status}{row.reason ? ' — ' + row.reason : ''}</td>
               <td className="mm-mono">{row.generation ? row.generation + ' tokens/s' : row.promptPerSecond ? row.promptPerSecond + ' prompt tokens/s' : row.ctx ? row.ctx + ' tokens' : '—'}</td></tr>)}</tbody>
           </table></div>}
+          </details>
         </li>)}</ol>
         {item.result && <div className="mm-easy-result" role="status"><div className="mm-easy-result-text">
           <p>Saved: <strong>{item.result.specLabel}</strong> at {item.result.generation} tokens/s{item.result.ubatch ? ', micro-batch ' + item.result.ubatch + ' (' + item.result.promptPerSecond + ' prompt tokens/s)' : ''}.</p>
           <p className="mm-note">KV cache: {item.result.kv}. Context: {item.result.context?.toLocaleString()} tokens. Draft acceptance: {item.result.acceptance == null ? 'not applicable' : item.result.acceptance + '%'}. All three quality probes passed.</p>
         </div></div>}
-      </section>)}</div>
-      {mine.queueProgress && <p className="mm-note">Models completed: {mine.queueProgress.done} of {mine.queueProgress.total}. {running ? 'Now tuning ' + mine.model + '.' : ''}</p>}
-      <p className="mm-note"><strong>{mine.status === 'running' ? mine.phase : mine.status === 'passed' ? 'Tuned' : mine.status === 'cancelled' ? 'Cancelled' : mine.status === 'interrupted' ? 'Interrupted' : 'Failed'}</strong>{mine.error ? ' — ' + mine.error : ''}</p>
-      {mine.models && <label className="mm-progress"><span className="sr-only">Auto-tune progress</span>
-        <progress value={complete} max={Math.max(1, shownModels.length * 4)}/><span aria-hidden="true">{complete} of {shownModels.length * 4} settings saved</span>
-      </label>}
-      {running && <button className="modal-btn secondary mm-cancel-action" disabled={busy} onClick={() => void mutate('/api/models/autotune/cancel')}>{busy ? 'Cancelling…' : 'Cancel auto-tune'}</button>}
-      {!running && mine.models && ['cancelled', 'interrupted', 'failed'].includes(mine.status) && <button className="modal-btn secondary" disabled={busy || !confirmed} onClick={() => void mutate('/api/models/autotune/resume', { confirmPause: confirmed })}>{busy ? 'Resuming…' : 'Resume auto-tune'}</button>}
-      {mine.log && mine.log.length > 0 && (running
-        ? <ActivityLog lines={mine.log} startedAt={mine.startedAt ?? mine.log[0].at} live/>
-        : <details className="mm-activity-details"><summary>What it did ({mine.log.length} lines)</summary>
-            <ActivityLog lines={mine.log} startedAt={mine.startedAt ?? mine.log[0].at}/>
-          </details>)}
+      </details>)}</div>
     </div>}
     {other && <p className="mm-note">Auto-tune is running for {job?.model}.</p>}
-    {!running && <>
-      <label className="mm-check"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />Chat pauses while each model is tuned. I have stopped Diary background jobs and other programs that use the model server.</label>
-      <button className="modal-btn primary" disabled={busy || !confirmed || (!model && !scan?.models.length)} onClick={() => void mutate('/api/models/autotune', { model, confirmPause: confirmed, untuned: !model })}>{busy ? 'Starting…' : model ? 'Auto-tune and apply' : 'Tune untuned models and apply'}</button>
-    </>}
+    {!mine && actions}
     {error && <p role="alert" className="modal-err">{error}</p>}
     {statusError && <p role="alert" className="modal-err">{statusError} <button className="modal-btn secondary" disabled={busy} onClick={() => void refresh(running)}>Retry status</button></p>}
+    <details className="mm-autotune-help"><summary>How automatic tuning works</summary>
+      <p className="mm-note">Tunes one model at a time: KV cache, context size, drafting, then batch size. Each measured setting is saved before the next begins. Three quality probes and long-context recall are smoke tests, not a general quality guarantee.</p>
+      <p className="mm-note">Chat pauses during each model and becomes available between models. If chat is active, tuning waits for it to finish. Each context test has a 120-second prompt budget.</p>
+    </details>
   </div>;
 }
 

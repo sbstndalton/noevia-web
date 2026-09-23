@@ -71,6 +71,10 @@ const pending = (id, label) => ({ id, label, status: 'pending', steps: [{ id: id
     await start.click();
     await panel.getByRole('button', { name: 'Cancel auto-tune' }).waitFor();
     assert.deepEqual(starts, [{ model: '', confirmPause: true, untuned: true }]);
+    const kvSummary = panel.locator('.mm-autotune-phase > summary').first();
+    await kvSummary.click();
+    await kvSummary.focus(); await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab');
+    assert.ok(await kvSummary.evaluate(el => getComputedStyle(el).outlineStyle !== 'none'), 'disclosure keyboard focus');
     await panel.getByRole('region', { name: 'Synthetic-Qwen KV cache steps' }).getByText('48 tokens/s').waitFor();
     await panel.getByRole('region', { name: 'Synthetic-Qwen Context size steps' }).getByText('16384 tokens').waitFor();
     for (const width of [375, 768, 1440]) for (const theme of ['light', 'dark']) {
@@ -101,6 +105,7 @@ const pending = (id, label) => ({ id, label, status: 'pending', steps: [{ id: id
       phases: job.models[0].phases.map(p => ({ ...p, status: 'passed' })),
       result: { specLabel: 'MTP deep drafts', generation: 60, kv: 'q8_0', context: 16384, acceptance: 65, ubatch: 1024, promptPerSecond: 800, extensions: [] } }] };
     await open.click(); await open.click();
+    await panel.locator('.mm-autotune-model > summary').click();
     await panel.getByText(/KV cache: q8_0/).waitFor();
     await panel.getByText(/0 models need tuning/).waitFor();
     assert.ok(await panel.getByRole('button', { name: 'Tune untuned models and apply' }).isDisabled());
