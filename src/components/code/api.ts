@@ -14,6 +14,8 @@ export interface CodeTask {
   task: string | null; branch: string | null;
   capabilities: CodeAction[]; steps: { id: string; title: string; status: string }[];
   plan: { status: string; subQuestions: string[] } | null;
+  /** Bounded visible ACP assistant text; it may be partial when the task stops. */
+  assistantOutput: { text: string; truncated: boolean } | null;
   approval: CodeApproval | null;
   /** What the harness reported about the run — and, in `limitations`, what it did not. */
   meta: {
