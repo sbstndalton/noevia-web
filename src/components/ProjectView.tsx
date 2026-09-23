@@ -194,7 +194,7 @@ export function ProjectView({
           {tab === 'code' && codeAccess ? (
             <div className="project-scroll"><CodePanel projectId={project.id}/></div>
           ) : tab === 'research' && researchAccess ? (
-            <div className="project-scroll"><ResearchPanel projectId={project.id} onSaved={onRefresh}/></div>
+            <div className="project-scroll"><ResearchPanel key={project.id} projectId={project.id} onSaved={onRefresh}/></div>
           ) : tab === 'chats' ? (
             <div className="project-scroll">
               {/* Outputs are documents noevia made here, not files you uploaded,
