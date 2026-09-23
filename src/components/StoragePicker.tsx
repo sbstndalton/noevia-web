@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { JSX } from 'react';
 import { fetchStorage, pollNextcloud, saveStorage, startNextcloud, testStorage } from '../api';
 import type { StorageConnection } from '../api';
@@ -15,6 +15,7 @@ export interface StoragePickerProps {
 /** Diary storage backend picker (local / Nextcloud / generic WebDAV), shared by
  *  the setup wizard (step 3) and Settings → Diary storage. */
 export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly = false }: StoragePickerProps): JSX.Element {
+  const id = useId();
   const [value, setValue] = useState<StorageConnection>({ kind: onlineOnly ? 'nextcloud' : 'local', baseUrl: '', username: '', corpusRoot: '' });
   const [loaded, setLoaded] = useState(false);
   const [secret, setSecret] = useState('');
@@ -60,7 +61,7 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
     onSaved?.(saved);
   };
   const test = async () => {
-    await testStorage(value.secretConfigured && !secret ? { useSaved: true } : { ...value, secret });
+    await testStorage({ ...value, secret, useSavedSecret: !!value.secretConfigured && !secret });
     setMessage('Connection successful.');
   };
 
@@ -70,9 +71,10 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
       {loadFailed && <div role="alert"><p className="route-note">Your saved storage connection couldn’t be loaded, so these fields are locked to avoid overwriting it. The server may be busy or unreachable.</p>
         <button type="button" className="modal-btn secondary" onClick={() => setAttempt(n => n + 1)}>Try again</button></div>}
       {backupOnly && <p className="diary-context-note">This is your account storage connection, also used by Projects. Changing it changes their connection too. Diary backups support Nextcloud and WebDAV.</p>}
+      <label className="modal-label" htmlFor={`${id}-kind`}>Storage type</label>
       <select
+        id={`${id}-kind`}
         className="modal-input"
-        aria-label="Diary storage type"
         disabled={!loaded}
         value={value.kind}
         onChange={(e) => patch({ kind: e.target.value as StorageConnection['kind'] })}
@@ -84,7 +86,9 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
       </select>
       {value.kind !== 'local' && (
         <>
+          <label className="modal-label" htmlFor={`${id}-baseUrl`}>{value.kind === 'nextcloud' ? 'Nextcloud URL' : value.kind === 's3' ? 'Endpoint URL' : 'WebDAV base URL'}</label>
           <input
+            id={`${id}-baseUrl`}
             disabled={!loaded}
             className="modal-input"
             placeholder={value.kind === 'nextcloud' ? 'https://cloud.example.com' : value.kind === 's3' ? 'Endpoint URL (https://s3.example.com)' : 'WebDAV base URL'}
@@ -92,15 +96,21 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
             onChange={(e) => patch({ baseUrl: e.target.value })}
           />
           {value.kind === 's3' && (
-            <input
-            disabled={!loaded}
-              className="modal-input"
-              placeholder="Bucket"
-              value={value.bucket || ''}
-              onChange={(e) => patch({ bucket: e.target.value })}
-            />
+            <>
+              <label className="modal-label" htmlFor={`${id}-bucket`}>Bucket</label>
+              <input
+                id={`${id}-bucket`}
+                disabled={!loaded}
+                className="modal-input"
+                placeholder="Bucket"
+                value={value.bucket || ''}
+                onChange={(e) => patch({ bucket: e.target.value })}
+              />
+            </>
           )}
+          <label className="modal-label" htmlFor={`${id}-corpusRoot`}>{value.kind === 's3' ? 'Folder inside the bucket (optional)' : 'Corpus folder'}</label>
           <input
+            id={`${id}-corpusRoot`}
             disabled={!loaded}
             className="modal-input"
             placeholder={value.kind === 's3' ? 'Folder inside the bucket (optional)' : 'Corpus folder'}
@@ -111,21 +121,27 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
       )}
       {(value.kind === 'webdav' || value.kind === 's3') && (
         <>
+          <label className="modal-label" htmlFor={`${id}-username`}>{value.kind === 's3' ? 'Access key ID' : 'Username'}</label>
           <input
+            id={`${id}-username`}
             disabled={!loaded}
             className="modal-input"
             placeholder="Username"
             value={value.username}
             onChange={(e) => patch({ username: e.target.value })}
           />
+          <label className="modal-label" htmlFor={`${id}-secret`}>{value.kind === 's3' ? 'Secret access key' : 'App password'}</label>
           <input
+            id={`${id}-secret`}
             disabled={!loaded}
             className="modal-input"
             type="password"
-            placeholder={value.secretConfigured ? (value.kind === 's3' ? 'Secret access key configured' : 'App password configured') : value.kind === 's3' ? 'Secret access key' : 'App password'}
+            aria-describedby={value.secretConfigured ? `${id}-secret-help` : undefined}
+            placeholder={value.kind === 's3' ? 'Secret access key' : 'App password'}
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
           />
+          {value.secretConfigured && <p id={`${id}-secret-help`} className="route-note">A secret is saved. Leave blank to test with it on the same server.</p>}
         </>
       )}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

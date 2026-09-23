@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { JSX } from 'react';
+import type { JSX, KeyboardEvent } from 'react';
 import { browseStorage, fetchStorage, readStorageFile } from '../api';
 import type { StorageEntry } from '../api';
+import { useModalDialog } from './useModalDialog';
 import { CloseButton } from './CloseButton';
 
 export interface PickedFile { name: string; content: string }
@@ -22,6 +23,7 @@ export function StorageFileBrowser({
   onClose: () => void;
   onPick: (files: PickedFile[]) => void;
 }): JSX.Element {
+  const dialog = useModalDialog();
   const [kind, setKind] = useState<string | null>(null);
   const [path, setPath] = useState('');
   const [entries, setEntries] = useState<StorageEntry[]>([]);
@@ -32,11 +34,12 @@ export function StorageFileBrowser({
   useEffect(() => {
     fetchStorage()
       .then((c) => setKind(c.kind))
-      .catch(() => setKind('local'));
+      .catch(() => { setError('Could not load your storage connection. Close this dialog and try again.'); setBusy(false); });
   }, []);
 
   useEffect(() => {
-    if (!kind || kind === 'local') { setBusy(false); return; }
+    if (!kind) return;
+    if (kind === 'local') { setBusy(false); return; }
     setBusy(true);
     setError('');
     browseStorage(path)
@@ -60,13 +63,27 @@ export function StorageFileBrowser({
     }
   };
 
+  const containTab = (event: KeyboardEvent<HTMLDialogElement>) => {
+    if (event.key !== 'Tab') return;
+    const controls = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]')]
+      .filter((element) => element.getClientRects().length > 0);
+    const first = controls[0], last = controls.at(-1);
+    if (event.shiftKey && document.activeElement === first && last) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last && first) { event.preventDefault(); first.focus(); }
+  };
+
   const segments = path ? path.split('/') : [];
   const dirs = entries.filter((e) => e.isDir);
   const files = entries.filter((e) => !e.isDir);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+    <dialog ref={dialog} className="modal-card aero dialog-sheet" aria-label="Pull from your storage"
+      onCancel={(e) => { e.preventDefault(); onClose(); }} onKeyDown={containTab}
+      onClick={(e) => {
+        if (e.target !== e.currentTarget) return;
+        const box = e.currentTarget.getBoundingClientRect();
+        if (e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom) onClose();
+      }}>
         <div className="modal-head">
           <h2>Pull from your storage</h2>
           <CloseButton onClick={onClose}/>
@@ -96,8 +113,8 @@ export function StorageFileBrowser({
               ))}
             </div>
 
-            {busy && <p className="route-note">Loading…</p>}
-            {error && <p className="modal-err">{error}</p>}
+            {busy && <p className="route-note" role="status">Loading…</p>}
+            {error && <p className="modal-err" role="alert">{error}</p>}
 
             <div className="modal-files" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
               {dirs.map((e) => (
@@ -140,7 +157,6 @@ export function StorageFileBrowser({
         <div className="modal-actions">
           <button className="modal-btn primary" onClick={onClose}>Done</button>
         </div>
-      </div>
-    </div>
+    </dialog>
   );
 }
