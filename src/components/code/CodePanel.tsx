@@ -234,10 +234,10 @@ function TaskCard({ task, busy, onDecide, onCancel }: {
     {task.plan && <section className="code-plan" role="region" aria-label="Reported plan" tabIndex={0}>
       <h4>Last reported plan</h4>
       <p className="code-plan-note">Reported as {task.plan.status}.</p>
+      {task.plan.truncated && <p className="code-plan-note">Some plan text was shortened.</p>}
       {task.plan.status !== 'skipped' && (task.plan.subQuestions.length
         ? <ul>{task.plan.subQuestions.map((entry, index) => <li key={index}>{entry}</li>)}</ul>
         : <p className="code-plan-note">No entries were reported.</p>)}
-      {task.plan.truncated && <p className="code-plan-note">Some plan text was shortened.</p>}
     </section>}
     {task.assistantOutput?.text && <section className="code-output" role="region" aria-label="Assistant output" tabIndex={0}>
       <h4>Assistant output</h4>

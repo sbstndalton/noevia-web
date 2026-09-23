@@ -113,6 +113,8 @@ const TASK='12345678-1234-4234-8234-123456789012';
    assert.ok((await plan.textContent()).includes('<script>window.planHacked=true</script>'));
    assert.equal(await page.evaluate(()=>window.planHacked),undefined,'plan text stays inert');
    await page.getByText('Some plan text was shortened.').waitFor();
+   assert.ok(await page.getByText('Some plan text was shortened.').evaluate(el=>
+     el.getBoundingClientRect().bottom<=el.closest('.code-plan').getBoundingClientRect().bottom),'shortening note visible before scrolling');
    assert.ok(await page.getByRole('group',{name:'Approval required'}).evaluate((el)=>
      el.compareDocumentPosition(document.querySelector('.code-plan')) & Node.DOCUMENT_POSITION_FOLLOWING), 'approval before plan');
    assert.ok(await plan.evaluate(el=>el.scrollHeight>el.clientHeight),'long plan scrolls within its region');
