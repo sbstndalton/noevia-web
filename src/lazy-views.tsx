@@ -9,7 +9,7 @@ type Loader<P> = () => Promise<ComponentType<P>>;
 
 // A tab left open across a deploy asks for chunk files the new build no longer
 // has. Retry once (a dropped connection), then explain instead of blanking.
-function lazyView<P extends object>(load: Loader<P>) {
+export function lazyView<P extends object>(load: Loader<P>) {
   let pending: Promise<ComponentType<P>> | null = null;
   const fetchOnce = () => {
     pending ??= load().catch(() => load()).catch((error) => { pending = null; throw error; });
@@ -46,3 +46,9 @@ export function prefetchViewsWhenIdle(): () => void {
   return () => globalThis.clearTimeout(id);
 }
 export const ModelManager = lazyView(() => import('./components/models/ModelManagerPage').then((m) => m.ModelManagerPage));
+
+/** Only the active destination announces; the Diary can preload while hidden. */
+export function ViewLoading({ name, active = true, settings = false }: { name: string; active?: boolean; settings?: boolean }) {
+  if (!active) return null;
+  return <div className={`view-loading${settings ? ' settings-stage' : ''}`} role="status">Loading {name}…</div>;
+}

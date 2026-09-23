@@ -46,7 +46,7 @@ import type {
 import { ChatView } from './components/ChatView';
 import { ModelPopup } from './components/ModelPopup';
 import { ProjectView } from './components/ProjectView';
-import { Coding, Diary, ModelManager, Projects, Settings, prefetchViewsWhenIdle } from './lazy-views';
+import { Coding, Diary, ModelManager, Projects, Settings, ViewLoading, prefetchViewsWhenIdle } from './lazy-views';
 import type { SettingsSection } from './components/SettingsShell';
 import { FeaturePreview } from './components/PreviewPanel';
 import { PluginsView } from './components/plugins/PluginsView';
@@ -100,9 +100,8 @@ export default function App(): JSX.Element {
     el.addEventListener('animationend', done, { once: true });
     return () => el.removeEventListener('animationend', done);
   }, [appMode]);
-  // The Code workspace is a lazy chunk. Hiding the chat the moment Code was chosen left a
-  // blank page until the chunk resolved (user review, 2026-09-18), so the chat stays on
-  // screen until the Code workspace has mounted, and the two swap before paint.
+  // The Code workspace is a lazy chunk. Its explicit loading view replaces Chat as soon as
+  // Code is chosen; codeShown swaps that loading view for the mounted workspace.
   const [codeShown, setCodeShown] = useState(false);
   useEffect(() => { if (appMode !== 'code') setCodeShown(false); }, [appMode]);
   const featureFlags = useFeatureFlags();
@@ -974,18 +973,18 @@ export default function App(): JSX.Element {
 
       <div className={`app-stack pane${settingsOpen ? ' has-settings' : ''}`}>
       <div className="app-main" ref={appMain}>
-      {appMode === 'code' && showPreviews && <Suspense fallback={null}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
-      <div className="chat-views" style={{display:appMode==='code'&&showPreviews&&codeShown?'none':'contents'}}>
+      {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="Coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
+      <div className="chat-views" style={{display:appMode==='code'&&showPreviews?'none':'contents'}}>
       {view.kind === 'plugins' && <PluginsView onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/>}
 
       {view.kind === 'preview' && showPreviews && <FeaturePreview title={view.title}/> }
       {view.kind === 'models' && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ViewLoading name="Models" active={appMode === 'chat' && !settingsOpen} />}>
           <ModelManager.View key={view.model || 'list'} initialModel={view.model} onBack={() => openSettings('models')} models={models} routes={routes} projects={projects} modelsError={modelsError} />
         </Suspense>
       )}
       {view.kind === 'projects' && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ViewLoading name="Projects" active={appMode === 'chat' && !settingsOpen} />}>
           <Projects.View onEdit={setEditingProjectId}
             onPatch={handlePatchProject}
             projects={projects}
@@ -1035,7 +1034,7 @@ export default function App(): JSX.Element {
         />
       )}
 
-      {diaryEnabled && <div className="diary-mount" style={{ display: view.kind === 'diary' ? 'contents' : 'none' }}><Suspense fallback={null}><Diary.View inferenceUp={health.inferenceUp} /></Suspense></div>}
+      {diaryEnabled && <div className="diary-mount" style={{ display: view.kind === 'diary' ? 'contents' : 'none' }}><Suspense fallback={<ViewLoading name="Diary" active={view.kind === 'diary' && appMode === 'chat' && !settingsOpen} />}><Diary.View inferenceUp={health.inferenceUp} /></Suspense></div>}
 
       {popupOpen && (
         <ModelPopup
@@ -1053,7 +1052,7 @@ export default function App(): JSX.Element {
 
       </div>
       {settingsOpen && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ViewLoading name="Settings" active={true} settings />}>
         <Settings.View
           key={settingsKey}
           initialSection={settingsSection}
