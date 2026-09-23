@@ -25,16 +25,16 @@ const {createFixture}=require('./diary-fixture.cjs');
  await page.goto(origin);await page.getByTitle('Settings',{exact:true}).click();
  const settings=page.getByRole('region',{name:'Settings',exact:true});await settings.getByRole('button',{name:'Users',exact:true}).click();
  const row=()=>settings.locator('.model-row').filter({hasText:'@member'});
- const alert=text=>settings.getByRole('alert').filter({hasText:text}).waitFor();
- await row().getByRole('button',{name:'Disable',exact:true}).click();await alert('Disable account could not be confirmed');assert.ok(await row().isVisible());
+ const alert=async text=>{const value=settings.locator('[role="alert"]');for(let i=0;i<60;i++){if((await value.allTextContents()).some(item=>item.includes(text)))return value;await page.waitForTimeout(50);}throw new Error(`Expected alert containing ${text}`);};
+ await row().getByRole('button',{name:'Disable',exact:true}).click();await alert('Synthetic failure');assert.ok(await row().isVisible());
  hold=true;await row().getByRole('button',{name:'Disable',exact:true}).click();
  await settings.getByRole('status').filter({hasText:'Disable account…'}).waitFor();
  assert.ok(await row().getByRole('button',{name:'Recovery',exact:true}).isDisabled());
  assert.ok(await settings.locator('.model-row').filter({hasText:'@other'}).getByRole('button',{name:'Recovery',exact:true}).isEnabled());
  await row().getByRole('button',{name:'Disable',exact:true}).evaluate(el=>el.click());assert.equal(mutations,2);
  member.disabled=true;hold=false;fail=false;await held.fulfill({json:{ok:true}});await row().getByRole('button',{name:'Enable',exact:true}).waitFor();
- fail=true;page.on('dialog',d=>d.accept('member'));await row().getByRole('button',{name:'Delete user member',exact:true}).click();await alert('Delete account could not be confirmed');assert.ok(await row().isVisible());
- failLink=true;await row().getByRole('button',{name:'Recovery',exact:true}).click();await alert('Create recovery link could not be confirmed');
+ fail=true;page.on('dialog',d=>d.accept('member'));await row().getByRole('button',{name:'Delete user member',exact:true}).click();await alert('Synthetic delete failure');assert.ok(await row().isVisible());
+ failLink=true;await row().getByRole('button',{name:'Recovery',exact:true}).click();await alert('Synthetic token failure');
  failLink=false;await row().getByRole('button',{name:'Recovery',exact:true}).click();await alert('Recovery link was created, but copying failed');
  assert.equal(await settings.getByLabel('Created link',{exact:true}).inputValue(),origin+'/?recovery=synthetic-recovery');
  await page.evaluate(()=>window.qaCopyFails=false);await settings.getByRole('button',{name:'Copy link again',exact:true}).click();
@@ -52,8 +52,8 @@ const {createFixture}=require('./diary-fixture.cjs');
   }
  }
  fail=false;failList=true;await row().getByRole('button',{name:'Enable',exact:true}).click();await alert('The change succeeded');assert.ok(await row().isVisible());
- failList=false;await settings.getByRole('button',{name:'Reload users',exact:true}).click();await row().getByRole('button',{name:'Disable',exact:true}).waitFor();
- await row().getByRole('button',{name:'Delete user member',exact:true}).click();await page.waitForFunction(()=>!document.body.textContent.includes('@member'));
+ failList=false;await settings.getByRole('button',{name:'Reload users',exact:true}).click();await row().getByRole('button',{name:'Disable',exact:true}).waitFor();assert.equal(await settings.getByRole('alert').filter({hasText:'The change succeeded'}).count(),0);
+ await row().getByRole('button',{name:'Delete user member',exact:true}).click();await page.waitForFunction(()=>!document.body.textContent.includes('@member'));await settings.getByRole('status').filter({hasText:'Account deleted.'}).waitFor();
  assert.deepEqual(errors,[]);assert.equal(fixture.requests.length,0);
  console.log('PASS admin failures, per-row guard, success/refresh, token/clipboard distinction and copy retry; responsive themes/focus.');
  }finally{await browser.close();await fixture.close();}

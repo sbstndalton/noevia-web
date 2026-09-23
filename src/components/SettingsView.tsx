@@ -156,6 +156,7 @@ function UsersCard(): JSX.Element {
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [denied, setDenied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
   const pending = useRef(new Set<string>());
   const [busy, setBusy] = useState<Record<string, string>>({});
@@ -164,7 +165,7 @@ function UsersCard(): JSX.Element {
   const refreshUsers = async () => {
     const request = ++listRequest.current;
     const result = await fetchUsers();
-    if (request === listRequest.current) setUsers(result.users);
+    if (request === listRequest.current) { setUsers(result.users); setError(null); }
   };
   const load = async () => {
     setLoading(true); setError(null);
@@ -178,21 +179,24 @@ function UsersCard(): JSX.Element {
     } finally { setLoading(false); }
   };
   useEffect(() => { void load(); }, []);
-  const act = async (key: string, label: string, action: () => Promise<unknown>, success: string, reload = true) => {
+  const act = async (key: string, label: string, action: () => Promise<unknown>, success: string, reload = true, globalSuccess = false) => {
     // Ref closes the gap before React renders the disabled controls.
     if (pending.current.has(key)) return;
     pending.current.add(key);
     setBusy(prev => ({ ...prev, [key]: label }));
     setFeedback(prev => ({ ...prev, [key]: {} }));
+    setNotice('');
     try {
       await action();
       if (reload) {
-        setFeedback(prev => ({ ...prev, [key]: { notice: success } }));
+        if (globalSuccess) setNotice(success);
+        else setFeedback(prev => ({ ...prev, [key]: { notice: success } }));
         try { await refreshUsers(); }
         catch { setError('The change succeeded, but the updated users could not be loaded. Reload users to confirm the saved state.'); }
       }
-    } catch {
-      setFeedback(prev => ({ ...prev, [key]: { error: `${label} could not be confirmed. Reload users to check the saved state, then try again.` } }));
+    } catch (e) {
+      const message = e instanceof Error && e.message ? e.message : `${label} could not be confirmed. Reload users to check the saved state, then try again.`;
+      setFeedback(prev => ({ ...prev, [key]: { error: message } }));
     } finally {
       pending.current.delete(key);
       setBusy(prev => { const next = { ...prev }; delete next[key]; return next; });
@@ -227,13 +231,14 @@ function UsersCard(): JSX.Element {
   if (denied) return <div><div className="rail-label">Users</div><p className="route-note">Administrator access is required to manage accounts.</p></div>;
   return <div>
     <div className="rail-label" style={{ marginBottom: 12 }}>Users</div>
+    {notice && <p className="route-note" role="status">{notice}</p>}
     <div className="card-list">
       {users.length === 0 && !loading && <p className="route-note">No users returned by the server.</p>}
       {users.map(u => <div key={u.id}>
         <div className="model-row"><div className="model-name-group"><span className="model-name">{u.displayName}</span><span className="model-quant">@{u.username} · {u.role}{u.disabled ? ' · disabled' : ''}</span></div>{u.id !== user.id && <>
           <button className="popup-tab" disabled={!!busy[u.id] || loading} onClick={() => void act(u.id, u.disabled ? 'Enable account' : 'Disable account', () => setUserDisabled(u.id, !u.disabled), 'Account updated.')}>{u.disabled ? 'Enable' : 'Disable'}</button>
           <button className="popup-tab" disabled={!!busy[u.id] || loading} onClick={() => void createLink(u.id, u.id)}>Recovery</button>
-          <button className="recents-del" title="Delete user" aria-label={`Delete user ${u.username}`} disabled={!!busy[u.id] || loading} onClick={() => { const typed = window.prompt(`Type ${u.username} to permanently delete this noevia account. Remote corpus files will be preserved.`); if (typed === u.username) void act(u.id, 'Delete account', () => deleteUser(u.id, typed), 'Account deleted.'); }}><ShellIcon name="close" size={16}/></button>
+          <button className="recents-del" title="Delete user" aria-label={`Delete user ${u.username}`} disabled={!!busy[u.id] || loading} onClick={() => { const typed = window.prompt(`Type ${u.username} to permanently delete this noevia account. Remote corpus files will be preserved.`); if (typed === u.username) void act(u.id, 'Delete account', () => deleteUser(u.id, typed), 'Account deleted.', true, true); }}><ShellIcon name="close" size={16}/></button>
         </>}</div>{actionFeedback(u.id)}
       </div>)}
       <button className="modal-btn secondary" disabled={!!busy.invitation || loading} onClick={() => void createLink('invitation')}><ShellIcon name="plus" size={16}/>Copy invitation link</button>
