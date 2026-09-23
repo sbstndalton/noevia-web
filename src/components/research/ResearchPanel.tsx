@@ -19,30 +19,79 @@ export function ResearchPanel({ projectId, onSaved }: { projectId: string; onSav
   const [busy, setBusy] = useState('');
   // Saved report files appear as project sources; tell the host when that count grows.
   const savedCount = useRef<number | null>(null);
+  const currentState = useRef<ResearchState | null>(null);
+  const live = useRef(true);
+  const version = useRef(0);
+  const ordinaryRead = useRef(0);
+  const activeMutation = useRef(0);
+  const nextMutation = useRef(0);
+  const onSavedRef = useRef(onSaved);
+  onSavedRef.current = onSaved;
 
-  const load = useCallback(() => fetchResearch(projectId).then(next => {
+  const publish = useCallback((next: ResearchState) => {
+    if (!live.current) return;
+    currentState.current = next;
     setState(next);
     const saved = next.jobs.reduce((n, j) => n + j.artifacts.length, 0);
-    if (savedCount.current !== null && saved > savedCount.current) onSaved?.();
+    if (savedCount.current !== null && saved > savedCount.current) onSavedRef.current?.();
     savedCount.current = saved;
-  }).catch(e => setError((e as Error).message)), [projectId, onSaved]);
+  }, []);
+  const publishJob = useCallback((job: ResearchJob) => {
+    const current = currentState.current;
+    if (current && live.current) publish({ ...current, jobs: [job, ...current.jobs.filter(item => item.id !== job.id)] });
+  }, [publish]);
+  const load = useCallback(async (mutation = 0): Promise<void> => {
+    if (activeMutation.current && mutation !== activeMutation.current) return;
+    if (!mutation && ordinaryRead.current) return;
+    const ticket = ++version.current;
+    if (!mutation) ordinaryRead.current = ticket;
+    try {
+      const next = await fetchResearch(projectId);
+      if (!live.current || ticket !== version.current) return;
+      publish(next);
+      setError('');
+    } catch (e) {
+      if (live.current && ticket === version.current) setError((e as Error).message);
+    } finally {
+      if (ordinaryRead.current === ticket) ordinaryRead.current = 0;
+    }
+  }, [projectId, publish]);
 
-  useEffect(() => { savedCount.current = null; load(); }, [load]);
+  useEffect(() => {
+    live.current = true;
+    savedCount.current = null;
+    void load();
+    return () => { live.current = false; version.current++; ordinaryRead.current = 0; activeMutation.current = 0; };
+  }, [load]);
   const running = !!state?.jobs.some(j => ACTIVE.has(j.status));
   useEffect(() => {
     if (!running) return;
-    const timer = window.setInterval(load, 2000);
+    const timer = window.setInterval(() => { void load(); }, 2000);
     return () => window.clearInterval(timer);
   }, [running, load]);
 
-  const act = async (label: string, work: () => Promise<unknown>) => {
+  const act = async <T,>(label: string, work: () => Promise<T>, onSuccess: (result: T) => void, refresh = true) => {
+    if (activeMutation.current) return;
+    const mutation = ++nextMutation.current;
+    activeMutation.current = mutation;
+    version.current++;
+    ordinaryRead.current = 0;
     setBusy(label); setError('');
-    try { await work(); await load(); } catch (e) { setError((e as Error).message); } finally { setBusy(''); }
+    try {
+      const result = await work();
+      if (live.current && activeMutation.current === mutation) {
+        onSuccess(result);
+        if (refresh) await load(mutation);
+      }
+    } catch (e) {
+      if (live.current && activeMutation.current === mutation) setError((e as Error).message);
+    } finally {
+      if (live.current && activeMutation.current === mutation) { activeMutation.current = 0; setBusy(''); }
+    }
   };
-  const start = (withPlan: boolean) => act('start', async () => {
-    await startResearch(projectId, withPlan && plan ? { question, plan: planEdited ? 'edited' : 'proposed', subQuestions: plan } : { question, plan: 'skipped' });
-    setQuestion(''); setPlan(null); setPlanEdited(false);
-  });
+  const start = (withPlan: boolean) => act('start',
+    () => startResearch(projectId, withPlan && plan ? { question, plan: planEdited ? 'edited' : 'proposed', subQuestions: plan } : { question, plan: 'skipped' }),
+    job => { publishJob(job); setQuestion(''); setPlan(null); setPlanEdited(false); });
   const edit = (next: string[]) => { setPlan(next); setPlanEdited(true); };
 
   if (!state) return <div className="research-panel"><p className="rail-empty">{error || 'Loading research…'}</p></div>;
@@ -74,7 +123,7 @@ export function ResearchPanel({ projectId, onSaved }: { projectId: string; onSav
       </fieldset>}
       <div className="research-actions">
         {!plan && <button type="button" className="btn btn-secondary" disabled={!question.trim() || !!busy || running || !state.available}
-          onClick={() => act('plan', async () => { setPlan(await proposePlan(projectId, question)); setPlanEdited(false); })}>{busy === 'plan' ? 'Planning…' : 'Propose a plan'}</button>}
+          onClick={() => act('plan', () => proposePlan(projectId, question), proposed => { setPlan(proposed); setPlanEdited(false); }, false)}>{busy === 'plan' ? 'Planning…' : 'Propose a plan'}</button>}
         <button type="button" className="btn btn-primary" disabled={!question.trim() || !!busy || running || !state.available || (!!plan && !plan.some(p => p.trim()))}
           onClick={() => start(!!plan)}>{busy === 'start' ? 'Starting…' : plan ? 'Start research' : 'Start without a plan'}</button>
       </div>
@@ -83,8 +132,8 @@ export function ResearchPanel({ projectId, onSaved }: { projectId: string; onSav
 
     <section className="research-jobs" aria-label="Research jobs">
       {state.jobs.length === 0 ? <EmptyState icon="research" title="No research yet" compact>Ask a question above. Finished reports are saved to this project's sources.</EmptyState> : state.jobs.map(job => <ResearchJobCard key={job.id} job={job} busy={busy}
-        onCancel={() => act(`cancel:${job.id}`, () => cancelResearch(projectId, job.id))}
-        onSave={() => act(`save:${job.id}`, () => savePartialResearch(projectId, job.id))}/>)}
+        onCancel={() => act(`cancel:${job.id}`, () => cancelResearch(projectId, job.id), publishJob)}
+        onSave={() => act(`save:${job.id}`, () => savePartialResearch(projectId, job.id), publishJob)}/>)}
     </section>
   </div>;
 }
@@ -107,8 +156,8 @@ function ResearchJobCard({ job, busy, onCancel, onSave }: { job: ResearchJob; bu
     {job.result && <p className="research-meta">{job.result.sections} of {job.result.questions} questions · {job.result.webCalls} web calls · {job.result.citations} citations, {Math.round(job.result.citationValidity * 100)}% verified</p>}
     {job.artifacts.length > 0 && <ul className="research-files" aria-label="Saved files">{job.artifacts.map(name => <li key={name}><ShellIcon name="folder" size={14}/>{name}</li>)}</ul>}
     <div className="research-actions">
-      {active && <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={busy === `cancel:${job.id}`}>Cancel</button>}
-      {job.canSavePartial && <button type="button" className="btn btn-primary" onClick={onSave} disabled={busy === `save:${job.id}`}>Save partial report</button>}
+      {active && <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={!!busy}>Cancel</button>}
+      {job.canSavePartial && <button type="button" className="btn btn-primary" onClick={onSave} disabled={!!busy}>Save partial report</button>}
     </div>
     {job.result?.markdown && <details className="research-report"><summary>Report preview</summary><pre>{job.result.markdown}</pre></details>}
   </article>;
