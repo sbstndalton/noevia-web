@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch } from '../../api';
 
@@ -6,7 +6,13 @@ interface Address { origin: string; source: 'settings' | 'environment' | 'setup'
 
 async function call<T>(url: string, body?: unknown): Promise<{ ok: boolean; body: T & { error?: string; unreachable?: boolean } }> {
   const r = await apiFetch(url, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  return { ok: r.ok, body: await r.json().catch(() => ({})) };
+  // An HTTP error without JSON still gets the usual fallback message. A successful response
+  // without readable JSON must fail instead of being treated as a saved address.
+  const result = await r.json().catch(() => {
+    if (r.ok) throw new Error('The response could not be read. Please try again.');
+    return {};
+  });
+  return { ok: r.ok, body: result };
 }
 
 /**
@@ -18,29 +24,57 @@ export function WebAddressSettings(): JSX.Element {
   const [current, setCurrent] = useState<Address | null>(null);
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [unreachable, setUnreachable] = useState(false);
   const [saved, setSaved] = useState('');
+  const mounted = useRef(false);
+  const loadAttempt = useRef(0);
+  const saveAttempt = useRef(0);
   const load = useCallback(async () => {
-    const r = await call<Address>('/api/admin/web-address');
-    if (r.ok) { setCurrent(r.body); setValue(v => v || r.body.origin); } else setError(r.body.error || 'The web address could not be loaded.');
+    const attempt = ++loadAttempt.current;
+    setLoading(true);
+    setError('');
+    try {
+      const r = await call<Address>('/api/admin/web-address');
+      if (!mounted.current || attempt !== loadAttempt.current) return;
+      if (r.ok) { setCurrent(r.body); setValue(v => v || r.body.origin); }
+      else setError(r.body.error || 'The web address could not be loaded. Please try again.');
+    } catch {
+      if (mounted.current && attempt === loadAttempt.current) setError('The web address could not be loaded. Please try again.');
+    } finally {
+      if (mounted.current && attempt === loadAttempt.current) setLoading(false);
+    }
   }, []);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    mounted.current = true;
+    void load();
+    return () => { mounted.current = false; loadAttempt.current++; saveAttempt.current++; };
+  }, [load]);
 
   const save = async (force = false) => {
+    const attempt = ++saveAttempt.current;
     setBusy(true); setError(''); setSaved(''); setUnreachable(false);
     const next = value.trim().replace(/\/+$/, '').replace(/^(?!https?:\/\/)/, 'https://');
-    const r = await call<Address>('/api/admin/web-address', { origin: next, force });
-    setBusy(false);
-    if (!r.ok) { setError(r.body.error || 'Could not save.'); setUnreachable(!!r.body.unreachable); return; }
-    setCurrent(r.body); setValue(r.body.origin);
-    setSaved(r.body.origin);
+    try {
+      const r = await call<Address>('/api/admin/web-address', { origin: next, force });
+      if (!mounted.current || attempt !== saveAttempt.current) return;
+      if (!r.ok) { setError(r.body.error || 'Could not save. Please try again.'); setUnreachable(!!r.body.unreachable); return; }
+      setCurrent(r.body); setValue(r.body.origin);
+      setSaved(r.body.origin);
+    } catch {
+      if (mounted.current && attempt === saveAttempt.current) setError('Could not save. Please try again.');
+    } finally {
+      if (mounted.current && attempt === saveAttempt.current) setBusy(false);
+    }
   };
 
   const moved = saved && saved !== window.location.origin;
   return <>
     <div className="settings-title"><h1>Web address</h1><p>The address people use to open noevia. Change it here after pointing the new name at this server (for example a Cloudflare tunnel route).</p></div>
-    {!current ? <p className="preview-footnote">{error || 'Loading…'}</p> : <>
+    {!current ? <div className="settings-section">
+      {error ? <><p className="route-note" role="alert">{error}</p><button type="button" className="btn btn-secondary" disabled={loading} onClick={() => void load()}>Retry</button></> : <p className="preview-footnote">Loading…</p>}
+    </div> : <>
       <div className="set-rows">
         <div className="set-row set-row-inline"><div className="set-row-text"><span className="set-row-label">Current address</span></div><div className="set-row-value">{current.origin || 'Not set'}</div></div>
         {current.previous.length > 0 && <div className="set-row set-row-inline"><div className="set-row-text"><span className="set-row-label">Earlier addresses</span><span className="set-row-desc">Still accepted for signing in, so nobody is locked out during a move.</span></div><div className="set-row-value">{current.previous.join(', ')}</div></div>}
