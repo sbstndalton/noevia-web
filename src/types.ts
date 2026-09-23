@@ -1,9 +1,23 @@
 export type Role = 'user' | 'assistant';
 
+export interface RoutingDecision {
+  offered: { id: string; label: string }[];
+  scores: Record<string, number>;
+  selectedRole: string | null;
+  effectiveRole: string;
+  backend: 'decision-service' | 'llama-logit' | 'legacy';
+  model: 'convaiinnovations/laya' | null;
+  calibrated: false;
+  latencyMs: number | null;
+  status: 'accepted' | 'fallback';
+  fallbackReason: string | null;
+}
+
 export interface Message {
   id: string;
   role: Role;
   senderLabel?: string;
+  routingDecision?: RoutingDecision;
   content: string;
   reasoningMode?: string;
   reasoningEffort?: string;
@@ -141,6 +155,7 @@ export interface HistoryEntry {
   role: Role;
   content: string;
   model?: string;
+  routingDecision?: RoutingDecision;
   // Persisted so a reloaded chat still shows its thinking, tool activity and
   // cost. The server stores these opaquely and strips everything but
   // role/content before the history is replayed to a model.

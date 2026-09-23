@@ -58,6 +58,7 @@ import { StatsBar } from './components/StatsBar';
 import { settleToolCalls } from './tool-call-state';
 import { mergeTranscripts } from './transcript-merge';
 import { readLastPlace, writeLastPlace, clearLastPlace } from './last-view';
+import { currentRoutingDecision } from './current-routing';
 
 type View =
   | { kind: 'diary' }
@@ -143,7 +144,9 @@ export default function App(): JSX.Element {
   messagesRef.current = messagesByChat;
   const [diaryEnabled, setDiaryEnabled] = useState(false);
   const [popupOpen, setPopupOpen] = useState(false);
-  const loadedChats = useRef<Set<string>>(new Set(view.kind === 'chat' ? [view.chatId] : []));
+  // A restored chat must fetch its saved transcript; only a newly created empty
+  // chat may skip that read until its first send.
+  const loadedChats = useRef<Set<string>>(new Set(view.kind === 'chat' && !restored.current ? [view.chatId] : []));
   const patchTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const pendingPatches = useRef<Record<string, Partial<Project>>>({});
   const lastSourceSync = useRef<Record<string, number>>({});
@@ -323,6 +326,7 @@ export default function App(): JSX.Element {
             role: h.role,
             content: h.content,
             senderLabel: h.model,
+            routingDecision: h.routingDecision,
             reasoning: h.reasoning,
             reasoningMs: h.reasoningMs,
             toolCalls: settleToolCalls(h.toolCalls),
@@ -386,6 +390,7 @@ export default function App(): JSX.Element {
   }, [sourceProjectId, sourceFolderKey, sourceBusy, refreshProjects]);
 
   const messages: Message[] = view.kind === 'chat' ? messagesByChat[view.chatId] ?? [] : [];
+  const routingDecision = currentRoutingDecision(messages, view.kind === 'chat' && appMode === 'chat');
 
   const persist = useCallback((chatId: string, msgs: Message[]) => {
     // Reasoning, tool activity and cost are persisted too, so reopening a
@@ -396,6 +401,7 @@ export default function App(): JSX.Element {
       role: m.role,
       content: m.content,
       model: m.senderLabel,
+      routingDecision: m.routingDecision,
       reasoning: m.reasoning || undefined,
       reasoningMs: m.reasoningMs,
       toolCalls: m.toolCalls && m.toolCalls.length ? m.toolCalls : undefined,
@@ -412,7 +418,7 @@ export default function App(): JSX.Element {
         historyRevisions.current[chatId] = result.conflict.revision;
         if (merged !== next) {
           next = merged;
-          setMessagesByChat((prev) => ({ ...prev, [chatId]: merged.map((h) => ({ id: uid(), role: h.role, content: h.content, senderLabel: h.model, reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats })) }));
+          setMessagesByChat((prev) => ({ ...prev, [chatId]: merged.map((h) => ({ id: uid(), role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats })) }));
         }
       }
     };
@@ -514,7 +520,7 @@ export default function App(): JSX.Element {
           if (ev.type === 'meta' && ev.route) {
             setMessagesByChat((prev) => ({
               ...prev,
-              [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, senderLabel: `Assistant · Auto (${ev.route})` } : m)),
+              [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, senderLabel: `Assistant · Auto (${ev.route})`, routingDecision: ev.routingDecision } : m)),
             }));
           } else if (ev.type === 'skills_scope') {
             setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, skillScope: ev.text || undefined } : m) }));
@@ -1116,6 +1122,7 @@ export default function App(): JSX.Element {
       <StatsBar
         stats={stats}
         reply={view.kind === 'chat' ? replyTelemetryByChat[view.chatId] || null : null}
+        routingDecision={routingDecision}
         modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null)}
       />
       {view.kind === 'chat' && activeProject && appMode === 'chat' && (

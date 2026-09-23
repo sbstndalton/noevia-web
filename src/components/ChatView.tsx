@@ -4,7 +4,7 @@ import { ReasoningControl } from './ReasoningControl';
 import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import type { Message, MessageStats, Project, InstalledModel } from '../types';
+import type { Message, MessageStats, Project, InstalledModel, RoutingDecision } from '../types';
 import { ChevronLeft, SendIcon, SlidersIcon } from './Icons';
 import { ComposerModel } from './ComposerModel';
 import { MarkdownPreview } from './DiaryModal';
@@ -14,6 +14,7 @@ import { ComposerTextarea } from './ComposerTextarea';
 import { modelChoiceLabel } from '../model-guidance';
 import { ComposerActions } from './ComposerActions';
 import { apiFetch } from '../api';
+import { isDisplayableRoutingDecision } from '../current-routing';
 
 interface ChatViewProps {
   project: Project | null;
@@ -59,6 +60,35 @@ export function ThinkingBlock({ text, live, ms }: { text: string; live: boolean;
       <div className="thinking-body">{text}</div>
     </details>
   );
+}
+
+export function RoutingDetails({ decision }: { decision: RoutingDecision }) {
+  if (!isDisplayableRoutingDecision(decision)) return null;
+  const source = decision.model === 'convaiinnovations/laya' ? 'Laya'
+    : decision.backend === 'llama-logit' ? 'Local logit'
+    : decision.backend === 'decision-service' ? 'Decision service' : 'Legacy';
+  const fallbackLabel = new Map([
+    ['disabled', 'experiment disabled'], ['no-backend', 'service unavailable'], ['missing-roles', 'roles unavailable'],
+    ['deadline', 'time limit'], ['no-backend-answered', 'service did not answer'],
+    ['low-confidence', 'decision rejected'], ['rejected', 'invalid decision'],
+  ]);
+  const reason = fallbackLabel.get(typeof decision.fallbackReason === 'string' ? decision.fallbackReason : '') || 'decision unavailable';
+  const offered = decision.offered.slice(0, 3).filter(option => option && ['fast', 'smart', 'code'].includes(option.id) && typeof option.label === 'string')
+    .map(option => ({ ...option, label: option.label.slice(0, 200) }));
+  const scores = decision.scores && typeof decision.scores === 'object' ? decision.scores : {};
+  const selectedRole = typeof decision.selectedRole === 'string' && ['fast', 'smart', 'code'].includes(decision.selectedRole) ? decision.selectedRole : null;
+  return <details className="thinking-block routing-details">
+    <summary>{source} routing · {decision.effectiveRole}{decision.status === 'fallback' ? ' · fallback' : ''}</summary>
+    <div className="routing-details-body">
+      <p>{decision.status === 'accepted' ? 'Decision accepted' : `Fallback: ${reason}`}{Number.isFinite(decision.latencyMs) ? ` · ${Math.round(decision.latencyMs!)} ms` : ''}</p>
+      {selectedRole && selectedRole !== decision.effectiveRole && <p>Selected: {selectedRole} · Used: {decision.effectiveRole}</p>}
+      {offered.length > 0 && <ul>{offered.map(option => <li key={option.id}>
+        <span><strong>{option.id}</strong> · {option.label}</span>
+        <span>{Object.hasOwn(scores, option.id) && Number.isFinite(scores[option.id]) ? String(scores[option.id]) : '—'}</span>
+      </li>)}</ul>}
+      <small>Scores are uncalibrated preferences, not a probability of a correct route. This service does not provide a prose thought process.</small>
+    </div>
+  </details>;
 }
 
 function fmtDuration(ms: number): string {
@@ -225,6 +255,7 @@ export function ChatView({
                   {m.reasoningMode && m.reasoningMode !== 'off' && <small className="reasoning-result">Effort: {m.reasoningEffort} · {m.reasoningMode === 'real' ? 'provider parameter' : 'best-effort hint'}</small>}
                   {m.warning && <p className="msg-warning" role="status">{m.warning}</p>}
                   {(m.toolScope || m.skillScope) && <small className="tool-scope" title="What noevia gave the model for this reply">{m.toolScope && <>Using: {m.toolScope}</>}{m.toolScope && m.skillScope && ' · '}{m.skillScope && <>Skill: {m.skillScope}</>}</small>}
+                  {m.routingDecision && <RoutingDetails decision={m.routingDecision} />}
                   {m.reasoning ? <ThinkingBlock text={m.reasoning} ms={m.reasoningMs} live={!!thinkingLive && !m.content} /> : null}
                   {m.toolCalls && m.toolCalls.length > 0 ? <ToolCalls calls={m.toolCalls} /> : null}
                   {m.content ? (

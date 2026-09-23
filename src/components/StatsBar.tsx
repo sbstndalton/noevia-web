@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import type { LiveStats, ReplyTelemetry } from '../types';
+import type { LiveStats, ReplyTelemetry, RoutingDecision } from '../types';
 import { Icon } from './icons/Icon';
+import { RoutingDetails } from './ChatView';
 
 interface StatsBarProps {
   stats: LiveStats | null; // App polls /api/stats and passes it down (single poller)
   /** Exact, request-local facts from the currently visible chat's SSE stream. */
   reply?: ReplyTelemetry | null;
+  /** Request-local route for the latest assistant turn in the visible chat. */
+  routingDecision?: RoutingDecision | null;
   /** What the composer says it will send to — so the strip names the model that answered. */
   modelLabel?: string;
 }
@@ -46,9 +49,24 @@ function usePhone(): boolean {
 /** Inference status under the composer: on a phone a single line (status, model, speed) that
  *  expands into plain-language details; on a desktop the same details, always open, laid out
  *  across the width instead of stacked. Purely presentational: App owns the /api/stats poll. */
-export function StatsBar({ stats, reply, modelLabel }: StatsBarProps): JSX.Element {
+export function StatsBar({ stats, reply, routingDecision, modelLabel }: StatsBarProps): JSX.Element {
   const phone = usePhone();
   const [userOpen, setUserOpen] = useState(readOpen);
+  const rootRef = useRef<HTMLElement>(null);
+  // The routing panel is an anchored popover (it must not grow the strip or squeeze the
+  // chat), so give it the Escape-to-close a popover is expected to have even though the
+  // underlying <details> element has no built-in keyboard dismissal.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      const panel = rootRef.current?.querySelector<HTMLDetailsElement>('.routing-details[open]');
+      if (!panel) return;
+      panel.open = false;
+      panel.querySelector('summary')?.focus();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
   const active = reply?.phase === 'waiting' || reply?.phase === 'streaming';
   // A completed external-provider reply is valid even when the separately
   // polled native engine is down. Do not relabel that reply as offline.
@@ -116,16 +134,17 @@ export function StatsBar({ stats, reply, modelLabel }: StatsBarProps): JSX.Eleme
   // Wide: one row, no control — there is nothing to reveal.
   if (!phone) {
     return (
-      <section className="stats-disclosure is-open is-wide" aria-label="Inference details">
+      <section ref={rootRef} className="stats-disclosure is-open is-wide" aria-label="Inference details">
         <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveAnnouncement}</span>
         <p className="stats-bar stats-bar-static">{status(false)}</p>
         {details}
+        {routingDecision && <RoutingDetails decision={routingDecision} />}
       </section>
     );
   }
 
   return (
-    <section className={`stats-disclosure${open ? ' is-open' : ''}`} aria-label="Inference details">
+    <section ref={rootRef} className={`stats-disclosure${open ? ' is-open' : ''}`} aria-label="Inference details">
       <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveAnnouncement}</span>
       <button type="button" className="stats-bar" aria-expanded={open} aria-controls="stats-details" onClick={toggle}
         title={open ? 'Hide inference details' : 'Show inference details'}>
@@ -133,6 +152,7 @@ export function StatsBar({ stats, reply, modelLabel }: StatsBarProps): JSX.Eleme
         <Icon name={open ? 'chevron-down' : 'chevron-right'} size={14} />
       </button>
       {open && details}
+      {routingDecision && <RoutingDetails decision={routingDecision} />}
     </section>
   );
 }

@@ -1753,6 +1753,41 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 /* Thinking and tool lists read as quiet disclosures, not labels in capitals. */
 .thinking-block { border-style: solid; border-color: var(--border-subtle); background: transparent; }
 .thinking-block summary { font-size: var(--text-caption); font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text-secondary); }
+.routing-details-body { margin-top: 8px; color: var(--text-secondary); font-size: var(--text-caption); line-height: 1.45; }
+.routing-details summary { display: list-item; box-sizing: border-box; min-height: 44px; padding-block: 12px; }
+.routing-details summary:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; border-radius: 4px; }
+.routing-details-body p { margin: 0 0 6px; }
+.routing-details-body ul { list-style: none; padding: 0; margin: 8px 0; }
+.routing-details-body li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 5px 0; border-top: 1px solid var(--border-subtle); }
+.routing-details-body li span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.routing-details-body li span:last-child { font-family: var(--font-mono); white-space: nowrap; }
+.routing-details-body small { display: block; color: var(--text-faint); }
+/* Anchored popover: the routing disclosure must never grow the stats strip itself (it
+   would push the chat/composer around it) so it comes out of flow and opens upward from
+   a fixed bottom-right anchor, overlaying the transcript instead of displacing it. */
+.stats-disclosure { position: relative; }
+/* Closed, the routing disclosure is just a small pill and can stay in flow next to the
+   stats. Opened, its content must never grow the strip or squeeze the chat/composer under
+   it, so it comes out of flow and becomes a popover anchored to the strip, opening upward
+   over the transcript instead of displacing it.
+   The extra `.stats-disclosure.is-wide` compound (repeated for every declaration below) is
+   not decorative: phone.css's `.stats-disclosure.is-wide > * + *` separator-dot rule loads
+   after this file and shares the plain child-combinator's specificity, so without matching
+   it here too that later rule wins the position tie and the panel falls back into flow. */
+.stats-disclosure > .routing-details, .stats-disclosure.is-wide > .routing-details {
+  flex: none; box-sizing: border-box; max-width: min(360px, calc(100vw - 24px)); margin: 0; padding: 0 12px;
+  border-style: solid; border-radius: 14px; background: var(--bg-surface);
+}
+.stats-disclosure > .routing-details[open], .stats-disclosure.is-wide > .routing-details[open] {
+  position: absolute; right: 0; bottom: 0; top: auto; z-index: 15;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(60vh, 420px); overflow: auto; box-shadow: var(--shadow-pop);
+}
+@media (max-width: 700px) {
+  .stats-disclosure > .routing-details[open], .stats-disclosure.is-wide > .routing-details[open] {
+    left: 0; right: 0; width: auto; max-width: none;
+  }
+}
 /* Diary breadcrumb: one row, one type size, links for ancestors (matches the chat header crumbs). */
 .diary-breadcrumb { display: flex; align-items: center; flex-wrap: nowrap; gap: 2px; min-width: 0; font-size: var(--text-callout); }
 .diary-breadcrumb > span { color: var(--text-faint); padding: 0 2px; }
