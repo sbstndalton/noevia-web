@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { cancelTask, decideTask, fetchCode, startTask } from './api';
 import type { CodeAction, CodeApproval, CodeState, CodeTask, NetworkActivity, PreparationMode } from './api';
@@ -20,6 +20,12 @@ export const ACTION_LABEL: Record<CodeAction, string> = {
 
 /** Code mode for one project (spec-agent-execution §3). Rendered only for admins with the feature on. */
 export function CodePanel({ projectId }: { projectId: string }): JSX.Element {
+  // Project identity owns every task snapshot and composer choice. The keyed child is replaced
+  // during the render that changes projects, before an effect could briefly paint the old one.
+  return <ProjectCodePanel key={projectId} projectId={projectId}/>;
+}
+
+function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
   const [state, setState] = useState<CodeState | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
@@ -29,29 +35,75 @@ export function CodePanel({ projectId }: { projectId: string }): JSX.Element {
   const [domains, setDomains] = useState('');
   const [harness, setHarness] = useState('');
   const [preparation, setPreparation] = useState('direct');
+  const mounted = useRef(true);
+  const requestGeneration = useRef(0);
+  const ordinaryRequest = useRef(0);
+  const activeMutation = useRef(0);
+  const nextMutation = useRef(0);
 
-  const load = useCallback(() => fetchCode(projectId)
-    .then(next => {
+  const load = useCallback(async (mutation = 0) => {
+    // Polls pause while a mutation owns the lifecycle. Its follow-up load passes that mutation's
+    // token; this prevents an in-flight pre-mutation snapshot from becoming authoritative later.
+    if (activeMutation.current && mutation !== activeMutation.current) return;
+    // A slow ordinary poll remains eligible instead of being invalidated every second forever.
+    // Mutation refreshes intentionally bypass this fence and supersede the older snapshot.
+    if (!mutation && ordinaryRequest.current) return;
+    const request = ++requestGeneration.current;
+    if (!mutation) ordinaryRequest.current = request;
+    try {
+      const next = await fetchCode(projectId);
+      if (!mounted.current || request !== requestGeneration.current) return;
       setState(next);
+      setError('');
       setCapabilities(current => current ?? next.defaultCapabilities);
       setRepository(current => current || next.repositories[0]?.id || '');
       setHarness(current => current || next.harnesses[0]?.id || '');
-    })
-    .catch(e => setError((e as Error).message)), [projectId]);
+    } catch (e) {
+      if (mounted.current && request === requestGeneration.current) setError((e as Error).message);
+    } finally {
+      if (ordinaryRequest.current === request) ordinaryRequest.current = 0;
+    }
+  }, [projectId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    mounted.current = true;
+    void load();
+    return () => {
+      mounted.current = false;
+      requestGeneration.current++;
+      ordinaryRequest.current = 0;
+      activeMutation.current = 0;
+    };
+  }, [load]);
   const running = !!state?.tasks.some(t => ACTIVE.has(t.status));
   // A task that is waiting for an answer is polled faster: the person is looking at the card.
   useEffect(() => {
     if (!running) return;
     const waiting = state?.tasks.some(t => t.status === 'waiting_approval');
-    const timer = window.setInterval(load, waiting ? 1000 : 2000);
+    const timer = window.setInterval(() => { void load(); }, waiting ? 1000 : 2000);
     return () => window.clearInterval(timer);
   }, [running, state, load]);
 
-  const act = async (label: string, work: () => Promise<unknown>) => {
+  const act = async (label: string, work: () => Promise<unknown>, onSuccess?: () => void) => {
+    const mutation = ++nextMutation.current;
+    activeMutation.current = mutation;
+    requestGeneration.current++;
+    ordinaryRequest.current = 0;
     setBusy(label); setError('');
-    try { await work(); await load(); } catch (e) { setError((e as Error).message); } finally { setBusy(''); }
+    try {
+      await work();
+      if (mounted.current && activeMutation.current === mutation) {
+        onSuccess?.();
+        await load(mutation);
+      }
+    } catch (e) {
+      if (mounted.current && activeMutation.current === mutation) setError((e as Error).message);
+    } finally {
+      if (mounted.current && activeMutation.current === mutation) {
+        activeMutation.current = 0;
+        setBusy('');
+      }
+    }
   };
   const toggle = (action: CodeAction) => setCapabilities(list =>
     (list || []).includes(action) ? (list || []).filter(a => a !== action) : [...(list || []), action]);
@@ -148,11 +200,8 @@ export function CodePanel({ projectId }: { projectId: string }): JSX.Element {
 
       <div className="code-actions">
         <button type="button" className="btn btn-primary" disabled={!prompt.trim() || !repository || running || !!busy}
-          onClick={() => act('start', async () => {
-            await startTask(projectId, { repository, prompt, capabilities: capabilities.filter(a => online || !needsNetwork(a)), harness, promptPreparation: preparation,
-              domains: domains.split(',').map(d => d.trim()).filter(Boolean) });
-            setPrompt('');
-          })}>{busy === 'start' ? 'Starting…' : 'Start task'}</button>
+          onClick={() => act('start', () => startTask(projectId, { repository, prompt, capabilities: capabilities.filter(a => online || !needsNetwork(a)), harness, promptPreparation: preparation,
+            domains: domains.split(',').map(d => d.trim()).filter(Boolean) }), () => setPrompt(''))}>{busy === 'start' ? 'Starting…' : 'Start task'}</button>
       </div>
       {running && <p className="code-note" role="status">One task runs per project at a time.</p>}
     </section>
