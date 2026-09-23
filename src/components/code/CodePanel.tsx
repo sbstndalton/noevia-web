@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { cancelTask, decideTask, fetchCode, startTask } from './api';
-import type { CodeAction, CodeApproval, CodeState, CodeTask, PreparationMode } from './api';
+import type { CodeAction, CodeApproval, CodeState, CodeTask, NetworkActivity, PreparationMode } from './api';
 import { EmptyState } from '../EmptyState';
 import { ShellIcon } from '../ShellIcon';
 import './code.css';
@@ -184,9 +184,26 @@ function TaskCard({ task, busy, onDecide, onCancel }: {
     {task.result && !active && <p className="code-meta">
       {task.result.tools ?? 0} tool calls · {task.result.allowed ?? 0} allowed · {task.result.refused ?? 0} declined · {task.result.denied ?? 0} refused by noevia
     </p>}
+    {task.result?.network && !active && <NetworkNote network={task.result.network}/>}
     {task.meta && !active && <TaskMeta meta={task.meta}/>}
     {active && <div className="code-actions"><button type="button" className="btn btn-secondary" onClick={onCancel} disabled={!!busy}>Cancel task</button></div>}
   </article>;
+}
+
+/**
+ * The hosts a task reached, and the ones the proxy refused. A refused host is the usual reason a
+ * networked task could not install something, and naming it is what lets the next task ask for it.
+ */
+function NetworkNote({ network }: { network: NetworkActivity }): JSX.Element | null {
+  if (!network.hosts.length) return <p className="code-meta">Network: nothing was requested.</p>;
+  const reached = network.hosts.filter(h => h.allowed);
+  const refused = network.hosts.filter(h => h.refused);
+  return <>
+    {reached.length > 0 && <p className="code-meta">Reached {reached.map(h => `${h.host} (${h.allowed})`).join(' · ')}</p>}
+    {refused.length > 0 && <p className="code-note is-error">
+      Refused {refused.map(h => `${h.host} (${h.refused})`).join(' · ')}. A task reaches only the domains it names; add one to the next task if it is needed.
+    </p>}
+  </>;
 }
 
 /** Why a preparation mode is or is not on offer — the measurement, in its own words. */
