@@ -5,12 +5,16 @@ import { fetchCode } from './api';
 /** True when this viewer may use Code mode here: the feature is on and the server says yes (admins). */
 export function useCodeAccess(projectId: string): boolean {
   const flags = useFeatureFlags();
-  const [allowed, setAllowed] = useState(false);
+  const [access, setAccess] = useState({ projectId: '', allowed: false });
   useEffect(() => {
-    if (!flags.codeHarness) { setAllowed(false); return; }
+    if (!flags.codeHarness) { setAccess({ projectId, allowed: false }); return; }
     let live = true;
-    fetchCode(projectId).then(() => { if (live) setAllowed(true); }).catch(() => { if (live) setAllowed(false); });
+    setAccess(current => current.projectId === projectId ? current : { projectId, allowed: false });
+    fetchCode(projectId)
+      .then(() => { if (live) setAccess({ projectId, allowed: true }); })
+      .catch(() => { if (live) setAccess({ projectId, allowed: false }); });
     return () => { live = false; };
   }, [flags.codeHarness, projectId]);
-  return allowed;
+  // A previous project's permission must not keep its Code panel mounted for even one render.
+  return !!flags.codeHarness && access.projectId === projectId && access.allowed;
 }
