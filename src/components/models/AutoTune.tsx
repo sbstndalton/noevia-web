@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch } from '../../api';
 
@@ -20,32 +20,71 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   const [confirmed, setConfirmed] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [scan, setScan] = useState<{ models: string[]; skipped: { model: string; reason: string }[] } | null>(null);
   const done = useRef('');
-  const refresh = async () => {
-    const r = await apiFetch('/api/models/autotune?model=' + encodeURIComponent(model)), v = await r.json();
-    if (!r.ok) throw Error(v.error || 'Auto-tune status is unavailable.');
-    setJob(v.job || null); setHistory(Array.isArray(v.history) ? v.history : []);
-    return v.job as Job | null;
-  };
+  const request = useRef(0);
+  const mutating = useRef(false);
+  const changed = useRef(onChanged);
+  changed.current = onChanged;
+  const [statusError, setStatusError] = useState('');
+  const refresh = useCallback(async (notify = false) => {
+    if (mutating.current) return;
+    const current = ++request.current;
+    try {
+      const r = await apiFetch('/api/models/autotune?model=' + encodeURIComponent(model)), v = await r.json();
+      if (current !== request.current) return;
+      if (!r.ok) throw Error(v.error || 'Auto-tune status is unavailable.');
+      const next = (v.job || null) as Job | null;
+      setJob(next); setHistory(Array.isArray(v.history) ? v.history : []); setStatusError('');
+      if (notify && next && next.status !== 'running' && done.current !== next.id) {
+        done.current = next.id;
+        changed.current();
+      }
+    } catch (e) {
+      if (current === request.current) setStatusError(e instanceof Error ? e.message : 'Auto-tune status is unavailable.');
+    }
+  }, [model]);
   useEffect(() => {
-    void refresh().catch((e) => setError(e instanceof Error ? e.message : 'Auto-tune status is unavailable.'));
-    if (!model) void apiFetch('/api/models/autotune/untuned').then(async r => { const v = await r.json(); if (!r.ok) throw Error(v.error); setScan(v); }).catch(e => setError(e.message));
-  }, [model, job?.status]);
+    let active = true;
+    done.current = '';
+    mutating.current = false;
+    setJob(null); setHistory([]); setScan(null); setConfirmed(false); setBusy(false); setError(''); setStatusError('');
+    void refresh();
+    if (!model) void apiFetch('/api/models/autotune/untuned').then(async r => {
+      const v = await r.json(); if (!r.ok) throw Error(v.error);
+      if (active) setScan(v);
+    }).catch(e => { if (active) setError(e.message); });
+    return () => { active = false; ++request.current; };
+  }, [model, refresh]);
   const running = job?.status === 'running';
   useEffect(() => {
-    if (!running) return;
-    // Every second while running: the activity log is only useful if a line appears when the
-    // thing it describes happens, not two seconds later in a batch.
-    const timer = setInterval(() => { void refresh().then((next) => { if (next && next.status !== 'running' && done.current !== next.id) { done.current = next.id; onChanged(); } }).catch(() => {}); }, 1000);
+    if (!running || busy) return;
+    const timer = setInterval(() => { void refresh(true); }, 1000);
     return () => clearInterval(timer);
-  }, [running]);
+  }, [running, busy, refresh]);
   const start = async () => {
-    setBusy(true); setError('');
+    const current = ++request.current;
+    mutating.current = true;
+    setBusy(true); setError(''); setStatusError('');
     try {
       const r = await apiFetch('/api/models/autotune', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, confirmPause: confirmed, untuned: !model }) });
-      const v = await r.json(); if (!r.ok) throw Error(v.error || 'Auto-tune could not start.'); setJob(v);
-    } catch (e) { setError(e instanceof Error ? e.message : 'Auto-tune could not start.'); } finally { setBusy(false); }
+      const v = await r.json();
+      if (current !== request.current) return;
+      if (!r.ok) throw Error(v.error || 'Auto-tune could not start.');
+      setJob(v);
+    } catch (e) { if (current === request.current) setError(e instanceof Error ? e.message : 'Auto-tune could not start.'); }
+    finally { if (current === request.current) { mutating.current = false; setBusy(false); } }
   };
-  const cancel = async () => { setBusy(true); try { const r = await apiFetch('/api/models/autotune/cancel', { method: 'POST' }); const v = await r.json(); if (!r.ok) throw Error(v.error); setJob(v); } catch (e) { setError(e instanceof Error ? e.message : 'Cancellation failed.'); } finally { setBusy(false); } };
+  const cancel = async () => {
+    const current = ++request.current;
+    mutating.current = true;
+    setBusy(true); setError(''); setStatusError('');
+    try {
+      const r = await apiFetch('/api/models/autotune/cancel', { method: 'POST' }); const v = await r.json();
+      if (current !== request.current) return;
+      if (!r.ok) throw Error(v.error || 'Cancellation failed.');
+      setJob(v);
+    } catch (e) { if (current === request.current) setError(e instanceof Error ? e.message : 'Cancellation failed.'); }
+    finally { if (current === request.current) { mutating.current = false; setBusy(false); } }
+  };
   const mine = job && (!model || job.model === model) ? job : null;
   const other = model && job && job.model !== model && running;
   const last = history[0];
@@ -96,6 +135,7 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
       <button className="modal-btn primary" disabled={busy || !confirmed || (!model && !scan?.models.length)} onClick={() => void start()}>{busy ? 'Starting…' : model ? 'Auto-tune and apply' : 'Tune untuned models and apply'}</button>
     </>}
     {error && <p role="alert" className="modal-err">{error}</p>}
+    {statusError && <p role="alert" className="modal-err">{statusError} <button className="modal-btn secondary" disabled={busy} onClick={() => void refresh(running)}>Retry status</button></p>}
   </div>;
 }
 
