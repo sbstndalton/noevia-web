@@ -116,6 +116,13 @@ const project = (id, body) => ({ id, name: `Project ${id}`, goal: '', instructio
       releaseGet(); releaseGet = undefined;
       await panel.getByRole('button', { name: 'Enable this version' }).waitFor({ state: 'visible' });
       assert.equal(await panel.getByRole('button', { name: 'Enable this version' }).isDisabled(), false);
+      assert.equal(await panel.getByRole('button', { name: 'Enable this version' }).getAttribute('aria-disabled'), 'false');
+      const afterPropRefresh = puts.length;
+      await panel.getByRole('button', { name: 'Enable this version' }).click();
+      await panel.locator('summary').first().getByText('Enabled').waitFor();
+      assert.equal(puts.length, afterPropRefresh + 1, 'action guard cleared after same-project refresh');
+      await panel.getByRole('button', { name: 'Disable' }).click();
+      await panel.locator('summary').first().getByText('Disabled').waitFor();
 
       // An older effect GET snapshot must not overwrite the newer conflict refresh.
       holdNextGet = true; first.updatedAt++;
