@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch } from '../../api';
 import { copyText, GoogleDriveConnect, RecoveryKeyLink } from './GoogleDriveSetup';
@@ -27,15 +27,28 @@ export function OffsiteBackupSettings(): JSX.Element {
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
-  const load = useCallback(() => call<Status>('/api/admin/offsite-backup').then(setStatus).catch(e => setError(e.message)), []);
-  useEffect(() => { void load(); }, [load]);
+  const [loadError, setLoadError] = useState('');
+  const request = useRef(0);
+  const load = useCallback(async () => {
+    const current = ++request.current;
+    setLoadError('');
+    try {
+      const next = await call<Status>('/api/admin/offsite-backup');
+      if (current === request.current) setStatus(next);
+    } catch (e) {
+      if (current === request.current) setLoadError((e as Error).message);
+    }
+  }, []);
+  useEffect(() => { void load(); return () => { ++request.current; }; }, [load]);
   const act = async (label: string, url: string) => {
-    setBusy(label); setError('');
-    try { await call(url, 'POST'); } catch (e) { setError((e as Error).message); } finally { setBusy(''); load(); }
+    ++request.current; // Earlier status reads cannot overwrite an action in progress.
+    setBusy(label); setError(''); setLoadError('');
+    try { await call(url, 'POST'); } catch (e) { setError((e as Error).message); } finally { setBusy(''); void load(); }
   };
   return <>
     <div className="settings-title"><h1>Backups</h1><p>Nightly encrypted copies of everything on this server — accounts, projects, chats, settings and the Diary. Files are encrypted here before they leave, so Google never sees their contents. Keep the key somewhere safe: without it nothing can be restored.</p></div>
     {error && <p className="route-note" role="alert">{error}</p>}
+    {loadError && <p className="route-note" role="alert">{loadError} <button type="button" className="btn btn-secondary" onClick={() => void load()}>Reload status</button></p>}
     {!status ? <p className="preview-footnote">Loading…</p> : <>
       {status.reason && <p className="route-note" role="status">{status.reason}</p>}
       <div className="set-rows">
