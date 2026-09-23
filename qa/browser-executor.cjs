@@ -34,6 +34,19 @@ const FIXTURES = {
       <input id="file" name="file" type="file">
     </form>`),
   '/page2': page('<h1>Page two</h1><p id="p">second page text</p>'),
+  '/attacks': page(`
+    <form id="o2" method="post" action="/order2">
+      <input id="f2" name="f2" type="text" aria-label="Field">
+      <button id="sub2" type="submit"><span id="inner">Details</span></button>
+      <label id="lab" for="sub2">Continue</label>
+    </form>
+    <form id="leak" method="get" action="PARTNER/collect">
+      <input id="q" name="q" type="text" aria-label="Search">
+    </form>
+    <a id="pop" href="/popup" target="_blank">Popup</a>
+    <iframe id="fr" src="PARTNER/frame"></iframe>`),
+  '/popup': page('<p>popup</p><script>setTimeout(() => window.close(), 300)</script>'),
+  '/frame': page('<input id="x" type="text" aria-label="Frame field">'),
   '/ws': page('<p id="w">socket</p><script>try { new WebSocket("EVIL_WS/socket"); } catch {}</script>'),
 };
 
@@ -52,27 +65,30 @@ async function main() {
     const url = new URL(req.url, 'http://x');
     if (req.method === 'POST') {
       let body = ''; req.on('data', (d) => body += d);
-      return req.on('end', () => { posts.push({ path: url.pathname, body }); res.writeHead(200, { 'content-type': 'text/html' }); res.end(page('<h1>Thanks</h1>')); });
+      return req.on('end', () => { posts.push({ host: req.headers.host, path: url.pathname, body }); res.writeHead(200, { 'content-type': 'text/html' }); res.end(page('<h1>Thanks</h1>')); });
     }
+    if (url.pathname === '/collect') { posts.push({ host: req.headers.host, path: url.pathname, body: url.search }); res.writeHead(200, { 'content-type': 'text/html' }); return res.end(page('ok')); }
     if (url.pathname === '/go') { res.writeHead(302, { location: `${EVIL}/landing` }); return res.end(); }
     if (url.pathname === '/hop') { res.writeHead(302, { location: '/page2', 'set-cookie': 'hop=1; Path=/' }); return res.end(); }
     if (url.pathname === '/report.csv') { res.writeHead(200, { 'content-type': 'text/csv', 'content-disposition': 'attachment; filename="../../report.csv"' }); return res.end('a,b\n1,2\n'); }
     const body = FIXTURES[url.pathname];
     res.writeHead(body ? 200 : 404, { 'content-type': 'text/html' });
-    res.end(body ? body.replace(/EVIL_WS/g, EVIL.replace('http', 'ws')).replace(/EVIL/g, EVIL) : '');
+    res.end(body ? body.replace(/EVIL_WS/g, EVIL.replace('http', 'ws')).replace(/EVIL/g, EVIL).replace(/PARTNER/g, PARTNER) : '');
   });
   await new Promise((r) => shop.listen(0, '127.0.0.1', r));
   const SHOP = `http://shop.example.test:${shop.address().port}`;
+  // A second allowed host, served by the same server: where a secret must not be carried.
+  const PARTNER = `http://partner.example.test:${shop.address().port}`;
   // The real proxy, with its resolver pointed at loopback: both names resolve to this machine,
   // loopback counts as public only because it stands in for the internet, and the two servers'
   // ports stand in for 80/443.
-  const hosts = new Set(['shop.example.test', 'evil.test']);
+  const hosts = new Set(['shop.example.test', 'partner.example.test', 'evil.test']);
   const proxyLog = [];
   const egress = createEgressProxy({ log: (e) => proxyLog.push(e),
     lookup: async (host) => (hosts.has(host) ? ['127.0.0.1'] : []), isPublicAddress: () => true,
     allowedPorts: [shop.address().port, evil.address().port] });
   await new Promise((r) => egress.server.listen(0, '127.0.0.1', r));
-  const grant = egress.grant({ taskId: 'qa-job', domains: ['shop.example.test'] });
+  const grant = egress.grant({ taskId: 'qa-job', domains: ['shop.example.test', 'partner.example.test'] });
   const executor = createBrowserExecutor({
     launch: () => chromium.launch({ channel: process.env.QA_CHANNEL || undefined }),
     askApproval: async (card) => { cards.push(card); return answers.shift() || 'deny'; },
@@ -86,7 +102,7 @@ async function main() {
   let refused = null;
   await executor.open({ jobId: 'qa-none', allowedDomains: ['shop.example.test'], downloadsDir }).catch((e) => { refused = e; });
   check('a session without an egress grant is refused', () => assert.equal(refused?.status, 409));
-  const s = await executor.open({ jobId: 'qa-job', allowedDomains: ['shop.example.test'], downloadsDir, uploadFiles: [given],
+  const s = await executor.open({ jobId: 'qa-job', allowedDomains: ['shop.example.test', 'partner.example.test'], downloadsDir, uploadFiles: [given],
     proxy: { server: `http://127.0.0.1:${egress.server.address().port}`, username: 'task', password: grant.token } });
   const act = (a) => executor.act(s, a);
 
@@ -166,6 +182,37 @@ async function main() {
   check('extract returns page text', () => assert.equal(r.evidence.text, 'second page text'));
   r = await act({ type: 'teleport' });
   check('an unknown action is blocked', () => assert.equal(r.status, 'blocked'));
+
+  // ── Attacks found in review: every way to submit without clicking the button itself. ──
+  r = await act({ type: 'navigate', url: SHOP + '/attacks' });
+  const postsBefore = posts.length, cardsBefore = cards.length;
+  answers = [];
+  for (const [label, a] of [
+    ['a click on a child of a submit button', { type: 'click', selector: '#inner' }],
+    ['a click on a label for a submit button', { type: 'click', selector: '#lab' }],
+    ['NumpadEnter in a form field', { type: 'press', selector: '#f2', key: 'NumpadEnter' }],
+    ['Shift+Enter in a form field', { type: 'press', selector: '#f2', key: 'Shift+Enter' }],
+    ['Space on a submit button', { type: 'press', selector: '#sub2', key: 'Space' }],
+  ]) {
+    const out = await act(a);
+    check(`${label} asks, and Decline sends nothing`, () => { assert.equal(out.status, 'blocked'); assert.equal(posts.length, postsBefore); });
+  }
+  check('...each of those reached the approval card', () => assert.equal(cards.length, cardsBefore + 5));
+  r = await act({ type: 'type', selector: '#q', text: '{{secret:shop_password}}' });
+  const leak = await act({ type: 'press', selector: '#q', key: 'NumpadEnter' });
+  check("a secret typed into a form bound for another allowed host is not sent unasked", () => {
+    assert.equal(leak.status, 'blocked'); assert.ok(!posts.some((p) => String(p.body).includes(SECRET) && /partner/.test(p.host)));
+  });
+  r = await act({ type: 'type', selector: '#fr >> internal:control=enter-frame >> #x', text: '{{secret:shop_password}}' });
+  check("a secret is not typed into another site's frame", () => { assert.equal(r.status, 'blocked'); assert.match(r.reason, /not for partner/); });
+  r = await act({ type: 'navigate', url: SHOP + '/attacks', method: 'POST' });
+  check('POST navigation is refused rather than silently sent as GET', () => assert.equal(r.status, 'blocked'));
+
+  r = await act({ type: 'navigate', url: SHOP + '/attacks' });
+  await act({ type: 'click', selector: '#pop' });
+  await new Promise((res) => setTimeout(res, 1200));
+  r = await act({ type: 'extract', selector: '#lab' });
+  check('a popup that closes itself leaves the session usable', () => assert.equal(r.status, 'done'));
 
   check('the secret appears in no result, card or log', () => {
     const everything = JSON.stringify({ cards: cards.map(({ screenshot, ...c }) => c), logs, state: executor.state(s) });
