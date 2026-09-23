@@ -67,11 +67,12 @@ const assert=require('node:assert/strict');
     failure='';
     const surface=async locator=>locator.evaluate(el=>{
       const css=getComputedStyle(el),box=el.getBoundingClientRect();
-      return {background:css.backgroundColor,image:css.backgroundImage,filter:css.backdropFilter||css.webkitBackdropFilter,
+      return {background:css.backgroundColor,image:css.backgroundImage,filter:css.backdropFilter||css.webkitBackdropFilter||'none',
         border:css.borderTopWidth,box:{left:box.left,right:box.right,top:box.top,bottom:box.bottom},
         viewport:{width:innerWidth,height:innerHeight},scrollWidth:document.documentElement.scrollWidth};
     });
-    const hasSurface=style=>style.background!=='rgba(0, 0, 0, 0)' || style.image!=='none' || style.filter!=='none';
+    // Blur by itself does not paint a sheet: the old reset left .aero's blur active.
+    const hasSurface=style=>(style.background!=='rgba(0, 0, 0, 0)' && style.background!=='transparent') || style.image!=='none';
     for(const material of ['soft','liquid','material'])for(const theme of ['light','dark'])for(const width of [375,768,1440]){
       await page.setViewportSize({width,height:900});
       await page.evaluate(({material,theme})=>{
