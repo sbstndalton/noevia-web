@@ -181,12 +181,17 @@ function TaskCard({ task, busy, onDecide, onCancel }: {
     {task.stage && active && !task.approval && <p className="code-stage">{task.stage}</p>}
     {task.error && <p className="code-note is-error">{task.error}</p>}
     {task.approval && <ApprovalCard approval={task.approval} busy={busy.startsWith('decide:')} onDecide={onDecide}/>}
+    {active && <div className="code-actions"><button type="button" className="btn btn-secondary" onClick={onCancel} disabled={!!busy}>Cancel task</button></div>}
+    {task.assistantOutput?.text && <section className="code-output" role="region" aria-label="Assistant output" tabIndex={0}>
+      <h4>Assistant output</h4>
+      {task.assistantOutput.truncated && <p className="code-output-note">Showing the first 32 KiB of output.</p>}
+      <p>{task.assistantOutput.text}</p>
+    </section>}
     {task.result && !active && <p className="code-meta">
       {task.result.tools ?? 0} tool calls · {task.result.allowed ?? 0} allowed · {task.result.refused ?? 0} declined · {task.result.denied ?? 0} refused by noevia
     </p>}
     {task.result?.network && !active && <NetworkNote network={task.result.network}/>}
     {task.meta && !active && <TaskMeta meta={task.meta}/>}
-    {active && <div className="code-actions"><button type="button" className="btn btn-secondary" onClick={onCancel} disabled={!!busy}>Cancel task</button></div>}
   </article>;
 }
 
