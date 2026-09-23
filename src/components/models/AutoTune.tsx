@@ -21,10 +21,23 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   const [scan, setScan] = useState<{ models: string[]; skipped: { model: string; reason: string }[] } | null>(null);
   const done = useRef('');
   const request = useRef(0);
+  const scanRequest = useRef(0);
   const mutating = useRef(false);
   const changed = useRef(onChanged);
   changed.current = onChanged;
   const [statusError, setStatusError] = useState('');
+  const refreshScan = useCallback(async () => {
+    if (model) return;
+    const current = ++scanRequest.current;
+    try {
+      const r = await apiFetch('/api/models/autotune/untuned'), v = await r.json();
+      if (current !== scanRequest.current) return;
+      if (!r.ok) throw Error(v.error || 'Untuned models are unavailable.');
+      setScan(v);
+    } catch (e) {
+      if (current === scanRequest.current) setError(e instanceof Error ? e.message : 'Untuned models are unavailable.');
+    }
+  }, [model]);
   const refresh = useCallback(async (notify = false) => {
     if (mutating.current) return;
     const current = ++request.current;
@@ -37,23 +50,20 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
       if (notify && next && next.status !== 'running' && done.current !== next.id) {
         done.current = next.id;
         changed.current();
+        void refreshScan();
       }
     } catch (e) {
       if (current === request.current) setStatusError(e instanceof Error ? e.message : 'Auto-tune status is unavailable.');
     }
-  }, [model]);
+  }, [model, refreshScan]);
   useEffect(() => {
-    let active = true;
     done.current = '';
     mutating.current = false;
     setJob(null); setHistory([]); setScan(null); setConfirmed(false); setBusy(false); setError(''); setStatusError('');
     void refresh();
-    if (!model) void apiFetch('/api/models/autotune/untuned').then(async r => {
-      const v = await r.json(); if (!r.ok) throw Error(v.error);
-      if (active) setScan(v);
-    }).catch(e => { if (active) setError(e.message); });
-    return () => { active = false; ++request.current; };
-  }, [model, refresh]);
+    void refreshScan();
+    return () => { ++request.current; ++scanRequest.current; };
+  }, [model, refresh, refreshScan]);
   const running = job?.status === 'running';
   useEffect(() => {
     if (!running || busy) return;
