@@ -293,6 +293,12 @@ html[data-lens='svg'] .glass-seg.is-moving > .glass-thumb, html[data-lens='svg']
 [data-material='liquid'] .glass.is-primary {
   background: var(--md-primary); color: var(--md-on-primary);
 }
+[data-material='liquid'] .glass.is-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--md-on-primary) 8%, var(--md-primary));
+}
+[data-material='liquid'] .glass.is-primary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--md-on-primary) 12%, var(--md-primary));
+}
 [data-material='liquid'] .glass::before { opacity: .22; }
 [data-material='liquid'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel) {
   background: var(--glass-menu); box-shadow: var(--pane-highlight), var(--shadow-3);
@@ -304,6 +310,12 @@ html[data-lens='svg'] .glass-seg.is-moving > .glass-thumb, html[data-lens='svg']
 }
 [data-material='liquid'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .aero) .glass.is-primary {
   background: var(--md-primary); color: var(--md-on-primary);
+}
+[data-material='liquid'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .aero) .glass.is-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--md-on-primary) 8%, var(--md-primary));
+}
+[data-material='liquid'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .aero) .glass.is-primary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--md-on-primary) 12%, var(--md-primary));
 }
 [data-material='liquid'] .glass-seg > .glass-thumb {
   background: var(--md-surface-container-highest); backdrop-filter: none; -webkit-backdrop-filter: none;
