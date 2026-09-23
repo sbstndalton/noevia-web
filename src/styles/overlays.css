@@ -63,7 +63,8 @@
    Every pop-up dialog is the same frame. On a phone it rises from the bottom
    edge as a sheet with a grabber, because a centred box under a software
    keyboard is how the lower half of a dialog disappears. */
-dialog.dialog-sheet, dialog:has(> .dialog-sheet) { border: 0; padding: 0; background: none; box-shadow: none; }
+/* Only a wrapper dialog is surface-free; a dialog that is the sheet keeps .aero. */
+dialog:has(> .dialog-sheet) { border: 0; padding: 0; background: none; box-shadow: none; }
 dialog.dialog-sheet::backdrop, dialog:has(> .dialog-sheet)::backdrop {
   background: color-mix(in srgb, var(--md-surface-dim) 35%, transparent);
   backdrop-filter: blur(2px) saturate(1.1); -webkit-backdrop-filter: blur(2px) saturate(1.1);

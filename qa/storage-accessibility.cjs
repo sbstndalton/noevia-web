@@ -19,7 +19,7 @@ const assert=require('node:assert/strict');
         else body={kind,baseUrl:'https://storage.example/dav',username:'synthetic-user',corpusRoot:'Notes',bucket:'synthetic',secretConfigured:true};
       }
       else if(path.endsWith('/test')){tested=route.request().postDataJSON();body={ok:true};}
-      else if(path.endsWith('/files')){body={entries:[{name:'note.md',path:'note.md',isDir:false,size:10}]};if(failure==='browse'){status=502;body={error:'Synthetic browse failure'};}}
+      else if(path.includes('/files')){body={entries:[{name:'Examples',path:'Examples',isDir:true,size:null},{name:'note.md',path:'note.md',isDir:false,size:10}]};if(failure==='browse'){status=502;body={error:'Synthetic browse failure'};}}
       else if(path.endsWith('/file')){status=502;body={error:'Synthetic read failure'};}
       else throw Error('Unexpected API: '+path);
       await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
@@ -64,6 +64,46 @@ const assert=require('node:assert/strict');
       await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});
       assert.ok(await trigger.evaluate(el=>document.activeElement===el));
     }
-    console.log('Storage labels, edited Test payload, dialog focus/Escape/errors and 375/768/1440 light/dark: passed');
+    failure='';
+    const surface=async locator=>locator.evaluate(el=>{
+      const css=getComputedStyle(el),box=el.getBoundingClientRect();
+      return {background:css.backgroundColor,image:css.backgroundImage,filter:css.backdropFilter||css.webkitBackdropFilter,
+        border:css.borderTopWidth,box:{left:box.left,right:box.right,top:box.top,bottom:box.bottom},
+        viewport:{width:innerWidth,height:innerHeight},scrollWidth:document.documentElement.scrollWidth};
+    });
+    const hasSurface=style=>style.background!=='rgba(0, 0, 0, 0)' || style.image!=='none' || style.filter!=='none';
+    for(const material of ['soft','liquid','material'])for(const theme of ['light','dark'])for(const width of [375,768,1440]){
+      await page.setViewportSize({width,height:900});
+      await page.evaluate(({material,theme})=>{
+        document.documentElement.dataset.material=material;
+        document.documentElement.dataset.theme=theme;
+      },{material,theme});
+      for(const [triggerName,dialogName] of [['Browse storage','Pull from your storage'],['Choose folder','Choose a folder']]){
+        const trigger=page.getByRole('button',{name:triggerName,exact:true});await trigger.click();
+        const dialog=page.getByRole('dialog',{name:dialogName});await dialog.waitFor();
+        await dialog.evaluate(el=>Promise.all(el.getAnimations().map(animation=>animation.finished.catch(()=>{}))));
+        const style=await surface(dialog);
+        assert.ok(hasSurface(style),`${material}/${theme}/${width} ${dialogName} lost its surface: ${JSON.stringify(style)}`);
+        assert.ok(style.box.left>=-1 && style.box.right<=width+1 && style.box.top>=-1 && style.box.bottom<=901,
+          `${material}/${theme}/${width} ${dialogName} escaped viewport: ${JSON.stringify(style.box)}`);
+        assert.ok(style.scrollWidth<=width,`${material}/${theme}/${width} caused horizontal overflow`);
+        assert.ok(await dialog.evaluate(el=>el.contains(document.activeElement)),`${dialogName} did not receive focus`);
+        if(material==='liquid' && theme==='dark' && width===375 && dialogName==='Choose a folder' && process.env.QA_SCREENSHOT)
+          await page.screenshot({path:process.env.QA_SCREENSHOT});
+        await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});
+        assert.ok(await trigger.evaluate(el=>document.activeElement===el),`${dialogName} did not restore focus`);
+      }
+      const trigger=page.getByRole('button',{name:'Open wrapper'});await trigger.click();
+      const wrapper=page.getByRole('dialog',{name:'Synthetic wrapper'});await wrapper.waitFor();
+      await wrapper.locator(':scope > .dialog-sheet').evaluate(el=>Promise.all(el.getAnimations().map(animation=>animation.finished.catch(()=>{}))));
+      const outer=await surface(wrapper),inner=await surface(wrapper.locator(':scope > .dialog-sheet'));
+      assert.equal(outer.background,'rgba(0, 0, 0, 0)',`${material}/${theme}/${width} wrapper acquired a background`);
+      assert.equal(outer.image,'none',`${material}/${theme}/${width} wrapper acquired an image`);
+      assert.ok(hasSurface(inner),`${material}/${theme}/${width} wrapped panel lost its surface`);
+      assert.ok(inner.box.left>=-1 && inner.box.right<=width+1 && inner.box.top>=-1 && inner.box.bottom<=901,
+        `${material}/${theme}/${width} wrapped panel escaped viewport`);
+      await page.keyboard.press('Escape');await wrapper.waitFor({state:'hidden'});
+    }
+    console.log('Storage labels, errors, focus/Escape and direct/wrapped dialog surfaces: 3 materials × 2 themes × 3 widths passed');
   }finally{await browser.close();await server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
