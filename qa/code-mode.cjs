@@ -28,28 +28,31 @@ const TASK='12345678-1234-4234-8234-123456789012';
    const task=(over={})=>({id:TASK,status:'running',stage:'Reading the repository',error:null,createdAt:1,updatedAt:2,
      task:'Fix the median bug',branch:'noevia/task-1234',meta:null,identityHash:null,
      capabilities:['read_repository','edit_file','execute_command'],steps:[],plan:null,assistantOutput:null,approval:null,result:null,...over});
+   const reportedPlan={status:'proposed',subQuestions:['Inspect /work/'+('longfilename'.repeat(35)),
+     '<script>window.planHacked=true</script>',...Array.from({length:18},(_,i)=>`Check case ${i+1}`)],truncated:true};
    const visible='I checked the path.\n/work/'+('longfilename'.repeat(40))+'\n'+('A line\n'.repeat(80))+'<script>window.hacked=true</script>';
    await page.route('**/api/projects/p2/code**',r=>r.fulfill({json:{repositories:[{id:'noevia'}],capabilities:CAPS,
      defaultCapabilities:['read_repository'],harnesses:[{id:'opencode',label:'OpenCode',version:null}],
      promptPreparation:[{id:'direct',label:'Direct',available:true,reason:'Direct'}],sandboxed:true,network:false,
      tasks:[task({id:'22222222-2222-4222-8222-222222222222',task:'Field task',status:'completed',
+       plan:{status:'edited',subQuestions:['Only the field project sees this plan.'],truncated:false},
        assistantOutput:{text:'Only the field project sees this.',truncated:false}})]}}));
    await page.route('**/api/projects/p1/code**',async r=>{
      const url=new URL(r.request().url()),method=r.request().method();
      if(url.pathname.endsWith('/approve')){
        const body=r.request().postDataJSON();posts.push(['decide',body.decision]);
        // After an edit is allowed, the harness asks to delete: a class that never stands.
-       tasks=[task({status:'waiting_approval',assistantOutput:{text:visible,truncated:false},approval:approval({id:'a2',action:'delete',title:'Delete build/',kind:'delete',paths:['/work/build'],arguments:{path:'/work/build'}})})];
-       if(body.decision==='deny')tasks=[task({status:'waiting_approval',assistantOutput:{text:visible,truncated:false},approval:approval({id:'a3',action:'execute_command',title:'Run the tests',kind:'execute',command:longCommand,arguments:{command:longCommand}})})];
+       tasks=[task({status:'waiting_approval',plan:reportedPlan,assistantOutput:{text:visible,truncated:false},approval:approval({id:'a2',action:'delete',title:'Delete build/',kind:'delete',paths:['/work/build'],arguments:{path:'/work/build'}})})];
+       if(body.decision==='deny')tasks=[task({status:'waiting_approval',plan:reportedPlan,assistantOutput:{text:visible,truncated:false},approval:approval({id:'a3',action:'execute_command',title:'Run the tests',kind:'execute',command:longCommand,arguments:{command:longCommand}})})];
        return r.fulfill({json:{ok:true}});
      }
-     if(url.pathname.endsWith('/cancel')){tasks=[task({status:'cancelled',stage:null,approval:null,assistantOutput:{text:visible,truncated:false},
+     if(url.pathname.endsWith('/cancel')){tasks=[task({status:'cancelled',stage:null,approval:null,plan:reportedPlan,assistantOutput:{text:visible,truncated:false},
        result:{branch:'noevia/task-1234',tools:4,approvals:2,allowed:1,refused:1,denied:0,
          network:{allowed:3,refused:2,hosts:[{host:'github.com',allowed:0,refused:2,reason:'host is not on this task’s list'},{host:'pypi.org',allowed:3,refused:0,reason:null}]}},
        // A harness that reported some of itself and not the rest: both halves must show.
        meta:{harness:'opencode',harnessVersion:'1.18.31',protocolVersion:1,usage:null,context:{used:8012,size:24576,percent:33},commands:2,failedCommands:1,messageChunks:3,
          limitations:['The harness did not report token usage.']},identityHash:'a'.repeat(64)})];return r.fulfill({json:tasks[0]});}
-     if(method==='POST'){posts.push(['start',r.request().postDataJSON()]);tasks=[task({status:'waiting_approval',assistantOutput:{text:'First visible words.',truncated:false},approval:approval()})];return r.fulfill({status:202,json:{taskId:TASK,branch:'noevia/task-1234'}});}
+     if(method==='POST'){posts.push(['start',r.request().postDataJSON()]);tasks=[task({status:'waiting_approval',plan:reportedPlan,assistantOutput:{text:'First visible words.',truncated:false},approval:approval()})];return r.fulfill({status:202,json:{taskId:TASK,branch:'noevia/task-1234'}});}
      return r.fulfill({json:{repositories:[{id:'noevia'},{id:'scratch'}],capabilities:CAPS,
        defaultCapabilities:['read_repository','edit_file','execute_command'],
        harnesses:[{id:'opencode',label:'OpenCode',version:'1.18.31'}],
@@ -105,6 +108,14 @@ const TASK='12345678-1234-4234-8234-123456789012';
    // The gate: three answers, arguments in full.
    await page.getByRole('heading',{name:'Fix the median bug'}).waitFor();
    await page.getByRole('group',{name:'Approval required'}).waitFor();
+   const plan=page.getByRole('region',{name:'Reported plan'});
+   assert.equal(await plan.locator('li').count(),20);
+   assert.ok((await plan.textContent()).includes('<script>window.planHacked=true</script>'));
+   assert.equal(await page.evaluate(()=>window.planHacked),undefined,'plan text stays inert');
+   await page.getByText('Some plan text was shortened.').waitFor();
+   assert.ok(await page.getByRole('group',{name:'Approval required'}).evaluate((el)=>
+     el.compareDocumentPosition(document.querySelector('.code-plan')) & Node.DOCUMENT_POSITION_FOLLOWING), 'approval before plan');
+   assert.ok(await plan.evaluate(el=>el.scrollHeight>el.clientHeight),'long plan scrolls within its region');
    assert.equal(await page.getByRole('region',{name:'Assistant output'}).textContent(), 'Assistant outputFirst visible words.');
    assert.ok(await page.getByRole('group',{name:'Approval required'}).evaluate((el)=>
      el.compareDocumentPosition(document.querySelector('.code-output')) & Node.DOCUMENT_POSITION_FOLLOWING), 'approval before output');
@@ -116,6 +127,8 @@ const TASK='12345678-1234-4234-8234-123456789012';
    assert.ok(shown.includes('long '.repeat(80).trim()),'the arguments were truncated');
    assert.equal(await page.getByRole('button',{name:'Start task'}).isDisabled(),true,'a second task while one runs');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow (approval)');
+   await plan.scrollIntoViewIfNeeded();
+   if(shots)await page.screenshot({path:`${shots}/code-plan-${width}-${theme}.png`});
    // The panel scrolls inside the project pane, so fullPage alone would photograph the
    // composer and never the card. Bring the card into view first.
    await page.getByRole('group',{name:'Approval required'}).scrollIntoViewIfNeeded();
@@ -129,6 +142,12 @@ const TASK='12345678-1234-4234-8234-123456789012';
    assert.equal(await page.evaluate(()=>window.hacked),undefined,'assistant text stays inert');
    assert.ok(await output.evaluate(el=>el.scrollHeight>el.clientHeight),'long output scrolls within its region');
    await page.getByRole('button',{name:'Cancel task'}).focus();await page.keyboard.press('Tab');
+   assert.equal(await plan.evaluate(el=>el===document.activeElement),true,'plan follows the action in keyboard order');
+   assert.equal(await plan.evaluate(el=>el.matches(':focus-visible')&&getComputedStyle(el).outlineStyle!=='none'),true,'plan keyboard focus is visible');
+   const beforePlanScroll=await plan.evaluate(el=>el.scrollTop);
+   await page.keyboard.press('PageDown');await page.waitForTimeout(150);
+   assert.ok(await plan.evaluate(el=>el.scrollTop)>beforePlanScroll,'keyboard scrolls the bounded plan region');
+   await page.keyboard.press('Tab');
    assert.equal(await output.evaluate(el=>el===document.activeElement),true,'output follows the action in keyboard order');
    assert.equal(await output.evaluate(el=>el.matches(':focus-visible')&&getComputedStyle(el).outlineStyle!=='none'),true,'keyboard focus is visible');
    const beforeScroll=await output.evaluate(el=>el.scrollTop);
@@ -150,6 +169,7 @@ const TASK='12345678-1234-4234-8234-123456789012';
    assert.ok(cmd.includes('x'.repeat(300)),'the command was truncated');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow (long command)');
    await page.getByRole('button',{name:'Cancel task'}).click();
+   await page.getByText('Reported as proposed.').waitFor();
    await page.getByText('4 tool calls · 1 allowed · 1 declined · 0 refused by noevia').waitFor();
    assert.ok((await page.getByRole('region',{name:'Assistant output'}).textContent()).includes('I checked the path.'));
    await page.getByRole('region',{name:'Assistant output'}).scrollIntoViewIfNeeded();
@@ -166,28 +186,34 @@ const TASK='12345678-1234-4234-8234-123456789012';
    assert.deepEqual(posts.map(p=>p[1]).slice(1),['approve','deny']);
    await page.getByText('4 tool calls · 1 allowed · 1 declined · 0 refused by noevia').scrollIntoViewIfNeeded();
    if(shots)await page.screenshot({path:`${shots}/code-finished-${width}-${theme}.png`});
-   tasks=[task({id:'f',task:'Failed task',status:'failed',error:'Synthetic failure',assistantOutput:{text:'Partial before failure.',truncated:false}}),
-     task({id:'i',task:'Interrupted task',status:'interrupted',assistantOutput:{text:'Flushed before restart.',truncated:false}}),
+   tasks=[task({id:'f',task:'Failed task',status:'failed',error:'Synthetic failure',plan:{status:'edited',subQuestions:['Last reported before failure.'],truncated:false},assistantOutput:{text:'Partial before failure.',truncated:false}}),
+     task({id:'i',task:'Interrupted task',status:'interrupted',plan:{status:'skipped',subQuestions:[],truncated:false},assistantOutput:{text:'Flushed before restart.',truncated:false}}),
      task({id:'t',task:'Truncated task',status:'completed',assistantOutput:{text:'x'.repeat(32768),truncated:true}}),
      task({id:'n',task:'Silent task',status:'completed',assistantOutput:null})];
    await page.getByRole('tab',{name:/Chats/}).click();await page.getByRole('tab',{name:'Code'}).click();
    await page.getByText('Partial before failure.').waitFor();
    await page.getByText('Flushed before restart.').waitFor();
    await page.getByText('Showing the first 32 KiB of output.').waitFor();
+   await page.getByText('Last reported before failure.').waitFor();
+   await page.getByText('Reported as skipped.').waitFor();
    assert.equal(await page.getByRole('region',{name:'Assistant output'}).count(),3,'null output has no section');
+   assert.equal(await page.getByRole('region',{name:'Reported plan'}).count(),2,'null plan has no section');
+   assert.equal(await page.locator('.code-plan input').count(),0,'no invented progress controls');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow (32KiB output)');
    await page.getByText('Showing the first 32 KiB of output.').scrollIntoViewIfNeeded();
    if(shots)await page.screenshot({path:`${shots}/code-truncated-${width}-${theme}.png`});
    await navClick(page,'Projects');await page.locator('.project-card').filter({hasText:'Field notes'}).first().click();
    await page.getByRole('tab',{name:'Code'}).click();
    await page.getByText('Only the field project sees this.').waitFor();
+   await page.getByText('Only the field project sees this plan.').waitFor();
    assert.equal(await page.getByText('Partial before failure.').count(),0,'another project cannot see task output');
+   assert.equal(await page.getByText('Last reported before failure.').count(),0,'another project cannot see task plan');
    await navClick(page,'Projects');await page.locator('.project-card').filter({hasText:'Battery notes'}).first().click();
    await page.getByRole('tab',{name:'Code'}).click();
    await page.getByText('Partial before failure.').waitFor();
    await page.close();
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS code-mode: repository and approval gates, bounded assistant output with keyboard scroll, terminal/null/truncated states, project revisit; 375/768/1440 light/dark.');
+  console.log('PASS code-mode: repository and approval gates, bounded reported plan and assistant output with keyboard scroll, terminal/null/truncated states, project revisit; 375/768/1440 light/dark.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
