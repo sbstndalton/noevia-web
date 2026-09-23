@@ -81,7 +81,12 @@ const pending = (id, label) => ({ id, label, status: 'pending', steps: [{ id: id
       const cancel = panel.getByRole('button', { name: 'Cancel auto-tune' });
       await cancel.focus(); await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab');
       assert.ok(await cancel.evaluate(el => getComputedStyle(el).outlineStyle !== 'none'), 'focus ' + width + ' ' + theme);
-      await panel.screenshot({ path: (process.env.QA_SCREENSHOTS || '/tmp') + '/models-autotune-' + width + '-' + theme + '.png' });
+      if (width === 375 && theme === 'light' || width === 1440 && theme === 'dark') {
+        await panel.getByRole('heading', { name: 'Automatic tuning' }).scrollIntoViewIfNeeded();
+        await page.screenshot({ path: (process.env.QA_SCREENSHOTS || '/tmp') + '/models-autotune-' + width + '-' + theme + '-top.png' });
+        await cancel.scrollIntoViewIfNeeded();
+        await page.screenshot({ path: (process.env.QA_SCREENSHOTS || '/tmp') + '/models-autotune-' + width + '-' + theme + '-bottom.png' });
+      }
     }
     await panel.getByRole('button', { name: 'Cancel auto-tune' }).click();
     const resume = panel.getByRole('button', { name: 'Resume auto-tune' });
