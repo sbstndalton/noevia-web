@@ -1979,3 +1979,6 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .decision-service-settings .set-row-control { width: 100%; min-width: 0; }
 .decision-service-settings .modal-input { width: 100%; min-width: 0; box-sizing: border-box; }
 .decision-service-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* Keep the workspace frame present while its lazy destination arrives. */
+.view-loading { flex: 1; min-height: 160px; padding: var(--space-6); color: var(--text-secondary); }
