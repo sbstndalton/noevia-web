@@ -38,3 +38,27 @@ export function adoptMergedTranscript(
     return current[at];
   });
 }
+
+/** Combine a chat's lazily loaded server history with whatever is already on screen for it. With
+ *  nothing local the loaded copy is shown as is. If the person already sent (or is streaming) in
+ *  this chat before the load resolved, the loaded turns are merged in front of the local ones and
+ *  local messages keep their ids, so the live reply placeholder still receives stream updates. */
+export function resolveLoadedHistory(current: Message[], loaded: Message[]): Message[] {
+  if (!current.length) return loaded;
+  const toEntry = (m: Message): HistoryEntry => ({ role: m.role, content: m.content });
+  const ours = current.filter((m) => !m.error).map(toEntry);
+  const theirs = loaded.map(toEntry);
+  let shared = 0;
+  while (shared < theirs.length && shared < ours.length && theirs[shared].role === ours[shared].role && theirs[shared].content === ours[shared].content) shared++;
+  if (shared === theirs.length) return current;
+  const merged = shared === ours.length ? theirs : [...theirs, ...ours.slice(shared)];
+  const byIndex = new Map<HistoryEntry, Message>(theirs.map((e, i) => [e, loaded[i]]));
+  return adoptMergedTranscript(current, merged, () => 'm-' + Math.random().toString(36).slice(2), (entry, id) => byIndex.get(entry) ?? { id, role: entry.role, content: entry.content });
+}
+
+/** Hands out sequence numbers for overlapping requests of one kind; `isLatest` is true only for
+ *  the most recently started one, so an older response cannot overwrite a newer one. */
+export function latestGate(): { next: () => number; isLatest: (seq: number) => boolean } {
+  let seq = 0;
+  return { next: () => ++seq, isLatest: (n) => n === seq };
+}

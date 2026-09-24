@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../api';
+import { isSystemModel, SYSTEM_MODEL_LABEL } from '../../model-system';
 import { bytes, ctxShort, errorText, mm, tokens } from './mm';
 import { NativeCalibration } from '../NativeCalibration';
 import { AutoTune } from './AutoTune';
@@ -85,12 +86,12 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
     } catch (e) { setError(errorText(e, 'Saved, but the engine did not reload')); } finally { setBusy(''); }
   };
   const doRename = async () => {
-    if (!data) return; setBusy('rename'); setError('');
+    if (!data || isSystemModel(name)) return; setBusy('rename'); setError('');
     try { await mm(`sections/${encodeURIComponent(name)}/rename`, { body: { newName: rename.trim(), baseRevision: data.revision } }); await apply(false); await onChanged(rename.trim()); }
     catch (e) { setError(errorText(e, 'Rename failed')); } finally { setBusy(''); }
   };
   const doDelete = async () => {
-    if (!data) return; setBusy('delete'); setError('');
+    if (!data || isSystemModel(name)) return; setBusy('delete'); setError('');
     try { await mm(`sections/${encodeURIComponent(name)}?baseRevision=${data.revision}`, { method: 'DELETE' }); dismissFolderModel(name); await apply(false); await onChanged(''); }
     catch (e) { setError(errorText(e, 'Delete failed')); } finally { setBusy(''); }
   };
@@ -140,7 +141,8 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
       <button className="modal-btn secondary" disabled={busy !== ''} onClick={() => void read(true)}>Reset to model-file defaults</button>
       {row?.cli && <button className="modal-btn secondary" onClick={() => void navigator.clipboard?.writeText(row.cli).then(() => setMessage('Command line copied.'))}>Copy command line</button>}
     </div>
-    {data.exists && <details className="mm-disclosure"><summary>Rename or delete</summary><div className="mm-form">
+    {data.exists && isSystemModel(name) && <p className="mm-note" role="status">{SYSTEM_MODEL_LABEL} — used internally for message routing; it cannot be renamed or removed here.</p>}
+    {data.exists && !isSystemModel(name) && <details className="mm-disclosure"><summary>Rename or delete</summary><div className="mm-form">
       <p className="mm-note">The name is the model id that chat, projects and the Diary refer to. Renaming keeps the same file.</p>
       <div className="mm-row"><label className="mm-grow">New name<input value={rename} onChange={e => setRename(e.target.value)} placeholder={name}/></label><button className="modal-btn secondary" disabled={!rename.trim() || rename.trim() === name || busy !== ''} onClick={() => void doRename()}>Rename</button></div>
       {confirmDelete ? <div className="mm-actions"><p>Remove these settings? The model file stays; the engine stops offering this model.</p><button className="modal-btn primary" disabled={busy !== ''} onClick={() => void doDelete()}>Remove settings</button><button className="modal-btn secondary" onClick={() => setConfirmDelete(false)}>Keep</button></div>

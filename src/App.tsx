@@ -57,7 +57,7 @@ import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
 import { settleToolCalls } from './tool-call-state';
 import { mergeTranscripts } from './transcript-merge';
-import { adoptMergedTranscript, enqueueKeyed, upsertChatMeta } from './chat-save';
+import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, upsertChatMeta } from './chat-save';
 import { readLastPlace, writeLastPlace, clearLastPlace } from './last-view';
 import { currentRoutingDecision } from './current-routing';
 
@@ -157,6 +157,8 @@ export default function App(): JSX.Element {
   // then terminates the upstream request.
   const streamAbort = useRef<Record<string, AbortController>>({});
   const sendingChats = useRef<Set<string>>(new Set());
+  const historyLoads = useRef<Record<string, Promise<Message[] | null>>>({});
+  const statsGate = useRef(latestGate());
   const historyRevisions = useRef<Record<string, string | null>>({});
   const historySaves = useRef<Record<string, Promise<void>>>({});
   // A merged transcript that arrived while a reply was streaming into that chat. Applying it then
@@ -303,9 +305,10 @@ export default function App(): JSX.Element {
     const tick = () => {
       if (pending || document.visibilityState === 'hidden') return;
       pending = true;
+      const seq = statsGate.current.next();
       void fetchStats()
-        .then((s) => alive && setStats(s))
-        .catch(() => alive && setStats((prev) => (prev ? { ...prev, up: false, mtp: [] } : prev)))
+        .then((s) => { if (alive && statsGate.current.isLatest(seq)) setStats(s); })
+        .catch(() => { if (alive && statsGate.current.isLatest(seq)) setStats((prev) => (prev ? { ...prev, up: false, mtp: [] } : prev)); })
         .finally(() => { pending = false; });
     };
     tick();
@@ -324,12 +327,12 @@ export default function App(): JSX.Element {
     const id = view.chatId;
     if (loadedChats.current.has(id)) return;
     loadedChats.current.add(id);
-    fetchChatHistoryRevision(id)
+    // A send made before this resolves waits on it (see handleSend), and whatever is already on
+    // screen is merged with the loaded copy rather than replaced by it.
+    const load = fetchChatHistoryRevision(id)
       .then(({ history, revision }) => {
         historyRevisions.current[id] = revision;
-        setMessagesByChat((prev) => ({
-          ...prev,
-          [id]: history.map((h) => ({
+        const loaded: Message[] = history.map((h) => ({
             id: uid(),
             role: h.role,
             content: h.content,
@@ -339,10 +342,17 @@ export default function App(): JSX.Element {
             reasoningMs: h.reasoningMs,
             toolCalls: settleToolCalls(h.toolCalls),
             stats: h.stats,
-          })),
-        }));
+          }));
+        setMessagesByChat((prev) => ({ ...prev, [id]: resolveLoadedHistory(prev[id] ?? [], loaded) }));
+        return loaded;
       })
-      .catch(() => undefined);
+      .catch(() => {
+        // Not loaded: reopening the chat retries instead of leaving it empty with no revision.
+        loadedChats.current.delete(id);
+        return null;
+      })
+      .finally(() => { if (historyLoads.current[id] === load) delete historyLoads.current[id]; });
+    historyLoads.current[id] = load;
   }, [view]);
 
   const allChats: ChatMeta[] = useMemo(() => {
@@ -462,7 +472,11 @@ export default function App(): JSX.Element {
       if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
       sendingChats.current.add(chatId);
       const userMsg: Message = { id: uid(), role: 'user', content: text };
-      const existing = base ?? messagesRef.current[chatId] ?? [];
+      // History still loading: wait for it so the model sees the earlier turns and the load does
+      // not land on top of this turn.
+      const pendingLoad = base ? undefined : historyLoads.current[chatId];
+      const loaded = pendingLoad ? await pendingLoad : null;
+      const existing = base ?? (loaded ? resolveLoadedHistory(messagesRef.current[chatId] ?? [], loaded) : messagesRef.current[chatId] ?? []);
       const history: HistoryEntry[] = existing.filter(m => !m.error).map(m => ({ role: m.role, content: m.content }));
       setMessagesByChat(prev => ({ ...prev, [chatId]: [...existing, userMsg] }));
       const replyId = uid();
@@ -664,7 +678,8 @@ export default function App(): JSX.Element {
             }));
             // Totals are engine-scoped, so reconcile them separately without
             // letting that response replace this chat's request-local facts.
-            void fetchStats().then(setStats).catch(() => undefined);
+            const statsSeq = statsGate.current.next();
+            void fetchStats().then((s) => { if (statsGate.current.isLatest(statsSeq)) setStats(s); }).catch(() => undefined);
           } else if (ev.type === 'done') {
             streamCompleted = true;
             setReplyTelemetryByChat((prev) => ({
