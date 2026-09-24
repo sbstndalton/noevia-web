@@ -29,8 +29,8 @@ const port=31293,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'.
    await page.goto(origin);await page.waitForLoadState('networkidle');
    await page.keyboard.press((await page.evaluate(()=>/mac/i.test(navigator.platform)))?'Meta+Comma':'Control+Comma');
    const dialog=page.getByRole('region',{name:'Settings'});await dialog.waitFor();
-   await dialog.getByRole('button',{name:'Personalization',exact:true}).click();
-   await dialog.getByRole('heading',{name:'Personalization',level:1}).waitFor();
+   await dialog.getByRole('button',{name:'Assistant & style',exact:true}).click();
+   await dialog.getByRole('heading',{name:'Assistant & style',level:1}).waitFor();
    const box=dialog.getByLabel(/Custom instructions/);
    if(width===1440&&theme==='light'){
     assert.equal(await dialog.getByRole('button',{name:'Save',exact:true}).isDisabled(),true,'nothing to save yet');
@@ -38,15 +38,30 @@ const port=31293,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'.
     await dialog.getByText('Concise',{exact:true}).click();assert.equal(await dialog.getByRole('radio',{name:/Concise/}).isChecked(),true);
     await dialog.getByRole('button',{name:'Save',exact:true}).click();
     await dialog.getByRole('status').filter({hasText:'Saved.'}).waitFor();
-    await dialog.getByLabel(/What noevia remembers/).fill('I keep bees. MEMORY-CANARY-3\n\nI keep bees. MEMORY-CANARY-3');
-    await dialog.getByRole('switch',{name:'Use project memory'}).click();
-    await dialog.getByRole('button',{name:'Save memory'}).click();
-    await dialog.getByRole('status').filter({hasText:'New messages use this memory'}).waitFor();
-    assert.equal(await dialog.getByLabel(/What noevia remembers/).inputValue(),'I keep bees. MEMORY-CANARY-3','duplicates and blank lines dropped');
-   } else {await dialog.locator('textarea:enabled').nth(1).waitFor();assert.equal(await dialog.getByLabel(/What noevia remembers/).inputValue(),'I keep bees. MEMORY-CANARY-3');assert.equal(await dialog.getByRole('switch',{name:'Use project memory'}).isChecked(),false);assert.equal(await box.inputValue(),'Answer in British English. PERSONAL-CANARY-7.','persists across reloads');assert.equal(await dialog.getByRole('radio',{name:/Concise/}).isChecked(),true);}
+   } else {await dialog.locator('textarea:enabled').first().waitFor();assert.equal(await box.inputValue(),'Answer in British English. PERSONAL-CANARY-7.','persists across reloads');assert.equal(await dialog.getByRole('radio',{name:/Concise/}).isChecked(),true);}
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow ${width}`);
    await page.screenshot({path:`${shots}/personalization-${width}-${theme}.png`});
-   await dialog.getByRole('button',{name:'Save memory'}).scrollIntoViewIfNeeded();await page.screenshot({path:`${shots}/personalization-memory-${width}-${theme}.png`});
+   // Memory has its own page (#228): one line per fact, each editable and forgettable.
+   if(width<821)await dialog.getByRole('button',{name:'All settings'}).click();
+   await dialog.getByRole('navigation',{name:'Settings categories'}).getByRole('button',{name:'Memory',exact:true}).click();
+   await dialog.getByRole('heading',{name:'Memory',level:1}).waitFor();
+   const list=dialog.getByRole('list',{name:'Account memory'});
+   if(width===1440&&theme==='light'){
+    await dialog.getByLabel('New memory').fill('I keep bees. MEMORY-CANARY-3');
+    await dialog.getByRole('button',{name:'Remember'}).click();
+    await dialog.getByRole('status').filter({hasText:'Remembered.'}).waitFor();
+    await dialog.getByLabel('New memory').fill('Temporary line to forget');await dialog.getByRole('button',{name:'Remember'}).click();
+    await list.getByText('Temporary line to forget').waitFor();
+    await dialog.getByRole('button',{name:'Forget “Temporary line to forget”'}).click();
+    await page.getByRole('dialog',{name:'Forget this line?'}).getByRole('button',{name:'Forget',exact:true}).click();
+    await list.getByText('Temporary line to forget').waitFor({state:'detached'});
+    await dialog.getByRole('switch',{name:'Use project memory'}).click();
+    await dialog.getByRole('status').filter({hasText:'no longer sent'}).waitFor();
+   }
+   await list.getByText('I keep bees. MEMORY-CANARY-3').waitFor();
+   assert.equal(await list.getByRole('listitem').count(),1,'one remembered line');
+   assert.equal(await dialog.getByRole('switch',{name:'Use project memory'}).isChecked(),false);
+   await page.screenshot({path:`${shots}/personalization-memory-${width}-${theme}.png`});
    await page.keyboard.press('Escape');
   }
   const project=(await api('/api/projects',{name:'Synthetic writing',model:'synthetic-model',toolboxes:[]})).body;

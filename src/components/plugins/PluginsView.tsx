@@ -5,7 +5,14 @@ import { ShellIcon } from '../ShellIcon';
 import { SegmentedControl } from '../SegmentedControl';
 import { ConnectorsSettings } from '../connectors/ConnectorsSettings';
 
-type Tab = 'connected' | 'mcp' | 'skills';
+/** Customise's three destinations (#238). The old tab ids stay accepted so a saved link lands on
+ *  the right one: 'connected' was Connectors, 'mcp' was the MCP directory that now lives in Plugins. */
+export type CustomiseTab = 'skills' | 'connectors' | 'plugins';
+export function customiseTab(value: string | null | undefined): CustomiseTab {
+  if (value === 'skills') return 'skills';
+  if (value === 'plugins' || value === 'mcp') return 'plugins';
+  return 'connectors';
+}
 interface Item { why?: string; id: string; name: string; publisher: string; description: string; version: string; url: string; remote: boolean; installable?: boolean; notInstallable?: string; needsKey?: boolean; headers?: KeyHeader[] }
 interface KeyHeader { name: string; required: boolean; secret: boolean; description: string; template: string | null }
 interface Added { id: string; registryName: string; title: string; declaredHeaders?: KeyHeader[]; toolCount: number | null; error: string | null; keyHeaders?: string[]; oauth?: boolean; personal?: boolean; redirectUri?: string; oauthClient?: { manual: boolean; clientId: string | null; hasSecret: boolean; redirectUri: string; issuer: string } | null }
@@ -19,22 +26,24 @@ async function signInTab(get: () => Promise<string | null>): Promise<boolean> {
   catch (e) { tab?.close(); throw e; }
 }
 
-/** Plugins: the integrations you use (Google Drive and friends) plus a read-only directory of
- *  MCP servers and skills other people publish. Connecting moved here from Settings
- *  (user review, 2026-09-19); off-site backups still use the same Drive connection. */
-export function PluginsView({ onStartChat, embedded = false, projects = [], onProjectsChanged }: { onStartChat?: (prompt: string) => void; embedded?: boolean; projects?: { id: string; name: string }[]; onProjectsChanged?: () => void }): JSX.Element {
-  const [tab, setTab] = useState<Tab>('connected');
+/** Customise (#238, formerly "Plugins"): Skills, Connectors and Plugins as three tabs. Connectors
+ *  are accounts you link (Google Drive and friends); Plugins are MCP servers, installed first and
+ *  then the public directory. The view id stays `plugins`, so saved places and links still resolve. */
+export function PluginsView({ onStartChat, embedded = false, projects = [], onProjectsChanged, initialTab }: { onStartChat?: (prompt: string) => void; embedded?: boolean; projects?: { id: string; name: string }[]; onProjectsChanged?: () => void; initialTab?: string }): JSX.Element {
+  const [tab, setTab] = useState<CustomiseTab>(() => customiseTab(initialTab));
   const [isAdmin, setIsAdmin] = useState(false);
   useEffect(() => { let live = true; fetchProfile().then((p) => { if (live) setIsAdmin(p.user.role === 'admin'); }).catch(() => undefined); return () => { live = false; }; }, []);
   const body = <div className="plugins-page">
     <header className="plugins-head">
-      <h1>Plugins</h1>
-      <p>Connect services noevia can use for you, and browse MCP servers and skills that other people publish.</p>
-      <SegmentedControl label="Plugins" value={tab} onChange={setTab} options={[['connected', 'Connected'], ['mcp', 'MCP servers'], ['skills', 'Skills']]}/>
+      <h1>Customise</h1>
+      <p>Skills shape how noevia works, connectors link your accounts, and plugins add tools through MCP servers.</p>
+      <SegmentedControl label="Customise" value={tab} onChange={setTab} options={[['skills', 'Skills'], ['connectors', 'Connectors'], ['plugins', 'Plugins']]}/>
     </header>
-    {tab === 'connected'
-      ? <div className="plugins-connected"><ConnectorsSettings hideTitle isAdmin={isAdmin} onStartChat={onStartChat}/><SignInServers/><KeyServers/></div>
-      : <Directory key={tab} kind={tab} projects={projects} onProjectsChanged={onProjectsChanged} isAdmin={isAdmin}/>}
+    {tab === 'connectors'
+      ? <div className="plugins-connected"><h2 className="plugins-subhead">Connected</h2><ConnectorsSettings hideTitle isAdmin={isAdmin} onStartChat={onStartChat}/></div>
+      : tab === 'plugins'
+        ? <div className="plugins-connected"><h2 className="plugins-subhead">Installed MCP servers</h2><SignInServers/><KeyServers/><p className="plugins-note">Each MCP server is a toolbox a project chooses; every write it offers still asks before it runs.{isAdmin ? '' : ' Adding servers is an administrator action.'}</p><h2 className="plugins-subhead">Discover</h2><Directory key="mcp" kind="mcp" projects={projects} onProjectsChanged={onProjectsChanged} isAdmin={isAdmin}/></div>
+        : <><p className="plugins-note">Installed skills are listed in each project’s instruction skills. Browse below to add one to a project.</p><h2 className="plugins-subhead">Discover</h2><Directory key="skills" kind="skills" projects={projects} onProjectsChanged={onProjectsChanged} isAdmin={isAdmin}/></>}
   </div>;
   return embedded ? body : <main className="main plugins-view">{body}</main>;
 }

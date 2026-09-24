@@ -1,3 +1,4 @@
+import { appLocale } from '../user-preferences';
 import { useId, useRef, useState } from 'react';
 import { useModalDialog } from './useModalDialog';
 import type { JSX } from 'react';
@@ -115,7 +116,7 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
                   <span className="project-chip">{p.chats.length} {p.chats.length === 1 ? 'chat' : 'chats'}</span>
                   {p.files.length > 0 && <span className="project-chip">{p.files.length} {p.files.length === 1 ? 'file' : 'files'}</span>}
                   {p.modes?.length && (p.modes.length > 1 || p.modes[0] !== 'chat') ? <span className="project-chip" aria-label={`Available in ${p.modes.join(', ')}`}>{p.modes.map((m) => m === 'chat' ? 'Chat' : m === 'cowork' ? 'Cowork' : 'Code').join(' · ')}</span> : null}
-                  <time className="project-card-time" dateTime={new Date(p.updatedAt).toISOString()} title={`Updated ${new Date(p.updatedAt).toLocaleString()}`}>{timeAgo(p.updatedAt)}</time>
+                  <time className="project-card-time" dateTime={new Date(p.updatedAt).toISOString()} title={`Updated ${new Date(p.updatedAt).toLocaleString(appLocale())}`}>{timeAgo(p.updatedAt)}</time>
                   {p.archived && (
                     <button
                       className="btn btn-secondary btn-sm"

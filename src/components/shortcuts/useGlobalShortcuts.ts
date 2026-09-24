@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { isApple, matchShortcut, type ShortcutId } from './shortcuts';
+import { isApple, isHelpKey, matchShortcut, type ShortcutId } from './shortcuts';
 
 export const OPEN_SEARCH = 'noevia:open-search';
 
@@ -10,7 +10,9 @@ export function useGlobalShortcuts(handlers: Record<ShortcutId, () => void>): bo
   latest.current = handlers;
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      const id = matchShortcut(event, apple);
+      const target = event.target as HTMLElement | null;
+      const targetEditable = !!target?.closest?.('input, textarea, select, [contenteditable=""], [contenteditable="true"]');
+      const id = matchShortcut(event, apple) ?? (isHelpKey({ ...event, key: event.key, targetEditable }) ? 'help' : null);
       if (!id) return;
       event.preventDefault();
       latest.current[id]();

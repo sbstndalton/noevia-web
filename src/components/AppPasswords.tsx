@@ -1,3 +1,4 @@
+import { appLocale } from '../user-preferences';
 import { useEffect, useState, type JSX } from 'react';
 import { apiFetch } from '../api';
 
@@ -45,7 +46,7 @@ export default function AppPasswords(): JSX.Element {
       {items.map(item => <div className="model-row" key={item.id}>
         <div className="model-name-group">
           <span className="model-name">{item.name}</span>
-          <span className="model-quant">{item.scope === 'lan' ? 'LAN scope' : 'Public scope'} · created {new Date(item.createdAt).toLocaleDateString()} · {item.lastUsedAt ? `used ${new Date(item.lastUsedAt).toLocaleString()}` : 'never used'}</span>
+          <span className="model-quant">{item.scope === 'lan' ? 'LAN scope' : 'Public scope'} · created {new Date(item.createdAt).toLocaleDateString(appLocale())} · {item.lastUsedAt ? `used ${new Date(item.lastUsedAt).toLocaleString(appLocale())}` : 'never used'}</span>
         </div>
         <button className="popup-tab" disabled={busy} aria-label={`Revoke ${item.name}`} onClick={() => void revoke(item.id)}>Revoke</button>
       </div>)}

@@ -109,6 +109,10 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
         {boxes.length > 0 && <p className="composer-menu-note">{selected.length ? `About ${tokens.toLocaleString()} tokens per message. The model decides when to call a tool; writes still ask first.` : 'No tools selected.'}</p>}
       </>}
       {error && <p className="composer-menu-note" role="alert">{error}</p>}
+      {/* One inventory (#238): the menu links to Customise rather than growing a second manager. */}
+      {!diary && <><div className="composer-menu-divider" role="separator"/><button type="button" className="composer-menu-row" onClick={() => { setOpen(false); window.dispatchEvent(new Event('noevia:open-customise')); }}>
+        <ShellIcon name="plugins" size={18}/><span>Manage skills, connectors and plugins<small>Opens Customise</small></span>
+      </button></>}
     </div>}
   </div>;
 }

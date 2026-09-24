@@ -3,11 +3,14 @@ import type { JSX } from 'react';
 import { apiFetch } from '../../api';
 import { readConversationsFile } from './readExport';
 import { notifyWorkspaceChanged } from './workspace-changed';
-import { ArchivedChats } from './ArchivedChats';
+import { useArchivedCount } from './ArchivedChats';
 import { RetentionSetting } from './RetentionSetting';
 
-/** Settings → Data. Export is the user's own chats; nothing here reaches other accounts. */
-export function DataSettings(): JSX.Element {
+/** Settings → Your data & privacy. Export is the user's own chats; nothing here reaches other
+ *  accounts. Archived chats are managed in their own view (#232) so a long archive never buries
+ *  the controls above; this page keeps a count and the way there. */
+export function DataSettings({ onManageArchived }: { onManageArchived?: () => void } = {}): JSX.Element {
+  const archived = useArchivedCount();
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
@@ -52,8 +55,9 @@ export function DataSettings(): JSX.Element {
   };
 
   return <>
-    <div className="settings-title"><h1>Data controls</h1><p>Take your conversations with you, or bring them back.</p></div>
+    <div className="settings-title"><h1>Your data &amp; privacy</h1><p>Take your conversations with you, bring them back, and decide how long they are kept.</p></div>
     <section className="settings-section">
+      <h2>Export and import</h2>
       <div className="set-rows">
         <div className="set-row">
           <div className="set-row-text"><span className="set-row-label">Export conversations</span><span className="set-row-desc">A ZIP with every chat as a Markdown file, grouped by project, plus one JSON file with everything. Thinking text is not included. Diary files have their own export in Diary.</span></div>
@@ -66,14 +70,22 @@ export function DataSettings(): JSX.Element {
             <button className="modal-btn secondary" disabled={busy} onClick={() => picker.current?.click()}>Import…</button>
           </div>
         </div>
-        <RetentionSetting />
       </div>
       {status && <p className="route-note" role="status">{status}</p>}
       {error && <p className="modal-err" role="alert">{error}</p>}
     </section>
     <section className="settings-section">
+      <h2>Retention and deletion</h2>
+      <div className="set-rows"><RetentionSetting /></div>
+    </section>
+    <section className="settings-section">
       <h2>Archived chats</h2>
-      <ArchivedChats />
+      <div className="set-rows">
+        <div className="set-row">
+          <div className="set-row-text"><span className="set-row-label">{archived === null ? 'Archived chats' : `${archived} archived chat${archived === 1 ? '' : 's'}`}</span><span className="set-row-desc">Hidden from the sidebar, kept until you delete them. Search, restore or delete them in their own view.</span></div>
+          <div className="set-row-control"><button className="modal-btn secondary" disabled={!onManageArchived} onClick={onManageArchived}>Manage archived chats</button></div>
+        </div>
+      </div>
     </section>
   </>;
 }

@@ -52,6 +52,8 @@ import { Coding, Diary, ModelManager, Projects, Settings, ViewLoading, prefetchV
 import type { SettingsSection } from './components/SettingsShell';
 import { FeaturePreview } from './components/PreviewPanel';
 import { PluginsView } from './components/plugins/PluginsView';
+import { ArchivedChatsView } from './components/data/ArchivedChats';
+import { recentChats } from './sidebar-order';
 import { useFeatureFlags } from './components/features/useFeatureFlags';
 import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
@@ -68,6 +70,7 @@ type View =
   | { kind: 'preview'; title: string }
   | { kind: 'projects' }
   | { kind: 'plugins' }
+  | { kind: 'archived' }
   | { kind: 'models'; model?: string }
   | { kind: 'project'; id: string }
   | { kind: 'chat'; chatId: string; projectId?: string | null };
@@ -87,6 +90,7 @@ export default function App(): JSX.Element {
     setSettingsSection(section); setSettingsKey((k) => k + 1); setSettingsOpen(true); };
   // `model` opens that model's tuning view directly; without it, the model list.
   const openModelManager = (model?: string) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); };
+  useEffect(() => { const open = () => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'plugins' }); }; window.addEventListener('noevia:open-customise', open); return () => window.removeEventListener('noevia:open-customise', open); }, []);
   useEffect(() => { const open = (e: Event) => { const model = (e as CustomEvent<{ model?: string }>).detail?.model; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account'); return fresh || !!readLastPlace()?.settings; });
   const [appMode, setAppMode] = useState<'chat'|'code'>('chat');
@@ -679,7 +683,7 @@ export default function App(): JSX.Element {
               status: 'pending',
               approvalId: ev.id,
             };
-            notifyIfAway('Approval needed', 'A tool is waiting for you in noevia.', `approval-${chatId}`);
+            notifyIfAway('Approval needed', 'A tool is waiting for you in noevia.', `approval-${chatId}`, 'approvalNeeded');
             setMessagesByChat((prev) => ({
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) =>
@@ -776,7 +780,7 @@ export default function App(): JSX.Element {
           ),
         }));
         // Titles and replies stay out of the notification: lock screens are not private.
-        if (!controller.signal.aborted) notifyIfAway(failed ? 'Reply failed' : 'Reply ready', failed ? 'noevia could not finish answering.' : 'noevia finished answering.', `reply-${chatId}`);
+        if (!controller.signal.aborted) notifyIfAway(failed ? 'Reply failed' : 'Reply ready', failed ? 'noevia could not finish answering.' : 'noevia finished answering.', `reply-${chatId}`, 'replyFinished');
         sendingChats.current.delete(chatId);
         // The engine loads models on demand, so a reply can change what is loaded (#205).
         notifyModelsChanged();
@@ -982,7 +986,8 @@ export default function App(): JSX.Element {
   const handleDeleteChat = useCallback(
     (projectId: string | null, chatId: string) => {
       const req = projectId ? deleteChat(projectId, chatId) : deleteFreeChat(chatId);
-      req
+      // Resolves to whether the delete happened, for callers that report it (Archived chats, #232).
+      return req
         .then(() => {
           // Stop the live reply first so its stream cannot write the chat back, then forget every
           // per-chat record; later saves for this id are refused (see shouldSaveChat).
@@ -1013,8 +1018,9 @@ export default function App(): JSX.Element {
             else startFreeChat();
           }
           refreshProjects();
+          return true;
         })
-        .catch(() => undefined);
+        .catch(() => false);
     },
     [refreshProjects, abortStream, startFreeChat],
   );
@@ -1172,6 +1178,7 @@ export default function App(): JSX.Element {
         onEnterCode={() => setAppMode('code')}
         onEnterChat={() => setAppMode('chat')}
         onOpenPlugins={() => { setAppMode('chat'); setView({ kind: 'plugins' }); }}
+        onOpenArchived={() => { setAppMode('chat'); setView({ kind: 'archived' }); }}
         onPreview={(title) => setView({kind:'preview',title})}
         showPreviews={showPreviews}
         projects={projects}
@@ -1204,6 +1211,7 @@ export default function App(): JSX.Element {
       {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="Coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
       <div className="chat-views" style={{display:appMode==='code'&&showPreviews?'none':'contents'}}>
       {view.kind === 'plugins' && <PluginsView onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/>}
+      {view.kind === 'archived' && <ArchivedChatsView onDelete={handleDeleteChat} onOpenData={() => openSettings('data')}/>}
 
       {view.kind === 'preview' && showPreviews && <FeaturePreview title={view.title}/> }
       {view.kind === 'models' && (
@@ -1262,6 +1270,8 @@ export default function App(): JSX.Element {
           onBack={activeProject ? () => setView({ kind: 'project', id: activeProject.id }) : null}
           onOpenModels={() => setPopupOpen(true)}
           onOpenSettings={() => openSettings()}
+          recent={view.projectId ? undefined : recentChats(allChats).filter((c) => c.id !== view.chatId).slice(0, 5).map((c) => ({ id: c.id, title: c.title, projectId: c.projectId ?? null, projectName: c.projectId ? projects.find((p) => p.id === c.projectId)?.name ?? null : null, updatedAt: c.updatedAt }))}
+          onOpenRecent={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
         />
       )}
 
@@ -1292,6 +1302,8 @@ export default function App(): JSX.Element {
           onClose={() => setSettingsOpen(false)}
           onClosing={() => { if (view.kind !== 'preview') writeLastPlace({ user: accountId, view, settings: null }); }}
           onStartChat={startFreeChatWith}
+          onOpenArchived={() => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'archived' }); }}
+          onOpenDiary={diaryEnabled ? () => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'diary' }); } : undefined}
           theme={theme}
           onTheme={setTheme}
           preference={preference}
@@ -1311,12 +1323,13 @@ export default function App(): JSX.Element {
         />
         </Suspense>
       )}
-      <StatsBar
+      {/* A blank chat shows no row of unavailable metrics; they return with the first reply (#239). */}
+      {!(view.kind === 'chat' && messages.length === 0 && !replyTelemetryByChat[view.chatId]) && <StatsBar
         stats={stats}
         reply={view.kind === 'chat' ? replyTelemetryByChat[view.chatId] || null : null}
         routingDecision={routingDecision}
         modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null)}
-      />
+      />}
       {view.kind === 'chat' && activeProject && appMode === 'chat' && (
         <Inspector
           project={activeProject ?? null}
@@ -1355,7 +1368,7 @@ export default function App(): JSX.Element {
       })()}
 
       </div>
-      {shortcutsOpen && <ShortcutsDialog apple={appleKeys} onClose={() => setShortcutsOpen(false)} />}
+      {shortcutsOpen && <ShortcutsDialog apple={appleKeys} onClose={() => setShortcutsOpen(false)} onOpenSettings={() => { setShortcutsOpen(false); openSettings('keyboard'); }} />}
 
     </div>
   );

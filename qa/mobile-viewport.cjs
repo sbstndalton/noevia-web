@@ -32,7 +32,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    assert.ok(await settings.evaluate(el=>el.scrollWidth<=el.clientWidth),'Settings must not overflow horizontally');
    if(width<700){
      // Phones show the list, then each page with a back arrow and a close button.
-     for(const section of ['Account','Security and login','General','Personalization','Capabilities','Diary & storage','AI providers','Usage','Data controls','Planned features']){
+     for(const section of ['Account','Security and login','Appearance & language','Assistant & style','Diary & storage','AI providers','Usage','Your data & privacy']){
        await settings.getByRole('button',{name:section,exact:true}).click();
        await reachable(settings.getByRole('button',{name:'Close settings'}),height);
        assert.ok(await settings.evaluate(el=>el.scrollWidth<=el.clientWidth),`Settings ${section} must fit`);

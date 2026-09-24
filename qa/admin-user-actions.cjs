@@ -42,7 +42,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  await page.evaluate(()=>window.qaCopyFails=true);await settings.getByRole('button',{name:'Copy invitation link',exact:true}).click();await alert('Single-use invitation (expires in 24 hours) was created');assert.equal(invitations,1);
  assert.equal(await settings.getByLabel('Created link',{exact:true}).count(),2);
  for(const theme of ['light','dark']){
-  await settings.getByRole('button',{name:'General',exact:true}).click();await settings.getByRole('button',{name:theme==='light'?'Light':'Dark',exact:true}).click();
+  await settings.getByRole('button',{name:'Appearance & language',exact:true}).click();await settings.getByRole('button',{name:theme==='light'?'Light':'Dark',exact:true}).click();
   await settings.getByRole('button',{name:'Users',exact:true}).click();await row().getByRole('button',{name:'Recovery',exact:true}).click();await alert('copying failed');
   for(const width of [375,768,1440]){
    await page.setViewportSize({width,height:950});await page.waitForTimeout(200);

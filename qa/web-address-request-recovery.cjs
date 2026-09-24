@@ -90,7 +90,7 @@ const admin = { id: 'synthetic-admin', username: 'fixture', displayName: 'Synthe
     const settings = page.getByRole('region', { name: 'Settings', exact: true });
     await settings.getByRole('button', { name: 'Web address', exact: true }).click();
     await requested;
-    await settings.getByRole('button', { name: 'General', exact: true }).click();
+    await settings.getByRole('button', { name: 'Appearance & language', exact: true }).click();
     holdOld = false;
     await settings.getByRole('button', { name: 'Web address', exact: true }).click();
     await settings.getByText(original.origin, { exact: true }).waitFor();

@@ -16,8 +16,8 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    await page.evaluate(()=>fetch('/api/connectors/gdrive/disconnect',{method:'POST'}));
    if(await page.getByRole('button',{name:'Open navigation',exact:true}).isVisible())await page.getByRole('button',{name:'Open navigation',exact:true}).click();
    // Connectors moved from Settings to the Plugins page (user review, 2026-09-19).
-   await page.getByRole('button',{name:'Plugins',exact:true}).click();
-   const s=page.locator('.plugins-page');await s.getByRole('heading',{name:'Plugins',level:1}).waitFor();
+   await page.getByRole('button',{name:'Customise',exact:true}).click();
+   const s=page.locator('.plugins-page');await s.getByRole('heading',{name:'Customise',level:1}).waitFor();
    // Every connector on this page is real now; the list names each one and its state.
    await s.getByRole('button',{name:'Nextcloud'}).waitFor();
    for(const name of ['Google Drive','Nextcloud'])assert.equal(await s.getByRole('button',{name}).count(),1,`${name} is listed`);

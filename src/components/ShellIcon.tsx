@@ -13,6 +13,7 @@ export const SHELL_ICONS: Record<string, string> = {
   providers: 'plug', usage: 'chart-column', data: 'database', planned: 'map', users: 'users', models: 'cpu', status: 'activity',
   connectors: 'blocks', features: 'toggle-right', backups: 'cloud-upload', address: 'globe', research: 'telescope', trash: 'trash', check: 'check',
   attach: 'paperclip', 'arrow-up': 'arrow-up', left: 'chevron-left', thinking: 'brain', tools: 'wrench', right: 'chevron-right', plus: 'plus',
+  keyboard: 'keyboard', memory: 'brain', bell: 'bell', notifications: 'bell',
 };
 
 export function ShellIcon({ name, size = 18 }: { name: string; size?: number }): JSX.Element {

@@ -2,11 +2,23 @@
  *  Per device (browser permission is per device), so the choice lives in localStorage. */
 export const NOTIFY_KEY = 'noevia:notify';
 
-export type NotifyEnv = { enabled: boolean; permission: string; hidden: boolean };
+/** The account's per-event choices (#227), cached by user-preferences.ts under this key. */
+export const ACCOUNT_PREFERENCES_KEY = 'noevia:account-preferences';
+export type NotifyEvent = 'replyFinished' | 'approvalNeeded';
 
-/** Only when the user opted in, the browser allowed it, and the page is not being looked at. */
+export type NotifyEnv = { enabled: boolean; permission: string; hidden: boolean; eventEnabled?: boolean };
+
+/** Only when this device opted in, the account wants this event, the browser allowed it, and the
+ *  page is not being looked at. An event missing from the account record counts as wanted. */
 export function shouldNotify(env: NotifyEnv): boolean {
-  return env.enabled && env.permission === 'granted' && env.hidden;
+  return env.enabled && env.eventEnabled !== false && env.permission === 'granted' && env.hidden;
+}
+
+export function eventEnabled(event: NotifyEvent): boolean {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ACCOUNT_PREFERENCES_KEY) || 'null');
+    return saved?.notifications?.[event] !== false;
+  } catch { return true; }
 }
 
 export function notificationsEnabled(): boolean {
@@ -18,9 +30,9 @@ export function setNotificationsEnabled(on: boolean): void {
 }
 
 /** Title is short; body never includes message content (lock screens are not private). */
-export function notifyIfAway(title: string, body: string, tag: string): void {
+export function notifyIfAway(title: string, body: string, tag: string, event: NotifyEvent): void {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
-  if (!shouldNotify({ enabled: notificationsEnabled(), permission: Notification.permission, hidden: document.visibilityState === 'hidden' })) return;
+  if (!shouldNotify({ enabled: notificationsEnabled(), eventEnabled: eventEnabled(event), permission: Notification.permission, hidden: document.visibilityState === 'hidden' })) return;
   try {
     const n = new Notification(title, { body, tag });
     n.onclick = () => { window.focus(); n.close(); };

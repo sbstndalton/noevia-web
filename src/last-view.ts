@@ -14,6 +14,7 @@ export type StoredView =
   | { kind: 'diary' }
   | { kind: 'projects' }
   | { kind: 'plugins' }
+  | { kind: 'archived' }
   | { kind: 'models'; model?: string }
   | { kind: 'project'; id: string }
   | { kind: 'chat'; chatId: string; projectId?: string | null };
@@ -24,7 +25,7 @@ export type LastPlace = { user: string | null; view: StoredView; settings: strin
 function parseView(value: unknown): StoredView | null {
   if (!value || typeof value !== 'object') return null;
   const v = value as Record<string, unknown>;
-  if (v.kind === 'diary' || v.kind === 'projects' || v.kind === 'plugins') return { kind: v.kind };
+  if (v.kind === 'diary' || v.kind === 'projects' || v.kind === 'plugins' || v.kind === 'archived') return { kind: v.kind };
   if (v.kind === 'models') return typeof v.model === 'string' ? { kind: 'models', model: v.model } : { kind: 'models' };
   if (v.kind === 'project' && typeof v.id === 'string' && v.id) return { kind: 'project', id: v.id };
   if (v.kind === 'chat' && typeof v.chatId === 'string' && v.chatId) {

@@ -1,3 +1,4 @@
+import { appLocale } from '../../user-preferences';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch } from '../../api';
@@ -38,7 +39,7 @@ const SUGGESTIONS = [
   'Find my Drive file about backups and summarise it',
 ];
 
-const when = (ms?: number | null) => (ms ? new Date(ms).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'never');
+const when = (ms?: number | null) => (ms ? new Date(ms).toLocaleString(appLocale(), { dateStyle: 'medium', timeStyle: 'short' }) : 'never');
 
 export function DriveLogo({ size = 24 }: { size?: number }): JSX.Element {
   return <svg width={size} height={size} viewBox="0 0 87.3 78" aria-hidden="true">

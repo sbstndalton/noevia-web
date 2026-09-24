@@ -85,7 +85,7 @@ function startModel(){
   await page.route('**/api/plugins/directory*',async r=>{if(r.request().url().includes('starters=1'))return r.fulfill({json:{items:[]}});const res=await fetch(`http://127.0.0.1:${regPort}/v0/servers`);const d=await res.json();
     const {mcpItems}=require('../server/routes/plugin-directory.cjs');r.fulfill({json:{source:{label:'fixture',home:'https://example.com'},items:mcpItems(d)}});});
   await page.goto(origin);await page.getByPlaceholder('Message noevia…').waitFor();
-  await page.getByRole('button',{name:'Plugins',exact:true}).click();await page.getByRole('radio',{name:'MCP servers'}).click();
+  await page.getByRole('button',{name:'Customise',exact:true}).click();await page.getByRole('radio',{name:'Plugins'}).click();
   await page.getByText('Runs as a program on the server; not supported').waitFor();
   await page.getByRole('button',{name:'Add Synthetic forecast to noevia'}).click();
   await page.getByText(/Added with 1 tool\b/).waitFor({timeout:20000});
@@ -113,7 +113,7 @@ function startModel(){
   assert.ok(offered.slice(before).every(n=>!n.includes('synthetic_forecast')));
   // A server that needs a key: a wrong key is refused before saving, the right one is stored
   // encrypted and never returned, calls carry it, and it can be changed.
-  await page.getByRole('button',{name:'Plugins',exact:true}).click();await page.getByRole('radio',{name:'MCP servers'}).click();
+  await page.getByRole('button',{name:'Customise',exact:true}).click();await page.getByRole('radio',{name:'Plugins'}).click();
   await page.getByText('Needs a key').waitFor();
   await page.getByRole('button',{name:'Add Synthetic keyed to noevia'}).click();
   await page.getByLabel('Everyone uses this key').check();
@@ -136,7 +136,7 @@ function startModel(){
   // Per-person keys: the admin's key lists the tools; a member is offered them only after adding
   // their own key (a wrong one is refused), and each account's calls carry its own key.
   await page.reload();await page.locator('.sidebar').waitFor();
-  await page.getByRole('button',{name:'Plugins',exact:true}).click();await page.getByRole('radio',{name:'MCP servers'}).click();
+  await page.getByRole('button',{name:'Customise',exact:true}).click();await page.getByRole('radio',{name:'Plugins'}).click();
   await page.getByRole('button',{name:'Add Synthetic keyed to noevia'}).click();
   await page.getByLabel(/Each person uses their own key/).check();await page.getByLabel(/Authorization/).fill('SYNTH-KEY-1');await page.getByRole('button',{name:'Add',exact:true}).click();
   await page.getByText(/Added with 1 tool\b/).last().waitFor({timeout:20000});
@@ -152,7 +152,7 @@ function startModel(){
   const kask=async(text)=>{await kp.locator('.sidebar').getByText('Member Keys',{exact:true}).hover();await kp.getByRole('button',{name:'New chat in Member Keys'}).click({force:true});const b=kp.getByRole('textbox',{name:/Message/}).first();await b.fill(text);await b.press('Enter');};
   const k0=offered.length;await kask('Look up my record');await kp.getByText('No forecast tool was offered.').last().waitFor();
   assert.ok(offered.slice(k0).every(n=>!n.includes('synthetic_secret_lookup')),'not offered before the member adds a key');
-  await kp.getByRole('button',{name:'Plugins',exact:true}).click();
+  await kp.getByRole('button',{name:'Customise',exact:true}).click();
   await kp.getByRole('button',{name:'Add your key for Synthetic keyed'}).click();await kp.getByLabel(/Authorization/).fill('WRONG');await kp.getByRole('button',{name:'Save key'}).click();
   await kp.getByText(/did not accept that key/).waitFor({timeout:20000});
   await kp.getByLabel(/Authorization/).fill('SYNTH-KEY-2');await kp.getByRole('button',{name:'Save key'}).click();
@@ -166,7 +166,7 @@ function startModel(){
   // OAuth: the admin adds a sign-in server (a new tab signs in and comes back); tools are listed
   // with the admin's sign-in. A member is not offered them until they sign in with their own
   // account, and each account's calls carry its own token.
-  await page.getByRole('button',{name:'Plugins',exact:true}).click();await page.getByRole('radio',{name:'MCP servers'}).click();
+  await page.getByRole('button',{name:'Customise',exact:true}).click();await page.getByRole('radio',{name:'Plugins'}).click();
   const [tab]=await Promise.all([page.context().waitForEvent('page'),page.getByRole('button',{name:'Add Synthetic oauth to noevia'}).click()]);
   await tab.getByText('Signed in').waitFor({timeout:20000});await tab.close().catch(()=>{});
   await page.getByText(/Signed in\. 1 tool available/).waitFor({timeout:30000});
@@ -183,7 +183,7 @@ function startModel(){
   const mask=async(text)=>{await mp.locator('.sidebar').getByText('Member OAuth',{exact:true}).hover();await mp.getByRole('button',{name:'New chat in Member OAuth'}).click({force:true});const b=mp.getByRole('textbox',{name:/Message/}).first();await b.fill(text);await b.press('Enter');};
   const b0=offered.length;await mask('Show my notes');await mp.getByText('No forecast tool was offered.').last().waitFor();
   assert.ok(offered.slice(b0).every(n=>!n.includes('synthetic_my_notes')),'not offered before the member signs in');
-  await mp.getByRole('button',{name:'Plugins',exact:true}).click();
+  await mp.getByRole('button',{name:'Customise',exact:true}).click();
   const [mtab]=await Promise.all([mctx.waitForEvent('page'),mp.getByRole('button',{name:'Sign in to Synthetic oauth'}).click()]);
   await mtab.getByText('Signed in').waitFor({timeout:20000});await mtab.close().catch(()=>{});
   await mp.getByRole('button',{name:'Disconnect Synthetic oauth'}).waitFor({timeout:20000});
@@ -205,7 +205,7 @@ function startModel(){
   await mctx.close();
   // A service with no self-registration: the admin is shown the return address, enters the
   // hand-registered app (a wrong secret gets no token), and then signs in as usual.
-  await page.getByRole('button',{name:'Plugins',exact:true}).click();await page.getByRole('radio',{name:'MCP servers'}).click();
+  await page.getByRole('button',{name:'Customise',exact:true}).click();await page.getByRole('radio',{name:'Plugins'}).click();
   const [t0]=await Promise.all([page.context().waitForEvent('page').catch(()=>null),page.getByRole('button',{name:'Add Synthetic manual to noevia'}).click()]);
   await page.getByText(/does not let apps register themselves/).waitFor({timeout:20000});
   assert.match(await page.locator('.plugin-copy code').innerText(),/\/api\/mcp-oauth\/callback$/);
@@ -225,7 +225,7 @@ function startModel(){
   assert.equal((await admin(`/api/admin/mcp-directory/${manualId}`,undefined,'DELETE')).status,200);
   // Add by URL: the same checks as a directory entry, plus a rejected private address.
   await page.reload();await page.locator('.sidebar').waitFor();
-  await page.getByRole('button',{name:'Plugins',exact:true}).click();await page.getByRole('radio',{name:'MCP servers'}).click();
+  await page.getByRole('button',{name:'Customise',exact:true}).click();await page.getByRole('radio',{name:'Plugins'}).click();
   await page.getByRole('button',{name:'Add a server by URL'}).click();
   const fill=async(name,url,header,value)=>{await page.getByLabel('Name',{exact:true}).fill(name);await page.getByLabel('Address',{exact:true}).fill(url);
     await page.getByLabel(/Sign-in header/).fill(header||'');if(header)await page.getByLabel('Its value',{exact:true}).fill(value||'');};

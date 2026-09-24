@@ -14,8 +14,8 @@ const { createFixture } = require('./diary-fixture.cjs');
       await page.getByRole('textbox', { name: 'Message', exact: true }).waitFor();
       await page.getByTitle('Settings', { exact: true }).click();
       const settings = page.getByRole('region', { name: 'Settings', exact: true });
-      await settings.getByRole('button', { name: 'General', exact: true }).click();
-      await settings.getByRole('heading', { name: 'General', exact: true }).waitFor();
+      await settings.getByRole('button', { name:'Appearance & language',exact: true }).click();
+      await settings.getByRole('heading', { name:'Appearance & language',exact: true }).waitFor();
       for (const theme of ['light', 'dark']) {
         await settings.getByRole('button', { name: theme === 'light' ? 'Light' : 'Dark', exact: true }).click();
         await page.waitForTimeout(350);
@@ -25,9 +25,9 @@ const { createFixture } = require('./diary-fixture.cjs');
       if (width <= 820) {
         await settings.getByRole('button', { name: 'All settings', exact: true }).click();
         await page.waitForTimeout(250);
-        assert.ok(await settings.getByRole('button', { name: 'General', exact: true }).evaluate(el => el === document.activeElement));
-        await settings.getByLabel('Search settings').fill('Connectors');
-        await settings.getByRole('button', { name: 'Connectors', exact: true }).click();
+        assert.ok(await settings.getByRole('button', { name:'Appearance & language',exact: true }).evaluate(el => el === document.activeElement));
+        await settings.getByLabel('Search settings').fill('Connected apps');
+        await settings.getByRole('button', { name: 'Connected apps', exact: true }).click();
         await settings.getByRole('heading', { name: 'Connectors', exact: true }).waitFor();
         assert.ok(await page.locator('.settings-detail-scroll').evaluate(el => el === document.activeElement));
       }

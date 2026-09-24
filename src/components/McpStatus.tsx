@@ -1,3 +1,4 @@
+import { appLocale } from '../user-preferences';
 import { useEffect, useState } from 'react';
 import { fetchToolboxes } from '../api';
 import type { McpStatus as Status } from '../api';
@@ -17,7 +18,7 @@ export function McpStatus() {
     {unconfigured&&<p className="route-note">No MCP server is configured, so only the built-in <code>core</code> toolbox is offered. Set <code>MCP_SERVERS</code> in this deployment's environment to <code>id|url|auth</code> entries. If connected tools used to appear here, the deployment's Compose file has most likely lost that variable.</p>}
     {!!servers.length&&<div className="card-list">{servers.map(server=><div className="model-row" key={server.id}>
       <span className={`model-dot${server.error||server.missingCurated?' down':''}`} />
-      <div className="model-name-group"><span className="model-name">{server.id}{server.auth==='internal'&&<span className="model-role"> · built-in</span>}</span><span className="model-quant">{server.error?'Catalogue unavailable':`${server.discovered} tools discovered${server.missingCurated?` · ${server.missingCurated} curated tools missing`:''}`}{server.checkedAt?` · Checked ${new Date(server.checkedAt).toLocaleTimeString()}`:''}</span></div>
+      <div className="model-name-group"><span className="model-name">{server.id}{server.auth==='internal'&&<span className="model-role"> · built-in</span>}</span><span className="model-quant">{server.error?'Catalogue unavailable':`${server.discovered} tools discovered${server.missingCurated?` · ${server.missingCurated} curated tools missing`:''}`}{server.checkedAt?` · Checked ${new Date(server.checkedAt).toLocaleTimeString(appLocale())}`:''}</span></div>
     </div>)}</div>}
     <p className="route-note">Catalogue checks are cached for up to ten minutes. A listed tool can still fail if its credentials or permissions change. Your selected toolboxes and write approvals still control execution.</p>
   </section>;

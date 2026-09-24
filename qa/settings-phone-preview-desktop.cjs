@@ -49,7 +49,7 @@ require('node:fs').mkdirSync(shots,{recursive:true});
     `settings nav should stay within the 430px #root column (allowing for the shell's own frame padding), got nav ${JSON.stringify(navBox)} vs root ${JSON.stringify(rootBox)}`);
   assert.ok(navBox.width>=rootBox.width-32, `settings nav should fill the narrow column (allowing for the shell's own frame padding), not a narrow leftover slice of a two-pane grid, got width ${navBox.width} for root width ${rootBox.width}`);
   // Nav button labels must render full text, not be clipped to icon-only by a squeezed column.
-  const generalLabel=d.getByRole('button',{name:'General',exact:true});
+  const generalLabel=d.getByRole('button',{name:'Appearance & language',exact:true});
   await generalLabel.waitFor();
   const labelBox=await generalLabel.boundingBox();
   assert.ok(labelBox && labelBox.width>60,`General nav label should not be clipped to an icon-only width, got ${labelBox&&labelBox.width}`);
@@ -73,9 +73,9 @@ require('node:fs').mkdirSync(shots,{recursive:true});
   // content is already correct. Wait for the running entrance animation(s) to finish before
   // asserting visible text or taking the screenshot.
   await page.locator('.settings-detail-scroll').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
-  const heading=d.getByRole('heading',{name:'General',exact:true});
+  const heading=d.getByRole('heading',{name:'Appearance & language',exact:true});
   await heading.waitFor();
-  assert.equal((await heading.textContent()).trim(),'General','the detail pane must show real, visible section content (not a blank frame) once selected');
+  assert.equal((await heading.textContent()).trim(),'Appearance & language','the detail pane must show real, visible section content (not a blank frame) once selected');
   const headingBox=await heading.boundingBox();
   assert.ok(headingBox && headingBox.width>0 && headingBox.height>0,'the "General" heading must have a non-zero rendered size inside the detail pane');
   await page.screenshot({path:`${shots}/settings-phone-preview-desktop-1440-detail.png`});
@@ -93,9 +93,9 @@ require('node:fs').mkdirSync(shots,{recursive:true});
   await autoPage.getByTitle('Settings',{exact:true}).click();
   const autoD=autoPage.getByRole('region',{name:'Settings'});await autoD.waitFor();
   assert.equal(await autoD.getAttribute('data-view'),'detail','desktop Settings still opens straight on the two-pane detail view outside the forced mobile preview');
-  await autoD.getByRole('button',{name:'General',exact:true}).click();
+  await autoD.getByRole('button',{name:'Appearance & language',exact:true}).click();
   await autoPage.locator('.settings-detail-scroll').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
-  const autoHeading=autoD.getByRole('heading',{name:'General',exact:true});await autoHeading.waitFor();
+  const autoHeading=autoD.getByRole('heading',{name:'Appearance & language',exact:true});await autoHeading.waitFor();
   const autoNavBox=await autoPage.locator('.settings-navigation').boundingBox();
   const autoDetailBox=await autoPage.locator('.settings-detail').boundingBox();
   // Desktop keeps its real two-pane grid: nav and detail are two separate side-by-side columns,

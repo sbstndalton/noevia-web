@@ -13,22 +13,34 @@ import { FeatureSettings } from './features/FeatureSettings';
 import { OffsiteBackupSettings } from './offsite-backup/OffsiteBackupSettings';
 import { WebAddressSettings } from './web-address/WebAddressSettings';
 import { ConnectorsSettings } from './connectors/ConnectorsSettings';
+import { NotificationSettings } from './notifications/NotificationSettings';
+import { MemorySettings } from './personalization/MemorySettings';
+import { LanguageSettings } from './personalization/LanguageSettings';
+import { KeyboardSettings } from './shortcuts/KeyboardSettings';
 
-type Item = [id: string, label: string];
+type Item = [id: string, label: string, keywords?: string];
 type Group = { name: string; items: Item[]; admin?: boolean };
 
-// Preserve section IDs for saved places. Personal preferences come first;
-// connections and deployment controls have their own visible groups.
+// Settings is two areas (#226): Personal (what you do for yourself) and Server administration
+// (admin-only, visually separate). Section IDs are preserved for saved places and links; new
+// pages got new IDs, and SECTION_ALIASES maps the old ones that moved. Keywords make search find a
+// page by the task ("export", "backups", "connected apps") rather than only by its title.
 const PERSONAL: Group[] = [
-  { name: '', items: [
-    ['appearance', 'General'],
-    ['personalization', 'Personalization'],
-    ['capabilities', 'Capabilities'],
-    ['usage', 'Usage'],
-    ['data', 'Data controls'],
-    ['diary', 'Diary & storage'],
-    ['security', 'Security and login'],
-    ['profile', 'Account'],
+  { name: 'Personal', items: [
+    ['appearance', 'Appearance & language', 'theme dark light accent font density motion layout locale date number format language'],
+    ['keyboard', 'Keyboard & input', 'shortcuts keys enter send newline hotkeys'],
+    ['personalization', 'Assistant & style', 'personalization response style tone length emoji headings custom instructions language'],
+    ['memory', 'Memory', 'remember facts forget clear project memory diary'],
+    ['notifications', 'Notifications', 'alerts browser approval reply finished'],
+    ['data', 'Your data & privacy', 'data controls export import delete retention archived chats'],
+    ['usage', 'Usage', 'activity tokens replies statistics'],
+  ] },
+  { name: 'Account & connections', items: [
+    ['profile', 'Account', 'profile name email'],
+    ['security', 'Security and login', 'passkeys sessions sign out app passwords'],
+    ['diary', 'Diary & storage', 'diary journal storage nextcloud webdav'],
+    ['connectors', 'Connected apps', 'connectors google drive customise plugins skills permissions'],
+    ['providers', 'AI providers', 'openai endpoint api key provider'],
   ] },
 ];
 
@@ -36,20 +48,32 @@ const PERSONAL: Group[] = [
 // presentation only — the server independently returns 403 on the routes
 // behind them (users, model mutations, shared providers), so hiding the entry
 // is a courtesy, never the access control.
-const ADMIN: Group = { name: 'Server', admin: true, items: [
-  ['users', 'Users'],
-  ['address', 'Web address'],
-  ['models', 'Models & routing'],
-  ['features', 'Features'],
-  ['experimental', 'Experimental'],
-  ['backups', 'Backups'],
-  ['status', 'Service status'],
+const ADMIN: Group = { name: 'Server administration', admin: true, items: [
+  ['users', 'Users', 'members invite accounts'],
+  ['models', 'Models & routing', 'model tuning auto routing download gguf'],
+  ['address', 'Web address', 'deployment domain url https'],
+  ['features', 'Features', 'deployment feature flags operator'],
+  ['experimental', 'Experimental', 'deployment preview'],
+  ['backups', 'Backups', 'offsite backup restore google drive s3'],
+  ['status', 'Service status', 'health mcp inference status'],
+  ['capabilities', 'Capabilities (status)', 'tools retrieval report'],
 ] };
 
-const CONNECTIONS: Group = { name: 'Connections', items: [['connectors', 'Connectors'], ['providers', 'AI providers']] };
+/** Old section IDs that moved: saved places and links resolve to the new home. */
+export const SECTION_ALIASES: Record<string, string> = { general: 'appearance', archived: 'data', language: 'appearance', shortcuts: 'keyboard', instructions: 'personalization' };
+export function resolveSection(id: string | null | undefined): string | null {
+  if (typeof id !== 'string' || !id) return null;
+  return SECTION_ALIASES[id] ?? id;
+}
+
+/** Search matches the page name or its task keywords, case-insensitively. */
+export function filterGroups<G extends { items: Item[] }>(groups: G[], query: string): G[] {
+  const q = query.trim().toLowerCase();
+  return groups.map((g) => ({ ...g, items: q ? g.items.filter(([, label, keywords = '']) => label.toLowerCase().includes(q) || keywords.includes(q)) : g.items }));
+}
 
 // Each section has its own symbol; names resolve through ShellIcon's Lucide map.
-const ICONS: Record<string, string> = Object.fromEntries(['profile','security','appearance','personalization','capabilities','diary','providers','usage','data','planned','users','models','status','features','backups','address','connectors'].map(id => [id, id]));
+const ICONS: Record<string, string> = { ...Object.fromEntries(['profile','security','appearance','personalization','capabilities','diary','providers','usage','data','planned','users','models','status','features','backups','address','connectors'].map(id => [id, id])), keyboard: 'keyboard', memory: 'memory', notifications: 'bell' };
 
 // Kept in step with the single-pane breakpoint in shell-v2.css.
 const PHONE = '(max-width: 820px)';
@@ -60,12 +84,12 @@ const PHONE = '(max-width: 820px)';
 const phone = () => typeof window !== 'undefined' && (window.matchMedia(PHONE).matches || document.documentElement.dataset.layout === 'mobile');
 const reducedMotion = () => typeof window !== 'undefined' && (document.documentElement.dataset.motion === 'reduced' || window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-export type SettingsSection = 'general' | 'usage' | 'models' | 'connectors';
+export type SettingsSection = 'general' | 'usage' | 'models' | 'connectors' | 'keyboard' | 'data' | 'notifications' | 'memory';
 
-export function SettingsShell(props: SettingsViewProps & {initialSection?:SettingsSection|string;onSection?:(id:string)=>void;appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; onClosing?:()=>void; onStartChat?:(prompt:string)=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void; preference?:'light'|'dark'|'system'; onPreference?:(preference:'light'|'dark'|'system')=>void}) {
+export function SettingsShell(props: SettingsViewProps & {initialSection?:SettingsSection|string;onSection?:(id:string)=>void;appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; onClosing?:()=>void; onStartChat?:(prompt:string)=>void; onOpenArchived?:()=>void; onOpenDiary?:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void; preference?:'light'|'dark'|'system'; onPreference?:(preference:'light'|'dark'|'system')=>void}) {
   // 'general' is the historical name for the first page; it now opens Appearance. Anything that is
   // not a section name (a click event handed through by mistake) counts as no choice.
-  const named = typeof props.initialSection === 'string' && props.initialSection !== 'general' ? props.initialSection : null;
+  const named = typeof props.initialSection === 'string' && props.initialSection !== 'general' ? resolveSection(props.initialSection) : null;
   const [section, setSection] = useState<string>(named || 'appearance');
   // Phones show the list and a page as two screens; a named section opens straight on its page.
   const [view, setView] = useState<'list' | 'detail'>(() => named || !phone() ? 'detail' : 'list');
@@ -123,7 +147,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
     return () => { live = false; };
   }, [profileAttempt]);
 
-  const groups: Group[] = useMemo(() => [...PERSONAL, CONNECTIONS, ...(isAdmin ? [ADMIN] : [])], [isAdmin]);
+  const groups: Group[] = useMemo(() => [...PERSONAL, ...(isAdmin ? [ADMIN] : [])], [isAdmin]);
 
   // A member who was viewing an admin section (or a stale saved section) must
   // not be left staring at an empty pane.
@@ -133,7 +157,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   }, [groups, section, profileKnown]);
 
   const title = groups.flatMap(g => g.items).find(([id]) => id === section)?.[1] || 'Settings';
-  const filtered = groups.map(g => ({ ...g, items: g.items.filter(([, label]) => label.toLowerCase().includes(query.trim().toLowerCase())) }));
+  const filtered = filterGroups(groups, query);
   const open = (id: string) => { setSection(id); props.onSection?.(id); setView('detail'); };
   // On narrow screens the navigation disappears. Move focus into the new page
   // so keyboard and screen-reader users do not lose their place.
@@ -161,8 +185,8 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
       <div className="settings-search"><ShellIcon name="search" size={16}/><input aria-label="Search settings" placeholder="Search settings" value={query} onChange={e => setQuery(e.target.value)}/>{query && <button className="settings-search-clear" onClick={clearSearch} aria-label="Clear settings search"><ShellIcon name="close" size={16}/></button>}</div>
       {profileError && <p className="route-note" role="alert">Account access could not be checked. <button className="popup-tab" onClick={() => setProfileAttempt(n => n + 1)}>Retry access</button></p>}
       <nav aria-label="Settings categories">
-        {filtered.map(g => g.items.length > 0 && <section key={g.name}>
-          {g.name && <h2>{g.name}</h2>}
+        {filtered.map(g => g.items.length > 0 && <section key={g.name} className={g.admin ? 'settings-nav-admin' : undefined} aria-label={g.name}>
+          {g.name && <h2>{g.name}{g.admin && <small className="settings-nav-badge">Admins only</small>}</h2>}
           {g.items.map(([id, label]) => <button key={id} aria-current={section === id ? 'page' : undefined} className={section === id ? 'is-active' : ''} onClick={() => open(id)}>
             <ShellIcon name={ICONS[id] || 'settings'} size={17}/><span>{label}</span><ShellIcon name="chevron-right" size={16}/>
           </button>)}
@@ -183,8 +207,14 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
         ) : section === 'profile' ? (
           <ProfileSettings />
         ) : section === 'appearance' ? (
-          <AppearanceSettings theme={props.theme} onTheme={props.onTheme} preference={props.preference} onPreference={props.onPreference} appearanceStatus={props.appearanceStatus}
-            appearanceError={props.appearanceError} retryAppearance={props.retryAppearance} />
+          <><AppearanceSettings theme={props.theme} onTheme={props.onTheme} preference={props.preference} onPreference={props.onPreference} appearanceStatus={props.appearanceStatus}
+            appearanceError={props.appearanceError} retryAppearance={props.retryAppearance} /><LanguageSettings onOpen={open}/></>
+        ) : section === 'keyboard' ? (
+          <KeyboardSettings />
+        ) : section === 'memory' ? (
+          <MemorySettings onOpenDiary={props.onOpenDiary} />
+        ) : section === 'notifications' ? (
+          <NotificationSettings />
         ) : (section === 'features' || section === 'experimental') && isAdmin ? (
           <FeatureSettings key={section} experimental={section === 'experimental'} />
         ) : section === 'address' && isAdmin ? (
@@ -193,12 +223,12 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
           <OffsiteBackupSettings />
         ) : section === 'connectors' ? (
           <ConnectorsSettings isAdmin={isAdmin} onStartChat={props.onStartChat}/>
-        ) : section === 'capabilities' ? (
+        ) : section === 'capabilities' && isAdmin ? (
           <CapabilitiesSettings />
         ) : section === 'personalization' ? (
-          <PersonalizationSettings />
+          <PersonalizationSettings onOpen={open} />
         ) : section === 'data' ? (
-          <DataSettings />
+          <DataSettings onManageArchived={props.onOpenArchived} />
         ) : section === 'usage' ? (
           <UsageView/>
         ) : null}

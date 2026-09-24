@@ -28,9 +28,9 @@ const {createFixture}=require('./diary-fixture.cjs');
  await page.getByTitle('Settings',{exact:true}).click();
  const dialog=page.getByRole('region',{name:'Settings'});
  // Opening Settings lands on General; Account keeps identity separate.
- await dialog.getByRole('button',{name:'General',exact:true}).waitFor();
+ await dialog.getByRole('button',{name:'Appearance & language',exact:true}).waitFor();
  await dialog.getByLabel('Search settings').fill('  connectors  ');
- await dialog.getByRole('button',{name:'Connectors',exact:true}).click();
+ await dialog.getByRole('button',{name:'Connected apps',exact:true}).click();
  await dialog.getByRole('heading',{name:'Connectors',exact:true}).waitFor();
  await dialog.getByLabel('Search settings').fill('no-such-setting');
  await dialog.getByText('No matching settings',{exact:true}).waitFor();
@@ -52,8 +52,8 @@ const {createFixture}=require('./diary-fixture.cjs');
  assert.equal(displayName,'Renamed admin');
 
  assert.equal(await dialog.getByText('Chat font').count(),0,'appearance leaked onto Profile');
- await dialog.getByRole('button',{name:'General',exact:true}).click();
- await dialog.getByRole('heading',{name:'General',level:1}).waitFor(); const glassTarget=dialog.getByRole('button',{name:'Security and login',exact:true});await glassTarget.hover({position:{x:30,y:12}});await page.waitForTimeout(80);assert.equal(await glassTarget.getAttribute('data-glass-active'),null,'Soft navigation does not acquire glass effects');await page.mouse.move(5,5);
+ await dialog.getByRole('button',{name:'Appearance & language',exact:true}).click();
+ await dialog.getByRole('heading',{name:'Appearance & language',level:1}).waitFor(); const glassTarget=dialog.getByRole('button',{name:'Security and login',exact:true});await glassTarget.hover({position:{x:30,y:12}});await page.waitForTimeout(80);assert.equal(await glassTarget.getAttribute('data-glass-active'),null,'Soft navigation does not acquire glass effects');await page.mouse.move(5,5);
 
  // ── Preferences actually change the page ──
  const attr=name=>page.evaluate(n=>document.documentElement.getAttribute(n),name);
@@ -78,7 +78,7 @@ const {createFixture}=require('./diary-fixture.cjs');
 
  // The reload restored Settings rather than dropping to a new chat, so it is still open.
  await dialog.waitFor();
- await dialog.getByRole('button',{name:'Capabilities',exact:true}).click();
+ await dialog.getByRole('button',{name:'Capabilities (status)',exact:true}).click();
 
  // ── Capabilities report real state, and never offer to disable approvals ──
  await dialog.getByRole('heading',{name:'Capabilities',level:1}).waitFor();

@@ -5,7 +5,7 @@ const {createFixture}=require('./diary-fixture.cjs');
 const {navClick}=require('./nav.cjs');
 const output=process.env.QA_SCREENSHOTS||'/tmp/noevia-material-audit';
 const modes=['soft','liquid','material'];
-const sections=process.env.QA_SECTIONS?.split('|')||['General','Personalization','Capabilities','Usage','Data controls','Diary & storage','Security and login','Account','Connectors','AI providers','Users','Web address','Models & routing','Features','Experimental','Backups','Service status'];
+const sections=process.env.QA_SECTIONS?.split('|')||['Appearance & language','Assistant & style','Usage','Your data & privacy','Diary & storage','Security and login','Account','Connected apps','AI providers','Users','Web address','Models & routing','Features','Experimental','Backups','Service status','Capabilities (status)'];
 (async()=>{
  fs.mkdirSync(output,{recursive:true});const fixture=createFixture(31451);await fixture.listen();
  const browser=await chromium.launch({headless:true,channel:'chrome'});const results=[],errors=[];
@@ -55,12 +55,12 @@ const sections=process.env.QA_SECTIONS?.split('|')||['General','Personalization'
    await inspect('Settings '+section);
    const scroll=settings.locator('.settings-detail-scroll');
    if(await scroll.evaluate(e=>e.scrollHeight>e.clientHeight+24)){await scroll.evaluate(e=>e.lastElementChild?.scrollIntoView({block:'end',behavior:'instant'}));await inspect('Settings '+section+' bottom');}
-   if(section==='General')assert.deepEqual(await settings.getByRole('radiogroup',{name:'Material'}).getByRole('radio').allTextContents(),['Soft','Liquid glass','Material 3']);
+   if(section==='Appearance & language')assert.deepEqual(await settings.getByRole('radiogroup',{name:'Material'}).getByRole('radio').allTextContents(),['Soft','Liquid glass','Material 3']);
   }
   await settings.getByRole('button',{name:'Close settings',exact:true}).click();await settings.waitFor({state:'detached'});
   await navClick(page,'Projects');await page.getByRole('heading',{name:'Projects',exact:true,level:1}).waitFor();await inspect('Projects');
   await page.getByRole('button',{name:'Project options for Synthetic research'}).click();await page.getByRole('menu').waitFor();await inspect('Project menu');await page.keyboard.press('Escape');
-  await navClick(page,'Plugins');await page.waitForTimeout(200);await inspect('Plugins');
+  await navClick(page,'Customise');await page.waitForTimeout(200);await inspect('Customise');
   await navClick(page,'Diary');await page.waitForTimeout(200);await inspect('Diary');
   await page.close();
  }

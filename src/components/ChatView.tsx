@@ -15,6 +15,8 @@ import { modelChoiceLabel } from '../model-guidance';
 import { ComposerActions } from './ComposerActions';
 import { apiFetch } from '../api';
 import { isDisplayableRoutingDecision } from '../current-routing';
+import { sendHint, useAccountPreferences, appLocale } from '../user-preferences';
+import { isApple } from './shortcuts/shortcuts';
 import { ComposerModeBar, useCoworkAccess } from './ComposerModeBar';
 import { ToolCatalogue } from './ToolCatalogue';
 import { CoworkTaskCard } from './CoworkTaskCard';
@@ -45,6 +47,9 @@ interface ChatViewProps {
   onBack: (() => void) | null;
   onOpenModels: () => void;
   onOpenSettings: () => void;
+  /** Home only (#239): the latest chats to pick up from, with their project names. */
+  recent?: { id: string; title: string; projectId: string | null; projectName: string | null; updatedAt: number }[];
+  onOpenRecent?: (chatId: string, projectId: string | null) => void;
 }
 
 /** "12s", "1m 05s": how long the thinking took, the way people say it. */
@@ -160,8 +165,12 @@ export function ChatView({
   onBack,
   onOpenModels,
   onOpenSettings,
+  recent,
+  onOpenRecent,
 }: ChatViewProps): JSX.Element {
   const [freeModels, setFreeModels] = useState(false);
+  const { sendKey } = useAccountPreferences();
+  const keyHint = sendHint(sendKey, typeof navigator !== 'undefined' && isApple(navigator.platform || navigator.userAgent));
   const [freeContext, setFreeContext] = useState<Project | null>(null);
   useEffect(() => {
     setFreeContext(null);
@@ -270,6 +279,8 @@ export function ChatView({
                 ? `Your project’s files and instructions are ready.`
                 : `Ask a question, explore an idea, or start something new.`}
             </p>
+            {/* Why a first reply cannot start yet, said once and plainly (#239). */}
+            {installedModels && installedModels.length === 0 && <p className="home-diagnostic" role="status">No model is installed on this server yet, so replies cannot start. <button className="link-button" onClick={() => window.dispatchEvent(new CustomEvent('noevia:open-model-settings', { detail: {} }))}>Open Models &amp; routing</button></p>}
           </div>
         )}
         {messages.map((m, i) => {
@@ -419,8 +430,15 @@ export function ChatView({
         </div>
         {actionStatus && <div className="composer-action-status" role="status">{actionStatus}</div>}
         <div className={`composer-hint${projectName ? '' : ' is-keyboard'}`}>
-          {projectName ? `Project context from ${projectName} applied` : 'Enter to send, Shift + Enter for a new line'}
+          {projectName ? `Project context from ${projectName} applied` : keyHint}
         </div>
+        {messages.length === 0 && !project && recent && <section className="home-recents" aria-labelledby="home-recents-title">
+          <h2 id="home-recents-title">Recent chats</h2>
+          {recent.length ? <ul>{recent.map((c) => <li key={c.id}><button onClick={() => onOpenRecent?.(c.id, c.projectId)}>
+            <span className="home-recent-title">{c.title || 'New chat'}</span>
+            <span className="home-recent-meta">{c.projectName ? `${c.projectName} · ` : ''}{c.updatedAt ? new Date(c.updatedAt).toLocaleDateString(appLocale(), { month: 'short', day: 'numeric' }) : ''}</span>
+          </button></li>)}</ul> : <p className="home-recent-empty">No chats yet. Your recent chats will appear here after your first message.</p>}
+        </section>}
       </div>
     </div>
   );

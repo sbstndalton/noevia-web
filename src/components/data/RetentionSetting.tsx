@@ -49,7 +49,7 @@ export function RetentionSetting(): JSX.Element {
 
   return <>
     <div className="set-row">
-      <div className="set-row-text"><span className="set-row-label">Delete old chats</span><span className="set-row-desc">Chats not updated for the chosen time are deleted for good, including from other devices. Pinned chats are always kept. Export first if you want a copy.</span></div>
+      <div className="set-row-text"><span className="set-row-label">Delete old chats</span><span className="set-row-desc">Chats not updated for the chosen time are deleted for good, including from other devices. Pinned chats are always kept; archived chats are not exempt. Export first if you want a copy.</span></div>
       <div className="set-row-control">
         <select aria-label="Delete old chats" value={state?.days ?? 0} disabled={!state || busy} onChange={(e) => void choose(Number(e.currentTarget.value))}>
           <option value={0}>Never</option>

@@ -92,7 +92,7 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
   const bump = () => setRevision((n) => n + 1);
 
   return <>
-    <div className="settings-title"><h1>General</h1><p>How noevia looks and moves. Theme and accent sync across devices; other preferences stay in this browser.</p></div>
+    <div className="settings-title"><h1>Appearance &amp; language</h1><p>How noevia looks and moves. Theme and accent sync across devices; other preferences stay in this browser.</p></div>
 
     <section className="settings-section appearance-section">
       <h2>Appearance</h2>

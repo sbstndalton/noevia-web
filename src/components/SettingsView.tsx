@@ -1,3 +1,4 @@
+import { appLocale } from '../user-preferences';
 import { McpStatus } from './McpStatus';
 import { ShellIcon } from './ShellIcon';
 import DiarySharing from './DiarySharing';
@@ -130,7 +131,7 @@ function SecurityCard(): JSX.Element {
           <div className="model-name-group">
             <span className="model-name">{sessionLabel(s.userAgent)}</span>
             <span className="model-quant">
-              {s.ip || 'unknown IP'} · last seen {new Date(s.lastSeenAt).toLocaleString()}
+              {s.ip || 'unknown IP'} · last seen {new Date(s.lastSeenAt).toLocaleString(appLocale())}
             </span>
           </div>
           <button className="recents-del" title="Revoke session" aria-label={`Revoke session ${sessionLabel(s.userAgent)}`} onClick={() => void act('Revoke session', () => revokeSession(s.id), 'Session revoked.')}><ShellIcon name="close" size={16}/></button>

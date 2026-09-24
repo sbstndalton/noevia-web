@@ -29,10 +29,10 @@ const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit
   await page.screenshot({path:`${out}/shared-${theme}-sticky.png`});
   await side.evaluate(el=>el.scrollTop=0);
   // Plugins is a real page with Google Drive and the directory.
-  await page.getByRole('button',{name:'Plugins',exact:true}).click();
-  await page.getByRole('heading',{name:'Plugins'}).waitFor();
+  await page.getByRole('button',{name:'Customise',exact:true}).click();
+  await page.getByRole('heading',{name:'Customise'}).waitFor();
   await page.getByRole('button',{name:'Google Drive'}).waitFor();
-  await page.getByRole('radio',{name:'MCP servers'}).click();await page.getByText('fixture-server').waitFor();
+  await page.getByRole('radio',{name:'Plugins'}).click();await page.getByText('fixture-server').waitFor();
   await page.getByRole('radio',{name:'Skills',exact:true}).click();await page.getByText('Pdf',{exact:true}).waitFor();
   const starters=page.getByRole('region',{name:'Recommended by noevia'});await starters.getByText('Create and edit Word documents.').waitFor();
   await page.getByRole('textbox',{name:'Search skills'}).fill('pd');await starters.waitFor({state:'hidden'});await page.getByRole('textbox',{name:'Search skills'}).fill('');

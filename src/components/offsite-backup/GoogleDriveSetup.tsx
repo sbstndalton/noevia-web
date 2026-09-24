@@ -1,3 +1,4 @@
+import { appLocale } from '../../user-preferences';
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch } from '../../api';
@@ -12,7 +13,7 @@ export interface GoogleState {
   copy?: { state: 'ok' | 'waiting' | 'refused' | 'failed' | 'stale' | 'unknown'; at: number | null; message: string } | null;
 }
 
-const when = (ms?: number | null) => (ms ? new Date(ms).toLocaleString() : 'never');
+const when = (ms?: number | null) => (ms ? new Date(ms).toLocaleString(appLocale()) : 'never');
 
 async function post<T = unknown>(url: string): Promise<T> {
   const r = await apiFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });

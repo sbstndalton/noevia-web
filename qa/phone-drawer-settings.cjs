@@ -26,7 +26,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   const check=async(label)=>{const l=await layout();
    assert.ok(l.labels>=2&&l.lists&&l.diaryInNav,`${tag} ${label}: drawer shows labels and lists ${JSON.stringify(l)}`);
    if(l.sticky){assert.ok(l.overlap<=1,`${tag} ${label}: top destinations under the footer ${JSON.stringify(l)}`);assert.ok(l.gapBelowFooter<=1,`${tag} ${label}: rows show below the footer ${JSON.stringify(l)}`);}
-   const plugins=page.getByRole('button',{name:'Plugins',exact:true});await plugins.scrollIntoViewIfNeeded();
+   const plugins=page.getByRole('button',{name:'Customise',exact:true});await plugins.scrollIntoViewIfNeeded();
    await plugins.evaluate((el,t)=>{const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);if(!el.contains(hit))throw Error(t+': Plugins covered by '+(hit?.className||hit?.tagName));},`${tag} ${label}`);};
   await open();await drawer.waitFor();await check('from chat');
   const orow=page.locator('.chat-row').filter({hasText:'Synthetic recent7'});await orow.scrollIntoViewIfNeeded();if(!touch)await orow.hover();const opts=page.getByRole('button',{name:'Options for Synthetic recent7',exact:true});
@@ -54,7 +54,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.getByRole('button',{name:'Account',exact:true}).first().click();await page.locator('.settings-detail .set-row-label').first().waitFor();
   const lefts=await page.evaluate(()=>[...document.querySelectorAll('.settings-detail .set-row-label')].map(e=>Math.round(e.getBoundingClientRect().left)));
   assert.equal(new Set(lefts).size,1,`${w} ${theme}: Profile labels share one edge ${lefts}`);
-  await page.getByRole('button',{name:'All settings',exact:true}).click();await page.getByRole('button',{name:'General',exact:true}).first().click();await page.locator('.theme-swatch').first().waitFor();
+  await page.getByRole('button',{name:'All settings',exact:true}).click();await page.getByRole('button',{name:'Appearance & language',exact:true}).first().click();await page.locator('.theme-swatch').first().waitFor();
   const lum=c=>{const [r,g,b]=c.match(/\d+/g).map(Number);return (r+g+b)/3;};
   const [light,dark]=await page.evaluate(()=>[...document.querySelectorAll('.theme-swatch:not(.is-system)')].map(e=>getComputedStyle(e).backgroundColor));
   assert.ok(lum(light)>180&&lum(dark)<80,`${w} ${theme}: previews show their own theme ${light} ${dark}`);
@@ -63,14 +63,13 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.close();
  }
 
- // Before the first stats reading the strip is neutral, not a red "Inference offline".
+ // A blank home shows no row of unavailable metrics (#239); in particular never a red "Inference offline".
  {
   const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,isMobile:true});page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/api/stats',()=>{});
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
-  const label=await page.locator('.stats-label').first().innerText();
-  assert.notEqual(label,'Inference offline','no reading yet is not an outage');
-  assert.ok(await page.locator('.stats-live-dot.unknown').count()>0,'neutral dot while unknown');
+  await page.waitForTimeout(300);
+  assert.equal(await page.locator('.stats-label').count(),0,'blank home has no stats row');
   await page.close();
  }
 
@@ -89,7 +88,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.ok(fr<=1,`${w}: filter spans the row like the cards (${fr}px short)`);
   await page.getByRole('button',{name:'Open navigation',exact:true}).click();
   await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
-  for(const name of ['Security and login','Data controls','General','Diary & storage']){
+  for(const name of ['Security and login','Your data & privacy','Appearance & language','Diary & storage']){
    await page.locator('.settings-navigation nav button').filter({hasText:name}).first().click();await page.locator('.settings-detail').waitFor();
    const small=await page.evaluate(()=>[...document.querySelectorAll('.settings-detail :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea,select)')].filter(e=>e.offsetParent&&parseFloat(getComputedStyle(e).fontSize)<16).map(e=>(e.getAttribute('aria-label')||e.tagName)+' '+getComputedStyle(e).fontSize));
    assert.deepEqual(small,[],`${w} ${name}: fields under 16px on touch`);
@@ -132,6 +131,9 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.route('**/api/toolboxes',r=>r.fulfill({json:{toolboxes:[],mcp:{configured:true,discovered:176,servers:[{id:'a'},{id:'b'},{id:'c'}]}}}));
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[0,1,2].map(i=>({id:`p${i}`,name:`Synthetic project ${i}`,updatedAt:1000,files:[],chats:[]})),freeChats:[chat('pinned',true),chat('pinned2',true),...Array.from({length:16},(_,i)=>chat(`recent${i}`))]}}));
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
+  // Recents are bounded (#239); "View all" expands them in place.
+  assert.equal(await page.locator('.recent-children .chat-row').count(),15,`${material}: recents bounded`);
+  await page.getByRole('button',{name:'View all 16 chats'}).click();
   const r=await page.evaluate(async()=>{const side=document.querySelector('.sidebar');
    const nested=[...side.querySelectorAll('*')].filter(e=>/(auto|scroll)/.test(getComputedStyle(e).overflowY)&&e.scrollHeight>e.clientHeight+1).map(e=>e.className.toString());
    const rows=side.querySelectorAll('.recent-children .chat-row').length;

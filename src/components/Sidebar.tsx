@@ -16,7 +16,9 @@ import { Logo } from './Icons';
 interface SidebarProps {
   projects: Project[];
   chats: ChatMeta[];
-  activeView: 'diary' | 'settings' | 'projects' | 'project' | 'chat' | 'preview' | 'models' | 'plugins';
+  activeView: 'diary' | 'settings' | 'projects' | 'project' | 'chat' | 'preview' | 'models' | 'plugins' | 'archived';
+  /** Archived chats (#232): the management view outside Settings. */
+  onOpenArchived?: () => void;
   /** Code mode reuses this sidebar with the coding destinations in place of the chat lists. */
   mode?: 'chat' | 'code';
   codePage?: string;
@@ -55,6 +57,8 @@ interface SidebarProps {
 // (D5). The Code mode switch is gated the same way.
 
 
+const RECENT_LIMIT = 15;
+
 export function Sidebar({
   projects,
   chats,
@@ -69,6 +73,7 @@ export function Sidebar({
   onCodePage,
   onEnterChat,
   onOpenPlugins,
+  onOpenArchived,
   showPreviews = false,
   onOpenProjects,
   onOpenProject,
@@ -105,6 +110,8 @@ export function Sidebar({
   const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
   const [searching, setSearching] = useState(false);
+  // Recents stay bounded so a long history never pushes everything else away (#239).
+  const [allRecents, setAllRecents] = useState(false);
   // ⌘K / Ctrl+K from anywhere (components/shortcuts): open the rail and its search field.
   useEffect(() => { const open = () => { setCollapsed(false); setExpanded(true); setSearching(true); }; window.addEventListener('noevia:open-search', open); return () => window.removeEventListener('noevia:open-search', open); }, []);
   // Below 600px the sidebar is gone entirely and opens as a drawer from one
@@ -316,6 +323,7 @@ export function Sidebar({
     <button className="row-action" aria-label={`Archive ${c.title || 'chat'}`} title="Archive chat" onClick={()=>onPatchChat(projectId,c.id,{archived:true})}><ShellIcon name="archive" size={18}/></button>
     <button className="row-action" aria-label={`Options for ${c.title || 'chat'}`} aria-haspopup="menu" aria-expanded={menu?.kind==='chat' && menu.id===c.id} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'chat',id:c.id,projectId,source,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={20}/></button>
   </div>;
+  const projectNames = new Map(projects.map((p) => [p.id, p.name]));
   const renderChat = (c: ChatMeta) => (
               <div
                 key={c.id}
@@ -347,6 +355,8 @@ export function Sidebar({
                   >
                     <ShellIcon name={c.pinned ? 'pin' : 'chat'} size={17}/>
                     <SidebarLabel text={c.title || 'New chat'}/>
+                    {/* Project context tells identically titled chats apart (#239). */}
+                    {c.projectId && projectNames.get(c.projectId) && <span className="chat-row-context">{projectNames.get(c.projectId)}</span>}
                     {streamingChats[c.id] && (
                       <span className="chat-working" aria-label="Still generating"><i /><i /><i /></span>
                     )}
@@ -404,11 +414,11 @@ export function Sidebar({
           <ShellIcon name="folder" size={17}/>
           <span className="nav-name">Projects</span>
         </button>
-        {/* Plugins stays with the destinations. Diary is a permanent space, so it lives in the
+        {/* Customise (formerly Plugins, #238) stays with the destinations. Diary is a permanent space, so it lives in the
             bottom bar beside Search: always one tap away, never in the way (user review). */}
-        <button className={`nav-item${activeView === 'plugins' ? ' is-active' : ''}`} aria-label="Plugins" aria-current={activeView === 'plugins' ? 'page' : undefined} onClick={onOpenPlugins}>
+        <button className={`nav-item${activeView === 'plugins' ? ' is-active' : ''}`} aria-label="Customise" aria-current={activeView === 'plugins' ? 'page' : undefined} onClick={onOpenPlugins}>
           <ShellIcon name="plugins" size={17}/>
-          <span className="nav-name">Plugins</span>
+          <span className="nav-name">Customise</span>
         </button>
       </nav>}
 
@@ -421,7 +431,7 @@ export function Sidebar({
         const entries = visibleProjects.filter(p=>group==='Pinned'?p.pinned:!p.pinned);
         if(group==='Pinned' && !entries.length && !visibleChats.some(c=>c.pinned))return null;
         return <div className={`spaces side-scroll side-scroll-${group.toLowerCase()}`} key={group}>
-          <div className="sidebar-section-head"><button className="section-label section-toggle" aria-label={`${group} section`} aria-expanded={!closedGroups[group]} onClick={()=>setClosedGroups(g=>({...g,[group]:!g[group]}))}>{group}</button>{group==='Projects' && <button className="row-action section-options" aria-label="Project ordering" aria-haspopup="menu" aria-expanded={!!sorting} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setSorting({x:r.left,y:r.bottom+4});}}><ShellIcon name="more" size={20}/></button>}</div>
+          <div className="sidebar-section-head"><button className="section-label section-toggle" aria-label={`${group} section`} aria-expanded={!closedGroups[group]} onClick={()=>setClosedGroups(g=>({...g,[group]:!g[group]}))}>{group==='Projects' ? 'Your projects' : group}</button>{group==='Projects' && <button className="row-action section-options" aria-label="Project ordering" aria-haspopup="menu" aria-expanded={!!sorting} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setSorting({x:r.left,y:r.bottom+4});}}><ShellIcon name="more" size={20}/></button>}</div>
           {group==='Pinned' && (!closedGroups[group] || query) && visibleChats.filter(c=>c.pinned).map(renderChat)}
           {(!closedGroups[group] || query) && entries.map(p=><div className="project-branch" key={p.id}>
             <div className={`proj-row${activeProjectId===p.id && activeView!=='projects'?' is-active':''}`} onContextMenu={e=>{e.preventDefault();setMenu({kind:'project',id:p.id,projectId:null,at:{x:e.clientX,y:e.clientY}});}}>
@@ -449,12 +459,19 @@ export function Sidebar({
           <div className="divider" />
           <div className="spaces side-scroll side-scroll-chats">
             <button className="section-label section-toggle" aria-expanded={!closedGroups.Chats} onClick={()=>setClosedGroups(g=>({...g,Chats:!g.Chats}))}>Recent chats</button>
-            {(!closedGroups.Chats || query) && <div className="recent-children">{visibleChats.filter(c=>!c.pinned).map(renderChat)}</div>}
+            {(!closedGroups.Chats || query) && (() => {
+              const recent = visibleChats.filter(c=>!c.pinned);
+              const bounded = query || allRecents ? recent : recent.slice(0, RECENT_LIMIT);
+              return <div className="recent-children">{bounded.map(renderChat)}
+                {!query && recent.length > RECENT_LIMIT && <button className="side-more" aria-expanded={allRecents} onClick={()=>setAllRecents(v=>!v)}>{allRecents ? 'Show fewer' : `View all ${recent.length} chats`}</button>}
+              </div>;
+            })()}
 
           </div>
         </>
       )}
 
+      {onOpenArchived && <button className={`side-more side-archived${activeView === 'archived' ? ' is-active' : ''}`} aria-current={activeView === 'archived' ? 'page' : undefined} onClick={()=>{onOpenArchived();setExpanded(false);}}><ShellIcon name="archive" size={16}/><span>Archived chats</span></button>}
       </div>}
 
       {tip && <div className={`rail-tip${tip.warm ? ' is-warm' : ''}`} role="tooltip" style={{ top: tip.y, left: tip.x }}>{tip.text}</div>}

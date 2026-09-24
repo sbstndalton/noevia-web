@@ -34,8 +34,8 @@ const port=31295,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'.
   // Opt in.
   await page.keyboard.press((await page.evaluate(()=>/mac/i.test(navigator.platform)))?'Meta+Comma':'Control+Comma');
   const dialog=page.getByRole('region',{name:'Settings'});await dialog.waitFor();
-  await dialog.getByRole('button',{name:'Personalization',exact:true}).click();
-  const toggle=dialog.getByRole('switch',{name:'Background notifications'});
+  await dialog.getByRole('button',{name:'Notifications',exact:true}).click();
+  const toggle=dialog.getByRole('switch',{name:'Browser notifications on this device'});
   assert.equal(await toggle.isChecked(),false,'off by default');
   await toggle.click();await page.waitForFunction(()=>localStorage.getItem('noevia:notify')==='1');
   assert.equal(await toggle.isChecked(),true);

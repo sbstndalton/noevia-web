@@ -12,7 +12,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    await page.addInitScript(theme=>localStorage.setItem('cowork-theme',theme),theme);
    await page.route('**/api/profile/appearance',r=>r.fulfill({json:{theme,light:'iris',dark:'iris'}}));
    await page.route('**/api/account/instructions',r=>r.fulfill({json:{text:'',style:'default',updatedAt:null,maxChars:4000}}));
-   await page.route('**/api/account/memory',r=>r.fulfill({json:{memories:[],useProjectMemories:true,updatedAt:null,maxItems:50,maxItemChars:300}}));
+   {let useProjectMemories=true;await page.route('**/api/account/memory',r=>{if(r.request().method()==='PUT')useProjectMemories=!!r.request().postDataJSON().useProjectMemories;return r.fulfill({json:{memories:[],useProjectMemories,updatedAt:null,maxItems:50,maxItemChars:300}});});}
    await page.goto('http://localhost:31452');await page.getByPlaceholder('Message noevia…').waitFor();
    await page.getByTitle('Settings',{exact:true}).click();
    const settings=page.getByRole('region',{name:'Settings',exact:true});
@@ -31,10 +31,10 @@ const {createFixture}=require('./diary-fixture.cjs');
     assert.equal(await material.locator('.glass-thumb').evaluate(e=>getComputedStyle(e).backdropFilter),'none','selected labels never refract');
     await material.getByRole('radio',{name,exact:true}).focus();await page.keyboard.press('Tab');
     assert.ok(await page.evaluate(()=>{const s=getComputedStyle(document.activeElement);return s.outlineStyle!=='none'&&parseFloat(s.outlineWidth)>=2;}),'visible keyboard focus');
-    await settings.getByRole('button',{name:'Personalization',exact:true}).click();
+    await settings.getByRole('navigation',{name:'Settings categories'}).getByRole('button',{name:'Memory',exact:true}).click();
     const toggle=settings.getByRole('switch',{name:'Use project memory',exact:true});await toggle.waitFor();
     for(const checked of [true,false]){
-     await toggle.setChecked(checked);await page.waitForTimeout(250);
+     if(await toggle.isChecked()!==checked)await toggle.click();await page.waitForFunction(([c])=>document.querySelector('[aria-label="Use project memory"]')?.checked===c,[checked]);await page.waitForTimeout(250);
      const contrast=await toggle.evaluate(e=>{
       const luminance=color=>{const rgb=color.match(/[\d.]+/g).slice(0,3).map(Number).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;});return .2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2];};
       const track=luminance(getComputedStyle(e).backgroundColor),knob=luminance(getComputedStyle(e,'::after').backgroundColor);
@@ -42,7 +42,7 @@ const {createFixture}=require('./diary-fixture.cjs');
      });
      assert.ok(contrast>=3,`${name} ${theme} switch ${checked?'on':'off'} contrast ${contrast}`);
     }
-    await settings.getByRole('button',{name:'General',exact:true}).click();await material.waitFor();
+    await settings.getByRole('button',{name:'Appearance & language',exact:true}).click();await material.waitFor();
    }
    await material.getByRole('radio',{name:'Liquid glass',exact:true}).click();
    await motion.getByRole('radio',{name:'Reduced',exact:true}).click();

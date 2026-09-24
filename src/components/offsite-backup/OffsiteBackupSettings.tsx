@@ -1,3 +1,4 @@
+import { appLocale } from '../../user-preferences';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch } from '../../api';
@@ -13,7 +14,7 @@ interface Status {
   google: GoogleState | null;
 }
 
-const when = (ms?: number | null) => (ms ? new Date(ms).toLocaleString() : 'Never');
+const when = (ms?: number | null) => (ms ? new Date(ms).toLocaleString(appLocale()) : 'Never');
 const size = (n: number) => (n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
 
 async function call<T>(url: string, method = 'GET'): Promise<T> {
