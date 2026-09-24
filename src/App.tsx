@@ -7,7 +7,7 @@ import { useWorkspaceChanged } from './components/data/workspace-changed';
 import { useGlobalShortcuts, OPEN_SEARCH } from './components/shortcuts/useGlobalShortcuts';
 import { ShortcutsDialog } from './components/shortcuts/ShortcutsDialog';
 import { notifyIfAway } from './components/notifications/notify';
-import { useModelsChanged } from './models-changed';
+import { notifyModelsChanged, useModelsChanged } from './models-changed';
 import { modelChoiceLabel } from './model-guidance';
 import { applyReplyTelemetry, beginReplyTelemetry, finishReplyTelemetry } from './reply-telemetry';
 import { TOOL_RESULT_LIMIT } from './components/ToolCalls';
@@ -761,6 +761,8 @@ export default function App(): JSX.Element {
         // Titles and replies stay out of the notification: lock screens are not private.
         if (!controller.signal.aborted) notifyIfAway(failed ? 'Reply failed' : 'Reply ready', failed ? 'noevia could not finish answering.' : 'noevia finished answering.', `reply-${chatId}`);
         sendingChats.current.delete(chatId);
+        // The engine loads models on demand, so a reply can change what is loaded (#205).
+        notifyModelsChanged();
         if (streamAbort.current[chatId] === controller) delete streamAbort.current[chatId];
         setStreamingChats((prev) => {
           const next = { ...prev };

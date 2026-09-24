@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ShellIcon } from '../ShellIcon';
 import { ago, errorText, mm, tokens } from './mm';
+import { fetchInstalledModels } from '../../api';
+import { splitChatSections } from '../../model-kind';
 
 type Prompt = { id: number; name: string; body: string };
 type Job = { run_id: number; status: string; backend: string; total: number; done: number; current: string; error: string; unit: string; lines: string[]; pct: number; elapsed: number; eta: number; active: boolean };
@@ -59,16 +61,22 @@ function Checklist({ label, items, value, onChange }: { label: string; items: { 
 function SuiteForm({ data, onStarted }: { data: Overview; onStarted: () => Promise<void> }) {
   const [backend, setBackend] = useState(data.backends[0] || ''), [aliases, setAliases] = useState<string[]>([]), [prompts, setPrompts] = useState<string[]>(data.prompts.slice(0, 3).map(p => String(p.id)));
   const [reps, setReps] = useState(3), [maxTokens, setMaxTokens] = useState(data.maxTokensDefault), [confirmed, setConfirmed] = useState(false), [error, setError] = useState('');
-  const start = async () => { setError(''); try { await mm('benchmark/start', { body: { backend, aliases, promptIds: prompts.map(Number), reps, maxTokens } }); setConfirmed(false); await onStarted(); } catch (e) { setError(errorText(e, 'Could not start')); } };
+  // The suite's prompts are chat generation; embedding, reranking and routing models cannot answer them (#206).
+  const [installed, setInstalled] = useState<{ name: string; labels: string[] }[]>([]);
+  useEffect(() => { let live = true; fetchInstalledModels().then((v) => { if (live) setInstalled(v); }).catch(() => {}); return () => { live = false; }; }, []);
+  const { chat: chatSections, excluded } = splitChatSections(data.sections, installed);
+  const chosen = aliases.filter((a) => chatSections.includes(a));
+  const start = async () => { setError(''); try { await mm('benchmark/start', { body: { backend, aliases: chosen, promptIds: prompts.map(Number), reps, maxTokens } }); setConfirmed(false); await onStarted(); } catch (e) { setError(errorText(e, 'Could not start')); } };
   return <details className="mm-disclosure"><summary>Prompt suite</summary><div className="mm-form">
     <label>Engine<select value={backend} onChange={e => setBackend(e.target.value)}>{data.backends.map(b => <option key={b}>{b}</option>)}</select></label>
-    <Checklist label="Models" items={data.sections.map(s => ({ id: s, label: s }))} value={aliases} onChange={setAliases}/>
+    <Checklist label="Models" items={chatSections.map(s => ({ id: s, label: s }))} value={chosen} onChange={setAliases}/>
+    {excluded.length > 0 && <p className="mm-note">Chat models only. Not listed (embedding, reranking or routing): {excluded.join(', ')}.</p>}
     <Checklist label="Prompts" items={data.prompts.map(p => ({ id: String(p.id), label: p.name }))} value={prompts} onChange={setPrompts}/>
     <div className="mm-row"><label>Repeats<input type="number" min={1} max={10} value={reps} onChange={e => setReps(Number(e.target.value) || 1)}/></label>
       <label>Maximum tokens<input type="number" min={16} max={data.maxTokensCeiling} value={maxTokens} onChange={e => setMaxTokens(Number(e.target.value) || data.maxTokensDefault)}/></label></div>
-    <p className="mm-note">{aliases.length * prompts.length * reps} requests. Each model is loaded in turn, replacing whatever is loaded now.</p>
+    <p className="mm-note">{chosen.length * prompts.length * reps} requests. Each model is loaded in turn, replacing whatever is loaded now.</p>
     <label className="mm-check"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)}/>I understand chat pauses while models are swapped and measured.</label>
-    <button className="modal-btn primary" disabled={!confirmed || !aliases.length || !prompts.length || !backend} onClick={() => void start()}>Start benchmark</button>
+    <button className="modal-btn primary" disabled={!confirmed || !chosen.length || !prompts.length || !backend} onClick={() => void start()}>Start benchmark</button>
     {error && <p role="alert" className="modal-err">{error}</p>}
   </div></details>;
 }
