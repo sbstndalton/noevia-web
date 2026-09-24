@@ -14,6 +14,7 @@ import { SendIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
 import { ConfirmDialog } from './ContextMenu';
 import { fileToBase64, uploadLimit } from '../sources';
+import { filesAfterRemoval } from '../project-files';
 import { deleteProjectImage, projectImageUrl, uploadProjectFile, deleteProjectFile } from '../api';
 import { ResearchPanel } from './research/ResearchPanel';
 import { useResearchAccess } from './research/useResearchAccess';
@@ -107,6 +108,7 @@ export function ProjectView({
   const [now, setNow] = useState(Date.now());
   useEffect(() => { if (!busyDocs) return; const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, [busyDocs]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [confirmImageDelete, setConfirmImageDelete] = useState<string | null>(null);
 
   const addFiles = async (list: FileList | null) => {
     if (!list || busyDocs) return;
@@ -298,18 +300,26 @@ export function ProjectView({
                 return <section key={group} aria-label={group}>
                   <h3 className="rail-label">{group} ({files.length + legacyImages.length})</h3>
                   <ul className="source-list">{files.map(f => {
+                    // Deletable mirrors the server's ownsFile: a file sitting directly in an
+                    // attached folder (its own or a linked one) may be deleted from storage.
+                    // A synced file that does NOT meet that bar (e.g. reached through a nested
+                    // sub-path) can never be detached here either — the config-patch endpoint
+                    // rebuilds every synced entry from the project's own record regardless of
+                    // what a patch sends, so there is nothing "Remove" could do for it.
                     const deletable = !!f.source && (!!f.attachment || (project.sourceFolders || []).some(d => f.name.startsWith(d + '/') && !f.name.slice(d.length + 1).includes('/')));
+                    const undeletableSynced = !!f.source && !deletable;
                     return <li key={f.name}>
                       {f.attachment?.assetId && <img className="source-thumbnail" src={projectImageUrl(project.id, f.attachment.assetId)} alt="" />}
                       <span className="source-name" title={f.name}><ShellIcon name="file"/><span>{f.name.split('/').pop()}
                         <small className="source-status">{skillFiles.includes(f.name) ? 'Instruction skill · review and enable above' : f.document ? sourceStatus(f) : f.attachment?.state === 'stored' ? (f.attachment.reason || 'Original stored · reader not available yet') : f.attachment?.state === 'vision' ? 'Uploaded · image read when you send a message' : f.attachment?.state === 'partial' ? (f.attachment.reason || 'Text preview limited · original kept') : 'Text ready'}</small>
                         <small className="source-status">{f.source ? f.name : 'Stored in noevia'}{f.attachment ? ` · ${(f.attachment.bytes / 1024 / 1024).toFixed(2)} MB` : ''}</small>
+                        {undeletableSynced && <small className="source-status">Synced from {f.source}; remove it in storage.</small>}
                       </span></span>
                       {(f.attachment || f.document?.byteHash) && <a className="btn btn-ghost btn-sm" href={`/api/projects/${encodeURIComponent(project.id)}/${f.attachment ? 'uploads' : 'documents'}/original?name=${encodeURIComponent(f.name)}`} download>Original</a>}
-                      <button className="btn btn-ghost btn-sm" aria-label={`${deletable ? 'Delete' : 'Remove'} ${f.name}`} onClick={() => deletable ? setConfirmDelete(f.name) : onPatch(project.id, { files: project.files.filter(x => !x.source && x.name !== f.name) })}>{deletable ? 'Delete' : 'Remove'}</button>
+                      {!undeletableSynced && <button className="btn btn-ghost btn-sm" aria-label={`${deletable ? 'Delete' : 'Remove'} ${f.name}`} onClick={() => deletable ? setConfirmDelete(f.name) : onPatch(project.id, { files: filesAfterRemoval(project.files, f.name) })}>{deletable ? 'Delete' : 'Remove'}</button>}
                     </li>;
                   })}
-                  {legacyImages.map(a => <li key={a.id}><img className="source-thumbnail" src={projectImageUrl(project.id, a.id)} alt=""/><span className="source-name"><span>{a.name}<small className="source-status">Earlier upload · stored in noevia. Refresh to copy to connected storage.</small></span></span><button className="btn btn-ghost btn-sm" onClick={() => void deleteProjectImage(project.id, a.id).then(onRefresh)}>Remove</button></li>)}
+                  {legacyImages.map(a => <li key={a.id}><img className="source-thumbnail" src={projectImageUrl(project.id, a.id)} alt=""/><span className="source-name"><span>{a.name}<small className="source-status">Earlier upload · stored in noevia. Refresh to copy to connected storage.</small></span></span><button className="btn btn-ghost btn-sm" onClick={() => setConfirmImageDelete(a.id)}>Remove</button></li>)}
                   </ul>
                 </section>;
               })}
@@ -443,6 +453,22 @@ export function ProjectView({
           danger
           onCancel={() => setConfirmDelete(null)}
           onConfirm={() => { const path = confirmDelete; setConfirmDelete(null); void removeFile(path); }}
+        />
+      )}
+      {confirmImageDelete && (
+        <ConfirmDialog
+          title="Remove this image?"
+          body="This deletes the earlier upload from noevia's own storage. This cannot be undone."
+          confirmLabel="Remove image"
+          danger
+          onCancel={() => setConfirmImageDelete(null)}
+          onConfirm={() => {
+            const assetId = confirmImageDelete;
+            setConfirmImageDelete(null);
+            void deleteProjectImage(project.id, assetId)
+              .then(onRefresh)
+              .catch((e: unknown) => setAddError(e instanceof Error ? e.message : 'Could not remove that image'));
+          }}
         />
       )}
       {pickingFolder && <FolderPicker onClose={()=>setPickingFolder(false)} onPick={path=>{setPickingFolder(false);void updateFolders([...new Set([...(project.sourceFolders || []),path])]);}}/>}

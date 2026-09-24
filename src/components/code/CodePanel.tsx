@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { cancelTask, decideTask, fetchCode, startTask } from './api';
 import type { CodeAction, CodeApproval, CodeState, CodeTask, NetworkActivity, PreparationMode } from './api';
+import { isDecisionStale } from './decision-guard';
 import { EmptyState } from '../EmptyState';
 import { ShellIcon } from '../ShellIcon';
 import './code.css';
@@ -40,6 +41,11 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
   const ordinaryRequest = useRef(0);
   const activeMutation = useRef(0);
   const nextMutation = useRef(0);
+  // Read at click time, not render time: `state` in a render's own closures is only ever
+  // as fresh as that render, so checking a stale approval id against it would compare two
+  // copies of the same snapshot. This ref always holds the latest poll's result.
+  const latestState = useRef<CodeState | null>(null);
+  latestState.current = state;
 
   const load = useCallback(async (mutation = 0) => {
     // Polls pause while a mutation owns the lifecycle. Its follow-up load passes that mutation's
@@ -85,6 +91,11 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
   }, [running, state, load]);
 
   const act = async (label: string, work: () => Promise<unknown>, onSuccess?: () => void) => {
+    // Mirrors ResearchPanel's guard: without it a double click (or a click while a
+    // previous decision/cancel/start is still in flight) fires a second mutation on
+    // top of the first, and for an approval that means two decisions sent for one
+    // task — the second racing the first's own follow-up load.
+    if (activeMutation.current) return;
     const mutation = ++nextMutation.current;
     activeMutation.current = mutation;
     requestGeneration.current++;
@@ -213,7 +224,15 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
       {state.tasks.length === 0
         ? <EmptyState icon="code" title="No tasks yet" compact>Describe a task above. Its branch stays in the repository when it finishes.</EmptyState>
         : state.tasks.map(task => <TaskCard key={task.id} task={task} busy={busy}
-          onDecide={decision => act(`decide:${task.id}`, () => decideTask(projectId, task.id, task.approval?.id ?? '', decision))}
+          onDecide={(decision, approvalId) => {
+            // approvalId is bound in the render that drew the button the person clicked.
+            // If a poll landed between that render and the click, this task's live
+            // approval id has since moved on (resolved, replaced, or expired) — sending
+            // the stale id would decide the wrong approval, so skip and say why instead.
+            const live = latestState.current?.tasks.find(t => t.id === task.id)?.approval?.id;
+            if (isDecisionStale(live, approvalId)) { setError('That approval already changed — refreshing.'); void load(); return; }
+            act(`decide:${task.id}`, () => decideTask(projectId, task.id, approvalId, decision));
+          }}
           onCancel={() => act(`cancel:${task.id}`, () => cancelTask(projectId, task.id))}/>)}
     </section>
   </div>;
@@ -221,7 +240,7 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
 
 function TaskCard({ task, busy, onDecide, onCancel }: {
   task: CodeTask; busy: string;
-  onDecide: (decision: 'approve' | 'approve_all' | 'deny') => void; onCancel: () => void;
+  onDecide: (decision: 'approve' | 'approve_all' | 'deny', approvalId: string) => void; onCancel: () => void;
 }): JSX.Element {
   const active = ACTIVE.has(task.status);
   return <article className={`code-task is-${task.status}`} aria-busy={active && !task.approval}>
@@ -303,9 +322,12 @@ function TaskMeta({ meta }: { meta: NonNullable<CodeTask['meta']> }): JSX.Elemen
  * summarised — because seeing them IS the gate. There is no "never ask".
  */
 function ApprovalCard({ approval, busy, onDecide }: {
-  approval: CodeApproval; busy: boolean; onDecide: (decision: 'approve' | 'approve_all' | 'deny') => void;
+  approval: CodeApproval; busy: boolean; onDecide: (decision: 'approve' | 'approve_all' | 'deny', approvalId: string) => void;
 }): JSX.Element {
   const standing = approval.action !== 'delete' && approval.action !== 'git_push';
+  // Bound here, at the render that drew this card, so every click on it carries the id
+  // of the approval actually on screen rather than whatever `approval` resolves to later.
+  const approvalId = approval.id;
   return <div className="code-approval" role="group" aria-label="Approval required">
     <p className="code-approval-title"><ShellIcon name="security" size={16}/>{ACTION_LABEL[approval.action]}{approval.title ? ` — ${approval.title}` : ''}</p>
     {approval.reason && <p className="code-note">{approval.reason}</p>}
@@ -314,9 +336,9 @@ function ApprovalCard({ approval, busy, onDecide }: {
     {approval.arguments !== null && approval.arguments !== undefined &&
       <pre className="code-approval-args" aria-label="Arguments">{JSON.stringify(approval.arguments, null, 2)}</pre>}
     <div className="code-approval-actions">
-      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('approve')}>Allow once</button>
-      <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => onDecide('deny')}>Decline</button>
-      {standing && <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => onDecide('approve_all')}>Allow for this task</button>}
+      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('approve', approvalId)}>Allow once</button>
+      <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => onDecide('deny', approvalId)}>Decline</button>
+      {standing && <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => onDecide('approve_all', approvalId)}>Allow for this task</button>}
     </div>
     {!standing && <p className="code-note">Deletes and pushes are asked every time.</p>}
   </div>;
