@@ -28,24 +28,34 @@ export function skippedSignature(skipped: SkippedSource[]): string {
     .join('\u0001');
 }
 
+export type SkippedToastState = { signature: string; message: string };
+
 /**
  * Decides what, if anything, should happen to the skipped-sources toast for
- * a project given its previously-shown signature and the latest refresh
- * result. `show` is:
+ * a project given its previously-shown signature/message and the latest
+ * refresh result. `show` is:
  *   - a string: the toast should be (re)displayed with this message
  *   - null: the toast should be cleared (a clean refresh followed one that
- *     had skipped entries)
+ *     had skipped entries) — but only when the error currently on screen IS
+ *     that previous skipped-sources toast; an unrelated project error (e.g.
+ *     a save failure) must not be wiped out by an unrelated clean sync.
  *   - undefined: no change — the same set is still skipped (already shown or
  *     dismissed) or there was nothing to report and nothing to clear.
+ *
+ * `currentError` is whatever is currently shown in the caller's error UI
+ * (or null/empty if nothing is shown).
  */
 export function resolveSkippedToast(
-  prevSignature: string,
+  prev: SkippedToastState,
   skipped: SkippedSource[],
-): { signature: string; show: string | null | undefined } {
+  currentError: string | null | undefined,
+): { signature: string; message: string; show: string | null | undefined } {
   const signature = skippedSignature(skipped);
   if (!signature) {
-    return prevSignature ? { signature: '', show: null } : { signature: prevSignature, show: undefined };
+    if (prev.signature && currentError === prev.message) return { signature: '', message: '', show: null };
+    return { signature: prev.signature, message: prev.message, show: undefined };
   }
-  if (signature === prevSignature) return { signature, show: undefined };
-  return { signature, show: sourceRefreshIssues(skipped) };
+  if (signature === prev.signature) return { signature, message: prev.message, show: undefined };
+  const message = sourceRefreshIssues(skipped);
+  return { signature, message, show: message };
 }

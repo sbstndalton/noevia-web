@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
+import { shouldPoll } from '../diary-storage-poll';
 
 type Status = { mode: 'managed' | 'legacy'; backup: 'not_configured' | 'pending' | 'failed' | 'complete'; lastBackedUp: number | null; error?: string };
 type Preview = { fingerprint: string; fileCount: number; bytes: number; files: { path: string; bytes: number; sha256: string }[] };
@@ -10,7 +11,8 @@ export function DiaryStorageStatus({ busy, revision, onMode, onImported, onBusyC
   const [preview, setPreview] = useState<Preview | null>(null);
   const [working, setWorking] = useState(false);
   useEffect(() => {
-    let stopped = false, running = false;
+    let stopped = false, running = false, timer: ReturnType<typeof setInterval> | null = null;
+    let current: Status | null = null;
     async function poll() {
       if (running) return;
       running = true;
@@ -19,12 +21,30 @@ export function DiaryStorageStatus({ busy, revision, onMode, onImported, onBusyC
         if (!r.ok) throw Error('Storage status is unavailable. Check your saved files before retrying an entry.');
         const value: Status = await r.json();
         if (value.mode !== 'managed' && value.mode !== 'legacy') throw Error('Storage status is unavailable.');
-        if (!stopped) { setStatus(value); onMode(value.mode); if(value.mode === 'managed')setPreview(null); setStatusError(''); }
-      } catch (e) { if (!stopped) { setStatus(null); setStatusError(String(e instanceof Error ? e.message : e)); } }
-      finally { running = false; }
+        if (!stopped) { current = value; setStatus(value); onMode(value.mode); if(value.mode === 'managed')setPreview(null); setStatusError(''); }
+      } catch (e) { if (!stopped) { current = null; setStatus(null); setStatusError(String(e instanceof Error ? e.message : e)); } }
+      finally { running = false; if (!stopped) reschedule(); }
     }
-    void poll(); const timer = setInterval(() => void poll(), 3000);
-    return () => { stopped = true; clearInterval(timer); };
+    function reschedule() {
+      if (timer) { clearInterval(timer); timer = null; }
+      if (shouldPoll(current, document.visibilityState === 'visible')) {
+        timer = setInterval(() => void poll(), 3000);
+      }
+    }
+    function onFocusOrVisibility() {
+      if (stopped) return;
+      if (document.visibilityState === 'visible') void poll();
+      else reschedule();
+    }
+    void poll();
+    window.addEventListener('focus', onFocusOrVisibility);
+    document.addEventListener('visibilitychange', onFocusOrVisibility);
+    return () => {
+      stopped = true;
+      if (timer) clearInterval(timer);
+      window.removeEventListener('focus', onFocusOrVisibility);
+      document.removeEventListener('visibilitychange', onFocusOrVisibility);
+    };
   }, [revision, onMode]);
   async function importDiary(commit: boolean) {
     setWorking(true); onBusyChange(true); setError('');

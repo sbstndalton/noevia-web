@@ -1,7 +1,7 @@
 import { titleAfterSend } from './chat-title';
 import { ShellIcon } from './components/ShellIcon';
 import { sourceRefresher } from './source-refresh';
-import { resolveSkippedToast, skippedSignature, sourceRefreshIssues } from './source-status';
+import { resolveSkippedToast, type SkippedToastState } from './source-status';
 import { useAppearance } from './useAppearance';
 import { useWorkspaceChanged } from './components/data/workspace-changed';
 import { useGlobalShortcuts, OPEN_SEARCH } from './components/shortcuts/useGlobalShortcuts';
@@ -158,7 +158,7 @@ export default function App(): JSX.Element {
   // Per-project fingerprint of the skipped-source set last surfaced in the
   // toast, so the watcher (60s poll, focus, online, visibility) only reopens
   // it when something actually changed, not on every rerun.
-  const lastSkippedSignature = useRef<Record<string, string>>({});
+  const lastSkippedSignature = useRef<Record<string, SkippedToastState>>({});
   // AbortController for the in-flight generation (chat or diary). Aborting
   // stops the client-side stream; the server's disconnect handling (Phase 1)
   // then terminates the upstream request.
@@ -399,9 +399,12 @@ export default function App(): JSX.Element {
       available: () => document.visibilityState === 'visible' && navigator.onLine && !sourceBusy,
       refresh: () => syncProjectSources(sourceProjectId),
       updated: result => {
-        const { signature, show } = resolveSkippedToast(lastSkippedSignature.current[sourceProjectId] || '', result.skipped || []);
-        lastSkippedSignature.current[sourceProjectId] = signature;
-        if (show !== undefined) setProjectError(show);
+        setProjectError(prevError => {
+          const prev = lastSkippedSignature.current[sourceProjectId] || { signature: '', message: '' };
+          const { signature, message, show } = resolveSkippedToast(prev, result.skipped || [], prevError);
+          lastSkippedSignature.current[sourceProjectId] = { signature, message };
+          return show === undefined ? prevError : show;
+        });
         void refreshProjects();
       },
       failed: error => setProjectError(`Sources could not be refreshed — ${error instanceof Error ? error.message : 'storage unavailable'}.`),
@@ -1018,10 +1021,12 @@ export default function App(): JSX.Element {
         // is why the behaviour looked arbitrary.
         if (Array.isArray(patch.sourceFolders)) {
           const r = await syncProjectSources(projectId);
-          lastSkippedSignature.current[projectId] = skippedSignature(r.skipped);
-          if (r.skipped.length) {
-            setProjectError(sourceRefreshIssues(r.skipped));
-          }
+          setProjectError(prevError => {
+            const prev = lastSkippedSignature.current[projectId] || { signature: '', message: '' };
+            const { signature, message, show } = resolveSkippedToast(prev, r.skipped || [], prevError);
+            lastSkippedSignature.current[projectId] = { signature, message };
+            return show === undefined ? prevError : show;
+          });
         }
       } catch (e) {
         setProjectError(`That did not save — ${e instanceof Error ? e.message : 'the server rejected the change'}.`);

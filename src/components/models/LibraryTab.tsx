@@ -107,7 +107,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     {models && !servable.length && installed.length > 0 && <p className="mm-note">Nothing matches. Clear the search or choose All models.</p>}
     <div className="model-grid">
     {servable.map(m => <ModelCard key={m.name} runtimeOptions={runtimeOptions} onRefresh={() => void refresh()} model={m} file={fileFor(m.name)} update={updates[fileFor(m.name)?.name || '']} busy={busy === m.name}
-      onToggle={() => void act(m.loaded ? 'unload' : 'load', m.name)} onConfigure={() => onConfigure(m.name)} onDeleted={onChanged}/>)}
+      onToggle={() => void act(m.loaded ? 'unload' : 'load', m.name)} onConfigure={() => onConfigure(m.name)} onDeleted={(err) => { if (err) setError(err); onChanged(); }}/>)}
     </div>
     {orphanFiles.length > 0 && <section className="mm-panel"><h3>Files without a model entry</h3>
       <p className="mm-note">These files are in the model folder but no settings point to them, so the engine cannot serve them yet.</p>
@@ -117,7 +117,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   </div>;
 }
 
-function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDeleted, runtimeOptions, onRefresh }: { model: InstalledModel; file?: FileEntry; update?: Update; busy: boolean; onToggle: () => void; onConfigure: () => void; onDeleted: () => void; runtimeOptions: boolean; onRefresh: () => void }) {
+function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDeleted, runtimeOptions, onRefresh }: { model: InstalledModel; file?: FileEntry; update?: Update; busy: boolean; onToggle: () => void; onConfigure: () => void; onDeleted: (error?: string | null) => void; runtimeOptions: boolean; onRefresh: () => void }) {
   const [detail, setDetail] = useState<Detail | null>(null), [open, setOpen] = useState(false);
   const state = m.failed ? 'failed' : m.loaded ? 'loaded' : 'unloaded';
   useEffect(() => { if (open && file && !detail) void mm<Detail>(`models/detail?key=${encodeURIComponent(file.key)}`).then(setDetail).catch(() => {}); }, [open, file, detail]);
@@ -166,7 +166,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
   </article>;
 }
 
-function DeleteModel({ model: m, file, onDeleted }: { model: InstalledModel; file?: FileEntry; onDeleted: () => void }) {
+function DeleteModel({ model: m, file, onDeleted }: { model: InstalledModel; file?: FileEntry; onDeleted: (error?: string | null) => void }) {
   const [confirming, setConfirming] = useState(false), [removeSettings, setRemoveSettings] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const run = async () => {
     setBusy(true); setError('');
@@ -176,7 +176,7 @@ function DeleteModel({ model: m, file, onDeleted }: { model: InstalledModel; fil
           const r = await apiFetch('/api/models/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: m.name }) });
           if (!r.ok) throw Error(httpErrorMessage(r.status, (await readErrorBody(r)).error));
         });
-        setConfirming(false); onDeleted(); if (outcome.error) setError(outcome.error); return;
+        setConfirming(false); onDeleted(outcome.error); return;
       }
       if (file) {
         const outcome = await runDeleteModelFiles(
@@ -190,7 +190,7 @@ function DeleteModel({ model: m, file, onDeleted }: { model: InstalledModel; fil
             for (const section of file.sections) rev = (await mm<{ revision: string }>(`sections/${encodeURIComponent(section)}?baseRevision=${rev}`, { method: 'DELETE' })).revision;
           } : undefined,
         );
-        setConfirming(false); onDeleted(); if (outcome.error) setError(outcome.error); return;
+        setConfirming(false); onDeleted(outcome.error); return;
       }
       throw Error('This model has no deletable files.');
     } catch (e) { setError(errorText(e, 'Delete failed')); } finally { setBusy(false); }
