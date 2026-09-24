@@ -24,15 +24,25 @@ export function NativeCalibration({ model, onChanged, autoFocus = false }: { mod
   const running = job?.status === 'running';
   useEffect(() => {
     if (!running) return;
-    const timer = setInterval(() => { void refresh().then(next => { if (next && next.status !== 'running' && finishedRef.current !== next.id) { finishedRef.current = next.id; onChanged(); } }).catch(() => {}); }, 2000);
-    return () => clearInterval(timer);
-  }, [running]);
+    let live = true;
+    const timer = setInterval(() => {
+      void refresh().then(next => {
+        if (!live) return;
+        if (next && next.status !== 'running' && finishedRef.current !== next.id) { finishedRef.current = next.id; onChanged(); }
+      }).catch(() => {});
+    }, 2000);
+    return () => { live = false; clearInterval(timer); };
+  }, [running, model]);
   const start = async () => {
     setBusy(true); setError('');
     try {
       const r = await apiFetch('/api/models/calibration', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, promptBudgetSeconds: budget, confirmPause: confirmed }) }), v = await r.json();
       if (!r.ok) throw Error(v.error || 'Calibration could not start');
       setJob(v); setConfirmed(false);
+      // The POST can return a job that already finished (e.g. a cached/instant
+      // result) rather than one still running. Without this, ConfigureTab's
+      // measured context stays stale until the next unrelated refresh.
+      if (v && v.status !== 'running' && finishedRef.current !== v.id) { finishedRef.current = v.id; onChanged(); }
     } catch (e) { setError(e instanceof Error ? e.message : 'Calibration could not start'); } finally { setBusy(false); }
   };
   const cancel = async () => {

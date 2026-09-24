@@ -1,7 +1,7 @@
 import { titleAfterSend } from './chat-title';
 import { ShellIcon } from './components/ShellIcon';
 import { sourceRefresher } from './source-refresh';
-import { sourceRefreshIssues } from './source-status';
+import { resolveSkippedToast, skippedSignature, sourceRefreshIssues } from './source-status';
 import { useAppearance } from './useAppearance';
 import { useWorkspaceChanged } from './components/data/workspace-changed';
 import { useGlobalShortcuts, OPEN_SEARCH } from './components/shortcuts/useGlobalShortcuts';
@@ -155,6 +155,10 @@ export default function App(): JSX.Element {
   const pendingPatches = useRef<Record<string, Partial<Project>>>({});
   const lastSourceSync = useRef<Record<string, number>>({});
   const pendingSourceSync = useRef(new Set<string>());
+  // Per-project fingerprint of the skipped-source set last surfaced in the
+  // toast, so the watcher (60s poll, focus, online, visibility) only reopens
+  // it when something actually changed, not on every rerun.
+  const lastSkippedSignature = useRef<Record<string, string>>({});
   // AbortController for the in-flight generation (chat or diary). Aborting
   // stops the client-side stream; the server's disconnect handling (Phase 1)
   // then terminates the upstream request.
@@ -395,7 +399,9 @@ export default function App(): JSX.Element {
       available: () => document.visibilityState === 'visible' && navigator.onLine && !sourceBusy,
       refresh: () => syncProjectSources(sourceProjectId),
       updated: result => {
-        if (result.skipped?.length) setProjectError(sourceRefreshIssues(result.skipped));
+        const { signature, show } = resolveSkippedToast(lastSkippedSignature.current[sourceProjectId] || '', result.skipped || []);
+        lastSkippedSignature.current[sourceProjectId] = signature;
+        if (show !== undefined) setProjectError(show);
         void refreshProjects();
       },
       failed: error => setProjectError(`Sources could not be refreshed — ${error instanceof Error ? error.message : 'storage unavailable'}.`),
@@ -1012,6 +1018,7 @@ export default function App(): JSX.Element {
         // is why the behaviour looked arbitrary.
         if (Array.isArray(patch.sourceFolders)) {
           const r = await syncProjectSources(projectId);
+          lastSkippedSignature.current[projectId] = skippedSignature(r.skipped);
           if (r.skipped.length) {
             setProjectError(sourceRefreshIssues(r.skipped));
           }
@@ -1241,12 +1248,21 @@ export default function App(): JSX.Element {
           />
         ) : null;
       })()}
-      {projectError && (
-        <div className="save-error" role="alert">
-          <span>{projectError}</span>
-          <button onClick={() => setProjectError(null)} aria-label="Dismiss"><ShellIcon name="close" size={16}/></button>
-        </div>
-      )}
+      {projectError && (() => {
+        const lines = projectError.split('\n').filter(Boolean);
+        return (
+          <div className="save-error" role="alert">
+            {lines.length > 1 ? (
+              <ul className="save-error-list">
+                {lines.map((line, i) => <li key={i}>{line}</li>)}
+              </ul>
+            ) : (
+              <span>{projectError}</span>
+            )}
+            <button onClick={() => setProjectError(null)} aria-label="Dismiss"><ShellIcon name="close" size={16}/></button>
+          </div>
+        );
+      })()}
 
       </div>
       {shortcutsOpen && <ShortcutsDialog apple={appleKeys} onClose={() => setShortcutsOpen(false)} />}
