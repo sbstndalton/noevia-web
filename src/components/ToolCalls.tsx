@@ -1,6 +1,6 @@
 import type { JSX } from 'react';
 import type { ToolCallView } from '../types';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { decideToolApproval } from '../api';
 import { ShellIcon } from './ShellIcon';
 
@@ -17,6 +17,7 @@ export const TOOL_RESULT_LIMIT = 4000;
 function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const decide = async (decision: 'approve' | 'deny' | 'approve_all') => {
     if (!call.approvalId || busy) return;
     setBusy(true);
@@ -26,13 +27,20 @@ function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
     } catch (e) {
       // Most likely the request timed out and the server already denied it.
       setErr(e instanceof Error ? e.message : 'Could not send the decision');
+    } finally {
+      // Clear the disabled state whether the decision succeeded or failed: a dropped
+      // stream must not leave every button stuck disabled with no way to retry.
       setBusy(false);
+      // The card is about to fold away (success) or stay put with an error (failure).
+      // Either way, move focus off the button that just vanished from under the cursor
+      // instead of letting it silently fall back to <body>.
+      containerRef.current?.focus();
     }
   };
   let pretty = call.args;
   try { pretty = JSON.stringify(JSON.parse(call.args || '{}'), null, 1); } catch { /* show it raw */ }
   return (
-    <div className="tool-approval" role="group" aria-label={`Approval required for ${call.name}`}>
+    <div className="tool-approval" role="group" tabIndex={-1} ref={containerRef} aria-label={`Approval required for ${call.name}`}>
       <span className="tool-approval-ask">
         Allow <strong>{call.name}</strong> to run? This changes data in your account.
       </span>

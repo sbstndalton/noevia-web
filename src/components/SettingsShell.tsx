@@ -53,7 +53,11 @@ const ICONS: Record<string, string> = Object.fromEntries(['profile','security','
 
 // Kept in step with the single-pane breakpoint in shell-v2.css.
 const PHONE = '(max-width: 820px)';
-const phone = () => typeof window !== 'undefined' && window.matchMedia(PHONE).matches;
+// layout-mode.js narrows a forced "mobile" preview by capping #root's width (noevia.css), not
+// the CSS viewport a desktop browser reports — so matchMedia alone misses it and the two-pane
+// desktop grid renders inside that column with the detail pane squeezed off screen. Honour the
+// forced layout the same way the stylesheet does.
+const phone = () => typeof window !== 'undefined' && (window.matchMedia(PHONE).matches || document.documentElement.dataset.layout === 'mobile');
 const reducedMotion = () => typeof window !== 'undefined' && (document.documentElement.dataset.motion === 'reduced' || window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 export type SettingsSection = 'general' | 'usage' | 'models' | 'connectors';

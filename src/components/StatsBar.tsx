@@ -33,15 +33,20 @@ const readOpen = (): boolean => { try { return localStorage.getItem(OPEN_KEY) ==
  *  desktop has the width to spare and hiding live state behind a tap there is a click
  *  for nothing (user review of `ab2720a`, 2026-09-18). */
 const PHONE = '(max-width: 700px)';
+// layout-mode.js narrows a forced "mobile" preview by capping #root's width (noevia.css), not
+// the CSS viewport a desktop browser reports, so matchMedia alone misses it. Honour the forced
+// layout the same way the stylesheet does, and its change event since toggling it isn't a resize.
+const narrow = (): boolean => { try { return window.matchMedia(PHONE).matches || document.documentElement.dataset.layout === 'mobile'; } catch { return document.documentElement.dataset.layout === 'mobile'; } };
 function usePhone(): boolean {
-  const [phone, setPhone] = useState(() => { try { return window.matchMedia(PHONE).matches; } catch { return false; } });
+  const [phone, setPhone] = useState(() => { try { return narrow(); } catch { return false; } });
   useEffect(() => {
-    let query: MediaQueryList;
-    try { query = window.matchMedia(PHONE); } catch { return; }
-    const sync = () => setPhone(query.matches);
+    let query: MediaQueryList | null = null;
+    try { query = window.matchMedia(PHONE); } catch { /* matchMedia is optional here */ }
+    const sync = () => setPhone(narrow());
     sync();
-    query.addEventListener('change', sync);
-    return () => query.removeEventListener('change', sync);
+    query?.addEventListener('change', sync);
+    window.addEventListener('noevia-layout-change', sync);
+    return () => { query?.removeEventListener('change', sync); window.removeEventListener('noevia-layout-change', sync); };
   }, []);
   return phone;
 }

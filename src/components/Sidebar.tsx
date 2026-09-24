@@ -111,7 +111,10 @@ export function Sidebar({
   // toggle; `expanded` is that drawer. Focus is trapped while it is open and
   // handed back to the toggle when it closes.
   const [expanded, setExpanded] = useState(false);
-  const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 519px)').matches);
+  // layout-mode.js narrows a forced "mobile" preview by capping #root's width (noevia.css), not
+  // the CSS viewport a desktop browser reports, so matchMedia alone misses it. Honour the forced
+  // layout the same way the stylesheet does.
+  const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && (window.matchMedia('(max-width: 519px)').matches || document.documentElement.dataset.layout === 'mobile'));
   const drawer = useRef<HTMLDivElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
@@ -130,9 +133,10 @@ export function Sidebar({
   }, [expanded]);
   useEffect(() => {
     const query = window.matchMedia('(max-width: 519px)');
-    const change = () => { setMobile(query.matches); if (!query.matches) setExpanded(false); };
+    const change = () => { const narrow = query.matches || document.documentElement.dataset.layout === 'mobile'; setMobile(narrow); if (!narrow) setExpanded(false); };
     query.addEventListener('change', change);
-    return () => query.removeEventListener('change', change);
+    window.addEventListener('noevia-layout-change', change);
+    return () => { query.removeEventListener('change', change); window.removeEventListener('noevia-layout-change', change); };
   }, []);
   useEffect(() => {
     if (!mobile) { wasOpen.current = false; return; }
