@@ -97,6 +97,9 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
         await load(mutation);
       }
     } catch (e) {
+      // A conflict means what the person acted on has moved on (an approval that expired, a
+      // task that started elsewhere): show the current state, not the stale card.
+      if (mounted.current && activeMutation.current === mutation && (e as { status?: number }).status === 409) await load(mutation);
       if (mounted.current && activeMutation.current === mutation) setError((e as Error).message);
     } finally {
       if (mounted.current && activeMutation.current === mutation) {
@@ -210,7 +213,7 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
       {state.tasks.length === 0
         ? <EmptyState icon="code" title="No tasks yet" compact>Describe a task above. Its branch stays in the repository when it finishes.</EmptyState>
         : state.tasks.map(task => <TaskCard key={task.id} task={task} busy={busy}
-          onDecide={decision => act(`decide:${task.id}`, () => decideTask(projectId, task.id, decision))}
+          onDecide={decision => act(`decide:${task.id}`, () => decideTask(projectId, task.id, task.approval?.id ?? '', decision))}
           onCancel={() => act(`cancel:${task.id}`, () => cancelTask(projectId, task.id))}/>)}
     </section>
   </div>;
