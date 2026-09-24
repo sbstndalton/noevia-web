@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch } from '../../api';
+import { isSystemModel, SYSTEM_MODEL_LABEL } from '../../model-system';
 
 type Step = { id: string; label: string; status: string; reason?: string; generation?: number; promptPerSecond?: number; ctx?: number };
 type Extension = { id: string; action: string; why: string; from?: number; to?: number };
@@ -59,6 +60,7 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
     void refresh(); void refreshScan();
     return () => { ++request.current; ++scanRequest.current; };
   }, [model, refresh, refreshScan]);
+  const system = !!model && isSystemModel(model);
   const running = job?.status === 'running';
   useEffect(() => {
     if (!running || busy) return;
@@ -91,6 +93,7 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
       <button className={'modal-btn ' + (resumable ? 'secondary' : 'primary')} disabled={busy || !confirmed || (!model && !scan?.models.length)} onClick={() => void mutate('/api/models/autotune', { model, confirmPause: confirmed, untuned: !model })}>{busy ? 'Starting…' : model ? 'Auto-tune and apply' : 'Tune untuned models and apply'}</button>
     </div>
   </div>;
+  if (system) return <p className="mm-note" role="status">{SYSTEM_MODEL_LABEL} — used internally for message routing; it fits the system rather than being tuned.</p>;
   return <div className="mm-autotune">
     {!model && scan && !running && <p className="mm-note" role="status">{scan.models.length} model{scan.models.length === 1 ? '' : 's'} need tuning{scan.models.length ? ': ' + scan.models.join(', ') : '.'} {scan.skipped.length} skipped (already tuned or not configured for chat).</p>}
     {last && !running && <p className="mm-note" role="status">Last tuned {new Date(last.at).toLocaleString()}: <strong>{last.specLabel}</strong>, {last.generation} tokens/s{last.kv ? ', ' + last.kv + ' KV, ' + last.context?.toLocaleString() + ' context' : ''}{last.ubatch ? ', micro-batch ' + last.ubatch : ''}.</p>}

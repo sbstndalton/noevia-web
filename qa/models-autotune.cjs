@@ -17,9 +17,10 @@ const pending = (id, label) => ({ id, label, status: 'pending', steps: [{ id: id
       const json = (body, status = 200) => route.fulfill({ json: body, status });
       if (p === '/api/profile' || p === '/api/auth/session') return json({ user: { id: 'qa', username: 'admin', displayName: 'Synthetic admin', role: 'admin', diaryEnabled: false, onboarded: true }, passkeys: [] });
       if (p === '/api/models/capabilities') return json({ kind: 'llamacpp', admin: true, autotune: true, presets: true });
-      if (p === '/api/models/installed') return json([{ name: 'Synthetic-Qwen', loaded: true, labels: [], sizeGB: 5, status: 'loaded' }]);
+      if (p === '/api/models/installed') return json([{ name: 'Synthetic-Qwen', loaded: true, labels: [], sizeGB: 5, status: 'loaded' },
+        { name: 'laya_multilingual_f16', loaded: true, labels: [], sizeGB: 1, status: 'loaded' }]);
       if (p === '/api/auto-roles') return json({ configured: true, roles: { fast: 'Synthetic-Qwen', smart: 'Synthetic-Qwen' }, missing: [] });
-      if (p === '/api/models/autotune/untuned') return json({ models: tuned ? [] : ['Synthetic-Qwen'], skipped: [{ model: 'embed', reason: 'Not a chat model' }] });
+      if (p === '/api/models/autotune/untuned') return json({ models: tuned ? [] : ['Synthetic-Qwen'], skipped: [{ model: 'embed', reason: 'Not a chat model' }, { model: 'laya_multilingual_f16', reason: 'System routing model — not tuned' }] });
       if (p === '/api/models/autotune/cancel') {
         job.status = 'cancelled'; job.phase = 'Cancelled'; job.models[0].status = 'interrupted';
         job.models[0].phases[1].status = 'interrupted'; job.models[0].phases[1].reason = 'Cancelled after the KV commit';
@@ -61,6 +62,15 @@ const pending = (id, label) => ({ id, label, status: 'pending', steps: [{ id: id
     const open = manager.getByRole('button', { name: 'Tune untuned models', exact: true });
     await open.waitFor();
     assert.ok(await manager.getByRole('button', { name: 'Check for updates' }).isVisible());
+    // Laya is a system routing model: its card offers no Tune action and is labelled instead.
+    const layaCard = manager.getByRole('article', { name: 'laya_multilingual_f16' });
+    await layaCard.waitFor();
+    assert.equal(await layaCard.getByRole('button', { name: 'Tune' }).count(), 0, 'Laya must not offer a Tune action');
+    assert.equal(await layaCard.getByRole('button', { name: 'Delete' }).count(), 0, 'Laya must not offer a Delete action');
+    assert.ok(await layaCard.getByRole('button', { name: 'Unload' }).isVisible(), 'Unload stays available');
+    await layaCard.getByText('System · routing').waitFor();
+    await layaCard.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: (process.env.QA_SCREENSHOTS || '/tmp') + '/models-library-laya-not-tunable.png' });
     await open.focus(); await page.keyboard.press('Enter');
     const panel = page.locator('#library-autotune');
     await panel.getByText(/1 model need tuning/).waitFor();

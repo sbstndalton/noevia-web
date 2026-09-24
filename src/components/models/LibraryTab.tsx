@@ -9,6 +9,7 @@ import { registerNewFolderModels } from './register';
 import { useModelsChanged } from '../../models-changed';
 import { MiddleTruncate } from '../MiddleTruncate';
 import { AutoTune } from './AutoTune';
+import { isSystemModel, SYSTEM_MODEL_LABEL } from '../../model-system';
 
 type FileEntry = { key: string; name: string; subdir: string; bytes: number; size: string; modified: string; sharded: boolean; parts: number;
   projector: { name: string; bytes: number } | null; sections: string[]; modelId: string; file: string;
@@ -120,6 +121,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
   const state = m.failed ? 'failed' : m.loaded ? 'loaded' : 'unloaded';
   useEffect(() => { if (open && file && !detail) void mm<Detail>(`models/detail?key=${encodeURIComponent(file.key)}`).then(setDetail).catch(() => {}); }, [open, file, detail]);
   const model = detail?.summary?.model || {};
+  const system = isSystemModel(m.name);
   return <article className={`model-card surface${open ? ' is-open' : ''}`} data-state={state} aria-label={m.name}>
     <header className="model-card-head"><h3 className="model-card-name"><MiddleTruncate text={m.name}/></h3><span className="model-card-state">{m.failed ? 'Failed to load' : m.loaded ? 'Loaded' : 'Unloaded'}</span></header>
     <p className="model-card-meta">
@@ -127,6 +129,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
       {m.maxContext != null && <span>trained for {tokens(m.maxContext)} tokens</span>}
       {file?.shape && <span>{file.shape.label}</span>}
       {file?.projector && <span className="model-card-tag">vision</span>}
+      {system && <span className="model-card-tag" title="Used internally for message routing; not tuned or configured by hand.">{SYSTEM_MODEL_LABEL}</span>}
       {m.labels.filter(l => l !== 'vision').map(l => <span key={l} className="model-card-tag">{l}</span>)}
       {m.source && <span>{m.source === 'preset' ? 'model folder' : m.source === 'cache' ? 'downloaded' : m.source}</span>}
       {update?.status === 'stale' && <span className="mm-pill is-warn">Update available ({update.remote})</span>}
@@ -134,9 +137,9 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
     {file?.badges && file.badges.length > 0 && <p className="model-card-meta">{file.badges.map(b => <span key={b.category} className="model-card-tag">{BADGE[b.category] || b.category} {b.rating}/5</span>)}</p>}
     <div className="model-card-actions">
       <button className="popup-tab" disabled={busy} onClick={onToggle}>{busy ? 'Working…' : m.loaded ? 'Unload' : 'Load'}</button>
-      <button className="popup-tab" onClick={onConfigure}>Tune</button>
+      {!system && <button className="popup-tab" onClick={onConfigure}>Tune</button>}
       <button className="popup-tab" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Hide details' : 'Details'}</button>
-      <DeleteModel model={m} file={file} onDeleted={onDeleted}/>
+      {!system && <DeleteModel model={m} file={file} onDeleted={onDeleted}/>}
     </div>
     {runtimeOptions && <MtpControl model={m} onChanged={onRefresh}/>}
     {open && <div className="mm-detail">
