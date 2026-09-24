@@ -18,6 +18,8 @@ export const tokens = (n: number | null | undefined) => (n == null ? '—' : n.t
 export const ctxShort = (n: number) => (n >= 1024 && n % 1024 === 0 ? `${n / 1024}K` : tokens(n));
 export const gib = (n: number | null | undefined, digits = 1) => (n == null ? '—' : `${n.toFixed(digits)} GiB`);
 export const bytes = (n: number) => (n >= 1024 ** 3 ? `${(n / 1024 ** 3).toFixed(1)} GiB` : n >= 1024 ** 2 ? `${(n / 1024 ** 2).toFixed(0)} MiB` : `${Math.round(n / 1024)} KiB`);
+export { filterOrphanFiles } from './orphan-files';
+
 export function ago(seconds: number) {
   if (seconds < 60) return `${Math.round(seconds)} s`;
   if (seconds < 3600) return `${Math.round(seconds / 60)} min`;

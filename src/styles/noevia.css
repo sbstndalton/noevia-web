@@ -1321,6 +1321,21 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .mm-table caption { text-align: start; padding: 12px 14px; font-weight: 600; }
 .mm-table th, .mm-table td { padding: 10px 14px; text-align: start; vertical-align: top; border-top: 1px solid var(--border-subtle); }
 .mm-table .popup-tab { min-height: 40px; }
+/* Per-project routing at phone width: the three-column table wraps every cell into
+   fragments once the middle/model columns lose room, so each project becomes a
+   stacked card instead — same tokens, no horizontal scroll (#175). */
+@media (max-width: 519px) {
+  .route-projects.mm-table, .route-projects.mm-table thead, .route-projects.mm-table tbody, .route-projects.mm-table tr, .route-projects.mm-table td {
+    display: block; width: 100%;
+  }
+  .route-projects.mm-table thead { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .route-projects.mm-table tr { padding: 12px 14px; border-top: 1px solid var(--border-subtle); }
+  .route-projects.mm-table tr:first-child { border-top: 0; }
+  .route-projects.mm-table td { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 4px 0; border-top: 0; overflow-wrap: anywhere; text-align: end; }
+  .route-projects.mm-table td::before { content: attr(data-label); flex: none; font-size: var(--text-caption); color: var(--text-secondary); text-align: start; }
+  .route-projects.mm-table td[data-label="Project"] { font-weight: 600; text-align: start; }
+  .route-projects.mm-table td[data-label="Project"]::before { content: none; }
+}
 .mm-est { display: block; }
 .mm-mono { font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: var(--text-caption); overflow-wrap: anywhere; }
 .mm-log, .mm-output, .mm-diagnosis pre, .mm-result pre { margin: 0; max-height: 320px; overflow: auto; padding: 10px; border-radius: 8px; background: var(--bg-chrome); border: 1px solid var(--border-subtle); font-family: var(--font-mono, ui-monospace, Menlo, monospace); font-size: var(--text-caption); white-space: pre-wrap; overflow-wrap: anywhere; }

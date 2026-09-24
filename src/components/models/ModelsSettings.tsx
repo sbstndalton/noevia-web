@@ -226,14 +226,16 @@ function ProjectRoutingSection({ models, routes, projects, modelsError }: {
   useEffect(() => { let live = true; fetchAutoRoles().then((v) => { if (live) setInfo(v); }).catch(() => undefined); return () => { live = false; }; }, []);
   return <section className="mm-panel">
     <div className="mm-panel-head"><h3>Per-project routing ({projects.length} {projects.length === 1 ? 'project' : 'projects'})</h3></div>
-    {projects.length ? <table className="mm-table route-projects">
+    {projects.length ? <div className="mm-table-wrap">
+      <table className="mm-table route-projects">
       <thead><tr><th scope="col">Project</th><th scope="col">Picks the model</th><th scope="col">Model</th></tr></thead>
       <tbody>{projects.map((p) => <tr key={p.id}>
-        <td>{p.name}</td>
-        <td>{p.routing === 'auto' ? 'Auto' : 'Manual'}</td>
-        <td>{p.routing === 'auto' ? (info?.configured ? roleSummary(info.roles) : 'Auto not configured — uses the loaded model') : modelChoiceLabel(p, modelsError ? null : models)}</td>
+        <td data-label="Project">{p.name}</td>
+        <td data-label="Picks the model">{p.routing === 'auto' ? 'Auto' : 'Manual'}</td>
+        <td data-label="Model">{p.routing === 'auto' ? (info?.configured ? roleSummary(info.roles) : 'Auto not configured — uses the loaded model') : modelChoiceLabel(p, modelsError ? null : models)}</td>
       </tr>)}</tbody>
-    </table> : <p className="mm-note">No projects yet.</p>}
+      </table>
+    </div> : <p className="mm-note">No projects yet.</p>}
     {routes.some((r) => r.task === 'Diary app') && <p className="mm-note">Diary: its own sidecar pipeline, not Auto.</p>}
     <p className="route-note">Change a project's model from its own model selector. {models.filter((m) => m.loaded).length ? `Loaded now: ${models.filter((m) => m.loaded).map((m) => m.name).join(', ')}.` : 'No model is loaded right now.'}</p>
   </section>;

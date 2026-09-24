@@ -31,7 +31,7 @@ export function SettingsView({ models, modelsError, health, stats, diaryEnabled,
   return <div className="settings-live-content">
     {section === 'security' && <SecurityCard />}
     {section === 'users' && <UsersCard />}
-    {section === 'diary' && <><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
+    {section === 'diary' && <><div className="settings-title"><h1>Diary &amp; storage</h1><p>Enable Diary and manage where its journal and corpus data are stored.</p></div><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
     {section === 'providers' && <ProvidersCard />}
     {section === 'models' && <ModelsSummary models={models} modelsError={modelsError} health={health} stats={stats} onOpen={onOpenModelManager}/>}
     {section === 'status' && <><McpStatus /><h2>Connected services</h2><div className="card-list">{[['Inference',health.inferenceUp],['Diary',diaryEnabled?health.diaryUp:null],['Project retrieval',health.ragAvailable]].map(([label,up])=><div className="model-row" key={String(label)}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?'available':up===false?'unavailable':'not available'}</span></div>)}</div><h2>Live engine</h2><div className="settings-stat-row"><div><span title="Provider-reported rate. Invalid samples and samples shorter than one estimated second are omitted.">Reported tokens / second</span><strong>{stats?.tokensPerSecond?.toFixed(1) ?? '—'}</strong></div><div><span>Requests</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${stats.vramGb.toFixed(1)} GB`:'—'}</strong></div></div></>}
@@ -278,6 +278,7 @@ function ProvidersCard(): JSX.Element {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="settings-title"><h1>AI providers</h1><p>Local and connected inference providers available to noevia.</p></div>
       {loading && <p role="status">Loading connections…</p>}
       {!loading && !err && providers.length === 0 && <p className="route-note">No connections saved. Connect a provider to make its models available.</p>}
       {err && <><p className="modal-err" role="alert">{err}</p><button className="modal-btn secondary" disabled={loading || !!removing} onClick={() => void refresh()}>Retry connections</button></>}

@@ -4,7 +4,7 @@ import type { InstalledModel } from '../../types';
 import { MtpControl } from '../MtpControl';
 import { NativeCalibration } from '../NativeCalibration';
 import { EvidenceList } from './EvidenceList';
-import { errorText, mm, tokens } from './mm';
+import { errorText, filterOrphanFiles, mm, tokens } from './mm';
 import { httpErrorMessage, readErrorBody, runDeleteModelFiles } from './delete-model-sequence';
 import { registerNewFolderModels } from './register';
 import { useModelsChanged } from '../../models-changed';
@@ -91,7 +91,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
       return a.name.localeCompare(b.name);
     });
   const shownFiles = new Set(servable.map(m => fileFor(m.name)?.key).filter(Boolean));
-  const orphanFiles = files.filter(f => !shownFiles.has(f.key));
+  const orphanFiles = filterOrphanFiles(files.filter(f => !shownFiles.has(f.key)), query, filter);
   return <div className="mm-tab">
     <div className="mm-library-bar">
       <p className="mm-note" role="status">{models ? <>{servable.length} of {installed.length} {installed.length === 1 ? 'model' : 'models'}{needle ? ` matching “${query.trim()}”` : ''}{filter !== 'all' ? ' after filtering' : ''}</> : 'Loading models…'}
@@ -104,7 +104,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     {error && <p role="alert" className="modal-err">{error}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
     {filesNote && <p className="mm-note">{filesNote}</p>}
-    {models && !servable.length && installed.length > 0 && <p className="mm-note">Nothing matches. Clear the search or choose All models.</p>}
+    {models && !servable.length && !orphanFiles.length && installed.length > 0 && <p className="mm-note">Nothing matches. Clear the search or choose All models.</p>}
     <div className="model-grid">
     {servable.map(m => <ModelCard key={m.name} runtimeOptions={runtimeOptions} onRefresh={() => void refresh()} model={m} file={fileFor(m.name)} update={updates[fileFor(m.name)?.name || '']} busy={busy === m.name}
       onToggle={() => void act(m.loaded ? 'unload' : 'load', m.name)} onConfigure={() => onConfigure(m.name)} onDeleted={(err) => { if (err) setError(err); onChanged(); }}/>)}

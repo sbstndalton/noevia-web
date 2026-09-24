@@ -12,13 +12,18 @@ export function NativeCalibration({ model, onChanged, autoFocus = false }: { mod
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
   const heading = useRef<HTMLHeadingElement>(null);
   const finishedRef = useRef<string>('');
-  const refresh = async () => {
+  const refresh = async (isLive?: () => boolean) => {
     const r = await apiFetch('/api/models/calibration?model=' + encodeURIComponent(model)), v = await r.json();
     if (!r.ok) throw Error(v.error || 'Calibration status unavailable');
+    if (isLive && !isLive()) return v.job as Job | null;
     setJob(v.job || null); setHistory(Array.isArray(v.history) ? v.history : []);
     return v.job as Job | null;
   };
-  useEffect(() => { void refresh().catch(e => setError(e instanceof Error ? e.message : 'Calibration status unavailable')); }, [model]);
+  useEffect(() => {
+    let live = true;
+    void refresh(() => live).catch(e => { if (live) setError(e instanceof Error ? e.message : 'Calibration status unavailable'); });
+    return () => { live = false; };
+  }, [model]);
   useEffect(() => { if (autoFocus) heading.current?.scrollIntoView({ block: 'nearest' }); }, [autoFocus]);
   const mine = job && job.model === model ? job : null;
   const running = job?.status === 'running';
@@ -26,7 +31,7 @@ export function NativeCalibration({ model, onChanged, autoFocus = false }: { mod
     if (!running) return;
     let live = true;
     const timer = setInterval(() => {
-      void refresh().then(next => {
+      void refresh(() => live).then(next => {
         if (!live) return;
         if (next && next.status !== 'running' && finishedRef.current !== next.id) { finishedRef.current = next.id; onChanged(); }
       }).catch(() => {});
