@@ -9,6 +9,7 @@
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
     "test": "node --require ./tests/hermetic-network.cjs --test server/*.test.cjs server/routes/*.test.cjs server/decision/*.test.cjs tests/*.test.cjs",
     "start": "node server/index.cjs",
+    "secrets:rotate": "node server/secrets-rotate.cjs",
     "lint:design": "node scripts/lint-design.cjs"
   },
   "dependencies": {

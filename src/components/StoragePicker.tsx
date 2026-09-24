@@ -160,6 +160,7 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
           />
+          {value.kind === loadedKind && value.secretNeedsReauth && <p className="route-note">The saved secret can no longer be read (the server key changed). Enter it again.</p>}
           {value.kind === loadedKind && value.secretConfigured && <p id={`${id}-secret-help`} className="route-note">A secret is saved. Leave blank to test with it on the same server.</p>}
         </>
       )}

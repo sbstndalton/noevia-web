@@ -238,7 +238,7 @@ function AddServer({ item, added, onChange }: { item: Item; added?: Added; onCha
 
 /** Plugins → Connected: MCP servers that need each person's own sign-in. */
 function SignInServers(): JSX.Element | null {
-  const [servers, setServers] = useState<{ id: string; title: string; connected: boolean }[]>([]);
+  const [servers, setServers] = useState<{ id: string; title: string; connected: boolean; needsReauth?: boolean }[]>([]);
   const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
   const load = () => apiFetch('/api/mcp-oauth/servers').then((r) => r.json()).then((d) => setServers(d.servers || [])).catch(() => undefined);
   useEffect(() => { void load(); }, []);
@@ -263,7 +263,7 @@ function SignInServers(): JSX.Element | null {
     <ul className="plugin-grid">
       {servers.map((s) => <li key={s.id} className="plugin-card surface">
         <span className="plugin-card-icon"><ShellIcon name="server" size={20}/></span>
-        <span className="plugin-card-text"><b>{s.title}</b><small>{s.connected ? 'Signed in' : 'Not signed in'}</small></span>
+        <span className="plugin-card-text"><b>{s.title}</b><small>{s.connected ? 'Signed in' : s.needsReauth ? 'Sign in again' : 'Not signed in'}</small></span>
         <span className="plugin-card-actions">{s.connected
           ? <button className="btn btn-ghost btn-sm" aria-label={`Disconnect ${s.title}`} onClick={() => void disconnect(s.id)}>Disconnect</button>
           : <button className="btn btn-secondary btn-sm" aria-label={`Sign in to ${s.title}`} onClick={() => connect(s.id)}>Sign in</button>}</span>
