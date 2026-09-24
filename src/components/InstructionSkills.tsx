@@ -51,8 +51,9 @@ export function InstructionSkills({ projectId, updatedAt, onRefresh, onFiles }: 
         return;
       }
       if (!response.ok) throw Error(result.error || 'Could not update instruction skill');
+      if (!Array.isArray(result.skills)) throw Error('Could not update instruction skill: invalid server response');
       ++listRequest.current;
-      setSkills(result.skills); await onRefresh();
+      setSkills(result.skills); onFiles(result.skills.map((s: Skill) => s.file)); await onRefresh();
     } catch (e) { if (lifecycle.current === generation) setError(e instanceof Error ? e.message : 'Could not update instruction skill'); }
     finally { if (lifecycle.current === generation) setBusy(null); }
   }
