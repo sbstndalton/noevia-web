@@ -7,6 +7,12 @@ export function upsertChatMeta(list: ChatMeta[], chatId: string, make: (existing
   return [make(list.find((c) => c.id === chatId)), ...list.filter((c) => c.id !== chatId)];
 }
 
+/** Whether a transcript save for `chatId` may go ahead. A chat deleted in this session is never
+ *  saved again, so a save queued before the delete (or retried after a conflict) cannot recreate it. */
+export function shouldSaveChat(chatId: string, deleted: ReadonlySet<string>): boolean {
+  return !!chatId && !deleted.has(chatId);
+}
+
 /** Run `task` after every earlier task queued under the same key, so whole-list writes for one
  *  chat list reach the server in the order they were made. A failed task does not block later ones. */
 export function enqueueKeyed(queue: Map<string, Promise<void>>, key: string, task: () => Promise<void>): Promise<void> {

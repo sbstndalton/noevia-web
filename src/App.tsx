@@ -57,7 +57,7 @@ import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
 import { settleToolCalls } from './tool-call-state';
 import { mergeTranscripts } from './transcript-merge';
-import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, upsertChatMeta } from './chat-save';
+import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, shouldSaveChat, upsertChatMeta } from './chat-save';
 import { readLastPlace, writeLastPlace, clearLastPlace } from './last-view';
 import { currentRoutingDecision } from './current-routing';
 
@@ -114,6 +114,9 @@ export default function App(): JSX.Element {
   // workspace load below can drop a reference to something that no longer exists.
   const restored = useRef(readLastPlace());
   const [view, setView] = useState<View>(() => restored.current?.view ?? { kind: 'chat', chatId: `c-${uid()}`, projectId: null });
+  // Latest view for async callbacks (a delete resolving after the person moved elsewhere).
+  const viewRef = useRef(view);
+  viewRef.current = view;
   const [accountId, setAccountId] = useState<string | null>(null);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -168,6 +171,9 @@ export default function App(): JSX.Element {
   // Chats whose transcript should be saved once the current render commits (kept out of state
   // updaters, which StrictMode runs twice).
   const persistAfterCommit = useRef<Set<string>>(new Set());
+  // Chats deleted in this session. A save queued (or retried) after the delete must not write the
+  // transcript back under the dead id.
+  const deletedChats = useRef<Set<string>>(new Set());
   const abortStream = useCallback((chatId: string) => {
     streamAbort.current[chatId]?.abort();
     delete streamAbort.current[chatId];
@@ -434,7 +440,9 @@ export default function App(): JSX.Element {
         [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats })),
       }));
     };
+    if (!shouldSaveChat(chatId, deletedChats.current)) return;
     const run = async () => {
+      if (!shouldSaveChat(chatId, deletedChats.current)) return;
       let next = entries;
       // A merge held back while a reply streamed is folded in now, so the save that follows the
       // stream does not overwrite the other device's turns with our shorter copy.
@@ -445,6 +453,7 @@ export default function App(): JSX.Element {
         if (merged !== next) { next = merged; show(merged); }
       }
       for (let attempt = 0; attempt < 3; attempt++) {
+        if (!shouldSaveChat(chatId, deletedChats.current)) return;
         const result = await saveChatHistory(chatId, next, historyRevisions.current[chatId]);
         if (result.ok) { historyRevisions.current[chatId] = result.revision; return; }
         const merged = mergeTranscripts(result.conflict.history, next);
@@ -749,11 +758,14 @@ export default function App(): JSX.Element {
           delete next[chatId];
           return next;
         });
-        persistAfterCommit.current.add(chatId);
-        setMessagesByChat((prev) => ({
-          ...prev,
-          [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId && m.toolCalls ? { ...m, toolCalls: settleToolCalls(m.toolCalls) } : m)),
-        }));
+        // A chat deleted mid-reply stays deleted: no settle write, no save.
+        if (!deletedChats.current.has(chatId)) {
+          persistAfterCommit.current.add(chatId);
+          setMessagesByChat((prev) => ({
+            ...prev,
+            [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId && m.toolCalls ? { ...m, toolCalls: settleToolCalls(m.toolCalls) } : m)),
+          }));
+        }
       }
     },
     [refreshProjects, streamingChats],
@@ -897,18 +909,39 @@ export default function App(): JSX.Element {
       const req = projectId ? deleteChat(projectId, chatId) : deleteFreeChat(chatId);
       req
         .then(() => {
+          // Stop the live reply first so its stream cannot write the chat back, then forget every
+          // per-chat record; later saves for this id are refused (see shouldSaveChat).
+          deletedChats.current.add(chatId);
+          abortStream(chatId);
           loadedChats.current.delete(chatId);
+          sendingChats.current.delete(chatId);
+          persistAfterCommit.current.delete(chatId);
+          delete deferredMerges.current[chatId];
+          delete historyRevisions.current[chatId];
+          delete historyLoads.current[chatId];
+          delete historySaves.current[chatId];
+          setStreamingChats((prev) => {
+            if (!(chatId in prev)) return prev;
+            const next = { ...prev };
+            delete next[chatId];
+            return next;
+          });
           setMessagesByChat((prev) => {
             const next = { ...prev };
             delete next[chatId];
             return next;
           });
-          if (projectId) setView({ kind: 'project', id: projectId });
+          // Only the open chat moves the view: a project chat returns to its project, a free chat
+          // to a fresh new chat, so the next message does not go to the deleted id.
+          if (viewRef.current.kind === 'chat' && viewRef.current.chatId === chatId) {
+            if (projectId) setView({ kind: 'project', id: projectId });
+            else startFreeChat();
+          }
           refreshProjects();
         })
         .catch(() => undefined);
     },
-    [refreshProjects],
+    [refreshProjects, abortStream, startFreeChat],
   );
 
   // A metadata POST contains the whole list. Save one action at a time per list,
@@ -1097,6 +1130,7 @@ export default function App(): JSX.Element {
 
       {view.kind === 'project' && activeProject && (
         <ProjectView
+          key={activeProject.id}
           modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null)}
           onOpenModels={() => setPopupOpen(true)}
           onEdit={() => setEditingProjectId(activeProject.id)}
