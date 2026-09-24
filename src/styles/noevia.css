@@ -2073,3 +2073,30 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 
 /* Keep the workspace frame present while its lazy destination arrives. */
 .view-loading { flex: 1; min-height: 160px; padding: var(--space-6); color: var(--text-secondary); }
+
+/* Guided model manager (#204): optimize steps, fit verdict, overview by role, recovery. */
+.mm-guided-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.mm-guided-step { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--radius-card); min-width: 0; }
+.mm-guided-step h4, .mm-role-group h4 { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); margin: 0; font-size: var(--text-callout); font-weight: 600; }
+.mm-guided-step h4 small, .mm-role-group h4 small { font-weight: 400; color: var(--text-secondary); font-size: var(--text-caption); }
+.mm-step-n { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: var(--radius-pill); border: 1px solid var(--border-strong); font-size: var(--text-caption); font-weight: 600; }
+.mm-fit-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-3); }
+.mm-fit { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); }
+.mm-fit small { color: var(--text-secondary); font-size: var(--text-caption); }
+.mm-fit-verdict { font-size: var(--text-headline); }
+.mm-fit[data-verdict="fits"] .mm-fit-verdict { color: var(--status-good); }
+.mm-fit[data-verdict="tight"] .mm-fit-verdict { color: var(--status-warning); }
+.mm-fit[data-verdict="no"] .mm-fit-verdict { color: var(--status-danger); }
+.mm-preflight { margin: 0; padding-inline-start: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-footnote); color: var(--text-secondary); }
+.mm-guided-link { border: 0; background: none; padding: 0; min-height: 24px; color: var(--accent-text); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.mm-overview { display: flex; flex-direction: column; gap: var(--space-4); }
+.mm-role-group { display: flex; flex-direction: column; gap: var(--space-2); }
+.mm-role-list, .mm-recover-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.mm-role-list li, .mm-recover-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); min-width: 0; }
+.mm-role-name { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; flex: 1 1 240px; }
+.mm-role-name strong { overflow-wrap: anywhere; }
+.mm-role-evidence { flex: 1 1 100%; order: 3; color: var(--text-secondary); font-size: var(--text-caption); }
+.mm-recover-list li > div { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; flex: 1 1 240px; overflow-wrap: anywhere; }
+.mm-recover-list small { color: var(--text-secondary); font-size: var(--text-caption); }
+.mm-loader-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); min-width: 0; }
+.mm-loader-state { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; color: var(--text-secondary); font-size: var(--text-footnote); }
