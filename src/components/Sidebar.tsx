@@ -12,6 +12,11 @@ import type { McpStatus } from '../api';
 import { ShellIcon } from './ShellIcon';
 import type { ChatMeta, HealthState, Project } from '../types';
 import { Logo } from './Icons';
+import { useT } from '../i18n';
+import type { MessageKey } from '../i18n';
+
+// Code-mode destinations: the English name is the page's identity (onCodePage), the key its label.
+const CODE_PAGES: [page: string, icon: string, key: MessageKey][] = [['Pull requests', 'git', 'sidebar.code.pullRequests'], ['Scheduled', 'clock', 'sidebar.code.scheduled'], ['Plugins', 'plugins', 'sidebar.code.plugins'], ['Explore', 'explore', 'sidebar.code.explore']];
 
 interface SidebarProps {
   projects: Project[];
@@ -90,6 +95,7 @@ export function Sidebar({
   theme,
   onToggleTheme,
 }: SidebarProps): JSX.Element {
+  const t = useT();
   const [orderKey,setOrderKey]=useState<string | null>(null);
   const [order,setOrder]=useState(()=>readSidebarOrder(null));
   const [sorting,setSorting]=useState<{x:number;y:number} | null>(null);
@@ -261,35 +267,35 @@ export function Sidebar({
     const index=peers.findIndex(x=>x.id===p.id);
     return [-1,1].flatMap(direction=>{
       const neighbor=peers[index+direction];
-      return neighbor ? [{label:direction<0?'Move up':'Move down',icon:<ShellIcon name={direction<0?'arrow-up':'arrow-down'}/>,onSelect:()=>setOrder(prev=>({...prev,order:moveProject(sortedProjects.map(x=>x.id),p.id,neighbor.id)}))}] : [];
+      return neighbor ? [{label:direction<0?t('sidebar.moveUp'):t('sidebar.moveDown'),icon:<ShellIcon name={direction<0?'arrow-up':'arrow-down'}/>,onSelect:()=>setOrder(prev=>({...prev,order:moveProject(sortedProjects.map(x=>x.id),p.id,neighbor.id)}))}] : [];
     });
   };
 
   const projectMenu = (p: Project): MenuItem[] => [
     ...manualItems(p),
-    { label: 'Rename', icon:<ShellIcon name="edit"/>, onSelect: () => startRename(p.id, p.name) },
-    { label: 'Project settings', icon:<ShellIcon name="settings"/>, onSelect: () => onEditProject(p.id) },
-    { icon:<ShellIcon name="pin"/>, separator:true, label: p.pinned ? 'Unpin' : 'Pin', onSelect: () => onPatchProject(p.id, { pinned: !p.pinned }) },
+    { label: t('sidebar.rename'), icon:<ShellIcon name="edit"/>, onSelect: () => startRename(p.id, p.name) },
+    { label: t('sidebar.projectSettings'), icon:<ShellIcon name="settings"/>, onSelect: () => onEditProject(p.id) },
+    { icon:<ShellIcon name="pin"/>, separator:true, label: p.pinned ? t('sidebar.unpin') : t('sidebar.pin'), onSelect: () => onPatchProject(p.id, { pinned: !p.pinned }) },
     {
-      label: 'Archive',
+      label: t('sidebar.archive'),
       icon:<ShellIcon name="archive"/>,
       onSelect: () =>
         setConfirm({
-          title: `Archive ${p.name}?`,
-          body: 'It leaves the sidebar and moves to Archived on the Projects page. Its chats and files are kept, and you can restore it at any time.',
-          confirmLabel: 'Archive',
+          title: t('sidebar.confirmArchiveProjectTitle', { name: p.name }),
+          body: t('sidebar.confirmArchiveProjectBody'),
+          confirmLabel: t('sidebar.archive'),
           run: () => onPatchProject(p.id, { archived: true }),
         }),
     },
     {
-      label: 'Delete project',
+      label: t('sidebar.deleteProject'),
       icon:<ShellIcon name="trash"/>,
       danger: true,
       onSelect: () =>
         setConfirm({
-          title: `Delete ${p.name}?`,
-          body: `This permanently deletes the project along with its ${(p.chats || []).length} chat${(p.chats || []).length === 1 ? '' : 's'} and ${(p.files || []).length} file${(p.files || []).length === 1 ? '' : 's'}. This cannot be undone.`,
-          confirmLabel: 'Delete project',
+          title: t('sidebar.confirmDeleteProjectTitle', { name: p.name }),
+          body: t('sidebar.confirmDeleteProjectBody', { chats: t.plural('sidebar.count.chats', (p.chats || []).length), files: t.plural('sidebar.count.files', (p.files || []).length) }),
+          confirmLabel: t('sidebar.deleteProject'),
           danger: true,
           run: () => onDeleteProject(p.id),
         }),
@@ -297,31 +303,31 @@ export function Sidebar({
   ];
 
   const chatMenu = (c: ChatMeta): MenuItem[] => [
-    { label: c.pinned ? 'Unpin' : 'Pin', icon:<ShellIcon name="pin"/>, onSelect: () => onPatchChat(c.projectId ?? null, c.id, { pinned: !c.pinned }) },
-    { label: 'Rename', icon:<ShellIcon name="edit"/>, onSelect: () => startRename(c.id, c.title || '', menu?.source) },
+    { label: c.pinned ? t('sidebar.unpin') : t('sidebar.pin'), icon:<ShellIcon name="pin"/>, onSelect: () => onPatchChat(c.projectId ?? null, c.id, { pinned: !c.pinned }) },
+    { label: t('sidebar.rename'), icon:<ShellIcon name="edit"/>, onSelect: () => startRename(c.id, c.title || '', menu?.source) },
     {
-      label: 'Archive',
+      label: t('sidebar.archive'),
       icon:<ShellIcon name="archive"/>,
       onSelect: () => onPatchChat(c.projectId ?? null, c.id, { archived: true }),
     },
     {
-      label: 'Delete chat',
+      label: t('sidebar.deleteChat'),
       icon:<ShellIcon name="trash"/>,
       danger: true,
       onSelect: () =>
         setConfirm({
-          title: `Delete "${c.title || 'this chat'}"?`,
-          body: 'The conversation and its history are permanently removed. This cannot be undone.',
-          confirmLabel: 'Delete chat',
+          title: t('sidebar.confirmDeleteChatTitle', { name: c.title || t('sidebar.thisChat') }),
+          body: t('sidebar.confirmDeleteChatBody'),
+          confirmLabel: t('sidebar.deleteChat'),
           danger: true,
           run: () => onDeleteChat(c.projectId ?? null, c.id),
         }),
     },
   ];
   const chatActions = (c: ChatMeta, projectId: string | null, source: 'nested' | 'list' = 'list') => <div className="row-actions">
-    <button className="row-action" aria-label={`${c.pinned ? 'Unpin' : 'Pin'} ${c.title || 'chat'}`} title={c.pinned ? 'Unpin chat' : 'Pin chat'} aria-pressed={!!c.pinned} onClick={()=>onPatchChat(projectId,c.id,{pinned:!c.pinned})}><ShellIcon name="pin" size={18}/></button>
-    <button className="row-action" aria-label={`Archive ${c.title || 'chat'}`} title="Archive chat" onClick={()=>onPatchChat(projectId,c.id,{archived:true})}><ShellIcon name="archive" size={18}/></button>
-    <button className="row-action" aria-label={`Options for ${c.title || 'chat'}`} aria-haspopup="menu" aria-expanded={menu?.kind==='chat' && menu.id===c.id} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'chat',id:c.id,projectId,source,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={20}/></button>
+    <button className="row-action" aria-label={t(c.pinned ? 'sidebar.unpinNamed' : 'sidebar.pinNamed', { name: c.title || t('sidebar.chatFallback') })} title={c.pinned ? t('sidebar.unpinChat') : t('sidebar.pinChat')} aria-pressed={!!c.pinned} onClick={()=>onPatchChat(projectId,c.id,{pinned:!c.pinned})}><ShellIcon name="pin" size={18}/></button>
+    <button className="row-action" aria-label={t('sidebar.archiveNamed', { name: c.title || t('sidebar.chatFallback') })} title={t('sidebar.archiveChat')} onClick={()=>onPatchChat(projectId,c.id,{archived:true})}><ShellIcon name="archive" size={18}/></button>
+    <button className="row-action" aria-label={t('sidebar.optionsFor', { name: c.title || t('sidebar.chatFallback') })} aria-haspopup="menu" aria-expanded={menu?.kind==='chat' && menu.id===c.id} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'chat',id:c.id,projectId,source,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={20}/></button>
   </div>;
   const projectNames = new Map(projects.map((p) => [p.id, p.name]));
   const renderChat = (c: ChatMeta) => (
@@ -351,14 +357,14 @@ export function Sidebar({
                     className="nav-item"
                     onClick={() => onOpenChat(c.id, c.projectId ?? null)}
                     title={c.title}
-                    data-tip={c.title || 'New chat'}
+                    data-tip={c.title || t('common.newChat')}
                   >
                     <ShellIcon name={c.pinned ? 'pin' : 'chat'} size={17}/>
-                    <SidebarLabel text={c.title || 'New chat'}/>
+                    <SidebarLabel text={c.title || t('common.newChat')}/>
                     {/* Project context tells identically titled chats apart (#239). */}
                     {c.projectId && projectNames.get(c.projectId) && <span className="chat-row-context">{projectNames.get(c.projectId)}</span>}
                     {streamingChats[c.id] && (
-                      <span className="chat-working" aria-label="Still generating"><i /><i /><i /></span>
+                      <span className="chat-working" aria-label={t('sidebar.stillGenerating')}><i /><i /><i /></span>
                     )}
                   </button>
                 )}
@@ -366,14 +372,14 @@ export function Sidebar({
               </div>
   );
   return (<>
-    <button ref={toggle} className="shell-icon-button nav-drawer-toggle" aria-label="Open navigation" aria-expanded={expanded} aria-controls="app-navigation" onClick={() => setExpanded(true)}><ShellIcon name="panel"/></button>
+    <button ref={toggle} className="shell-icon-button nav-drawer-toggle" aria-label={t('sidebar.openNavigation')} aria-expanded={expanded} aria-controls="app-navigation" onClick={() => setExpanded(true)}><ShellIcon name="panel"/></button>
     {mobile && expanded && <div className="nav-drawer-backdrop" aria-hidden="true" onClick={() => setExpanded(false)}/>}
     <div
       ref={drawer}
       id="app-navigation"
       role={mobile && expanded ? 'dialog' : undefined}
       aria-modal={mobile && expanded ? true : undefined}
-      aria-label={mobile && expanded ? 'Navigation' : undefined}
+      aria-label={mobile && expanded ? t('sidebar.navigation') : undefined}
       onKeyDown={trapDrawer}
       onMouseOver={showTip}
       onMouseLeave={() => setTip(null)}
@@ -387,70 +393,70 @@ export function Sidebar({
         if (collapsed && !mobile && !(e.target as HTMLElement).closest('button, a, input')) setCollapsed(false);
       }}
     >
-      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? 'Close navigation' : collapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div>{/* Like Claude's: a small icon-only Chat/Code switch at the end of the header row. Switching
+      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? t('sidebar.closeNavigation') : collapsed ? t('sidebar.expandNavigation') : t('sidebar.collapseNavigation')} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div>{/* Like Claude's: a small icon-only Chat/Code switch at the end of the header row. Switching
           closes the phone drawer, so the new mode is what you see. */}{showPreviews && <ModeSwitch compact mode={mode} onCode={() => { setExpanded(false); onEnterCode(); }} onChat={() => { setExpanded(false); onEnterChat?.(); }}/>}</div>
-      {/* On a phone the drawer always shows the search field under its header, as Claude's does. */}{(searching || (mobile && expanded))&&<input className="shell-search" autoFocus={searching} aria-label="Search projects and chats" placeholder="Search projects and chats…" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');}}}/>}
+      {/* On a phone the drawer always shows the search field under its header, as Claude's does. */}{(searching || (mobile && expanded))&&<input className="shell-search" autoFocus={searching} aria-label={t('sidebar.search')} placeholder={t('sidebar.searchPlaceholder')} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');}}}/>}
 
       {/* Floats over the list as it scrolls, as ChatGPT's New chat does. */}
       <div className="side-new">
-      <button className="new-chat-btn glass" onClick={()=>{if(code)onCodePage?.('New task');else onNewChat();setExpanded(false);}} title={code?'New task':'New chat'} data-tip={code?'New task':'New chat'}>
+      <button className="new-chat-btn glass" onClick={()=>{if(code)onCodePage?.('New task');else onNewChat();setExpanded(false);}} title={code?t('sidebar.newTask'):t('common.newChat')} data-tip={code?t('sidebar.newTask'):t('common.newChat')}>
         <ShellIcon name="compose" size={17}/>
-        <span>{code?'New task':'New chat'}</span>
+        <span>{code?t('sidebar.newTask'):t('common.newChat')}</span>
       </button>
       </div>
 
-      {code ? <nav className="side-nav" aria-label="Coding navigation">
-        {[['Pull requests','git'],['Scheduled','clock'],['Plugins','plugins'],['Explore','explore']].map(([label,icon])=><button key={label} className={`nav-item${codePage===label?' is-active':''}`} aria-label={label} aria-current={codePage===label?'page':undefined} onClick={()=>onCodePage?.(label)}>
+      {code ? <nav className="side-nav" aria-label={t('sidebar.codingNavigation')}>
+        {CODE_PAGES.map(([page,icon,key])=><button key={page} className={`nav-item${codePage===page?' is-active':''}`} aria-label={t(key)} aria-current={codePage===page?'page':undefined} onClick={()=>onCodePage?.(page)}>
           <ShellIcon name={icon} size={17}/>
-          <span className="nav-name">{label}</span>
+          <span className="nav-name">{t(key)}</span>
         </button>)}
-      </nav> : <nav className="side-nav" aria-label="Primary">
+      </nav> : <nav className="side-nav" aria-label={t('sidebar.primary')}>
         <button
           className={`nav-item${activeView === 'projects' ? ' is-active' : ''}`}
-          aria-label="Projects"
+          aria-label={t('sidebar.projects')}
           aria-current={activeView === 'projects' ? 'page' : undefined}
           onClick={onOpenProjects}
         >
           <ShellIcon name="folder" size={17}/>
-          <span className="nav-name">Projects</span>
+          <span className="nav-name">{t('sidebar.projects')}</span>
         </button>
         {/* Customise (formerly Plugins, #238) stays with the destinations. Diary is a permanent space, so it lives in the
             bottom bar beside Search: always one tap away, never in the way (user review). */}
-        <button className={`nav-item${activeView === 'plugins' ? ' is-active' : ''}`} aria-label="Customise" aria-current={activeView === 'plugins' ? 'page' : undefined} onClick={onOpenPlugins}>
+        <button className={`nav-item${activeView === 'plugins' ? ' is-active' : ''}`} aria-label={t('sidebar.customise')} aria-current={activeView === 'plugins' ? 'page' : undefined} onClick={onOpenPlugins}>
           <ShellIcon name="plugins" size={17}/>
-          <span className="nav-name">Customise</span>
+          <span className="nav-name">{t('sidebar.customise')}</span>
         </button>
       </nav>}
 
-      <div className="rail-tools"><button className="shell-icon-button" aria-label="Search projects and chats" onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(true);}}><ShellIcon name="search"/></button><button className="shell-icon-button" aria-label="Show pinned items" onClick={()=>{setCollapsed(false);setExpanded(true);setClosedGroups(g=>({...g,Pinned:false}));}}><ShellIcon name="pin"/></button></div>
+      <div className="rail-tools"><button className="shell-icon-button" aria-label={t('sidebar.search')} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(true);}}><ShellIcon name="search"/></button><button className="shell-icon-button" aria-label={t('sidebar.showPinned')} onClick={()=>{setCollapsed(false);setExpanded(true);setClosedGroups(g=>({...g,Pinned:false}));}}><ShellIcon name="pin"/></button></div>
       {code ? <div className="sidebar-history coding-history">
-        <div className="spaces side-scroll"><div className="sidebar-section-head"><span className="section-label">Coding projects</span></div><p className="side-hint">No coding projects connected. Connecting a repository is coming in a future update.</p></div>
-        <div className="spaces side-scroll"><div className="sidebar-section-head"><span className="section-label">Tasks</span></div><p className="side-hint">Your coding tasks will appear here.</p></div>
+        <div className="spaces side-scroll"><div className="sidebar-section-head"><span className="section-label">{t('sidebar.codingProjects')}</span></div><p className="side-hint">{t('sidebar.codingProjectsEmpty')}</p></div>
+        <div className="spaces side-scroll"><div className="sidebar-section-head"><span className="section-label">{t('sidebar.tasks')}</span></div><p className="side-hint">{t('sidebar.tasksEmpty')}</p></div>
       </div> : <div className="sidebar-history">
       {['Pinned','Projects'].map(group => {
         const entries = visibleProjects.filter(p=>group==='Pinned'?p.pinned:!p.pinned);
         if(group==='Pinned' && !entries.length && !visibleChats.some(c=>c.pinned))return null;
         return <div className={`spaces side-scroll side-scroll-${group.toLowerCase()}`} key={group}>
-          <div className="sidebar-section-head"><button className="section-label section-toggle" aria-label={`${group} section`} aria-expanded={!closedGroups[group]} onClick={()=>setClosedGroups(g=>({...g,[group]:!g[group]}))}>{group==='Projects' ? 'Your projects' : group}</button>{group==='Projects' && <button className="row-action section-options" aria-label="Project ordering" aria-haspopup="menu" aria-expanded={!!sorting} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setSorting({x:r.left,y:r.bottom+4});}}><ShellIcon name="more" size={20}/></button>}</div>
+          <div className="sidebar-section-head"><button className="section-label section-toggle" aria-label={t('sidebar.sectionNamed', { name: group==='Projects' ? t('sidebar.projects') : t('sidebar.pinned') })} aria-expanded={!closedGroups[group]} onClick={()=>setClosedGroups(g=>({...g,[group]:!g[group]}))}>{group==='Projects' ? t('sidebar.yourProjects') : t('sidebar.pinned')}</button>{group==='Projects' && <button className="row-action section-options" aria-label={t('sidebar.projectOrdering')} aria-haspopup="menu" aria-expanded={!!sorting} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setSorting({x:r.left,y:r.bottom+4});}}><ShellIcon name="more" size={20}/></button>}</div>
           {group==='Pinned' && (!closedGroups[group] || query) && visibleChats.filter(c=>c.pinned).map(renderChat)}
           {(!closedGroups[group] || query) && entries.map(p=><div className="project-branch" key={p.id}>
             <div className={`proj-row${activeProjectId===p.id && activeView!=='projects'?' is-active':''}`} onContextMenu={e=>{e.preventDefault();setMenu({kind:'project',id:p.id,projectId:null,at:{x:e.clientX,y:e.clientY}});}}>
-              {renamingId===p.id ? <input className="proj-rename-input" aria-label="Project name" value={renameDraft} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(null,false)} onKeyDown={e=>{if(e.key==='Enter')commitRename(null,false);if(e.key==='Escape')setRenamingId(null);}}/> : <><button className="project-expand" data-tip={p.name} aria-label={`${openProjects[p.id]?'Collapse':'Expand'} chats in ${p.name}`} aria-expanded={!!openProjects[p.id]} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:!prev[p.id]}));}}><ProjectIcon project={p} size={18}/></button><button className="project-disclosure" aria-label={`Open ${p.name}`} onMouseEnter={e=>openHover(p.id,e.currentTarget)} onMouseLeave={closeHover} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:true}));onOpenProject(p.id);setExpanded(false);}}><SidebarLabel text={p.name}/></button></>}
+              {renamingId===p.id ? <input className="proj-rename-input" aria-label={t('sidebar.projectName')} value={renameDraft} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(null,false)} onKeyDown={e=>{if(e.key==='Enter')commitRename(null,false);if(e.key==='Escape')setRenamingId(null);}}/> : <><button className="project-expand" data-tip={p.name} aria-label={t(openProjects[p.id]?'sidebar.collapseChatsIn':'sidebar.expandChatsIn', { name: p.name })} aria-expanded={!!openProjects[p.id]} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:!prev[p.id]}));}}><ProjectIcon project={p} size={18}/></button><button className="project-disclosure" aria-label={t('sidebar.openNamed', { name: p.name })} onMouseEnter={e=>openHover(p.id,e.currentTarget)} onMouseLeave={closeHover} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:true}));onOpenProject(p.id);setExpanded(false);}}><SidebarLabel text={p.name}/></button></>}
 
               <div className="row-actions">
-                <button className="row-action" aria-label={`Options for ${p.name}`} aria-haspopup="menu" aria-expanded={menu?.kind==='project' && menu.id===p.id} onClick={e=>{closeHover();const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'project',id:p.id,projectId:null,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={22}/></button>
-                <button className="row-action" aria-label={`New chat in ${p.name}`} title="New chat in project" onClick={()=>{onNewProjectChat(p.id);setExpanded(false);}}><ShellIcon name="compose" size={20}/></button>
+                <button className="row-action" aria-label={t('sidebar.optionsFor', { name: p.name })} aria-haspopup="menu" aria-expanded={menu?.kind==='project' && menu.id===p.id} onClick={e=>{closeHover();const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'project',id:p.id,projectId:null,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={22}/></button>
+                <button className="row-action" aria-label={t('sidebar.newChatIn', { name: p.name })} title={t('sidebar.newChatInProject')} onClick={()=>{onNewProjectChat(p.id);setExpanded(false);}}><ShellIcon name="compose" size={20}/></button>
               </div>
             </div>
             {openProjects[p.id] && <div className="project-children">
               {(p.chats || []).filter(c=>!c.archived && !c.pinned).sort((a,b)=>b.updatedAt-a.updatedAt).map(c=><div className="chat-row" key={c.id}>
-                {renamingId===c.id && renameSource==='nested' ? <input className="proj-rename-input" aria-label="Chat name" value={renameDraft} autoFocus onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(p.id,true)} onKeyDown={e=>{if(e.key==='Enter')commitRename(p.id,true);if(e.key==='Escape')setRenamingId(null);}}/> : <button className={`nested-chat-title${activeChatId===c.id?' is-active':''}`} onClick={()=>{onOpenChat(c.id,p.id);setExpanded(false);}}><SidebarLabel text={c.title || 'New chat'}/>{streamingChats[c.id] && <span aria-label="Still generating"> ···</span>}</button>}
+                {renamingId===c.id && renameSource==='nested' ? <input className="proj-rename-input" aria-label={t('sidebar.chatName')} value={renameDraft} autoFocus onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(p.id,true)} onKeyDown={e=>{if(e.key==='Enter')commitRename(p.id,true);if(e.key==='Escape')setRenamingId(null);}}/> : <button className={`nested-chat-title${activeChatId===c.id?' is-active':''}`} onClick={()=>{onOpenChat(c.id,p.id);setExpanded(false);}}><SidebarLabel text={c.title || t('common.newChat')}/>{streamingChats[c.id] && <span aria-label={t('sidebar.stillGenerating')}> ···</span>}</button>}
                 {chatActions(c,p.id,'nested')}
               </div>)}
-              {!p.chats?.some(c=>!c.archived && !c.pinned) && <p>{p.chats?.some(c=>!c.archived && c.pinned)?'Chats pinned above':'No chats yet'}</p>}
+              {!p.chats?.some(c=>!c.archived && !c.pinned) && <p>{p.chats?.some(c=>!c.archived && c.pinned)?t('sidebar.chatsPinnedAbove'):t('sidebar.noChatsYet')}</p>}
             </div>}
           </div>)}
-          {!entries.length && group==='Projects' && <p className="side-hint">{query?'No matching projects.':'Create a project from the Projects page.'}</p>}
+          {!entries.length && group==='Projects' && <p className="side-hint">{query?t('sidebar.noMatchingProjects'):t('sidebar.createProjectHint')}</p>}
         </div>;
       })}
 
@@ -458,12 +464,12 @@ export function Sidebar({
         <>
           <div className="divider" />
           <div className="spaces side-scroll side-scroll-chats">
-            <button className="section-label section-toggle" aria-expanded={!closedGroups.Chats} onClick={()=>setClosedGroups(g=>({...g,Chats:!g.Chats}))}>Recent chats</button>
+            <button className="section-label section-toggle" aria-expanded={!closedGroups.Chats} onClick={()=>setClosedGroups(g=>({...g,Chats:!g.Chats}))}>{t('sidebar.recentChats')}</button>
             {(!closedGroups.Chats || query) && (() => {
               const recent = visibleChats.filter(c=>!c.pinned);
               const bounded = query || allRecents ? recent : recent.slice(0, RECENT_LIMIT);
               return <div className="recent-children">{bounded.map(renderChat)}
-                {!query && recent.length > RECENT_LIMIT && <button className="side-more" aria-expanded={allRecents} onClick={()=>setAllRecents(v=>!v)}>{allRecents ? 'Show fewer' : `View all ${recent.length} chats`}</button>}
+                {!query && recent.length > RECENT_LIMIT && <button className="side-more" aria-expanded={allRecents} onClick={()=>setAllRecents(v=>!v)}>{allRecents ? t('sidebar.showFewer') : t('sidebar.viewAll', { count: recent.length })}</button>}
               </div>;
             })()}
 
@@ -471,7 +477,7 @@ export function Sidebar({
         </>
       )}
 
-      {onOpenArchived && <button className={`side-more side-archived${activeView === 'archived' ? ' is-active' : ''}`} aria-current={activeView === 'archived' ? 'page' : undefined} onClick={()=>{onOpenArchived();setExpanded(false);}}><ShellIcon name="archive" size={16}/><span>Archived chats</span></button>}
+      {onOpenArchived && <button className={`side-more side-archived${activeView === 'archived' ? ' is-active' : ''}`} aria-current={activeView === 'archived' ? 'page' : undefined} onClick={()=>{onOpenArchived();setExpanded(false);}}><ShellIcon name="archive" size={16}/><span>{t('sidebar.archivedChats')}</span></button>}
       </div>}
 
       {tip && <div className={`rail-tip${tip.warm ? ' is-warm' : ''}`} role="tooltip" style={{ top: tip.y, left: tip.x }}>{tip.text}</div>}
@@ -483,16 +489,16 @@ export function Sidebar({
           <div className="row-card" role="tooltip" style={{ top: hover.y, left: hover.x }}>
             <strong>{p.name}</strong>
             {p.goal && <em>{p.goal}</em>}
-            <span>{(p.chats || []).length} chat{(p.chats || []).length === 1 ? '' : 's'} · {files.length} source{files.length === 1 ? '' : 's'}</span>
+            <span>{t.plural('sidebar.count.chats', (p.chats || []).length)} · {t.plural('sidebar.count.sources', files.length)}</span>
             {files.slice(0, 4).map((f) => <span key={f.name} className="row-card-src">{f.name}</span>)}
-            {files.length > 4 && <span className="row-card-src">+{files.length - 4} more</span>}
-            {files.length === 0 && <span className="row-card-src">No sources attached</span>}
+            {files.length > 4 && <span className="row-card-src">{t('sidebar.moreSources', { count: files.length - 4 })}</span>}
+            {files.length === 0 && <span className="row-card-src">{t('sidebar.noSources')}</span>}
           </div>
         );
       })()}
       {sorting && <ContextMenu at={sorting} onClose={()=>setSorting(null)} items={[
-        {label:'Last used',selected:order.sort==='recent',onSelect:()=>setOrder(prev=>({...prev,sort:'recent'}))},
-        {label:'Manual order',selected:order.sort==='manual',onSelect:()=>setOrder(prev=>({...prev,sort:'manual',order:prev.order.length ? prev.order : sortedProjects.map(p=>p.id)}))},
+        {label:t('sidebar.lastUsed'),selected:order.sort==='recent',onSelect:()=>setOrder(prev=>({...prev,sort:'recent'}))},
+        {label:t('sidebar.manualOrder'),selected:order.sort==='manual',onSelect:()=>setOrder(prev=>({...prev,sort:'manual',order:prev.order.length ? prev.order : sortedProjects.map(p=>p.id)}))},
       ]}/>}
       {menu && (
         <ContextMenu
@@ -537,7 +543,7 @@ export function Sidebar({
             <span className="status-text">{label}</span>
           </div>
         );
-      })()}{/* Inference status lives in the workspace status pill and the chat banner; one place is enough. */}<div className="side-footer-row"><AccountMenu onSettings={openSettings} theme={theme} onToggleTheme={onToggleTheme}/>{diaryEnabled && <button className={`shell-icon-button side-footer-diary${activeView === 'diary' ? ' is-active' : ''}`} aria-label="Diary" title="Diary" aria-current={activeView === 'diary' ? 'page' : undefined} onClick={() => { onOpenDiary(); setExpanded(false); }}><ShellIcon name="diary"/></button>}{/* Search sits beside the account, as in Claude. */}<button className="shell-icon-button side-footer-search" aria-label="Search projects and chats" aria-expanded={searching} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
+      })()}{/* Inference status lives in the workspace status pill and the chat banner; one place is enough. */}<div className="side-footer-row"><AccountMenu onSettings={openSettings} theme={theme} onToggleTheme={onToggleTheme}/>{diaryEnabled && <button className={`shell-icon-button side-footer-diary${activeView === 'diary' ? ' is-active' : ''}`} aria-label={t('sidebar.diary')} title={t('sidebar.diary')} aria-current={activeView === 'diary' ? 'page' : undefined} onClick={() => { onOpenDiary(); setExpanded(false); }}><ShellIcon name="diary"/></button>}{/* Search sits beside the account, as in Claude. */}<button className="shell-icon-button side-footer-search" aria-label={t('sidebar.search')} aria-expanded={searching} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
     </div>
   </>);
 }

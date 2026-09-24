@@ -1,6 +1,8 @@
 import { SegmentedControl } from './SegmentedControl';
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
+import { t as translate, useT } from '../i18n';
+import type { MessageKey } from '../i18n';
 
 export type LayoutMode = 'auto' | 'mobile' | 'desktop';
 
@@ -16,10 +18,11 @@ const api = (): LayoutApi | undefined => (window as unknown as { noeviaLayout?: 
  * with the device: a phone can genuinely be widened to the desktop layout, while a desktop
  * browser ignores the viewport meta and can only preview the phone one.
  */
-const OPTIONS: [LayoutMode, string][] = [['auto', 'Automatic'], ['mobile', 'Phone'], ['desktop', 'Desktop']];
+const OPTIONS: [LayoutMode, MessageKey][] = [['auto', 'appearance.layout.auto'], ['mobile', 'appearance.layout.phone'], ['desktop', 'appearance.layout.desktop']];
 
 /** The three-way picker on its own, for embedding in a settings row. */
 export function LayoutModeChoice(): JSX.Element | null {
+  const t = useT();
   const [mode, setMode] = useState<LayoutMode>(() => api()?.get() ?? 'auto');
   const [device, setDevice] = useState<'mobile' | 'desktop'>(() => api()?.device() ?? 'desktop');
 
@@ -31,13 +34,11 @@ export function LayoutModeChoice(): JSX.Element | null {
 
   if (!api()) return null;
   const choose = (next: LayoutMode) => { api()?.set(next); setMode(next); };
-  return <SegmentedControl label="Layout" value={mode} onChange={choose}
-    options={OPTIONS.map(([id, label]) => [id, `${label}${id === 'auto' ? ` · ${device === 'mobile' ? 'phone' : 'desktop'}` : ''}`])}/>;
+  return <SegmentedControl label={t('appearance.layout')} value={mode} onChange={choose}
+    options={OPTIONS.map(([id, key]) => [id, `${t(key)}${id === 'auto' ? ` · ${t(device === 'mobile' ? 'appearance.layout.devicePhone' : 'appearance.layout.deviceDesktop')}` : ''}`])}/>;
 }
 
 /** What the picker does here depends on the device, so the description is not static. */
-export function layoutModeDescription(): string {
-  return (api()?.device() ?? 'desktop') === 'mobile'
-    ? 'Automatic follows this device, which looks like a phone or tablet. Desktop renders the full-width layout and scales it down, the same as your browser\u2019s \u201cRequest desktop site\u201d.'
-    : 'Automatic follows this device, which looks like a desktop. Phone previews the compact layout in a phone-width column \u2014 this browser ignores the viewport width a phone would report, so the preview covers the shell, Settings and Models rather than every view.';
+export function layoutModeDescription(t: (key: MessageKey) => string = translate): string {
+  return t((api()?.device() ?? 'desktop') === 'mobile' ? 'appearance.layout.descPhone' : 'appearance.layout.descDesktop');
 }

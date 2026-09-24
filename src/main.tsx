@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import { AuthGate } from './components/AuthGate';
 import { startFitToViewport } from './fit-to-viewport';
+import { startInterfaceLanguage } from './i18n';
 import './styles/tokens.css';
 import './styles/themes.css';
 import './styles/motion.css';
@@ -20,6 +21,7 @@ import './styles/theme-contemporary.css';
 import './styles/system.css';
 
 startFitToViewport();
+startInterfaceLanguage();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

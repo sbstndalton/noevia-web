@@ -4,9 +4,11 @@ import { fetchPermittedTools } from '../api';
 import { filterCatalogue, type CatalogueEntry, type PermittedBox } from '../tool-catalogue';
 import type { ChatMode } from '../chat-mode';
 import { ShellIcon } from './ShellIcon';
+import { useT } from '../i18n';
+import type { MessageKey } from '../i18n';
 
-const PERMISSION_LABEL: Record<CatalogueEntry['permission'], string> = {
-  allowed: 'Allowed', 'needs-approval': 'Asks first', unavailable: 'Unavailable',
+const PERMISSION_LABEL: Record<CatalogueEntry['permission'], MessageKey> = {
+  allowed: 'tools.allowed', 'needs-approval': 'tools.asksFirst', unavailable: 'capabilities.unavailable',
 };
 
 /**
@@ -21,8 +23,10 @@ export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, on
   onBoxes: (boxes: PermittedBox[]) => void; disabled: boolean;
 }): JSX.Element {
   const id = useId();
+  const t = useT();
   const [boxes, setBoxes] = useState<PermittedBox[] | null>(null);
-  const [error, setError] = useState('');
+  // A server message is shown as sent; our own failure is a code, translated at render.
+  const [error, setError] = useState<{ kind: 'load' } | { kind: 'server'; text: string } | null>(null);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const input = useRef<HTMLInputElement>(null);
@@ -33,10 +37,10 @@ export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, on
   useEffect(() => {
     if (!open || boxes) return;
     let live = true;
-    setError('');
+    setError(null);
     fetchPermittedTools(projectId, mode)
       .then(v => { if (live) { setBoxes(v.boxes); onBoxes(v.boxes); } })
-      .catch(err => { if (live) setError(err instanceof Error ? err.message : 'Tools could not be loaded.'); });
+      .catch(err => { if (live) setError(err instanceof Error && err.message ? { kind: 'server', text: err.message } : { kind: 'load' }); });
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, boxes, projectId, mode]);
@@ -69,17 +73,17 @@ export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, on
   const turnCount = toggled.length;
   return <div className="tool-catalogue" ref={root}>
     <button ref={trigger} type="button" className="tool-catalogue-trigger btn btn-ghost" aria-haspopup="listbox" aria-expanded={open}
-      aria-controls={open ? `${id}-list` : undefined} disabled={disabled} onClick={() => onOpenChange(!open)} title="Browse tools (type / in an empty message)">
-      <ShellIcon name="tools" size={16}/><span>Tools{turnCount ? ` · ${turnCount} for this message` : ''}</span>
+      aria-controls={open ? `${id}-list` : undefined} disabled={disabled} onClick={() => onOpenChange(!open)} title={t('tools.browse')}>
+      <ShellIcon name="tools" size={16}/><span>{t('tools.trigger')}{turnCount ? ` · ${t('tools.forMessage', { count: turnCount })}` : ''}</span>
     </button>
-    {open && <div className="tool-catalogue-panel overlay" role="dialog" aria-label="Tool catalogue">
+    {open && <div className="tool-catalogue-panel overlay" role="dialog" aria-label={t('tools.catalogue')}>
       <input ref={input} className="tool-catalogue-search" type="search" role="combobox" aria-expanded="true" aria-autocomplete="list"
         aria-controls={`${id}-list`} aria-activedescendant={rows.length ? `${id}-opt-${active}` : undefined}
-        placeholder="Search tools and services" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={onKey} />
-      <p className="tool-catalogue-boundary">Only tools already connected and permitted for {projectId ? 'this project' : 'your account'} are offered. Writes always ask first.</p>
-      {!boxes && !error && <p className="tool-catalogue-note" role="status">Loading tools…</p>}
-      {error && <p className="tool-catalogue-note" role="alert">{error}</p>}
-      {boxes && <ul id={`${id}-list`} className="tool-catalogue-list" role="listbox" aria-label="Tools">
+        placeholder={t('tools.search')} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={onKey} />
+      <p className="tool-catalogue-boundary">{t(projectId ? 'tools.boundaryProject' : 'tools.boundaryAccount')}</p>
+      {!boxes && !error && <p className="tool-catalogue-note" role="status">{t('composer.loadingTools')}</p>}
+      {error && <p className="tool-catalogue-note" role="alert">{error.kind === 'server' ? error.text : t('tools.loadError')}</p>}
+      {boxes && <ul id={`${id}-list`} className="tool-catalogue-list" role="listbox" aria-label={t('tools.trigger')}>
         {rows.map((row, i) => {
           const on = row.kind === 'box' && (row.active || toggled.includes(row.boxId));
           return <li key={row.key} id={`${id}-opt-${i}`} role="option" aria-selected={i === active}
@@ -89,10 +93,10 @@ export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, on
               <span className="tool-catalogue-label">{row.kind === 'tool' ? `@${row.name}` : row.label}</span>
               <small>{row.reason || row.description}</small>
             </span>
-            <span className="tool-catalogue-state">{row.kind === 'box' && row.active ? 'On for this chat' : on ? 'This message' : PERMISSION_LABEL[row.permission]}</span>
+            <span className="tool-catalogue-state">{row.kind === 'box' && row.active ? t('tools.onForChat') : on ? t('tools.thisMessage') : t(PERMISSION_LABEL[row.permission])}</span>
           </li>;
         })}
-        {!rows.length && <li className="tool-catalogue-note" role="option" aria-disabled="true" aria-selected="false">No tools match “{query}”.</li>}
+        {!rows.length && <li className="tool-catalogue-note" role="option" aria-disabled="true" aria-selected="false">{t('tools.noMatch', { query })}</li>}
       </ul>}
     </div>}
   </div>;

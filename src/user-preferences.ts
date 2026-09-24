@@ -24,7 +24,8 @@ export const NOTIFICATION_EVENTS: { id: NotificationEvent; label: string; descri
   { id: 'approvalNeeded', label: 'Approval needed', description: 'A tool wants to change something and is waiting for your decision.' },
 ];
 
-/** Date and number formats noevia can apply. The interface text is English only (#231). */
+/** Interface locales (#231): the language of the interface and the format of dates and numbers.
+ *  Each has a catalogue in src/i18n; language names stay in their own language. */
 export const LOCALE_OPTIONS: [string, string][] = [
   ['system', 'Match this browser'], ['en-GB', 'English (UK)'], ['en-US', 'English (US)'], ['de-DE', 'Deutsch'], ['es-ES', 'Español'],
   ['fr-FR', 'Français'], ['it-IT', 'Italiano'], ['nb-NO', 'Norsk bokmål'], ['nl-NL', 'Nederlands'], ['pt-BR', 'Português (Brasil)'], ['sv-SE', 'Svenska'],

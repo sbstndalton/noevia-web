@@ -11,11 +11,22 @@ import { applyPalette, currentPalette, palettes } from '../appearance';
 import type { Palette } from '../appearance';
 import { FAMILIES, FAMILY_SPECS } from '../theme-family';
 import type { Family } from '../theme-family';
+import { useT } from '../i18n';
+import type { MessageKey } from '../i18n';
 
 /** The accent palettes, restored at the user's request (2026-09-18). Each name says what
  *  it looks like rather than what it is called internally. */
-const PALETTE_LABELS: Record<Palette, string> = {
-  iris: 'Iris', warm: 'Warm', cool: 'Cool', neutral: 'Neutral', sage: 'Sage',
+const PALETTE_LABELS: Record<Palette, MessageKey> = {
+  iris: 'appearance.palette.iris', warm: 'appearance.palette.warm', cool: 'appearance.palette.cool', neutral: 'appearance.palette.neutral', sage: 'appearance.palette.sage',
+};
+
+/** useAppearance reports its sync state in English; shown here in the interface language. */
+const APPEARANCE_STATUS: Record<string, MessageKey> = {
+  'Saving appearance…': 'appearance.status.saving',
+  'Saved to your profile': 'appearance.status.saved',
+  'Appearance could not be saved to your profile. Your choices are still applied here. Retry to save.': 'appearance.status.saveError',
+  'Loading profile appearance…': 'appearance.status.loading',
+  'Profile appearance could not be loaded. Changes stay in this browser until you retry.': 'appearance.status.loadError',
 };
 
 /** A live preview: the tiles carry the palette attribute themselves, so each swatch is
@@ -23,13 +34,14 @@ const PALETTE_LABELS: Record<Palette, string> = {
  *  mode has to travel with it, because the generated dark block is written as
  *  `:not([data-theme='light'])` and would otherwise match a tile that names no mode. */
 function AccentChoice({ mode }: { mode: 'light' | 'dark' }): JSX.Element {
+  const t = useT();
   const [chosen, setChosen] = useState<Palette>(() => currentPalette());
   useEffect(() => {
     const sync = () => setChosen(currentPalette());
     window.addEventListener('cowork:appearance', sync);
     return () => window.removeEventListener('cowork:appearance', sync);
   }, []);
-  return <div className="accent-choice" role="radiogroup" aria-label="Accent">
+  return <div className="accent-choice" role="radiogroup" aria-label={t('appearance.accent')}>
     {palettes.map((name) => <button
       key={name}
       role="radio"
@@ -38,7 +50,7 @@ function AccentChoice({ mode }: { mode: 'light' | 'dark' }): JSX.Element {
       onClick={() => { applyPalette(name); setChosen(name); }}
     >
       <span className="accent-swatch" data-palette={name} data-theme={mode} aria-hidden="true"><i /><i /><i /></span>
-      {PALETTE_LABELS[name]}
+      {t(PALETTE_LABELS[name])}
     </button>)}
   </div>;
 }
@@ -49,18 +61,20 @@ function AccentChoice({ mode }: { mode: 'light' | 'dark' }): JSX.Element {
  *  current accent — never a screenshot. Choosing one writes the per-device preference, which
  *  sets data-family on <html> and restyles the whole interface at once. */
 function FamilyPreview({ family, mode, palette }: { family: Family; mode: 'light' | 'dark'; palette: Palette }): JSX.Element {
+  const t = useT();
   return <span className="family-preview theme-scope" data-family={family} data-theme={mode} data-palette={palette} aria-hidden="true">
-    <span className="family-preview-heading">Good evening</span>
-    <span className="family-preview-message">Summarise the notes</span>
+    <span className="family-preview-heading">{t('appearance.preview.greeting')}</span>
+    <span className="family-preview-message">{t('appearance.preview.message')}</span>
     <span className="family-preview-row">
-      <span className="family-preview-composer">Message noevia…<i className="family-preview-send" /></span>
+      <span className="family-preview-composer">{t('composer.placeholder')}<i className="family-preview-send" /></span>
       <span className="family-preview-menu"><span>Chat</span><span>Cowork</span></span>
     </span>
-    <span className="family-preview-controls"><span className="family-preview-button is-primary">Save</span><span className="family-preview-button">Cancel</span></span>
+    <span className="family-preview-controls"><span className="family-preview-button is-primary">{t('common.save')}</span><span className="family-preview-button">{t('common.cancel')}</span></span>
   </span>;
 }
 
 export function FamilyChoice({ onChange }: { onChange?: () => void }): JSX.Element {
+  const t = useT();
   const [chosen, setChosen] = useState<Family>(() => readPreference('family'));
   const [palette, setPalette] = useState<Palette>(() => currentPalette());
   useEffect(() => {
@@ -79,7 +93,7 @@ export function FamilyChoice({ onChange }: { onChange?: () => void }): JSX.Eleme
     choose(next);
     event.currentTarget.querySelector<HTMLElement>(`[data-choice="${next}"]`)?.focus();
   };
-  return <div className="family-choice" role="radiogroup" aria-label="Theme family" onKeyDown={onKey}>
+  return <div className="family-choice" role="radiogroup" aria-label={t('appearance.family')} onKeyDown={onKey}>
     {FAMILIES.map((name) => {
       const spec = FAMILY_SPECS[name];
       return <button key={name} type="button" role="radio" data-choice={name} aria-checked={chosen === name} tabIndex={chosen === name ? 0 : -1}
@@ -89,7 +103,7 @@ export function FamilyChoice({ onChange }: { onChange?: () => void }): JSX.Eleme
           <FamilyPreview family={name} mode="dark" palette={palette} />
         </span>
         <span className="family-tile-name">{spec.label}</span>
-        <span className="family-tile-desc">{spec.description} {spec.display === spec.ui ? `Set in ${spec.ui}.` : `${spec.display} headings, ${spec.ui} text.`}</span>
+        <span className="family-tile-desc">{t(`appearance.family.${name}` as MessageKey)} {spec.display === spec.ui ? t('appearance.family.setIn', { font: spec.ui }) : t('appearance.family.pair', { display: spec.display, ui: spec.ui })}</span>
       </button>;
     })}
   </div>;
@@ -118,15 +132,17 @@ function Choice<N extends PreferenceName>({ name, options, onChange, segmented, 
 }
 
 export function ProfileSettings(): JSX.Element {
+  const t = useT();
   return <>
-    <div className="settings-title"><h1>Account</h1><p>Who you are here.</p></div>
+    <div className="settings-title"><h1>{t('settings.section.profile')}</h1><p>{t('profile.intro')}</p></div>
     <ProfileCard />
   </>;
 }
 
 export function CapabilitiesSettings(): JSX.Element {
+  const t = useT();
   return <>
-    <div className="settings-title"><h1>Capabilities</h1><p>What this deployment can do for you right now.</p></div>
+    <div className="settings-title"><h1>{t('capabilities.title')}</h1><p>{t('capabilities.intro')}</p></div>
     <CapabilitiesCard />
   </>;
 }
@@ -144,58 +160,60 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
   // re-reads it rather than showing a stale value.
   const [, setRevision] = useState(0);
   const bump = () => setRevision((n) => n + 1);
+  const t = useT();
 
   return <>
-    <div className="settings-title"><h1>Appearance &amp; language</h1><p>How noevia looks and moves. Theme and accent sync across devices; other preferences stay in this browser.</p></div>
+    <div className="settings-title"><h1>{t('settings.section.appearance')}</h1><p>{t('appearance.intro')}</p></div>
 
     <section className="settings-section appearance-section">
-      <h2>Appearance</h2>
+      <h2>{t('appearance.heading')}</h2>
       <div className="set-rows">
         <div className="set-row">
-          <div className="set-row-text"><span className="set-row-label">Theme</span><span className="set-row-desc">Choose a light or dark canvas, or follow your device.</span></div>
-          <div className="theme-choice" role="group" aria-label="Mode">{(['system', 'light', 'dark'] as const).map((t) => {
-            const chosen = (preference ?? theme) === t;
-            const swatch = t === 'system' ? theme : t;
-            return <button className={chosen ? 'is-active' : ''} aria-pressed={chosen} key={t} onClick={() => (onPreference ? onPreference(t) : t !== 'system' && onTheme(t))}>
-              <span className={`theme-swatch ${swatch}${t === 'system' ? ' is-system' : ''}`} data-theme={swatch}><i /><i /><i /></span>{t === 'system' ? 'System' : t === 'light' ? 'Light' : 'Dark'}
+          <div className="set-row-text"><span className="set-row-label">{t('appearance.theme')}</span><span className="set-row-desc">{t('appearance.themeDesc')}</span></div>
+          <div className="theme-choice" role="group" aria-label={t('appearance.mode')}>{(['system', 'light', 'dark'] as const).map((mode) => {
+            const chosen = (preference ?? theme) === mode;
+            const swatch = mode === 'system' ? theme : mode;
+            return <button className={chosen ? 'is-active' : ''} aria-pressed={chosen} key={mode} onClick={() => (onPreference ? onPreference(mode) : mode !== 'system' && onTheme(mode))}>
+              <span className={`theme-swatch ${swatch}${mode === 'system' ? ' is-system' : ''}`} data-theme={swatch}><i /><i /><i /></span>{mode === 'system' ? t('common.system') : mode === 'light' ? t('appearance.light') : t('appearance.dark')}
             </button>;
           })}</div>
         </div>
 
         <div className="set-row">
-          <div className="set-row-text"><span className="set-row-label">Accent</span><span className="set-row-desc">Colour for selections, links and the send button.</span></div>
+          <div className="set-row-text"><span className="set-row-label">{t('appearance.accent')}</span><span className="set-row-desc">{t('appearance.accentDesc')}</span></div>
           <AccentChoice mode={theme} />
         </div>
-        <Row label="Theme family" description="The whole interface: surfaces, typefaces, shapes and motion. Each works with every accent, in light and dark. Replaces Soft, Liquid glass and Material 3, which become Editorial, Glass and Contemporary.">
+        <Row label={t('appearance.family')} description={t('appearance.familyDesc')}>
           <FamilyChoice onChange={bump} />
         </Row>
       </div>
-      <h2>Reading and motion</h2>
+      <h2>{t('appearance.reading')}</h2>
       <div className="set-rows">
-        <Row label="Chat font" description="A reading font for messages only. Default follows the theme family; the rest of the interface keeps the family’s typeface.">
-          <Choice name="chatFont" label="Chat font" onChange={bump} options={[['sans', 'Sans (default)'], ['serif', 'Serif'], ['mono', 'Monospace']]} />
+        <Row label={t('appearance.chatFont')} description={t('appearance.chatFontDesc')}>
+          <Choice name="chatFont" label={t('appearance.chatFont')} onChange={bump} options={[['sans', t('appearance.font.sans')], ['serif', t('appearance.font.serif')], ['mono', t('appearance.font.mono')]]} />
         </Row>
-        <Row label="Density" description="Compact tightens spacing without shrinking anything you tap.">
-          <Choice name="density" segmented="Density" onChange={bump} options={[['comfortable', 'Comfortable'], ['compact', 'Compact']]} />
+        <Row label={t('appearance.density')} description={t('appearance.densityDesc')}>
+          <Choice name="density" segmented={t('appearance.density')} onChange={bump} options={[['comfortable', t('appearance.density.comfortable')], ['compact', t('appearance.density.compact')]]} />
         </Row>
-        <Row label="Motion" description="Reduced keeps state changes and drops movement, in streaming replies too.">
-          <Choice name="motion" segmented="Motion" onChange={bump} options={[['system', 'System'], ['reduced', 'Reduced']]} />
+        <Row label={t('appearance.motion')} description={t('appearance.motionDesc')}>
+          <Choice name="motion" segmented={t('appearance.motion')} onChange={bump} options={[['system', t('common.system')], ['reduced', t('appearance.motion.reduced')]]} />
         </Row>
-        <Row label="Layout" description={layoutModeDescription()}>
+        <Row label={t('appearance.layout')} description={layoutModeDescription(t)}>
           <LayoutModeChoice />
         </Row>
       </div>
       <p className="route-note">
-        Theme family, chat font, density, motion and layout are saved on this device only — how dense you want a screen depends on the screen.
-        {' '}Appearance follows your account.
+        {t('appearance.deviceNote')}
+        {' '}{t('appearance.accountNote')}
       </p>
-      <p role={appearanceError ? 'alert' : 'status'} className="route-note">{appearanceStatus}</p>
-      {appearanceError && <button className="modal-btn secondary" onClick={retryAppearance}>Retry appearance</button>}
+      <p role={appearanceError ? 'alert' : 'status'} className="route-note">{appearanceStatus && APPEARANCE_STATUS[appearanceStatus] ? t(APPEARANCE_STATUS[appearanceStatus]) : appearanceStatus}</p>
+      {appearanceError && <button className="modal-btn secondary" onClick={retryAppearance}>{t('appearance.retry')}</button>}
     </section>
   </>;
 }
 
 function ProfileCard(): JSX.Element {
+  const t = useT();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [name, setName] = useState('');
   const [state, setState] = useState<{ busy: boolean; message: string; error: boolean }>({ busy: false, message: '', error: false });
@@ -203,7 +221,7 @@ function ProfileCard(): JSX.Element {
   useEffect(() => {
     let live = true;
     fetchProfile().then((p) => { if (live) { setUser(p.user); setName(p.user.displayName); } })
-      .catch(() => { if (live) setState({ busy: false, message: 'Your profile could not be loaded.', error: true }); });
+      .catch(() => { if (live) setState({ busy: false, message: t('profile.loadError'), error: true }); });
     return () => { live = false; };
   }, []);
 
@@ -214,35 +232,35 @@ function ProfileCard(): JSX.Element {
     try {
       await updateProfile(next);
       setUser({ ...user, displayName: next });
-      setState({ busy: false, message: 'Saved.', error: false });
-    } catch { setState({ busy: false, message: 'That change could not be saved.', error: true }); }
+      setState({ busy: false, message: t('common.saved'), error: false });
+    } catch { setState({ busy: false, message: t('profile.saveError'), error: true }); }
   };
 
   const initials = (user?.displayName || user?.username || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('');
 
   return <section className="settings-section">
     <div className="set-rows">
-      <Row label="Avatar" description="Taken from your name. Uploading a picture is not built yet.">
+      <Row label={t('profile.avatar')} description={t('profile.avatarDesc')}>
         <span className="set-avatar" aria-hidden="true">{initials || '?'}</span>
       </Row>
-      <Row label="Display name" description="What noevia calls you, and what other people on this server see.">
+      <Row label={t('profile.displayName')} description={t('profile.displayNameDesc')}>
         <span className="set-name-field">
-          <input aria-label="Display name" value={name} disabled={!user || state.busy} maxLength={80}
+          <input aria-label={t('profile.displayName')} value={name} disabled={!user || state.busy} maxLength={80}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') void save(); }} />
           <button className="modal-btn secondary" disabled={!user || state.busy || !name.trim() || name.trim() === user?.displayName}
-            onClick={() => void save()}>{state.busy ? 'Saving…' : 'Save'}</button>
+            onClick={() => void save()}>{state.busy ? t('common.saving') : t('common.save')}</button>
         </span>
       </Row>
-      <Row label="Username" description="Used to sign in. It cannot be changed after the account is created.">
+      <Row label={t('profile.username')} description={t('profile.usernameDesc')}>
         <span className="set-static">{user?.username || '—'}</span>
       </Row>
-      <Row label="Role" description="Administrators can manage users, models and deployment-wide settings.">
-        <span className="set-static">{user ? (user.role === 'admin' ? 'Administrator' : 'Member') : '—'}</span>
+      <Row label={t('profile.role')} description={t('profile.roleDesc')}>
+        <span className="set-static">{user ? (user.role === 'admin' ? t('profile.admin') : t('profile.member')) : '—'}</span>
       </Row>
     </div>
     {state.message && <p className={state.error ? 'modal-err' : 'route-note'} role={state.error ? 'alert' : 'status'}>{state.message}</p>}
-    <p className="route-note">Passwords, passkeys, sessions and app passwords are under Security and login.</p>
+    <p className="route-note">{t('profile.securityNote')}</p>
   </section>;
 }
 
@@ -254,6 +272,7 @@ function CapabilitiesCard(): JSX.Element {
   const [health, setHealth] = useState<HealthState | null>(null);
   const [tools, setTools] = useState<{ configured: boolean; count: number; error: string | null } | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const t = useT();
 
   useEffect(() => {
     let live = true;
@@ -264,26 +283,25 @@ function CapabilitiesCard(): JSX.Element {
   }, []);
 
   const badge = (on: boolean | null, onText: string, offText: string) =>
-    <span className={`set-badge${on ? ' is-on' : ''}`}>{on === null ? 'Checking…' : on ? onText : offText}</span>;
+    <span className={`set-badge${on ? ' is-on' : ''}`}>{on === null ? t('common.checking') : on ? onText : offText}</span>;
 
   return <section className="settings-section">
     <div className="set-rows">
-      <Row label="Diary" description="Private journaling with its own storage and retrieval. Turn it on in Diary & storage.">
-        {badge(user ? user.diaryEnabled : null, 'On', 'Off')}
+      <Row label={t('sidebar.diary')} description={t('capabilities.diaryDesc')}>
+        {badge(user ? user.diaryEnabled : null, t('common.on'), t('common.off'))}
       </Row>
-      <Row label="Connected tools" description="Curated MCP toolboxes a project can enable. Configured by the administrator.">
-        {badge(tools ? tools.configured && !tools.error : null, tools ? `${tools.count} ${tools.count === 1 ? 'toolbox' : 'toolboxes'}` : 'On', tools?.error ? 'Unavailable' : 'Not configured')}
+      <Row label={t('capabilities.tools')} description={t('capabilities.toolsDesc')}>
+        {badge(tools ? tools.configured && !tools.error : null, tools ? t.plural('capabilities.toolboxes', tools.count) : t('common.on'), tools?.error ? t('capabilities.unavailable') : t('capabilities.notConfigured'))}
       </Row>
-      <Row label="Project retrieval" description="Searches a project's files for the parts relevant to your message.">
-        {badge(health ? health.ragAvailable ?? false : null, 'Available', 'No index on this deployment')}
+      <Row label={t('capabilities.retrieval')} description={t('capabilities.retrievalDesc')}>
+        {badge(health ? health.ragAvailable ?? false : null, t('capabilities.available'), t('capabilities.noIndex'))}
       </Row>
-      <Row label="Inference" description="The engine that answers. Models and routing have their own screen.">
-        {badge(health ? health.inferenceUp : null, 'Reachable', 'Unreachable')}
+      <Row label={t('capabilities.inference')} description={t('capabilities.inferenceDesc')}>
+        {badge(health ? health.inferenceUp : null, t('capabilities.reachable'), t('capabilities.unreachable'))}
       </Row>
     </div>
     <p className="route-note">
-      Write approvals cannot be turned off: every tool that changes something stops for a human, with its arguments shown in full.
-      That is the protection against a search result talking a model into deleting a file, so there is no setting for it.
+      {t('capabilities.approvalNote')}
     </p>
   </section>;
 }

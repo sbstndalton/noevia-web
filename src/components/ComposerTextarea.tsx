@@ -1,5 +1,6 @@
 import type { JSX, TextareaHTMLAttributes } from 'react';
-import { composerKeyAction, sendHint, useAccountPreferences } from '../user-preferences';
+import { composerKeyAction, useAccountPreferences } from '../user-preferences';
+import { sendHintText, useT } from '../i18n';
 import { isApple } from './shortcuts/shortcuts';
 
 /** The message box shared by chat, projects and the Diary. Enter sends and Shift+Enter adds a
@@ -11,7 +12,8 @@ export function ComposerTextarea({ value, onValue, onSubmit, className = '', ...
   onSubmit: () => void;
 }): JSX.Element {
   const { sendKey } = useAccountPreferences();
-  const hint = sendHint(sendKey, typeof navigator !== 'undefined' && isApple(navigator.platform || navigator.userAgent));
+  const t = useT();
+  const hint = sendHintText(t, sendKey, typeof navigator !== 'undefined' && isApple(navigator.platform || navigator.userAgent));
   return (
     <textarea
       title={hint}

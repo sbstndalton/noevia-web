@@ -17,9 +17,23 @@ import { NotificationSettings } from './notifications/NotificationSettings';
 import { MemorySettings } from './personalization/MemorySettings';
 import { LanguageSettings } from './personalization/LanguageSettings';
 import { KeyboardSettings } from './shortcuts/KeyboardSettings';
+import { useT } from '../i18n';
+import type { MessageKey, Translate } from '../i18n';
 
 type Item = [id: string, label: string, keywords?: string];
 type Group = { name: string; items: Item[]; admin?: boolean };
+
+const GROUP_KEYS: Record<string, MessageKey> = { 'Personal': 'settings.group.personal', 'Account & connections': 'settings.group.account', 'Server administration': 'settings.group.admin' };
+
+/** The groups in the interface language (#231). Search keeps the English name and keywords too,
+ *  so a task word typed in either language still finds its page. */
+function localiseGroups(groups: Group[], t: Translate): Group[] {
+  return groups.map((g) => ({ ...g, name: GROUP_KEYS[g.name] ? t(GROUP_KEYS[g.name]) : g.name, items: g.items.map(([id, label, keywords = '']): Item => {
+    const own = t(`settings.section.${id}` as MessageKey);
+    const ownKeywords = t(`settings.keywords.${id}` as MessageKey);
+    return [id, own.startsWith('settings.') ? label : own, [keywords, ownKeywords.startsWith('settings.') ? '' : ownKeywords, own === label ? '' : label.toLowerCase()].filter(Boolean).join(' ')];
+  }) }));
+}
 
 // Settings is two areas (#226): Personal (what you do for yourself) and Server administration
 // (admin-only, visually separate). Section IDs are preserved for saved places and links; new
@@ -99,6 +113,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   const [profileKnown, setProfileKnown] = useState(false);
   const [profileError, setProfileError] = useState(false);
   const [profileAttempt, setProfileAttempt] = useState(0);
+  const t = useT();
   const stage = useRef<HTMLElement>(null);
   const onClose = useRef(props.onClose);
   onClose.current = props.onClose;
@@ -147,7 +162,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
     return () => { live = false; };
   }, [profileAttempt]);
 
-  const groups: Group[] = useMemo(() => [...PERSONAL, ...(isAdmin ? [ADMIN] : [])], [isAdmin]);
+  const groups: Group[] = useMemo(() => localiseGroups([...PERSONAL, ...(isAdmin ? [ADMIN] : [])], t), [isAdmin, t]);
 
   // A member who was viewing an admin section (or a stale saved section) must
   // not be left staring at an empty pane.
@@ -156,7 +171,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
     if (profileKnown && !groups.some((g) => g.items.some(([id]) => id === section))) setSection('appearance');
   }, [groups, section, profileKnown]);
 
-  const title = groups.flatMap(g => g.items).find(([id]) => id === section)?.[1] || 'Settings';
+  const title = groups.flatMap(g => g.items).find(([id]) => id === section)?.[1] || t('settings.title');
   const filtered = filterGroups(groups, query);
   const open = (id: string) => { setSection(id); props.onSection?.(id); setView('detail'); };
   // On narrow screens the navigation disappears. Move focus into the new page
@@ -176,29 +191,29 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   const report = props.onSection;
   useEffect(() => { report?.(section); }, [report, section]);
 
-  return <section ref={stage} className={`settings-stage${closing ? ' is-closing' : ''}`} data-view={view} role="region" aria-label="Settings">
+  return <section ref={stage} className={`settings-stage${closing ? ' is-closing' : ''}`} data-view={view} role="region" aria-label={t('settings.title')}>
     <aside className="settings-navigation">
       <div className="settings-nav-head">
-        <button className="settings-back" onClick={close}><ShellIcon name="arrow"/>Back to app</button>
-        <h1 className="settings-nav-title">Settings</h1>
+        <button className="settings-back" onClick={close}><ShellIcon name="arrow"/>{t('settings.backToApp')}</button>
+        <h1 className="settings-nav-title">{t('settings.title')}</h1>
       </div>
-      <div className="settings-search"><ShellIcon name="search" size={16}/><input aria-label="Search settings" placeholder="Search settings" value={query} onChange={e => setQuery(e.target.value)}/>{query && <button className="settings-search-clear" onClick={clearSearch} aria-label="Clear settings search"><ShellIcon name="close" size={16}/></button>}</div>
-      {profileError && <p className="route-note" role="alert">Account access could not be checked. <button className="popup-tab" onClick={() => setProfileAttempt(n => n + 1)}>Retry access</button></p>}
-      <nav aria-label="Settings categories">
+      <div className="settings-search"><ShellIcon name="search" size={16}/><input aria-label={t('settings.search')} placeholder={t('settings.search')} value={query} onChange={e => setQuery(e.target.value)}/>{query && <button className="settings-search-clear" onClick={clearSearch} aria-label={t('settings.clearSearchLabel')}><ShellIcon name="close" size={16}/></button>}</div>
+      {profileError && <p className="route-note" role="alert">{t('settings.accessError')} <button className="popup-tab" onClick={() => setProfileAttempt(n => n + 1)}>{t('settings.retryAccess')}</button></p>}
+      <nav aria-label={t('settings.categories')}>
         {filtered.map(g => g.items.length > 0 && <section key={g.name} className={g.admin ? 'settings-nav-admin' : undefined} aria-label={g.name}>
-          {g.name && <h2>{g.name}{g.admin && <small className="settings-nav-badge">Admins only</small>}</h2>}
+          {g.name && <h2>{g.name}{g.admin && <small className="settings-nav-badge">{t('settings.adminsOnly')}</small>}</h2>}
           {g.items.map(([id, label]) => <button key={id} aria-current={section === id ? 'page' : undefined} className={section === id ? 'is-active' : ''} onClick={() => open(id)}>
             <ShellIcon name={ICONS[id] || 'settings'} size={17}/><span>{label}</span><ShellIcon name="chevron-right" size={16}/>
           </button>)}
         </section>)}
-        {filtered.every(g => !g.items.length) && <div className="settings-search-empty" role="status"><strong>No matching settings</strong><p>Try a different name or browse all settings.</p><button className="btn btn-secondary" onClick={clearSearch}>Clear search</button></div>}
+        {filtered.every(g => !g.items.length) && <div className="settings-search-empty" role="status"><strong>{t('settings.noMatch')}</strong><p>{t('settings.noMatchHint')}</p><button className="btn btn-secondary" onClick={clearSearch}>{t('settings.clearSearch')}</button></div>}
       </nav>
     </aside>
     <section className="settings-detail" aria-label={title}>
       <header>
-        <button className="shell-icon-button settings-list-back" onClick={showList} aria-label="All settings"><ShellIcon name="chevron-left"/></button>
+        <button className="shell-icon-button settings-list-back" onClick={showList} aria-label={t('settings.allSettings')}><ShellIcon name="chevron-left"/></button>
         <span>{title}</span>
-        <CloseButton onClick={close} label="Close settings"/>
+        <CloseButton onClick={close} label={t('settings.close')}/>
       </header>
       <div className="settings-detail-scroll" key={section} tabIndex={-1} aria-label={title}>
         <SettingsPanelBoundary>

@@ -15,7 +15,8 @@ import { modelChoiceLabel } from '../model-guidance';
 import { ComposerActions } from './ComposerActions';
 import { apiFetch } from '../api';
 import { isDisplayableRoutingDecision } from '../current-routing';
-import { sendHint, useAccountPreferences, appLocale } from '../user-preferences';
+import { useAccountPreferences, appLocale } from '../user-preferences';
+import { sendHintText, useT } from '../i18n';
 import { isApple } from './shortcuts/shortcuts';
 import { ComposerModeBar, useCoworkAccess } from './ComposerModeBar';
 import { ToolCatalogue } from './ToolCatalogue';
@@ -170,7 +171,10 @@ export function ChatView({
 }: ChatViewProps): JSX.Element {
   const [freeModels, setFreeModels] = useState(false);
   const { sendKey } = useAccountPreferences();
-  const keyHint = sendHint(sendKey, typeof navigator !== 'undefined' && isApple(navigator.platform || navigator.userAgent));
+  const t = useT();
+  // The project name (with its icon) sits wherever the language puts {project}.
+  const projectLead = t('chat.empty.project').split('{project}');
+  const keyHint = sendHintText(t, sendKey, typeof navigator !== 'undefined' && isApple(navigator.platform || navigator.userAgent));
   const [freeContext, setFreeContext] = useState<Project | null>(null);
   useEffect(() => {
     setFreeContext(null);
@@ -257,7 +261,7 @@ export function ChatView({
           </span>
         </div>
         <div className="header-controls">
-          <button className="icon-btn" onClick={onOpenSettings} title="Settings">
+          <button className="icon-btn" onClick={onOpenSettings} title={t('settings.title')} aria-label={t('settings.title')}>
             <SlidersIcon size={15} />
           </button>
         </div>
@@ -273,14 +277,12 @@ export function ChatView({
       <div className="transcript" ref={scrollRef} onScroll={onScroll}>
         {messages.length === 0 && (
           <div className="empty-state">
-            <h2>{projectName ? <>Let’s work on {project && <ProjectIcon project={project} size={26}/>}{projectName}</> : 'What’s on your mind?'}</h2>
+            <h2>{projectName ? <>{projectLead[0]}{project && <ProjectIcon project={project} size={26}/>}{projectName}{projectLead[1]}</> : t('chat.empty.title')}</h2>
             <p>
-              {projectName
-                ? `Your project’s files and instructions are ready.`
-                : `Ask a question, explore an idea, or start something new.`}
+              {projectName ? t('chat.empty.projectIntro') : t('chat.empty.intro')}
             </p>
             {/* Why a first reply cannot start yet, said once and plainly (#239). */}
-            {installedModels && installedModels.length === 0 && <p className="home-diagnostic" role="status">No model is installed on this server yet, so replies cannot start. <button className="link-button" onClick={() => window.dispatchEvent(new CustomEvent('noevia:open-model-settings', { detail: {} }))}>Open Models &amp; routing</button></p>}
+            {installedModels && installedModels.length === 0 && <p className="home-diagnostic" role="status">{t('chat.noModel')} <button className="link-button" onClick={() => window.dispatchEvent(new CustomEvent('noevia:open-model-settings', { detail: {} }))}>{t('chat.openModels')}</button></p>}
           </div>
         )}
         {messages.map((m, i) => {
@@ -407,9 +409,9 @@ export function ChatView({
         </ComposerModeBar>
         <div className="composer-inner chat-composer-inner pane">
           <ComposerTextarea
-            aria-label="Message"
+            aria-label={t('composer.message')}
             rows={2}
-            placeholder="Message noevia…"
+            placeholder={t('composer.placeholder')}
             value={draft}
             disabled={streaming || actionBusy}
             onValue={onDraft}
@@ -419,25 +421,25 @@ export function ChatView({
           <ComposerModel label={modelLabel} onClick={openModels} />
           <ReasoningControl project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} />
           {streaming ? (
-            <button className="send-btn glass glass-lens is-primary is-press" onClick={onStop} title="Stop generating">
+            <button className="send-btn glass glass-lens is-primary is-press" onClick={onStop} title={t('composer.stop')} aria-label={t('composer.stop')}>
               <span aria-hidden="true">&#9632;</span>
             </button>
           ) : (
-            <button className="send-btn glass glass-lens is-primary is-press" onClick={submit} disabled={!draft.trim() || actionBusy} title="Send">
+            <button className="send-btn glass glass-lens is-primary is-press" onClick={submit} disabled={!draft.trim() || actionBusy} title={t('composer.send')} aria-label={t('composer.send')}>
               <SendIcon />
             </button>
           )}
         </div>
         {actionStatus && <div className="composer-action-status" role="status">{actionStatus}</div>}
         <div className={`composer-hint${projectName ? '' : ' is-keyboard'}`}>
-          {projectName ? `Project context from ${projectName} applied` : keyHint}
+          {projectName ? t('composer.projectContext', { name: projectName }) : keyHint}
         </div>
         {messages.length === 0 && !project && recent && <section className="home-recents" aria-labelledby="home-recents-title">
-          <h2 id="home-recents-title">Recent chats</h2>
+          <h2 id="home-recents-title">{t('sidebar.recentChats')}</h2>
           {recent.length ? <ul>{recent.map((c) => <li key={c.id}><button onClick={() => onOpenRecent?.(c.id, c.projectId)}>
-            <span className="home-recent-title">{c.title || 'New chat'}</span>
+            <span className="home-recent-title">{c.title || t('common.newChat')}</span>
             <span className="home-recent-meta">{c.projectName ? `${c.projectName} · ` : ''}{c.updatedAt ? new Date(c.updatedAt).toLocaleDateString(appLocale(), { month: 'short', day: 'numeric' }) : ''}</span>
-          </button></li>)}</ul> : <p className="home-recent-empty">No chats yet. Your recent chats will appear here after your first message.</p>}
+          </button></li>)}</ul> : <p className="home-recent-empty">{t('composer.noRecent')}</p>}
         </section>}
       </div>
     </div>

@@ -4,6 +4,10 @@ import { decideDispatch, MODE_LABELS, switchNeedsNewSession, type ChatMode } fro
 import { useFeatureFlags } from './features/useFeatureFlags';
 import { fetchCode } from './code/api';
 import './composer-mode.css';
+import { useT } from '../i18n';
+import type { MessageKey } from '../i18n';
+
+const MODE_DESCRIPTIONS: Record<ChatMode, MessageKey> = { chat: 'mode.chatDesc', cowork: 'mode.coworkDesc' };
 
 export interface CoworkAccess { harnessEnabled: boolean; canUseCode: boolean; repositories: string[] }
 
@@ -37,6 +41,7 @@ export function ComposerModeBar({ mode, messageCount, projectId, disabled, acces
   onModeChange: (mode: ChatMode, newSession: boolean) => void; children?: ReactNode;
 }): JSX.Element {
   const id = useId();
+  const t = useT();
   const [confirm, setConfirm] = useState<ChatMode | null>(null);
   const group = useRef<HTMLDivElement>(null);
   useEffect(() => { setConfirm(null); }, [mode, messageCount === 0]);
@@ -56,28 +61,28 @@ export function ComposerModeBar({ mode, messageCount, projectId, disabled, acces
   const decision = decideDispatch({ mode, harnessEnabled: access.harnessEnabled, canUseCode: access.canUseCode, projectId, repository });
   return <div className="composer-mode-bar">
     <div className="composer-mode-row">
-      <div ref={group} className="composer-mode-toggle" data-mode={mode} role="radiogroup" aria-label="Session mode" onKeyDown={onKey}>
+      <div ref={group} className="composer-mode-toggle" data-mode={mode} role="radiogroup" aria-label={t('mode.session')} onKeyDown={onKey}>
         {ORDER.map(option => <button key={option} type="button" role="radio" data-mode={option}
           aria-checked={option === mode} aria-describedby={`${id}-${option}`} tabIndex={option === mode ? 0 : -1}
           disabled={disabled} onClick={() => choose(option)}>{MODE_LABELS[option].label}</button>)}
       </div>
       <span className="composer-mode-harness" aria-live="polite">
         {decision.harness === 'cowork'
-          ? <>Runs a coding task in{' '}
+          ? <>{t('mode.runsCoding')}{' '}
             {access.repositories.length > 1
-              ? <select aria-label="Repository" value={repository ?? ''} disabled={disabled} onChange={e => onRepository(e.target.value)}>
+              ? <select aria-label={t('mode.repository')} value={repository ?? ''} disabled={disabled} onChange={e => onRepository(e.target.value)}>
                   {access.repositories.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               : <strong>{repository}</strong>}</>
-          : mode === 'cowork' ? decision.notice?.replace(/^Sent as Chat: /, 'Will send as Chat: ') : 'Runs a conversational reply'}
+          : mode === 'cowork' && decision.reason ? t('mode.willSendAsChat', { reason: t(`mode.reason.${decision.reason}`) }) : t('mode.runsChat')}
       </span>
       {children}
     </div>
-    {ORDER.map(option => <span key={option} id={`${id}-${option}`} hidden>{MODE_LABELS[option].description}</span>)}
-    {confirm && <div className="composer-mode-confirm" role="alertdialog" aria-label="Start a new session">
-      <span>{MODE_LABELS[confirm].label} runs on a different harness. Start a new {MODE_LABELS[confirm].label} session? This conversation stays as it is.</span>
-      <button type="button" className="btn btn-primary" onClick={() => { setConfirm(null); onModeChange(confirm, true); }}>Start new session</button>
-      <button type="button" className="btn btn-secondary" onClick={() => setConfirm(null)}>Keep {MODE_LABELS[mode].label}</button>
+    {ORDER.map(option => <span key={option} id={`${id}-${option}`} hidden>{t(MODE_DESCRIPTIONS[option])}</span>)}
+    {confirm && <div className="composer-mode-confirm" role="alertdialog" aria-label={t('mode.newSession')}>
+      <span>{t('mode.confirm', { mode: MODE_LABELS[confirm].label })}</span>
+      <button type="button" className="btn btn-primary" onClick={() => { setConfirm(null); onModeChange(confirm, true); }}>{t('mode.startNew')}</button>
+      <button type="button" className="btn btn-secondary" onClick={() => setConfirm(null)}>{t('mode.keep', { mode: MODE_LABELS[mode].label })}</button>
     </div>}
   </div>;
 }

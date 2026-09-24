@@ -3,14 +3,20 @@ import type { JSX } from 'react';
 import { notificationsEnabled, setNotificationsEnabled } from './notify';
 import { NOTIFICATION_EVENTS, savePreferences, useAccountPreferences } from '../../user-preferences';
 import type { NotificationEvent } from '../../user-preferences';
+import { useT } from '../../i18n';
+import type { MessageKey } from '../../i18n';
 
 type Permission = 'granted' | 'denied' | 'default' | 'unsupported';
 const readPermission = (): Permission => (typeof window !== 'undefined' && 'Notification' in window ? Notification.permission as Permission : 'unsupported');
-const PERMISSION_TEXT: Record<Permission, string> = {
-  granted: 'Allowed by this browser.',
-  default: 'Not asked yet. Turning notifications on asks the browser once.',
-  denied: 'Blocked by this browser. Open the site settings (the icon left of the address), allow notifications for this site, then come back.',
-  unsupported: 'This browser does not support notifications.',
+const PERMISSION_TEXT: Record<Permission, MessageKey> = {
+  granted: 'notifications.permission.granted',
+  default: 'notifications.permission.default',
+  denied: 'notifications.permission.denied',
+  unsupported: 'notifications.permission.unsupported',
+};
+const EVENT_TEXT: Record<NotificationEvent, [MessageKey, MessageKey]> = {
+  replyFinished: ['notifications.event.replyFinished', 'notifications.event.replyFinishedDesc'],
+  approvalNeeded: ['notifications.event.approvalNeeded', 'notifications.event.approvalNeededDesc'],
 };
 
 /** Settings → Notifications (#227). Two layers, labelled as such: whether THIS DEVICE may show
@@ -20,6 +26,7 @@ export function NotificationSettings(): JSX.Element {
   const [permission, setPermission] = useState<Permission>(readPermission);
   const [device, setDevice] = useState(() => readPermission() === 'granted' && notificationsEnabled());
   const prefs = useAccountPreferences();
+  const t = useT();
   const [saving, setSaving] = useState<NotificationEvent | null>(null);
   const [error, setError] = useState('');
 
@@ -43,33 +50,33 @@ export function NotificationSettings(): JSX.Element {
   const toggleEvent = async (id: NotificationEvent, on: boolean) => {
     setSaving(id); setError('');
     try { await savePreferences({ notifications: { [id]: on } }); }
-    catch (e) { setError(e instanceof Error ? e.message : 'Could not save. Try again.'); }
+    catch (e) { setError(e instanceof Error ? e.message : t('common.saveFailed')); }
     finally { setSaving(null); }
   };
 
   const delivering = device && permission === 'granted';
   return <>
-    <div className="settings-title"><h1>Notifications</h1><p>Browser notifications for work that finishes while noevia is in another tab. They never include what you or noevia wrote.</p></div>
+    <div className="settings-title"><h1>{t('settings.section.notifications')}</h1><p>{t('notifications.intro')}</p></div>
     <section className="settings-section">
-      <h2>This device</h2>
+      <h2>{t('notifications.device')}</h2>
       <div className="set-rows">
         <div className="set-row">
-          <div className="set-row-text"><span className="set-row-label">Browser notifications on this device</span><span className="set-row-desc" role="status">{PERMISSION_TEXT[permission]}</span></div>
-          <div className="set-row-control"><input type="checkbox" role="switch" className="noevia-switch" aria-label="Browser notifications on this device" checked={delivering} disabled={permission === 'unsupported' || permission === 'denied'} onChange={(e) => void toggleDevice(e.currentTarget.checked)} /></div>
+          <div className="set-row-text"><span className="set-row-label">{t('notifications.deviceToggle')}</span><span className="set-row-desc" role="status">{t(PERMISSION_TEXT[permission])}</span></div>
+          <div className="set-row-control"><input type="checkbox" role="switch" className="noevia-switch" aria-label={t('notifications.deviceToggle')} checked={delivering} disabled={permission === 'unsupported' || permission === 'denied'} onChange={(e) => void toggleDevice(e.currentTarget.checked)} /></div>
         </div>
       </div>
     </section>
     <section className="settings-section">
-      <h2>Events</h2>
-      <p className="set-row-desc">Saved to your account and used on every device where notifications are on.{delivering ? '' : ' Nothing is delivered here until this device is turned on above.'}</p>
+      <h2>{t('notifications.events')}</h2>
+      <p className="set-row-desc">{t('notifications.eventsNote')}{delivering ? '' : ` ${t('notifications.eventsOff')}`}</p>
       <div className="set-rows">
         {NOTIFICATION_EVENTS.map((event) => <div className="set-row" key={event.id}>
-          <div className="set-row-text"><span className="set-row-label">{event.label}</span><span className="set-row-desc">{event.description}</span></div>
-          <div className="set-row-control"><input type="checkbox" role="switch" className="noevia-switch" aria-label={event.label} checked={prefs.notifications[event.id]} disabled={saving !== null} onChange={(e) => void toggleEvent(event.id, e.currentTarget.checked)} /></div>
+          <div className="set-row-text"><span className="set-row-label">{t(EVENT_TEXT[event.id][0])}</span><span className="set-row-desc">{t(EVENT_TEXT[event.id][1])}</span></div>
+          <div className="set-row-control"><input type="checkbox" role="switch" className="noevia-switch" aria-label={t(EVENT_TEXT[event.id][0])} checked={prefs.notifications[event.id]} disabled={saving !== null} onChange={(e) => void toggleEvent(event.id, e.currentTarget.checked)} /></div>
         </div>)}
       </div>
       {error && <p className="modal-err" role="alert">{error}</p>}
-      <p className="route-note">In-app status, such as a source that could not sync, always appears inside noevia and is not affected by these switches.</p>
+      <p className="route-note">{t('notifications.inAppNote')}</p>
     </section>
   </>;
 }

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { JSX, ReactNode } from 'react';
 import { ShellIcon } from './ShellIcon';
 import { shouldRefocusTrigger } from '../menu-focus';
+import { useT } from '../i18n';
 
 export interface MenuItem {
   label: string;
@@ -142,6 +143,7 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }): JSX.Element {
+  const t = useT();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -161,7 +163,7 @@ export function ConfirmDialog({
       <h2>{title}</h2>
       <p>{body}</p>
       <div className="confirm-actions">
-        <button className="btn btn-secondary confirm-cancel" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-secondary confirm-cancel" onClick={onCancel}>{t('common.cancel')}</button>
         <button
           className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`}
           onClick={onConfirm}

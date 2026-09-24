@@ -46,16 +46,25 @@ export interface DispatchDecision {
   harness: ChatMode;
   /** One line shown with the reply when Cowork fell back to Chat; null otherwise. */
   notice: string | null;
+  /** Why Cowork fell back to Chat, as a code the interface can translate; null when it did not. */
+  reason: FallbackReason | null;
 }
+export type FallbackReason = 'harnessOff' | 'freeChat' | 'adminOnly' | 'noRepository';
+const REASON_TEXT: Record<FallbackReason, string> = {
+  harnessOff: 'the coding harness is off on this server',
+  freeChat: 'Cowork runs inside a project, and this is a free chat',
+  adminOnly: 'the coding harness is limited to administrators',
+  noRepository: 'no repository is selected',
+};
 
 export function decideDispatch({ mode, harnessEnabled, canUseCode, projectId, repository }: DispatchInput): DispatchDecision {
-  if (mode !== 'cowork') return { harness: 'chat', notice: null };
-  const why = !harnessEnabled ? 'the coding harness is off on this server'
-    : !projectId ? 'Cowork runs inside a project, and this is a free chat'
-    : !canUseCode ? 'the coding harness is limited to administrators'
-    : !repository ? 'no repository is selected'
+  if (mode !== 'cowork') return { harness: 'chat', notice: null, reason: null };
+  const reason: FallbackReason | null = !harnessEnabled ? 'harnessOff'
+    : !projectId ? 'freeChat'
+    : !canUseCode ? 'adminOnly'
+    : !repository ? 'noRepository'
     : null;
-  return why ? { harness: 'chat', notice: `Sent as Chat: ${why}.` } : { harness: 'cowork', notice: null };
+  return reason ? { harness: 'chat', notice: `Sent as Chat: ${REASON_TEXT[reason]}.`, reason } : { harness: 'cowork', notice: null, reason: null };
 }
 
 /** Terminal task states: polling stops and the card shows its final state. */
