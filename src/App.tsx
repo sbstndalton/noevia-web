@@ -57,6 +57,7 @@ import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
 import { settleToolCalls } from './tool-call-state';
 import { mergeTranscripts } from './transcript-merge';
+import { adoptMergedTranscript, enqueueKeyed, upsertChatMeta } from './chat-save';
 import { readLastPlace, writeLastPlace, clearLastPlace } from './last-view';
 import { currentRoutingDecision } from './current-routing';
 
@@ -158,6 +159,13 @@ export default function App(): JSX.Element {
   const sendingChats = useRef<Set<string>>(new Set());
   const historyRevisions = useRef<Record<string, string | null>>({});
   const historySaves = useRef<Record<string, Promise<void>>>({});
+  // A merged transcript that arrived while a reply was streaming into that chat. Applying it then
+  // would replace the live user message and reply placeholder; it is folded into the save made
+  // when the stream ends instead.
+  const deferredMerges = useRef<Record<string, HistoryEntry[]>>({});
+  // Chats whose transcript should be saved once the current render commits (kept out of state
+  // updaters, which StrictMode runs twice).
+  const persistAfterCommit = useRef<Set<string>>(new Set());
   const abortStream = useCallback((chatId: string) => {
     streamAbort.current[chatId]?.abort();
     delete streamAbort.current[chatId];
@@ -409,8 +417,23 @@ export default function App(): JSX.Element {
     }));
     // Saves for one chat run in order. If another device saved first, merge its copy with ours
     // (nothing either side wrote is dropped), show the merged transcript, and save that.
+    const show = (merged: HistoryEntry[]) => {
+      if (sendingChats.current.has(chatId)) { deferredMerges.current[chatId] = merged; return; }
+      setMessagesByChat((prev) => ({
+        ...prev,
+        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats })),
+      }));
+    };
     const run = async () => {
       let next = entries;
+      // A merge held back while a reply streamed is folded in now, so the save that follows the
+      // stream does not overwrite the other device's turns with our shorter copy.
+      const deferred = deferredMerges.current[chatId];
+      if (deferred && !sendingChats.current.has(chatId)) {
+        delete deferredMerges.current[chatId];
+        const merged = mergeTranscripts(deferred, next);
+        if (merged !== next) { next = merged; show(merged); }
+      }
       for (let attempt = 0; attempt < 3; attempt++) {
         const result = await saveChatHistory(chatId, next, historyRevisions.current[chatId]);
         if (result.ok) { historyRevisions.current[chatId] = result.revision; return; }
@@ -418,12 +441,19 @@ export default function App(): JSX.Element {
         historyRevisions.current[chatId] = result.conflict.revision;
         if (merged !== next) {
           next = merged;
-          setMessagesByChat((prev) => ({ ...prev, [chatId]: merged.map((h) => ({ id: uid(), role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats })) }));
+          show(merged);
         }
       }
     };
     historySaves.current[chatId] = (historySaves.current[chatId] || Promise.resolve()).then(run).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (!persistAfterCommit.current.size) return;
+    const due = [...persistAfterCommit.current];
+    persistAfterCommit.current.clear();
+    for (const chatId of due) persist(chatId, messagesByChat[chatId] ?? []);
+  }, [messagesByChat, persist]);
 
   const handleSend = useCallback(
     async (chatId: string, projectId: string | null, text: string, base?: Message[]) => {
@@ -451,25 +481,41 @@ export default function App(): JSX.Element {
       // Upsert the chat's meta on every send, not only the first. Registering
       // once meant updatedAt froze at creation, so a list sorted by recency
       // never actually moved, and there was nothing to preview a chat with.
-      const upsert = (list: ChatMeta[]): ChatMeta[] => {
-        const existing = list.find((c) => c.id === chatId);
-        const meta: ChatMeta = existing
-          ? { ...existing, title: titleAfterSend(existing.title, messagesRef.current[chatId] ?? [], base, text), preview: text.slice(0, 200), updatedAt: Date.now() }
-          : { id: chatId, title: text.slice(0, 80), preview: text.slice(0, 200), updatedAt: Date.now() };
-        return [meta, ...list.filter((c) => c.id !== chatId)];
-      };
-      if (projectId) {
-        const project = projects.find((p) => p.id === projectId);
-        if (project) {
-          saveProjectChats(projectId, upsert(project.chats || []))
-            .then(() => refreshProjects())
-            .catch(() => undefined);
+      // Each write sends the whole list, so it is built from the latest list when its turn in the
+      // per-list queue comes (not the list captured when this send began), and writes for one
+      // list run in order. Two new chats sent at once therefore both survive.
+      const priorMessages = messagesRef.current[chatId] ?? [];
+      const sentAt = Date.now();
+      const make = (existing: ChatMeta | undefined): ChatMeta => existing
+        ? { ...existing, title: titleAfterSend(existing.title, priorMessages, base, text), preview: text.slice(0, 200), updatedAt: sentAt }
+        : { id: chatId, title: text.slice(0, 80), preview: text.slice(0, 200), updatedAt: sentAt };
+      void enqueueKeyed(chatMetaSaves.current, projectId === null ? 'free' : `project:${projectId}`, async () => {
+        if (projectId) {
+          const project = projectsRef.current.find((p) => p.id === projectId);
+          if (!project) return;
+          const next = upsertChatMeta(project.chats || [], chatId, make);
+          await saveProjectChats(projectId, next);
+          projectsRef.current = projectsRef.current.map((p) => (p.id === projectId ? { ...p, chats: next } : p));
+        } else {
+          const next = upsertChatMeta(freeChatsRef.current, chatId, make);
+          await saveFreeChats(next);
+          freeChatsRef.current = next;
         }
-      } else {
-        saveFreeChats(upsert(freeChats))
-          .then(() => refreshProjects())
-          .catch(() => undefined);
-      }
+        // A workspace GET that began before this save may carry the old list.
+        workspaceRequest.current += 1;
+        // Await (not fire-and-forget) so the refs are back in sync with the
+        // server before the next queued task for this key reads them. Every
+        // render reassigns projectsRef/freeChatsRef from state at the top of
+        // this component, so a render landing between two queued tasks would
+        // otherwise reset the ref to the stale pre-save list and the next
+        // task's whole-list PUT would drop this task's chat. If this call is
+        // itself superseded by a later refreshProjects (request !==
+        // workspaceRequest.current), it resolves without touching the refs,
+        // but that's fine: the ref writes just above (projectsRef.current /
+        // freeChatsRef.current) already reflect this task's saved list, and
+        // the later, superseding refresh will bring in server truth anyway.
+        await refreshProjects();
+      }).catch(() => undefined);
 
       const startedAt = Date.now();
       let failed = false;
@@ -688,14 +734,14 @@ export default function App(): JSX.Element {
           delete next[chatId];
           return next;
         });
-        setMessagesByChat((prev) => {
-          const msgs = (prev[chatId] ?? []).map((m) => (m.id === replyId && m.toolCalls ? { ...m, toolCalls: settleToolCalls(m.toolCalls) } : m));
-          persist(chatId, msgs);
-          return { ...prev, [chatId]: msgs };
-        });
+        persistAfterCommit.current.add(chatId);
+        setMessagesByChat((prev) => ({
+          ...prev,
+          [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId && m.toolCalls ? { ...m, toolCalls: settleToolCalls(m.toolCalls) } : m)),
+        }));
       }
     },
-    [freeChats, persist, projects, streamingChats],
+    [refreshProjects, streamingChats],
   );
 
   const sendToCurrent = useCallback(
