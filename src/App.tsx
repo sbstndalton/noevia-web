@@ -30,7 +30,9 @@ import {
   syncProjectSources,
   saveProjectChats,
   streamChat,
+  startCowork,
 } from './api';
+import { sessionMode, type ChatMode } from './chat-mode';
 import type {
   ChatMeta,
   HealthState,
@@ -144,6 +146,10 @@ export default function App(): JSX.Element {
   // a particular chat — and one chat working must not lock the composer of
   // another.
   const [streamingChats, setStreamingChats] = useState<Record<string, true>>({});
+  // #236: a mode chosen for a chat that has no saved record yet (a new, unsent session).
+  const [pendingModes, setPendingModes] = useState<Record<string, ChatMode>>({});
+  const pendingModesRef = useRef(pendingModes);
+  pendingModesRef.current = pendingModes;
   const messagesRef = useRef(messagesByChat);
   messagesRef.current = messagesByChat;
   const [diaryEnabled, setDiaryEnabled] = useState(false);
@@ -352,6 +358,7 @@ export default function App(): JSX.Element {
             reasoningMs: h.reasoningMs,
             toolCalls: settleToolCalls(h.toolCalls),
             stats: h.stats,
+            coworkTask: h.coworkTask,
           }));
         setMessagesByChat((prev) => ({ ...prev, [id]: resolveLoadedHistory(prev[id] ?? [], loaded) }));
         return loaded;
@@ -439,6 +446,7 @@ export default function App(): JSX.Element {
       reasoningMs: m.reasoningMs,
       toolCalls: m.toolCalls && m.toolCalls.length ? m.toolCalls : undefined,
       stats: m.stats,
+      coworkTask: m.coworkTask,
     }));
     // Saves for one chat run in order. If another device saved first, merge its copy with ours
     // (nothing either side wrote is dropped), show the merged transcript, and save that.
@@ -446,7 +454,7 @@ export default function App(): JSX.Element {
       if (sendingChats.current.has(chatId)) { deferredMerges.current[chatId] = merged; return; }
       setMessagesByChat((prev) => ({
         ...prev,
-        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats })),
+        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats, coworkTask: h.coworkTask })),
       }));
     };
     if (!shouldSaveChat(chatId, deletedChats.current)) return;
@@ -483,8 +491,39 @@ export default function App(): JSX.Element {
     for (const chatId of due) persist(chatId, messagesByChat[chatId] ?? []);
   }, [messagesByChat, persist]);
 
+  // Upsert one chat's meta in its list's save queue (shared by the Chat and Cowork send paths).
+  const queueMetaUpsert = useCallback((projectId: string | null, chatId: string, make: (existing: ChatMeta | undefined) => ChatMeta) => {
+    void enqueueKeyed(chatMetaSaves.current, projectId === null ? 'free' : `project:${projectId}`, async () => {
+      if (projectId) {
+        const project = projectsRef.current.find((p) => p.id === projectId);
+        if (!project) return;
+        const next = upsertChatMeta(project.chats || [], chatId, make);
+        await saveProjectChats(projectId, next);
+        projectsRef.current = projectsRef.current.map((p) => (p.id === projectId ? { ...p, chats: next } : p));
+      } else {
+        const next = upsertChatMeta(freeChatsRef.current, chatId, make);
+        await saveFreeChats(next);
+        freeChatsRef.current = next;
+      }
+      // A workspace GET that began before this save may carry the old list.
+      workspaceRequest.current += 1;
+      // Await (not fire-and-forget) so the refs are back in sync with the
+      // server before the next queued task for this key reads them. Every
+      // render reassigns projectsRef/freeChatsRef from state at the top of
+      // this component, so a render landing between two queued tasks would
+      // otherwise reset the ref to the stale pre-save list and the next
+      // task's whole-list PUT would drop this task's chat. If this call is
+      // itself superseded by a later refreshProjects (request !==
+      // workspaceRequest.current), it resolves without touching the refs,
+      // but that's fine: the ref writes just above (projectsRef.current /
+      // freeChatsRef.current) already reflect this task's saved list, and
+      // the later, superseding refresh will bring in server truth anyway.
+      await refreshProjects();
+    }).catch(() => undefined);
+  }, [refreshProjects]);
+
   const handleSend = useCallback(
-    async (chatId: string, projectId: string | null, text: string, base?: Message[]) => {
+    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; notice?: string | null } = {}) => {
       // `streamingChats` is render state, so two sends in one tick both see it false. The ref
       // is updated synchronously and is the real guard against a duplicate generation.
       if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
@@ -502,7 +541,7 @@ export default function App(): JSX.Element {
         ...prev,
         [chatId]: [
           ...(prev[chatId] ?? []),
-          { id: replyId, role: 'assistant', content: '', reasoning: '', toolCalls: [] },
+          { id: replyId, role: 'assistant', content: '', reasoning: '', toolCalls: [], ...(turn.notice ? { warning: turn.notice } : {}) },
         ],
       }));
       setStreamingChats((prev) => ({ ...prev, [chatId]: true }));
@@ -520,34 +559,10 @@ export default function App(): JSX.Element {
       const sentAt = Date.now();
       const make = (existing: ChatMeta | undefined): ChatMeta => existing
         ? { ...existing, title: titleAfterSend(existing.title, priorMessages, base, text), preview: text.slice(0, 200), updatedAt: sentAt }
-        : { id: chatId, title: text.slice(0, 80), preview: text.slice(0, 200), updatedAt: sentAt };
-      void enqueueKeyed(chatMetaSaves.current, projectId === null ? 'free' : `project:${projectId}`, async () => {
-        if (projectId) {
-          const project = projectsRef.current.find((p) => p.id === projectId);
-          if (!project) return;
-          const next = upsertChatMeta(project.chats || [], chatId, make);
-          await saveProjectChats(projectId, next);
-          projectsRef.current = projectsRef.current.map((p) => (p.id === projectId ? { ...p, chats: next } : p));
-        } else {
-          const next = upsertChatMeta(freeChatsRef.current, chatId, make);
-          await saveFreeChats(next);
-          freeChatsRef.current = next;
-        }
-        // A workspace GET that began before this save may carry the old list.
-        workspaceRequest.current += 1;
-        // Await (not fire-and-forget) so the refs are back in sync with the
-        // server before the next queued task for this key reads them. Every
-        // render reassigns projectsRef/freeChatsRef from state at the top of
-        // this component, so a render landing between two queued tasks would
-        // otherwise reset the ref to the stale pre-save list and the next
-        // task's whole-list PUT would drop this task's chat. If this call is
-        // itself superseded by a later refreshProjects (request !==
-        // workspaceRequest.current), it resolves without touching the refs,
-        // but that's fine: the ref writes just above (projectsRef.current /
-        // freeChatsRef.current) already reflect this task's saved list, and
-        // the later, superseding refresh will bring in server truth anyway.
-        await refreshProjects();
-      }).catch(() => undefined);
+        : { id: chatId, title: text.slice(0, 80), preview: text.slice(0, 200), updatedAt: sentAt,
+            // The chosen mode is the session's even when this turn fell back to Chat (#236).
+            ...(pendingModesRef.current[chatId] === 'cowork' ? { mode: 'cowork' as const } : {}) };
+      queueMetaUpsert(projectId, chatId, make);
 
       const startedAt = Date.now();
       let failed = false;
@@ -572,6 +587,8 @@ export default function App(): JSX.Element {
             history,
             projectId,
             chatId,
+            mode: 'chat',
+            ...(turn.turnToolboxes && turn.turnToolboxes.length ? { turnToolboxes: turn.turnToolboxes } : {}),
           },
           controller.signal,
         )) {
@@ -779,17 +796,56 @@ export default function App(): JSX.Element {
         }
       }
     },
-    [refreshProjects, streamingChats],
+    [refreshProjects, streamingChats, queueMetaUpsert],
   );
 
+  // A Cowork turn (#236): start a task on the code harness through /api/chat (the server guards
+  // admin, the harness flag and the project) and show it as an inline task card. A refusal is an
+  // error reply with Retry; it is never quietly re-run as a Chat turn.
+  const handleCoworkSend = useCallback(
+    async (chatId: string, projectId: string, text: string, repository: string) => {
+      if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
+      sendingChats.current.add(chatId);
+      const pendingLoad = historyLoads.current[chatId];
+      const loaded = pendingLoad ? await pendingLoad : null;
+      const existing = loaded ? resolveLoadedHistory(messagesRef.current[chatId] ?? [], loaded) : messagesRef.current[chatId] ?? [];
+      const replyId = uid();
+      setMessagesByChat(prev => ({ ...prev, [chatId]: [...existing, { id: uid(), role: 'user', content: text },
+        { id: replyId, role: 'assistant', content: '', senderLabel: 'Cowork', processingStatus: 'starting a task…' }] }));
+      setStreamingChats(prev => ({ ...prev, [chatId]: true }));
+      const sentAt = Date.now();
+      queueMetaUpsert(projectId, chatId, (meta) => meta
+        ? { ...meta, preview: text.slice(0, 200), updatedAt: sentAt, mode: 'cowork' }
+        : { id: chatId, title: text.slice(0, 80), preview: text.slice(0, 200), updatedAt: sentAt, mode: 'cowork' });
+      let patch: Partial<Message>;
+      try {
+        const task = await startCowork({ projectId, chatId, repository, message: text });
+        patch = { content: `Started a Cowork task in **${task.repository || repository}**${task.branch ? ` on branch \`${task.branch}\`` : ''}.`,
+          coworkTask: { projectId, taskId: task.taskId, repository: task.repository || repository }, processingStatus: undefined };
+      } catch (err) {
+        patch = { content: `Cowork task did not start — ${err instanceof Error ? err.message : 'unknown error'}`, error: true, coworkRepository: repository, processingStatus: undefined };
+      }
+      sendingChats.current.delete(chatId);
+      setStreamingChats(prev => { const next = { ...prev }; delete next[chatId]; return next; });
+      if (!deletedChats.current.has(chatId)) {
+        persistAfterCommit.current.add(chatId);
+        setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => (m.id === replyId ? { ...m, ...patch } : m)) }));
+      }
+    },
+    [streamingChats, queueMetaUpsert],
+  );
+
+  const activeMode: ChatMode = view.kind === 'chat' ? sessionMode(activeChatMeta?.mode, pendingModes[view.chatId]) : 'chat';
+
   const sendToCurrent = useCallback(
-    (text: string) => {
+    (text: string, turn: { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string } } = {}) => {
       if (view.kind !== 'chat') return;
       const chatId = view.chatId;
       const projectId = view.projectId ?? activeChatMeta?.projectId ?? null;
-      void handleSend(chatId, projectId, text);
+      if (turn.cowork && projectId) void handleCoworkSend(chatId, projectId, text, turn.cowork.repository);
+      else void handleSend(chatId, projectId, text, undefined, turn);
     },
-    [activeChatMeta, handleSend, view],
+    [activeChatMeta, handleSend, handleCoworkSend, view],
   );
 
   // Retry a failed exchange: drop the failed assistant bubble and the user
@@ -802,8 +858,16 @@ export default function App(): JSX.Element {
     // Retry is offered only for the final exchange. Never truncate later history.
     if (index !== msgs.length - 1 || index < 1 || msgs[index - 1].role !== 'user') return;
     const projectId = view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
+    const failed = msgs[index];
+    if (failed.coworkRepository && projectId) {
+      // Retry on the harness that failed, never on the other one.
+      messagesRef.current = { ...messagesRef.current, [chatId]: msgs.slice(0, index - 1) };
+      setMessagesByChat(prev => ({ ...prev, [chatId]: msgs.slice(0, index - 1) }));
+      void handleCoworkSend(chatId, projectId, msgs[index - 1].content, failed.coworkRepository);
+      return;
+    }
     void handleSend(chatId, projectId, msgs[index - 1].content, msgs.slice(0, index - 1));
-  }, [activeChatMeta, handleSend, streamingChats, view]);
+  }, [activeChatMeta, handleSend, handleCoworkSend, streamingChats, view]);
 
   // Edit an earlier message and re-run the conversation from that point.
   // Everything after the edited message is dropped rather than kept as dead
@@ -999,6 +1063,23 @@ export default function App(): JSX.Element {
     [],
   );
 
+  // #236: before the first message the mode changes in place; after it, the other harness would
+  // run on context it never saw, so ChatView asks first and this opens a new session instead.
+  const changeMode = useCallback((mode: ChatMode, newSession: boolean) => {
+    if (view.kind !== 'chat') return;
+    const projectId = view.projectId ?? activeChatMeta?.projectId ?? null;
+    if (newSession) {
+      const chatId = `c-${uid()}`;
+      loadedChats.current.add(chatId);
+      setPendingModes(prev => ({ ...prev, [chatId]: mode }));
+      setMessagesByChat(prev => ({ ...prev, [chatId]: [] }));
+      setView({ kind: 'chat', chatId, projectId });
+      return;
+    }
+    setPendingModes(prev => ({ ...prev, [view.chatId]: mode }));
+    if (activeChatMeta) handlePatchChat(activeChatMeta.projectId ?? null, view.chatId, { mode });
+  }, [activeChatMeta, handlePatchChat, view]);
+
   // Saving the project settings dialog. Unlike the debounced rail edits this
   // lands immediately and then pulls the attached folders, because a folder
   // that is attached but not read is indistinguishable from one that does not
@@ -1174,6 +1255,8 @@ export default function App(): JSX.Element {
           streaming={view.kind === 'chat' ? !!streamingChats[view.chatId] : false}
           inferenceUp={health.inferenceUp}
           onSend={sendToCurrent}
+          mode={activeMode}
+          onModeChange={changeMode}
           onRetry={retryLast}
           onStop={() => { if (view.kind === 'chat') abortStream(view.chatId); }}
           onBack={activeProject ? () => setView({ kind: 'project', id: activeProject.id }) : null}

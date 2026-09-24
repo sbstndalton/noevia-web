@@ -384,7 +384,9 @@ export async function saveChatHistory(chatId: string, history: HistoryEntry[], b
 //     first-token time and optional MTP accepted/drafted counts }
 export async function* streamChat(
   body: { spaceId: string; compactOnly?: boolean; extrasEnabled?: boolean; extraContext?: string;
-    exchangeId?: string; recoveryId?: string; preparationId?: string; files?: Record<string,string>; entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null },
+    exchangeId?: string; recoveryId?: string; preparationId?: string; files?: Record<string,string>; entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null;
+    /** #236/#237: the session's harness, and boxes added for this turn only. */
+    mode?: 'chat'; turnToolboxes?: string[] },
   signal?: AbortSignal,
 ): AsyncGenerator<{
   type: string;
@@ -458,4 +460,19 @@ export async function* streamChat(
     if (body.spaceId === 'diary' && !completed) throw new Error('The diary connection ended before saving was confirmed. Check the saved diary before sending again.');
     throw error;
   } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+}
+
+/** #237: the tools this account could use this turn, with permission state. Cached server-side ~30s. */
+export function fetchPermittedTools(projectId: string | null, mode: 'chat' | 'cowork'): Promise<{ mode: string; boxes: import('./tool-catalogue').PermittedBox[] }> {
+  const q = new URLSearchParams({ mode });
+  if (projectId) q.set('projectId', projectId);
+  return getJson(`/api/toolboxes/permitted?${q}`);
+}
+
+/** #236: a Cowork turn. The server guards it (403 member, 409 harness off) and starts a code task. */
+export async function startCowork(body: { projectId: string; chatId: string; repository: string; message: string }): Promise<{ taskId: string; branch: string; repository: string }> {
+  const res = await apiFetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, mode: 'cowork', spaceId: body.projectId }) });
+  if (!res.ok) throw Object.assign(new Error(await describeFailure(res, 'Cowork task could not start')), { status: res.status });
+  const { task } = await res.json() as { task: { taskId: string; branch: string; repository: string } };
+  return task;
 }

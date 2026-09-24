@@ -15,6 +15,14 @@ import { modelChoiceLabel } from '../model-guidance';
 import { ComposerActions } from './ComposerActions';
 import { apiFetch } from '../api';
 import { isDisplayableRoutingDecision } from '../current-routing';
+import { ComposerModeBar, useCoworkAccess } from './ComposerModeBar';
+import { ToolCatalogue } from './ToolCatalogue';
+import { CoworkTaskCard } from './CoworkTaskCard';
+import { decideDispatch, type ChatMode } from '../chat-mode';
+import { insertMention, turnBoxesFor, type PermittedBox } from '../tool-catalogue';
+
+/** What one send carries besides its text: per-turn boxes, a fallback notice, or a Cowork task. */
+export interface SendTurn { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string } }
 
 interface ChatViewProps {
   project: Project | null;
@@ -26,7 +34,10 @@ interface ChatViewProps {
   messages: Message[];
   streaming: boolean;
   inferenceUp?: boolean | null;
-  onSend: (text: string) => void;
+  onSend: (text: string, turn?: SendTurn) => void;
+  /** The session's harness (#236) and how to change it; `newSession` forks instead of switching. */
+  mode?: ChatMode;
+  onModeChange?: (mode: ChatMode, newSession: boolean) => void;
   onRetry: (chatId: string, messageId: string) => void;
   onEditMessage: (chatId: string, messageId: string, text: string) => void;
   chatId: string;
@@ -140,6 +151,8 @@ export function ChatView({
   streaming,
   inferenceUp = null,
   onSend,
+  mode = 'chat',
+  onModeChange = () => {},
   onRetry,
   onEditMessage,
   chatId,
@@ -189,12 +202,30 @@ export function ChatView({
 
   const openModels = () => { if (!project && freeContext) setFreeModels(true); else onOpenModels(); };
   if (!project && freeContext) modelLabel = freeContext.routing === 'auto' || freeContext.model ? modelChoiceLabel(freeContext, installedModels ?? null) : modelLabel;
+  const coworkAccess = useCoworkAccess(project?.id ?? null);
+  const [repository, setRepository] = useState<string | null>(null);
+  useEffect(() => {
+    setRepository(current => current && coworkAccess.repositories.includes(current) ? current : coworkAccess.repositories[0] ?? null);
+  }, [coworkAccess.repositories]);
+  const [catalogueOpen, setCatalogueOpen] = useState(false);
+  const [turnBoxes, setTurnBoxes] = useState<string[]>([]);
+  const [permitted, setPermitted] = useState<PermittedBox[]>([]);
+  // Per-turn choices belong to the next message in this chat only.
+  useEffect(() => { setTurnBoxes([]); setCatalogueOpen(false); setPermitted([]); }, [chatId, mode, project?.id]);
+  // A lone "/" opens the catalogue; typing continues to filter there instead of the message.
+  const onDraft = (value: string) => {
+    if (value === '/' && draft === '') { setCatalogueOpen(true); return; }
+    setDraft(value);
+  };
   const submit = () => {
     const text = draft.trim();
     if (!text || streaming || actionBusy) return;
     follow();
-    onSend(text);
+    const decision = decideDispatch({ mode, harnessEnabled: coworkAccess.harnessEnabled, canUseCode: coworkAccess.canUseCode, projectId: project?.id ?? null, repository });
+    if (decision.harness === 'cowork' && repository) onSend(text, { cowork: { repository } });
+    else onSend(text, { turnToolboxes: turnBoxesFor(text, permitted, turnBoxes), notice: decision.notice });
     setDraft('');
+    setTurnBoxes([]);
   };
 
   return (
@@ -258,6 +289,8 @@ export function ChatView({
                   {m.routingDecision && <RoutingDetails decision={m.routingDecision} />}
                   {m.reasoning ? <ThinkingBlock text={m.reasoning} ms={m.reasoningMs} live={!!thinkingLive && !m.content} /> : null}
                   {m.toolCalls && m.toolCalls.length > 0 ? <ToolCalls calls={m.toolCalls} /> : null}
+                  {m.coworkTask ? <CoworkTaskCard task={m.coworkTask} disabled={streaming || actionBusy}
+                    onRetry={() => { const prompt = messages[i - 1]?.role === 'user' ? messages[i - 1].content : ''; if (prompt) onSend(prompt, { cowork: { repository: m.coworkTask!.repository } }); }} /> : null}
                   {m.content ? (
                     <div className="bubble">
                       {/* Model replies are Markdown. A bare <p> showed the raw
@@ -339,8 +372,8 @@ export function ChatView({
                     <button
                       className="msg-edit-btn"
                       onClick={() => { setEditingId(m.id); setEditDraft(m.content); }}
-                      disabled={streaming || actionBusy}
-                      title="Edit this message and re-run the conversation from here"
+                      disabled={streaming || actionBusy || mode === 'cowork'}
+                      title={mode === 'cowork' ? 'Cowork tasks are not re-run by editing; send a new task instead' : 'Edit this message and re-run the conversation from here'}
                       aria-label="Edit and re-run from this message"
                     >
                       ✎ Edit
@@ -355,6 +388,12 @@ export function ChatView({
 
       <div className="composer">
         <ChatContext key={chatId} chatId={chatId} projectId={project?.id || null} messages={messages} streaming={streaming} onBusy={setActionBusy} />
+        <ComposerModeBar mode={mode} messageCount={messages.length} projectId={project?.id ?? null} disabled={streaming || actionBusy}
+          access={coworkAccess} repository={repository} onRepository={setRepository} onModeChange={onModeChange}>
+          <ToolCatalogue open={catalogueOpen} onOpenChange={setCatalogueOpen} projectId={project?.id ?? null} mode={mode}
+            toggled={turnBoxes} onToggle={id => setTurnBoxes(prev => prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id])}
+            onMention={name => setDraft(d => insertMention(d, name))} onBoxes={setPermitted} disabled={streaming || actionBusy} />
+        </ComposerModeBar>
         <div className="composer-inner chat-composer-inner pane">
           <ComposerTextarea
             aria-label="Message"
@@ -362,7 +401,7 @@ export function ChatView({
             placeholder="Message noevia…"
             value={draft}
             disabled={streaming || actionBusy}
-            onValue={setDraft}
+            onValue={onDraft}
             onSubmit={submit}
           />
           <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={setActionStatus} />

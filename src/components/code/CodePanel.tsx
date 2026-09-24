@@ -321,7 +321,7 @@ function TaskMeta({ meta }: { meta: NonNullable<CodeTask['meta']> }): JSX.Elemen
  * The gate. Three distinct answers, and the arguments in full — never truncated, never
  * summarised — because seeing them IS the gate. There is no "never ask".
  */
-function ApprovalCard({ approval, busy, onDecide }: {
+export function ApprovalCard({ approval, busy, onDecide }: {
   approval: CodeApproval; busy: boolean; onDecide: (decision: 'approve' | 'approve_all' | 'deny', approvalId: string) => void;
 }): JSX.Element {
   const standing = approval.action !== 'delete' && approval.action !== 'git_push';

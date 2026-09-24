@@ -35,7 +35,14 @@ export interface Message {
   stats?: MessageStats;
   /** Set when this message was edited and the exchange re-run from here. */
   edited?: boolean;
+  /** A Cowork turn (#236): the code task this reply follows, shown as an inline task card. */
+  coworkTask?: CoworkTaskRef;
+  /** A Cowork start that failed keeps its repository so Retry uses the same harness. */
+  coworkRepository?: string;
 }
+
+/** The code task a Cowork reply started; the card reads its live state from the code API. */
+export interface CoworkTaskRef { projectId: string; taskId: string; repository: string }
 
 /** What a finished reply cost. Token counts come from the provider's own
  *  usage chunk (never estimated locally); elapsedMs is measured client-side
@@ -149,6 +156,8 @@ export interface ChatMeta {
   pinned?: boolean;
   /** Hidden from the default lists, still reachable under Archived. */
   archived?: boolean;
+  /** The session's harness (#236). Absent means Chat, as for every chat before modes. */
+  mode?: 'chat' | 'cowork';
 }
 
 export interface HistoryEntry {
@@ -163,6 +172,7 @@ export interface HistoryEntry {
   reasoningMs?: number;
   toolCalls?: ToolCallView[];
   stats?: MessageStats;
+  coworkTask?: CoworkTaskRef;
 }
 
 export interface WorkspaceInfo {

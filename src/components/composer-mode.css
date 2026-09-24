@@ -1,0 +1,45 @@
+/* Chat / Cowork mode bar, tool catalogue and inline Cowork task card (#236, #237).
+   Loaded with ComposerModeBar; class names are unique so the later shared sheets cannot
+   override them by accident. Tokens only (docs/design-system.md). */
+.composer-mode-bar { max-width: 744px; margin-inline: auto; margin-bottom: var(--space-2); display: grid; gap: var(--space-2); }
+.composer-mode-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; min-width: 0; }
+.composer-mode-toggle { display: inline-flex; padding: 2px; gap: 2px; border: 1px solid var(--control-border); border-radius: var(--radius-pill); background: var(--bg-surface); }
+.composer-mode-toggle button { min-height: 30px; padding: 0 var(--space-4); border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text-secondary); font-size: var(--text-footnote); font-weight: 500; cursor: pointer; }
+.composer-mode-toggle button[aria-checked='true'] { background: var(--text-primary); color: var(--bg-app); }
+.composer-mode-toggle button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.composer-mode-toggle button:disabled { cursor: default; opacity: .6; }
+.composer-mode-harness { flex: 1 1 180px; min-width: 0; color: var(--text-secondary); font-size: var(--text-caption); }
+.composer-mode-harness select { font: inherit; color: var(--text-primary); background: var(--bg-surface); border: 1px solid var(--control-border); border-radius: var(--radius-sm); padding: 2px var(--space-2); }
+.composer-mode-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-surface); font-size: var(--text-footnote); color: var(--text-primary); }
+.composer-mode-confirm > span { flex: 1 1 260px; }
+
+.tool-catalogue { position: relative; margin-left: auto; }
+.tool-catalogue-trigger { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 30px; padding: 0 var(--space-3); border: 1px solid var(--control-border); border-radius: var(--radius-pill); background: var(--bg-surface); color: var(--text-primary); font-size: var(--text-footnote); cursor: pointer; }
+.tool-catalogue-trigger:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.tool-catalogue-panel { position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 40; width: min(420px, calc(100vw - 32px)); max-height: min(440px, 60vh); display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-panel); box-shadow: var(--shadow-pop); }
+.tool-catalogue-search { width: 100%; box-sizing: border-box; min-height: 36px; padding: 0 var(--space-3); border: 1px solid var(--control-border); border-radius: var(--radius-input); background: var(--bg-input); color: var(--text-primary); font-size: var(--text-callout); }
+.tool-catalogue-search:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.tool-catalogue-boundary, .tool-catalogue-note { margin: 0; color: var(--text-secondary); font-size: var(--text-caption); }
+.tool-catalogue-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; min-height: 0; }
+.tool-catalogue-list > li[role='option'] { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); cursor: pointer; }
+.tool-catalogue-list > li.is-active { background: var(--bg-surface-hover); }
+.tool-catalogue-list > li[data-kind='tool'] { padding-left: var(--space-6); }
+.tool-catalogue-list > li[aria-disabled='true'] { cursor: default; }
+.tool-catalogue-list > li[data-permission='unavailable'] .tool-catalogue-label { color: var(--text-secondary); }
+.tool-catalogue-main { display: grid; min-width: 0; flex: 1; }
+.tool-catalogue-label { color: var(--text-primary); font-size: var(--text-footnote); font-weight: 500; overflow-wrap: anywhere; }
+.tool-catalogue-main small { color: var(--text-secondary); font-size: var(--text-caption); }
+.tool-catalogue-state { flex: none; color: var(--text-secondary); font-size: var(--text-caption); }
+.tool-catalogue-list > li[data-permission='needs-approval'] .tool-catalogue-state { color: var(--accent-text); }
+
+.cowork-task { display: grid; gap: var(--space-2); padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-surface); }
+.cowork-task-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.cowork-task-title { font-size: var(--text-footnote); font-weight: 500; color: var(--text-primary); }
+.cowork-task-status { font-size: var(--text-caption); color: var(--text-secondary); }
+.cowork-task-status[data-status='waiting_approval'] { color: var(--accent-text); }
+.cowork-task-status[data-status='failed'] { color: var(--danger); }
+.cowork-task-note { margin: 0; font-size: var(--text-caption); color: var(--text-secondary); }
+.cowork-task-steps { margin: 0; padding-left: var(--space-5); font-size: var(--text-caption); color: var(--text-secondary); }
+.cowork-task-output { margin: 0; max-height: 200px; overflow: auto; white-space: pre-wrap; font-size: var(--text-caption); color: var(--text-primary); }
+.cowork-task-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+@media (prefers-reduced-motion: reduce) { .tool-catalogue-panel { transition: none; } }

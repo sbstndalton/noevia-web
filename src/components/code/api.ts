@@ -54,6 +54,7 @@ const post = (url: string, body?: unknown) => apiFetch(url, { method: 'POST', he
 
 export const fetchCode = (projectId: string) => apiFetch(base(projectId)).then(r => read<CodeState>(r));
 export const startTask = (projectId: string, body: StartTask) => post(base(projectId), body).then(r => read<{ taskId: string; branch: string }>(r));
+export const fetchTask = (projectId: string, id: string) => apiFetch(`${base(projectId)}/${id}`).then(r => read<CodeTask>(r));
 export const cancelTask = (projectId: string, id: string) => post(`${base(projectId)}/${id}/cancel`).then(r => read<CodeTask>(r));
 /** Answers one named approval. A 409 means that card is gone: refresh and show what is waiting now. */
 export const decideTask = (projectId: string, id: string, approvalId: string, decision: 'approve' | 'approve_all' | 'deny') =>
