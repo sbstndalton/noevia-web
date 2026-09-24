@@ -5,6 +5,7 @@ import { MtpControl } from '../MtpControl';
 import { NativeCalibration } from '../NativeCalibration';
 import { EvidenceList } from './EvidenceList';
 import { errorText, mm, tokens } from './mm';
+import { httpErrorMessage, readErrorBody, runDeleteModelFiles } from './delete-model-sequence';
 import { registerNewFolderModels } from './register';
 import { useModelsChanged } from '../../models-changed';
 import { MiddleTruncate } from '../MiddleTruncate';
@@ -171,18 +172,27 @@ function DeleteModel({ model: m, file, onDeleted }: { model: InstalledModel; fil
     setBusy(true); setError('');
     try {
       if (m.canDelete !== false && m.source !== 'preset') {
-        const r = await apiFetch('/api/models/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: m.name }) });
-        if (!r.ok) throw Error((await r.json()).error || 'Delete failed');
-      } else if (file) {
-        const v = await mm<{ results: { ok: boolean; message: string }[] }>('models/delete', { body: { models: [file.key] } });
-        if (!v.results[0]?.ok) throw Error(v.results[0]?.message || 'Delete failed');
-        if (removeSettings && file.sections.length) {
-          const { revision } = await mm<{ revision: string }>('sections');
-          let rev = revision;
-          for (const section of file.sections) rev = (await mm<{ revision: string }>(`sections/${encodeURIComponent(section)}?baseRevision=${rev}`, { method: 'DELETE' })).revision;
-        }
-      } else throw Error('This model has no deletable files.');
-      setConfirming(false); onDeleted();
+        const outcome = await runDeleteModelFiles(async () => {
+          const r = await apiFetch('/api/models/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: m.name }) });
+          if (!r.ok) throw Error(httpErrorMessage(r.status, (await readErrorBody(r)).error));
+        });
+        setConfirming(false); onDeleted(); if (outcome.error) setError(outcome.error); return;
+      }
+      if (file) {
+        const outcome = await runDeleteModelFiles(
+          async () => {
+            const v = await mm<{ results: { ok: boolean; message: string }[] }>('models/delete', { body: { models: [file.key] } });
+            if (!v.results[0]?.ok) throw Error(v.results[0]?.message || 'Delete failed');
+          },
+          removeSettings && file.sections.length ? async () => {
+            const { revision } = await mm<{ revision: string }>('sections');
+            let rev = revision;
+            for (const section of file.sections) rev = (await mm<{ revision: string }>(`sections/${encodeURIComponent(section)}?baseRevision=${rev}`, { method: 'DELETE' })).revision;
+          } : undefined,
+        );
+        setConfirming(false); onDeleted(); if (outcome.error) setError(outcome.error); return;
+      }
+      throw Error('This model has no deletable files.');
     } catch (e) { setError(errorText(e, 'Delete failed')); } finally { setBusy(false); }
   };
   if (!confirming) return <button className="popup-tab model-card-danger" onClick={() => setConfirming(true)}>Delete</button>;
