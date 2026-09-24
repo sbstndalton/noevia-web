@@ -130,6 +130,37 @@
   @keyframes sheet-fall { from { transform: none; opacity: 1; } to { transform: translateY(40px); opacity: 0; } }
 }
 
+/* layout-mode.js's forced "mobile" preview (Request-mobile-site) narrows #root to 430px via
+   noevia.css's :root[data-layout="mobile"][data-device="desktop"] #root, but a desktop browser
+   still reports its real (wide) viewport, so the `@media (max-width: 820px)` rule above never
+   fires there and the two-pane grid stays put, squeezing .settings-detail off the visible
+   430px column. Mirror the same one-pane-at-a-time rules against the attribute layout-mode.js
+   sets, same pattern as noevia.css's own :root[data-layout="mobile"] rules for the legacy
+   .settings-shell, so the forced preview matches a real narrow viewport. */
+:root[data-layout="mobile"] .settings-stage { grid-template-columns: 1fr; border-radius: 0; }
+:root[data-layout="mobile"] .settings-stage[data-view='list'] .settings-detail,
+:root[data-layout="mobile"] .settings-stage[data-view='detail'] .settings-navigation { display: none; }
+:root[data-layout="mobile"] .settings-stage .settings-navigation { border-right: 0; padding: calc(env(safe-area-inset-top) + var(--space-2)) var(--space-3) var(--space-4); }
+:root[data-layout="mobile"] .settings-stage .settings-nav-head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: 0 0 var(--space-3); }
+:root[data-layout="mobile"] .settings-stage .settings-back { min-height: 44px; padding: 0 var(--space-2); margin-left: calc(-1 * var(--space-2)); color: var(--md-primary); font-size: var(--text-callout); }
+:root[data-layout="mobile"] .settings-stage .settings-nav-title { margin: 0; font-family: var(--font-display); font-size: var(--text-title1); font-weight: 600; letter-spacing: var(--tracking-title); }
+:root[data-layout="mobile"] .settings-stage .settings-search { margin: 0 0 var(--space-2); min-height: 44px; }
+:root[data-layout="mobile"] .settings-stage .settings-navigation nav button { min-height: 48px; font-size: var(--text-body); color: var(--text-primary); white-space: normal; overflow: visible; text-overflow: clip; }
+:root[data-layout="mobile"] .settings-stage .settings-navigation nav button > svg:last-child { display: block; margin-left: auto; color: var(--text-secondary); }
+:root[data-layout="mobile"] .settings-stage .settings-navigation nav button.is-active { background: transparent; color: var(--text-primary); font-weight: 400; }
+:root[data-layout="mobile"] .settings-stage .settings-detail > header { position: sticky; top: 0; right: auto; display: flex; align-items: center; gap: var(--space-2); min-height: 52px;
+  padding: env(safe-area-inset-top) var(--space-2) 0; background: color-mix(in srgb, var(--bg-app) 86%, transparent); backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4); border-bottom: 1px solid var(--border-subtle); }
+:root[data-layout="mobile"] .settings-stage .settings-detail > header > span { display: block; flex: 1; text-align: center; font-weight: 600; font-size: var(--text-headline); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root[data-layout="mobile"] .settings-stage .settings-list-back { display: inline-flex; }
+:root[data-layout="mobile"] .settings-stage .settings-detail > header .shell-icon-button { width: 44px; height: 44px; }
+:root[data-layout="mobile"] .settings-stage .settings-detail { overflow-y: auto; }
+:root[data-layout="mobile"] .settings-stage .settings-detail-scroll { overflow: visible; padding: var(--space-4) var(--space-4) calc(var(--space-12) + env(safe-area-inset-bottom)); }
+:root[data-layout="mobile"] .app .settings-stage .settings-navigation nav,
+:root[data-layout="mobile"] .app .settings-stage .settings-navigation .settings-search { display: flex; }
+:root[data-layout="mobile"] .app .settings-stage .settings-navigation nav { flex-direction: column; }
+:root[data-layout="mobile"] .settings-stage .settings-back, :root[data-layout="mobile"] .settings-stage .settings-back:hover { background: transparent; }
+:root[data-layout="mobile"] .app .settings-stage .settings-detail > header { display: flex; }
+
 @media (max-width: 519px) {
   .app { padding: 0; gap: 0; }
   .app .app-stack.pane { border-radius: 0; border-width: 0; box-shadow: none; }
