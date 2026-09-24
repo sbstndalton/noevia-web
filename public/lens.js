@@ -65,7 +65,7 @@
       if (resize) resize.observe(node);
     });
   }
-  function active() { return chromium && !calm.matches && root.getAttribute('data-motion') !== 'reduced' && root.getAttribute('data-material') === 'liquid'; }
+  function active() { return chromium && !calm.matches && root.getAttribute('data-motion') !== 'reduced' && root.getAttribute('data-family') === 'glass'; }
   function sync() {
     if (active()) { root.setAttribute('data-lens', 'svg'); scan(); } else { root.removeAttribute('data-lens'); resize?.disconnect(); seen.clear(); }
   }
@@ -73,7 +73,7 @@
   if (!chromium) return;
   sync();
   calm.addEventListener('change', sync);
-  new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-material', 'data-motion'] });
+  new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-family', 'data-motion'] });
   let queued = false;
   new MutationObserver(() => { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; scan(); }); })
     .observe(document.body, { subtree: true, childList: true });

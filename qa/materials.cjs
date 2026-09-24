@@ -4,7 +4,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const {createFixture}=require('./diary-fixture.cjs');
 const {navClick}=require('./nav.cjs');
 const output=process.env.QA_SCREENSHOTS||'/tmp/noevia-material-audit';
-const modes=['soft','liquid','material'];
+const modes=['editorial','glass','contemporary']; // theme families (#249), formerly soft/liquid/material
 const sections=process.env.QA_SECTIONS?.split('|')||['Appearance & language','Assistant & style','Usage','Your data & privacy','Diary & storage','Security and login','Account','Connected apps','AI providers','Users','Web address','Models & routing','Features','Experimental','Backups','Service status','Capabilities (status)'];
 (async()=>{
  fs.mkdirSync(output,{recursive:true});const fixture=createFixture(31451);await fixture.listen();
@@ -13,7 +13,7 @@ const sections=process.env.QA_SECTIONS?.split('|')||['Appearance & language','As
  for(const width of [375,768,1440])for(const theme of ['light','dark'])for(const material of modes){
   const page=await browser.newPage({viewport:{width,height:950},hasTouch:width<768});
   page.on('pageerror',e=>errors.push({width,theme,material,error:e.message}));
-  await page.addInitScript(({theme,material})=>{localStorage.setItem('cowork-theme',theme);localStorage.setItem('noevia:material',material);},{theme,material});
+  await page.addInitScript(({theme,material})=>{localStorage.setItem('cowork-theme',theme);localStorage.setItem('noevia:theme-family',material);},{theme,material});
   const user={id:'synthetic-material-qa',username:'materialqa',displayName:'Material QA',role:'admin',diaryEnabled:true,onboarded:true};
   const project={id:'material-project',name:'Synthetic research',goal:'Compare the material treatments.',instructions:'',memories:[],files:[],assets:[],chats:[],toolboxes:['core'],modes:['chat','code'],createdAt:1000,updatedAt:1000};
   await page.route('**/api/profile',r=>r.fulfill({json:{user,passkeys:[]}}));
@@ -40,7 +40,7 @@ const sections=process.env.QA_SECTIONS?.split('|')||['Appearance & language','As
    const result=await page.evaluate(()=>{
     const visible=e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(e).visibility!=='hidden';};
     const blurred=[...document.querySelectorAll('*')].filter(visible).filter(e=>{const f=getComputedStyle(e).backdropFilter;return f&&f!=='none';}).map(e=>e.className.toString()).filter(Boolean);
-    return {overflow:document.documentElement.scrollWidth>innerWidth+1,blurred,material:document.documentElement.dataset.material,headings:[...document.querySelectorAll('h1,h2')].filter(visible).map(e=>e.textContent),failure:/Something went wrong|This panel couldn’t be displayed|Users could not be loaded|Usage could not be loaded/.test(document.body.innerText)};
+    return {overflow:document.documentElement.scrollWidth>innerWidth+1,blurred,material:document.documentElement.dataset.family,headings:[...document.querySelectorAll('h1,h2')].filter(visible).map(e=>e.textContent),failure:/Something went wrong|This panel couldn’t be displayed|Users could not be loaded|Usage could not be loaded/.test(document.body.innerText)};
    });
    const record={width,theme,material,surface,...result};results.push(record);
    if(width!==768)await page.screenshot({path:path.join(output,`${width}-${theme}-${material}-${surface.replace(/[^a-z0-9]+/gi,'-')}.png`)});
@@ -55,7 +55,7 @@ const sections=process.env.QA_SECTIONS?.split('|')||['Appearance & language','As
    await inspect('Settings '+section);
    const scroll=settings.locator('.settings-detail-scroll');
    if(await scroll.evaluate(e=>e.scrollHeight>e.clientHeight+24)){await scroll.evaluate(e=>e.lastElementChild?.scrollIntoView({block:'end',behavior:'instant'}));await inspect('Settings '+section+' bottom');}
-   if(section==='Appearance & language')assert.deepEqual(await settings.getByRole('radiogroup',{name:'Material'}).getByRole('radio').allTextContents(),['Soft','Liquid glass','Material 3']);
+   if(section==='Appearance & language')assert.deepEqual(await settings.getByRole('radiogroup',{name:'Theme family'}).locator('.family-tile-name').allTextContents(),['Editorial','Contemporary','Glass']);
   }
   await settings.getByRole('button',{name:'Close settings',exact:true}).click();await settings.waitFor({state:'detached'});
   await navClick(page,'Projects');await page.getByRole('heading',{name:'Projects',exact:true,level:1}).waitFor();await inspect('Projects');
@@ -65,7 +65,7 @@ const sections=process.env.QA_SECTIONS?.split('|')||['Appearance & language','As
   await page.close();
  }
  fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({results,errors},null,2));
- const defects=results.filter(r=>r.overflow||r.failure||(['soft','material'].includes(r.material)&&r.blurred.length));
+ const defects=results.filter(r=>r.overflow||r.failure||(['editorial','contemporary'].includes(r.material)&&r.blurred.length));
  console.log(JSON.stringify({surfaces:results.length,errors,defects},null,2));
  assert.deepEqual(errors,[]);assert.deepEqual(defects,[]);
  console.log('PASS material inventory: all settings, chat, projects, menus, plugins and Diary; three modes, two themes, three sizes.');

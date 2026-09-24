@@ -1,4 +1,4 @@
-// Presentation preferences: chat font, density, motion and material.
+// Presentation preferences: chat font, density, motion and theme family.
 //
 // Per-device on purpose. The theme syncs through the profile because people
 // expect their palette to follow them; how dense YOU want this screen depends
@@ -8,11 +8,14 @@
 // `noevia:` keys because the cowork-* storage keys are frozen compatibility
 // contracts (AGENTS.md) and these are new.
 
+import { FAMILIES, FAMILY_KEY } from './theme-family';
+
 export const PREFERENCES = {
   chatFont: { key: 'noevia:chat-font', attribute: 'data-chat-font', values: ['sans', 'serif', 'mono'] as const },
   density: { key: 'noevia:density', attribute: 'data-density', values: ['comfortable', 'compact'] as const },
   motion: { key: 'noevia:motion', attribute: 'data-motion', values: ['system', 'reduced'] as const },
-  material: { key: 'noevia:material', attribute: 'data-material', values: ['soft', 'liquid', 'material'] as const },
+  // Theme family (#249). Replaces `noevia:material`; theme.js migrates a saved material before paint.
+  family: { key: FAMILY_KEY, attribute: 'data-family', values: FAMILIES },
 };
 
 export type PreferenceName = keyof typeof PREFERENCES;

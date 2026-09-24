@@ -56,7 +56,7 @@ export function ComposerModeBar({ mode, messageCount, projectId, disabled, acces
   const decision = decideDispatch({ mode, harnessEnabled: access.harnessEnabled, canUseCode: access.canUseCode, projectId, repository });
   return <div className="composer-mode-bar">
     <div className="composer-mode-row">
-      <div ref={group} className="composer-mode-toggle" role="radiogroup" aria-label="Session mode" onKeyDown={onKey}>
+      <div ref={group} className="composer-mode-toggle" data-mode={mode} role="radiogroup" aria-label="Session mode" onKeyDown={onKey}>
         {ORDER.map(option => <button key={option} type="button" role="radio" data-mode={option}
           aria-checked={option === mode} aria-describedby={`${id}-${option}`} tabIndex={option === mode ? 0 : -1}
           disabled={disabled} onClick={() => choose(option)}>{MODE_LABELS[option].label}</button>)}

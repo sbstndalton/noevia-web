@@ -73,10 +73,10 @@ const assert=require('node:assert/strict');
     });
     // Blur by itself does not paint a sheet: the old reset left .aero's blur active.
     const hasSurface=style=>(style.background!=='rgba(0, 0, 0, 0)' && style.background!=='transparent') || style.image!=='none';
-    for(const material of ['soft','liquid','material'])for(const theme of ['light','dark'])for(const width of [375,768,1440]){
+    for(const material of ['editorial','glass','contemporary'])for(const theme of ['light','dark'])for(const width of [375,768,1440]){
       await page.setViewportSize({width,height:900});
       await page.evaluate(({material,theme})=>{
-        document.documentElement.dataset.material=material;
+        document.documentElement.dataset.family=material;
         document.documentElement.dataset.theme=theme;
       },{material,theme});
       for(const [triggerName,dialogName] of [['Browse storage','Pull from your storage'],['Choose folder','Choose a folder']]){

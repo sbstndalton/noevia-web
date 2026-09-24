@@ -202,20 +202,20 @@ button.connector-card:focus-visible { outline: 2px solid var(--focus-ring); outl
 /* Material choices share the same inset and wrap safely on narrow phones. */
 @media (max-width: 400px) { .settings-stage .glass-seg > button { padding-inline: 10px; } }
 
-/* Soft material: controls are pressed out of the surface instead of bordered. */
-[data-material='soft'] :is(.btn, .modal-btn, .popup-tab):not(.btn-primary):not(.primary):not(.btn-ghost):not(.btn-danger) {
-  border-color: transparent; background: var(--bg-app); box-shadow: -3px -3px 7px var(--soft-hi), 3px 3px 7px var(--soft-lo);
+/* Editorial: controls are flat and outlined; pressing darkens the fill (no inset hollows). */
+[data-family='editorial'] :is(.btn, .modal-btn, .popup-tab):not(.btn-primary):not(.primary):not(.btn-ghost):not(.btn-danger) {
+  border-color: var(--edge-raised); background: var(--bg-surface); box-shadow: var(--elev-flat);
 }
-[data-material='soft'] :is(.btn, .modal-btn, .popup-tab):not(.btn-primary):not(.primary):not(.btn-ghost):active:not(:disabled) { box-shadow: inset 2px 2px 5px var(--soft-lo), inset -2px -2px 5px var(--soft-hi); transform: none; }
-[data-material='soft'] :is(.modal-input, label.select > select, .settings-detail select:not(.mobile-settings-section), .settings-detail input[type='text'], .settings-detail input[type='url'], .settings-detail input[type='email'], .settings-detail input[type='password'], .settings-detail input[type='number'], .settings-detail textarea) {
-  border-color: transparent; background-color: var(--bg-app); box-shadow: inset 2px 2px 5px var(--soft-lo), inset -2px -2px 5px var(--soft-hi);
+[data-family='editorial'] :is(.btn, .modal-btn, .popup-tab):not(.btn-primary):not(.primary):not(.btn-ghost):active:not(:disabled) { background: var(--bg-surface-active); box-shadow: var(--elev-flat); }
+[data-family='editorial'] :is(.modal-input, label.select > select, .settings-detail select:not(.mobile-settings-section), .settings-detail input[type='text'], .settings-detail input[type='url'], .settings-detail input[type='email'], .settings-detail input[type='password'], .settings-detail input[type='number'], .settings-detail textarea) {
+  border-color: var(--control-border); background-color: var(--bg-surface); box-shadow: var(--elev-flat);
 }
-[data-material='soft'] .noevia-switch:not(:checked), [data-material='soft'] .settings-detail .set-row-control input[type='checkbox']:not(.plain):not(:checked) { background: var(--bg-app); box-shadow: inset 0 0 0 1px var(--control-border), inset 2px 2px 5px var(--soft-lo), inset -2px -2px 5px var(--soft-hi); }
-[data-material='soft'] .chip, [data-material='soft'] .logo { border-color: transparent; background: var(--bg-app); box-shadow: -2px -2px 5px var(--soft-hi), 2px 2px 5px var(--soft-lo); }
-/* Material 3: flat tonal controls, no borders. */
-[data-material='material'] :is(.btn-secondary, .modal-btn.secondary, .popup-tab) { border-color: var(--md-outline-variant); box-shadow: none; background: transparent; color: var(--md-primary); }
-[data-material='material'] :is(.btn, .modal-btn) { border-radius: var(--radius-pill); }
-[data-material='material'] .btn-primary, [data-material='material'] .modal-btn.primary { box-shadow: none; }
+[data-family='editorial'] .noevia-switch:not(:checked), [data-family='editorial'] .settings-detail .set-row-control input[type='checkbox']:not(.plain):not(:checked) { background: var(--bg-app); box-shadow: inset 0 0 0 1px var(--control-border); }
+[data-family='editorial'] .chip, [data-family='editorial'] .logo { border-color: var(--edge-raised); background: var(--bg-surface); box-shadow: var(--elev-flat); }
+/* Contemporary (was Material 3): flat tonal controls with outlined secondaries. */
+[data-family='contemporary'] :is(.btn-secondary, .modal-btn.secondary, .popup-tab) { border-color: var(--md-outline-variant); box-shadow: none; background: transparent; color: var(--md-primary); }
+[data-family='contemporary'] :is(.btn, .modal-btn) { border-radius: var(--radius-pill); }
+[data-family='contemporary'] .btn-primary, [data-family='contemporary'] .modal-btn.primary { box-shadow: none; }
 
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   :is(.btn, .modal-btn, .popup-tab, .chip) { box-shadow: none; border-color: var(--control-border); }

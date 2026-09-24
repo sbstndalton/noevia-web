@@ -10,7 +10,14 @@
 //   gradient-text  background-clip: text.
 //   type-scale     a font-size in px/rem off the type scale (tokens.css --text-*); em, % and
 //                  keywords stay allowed because they are relative to a scale step.
-//   font-weight    a weight other than 400/500/600/700 (HIG: no in-between weights).
+//   font-weight    a weight other than 400/500/600/700 (HIG: no in-between weights). A weight may
+//                  come from a --*-weight token (theme families pick their display weight, #249);
+//                  the token's own declaration is then held to the same four weights.
+//   transition-all `transition: all` or `transition-property: all`, or a shorthand with no property
+//                  (which means all): name what animates (#247). motion.css is exempt from both
+//                  motion rules: it holds the reduced-motion floor and describes the contract.
+//   motion-token   a literal duration in a transition or animation; use the motion contract in
+//                  tokens.css (--motion-immediate/-quick/-considered/-async). tokens.css defines them.
 //   undefined-token  var(--x) where --x is defined in no stylesheet or script (a fallback such as
 //                  var(--surface, #fff) then silently pins one theme's colour).
 // Silence a deliberate case on the line itself or the line above:  /* design-lint: allow <rule> — reason */
@@ -51,8 +58,21 @@ function lint(text, file = '') {
     for (const m of line.matchAll(/(?<![-\w])font-size\s*:\s*([\d.]+)(px|rem)\b/g)) {
       if (m[2] === 'rem' || !TYPE_SCALE.has(Number(m[1]))) push('type-scale', `${m[1]}${m[2]} is off the type scale; use a --text-* token`);
     }
-    for (const m of line.matchAll(/(?<![-\w])font-weight\s*:\s*([\w]+)/g)) {
-      if (!WEIGHTS.has(m[1])) push('font-weight', `weight ${m[1]}; use 400, 500, 600 or 700`);
+    for (const m of line.matchAll(/(?<![-\w])font-weight\s*:\s*(var\(\s*--[\w-]*weight[\w-]*[^)]*\)|[\w]+)/g)) {
+      if (!m[1].startsWith('var(') && !WEIGHTS.has(m[1])) push('font-weight', `weight ${m[1]}; use 400, 500, 600 or 700`);
+    }
+    for (const m of line.matchAll(/--[\w-]*weight[\w-]*\s*:\s*([\w]+)/g)) {
+      if (!WEIGHTS.has(m[1])) push('font-weight', `weight token ${m[1]}; use 400, 500, 600 or 700`);
+    }
+    // motion.css owns the reduced-motion floor (1ms) and documents the rules in prose.
+    if (/\.css$/.test(file) && !/(^|\/)motion\.css$/.test(file)) {
+      for (const m of line.matchAll(/(?<![-\w])transition(-property)?\s*:\s*([^;}]*)/g)) {
+        const value = m[2].trim();
+        if (/^all\b|,\s*all\b/.test(value) || (!m[1] && /^(?:var\(|[\d.]+m?s\b|ease|linear|cubic-bezier)/.test(value))) push('transition-all', `transition: ${value.slice(0, 40)} animates every property; name them`);
+      }
+      if (!/tokens\.css$/.test(file)) for (const m of line.matchAll(/(?<![-\w])(transition|animation)(-duration|-delay)?\s*:\s*([^;}]*)/g)) {
+        if (/(?<![\w.-])\d*\.?\d+m?s\b/.test(m[3].replace(/var\([^)]*\)/g, '')) && !/^\s*(none|0m?s)\s*$/.test(m[3])) push('motion-token', `${m[1]}${m[2] || ''}: ${m[3].trim().slice(0, 50)} uses a literal duration; use a --motion-* token`);
+      }
     }
   });
   return findings;

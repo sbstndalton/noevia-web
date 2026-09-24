@@ -1,0 +1,110 @@
+/* Theme families (#249). Loads straight after tokens.css. A family is a complete visual
+   language: how the neutral surfaces read in light and dark, a typeface pairing, and a shape,
+   elevation and motion profile. Accent stays with data-palette (the --md-* roles), and
+   light/dark with data-theme, so every family works with every accent in both modes.
+
+   Only tokens live here. Components read the semantic roles (tokens.css) and the shared
+   surface rules (system.css); a family never restyles a component's geometry.
+
+   Typefaces load from Google Fonts after first paint (public/fonts.js); each stack falls back
+   to a system face with similar metrics, so a blocked font server changes the look but not
+   the layout. Mono stays JetBrains Mono in every family for predictable code widths.
+
+   Surface mixes stay close to the accent palette's own neutrals: text keeps at least the 7:1
+   the contrast test measures on the unmixed tokens (the tint moves lightness by under 3%). */
+
+/* ── Editorial — the default. Warm paper, a serif display face, soft bordered depth. ── */
+[data-family='editorial'] {
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --display-weight: 500;
+  --display-tracking: -0.02em;
+  --radius-control: 10px;
+  --radius-overlay: 14px;
+  --radius-surface: 20px;
+  --motion-quick: 160ms;
+  --motion-considered: 260ms;
+}
+[data-family='editorial'][data-theme='light'] {
+  --bg-app: color-mix(in srgb, var(--md-surface) 86%, #f6efe3);
+  --bg-canvas: var(--bg-app);
+  --bg-chrome: color-mix(in srgb, var(--md-surface-container-low) 84%, #efe6d6);
+  --bg-surface: color-mix(in srgb, var(--md-surface-container-lowest) 92%, #fffaf1);
+  --edge-raised: color-mix(in srgb, var(--md-outline-variant) 85%, #d9ccb6);
+  --elev-raised: 0 1px 2px rgba(58, 42, 24, .05), 0 8px 24px -14px rgba(58, 42, 24, .22);
+  --elev-overlay: 0 18px 44px -14px rgba(58, 42, 24, .26), 0 3px 10px -4px rgba(58, 42, 24, .10);
+}
+[data-family='editorial']:not([data-theme='light']) {
+  --bg-app: color-mix(in srgb, var(--md-surface) 90%, #2a2119);
+  --bg-canvas: var(--bg-app);
+  --bg-chrome: color-mix(in srgb, var(--md-surface-container-low) 90%, #2a2119);
+  --bg-surface: color-mix(in srgb, var(--md-surface-container) 90%, #33291f);
+}
+
+/* ── Contemporary — was Material 3. Crisp tonal surfaces, tight corners, near-flat depth. ── */
+[data-family='contemporary'] {
+  --font-ui: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --display-weight: 600;
+  --display-tracking: -0.03em;
+  --radius-control: 8px;
+  --radius-overlay: 12px;
+  --radius-surface: 16px;
+  --motion-immediate: 90ms;
+  --motion-quick: 140ms;
+  --motion-considered: 220ms;
+  --edge-raised: var(--md-outline-variant);
+}
+[data-family='contemporary'][data-theme='light'] {
+  --bg-app: var(--md-surface-container-lowest);
+  --bg-canvas: var(--bg-app);
+  --bg-chrome: var(--md-surface-container-low);
+  --bg-surface: var(--md-surface-container-lowest);
+  --surface-overlay: var(--md-surface-container-lowest);
+  --elev-raised: 0 1px 2px rgba(var(--shadow-rgb), .06);
+  --elev-overlay: 0 10px 28px -10px rgba(var(--shadow-rgb), .20), 0 1px 3px rgba(var(--shadow-rgb), .08);
+}
+[data-family='contemporary']:not([data-theme='light']) {
+  --bg-app: var(--md-surface-container-lowest);
+  --bg-canvas: var(--bg-app);
+  --bg-chrome: var(--md-surface-container-low);
+  --bg-surface: var(--md-surface-container-low);
+  --surface-overlay: var(--md-surface-container);
+  --elev-raised: 0 1px 2px rgba(0, 0, 6, .40);
+  --elev-overlay: 0 14px 36px -10px rgba(0, 0, 6, .66), 0 1px 3px rgba(0, 0, 6, .40);
+}
+
+/* ── Glass — was Liquid glass. Translucent chrome over an opaque reading plane. ──
+   Hierarchy: canvas (a faint atmosphere) < chrome (sidebar, translucent) < controls
+   (glass, blurred) < overlays (near-opaque). Messages and the composer text never sit on blur. */
+[data-family='glass'] {
+  --font-ui: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Sora', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --display-weight: 500;
+  --display-tracking: -0.025em;
+  --radius-control: 12px;
+  --radius-overlay: 18px;
+  --radius-surface: 24px;
+  --motion-quick: 180ms;
+  --motion-considered: 300ms;
+  --surface-raised: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  --surface-overlay: var(--glass-menu);
+}
+[data-family='glass'][data-theme='light'] {
+  --bg-chrome: color-mix(in srgb, var(--md-surface-container-low) 72%, transparent);
+  --edge-raised: rgba(255, 255, 255, .85);
+  --elev-raised: inset 0 1px 0 rgba(255, 255, 255, .9), 0 1px 2px rgba(var(--shadow-rgb), .06), 0 10px 30px -14px rgba(var(--shadow-rgb), .28);
+  --elev-overlay: inset 0 1px 0 rgba(255, 255, 255, .8), 0 24px 56px -16px rgba(var(--shadow-rgb), .32), 0 4px 12px -4px rgba(var(--shadow-rgb), .10);
+}
+[data-family='glass']:not([data-theme='light']) {
+  --bg-chrome: color-mix(in srgb, var(--md-surface-container-low) 70%, transparent);
+  --edge-raised: rgba(236, 234, 255, .16);
+  --elev-raised: inset 0 1px 0 rgba(236, 234, 255, .10), 0 10px 30px -14px rgba(0, 0, 6, .70);
+  --elev-overlay: inset 0 1px 0 rgba(236, 234, 255, .10), 0 26px 60px -16px rgba(0, 0, 6, .75), 0 4px 14px -4px rgba(0, 0, 6, .40);
+}
+
+/* Contrast and transparency preferences flatten every family onto opaque, outlined steps. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  :root[data-family] { --surface-raised: var(--bg-surface); --surface-overlay: var(--bg-surface); --edge-raised: var(--control-border); }
+  :root[data-family='glass'] { --bg-chrome: var(--md-surface-container-low); }
+}

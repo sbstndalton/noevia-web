@@ -158,10 +158,8 @@ html[data-lens='svg'] .glass-seg.is-moving > .glass-thumb, html[data-lens='svg']
 }
 /* Content inside the frame sits on a calmer pane so text never reads over the blur. */
 .aero-content { background: color-mix(in srgb, var(--bg-app) 86%, transparent); }
-@keyframes aero-in { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
-@keyframes scrim-in { from { opacity: 0; } to { opacity: 1; } }
-.aero.is-entering { animation: aero-in var(--duration-slow) var(--ease-out) both; }
-.scrim.is-entering { animation: scrim-in var(--duration-base) var(--ease-standard) both; }
+.aero.is-entering { --enter-from: translateY(8px) scale(.985); animation: motion-enter var(--motion-considered) var(--ease-considered) both; }
+.scrim.is-entering { --enter-from: none; animation: motion-enter var(--motion-quick) var(--ease-quick) both; }
 
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   .aero { background: var(--md-surface-container-low); backdrop-filter: none; -webkit-backdrop-filter: none; }
@@ -171,7 +169,7 @@ html[data-lens='svg'] .glass-seg.is-moving > .glass-thumb, html[data-lens='svg']
 
 /* Three materials share geometry. Liquid effects belong to foreground controls;
    Soft uses restrained depth; Material 3 maps controls to tonal roles. */
-[data-material='liquid'] .glass {
+[data-family='glass'] .glass {
   --glass-tint: transparent;
   --glass-fill: color-mix(in srgb, var(--md-surface-container-high) 82%, transparent);
   box-shadow: inset 0 1px 0 var(--glass-edge), inset 0 -1px 0 var(--glass-rim),
@@ -181,99 +179,100 @@ html[data-lens='svg'] .glass-seg.is-moving > .glass-thumb, html[data-lens='svg']
   transition: transform var(--duration-fast) var(--ease-spring), box-shadow var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard);
 }
 /* Feedback follows the press; labels do not tilt or grow under the pointer. */
-[data-material='liquid'] .glass.is-press:active:not(:disabled) { transform: scale(.98); }
+[data-family='glass'] .glass.is-press:active:not(:disabled) { transform: scale(.98); }
 
 /* Selection labels always sit above their material, including during movement. */
 .glass-seg > .glass-thumb { z-index: 0; }
 .glass-seg > button { z-index: 1; }
 
-/* Soft: opaque surfaces with gentle paired shadows; controls keep visible edges. */
-[data-material='soft'] { --soft-hi: rgba(255, 255, 255, .9); --soft-lo: rgba(var(--shadow-rgb), .16); --soft-d: 3px; --soft-b: 10px; }
-:root:not([data-theme='light'])[data-material='soft'] { --soft-hi: rgba(255, 255, 255, .07); --soft-lo: rgba(0, 0, 4, .38); }
-[data-material='soft'] body { background: var(--bg-app); }
-[data-material='soft'] .pane, [data-material='soft'] .surface, [data-material='soft'] .aero {
-  background: var(--bg-app); border-color: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
-  box-shadow: calc(var(--soft-d) * -1) calc(var(--soft-d) * -1) var(--soft-b) var(--soft-hi), var(--soft-d) var(--soft-d) var(--soft-b) var(--soft-lo);
+/* Editorial (was Soft, #249): opaque paper surfaces. Depth comes from the shared scale in
+   tokens.css — hairline edges and one soft shadow step — never paired light/dark shadows. */
+[data-family='editorial'] body { background: var(--bg-app); }
+[data-family='editorial'] .pane, [data-family='editorial'] .surface {
+  background: var(--bg-app); border-color: var(--edge-flat); backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: var(--elev-flat);
 }
-[data-material='soft'] .aero::before { display: none; }
-[data-material='soft'] .glass, [data-material='soft'] .glass-seg > .glass-thumb {
-  background: var(--bg-app); border-color: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
-  box-shadow: -3px -3px 7px var(--soft-hi), 3px 3px 7px var(--soft-lo);
+[data-family='editorial'] .aero { border-color: var(--edge-raised); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: var(--elev-overlay); }
+[data-family='editorial'] .aero::before { display: none; }
+[data-family='editorial'] .glass, [data-family='editorial'] .glass-seg > .glass-thumb {
+  background: var(--bg-surface); border-color: var(--edge-raised); backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: var(--elev-flat);
 }
-[data-material='soft'] .glass::before { display: none; }
-[data-material='soft'] .glass.is-primary { background: var(--md-primary); }
-/* Wells: segmented tracks and switch tracks are pressed into the surface. */
-[data-material='soft'] .glass-seg, [data-material='soft'] .glass-switch:not([aria-checked='true']) {
-  background: var(--bg-app);
-  box-shadow: inset 3px 3px 6px var(--soft-lo), inset -3px -3px 6px var(--soft-hi);
+[data-family='editorial'] .glass-seg > .glass-thumb { box-shadow: var(--elev-raised); }
+[data-family='editorial'] .glass::before { display: none; }
+[data-family='editorial'] .glass.is-primary { background: var(--md-primary); border-color: transparent; }
+/* Tracks read as a tonal well with a hairline, not a pressed-in hollow. */
+[data-family='editorial'] .glass-seg, [data-family='editorial'] .glass-switch:not([aria-checked='true']) {
+  background: var(--bg-surface-hover);
+  box-shadow: inset 0 0 0 1px var(--edge-raised);
 }
-[data-material='soft'] .glass-switch > .knob { background: var(--bg-app); box-shadow: -2px -2px 5px var(--soft-hi), 2px 2px 5px var(--soft-lo); }
-[data-material='soft'] .glass-switch:active > .knob { --glass-fill: var(--bg-app); }
-[data-material='soft'] .glass:active, [data-material='soft'] .glass[aria-pressed='true'] {
-  box-shadow: inset 3px 3px 6px var(--soft-lo), inset -3px -3px 6px var(--soft-hi);
+[data-family='editorial'] .glass-switch > .knob { background: var(--bg-surface); box-shadow: var(--elev-raised); }
+[data-family='editorial'] .glass-switch:active > .knob { --glass-fill: var(--bg-surface); }
+[data-family='editorial'] .glass:active, [data-family='editorial'] .glass[aria-pressed='true'] {
+  background: var(--bg-surface-active); box-shadow: var(--elev-flat);
 }
 
 /* Material 3, straight: tonal surfaces, no blur or glass, state layers, M3 shapes.
    Segmented buttons and switches retain shared geometry with tonal selection fills. */
-[data-material='material'] body {
+[data-family='contemporary'] body {
   background: var(--md-surface);
 }
-[data-material='material'] .pane, [data-material='material'] .aero {
+[data-family='contemporary'] .pane, [data-family='contemporary'] .aero {
   background: var(--md-surface-container); border-color: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; border-radius: var(--radius-lg);
 }
-[data-material='material'] .aero {
+[data-family='contemporary'] .aero {
   background: var(--md-surface-container-high); border-radius: var(--radius-2xl); box-shadow: var(--shadow-3);
 }
-[data-material='material'] .aero::before, [data-material='material'] .glass::before {
+[data-family='contemporary'] .aero::before, [data-family='contemporary'] .glass::before {
   display: none;
 }
-[data-material='material'] .aero-content {
+[data-family='contemporary'] .aero-content {
   background: transparent;
 }
-[data-material='material'] .surface {
+[data-family='contemporary'] .surface {
   background: var(--md-surface-container-low); border-color: transparent; box-shadow: none; border-radius: 12px;
 }
-[data-material='material'] .glass {
+[data-family='contemporary'] .glass {
   background: var(--md-secondary-container); color: var(--md-on-secondary-container); border-color: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
 }
-[data-material='material'] .glass:hover {
+[data-family='contemporary'] .glass:hover {
   background: color-mix(in srgb, var(--md-on-secondary-container) 8%, var(--md-secondary-container));
 }
-[data-material='material'] .glass:active {
+[data-family='contemporary'] .glass:active {
   background: color-mix(in srgb, var(--md-on-secondary-container) 12%, var(--md-secondary-container)); transform: none;
 }
-[data-material='material'] .glass.is-primary {
+[data-family='contemporary'] .glass.is-primary {
   background: var(--md-primary); color: var(--md-on-primary);
 }
-[data-material='material'] .glass.is-primary:hover {
+[data-family='contemporary'] .glass.is-primary:hover {
   background: color-mix(in srgb, var(--md-on-primary) 8%, var(--md-primary)); box-shadow: var(--shadow-1);
 }
-[data-material='material'] .glass-seg {
+[data-family='contemporary'] .glass-seg {
   background: transparent; box-shadow: inset 0 0 0 1px var(--md-outline);
 }
-[data-material='material'] .glass-seg > button {
+[data-family='contemporary'] .glass-seg > button {
   z-index: 1; color: var(--md-on-surface);
 }
 
-[data-material='material'] .glass-seg > button[aria-checked='true'] {
+[data-family='contemporary'] .glass-seg > button[aria-checked='true'] {
   color: var(--md-on-secondary-container);
 }
-[data-material='material'] .glass-seg > button:hover {
+[data-family='contemporary'] .glass-seg > button:hover {
   background: color-mix(in srgb, var(--md-on-surface) 8%, transparent);
 }
-[data-material='material'] .glass-seg > .glass-thumb {
+[data-family='contemporary'] .glass-seg > .glass-thumb {
   z-index: 0; top: 0; bottom: auto; scale: none; background: var(--md-secondary-container); backdrop-filter: none; -webkit-backdrop-filter: none; border-color: transparent;
 }
-[data-material='material'] .glass-switch {
+[data-family='contemporary'] .glass-switch {
   background: var(--md-surface-container-highest); box-shadow: inset 0 0 0 2px var(--md-outline);
 }
-[data-material='material'] .glass-switch[aria-checked='true'] {
+[data-family='contemporary'] .glass-switch[aria-checked='true'] {
   background: var(--md-primary); box-shadow: none;
 }
-[data-material='material'] .glass-switch > .knob {
+[data-family='contemporary'] .glass-switch > .knob {
   background: var(--md-outline); border-color: transparent; box-shadow: none; backdrop-filter: none; transition: transform var(--duration-base) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard);
 }
-[data-material='material'] .glass-switch[aria-checked='true'] > .knob {
+[data-family='contemporary'] .glass-switch[aria-checked='true'] > .knob {
    background: var(--md-on-primary);
 }
 
@@ -290,53 +289,53 @@ html[data-lens='svg'] .glass-seg.is-moving > .glass-thumb, html[data-lens='svg']
 
 /* Regular Liquid Glass: restrained rim and a readable backing on floating controls.
    Never glass-on-glass in menus or dialogs. The Aqua reference informs the rim only. */
-[data-material='liquid'] .glass.is-primary {
+[data-family='glass'] .glass.is-primary {
   background: var(--md-primary); color: var(--md-on-primary);
 }
-[data-material='liquid'] .glass.is-primary:hover:not(:disabled) {
+[data-family='glass'] .glass.is-primary:hover:not(:disabled) {
   background: color-mix(in srgb, var(--md-on-primary) 8%, var(--md-primary));
 }
-[data-material='liquid'] .glass.is-primary:active:not(:disabled) {
+[data-family='glass'] .glass.is-primary:active:not(:disabled) {
   background: color-mix(in srgb, var(--md-on-primary) 12%, var(--md-primary));
 }
-[data-material='liquid'] .glass::before { opacity: .22; }
-[data-material='liquid'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel) {
+[data-family='glass'] .glass::before { opacity: .22; }
+[data-family='glass'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel) {
   background: var(--glass-menu); box-shadow: var(--pane-highlight), var(--shadow-3);
   backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2);
 }
-[data-material='liquid'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .aero) .glass {
+[data-family='glass'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .aero) .glass {
   backdrop-filter: none; -webkit-backdrop-filter: none;
   background: var(--bg-surface); box-shadow: none;
 }
-[data-material='liquid'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .aero) .glass.is-primary {
+[data-family='glass'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .aero) .glass.is-primary {
   background: var(--md-primary); color: var(--md-on-primary);
 }
-[data-material='liquid'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .aero) .glass.is-primary:hover:not(:disabled) {
+[data-family='glass'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .aero) .glass.is-primary:hover:not(:disabled) {
   background: color-mix(in srgb, var(--md-on-primary) 8%, var(--md-primary));
 }
-[data-material='liquid'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .aero) .glass.is-primary:active:not(:disabled) {
+[data-family='glass'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .aero) .glass.is-primary:active:not(:disabled) {
   background: color-mix(in srgb, var(--md-on-primary) 12%, var(--md-primary));
 }
-[data-material='liquid'] .glass-seg > .glass-thumb {
+[data-family='glass'] .glass-seg > .glass-thumb {
   background: var(--md-surface-container-highest); backdrop-filter: none; -webkit-backdrop-filter: none;
   box-shadow: inset 0 1px 0 var(--glass-edge), 0 1px 3px var(--glass-shadow);
 }
-[data-material='liquid'] .glass-seg > button[aria-checked='true'] { color: var(--md-on-surface); }
-[data-material='liquid'] .glass-reactive::after { display: block !important; }
+[data-family='glass'] .glass-seg > button[aria-checked='true'] { color: var(--md-on-surface); }
+[data-family='glass'] .glass-reactive::after { display: block !important; }
 
 /* Soft is matte throughout, including menus and the switch's off state. */
-[data-material='soft'] :is(.overlay, .ctx-menu, .account-popover, .popup, .composer-actions-panel, .stats-disclosure, .usage-stat, .app-mode-switch) {
+[data-family='editorial'] :is(.overlay, .ctx-menu, .account-popover, .popup, .composer-actions-panel, .stats-disclosure, .usage-stat, .app-mode-switch) {
   background: var(--bg-surface); backdrop-filter: none; -webkit-backdrop-filter: none;
 }
-[data-material='soft'] :is(.overlay, .ctx-menu, .account-popover, .popup, .composer-actions-panel) {
+[data-family='editorial'] :is(.overlay, .ctx-menu, .account-popover, .popup, .composer-actions-panel) {
   box-shadow: var(--shadow-3);
 }
-[data-material='soft'] .surface { background: var(--bg-surface); box-shadow: var(--shadow-1); }
-[data-material='soft'] .glass { border-color: var(--border-subtle); }
-[data-material='soft'] .glass-switch:not([aria-checked='true']) {
-  box-shadow: inset 0 0 0 1px var(--control-border), inset 2px 2px 4px var(--soft-lo);
+[data-family='editorial'] .surface { background: var(--bg-surface); box-shadow: var(--shadow-1); }
+[data-family='editorial'] .glass { border-color: var(--border-subtle); }
+[data-family='editorial'] .glass-switch:not([aria-checked='true']) {
+  box-shadow: inset 0 0 0 1px var(--control-border);
 }
-[data-material='soft'] .glass-switch[aria-checked='true'] > .knob { background: var(--md-on-primary); }
+[data-family='editorial'] .glass-switch[aria-checked='true'] > .knob { background: var(--md-on-primary); }
 
 /* Disabled is a state, never a pressable glass effect. */
 .glass:disabled, .glass-switch:disabled { cursor: not-allowed; transform: none; }
@@ -344,15 +343,15 @@ html[data-lens='svg'] .glass-seg.is-moving > .glass-thumb, html[data-lens='svg']
 
 /* Accessibility overrides come last, after every material variant. */
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-  :root[data-material] :is(.pane, .glass, .overlay, .aero, .ctx-menu, .account-popover, .popup, .composer-actions-panel, .app-mode-switch, .stats-disclosure) {
+  :root[data-family] :is(.pane, .glass, .overlay, .aero, .ctx-menu, .account-popover, .popup, .composer-actions-panel, .app-mode-switch, .stats-disclosure) {
     background: var(--bg-surface); backdrop-filter: none; -webkit-backdrop-filter: none;
   }
-  :root[data-material] .glass.is-primary { background: var(--md-primary); color: var(--md-on-primary); }
-  :root[data-material] .glass-seg > .glass-thumb { background: var(--md-secondary-container); }
-  :root[data-material] .glass-seg > button[aria-checked='true'] { color: var(--md-on-secondary-container); }
-  :root[data-material] .glass-switch > .knob { background: var(--md-outline); }
-  :root[data-material] .glass-switch[aria-checked='true'] > .knob { background: var(--md-on-primary); }
-  :root[data-material] .glass::before, :root[data-material] .glass-reactive::after { display: none !important; }
+  :root[data-family] .glass.is-primary { background: var(--md-primary); color: var(--md-on-primary); }
+  :root[data-family] .glass-seg > .glass-thumb { background: var(--md-secondary-container); }
+  :root[data-family] .glass-seg > button[aria-checked='true'] { color: var(--md-on-secondary-container); }
+  :root[data-family] .glass-switch > .knob { background: var(--md-outline); }
+  :root[data-family] .glass-switch[aria-checked='true'] > .knob { background: var(--md-on-primary); }
+  :root[data-family] .glass::before, :root[data-family] .glass-reactive::after { display: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   .glass, .glass-seg > .glass-thumb, .glass-switch > .knob, .app-mode-switch.has-thumb > .glass-thumb { transition: none; }
@@ -361,38 +360,38 @@ html[data-lens='svg'] .glass-seg.is-moving > .glass-thumb, html[data-lens='svg']
 :root[data-motion='reduced'] .glass:active, :root[data-motion='reduced'] .glass.is-press:active { transform: none; }
 
 /* Navigation chrome follows its chosen material, including sticky and mobile pieces. */
-:is([data-material='soft'], [data-material='material']) .nav-drawer-toggle,
-:is([data-material='soft'], [data-material='material']) .settings-navigation nav button.is-active {
+:is([data-family='editorial'], [data-family='contemporary']) .nav-drawer-toggle,
+:is([data-family='editorial'], [data-family='contemporary']) .settings-navigation nav button.is-active {
   backdrop-filter: none; -webkit-backdrop-filter: none;
 }
-[data-material='soft'] .nav-drawer-toggle { background: var(--bg-surface); }
-[data-material='soft'] .nav-drawer-backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; }
+[data-family='editorial'] .nav-drawer-toggle { background: var(--bg-surface); }
+[data-family='editorial'] .nav-drawer-backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; }
 /* Reading and code surfaces never need optical distortion. */
 .usage-stat { background: var(--bg-surface); }
 .coding-side-panel, .coding-composer { background: var(--bg-surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-  :root[data-material] .app .sidebar.pane :is(.side-new, .side-footer),
-  :root[data-material] :is(.nav-drawer-toggle, .nav-drawer-backdrop, .scrim),
-  :root[data-material] .settings-navigation nav button.is-active {
+  :root[data-family] .app .sidebar.pane :is(.side-new, .side-footer),
+  :root[data-family] :is(.nav-drawer-toggle, .nav-drawer-backdrop, .scrim),
+  :root[data-family] .settings-navigation nav button.is-active {
     backdrop-filter: none; -webkit-backdrop-filter: none;
   }
 }
 
 /* Matte content and browser-owned pickers follow the material too. */
 .settings-stage :is(.set-rows, .group) { background: transparent; }
-[data-material='soft'] :is(.btn-secondary, .modal-btn.secondary, .auth-card, .modal, .project-card) {
+[data-family='editorial'] :is(.btn-secondary, .modal-btn.secondary, .auth-card, .modal, .project-card) {
   background: var(--bg-surface);
 }
 .app .mp-panel.aero { background: var(--bg-surface) !important; backdrop-filter: none; -webkit-backdrop-filter: none; }
-:is([data-material='soft'], [data-material='material']) select::picker(select) {
+:is([data-family='editorial'], [data-family='contemporary']) select::picker(select) {
   background: var(--bg-surface); backdrop-filter: none; -webkit-backdrop-filter: none;
 }
-:is([data-material='soft'], [data-material='material']) dialog.folder-picker::backdrop,
-:is([data-material='soft'], [data-material='material']) .scrim {
+:is([data-family='editorial'], [data-family='contemporary']) dialog.folder-picker::backdrop,
+:is([data-family='editorial'], [data-family='contemporary']) .scrim {
   backdrop-filter: none; -webkit-backdrop-filter: none;
 }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-  :root[data-material] select::picker(select), :root[data-material] dialog.folder-picker::backdrop {
+  :root[data-family] select::picker(select), :root[data-family] dialog.folder-picker::backdrop {
     backdrop-filter: none; -webkit-backdrop-filter: none;
   }
 }

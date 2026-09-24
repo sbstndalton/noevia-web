@@ -393,7 +393,7 @@ export function Sidebar({
 
       {/* Floats over the list as it scrolls, as ChatGPT's New chat does. */}
       <div className="side-new">
-      <button className="new-chat-btn glass glass-lens" onClick={()=>{if(code)onCodePage?.('New task');else onNewChat();setExpanded(false);}} title={code?'New task':'New chat'} data-tip={code?'New task':'New chat'}>
+      <button className="new-chat-btn glass" onClick={()=>{if(code)onCodePage?.('New task');else onNewChat();setExpanded(false);}} title={code?'New task':'New chat'} data-tip={code?'New task':'New chat'}>
         <ShellIcon name="compose" size={17}/>
         <span>{code?'New task':'New chat'}</span>
       </button>

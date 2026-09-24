@@ -39,24 +39,23 @@
 .account-popover-head span { font-size: var(--text-caption); color: var(--text-secondary); }
 .account-divider { height: 1px; margin: 5px 6px; background: var(--border-subtle); }
 
-/* Menus arrive from their trigger: a short rise with no bounce. */
-@keyframes overlay-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+/* Menus arrive from their trigger: a short rise with no bounce (motion.css). */
 .overlay:is(.ctx-menu, .account-popover, .composer-actions-panel) {
   transform-origin: top left;
-  animation: overlay-in var(--duration-fast) var(--ease-out) both;
+  --enter-from: translateY(-4px) scale(.98);
+  animation: motion-enter var(--motion-quick) var(--ease-quick) both;
 }
 
 /* Soft and Material 3 give the overlay their own depth (materials.css stops at .aero). */
-[data-material='soft'] .overlay {
-  /* Soft draws edges with shadow alone, but a menu sits on a pane of the same colour,
-     so it keeps a hairline or it dissolves into what it floats over. */
-  background: var(--bg-app); border: 1px solid var(--border-subtle);
+[data-family='editorial'] .overlay {
+  /* A menu sits on a pane of the same colour, so it keeps a hairline and the overlay step. */
+  background: var(--surface-overlay); border-color: var(--edge-raised);
   backdrop-filter: none; -webkit-backdrop-filter: none;
-  box-shadow: calc(var(--soft-d) * -1) calc(var(--soft-d) * -1) var(--soft-b) var(--soft-hi), var(--soft-d) var(--soft-d) var(--soft-b) var(--soft-lo);
+  box-shadow: var(--elev-overlay);
 }
-[data-material='material'] .overlay {
-  background: var(--md-surface-container-high); border-color: transparent;
-  backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: var(--shadow-3);
+[data-family='contemporary'] .overlay {
+  background: var(--surface-overlay); border-color: var(--edge-raised);
+  backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: var(--elev-overlay);
 }
 
 /* ── Dialogs: aero overlays over a scrim ───────────────────────────────────
@@ -68,7 +67,8 @@ dialog:has(> .dialog-sheet) { border: 0; padding: 0; background: none; box-shado
 dialog.dialog-sheet::backdrop, dialog:has(> .dialog-sheet)::backdrop {
   background: color-mix(in srgb, var(--md-surface-dim) 35%, transparent);
   backdrop-filter: blur(2px) saturate(1.1); -webkit-backdrop-filter: blur(2px) saturate(1.1);
-  animation: scrim-in var(--duration-base) var(--ease-standard) both;
+  --enter-from: none;
+  animation: motion-enter var(--motion-quick) var(--ease-quick) both;
 }
 :root:not([data-theme='light']) dialog.dialog-sheet::backdrop,
 :root:not([data-theme='light']) dialog:has(> .dialog-sheet)::backdrop { background: rgba(0, 0, 6, .38); }
@@ -76,7 +76,8 @@ dialog.dialog-sheet::backdrop, dialog:has(> .dialog-sheet)::backdrop {
 .aero.dialog-sheet {
   overflow: auto;
   border-radius: var(--radius-2xl);
-  animation: aero-in var(--duration-slow) var(--ease-out) both;
+  --enter-from: translateY(8px) scale(.985);
+  animation: motion-enter var(--motion-considered) var(--ease-considered) both;
 }
 /* A dialog that is itself the frame: centred, bounded by the visible viewport. */
 dialog.aero.dialog-sheet {
@@ -124,7 +125,8 @@ dialog.confirm-dialog.dialog-sheet { width: min(420px, calc(100vw - 32px)); }
     border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
     padding-top: var(--space-6);
     padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-4));
-    animation: sheet-in var(--duration-slow) var(--ease-out) both;
+    --enter-from: translateY(100%); --enter-opacity: 1;
+    animation: motion-enter var(--motion-considered) var(--ease-considered) both;
   }
   dialog:has(> .dialog-sheet) { align-items: flex-end; }
   /* The grabber: the affordance that says this sheet came from the bottom edge. */
@@ -137,11 +139,7 @@ dialog.confirm-dialog.dialog-sheet { width: min(420px, calc(100vw - 32px)); }
   .dialog-sheet .modal-actions, .aero.dialog-sheet > .confirm-actions { flex-direction: column; }
   .dialog-sheet .modal-actions > .btn, .aero.dialog-sheet > .confirm-actions > .btn { width: 100%; }
 }
-@keyframes sheet-in { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
 
-@media (prefers-reduced-motion: reduce) {
-  .aero.dialog-sheet, .overlay:is(.ctx-menu, .account-popover, .composer-actions-panel), .save-error { animation-duration: 1ms; }
-}
 
 /* ── Cards ─────────────────────────────────────────────────────────────────
    One card: a content surface that lifts on hover and presses on click. Cards
@@ -166,12 +164,8 @@ dialog.confirm-dialog.dialog-sheet { width: min(420px, calc(100vw - 32px)); }
   background: var(--md-surface-container-highest); color: var(--text-secondary);
   font-size: var(--text-caption); font-weight: 500;
 }
-[data-material='soft'] :is(.project-card, .month-card).surface:hover {
-  box-shadow: calc(var(--soft-d) * -1.3) calc(var(--soft-d) * -1.3) calc(var(--soft-b) * 1.2) var(--soft-hi), calc(var(--soft-d) * 1.3) calc(var(--soft-d) * 1.3) calc(var(--soft-b) * 1.2) var(--soft-lo);
-}
-[data-material='soft'] :is(.project-card, .month-card).surface:active {
-  box-shadow: inset 3px 3px 6px var(--soft-lo), inset -3px -3px 6px var(--soft-hi);
-}
+[data-family='editorial'] :is(.project-card, .month-card).surface:hover { border-color: var(--edge-raised); box-shadow: var(--elev-raised); }
+[data-family='editorial'] :is(.project-card, .month-card).surface:active { box-shadow: var(--elev-flat); }
 
 /* ── Banners and the save toast ────────────────────────────────────────────
    A banner states the problem and the recovery on one line. Its colour comes
@@ -199,15 +193,16 @@ dialog.confirm-dialog.dialog-sheet { width: min(420px, calc(100vw - 32px)); }
   box-shadow: var(--shadow-4);
   backdrop-filter: blur(28px) saturate(1.5); -webkit-backdrop-filter: blur(28px) saturate(1.5);
   font-size: var(--text-footnote); line-height: var(--leading-snug);
-  animation: overlay-in var(--duration-base) var(--ease-out) both;
+  --enter-from: translateY(-4px) scale(.98);
+  animation: motion-enter var(--motion-quick) var(--ease-quick) both;
 }
 .save-error-list {
   margin: 0; padding: 0 0 0 var(--space-4); max-height: 40vh; overflow-y: auto;
   list-style: disc; display: flex; flex-direction: column; gap: var(--space-1);
 }
 .save-error button { border-radius: var(--radius-sm); }
-[data-material='soft'] .save-error { background: var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; }
-[data-material='material'] .save-error { background: var(--md-surface-container-high); backdrop-filter: none; -webkit-backdrop-filter: none; }
+[data-family='editorial'] .save-error { background: var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; }
+[data-family='contemporary'] .save-error { background: var(--md-surface-container-high); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .route-note { margin: var(--space-2) 2px 0; font-size: var(--text-footnote); color: var(--text-secondary); line-height: var(--leading-snug); }
 
 /* ── Empty states ──────────────────────────────────────────────────────────
@@ -241,9 +236,9 @@ dialog.confirm-dialog.dialog-sheet { width: min(420px, calc(100vw - 32px)); }
   background: var(--bg-surface); color: var(--text-secondary);
   padding: var(--space-2) var(--space-3); font-size: var(--text-footnote); line-height: var(--leading-snug);
 }
-[data-material='soft'] .msg[data-role='user'] .msg-user-row, [data-material='soft'] .msg-user .msg-user-row {
-  background: var(--bg-app); border-color: transparent;
-  box-shadow: -3px -3px 7px var(--soft-hi), 3px 3px 7px var(--soft-lo);
+[data-family='editorial'] .msg[data-role='user'] .msg-user-row, [data-family='editorial'] .msg-user .msg-user-row {
+  background: var(--bg-surface-hover); border-color: transparent;
+  box-shadow: var(--elev-flat);
 }
 
 /* ── The tool-call list ────────────────────────────────────────────────────
@@ -264,10 +259,7 @@ dialog.confirm-dialog.dialog-sheet { width: min(420px, calc(100vw - 32px)); }
 .tool-calls > ol { padding: 0 var(--space-1) var(--space-1); }
 .tool-call > details > summary { align-items: center; gap: var(--space-2); padding: var(--space-2); border-radius: var(--radius-sm); }
 .tool-call-state { display: inline-grid; place-items: center; width: 16px; flex: none; color: var(--status-connected); }
-@media (prefers-reduced-motion: no-preference) {
-  @keyframes tool-call-spin { to { transform: rotate(360deg); } }
-  .tool-call.is-running .tool-call-state > svg { animation: tool-call-spin 1.6s linear infinite; }
-}
+.tool-call.is-running .tool-call-state > svg { animation: motion-spin var(--motion-async) var(--ease-async) infinite; }
 .tool-call.is-running .tool-call-state { color: var(--text-secondary); }
 .tool-call.is-declined .tool-call-state, .tool-call.is-not-run .tool-call-state { color: var(--status-danger); }
 .tool-call-name { font-family: var(--font-mono); font-size: var(--text-caption); color: var(--text-primary); }

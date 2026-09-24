@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { JSX } from 'react';
+import type { JSX, KeyboardEvent } from 'react';
 import { SegmentedControl } from './SegmentedControl';
 import { LayoutModeChoice, layoutModeDescription } from './LayoutMode';
 import { fetchHealth, fetchProfile, fetchToolboxes, updateProfile } from '../api';
@@ -9,6 +9,8 @@ import { readPreference, writePreference } from '../preferences';
 import type { PreferenceName } from '../preferences';
 import { applyPalette, currentPalette, palettes } from '../appearance';
 import type { Palette } from '../appearance';
+import { FAMILIES, FAMILY_SPECS } from '../theme-family';
+import type { Family } from '../theme-family';
 
 /** The accent palettes, restored at the user's request (2026-09-18). Each name says what
  *  it looks like rather than what it is called internally. */
@@ -38,6 +40,58 @@ function AccentChoice({ mode }: { mode: 'light' | 'dark' }): JSX.Element {
       <span className="accent-swatch" data-palette={name} data-theme={mode} aria-hidden="true"><i /><i /><i /></span>
       {PALETTE_LABELS[name]}
     </button>)}
+  </div>;
+}
+
+/** Theme families (#249) as live previews. Each sample carries data-family, data-theme and
+ *  data-palette and the `theme-scope` class, so tokens.css and themes.css resolve it exactly
+ *  as they resolve the app: the preview is the real family, in light and in dark, with the
+ *  current accent — never a screenshot. Choosing one writes the per-device preference, which
+ *  sets data-family on <html> and restyles the whole interface at once. */
+function FamilyPreview({ family, mode, palette }: { family: Family; mode: 'light' | 'dark'; palette: Palette }): JSX.Element {
+  return <span className="family-preview theme-scope" data-family={family} data-theme={mode} data-palette={palette} aria-hidden="true">
+    <span className="family-preview-heading">Good evening</span>
+    <span className="family-preview-message">Summarise the notes</span>
+    <span className="family-preview-row">
+      <span className="family-preview-composer">Message noevia…<i className="family-preview-send" /></span>
+      <span className="family-preview-menu"><span>Chat</span><span>Cowork</span></span>
+    </span>
+    <span className="family-preview-controls"><span className="family-preview-button is-primary">Save</span><span className="family-preview-button">Cancel</span></span>
+  </span>;
+}
+
+export function FamilyChoice({ onChange }: { onChange?: () => void }): JSX.Element {
+  const [chosen, setChosen] = useState<Family>(() => readPreference('family'));
+  const [palette, setPalette] = useState<Palette>(() => currentPalette());
+  useEffect(() => {
+    // The previews use every family's typeface; load them now rather than on first switch.
+    window.dispatchEvent(new Event('noevia:preview-fonts'));
+    const sync = () => setPalette(currentPalette());
+    window.addEventListener('cowork:appearance', sync);
+    return () => window.removeEventListener('cowork:appearance', sync);
+  }, []);
+  const choose = (next: Family) => { setChosen(next); writePreference('family', next); onChange?.(); };
+  const onKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
+    if (!step) return;
+    event.preventDefault();
+    const next = FAMILIES[(FAMILIES.indexOf(chosen) + step + FAMILIES.length) % FAMILIES.length];
+    choose(next);
+    event.currentTarget.querySelector<HTMLElement>(`[data-choice="${next}"]`)?.focus();
+  };
+  return <div className="family-choice" role="radiogroup" aria-label="Theme family" onKeyDown={onKey}>
+    {FAMILIES.map((name) => {
+      const spec = FAMILY_SPECS[name];
+      return <button key={name} type="button" role="radio" data-choice={name} aria-checked={chosen === name} tabIndex={chosen === name ? 0 : -1}
+        className="family-tile" onClick={() => choose(name)}>
+        <span className="family-tile-previews">
+          <FamilyPreview family={name} mode="light" palette={palette} />
+          <FamilyPreview family={name} mode="dark" palette={palette} />
+        </span>
+        <span className="family-tile-name">{spec.label}</span>
+        <span className="family-tile-desc">{spec.description} {spec.display === spec.ui ? `Set in ${spec.ui}.` : `${spec.display} headings, ${spec.ui} text.`}</span>
+      </button>;
+    })}
   </div>;
 }
 
@@ -112,13 +166,13 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
           <div className="set-row-text"><span className="set-row-label">Accent</span><span className="set-row-desc">Colour for selections, links and the send button.</span></div>
           <AccentChoice mode={theme} />
         </div>
-        <Row label="Material" description="Soft uses gentle depth. Liquid glass adds translucent controls. Material 3 uses tonal surfaces and clear state changes.">
-          <Choice name="material" segmented="Material" onChange={bump} options={[['soft', 'Soft'], ['liquid', 'Liquid glass'], ['material', 'Material 3']]} />
+        <Row label="Theme family" description="The whole interface: surfaces, typefaces, shapes and motion. Each works with every accent, in light and dark. Replaces Soft, Liquid glass and Material 3, which become Editorial, Glass and Contemporary.">
+          <FamilyChoice onChange={bump} />
         </Row>
       </div>
       <h2>Reading and motion</h2>
       <div className="set-rows">
-        <Row label="Chat font" description="The typeface for messages. The rest of the interface keeps the system font.">
+        <Row label="Chat font" description="A reading font for messages only. Default follows the theme family; the rest of the interface keeps the family’s typeface.">
           <Choice name="chatFont" label="Chat font" onChange={bump} options={[['sans', 'Sans (default)'], ['serif', 'Serif'], ['mono', 'Monospace']]} />
         </Row>
         <Row label="Density" description="Compact tightens spacing without shrinking anything you tap.">
@@ -132,7 +186,7 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
         </Row>
       </div>
       <p className="route-note">
-        Chat font, density, motion and layout are saved on this device only — how dense you want a screen depends on the screen.
+        Theme family, chat font, density, motion and layout are saved on this device only — how dense you want a screen depends on the screen.
         {' '}Appearance follows your account.
       </p>
       <p role={appearanceError ? 'alert' : 'status'} className="route-note">{appearanceStatus}</p>

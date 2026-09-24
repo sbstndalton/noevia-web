@@ -10,9 +10,9 @@
 
   const release = (node) => { if (node) node.removeAttribute('data-glass-active'); };
 
-  const enabled = () => root.getAttribute('data-material') === 'liquid' && root.getAttribute('data-motion') !== 'reduced' && !reduced.matches && !coarse.matches;
+  const enabled = () => root.getAttribute('data-family') === 'glass' && root.getAttribute('data-motion') !== 'reduced' && !reduced.matches && !coarse.matches;
   const reset = () => { release(active); active = null; };
-  new MutationObserver(reset).observe(root, { attributes: true, attributeFilter: ['data-material', 'data-motion'] });
+  new MutationObserver(reset).observe(root, { attributes: true, attributeFilter: ['data-family', 'data-motion'] });
   reduced.addEventListener('change', reset);
   coarse.addEventListener('change', reset);
 

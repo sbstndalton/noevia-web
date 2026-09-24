@@ -1,0 +1,153 @@
+/* Visual system (#245). Loads LAST, after every family sheet, so the shared surfaces have one
+   definition. Everything here reads the scales in tokens.css (radius roles, --elev-* with
+   their fills and edges, the motion contract) which each theme family retunes in themes.css.
+
+   Surface treatments, from quietest to strongest:
+     canvas     --bg-app; content sits directly on it
+     chrome     --bg-chrome; the sidebar
+     flat       sidebar rows, New chat, buttons, menu items — tonal fill and hairline, no shadow
+     raised     the composer: the page's one lifted surface and the home screen's focal point
+     overlay    menus, popovers, the tool catalogue, dialogs
+     selected   --selected / --on-selected, the same in rows, menus and segmented controls
+   The strongest emphasis is the composer and its send action, not every raised button. */
+
+/* ── Type ─────────────────────────────────────────────────────────────────────
+   Display face for greetings and page titles; the interface face for everything else.
+   Sizes keep the existing --text-* scale (lint:design enforces it). Diary keeps its own. */
+.app .chat-workspace .empty-state h2,
+:is(.settings-title, .projects-hero, .projects-head, .archived-head, .coding-welcome, .auth-card) h1,
+.project-main h1.project-title {
+  font-family: var(--font-display);
+  font-weight: var(--display-weight, 600);
+  letter-spacing: var(--display-tracking, -0.02em);
+}
+.app .chat-workspace .empty-state h2 { color: var(--text-primary); line-height: var(--leading-tight); }
+
+/* ── Sidebar hierarchy ────────────────────────────────────────────────────────
+   Destinations (New chat, Projects, Diary…) read first; history reads second; section
+   labels are small and quiet. Every row shares the control radius and the flat treatment. */
+.app .sidebar.pane :is(.nav-item, .proj-row, .chat-row, .account-trigger, .shell-icon-button) { border-radius: var(--radius-control); }
+.app .sidebar.pane .side-nav .nav-item { color: var(--text-primary); }
+.app .sidebar.pane .side-nav .nav-item .nav-name { font-weight: 500; }
+.app .sidebar.pane :is(.proj-row, .chat-row) .nav-item { color: var(--text-secondary); }
+.app .sidebar.pane :is(.proj-row, .chat-row):hover .nav-item { color: var(--text-primary); }
+.app .sidebar.pane :is(.proj-row.is-active, .chat-row.is-active) .nav-item { color: var(--on-selected); }
+.app .sidebar.pane :is(.section-label, .sidebar-history .section-label) { font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); }
+.app .sidebar.pane :is(.proj-row, .chat-row) { transition: background-color var(--motion-immediate) var(--ease-immediate); }
+
+/* New chat: a flat, outlined control — clearly a button, not a second focal point. */
+.app .sidebar.pane .new-chat-btn.glass {
+  background: var(--bg-surface); color: var(--text-primary);
+  border: 1px solid var(--edge-raised); border-radius: var(--radius-control);
+  box-shadow: var(--elev-flat); backdrop-filter: none; -webkit-backdrop-filter: none;
+  transition: background-color var(--motion-immediate) var(--ease-immediate), border-color var(--motion-immediate) var(--ease-immediate), transform var(--motion-immediate) var(--ease-immediate);
+}
+.app .sidebar.pane .new-chat-btn.glass::before, .app .sidebar.pane .new-chat-btn.glass::after { display: none !important; }
+.app .sidebar.pane .new-chat-btn.glass:hover { background: var(--bg-surface-hover); }
+.app .sidebar.pane .new-chat-btn.glass:active { background: var(--bg-surface-active); transform: scale(.98); }
+.app .sidebar.pane .side-new { background: var(--bg-chrome); }
+/* The sticky New chat strip is chrome: only Glass blurs what scrolls under it. */
+:root:not([data-family='glass']) .app .sidebar.pane .side-new { backdrop-filter: none; -webkit-backdrop-filter: none; }
+.app .sidebar.pane:not(.is-collapsed) .side-new::after { background: linear-gradient(var(--bg-chrome), transparent); }
+
+/* ── Composer: raised ─────────────────────────────────────────────────────────
+   Every composer (chat, project, and the Diary dock, which already followed the material) is
+   the same raised surface. */
+:root .app .composer-inner,
+:root .app .composer-inner.pane {
+  background: var(--surface-raised);
+  border: 1px solid var(--edge-raised);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--elev-raised);
+  outline: 0;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  transition: border-color var(--motion-immediate) var(--ease-immediate), box-shadow var(--motion-quick) var(--ease-quick);
+}
+:root .app .composer-inner:focus-within,
+:root .app .composer-inner.pane:focus-within {
+  border-color: color-mix(in srgb, var(--focus-ring) 70%, var(--edge-raised));
+  box-shadow: var(--elev-raised), 0 0 0 3px var(--focus-halo);
+}
+
+/* ── Buttons: flat, one radius, press feedback ────────────────────────────── */
+:root :is(.btn, .modal-btn) { border-radius: var(--radius-control); }
+:root :is(.btn, .modal-btn, .send-btn):active:not(:disabled) { transform: scale(.97); }
+:root .send-btn { transition: background-color var(--motion-immediate) var(--ease-immediate), transform var(--motion-immediate) var(--ease-immediate); }
+
+/* ── Overlays: menus, popovers, the tool catalogue ────────────────────────── */
+:root :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .tool-catalogue-panel, .identity-options) {
+  background: var(--surface-overlay);
+  border: 1px solid var(--edge-raised);
+  border-radius: var(--radius-overlay);
+  box-shadow: var(--elev-overlay);
+}
+/* Only the Glass family blurs what is behind an overlay; the rest stay opaque. */
+:root:not([data-family='glass']) :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .tool-catalogue-panel) { backdrop-filter: none; -webkit-backdrop-filter: none; }
+:root :is(.ctx-menu .ctx-item, .account-popover > button, .composer-actions-panel > button, .composer-actions-panel .composer-menu-row, .tool-catalogue-list > li[role='option']) {
+  border-radius: max(4px, calc(var(--radius-overlay) - 6px));
+  transition: background-color var(--motion-immediate) var(--ease-immediate), color var(--motion-immediate) var(--ease-immediate);
+}
+.tool-catalogue-panel { transform-origin: bottom right; --enter-from: translateY(4px) scale(.98); animation: motion-enter var(--motion-quick) var(--ease-quick) both; }
+
+/* ── Chat / Cowork: a thumb moves to the chosen mode ─────────────────────────
+   Equal columns so the thumb can travel by its own width. The label colour switches at once
+   and the harness line under it changes text, so the mode never depends on the animation. */
+.composer-mode-toggle { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; isolation: isolate; }
+.composer-mode-toggle::before {
+  content: ''; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 3px);
+  border-radius: var(--radius-pill); background: var(--text-primary);
+  transition: transform var(--motion-considered) var(--ease-considered);
+}
+.composer-mode-toggle[data-mode='cowork']::before { transform: translateX(calc(100% + 2px)); }
+.composer-mode-toggle:has(button:disabled)::before { opacity: .6; }
+.composer-mode-toggle button[aria-checked='true'] { background: transparent; }
+.composer-mode-toggle button { transition: color var(--motion-immediate) var(--ease-immediate); }
+.composer-mode-toggle button:not([aria-checked='true']):hover:not(:disabled) { color: var(--text-primary); }
+
+/* ── Async and recovery states ───────────────────────────────────────────────
+   One sequence on the shared tokens: send → waiting (typing dots, motion-pulse) → streaming
+   and tool activity (motion-spin on the running call) → done, or a failure that arrives with
+   the quick entrance (the save-error toast, the new-session confirmation). Status text and
+   colour change with each step, so reduced motion loses nothing but the travel. */
+.composer-mode-confirm { --enter-from: translateY(4px); animation: motion-enter var(--motion-quick) var(--ease-quick) both; }
+.cowork-task-status { transition: color var(--motion-immediate) var(--ease-immediate); }
+
+/* ── Settings → Appearance: family previews ───────────────────────────────── */
+.family-choice { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); width: 100%; }
+.family-tile-previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.family-tile {
+  display: grid; gap: var(--space-2); padding: var(--space-2); min-width: 0; text-align: left; cursor: pointer;
+  border: 1px solid var(--edge-flat); border-radius: var(--radius-overlay); background: transparent; color: var(--text-primary);
+  transition: border-color var(--motion-immediate) var(--ease-immediate), background-color var(--motion-immediate) var(--ease-immediate);
+}
+@media (hover: hover) { .family-tile:hover { background: var(--nav-hover); } }
+.family-tile[aria-checked='true'] { border-color: var(--focus-ring); box-shadow: 0 0 0 1px var(--focus-ring); }
+.family-tile-name { font-size: var(--text-footnote); font-weight: 600; padding: 0 var(--space-1); }
+.family-tile-desc { font-size: var(--text-caption); color: var(--text-secondary); line-height: var(--leading-snug); padding: 0 var(--space-1) var(--space-1); }
+.family-preview {
+  display: grid; gap: 6px; padding: var(--space-3); min-height: 132px; overflow: hidden; pointer-events: none;
+  background: var(--bg-app); color: var(--text-primary); font-family: var(--font-ui);
+  border-radius: calc(var(--radius-overlay) - 4px); border: 1px solid var(--edge-flat);
+}
+.family-preview-heading { font-family: var(--font-display); font-weight: var(--display-weight, 600); letter-spacing: var(--display-tracking, -0.02em); font-size: var(--text-headline); line-height: var(--leading-tight); }
+.family-preview-message { justify-self: end; max-width: 80%; padding: 4px 8px; border-radius: var(--radius-control); background: var(--bg-surface-hover); font-size: var(--text-caption2); }
+.family-preview-row { display: flex; gap: 6px; align-items: flex-start; }
+.family-preview-composer {
+  flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 30px; padding: 4px 4px 4px 8px;
+  background: var(--surface-raised); border: 1px solid var(--edge-raised); border-radius: var(--radius-surface); box-shadow: var(--elev-raised);
+  font-size: var(--text-caption2); color: var(--text-secondary);
+}
+.family-preview-send { width: 20px; height: 20px; border-radius: var(--radius-pill); background: var(--md-primary); flex: none; }
+.family-preview-menu {
+  display: grid; gap: 2px; padding: 4px; min-width: 64px; font-size: var(--text-caption2);
+  background: var(--surface-overlay); border: 1px solid var(--edge-raised); border-radius: var(--radius-overlay); box-shadow: var(--elev-overlay);
+}
+.family-preview-menu > span { padding: 2px 6px; border-radius: max(3px, calc(var(--radius-overlay) - 8px)); }
+.family-preview-menu > span:first-child { background: var(--selected); color: var(--on-selected); }
+.family-preview-controls { display: flex; gap: 6px; align-items: center; font-size: var(--text-caption2); }
+.family-preview-button { padding: 2px 8px; border: 1px solid var(--edge-raised); border-radius: var(--radius-control); background: var(--bg-surface); }
+.family-preview-button.is-primary { background: var(--md-primary); color: var(--md-on-primary); border-color: transparent; }
+@media (max-width: 420px) {
+  .family-preview { padding: var(--space-2); min-height: 120px; }
+  .family-preview-menu { display: none; }
+}

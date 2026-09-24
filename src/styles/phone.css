@@ -109,7 +109,7 @@
 .app .sidebar.pane:not(.coding-sidebar):not(.is-collapsed) { padding-bottom: 0; }
 .app .sidebar.pane:not(.coding-sidebar):not(.is-collapsed) .side-footer { padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom)); }
 .app .sidebar.pane.is-expanded .side-footer { padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom)); }
-[data-material='soft'] .app .sidebar.pane .side-footer { background: var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; }
+[data-family='editorial'] .app .sidebar.pane .side-footer { background: var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; }
 
 /* ── The accent palettes (Settings → General) ───────────────────────────
    Each tile carries its own `data-palette`, so the swatch is drawn by the very
@@ -274,7 +274,7 @@
     position: fixed; z-index: 40; inset: calc(8px + env(safe-area-inset-top)) auto calc(8px + env(safe-area-inset-bottom)) 8px;
     width: min(84vw, 320px); padding: var(--space-3); border-radius: var(--radius-2xl); box-shadow: var(--shadow-4);
     background: var(--pane-fill); backdrop-filter: blur(var(--pane-blur)); -webkit-backdrop-filter: blur(var(--pane-blur));
-    overflow-y: auto; animation: drawer-in var(--duration-slow) var(--ease-out) both;
+    overflow-y: auto; --enter-from: translateX(calc(-100% - 16px)); --enter-opacity: 1; animation: motion-enter var(--motion-considered) var(--ease-considered) both;
   }
   .coding-sidebar.is-open :is(.shell-sidebar-head > strong, .shell-sidebar-head > .preview-badge, .coding-projects, .coding-recents, .account-name) { display: revert; }
   .coding-sidebar.is-open .nav-item > span { display: inline; }
@@ -313,10 +313,10 @@ html[data-lens='svg'] .app-mode-switch.has-thumb.is-moving > .glass-thumb, html[
 .app-mode-switch.has-thumb:active > .glass-thumb { scale: 1.06 1.12; }
 .app-mode-switch.has-thumb > button { position: relative; z-index: 1; }
 .app-mode-switch.has-thumb > button.is-selected { background: transparent; box-shadow: none; }
-[data-material='soft'] .app-mode-switch.has-thumb > .glass-thumb { background: var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: -3px -3px 7px var(--soft-hi), 3px 3px 7px var(--soft-lo); }
+[data-family='editorial'] .app-mode-switch.has-thumb > .glass-thumb { background: var(--bg-surface); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: var(--elev-raised); }
 /* M3 segmented buttons do not slide: the tonal fill stays on the selected segment. */
-[data-material='material'] .app-mode-switch.has-thumb > .glass-thumb { display: none; }
-[data-material='material'] .app-mode-switch.has-thumb > button.is-selected { background: var(--md-secondary-container); }
+[data-family='contemporary'] .app-mode-switch.has-thumb > .glass-thumb { display: none; }
+[data-family='contemporary'] .app-mode-switch.has-thumb > button.is-selected { background: var(--md-secondary-container); }
 @media (prefers-reduced-motion: reduce) { .app-mode-switch.has-thumb > .glass-thumb { transition: none; } }
 html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transition: none; }
 @media (min-width: 520px) { .coding-sidebar.is-collapsed .app-mode-switch .glass-thumb { display: none; } }
@@ -341,8 +341,8 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 }
 .app-mode-switch.is-compact > button.is-selected { color: var(--text-primary); }
 .app-mode-switch.is-compact > .glass-thumb { border-radius: 5px; }
-[data-material='material'] .app-mode-switch.is-compact { border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px var(--md-outline); }
-[data-material='material'] .app-mode-switch.is-compact > button { border-radius: 0; }
+[data-family='contemporary'] .app-mode-switch.is-compact { border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px var(--md-outline); }
+[data-family='contemporary'] .app-mode-switch.is-compact > button { border-radius: 0; }
 @media (pointer: coarse) { .app-mode-switch.is-compact { height: 40px; } .app-mode-switch.is-compact > button { width: 44px; height: 36px; } }
 /* Collapsed rail: the header stacks, and the switch runs down under the expand button. */
 @media (min-width: 520px) {
@@ -357,7 +357,7 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
     inset: 0 auto 0 0; width: 100vw; height: var(--drawer-height, 100dvh); border-radius: 0; border: 0;
     padding: calc(env(safe-area-inset-top) + var(--space-2)) calc(env(safe-area-inset-right) + var(--space-3)) 0 calc(env(safe-area-inset-left) + var(--space-3));
   }
-  [data-material='material'] .app .sidebar.pane:not(.coding-sidebar).is-expanded { border-radius: 0; }
+  [data-family='contemporary'] .app .sidebar.pane:not(.coding-sidebar).is-expanded { border-radius: 0; }
   .app .sidebar.pane .side-footer-search { display: none; }
   .app .sidebar.pane.is-expanded .shell-search { width: 100%; min-height: 44px; margin: var(--space-2) 0; }
 }
@@ -427,7 +427,7 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
   box-shadow: calc(-1 * var(--space-4)) 0 0 var(--pane-fill), var(--space-4) 0 0 var(--pane-fill);
 }
 .app .sidebar.pane .side-new .new-chat-btn.glass { width: 100%; }
-[data-material='soft'] .app .sidebar.pane .side-new { background: var(--bg-app); box-shadow: calc(-1 * var(--space-4)) 0 0 var(--bg-app), var(--space-4) 0 0 var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; }
+[data-family='editorial'] .app .sidebar.pane .side-new { background: var(--bg-app); box-shadow: calc(-1 * var(--space-4)) 0 0 var(--bg-app), var(--space-4) 0 0 var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .app .sidebar.pane.is-collapsed .side-new { position: static; margin: 0; padding: 0; background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; display: flex; justify-content: center; width: 100%; }
 .app .sidebar.pane.is-collapsed .side-new .new-chat-btn.glass { width: 40px; }
 .app .sidebar.pane .coding-history .side-hint { margin: 0; padding: 2px 2px 0; color: var(--text-secondary); font-size: var(--text-footnote); line-height: 1.4; }
@@ -439,23 +439,17 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   background: var(--text-primary); color: var(--bg-app);
   font-size: var(--text-footnote); font-weight: 500; line-height: 1.3;
-  box-shadow: var(--shadow-pop); animation: rail-tip-in 120ms var(--ease-out) both;
+  box-shadow: var(--shadow-pop); --enter-from: translate(-3px, -50%); animation: motion-enter var(--motion-quick) var(--ease-quick) both;
 }
-@keyframes rail-tip-in { from { opacity: 0; transform: translate(-3px, -50%); } }
 
-/* Chat ⇄ Code: the page eases in rather than cutting in one frame (Claude does this). */
-.app-stack:not(.has-settings) > .app-main.mode-enter { animation: mode-enter 240ms cubic-bezier(0.23, 1, 0.32, 1) both; }
-@keyframes mode-enter { from { opacity: 0; transform: translateY(4px); } }
-@keyframes mode-fade { from { opacity: 0; } }
-/* Reduced motion keeps a gentle cross-fade rather than cutting. */
-@media (prefers-reduced-motion: reduce) { .app-stack:not(.has-settings) > .app-main.mode-enter { animation: mode-fade 160ms ease both; } .rail-tip { animation: none; } }
-:root[data-motion='reduced'] .app-stack:not(.has-settings) > .app-main.mode-enter { animation: mode-fade 160ms ease both; }
-:root[data-motion='reduced'] .rail-tip { animation: none; }
+/* Chat ⇄ Code: the page eases in rather than cutting in one frame (Claude does this).
+   Reduced motion collapses it to an instant change (motion.css); animationend still fires. */
+.app-stack:not(.has-settings) > .app-main.mode-enter { --enter-from: translateY(4px); animation: motion-enter var(--motion-considered) var(--ease-considered) both; }
 /* Moving from one rail item to the next swaps the name instantly, as native tooltips do. */
 .rail-tip.is-warm { animation: none; }
 /* A soft edge where the list slides under New chat, not a hard cut. */
 .app .sidebar.pane:not(.is-collapsed) .side-new::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 10px; pointer-events: none; background: linear-gradient(var(--pane-fill), transparent); }
-[data-material='soft'] .app .sidebar.pane:not(.is-collapsed) .side-new::after { background: linear-gradient(var(--bg-app), transparent); }
+[data-family='editorial'] .app .sidebar.pane:not(.is-collapsed) .side-new::after { background: linear-gradient(var(--bg-app), transparent); }
 
 /* The Code page now sits in the shared shell, beside the shared sidebar. */
 .app-main > .code-mount .coding-workspace, .app-main .coding-workspace { flex: 1; min-height: 0; height: auto; }

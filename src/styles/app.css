@@ -172,7 +172,7 @@ body { margin: 0; background: var(--bg); }
   display: flex; align-items: center; justify-content: center;
   width: 22px; height: 22px; flex-shrink: 0; margin-right: 2px;
   background: none; border: none; cursor: pointer; border-radius: 6px;
-  color: var(--text-faint); opacity: 0; transition: opacity 0.12s ease;
+  color: var(--text-faint); opacity: 0; transition: opacity var(--motion-quick) var(--ease-quick);
 }
 .proj-row:hover .proj-menu-btn,
 .proj-menu-btn:focus-visible,
@@ -320,11 +320,11 @@ body { margin: 0; background: var(--bg); }
 .typing { display: inline-flex; gap: 4px; align-items: center; }
 .typing i {
   width: 5px; height: 5px; border-radius: 50%; background: var(--text-faint);
-  animation: typing 1.2s infinite ease-in-out;
+  --pulse-low: .3; animation: motion-pulse var(--motion-async) var(--ease-async) infinite;
 }
-.typing i:nth-child(2) { animation-delay: 0.15s; }
-.typing i:nth-child(3) { animation-delay: 0.3s; }
-@keyframes typing { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
+/* Staggered by an eighth of the loop so the three dots read as one wave. */
+.typing i:nth-child(2) { animation-delay: calc(var(--motion-async) / 8); }
+.typing i:nth-child(3) { animation-delay: calc(var(--motion-async) / 4); }
 
 /* ── Composer ────────────────────────────────────────────── */
 
@@ -513,7 +513,7 @@ body { margin: 0; background: var(--bg); }
   background: var(--bg-card); padding: 16px 18px;
   display: flex; flex-direction: column; gap: 8px;
   cursor: pointer; min-height: 130px;
-  transition: border-color 0.12s ease, transform 0.12s ease;
+  transition: border-color var(--motion-immediate) var(--ease-immediate), transform var(--motion-quick) var(--ease-quick);
 }
 .project-card:hover { border-color: var(--accent-2); transform: translateY(-1px); }
 .project-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -540,7 +540,7 @@ body { margin: 0; background: var(--bg); }
   background: var(--bg-card); padding: 16px 18px; text-align: left;
   display: flex; flex-direction: column; gap: 6px; cursor: pointer;
   min-height: 110px; font-family: var(--font-ui);
-  transition: border-color 0.12s ease, transform 0.12s ease;
+  transition: border-color var(--motion-immediate) var(--ease-immediate), transform var(--motion-quick) var(--ease-quick);
 }
 .month-card:hover { border-color: var(--accent-2); transform: translateY(-1px); }
 .month-card.is-today { border-color: var(--accent-2); background: var(--accent-2-soft); }
@@ -686,7 +686,7 @@ body { margin: 0; background: var(--bg); }
   border-top: 1px solid var(--border);
   background: var(--bg-sidebar);
   font-family: var(--font-mono);
-  transition: background 0.4s ease;
+  transition: background var(--motion-considered) var(--ease-considered);
 }
 .stats-bar.is-flash { background: var(--bg-active); }
 .stats-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); flex-shrink: 0; }
@@ -736,14 +736,13 @@ body { margin: 0; background: var(--bg); }
   flex-shrink: 0;
   min-height: 32px;
 }
-.stats-bar.is-flash .stats-value { color: var(--accent-2); transition: color 0.2s ease; }
+.stats-bar.is-flash .stats-value { color: var(--accent-2); transition: color var(--motion-immediate) var(--ease-immediate); }
 .stats-live-dot {
   width: 7px; height: 7px; border-radius: 50%; background: var(--good);
-  animation: statspulse 2.5s ease-in-out infinite; flex-shrink: 0;
+  --pulse-low: .45; animation: motion-pulse calc(var(--motion-async) * 2) var(--ease-async) infinite; flex-shrink: 0;
 }
 .stats-live-dot.down { background: var(--text-off); animation: none; }
 .stats-live-dot.unknown { background: var(--border-strong); animation: none; }
-@keyframes statspulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 .stats-item { display: inline-flex; align-items: baseline; gap: 5px; }
 .stats-label {
   font-size: var(--text-caption2); font-weight: 700; letter-spacing: 0.05em;
@@ -760,7 +759,7 @@ body { font-family: var(--font-ui); -webkit-font-smoothing: antialiased; }
 button, input, textarea, select { font: inherit; }
 button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
 :focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; }
-button { transition: background .16s ease, border-color .16s ease, box-shadow .16s ease; }
+button { transition: background var(--motion-immediate) var(--ease-immediate), border-color var(--motion-immediate) var(--ease-immediate), box-shadow var(--motion-immediate) var(--ease-immediate); }
 button:disabled { cursor: not-allowed; }
 .app { height: 100dvh; }
 .chat-header { min-height: 84px; background: var(--bg); }
@@ -800,9 +799,6 @@ button:disabled { cursor: not-allowed; }
   .sidebar .chat-row-title { max-width: 85px; }
   .header-subtitle { display: none; }
 }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
-}
 
 /* ── Per-message metadata, edit affordance (chat) ─────────────────────────
    The meta line is deliberately quiet: it is reference information you scan
@@ -821,7 +817,7 @@ button:disabled { cursor: not-allowed; }
 .msg-edit-btn {
   flex: none;
   opacity: 0;
-  transition: opacity 120ms ease;
+  transition: opacity var(--motion-quick) var(--ease-quick);
   font-size: var(--text-caption2);
   padding: 2px 8px;
   border-radius: 999px;
@@ -972,9 +968,8 @@ button:disabled { cursor: not-allowed; }
   position: absolute; top: 0; right: 0; bottom: 0; width: min(340px, 86vw); z-index: 6;
   background: var(--bg-surface); border-left: 1px solid var(--border);
   box-shadow: -18px 0 48px rgba(0,0,0,.22); overflow-y: auto;
-  animation: inspector-in var(--duration-base) var(--ease-spring);
+  --enter-from: translateX(12px); animation: motion-enter var(--motion-quick) var(--ease-quick) both;
 }
-@keyframes inspector-in { from { transform: translateX(12px); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* Chat titles are derived from the first user message, so they can be a
    paragraph. The header is chrome — it stays one line at any width, and the
@@ -1246,9 +1241,8 @@ button:disabled { cursor: not-allowed; }
    clip it, and fades in after the open delay. */
 .row-card {
   position: fixed; display: flex;
-  animation: row-card-in var(--duration-base) var(--ease-spring);
+  --enter-from: translateX(-4px); animation: motion-enter var(--motion-quick) var(--ease-quick) both;
 }
-@keyframes row-card-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
 
 /* Three controls share this row, so it wraps as a whole rather than letting
    the segmented labels break across lines or the filter run off the edge. */
@@ -1421,11 +1415,10 @@ button:disabled { cursor: not-allowed; }
 .chat-working { display: inline-flex; gap: 3px; align-items: center; margin-left: 6px; flex-shrink: 0; }
 .chat-working i {
   width: 4px; height: 4px; border-radius: 50%; background: var(--accent-text);
-  animation: chat-working 1.2s infinite ease-in-out;
+  --pulse-low: .25; animation: motion-pulse var(--motion-async) var(--ease-async) infinite;
 }
-.chat-working i:nth-child(2) { animation-delay: 0.15s; }
-.chat-working i:nth-child(3) { animation-delay: 0.3s; }
-@keyframes chat-working { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
+.chat-working i:nth-child(2) { animation-delay: calc(var(--motion-async) / 8); }
+.chat-working i:nth-child(3) { animation-delay: calc(var(--motion-async) / 4); }
 
 /* Image sources. Shown as thumbnails because the point of an image source is
    that you can see it — a filename tells you nothing about a screenshot. */

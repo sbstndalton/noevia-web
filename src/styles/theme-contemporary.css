@@ -1,0 +1,358 @@
+/* Contemporary family (#249; subsumes Material 3): tonal roles over the shared component
+   geometry. Typeface, radius, elevation and motion come from the family token block in
+   themes.css; the composer, New chat and menus take the shared surface rules in system.css.
+   Do not add family-specific sizing or spacing here: switching families keeps layout. */
+[data-family='contemporary'] {
+  /* Tonal state layers; shadows come from the shared --elev-* scale. */
+  --m3-elev-1: var(--elev-raised); --m3-elev-2: var(--elev-raised); --m3-elev-3: var(--elev-overlay); --m3-hover: 8%; --m3-press: 10%;
+}
+
+/* ── Layout surfaces: the drawer sits on surface-container-low, content on surface. ── */
+[data-family='contemporary'] body, [data-family='contemporary'] .app {
+  background: var(--md-surface);
+}
+[data-family='contemporary'] .app .sidebar.pane {
+  background: var(--md-surface-container-low); border-color: transparent; box-shadow: none; border-radius: var(--radius-surface);
+}
+[data-family='contemporary'] .app .app-stack.pane {
+  background: var(--md-surface); border-color: transparent; box-shadow: none;
+}
+@media (max-width: 519px) {
+  /* Modal navigation drawer: level 1, 16px on the open edge. */
+  [data-family='contemporary'] .app .sidebar.pane:not(.coding-sidebar).is-expanded {
+  background: var(--md-surface-container-low); box-shadow: var(--m3-elev-1); border-radius: 0 var(--radius-surface) var(--radius-surface) 0;
+}
+  [data-family='contemporary'] .nav-drawer-backdrop {
+  background: rgba(0, 0, 0, .32); backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+}
+/* Sticky pieces inside the drawer take the drawer's own colour, not the page's. */
+[data-family='contemporary'] .app .sidebar.pane .sidebar-history .side-scroll > :is(.sidebar-section-head, .section-label):first-child,
+[data-family='contemporary'] .app .sidebar.pane :is(.side-permanent, .side-footer) {
+  background: var(--md-surface-container-low); backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+
+/* ── Navigation drawer destinations: 56px, pill active indicator, label-large. ── */
+/* Rows take the family's control radius (system.css), not M3 pills: one shape for every row. */
+[data-family='contemporary'] .app .sidebar.pane :is(.nav-item, .proj-row, .chat-row):hover {
+  background: color-mix(in srgb, var(--md-on-surface) var(--m3-hover), transparent);
+}
+[data-family='contemporary'] .app .sidebar.pane :is(.nav-item.is-active, .side-nav .nav-item[aria-current='page'], .proj-row.is-active, .chat-row.is-active) {
+  background: var(--md-secondary-container); color: var(--md-on-secondary-container);
+}
+[data-family='contemporary'] .app .sidebar.pane :is(.proj-row.is-active, .chat-row.is-active) .nav-item {
+  color: var(--md-on-secondary-container);
+}
+/* Section headlines are title-small in on-surface-variant. */
+[data-family='contemporary'] .app .sidebar.pane .section-label {
+  color: var(--md-on-surface-variant);
+}
+[data-family='contemporary'] .app .sidebar.pane .side-permanent, [data-family='contemporary'] .app .sidebar.pane .side-footer {
+  border-top-color: var(--md-outline-variant);
+}
+[data-family='contemporary'] .app .sidebar.pane .recent-children {
+  border-left-color: transparent;
+}
+
+[data-family='contemporary'] .app .sidebar.pane.is-collapsed .new-chat-btn.glass {
+  justify-content: center;
+}
+
+/* Chat / Code switch in the drawer: a two-segment M3 segmented button. */
+[data-family='contemporary'] .app-mode-switch {
+  background: transparent; border-color: var(--md-outline); border-radius: var(--radius-pill); box-shadow: none; overflow: hidden;
+}
+[data-family='contemporary'] .app-mode-switch button {
+  border-radius: 0; color: var(--md-on-surface); background: transparent; box-shadow: none;
+}
+[data-family='contemporary'] .app-mode-switch button + button {
+  border-left-color: var(--md-outline);
+}
+[data-family='contemporary'] .app-mode-switch button.is-selected {
+  background: var(--md-secondary-container); color: var(--md-on-secondary-container);
+}
+[data-family='contemporary'] .app-mode-switch button.is-selected:hover {
+  background: color-mix(in srgb, var(--md-on-secondary-container) var(--m3-hover), var(--md-secondary-container));
+}
+[data-family='contemporary'] .app-mode-switch button:active {
+  background: color-mix(in srgb, var(--md-on-surface) var(--m3-press), transparent);
+}
+[data-family='contemporary'] .app-mode-switch button.is-selected:active {
+  background: color-mix(in srgb, var(--md-on-secondary-container) var(--m3-press), var(--md-secondary-container));
+}
+
+/* Send: filled icon button — 40px circle in primary; disabled is on-surface at 12%/38%. */
+[data-family='contemporary'] .send-btn.glass {
+  border-radius: 50%; background: var(--md-primary); color: var(--md-on-primary); box-shadow: none;
+}
+[data-family='contemporary'] .send-btn.glass:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--md-on-primary) var(--m3-hover), var(--md-primary)); box-shadow: var(--m3-elev-1);
+}
+[data-family='contemporary'] .send-btn.glass:disabled {
+  background: color-mix(in srgb, var(--md-on-surface) 12%, transparent); color: color-mix(in srgb, var(--md-on-surface) 38%, transparent); opacity: 1;
+}
+/* Add: standard icon button. */
+[data-family='contemporary'] .composer-add {
+  background: transparent; border-color: transparent; box-shadow: none; color: var(--md-on-surface-variant); border-radius: 50%;
+}
+[data-family='contemporary'] .composer-add:hover {
+  background: color-mix(in srgb, var(--md-on-surface-variant) var(--m3-hover), transparent);
+}
+/* Model and thinking: assist chips — 32px, 8px corners, outline-variant. */
+[data-family='contemporary'] .model-pill.glass, [data-family='contemporary'] .composer :is(select[aria-label='Thinking effort']) {
+  border-radius: var(--radius-control); background: transparent; color: var(--md-on-surface); border-color: var(--md-outline-variant); box-shadow: none;
+}
+[data-family='contemporary'] .model-pill.glass:hover {
+  background: color-mix(in srgb, var(--md-on-surface) var(--m3-hover), transparent);
+}
+
+/* ── Messages: the user's turn is a tonal bubble; replies sit on the surface. ── */
+[data-family='contemporary'] .msg[data-role='user'] .msg-user-row, [data-family='contemporary'] .msg-user .msg-user-row {
+  background: var(--md-secondary-container); color: var(--md-on-secondary-container); border-color: transparent; box-shadow: none; border-radius: 20px 20px 4px 20px;
+}
+[data-family='contemporary'] .msg[data-role='user'] .msg-user-row > p {
+  color: var(--md-on-secondary-container);
+}
+[data-family='contemporary'] .tool-approval {
+  background: var(--md-surface-container-low); border-color: var(--md-outline-variant); border-radius: var(--radius-overlay); box-shadow: none;
+}
+[data-family='contemporary'] .tool-approval-args {
+  background: var(--md-surface-container-highest); border-color: transparent; border-radius: var(--radius-control);
+}
+
+[data-family='contemporary'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel) :is(button, .ctx-item):hover {
+  background: color-mix(in srgb, var(--md-on-surface) var(--m3-hover), transparent);
+}
+[data-family='contemporary'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel) :is(button, .ctx-item):active:not(:disabled) {
+  background: color-mix(in srgb, var(--md-on-surface) var(--m3-press), transparent);
+}
+[data-family='contemporary'] .ctx-menu .ctx-item.has-separator {
+  border-top-color: var(--md-outline-variant);
+}
+[data-family='contemporary'] .ctx-menu .ctx-item.is-danger {
+  color: var(--md-error);
+}
+
+/* ── Cards ── */
+[data-family='contemporary'] .project-card {
+  background: var(--md-surface-container-low); border-color: transparent; border-radius: var(--radius-overlay); box-shadow: var(--m3-elev-1);
+}
+[data-family='contemporary'] .project-card:hover {
+  box-shadow: var(--m3-elev-2); background: color-mix(in srgb, var(--md-on-surface) var(--m3-hover), var(--md-surface-container-low));
+}
+[data-family='contemporary'] .settings-stage :is(.set-rows, .group) {
+  background: transparent; border-color: transparent; border-radius: var(--radius-overlay); box-shadow: none;
+}
+[data-family='contemporary'] .settings-stage :is(.set-row + .set-row, .group .row + .row) {
+  border-top-color: var(--md-outline-variant);
+}
+[data-family='contemporary'] .empty-state {
+  background: transparent; border-color: transparent; box-shadow: none;
+}
+
+/* ── Outlined text fields: 4px corners, outline, 2px primary on focus. ── */
+[data-family='contemporary'] :is(.modal-input, .projects-head .projects-search, .set-name-field input, .settings-detail input:not([type=checkbox]):not([type=radio]):not([type=range]), .settings-detail textarea, .settings-detail select, label.select > select, .shell-search) {
+  background: transparent; border-color: var(--md-outline); border-radius: 4px; box-shadow: none; color: var(--md-on-surface);
+}
+[data-family='contemporary'] :is(.modal-input, .projects-head .projects-search, .set-name-field input, .settings-detail input, .settings-detail textarea, .settings-detail select, label.select > select, .shell-search):focus {
+  outline: none; border-color: var(--md-primary); box-shadow: inset 0 0 0 1px var(--md-primary);
+}
+
+/* ── Projects tabs: M3 primary tabs — primary label, 3px indicator with rounded top. ── */
+[data-family='contemporary'] .projects-head .seg button {
+  color: var(--md-on-surface-variant); border-bottom-color: transparent; position: relative;
+}
+[data-family='contemporary'] .projects-head .seg button.is-selected {
+  color: var(--md-primary); border-bottom-color: transparent;
+}
+[data-family='contemporary'] .projects-head .seg button.is-selected::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; block-size: 3px; border-radius: 3px 3px 0 0; background: var(--md-primary);
+}
+[data-family='contemporary'] .projects-head {
+  border-bottom-color: var(--md-outline-variant);
+}
+[data-family='contemporary'] :is(.btn-primary, .modal-btn.primary) {
+  background: var(--md-primary); color: var(--md-on-primary); border-color: transparent;
+}
+[data-family='contemporary'] :is(.btn-primary, .modal-btn.primary):hover {
+  background: color-mix(in srgb, var(--md-on-primary) var(--m3-hover), var(--md-primary)); box-shadow: var(--m3-elev-1);
+}
+[data-family='contemporary'] :is(.btn-secondary, .modal-btn.secondary, .popup-tab) {
+  background: transparent; border-color: var(--md-outline); color: var(--md-primary);
+}
+[data-family='contemporary'] :is(.btn-secondary, .modal-btn.secondary, .popup-tab):hover {
+  background: color-mix(in srgb, var(--md-primary) var(--m3-hover), transparent);
+}
+[data-family='contemporary'] .btn-danger {
+  background: var(--md-error); color: var(--md-on-error); border-color: transparent;
+}
+
+/* ── Dialogs and sheets: 28px, surface-container-high, headline-small, no border. ── */
+[data-family='contemporary'] :is(.confirm-dialog.aero, .mp-panel.aero, .dialog-sheet.aero) {
+  background: var(--md-surface-container-high); border-color: transparent; border-radius: var(--radius-surface); box-shadow: var(--m3-elev-3);
+}
+[data-family='contemporary'] :is(.confirm-dialog, .dialog-sheet) h2 {
+  color: var(--md-on-surface);
+}
+[data-family='contemporary'] :is(.confirm-dialog, .dialog-sheet) p {
+  color: var(--md-on-surface-variant);
+}
+[data-family='contemporary'] dialog.dialog-sheet::backdrop, [data-family='contemporary'] dialog:has(> .dialog-sheet)::backdrop {
+  background: rgba(0, 0, 0, .32); backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+@media (max-width: 700px) {
+  /* Bottom sheet: surface-container-low, 28px top corners, 32×4 drag handle. */
+  [data-family='contemporary'] :is(.confirm-dialog.aero, .mp-panel.aero, .dialog-sheet.aero) {
+  background: var(--md-surface-container-low); border-radius: var(--radius-surface) var(--radius-surface) 0 0;
+}
+  [data-family='contemporary'] :is(.confirm-dialog, .dialog-sheet)::before, [data-family='contemporary'] .dialog-grabber {
+  border-radius: 2px; background: var(--md-on-surface-variant); opacity: .4;
+}
+}
+
+/* ── Segmented buttons keep shared dimensions and selection shapes. ── */
+[data-family='contemporary'] .glass-seg {
+  border-radius: var(--radius-pill);
+}
+
+
+/* ── Chips and banners ── */
+/* Card metadata ("2 chats · 14 files") is supporting text, not a chip. */
+[data-family='contemporary'] .project-chip {
+  border-color: transparent; background: none; color: var(--md-on-surface-variant);
+}
+[data-family='contemporary'] :is(.chip, .tool-chip) {
+  border-radius: var(--radius-control); border-color: var(--md-outline-variant); background: transparent; color: var(--md-on-surface-variant);
+}
+[data-family='contemporary'] .conn-banner {
+  background: var(--md-surface-container-high); border-color: transparent; border-radius: var(--radius-overlay); box-shadow: none; color: var(--md-on-surface);
+}
+
+/* ── Inference strip: a plain row on the surface. ── */
+[data-family='contemporary'] .stats-disclosure {
+  background: transparent; border-color: transparent; box-shadow: none;
+}
+[data-family='contemporary'] .stats-bar {
+  background: var(--md-surface-container); border-color: transparent; border-radius: var(--radius-pill); box-shadow: none;
+}
+
+/* Settings search: one outlined field (the container holds the icon and the input). */
+[data-family='contemporary'] .settings-stage .settings-search {
+  background: transparent; border-color: var(--md-outline); border-radius: 4px; box-shadow: none;
+}
+[data-family='contemporary'] .settings-stage .settings-search:focus-within {
+  border-color: var(--md-primary); box-shadow: inset 0 0 0 1px var(--md-primary);
+}
+[data-family='contemporary'] .settings-stage .settings-search input {
+  border-color: transparent; background: transparent; box-shadow: none; outline: none;
+}
+
+/* Settings navigation is a navigation drawer too: pill destinations, tonal active. */
+[data-family='contemporary'] .settings-stage .settings-navigation nav button {
+  border-radius: var(--radius-pill); color: var(--md-on-surface-variant);
+}
+[data-family='contemporary'] .settings-stage .settings-navigation nav button:hover {
+  background: color-mix(in srgb, var(--md-on-surface) var(--m3-hover), transparent);
+}
+[data-family='contemporary'] .settings-stage .settings-navigation nav button.is-active {
+  background: var(--md-secondary-container); color: var(--md-on-secondary-container);
+}
+@media (max-width: 819px) {
+  /* Single-pane Settings is a list, not a drawer: rows, no active pill. */
+  [data-family='contemporary'] .settings-stage .settings-navigation nav button, [data-family='contemporary'] .settings-stage .settings-navigation nav button.is-active {
+  border-radius: 0; background: transparent; color: var(--md-on-surface);
+}
+}
+
+/* Collapsed: an M3 navigation rail — the FAB at the top, 56px, icon-only destinations
+   with a 56×32 pill indicator. */
+@media (min-width: 520px) {
+  [data-family='contemporary'] .app .sidebar.pane.is-collapsed .side-nav .nav-item {
+  border-radius: var(--radius-pill);
+}
+  [data-family='contemporary'] .app .sidebar.pane.is-collapsed .app-mode-switch {
+  border-color: transparent;
+}
+  [data-family='contemporary'] .app .sidebar.pane.is-collapsed .app-mode-switch button {
+  border-radius: var(--radius-pill); border-color: transparent;
+}
+  [data-family='contemporary'] .app .sidebar.pane.is-collapsed .app-mode-switch button.is-selected {
+    background: var(--md-secondary-container); color: var(--md-on-secondary-container);
+  }
+  [data-family='contemporary'] .app .sidebar.pane.is-collapsed .app-mode-switch button.is-selected:hover {
+    background: color-mix(in srgb, var(--md-on-secondary-container) var(--m3-hover), var(--md-secondary-container));
+  }
+  [data-family='contemporary'] .app .sidebar.pane.is-collapsed .app-mode-switch button.is-selected:active {
+    background: color-mix(in srgb, var(--md-on-secondary-container) var(--m3-press), var(--md-secondary-container));
+  }
+}
+
+/* A multi-row track keeps the shared corner geometry instead of becoming an oval. */
+[data-family='contemporary'] .glass-seg[data-wrapped='true'] { border-radius: var(--radius-lg); }
+
+/* Finish the role mapping across shared surfaces; no optical effects leak from Liquid. */
+[data-family='contemporary'] :is(.overlay, .stats-bar, .stats-disclosure, .usage-stat, .project-card, .app-mode-switch, .glass, .pane, .aero) {
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+[data-family='contemporary'] :is(.glass, .app-mode-switch, .glass-reactive)::after,
+[data-family='contemporary'] .app-mode-switch::before { display: none !important; }
+[data-family='contemporary'] .settings-stage .settings-navigation { background: var(--md-surface-container-low); }
+[data-family='contemporary'] :is(.settings-detail, .diary-context) { background: var(--md-surface); }
+[data-family='contemporary'] .usage-stat { background: var(--md-surface-container-low); box-shadow: none; }
+
+/* Segments use a stable selected fill and separators, not a floating glass capsule. */
+[data-family='contemporary'] .glass-seg > .glass-thumb { visibility: hidden; box-shadow: none; }
+[data-family='contemporary'] .glass-seg > button { border-radius: 0; }
+[data-family='contemporary'] .glass-seg > button:first-of-type { border-start-start-radius: var(--radius-pill); border-end-start-radius: var(--radius-pill); }
+[data-family='contemporary'] .glass-seg > button:last-of-type { border-start-end-radius: var(--radius-pill); border-end-end-radius: var(--radius-pill); }
+[data-family='contemporary'] .glass-seg > button + button { box-shadow: -1px 0 0 var(--md-outline); }
+[data-family='contemporary'] .glass-seg > button[aria-checked='true'] { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+[data-family='contemporary'] .glass-seg > button[aria-checked='true']:hover { background: color-mix(in srgb, var(--md-on-secondary-container) var(--m3-hover), var(--md-secondary-container)); }
+[data-family='contemporary'] .glass-seg[data-wrapped='true'] > button {
+  border-radius: var(--radius-sm); box-shadow: none;
+}
+/* Each wrapped choice has its own boundary; a horizontal divider would otherwise
+   appear on the wrong side when a row breaks. Keep the selected fill tonal. */
+[data-family='contemporary'] .glass-seg[data-wrapped='true'] > button:not([aria-checked='true']) {
+  box-shadow: inset 0 0 0 1px var(--md-outline-variant);
+}
+
+/* State layers use the on-color of the actual container, including primary actions. */
+[data-family='contemporary'] :is(.glass, .glass.is-press, .glass-press):active { transform: none; }
+[data-family='contemporary'] :is(.glass.is-primary, .btn-primary, .modal-btn.primary, .send-btn.glass):active:not(:disabled) {
+  background: color-mix(in srgb, var(--md-on-primary) var(--m3-press), var(--md-primary)); color: var(--md-on-primary); box-shadow: none;
+}
+[data-family='contemporary'] .glass-seg > button:active { background: color-mix(in srgb, var(--md-on-surface) var(--m3-press), transparent); }
+[data-family='contemporary'] .glass-seg > button[aria-checked='true']:active { background: color-mix(in srgb, var(--md-on-secondary-container) var(--m3-press), var(--md-secondary-container)); }
+[data-family='contemporary'] :is(.btn-primary, .btn-secondary, .modal-btn, .glass):disabled {
+  background: color-mix(in srgb, var(--md-on-surface) 12%, transparent); color: color-mix(in srgb, var(--md-on-surface) 38%, transparent); box-shadow: none; opacity: 1;
+}
+[data-family='contemporary'] :is(.btn-secondary, .modal-btn.secondary, .popup-tab):active:not(:disabled) {
+  background: color-mix(in srgb, var(--md-primary) var(--m3-press), transparent);
+}
+[data-family='contemporary'] .btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--md-on-error) var(--m3-hover), var(--md-error));
+}
+[data-family='contemporary'] .btn-danger:active:not(:disabled) {
+  background: color-mix(in srgb, var(--md-on-error) var(--m3-press), var(--md-error));
+}
+[data-family='contemporary'] .glass-switch:active > .knob { background: var(--md-on-surface-variant); }
+[data-family='contemporary'] .glass-switch[aria-checked='true']:active > .knob { background: var(--md-primary-container); }
+[data-family='contemporary'] .glass-switch > .knob::before { display: none; }
+[data-family='contemporary'] .glass-switch:disabled { opacity: .38; }
+
+@media (prefers-contrast: more) {
+  [data-family='contemporary'] :is(.glass-seg, .glass-switch, .btn-secondary) { outline: 1px solid var(--control-border); outline-offset: 0; }
+}
+
+[data-family='contemporary'] .nav-drawer-toggle { background: var(--md-surface-container-high); }
+
+/* Native checkbox switches use the same tonal roles as the React switch. */
+[data-family='contemporary'] .noevia-switch,
+[data-family='contemporary'] .settings-detail .set-row-control input[type='checkbox']:not(.plain) {
+  box-shadow: inset 0 0 0 2px var(--md-outline);
+}
+[data-family='contemporary'] .noevia-switch:checked,
+[data-family='contemporary'] .settings-detail .set-row-control input[type='checkbox']:not(.plain):checked { box-shadow: none; }
+[data-family='contemporary'] .noevia-switch::after,
+[data-family='contemporary'] .settings-detail .set-row-control input[type='checkbox']:not(.plain)::after { box-shadow: none; }

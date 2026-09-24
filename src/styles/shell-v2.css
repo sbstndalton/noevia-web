@@ -56,15 +56,11 @@
 
 /* ── Settings stage: takes the workspace's place ────────────────────────── */
 .settings-stage { position: absolute; inset: 0; z-index: 40; display: grid; grid-template-columns: 240px minmax(0, 1fr); border-radius: inherit;
-  border: 0; box-shadow: none; animation: stage-in var(--duration-slow) var(--ease-out) both; transform-origin: 30% 50%; }
-.settings-stage.is-closing { animation: stage-out 240ms var(--ease-in) both; pointer-events: none; }
+  border: 0; box-shadow: none; --enter-from: translateX(28px) scale(.99); animation: motion-enter var(--motion-considered) var(--ease-considered) both; transform-origin: 30% 50%; }
+.settings-stage.is-closing { --exit-to: translateX(28px) scale(.99); animation: motion-exit var(--motion-quick) var(--ease-quick) both; pointer-events: none; }
 /* What was there steps back as Settings arrives, and returns when it leaves. */
-.app-stack.has-settings > .app-main { animation: work-out var(--duration-slow) var(--ease-out) both; }
-.app-stack.has-settings:has(.settings-stage.is-closing) > .app-main { animation: work-in 240ms var(--ease-out) both; }
-@keyframes stage-in { from { opacity: 0; transform: translateX(28px) scale(.99); clip-path: inset(0 0 0 8% round var(--radius-xl)); } to { opacity: 1; transform: none; clip-path: inset(0 round var(--radius-xl)); } }
-@keyframes stage-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(28px) scale(.99); } }
-@keyframes work-out { from { opacity: 1; transform: none; filter: none; visibility: visible; } to { opacity: 0; transform: scale(.97); filter: blur(6px); visibility: hidden; } }
-@keyframes work-in { from { opacity: 0; transform: scale(.97); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+.app-stack.has-settings > .app-main { --exit-to: scale(.98); animation: motion-exit var(--motion-considered) var(--ease-considered) both; }
+.app-stack.has-settings:has(.settings-stage.is-closing) > .app-main { --enter-from: scale(.98); animation: motion-enter var(--motion-quick) var(--ease-quick) both; }
 
 .settings-stage .settings-navigation { width: auto; display: flex; flex-direction: column; min-height: 0; padding: var(--space-4) var(--space-2); border: 0; border-right: 1px solid var(--border-subtle); background: transparent; }
 .settings-stage .settings-nav-head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: 0 var(--space-2) var(--space-4); }
@@ -91,9 +87,8 @@
 .settings-stage .settings-detail { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .settings-stage .settings-detail > header { position: absolute; top: var(--space-3); right: var(--space-3); z-index: 2; height: auto; padding: 0; border: 0; background: none; }
 .settings-stage .settings-detail > header > span, .settings-stage .settings-list-back { display: none; }
-.settings-stage .settings-detail-scroll { flex: 1; overflow-y: auto; padding: var(--space-10) var(--space-12) var(--space-16); animation: page-in var(--duration-base) var(--ease-out) both; }
+.settings-stage .settings-detail-scroll { flex: 1; overflow-y: auto; padding: var(--space-10) var(--space-12) var(--space-16); --enter-from: translateY(6px); animation: motion-enter var(--motion-quick) var(--ease-quick) both; }
 .settings-stage .settings-detail-scroll > * { max-width: 760px; }
-@keyframes page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 /* Tablet: a narrower list. */
 @media (min-width: 821px) and (max-width: 1000px) {
@@ -119,15 +114,11 @@
   .settings-stage .settings-list-back { display: inline-flex; }
   .settings-stage .settings-detail > header .shell-icon-button { width: 44px; height: 44px; }
   .settings-stage .settings-detail { overflow-y: auto; }
-  .settings-stage .settings-detail-scroll { overflow: visible; padding: var(--space-4) var(--space-4) calc(var(--space-12) + env(safe-area-inset-bottom)); animation-name: push-in; }
-  .settings-stage[data-view='list'] .settings-navigation { animation: pop-in var(--duration-base) var(--ease-out) both; }
-  @keyframes push-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
-  @keyframes pop-in { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+  .settings-stage .settings-detail-scroll { overflow: visible; padding: var(--space-4) var(--space-4) calc(var(--space-12) + env(safe-area-inset-bottom)); --enter-from: translateX(24px); }
+  .settings-stage[data-view='list'] .settings-navigation { --enter-from: translateX(-16px); animation: motion-enter var(--motion-quick) var(--ease-quick) both; }
   /* On a phone Settings rises as a sheet. */
-  .settings-stage { animation-name: sheet-rise; }
-  .settings-stage.is-closing { animation-name: sheet-fall; }
-  @keyframes sheet-rise { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
-  @keyframes sheet-fall { from { transform: none; opacity: 1; } to { transform: translateY(40px); opacity: 0; } }
+  .settings-stage { --enter-from: translateY(40px); }
+  .settings-stage.is-closing { --exit-to: translateY(40px); }
 }
 
 /* layout-mode.js's forced "mobile" preview (Request-mobile-site) narrows #root to 430px via
@@ -167,21 +158,15 @@
   /* The drawer is a floating pane that slides in from the edge. */
   .app .sidebar.pane:not(.coding-sidebar).is-expanded { inset: 8px auto 8px 8px; width: min(84vw, 320px); height: calc(var(--drawer-height, 100dvh) - 16px);
     border-radius: var(--radius-2xl); padding: calc(env(safe-area-inset-top) + var(--space-3)) var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
-    animation: drawer-in var(--duration-slow) var(--ease-out) both; }
+    --enter-from: translateX(calc(-100% - 16px)); --enter-opacity: 1; animation: motion-enter var(--motion-considered) var(--ease-considered) both; }
   .app .sidebar.pane.is-expanded .nav-item, .app .sidebar.pane.is-expanded .new-chat-btn.glass { min-height: 44px; }
   .app .sidebar.pane.is-expanded .shell-icon-button { width: 44px; height: 44px; }
-  .nav-drawer-backdrop { background: color-mix(in srgb, var(--md-surface-dim) 35%, transparent); backdrop-filter: blur(2px) saturate(1.1); -webkit-backdrop-filter: blur(2px) saturate(1.1); animation: fade-in var(--duration-base) var(--ease-standard) both; }
+  .nav-drawer-backdrop { background: color-mix(in srgb, var(--md-surface-dim) 35%, transparent); backdrop-filter: blur(2px) saturate(1.1); -webkit-backdrop-filter: blur(2px) saturate(1.1); --enter-from: none; animation: motion-enter var(--motion-quick) var(--ease-quick) both; }
   :root:not([data-theme='light']) .nav-drawer-backdrop { background: rgba(0, 0, 6, .45); }
   .nav-drawer-toggle { border-radius: var(--radius-md); background: var(--pane-fill); border-color: var(--pane-edge); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-  @keyframes drawer-in { from { transform: translateX(calc(-100% - 16px)); } to { transform: none; } }
-  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .settings-stage, .settings-stage.is-closing, .settings-stage .settings-detail-scroll, .app-stack.has-settings > .app-main, .app .sidebar.pane.is-expanded { animation: none !important; }
-}
-html[data-motion='reduced'] .settings-stage, html[data-motion='reduced'] .settings-stage .settings-detail-scroll,
-html[data-motion='reduced'] .app-stack.has-settings > .app-main, html[data-motion='reduced'] .app .sidebar.pane.is-expanded { animation: none !important; }
+/* Reduced motion: motion.css makes every entrance and exit here instant. */
 
 /* Settings has its own back and close controls; the drawer toggle must not sit on them. */
 .app:has(.settings-stage:not(.is-closing)) .nav-drawer-toggle { display: none; }
@@ -227,7 +212,7 @@ html[data-motion='reduced'] .app-stack.has-settings > .app-main, html[data-motio
 .app .noevia-inspector :is(.insp-note, .insp-empty) { color: var(--text-secondary); font-size: var(--text-footnote); line-height: var(--leading-snug); }
 .app .noevia-inspector .insp-action { border-radius: var(--radius-sm); }
 .app .noevia-inspector .insp-action:hover { background: var(--nav-hover); }
-[data-material='soft'] .app .app-stack.pane .noevia-inspector { border-color: transparent; background: var(--bg-app); box-shadow: -3px -3px 8px var(--soft-hi), 3px 3px 8px var(--soft-lo); }
+[data-family='editorial'] .app .app-stack.pane .noevia-inspector { border-color: var(--edge-raised); background: var(--surface-overlay); box-shadow: var(--elev-overlay); }
 
 /* Tablet widths are touch widths: sidebar rows keep 44px targets. */
 @media (max-width: 1024px) {

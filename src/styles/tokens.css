@@ -430,7 +430,9 @@
 /* palette:end */
 
 /* ── Semantic layer: what components read ─────────────────────────────────── */
-:root {
+/* .theme-scope re-declares the semantic layer on a live preview (Settings → Appearance), so a
+   sample carrying its own data-theme, data-palette and data-family resolves like the app. */
+:root, .theme-scope {
   /* Layer 0 canvas and Layer 1–2 grounds. Structure stays neutral; chroma is for state. */
   --bg-app: var(--md-surface);
   --bg-canvas: var(--md-surface);
@@ -518,33 +520,69 @@
   --radius-xl: 20px;
   --radius-2xl: 28px;
   --radius-pill: 999px;
+  /* Three shape roles every shared component uses (#245); families retune them in themes.css.
+     control: buttons, sidebar rows, New chat, menu items, fields · overlay: menus, popovers,
+     cards · surface: the composer, panels, dialogs. */
   --radius-control: var(--radius-md);
-  --radius-card: var(--radius-lg);
+  --radius-overlay: var(--radius-lg);
+  --radius-surface: var(--radius-xl);
+  --radius-card: var(--radius-overlay);
   --radius-bubble: var(--radius-lg);
-  --radius-panel: var(--radius-xl);
-  --radius-input: var(--radius-xl);
+  --radius-panel: var(--radius-surface);
+  --radius-input: var(--radius-surface);
 
-  /* Motion (brief §14): one curve family, durations by distance travelled.
-     Spring = a critically damped response (no overshoot), sampled for linear(). */
-  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --ease-out: cubic-bezier(0.05, 0.7, 0.1, 1);
-  --ease-in: cubic-bezier(0.3, 0, 0.8, 0.15);
-  --ease-spring: linear(0, 0.13 3%, 0.39 9%, 0.63 16%, 0.8 24%, 0.9 32%, 0.96 42%, 0.99 56%, 1);
-  --duration-instant: 90ms;   /* hover, press, toggle knob */
-  --duration-fast: 140ms;     /* selection, chips, menus in */
-  --duration-base: 200ms;     /* popovers, tabs, disclosure */
-  --duration-slow: 280ms;     /* modals, drawers, side panels */
-  --duration-page: 320ms;     /* content transitions */
+  /* Motion contract (#247). Four purposes, each one duration and one easing; nothing else
+     in the app names a raw timing. Enter and exit ease out, on-screen movement eases in and
+     out, loops are linear. All curves stay inside 0..1 (no overshoot; lint:design checks).
+       immediate   hover, press and colour feedback                     90–110ms  ease
+       quick       menus, popovers, tooltips, toasts entering            140–180ms strong ease-out
+       considered  Chat/Cowork and Chat/Code thumbs, drawers, dialogs    220–300ms drawer curve
+       async       loading, streaming and tool-activity loops            1.2s      linear
+     Families retune the numbers in themes.css; reduced motion collapses them at the end of
+     this file and motion.css stops every loop. */
+  --motion-immediate: 100ms;
+  --motion-quick: 160ms;
+  --motion-considered: 260ms;
+  --motion-async: 1200ms;
+  /* Not a duration: how long a pointer rests before a truncated sidebar title scrolls. */
+  --delay-hover-intent: 800ms;
+  --ease-immediate: ease;
+  --ease-quick: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-considered: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-async: linear;
+  /* Earlier names, kept as aliases onto the contract so no rule carries its own timing. */
+  --ease-standard: var(--ease-immediate);
+  --ease-out: var(--ease-quick);
+  --ease-in: var(--ease-quick);
+  --ease-spring: var(--ease-considered);
+  --duration-instant: var(--motion-immediate);
+  --duration-fast: var(--motion-quick);
+  --duration-base: var(--motion-quick);
+  --duration-slow: var(--motion-considered);
+  --duration-page: var(--motion-considered);
 
-  /* Elevation: offset + soft blur, stronger in dark where black shadows vanish. */
+  /* Elevation (#245): one scale, three steps, used by every shared surface.
+       flat     sits on the canvas — sidebar rows, New chat, buttons, cards at rest
+       raised   the composer and selected thumbs — the one lifted thing on a page
+       overlay  menus, popovers, dialogs — the strongest separation
+     Each step pairs a fill, an edge and a shadow; families retune all three per mode. */
   --shadow-rgb: 22, 24, 48;
-  --shadow-1: 0 1px 2px rgba(var(--shadow-rgb), .06), 0 1px 1px rgba(var(--shadow-rgb), .04);
-  --shadow-2: 0 2px 6px rgba(var(--shadow-rgb), .07), 0 1px 2px rgba(var(--shadow-rgb), .05);
-  --shadow-3: 0 10px 28px -6px rgba(var(--shadow-rgb), .16), 0 3px 8px rgba(var(--shadow-rgb), .06);
-  --shadow-4: 0 24px 64px -12px rgba(var(--shadow-rgb), .26), 0 8px 20px -4px rgba(var(--shadow-rgb), .10);
-  --shadow-card: var(--shadow-1);
-  --shadow-pop: var(--shadow-4);
-  --shadow-soft: var(--shadow-card);
+  --surface-raised: var(--bg-surface);
+  --surface-overlay: var(--bg-surface);
+  --edge-flat: var(--border-subtle);
+  --edge-raised: color-mix(in srgb, var(--md-outline-variant) 90%, transparent);
+  --elev-flat: 0 0 0 0 transparent; /* a real shadow value, so it composes in comma lists */
+  --elev-raised: 0 1px 2px rgba(var(--shadow-rgb), .05), 0 6px 20px -10px rgba(var(--shadow-rgb), .20);
+  --elev-overlay: 0 16px 40px -12px rgba(var(--shadow-rgb), .24), 0 4px 12px -4px rgba(var(--shadow-rgb), .10);
+  --focus-halo: color-mix(in srgb, var(--focus-ring) 22%, transparent);
+  /* Earlier shadow names resolve onto the scale. */
+  --shadow-1: var(--elev-flat);
+  --shadow-2: var(--elev-raised);
+  --shadow-3: var(--elev-overlay);
+  --shadow-4: var(--elev-overlay);
+  --shadow-card: var(--elev-raised);
+  --shadow-pop: var(--elev-overlay);
+  --shadow-soft: var(--elev-raised);
 
   /* Materials (brief §16–17). Structural panes (Aero/UniFi) are near-opaque with a thin
      light-catching edge; glass (foreground controls) is translucent with a lens and a rim. */
@@ -589,7 +627,7 @@
   --send-icon: var(--on-accent);
 }
 /* Cards: white on the light canvas; one step up from the canvas in dark. */
-:root:not([data-theme='light']) {
+:root:not([data-theme='light']), .theme-scope:not([data-theme='light']) {
   --bg-surface: var(--md-surface-container);
   --shadow-rgb: 0, 0, 6;
   --pane-highlight: inset 0 1px 0 rgba(255, 255, 255, .06);
@@ -600,18 +638,20 @@
   --glass-selected: color-mix(in srgb, var(--md-surface-bright) 62%, transparent);
   --glass-menu: color-mix(in srgb, var(--md-surface-container-high) 94%, transparent);
   --glass-reflection: rgba(226, 232, 255, .18);
-  --shadow-3: 0 12px 32px -6px rgba(0, 0, 6, .5), 0 3px 8px rgba(0, 0, 6, .3);
-  --shadow-4: 0 28px 72px -12px rgba(0, 0, 6, .66), 0 8px 24px -4px rgba(0, 0, 6, .4);
+  --elev-raised: 0 1px 2px rgba(0, 0, 6, .30), 0 8px 24px -12px rgba(0, 0, 6, .55);
+  --elev-overlay: 0 20px 48px -12px rgba(0, 0, 6, .62), 0 4px 14px -4px rgba(0, 0, 6, .38);
 }
 [data-theme='light'] {
   --bg-surface: var(--md-surface-container-lowest);
 }
 
-/* Reduced motion (system or Settings → Motion) keeps state changes, drops travel. */
+/* Reduced motion (system or Settings → Motion) keeps state changes, drops travel. The
+   html:root[data-family] selector outranks the family blocks in themes.css; immediate stays
+   so colour feedback still reads as a change, and motion.css stops every loop. */
 @media (prefers-reduced-motion: reduce) {
-  :root { --duration-fast: 1ms; --duration-base: 1ms; --duration-slow: 1ms; --duration-page: 1ms; --ease-spring: linear; }
+  html:root, html:root[data-family] { --motion-quick: 1ms; --motion-considered: 1ms; --ease-considered: linear; }
 }
-:root[data-motion='reduced'] { --duration-fast: 1ms; --duration-base: 1ms; --duration-slow: 1ms; --duration-page: 1ms; --ease-spring: linear; }
+html:root[data-motion='reduced'], html:root[data-motion='reduced'][data-family] { --motion-quick: 1ms; --motion-considered: 1ms; --ease-considered: linear; }
 /* Reduced transparency: panes and glass go opaque, blur off. */
 @media (prefers-reduced-transparency: reduce) {
   :root { --pane-fill: var(--md-surface-container-low); --glass-fill: var(--md-surface-container-high); --glass-menu: var(--md-surface-container-high); --pane-blur: 0px; --glass-blur: 0px; }

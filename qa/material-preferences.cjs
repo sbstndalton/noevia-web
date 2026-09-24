@@ -1,4 +1,4 @@
-// Dynamic material and accessibility preferences against synthetic APIs only.
+// Dynamic theme family (was material) and accessibility preferences against synthetic APIs only.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
@@ -16,20 +16,19 @@ const {createFixture}=require('./diary-fixture.cjs');
    await page.goto('http://localhost:31452');await page.getByPlaceholder('Message noevia…').waitFor();
    await page.getByTitle('Settings',{exact:true}).click();
    const settings=page.getByRole('region',{name:'Settings',exact:true});
-   const material=settings.getByRole('radiogroup',{name:'Material'});
+   const material=settings.getByRole('radiogroup',{name:'Theme family'});
    const motion=settings.getByRole('radiogroup',{name:'Motion'});
    await material.waitFor();
-   assert.deepEqual(await material.getByRole('radio').allTextContents(),['Soft','Liquid glass','Material 3']);
-   for(const [name,value] of [['Liquid glass','liquid'],['Material 3','material'],['Soft','soft']]){
-    await material.getByRole('radio',{name,exact:true}).click();
-    await page.waitForFunction(value=>document.documentElement.dataset.material===value,value);
+   assert.deepEqual(await material.locator('.family-tile-name').allTextContents(),['Editorial','Contemporary','Glass']);
+   for(const [name,value] of [['Glass','glass'],['Contemporary','contemporary'],['Editorial','editorial']]){
+    await material.getByRole('radio',{name:new RegExp('^'+name)}).click();
+    await page.waitForFunction(value=>document.documentElement.dataset.family===value,value);
     await page.waitForTimeout(100);
     const control=page.locator('.new-chat-btn');await control.hover();await page.waitForTimeout(40);
     const state=await page.evaluate(()=>({lens:document.documentElement.dataset.lens,active:!!document.querySelector('[data-glass-active]')}));
-    assert.equal(state.lens,value==='liquid'?'svg':undefined);
-    assert.equal(state.active,value==='liquid');
-    assert.equal(await material.locator('.glass-thumb').evaluate(e=>getComputedStyle(e).backdropFilter),'none','selected labels never refract');
-    await material.getByRole('radio',{name,exact:true}).focus();await page.keyboard.press('Tab');
+    assert.equal(state.lens,value==='glass'?'svg':undefined);
+    assert.equal(state.active,value==='glass');
+    await material.getByRole('radio',{name:new RegExp('^'+name)}).focus();await page.keyboard.press('Tab');
     assert.ok(await page.evaluate(()=>{const s=getComputedStyle(document.activeElement);return s.outlineStyle!=='none'&&parseFloat(s.outlineWidth)>=2;}),'visible keyboard focus');
     await settings.getByRole('navigation',{name:'Settings categories'}).getByRole('button',{name:'Memory',exact:true}).click();
     const toggle=settings.getByRole('switch',{name:'Use project memory',exact:true});await toggle.waitFor();
@@ -44,7 +43,7 @@ const {createFixture}=require('./diary-fixture.cjs');
     }
     await settings.getByRole('button',{name:'Appearance & language',exact:true}).click();await material.waitFor();
    }
-   await material.getByRole('radio',{name:'Liquid glass',exact:true}).click();
+   await material.getByRole('radio',{name:/^Glass/}).click();
    await motion.getByRole('radio',{name:'Reduced',exact:true}).click();
    await page.waitForFunction(()=>!document.documentElement.hasAttribute('data-lens'));
    await page.locator('.new-chat-btn').hover();await page.waitForTimeout(40);
@@ -66,6 +65,6 @@ const {createFixture}=require('./diary-fixture.cjs');
    await page.close();
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS dynamic materials, switch knob/track contrast at least 3:1, visible focus, no label refraction, app/OS reduced motion, reduced transparency and increased contrast; both themes.');
+  console.log('PASS dynamic theme families, switch knob/track contrast at least 3:1, visible focus, no label refraction, app/OS reduced motion, reduced transparency and increased contrast; both themes.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

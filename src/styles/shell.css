@@ -24,7 +24,7 @@
 
 /* Nav rows: inactive muted, brightening on hover; active is a filled row with
    a left accent pip, not an outline. */
-.sidebar .nav-item { position:relative; transition:background var(--duration-fast) var(--ease-spring), color var(--duration-fast) var(--ease-spring); }
+.sidebar .nav-item { position:relative; transition:background-color var(--motion-immediate) var(--ease-immediate), color var(--motion-immediate) var(--ease-immediate); }
 .sidebar .nav-item:hover { background:var(--nav-hover); color:var(--text); }
 .sidebar .nav-item.is-active,
 .sidebar .proj-row.is-active .nav-item,

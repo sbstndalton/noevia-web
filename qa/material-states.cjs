@@ -32,7 +32,7 @@ const { createFixture } = require('./diary-fixture.cjs');
         assert.notEqual(pressed.background, hover.background, `${theme} ${selector}: pressed layer`);
         assert.equal(pressed.color, rest.color, `${theme} ${selector}: foreground preserved`);
       };
-      await page.evaluate(() => document.documentElement.dataset.material = 'material');
+      await page.evaluate(() => document.documentElement.dataset.family = 'contemporary');
       for (const selector of ['.app-mode-switch .is-selected', '.glass-seg [aria-checked="true"]', '.btn-secondary', '.btn-danger']) await state(selector);
       assert.match(await page.locator('#state-fixture .glass-seg [aria-checked="false"]').evaluate(e => getComputedStyle(e).boxShadow), /inset/);
       await page.evaluate(() => {
@@ -42,7 +42,7 @@ const { createFixture } = require('./diary-fixture.cjs');
         rail.append(panel.querySelector('.app-mode-switch')); panel.prepend(rail);
       });
       await state('.app-mode-switch .is-selected');
-      await page.evaluate(() => document.documentElement.dataset.material = 'liquid');
+      await page.evaluate(() => document.documentElement.dataset.family = 'glass');
       await state('.aero .is-primary');
       await page.screenshot({ path: `/tmp/noevia-parity-states-${theme}.png` });
       await page.close();

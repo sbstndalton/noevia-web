@@ -1,0 +1,64 @@
+/* Motion system (#247). Loads after tokens.css and themes.css. The timing contract (four
+   purposes: immediate, quick, considered, async) lives in tokens.css; this file holds every
+   keyframe the app uses and the reduced-motion guarantees. There were 29 one-off keyframes;
+   these five replace them. Each is parameterised by custom properties on the element, so a
+   new surface picks a distance, not a new animation.
+
+   Rules: animate opacity and transform only (never layout, never `transition: all`); enter
+   with --ease-quick, move on screen with --ease-considered, loop with --ease-async; motion is
+   never the only signal — every state it accompanies also changes text, colour or an icon. */
+
+/* 1. Enter — menus, popovers, tooltips, dialogs, sheets, drawers, pages, the inspector.
+   Only a `from` frame, so the element ends on its own transform (the rail tooltip keeps its
+   translateY(-50%)). --enter-from sets the travel; --enter-opacity 1 makes it slide only. */
+@keyframes motion-enter {
+  from { opacity: var(--enter-opacity, 0); transform: var(--enter-from, translateY(4px)); }
+}
+
+/* 2. Exit — Settings leaving, the phone sheet falling, the workspace stepping back. Ends
+   hidden so a covered surface cannot take focus or clicks while it is invisible. */
+@keyframes motion-exit {
+  to { opacity: 0; transform: var(--exit-to, none); visibility: hidden; }
+}
+
+/* 3. Pulse — async waiting: typing and working dots, live thinking, the live-inference dot,
+   model-manager activity. Opacity only; the text beside it says what is happening. */
+@keyframes motion-pulse {
+  0%, 100% { opacity: var(--pulse-low, .35); }
+  50% { opacity: 1; }
+}
+
+/* 4. Spin — a running tool call. The row also says "Running" and changes colour. */
+@keyframes motion-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 5. Title scroll — reveals the end of a truncated sidebar title, only while that row is
+   hovered or focused. Reduced motion replaces it with wrapping (noevia.css). */
+@keyframes sidebar-title-scroll {
+  0%, 15% { transform: translateX(0); }
+  85%, 100% { transform: translateX(calc(var(--label-travel) - 14px)); }
+}
+
+/* Reduced motion — the OS setting or Settings → Motion — in every state: streaming,
+   popovers, the drawer, loading loops, error toasts and auto-tune progress. Entrances still
+   happen (instantly, so animationend fires), loops stop at full opacity, and colour and text
+   changes apply at once. Transitions are removed rather than shortened: a global
+   transition-duration would switch on the initial `transition-property: all` for every
+   element, and a menu's clamped `left` would then glide off-screen. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+:root[data-motion='reduced'] *, :root[data-motion='reduced'] *::before, :root[data-motion='reduced'] *::after {
+  animation-duration: 1ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}

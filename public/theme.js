@@ -22,10 +22,21 @@
     ['noevia:chat-font', 'data-chat-font', ['sans', 'serif', 'mono']],
     ['noevia:density', 'data-density', ['comfortable', 'compact']],
     ['noevia:motion', 'data-motion', ['system', 'reduced']],
-    ['noevia:material', 'data-material', ['soft', 'liquid', 'material']],
   ]) {
     let value = allowed[0];
     try { const saved = localStorage.getItem(key); if (allowed.includes(saved)) value = saved; } catch { /* use the default */ }
     document.documentElement.setAttribute(attribute, value);
   }
+  // Theme family (#249). A browser that saved one of the retired materials lands on the
+  // family that replaced it; src/theme-family.ts holds the same table.
+  const families = ['editorial', 'contemporary', 'glass'];
+  const migration = { soft: 'editorial', material: 'contemporary', liquid: 'glass' };
+  let family = 'editorial';
+  try {
+    const saved = localStorage.getItem('noevia:theme-family');
+    const legacy = localStorage.getItem('noevia:material');
+    if (families.includes(saved)) family = saved;
+    else if (Object.prototype.hasOwnProperty.call(migration, legacy)) family = migration[legacy];
+  } catch { /* use the default */ }
+  document.documentElement.setAttribute('data-family', family);
 })();
