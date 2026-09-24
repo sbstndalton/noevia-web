@@ -20,6 +20,8 @@ import { ResearchPanel } from './research/ResearchPanel';
 import { useResearchAccess } from './research/useResearchAccess';
 import { CodePanel } from './code/CodePanel';
 import { useCodeAccess } from './code/useCodeAccess';
+import { BrowserPanel } from './browser/BrowserPanel';
+import { useBrowserAccess } from './browser/useBrowserAccess';
 import { EmptyState } from './EmptyState';
 
 /** First free "name", "name (2)", "name (3)", … avoiding collisions. */
@@ -92,11 +94,13 @@ export function ProjectView({
   const [composerBusy, setComposerBusy] = useState(false);
   const [composerStatus, setComposerStatus] = useState('');
   const [panel, setPanel] = useState<'instructions' | 'memory' | 'context' | null>(null);
-  const [tab, setTab] = useState<'chats' | 'sources' | 'research' | 'code'>('chats');
+  const [tab, setTab] = useState<'chats' | 'sources' | 'research' | 'code' | 'browser'>('chats');
   const researchAccess = useResearchAccess(project.id);
   const codeAccess = useCodeAccess(project.id);
+  const browserAccess = useBrowserAccess(project.id);
   useEffect(() => { if (tab === 'research' && !researchAccess) setTab('chats'); }, [tab, researchAccess]);
   useEffect(() => { if (tab === 'code' && !codeAccess) setTab('chats'); }, [tab, codeAccess]);
+  useEffect(() => { if (tab === 'browser' && !browserAccess) setTab('chats'); }, [tab, browserAccess]);
   const [draft, setDraft] = useState('');
   const [skillFiles, setSkillFiles] = useState<string[]>([]);
   const [pickingFolder, setPickingFolder] = useState(false);
@@ -191,10 +195,15 @@ export function ProjectView({
             {codeAccess && <button role="tab" aria-selected={tab === 'code'} className={tab === 'code' ? 'is-selected' : ''} onClick={() => setTab('code')}>
               Code
             </button>}
+            {browserAccess && <button role="tab" aria-selected={tab === 'browser'} className={tab === 'browser' ? 'is-selected' : ''} onClick={() => setTab('browser')}>
+              Browser
+            </button>}
           </div>
 
           {tab === 'code' && codeAccess ? (
             <div className="project-scroll"><CodePanel projectId={project.id}/></div>
+          ) : tab === 'browser' && browserAccess ? (
+            <div className="project-scroll"><BrowserPanel projectId={project.id}/></div>
           ) : tab === 'research' && researchAccess ? (
             <div className="project-scroll"><ResearchPanel key={project.id} projectId={project.id} onSaved={onRefresh}/></div>
           ) : tab === 'chats' ? (
@@ -333,7 +342,7 @@ export function ProjectView({
           {!chatEnabled && <p className="route-note" role="status">This project is not enabled for Chat. Turn Chat on under Project settings → Available in to send messages here.</p>}
           {/* Research and Code each have their own way to start something; a chat composer
               under them is a second, unrelated send button taking half the height. */}
-          <div className="project-composer" hidden={!chatEnabled || tab === 'research' || tab === 'code'}>
+          <div className="project-composer" hidden={!chatEnabled || tab === 'research' || tab === 'code' || tab === 'browser'}>
             {/* What rides along with the next message, stated before it is sent
                 rather than discovered afterwards. Each chip opens what it counts. */}
             <ul className="composer-context-chips" aria-label="Context sent with every message in this project">
