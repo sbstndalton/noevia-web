@@ -1568,8 +1568,12 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .model-manager-page .settings-scroll { padding: 0 36px 40px; }
 .model-manager-head { padding: 18px 0 6px; }
 .model-manager-head .settings-back { padding-inline-start: 0; }
-.mm-summary { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
-.mm-summary .card-list { align-self: stretch; }
+.mm-summary { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; width: 100%; }
+.mm-summary .card-list { align-self: stretch; min-width: 0; }
+/* The routing summary line ("Fast: … · Smart: … · Vision: …") can outgrow the card at
+   narrow widths; wrap it instead of letting it run past the card's right edge. */
+.mm-summary .model-row { min-width: 0; }
+.mm-summary .model-role { flex-shrink: 1; min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: right; }
 @media (max-width: 700px) { .model-manager-page .settings-scroll { padding: 0 16px 32px; } }
 
 /* Easy / Advanced model settings */

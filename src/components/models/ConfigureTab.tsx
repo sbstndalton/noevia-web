@@ -204,13 +204,15 @@ function EasySettings({ name, draft, busy, onChange, onUseTuned, onAutoApplied }
     : heads.remote.length ? `No MTP head here yet; ${heads.repo} publishes one.`
     : heads.mtpBuild ? `This file has no MTP layers. An MTP build is published as ${heads.mtpBuild}.`
     : 'No MTP head is available for this model, so speculative decoding stays off unless you pick N-gram.';
+  const system = isSystemModel(name);
   return <div className="mm-form mm-easy">
     <div className="mm-easy-row">
       <div><strong>Context</strong><p className="mm-note">{draft['ctx-size'] ? `${ctxShort(Number(draft['ctx-size']))} tokens` : 'Engine default'}. {verified > 0 ? `Measured on this machine: ${ctxShort(verified)} tokens.` : 'Not measured on this machine yet.'} Tuning estimates what fits in memory and what this machine can read in time.</p></div>
-      <button className="modal-btn secondary" disabled={tuning || busy} onClick={() => void tune()}>{tuning ? 'Estimating…' : 'Tune for this machine'}</button>
+      {!system && <button className="modal-btn secondary" disabled={tuning || busy} onClick={() => void tune()}>{tuning ? 'Estimating…' : 'Tune for this machine'}</button>}
     </div>
-    {failure && <p role="alert" className="modal-err">{failure}</p>}
-    {rec && !failure && <div className="mm-easy-result" role="status">
+    {system && <p className="mm-note" role="status">{SYSTEM_MODEL_LABEL} — used internally for message routing; it cannot be tuned or calibrated here.</p>}
+    {!system && failure && <p role="alert" className="modal-err">{failure}</p>}
+    {!system && rec && !failure && <div className="mm-easy-result" role="status">
       <div className="mm-easy-result-text">
         <p>Recommended: <strong>{ctxShort(rec.recommended_ctx)} tokens</strong> on {rec.recommended_backend}{rec.fits_full_gpu ? ', entirely on the GPU' : ''}.</p>
         {rec.ctx_cap_reason && rec.estimated_ctx ? <p className="mm-note">Memory would allow {ctxShort(rec.estimated_ctx)}; limited because {rec.ctx_cap_reason}.</p> : null}
@@ -218,14 +220,14 @@ function EasySettings({ name, draft, busy, onChange, onUseTuned, onAutoApplied }
       </div>
       <button className="modal-btn primary" disabled={busy} onClick={() => void onUseTuned({ ...rec.values, ...keepChoices(draft) }, rec.displaced)}>Use and save</button>
     </div>}
-<details className="mm-disclosure mm-easy-autotune" open>
+{!system && <details className="mm-disclosure mm-easy-autotune" open>
       <summary>Auto-tune and apply <small>Measures context, KV cache, drafting and batch size together; chat pauses while it runs.</small></summary>
       <AutoTune model={name} onChanged={() => { setAuto(null); onAutoApplied(); }}/>
-    </details>
-    <details className="mm-disclosure mm-easy-measure">
+    </details>}
+    {!system && <details className="mm-disclosure mm-easy-measure">
       <summary>Measure context on this machine <small>Tests the real engine; chat pauses while it runs.</small></summary>
           <NativeCalibration model={name} onChanged={() => { setAuto(null); setVerified(0); void apiFetch('/api/models/calibration?model=' + encodeURIComponent(name)).then(r => r.json()).then((v: { history?: { at: number; appliedCtx?: number; verifiedCtx?: number }[] }) => { const last = (v.history || []).slice().sort((a, b) => b.at - a.at)[0]; setVerified(last?.verifiedCtx || last?.appliedCtx || 0); }).catch(() => {}); }}/>
-    </details>
+    </details>}
     <label>Speculative decoding (MTP)<select value={draft['spec-type'] || ''} onChange={e => onChange({ 'spec-type': e.target.value })}>
       {SPEC_CHOICES.map(([v, label]) => <option key={v} value={v} disabled={v === 'draft-mtp' && heads !== null && !heads.available}>{label}{v === 'draft-mtp' && heads?.available ? ' (available)' : ''}</option>)}
       {!spec && <option value={draft['spec-type']}>{draft['spec-type']} (set in Advanced)</option>}

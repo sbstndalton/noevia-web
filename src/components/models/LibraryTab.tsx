@@ -159,7 +159,8 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
         {Object.entries(detail.summary.chat_template_features || {}).some(([, v]) => v) && <div><dt>Chat template</dt><dd>{Object.entries(detail.summary.chat_template_features).filter(([, v]) => v).map(([k]) => k.replace(/_/g, ' ')).join(', ')}</dd></div>}
       </dl>}
       <EvidenceList model={m.name}/>
-      <NativeCalibration model={m.name} onChanged={() => {}}/>
+      {system ? <p className="mm-note" role="status">{SYSTEM_MODEL_LABEL} — used internally for message routing; not tuned or calibrated by hand.</p>
+        : <NativeCalibration model={m.name} onChanged={() => {}}/>}
     </div>}
   </article>;
 }
