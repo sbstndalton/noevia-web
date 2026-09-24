@@ -314,7 +314,7 @@ export function Sidebar({
   const chatActions = (c: ChatMeta, projectId: string | null, source: 'nested' | 'list' = 'list') => <div className="row-actions">
     <button className="row-action" aria-label={`${c.pinned ? 'Unpin' : 'Pin'} ${c.title || 'chat'}`} title={c.pinned ? 'Unpin chat' : 'Pin chat'} aria-pressed={!!c.pinned} onClick={()=>onPatchChat(projectId,c.id,{pinned:!c.pinned})}><ShellIcon name="pin" size={18}/></button>
     <button className="row-action" aria-label={`Archive ${c.title || 'chat'}`} title="Archive chat" onClick={()=>onPatchChat(projectId,c.id,{archived:true})}><ShellIcon name="archive" size={18}/></button>
-    <button className="row-action" aria-label={`Options for ${c.title || 'chat'}`} aria-haspopup="menu" onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'chat',id:c.id,projectId,source,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={20}/></button>
+    <button className="row-action" aria-label={`Options for ${c.title || 'chat'}`} aria-haspopup="menu" aria-expanded={menu?.kind==='chat' && menu.id===c.id} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'chat',id:c.id,projectId,source,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={20}/></button>
   </div>;
   const renderChat = (c: ChatMeta) => (
               <div
@@ -421,14 +421,14 @@ export function Sidebar({
         const entries = visibleProjects.filter(p=>group==='Pinned'?p.pinned:!p.pinned);
         if(group==='Pinned' && !entries.length && !visibleChats.some(c=>c.pinned))return null;
         return <div className={`spaces side-scroll side-scroll-${group.toLowerCase()}`} key={group}>
-          <div className="sidebar-section-head"><button className="section-label section-toggle" aria-label={`${group} section`} aria-expanded={!closedGroups[group]} onClick={()=>setClosedGroups(g=>({...g,[group]:!g[group]}))}>{group}</button>{group==='Projects' && <button className="row-action section-options" aria-label="Project ordering" aria-haspopup="menu" onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setSorting({x:r.left,y:r.bottom+4});}}><ShellIcon name="more" size={20}/></button>}</div>
+          <div className="sidebar-section-head"><button className="section-label section-toggle" aria-label={`${group} section`} aria-expanded={!closedGroups[group]} onClick={()=>setClosedGroups(g=>({...g,[group]:!g[group]}))}>{group}</button>{group==='Projects' && <button className="row-action section-options" aria-label="Project ordering" aria-haspopup="menu" aria-expanded={!!sorting} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setSorting({x:r.left,y:r.bottom+4});}}><ShellIcon name="more" size={20}/></button>}</div>
           {group==='Pinned' && (!closedGroups[group] || query) && visibleChats.filter(c=>c.pinned).map(renderChat)}
           {(!closedGroups[group] || query) && entries.map(p=><div className="project-branch" key={p.id}>
             <div className={`proj-row${activeProjectId===p.id && activeView!=='projects'?' is-active':''}`} onContextMenu={e=>{e.preventDefault();setMenu({kind:'project',id:p.id,projectId:null,at:{x:e.clientX,y:e.clientY}});}}>
               {renamingId===p.id ? <input className="proj-rename-input" aria-label="Project name" value={renameDraft} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(null,false)} onKeyDown={e=>{if(e.key==='Enter')commitRename(null,false);if(e.key==='Escape')setRenamingId(null);}}/> : <><button className="project-expand" data-tip={p.name} aria-label={`${openProjects[p.id]?'Collapse':'Expand'} chats in ${p.name}`} aria-expanded={!!openProjects[p.id]} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:!prev[p.id]}));}}><ProjectIcon project={p} size={18}/></button><button className="project-disclosure" aria-label={`Open ${p.name}`} onMouseEnter={e=>openHover(p.id,e.currentTarget)} onMouseLeave={closeHover} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:true}));onOpenProject(p.id);setExpanded(false);}}><SidebarLabel text={p.name}/></button></>}
 
               <div className="row-actions">
-                <button className="row-action" aria-label={`Options for ${p.name}`} aria-haspopup="menu" onClick={e=>{closeHover();const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'project',id:p.id,projectId:null,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={22}/></button>
+                <button className="row-action" aria-label={`Options for ${p.name}`} aria-haspopup="menu" aria-expanded={menu?.kind==='project' && menu.id===p.id} onClick={e=>{closeHover();const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'project',id:p.id,projectId:null,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={22}/></button>
                 <button className="row-action" aria-label={`New chat in ${p.name}`} title="New chat in project" onClick={()=>{onNewProjectChat(p.id);setExpanded(false);}}><ShellIcon name="compose" size={20}/></button>
               </div>
             </div>

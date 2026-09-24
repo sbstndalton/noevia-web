@@ -13,6 +13,8 @@ import { DownloadTab } from './DownloadTab';
 import { HardwareTab } from './HardwareTab';
 import { LibraryTab } from './LibraryTab';
 import { notifyModelsChanged } from '../../models-changed';
+import { routingViewState } from '../../routing-view-state';
+export type { RoutingViewState } from '../../routing-view-state';
 
 export type ModelSort = 'name' | 'size' | 'modified';
 export type ModelFilter = 'all' | 'loaded' | 'vision' | 'unconfigured';
@@ -133,17 +135,25 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
       await putAutoRoles({ fast, smart, vision, code });
       setPending({}); setInfo({ configured: true, roles: { fast, smart, ...(vision ? { vision } : {}), ...(code ? { code } : {}) } });
       setSaved('Saved. Models load on demand.');
+      // The Settings summary card (ModelsSummary.tsx) fetched Auto's roles once on mount and
+      // cached them; without this it keeps showing the pre-save state until the page remounts.
+      notifyModelsChanged();
     } catch (e) { setError(e instanceof Error ? e.message : 'The change could not be saved.'); }
     finally { setBusy(false); }
   };
+
+  const view = routingViewState(info, error);
 
   return <><DefaultModeSection />
   <section className="mm-panel">
     <div className="mm-panel-head"><h3>Routing</h3></div>
     <p className="mm-note">Projects set to Auto pick a model per message. Vision and Code are optional. Set Vision and that model describes any images, then Fast or Smart answers from the description — so the answering model does not need to see. Set Code and coding work goes there instead of Smart.</p>
     {modelsError && <p role="alert" className="modal-err">{modelsError}</p>}
-    {!info?.configured && !error && <p className="mm-note">Auto has no models assigned yet. Pick Fast and Smart, then save.</p>}
+    {view === 'loading' && <p className="mm-note" role="status">Loading…</p>}
+    {view === 'error' && <p role="alert" className="modal-err">{error}</p>}
+    {view === 'unconfigured' && <p className="mm-note">Auto has no models assigned yet. Pick Fast and Smart, then save.</p>}
     {!!info?.missing?.length && <p className="mm-note warn" role="alert">Auto can't answer until you replace {info.missing.map((m) => `${ROLE_LABEL[m.role]} (${m.model})`).join(', ')}: {info.missing.length === 1 ? 'that model is' : 'those models are'} no longer installed.</p>}
+    {view !== 'loading' && view !== 'error' && <>
     <div className="mm-form route-roles">
       {(['fast', 'smart', 'vision', 'code'] as const).map((role) => <label key={role}>
         {ROLE_LABEL[role]}
@@ -161,6 +171,7 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
       {saved && <span role="status" className="mm-note">{saved}</span>}
       {error && <span role="alert" className="modal-err">{error}</span>}
     </div>
+    </>}
 
     <details className="mm-disclosure">
       <summary>How Auto decides</summary>

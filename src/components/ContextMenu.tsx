@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { JSX, ReactNode } from 'react';
 import { ShellIcon } from './ShellIcon';
+import { shouldRefocusTrigger } from '../menu-focus';
 
 export interface MenuItem {
   label: string;
@@ -100,7 +101,16 @@ export function ContextMenu({
           role={it.selected === undefined ? 'menuitem' : 'menuitemradio'}
           aria-checked={it.selected === undefined ? undefined : it.selected}
           className={`ctx-item${it.danger ? ' is-danger' : ''}${it.separator ? ' has-separator' : ''}`}
-          onClick={() => { onClose(); it.onSelect(); }}
+          onClick={() => {
+            onClose();
+            it.onSelect();
+            // The Escape path (above) already refocuses the trigger; choosing an item
+            // dropped that same courtesy, so a screen reader / keyboard user landed
+            // nowhere afterward. Some actions (rename) open an input synchronously in
+            // response to onSelect, and that input should keep focus rather than be
+            // yanked back to the trigger.
+            if (shouldRefocusTrigger(document.activeElement, document.body)) trigger.current?.focus();
+          }}
         >
           {/* Every row keeps the symbol column, so labels line up whether or not this
               particular item has one. */}

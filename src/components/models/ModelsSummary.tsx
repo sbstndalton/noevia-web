@@ -3,13 +3,18 @@ import type { JSX } from 'react';
 import type { HealthState, InstalledModel, LiveStats } from '../../types';
 import type { AutoRoles } from '../../api';
 import { fetchAutoRoles } from '../../api';
+import { useModelsChanged } from '../../models-changed';
 
 /** Settings keeps only what answers "is the engine fine and where does Auto go";
  *  everything you act on lives in the model manager page. */
 export function ModelsSummary({ models, modelsError, health, stats, onOpen }: { models: InstalledModel[]; modelsError: string | null; health: HealthState; stats: LiveStats | null; onOpen: () => void }): JSX.Element {
   const [roles, setRoles] = useState<{ configured: boolean; roles: AutoRoles | null } | null>(null);
   const [rolesError, setRolesError] = useState(false);
+  const load = () => { fetchAutoRoles().then((v) => { setRoles(v); setRolesError(false); }).catch(() => setRolesError(true)); };
   useEffect(() => { let live = true; fetchAutoRoles().then((v) => { if (live) setRoles(v); }).catch(() => { if (live) setRolesError(true); }); return () => { live = false; }; }, []);
+  // A save on the Routing tab (ModelsSettings.tsx) fires this so the cached card here does not
+  // keep showing stale roles until the whole Settings page remounts.
+  useModelsChanged(load);
   const loaded = models.filter((m) => m.loaded).map((m) => m.name);
   const routing = rolesError ? 'Could not be read' : !roles ? 'Loading…' : roles.configured && roles.roles
     ? `Fast: ${roles.roles.fast} · Smart: ${roles.roles.smart}${roles.roles.vision ? ` · Vision: ${roles.roles.vision}` : ''}` : 'Not configured';
