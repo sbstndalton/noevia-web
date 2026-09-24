@@ -7,6 +7,7 @@ import { SegmentedControl } from '../SegmentedControl';
 import { matchesModelUse, modelChoiceLabel } from '../../model-guidance';
 import { AUTO_EXPLAINED, ROLE_LABEL, roleSummary } from '../../routing-copy';
 import { ReasoningControl } from '../ReasoningControl';
+import { SamplingPresetsControl } from '../SamplingPresetsControl';
 import { BenchmarksTab, PromptsTab } from './BenchmarksTab';
 import { ConfigureTab } from './ConfigureTab';
 import { DownloadTab } from './DownloadTab';
@@ -184,6 +185,12 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
   <section className="mm-panel">
     <div className="mm-panel-head"><h3>Thinking</h3></div>
     <ReasoningControl global />
+  </section>
+
+  {/* Issue #194: task-aware sampling presets, own panel for the same reason as Thinking above. */}
+  <section className="mm-panel">
+    <div className="mm-panel-head"><h3>Sampling</h3></div>
+    <SamplingPresetsControl />
   </section></>;
 }
 

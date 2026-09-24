@@ -163,7 +163,9 @@ const SPEC_CHOICES: [string, string, string][] = [
   ['draft-mtp', 'MTP draft head', 'Uses the model\'s MTP prediction head. Tune for this machine fills in the head file when one sits beside the model.'],
   ['ngram-simple', 'N-gram (no extra model)', 'Guesses from text already in the conversation. Helps with repetitive output.'],
 ];
-const KV_CHOICES: [string, string][] = [['', 'Engine default'], ['f16', 'Full precision (f16)'], ['q8_0', 'Balanced (q8_0)'], ['q4_0', 'Smallest (q4_0)']];
+// Easy mode never offers below Q5: Q4 degrades quality too much for a routine choice.
+// Advanced mode's FieldInput still lists q4_0/q4_1 via the full preset schema for expert use.
+const KV_CHOICES: [string, string][] = [['', 'Engine default'], ['f16', 'Full precision (f16)'], ['q8_0', 'Balanced (q8_0)'], ['q5_0', 'Smallest (q5_0)']];
 
 // Easy exposes speculative decoding and KV cache type; tuning must not override what was picked.
 const keepChoices = (draft: Record<string, string>) => Object.fromEntries(['spec-type', 'cache-type-k', 'cache-type-v'].filter(k => draft[k]).map(k => [k, draft[k]]));
