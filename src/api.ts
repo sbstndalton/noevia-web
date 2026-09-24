@@ -67,7 +67,7 @@ export const deleteUser = (id: string, username: string) => apiFetch(`/api/admin
   if (!r.ok) throw new Error(result.error || `Delete failed: ${r.status}`);
   return result;
 });
-export interface StorageConnection { kind: 'local' | 'nextcloud' | 'webdav' | 's3'; baseUrl: string; bucket?: string; username: string; corpusRoot: string; secretConfigured?: boolean }
+export interface StorageConnection { kind: 'local' | 'nextcloud' | 'webdav' | 's3'; baseUrl: string; bucket?: string; region?: string; username: string; corpusRoot: string; secretConfigured?: boolean }
 export const fetchStorage = () => getJson<StorageConnection>('/api/integrations/storage');
 export const saveStorage = (body: StorageConnection & { secret?: string }) => putJson<StorageConnection>('/api/integrations/storage', body);
 export const testStorage = (body: Partial<StorageConnection> & { secret?: string; useSavedSecret?: boolean }) => postJson<{ ok: true }>('/api/integrations/storage/test', body);

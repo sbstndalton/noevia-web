@@ -116,6 +116,15 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
                 value={value.bucket || ''}
                 onChange={(e) => patch({ bucket: e.target.value })}
               />
+              <label className="modal-label" htmlFor={`${id}-region`}>Region (optional)</label>
+              <input
+                id={`${id}-region`}
+                disabled={!loaded}
+                className="modal-input"
+                placeholder="us-east-1"
+                value={value.region || ''}
+                onChange={(e) => patch({ region: e.target.value.trim().toLowerCase() })}
+              />
             </>
           )}
           <label className="modal-label" htmlFor={`${id}-corpusRoot`}>{value.kind === 's3' ? 'Folder inside the bucket (optional)' : 'Corpus folder'}</label>
