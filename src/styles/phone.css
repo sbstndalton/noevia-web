@@ -374,6 +374,10 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
   .app .reasoning-pill > span:first-child { display: none; }
   .app .reasoning-pill.glass { padding-inline: 10px 8px; }
 }
+/* The forced Phone preview caps #root at 430px without narrowing the browser viewport. */
+:root[data-layout='mobile'][data-device='desktop'] .composer-inner.chat-composer-inner { column-gap: 6px; }
+:root[data-layout='mobile'][data-device='desktop'] .app .reasoning-pill > span:first-child { display: none; }
+:root[data-layout='mobile'][data-device='desktop'] .app .reasoning-pill.glass { padding-inline: 10px 8px; }
 
 /* ── One row geometry for projects and chats (visual pass, 2026-09-18) ─────────
    Project rows put their icon in its own button, chat rows inside the title button; each had
@@ -584,6 +588,8 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .mp-budget.is-over > span { background: var(--danger, #c0392b); }
 .mp-tool-list { display: flex; flex-direction: column; gap: 2px; }
 .mp-tool { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 10px; cursor: pointer; }
+/* Nine tool rows should leave room for the cost hint inside the 640px picker column. */
+.mp-col-tools .mp-tool { padding-block: 7px; }
 .mp-tool:hover { background: var(--nav-hover); }
 .mp-tool input[type="checkbox"] { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); }
 .mp-tool-desc { display: block; margin-top: 2px; color: var(--text-secondary); font-size: var(--text-caption, 12px); line-height: 1.4; }
