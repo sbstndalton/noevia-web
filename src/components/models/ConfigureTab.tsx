@@ -87,13 +87,19 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
   };
   const doRename = async () => {
     if (!data || isSystemModel(name)) return; setBusy('rename'); setError('');
-    try { await mm(`sections/${encodeURIComponent(name)}/rename`, { body: { newName: rename.trim(), baseRevision: data.revision } }); await apply(false); await onChanged(rename.trim()); }
+    // onChanged before apply: apply() manages the shared `busy` flag itself (it sets its own
+    // 'apply' value and clears it in its own finally), so if it ran first, busy would already be
+    // '' — and the button re-enabled — while onChanged (which reloads the section list and the
+    // selected name) was still in flight. Awaiting onChanged first closes that double-click window.
+    try { await mm(`sections/${encodeURIComponent(name)}/rename`, { body: { newName: rename.trim(), baseRevision: data.revision } }); await onChanged(rename.trim()); await apply(false); }
     catch (e) { setError(errorText(e, 'Rename failed')); } finally { setBusy(''); }
   };
   const doDelete = async () => {
     if (!data || isSystemModel(name)) return; setBusy('delete'); setError('');
-    try { await mm(`sections/${encodeURIComponent(name)}?baseRevision=${data.revision}`, { method: 'DELETE' }); dismissFolderModel(name); await apply(false); await onChanged(''); }
-    catch (e) { setError(errorText(e, 'Delete failed')); } finally { setBusy(''); }
+    // See doRename above: onChanged is awaited before apply() so its own finally cannot clear
+    // `busy` while onChanged is still pending.
+    try { await mm(`sections/${encodeURIComponent(name)}?baseRevision=${data.revision}`, { method: 'DELETE' }); dismissFolderModel(name); await onChanged(''); await apply(false); }
+    catch (e) { if ((e as { status?: number }).status === 409) setConflict(true); setError(errorText(e, 'Delete failed')); } finally { setBusy(''); }
   };
   const merge = (values: Record<string, string>, displaced: string[]) => {
     const schemaKeys = new Set(data?.schema.flatMap(t => t.fields.map(f => f.key)) || []);

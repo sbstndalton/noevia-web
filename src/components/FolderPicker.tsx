@@ -95,7 +95,15 @@ export function FolderPicker({
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') void makeFolder();
-                if (e.key === 'Escape') { setCreating(false); setNewName(''); }
+                if (e.key === 'Escape') {
+                  // Without this, Escape bubbles to the native <dialog>, which fires its own
+                  // cancel event (onCancel, above) and closes the whole picker instead of just
+                  // clearing the in-progress folder name.
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setCreating(false);
+                  setNewName('');
+                }
               }}
             />
             <button className="btn btn-ghost btn-sm" onClick={() => { setCreating(false); setNewName(''); }}>Cancel</button>
