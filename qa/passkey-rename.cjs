@@ -48,6 +48,14 @@ const PORT=31385,OLD=`http://old.localhost:${PORT}`,NEW=`http://new.localhost:${
   await secure.click();
   assert.equal((await made).status(),200,'the passkey is made for the new address');
   await secure.waitFor({state:'detached'});
+  // A freshly-made passkey opens Settings automatically (the "new account" flag in
+  // App.tsx) and that open/section is then remembered per-device (last-view). Leaving
+  // it open here would make step 4's reload resume straight into Settings, hiding the
+  // Settings toggle button and making the sign-in check below hang for no real reason.
+  const settings=page.getByRole('region',{name:'Settings'});
+  await settings.waitFor();
+  await settings.getByRole('button',{name:'Close settings'}).click();
+  await settings.waitFor({state:'detached'});
 
   // 4. Sign out and sign in with the passkey at the new address.
   await page.context().clearCookies();
