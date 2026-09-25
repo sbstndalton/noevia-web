@@ -7,6 +7,9 @@
 //    locale from English to German in Settings turns the Security page German.
 // 3. With the German Settings segment chunk failing, the shell stays German, Settings pages fall
 //    back to English key by key, and the failure is logged once.
+// 4. (#293) de-DE and fr-FR: Diary & storage and Service status, and the model manager page (its
+//    model list, one model's detail and the routing panel) at 375 and 1440, same overflow and
+//    clipping checks; the model manager's German strings arrive only with its own chunk.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
 const { createFixture } = require('./diary-fixture.cjs');
@@ -21,6 +24,49 @@ const L = {
     screens: [['models', 'Modèles et routage', 'Ouvrir le gestionnaire de modèles'], ['connectors', 'Apps connectées', 'Rechercher, lire et enregistrer des fichiers.'], ['data', 'Vos données et confidentialité', 'Exporter les conversations'],
       ['memory', 'Mémoire', 'Utiliser la mémoire des projets'], ['usage', 'Utilisation', 'Heure de pointe'], ['security', 'Sécurité et connexion', 'Ajouter une clé d’accès'], ['users', 'Utilisateurs', 'Copier le lien d’invitation'], ['providers', 'Fournisseurs d’IA', 'Connecter un fournisseur']] },
 };
+// Section label, a string that proves the screen rendered translated.
+const EXTRA = {
+  'de-DE': { diary: ['Tagebuch & Speicher', 'Optionale Apps', 'Connector hinzufügen'], status: ['Dienststatus', 'Verbundene Dienste', '12 Tools gefunden'],
+    models: 'Modelle & Routing', open: 'Modellmanager öffnen', mmTitle: 'Modelle & Routing', tune: 'Tunen', guided: 'Dieses Modell optimieren', back: 'Alle Modelle',
+    routingTab: 'Routing', routing: 'Standard-Modellmodus', yours: 'Deine Modelle', listText: 'Nach Updates suchen' },
+  'fr-FR': { diary: ['Journal et stockage', 'Apps facultatives', 'Ajouter un connecteur'], status: ['État des services', 'Services connectés', '12 outils découverts'],
+    models: 'Modèles et routage', open: 'Ouvrir le gestionnaire de modèles', mmTitle: 'Modèles et routage', tune: 'Régler', guided: 'Optimiser ce modèle', back: 'Tous les modèles',
+    routingTab: 'Routage', routing: 'Mode de modèle par défaut', yours: 'Vos modèles', listText: 'Rechercher des mises à jour' },
+};
+// Synthetic model manager and Settings APIs for section 4 (no real engine, diary or MCP server).
+const INSTALLED = [{ name: 'Synthetic-Qwen-9B-Q4_K_M', labels: ['vision'], loaded: true, sizeGB: 5.6, maxContext: 262144, source: 'preset', canDelete: false, status: 'loaded' },
+  { name: 'Synthetic-Gemma-E2B', labels: [], loaded: false, sizeGB: 3, maxContext: 131072, source: 'preset', canDelete: false, status: 'unloaded' }];
+const SCHEMA = [{ tier: 'Common', open: true, fields: [{ key: 'model', label: 'Model file', kind: 'text', choices: [], placeholder: '', help: 'Model path' }, { key: 'ctx-size', label: 'Context size', kind: 'int', choices: [], placeholder: '8192', help: 'Tokens' }] }];
+function extraApi(route, p, req) {
+  const json = (body, status = 200) => route.fulfill({ status, json: body });
+  const now = Date.now();
+  if (p === '/api/health') return json({ inferenceUp: true, diaryUp: true, ragAvailable: false });
+  if (p === '/api/toolboxes') return json({ toolboxes: [], mcp: { configured: true, servers: [{ id: 'synthetic-docs', auth: 'bearer', discovered: 12, missingCurated: 1, checkedAt: now }, { id: 'core', auth: 'internal', discovered: 8, missingCurated: 0, checkedAt: now }] } });
+  if (p === '/api/profile/diary-connectors') return json({ connectors: [{ id: 'c1', name: 'Synthetisches Telefon', createdAt: now }] });
+  if (p === '/api/profile/sharing') return json({ available: false, reason: 'Synthetic.', scope: 'off', cleartext: false, url: '', eligible: false });
+  if (p === '/api/integrations/storage') return json({ kind: 'local', baseUrl: '', username: '', corpusRoot: '' });
+  if (p === '/api/models/capabilities') return json({ kind: 'llamacpp', admin: true, presets: true, download: true, runtimeOptions: false, modelManagement: true, autotune: true });
+  if (p === '/api/models/installed') return json(INSTALLED);
+  if (p === '/api/routing-default') return json({ routing: 'auto' });
+  if (p === '/api/sampling-settings') return json({ enabled: true, admin: true });
+  if (p === '/api/models/estimate') return json({ model: 'Synthetic-Qwen-9B-Q4_K_M', budgetGib: 14, chat: true, sizeable: true, arch: 'qwen35', nativeCtx: 262144, modelGib: 5.6, pinnedGib: 0.9, reserveGib: 0.5, safety: 1.05, moe: false,
+    rows: [{ ctx: 8192, kvQ8Gib: 0.14 }, { ctx: 32768, kvQ8Gib: 0.53 }, { ctx: 131072, kvQ8Gib: 2.1 }], current: { ctx: 32768, kv: 'q8_0' } });
+  if (p === '/api/models/hardware') return json({ systemGB: 32, gpus: [{ name: 'Synthetic iGPU', capacityGB: 2, sharedGB: 12 }] });
+  if (p === '/api/models/autotune') return json({ job: null, history: [{ at: now, kv: 'q8_0', context: 32768, specLabel: 'MTP', generation: 33.4 }] });
+  if (p === '/api/models/calibration') return json({ job: null, history: [{ at: now, appliedCtx: 32768, verifiedCtx: 32768, promptBudgetSeconds: 120 }] });
+  if (p === '/api/models/evidence') return json({ tracked: true, categories: [{ category: 'context_capacity', state: 'verified', value: { ctx: 32768 }, at: now, suite: null, limitations: [] }, { category: 'throughput', state: 'reported', value: { rate: 13.7 }, at: now, suite: null, limitations: [] }], external: null });
+  if (p.startsWith('/api/models/')) return json([]);
+  if (!p.startsWith('/api/model-manager/')) return undefined;
+  const r = p.slice('/api/model-manager/'.length);
+  if (r === 'models') return json({ models: [{ key: 'q/Synthetic-Qwen-9B-Q4_K_M.gguf', name: 'Synthetic-Qwen-9B-Q4_K_M.gguf', subdir: 'q', bytes: 5.6e9, size: '5.6 GB', modified: '2026-09-01', sharded: false, parts: 1, projector: { name: 'mmproj.gguf', bytes: 9e8 }, sections: ['Synthetic-Qwen-9B-Q4_K_M'], modelId: 'Synthetic-Qwen-9B-Q4_K_M', file: 'q/Synthetic-Qwen-9B-Q4_K_M.gguf', shape: { arch: 'qwen35', moe: false, experts: 0, active: 0, label: 'dense' }, loadedOn: ['synthetic-llama'], fit: [], badges: [{ category: 'coding', rating: 4, note: '' }] }], unregistered: [] });
+  if (r === 'overview') return json({ modelsDir: { path: '/models', hostPath: '/mnt/synthetic/models', exists: true, disk: { freeH: '139.7 GB', totalH: '465.7 GB', usedPct: 70 } } });
+  if (r === 'models/updates') return json({ status: { 'Synthetic-Qwen-9B-Q4_K_M.gguf': { status: 'stale', remote: '2026-09-10', delta_days: 9 } } });
+  if (r === 'sections' && req.method() === 'GET') return json({ revision: 'r1', schema: SCHEMA, sections: [{ name: 'Synthetic-Qwen-9B-Q4_K_M', items: [], hasFile: true, file: 'q/Synthetic-Qwen-9B-Q4_K_M.gguf', cli: 'llama-server -m q' }], unregistered: [], backups: [['models.ini.bak-1', now / 1000, 100]], raw: '[Synthetic-Qwen-9B-Q4_K_M]\n' });
+  if (r.endsWith('/draft-heads')) return json({ local: '', builtinLayers: 1, available: true, remote: [], mtpBuild: null, repo: null });
+  if (r.startsWith('sections/')) return json({ name: 'Synthetic-Qwen-9B-Q4_K_M', exists: true, values: { model: '/models/q/Synthetic-Qwen-9B-Q4_K_M.gguf', 'ctx-size': '32768' }, extras: '', hints: [], revision: 'r1', schema: SCHEMA });
+  return json({});
+}
+
 const day = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
 const totals = (input, output, replies) => ({ input, output, replies });
 const USAGE = { days: [{ day: day(2), ...totals(0, 0, 0) }, { day: day(1), ...totals(4000, 1200, 3) }, { day: day(0), ...totals(9000, 3000, 5) }],
@@ -28,16 +74,17 @@ const USAGE = { days: [{ day: day(2), ...totals(0, 0, 0) }, { day: day(1), ...to
   models: [{ name: 'synthetic-30b', ...totals(10000, 3200, 6) }], tools: [{ name: 'read_project_file', calls: 9 }], hours: Array.from({ length: 24 }, (_, h) => (h === 14 ? 6 : 0)),
   peakHour: { hour: 14, replies: 6 }, retentionDays: 365, timeZone: 'Europe/Oslo' };
 
-async function openPage(browser, width, prefs) {
+async function openPage(browser, width, prefs, extra) {
   const touch = width < 800;
   const page = await browser.newPage(withLocale({ viewport: { width, height: touch ? 812 : 900 }, hasTouch: touch, isMobile: touch }));
-  const admin = { id: 'synthetic-admin', username: 'synthadmin', displayName: 'Synthetische Administratorin', role: 'admin', diaryEnabled: false, onboarded: true };
+  const admin = { id: 'synthetic-admin', username: 'synthadmin', displayName: 'Synthetische Administratorin', role: 'admin', diaryEnabled: !!extra, onboarded: true };
   const member = { id: 'synthetic-member', username: 'synthmember', displayName: 'Synthetisches Mitglied', role: 'member', disabled: true };
   const profile = { user: admin, passkeys: [{ id: 'k1', name: 'Synthetischer Schlüssel', backedUp: true, deviceType: 'multiDevice' }],
     sessions: [{ id: 's1', userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605 Version/17 Safari/605', ip: '192.0.2.10', lastSeenAt: Date.now() }] };
   await page.addInitScript(() => localStorage.setItem('cowork-theme', 'light'));
   await page.route('**/api/**', (route) => {
     const req = route.request(), p = new URL(req.url()).pathname;
+    if (extra) { const handled = extra(route, p, req); if (handled) return handled; }
     if (p === '/api/profile' || p === '/api/auth/session') return route.fulfill({ json: profile });
     if (p === '/api/profile/appearance') return route.fulfill({ json: { theme: 'light', light: 'iris', dark: 'iris' } });
     if (p === '/api/profile/app-passwords') return route.fulfill({ json: { appPasswords: [{ id: 'a1', name: 'Synthetischer Laptop', scope: 'lan', createdAt: Date.now(), lastUsedAt: null }] } });
@@ -68,13 +115,14 @@ async function openSection(page, settings, l, label) {
   await settings.locator('.settings-navigation').getByRole('button', { name: label, exact: true }).click();
 }
 
-async function checkLayout(page, name) {
+async function checkLayout(page, name, root = '.settings-detail-scroll') {
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(300);
-  const state = await page.evaluate(() => {
+  const state = await page.evaluate((root) => {
     const overflow = document.documentElement.scrollWidth > window.innerWidth + 1;
     const scrolls = (e) => /auto|scroll/.test(getComputedStyle(e).overflowX);
-    const clipped = [...document.querySelectorAll('.settings-detail-scroll :is(button, label, h1, h2, h3, select, .set-row-label, .set-row-desc, .route-note, .model-name, .model-quant, .model-role, .usage-stat-label, .usage-stat-hint, .badge, .row-label, .row-desc, dt, dd)')]
+    const extra = root === '.settings-detail-scroll' ? '' : ', h4, summary, legend, th, .mm-pill, .mm-note, .model-card-state, .model-card-tag, .popup-tab, .modal-btn';
+    const clipped = [...document.querySelectorAll(`${root} :is(button, label, h1, h2, h3, select, .set-row-label, .set-row-desc, .route-note, .model-name, .model-quant, .model-role, .usage-stat-label, .usage-stat-hint, .badge, .row-label, .row-desc, dt, dd${extra})`)]
       .filter((e) => e.offsetParent && e.getClientRects().length && !e.closest('[hidden], .usage-heatmap-scroll'))
       .filter((e) => {
         if (e.scrollWidth > e.clientWidth + 1 && !scrolls(e) && getComputedStyle(e).textOverflow !== 'ellipsis') return true;
@@ -86,7 +134,7 @@ async function checkLayout(page, name) {
       })
       .map((e) => `${(e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 60)} [${e.tagName}.${e.className}]`);
     return { overflow, clipped };
-  });
+  }, root);
   assert.equal(state.overflow, false, `${name}: horizontal overflow`);
   assert.deepEqual(state.clipped, [], `${name}: clipped ${state.clipped.join(' | ')}`);
 }
@@ -178,7 +226,48 @@ async function checkLayout(page, name) {
       await page.screenshot({ path: path.join(out, 'de-DE-1440-fallback-security.png') });
       await page.close();
     }
+    // 4. Diary & storage, Service status and the model manager page (#293), both languages, phone and desktop.
+    for (const locale of ['de-DE', 'fr-FR']) for (const width of [375, 1440]) {
+      const l = L[locale], x = EXTRA[locale];
+      const page = await openPage(browser, width, { notifications: { replyFinished: true, approvalNeeded: true }, sendKey: 'enter', locale }, extraApi);
+      page.on('pageerror', (e) => errors.push(`${locale} ${width} #293: ${e.message}`));
+      let mmCode = false; const early = [];
+      page.on('request', (r) => { if (/ModelManagerPage/.test(r.url())) mmCode = true; });
+      page.on('response', async (r) => { if (/\/assets\/(de-DE|fr-FR)-[^/]+\.js$/.test(r.url()) && (await r.text()).includes('mm.fit.rec.use') && !mmCode) early.push(r.url()); });
+      await page.goto(`http://localhost:${PORT}`);
+      await page.getByPlaceholder(l.composer).waitFor();
+      const settings = await openSettings(page, l.settings);
+      for (const [id, [label, heading, text]] of [['diary', x.diary], ['status', x.status]]) {
+        await openSection(page, settings, l, label);
+        await settings.locator('.settings-detail-scroll').getByText(heading, { exact: false }).first().waitFor();
+        await settings.locator('.settings-detail-scroll').getByText(text, { exact: false }).first().waitFor();
+        await checkLayout(page, `${locale} ${width} ${id}`);
+        await page.screenshot({ path: path.join(out, `${locale}-${width}-${id}.png`), fullPage: true });
+      }
+      await openSection(page, settings, l, x.models);
+      await settings.getByRole('button', { name: x.open }).click();
+      const mm = page.locator('.model-manager-page');
+      await mm.getByRole('heading', { name: x.mmTitle, level: 1 }).waitFor();
+      await mm.getByRole('tab', { name: x.yours, selected: true }).waitFor();
+      await mm.getByRole('article', { name: INSTALLED[0].name }).waitFor();
+      await mm.getByText(x.listText).first().waitFor();
+      await checkLayout(page, `${locale} ${width} models-list`, '.model-manager-page');
+      await page.screenshot({ path: path.join(out, `${locale}-${width}-models-list.png`), fullPage: true });
+      await mm.getByRole('article', { name: INSTALLED[0].name }).getByRole('button', { name: x.tune, exact: true }).click();
+      await mm.getByRole('heading', { name: x.guided, level: 3 }).waitFor();
+      await mm.locator('.mm-fit-verdict').waitFor();
+      await checkLayout(page, `${locale} ${width} models-detail`, '.model-manager-page');
+      await page.screenshot({ path: path.join(out, `${locale}-${width}-models-detail.png`), fullPage: true });
+      await mm.getByRole('button', { name: x.back }).click();
+      await mm.getByRole('tab', { name: x.routingTab, exact: true }).click();
+      await mm.getByRole('heading', { name: x.routing, level: 3 }).waitFor();
+      await checkLayout(page, `${locale} ${width} models-routing`, '.model-manager-page');
+      await page.screenshot({ path: path.join(out, `${locale}-${width}-models-routing.png`), fullPage: true });
+      assert.deepEqual(early, [], 'model manager strings requested before its chunk');
+      await page.close();
+    }
+
     assert.deepEqual(errors, []);
-    console.log(`PASS settings i18n: 8 Settings screens in de-DE and fr-FR at 375/1440 without overflow or clipping; German Settings segment loads once, only with Settings, after an English→German switch; a failed segment leaves Settings English with one warning. Screenshots in ${out}`);
+    console.log(`PASS settings i18n (#293 too: Diary & storage, Service status, model manager list/detail/routing in de-DE and fr-FR at 375/1440): 8 Settings screens in de-DE and fr-FR at 375/1440 without overflow or clipping; German Settings segment loads once, only with Settings, after an English→German switch; a failed segment leaves Settings English with one warning. Screenshots in ${out}`);
   } finally { await browser.close(); await fixture.close?.(); }
 })().catch((e) => { console.error(e); process.exit(1); });

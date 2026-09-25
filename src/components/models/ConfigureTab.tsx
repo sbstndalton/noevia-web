@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../api';
-import { isSystemModel, SYSTEM_MODEL_LABEL } from '../../model-system';
-import { bytes, ctxShort, errorText, mm, tokens } from './mm';
+import { isSystemModel } from '../../model-system';
+import { bytes, ctxShort, errorText, mm, num, tokens } from './mm';
 import { NativeCalibration } from '../NativeCalibration';
 import { AutoTune } from './AutoTune';
 import { dismissFolderModel } from './register';
+import { useT } from '../../i18n';
+import type { MessageKey } from '../../i18n';
 
 type Field = { key: string; label: string; kind: 'int' | 'text' | 'bool' | 'select'; choices: string[]; placeholder: string; help: string };
 type Tier = { tier: string; open: boolean; fields: Field[] };
@@ -23,37 +25,38 @@ type Run = Measured & { instance: string; is_current: boolean; diff: Record<stri
 type Auto = { error?: string; section: string; arch: string; params: string; fileBytes: number; model: string; recommendation: Rec; measured: Measured; history: Run[] };
 
 export function ConfigureTab({ initial, onSaved, onSelect }: { initial?: string; onSaved: () => void; onSelect?: (name: string) => void }) {
+  const t = useT();
   const [list, setList] = useState<SectionsResponse | null>(null), [selected, setSelected] = useState(initial || ''), [error, setError] = useState('');
   const load = async () => {
     try {
       const v = await mm<Partial<SectionsResponse>>('sections');
       // Opened straight from chat, this may meet a server without the model manager: say so, never crash.
-      if (!Array.isArray(v?.sections)) throw Error('Model settings are unavailable on this server.');
+      if (!Array.isArray(v?.sections)) throw Error(t('mm.configure.noServer'));
       setList({ revision: v.revision || '', schema: v.schema || [], sections: v.sections, unregistered: Array.isArray(v.unregistered) ? v.unregistered : [], backups: Array.isArray(v.backups) ? v.backups : [], raw: v.raw });
-    } catch (e) { setError(errorText(e, 'Model settings are unavailable.')); }
+    } catch (e) { setError(errorText(e, t('mm.configure.unavailable'))); }
   };
   useEffect(() => { void load(); }, []);
   useEffect(() => { if (initial) setSelected(initial); }, [initial]);
   const names = list?.sections.map(s => s.name) || [];
   return <div className="mm-tab">
-    <p className="mm-lede">Per-model settings for the llama.cpp engine (its models.ini). Each entry's name is the model id chat uses. Changes apply the next time the model loads.</p>
+    <p className="mm-lede">{t('mm.configure.lede')}</p>
     {error && <p role="alert" className="modal-err">{error}</p>}
     <div className="mm-row">
-      <label className="mm-grow">Model<select value={selected} onChange={e => { setSelected(e.target.value); onSelect?.(e.target.value); }}>
-        <option value="">Choose a model…</option>
-        <optgroup label="Configured">{names.map(n => <option key={n} value={n}>{n}</option>)}</optgroup>
-        {!!list?.unregistered.length && <optgroup label="Files without settings">{list.unregistered.map(n => <option key={n} value={n}>{n} (new)</option>)}</optgroup>}
-        {selected && !names.includes(selected) && !list?.unregistered.includes(selected) && <option value={selected}>{selected} (new)</option>}
+      <label className="mm-grow">{t('mm.projects.model')}<select value={selected} onChange={e => { setSelected(e.target.value); onSelect?.(e.target.value); }}>
+        <option value="">{t('mm.configure.choose')}</option>
+        <optgroup label={t('mm.configure.configured')}>{names.map(n => <option key={n} value={n}>{n}</option>)}</optgroup>
+        {!!list?.unregistered.length && <optgroup label={t('mm.configure.withoutSettings')}>{list.unregistered.map(n => <option key={n} value={n}>{t('mm.configure.new', { model: n })}</option>)}</optgroup>}
+        {selected && !names.includes(selected) && !list?.unregistered.includes(selected) && <option value={selected}>{t('mm.configure.new', { model: selected })}</option>}
       </select></label>
     </div>
     {selected && list && <SectionEditor key={selected} name={selected} row={list.sections.find(s => s.name === selected)} onChanged={async (renamed) => { await load(); if (renamed !== undefined) { setSelected(renamed); onSelect?.(renamed); } onSaved(); }}/>}
-    {list && !selected && <ul className="mm-list">{list.sections.map(s => <li key={s.name}><span>{s.name}<small>{s.hasFile ? s.file : 'model file not found'}</small></span><button className="modal-btn secondary" onClick={() => { setSelected(s.name); onSelect?.(s.name); }}>Edit</button></li>)}</ul>}
-    {list && <details className="mm-disclosure"><summary>Raw file &amp; backups</summary><div className="mm-form">
-      <pre className="mm-raw mm-mono" aria-label="models.ini contents">{list.raw || '(empty)'}</pre>
+    {list && !selected && <ul className="mm-list">{list.sections.map(s => <li key={s.name}><span>{s.name}<small>{s.hasFile ? s.file : t('mm.configure.fileMissing')}</small></span><button className="modal-btn secondary" onClick={() => { setSelected(s.name); onSelect?.(s.name); }}>{t('mm.configure.edit')}</button></li>)}</ul>}
+    {list && <details className="mm-disclosure"><summary>{t('mm.configure.raw')}</summary><div className="mm-form">
+      <pre className="mm-raw mm-mono" aria-label={t('mm.configure.rawLabel')}>{list.raw || t('mm.configure.empty')}</pre>
       {list.backups.length > 0
-        ? <><p className="mm-note">{list.backups.length} automatic backups are kept on the server, newest first. Restoring one is an operator task on the server.</p>
-          <ul className="mm-hints mm-mono">{list.backups.map(([file, mtime, size]) => <li key={file}>{file} · {new Date(mtime * 1000).toLocaleString()} · {size} B</li>)}</ul></>
-        : <p className="mm-note">No backups yet. One is created on the next save.</p>}
+        ? <><p className="mm-note">{t.plural('mm.configure.backups', list.backups.length)}</p>
+          <ul className="mm-hints mm-mono">{list.backups.map(([file, mtime, size]) => <li key={file}>{file} · {new Date(mtime * 1000).toLocaleString(t.locale)} · {size} B</li>)}</ul></>
+        : <p className="mm-note">{t('mm.configure.noBackups')}</p>}
     </div></details>}
   </div>;
 }
@@ -62,16 +65,17 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
   const [data, setData] = useState<SectionResponse | null>(null), [draft, setDraft] = useState<Record<string, string>>({}), [extras, setExtras] = useState('');
   const [busy, setBusy] = useState(''), [error, setError] = useState(''), [message, setMessage] = useState(''), [conflict, setConflict] = useState(false);
   const [rename, setRename] = useState(''), [confirmDelete, setConfirmDelete] = useState(false);
+  const t = useT();
   const read = async (defaults = false) => {
     setError(''); setConflict(false);
-    try { const v = await mm<SectionResponse>(`sections/${encodeURIComponent(name)}${defaults ? '?defaults=true' : ''}`); setData(v); setDraft(v.values); if (!defaults) setExtras(v.extras); setMessage(defaults ? 'Filled with defaults derived from the model file. Nothing is saved until you save.' : ''); }
-    catch (e) { setError(errorText(e, 'Could not read these settings')); }
+    try { const v = await mm<SectionResponse>(`sections/${encodeURIComponent(name)}${defaults ? '?defaults=true' : ''}`); setData(v); setDraft(v.values); if (!defaults) setExtras(v.extras); setMessage(defaults ? t('mm.editor.defaultsFilled') : ''); }
+    catch (e) { setError(errorText(e, t('mm.editor.readFailed'))); }
   };
   useEffect(() => { void read(); }, [name]);
   const save = async (values = draft, extraText = extras) => {
     if (!data) return; setBusy('save'); setError(''); setMessage('');
     try { const v = await mm<{ revision: string }>(`sections/${encodeURIComponent(name)}`, { method: 'PUT', body: { baseRevision: data.revision, values, extras: extraText } }); setData({ ...data, revision: v.revision, exists: true }); await onChanged(); await apply(false); }
-    catch (e) { if ((e as { status?: number }).status === 409) setConflict(true); setError(errorText(e, 'Save failed')); } finally { setBusy(''); }
+    catch (e) { if ((e as { status?: number }).status === 409) setConflict(true); setError(errorText(e, t('mm.editor.saveFailed'))); } finally { setBusy(''); }
   };
   const [pending, setPending] = useState<string[]>([]);
   // The engine reads its settings file only on reload; apply now, or say what is waiting.
@@ -80,10 +84,10 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
     try {
       const r = await apiFetch('/api/models/presets/reload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unload }) });
       const v = await r.json().catch(() => ({}));
-      if (r.status === 409 && Array.isArray(v.loaded)) { setPending(v.loaded); setMessage(`Saved. ${v.loaded.join(', ')} is loaded, so the engine keeps the old settings until it is unloaded.`); return; }
-      if (!r.ok) throw Error(v.error || 'The engine did not reload');
-      setPending([]); setMessage(unload && v.unloaded?.length ? `Saved and applied. ${v.unloaded.join(', ')} was unloaded and loads with the new settings next time.` : 'Saved and applied. The engine uses the new settings from the next load.');
-    } catch (e) { setError(errorText(e, 'Saved, but the engine did not reload')); } finally { setBusy(''); }
+      if (r.status === 409 && Array.isArray(v.loaded)) { setPending(v.loaded); setMessage(t('mm.editor.savedLoaded', { models: v.loaded.join(', ') })); return; }
+      if (!r.ok) throw Error(v.error || t('mm.editor.noReload'));
+      setPending([]); setMessage(unload && v.unloaded?.length ? t('mm.editor.appliedUnloaded', { models: v.unloaded.join(', ') }) : t('mm.editor.applied'));
+    } catch (e) { setError(errorText(e, t('mm.editor.savedNoReload'))); } finally { setBusy(''); }
   };
   const doRename = async () => {
     if (!data || isSystemModel(name)) return; setBusy('rename'); setError('');
@@ -92,14 +96,14 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
     // '' — and the button re-enabled — while onChanged (which reloads the section list and the
     // selected name) was still in flight. Awaiting onChanged first closes that double-click window.
     try { await mm(`sections/${encodeURIComponent(name)}/rename`, { body: { newName: rename.trim(), baseRevision: data.revision } }); await onChanged(rename.trim()); await apply(false); }
-    catch (e) { setError(errorText(e, 'Rename failed')); } finally { setBusy(''); }
+    catch (e) { setError(errorText(e, t('mm.editor.renameFailed'))); } finally { setBusy(''); }
   };
   const doDelete = async () => {
     if (!data || isSystemModel(name)) return; setBusy('delete'); setError('');
     // See doRename above: onChanged is awaited before apply() so its own finally cannot clear
     // `busy` while onChanged is still pending.
     try { await mm(`sections/${encodeURIComponent(name)}?baseRevision=${data.revision}`, { method: 'DELETE' }); dismissFolderModel(name); await onChanged(''); await apply(false); }
-    catch (e) { if ((e as { status?: number }).status === 409) setConflict(true); setError(errorText(e, 'Delete failed')); } finally { setBusy(''); }
+    catch (e) { if ((e as { status?: number }).status === 409) setConflict(true); setError(errorText(e, t('mm.deleteFailed'))); } finally { setBusy(''); }
   };
   const merge = (values: Record<string, string>, displaced: string[]) => {
     const schemaKeys = new Set(data?.schema.flatMap(t => t.fields.map(f => f.key)) || []);
@@ -112,7 +116,7 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
   const fill = (values: Record<string, string>, displaced: string[]) => {
     const { next, extraText } = merge(values, displaced);
     setDraft(next); setExtras(extraText);
-    setMessage('Autoconfig values filled in. Review them, then save.');
+    setMessage(t('mm.editor.autoconfigFilled'));
   };
   const useTuned = async (values: Record<string, string>, displaced: string[]) => {
     const { next, extraText } = merge(values, displaced);
@@ -121,51 +125,51 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
   };
   const [mode, setModeState] = useState<'easy' | 'advanced'>(() => { try { return localStorage.getItem('noevia:model-settings-mode') === 'advanced' ? 'advanced' : 'easy'; } catch { return 'easy'; } });
   const setMode = (next: 'easy' | 'advanced') => { setModeState(next); try { localStorage.setItem('noevia:model-settings-mode', next); } catch { /* optional */ } };
-  if (!data) return error ? <p role="alert" className="modal-err">{error}</p> : <p role="status">Reading settings…</p>;
+  if (!data) return error ? <p role="alert" className="modal-err">{error}</p> : <p role="status">{t('mm.editor.reading')}</p>;
   return <section className="mm-panel" aria-labelledby="mm-section-title">
-    <header className="mm-panel-head"><div><h3 id="mm-section-title">{name}</h3><p className="mm-note">{data.exists ? (row?.hasFile ? row.file : 'Model file not found for these settings') : 'New settings: not saved yet'}</p></div></header>
-    <div className="mm-mode" role="group" aria-label="Settings detail">
-      {(['easy', 'advanced'] as const).map(m => <button key={m} aria-pressed={mode === m} className={mode === m ? 'is-active' : ''} onClick={() => setMode(m)}>{m === 'easy' ? 'Easy' : 'Advanced'}</button>)}
+    <header className="mm-panel-head"><div><h3 id="mm-section-title">{name}</h3><p className="mm-note">{data.exists ? (row?.hasFile ? row.file : t('mm.editor.fileMissing')) : t('mm.editor.unsaved')}</p></div></header>
+    <div className="mm-mode" role="group" aria-label={t('mm.editor.detail')}>
+      {(['easy', 'advanced'] as const).map(m => <button key={m} aria-pressed={mode === m} className={mode === m ? 'is-active' : ''} onClick={() => setMode(m)}>{m === 'easy' ? t('mm.editor.easy') : t('mm.editor.advanced')}</button>)}
     </div>
     {mode === 'easy' ? <EasySettings name={name} draft={draft} busy={busy !== ''} onChange={(patch) => setDraft({ ...draft, ...patch })} onUseTuned={useTuned} onAutoApplied={() => { void read(); void onChanged(); }}/> : <>
     {data.hints.length > 0 && <ul className="mm-hints">{data.hints.map(h => <li key={h}>{h}</li>)}</ul>}
     <AutoconfigPanel name={name} onFill={fill}/>
     <div className="mm-form">
-      {data.schema.map(t => <details key={t.tier} className="mm-tier" open={t.open || t.fields.some(f => draft[f.key])}>
-        <summary>{t.tier}{t.fields.some(f => draft[f.key]) ? <small>{t.fields.filter(f => draft[f.key]).length} set</small> : null}</summary>
-        <div className="mm-fields">{t.fields.map(f => <FieldInput key={f.key} field={f} value={draft[f.key] || ''} onChange={v => setDraft({ ...draft, [f.key]: v })}/>)}</div>
+      {data.schema.map(tier => <details key={tier.tier} className="mm-tier" open={tier.open || tier.fields.some(f => draft[f.key])}>
+        <summary>{tier.tier}{tier.fields.some(f => draft[f.key]) ? <small>{t('mm.editor.set', { count: tier.fields.filter(f => draft[f.key]).length })}</small> : null}</summary>
+        <div className="mm-fields">{tier.fields.map(f => <FieldInput key={f.key} field={f} value={draft[f.key] || ''} onChange={v => setDraft({ ...draft, [f.key]: v })}/>)}</div>
       </details>)}
-      <label>Other options, one per line (key = value)<textarea rows={4} className="mm-mono" value={extras} onChange={e => setExtras(e.target.value)} placeholder="e.g. override-tensor = exps=CPU"/></label>
+      <label>{t('mm.editor.otherOptions')}<textarea rows={4} className="mm-mono" value={extras} onChange={e => setExtras(e.target.value)} placeholder={t('mm.editor.otherPlaceholder')}/></label>
     </div>
     </>}
-    {conflict && <p role="alert" className="modal-err">The settings file changed since you opened it (another save, a calibration or an edit on the server). <button className="modal-btn secondary" onClick={() => void read()}>Reload latest</button> Your unsaved changes will be replaced.</p>}
+    {conflict && <p role="alert" className="modal-err">{t('mm.editor.conflict')} <button className="modal-btn secondary" onClick={() => void read()}>{t('mm.editor.reloadLatest')}</button> {t('mm.editor.conflictAfter')}</p>}
     {error && !conflict && <p role="alert" className="modal-err">{error}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
-    {pending.length > 0 && <div className="mm-actions"><button className="modal-btn secondary" disabled={busy !== ''} onClick={() => void apply(true)}>{busy === 'apply' ? 'Applying…' : 'Apply now (unloads the model)'}</button></div>}
+    {pending.length > 0 && <div className="mm-actions"><button className="modal-btn secondary" disabled={busy !== ''} onClick={() => void apply(true)}>{busy === 'apply' ? t('mm.editor.applying') : t('mm.editor.applyNow')}</button></div>}
     <div className="mm-actions">
-      <button className="modal-btn primary" disabled={busy !== ''} onClick={() => void save()}>{busy === 'save' ? 'Saving…' : data.exists ? 'Save settings' : 'Create settings'}</button>
-      <button className="modal-btn secondary" disabled={busy !== ''} onClick={() => void read(true)}>Reset to model-file defaults</button>
-      {row?.cli && <button className="modal-btn secondary" onClick={() => void navigator.clipboard?.writeText(row.cli).then(() => setMessage('Command line copied.'))}>Copy command line</button>}
+      <button className="modal-btn primary" disabled={busy !== ''} onClick={() => void save()}>{busy === 'save' ? t('mm.saving') : data.exists ? t('mm.editor.save') : t('mm.createSettings')}</button>
+      <button className="modal-btn secondary" disabled={busy !== ''} onClick={() => void read(true)}>{t('mm.editor.reset')}</button>
+      {row?.cli && <button className="modal-btn secondary" onClick={() => void navigator.clipboard?.writeText(row.cli).then(() => setMessage(t('mm.editor.cliCopied')))}>{t('mm.editor.copyCli')}</button>}
     </div>
-    {data.exists && isSystemModel(name) && <p className="mm-note" role="status">{SYSTEM_MODEL_LABEL} — used internally for message routing; it cannot be renamed or removed here.</p>}
-    {data.exists && !isSystemModel(name) && <details className="mm-disclosure"><summary>Rename or delete</summary><div className="mm-form">
-      <p className="mm-note">The name is the model id that chat, projects and the Diary refer to. Renaming keeps the same file.</p>
-      <div className="mm-row"><label className="mm-grow">New name<input value={rename} onChange={e => setRename(e.target.value)} placeholder={name}/></label><button className="modal-btn secondary" disabled={!rename.trim() || rename.trim() === name || busy !== ''} onClick={() => void doRename()}>Rename</button></div>
-      {confirmDelete ? <div className="mm-actions"><p>Remove these settings? The model file stays; the engine stops offering this model.</p><button className="modal-btn primary" disabled={busy !== ''} onClick={() => void doDelete()}>Remove settings</button><button className="modal-btn secondary" onClick={() => setConfirmDelete(false)}>Keep</button></div>
-        : <button className="modal-btn secondary" onClick={() => setConfirmDelete(true)}>Remove these settings…</button>}
+    {data.exists && isSystemModel(name) && <p className="mm-note" role="status">{t('model.systemLabel')}{t('mm.editor.systemNote')}</p>}
+    {data.exists && !isSystemModel(name) && <details className="mm-disclosure"><summary>{t('mm.editor.renameOrDelete')}</summary><div className="mm-form">
+      <p className="mm-note">{t('mm.editor.renameNote')}</p>
+      <div className="mm-row"><label className="mm-grow">{t('mm.editor.newName')}<input value={rename} onChange={e => setRename(e.target.value)} placeholder={name}/></label><button className="modal-btn secondary" disabled={!rename.trim() || rename.trim() === name || busy !== ''} onClick={() => void doRename()}>{t('mm.editor.rename')}</button></div>
+      {confirmDelete ? <div className="mm-actions"><p>{t('mm.editor.removeConfirm')}</p><button className="modal-btn primary" disabled={busy !== ''} onClick={() => void doDelete()}>{t('mm.editor.remove')}</button><button className="modal-btn secondary" onClick={() => setConfirmDelete(false)}>{t('mm.keep')}</button></div>
+        : <button className="modal-btn secondary" onClick={() => setConfirmDelete(true)}>{t('mm.editor.removeAsk')}</button>}
     </div></details>}
   </section>;
 }
 
-const SPEC_CHOICES: [string, string, string][] = [
-  ['', 'Engine default', 'Leave speculative decoding to the engine.'],
-  ['none', 'Off', 'No speculative decoding.'],
-  ['draft-mtp', 'MTP draft head', 'Uses the model\'s MTP prediction head. Tune for this machine fills in the head file when one sits beside the model.'],
-  ['ngram-simple', 'N-gram (no extra model)', 'Guesses from text already in the conversation. Helps with repetitive output.'],
+const SPEC_CHOICES: [string, MessageKey, MessageKey][] = [
+  ['', 'mm.easy.engineDefault', 'mm.easy.spec.defaultHelp'],
+  ['none', 'mm.easy.spec.off', 'mm.easy.spec.offHelp'],
+  ['draft-mtp', 'mm.easy.spec.mtp', 'mm.easy.spec.mtpHelp'],
+  ['ngram-simple', 'mm.easy.spec.ngram', 'mm.easy.spec.ngramHelp'],
 ];
 // Easy mode never offers below Q5: Q4 degrades quality too much for a routine choice.
 // Advanced mode's FieldInput still lists q4_0/q4_1 via the full preset schema for expert use.
-const KV_CHOICES: [string, string][] = [['', 'Engine default'], ['f16', 'Full precision (f16)'], ['q8_0', 'Balanced (q8_0)'], ['q5_0', 'Smallest (q5_0)']];
+const KV_CHOICES: [string, MessageKey][] = [['', 'mm.easy.engineDefault'], ['f16', 'mm.easy.kv.f16'], ['q8_0', 'mm.easy.kv.q8'], ['q5_0', 'mm.easy.kv.q5']];
 
 // Easy exposes speculative decoding and KV cache type; tuning must not override what was picked.
 const keepChoices = (draft: Record<string, string>) => Object.fromEntries(['spec-type', 'cache-type-k', 'cache-type-v'].filter(k => draft[k]).map(k => [k, draft[k]]));
@@ -176,6 +180,7 @@ type DraftHeads = { local: string; builtinLayers: number; available: boolean; re
 function EasySettings({ name, draft, busy, onChange, onUseTuned, onAutoApplied }: { name: string; draft: Record<string, string>; busy: boolean; onChange: (patch: Record<string, string>) => void; onUseTuned: (values: Record<string, string>, displaced: string[]) => Promise<void>; onAutoApplied: () => void }) {
   const [auto, setAuto] = useState<Auto | null>(null), [tuning, setTuning] = useState(false), [error, setError] = useState('');
   const [verified, setVerified] = useState(0), [heads, setHeads] = useState<DraftHeads | null>(null), [headNote, setHeadNote] = useState('');
+  const t = useT();
   useEffect(() => {
     let live = true;
     // A context measured on this machine bounds every estimate; newest measurement wins.
@@ -196,70 +201,71 @@ function EasySettings({ name, draft, busy, onChange, onUseTuned, onAutoApplied }
     const q = new URLSearchParams({ sessions: '1', spec, vision: String(Boolean(draft.mmproj)) });
     if (verified > 0) q.set('verified_ctx', String(verified));
     try { setAuto(await mm<Auto>(`sections/${encodeURIComponent(name)}/autoconfig?${q}`)); }
-    catch (e) { setError(errorText(e, 'Tuning failed')); } finally { setTuning(false); }
+    catch (e) { setError(errorText(e, t('mm.easy.tuneFailed'))); } finally { setTuning(false); }
   };
   const downloadHead = async (path: string) => {
     setHeadNote('');
-    try { await mm(`sections/${encodeURIComponent(name)}/draft-heads/download`, { body: { path } }); setHeadNote('Downloading the MTP head into this model\'s folder. Tune again when it finishes to turn MTP on.'); }
-    catch (e) { setHeadNote(errorText(e, 'The head could not be downloaded.')); }
+    try { await mm(`sections/${encodeURIComponent(name)}/draft-heads/download`, { body: { path } }); setHeadNote(t('mm.easy.headDownloading')); }
+    catch (e) { setHeadNote(errorText(e, t('mm.easy.headFailed'))); }
   };
   const rec = auto?.recommendation;
   const failure = auto?.error || rec?.error || error;
   const kv = draft['cache-type-k'] === draft['cache-type-v'] ? draft['cache-type-k'] || '' : 'mixed';
   const spec = SPEC_CHOICES.find(c => c[0] === (draft['spec-type'] || ''));
-  const mtpStatus = !heads ? '' : heads.local ? 'This model has an MTP draft head beside it.'
-    : heads.builtinLayers > 0 ? 'This model has MTP layers built in; no extra file is needed.'
-    : heads.remote.length ? `No MTP head here yet; ${heads.repo} publishes one.`
-    : heads.mtpBuild ? `This file has no MTP layers. An MTP build is published as ${heads.mtpBuild}.`
-    : 'No MTP head is available for this model, so speculative decoding stays off unless you pick N-gram.';
+  const mtpStatus = !heads ? '' : heads.local ? t('mm.easy.mtp.local')
+    : heads.builtinLayers > 0 ? t('mm.easy.mtp.builtin')
+    : heads.remote.length ? t('mm.easy.mtp.remote', { repo: heads.repo ?? '' })
+    : heads.mtpBuild ? t('mm.easy.mtp.build', { build: heads.mtpBuild })
+    : t('mm.easy.mtp.none');
   const system = isSystemModel(name);
   return <div className="mm-form mm-easy">
     <div className="mm-easy-row">
-      <div><strong>Context</strong><p className="mm-note">{draft['ctx-size'] ? `${ctxShort(Number(draft['ctx-size']))} tokens` : 'Engine default'}. {verified > 0 ? `Measured on this machine: ${ctxShort(verified)} tokens.` : 'Not measured on this machine yet.'} Tuning estimates what fits in memory and what this machine can read in time.</p></div>
-      {!system && <button className="modal-btn secondary" disabled={tuning || busy} onClick={() => void tune()}>{tuning ? 'Estimating…' : 'Tune for this machine'}</button>}
+      <div><strong>{t('mm.easy.context')}</strong><p className="mm-note">{draft['ctx-size'] ? t('mm.tokensCount', { tokens: ctxShort(Number(draft['ctx-size'])) }) : t('mm.easy.engineDefault')}. {verified > 0 ? t('mm.easy.measured', { tokens: ctxShort(verified) }) : t('mm.easy.notMeasured')} {t('mm.easy.tuningNote')}</p></div>
+      {!system && <button className="modal-btn secondary" disabled={tuning || busy} onClick={() => void tune()}>{tuning ? t('mm.easy.estimating') : t('mm.easy.tune')}</button>}
     </div>
-    {system && <p className="mm-note" role="status">{SYSTEM_MODEL_LABEL} — used internally for message routing; it cannot be tuned or calibrated here.</p>}
+    {system && <p className="mm-note" role="status">{t('model.systemLabel')}{t('mm.easy.systemNote')}</p>}
     {!system && failure && <p role="alert" className="modal-err">{failure}</p>}
     {!system && rec && !failure && <div className="mm-easy-result" role="status">
       <div className="mm-easy-result-text">
-        <p>Recommended: <strong>{ctxShort(rec.recommended_ctx)} tokens</strong> on {rec.recommended_backend}{rec.fits_full_gpu ? ', entirely on the GPU' : ''}.</p>
-        {rec.ctx_cap_reason && rec.estimated_ctx ? <p className="mm-note">Memory would allow {ctxShort(rec.estimated_ctx)}; limited because {rec.ctx_cap_reason}.</p> : null}
+        <p>{t('mm.easy.recommended')}<strong>{t('mm.tokensCount', { tokens: ctxShort(rec.recommended_ctx) })}</strong>{t(rec.fits_full_gpu ? 'mm.easy.onBackendGpu' : 'mm.easy.onBackend', { backend: rec.recommended_backend })}</p>
+        {rec.ctx_cap_reason && rec.estimated_ctx ? <p className="mm-note">{t('mm.easy.capped', { ctx: ctxShort(rec.estimated_ctx), reason: rec.ctx_cap_reason })}</p> : null}
         {(rec.warnings || []).map((w) => <p key={w} className="mm-note mm-warn" role="note">{w}</p>)}
       </div>
-      <button className="modal-btn primary" disabled={busy} onClick={() => void onUseTuned({ ...rec.values, ...keepChoices(draft) }, rec.displaced)}>Use and save</button>
+      <button className="modal-btn primary" disabled={busy} onClick={() => void onUseTuned({ ...rec.values, ...keepChoices(draft) }, rec.displaced)}>{t('mm.easy.useSave')}</button>
     </div>}
 {!system && <details className="mm-disclosure mm-easy-autotune" open>
-      <summary>Auto-tune and apply <small>Measures context, KV cache, drafting and batch size together; chat pauses while it runs.</small></summary>
+      <summary>{t('mm.autotune.apply')} <small>{t('mm.easy.autotuneHint')}</small></summary>
       <AutoTune model={name} onChanged={() => { setAuto(null); onAutoApplied(); }}/>
     </details>}
     {!system && <details className="mm-disclosure mm-easy-measure">
-      <summary>Measure context on this machine <small>Tests the real engine; chat pauses while it runs.</small></summary>
+      <summary>{t('mm.calibration.title')} <small>{t('mm.easy.measureHint')}</small></summary>
           <NativeCalibration model={name} onChanged={() => { setAuto(null); setVerified(0); void apiFetch('/api/models/calibration?model=' + encodeURIComponent(name)).then(r => r.json()).then((v: { history?: { at: number; appliedCtx?: number; verifiedCtx?: number }[] }) => { const last = (v.history || []).slice().sort((a, b) => b.at - a.at)[0]; setVerified(last?.verifiedCtx || last?.appliedCtx || 0); }).catch(() => {}); }}/>
     </details>}
-    <label>Speculative decoding (MTP)<select value={draft['spec-type'] || ''} onChange={e => onChange({ 'spec-type': e.target.value })}>
-      {SPEC_CHOICES.map(([v, label]) => <option key={v} value={v} disabled={v === 'draft-mtp' && heads !== null && !heads.available}>{label}{v === 'draft-mtp' && heads?.available ? ' (available)' : ''}</option>)}
-      {!spec && <option value={draft['spec-type']}>{draft['spec-type']} (set in Advanced)</option>}
-    </select><small>{spec ? spec[2] : 'A custom strategy is set; change it in Advanced.'}{mtpStatus ? ` ${mtpStatus}` : ''}</small></label>
+    <label>{t('mm.easy.spec')}<select value={draft['spec-type'] || ''} onChange={e => onChange({ 'spec-type': e.target.value })}>
+      {SPEC_CHOICES.map(([v, label]) => <option key={v} value={v} disabled={v === 'draft-mtp' && heads !== null && !heads.available}>{t(label)}{v === 'draft-mtp' && heads?.available ? ` (${t('mm.easy.available')})` : ''}</option>)}
+      {!spec && <option value={draft['spec-type']}>{t('mm.easy.setInAdvanced', { value: draft['spec-type'] })}</option>}
+    </select><small>{spec ? t(spec[2]) : t('mm.easy.customSpec')}{mtpStatus ? ` ${mtpStatus}` : ''}</small></label>
     {heads && !heads.available && heads.remote[0] && <div className="mm-easy-row">
       <p className="mm-note">{heads.remote[0].path} · {bytes(heads.remote[0].size)}</p>
-      <button className="modal-btn secondary" disabled={busy} onClick={() => void downloadHead(heads.remote[0].path)}>Download MTP head</button>
+      <button className="modal-btn secondary" disabled={busy} onClick={() => void downloadHead(heads.remote[0].path)}>{t('mm.easy.downloadHead')}</button>
     </div>}
     {headNote && <p className="mm-note" role="status">{headNote}</p>}
-    <label>KV cache quantisation<select value={kv} onChange={e => onChange({ 'cache-type-k': e.target.value, 'cache-type-v': e.target.value })}>
-      {KV_CHOICES.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
-      {kv === 'mixed' && <option value="mixed" disabled>Different K and V (set in Advanced)</option>}
+    <label>{t('mm.easy.kv')}<select value={kv} onChange={e => onChange({ 'cache-type-k': e.target.value, 'cache-type-v': e.target.value })}>
+      {KV_CHOICES.map(([v, label]) => <option key={v} value={v}>{t(label)}</option>)}
+      {kv === 'mixed' && <option value="mixed" disabled>{t('mm.easy.kv.mixed')}</option>}
       {kv !== 'mixed' && !KV_CHOICES.some(c => c[0] === kv) && <option value={kv}>{kv}</option>}
-    </select><small>Smaller cache types fit more context in the same memory at a small quality cost.</small></label>
+    </select><small>{t('mm.easy.kvHelp')}</small></label>
   </div>;
 }
 
 function FieldInput({ field: f, value, onChange }: { field: Field; value: string; onChange: (v: string) => void }) {
   const id = `mm-field-${f.key}`;
+  const t = useT();
   return <div className="mm-field">
     {f.kind === 'bool'
       ? <label className="mm-check"><input id={id} type="checkbox" checked={['true', 'on', '1'].includes(value)} onChange={e => onChange(e.target.checked ? 'true' : '')}/>{f.label}</label>
       : <label htmlFor={id}>{f.label}</label>}
-    {f.kind === 'select' && <select id={id} value={value} onChange={e => onChange(e.target.value)}>{f.choices.map(c => <option key={c} value={c}>{c || 'Default'}</option>)}</select>}
+    {f.kind === 'select' && <select id={id} value={value} onChange={e => onChange(e.target.value)}>{f.choices.map(c => <option key={c} value={c}>{c || t('mm.field.default')}</option>)}</select>}
     {(f.kind === 'int' || f.kind === 'text') && <input id={id} inputMode={f.kind === 'int' ? 'numeric' : undefined} value={value} placeholder={f.placeholder} onChange={e => onChange(e.target.value)}/>}
     {f.help && <small>{f.help}</small>}
   </div>;
@@ -268,10 +274,11 @@ function FieldInput({ field: f, value, onChange }: { field: Field; value: string
 function AutoconfigPanel({ name, onFill }: { name: string; onFill: (values: Record<string, string>, displaced: string[]) => void }) {
   const [sessions, setSessions] = useState(1), [preset, setPreset] = useState(''), [spec, setSpec] = useState(''), [vision, setVision] = useState(true), [point, setPoint] = useState<number | null>(null);
   const [data, setData] = useState<Auto | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState('');
+  const t = useT();
   const run = async () => {
     setBusy(true); setError('');
     try { setData(await mm<Auto>(`sections/${encodeURIComponent(name)}/autoconfig?${new URLSearchParams({ sessions: String(sessions), preset, spec, vision: String(vision) })}`)); setPoint(null); }
-    catch (e) { setError(errorText(e, 'Autoconfig failed')); } finally { setBusy(false); }
+    catch (e) { setError(errorText(e, t('mm.autoconfig.failed'))); } finally { setBusy(false); }
   };
   useEffect(() => { if (data) void run(); }, [sessions, preset, spec, vision]);
   const rec = data?.recommendation;
@@ -285,44 +292,44 @@ function AutoconfigPanel({ name, onFill }: { name: string; onFill: (values: Reco
   }, [rec, chosen]);
   const columns = rec ? [...new Set(rec.plans.flatMap(p => p.rows.map(r => r.ctx)))].filter(c => [8192, 32768, 65536, 131072, 262144, rec.native_ctx, ...rec.plans.map(p => p.max_ctx)].includes(c)).sort((a, b) => a - b).slice(0, 6) : [];
   return <details className="mm-disclosure mm-autoconfig" open={!!data}>
-    <summary>Autoconfig: work out settings that fit this machine</summary>
+    <summary>{t('mm.autoconfig.title')}</summary>
     <div className="mm-form">
-      <p className="mm-note">Reads the model file and this server's GPU memory, then proposes a context size, GPU placement, cache type and related settings. Nothing changes until you fill the form and save. For a measured answer, use Measure context in the Library.</p>
+      <p className="mm-note">{t('mm.autoconfig.note')}</p>
       <div className="mm-row">
-        <label>Chats at once<select value={sessions} onChange={e => setSessions(Number(e.target.value))}>{[1, 2, 3, 4, 6, 8].map(n => <option key={n} value={n}>{n}</option>)}</select></label>
-        {data?.recommendation?.vision_available && <label className="mm-check"><input type="checkbox" checked={vision} onChange={e => setVision(e.target.checked)}/>Vision (image input)</label>}
-        <button className="modal-btn secondary" disabled={busy} onClick={() => void run()}>{busy ? 'Working…' : data ? 'Recalculate' : 'Run autoconfig'}</button>
+        <label>{t('mm.autoconfig.sessions')}<select value={sessions} onChange={e => setSessions(Number(e.target.value))}>{[1, 2, 3, 4, 6, 8].map(n => <option key={n} value={n}>{n}</option>)}</select></label>
+        {data?.recommendation?.vision_available && <label className="mm-check"><input type="checkbox" checked={vision} onChange={e => setVision(e.target.checked)}/>{t('mm.autoconfig.vision')}</label>}
+        <button className="modal-btn secondary" disabled={busy} onClick={() => void run()}>{busy ? t('mm.working') : data ? t('mm.autoconfig.recalculate') : t('mm.autoconfig.run')}</button>
       </div>
       {error && <p role="alert" className="modal-err">{error}</p>}
       {data?.error && <p role="alert" className="modal-err">{data.error}</p>}
       {rec?.error && <p role="alert" className="modal-err">{rec.error}</p>}
       {rec && !rec.error && <>
-        <p><strong>{data?.arch}{data?.params ? ` · ${data.params}` : ''}</strong> · recommended {ctxShort(rec.recommended_ctx)} tokens per chat{rec.n_sessions > 1 ? ` (${ctxShort(rec.recommended_total_ctx)} total)` : ''} on {rec.recommended_backend}{rec.native_ctx ? ` · trained for ${ctxShort(rec.native_ctx)}` : ''}</p>
-        {!vision && rec.vision_available && <p className="mm-note">Vision off: the projector is not loaded and its memory goes to context. Saving removes image input for this model.</p>}
-        {rec.presets.length > 1 && <fieldset className="mm-chips"><legend>Priority</legend>{rec.presets.map(p => <button key={p.key} aria-pressed={(preset || rec.active_preset) === p.key} className={(preset || rec.active_preset) === p.key ? 'is-active' : ''} onClick={() => setPreset(p.key)}>
-          <strong>{p.label}{rec.current_preset === p.key ? ' (current)' : ''}</strong><small>{ctxShort(p.ctx)} tokens · {p.gpu_layers}/{p.total_layers} layers on GPU · ~{Math.round(p.speed_score * 100)}% speed</small></button>)}</fieldset>}
-        {rec.fits_full_gpu && <p className="mm-note">Fits entirely on the GPU at its full trained context, so there is nothing to trade off.</p>}
-        {rec.frontier.length > 2 && <label>Fine-tune: {chosen ? `${ctxShort(chosen.ctx)} tokens, ${chosen.gpu_layers}/${chosen.total_layers} layers on GPU, ~${Math.round(chosen.speed_score * 100)}% speed` : 'use the priority above'}
+        <p><strong>{data?.arch}{data?.params ? ` · ${data.params}` : ''}</strong> · {t('mm.autoconfig.recommended', { tokens: ctxShort(rec.recommended_ctx) })}{rec.n_sessions > 1 ? ` (${t('mm.autoconfig.total', { tokens: ctxShort(rec.recommended_total_ctx) })})` : ''} {t('mm.autoconfig.on', { backend: rec.recommended_backend })}{rec.native_ctx ? ` · ${t('mm.autoconfig.trainedFor', { tokens: ctxShort(rec.native_ctx) })}` : ''}</p>
+        {!vision && rec.vision_available && <p className="mm-note">{t('mm.autoconfig.visionOff')}</p>}
+        {rec.presets.length > 1 && <fieldset className="mm-chips"><legend>{t('mm.autoconfig.priority')}</legend>{rec.presets.map(p => <button key={p.key} aria-pressed={(preset || rec.active_preset) === p.key} className={(preset || rec.active_preset) === p.key ? 'is-active' : ''} onClick={() => setPreset(p.key)}>
+          <strong>{p.label}{rec.current_preset === p.key ? ` ${t('mm.current')}` : ''}</strong><small>{t('mm.tokensCount', { tokens: ctxShort(p.ctx) })} · {t('mm.layersOnGpu', { gpu: p.gpu_layers, total: p.total_layers })} · {t('mm.speedPct', { pct: Math.round(p.speed_score * 100) })}</small></button>)}</fieldset>}
+        {rec.fits_full_gpu && <p className="mm-note">{t('mm.autoconfig.fitsFull')}</p>}
+        {rec.frontier.length > 2 && <label>{t('mm.autoconfig.fineTune')} {chosen ? [t('mm.tokensCount', { tokens: ctxShort(chosen.ctx) }), t('mm.layersOnGpu', { gpu: chosen.gpu_layers, total: chosen.total_layers }), t('mm.speedPct', { pct: Math.round(chosen.speed_score * 100) })].join(', ') : t('mm.autoconfig.usePriority')}
           <input type="range" min={0} max={rec.frontier.length - 1} value={point ?? 0} onChange={e => setPoint(Number(e.target.value))}/></label>}
-        {rec.spec_profiles.length > 0 && <fieldset className="mm-chips"><legend>Speculative decoding</legend>{rec.spec_profiles.map(s => {
+        {rec.spec_profiles.length > 0 && <fieldset className="mm-chips"><legend>{t('mm.autoconfig.spec')}</legend>{rec.spec_profiles.map(s => {
           const unusable = s.needs_head && !rec.spec_head_rel;
-          return <button key={s.key} disabled={unusable} aria-pressed={(spec || rec.active_spec_profile) === s.key} className={(spec || rec.active_spec_profile) === s.key ? 'is-active' : ''} onClick={() => setSpec(s.key)} title={unusable ? 'Needs a draft or MTP head next to the model file' : s.blurb}>
-            <strong>{s.label}{rec.current_spec_profile === s.key ? ' (current)' : ''}</strong><small>{unusable ? 'No prediction head found' : s.blurb}</small></button>;
+          return <button key={s.key} disabled={unusable} aria-pressed={(spec || rec.active_spec_profile) === s.key} className={(spec || rec.active_spec_profile) === s.key ? 'is-active' : ''} onClick={() => setSpec(s.key)} title={unusable ? t('mm.autoconfig.needsHead') : s.blurb}>
+            <strong>{s.label}{rec.current_spec_profile === s.key ? ` ${t('mm.current')}` : ''}</strong><small>{unusable ? t('mm.autoconfig.noHead') : s.blurb}</small></button>;
         })}</fieldset>}
         {rec.plans.map(p => <div key={p.name} className="mm-table-wrap"><table className="mm-table">
-          <caption>{p.name}: {p.vram_gb.toFixed(1)} GiB budget{p.fits_at_all ? `, up to ${ctxShort(p.max_ctx)} tokens` : ', does not fit'}</caption>
-          <thead><tr><th scope="col">Context</th><th scope="col">Weights</th><th scope="col">KV cache</th><th scope="col">Total</th><th scope="col">Fits</th></tr></thead>
-          <tbody>{p.rows.filter(r => columns.includes(r.ctx)).map(r => <tr key={r.ctx}><td>{ctxShort(r.ctx)}</td><td>{r.model_gb} GiB</td><td>{r.kv_gb} GiB</td><td>{r.total_gb} GiB</td>
-            <td>{r.fits ? (r.offload_kind ? `Yes, ${r.offload_kind === 'ngl' ? `${100 - r.gpu_pct}% of weights on CPU` : 'with expert offload'}` : 'Yes') : 'No'}</td></tr>)}</tbody>
+          <caption>{t(p.fits_at_all ? 'mm.autoconfig.budgetUpTo' : 'mm.autoconfig.budgetNoFit', { name: p.name, gib: num(p.vram_gb, 1), tokens: ctxShort(p.max_ctx) })}</caption>
+          <thead><tr><th scope="col">{t('mm.easy.context')}</th><th scope="col">{t('mm.autoconfig.weights')}</th><th scope="col">{t('mm.autoconfig.kv')}</th><th scope="col">{t('mm.autoconfig.totalCol')}</th><th scope="col">{t('mm.verdict.fits')}</th></tr></thead>
+          <tbody>{p.rows.filter(r => columns.includes(r.ctx)).map(r => <tr key={r.ctx}><td>{ctxShort(r.ctx)}</td><td>{num(r.model_gb)} GiB</td><td>{num(r.kv_gb)} GiB</td><td>{num(r.total_gb)} GiB</td>
+            <td>{r.fits ? (r.offload_kind ? (r.offload_kind === 'ngl' ? t('mm.autoconfig.yesCpu', { pct: 100 - r.gpu_pct }) : t('mm.autoconfig.yesExperts')) : t('mm.autoconfig.yes')) : t('mm.autoconfig.no')}</td></tr>)}</tbody>
         </table></div>)}
-        {data && data.measured.n > 0 && <p className="mm-note">Measured on this server: {data.measured.gen_p50.toFixed(1)} tokens/s generating (typically {data.measured.gen_p25.toFixed(1)}–{data.measured.gen_p75.toFixed(1)}), {data.measured.prompt_p50.toFixed(0)} tokens/s reading prompts{data.measured.draft_acc_p50 != null ? `, ${Math.round(data.measured.draft_acc_p50 * 100)}% of predicted tokens accepted` : ''} across {data.measured.n} requests.</p>}
-        {data && data.history.length > 0 && <div className="mm-table-wrap"><table className="mm-table"><caption>Configurations this model has run under</caption>
-          <thead><tr><th scope="col">Settings that differ</th><th scope="col">Generation</th><th scope="col">Requests</th></tr></thead>
-          <tbody>{data.history.map(h => <tr key={h.instance}><td>{Object.entries(h.diff).map(([k, v]) => `${k} ${v}`).join(', ') || '—'}{h.is_current ? ' (current)' : ''}</td><td>{h.gen_p50.toFixed(1)} tokens/s ({h.rel_pct}%)</td><td>{h.n}</td></tr>)}</tbody></table></div>}
-        {rec.current_diff.length > 0 && <details className="mm-disclosure"><summary>{rec.current_diff.length} changes from the saved settings</summary><ul className="mm-hints mm-mono">{rec.current_diff.map(d => <li key={d}>{d}</li>)}</ul></details>}
-        {rec.quirks.length > 0 && <details className="mm-disclosure"><summary>Notes for this model ({rec.quirks.length})</summary><ul className="mm-hints">{rec.quirks.map(q => <li key={q}>{q}</li>)}</ul></details>}
-        <button className="modal-btn primary" onClick={() => onFill(values, rec.displaced)}>Fill the form with these values</button>
-        <p className="mm-note">Values: {Object.entries(values).filter(([, v]) => v).map(([k, v]) => `${k}=${v}`).join(' · ') || '—'}{data && data.fileBytes ? ` · model ${tokens(Math.round(data.fileBytes / 1024 ** 2))} MiB` : ''}</p>
+        {data && data.measured.n > 0 && <p className="mm-note">{t.plural(data.measured.draft_acc_p50 != null ? 'mm.autoconfig.measuredDraft' : 'mm.autoconfig.measured', data.measured.n, { gen: num(data.measured.gen_p50, 1), low: num(data.measured.gen_p25, 1), high: num(data.measured.gen_p75, 1), prompt: num(data.measured.prompt_p50, 0), accepted: data.measured.draft_acc_p50 != null ? Math.round(data.measured.draft_acc_p50 * 100) : 0 })}</p>}
+        {data && data.history.length > 0 && <div className="mm-table-wrap"><table className="mm-table"><caption>{t('mm.autoconfig.history')}</caption>
+          <thead><tr><th scope="col">{t('mm.autoconfig.differ')}</th><th scope="col">{t('mm.autoconfig.generation')}</th><th scope="col">{t('mm.autoconfig.requests')}</th></tr></thead>
+          <tbody>{data.history.map(h => <tr key={h.instance}><td>{Object.entries(h.diff).map(([k, v]) => `${k} ${v}`).join(', ') || '—'}{h.is_current ? ` ${t('mm.current')}` : ''}</td><td>{t('mm.tokensPerSecond', { rate: num(h.gen_p50, 1) })} ({h.rel_pct}%)</td><td>{h.n}</td></tr>)}</tbody></table></div>}
+        {rec.current_diff.length > 0 && <details className="mm-disclosure"><summary>{t.plural('mm.autoconfig.changes', rec.current_diff.length)}</summary><ul className="mm-hints mm-mono">{rec.current_diff.map(d => <li key={d}>{d}</li>)}</ul></details>}
+        {rec.quirks.length > 0 && <details className="mm-disclosure"><summary>{t('mm.autoconfig.notes', { count: rec.quirks.length })}</summary><ul className="mm-hints">{rec.quirks.map(q => <li key={q}>{q}</li>)}</ul></details>}
+        <button className="modal-btn primary" onClick={() => onFill(values, rec.displaced)}>{t('mm.autoconfig.fill')}</button>
+        <p className="mm-note">{t('mm.autoconfig.values', { values: Object.entries(values).filter(([, v]) => v).map(([k, v]) => `${k}=${v}`).join(' · ') || '—' })}{data && data.fileBytes ? ` · ${t('mm.autoconfig.modelSize', { size: `${tokens(Math.round(data.fileBytes / 1024 ** 2))} MiB` })}` : ''}</p>
       </>}
     </div>
   </details>;

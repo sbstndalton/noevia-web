@@ -5,7 +5,9 @@
 // settings sections is real but non-blocking, and must never leave the deleted model stuck on
 // screen (a re-click would just re-run the already-successful file delete and throw again).
 
-export type DeleteOutcome = { onDeleted: boolean; error: string | null };
+/** `error` is the English text (logs, tests); `cleanupDetail` is the underlying message the UI
+ *  wraps in its own translated sentence (mm.delete.cleanupFailed). */
+export type DeleteOutcome = { onDeleted: boolean; error: string | null; cleanupDetail?: string };
 
 /**
  * @param deleteFiles   Deletes the model's files. Rejects on failure.
@@ -19,7 +21,7 @@ export async function runDeleteModelFiles(deleteFiles: () => Promise<void>, dele
     await deleteSettings();
     return { onDeleted: true, error: null };
   } catch (e) {
-    return { onDeleted: true, error: settingsCleanupErrorText(e) };
+    return { onDeleted: true, error: settingsCleanupErrorText(e), cleanupDetail: e instanceof Error ? e.message : String(e ?? '') };
   }
 }
 

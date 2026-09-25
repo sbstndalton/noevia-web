@@ -5,7 +5,6 @@ import type { InstalledModel, Project, RouteRule } from '../../types';
 import { fetchAutoRoles, setAutoRoles as putAutoRoles, fetchRoutingDefault, putRoutingDefault } from '../../api';
 import { SegmentedControl } from '../SegmentedControl';
 import { matchesModelUse, modelChoiceLabel } from '../../model-guidance';
-import { AUTO_EXPLAINED, ROLE_LABEL, roleSummary } from '../../routing-copy';
 import { ReasoningControl } from '../ReasoningControl';
 import { SamplingPresetsControl } from '../SamplingPresetsControl';
 import { BenchmarksTab, PromptsTab } from './BenchmarksTab';
@@ -17,6 +16,9 @@ import { GuidedOptimize } from './GuidedOptimize';
 import { OverviewTab } from './OverviewTab';
 import { notifyModelsChanged } from '../../models-changed';
 import { routingViewState } from '../../routing-view-state';
+import { roleSummary } from '../../routing-copy';
+import { useT } from '../../i18n';
+import type { MessageKey } from '../../i18n';
 export type { RoutingViewState } from '../../routing-view-state';
 
 export type ModelSort = 'name' | 'size' | 'modified';
@@ -25,13 +27,18 @@ export type Tab = 'overview' | 'yours' | 'discover' | 'routing' | 'projects' | '
 
 // One tab bar for the whole page. Your models and Discover are the two anyone opens while
 // switching a model; the rest are their own pages' worth of content.
-const TABS: [Tab, string][] = [
-  ['overview', 'Overview'], ['yours', 'Your models'], ['discover', 'Discover'], ['routing', 'Routing'], ['projects', 'Projects'],
-  ['hardware', 'Hardware'], ['benchmarks', 'Benchmarks'], ['prompts', 'Prompts'],
+const TABS: [Tab, MessageKey][] = [
+  ['overview', 'mm.tab.overview'], ['yours', 'mm.tab.yours'], ['discover', 'mm.tab.discover'], ['routing', 'mm.tab.routing'], ['projects', 'mm.tab.projects'],
+  ['hardware', 'mm.tab.hardware'], ['benchmarks', 'mm.tab.benchmarks'], ['prompts', 'mm.tab.prompts'],
 ];
 
-const SORTS: [ModelSort, string][] = [['name', 'Name'], ['size', 'Size'], ['modified', 'Recently updated']];
-const FILTERS: [ModelFilter, string][] = [['all', 'All models'], ['loaded', 'Loaded'], ['vision', 'Vision'], ['unconfigured', 'Needs setup']];
+const SORTS: [ModelSort, MessageKey][] = [['name', 'mm.sort.name'], ['size', 'mm.sort.size'], ['modified', 'mm.sort.modified']];
+const FILTERS: [ModelFilter, MessageKey][] = [['all', 'mm.filter.all'], ['loaded', 'mm.filter.loaded'], ['vision', 'mm.filter.vision'], ['unconfigured', 'mm.filter.unconfigured']];
+const HF_SORTS: [string, MessageKey][] = [['fit', 'mm.hfSort.fit'], ['trendingScore', 'mm.hfSort.trending'], ['downloads', 'mm.hfSort.downloads'], ['likes', 'mm.hfSort.likes'], ['lastModified', 'mm.sort.modified']];
+type RouteRole = 'fast' | 'smart' | 'vision' | 'code';
+// Auto's role names and explanation for the Routing panel (routing-copy.ts has the summary).
+const ROUTE_ROLE: Record<RouteRole, MessageKey> = { fast: 'mm.route.role.fast', smart: 'mm.route.role.smart', vision: 'mm.route.role.vision', code: 'mm.route.role.code' };
+const AUTO_EXPLAINED: MessageKey[] = ['mm.route.explain1', 'mm.route.explain2', 'mm.route.explain3', 'mm.route.explain4', 'mm.route.explain5'];
 
 // Settings → Models & routing. One interface rather than seven tabs.
 //
@@ -55,6 +62,7 @@ export function ModelsSettings({ models, routes, projects, modelsError, initialM
   const [sort, setSort] = useState<ModelSort>('name');
   const [filter, setFilter] = useState<ModelFilter>('all');
   const [hfSort, setHfSort] = useState('fit');
+  const t = useT();
 
   const go = (next: Tab) => {
     setTab(next); setOpen('');
@@ -65,7 +73,7 @@ export function ModelsSettings({ models, routes, projects, modelsError, initialM
 
   if (open) return <div className="mm-root">
     <div className="mm-detail-head">
-      <button className="modal-btn secondary" onClick={() => setOpen('')}><ShellIcon name="left" size={16}/>All models</button>
+      <button className="modal-btn secondary" onClick={() => setOpen('')}><ShellIcon name="left" size={16}/>{t('mm.allModels')}</button>
       <h1>{open}</h1>
     </div>
     <GuidedOptimize model={open} installed={models.find((m) => m.name === open)} onOpenTab={go} />
@@ -73,45 +81,45 @@ export function ModelsSettings({ models, routes, projects, modelsError, initialM
   </div>;
 
   return <div className="mm-root">
-    <div className="settings-title"><h1>Models &amp; routing</h1><p>Download, configure, measure and route the models this server runs.</p></div>
+    <div className="settings-title"><h1>{t('mm.title')}</h1><p>{t('mm.lede')}</p></div>
 
     {/* One toolbar: which list, a search, and that list's filters (user review, 2026-09-19). */}
-    <nav className="mm-tabs mm-toolbar-one" aria-label="Model management">
+    <nav className="mm-tabs mm-toolbar-one" aria-label={t('mm.navLabel')}>
       <div className="mm-tabs-row" role="tablist">
         {TABS.map(([id, label]) =>
-          <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-active' : ''} onClick={() => go(id)}>{label}</button>)}
+          <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-active' : ''} onClick={() => go(id)}>{t(label)}</button>)}
       </div>
       {(tab === 'yours' || tab === 'discover') && <div className="mm-search mm-search-inline">
         <ShellIcon name="search" size={16}/>
-        <input aria-label="Search models" placeholder={tab === 'yours' ? 'Search your models…' : 'Search Hugging Face…'}
+        <input aria-label={t('mm.search')} placeholder={tab === 'yours' ? t('mm.searchYours') : t('mm.searchHf')}
           value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>}
       {tab === 'discover' ? <div className="mm-tabs-controls">
-        <label className="mm-select"><span className="sr-only">Sort Hugging Face results</span>
+        <label className="mm-select"><span className="sr-only">{t('mm.hfSortLabel')}</span>
           <select value={hfSort} onChange={(e) => setHfSort(e.target.value)}>
-            {[['fit', 'Best for this server'], ['trendingScore', 'Trending'], ['downloads', 'Downloads'], ['likes', 'Likes'], ['lastModified', 'Recently updated']].map(([id, label]) => <option key={id} value={id}>Sort · {label}</option>)}
+            {HF_SORTS.map(([id, label]) => <option key={id} value={id}>{t('mm.sortOption', { label: t(label) })}</option>)}
           </select></label>
       </div> : tab === 'yours' ? <div className="mm-tabs-controls">
-        <label className="mm-select"><span className="sr-only">Filter models</span>
+        <label className="mm-select"><span className="sr-only">{t('mm.filterLabel')}</span>
           <select value={filter} onChange={(e) => setFilter(e.target.value as ModelFilter)}>
-            {FILTERS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+            {FILTERS.map(([id, label]) => <option key={id} value={id}>{t(label)}</option>)}
           </select></label>
-        <label className="mm-select"><span className="sr-only">Sort models</span>
+        <label className="mm-select"><span className="sr-only">{t('mm.sortLabel')}</span>
           <select value={sort} onChange={(e) => setSort(e.target.value as ModelSort)}>
-            {SORTS.map(([id, label]) => <option key={id} value={id}>Sort · {label}</option>)}
+            {SORTS.map(([id, label]) => <option key={id} value={id}>{t('mm.sortOption', { label: t(label) })}</option>)}
           </select></label>
       </div> : null}
     </nav>
 
-    <div role="tabpanel" aria-label={TABS.find(([id]) => id === tab)?.[1]}>
+    <div role="tabpanel" aria-label={t(TABS.find(([id]) => id === tab)?.[1] ?? 'mm.tab.yours')}>
       {tab === 'overview' && <OverviewTab models={models} modelsError={modelsError} onOpen={openModel} onTab={go} />}
       {tab === 'yours' && <LibraryTab query={query} sort={sort} filter={filter} onConfigure={openModel} onChanged={changed} />}
       {tab === 'discover' && <DownloadTab query={query} sort={hfSort} onDownloaded={changed} onSetUp={openModel} />}
       {tab === 'routing' && <RoutingSection models={models} modelsError={modelsError} />}
       {tab === 'projects' && <ProjectRoutingSection models={models} routes={routes} projects={projects} modelsError={modelsError} />}
-      {tab === 'hardware' && <section className="mm-panel"><div className="mm-panel-head"><h3>Hardware</h3></div><p className="mm-note">Engines, GPU and container health, logs.</p><HardwareTab /></section>}
-      {tab === 'benchmarks' && <section className="mm-panel"><div className="mm-panel-head"><h3>Benchmarks</h3></div><p className="mm-note">Measured speed, and your own capability ratings.</p><BenchmarksTab /></section>}
-      {tab === 'prompts' && <section className="mm-panel"><div className="mm-panel-head"><h3>Prompt library</h3></div><p className="mm-note">Saved system prompts used by benchmark runs.</p><PromptsTab /></section>}
+      {tab === 'hardware' && <section className="mm-panel"><div className="mm-panel-head"><h3>{t('mm.tab.hardware')}</h3></div><p className="mm-note">{t('mm.hardwareNote')}</p><HardwareTab /></section>}
+      {tab === 'benchmarks' && <section className="mm-panel"><div className="mm-panel-head"><h3>{t('mm.tab.benchmarks')}</h3></div><p className="mm-note">{t('mm.benchmarksNote')}</p><BenchmarksTab /></section>}
+      {tab === 'prompts' && <section className="mm-panel"><div className="mm-panel-head"><h3>{t('mm.promptLibrary')}</h3></div><p className="mm-note">{t('mm.promptLibraryNote')}</p><PromptsTab /></section>}
     </div>
   </div>;
 }
@@ -124,8 +132,9 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState('');
+  const t = useT();
 
-  useEffect(() => { let live = true; fetchAutoRoles().then((v) => { if (live) setInfo(v); }).catch(() => { if (live) setError('Auto routing settings could not be loaded.'); }); return () => { live = false; }; }, []);
+  useEffect(() => { let live = true; fetchAutoRoles().then((v) => { if (live) setInfo(v); }).catch(() => { if (live) setError(t('mm.route.loadError')); }); return () => { live = false; }; }, []);
 
   // Embedding and reranking models cannot answer a chat, so they are never
   // offered for a role — picking one produces a model that 400s every request.
@@ -134,16 +143,16 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
 
   const save = async () => {
     const fast = valueFor('fast').trim(), smart = valueFor('smart').trim(), vision = valueFor('vision').trim(), code = valueFor('code').trim();
-    if (!fast || !smart) { setError('Auto needs both a fast and a smart model.'); return; }
+    if (!fast || !smart) { setError(t('mm.route.needBoth')); return; }
     setBusy(true); setError(''); setSaved('');
     try {
       await putAutoRoles({ fast, smart, vision, code });
       setPending({}); setInfo({ configured: true, roles: { fast, smart, ...(vision ? { vision } : {}), ...(code ? { code } : {}) } });
-      setSaved('Saved. Models load on demand.');
+      setSaved(t('mm.route.saved'));
       // The Settings summary card (ModelsSummary.tsx) fetched Auto's roles once on mount and
       // cached them; without this it keeps showing the pre-save state until the page remounts.
       notifyModelsChanged();
-    } catch (e) { setError(e instanceof Error ? e.message : 'The change could not be saved.'); }
+    } catch (e) { setError(e instanceof Error ? e.message : t('mm.saveError')); }
     finally { setBusy(false); }
   };
 
@@ -151,36 +160,36 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
 
   return <><DefaultModeSection />
   <section className="mm-panel">
-    <div className="mm-panel-head"><h3>Routing</h3></div>
-    <p className="mm-note">Projects set to Auto pick a model per message. Vision and Code are optional. Set Vision and that model describes any images, then Fast or Smart answers from the description — so the answering model does not need to see. Set Code and coding work goes there instead of Smart.</p>
+    <div className="mm-panel-head"><h3>{t('mm.tab.routing')}</h3></div>
+    <p className="mm-note">{t('mm.route.intro')}</p>
     {modelsError && <p role="alert" className="modal-err">{modelsError}</p>}
-    {view === 'loading' && <p className="mm-note" role="status">Loading…</p>}
+    {view === 'loading' && <p className="mm-note" role="status">{t('mm.loading')}</p>}
     {view === 'error' && <p role="alert" className="modal-err">{error}</p>}
-    {view === 'unconfigured' && <p className="mm-note">Auto has no models assigned yet. Pick Fast and Smart, then save.</p>}
-    {!!info?.missing?.length && <p className="mm-note warn" role="alert">Auto can't answer until you replace {info.missing.map((m) => `${ROLE_LABEL[m.role]} (${m.model})`).join(', ')}: {info.missing.length === 1 ? 'that model is' : 'those models are'} no longer installed.</p>}
+    {view === 'unconfigured' && <p className="mm-note">{t('mm.route.unconfigured')}</p>}
+    {!!info?.missing?.length && <p className="mm-note warn" role="alert">{t(info.missing.length === 1 ? 'mm.route.missingOne' : 'mm.route.missingSeveral', { models: info.missing.map((m) => `${t(ROUTE_ROLE[m.role])} (${m.model})`).join(', ') })}</p>}
     {view !== 'loading' && view !== 'error' && <>
     <div className="mm-form route-roles">
       {(['fast', 'smart', 'vision', 'code'] as const).map((role) => <label key={role}>
-        {ROLE_LABEL[role]}
+        {t(ROUTE_ROLE[role])}
         <select value={valueFor(role)} disabled={busy} onChange={(e) => setPending((prev) => ({ ...prev, [role]: e.target.value }))}>
-          <option value="">{role === 'vision' || role === 'code' ? '— none —' : '— pick a model —'}</option>
-          {chatModels.map((m) => <option key={m.name} value={m.name}>{m.name}{m.loaded ? ' · loaded' : ''}</option>)}
+          <option value="">{role === 'vision' || role === 'code' ? t('mm.route.none') : t('mm.route.pick')}</option>
+          {chatModels.map((m) => <option key={m.name} value={m.name}>{m.loaded ? t('mm.route.loadedOption', { model: m.name }) : m.name}</option>)}
           {/* A role can name a model that is no longer installed; keep it
               selectable so saving does not silently drop it. */}
-          {info?.roles?.[role] && !models.some((m) => m.name === info.roles?.[role]) && <option value={info.roles[role]}>{info.roles[role]} · not installed</option>}
+          {info?.roles?.[role] && !models.some((m) => m.name === info.roles?.[role]) && <option value={info.roles[role]}>{t('mm.route.notInstalledOption', { model: info.roles[role] ?? '' })}</option>}
         </select>
       </label>)}
     </div>
     <div className="mm-actions">
-      <button className="modal-btn primary" disabled={busy} onClick={() => void save()}>{busy ? 'Saving…' : 'Save routing'}</button>
+      <button className="modal-btn primary" disabled={busy} onClick={() => void save()}>{busy ? t('mm.saving') : t('mm.route.save')}</button>
       {saved && <span role="status" className="mm-note">{saved}</span>}
       {error && <span role="alert" className="modal-err">{error}</span>}
     </div>
     </>}
 
     <details className="mm-disclosure">
-      <summary>How Auto decides</summary>
-      <ol className="mm-hints">{AUTO_EXPLAINED.map((line) => <li key={line}>{line}</li>)}</ol>
+      <summary>{t('mm.route.howAuto')}</summary>
+      <ol className="mm-hints">{AUTO_EXPLAINED.map((line) => <li key={line}>{t(line)}</li>)}</ol>
     </details>
   </section>
 
@@ -193,7 +202,7 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
 
   {/* Issue #194: task-aware sampling presets, own panel for the same reason as Thinking above. */}
   <section className="mm-panel">
-    <div className="mm-panel-head"><h3>Sampling</h3></div>
+    <div className="mm-panel-head"><h3>{t('mm.sampling.title')}</h3></div>
     <SamplingPresetsControl />
   </section></>;
 }
@@ -205,22 +214,24 @@ function DefaultModeSection(): JSX.Element {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
-  useEffect(() => { let live = true; fetchRoutingDefault().then((v) => { if (live) setMode(v.routing); }).catch(() => { if (live) setError('The default mode could not be loaded.'); }); return () => { live = false; }; }, []);
+  const t = useT();
+  useEffect(() => { let live = true; fetchRoutingDefault().then((v) => { if (live) setMode(v.routing); }).catch(() => { if (live) setError(t('mm.defaultMode.loadError')); }); return () => { live = false; }; }, []);
   const save = async (next: 'auto' | 'manual', applyToExisting: boolean) => {
     setBusy(true); setError(''); setStatus('');
     try {
       const r = await putRoutingDefault(next, applyToExisting);
       setMode(r.routing);
-      setStatus(applyToExisting ? (r.updated ? `Switched ${r.updated} ${r.updated === 1 ? 'project' : 'projects'} to ${next === 'auto' ? 'Auto' : 'Manual'}.` : 'Every project already uses this mode.') : 'Saved. New projects start this way.');
-    } catch (e) { setError(e instanceof Error ? e.message : 'The change could not be saved.'); }
+      const modeName = next === 'auto' ? t('mm.mode.auto') : t('mm.mode.manual');
+      setStatus(applyToExisting ? (r.updated ? t.plural('mm.defaultMode.switched', r.updated, { mode: modeName }) : t('mm.defaultMode.already')) : t('mm.defaultMode.saved'));
+    } catch (e) { setError(e instanceof Error ? e.message : t('mm.saveError')); }
     finally { setBusy(false); }
   };
   return <section className="mm-panel">
-    <div className="mm-panel-head"><h3>Default model mode</h3></div>
-    <p className="mm-note">How new projects pick their model. Auto chooses Fast or Smart per message; Manual keeps one pinned model. Any project can still be changed from its own model selector.</p>
-    {mode && <SegmentedControl label="Default model mode" value={mode} options={[['auto', 'Auto'], ['manual', 'Manual']]} onChange={(next) => { if (!busy) void save(next, false); }} />}
+    <div className="mm-panel-head"><h3>{t('mm.defaultMode.title')}</h3></div>
+    <p className="mm-note">{t('mm.defaultMode.intro')}</p>
+    {mode && <SegmentedControl label={t('mm.defaultMode.title')} value={mode} options={[['auto', t('mm.mode.auto')], ['manual', t('mm.mode.manual')]]} onChange={(next) => { if (!busy) void save(next, false); }} />}
     <div className="mm-actions">
-      <button className="modal-btn secondary" disabled={busy || !mode} onClick={() => mode && void save(mode, true)}>{busy ? 'Saving…' : `Switch existing projects to ${mode === 'manual' ? 'Manual' : 'Auto'}`}</button>
+      <button className="modal-btn secondary" disabled={busy || !mode} onClick={() => mode && void save(mode, true)}>{busy ? t('mm.saving') : t('mm.defaultMode.switch', { mode: mode === 'manual' ? t('mm.mode.manual') : t('mm.mode.auto') })}</button>
       {status && <span role="status" className="mm-note">{status}</span>}
       {error && <span role="alert" className="modal-err">{error}</span>}
     </div>
@@ -234,20 +245,22 @@ function ProjectRoutingSection({ models, routes, projects, modelsError }: {
   models: InstalledModel[]; routes: RouteRule[]; projects: Project[]; modelsError: string | null;
 }): JSX.Element {
   const [info, setInfo] = useState<Awaited<ReturnType<typeof fetchAutoRoles>> | null>(null);
+  const t = useT();
   useEffect(() => { let live = true; fetchAutoRoles().then((v) => { if (live) setInfo(v); }).catch(() => undefined); return () => { live = false; }; }, []);
+  const loaded = models.filter((m) => m.loaded).map((m) => m.name);
   return <section className="mm-panel">
-    <div className="mm-panel-head"><h3>Per-project routing ({projects.length} {projects.length === 1 ? 'project' : 'projects'})</h3></div>
+    <div className="mm-panel-head"><h3>{t.plural('mm.projects.title', projects.length)}</h3></div>
     {projects.length ? <div className="mm-table-wrap">
       <table className="mm-table route-projects">
-      <thead><tr><th scope="col">Project</th><th scope="col">Picks the model</th><th scope="col">Model</th></tr></thead>
+      <thead><tr><th scope="col">{t('mm.projects.project')}</th><th scope="col">{t('mm.projects.picks')}</th><th scope="col">{t('mm.projects.model')}</th></tr></thead>
       <tbody>{projects.map((p) => <tr key={p.id}>
-        <td data-label="Project">{p.name}</td>
-        <td data-label="Picks the model">{p.routing === 'auto' ? 'Auto' : 'Manual'}</td>
-        <td data-label="Model">{p.routing === 'auto' ? (info?.configured ? roleSummary(info.roles) : 'Auto not configured — uses the loaded model') : modelChoiceLabel(p, modelsError ? null : models)}</td>
+        <td data-label={t('mm.projects.project')}>{p.name}</td>
+        <td data-label={t('mm.projects.picks')}>{p.routing === 'auto' ? t('mm.mode.auto') : t('mm.mode.manual')}</td>
+        <td data-label={t('mm.projects.model')}>{p.routing === 'auto' ? (info?.configured ? roleSummary(info.roles, t) : t('mm.projects.autoUnconfigured')) : modelChoiceLabel(p, modelsError ? null : models)}</td>
       </tr>)}</tbody>
       </table>
-    </div> : <p className="mm-note">No projects yet.</p>}
-    {routes.some((r) => r.task === 'Diary app') && <p className="mm-note">Diary: its own sidecar pipeline, not Auto.</p>}
-    <p className="route-note">Change a project's model from its own model selector. {models.filter((m) => m.loaded).length ? `Loaded now: ${models.filter((m) => m.loaded).map((m) => m.name).join(', ')}.` : 'No model is loaded right now.'}</p>
+    </div> : <p className="mm-note">{t('mm.projects.none')}</p>}
+    {routes.some((r) => r.task === 'Diary app') && <p className="mm-note">{t('mm.projects.diary')}</p>}
+    <p className="route-note">{t('mm.projects.change')} {loaded.length ? t('mm.projects.loadedNow', { models: loaded.join(', ') }) : t('mm.projects.noneLoaded')}</p>
   </section>;
 }

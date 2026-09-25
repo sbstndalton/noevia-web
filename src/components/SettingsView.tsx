@@ -31,19 +31,21 @@ export interface SettingsViewProps {
 }
 
 export function SettingsView({ models, modelsError, health, stats, diaryEnabled, onDiaryEnabledChange, onOpenModelManager, section = 'profile' }: SettingsViewProps): JSX.Element {
+  const t = useT();
   return <div className="settings-live-content">
     {section === 'security' && <SecurityCard />}
     {section === 'users' && <UsersCard />}
-    {section === 'diary' && <><div className="settings-title"><h1>Diary &amp; storage</h1><p>Enable Diary and manage where its journal and corpus data are stored.</p></div><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
+    {section === 'diary' && <><div className="settings-title"><h1>{t('settings.section.diary')}</h1><p>{t('diarySettings.lede')}</p></div><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
     {section === 'providers' && <ProvidersCard />}
     {section === 'models' && <ModelsSummary models={models} modelsError={modelsError} health={health} stats={stats} onOpen={onOpenModelManager}/>}
-    {section === 'status' && <><McpStatus /><h2>Connected services</h2><div className="card-list">{[['Inference',health.inferenceUp],['Diary',diaryEnabled?health.diaryUp:null],['Project retrieval',health.ragAvailable]].map(([label,up])=><div className="model-row" key={String(label)}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?'available':up===false?'unavailable':'not available'}</span></div>)}</div><h2>Live engine</h2><div className="settings-stat-row"><div><span title="Provider-reported rate. Invalid samples and samples shorter than one estimated second are omitted.">Reported tokens / second</span><strong>{stats?.tokensPerSecond?.toFixed(1) ?? '—'}</strong></div><div><span>Requests</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${stats.vramGb.toFixed(1)} GB`:'—'}</strong></div></div></>}
+    {section === 'status' && <><McpStatus /><h2>{t('serviceStatus.connected')}</h2><div className="card-list">{([['inference', t('serviceStatus.inference'), health.inferenceUp], ['diary', t('serviceStatus.diary'), diaryEnabled ? health.diaryUp : null], ['retrieval', t('serviceStatus.retrieval'), health.ragAvailable]] as const).map(([id, label, up])=><div className="model-row" key={id}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?t('models.available'):up===false?t('models.unavailable'):t('serviceStatus.notAvailable')}</span></div>)}</div><h2>{t('serviceStatus.liveEngine')}</h2><div className="settings-stat-row"><div><span title={t('serviceStatus.rateTitle')}>{t('serviceStatus.rate')}</span><strong>{stats?.tokensPerSecond?.toFixed(1) ?? '—'}</strong></div><div><span>{t('serviceStatus.requests')}</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${stats.vramGb.toFixed(1)} GB`:'—'}</strong></div></div></>}
   </div>;
 }
 
 function DiaryAddonCard({ enabled, onChange }: { enabled: boolean; onChange: (enabled: boolean) => void }): JSX.Element {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const t = useT();
   const toggle = async () => {
     const next = !enabled;
     setBusy(true);
@@ -52,19 +54,20 @@ function DiaryAddonCard({ enabled, onChange }: { enabled: boolean; onChange: (en
       const result = await updateFeatures(next);
       onChange(result.diaryEnabled);
     } catch {
-      setError('Diary preference could not be confirmed. Showing the last confirmed setting. Try again or reload.');
+      setError(t('diarySettings.toggleError'));
     } finally {
       setBusy(false);
     }
   };
-  return <div><div className="rail-label" style={{ marginBottom: 12 }}>Optional apps</div><div className="card-list">
-    <div className="model-row"><span className={`model-dot${enabled ? '' : ' down'}`} /><div className="model-name-group"><span className="model-name">Diary</span><span className="model-quant">Private journaling, memory, and configurable corpus storage</span></div><button className="popup-tab" disabled={busy} onClick={() => void toggle()}>{busy ? 'Saving…' : enabled ? 'Disable' : 'Enable'}</button></div>
-  </div>{error && <p className="modal-err" role="alert">{error}</p>}<p className="route-note">Saved to your account. Disabling Diary does not delete journal files.</p></div>;
+  return <div><div className="rail-label" style={{ marginBottom: 12 }}>{t('diarySettings.optionalApps')}</div><div className="card-list">
+    <div className="model-row"><span className={`model-dot${enabled ? '' : ' down'}`} /><div className="model-name-group"><span className="model-name">{t('serviceStatus.diary')}</span><span className="model-quant">{t('diarySettings.diaryDesc')}</span></div><button className="popup-tab" disabled={busy} onClick={() => void toggle()}>{busy ? t('diarySettings.saving') : enabled ? t('diarySettings.disable') : t('diarySettings.enable')}</button></div>
+  </div>{error && <p className="modal-err" role="alert">{error}</p>}<p className="route-note">{t('diarySettings.savedNote')}</p></div>;
 }
 
 function StorageCard(): JSX.Element {
+  const t = useT();
   return <div>
-    <div className="rail-label" style={{ marginBottom: 12 }}>Diary storage</div>
+    <div className="rail-label" style={{ marginBottom: 12 }}>{t('diarySettings.storage')}</div>
     <StoragePicker />
     <DiarySharing />
     <DiaryConnectors />

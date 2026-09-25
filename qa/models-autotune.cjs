@@ -73,7 +73,7 @@ const pending = (id, label) => ({ id, label, status: 'pending', steps: [{ id: id
     await page.screenshot({ path: (process.env.QA_SCREENSHOTS || '/tmp') + '/models-library-laya-not-tunable.png' });
     await open.focus(); await page.keyboard.press('Enter');
     const panel = page.locator('#library-autotune');
-    await panel.getByText(/1 model need tuning/).waitFor();
+    await panel.getByText(/1 model needs tuning/).waitFor();
     await panel.getByText(/Older run stopped/).waitFor();
     const start = panel.getByRole('button', { name: 'Tune untuned models and apply' });
     assert.ok(await start.isDisabled());

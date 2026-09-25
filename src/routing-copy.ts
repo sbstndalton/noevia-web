@@ -1,22 +1,15 @@
 // One vocabulary for Auto routing wherever it appears. Mirrors server
-// classifyFastOrSmart / heuristicWantsSmart; update both together.
-export const ROLE_LABEL: Record<'fast' | 'smart' | 'vision' | 'code', string> = {
-  fast: 'Fast — quick answers',
-  smart: 'Smart — harder questions',
-  vision: 'Vision — reads images (optional)',
-  code: 'Code — writes and reads code (optional)',
-};
+// classifyFastOrSmart / heuristicWantsSmart; update both together. The role names and the
+// explanation are message keys (routing.* in the base catalogue for the summary the chat's model
+// picker shows; mm.route.* in the model manager segment for its Routing panel).
+import type { MessageKey, Params } from './i18n/core';
 
-export const AUTO_EXPLAINED = [
-  'Long messages, code, several numbers, or requests for detail ("step by step", "in detail", word counts) go straight to Smart.',
-  'Anything else gets a one-word check by the Fast model, which picks Fast or Smart.',
-  'If that check fails or is unclear, Fast answers — Auto never blocks a message.',
-  'When a message has images and Vision is set, Vision describes them first and the chosen model answers from the description.',
-  'When Code is set, a fenced code block or a diff goes straight to it, and the one-word check can choose it too. Without a Code model, code work goes to Smart as before.',
-];
+type T = (key: MessageKey, params?: Params) => string;
 
-export function roleSummary(roles: { fast?: string; smart?: string; vision?: string; code?: string } | null | undefined): string {
-  if (!roles) return 'not configured';
-  return [`Fast: ${roles.fast || 'not set'}`, `Smart: ${roles.smart || 'not set'}`,
-    ...(roles.vision ? [`Vision: ${roles.vision}`] : []), ...(roles.code ? [`Code: ${roles.code}`] : [])].join(' · ');
+/** "Fast: a · Smart: b", in the interface language through the caller's translate function. */
+export function roleSummary(roles: { fast?: string; smart?: string; vision?: string; code?: string } | null | undefined, t: T): string {
+  if (!roles) return t('routing.notConfigured');
+  const notSet = t('routing.notSet');
+  return [t('routing.fast', { model: roles.fast || notSet }), t('routing.smart', { model: roles.smart || notSet }),
+    ...(roles.vision ? [t('routing.vision', { model: roles.vision })] : []), ...(roles.code ? [t('routing.code', { model: roles.code })] : [])].join(' · ');
 }

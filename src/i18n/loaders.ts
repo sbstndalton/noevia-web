@@ -65,7 +65,19 @@ export const CUSTOMISE_LOADERS: Record<string, () => Promise<Catalogue>> = {
   'pt-BR': () => import('./customise/pt-BR').then((m) => m.PT_BR_CUSTOMISE),
   'sv-SE': () => import('./customise/sv-SE').then((m) => m.SV_SE_CUSTOMISE),
 };
-const SEGMENT_LOADERS: Record<Segment, Record<string, () => Promise<Catalogue>>> = { settings: SETTINGS_LOADERS, projects: PROJECTS_LOADERS, diary: DIARY_LOADERS, customise: CUSTOMISE_LOADERS };
+/** The model manager segment of each locale (#293). Requested only once ModelManagerPage has
+ *  loaded and registered its English part (models/index.ts), never on the first screen. */
+export const MODELS_LOADERS: Record<string, () => Promise<Catalogue>> = {
+  'de-DE': () => import('./models/de-DE').then((m) => m.DE_DE_MODELS),
+  'es-ES': () => import('./models/es-ES').then((m) => m.ES_ES_MODELS),
+  'fr-FR': () => import('./models/fr-FR').then((m) => m.FR_FR_MODELS),
+  'it-IT': () => import('./models/it-IT').then((m) => m.IT_IT_MODELS),
+  'nb-NO': () => import('./models/nb-NO').then((m) => m.NB_NO_MODELS),
+  'nl-NL': () => import('./models/nl-NL').then((m) => m.NL_NL_MODELS),
+  'pt-BR': () => import('./models/pt-BR').then((m) => m.PT_BR_MODELS),
+  'sv-SE': () => import('./models/sv-SE').then((m) => m.SV_SE_MODELS),
+};
+const SEGMENT_LOADERS: Record<Segment, Record<string, () => Promise<Catalogue>>> = { settings: SETTINGS_LOADERS, projects: PROJECTS_LOADERS, diary: DIARY_LOADERS, customise: CUSTOMISE_LOADERS, models: MODELS_LOADERS };
 
 const pending = new Map<string, Promise<boolean>>();
 const failed = new Set<string>();

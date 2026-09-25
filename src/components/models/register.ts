@@ -1,5 +1,10 @@
 import { apiFetch } from '../../api';
 import { errorText, mm } from './mm';
+import { interfaceLocale, t } from '../../i18n';
+import { translatePlural } from '../../i18n/core';
+
+// Outside React: messages in the interface language at the moment the note is written.
+const plural = (key: string, count: number, params?: Record<string, string | number>) => translatePlural(interfaceLocale(), key, count, params);
 
 // A finished download gets conservative settings once (8k context, MTP only with a
 // draft head beside it, the GGUF's own template and sampling), then the preset file
@@ -12,16 +17,16 @@ export async function registerSafeDefaults(section: string): Promise<{ registere
     const status = (e as { status?: number }).status;
     if (status === 409) return { registered: true, text: '' };
     if (status === 400) return { registered: false, text: '' };
-    return { registered: false, text: `${section} downloaded, but safe defaults were not written: ${errorText(e, 'unknown error')}. Use Set up this model.` };
+    return { registered: false, text: t('mm.register.notWritten', { model: section, error: errorText(e, t('mm.unknownError')) }) };
   }
-  const saved = `Registered ${section} with safe defaults (8K context${mtp ? ', MTP draft head' : ''}).`;
+  const saved = t(mtp ? 'mm.register.savedMtp' : 'mm.register.saved', { model: section });
   try {
     const r = await apiFetch('/api/models/presets/reload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unload: false }) });
     const v = await r.json().catch(() => ({})) as { loaded?: string[]; error?: string };
-    if (r.status === 409 && Array.isArray(v.loaded)) return { registered: true, text: `${saved} ${v.loaded.join(', ')} is loaded, so the engine offers it after that model is unloaded.` };
-    if (!r.ok) return { registered: true, text: `${saved} The engine did not reload yet: ${v.error || r.status}.` };
-    return { registered: true, text: `${saved} Ready to load.` };
-  } catch (e) { return { registered: true, text: `${saved} The engine did not reload yet: ${errorText(e, 'unknown error')}.` }; }
+    if (r.status === 409 && Array.isArray(v.loaded)) return { registered: true, text: `${saved} ${t('mm.register.afterUnload', { models: v.loaded.join(', ') })}` };
+    if (!r.ok) return { registered: true, text: `${saved} ${t('mm.register.noReload', { error: v.error || r.status })}` };
+    return { registered: true, text: `${saved} ${t('mm.register.ready')}` };
+  } catch (e) { return { registered: true, text: `${saved} ${t('mm.register.noReload', { error: errorText(e, t('mm.unknownError')) })}` }; }
 }
 
 // Files that appear in the models folder (downloaded elsewhere, copied in, or renamed) get the
@@ -53,17 +58,18 @@ export async function registerNewFolderModels(stems: string[]): Promise<{ added:
       added.push(stem); if (r.mtp) mtp.push(stem);
     } catch (e) {
       const status = (e as { status?: number }).status;
-      if (status !== 409 && status !== 400) failed.push(`${stem} (${errorText(e, 'error')})`);
+      if (status !== 409 && status !== 400) failed.push(`${stem} (${errorText(e, t('mm.register.error'))})`);
     }
   }
-  if (!added.length) return { added, text: failed.length ? `New files could not be set up: ${failed.join(', ')}.` : '' };
-  let reload = ' Ready to load.';
+  if (!added.length) return { added, text: failed.length ? t('mm.register.failed', { files: failed.join(', ') }) : '' };
+  let reload = ` ${t('mm.register.ready')}`;
   try {
     const r = await apiFetch('/api/models/presets/reload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unload: false }) });
     const v = await r.json().catch(() => ({})) as { loaded?: string[]; error?: string };
-    if (r.status === 409 && Array.isArray(v.loaded)) reload = ` The engine offers them once ${v.loaded.join(', ')} is unloaded.`;
-    else if (!r.ok) reload = ` The engine did not reload yet: ${v.error || r.status}.`;
-  } catch (e) { reload = ` The engine did not reload yet: ${errorText(e, 'unknown error')}.`; }
+    if (r.status === 409 && Array.isArray(v.loaded)) reload = ` ${t('mm.register.onceUnloaded', { models: v.loaded.join(', ') })}`;
+    else if (!r.ok) reload = ` ${t('mm.register.noReload', { error: v.error || r.status })}`;
+  } catch (e) { reload = ` ${t('mm.register.noReload', { error: errorText(e, t('mm.unknownError')) })}`; }
   const names = added.join(', ');
-  return { added, text: `Found ${added.length} new ${added.length === 1 ? 'model' : 'models'} in the models folder and added ${added.length === 1 ? 'it' : 'them'} with safe defaults (8K context${mtp.length ? `, MTP for ${mtp.join(', ')}` : ''}): ${names}.${reload}${failed.length ? ` Not set up: ${failed.join(', ')}.` : ''}` };
+  const found = mtp.length ? plural('mm.register.foundMtp', added.length, { models: names, mtp: mtp.join(', ') }) : plural('mm.register.found', added.length, { models: names });
+  return { added, text: `${found}${reload}${failed.length ? ` ${t('mm.register.notSetUp', { files: failed.join(', ') })}` : ''}` };
 }

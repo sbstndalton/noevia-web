@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch } from '../api';
+import { useT } from '../i18n';
 
 // Issue #194: a single deployment-wide toggle for "Automatic sampling presets", default on.
 // Selection and precedence live server-side (sampling-presets.cjs); this only flips the
@@ -11,6 +12,7 @@ type Settings = { enabled: boolean; admin: boolean };
 export function SamplingPresetsControl(): JSX.Element | null {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [saving, setSaving] = useState(false), [error, setError] = useState('');
+  const t = useT();
   useEffect(() => {
     let stale = false;
     apiFetch('/api/sampling-settings')
@@ -26,17 +28,17 @@ export function SamplingPresetsControl(): JSX.Element | null {
       const response = await apiFetch('/api/sampling-settings', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }),
       });
-      if (!response.ok) throw Error((await response.json()).error || 'Could not save sampling settings');
+      if (!response.ok) throw Error((await response.json()).error || t('mm.sampling.saveFailed'));
       setSettings({ ...settings, enabled });
     } catch (e) { setError(String(e)); } finally { setSaving(false); }
   };
   return <span className="reasoning-control">
     <label className="mm-check">
-      <input type="checkbox" aria-label="Automatic sampling presets" checked={settings.enabled}
+      <input type="checkbox" aria-label={t('mm.sampling.label')} checked={settings.enabled}
         disabled={saving || !settings.admin} onChange={e => void save(e.target.checked)}/>
-      Automatic sampling presets
+      {t('mm.sampling.label')}
     </label>
-    <small>Chooses temperature, top-p and repeat penalty from the chat's task (coding, creative writing, reasoning, or general) automatically. A chat or project with its own sampling values always keeps them.</small>
+    <small>{t('mm.sampling.help')}</small>
     {error && <span role="alert">{error}</span>}
   </span>;
 }

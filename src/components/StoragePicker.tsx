@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import type { JSX } from 'react';
 import { fetchStorage, pollNextcloud, saveStorage, startNextcloud, testStorage } from '../api';
 import type { StorageConnection } from '../api';
+import { useT } from '../i18n';
 
 export interface StoragePickerProps {
   /** Called after storage is saved. Receives the saved connection. */
@@ -16,6 +17,7 @@ export interface StoragePickerProps {
  *  the setup wizard (step 3) and Settings → Diary storage. */
 export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly = false }: StoragePickerProps): JSX.Element {
   const id = useId();
+  const t = useT();
   const [value, setValue] = useState<StorageConnection>({ kind: onlineOnly ? 'nextcloud' : 'local', baseUrl: '', username: '', corpusRoot: '' });
   const [loaded, setLoaded] = useState(false);
   const [loadedKind, setLoadedKind] = useState<StorageConnection['kind'] | null>(null);
@@ -47,16 +49,16 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
   const connectNextcloud = async () => {
     const flow = await startNextcloud(value.baseUrl);
     window.open(flow.loginUrl, '_blank', 'noopener,noreferrer');
-    setMessage('Grant access in Nextcloud, then click Finish connection.');
+    setMessage(t('storage.grantHint'));
     sessionStorage.setItem('cowork-nextcloud-flow', flow.flowId);
   };
   const finishNextcloud = async () => {
     const id = sessionStorage.getItem('cowork-nextcloud-flow') || '';
     const result = await pollNextcloud(id, value.corpusRoot || 'Cowork/Diary');
-    if (result.pending) setMessage('Still waiting for Nextcloud approval.');
+    if (result.pending) setMessage(t('storage.waiting'));
     else {
       setValue(result);
-      setMessage('Nextcloud connected.');
+      setMessage(t('storage.connected'));
       sessionStorage.removeItem('cowork-nextcloud-flow');
       onSaved?.(result);
     }
@@ -67,21 +69,21 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
     setValue(saved);
     setLoadedKind(saved.kind);
     setSecret('');
-    setMessage('Storage saved.');
+    setMessage(t('storage.saved'));
     onSaved?.(saved);
   };
   const test = async () => {
     await testStorage({ ...value, secret, useSavedSecret: value.kind === loadedKind && !!value.secretConfigured && !secret });
-    setMessage('Connection successful.');
+    setMessage(t('storage.tested'));
   };
 
   return (
     <div className="card-list" style={{ padding: 12, gap: 8 }}>
-      {!loaded && !loadFailed && <p className="route-note" role="status">Loading your saved storage connection…</p>}
-      {loadFailed && <div role="alert"><p className="route-note">Your saved storage connection couldn’t be loaded, so these fields are locked to avoid overwriting it. The server may be busy or unreachable.</p>
-        <button type="button" className="modal-btn secondary" onClick={() => setAttempt(n => n + 1)}>Try again</button></div>}
-      {backupOnly && <p className="diary-context-note">This is your account storage connection, also used by Projects. Changing it changes their connection too. Diary backups support Nextcloud and WebDAV.</p>}
-      <label className="modal-label" htmlFor={`${id}-kind`}>Storage type</label>
+      {!loaded && !loadFailed && <p className="route-note" role="status">{t('storage.loading')}</p>}
+      {loadFailed && <div role="alert"><p className="route-note">{t('storage.loadFailed')}</p>
+        <button type="button" className="modal-btn secondary" onClick={() => setAttempt(n => n + 1)}>{t('storage.tryAgain')}</button></div>}
+      {backupOnly && <p className="diary-context-note">{t('storage.backupNote')}</p>}
+      <label className="modal-label" htmlFor={`${id}-kind`}>{t('storage.type')}</label>
       <select
         id={`${id}-kind`}
         className="modal-input"
@@ -89,34 +91,34 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
         value={value.kind}
         onChange={(e) => patch({ kind: e.target.value as StorageConnection['kind'] })}
       >
-        {!onlineOnly && <option value="local">Server storage</option>}
+        {!onlineOnly && <option value="local">{t('storage.kind.local')}</option>}
         <option value="nextcloud">Nextcloud</option>
-        <option value="webdav">Generic WebDAV</option>
-        {!backupOnly && <option value="s3">S3-compatible</option>}
+        <option value="webdav">{t('storage.kind.webdav')}</option>
+        {!backupOnly && <option value="s3">{t('storage.kind.s3')}</option>}
       </select>
       {value.kind !== 'local' && (
         <>
-          <label className="modal-label" htmlFor={`${id}-baseUrl`}>{value.kind === 'nextcloud' ? 'Nextcloud URL' : value.kind === 's3' ? 'Endpoint URL' : 'WebDAV base URL'}</label>
+          <label className="modal-label" htmlFor={`${id}-baseUrl`}>{value.kind === 'nextcloud' ? t('storage.nextcloudUrl') : value.kind === 's3' ? t('storage.endpointUrl') : t('storage.webdavUrl')}</label>
           <input
             id={`${id}-baseUrl`}
             disabled={!loaded}
             className="modal-input"
-            placeholder={value.kind === 'nextcloud' ? 'https://cloud.example.com' : value.kind === 's3' ? 'Endpoint URL (https://s3.example.com)' : 'WebDAV base URL'}
+            placeholder={value.kind === 'nextcloud' ? 'https://cloud.example.com' : value.kind === 's3' ? t('storage.endpointPlaceholder') : t('storage.webdavUrl')}
             value={value.baseUrl}
             onChange={(e) => patch({ baseUrl: e.target.value })}
           />
           {value.kind === 's3' && (
             <>
-              <label className="modal-label" htmlFor={`${id}-bucket`}>Bucket</label>
+              <label className="modal-label" htmlFor={`${id}-bucket`}>{t('storage.bucket')}</label>
               <input
                 id={`${id}-bucket`}
                 disabled={!loaded}
                 className="modal-input"
-                placeholder="Bucket"
+                placeholder={t('storage.bucket')}
                 value={value.bucket || ''}
                 onChange={(e) => patch({ bucket: e.target.value })}
               />
-              <label className="modal-label" htmlFor={`${id}-region`}>Region (optional)</label>
+              <label className="modal-label" htmlFor={`${id}-region`}>{t('storage.region')}</label>
               <input
                 id={`${id}-region`}
                 disabled={!loaded}
@@ -127,12 +129,12 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
               />
             </>
           )}
-          <label className="modal-label" htmlFor={`${id}-corpusRoot`}>{value.kind === 's3' ? 'Folder inside the bucket (optional)' : 'Corpus folder'}</label>
+          <label className="modal-label" htmlFor={`${id}-corpusRoot`}>{value.kind === 's3' ? t('storage.bucketFolder') : t('storage.corpusFolder')}</label>
           <input
             id={`${id}-corpusRoot`}
             disabled={!loaded}
             className="modal-input"
-            placeholder={value.kind === 's3' ? 'Folder inside the bucket (optional)' : 'Corpus folder'}
+            placeholder={value.kind === 's3' ? t('storage.bucketFolder') : t('storage.corpusFolder')}
             value={value.corpusRoot}
             onChange={(e) => patch({ corpusRoot: e.target.value })}
           />
@@ -140,28 +142,28 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
       )}
       {(value.kind === 'webdav' || value.kind === 's3') && (
         <>
-          <label className="modal-label" htmlFor={`${id}-username`}>{value.kind === 's3' ? 'Access key ID' : 'Username'}</label>
+          <label className="modal-label" htmlFor={`${id}-username`}>{value.kind === 's3' ? t('storage.accessKey') : t('storage.username')}</label>
           <input
             id={`${id}-username`}
             disabled={!loaded}
             className="modal-input"
-            placeholder="Username"
+            placeholder={t('storage.username')}
             value={value.username}
             onChange={(e) => patch({ username: e.target.value })}
           />
-          <label className="modal-label" htmlFor={`${id}-secret`}>{value.kind === 's3' ? 'Secret access key' : 'App password'}</label>
+          <label className="modal-label" htmlFor={`${id}-secret`}>{value.kind === 's3' ? t('storage.secretKey') : t('storage.appPassword')}</label>
           <input
             id={`${id}-secret`}
             disabled={!loaded}
             className="modal-input"
             type="password"
             aria-describedby={value.kind === loadedKind && value.secretConfigured ? `${id}-secret-help` : undefined}
-            placeholder={value.kind === 's3' ? 'Secret access key' : 'App password'}
+            placeholder={value.kind === 's3' ? t('storage.secretKey') : t('storage.appPassword')}
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
           />
-          {value.kind === loadedKind && value.secretNeedsReauth && <p className="route-note">The saved secret can no longer be read (the server key changed). Enter it again.</p>}
-          {value.kind === loadedKind && value.secretConfigured && <p id={`${id}-secret-help`} className="route-note">A secret is saved. Leave blank to test with it on the same server.</p>}
+          {value.kind === loadedKind && value.secretNeedsReauth && <p className="route-note">{t('storage.reauth')}</p>}
+          {value.kind === loadedKind && value.secretConfigured && <p id={`${id}-secret-help`} className="route-note">{t('storage.secretSaved')}</p>}
         </>
       )}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -172,23 +174,23 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
               disabled={!loaded}
               onClick={() => void connectNextcloud().catch((e) => setMessage(String(e)))}
             >
-              Grant Nextcloud access
+              {t('storage.grant')}
             </button>
             <button
               className="modal-btn secondary"
               disabled={!loaded}
               onClick={() => void finishNextcloud().catch((e) => setMessage(String(e)))}
             >
-              Finish connection
+              {t('storage.finish')}
             </button>
           </>
         ) : (
           <>
             <button disabled={!loaded} className="modal-btn primary" onClick={() => void save().catch((e) => setMessage(String(e)))}>
-              Save
+              {t('common.save')}
             </button>
             <button disabled={!loaded} className="modal-btn secondary" onClick={() => void test().catch((e) => setMessage(String(e)))}>
-              Test
+              {t('storage.test')}
             </button>
           </>
         )}
@@ -200,7 +202,7 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
               onSkip();
             }}
           >
-            Skip — set up later in Settings
+            {t('storage.skip')}
           </button>
         )}
       </div>

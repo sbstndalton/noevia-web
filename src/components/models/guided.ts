@@ -27,11 +27,13 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 /** Which memory the estimate is compared with. A configured server budget wins; otherwise the
  *  largest GPU's dedicated plus shared memory (shared-memory APUs report most of it as shared),
  *  otherwise system RAM. Null when nothing is known: the panel then asks for a figure. */
-export function budgetFor(serverBudget: number | null | undefined, hw: Hardware | null): { gib: number; source: string } | null {
-  if (serverBudget && serverBudget > 0) return { gib: serverBudget, source: 'the configured inference memory budget' };
+export type BudgetKind = 'configured' | 'gpu' | 'gpu-shared' | 'system' | 'manual';
+/** `kind` (and `gpu`, the card's name) lets the panel say `source` in the interface language. */
+export function budgetFor(serverBudget: number | null | undefined, hw: Hardware | null): { gib: number; source: string; kind: BudgetKind; gpu?: string } | null {
+  if (serverBudget && serverBudget > 0) return { gib: serverBudget, source: 'the configured inference memory budget', kind: 'configured' };
   const gpu = (hw?.gpus || []).map((g) => ({ g, total: (g.capacityGB || 0) + (g.sharedGB || 0) })).sort((a, b) => b.total - a.total)[0];
-  if (gpu && gpu.total > 0) return { gib: gpu.total, source: `${gpu.g.name} (${gpu.g.sharedGB ? 'dedicated + shared' : 'dedicated'} memory)` };
-  if (hw?.systemGB) return { gib: hw.systemGB, source: 'system memory (no GPU reported)' };
+  if (gpu && gpu.total > 0) return { gib: gpu.total, source: `${gpu.g.name} (${gpu.g.sharedGB ? 'dedicated + shared' : 'dedicated'} memory)`, kind: gpu.g.sharedGB ? 'gpu-shared' : 'gpu', gpu: gpu.g.name };
+  if (hw?.systemGB) return { gib: hw.systemGB, source: 'system memory (no GPU reported)', kind: 'system' };
   return null;
 }
 
@@ -54,14 +56,15 @@ export function verdictFor(totalGib: number, budgetGib: number): Verdict {
   return budgetGib - totalGib < tightMargin(budgetGib) ? 'tight' : 'fits';
 }
 
+// `text` is the English sentence; the other fields let the panel phrase it in the interface language.
 export type Recommendation = { kind: 'use'; ctx: number; kv: string; totalGib: number; verdict: Verdict; text: string }
-  | { kind: 'smaller'; text: string } | { kind: 'unknown'; text: string };
+  | { kind: 'smaller'; floorGib: number; moe: boolean; text: string } | { kind: 'unknown'; reason: 'not-chat' | 'no-layout'; arch: string; text: string };
 
 /** The one next step. Prefers q8_0 at the largest context that fits with headroom; drops to Q5
  *  only when q8_0 cannot reach `wantCtx`; never recommends below the Q5 floor (#190). */
 export function recommend(inputs: EstimateInputs, budgetGib: number, wantCtx = 0): Recommendation {
-  if (!inputs.chat) return { kind: 'unknown', text: 'Embedding, reranking and projector files keep their qualified settings; the estimate covers chat models.' };
-  if (!inputs.sizeable || !inputs.rows.length) return { kind: 'unknown', text: `The model file does not describe its attention layout (${inputs.arch || 'unknown architecture'}), so memory cannot be estimated. Use Measure context instead.` };
+  if (!inputs.chat) return { kind: 'unknown', reason: 'not-chat', arch: inputs.arch || '', text: 'Embedding, reranking and projector files keep their qualified settings; the estimate covers chat models.' };
+  if (!inputs.sizeable || !inputs.rows.length) return { kind: 'unknown', reason: 'no-layout', arch: inputs.arch || '', text: `The model file does not describe its attention layout (${inputs.arch || 'unknown architecture'}), so memory cannot be estimated. Use Measure context instead.` };
   const best = (kv: string, allowTight: boolean) => {
     let pick: ReturnType<typeof estimateGib> = null;
     for (const row of inputs.rows) {
@@ -87,7 +90,7 @@ export function recommend(inputs: EstimateInputs, budgetGib: number, wantCtx = 0
     }
   }
   const floor = round2((inputs.modelGib + inputs.pinnedGib + inputs.reserveGib) * inputs.safety);
-  return { kind: 'smaller', text: `This model needs about ${floor} GiB before any context, and the smallest context does not fit ${budgetGib} GiB even with Q5 KV cache. Choose a smaller quantization${inputs.moe ? ' or configure CPU expert offload in Advanced' : ''}.` };
+  return { kind: 'smaller', floorGib: floor, moe: inputs.moe, text: `This model needs about ${floor} GiB before any context, and the smallest context does not fit ${budgetGib} GiB even with Q5 KV cache. Choose a smaller quantization${inputs.moe ? ' or configure CPU expert offload in Advanced' : ''}.` };
 }
 
 // ── Tuning pre-flight ────────────────────────────────────────────────────────────────────────

@@ -2,13 +2,28 @@ import { useEffect, useMemo, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch } from '../../api';
 import type { InstalledModel } from '../../types';
-import { isSystemModel, SYSTEM_MODEL_LABEL } from '../../model-system';
+import { isSystemModel } from '../../model-system';
 import { EvidenceList } from './EvidenceList';
-import { ctxShort } from './mm';
+import { ctxShort, num } from './mm';
 import type { EstimateInputs, Hardware, Verdict } from './guided';
-import { belowKvFloor, budgetFor, canPromptSuite, estimateGib, KV_FLOOR, KV_GUIDED, recommend, ROLE_LABEL, roleOf, TUNE_STEPS, tuneMinutes, verdictFor } from './guided';
+import { belowKvFloor, budgetFor, canPromptSuite, estimateGib, KV_FLOOR, KV_GUIDED, recommend, roleOf, TUNE_STEPS, tuneMinutes, verdictFor } from './guided';
+import type { BudgetKind, Recommendation } from './guided';
+import { useT } from '../../i18n';
+import type { MessageKey, Translate } from '../../i18n';
+import { ROLE_KEY, stuckStatus } from './mm-text';
 
-const VERDICT: Record<Verdict, string> = { fits: 'Fits', tight: 'Tight fit', no: 'Does not fit' };
+const VERDICT: Record<Verdict, MessageKey> = { fits: 'mm.verdict.fits', tight: 'mm.verdict.tight', no: 'mm.verdict.no' };
+const TUNE_STEP: Record<string, [MessageKey, MessageKey]> = {
+  kv: ['mm.autoconfig.kv', 'mm.tune.step.kv'], context: ['mm.tune.step.contextLabel', 'mm.tune.step.context'],
+  drafting: ['mm.tune.step.draftingLabel', 'mm.tune.step.drafting'], batch: ['mm.tune.step.batchLabel', 'mm.tune.step.batch'],
+};
+const BUDGET_SOURCE: Record<BudgetKind, MessageKey> = { configured: 'mm.fit.source.configured', gpu: 'mm.fit.source.gpu', 'gpu-shared': 'mm.fit.source.gpuShared', system: 'mm.fit.source.system', manual: 'mm.fit.source.manual' };
+/** guided.ts recommend() in the interface language (its `text` is the English original). */
+function recommendationText(t: Translate, rec: Recommendation, budgetGib: number): string {
+  if (rec.kind === 'use') return t(rec.verdict === 'tight' ? 'mm.fit.rec.useTight' : 'mm.fit.rec.use', { ctx: num(rec.ctx, 0), kv: rec.kv, total: num(rec.totalGib), budget: num(budgetGib) });
+  if (rec.kind === 'smaller') return t(rec.moe ? 'mm.fit.rec.smallerMoe' : 'mm.fit.rec.smaller', { floor: num(rec.floorGib), budget: num(budgetGib) });
+  return rec.reason === 'not-chat' ? t('mm.fit.rec.notChat') : t('mm.fit.rec.noLayout', { arch: rec.arch || t('mm.fit.unknownArch') });
+}
 type TuneStatus = { job: { model?: string; status?: string; error?: string; models?: { model: string; status: string; error?: string }[] } | null; history: { at: number; kv?: string; context?: number; specLabel?: string; generation?: number }[] };
 
 async function getJson<T>(path: string): Promise<T> {
@@ -21,12 +36,13 @@ async function getJson<T>(path: string): Promise<T> {
  *  says whether it only measures or writes settings; nothing here starts a run by itself. */
 export function GuidedOptimize({ model, installed, onOpenTab }: { model: string; installed?: InstalledModel; onOpenTab: (tab: 'benchmarks' | 'hardware') => void }): JSX.Element {
   const role = roleOf(model, installed?.labels || []);
-  if (isSystemModel(model)) return <section className="mm-panel mm-guided" aria-label="Optimize this model">
-    <p className="mm-note" role="status">{SYSTEM_MODEL_LABEL} — used internally for message routing; it is not estimated, tuned or calibrated here.</p>
+  const t = useT();
+  if (isSystemModel(model)) return <section className="mm-panel mm-guided" aria-label={t('mm.guided.title')}>
+    <p className="mm-note" role="status">{t('model.systemLabel')}{t('mm.guided.systemNote')}</p>
   </section>;
-  return <section className="mm-panel mm-guided" aria-label="Optimize this model">
-    <div className="mm-panel-head"><h3>Optimize this model</h3><span className="mm-pill">{ROLE_LABEL[role]}</span></div>
-    <p className="mm-note">Three optional steps. Each says whether it only measures or changes settings. Detailed llama.cpp fields stay in Advanced below.</p>
+  return <section className="mm-panel mm-guided" aria-label={t('mm.guided.title')}>
+    <div className="mm-panel-head"><h3>{t('mm.guided.title')}</h3><span className="mm-pill">{t(ROLE_KEY[role])}</span></div>
+    <p className="mm-note">{t('mm.guided.intro')}</p>
     <ol className="mm-guided-steps">
       <li><FitStep model={model}/></li>
       <li><TuneStep model={model} sizeGB={installed?.sizeGB ?? null} chat={canPromptSuite(role)}/></li>
@@ -38,48 +54,50 @@ export function GuidedOptimize({ model, installed, onOpenTab }: { model: string;
 function FitStep({ model }: { model: string }): JSX.Element {
   const [inputs, setInputs] = useState<EstimateInputs | null>(null), [hw, setHw] = useState<Hardware | null>(null);
   const [error, setError] = useState(''), [ctx, setCtx] = useState(0), [kv, setKv] = useState('q8_0'), [manual, setManual] = useState('');
+  const t = useT();
   useEffect(() => {
     let live = true; setInputs(null); setError('');
     getJson<EstimateInputs>('/api/models/estimate?model=' + encodeURIComponent(model)).then((v) => {
       if (!live) return; setInputs(v);
       setCtx(v.current.ctx || v.rows.find((r) => r.ctx >= 16384)?.ctx || v.rows[0]?.ctx || 0);
       if (v.current.kv && v.current.kv in { f16: 1, q8_0: 1, q5_1: 1, q5_0: 1, q4_0: 1 }) setKv(v.current.kv);
-    }).catch((e) => { if (live) setError(e instanceof Error ? e.message : 'The estimate is unavailable.'); });
+    }).catch((e) => { if (live) setError(e instanceof Error ? e.message : t('mm.fit.unavailable')); });
     getJson<Hardware>('/api/models/hardware').then((v) => { if (live) setHw(v); }).catch(() => undefined);
     return () => { live = false; };
   }, [model]);
-  const budget = useMemo(() => { const n = Number(manual); return n > 0 ? { gib: n, source: 'the figure you entered' } : budgetFor(inputs?.budgetGib, hw); }, [manual, inputs, hw]);
+  const budget = useMemo(() => { const n = Number(manual); return n > 0 ? { gib: n, source: 'the figure you entered', kind: 'manual' as const, gpu: undefined } : budgetFor(inputs?.budgetGib, hw); }, [manual, inputs, hw]);
   const est = inputs && ctx ? estimateGib(inputs, ctx, kv) : null;
   const verdict = est && budget ? verdictFor(est.totalGib, budget.gib) : null;
   const rec = inputs && budget ? recommend(inputs, budget.gib, ctx) : null;
   return <div className="mm-guided-step">
-    <h4><span className="mm-step-n" aria-hidden="true">1</span>Will it fit? <small>Estimate only · nothing is loaded or saved</small></h4>
-    {error && <p className="mm-note" role="status">{error} Use Measure context below to test the real engine instead.</p>}
-    {!inputs && !error && <p className="mm-note" role="status">Reading the model file…</p>}
+    <h4><span className="mm-step-n" aria-hidden="true">1</span>{t('mm.fit.title')} <small>{t('mm.fit.hint')}</small></h4>
+    {error && <p className="mm-note" role="status">{error} {t('mm.fit.errorHint')}</p>}
+    {!inputs && !error && <p className="mm-note" role="status">{t('mm.readingFile')}</p>}
     {inputs && inputs.rows.length > 0 && <div className="mm-form mm-fit-form">
-      <label>Context<select value={ctx} onChange={(e) => setCtx(Number(e.target.value))}>
-        {inputs.rows.map((r) => <option key={r.ctx} value={r.ctx}>{ctxShort(r.ctx)} tokens{r.ctx === inputs.current.ctx ? ' (current)' : ''}</option>)}
+      <label>{t('mm.easy.context')}<select value={ctx} onChange={(e) => setCtx(Number(e.target.value))}>
+        {inputs.rows.map((r) => <option key={r.ctx} value={r.ctx}>{t('mm.tokensCount', { tokens: ctxShort(r.ctx) })}{r.ctx === inputs.current.ctx ? ` ${t('mm.current')}` : ''}</option>)}
       </select></label>
-      <label>KV cache<select value={kv} onChange={(e) => setKv(e.target.value)}>
-        {KV_GUIDED.map((k) => <option key={k} value={k}>{k}{k === inputs.current.kv ? ' (current)' : ''}</option>)}
-        <option value="q4_0">q4_0 · below the Q5 floor{inputs.current.kv === 'q4_0' ? ' (current)' : ''}</option>
+      <label>{t('mm.autoconfig.kv')}<select value={kv} onChange={(e) => setKv(e.target.value)}>
+        {KV_GUIDED.map((k) => <option key={k} value={k}>{k}{k === inputs.current.kv ? ` ${t('mm.current')}` : ''}</option>)}
+        <option value="q4_0">{t('mm.fit.belowFloorOption')}{inputs.current.kv === 'q4_0' ? ` ${t('mm.current')}` : ''}</option>
       </select></label>
-      <label>Memory to fit in (GiB)<input inputMode="decimal" value={manual} placeholder={budget ? String(budget.gib) : 'e.g. 16'} onChange={(e) => setManual(e.target.value.replace(/[^\d.]/g, ''))}/></label>
+      <label>{t('mm.fit.memory')}<input inputMode="decimal" value={manual} placeholder={budget ? String(budget.gib) : t('mm.fit.memoryPlaceholder')} onChange={(e) => setManual(e.target.value.replace(/[^\d.]/g, ''))}/></label>
     </div>}
     {est && budget && verdict && <div className="mm-fit" data-verdict={verdict} role="status">
-      <strong className="mm-fit-verdict">{VERDICT[verdict]}</strong>
-      <span>About <strong>{est.totalGib} GiB</strong> of {budget.gib} GiB ({budget.source}).</span>
-      <small>Model {inputs!.modelGib} GiB · KV cache {est.kvGib} GiB{inputs!.pinnedGib ? ` · vision projector ${inputs!.pinnedGib} GiB` : ''} · runtime reserve {inputs!.reserveGib} GiB · plus a 5% margin. One conversation slot.</small>
+      <strong className="mm-fit-verdict">{t(VERDICT[verdict])}</strong>
+      <span>{t('mm.fit.aboutBefore')}<strong>{num(est.totalGib)} GiB</strong>{t('mm.fit.aboutAfter', { budget: num(budget.gib), source: t(BUDGET_SOURCE[budget.kind], { gpu: budget.gpu ?? '' }) })}</span>
+      <small>{[t('mm.fit.model', { gib: num(inputs!.modelGib) }), t('mm.fit.kv', { gib: num(est.kvGib) }), ...(inputs!.pinnedGib ? [t('mm.fit.projector', { gib: num(inputs!.pinnedGib) })] : []), t('mm.fit.reserve', { gib: num(inputs!.reserveGib) })].join(' · ')}{t('mm.fit.margin')}</small>
     </div>}
-    {inputs && !budget && <p className="mm-note" role="status">This server reports no memory figure. Enter how much memory the engine may use to see a verdict.</p>}
-    {belowKvFloor(kv) && <p className="mm-note mm-warn" role="note">q4_0 is below the {KV_FLOOR} floor for automatic choices (#190): it fits more context but noticeably lowers answer quality. Existing q4_0 settings keep working until you change them.</p>}
-    {rec && <p className={'mm-note' + (rec.kind === 'smaller' ? ' mm-warn' : '')}><strong>Recommendation:</strong> {rec.text}{rec.kind === 'use' && (rec.ctx !== ctx || rec.kv !== kv) ? <> <button type="button" className="mm-guided-link" onClick={() => { setCtx(rec.ctx); setKv(rec.kv); }}>Show this</button></> : null}</p>}
-    {inputs?.rows.length ? <p className="mm-note">Estimates can be off by a few percent. To save a context, use <em>Tune for this machine</em> or step 2, which measure on the real engine.</p> : null}
+    {inputs && !budget && <p className="mm-note" role="status">{t('mm.fit.noMemory')}</p>}
+    {belowKvFloor(kv) && <p className="mm-note mm-warn" role="note">{t('mm.fit.belowFloor', { floor: KV_FLOOR })}</p>}
+    {rec && budget && <p className={'mm-note' + (rec.kind === 'smaller' ? ' mm-warn' : '')}><strong>{t('mm.fit.recommendation')}</strong> {recommendationText(t, rec, budget.gib)}{rec.kind === 'use' && (rec.ctx !== ctx || rec.kv !== kv) ? <> <button type="button" className="mm-guided-link" onClick={() => { setCtx(rec.ctx); setKv(rec.kv); }}>{t('mm.fit.show')}</button></> : null}</p>}
+    {inputs?.rows.length ? <p className="mm-note">{t('mm.fit.accuracyBefore')}<em>{t('mm.easy.tune')}</em>{t('mm.fit.accuracyAfter')}</p> : null}
   </div>;
 }
 
 function TuneStep({ model, sizeGB, chat }: { model: string; sizeGB: number | null; chat: boolean }): JSX.Element {
   const [status, setStatus] = useState<TuneStatus | null>(null);
+  const t = useT();
   useEffect(() => {
     let live = true;
     getJson<TuneStatus>('/api/models/autotune?model=' + encodeURIComponent(model)).then((v) => { if (live) setStatus(v); }).catch(() => undefined);
@@ -93,24 +111,25 @@ function TuneStep({ model, sizeGB, chat }: { model: string; sizeGB: number | nul
     const box = document.querySelector<HTMLDetailsElement>('.mm-easy-autotune');
     if (box) { box.open = true; box.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   };
-  if (!chat) return <div className="mm-guided-step"><h4><span className="mm-step-n" aria-hidden="true">2</span>Full auto-tune</h4><p className="mm-note">Auto-tune measures chat answers, so it does not apply to embedding or reranking models.</p></div>;
+  if (!chat) return <div className="mm-guided-step"><h4><span className="mm-step-n" aria-hidden="true">2</span>{t('mm.tune.title')}</h4><p className="mm-note">{t('mm.tune.notChat')}</p></div>;
   return <div className="mm-guided-step">
-    <h4><span className="mm-step-n" aria-hidden="true">2</span>Full auto-tune <small>Measures, then applies each setting as it passes</small></h4>
-    <p className="mm-note">Expected time: about {time.low}–{time.high} minutes for this model{sizeGB ? ` (${sizeGB.toFixed(1)} GB file)` : ''}. <strong>Chat pauses</strong> while it runs; stop Diary background jobs first. You can cancel at any point and resume later.</p>
-    <ol className="mm-preflight">{TUNE_STEPS.map((s) => <li key={s.id}><strong>{s.label}</strong> — {s.what}</li>)}</ol>
-    <p className="mm-note mm-warn" role="note">Q5 floor (#190): the goal is never to choose a KV cache below {KV_FLOOR} automatically. This build's auto-tune still tries f16, q8_0 and q4_0; if it picks q4_0, set q5_0 or higher under KV cache below.</p>
-    {last && <p className="mm-note">Last tuned {new Date(last.at).toLocaleDateString()}: {last.specLabel || 'saved'}{last.generation ? `, ${last.generation} tokens/s` : ''}{last.kv ? `, ${last.kv} KV` : ''}{last.context ? `, ${last.context.toLocaleString('en-US')} context` : ''}.{belowKvFloor(last.kv) ? ' This KV cache is below the Q5 floor.' : ''}</p>}
-    {failed && <p className="mm-note mm-warn" role="status">The last run {String(mine!.status)}{mine!.error ? `: ${mine!.error}` : ''}. The settings saved before it stay active{last ? ' (last known-good result above)' : ''}, so chat still works. Resume or retry it below, or keep the current settings.</p>}
-    <div className="mm-actions"><button type="button" className="modal-btn secondary" onClick={goTune}>Go to Auto-tune and apply</button></div>
+    <h4><span className="mm-step-n" aria-hidden="true">2</span>{t('mm.tune.title')} <small>{t('mm.tune.hint')}</small></h4>
+    <p className="mm-note">{t('mm.tune.time', { low: time.low, high: time.high })}{sizeGB ? ` ${t('mm.tune.fileSize', { size: `${num(sizeGB, 1)} GB` })}` : ''}. <strong>{t('mm.tune.chatPauses')}</strong>{t('mm.tune.pauseAfter')}</p>
+    <ol className="mm-preflight">{TUNE_STEPS.map((s) => <li key={s.id}><strong>{TUNE_STEP[s.id] ? t(TUNE_STEP[s.id][0]) : s.label}</strong> — {TUNE_STEP[s.id] ? t(TUNE_STEP[s.id][1]) : s.what}</li>)}</ol>
+    <p className="mm-note mm-warn" role="note">{t('mm.tune.floor', { floor: KV_FLOOR })}</p>
+    {last && <p className="mm-note">{t('mm.tune.last', { date: new Date(last.at).toLocaleDateString(t.locale), result: [last.specLabel || t('mm.tune.saved'), ...(last.generation ? [t('mm.tokensPerSecond', { rate: num(last.generation) })] : []), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv })] : []), ...(last.context ? [t('mm.tune.context', { tokens: num(last.context, 0) })] : [])].join(', ') })}{belowKvFloor(last.kv) ? ` ${t('mm.tune.lastBelowFloor')}` : ''}</p>}
+    {failed && <p className="mm-note mm-warn" role="status">{t(mine!.error ? 'mm.tune.failedError' : 'mm.tune.failed', { status: stuckStatus(t, String(mine!.status)), error: mine!.error ?? '' })} {t(last ? 'mm.tune.failedKeepLast' : 'mm.tune.failedKeep')}</p>}
+    <div className="mm-actions"><button type="button" className="modal-btn secondary" onClick={goTune}>{t('mm.tune.go')}</button></div>
   </div>;
 }
 
 function QualityStep({ model, chat, onOpenTab }: { model: string; chat: boolean; onOpenTab: (tab: 'benchmarks' | 'hardware') => void }): JSX.Element {
+  const t = useT();
   return <div className="mm-guided-step">
-    <h4><span className="mm-step-n" aria-hidden="true">3</span>Quality <small>Measures only</small></h4>
+    <h4><span className="mm-step-n" aria-hidden="true">3</span>{t('mm.overview.quality')} <small>{t('mm.quality.hint')}</small></h4>
     <EvidenceList model={model}/>
     {chat
-      ? <p className="mm-note">Run the prompt suite on fixed tasks to compare this model with the others. <button type="button" className="mm-guided-link" onClick={() => onOpenTab('benchmarks')}>Open Benchmarks</button></p>
-      : <p className="mm-note">The prompt suite sends chat prompts, so it is limited to chat models.</p>}
+      ? <p className="mm-note">{t('mm.quality.run')} <button type="button" className="mm-guided-link" onClick={() => onOpenTab('benchmarks')}>{t('mm.quality.open')}</button></p>
+      : <p className="mm-note">{t('mm.quality.notChat')}</p>}
   </div>;
 }
