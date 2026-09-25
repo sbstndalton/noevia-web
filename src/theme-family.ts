@@ -33,19 +33,19 @@ export interface FamilySpec {
 export const FAMILY_SPECS: Readonly<Record<Family, FamilySpec>> = {
   editorial: {
     label: 'Editorial',
-    description: 'Quiet paper tones, a serif display face and soft, bordered depth.',
+    description: 'Paper tones, a serif display face and hairline rules instead of shadows.',
     display: 'Fraunces',
     ui: 'Inter',
   },
   contemporary: {
     label: 'Contemporary',
-    description: 'Crisp tonal surfaces, tighter corners and flat, outlined controls.',
+    description: 'Material 3: tonal surfaces, rounder cards and sheets, and pill buttons.',
     display: 'Geist',
     ui: 'Geist',
   },
   glass: {
     label: 'Glass',
-    description: 'Translucent chrome over an opaque reading plane, with rounder shapes.',
+    description: 'Frosted, translucent panes with a bright edge over a soft colour field.',
     display: 'Sora',
     ui: 'Manrope',
   },

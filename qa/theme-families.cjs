@@ -2,12 +2,17 @@
 // model, no inference, no Diary, no live services. Serves the built app from ../dist.
 //   PLAYWRIGHT_MODULE=~/noevia-local-test/node_modules/playwright-core node qa/theme-families.cjs
 // Screenshots (375 and 1440): home, chat, composer with Chat/Cowork (Cowork chosen), a menu
-// open, and Settings → Appearance with the family previews. 768 is checked for overflow only.
+// open, the model sheet, and Settings → Appearance with the family previews. 768 is checked for
+// overflow only. #313 adds per-family signatures (Contemporary: tonal, shadowless composer and
+// pill buttons; Glass: blurred translucent panes over a coloured atmosphere; Editorial: flat,
+// ruled paper) and the hover pull (translate ≤ 3px, no tilt, not clinging, off for touch and reduced motion).
+// Contact sheet afterwards: node qa/families-contact-sheet.cjs <shots-dir>
 const os = require('node:os');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || `${os.homedir()}/noevia-local-test/node_modules/playwright-core`);
+const { withLocale } = require('./qa-locale.cjs');
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
 const { createFixture } = require('./diary-fixture.cjs');
-const out = process.env.QA_SCREENSHOTS || '/tmp/noevia-bJ-shots';
+const out = process.env.QA_SCREENSHOTS || '/tmp/families-shots';
 const PORT = 31461;
 const FAMILIES = { editorial: 'Editorial', contemporary: 'Contemporary', glass: 'Glass' };
 const DISPLAY = { editorial: 'Fraunces', contemporary: 'Geist', glass: 'Sora' };
@@ -20,7 +25,7 @@ const DISPLAY = { editorial: 'Fraunces', contemporary: 'Geist', glass: 'Sora' };
   try {
     for (const width of [375, 768, 1440]) for (const theme of ['light', 'dark']) for (const family of Object.keys(FAMILIES)) {
       const touch = width < 768;
-      const page = await browser.newPage({ viewport: { width, height: width < 768 ? 812 : 900 }, hasTouch: touch, isMobile: touch });
+      const page = await browser.newPage(withLocale({ viewport: { width, height: width < 768 ? 812 : 900 }, hasTouch: touch, isMobile: touch }));
       page.on('pageerror', (e) => errors.push({ width, theme, family, error: e.message }));
       // A browser that saved the retired material migrates; the rest save the family directly.
       const legacy = { editorial: 'soft', contemporary: 'material', glass: 'liquid' }[family];
@@ -47,7 +52,16 @@ const DISPLAY = { editorial: 'Fraunces', contemporary: 'Geist', glass: 'Sora' };
           const root = document.documentElement;
           const inner = document.querySelector('.composer-inner');
           const h = document.querySelector('.chat-workspace .empty-state h2');
+          const side = document.querySelector('.app .sidebar.pane');
+          const stack = document.querySelector('.app .app-stack.pane');
           return {
+            sidebarFilter: side ? getComputedStyle(side).backdropFilter : null,
+            stackFilter: stack ? getComputedStyle(stack).backdropFilter : null,
+            stackBg: stack ? getComputedStyle(stack).backgroundColor : null,
+            stackImage: stack ? getComputedStyle(stack).backgroundImage : null,
+            bodyImage: getComputedStyle(document.body).backgroundImage,
+            composerBg: inner ? getComputedStyle(inner).backgroundColor : null,
+            composerRadius: inner ? getComputedStyle(inner).borderTopLeftRadius : null,
             family: root.dataset.family, theme: root.dataset.theme,
             overflow: root.scrollWidth > innerWidth + 1,
             composerShadow: inner ? getComputedStyle(inner).boxShadow : null,
@@ -66,7 +80,21 @@ const DISPLAY = { editorial: 'Fraunces', contemporary: 'Geist', glass: 'Sora' };
       await shot('home');
       const home = results.at(-1);
       assert.ok(home.headingFont?.includes(DISPLAY[family]), `${family} greeting uses ${DISPLAY[family]}: ${home.headingFont}`);
-      assert.notEqual(home.composerShadow, 'none', 'composer is raised');
+      if (family === 'contemporary') {
+        // M3: tonal elevation — the composer is a filled container, not a shadow; 28px shape.
+        assert.equal(home.composerShadow, 'none', 'contemporary composer is tonal, not shadowed');
+        assert.equal(home.composerRadius, '28px', 'contemporary composer uses the 28px M3 shape');
+        assert.notEqual(home.composerBg, home.stackBg, 'contemporary composer sits on a distinct container tone');
+      } else if (family === 'glass') assert.notEqual(home.composerShadow, 'none', 'glass composer floats');
+      if (family === 'glass') {
+        assert.match(home.stackFilter || '', /blur\(/, 'glass reading plane is frosted');
+        if (width >= 520) assert.match(home.sidebarFilter || '', /blur\(.*saturate\(/, 'glass sidebar blurs and saturates');
+        assert.match(home.bodyImage, /radial-gradient/, 'glass atmosphere behind the panes');
+        assert.match(home.stackImage || '', /^linear-gradient\((?:rgba\([^)]*, 0\.\d+\)|color\([^)]*\/ 0\.\d+\))/, `glass reading plane is translucent: ${home.stackImage}`);
+      } else {
+        assert.match(home.stackFilter || 'none', /^none$/, `${family} reading plane is opaque`);
+      }
+      if (family === 'editorial') assert.equal(home.composerShadow, 'none', 'editorial composer is ruled, not lifted');
 
       // Chat/Cowork: the thumb moves, the harness line changes text.
       const toggle = page.getByRole('radiogroup', { name: 'Session mode' });
@@ -85,6 +113,41 @@ const DISPLAY = { editorial: 'Fraunces', contemporary: 'Geist', glass: 'Sora' };
       assert.notEqual(overlay.shadow, 'none', 'menu uses the overlay elevation');
       await shot('menu');
       await page.keyboard.press('Escape');
+
+      // A sheet: the model picker (a dialog on desktop, a bottom sheet on phones).
+      await page.locator('.composer .model-pill').first().click();
+      const sheet = page.locator('.mp-panel');
+      await sheet.waitFor();
+      await page.waitForTimeout(400);
+      const sheetStyle = await sheet.evaluate((e) => ({ radius: getComputedStyle(e).borderTopLeftRadius, filter: getComputedStyle(e).backdropFilter }));
+      if (family === 'contemporary') assert.equal(sheetStyle.radius, '28px', 'M3 sheets and dialogs take 28px');
+      if (family === 'glass') assert.match(sheetStyle.filter, /blur\(/, 'glass sheet is frosted');
+      await shot('sheet');
+      await page.keyboard.press('Escape');
+      if (await sheet.isVisible()) await page.mouse.click(5, 5);
+      await sheet.waitFor({ state: 'hidden' }).catch(() => {});
+
+      // Hover pull: on desktop a sidebar row shifts ≤ 3px toward the pointer (no tilt), then settles back.
+      if (!touch) {
+        const row = page.locator('.app .sidebar.pane .side-nav .nav-item').first();
+        const b = await row.boundingBox();
+        await page.mouse.move(b.x + b.width - 2, b.y + b.height / 2);
+        await page.waitForTimeout(260);
+        const pulled = await row.evaluate((e) => ({ translate: getComputedStyle(e).translate, rotate: getComputedStyle(e).rotate, pulling: e.hasAttribute('data-pulling') }));
+        assert.equal(pulled.rotate, 'none', 'the pull is a translate only, no tilt');
+        assert.ok(pulled.pulling, 'row marked as pulling');
+        const [tx] = pulled.translate.split(' ').map(parseFloat);
+        assert.ok(tx > 0 && tx <= 3, `row pulls toward the pointer by ≤ 3px: ${pulled.translate}`);
+        await page.mouse.move(b.x + b.width / 2, b.y - 200);
+        await page.waitForTimeout(600);
+        const settled = await row.evaluate((e) => getComputedStyle(e).translate);
+        assert.ok(settled === 'none' || /^0px( 0px)?$/.test(settled), `row settles after leaving: ${settled}`);
+        // Text inputs never move.
+        const box = await composer.boundingBox();
+        await page.mouse.move(box.x + box.width - 4, box.y + 4);
+        await page.waitForTimeout(260);
+        assert.equal(await composer.evaluate((e) => getComputedStyle(e).translate), 'none', 'the composer input does not pull');
+      }
 
       // Chat: a synthetic conversation opened from the sidebar.
       if (touch) await page.getByRole('button', { name: 'Open navigation', exact: true }).click().catch(() => {});
@@ -120,13 +183,19 @@ const DISPLAY = { editorial: 'Fraunces', contemporary: 'Geist', glass: 'Sora' };
     }
 
     // Reduced motion: menus still open, instantly, and loops stop.
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+    const page = await browser.newPage(withLocale({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' }));
     page.on('pageerror', (e) => errors.push({ reduced: true, error: e.message }));
     await page.route('**/api/profile/appearance', (r) => r.fulfill({ json: { theme: 'light', light: 'iris', dark: 'iris' } }));
     await page.goto(`http://localhost:${PORT}`); await page.getByPlaceholder('Message noevia…').waitFor();
     await page.getByRole('button', { name: 'Add files and tools' }).click();
     const timing = await page.locator('.composer-actions-panel').evaluate((e) => getComputedStyle(e).animationDuration);
     assert.equal(timing, '0.001s', `reduced motion menu entrance ${timing}`);
+    await page.keyboard.press('Escape');
+    const still = page.locator('.app .sidebar.pane .side-nav .nav-item').first();
+    const sb = await still.boundingBox();
+    await page.mouse.move(sb.x + sb.width - 2, sb.y + sb.height / 2);
+    await page.waitForTimeout(260);
+    assert.equal(await still.evaluate((e) => getComputedStyle(e).translate), 'none', 'no hover pull with reduced motion');
     await page.close();
 
     fs.writeFileSync(path.join(out, 'results.json'), JSON.stringify({ results, errors }, null, 2));

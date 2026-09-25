@@ -24,59 +24,85 @@
   --radius-surface: 20px;
   --motion-quick: 160ms;
   --motion-considered: 260ms;
+  /* Hairline rules instead of elevation (#313): one ink colour at low strength. */
+  --rule: color-mix(in srgb, var(--md-on-surface) 16%, transparent);
+  --rule-strong: color-mix(in srgb, var(--md-on-surface) 34%, transparent);
 }
 [data-family='editorial'][data-theme='light'] {
-  --bg-app: color-mix(in srgb, var(--md-surface) 86%, #f6efe3);
+  --bg-app: color-mix(in srgb, var(--md-surface) 62%, #f1e7d4);
   --bg-canvas: var(--bg-app);
-  --bg-chrome: color-mix(in srgb, var(--md-surface-container-low) 84%, #efe6d6);
-  --bg-surface: color-mix(in srgb, var(--md-surface-container-lowest) 92%, #fffaf1);
-  --edge-raised: color-mix(in srgb, var(--md-outline-variant) 85%, #d9ccb6);
-  --elev-raised: 0 1px 2px rgba(58, 42, 24, .05), 0 8px 24px -14px rgba(58, 42, 24, .22);
-  --elev-overlay: 0 18px 44px -14px rgba(58, 42, 24, .26), 0 3px 10px -4px rgba(58, 42, 24, .10);
+  --bg-chrome: color-mix(in srgb, var(--md-surface-container-low) 58%, #ebdfc8);
+  --bg-surface: color-mix(in srgb, var(--md-surface-container-lowest) 80%, #fdf7ea);
+  --edge-raised: color-mix(in srgb, var(--md-outline-variant) 70%, #cdbc9e);
+  --elev-raised: 0 1px 0 rgba(58, 42, 24, .06);
+  --elev-overlay: 0 14px 36px -16px rgba(58, 42, 24, .28), 0 1px 0 rgba(58, 42, 24, .08);
 }
 [data-family='editorial']:not([data-theme='light']) {
-  --bg-app: color-mix(in srgb, var(--md-surface) 90%, #2a2119);
+  --bg-app: color-mix(in srgb, var(--md-surface) 78%, #2b2219);
   --bg-canvas: var(--bg-app);
-  --bg-chrome: color-mix(in srgb, var(--md-surface-container-low) 90%, #2a2119);
-  --bg-surface: color-mix(in srgb, var(--md-surface-container) 90%, #33291f);
+  --bg-chrome: color-mix(in srgb, var(--md-surface-container-low) 76%, #2b2219);
+  --bg-surface: color-mix(in srgb, var(--md-surface-container) 80%, #352a1f);
+  --elev-raised: 0 1px 0 rgba(0, 0, 0, .30);
 }
 
-/* ── Contemporary — was Material 3. Crisp tonal surfaces, tight corners, near-flat depth. ── */
+/* ── Contemporary — Material 3 (#313). Tonal surface containers carry the hierarchy, not
+   shadows; the containers lean toward the accent's primary tone the way M3 dynamic colour
+   does, so every accent yields its own tonal palette in both modes. Shape follows the M3
+   scale: 16px cards, 28px sheets and dialogs, pill buttons; state layers are 8% hover,
+   12% press and focus of the content colour. ── */
 [data-family='contemporary'] {
   --font-ui: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-display: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --display-weight: 600;
-  --display-tracking: -0.03em;
+  --display-weight: 400;
+  --display-tracking: -0.01em;
   --radius-control: 8px;
-  --radius-overlay: 12px;
-  --radius-surface: 16px;
+  --radius-overlay: 16px;
+  --radius-surface: 28px;
+  --radius-button: 999px;
   --motion-immediate: 90ms;
-  --motion-quick: 140ms;
-  --motion-considered: 220ms;
-  --edge-raised: var(--md-outline-variant);
+  --motion-quick: 150ms;
+  --motion-considered: 300ms;
+  --ease-considered: cubic-bezier(0.2, 0, 0, 1);
+  --edge-raised: transparent;
+  --m3-state-hover: 8%;
+  --m3-state-press: 12%;
+  --m3-state-focus: 12%;
+  --elev-raised: 0 0 0 0 transparent;
 }
 [data-family='contemporary'][data-theme='light'] {
-  --bg-app: var(--md-surface-container-lowest);
+  --m3-surface: color-mix(in srgb, var(--md-primary) 2%, var(--md-surface));
+  --m3-container-low: color-mix(in srgb, var(--md-primary) 5%, var(--md-surface-container-low));
+  --m3-container: color-mix(in srgb, var(--md-primary) 8%, var(--md-surface-container));
+  --m3-container-high: color-mix(in srgb, var(--md-primary) 10%, var(--md-surface-container-high));
+  --m3-container-highest: color-mix(in srgb, var(--md-primary) 7%, var(--md-surface-container-highest));
+  --bg-app: var(--m3-container);
   --bg-canvas: var(--bg-app);
-  --bg-chrome: var(--md-surface-container-low);
-  --bg-surface: var(--md-surface-container-lowest);
-  --surface-overlay: var(--md-surface-container-lowest);
-  --elev-raised: 0 1px 2px rgba(var(--shadow-rgb), .06);
-  --elev-overlay: 0 10px 28px -10px rgba(var(--shadow-rgb), .20), 0 1px 3px rgba(var(--shadow-rgb), .08);
+  --bg-chrome: var(--m3-container);
+  --bg-surface: var(--m3-surface);
+  --surface-raised: var(--m3-container-high);
+  --surface-overlay: var(--m3-container-low);
+  --elev-overlay: 0 1px 2px rgba(var(--shadow-rgb), .18), 0 2px 6px 2px rgba(var(--shadow-rgb), .08);
 }
 [data-family='contemporary']:not([data-theme='light']) {
-  --bg-app: var(--md-surface-container-lowest);
+  --m3-surface: color-mix(in srgb, var(--md-primary) 3%, var(--md-surface));
+  --m3-container-low: color-mix(in srgb, var(--md-primary) 5%, var(--md-surface-container-low));
+  --m3-container: color-mix(in srgb, var(--md-primary) 7%, var(--md-surface-container));
+  --m3-container-high: color-mix(in srgb, var(--md-primary) 9%, var(--md-surface-container-high));
+  --m3-container-highest: color-mix(in srgb, var(--md-primary) 11%, var(--md-surface-container-highest));
+  --bg-app: var(--m3-container-low);
   --bg-canvas: var(--bg-app);
-  --bg-chrome: var(--md-surface-container-low);
-  --bg-surface: var(--md-surface-container-low);
-  --surface-overlay: var(--md-surface-container);
-  --elev-raised: 0 1px 2px rgba(0, 0, 6, .40);
-  --elev-overlay: 0 14px 36px -10px rgba(0, 0, 6, .66), 0 1px 3px rgba(0, 0, 6, .40);
+  --bg-chrome: var(--m3-container-low);
+  --bg-surface: var(--m3-surface);
+  --surface-raised: var(--m3-container-high);
+  --surface-overlay: var(--m3-container);
+  --elev-overlay: 0 1px 3px rgba(0, 0, 6, .40), 0 4px 8px 3px rgba(0, 0, 6, .22);
 }
 
-/* ── Glass — was Liquid glass. Translucent chrome over an opaque reading plane. ──
-   Hierarchy: canvas (a faint atmosphere) < chrome (sidebar, translucent) < controls
-   (glass, blurred) < overlays (near-opaque). Messages and the composer text never sit on blur. */
+/* ── Glass — Liquid Glass (#313). Layered frosted panes over a coloured atmosphere: the
+   sidebar, the reading plane, the composer, sheets and popovers are all translucent, blurred
+   and saturated, with a specular top-left edge, an inner border and a refraction band that
+   shows the atmosphere slightly displaced and magnified (families.css).
+   Hierarchy: atmosphere < chrome (thinnest) < reading plane < composer and overlays (densest). ── */
 [data-family='glass'] {
   --font-ui: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-display: 'Sora', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
@@ -85,19 +111,40 @@
   --radius-control: 12px;
   --radius-overlay: 18px;
   --radius-surface: 24px;
-  --motion-quick: 180ms;
+  --radius-button: var(--radius-control);
+  --motion-quick: 200ms;
   --motion-considered: 300ms;
-  --surface-raised: color-mix(in srgb, var(--bg-surface) 92%, transparent);
-  --surface-overlay: var(--glass-menu);
+  --ease-quick: cubic-bezier(0.16, 1, 0.3, 1);
+  --glass-panel-blur: 30px;
+  --glass-panel-saturate: 1.8;
+  --glass-refraction-shift: 10px;
+  --surface-raised: var(--glass-sheet);
+  --surface-overlay: var(--glass-sheet);
 }
 [data-family='glass'][data-theme='light'] {
-  --bg-chrome: color-mix(in srgb, var(--md-surface-container-low) 72%, transparent);
+  --glass-canvas-peak: color-mix(in srgb, var(--md-primary) 36%, var(--md-surface));
+  --glass-canvas-peak-2: color-mix(in srgb, var(--md-tertiary) 42%, var(--md-surface));
+  --glass-canvas-peak-3: color-mix(in srgb, var(--md-secondary) 34%, var(--md-surface));
+  --bg-chrome: color-mix(in srgb, var(--md-surface-container-lowest) 70%, transparent);
+  --glass-plane: color-mix(in srgb, var(--md-surface-container-lowest) 68%, transparent);
+  --glass-sheet: color-mix(in srgb, var(--md-surface-container-lowest) 74%, transparent);
+  --glass-specular-edge: rgba(255, 255, 255, .95);
+  --glass-inner-border: rgba(255, 255, 255, .45);
+  --glass-lower-rim: rgba(var(--shadow-rgb), .10);
   --edge-raised: rgba(255, 255, 255, .85);
   --elev-raised: inset 0 1px 0 rgba(255, 255, 255, .9), 0 1px 2px rgba(var(--shadow-rgb), .06), 0 10px 30px -14px rgba(var(--shadow-rgb), .28);
   --elev-overlay: inset 0 1px 0 rgba(255, 255, 255, .8), 0 24px 56px -16px rgba(var(--shadow-rgb), .32), 0 4px 12px -4px rgba(var(--shadow-rgb), .10);
 }
 [data-family='glass']:not([data-theme='light']) {
-  --bg-chrome: color-mix(in srgb, var(--md-surface-container-low) 70%, transparent);
+  --glass-canvas-peak: color-mix(in srgb, var(--md-primary) 46%, var(--md-surface));
+  --glass-canvas-peak-2: color-mix(in srgb, var(--md-tertiary) 38%, var(--md-surface));
+  --glass-canvas-peak-3: color-mix(in srgb, var(--md-secondary) 30%, var(--md-surface));
+  --bg-chrome: color-mix(in srgb, var(--md-surface-container-low) 56%, transparent);
+  --glass-plane: color-mix(in srgb, var(--md-surface-container-low) 62%, transparent);
+  --glass-sheet: color-mix(in srgb, var(--md-surface-container-high) 76%, transparent);
+  --glass-specular-edge: rgba(255, 255, 255, .34);
+  --glass-inner-border: rgba(255, 255, 255, .10);
+  --glass-lower-rim: rgba(0, 0, 6, .40);
   --edge-raised: rgba(236, 234, 255, .16);
   --elev-raised: inset 0 1px 0 rgba(236, 234, 255, .10), 0 10px 30px -14px rgba(0, 0, 6, .70);
   --elev-overlay: inset 0 1px 0 rgba(236, 234, 255, .10), 0 26px 60px -16px rgba(0, 0, 6, .75), 0 4px 14px -4px rgba(0, 0, 6, .40);
@@ -106,5 +153,5 @@
 /* Contrast and transparency preferences flatten every family onto opaque, outlined steps. */
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   :root[data-family] { --surface-raised: var(--bg-surface); --surface-overlay: var(--bg-surface); --edge-raised: var(--control-border); }
-  :root[data-family='glass'] { --bg-chrome: var(--md-surface-container-low); }
+  :root[data-family='glass'] { --bg-chrome: var(--md-surface-container-low); --glass-plane: var(--md-surface-container-lowest); --glass-sheet: var(--md-surface-container-low); --glass-panel-blur: 0px; --glass-refraction-shift: 0px; }
 }

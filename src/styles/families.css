@@ -1,0 +1,240 @@
+/* Distinct theme families (#313). Loads LAST, after system.css. Each family here takes the
+   shared surfaces (system.css) and gives them its own design language, using only colour,
+   shape, depth and optical tokens from themes.css — never size, spacing or type metrics
+   (tests/family-geometry.test.cjs), so switching family never moves layout.
+
+     Editorial     paper, ink and hairline rules; almost no elevation; serif display.
+     Contemporary  Material 3: tonal surface containers instead of shadows, the M3 shape
+                   scale, filled / tonal / outlined buttons and 8/12/12% state layers.
+     Glass         Liquid Glass: translucent, blurred, saturated panes over a coloured
+                   atmosphere, a specular edge, an inner border and a refraction band.
+
+   The hover pull (src/hover-pull.ts) is behaviour, not styling: a ≤3px translate, no tilt. */
+
+[data-pulling] { will-change: translate; }
+
+/* ════════════════════════════ Editorial ════════════════════════════ */
+/* The page is one sheet of paper: sidebar and content share the ground, separated by a rule. */
+[data-family='editorial'] body { background: var(--bg-app); }
+[data-family='editorial'] .app .sidebar.pane {
+  background: var(--bg-chrome); border-color: var(--rule); box-shadow: none;
+}
+[data-family='editorial'] .app .app-stack.pane {
+  background: var(--bg-app); border-color: var(--rule); box-shadow: none;
+}
+[data-family='editorial'] .app .app-stack.pane .chat-header {
+  box-shadow: inset 0 -1px 0 var(--rule);
+}
+/* Composer: a bordered card on the paper, no lift; focus darkens the rule. */
+[data-family='editorial'] .app .composer-inner,
+[data-family='editorial'] .app .composer-inner.pane {
+  background: var(--bg-surface); border-color: var(--rule-strong); box-shadow: none;
+}
+[data-family='editorial'] .app .composer-inner:focus-within { border-color: var(--text-primary); box-shadow: 0 0 0 3px var(--focus-halo); }
+/* Lists are ruled like a table of contents. */
+[data-family='editorial'] .home-recents li + li { box-shadow: inset 0 1px 0 var(--rule); }
+[data-family='editorial'] .home-recents button { border-radius: 0; }
+[data-family='editorial'] .app .sidebar.pane .section-label { text-transform: uppercase; color: var(--text-secondary); }
+[data-family='editorial'] .app .sidebar.pane :is(.nav-item.is-active, .proj-row.is-active, .chat-row.is-active) {
+  background: transparent; color: var(--text-primary); box-shadow: inset 0 -1px 0 var(--rule-strong);
+}
+[data-family='editorial'] .msg[data-role='user'] .msg-user-row {
+  background: transparent; border-color: var(--rule-strong); box-shadow: none;
+}
+/* Overlays and sheets: paper cards with a rule and one soft shadow. */
+[data-family='editorial'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .tool-catalogue-panel, .confirm-dialog.aero, .mp-panel.aero, .dialog-sheet.aero) {
+  background: var(--bg-surface); border-color: var(--rule-strong);
+}
+[data-family='editorial'] .project-card { background: var(--bg-surface); border-color: var(--rule); box-shadow: none; }
+/* Buttons are ink: a solid primary, outlined secondaries. */
+[data-family='editorial'] :is(.btn-primary, .modal-btn.primary) { background: var(--text-primary); color: var(--bg-app); border-color: transparent; }
+[data-family='editorial'] :is(.btn-secondary, .modal-btn.secondary) { background: transparent; border-color: var(--rule-strong); }
+[data-family='editorial'] .composer-mode-toggle { border-color: var(--rule-strong); }
+
+/* ═══════════════════════════ Contemporary (M3) ═══════════════════════════ */
+/* Tonal elevation: the app sits on surface-container; the content pane is the surface; the
+   sidebar is a navigation rail/drawer on the container itself, with no pane of its own. */
+[data-family='contemporary'] body, [data-family='contemporary'] .app { background: var(--bg-app); }
+[data-family='contemporary'] .app .sidebar.pane {
+  background: var(--bg-chrome); border-color: transparent; box-shadow: none;
+}
+[data-family='contemporary'] .app .app-stack.pane {
+  background: var(--m3-surface); border-color: transparent; box-shadow: none; border-radius: var(--radius-surface);
+}
+@media (max-width: 519px) {
+  [data-family='contemporary'] .app .app-stack.pane { border-radius: 0; }
+}
+/* Top app bar: the header is a small top app bar on the surface. */
+[data-family='contemporary'] .app .app-stack.pane .chat-header { background: var(--m3-surface); }
+[data-family='contemporary'] .app .app-stack.pane .chat-header .header-title { color: var(--md-on-surface); }
+
+/* Composer: a filled container at surface-container-high, no outline and no shadow. */
+[data-family='contemporary'] .app .composer-inner,
+[data-family='contemporary'] .app .composer-inner.pane {
+  background: var(--m3-container-high); border-color: transparent; box-shadow: none; border-radius: var(--radius-surface);
+}
+[data-family='contemporary'] .app .composer-inner:focus-within,
+[data-family='contemporary'] .app .composer-inner.pane:focus-within {
+  border-color: transparent; background: var(--m3-container-highest); box-shadow: inset 0 -2px 0 var(--md-primary);
+}
+
+/* Navigation drawer: pill destinations, secondary-container active indicator. */
+[data-family='contemporary'] .app .sidebar.pane :is(.nav-item, .proj-row, .chat-row, .account-trigger) { border-radius: var(--radius-button); }
+[data-family='contemporary'] .app .sidebar.pane :is(.nav-item, .proj-row, .chat-row):focus-visible {
+  background: color-mix(in srgb, var(--md-on-surface) var(--m3-state-focus), transparent);
+}
+[data-family='contemporary'] .app .sidebar.pane :is(.nav-item, .proj-row, .chat-row):active {
+  background: color-mix(in srgb, var(--md-on-surface) var(--m3-state-press), transparent);
+}
+/* New chat is the FAB: primary-container, 16px corners, a tonal lift not a border. */
+[data-family='contemporary'] .app .sidebar.pane .new-chat-btn.glass {
+  background: var(--md-primary-container); color: var(--md-on-primary-container); border-color: transparent;
+  border-radius: var(--radius-overlay); box-shadow: 0 1px 3px rgba(var(--shadow-rgb), .14), 0 4px 8px 3px rgba(var(--shadow-rgb), .08);
+}
+[data-family='contemporary'] .app .sidebar.pane .new-chat-btn.glass:hover {
+  background: color-mix(in srgb, var(--md-on-primary-container) var(--m3-state-hover), var(--md-primary-container));
+}
+[data-family='contemporary'] .app .sidebar.pane .new-chat-btn.glass:is(:active, :focus-visible) {
+  background: color-mix(in srgb, var(--md-on-primary-container) var(--m3-state-press), var(--md-primary-container));
+}
+[data-family='contemporary'] .app .sidebar.pane:not(.is-collapsed) .side-new { background: var(--bg-chrome); box-shadow: calc(-1 * var(--space-4)) 0 0 var(--bg-chrome), var(--space-4) 0 0 var(--bg-chrome); }
+[data-family='contemporary'] .app .sidebar.pane:not(.is-collapsed) .side-new::after { background: linear-gradient(var(--bg-chrome), transparent); }
+[data-family='contemporary'] .app .sidebar.pane :is(.side-permanent, .side-footer),
+[data-family='contemporary'] .app .sidebar.pane .sidebar-history .side-scroll > :is(.sidebar-section-head, .section-label):first-child { background: var(--bg-chrome); }
+
+/* Button hierarchy: filled (primary), tonal (secondary-container), outlined; all pills. */
+[data-family='contemporary'] :is(.btn, .modal-btn, .btn-primary, .btn-secondary, .btn-danger) { border-radius: var(--radius-button); }
+[data-family='contemporary'] :is(.btn-primary, .modal-btn.primary):focus-visible {
+  background: color-mix(in srgb, var(--md-on-primary) var(--m3-state-focus), var(--md-primary));
+}
+[data-family='contemporary'] :is(.btn.tonal, .modal-btn.tonal, .btn-tonal) {
+  background: var(--md-secondary-container); color: var(--md-on-secondary-container); border-color: transparent;
+}
+[data-family='contemporary'] :is(.btn.tonal, .modal-btn.tonal, .btn-tonal):hover:not(:disabled) {
+  background: color-mix(in srgb, var(--md-on-secondary-container) var(--m3-state-hover), var(--md-secondary-container));
+}
+[data-family='contemporary'] :is(.btn-secondary, .modal-btn.secondary):focus-visible {
+  background: color-mix(in srgb, var(--md-primary) var(--m3-state-focus), transparent);
+}
+/* Chat / Cowork is an M3 segmented button: outlined, secondary-container thumb. */
+[data-family='contemporary'] .composer-mode-toggle { border-color: var(--md-outline); border-radius: var(--radius-button); background: transparent; }
+[data-family='contemporary'] .composer-mode-toggle::before { background: var(--md-secondary-container); }
+[data-family='contemporary'] .composer-mode-toggle button[aria-checked='true'] { color: var(--md-on-secondary-container); }
+[data-family='contemporary'] .composer-mode-toggle button:not([aria-checked='true']):hover:not(:disabled) {
+  background: color-mix(in srgb, var(--md-on-surface) var(--m3-state-hover), transparent);
+}
+[data-family='contemporary'] :is(.model-pill.glass, .reasoning-pill.glass) { border-radius: var(--radius-control); }
+[data-family='contemporary'] .composer-add:active { background: color-mix(in srgb, var(--md-on-surface-variant) var(--m3-state-press), transparent); }
+
+/* Cards: filled cards on surface-container-low with 16px corners; no shadow. */
+[data-family='contemporary'] .project-card { background: var(--m3-container-low); box-shadow: none; border-radius: var(--radius-overlay); }
+[data-family='contemporary'] .project-card:hover { background: color-mix(in srgb, var(--md-on-surface) var(--m3-state-hover), var(--m3-container-low)); box-shadow: none; }
+[data-family='contemporary'] .home-recents button { border-radius: var(--radius-button); }
+[data-family='contemporary'] .home-recents button:hover { background: color-mix(in srgb, var(--md-on-surface) var(--m3-state-hover), transparent); }
+[data-family='contemporary'] .home-recents button:active { background: color-mix(in srgb, var(--md-on-surface) var(--m3-state-press), transparent); }
+
+/* Menus: surface-container, 4px-radius items? No — M3 menus are 4px containers; we keep the
+   16px overlay shape from the M3 scale for popovers and 28px for sheets and dialogs. */
+[data-family='contemporary'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .tool-catalogue-panel, .identity-options) {
+  background: var(--surface-overlay); border-color: transparent; box-shadow: var(--elev-overlay);
+}
+[data-family='contemporary'] :is(.confirm-dialog.aero, .mp-panel.aero, .dialog-sheet.aero) {
+  background: var(--m3-container-high); border-radius: var(--radius-surface); box-shadow: var(--elev-overlay);
+}
+@media (max-width: 700px) {
+  [data-family='contemporary'] :is(.confirm-dialog.aero, .mp-panel.aero, .dialog-sheet.aero) {
+    background: var(--m3-container-low); border-radius: var(--radius-surface) var(--radius-surface) 0 0;
+  }
+}
+/* User messages: a tonal primary-container bubble. */
+[data-family='contemporary'] .msg[data-role='user'] .msg-user-row, [data-family='contemporary'] .msg-user .msg-user-row {
+  background: var(--md-primary-container); color: var(--md-on-primary-container);
+}
+[data-family='contemporary'] .msg[data-role='user'] .msg-user-row > p { color: var(--md-on-primary-container); }
+/* Settings: the navigation drawer on the container, detail on the surface. */
+[data-family='contemporary'] .settings-stage .settings-navigation { background: var(--bg-chrome); }
+[data-family='contemporary'] :is(.settings-detail, .diary-context) { background: var(--m3-surface); }
+[data-family='contemporary'] .settings-stage :is(.set-rows, .group) { background: var(--m3-container-low); border-radius: var(--radius-overlay); }
+[data-family='contemporary'] .family-tile { border-color: transparent; background: var(--m3-container-low); border-radius: var(--radius-overlay); }
+[data-family='contemporary'] .family-tile[aria-checked='true'] { background: var(--md-secondary-container); box-shadow: none; border-color: transparent; }
+
+/* ════════════════════════════ Glass ════════════════════════════ */
+/* The atmosphere: three soft blooms of the accent's primary, tertiary and secondary tones.
+   It is what the frosted panes blur, saturate and refract. */
+[data-family='glass'] body {
+  background:
+    radial-gradient(60% 55% at 8% 12%, var(--glass-canvas-peak), transparent 70%),
+    radial-gradient(55% 60% at 92% 20%, var(--glass-canvas-peak-2), transparent 70%),
+    radial-gradient(70% 60% at 60% 100%, var(--glass-canvas-peak-3), transparent 70%),
+    var(--bg-app);
+  background-attachment: fixed;
+}
+/* Every frosted pane: translucent fill, a specular gradient border that is brightest top-left
+   (the light source), an inner border and a darker lower rim. The refraction band is a copy
+   of the atmosphere, fixed to the viewport but shifted and magnified, visible only near the
+   edges: what is behind the glass appears bent where the glass curves. */
+[data-family='glass'] :is(.app .sidebar.pane, .app .app-stack.pane, .app .composer-inner, .ctx-menu, .account-popover, .popup, .composer-actions-panel, .tool-catalogue-panel, .confirm-dialog.aero, .mp-panel.aero, .dialog-sheet.aero) {
+  --glass-pane-fill: var(--glass-sheet);
+  border-color: transparent;
+  background:
+    linear-gradient(var(--glass-pane-fill), var(--glass-pane-fill)) padding-box,
+    radial-gradient(120% 90% at 50% 50%, transparent 72%, color-mix(in srgb, var(--glass-canvas-peak) 70%, transparent) 100%) padding-box,
+    linear-gradient(135deg, var(--glass-specular-edge), transparent 38%, transparent 62%, var(--glass-inner-border)) border-box;
+  box-shadow:
+    inset 1px 1px 0 var(--glass-inner-border),
+    inset -1px -1px 0 var(--glass-lower-rim),
+    var(--elev-overlay);
+  backdrop-filter: blur(var(--glass-panel-blur)) saturate(var(--glass-panel-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-panel-blur)) saturate(var(--glass-panel-saturate));
+}
+/* The chrome (sidebar) is the thinnest layer; the reading plane is denser so text stays AA. */
+[data-family='glass'] .app .sidebar.pane { --glass-pane-fill: var(--bg-chrome); box-shadow: inset 1px 1px 0 var(--glass-inner-border), inset -1px -1px 0 var(--glass-lower-rim), var(--elev-raised); }
+[data-family='glass'] .app .app-stack.pane { --glass-pane-fill: var(--glass-plane); box-shadow: inset 1px 1px 0 var(--glass-inner-border), inset -1px -1px 0 var(--glass-lower-rim), var(--elev-raised); }
+[data-family='glass'] .app .composer-inner:focus-within { box-shadow: inset 1px 1px 0 var(--glass-inner-border), var(--elev-overlay), 0 0 0 3px var(--focus-halo); }
+/* Refraction: the band near each pane's edge shows the atmosphere displaced by
+   --glass-refraction-shift and magnified 6%, as if seen through the curved rim. */
+[data-family='glass'] :is(.app .sidebar.pane, .app .app-stack.pane)::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit;
+  background:
+    radial-gradient(64% 58% at 8% 12%, var(--glass-canvas-peak), transparent 70%),
+    radial-gradient(58% 64% at 92% 20%, var(--glass-canvas-peak-2), transparent 70%);
+  background-attachment: fixed;
+  background-position: var(--glass-refraction-shift) var(--glass-refraction-shift);
+  background-size: 106% 106%;
+  -webkit-mask: radial-gradient(130% 110% at 50% 50%, transparent 70%, #000 100%);
+  mask: radial-gradient(130% 110% at 50% 50%, transparent 70%, #000 100%);
+  opacity: .3;
+  filter: blur(6px) saturate(1.4);
+}
+/* Sticky strips inside the sidebar blur what scrolls beneath rather than painting a slab. */
+[data-family='glass'] .app .sidebar.pane :is(.side-new, .side-permanent, .side-footer),
+[data-family='glass'] .app .sidebar.pane .sidebar-history .side-scroll > :is(.sidebar-section-head, .section-label):first-child { background: transparent; }
+[data-family='glass'] .app .sidebar.pane:not(.is-collapsed) .side-new::after { background: none; }
+[data-family='glass'] .app .sidebar.pane .side-new { box-shadow: none; }
+[data-family='glass'] .app .app-stack.pane .chat-header { background: transparent; }
+[data-family='glass'] :is(.settings-stage, .settings-detail, .diary-context) { background: transparent; }
+[data-family='glass'] .settings-stage .settings-navigation { background: color-mix(in srgb, var(--glass-sheet) 50%, transparent); }
+/* Controls on glass: a lighter frosted chip with the same specular edge. */
+[data-family='glass'] .app .sidebar.pane .new-chat-btn.glass,
+[data-family='glass'] :is(.project-card, .family-tile, .settings-stage .set-rows, .settings-stage .group) {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--glass-sheet), var(--glass-sheet)) padding-box,
+    linear-gradient(135deg, var(--glass-specular-edge), transparent 45%, var(--glass-inner-border)) border-box;
+  box-shadow: inset 1px 1px 0 var(--glass-inner-border), 0 6px 18px -10px rgba(var(--shadow-rgb), .30);
+}
+[data-family='glass'] .family-tile[aria-checked='true'] { box-shadow: 0 0 0 2px var(--focus-ring), inset 1px 1px 0 var(--glass-inner-border); }
+[data-family='glass'] .msg[data-role='user'] .msg-user-row {
+  background: color-mix(in srgb, var(--md-primary-container) 72%, transparent); border-color: var(--glass-inner-border);
+  backdrop-filter: blur(12px) saturate(1.6); -webkit-backdrop-filter: blur(12px) saturate(1.6);
+}
+/* Fluid motion: overlays enter with a longer, softer glide and a slight scale. */
+[data-family='glass'] :is(.ctx-menu, .account-popover, .composer-actions-panel, .tool-catalogue-panel) { --enter-from: translateY(6px) scale(.97); }
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  [data-family='glass'] body { background: var(--bg-app); }
+  [data-family='glass'] :is(.app .sidebar.pane, .app .app-stack.pane)::after { display: none; }
+  [data-family='glass'] :is(.app .sidebar.pane, .app .app-stack.pane, .app .composer-inner, .ctx-menu, .account-popover, .popup, .composer-actions-panel, .tool-catalogue-panel, .confirm-dialog.aero, .mp-panel.aero, .dialog-sheet.aero) {
+    background: var(--bg-surface); border-color: var(--control-border); backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+}

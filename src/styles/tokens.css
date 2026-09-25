@@ -524,6 +524,7 @@
      control: buttons, sidebar rows, New chat, menu items, fields · overlay: menus, popovers,
      cards · surface: the composer, panels, dialogs. */
   --radius-control: var(--radius-md);
+  --radius-button: var(--radius-control); /* Contemporary: M3 pill buttons (#313) */
   --radius-overlay: var(--radius-lg);
   --radius-surface: var(--radius-xl);
   --radius-card: var(--radius-overlay);
@@ -544,6 +545,10 @@
   --motion-quick: 160ms;
   --motion-considered: 260ms;
   --motion-async: 1200ms;
+  /* Hover pull (#313, src/hover-pull.ts) moves on --motion-quick / --ease-quick toward the
+     pointer and returns on --motion-considered with this small spring: a linear() curve that
+     overshoots by about 4% once, never a bounce loop. */
+  --ease-pull-return: linear(0, 0.21 8%, 0.62 20%, 0.93 33%, 1.04 45%, 1.03 58%, 1 72%, 1);
   /* Not a duration: how long a pointer rests before a truncated sidebar title scrolls. */
   --delay-hover-intent: 800ms;
   --ease-immediate: ease;
