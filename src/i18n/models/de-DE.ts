@@ -211,6 +211,7 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.delete.confirmCache': "Die heruntergeladenen Dateien dieses Modells löschen? Das lässt sich nicht rückgängig machen.",
   'mm.delete.alsoSettings': "Auch seine Einstellungen entfernen ({sections})",
   'mm.delete.deleting': "Wird gelöscht…",
+  'mm.delete.rolesCleared': "Auch aus dem Auto-Routing entfernt: {roles}.",
   'mm.delete.files': "Dateien löschen",
   'mm.tryAgain': "Erneut versuchen",
   'mm.unknownError': "unbekannter Fehler",

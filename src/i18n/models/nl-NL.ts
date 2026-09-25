@@ -211,6 +211,7 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.delete.confirmCache': "De gedownloade bestanden van dit model verwijderen? Dit kan niet ongedaan worden gemaakt.",
   'mm.delete.alsoSettings': "Ook de instellingen verwijderen ({sections})",
   'mm.delete.deleting': "Verwijderen…",
+  'mm.delete.rolesCleared': "Ook verwijderd uit automatische routering: {roles}.",
   'mm.delete.files': "Bestanden verwijderen",
   'mm.tryAgain': "Opnieuw proberen",
   'mm.unknownError': "onbekende fout",

@@ -113,7 +113,17 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     {models && !servable.length && !orphanFiles.length && installed.length > 0 && <p className="mm-note">{t('mm.library.nothing')}</p>}
     <div className="model-grid">
     {servable.map(m => <ModelCard key={m.name} runtimeOptions={runtimeOptions} onRefresh={() => void refresh()} model={m} file={fileFor(m.name)} update={updates[fileFor(m.name)?.name || '']} busy={busy === m.name}
-      onToggle={() => void act(m.loaded ? 'unload' : 'load', m.name)} onConfigure={() => onConfigure(m.name)} onDeleted={(err) => { if (err) setError(err); onChanged(); }}/>)}
+      onToggle={() => void act(m.loaded ? 'unload' : 'load', m.name)} onConfigure={() => onConfigure(m.name)}
+      onDeleted={(err, rolesCleared) => {
+        if (err) setError(err);
+        else {
+          // The card leaves the list the moment the server confirms the delete — the
+          // noevia:models-changed refetch below is a consistency check, not what removes it.
+          setModels(prev => (prev || []).filter(x => x.name !== m.name));
+          if (rolesCleared && rolesCleared.length) setMessage(t('mm.delete.rolesCleared', { roles: rolesCleared.map(r => r.charAt(0).toUpperCase() + r.slice(1)).join(', ') }));
+        }
+        onChanged();
+      }}/>)}
     </div>
     {orphanFiles.length > 0 && <section className="mm-panel"><h3>{t('mm.library.orphans')}</h3>
       <p className="mm-note">{t('mm.library.orphansNote')}</p>
@@ -123,7 +133,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   </div>;
 }
 
-function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDeleted, runtimeOptions, onRefresh }: { model: InstalledModel; file?: FileEntry; update?: Update; busy: boolean; onToggle: () => void; onConfigure: () => void; onDeleted: (error?: string | null) => void; runtimeOptions: boolean; onRefresh: () => void }) {
+function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDeleted, runtimeOptions, onRefresh }: { model: InstalledModel; file?: FileEntry; update?: Update; busy: boolean; onToggle: () => void; onConfigure: () => void; onDeleted: (error?: string | null, rolesCleared?: string[]) => void; runtimeOptions: boolean; onRefresh: () => void }) {
   const t = useT();
   const [detail, setDetail] = useState<Detail | null>(null), [open, setOpen] = useState(false);
   const state = m.failed ? 'failed' : m.loaded ? 'loaded' : 'unloaded';
@@ -173,7 +183,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
   </article>;
 }
 
-function DeleteModel({ model: m, file, onDeleted }: { model: InstalledModel; file?: FileEntry; onDeleted: (error?: string | null) => void }) {
+function DeleteModel({ model: m, file, onDeleted }: { model: InstalledModel; file?: FileEntry; onDeleted: (error?: string | null, rolesCleared?: string[]) => void }) {
   const t = useT();
   const [confirming, setConfirming] = useState(false), [removeSettings, setRemoveSettings] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState('');
   // The files are gone but settings clean-up failed: say so in the interface language.
@@ -185,14 +195,21 @@ function DeleteModel({ model: m, file, onDeleted }: { model: InstalledModel; fil
         const outcome = await runDeleteModelFiles(async () => {
           const r = await apiFetch('/api/models/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: m.name }) });
           if (!r.ok) throw Error(httpErrorMessage(r.status, (await readErrorBody(r)).error));
+          const body = (await r.json().catch(() => ({}))) as { rolesCleared?: string[] };
+          return Array.isArray(body.rolesCleared) ? body.rolesCleared : [];
         });
-        setConfirming(false); onDeleted(outcome.error && cleanupText(outcome.cleanupDetail)); return;
+        setConfirming(false); onDeleted(outcome.error && cleanupText(outcome.cleanupDetail), outcome.rolesCleared); return;
       }
       if (file) {
         const outcome = await runDeleteModelFiles(
           async () => {
-            const v = await mm<{ results: { ok: boolean; message: string }[] }>('models/delete', { body: { models: [file.key] } });
+            // Folder-configured (source: 'preset') models take this path: the proxy also
+            // unloads the engine model(s) the deleted file backed and clears any auto-role
+            // that named them (#302), reporting back the same rolesCleared shape as the
+            // primary /api/models/delete path above.
+            const v = await mm<{ results: { ok: boolean; message: string }[]; rolesCleared?: string[] }>('models/delete', { body: { models: [file.key] } });
             if (!v.results[0]?.ok) throw Error(v.results[0]?.message || t('mm.deleteFailed'));
+            return Array.isArray(v.rolesCleared) ? v.rolesCleared : [];
           },
           removeSettings && file.sections.length ? async () => {
             const { revision } = await mm<{ revision: string }>('sections');
@@ -200,7 +217,7 @@ function DeleteModel({ model: m, file, onDeleted }: { model: InstalledModel; fil
             for (const section of file.sections) rev = (await mm<{ revision: string }>(`sections/${encodeURIComponent(section)}?baseRevision=${rev}`, { method: 'DELETE' })).revision;
           } : undefined,
         );
-        setConfirming(false); onDeleted(outcome.error && cleanupText(outcome.cleanupDetail)); return;
+        setConfirming(false); onDeleted(outcome.error && cleanupText(outcome.cleanupDetail), outcome.rolesCleared); return;
       }
       throw Error(t('mm.delete.noFiles'));
     } catch (e) { setError(errorText(e, t('mm.deleteFailed'))); } finally { setBusy(false); }

@@ -211,6 +211,7 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.delete.confirmCache': "Supprimer les fichiers téléchargés de ce modèle ? Cette action est irréversible.",
   'mm.delete.alsoSettings': "Supprimer aussi ses réglages ({sections})",
   'mm.delete.deleting': "Suppression…",
+  'mm.delete.rolesCleared': "Également retiré du routage automatique : {roles}.",
   'mm.delete.files': "Supprimer les fichiers",
   'mm.tryAgain': "Réessayer",
   'mm.unknownError': "erreur inconnue",

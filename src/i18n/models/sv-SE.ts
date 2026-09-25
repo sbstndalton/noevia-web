@@ -211,6 +211,7 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.delete.confirmCache': "Radera de nedladdade filerna för den här modellen? Det går inte att ångra.",
   'mm.delete.alsoSettings': "Ta också bort dess inställningar ({sections})",
   'mm.delete.deleting': "Raderar…",
+  'mm.delete.rolesCleared': "Även borttaget från automatisk routning: {roles}.",
   'mm.delete.files': "Radera filer",
   'mm.tryAgain': "Försök igen",
   'mm.unknownError': "okänt fel",

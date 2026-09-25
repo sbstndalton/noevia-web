@@ -211,6 +211,7 @@ export const IT_IT_MODELS: ModelsCatalogue = {
   'mm.delete.confirmCache': "Eliminare i file scaricati di questo modello? L’operazione non si può annullare.",
   'mm.delete.alsoSettings': "Rimuovi anche le sue impostazioni ({sections})",
   'mm.delete.deleting': "Eliminazione…",
+  'mm.delete.rolesCleared': "Rimosso anche dal routing automatico: {roles}.",
   'mm.delete.files': "Elimina i file",
   'mm.tryAgain': "Riprova",
   'mm.unknownError': "errore sconosciuto",

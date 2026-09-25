@@ -211,6 +211,7 @@ export const ES_ES_MODELS: ModelsCatalogue = {
   'mm.delete.confirmCache': "¿Eliminar los archivos descargados de este modelo? No se puede deshacer.",
   'mm.delete.alsoSettings': "Quitar también su configuración ({sections})",
   'mm.delete.deleting': "Eliminando…",
+  'mm.delete.rolesCleared': "También se ha quitado del enrutamiento automático: {roles}.",
   'mm.delete.files': "Eliminar archivos",
   'mm.tryAgain': "Reintentar",
   'mm.unknownError': "error desconocido",

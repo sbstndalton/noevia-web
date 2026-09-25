@@ -211,6 +211,7 @@ export const PT_BR_MODELS: ModelsCatalogue = {
   'mm.delete.confirmCache': "Excluir os arquivos baixados deste modelo? Não é possível desfazer.",
   'mm.delete.alsoSettings': "Remover também as configurações ({sections})",
   'mm.delete.deleting': "Excluindo…",
+  'mm.delete.rolesCleared': "Também removido do roteamento automático: {roles}.",
   'mm.delete.files': "Excluir arquivos",
   'mm.tryAgain': "Tentar de novo",
   'mm.unknownError': "erro desconhecido",

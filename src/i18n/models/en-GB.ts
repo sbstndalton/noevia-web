@@ -221,6 +221,7 @@ export const EN_GB_MODELS = {
   'mm.delete.alsoSettings': 'Also remove its settings ({sections})',
   'mm.delete.deleting': 'Deleting…',
   'mm.delete.files': 'Delete files',
+  'mm.delete.rolesCleared': 'Also cleared from auto-routing: {roles}.',
   // Discover (DownloadTab.tsx)
   'mm.tryAgain': 'Try again',
   'mm.unknownError': 'unknown error',

@@ -211,6 +211,7 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.delete.confirmCache': "Slette de nedlastede filene for denne modellen? Dette kan ikke angres.",
   'mm.delete.alsoSettings': "Fjern også innstillingene ({sections})",
   'mm.delete.deleting': "Sletter…",
+  'mm.delete.rolesCleared': "Også fjernet fra automatisk ruting: {roles}.",
   'mm.delete.files': "Slett filer",
   'mm.tryAgain': "Prøv igjen",
   'mm.unknownError': "ukjent feil",
