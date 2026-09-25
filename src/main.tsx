@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import { AuthGate } from './components/AuthGate';
 import { startFitToViewport } from './fit-to-viewport';
+import { checkStaleShell } from './stale-shell-guard';
 import { startInterfaceLanguage } from './i18n';
 import './styles/tokens.css';
 import './styles/themes.css';
@@ -22,6 +23,7 @@ import './styles/system.css';
 
 startFitToViewport();
 startInterfaceLanguage();
+void checkStaleShell();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

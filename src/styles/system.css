@@ -129,6 +129,8 @@
   background: var(--bg-app); color: var(--text-primary); font-family: var(--font-ui);
   border-radius: calc(var(--radius-overlay) - 4px); border: 1px solid var(--edge-flat);
 }
+.family-preview-mark { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: var(--text-caption); letter-spacing: -0.01em; }
+.family-preview-mark > svg { width: 14px; height: 14px; flex: none; }
 .family-preview-heading { font-family: var(--font-display); font-weight: var(--display-weight, 600); letter-spacing: var(--display-tracking, -0.02em); font-size: var(--text-headline); line-height: var(--leading-tight); }
 .family-preview-message { justify-self: end; max-width: 80%; padding: 4px 8px; border-radius: var(--radius-control); background: var(--bg-surface-hover); font-size: var(--text-caption2); }
 .family-preview-row { display: flex; gap: 6px; align-items: flex-start; }

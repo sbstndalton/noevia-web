@@ -1,11 +1,11 @@
 {
   "name": "cowork-ui",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "node node_modules/vite/bin/vite.js --configLoader runner",
-    "build": "node node_modules/vite/bin/vite.js build --configLoader runner",
+    "build": "node scripts/build.cjs",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
     "test": "node --require ./tests/hermetic-network.cjs --test server/*.test.cjs server/routes/*.test.cjs server/decision/*.test.cjs tests/*.test.cjs",
     "start": "node server/index.cjs",

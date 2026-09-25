@@ -11,6 +11,7 @@ import { applyPalette, currentPalette, palettes } from '../appearance';
 import type { Palette } from '../appearance';
 import { FAMILIES, FAMILY_SPECS } from '../theme-family';
 import type { Family } from '../theme-family';
+import { Logo } from './Icons';
 import { useT } from '../i18n';
 import type { MessageKey } from '../i18n';
 
@@ -63,6 +64,7 @@ function AccentChoice({ mode }: { mode: 'light' | 'dark' }): JSX.Element {
 function FamilyPreview({ family, mode, palette }: { family: Family; mode: 'light' | 'dark'; palette: Palette }): JSX.Element {
   const t = useT();
   return <span className="family-preview theme-scope" data-family={family} data-theme={mode} data-palette={palette} aria-hidden="true">
+    <span className="family-preview-mark"><Logo/><span>noevia</span></span>
     <span className="family-preview-heading">{t('appearance.preview.greeting')}</span>
     <span className="family-preview-message">{t('appearance.preview.message')}</span>
     <span className="family-preview-row">
