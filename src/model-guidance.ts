@@ -18,6 +18,11 @@ export function matchesModelUse(labels: string[], use: ModelUse): boolean {
   return labels.some(label=>allowed[use].test(label));
 }
 
+/** modelChoiceLabel's fallback when nothing is loaded. This file is loaded in isolation by
+ *  tests/model-guidance.test.cjs (no module resolution there), so it stays free of the i18n
+ *  module; callers that display it to a person (StatsBar) translate this exact sentinel. */
+export const LOCAL_MODEL_FALLBACK = 'local model';
+
 /** Composer/header label for a project or chat's model choice. `installed` is
  *  null while the local catalogue is unknown (not fetched, manager disabled or
  *  failing) — only a successfully fetched list may declare a model missing.
@@ -31,7 +36,7 @@ export function modelChoiceLabel(
     if (!choice.provider && installed && !installed.some(m => m.name === choice.model)) return 'No model selected';
     return choice.model;
   }
-  return installed?.find(m => m.loaded)?.name ?? 'local model';
+  return installed?.find(m => m.loaded)?.name ?? LOCAL_MODEL_FALLBACK;
 }
 
 /** On unified-memory GPUs the kernel lets the GPU borrow system RAM (GTT) outside any container

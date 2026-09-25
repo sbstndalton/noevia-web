@@ -1,6 +1,7 @@
 import type { JSX, ReactNode } from 'react';
 import type { InstalledModel, Project } from '../types';
 import { ShellIcon } from './ShellIcon';
+import { useT } from '../i18n';
 
 function Section({
   title,
@@ -38,63 +39,64 @@ export function Inspector({
   onConfigureModels: () => void;
   onEditProject: (id: string) => void;
 }): JSX.Element {
-  const model = project?.model || models.find((m) => m.loaded)?.name || 'Not selected';
+  const t = useT();
+  const model = project?.model || models.find((m) => m.loaded)?.name || t('inspector.notSelected');
 
   return (
-    <aside id="noevia-inspector" className="noevia-inspector" aria-label="Project context">
+    <aside id="noevia-inspector" className="noevia-inspector" aria-label={t('inspector.contextAria')}>
       <header className="insp-bar">
-        <h2>{project ? project.name : 'Context'}</h2>
+        <h2>{project ? project.name : t('inspector.contextTitle')}</h2>
       </header>
 
       <Section
-        title="Model"
-        action={{ icon: 'settings', onClick: onConfigureModels, aria: 'Configure models and routing' }}
+        title={t('inspector.model')}
+        action={{ icon: 'settings', onClick: onConfigureModels, aria: t('inspector.configureAria') }}
       >
         <p className="insp-value">{model}</p>
         <p className="insp-note">
-          Routing: {project?.routing === 'auto' ? 'Auto · Fast / Smart' : 'Manual'}
+          {t('inspector.routing', { value: project?.routing === 'auto' ? t('inspector.routingAuto') : t('inspector.routingManual') })}
         </p>
       </Section>
 
       {project ? (
         <>
           <Section
-            title="Instructions"
-            action={{ icon: 'edit', onClick: () => onEditProject(project.id), aria: 'Edit project instructions' }}
+            title={t('inspector.instructions')}
+            action={{ icon: 'edit', onClick: () => onEditProject(project.id), aria: t('inspector.editInstructionsAria') }}
           >
             {project.instructions ? (
               <p className="insp-note insp-clamp">{project.instructions}</p>
             ) : (
-              <p className="insp-empty">No standing instructions yet.</p>
+              <p className="insp-empty">{t('inspector.noInstructions')}</p>
             )}
           </Section>
 
           <Section
-            title="Sources"
-            action={{ icon: 'new', onClick: () => onEditProject(project.id), aria: 'Add sources' }}
+            title={t('inspector.sources')}
+            action={{ icon: 'new', onClick: () => onEditProject(project.id), aria: t('inspector.addSourcesAria') }}
           >
             {project.files.length ? (
               <ul className="insp-list">
                 {project.files.map((f) => <li key={f.name}>{f.name}</li>)}
               </ul>
             ) : (
-              <p className="insp-empty">No sources attached.</p>
+              <p className="insp-empty">{t('inspector.noSources')}</p>
             )}
           </Section>
 
-          <Section title="Memory">
+          <Section title={t('inspector.memory')}>
             {project.memories.length ? (
               <ul className="insp-list">
                 {project.memories.map((m, i) => <li key={i}>{m}</li>)}
               </ul>
             ) : (
-              <p className="insp-empty">Nothing saved yet.</p>
+              <p className="insp-empty">{t('inspector.noMemory')}</p>
             )}
           </Section>
         </>
       ) : (
-        <Section title="Project">
-          <p className="insp-empty">Open a project to see its sources and memory.</p>
+        <Section title={t('inspector.project')}>
+          <p className="insp-empty">{t('inspector.openProjectHint')}</p>
         </Section>
       )}
     </aside>

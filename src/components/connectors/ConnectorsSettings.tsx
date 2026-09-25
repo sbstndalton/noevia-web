@@ -144,7 +144,7 @@ export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false }: 
       </button>}
       <div className="connector-card surface is-later" aria-disabled="true">
         <span className="logo"><ShellIcon name="server" size={22}/></span>
-        <span className="connector-text"><b>{t('connectors.mcp.title')}</b><small>{t('connectors.mcp.summary')}</small></span>
+        <span className="connector-text"><b>{t('connectors.mcp.title')}</b><small>{t('connectors.mcp.summary', { plugins: t('connectors.mcp.navPlugins'), mcp: t('connectors.mcp.title') })}</small></span>
       </div>
     </div>
   </>;

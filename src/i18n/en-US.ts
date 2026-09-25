@@ -4,4 +4,5 @@ import type { Catalogue } from './en-GB';
 export const EN_US: Catalogue = {
   'sidebar.customise': 'Customize',
   'composer.opensCustomise': 'Opens Customize',
+  'viewLoading.customise': 'Customize',
 };

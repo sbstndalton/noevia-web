@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { ContextMenu } from './ContextMenu';
 import { ShellIcon } from './ShellIcon';
 import { apiFetch } from '../api';
+import { useT } from '../i18n';
 import type { Project } from '../types';
 type Effort = 'default' | 'low' | 'high';
 type Settings = { default: Effort; effort: Effort; mode: string; admin: boolean };
 export function ReasoningControl({ project, disabled, onChanged, global = false }: {
   project?: Project | null; disabled?: boolean; onChanged?: () => void | Promise<void>; global?: boolean;
 }) {
+  const t = useT();
   const [revision,setRevision] = useState(0);
   useEffect(()=>{const refresh=()=>setRevision(n=>n+1);window.addEventListener('cowork-reasoning-updated',refresh);return()=>window.removeEventListener('cowork-reasoning-updated',refresh);},[]);
   const [settings,setSettings] = useState<Settings | null>(null);
@@ -42,33 +44,34 @@ export function ReasoningControl({ project, disabled, onChanged, global = false 
   // (user review, 2026-09-18). The deployment default in Settings stays a plain select.
   if(!global){
     const levels:[string,string,string][]=[
-      ['inherit','Auto','Uses the default set for this deployment'],
-      ['low','Low','Answers quickly with little or no thinking'],
-      ['default','Standard','Balanced thinking for most questions'],
-      ['high','High','Thinks longer on hard problems'],
+      ['inherit',t('composer.thinking.auto'),t('composer.thinking.autoDesc')],
+      ['low',t('composer.thinking.low'),t('composer.thinking.lowDesc')],
+      ['default',t('composer.thinking.standard'),t('composer.thinking.standardDesc')],
+      ['high',t('composer.thinking.high'),t('composer.thinking.highDesc')],
     ];
-    const current=levels.find(([v])=>v===value)?.[1]??'Auto';
-    const hint=`How much the model thinks before answering. ${settings.mode === 'real' ? 'Sent as a request parameter.' : settings.mode === 'hint' ? 'Sent as a hint.' : 'This provider decides.'} The mode used is shown with each reply.`;
+    const current=levels.find(([v])=>v===value)?.[1]??t('composer.thinking.auto');
+    const mode=settings.mode === 'real' ? t('composer.thinking.modeReal') : settings.mode === 'hint' ? t('composer.thinking.modeHint') : t('composer.thinking.modeProviderDecides');
+    const hint=t('composer.thinking.hint',{mode});
     return <span className="reasoning-control is-menu">
-      <button ref={trigger} type="button" className="reasoning-pill glass glass-lens is-press" aria-label="Thinking effort" aria-haspopup="menu" aria-expanded={!!menuAt} title={hint} disabled={disabled||saving}
+      <button ref={trigger} type="button" className="reasoning-pill glass glass-lens is-press" aria-label={t('composer.thinking.ariaLabel')} aria-haspopup="menu" aria-expanded={!!menuAt} title={hint} disabled={disabled||saving}
         onClick={()=>{const r=trigger.current!.getBoundingClientRect();setMenuAt(menuAt?null:{x:r.right-280,y:r.top});}}>
-        <span>Thinking</span><span className="reasoning-pill-value">{current}</span><ShellIcon name="down" size={14}/>
+        <span>{t('composer.thinking.label')}</span><span className="reasoning-pill-value">{current}</span><ShellIcon name="down" size={14}/>
       </button>
-      {menuAt&&<ContextMenu at={menuAt} placement="above" label="Thinking effort" onClose={()=>setMenuAt(null)}
+      {menuAt&&<ContextMenu at={menuAt} placement="above" label={t('composer.thinking.ariaLabel')} onClose={()=>setMenuAt(null)}
         items={levels.map(([v,label,description])=>({label,description,selected:v===value,onSelect:()=>{if(v!==value)void save(v);}}))}/>}
       {error && <span role="alert">{error}</span>}
     </span>;
   }
+  // Only reached with global=true: !global already returned the composer pill above.
   return <span className="reasoning-control">
-    <label><span className={global ? '' : 'sr-only'}>{global?'Default thinking effort':'Thinking effort'}</span>
-      <select aria-label={global?'Default thinking effort':'Thinking effort'} value={value} disabled={disabled || saving || (global && !settings.admin)} onChange={e=>void save(e.target.value)}
-        title={global ? undefined : `How much the model thinks before answering. ${settings.mode === 'real' ? 'Sent as a request parameter.' : settings.mode === 'hint' ? 'Sent as a hint.' : 'This provider decides.'} The mode used is shown with each reply.`}>
-        {global
-          ? <><option value="default">Standard</option><option value="low">Low</option><option value="high">High</option></>
-          : <><option value="inherit">Thinking: auto</option><option value="default">Thinking: standard</option><option value="low">Thinking: low</option><option value="high">Thinking: high</option></>}
+    <label><span>{t('reasoning.defaultLabel')}</span>
+      <select aria-label={t('reasoning.defaultLabel')} value={value} disabled={disabled || saving || !settings.admin} onChange={e=>void save(e.target.value)}>
+        <option value="default">{t('composer.thinking.standard')}</option>
+        <option value="low">{t('composer.thinking.low')}</option>
+        <option value="high">{t('composer.thinking.high')}</option>
       </select>
     </label>
-    {global && <small>Applies unless a project overrides it. Local Qwen: Low turns thinking off; High turns it on. Other providers may use effort parameters or hints. High hints request an 8,192-token budget.</small>}
+    <small>{t('reasoning.globalNote')}</small>
     {error && <span role="alert">{error}</span>}
   </span>;
 }

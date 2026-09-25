@@ -1212,9 +1212,9 @@ export default function App(): JSX.Element {
       <div className="app-main" ref={appMain}>
       {/* In flow at the top of the pane: it pushes the view down rather than covering its header. */}
       {featureFlags.codeHarness === true && <ActiveCodeTasks onOpenProject={(id) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}/>}
-      {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="Coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
+      {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
       <div className="chat-views" style={{display:appMode==='code'&&showPreviews?'none':'contents'}}>
-      {view.kind === 'plugins' && <Suspense fallback={<ViewLoading name="Customise" active={appMode === 'chat' && !settingsOpen} />}><Customise.View onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/></Suspense>}
+      {view.kind === 'plugins' && <Suspense fallback={<ViewLoading name="customise" active={appMode === 'chat' && !settingsOpen} />}><Customise.View onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/></Suspense>}
       {view.kind === 'archived' && <ArchivedChatsView onDelete={handleDeleteChat} onOpenData={() => openSettings('data')}/>}
 
       {view.kind === 'preview' && showPreviews && <FeaturePreview title={view.title}/> }
@@ -1224,7 +1224,7 @@ export default function App(): JSX.Element {
         </Suspense>
       )}
       {view.kind === 'projects' && (
-        <Suspense fallback={<ViewLoading name="Projects" active={appMode === 'chat' && !settingsOpen} />}>
+        <Suspense fallback={<ViewLoading name="projects" active={appMode === 'chat' && !settingsOpen} />}>
           <Projects.View onEdit={setEditingProjectId}
             onPatch={handlePatchProject}
             projects={projects}
@@ -1280,7 +1280,7 @@ export default function App(): JSX.Element {
         />
       )}
 
-      {diaryEnabled && <div className="diary-mount" style={{ display: view.kind === 'diary' ? 'contents' : 'none' }}><Suspense fallback={<ViewLoading name="Diary" active={view.kind === 'diary' && appMode === 'chat' && !settingsOpen} />}><Diary.View inferenceUp={health.inferenceUp} /></Suspense></div>}
+      {diaryEnabled && <div className="diary-mount" style={{ display: view.kind === 'diary' ? 'contents' : 'none' }}><Suspense fallback={<ViewLoading name="diary" active={view.kind === 'diary' && appMode === 'chat' && !settingsOpen} />}><Diary.View inferenceUp={health.inferenceUp} /></Suspense></div>}
 
       {popupOpen && (
         <ModelPopup
@@ -1298,7 +1298,7 @@ export default function App(): JSX.Element {
 
       </div>
       {settingsOpen && (
-        <Suspense fallback={<ViewLoading name="Settings" active={true} settings />}>
+        <Suspense fallback={<ViewLoading name="settings" active={true} settings />}>
         <Settings.View
           key={settingsKey}
           initialSection={settingsSection}
