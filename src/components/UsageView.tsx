@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { fetchProfile, fetchUsage } from '../api';
 import type { UsageSummary, UsageTotals } from '../types';
+import { useT } from '../i18n';
 
 function compact(n: number): string {
   if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
@@ -35,18 +36,26 @@ function Stat({ label, value, hint, name }: { label: string; value: string; hint
   </div>;
 }
 
-/** 14 → "2 pm". The hour a person recognises, not a 24-hour bucket index. */
-function hourLabel(hour: number): string {
-  const suffix = hour < 12 ? 'am' : 'pm';
-  const shown = hour % 12 === 0 ? 12 : hour % 12;
-  return `${shown} ${suffix}`;
+/** 14 → "2 pm" (or "14 Uhr"). The hour a person recognises, not a 24-hour bucket index;
+ *  English keeps its 12-hour clock, other languages their own. */
+function hourLabel(hour: number, locale: string): string {
+  try {
+    return new Intl.DateTimeFormat(locale, { hour: 'numeric', hour12: locale.startsWith('en') ? true : undefined }).format(new Date(2000, 0, 1, hour));
+  } catch {
+    const shown = hour % 12 === 0 ? 12 : hour % 12;
+    return `${shown} ${hour < 12 ? 'am' : 'pm'}`;
+  }
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** Short month and weekday names in the interface language. */
+const shortName = (locale: string, date: Date, part: 'month' | 'weekday') => {
+  try { return new Intl.DateTimeFormat(locale, { [part]: 'short' }).format(date); } catch { return new Intl.DateTimeFormat('en-GB', { [part]: 'short' }).format(date); }
+};
 
 export function UsageView(): JSX.Element {
+  const t = useT();
   const [data, setData] = useState<UsageSummary | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [aggregate,setAggregate]=useState(false);
   // Admin gates the all-accounts scope. This used to ride on the pricing
@@ -58,23 +67,23 @@ export function UsageView(): JSX.Element {
 
   useEffect(() => {
     let live = true;
-    setError(null);
+    setError(false);
     setData(null);
     void fetchProfile().then(p=>{if(live)setIsAdmin(p.user.role==='admin');}).catch(()=>undefined);
     fetchUsage(aggregate)
       .then((d) => { if (live) setData(d); })
-      .catch(() => { if (live) setError('Usage could not be loaded.'); });
+      .catch(() => { if (live) setError(true); });
     return () => { live = false; };
   }, [attempt,aggregate]);
 
-  if (error) return <><div className="settings-title"><h1>Usage</h1></div><p className="route-note" role="alert">{error}</p><button className="btn btn-secondary" onClick={() => setAttempt(n => n + 1)}>Retry usage</button>{aggregate&&<button className="btn btn-secondary" onClick={()=>setAggregate(false)}>Return to your usage</button>}</>;
-  if (!data) return <><div className="settings-title"><h1>Usage</h1></div><p className="route-note">Loading…</p></>;
+  if (error) return <><div className="settings-title"><h1>{t('settings.section.usage')}</h1></div><p className="route-note" role="alert">{t('usage.loadError')}</p><button className="btn btn-secondary" onClick={() => setAttempt(n => n + 1)}>{t('usage.retry')}</button>{aggregate&&<button className="btn btn-secondary" onClick={()=>setAggregate(false)}>{t('usage.returnToYours')}</button>}</>;
+  if (!data) return <><div className="settings-title"><h1>{t('settings.section.usage')}</h1></div><p className="route-note">{t('settings.loading')}</p></>;
 
   const totals: UsageTotals = window_ === '7' ? data.last7 : window_ === '30' ? data.last30 : data.allTime;
-  const label = window_ === 'all' ? 'retained history' : `last ${window_} days`;
+  const label = window_ === 'all' ? t('usage.retainedHistoryLower') : t('usage.lastDays', { count: window_ });
   const busiest = Math.max(0, ...data.days.map((d) => d.input + d.output));
   const everUsed = data.allTime.replies > 0;
-  const toolCalls = data.tools.reduce((sum, t) => sum + t.calls, 0);
+  const toolCalls = data.tools.reduce((sum, tool) => sum + tool.calls, 0);
 
   // Column-major weeks so the grid reads left-to-right in time, like a
   // contribution graph: each column is a week, each row a weekday.
@@ -86,48 +95,45 @@ export function UsageView(): JSX.Element {
   const monthMarks: { col: number; label: string }[] = [];
   grid.forEach((d, i) => {
     const date = new Date(`${d.day}T12:00:00`);
-    if (date.getDate() === 1) monthMarks.push({ col: Math.floor((i + firstWeekday) / 7), label: MONTHS[date.getMonth()] });
+    if (date.getDate() === 1) monthMarks.push({ col: Math.floor((i + firstWeekday) / 7), label: shortName(t.locale, date, 'month') });
   });
 
   return <>
     <div className="settings-title">
-      <h1>Usage</h1>
-      <p>Provider-reported usage for ordinary chats and optional Diary tool preparation. Companion-only Diary generation and providers that omit usage are not counted.</p>
+      <h1>{t('settings.section.usage')}</h1>
+      <p>{t('usage.intro')}</p>
     </div>
 
-    {isAdmin&&<div className="usage-window" role="group" aria-label="Usage scope"><button aria-pressed={!aggregate} onClick={()=>setAggregate(false)}>Your account</button><button aria-pressed={aggregate} onClick={()=>setAggregate(true)}>All accounts</button></div>}
-    {data.aggregate&&<p className="route-note">Aggregated across {data.aggregate.accounts} current accounts. Snapshot {new Date(data.aggregate.checkedAt).toLocaleTimeString(appLocale())} · cached up to 30 seconds.{data.aggregate.unreadableAccounts>0?` Incomplete: ${data.aggregate.unreadableAccounts} accounts could not be read.`:''}</p>}
+    {isAdmin&&<div className="usage-window" role="group" aria-label={t('usage.scope')}><button aria-pressed={!aggregate} onClick={()=>setAggregate(false)}>{t('usage.yourAccount')}</button><button aria-pressed={aggregate} onClick={()=>setAggregate(true)}>{t('usage.allAccounts')}</button></div>}
+    {data.aggregate&&<p className="route-note">{t.plural('usage.aggregated', data.aggregate.accounts, { time: new Date(data.aggregate.checkedAt).toLocaleTimeString(appLocale()) })}{data.aggregate.unreadableAccounts>0?` ${t.plural('usage.incomplete', data.aggregate.unreadableAccounts)}`:''}</p>}
     {!everUsed && (
-      <p className="route-note">
-        No usage recorded yet. Counting started when this feature shipped, so replies generated
-        before then are not included — they still show their own token counts in the chat.
-      </p>
+      <p className="route-note">{t('usage.nothingYet')}</p>
     )}
 
     <section className="usage-section">
       <div className="usage-section-head">
-        <div><h2>Tokens · {label}</h2><p>What the models read and wrote for you.</p></div>
-        <div className="usage-window" role="group" aria-label="Time window">
+        <div><h2>{t('usage.tokens', { window: label })}</h2><p>{t('usage.tokensIntro')}</p></div>
+        <div className="usage-window" role="group" aria-label={t('usage.timeWindow')}>
           {(['7', '30', 'all'] as const).map((w) => (
             <button key={w} className={window_ === w ? 'is-active' : ''} aria-pressed={window_ === w} onClick={() => setWindow(w)}>
-              {w === 'all' ? 'Retained history' : `${w} days`}
+              {w === 'all' ? t('usage.retainedHistory') : t('usage.days', { count: w })}
             </button>
           ))}
         </div>
       </div>
       <div className="usage-stat-grid">
-        <Stat label="Total" value={compact(totals.input + totals.output)} hint="Input and output." />
-        <Stat label="Input" value={compact(totals.input)} hint="Prompt and context." />
-        <Stat label="Output" value={compact(totals.output)} hint="Generated by the model." />
-        <Stat label="Model responses" value={totals.replies.toLocaleString(appLocale())} hint={`Provider responses, ${label}.`} />
+        <Stat label={t('usage.total')} value={compact(totals.input + totals.output)} hint={t('usage.totalHint')} />
+        <Stat label={t('usage.input')} value={compact(totals.input)} hint={t('usage.inputHint')} />
+        <Stat label={t('usage.output')} value={compact(totals.output)} hint={t('usage.outputHint')} />
+        <Stat label={t('usage.modelResponses')} value={totals.replies.toLocaleString(appLocale())} hint={t('usage.modelResponsesHint', { window: label })} />
       </div>
     </section>
 
     <section className="usage-section">
       <div className="usage-section-head">
-        <div><h2>Activity</h2><p>The last {data.retentionDays} days, in {data.timeZone} time. A response counts when its provider reports usage; cancelled or unreported responses may be absent.</p></div>
+        <div><h2>{t('usage.activity')}</h2><p>{t('usage.activityIntro', { count: data.retentionDays, zone: data.timeZone })}</p></div>
       </div>
-      {grid.length === 0 && <p className="route-note">No daily activity recorded yet.</p>}
+      {grid.length === 0 && <p className="route-note">{t('usage.noActivity')}</p>}
       <div className="usage-heatmap-scroll">
         <div className="usage-heatmap-inner">
           {/* The month strip must share the grid's exact column pitch (cell +
@@ -141,16 +147,17 @@ export function UsageView(): JSX.Element {
             {/* Rows are weekdays, Sunday first. Without labels there is no way
                 to tell which row a square belongs to. */}
             <div className="usage-weekdays" aria-hidden="true">
-              {['', 'Mon', '', 'Wed', '', 'Fri', ''].map((label, i) => <span key={i}>{label}</span>)}
+              {/* 2024-01-01 was a Monday; rows are Sunday first, labelled on Mon, Wed and Fri. */}
+              {[null, 1, null, 3, null, 5, null].map((d, i) => <span key={i}>{d === null ? '' : shortName(t.locale, new Date(2024, 0, d), 'weekday')}</span>)}
             </div>
-            <div className="usage-heatmap" role="group" aria-label={`Daily activity for the last ${data.retentionDays} days. ${data.activeDays} active days. Select a day for details.`}>
+            <div className="usage-heatmap" role="group" aria-label={t('usage.heatmapLabel', { count: data.retentionDays, active: t.plural('usage.activeDays', data.activeDays) })}>
               {cells.map((d, i) => d === null
                 ? <span key={`pad-${i}`} className="usage-cell is-pad" />
                 : <button
                     key={d.day}
                     type="button"
                     className={`usage-cell level-${level(d.input + d.output, busiest)}`}
-                    aria-label={`${d.day}: ${d.replies} ${d.replies === 1 ? 'response' : 'responses'}, ${d.input} input tokens, ${d.output} output tokens`}
+                    aria-label={t('usage.cellLabel', { day: d.day, responses: t.plural('usage.responses', d.replies), input: d.input, output: d.output })}
                     aria-pressed={activeDay?.day === d.day}
                     tabIndex={activeDay?.day === d.day ? 0 : -1}
                     onClick={() => setSelectedDay(d.day)}
@@ -169,36 +176,36 @@ export function UsageView(): JSX.Element {
         </div>
       </div>
       <div className="usage-legend">
-        <span>{data.activeDays} active days</span>
-        <span className="usage-scale">Less {[0, 1, 2, 3, 4].map((l) => <i key={l} className={`usage-cell level-${l}`} />)} More</span>
+        <span>{t.plural('usage.activeDays', data.activeDays)}</span>
+        <span className="usage-scale">{t('usage.less')} {[0, 1, 2, 3, 4].map((l) => <i key={l} className={`usage-cell level-${l}`} />)} {t('usage.more')}</span>
       </div>
       {activeDay && <div className="usage-day-detail" aria-live="polite">
-        <label htmlFor="usage-day-picker">Inspect a day</label>
+        <label htmlFor="usage-day-picker">{t('usage.inspectDay')}</label>
         <input id="usage-day-picker" type="date" min={grid[0].day} max={grid[grid.length - 1].day} value={activeDay.day} onChange={(event) => setSelectedDay(event.target.value)} />
-        <p><strong>{activeDay.day}</strong> · {activeDay.replies.toLocaleString()} {activeDay.replies === 1 ? 'response' : 'responses'} · {activeDay.input.toLocaleString()} input tokens · {activeDay.output.toLocaleString()} output tokens</p>
+        <p><strong>{activeDay.day}</strong> · {t.plural('usage.responses', activeDay.replies, { count: activeDay.replies.toLocaleString(appLocale()) })} · {t('usage.inputTokens', { count: activeDay.input.toLocaleString(appLocale()) })} · {t('usage.outputTokens', { count: activeDay.output.toLocaleString(appLocale()) })}</p>
       </div>}
     </section>
 
     <section className="usage-section">
       <div className="usage-stat-grid">
-        <Stat label="Peak hour" value={data.peakHour ? hourLabel(data.peakHour.hour) : '—'} hint={data.peakHour ? `${data.peakHour.replies.toLocaleString(appLocale())} ${data.peakHour.replies === 1 ? 'reply' : 'replies'}, ${data.timeZone}.` : 'Recorded from the first reply after this shipped.'} />
-        <Stat label="Favourite model" value={data.models[0]?.name || '—'} hint={data.models[0] ? `${compact(data.models[0].input + data.models[0].output)} tokens, retained history.` : undefined} name />
-        <Stat label="Tool calls" value={compact(toolCalls)} hint={toolCalls ? `${data.tools.length} ${data.tools.length === 1 ? 'tool' : 'tools'} used.` : 'Counted from the first tool run after this shipped.'} />
-        <Stat label="Current streak" value={`${data.currentStreak} ${data.currentStreak === 1 ? 'day' : 'days'}`} hint="Send a message today to keep it." />
-        <Stat label="Longest streak" value={`${data.longestStreak} ${data.longestStreak === 1 ? 'day' : 'days'}`} />
-        <Stat label="Active days" value={String(data.activeDays)} hint="Days you sent at least one message." />
-        <Stat label="Responses · retained history" value={data.allTime.replies.toLocaleString(appLocale())} />
+        <Stat label={t('usage.peakHour')} value={data.peakHour ? hourLabel(data.peakHour.hour, t.locale) : '—'} hint={data.peakHour ? t('usage.peakHourHint', { replies: t.plural('usage.replies', data.peakHour.replies, { count: data.peakHour.replies.toLocaleString(appLocale()) }), zone: data.timeZone }) : t('usage.peakHourEmpty')} />
+        <Stat label={t('usage.favouriteModel')} value={data.models[0]?.name || '—'} hint={data.models[0] ? t('usage.favouriteModelHint', { tokens: compact(data.models[0].input + data.models[0].output) }) : undefined} name />
+        <Stat label={t('usage.toolCalls')} value={compact(toolCalls)} hint={toolCalls ? t.plural('usage.toolsUsed', data.tools.length) : t('usage.toolCallsEmpty')} />
+        <Stat label={t('usage.currentStreak')} value={t.plural('usage.dayCount', data.currentStreak)} hint={t('usage.currentStreakHint')} />
+        <Stat label={t('usage.longestStreak')} value={t.plural('usage.dayCount', data.longestStreak)} />
+        <Stat label={t('usage.activeDaysLabel')} value={String(data.activeDays)} hint={t('usage.activeDaysHint')} />
+        <Stat label={t('usage.responsesRetained')} value={data.allTime.replies.toLocaleString(appLocale())} />
       </div>
     </section>
 
     {data.tools.length > 0 && (
       <section className="usage-section">
-        <div className="usage-section-head"><div><h2>Tools</h2><p>Calls the model made, retained history, busiest first. Failed calls are counted too.</p></div></div>
+        <div className="usage-section-head"><div><h2>{t('usage.tools')}</h2><p>{t('usage.toolsIntro')}</p></div></div>
         <div className="card-list">
-          {data.tools.map((t) => (
-            <div className="model-row" key={t.name}>
-              <div className="model-name-group"><span className="model-name">{t.name}</span></div>
-              <span className="model-role">{t.calls.toLocaleString(appLocale())} {t.calls === 1 ? 'call' : 'calls'}</span>
+          {data.tools.map((tool) => (
+            <div className="model-row" key={tool.name}>
+              <div className="model-name-group"><span className="model-name">{tool.name}</span></div>
+              <span className="model-role">{t.plural('usage.calls', tool.calls, { count: tool.calls.toLocaleString(appLocale()) })}</span>
             </div>
           ))}
         </div>
@@ -207,13 +214,13 @@ export function UsageView(): JSX.Element {
 
     {data.models.length > 0 && (
       <section className="usage-section">
-        <div className="usage-section-head"><div><h2>By model</h2><p>Retained history, busiest first.</p></div></div>
+        <div className="usage-section-head"><div><h2>{t('usage.byModel')}</h2><p>{t('usage.byModelIntro')}</p></div></div>
         <div className="card-list">
           {data.models.map((m) => (
             <div className="model-row" key={m.name}>
               <div className="model-name-group">
                 <span className="model-name">{m.name}</span>
-                <span className="model-quant">{m.replies.toLocaleString(appLocale())} {m.replies === 1 ? 'reply' : 'replies'} · {compact(m.input)} in / {compact(m.output)} out</span>
+                <span className="model-quant">{t.plural('usage.replies', m.replies, { count: m.replies.toLocaleString(appLocale()) })} · {t('usage.inOut', { input: compact(m.input), output: compact(m.output) })}</span>
               </div>
               <span className="model-role">{compact(m.input + m.output)}</span>
             </div>

@@ -49,10 +49,9 @@ import { ChatView } from './components/ChatView';
 import { ModelPopup } from './components/ModelPopup';
 import { ProjectView } from './components/ProjectView';
 import { ActiveCodeTasks } from './components/code/ActiveCodeTasks';
-import { Coding, Diary, ModelManager, Projects, Settings, ViewLoading, prefetchViewsWhenIdle } from './lazy-views';
+import { Coding, Customise, Diary, ModelManager, Projects, Settings, ViewLoading, prefetchViewsWhenIdle } from './lazy-views';
 import type { SettingsSection } from './components/SettingsShell';
 import { FeaturePreview } from './components/PreviewPanel';
-import { PluginsView } from './components/plugins/PluginsView';
 import { ArchivedChatsView } from './components/data/ArchivedChats';
 import { recentChats } from './sidebar-order';
 import { useFeatureFlags } from './components/features/useFeatureFlags';
@@ -1215,7 +1214,7 @@ export default function App(): JSX.Element {
       {featureFlags.codeHarness === true && <ActiveCodeTasks onOpenProject={(id) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}/>}
       {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="Coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
       <div className="chat-views" style={{display:appMode==='code'&&showPreviews?'none':'contents'}}>
-      {view.kind === 'plugins' && <PluginsView onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/>}
+      {view.kind === 'plugins' && <Suspense fallback={<ViewLoading name="Customise" active={appMode === 'chat' && !settingsOpen} />}><Customise.View onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/></Suspense>}
       {view.kind === 'archived' && <ArchivedChatsView onDelete={handleDeleteChat} onOpenData={() => openSettings('data')}/>}
 
       {view.kind === 'preview' && showPreviews && <FeaturePreview title={view.title}/> }

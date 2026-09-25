@@ -5,11 +5,13 @@ import { readConversationsFile } from './readExport';
 import { notifyWorkspaceChanged } from './workspace-changed';
 import { useArchivedCount } from './ArchivedChats';
 import { RetentionSetting } from './RetentionSetting';
+import { useT } from '../../i18n';
 
 /** Settings → Your data & privacy. Export is the user's own chats; nothing here reaches other
  *  accounts. Archived chats are managed in their own view (#232) so a long archive never buries
  *  the controls above; this page keeps a count and the way there. */
 export function DataSettings({ onManageArchived }: { onManageArchived?: () => void } = {}): JSX.Element {
+  const t = useT();
   const archived = useArchivedCount();
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
@@ -17,57 +19,57 @@ export function DataSettings({ onManageArchived }: { onManageArchived?: () => vo
   const picker = useRef<HTMLInputElement>(null);
 
   const importConversations = async (file: File) => {
-    setBusy(true); setStatus(`Reading ${file.name}…`); setError('');
+    setBusy(true); setStatus(t('data.reading', { file: file.name })); setError('');
     try {
       const text = await readConversationsFile(file);
       let parsed: unknown;
-      try { parsed = JSON.parse(text); } catch { throw Error('Choose a conversations.json from a noevia conversations export.'); }
-      setStatus('Importing…');
+      try { parsed = JSON.parse(text); } catch { throw Error(t('data.chooseExport')); }
+      setStatus(t('data.importing'));
       const response = await apiFetch('/api/import/conversations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parsed) });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw Error(body.error || 'Import failed. Try again.');
+      if (!response.ok) throw Error(body.error || t('data.importFailed'));
       const skipped = Array.isArray(body.skipped) ? body.skipped.length : 0;
       setStatus([
-        `Imported ${body.imported} chat${body.imported === 1 ? '' : 's'}.`,
-        skipped ? `${skipped} ${skipped === 1 ? 'was' : 'were'} already here.` : '',
-        body.projectsCreated ? `Created ${body.projectsCreated} project${body.projectsCreated === 1 ? '' : 's'}.` : '',
+        t.plural('data.imported', Number(body.imported) || 0),
+        skipped ? t.plural('data.skipped', skipped) : '',
+        body.projectsCreated ? t.plural('data.projectsCreated', Number(body.projectsCreated)) : '',
       ].filter(Boolean).join(' '));
       notifyWorkspaceChanged();
     } catch (e) {
-      setStatus(''); setError(e instanceof Error ? e.message : 'Import failed. Try again.');
+      setStatus(''); setError(e instanceof Error ? e.message : t('data.importFailed'));
     } finally { setBusy(false); if (picker.current) picker.current.value = ''; }
   };
 
   const exportConversations = async () => {
-    setBusy(true); setStatus('Preparing your export…'); setError('');
+    setBusy(true); setStatus(t('data.preparing')); setError('');
     try {
       const response = await apiFetch('/api/export/conversations');
-      if (!response.ok) { const body = await response.json().catch(() => ({})); throw Error(body.error || 'Export failed. Try again.'); }
-      if (!response.headers.get('content-type')?.startsWith('application/zip')) throw Error('Export failed. Try again.');
+      if (!response.ok) { const body = await response.json().catch(() => ({})); throw Error(body.error || t('data.exportFailed')); }
+      if (!response.headers.get('content-type')?.startsWith('application/zip')) throw Error(t('data.exportFailed'));
       const name = /filename="([^"]+)"/.exec(response.headers.get('content-disposition') || '')?.[1] || 'noevia-conversations.zip';
       const url = URL.createObjectURL(await response.blob());
       const anchor = document.createElement('a'); anchor.href = url; anchor.download = name; anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 60000);
-      setStatus(`Downloaded ${name}.`);
+      setStatus(t('data.downloaded', { file: name }));
     } catch (e) {
-      setStatus(''); setError(e instanceof Error ? e.message : 'Export failed. Try again.');
+      setStatus(''); setError(e instanceof Error ? e.message : t('data.exportFailed'));
     } finally { setBusy(false); }
   };
 
   return <>
-    <div className="settings-title"><h1>Your data &amp; privacy</h1><p>Take your conversations with you, bring them back, and decide how long they are kept.</p></div>
+    <div className="settings-title"><h1>{t('settings.section.data')}</h1><p>{t('data.intro')}</p></div>
     <section className="settings-section">
-      <h2>Export and import</h2>
+      <h2>{t('data.exportImport')}</h2>
       <div className="set-rows">
         <div className="set-row">
-          <div className="set-row-text"><span className="set-row-label">Export conversations</span><span className="set-row-desc">A ZIP with every chat as a Markdown file, grouped by project, plus one JSON file with everything. Thinking text is not included. Diary files have their own export in Diary.</span></div>
-          <div className="set-row-control"><button className="modal-btn secondary" disabled={busy} onClick={() => void exportConversations()}>{busy ? 'Exporting…' : 'Export'}</button></div>
+          <div className="set-row-text"><span className="set-row-label">{t('data.export')}</span><span className="set-row-desc">{t('data.exportDesc')}</span></div>
+          <div className="set-row-control"><button className="modal-btn secondary" disabled={busy} onClick={() => void exportConversations()}>{busy ? t('data.exporting') : t('data.exportButton')}</button></div>
         </div>
         <div className="set-row">
-          <div className="set-row-text"><span className="set-row-label">Import conversations</span><span className="set-row-desc">Choose an export ZIP or its conversations.json. Chats are added, never replaced; ones already here are skipped, and missing projects are created.</span></div>
+          <div className="set-row-text"><span className="set-row-label">{t('data.import')}</span><span className="set-row-desc">{t('data.importDesc')}</span></div>
           <div className="set-row-control">
-            <input ref={picker} type="file" accept=".zip,.json,application/zip,application/json" hidden aria-label="Conversations file" onChange={(e) => { const file = e.currentTarget.files?.[0]; if (file) void importConversations(file); }} />
-            <button className="modal-btn secondary" disabled={busy} onClick={() => picker.current?.click()}>Import…</button>
+            <input ref={picker} type="file" accept=".zip,.json,application/zip,application/json" hidden aria-label={t('data.file')} onChange={(e) => { const file = e.currentTarget.files?.[0]; if (file) void importConversations(file); }} />
+            <button className="modal-btn secondary" disabled={busy} onClick={() => picker.current?.click()}>{t('data.importButton')}</button>
           </div>
         </div>
       </div>
@@ -75,15 +77,15 @@ export function DataSettings({ onManageArchived }: { onManageArchived?: () => vo
       {error && <p className="modal-err" role="alert">{error}</p>}
     </section>
     <section className="settings-section">
-      <h2>Retention and deletion</h2>
+      <h2>{t('data.retention')}</h2>
       <div className="set-rows"><RetentionSetting /></div>
     </section>
     <section className="settings-section">
-      <h2>Archived chats</h2>
+      <h2>{t('data.archived')}</h2>
       <div className="set-rows">
         <div className="set-row">
-          <div className="set-row-text"><span className="set-row-label">{archived === null ? 'Archived chats' : `${archived} archived chat${archived === 1 ? '' : 's'}`}</span><span className="set-row-desc">Hidden from the sidebar, kept until you delete them. Search, restore or delete them in their own view.</span></div>
-          <div className="set-row-control"><button className="modal-btn secondary" disabled={!onManageArchived} onClick={onManageArchived}>Manage archived chats</button></div>
+          <div className="set-row-text"><span className="set-row-label">{archived === null ? t('data.archived') : t.plural('data.archivedCount', archived)}</span><span className="set-row-desc">{t('data.archivedDesc')}</span></div>
+          <div className="set-row-control"><button className="modal-btn secondary" disabled={!onManageArchived} onClick={onManageArchived}>{t('data.manageArchived')}</button></div>
         </div>
       </div>
     </section>

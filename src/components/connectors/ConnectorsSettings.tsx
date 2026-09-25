@@ -6,6 +6,9 @@ import { ShellIcon } from '../ShellIcon';
 import { Switch } from '../Switch';
 import { MODE_LABEL, PermissionControl } from './PermissionControl';
 import type { ToolMode } from './PermissionControl';
+import { useT } from '../../i18n';
+import type { MessageKey, Translate } from '../../i18n';
+import '../../i18n/settings';
 
 interface Tool { name: string; label: string; write: boolean; mode: ToolMode }
 interface Nextcloud {
@@ -33,39 +36,38 @@ async function call<T>(url: string, method = 'GET', body?: unknown): Promise<T> 
 }
 
 // Things to ask that work with drive.file access: files noevia made, or was given.
-const SUGGESTIONS = [
-  'List the files you have saved to my Google Drive',
-  'Save a summary of this week’s notes to Google Drive',
-  'Find my Drive file about backups and summarise it',
-];
+// They become the person's own message, so they are in the interface language.
+const SUGGESTIONS: MessageKey[] = ['connectors.drive.suggestList', 'connectors.drive.suggestSave', 'connectors.drive.suggestFind'];
 
-const when = (ms?: number | null) => (ms ? new Date(ms).toLocaleString(appLocale(), { dateStyle: 'medium', timeStyle: 'short' }) : 'never');
+const when = (t: Translate, ms?: number | null) => (ms ? new Date(ms).toLocaleString(appLocale(), { dateStyle: 'medium', timeStyle: 'short' }) : t('connectors.never'));
 
 function TrustReview({ origin, scope, tools, connected }: { origin: string; scope: string; tools: Tool[]; connected: boolean }): JSX.Element {
+  const t = useT();
   const readable = tools.filter((tool) => !tool.write && tool.mode !== 'block').length;
   const writable = tools.filter((tool) => tool.write && tool.mode !== 'block').length;
   const blocked = tools.filter((tool) => tool.mode === 'block').length;
-  return <section className="connector-trust" aria-label="Connection access review">
-    <h2>Access review</h2>
+  return <section className="connector-trust" aria-label={t('connectors.review.label')}>
+    <h2>{t('connectors.review.title')}</h2>
     <dl>
-      <div><dt>Destination</dt><dd>{origin}</dd></div>
-      <div><dt>Scope</dt><dd>{scope}</dd></div>
-      <div><dt>Tools</dt><dd>{readable} read · {writable} write or delete · {blocked} blocked</dd></div>
+      <div><dt>{t('connectors.review.destination')}</dt><dd>{origin}</dd></div>
+      <div><dt>{t('connectors.review.scope')}</dt><dd>{scope}</dd></div>
+      <div><dt>{t('connectors.review.tools')}</dt><dd>{t('connectors.review.toolCounts', { read: readable, write: writable, blocked })}</dd></div>
     </dl>
-    <p>{connected ? 'Enabled tools can send the data needed for a request to this service.' : 'These tool permissions take effect after this account connects.'} Every write or delete still needs your approval before it runs.</p>
+    <p>{connected ? t('connectors.review.connected') : t('connectors.review.notConnected')} {t('connectors.review.approval')}</p>
   </section>;
 }
 
 function ToolReview({ tools, busy, setMode }: { tools: Tool[]; busy: string; setMode: (tools: string[], mode: ToolMode) => void }): JSX.Element {
+  const t = useT();
   const [query, setQuery] = useState('');
   const matching = tools.filter((tool) => `${tool.label} ${tool.name}`.toLowerCase().includes(query.trim().toLowerCase()));
-  const groups: [string, Tool[]][] = [['Read-only tools', matching.filter((tool) => !tool.write)], ['Write and delete tools', matching.filter((tool) => tool.write)]];
+  const groups: [string, Tool[]][] = [[t('connectors.tools.read'), matching.filter((tool) => !tool.write)], [t('connectors.tools.write'), matching.filter((tool) => tool.write)]];
   return <>
-    <h2>Tool permissions</h2>
-    <p className="lede lede-tight">Read tools can use this connection without a write approval when allowed. Writes and deletes always ask before they run. Blocked tools cannot run.</p>
-    {tools.length > 0 && <input className="connector-tool-search" type="search" aria-label="Find a connector tool" placeholder="Find a tool…" value={query} onChange={(event) => setQuery(event.target.value)} />}
-    {tools.length === 0 && <p className="route-note">No tools are available to review yet.</p>}
-    {query && matching.length === 0 && <p className="route-note" role="status">No tools match “{query}”.</p>}
+    <h2>{t('connectors.tools.title')}</h2>
+    <p className="lede lede-tight">{t('connectors.tools.intro')}</p>
+    {tools.length > 0 && <input className="connector-tool-search" type="search" aria-label={t('connectors.tools.find')} placeholder={t('connectors.tools.findPlaceholder')} value={query} onChange={(event) => setQuery(event.target.value)} />}
+    {tools.length === 0 && <p className="route-note">{t('connectors.tools.none')}</p>}
+    {query && matching.length === 0 && <p className="route-note" role="status">{t('connectors.tools.noMatch', { query })}</p>}
     {groups.map(([title, group]) => group.length > 0 && <PermGroup key={title} title={title} tools={group} busy={busy} setMode={setMode}/>)}
   </>;
 }
@@ -81,15 +83,23 @@ export function DriveLogo({ size = 24 }: { size?: number }): JSX.Element {
   </svg>;
 }
 
-const stateBadge = (d: Drive) => d.state === 'connected'
-  ? <span className="badge ok"><ShellIcon name="check" size={13}/>{d.email ? `Connected as ${d.email.replace(/@gmail\.com$/, '')}` : 'Connected'}</span>
-  : d.state === 'pending' ? <span className="badge warn">Waiting for Google</span>
-  : d.state === 'error' ? <span className="badge danger">Needs reconnecting</span>
-  : d.state === 'not-configured' ? <span className="badge count">Not available</span>
-  : <span className="badge count">Not connected</span>;
+const stateBadge = (t: Translate, d: Drive) => d.state === 'connected'
+  ? <span className="badge ok"><ShellIcon name="check" size={13}/>{d.email ? t('connectors.connectedAs', { account: d.email.replace(/@gmail\.com$/, '') }) : t('connectors.connected')}</span>
+  : d.state === 'pending' ? <span className="badge warn">{t('connectors.drive.waiting')}</span>
+  : d.state === 'error' ? <span className="badge danger">{t('connectors.drive.reconnect')}</span>
+  : d.state === 'not-configured' ? <span className="badge count">{t('connectors.notAvailable')}</span>
+  : <span className="badge count">{t('connectors.notConnected')}</span>;
+
+/** Nextcloud's badge: the same states, with its own wording for an error. */
+const ncBadge = (t: Translate, nc: Nextcloud) => nc.state === 'connected'
+  ? <span className="badge ok"><ShellIcon name="check" size={13}/>{t('connectors.connectedAs', { account: nc.account ?? '' })}</span>
+  : nc.state === 'error' ? <span className="badge danger">{t('connectors.needsAttention')}</span>
+  : nc.state === 'not-configured' ? <span className="badge count">{t('connectors.notAvailable')}</span>
+  : <span className="badge count">{t('connectors.notConnected')}</span>;
 
 /** Settings → Connectors: what noevia can reach on your behalf, and what each tool may do. */
 export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false }: { isAdmin: boolean; onStartChat?: (prompt: string) => void; hideTitle?: boolean }): JSX.Element {
+  const t = useT();
   const [drive, setDrive] = useState<Drive | null>(null);
   const [nc, setNc] = useState<Nextcloud | null>(null);
   const [page, setPage] = useState<'list' | 'gdrive' | 'nextcloud'>('list');
@@ -119,26 +129,22 @@ export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false }: 
   if (page === 'gdrive' && drive) return <DrivePage drive={drive} isAdmin={isAdmin} onBack={() => { invalidateLoads(); setPage('list'); }} onChange={updateDrive} onActionStart={invalidateLoads} reload={load} onStartChat={onStartChat}/>;
 
   return <>
-    {!hideTitle && <div className="settings-title"><h1>Connectors</h1><p>Services noevia can use on your behalf. Each connection is yours alone: other people on this server never reach it.</p></div>}
-    {error && <p className="route-note" role="alert">{error} <button className="btn btn-secondary btn-sm" onClick={() => void load()}>Try again</button></p>}
+    {!hideTitle && <div className="settings-title"><h1>{t('connectors.title')}</h1><p>{t('connectors.intro')}</p></div>}
+    {error && <p className="route-note" role="alert">{error} <button className="btn btn-secondary btn-sm" onClick={() => void load()}>{t('connectors.tryAgain')}</button></p>}
     <div className="connector-list">
       <button className="connector-card surface" onClick={() => setPage('gdrive')} disabled={!drive} aria-label="Google Drive">
         <span className="logo"><DriveLogo/></span>
-        <span className="connector-text"><b>Google Drive</b><small>Search, read and save files. {drive ? stateBadge(drive) : <span className="badge count">Loading…</span>}</small></span>
+        <span className="connector-text"><b>Google Drive</b><small>{t('connectors.drive.summary')} {drive ? stateBadge(t, drive) : <span className="badge count">{t('settings.loading')}</span>}</small></span>
         <ShellIcon name="chevron-right" size={18}/>
       </button>
       {nc && <button className="connector-card surface" onClick={() => setPage('nextcloud')} aria-label="Nextcloud">
         <span className="logo"><ShellIcon name="hard-drive" size={22}/></span>
-        <span className="connector-text"><b>Nextcloud</b><small>Notes, files, calendar, tasks and more from your Nextcloud. {nc.state === 'connected'
-          ? <span className="badge ok"><ShellIcon name="check" size={13}/>Connected as {nc.account}</span>
-          : nc.state === 'error' ? <span className="badge danger">Needs attention</span>
-          : nc.state === 'not-configured' ? <span className="badge count">Not available</span>
-          : <span className="badge count">Not connected</span>}</small></span>
+        <span className="connector-text"><b>Nextcloud</b><small>{t('connectors.nextcloud.summary')} {ncBadge(t, nc)}</small></span>
         <ShellIcon name="chevron-right" size={18}/>
       </button>}
       <div className="connector-card surface is-later" aria-disabled="true">
         <span className="logo"><ShellIcon name="server" size={22}/></span>
-        <span className="connector-text"><b>MCP servers</b><small>Administrators add servers from the MCP directory or by URL, in Plugins → MCP servers. Ones that need your own sign-in or key are listed below.</small></span>
+        <span className="connector-text"><b>{t('connectors.mcp.title')}</b><small>{t('connectors.mcp.summary')}</small></span>
       </div>
     </div>
   </>;
@@ -147,6 +153,7 @@ export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false }: 
 function DrivePage({ drive, isAdmin, onBack, onChange, onActionStart, reload, onStartChat }: {
   drive: Drive; isAdmin: boolean; onBack: () => void; onChange: (d: Drive) => void; onActionStart: () => void; reload: () => Promise<unknown>; onStartChat?: (prompt: string) => void;
 }): JSX.Element {
+  const t = useT();
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [confirmOff, setConfirmOff] = useState(false);
@@ -158,8 +165,8 @@ function DrivePage({ drive, isAdmin, onBack, onChange, onActionStart, reload, on
   // Waiting on Google: refresh until the approval lands, so the page turns green by itself.
   useEffect(() => {
     if (drive.state !== 'pending' || busy) return;
-    const t = window.setInterval(() => { void reload(); }, 3000);
-    return () => window.clearInterval(t);
+    const timer = window.setInterval(() => { void reload(); }, 3000);
+    return () => window.clearInterval(timer);
   }, [drive.state, busy, reload]);
 
   const connect = () => act('connect', async () => {
@@ -176,62 +183,63 @@ function DrivePage({ drive, isAdmin, onBack, onChange, onActionStart, reload, on
   const connected = drive.state === 'connected';
 
   return <div className="connector-page">
-    <button className="crumb-link" onClick={onBack}><ShellIcon name="arrow"/>Connectors</button>
+    <button className="crumb-link" onClick={onBack}><ShellIcon name="arrow"/>{t('connectors.title')}</button>
     <div className="conn-head">
       <span className="logo"><DriveLogo/></span>
-      <div className="conn-title"><h1>Google Drive</h1>{stateBadge(drive)}</div>
+      <div className="conn-title"><h1>Google Drive</h1>{stateBadge(t, drive)}</div>
       <div className="actions">
-        {connected && !confirmOff && <button className="btn btn-secondary" disabled={!!busy} onClick={() => setConfirmOff(true)}>Disconnect</button>}
+        {connected && !confirmOff && <button className="btn btn-secondary" disabled={!!busy} onClick={() => setConfirmOff(true)}>{t('connectors.disconnect')}</button>}
       </div>
     </div>
-    <p className="lede">Lets noevia search, read and save files in your Drive. It only sees files it created or that were shared with it (Google’s <em>drive.file</em> access), never the rest of your Drive.</p>
-    <TrustReview origin="Google Drive · Google account" scope="This account; files noevia created or you shared with it" tools={drive.tools} connected={connected}/>
+    <p className="lede">{t('connectors.drive.lede')}</p>
+    <TrustReview origin={t('connectors.drive.origin')} scope={t('connectors.drive.scope')} tools={drive.tools} connected={connected}/>
     {(error || (drive.message && drive.state !== 'pending')) && <p className="route-note" role="alert">{error || drive.message}</p>}
 
     {confirmOff && <div className="confirm-strip surface" role="alert">
-      <div><b>Disconnect Google Drive?</b><p>noevia forgets the connection and Google revokes its access.{drive.backup ? ' Backups stop being copied to Drive until you connect again.' : ''} Files already in your Drive stay there.</p></div>
-      <div className="confirm-actions"><button className="btn btn-secondary" onClick={() => setConfirmOff(false)}>Keep connected</button><button className="btn btn-danger" disabled={!!busy} onClick={() => void disconnect()}>{busy === 'disconnect' ? 'Disconnecting…' : 'Disconnect'}</button></div>
+      <div><b>{t('connectors.drive.confirmTitle')}</b><p>{[t('connectors.drive.confirmBody'), drive.backup ? t('connectors.drive.confirmBackups') : '', t('connectors.drive.confirmFiles')].filter(Boolean).join(' ')}</p></div>
+      <div className="confirm-actions"><button className="btn btn-secondary" onClick={() => setConfirmOff(false)}>{t('connectors.keepConnected')}</button><button className="btn btn-danger" disabled={!!busy} onClick={() => void disconnect()}>{busy === 'disconnect' ? t('connectors.disconnecting') : t('connectors.disconnect')}</button></div>
     </div>}
 
-    {drive.state === 'not-configured' && <div className="group surface"><div className="row"><div className="row-text"><span className="row-label">Not available on this server</span><span className="row-desc">{isAdmin ? 'This noevia build has no Google sign-in registered (GOOGLE_OAUTH_CLIENT_ID).' : 'Ask the person who runs this server to enable Google sign-in.'}</span></div></div></div>}
+    {drive.state === 'not-configured' && <div className="group surface"><div className="row"><div className="row-text"><span className="row-label">{t('connectors.drive.unavailable')}</span><span className="row-desc">{isAdmin ? t('connectors.drive.unavailableAdmin') : t('connectors.drive.unavailableMember')}</span></div></div></div>}
 
     {(drive.state === 'disconnected' || drive.state === 'error') && <div className="group surface"><div className="row">
-      <div className="row-text"><span className="row-label">Connect your Google account</span><span className="row-desc">Google opens in a new tab with a short code. Approve there and this page updates by itself.</span></div>
-      <button className="btn btn-primary" disabled={!!busy} onClick={() => void connect()}>{busy === 'connect' ? 'Starting…' : 'Connect Google Drive'}</button>
+      <div className="row-text"><span className="row-label">{t('connectors.drive.connectTitle')}</span><span className="row-desc">{t('connectors.drive.connectDesc')}</span></div>
+      <button className="btn btn-primary" disabled={!!busy} onClick={() => void connect()}>{busy === 'connect' ? t('connectors.drive.starting') : t('connectors.drive.connect')}</button>
     </div></div>}
 
     {drive.state === 'pending' && <div className="group surface gdrive-pending" aria-live="polite"><div className="row">
-      <div className="row-text"><span className="row-label">Enter this code on Google’s page</span><span className="row-desc">Opened in a new tab. You can also go to <a href={drive.verificationUrl} target="_blank" rel="noreferrer">{drive.verificationUrl?.replace(/^https?:\/\//, '')}</a> on any device.</span></div>
-      <output className="gdrive-code-value" aria-label="Google sign-in code">{drive.userCode}</output>
+      <div className="row-text"><span className="row-label">{t('connectors.drive.enterCode')}</span><span className="row-desc">{t('connectors.drive.openedBefore')} <a href={drive.verificationUrl} target="_blank" rel="noreferrer">{drive.verificationUrl?.replace(/^https?:\/\//, '')}</a> {t('connectors.drive.openedAfter')}</span></div>
+      <output className="gdrive-code-value" aria-label={t('connectors.drive.code')}>{drive.userCode}</output>
     </div><div className="row">
-      <div className="row-text"><span className="row-desc">Waiting for you to click Allow…</span></div>
-      <a className="btn btn-primary" href={drive.verificationUrl} target="_blank" rel="noreferrer">Open Google <ShellIcon name="external-link" size={14}/></a>
-      <button className="btn btn-secondary" disabled={!!busy} onClick={() => void act('cancel', () => call<Drive>('/api/connectors/gdrive/disconnect', 'POST', {}))}>Cancel</button>
+      <div className="row-text"><span className="row-desc">{t('connectors.drive.waitingAllow')}</span></div>
+      <a className="btn btn-primary" href={drive.verificationUrl} target="_blank" rel="noreferrer">{t('connectors.drive.openGoogle')} <ShellIcon name="external-link" size={14}/></a>
+      <button className="btn btn-secondary" disabled={!!busy} onClick={() => void act('cancel', () => call<Drive>('/api/connectors/gdrive/disconnect', 'POST', {}))}>{t('common.cancel')}</button>
     </div></div>}
 
     {connected && drive.backup && <div className="group surface backup"><div className="row">
-      <div className="row-text"><span className="row-label">Offsite backups</span><span className="row-desc">
+      <div className="row-text"><span className="row-label">{t('connectors.backup.title')}</span><span className="row-desc">
         {drive.backup.copyEnabled
-          ? <>Encrypted backups are copied to the <em>noevia-offsite</em> folder. {drive.backup.copy?.state === 'ok' ? `Last copy ${when(drive.backup.copy.at)}${drive.backup.lastBackup ? `, ${(drive.backup.lastBackup.uploadedBytes / 1024 / 1024).toFixed(1)} MB` : ''}.` : drive.backup.copy?.message || 'The first copy follows the next backup.'}</>
-          : <>Off: backups stay on this server only.</>}
+          ? <>{t('connectors.backup.on', { folder: 'noevia-offsite' })} {drive.backup.copy?.state === 'ok' ? (drive.backup.lastBackup ? t('connectors.backup.lastCopySize', { date: when(t, drive.backup.copy.at), size: (drive.backup.lastBackup.uploadedBytes / 1024 / 1024).toFixed(1) }) : t('connectors.backup.lastCopy', { date: when(t, drive.backup.copy.at) })) : drive.backup.copy?.message || t('connectors.backup.first')}</>
+          : <>{t('connectors.backup.off')}</>}
       </span></div>
-      <Switch label="Copy backups to Google Drive" checked={drive.backup.copyEnabled} disabled={!!busy} onChange={(on) => void act('backup', () => call<Drive>('/api/connectors/gdrive/backup-copy', 'PUT', { enabled: on }))}/>
+      <Switch label={t('connectors.backup.switch')} checked={drive.backup.copyEnabled} disabled={!!busy} onChange={(on) => void act('backup', () => call<Drive>('/api/connectors/gdrive/backup-copy', 'PUT', { enabled: on }))}/>
     </div></div>}
 
     {connected && onStartChat && <>
-      <h2>Prompt suggestions</h2>
-      <div className="suggest">{SUGGESTIONS.map((s) => <button key={s} className="chip" onClick={() => onStartChat(s)}>{s}<ShellIcon name="arrow-right" size={14}/></button>)}</div>
+      <h2>{t('connectors.drive.suggestions')}</h2>
+      <div className="suggest">{SUGGESTIONS.map((key) => t(key)).map((s) => <button key={s} className="chip" onClick={() => onStartChat(s)}>{s}<ShellIcon name="arrow-right" size={14}/></button>)}</div>
     </>}
 
     <ToolReview tools={drive.tools} busy={busy} setMode={setMode}/>
-    {!connected && drive.state !== 'not-configured' && <p className="preview-footnote">These apply as soon as Drive is connected.</p>}
+    {!connected && drive.state !== 'not-configured' && <p className="preview-footnote">{t('connectors.drive.applyLater')}</p>}
   </div>;
 }
 
 function PermGroup({ title, tools, busy, setMode }: { title: string; tools: Tool[]; busy: string; setMode: (tools: string[], mode: ToolMode) => void }): JSX.Element {
+  const t = useT();
   const [open, setOpen] = useState(true);
-  const modes = [...new Set(tools.map((t) => t.mode))];
-  const write = tools.some((t) => t.write);
+  const modes = [...new Set(tools.map((tool) => tool.mode))];
+  const write = tools.some((tool) => tool.write);
   const id = `perm-${title.replace(/\W+/g, '-').toLowerCase()}`;
   return <section className="group surface perm-group" aria-label={title}>
     <div className="perm-head">
@@ -239,17 +247,17 @@ function PermGroup({ title, tools, busy, setMode }: { title: string; tools: Tool
         <ShellIcon name={open ? 'down' : 'chevron-right'} size={16}/><b>{title}</b><span className="badge count">{tools.length}</span>
       </button>
       <label className="select">
-        <span className="sr-only">{title}: set all to</span>
-        <select value={modes.length === 1 ? modes[0] : ''} disabled={!!busy} onChange={(e) => setMode(tools.map((t) => t.name), e.target.value as ToolMode)}>
-          {modes.length > 1 && <option value="" disabled>Mixed</option>}
-          {(['allow', 'ask', 'block'] as ToolMode[]).filter((m) => !(write && m === 'allow')).map((m) => <option key={m} value={m}>{MODE_LABEL[m]}</option>)}
+        <span className="sr-only">{t('connectors.tools.setAll', { group: title })}</span>
+        <select value={modes.length === 1 ? modes[0] : ''} disabled={!!busy} onChange={(e) => setMode(tools.map((tool) => tool.name), e.target.value as ToolMode)}>
+          {modes.length > 1 && <option value="" disabled>{t('connectors.tools.mixed')}</option>}
+          {(['allow', 'ask', 'block'] as ToolMode[]).filter((m) => !(write && m === 'allow')).map((m) => <option key={m} value={m}>{t(MODE_LABEL[m])}</option>)}
         </select>
         <ShellIcon name="down" size={14}/>
       </label>
     </div>
-    {open && <div id={id}>{tools.map((t) => <div className="tool" key={t.name}>
-      <span>{t.label}</span>
-      <PermissionControl tool={t.label} value={t.mode} write={t.write} busy={busy.startsWith('policy')} onChange={(m) => setMode([t.name], m)}/>
+    {open && <div id={id}>{tools.map((tool) => <div className="tool" key={tool.name}>
+      <span>{tool.label}</span>
+      <PermissionControl tool={tool.label} value={tool.mode} write={tool.write} busy={busy.startsWith('policy')} onChange={(m) => setMode([tool.name], m)}/>
     </div>)}</div>}
   </section>;
 }
@@ -257,6 +265,7 @@ function PermGroup({ title, tools, busy, setMode }: { title: string; tools: Tool
 /** Settings → Connectors → Nextcloud. It has no connect button of its own: the tools use the
  *  account's storage connection, so this page says what that allows and owns what each tool may do. */
 function NextcloudPage({ nc, onBack, onChange }: { nc: Nextcloud; onBack: () => void; onChange: (n: Nextcloud) => void }): JSX.Element {
+  const t = useT();
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const setMode = async (tools: string[], mode: ToolMode) => {
@@ -265,29 +274,26 @@ function NextcloudPage({ nc, onBack, onChange }: { nc: Nextcloud; onBack: () => 
     catch (e) { setError((e as Error).message); } finally { setBusy(''); }
   };
   return <div className="connector-page">
-    <button className="crumb-link" onClick={onBack}><ShellIcon name="arrow"/>Connectors</button>
+    <button className="crumb-link" onClick={onBack}><ShellIcon name="arrow"/>{t('connectors.title')}</button>
     <div className="conn-head">
       <span className="logo"><ShellIcon name="hard-drive" size={24}/></span>
       <div className="conn-title"><h1>Nextcloud</h1>
-        {nc.state === 'connected' ? <span className="badge ok"><ShellIcon name="check" size={13}/>Connected as {nc.account}</span>
-          : nc.state === 'error' ? <span className="badge danger">Needs attention</span>
-          : nc.state === 'not-configured' ? <span className="badge count">Not available</span>
-          : <span className="badge count">Not connected</span>}
+        {ncBadge(t, nc)}
       </div>
     </div>
-    <p className="lede">Your own Nextcloud, reached with the connection you set under <b>Settings → Diary &amp; storage</b>. noevia sends your app password only to that address, only for your requests, and only to the server an administrator listed.</p>
-    <TrustReview origin={nc.baseUrl || 'Nextcloud address set by the server administrator'} scope="This account; project toolboxes choose which tools are offered in chat" tools={nc.tools} connected={nc.state === 'connected'}/>
+    <p className="lede">{t('connectors.nextcloud.ledeBefore')} <b>{t('settings.title')} → {t('settings.section.diary')}</b>{t('connectors.nextcloud.ledeAfter')}</p>
+    <TrustReview origin={nc.baseUrl || t('connectors.nextcloud.origin')} scope={t('connectors.nextcloud.scope')} tools={nc.tools} connected={nc.state === 'connected'}/>
     {(error || nc.message) && <p className="route-note" role={error || nc.state === 'error' ? 'alert' : 'status'}>{error || nc.message}</p>}
     {nc.baseUrl && <div className="group surface"><div className="row">
-      <div className="row-text"><span className="row-label">Address</span><span className="row-desc">{nc.baseUrl}</span></div>
+      <div className="row-text"><span className="row-label">{t('connectors.nextcloud.address')}</span><span className="row-desc">{nc.baseUrl}</span></div>
     </div></div>}
     {nc.boxes.length > 0 && <div className="group surface"><div className="row">
-      <div className="row-text"><span className="row-label">Toolboxes it offers</span>
-        <span className="row-desc">{nc.boxes.map((b) => `${b.label} (${b.toolCount})`).join(' · ')}. A project chooses which of these it uses.</span></div>
+      <div className="row-text"><span className="row-label">{t('connectors.nextcloud.toolboxes')}</span>
+        <span className="row-desc">{nc.boxes.map((b) => `${b.label} (${b.toolCount})`).join(' · ')}. {t('connectors.nextcloud.toolboxesNote')}</span></div>
     </div></div>}
     {nc.tools.length > 0 && <>
       <ToolReview tools={nc.tools} busy={busy} setMode={(t, m) => void setMode(t, m)}/>
-      {nc.state !== 'connected' && <p className="preview-footnote">These apply as soon as Nextcloud is connected.</p>}
+      {nc.state !== 'connected' && <p className="preview-footnote">{t('connectors.nextcloud.applyLater')}</p>}
     </>}
   </div>;
 }

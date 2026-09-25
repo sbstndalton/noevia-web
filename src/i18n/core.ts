@@ -2,10 +2,16 @@
 // Catalogues are static modules bundled at build time: nothing is fetched, and no import path
 // is ever built from a preference or a browser value.
 import { EN_GB } from './en-GB';
-import type { Catalogue, MessageKey } from './en-GB';
+import type { Catalogue as BaseCatalogue, MessageKey as BaseKey } from './en-GB';
 import { EN_US } from './en-US';
+// Type only: the Settings strings themselves load with the Settings chunk (settings/index.ts).
+import type { SettingsCatalogue, SettingsKey } from './settings/en-GB';
 
-export type { Catalogue, MessageKey };
+/** Every message key: the base segment (first screen) or the Settings segment. */
+export type MessageKey = BaseKey | SettingsKey;
+/** A translation of either segment; each file's own type still rejects keys English lacks. */
+export type Catalogue = BaseCatalogue | SettingsCatalogue;
+export type { BaseKey, SettingsKey };
 export type Params = Record<string, string | number>;
 
 export const BASE_LOCALE = 'en-GB';
@@ -18,6 +24,35 @@ export const CATALOGUES: Record<string, Catalogue> = { 'en-GB': EN_GB, 'en-US': 
 /** Adds a loaded catalogue; ignored for anything that is not a supported locale. */
 export function registerCatalogue(locale: string, catalogue: Catalogue): void {
   if (SUPPORTED.includes(locale)) CATALOGUES[locale] = catalogue;
+}
+
+/** Segments beyond the base: strings a lazy view needs, kept out of the first-load bundle.
+ *  SEGMENTS[segment][locale] is that locale's part; the English part is registered by the view's
+ *  own code when its chunk loads (settings/index.ts), the other locales through loaders.ts. */
+export const SEGMENT_NAMES = ['settings'] as const;
+export type Segment = (typeof SEGMENT_NAMES)[number];
+export const SEGMENTS: Record<Segment, Record<string, Catalogue>> = { settings: {} };
+
+/** Adds one locale's part of a segment; ignored for an unknown segment or locale. */
+export function registerSegment(segment: Segment, locale: string, catalogue: Catalogue): void {
+  if (SUPPORTED.includes(locale) && Object.prototype.hasOwnProperty.call(SEGMENTS, segment)) SEGMENTS[segment][locale] = catalogue;
+}
+
+/** Segments whose English part is present, i.e. whose view code has loaded in this page. */
+export function activeSegments(): Segment[] {
+  return SEGMENT_NAMES.filter((segment) => !!SEGMENTS[segment][BASE_LOCALE]);
+}
+
+const own = (table: Record<string, Catalogue>, locale: string, key: string): string | undefined => {
+  const text = Object.prototype.hasOwnProperty.call(table, locale) ? (table[locale] as Record<string, string>)[key] : undefined;
+  return typeof text === 'string' && text ? text : undefined;
+};
+/** A key's text in one locale across the base and every segment, or undefined. */
+function lookup(locale: string, key: string): string | undefined {
+  const found = own(CATALOGUES, locale, key);
+  if (found !== undefined) return found;
+  for (const segment of SEGMENT_NAMES) { const text = own(SEGMENTS[segment], locale, key); if (text !== undefined) return text; }
+  return undefined;
 }
 
 // A bare language picks the locale noevia has for it; Norwegian's three codes all read Bokmål.
@@ -53,9 +88,7 @@ export function interpolate(text: string, params?: Params): string {
 
 /** A message in the locale, falling back key by key to English (and then to the key itself). */
 export function translate(locale: string, key: MessageKey, params?: Params): string {
-  const own = Object.prototype.hasOwnProperty.call(CATALOGUES, locale) ? CATALOGUES[locale][key] : undefined;
-  const text = typeof own === 'string' && own ? own : (EN_GB as Record<string, string>)[key] ?? key;
-  return interpolate(text, params);
+  return interpolate(lookup(locale, key) ?? lookup(BASE_LOCALE, key) ?? key, params);
 }
 
 /** A plural pair: `${key}.one` or `${key}.other`, chosen by the locale's own rules. */
@@ -69,10 +102,14 @@ export type Coverage = { locale: string; translated: number; total: number; miss
 
 const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join();
 
-/** How complete a catalogue is against English, and anything it has that English does not. */
-export function coverage(locale: string): Coverage {
-  const base = EN_GB as Record<string, string>;
-  const own = (CATALOGUES[locale] ?? {}) as Record<string, string>;
+/** How complete a catalogue is against English, and anything it has that English does not.
+ *  With no segment it covers the base and every segment present; with one, only that part. */
+export function coverage(locale: string, segment?: 'base' | Segment): Coverage {
+  const parts = (table: Record<string, Catalogue>) => (table[locale] ?? {}) as Record<string, string>;
+  const english = (table: Record<string, Catalogue>) => (table[BASE_LOCALE] ?? {}) as Record<string, string>;
+  const tables: Record<string, Catalogue>[] = segment === 'base' ? [CATALOGUES] : segment ? [SEGMENTS[segment]] : [CATALOGUES, ...SEGMENT_NAMES.map((s) => SEGMENTS[s])];
+  const base: Record<string, string> = Object.assign({}, ...tables.map(english));
+  const own: Record<string, string> = Object.assign({}, ...tables.map(parts));
   const keys = Object.keys(base);
   return {
     locale,

@@ -34,10 +34,12 @@ function UpdatedNotice() {
 export const Diary = lazyView(() => import('./components/DiaryView').then((m) => m.DiaryView));
 export const Settings = lazyView(() => import('./components/SettingsShell').then((m) => m.SettingsShell));
 export const Projects = lazyView(() => import('./components/ProjectsView').then((m) => m.ProjectsView));
+// Customise (skills, connectors, plugins) carries the connector catalogue and the Settings strings.
+export const Customise = lazyView(() => import('./components/plugins/PluginsView').then((m) => m.PluginsView));
 export const Coding = lazyView(() => import('./components/CodingWorkspace').then((m) => m.CodingWorkspace));
 
 export function prefetchViewsWhenIdle(): () => void {
-  const run = () => { for (const view of [Settings, Diary, Projects, Coding]) view.prefetch(); };
+  const run = () => { for (const view of [Settings, Customise, Diary, Projects, Coding]) view.prefetch(); };
   if ('requestIdleCallback' in window) {
     const id = window.requestIdleCallback(run, { timeout: 4000 });
     return () => window.cancelIdleCallback(id);

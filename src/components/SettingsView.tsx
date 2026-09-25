@@ -13,6 +13,8 @@ import type { AuthUser, PasskeyInfo, SessionInfo } from '../api';
 import { startRegistration } from '@simplewebauthn/browser';
 import { ProviderForm } from './ProviderForm';
 import { StoragePicker } from './StoragePicker';
+import { useT } from '../i18n';
+import type { Translate } from '../i18n';
 
 export interface SettingsViewProps {
   section?: string;
@@ -70,15 +72,16 @@ function StorageCard(): JSX.Element {
 }
 
 /** Short device label from a session's User-Agent (browser-focused). */
-function sessionLabel(ua?: string | null): string {
-  if (!ua) return 'Unknown device';
-  const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : /Firefox\//.test(ua) ? 'Firefox' : 'Browser';
+function sessionLabel(t: Translate, ua?: string | null): string {
+  if (!ua) return t('security.unknownDevice');
+  const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : /Firefox\//.test(ua) ? 'Firefox' : t('security.browser');
   const os = /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? 'macOS' : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Linux/.test(ua) ? 'Linux' : '';
   return `${browser}${os ? ` · ${os}` : ''}`;
 }
 
 // Account security only; identity (name, username, role) is the Profile page.
 function SecurityCard(): JSX.Element {
+  const t = useT();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
@@ -93,7 +96,7 @@ function SecurityCard(): JSX.Element {
   const load = async () => {
     setLoading(true); setError('');
     try { await refresh(); }
-    catch { setError('Profile could not be loaded. Check your connection and retry.'); }
+    catch { setError(t('security.loadError')); }
     finally { setLoading(false); }
   };
   useEffect(() => { void load(); }, []);
@@ -104,45 +107,45 @@ function SecurityCard(): JSX.Element {
       await action();
       setNotice(success);
       try { await refresh(); }
-      catch { setError('The change succeeded, but the updated profile could not be loaded. Retry loading before making another change.'); }
+      catch { setError(t('security.refreshError')); }
     } catch (e) {
       // A browser refusal (cancelled, wrong address, unsupported) is not a connection problem.
       const name = (e as Error)?.name;
-      if (name === 'NotAllowedError' || name === 'AbortError') setError(`${label} was cancelled or timed out. Nothing was changed.`);
-      else if (name === 'SecurityError' || name === 'InvalidStateError' || name === 'NotSupportedError') setError(`${label} was refused by the browser: ${(e as Error).message}`);
-      else setError(`${label} could not be confirmed. Check your connection, then reload to check the saved state.`);
+      if (name === 'NotAllowedError' || name === 'AbortError') setError(t('security.cancelled', { action: label }));
+      else if (name === 'SecurityError' || name === 'InvalidStateError' || name === 'NotSupportedError') setError(t('security.refused', { action: label, message: (e as Error).message }));
+      else setError(t('security.unconfirmed', { action: label }));
     }
     finally { setBusy(''); }
   };
   const addKey = async () => {
     const c = await passkeyRegistrationOptions();
     const response = await startRegistration({ optionsJSON: c.options });
-    await passkeyRegistrationVerify(c.challengeToken, response, `Passkey ${passkeys.length + 1}`);
+    await passkeyRegistrationVerify(c.challengeToken, response, t('security.passkeyName', { number: passkeys.length + 1 }));
   };
-  if (!user) return <div><h2>Security</h2>{loading ? <p role="status">Loading profile…</p> : <><p className="modal-err" role="alert">{error}</p><button className="modal-btn secondary" onClick={() => void load()}>Retry profile</button></>}</div>;
+  if (!user) return <div><h2>{t('security.heading')}</h2>{loading ? <p role="status">{t('security.loadingProfile')}</p> : <><p className="modal-err" role="alert">{error}</p><button className="modal-btn secondary" onClick={() => void load()}>{t('security.retryProfile')}</button></>}</div>;
   return <div>
-    <div className="settings-title"><h1>Security and login</h1><p>Passkeys, signed-in sessions and app passwords for {user.username}.</p></div>
+    <div className="settings-title"><h1>{t('settings.section.security')}</h1><p>{t('security.intro', { username: user.username })}</p></div>
     <fieldset className="settings-action-group" disabled={!!busy || loading}><div className="card-list">
-      {passkeys.map(k => <div className="model-row" key={k.id}><span className="model-dot"/><div className="model-name-group"><span className="model-name">{k.name}</span><span className="model-quant">{k.backedUp ? 'synced passkey' : k.deviceType}</span></div><button className="recents-del" aria-label={`Remove passkey ${k.name}`} onClick={() => void act('Remove passkey', () => removePasskey(k.id), 'Passkey removed.')}><ShellIcon name="close" size={16}/></button></div>)}
-      <button className="modal-btn secondary" onClick={() => void act('Passkey setup', addKey, 'Passkey added.')}><ShellIcon name="plus" size={16}/>Add passkey</button>
+      {passkeys.map(k => <div className="model-row" key={k.id}><span className="model-dot"/><div className="model-name-group"><span className="model-name">{k.name}</span><span className="model-quant">{k.backedUp ? t('security.syncedPasskey') : k.deviceType}</span></div><button className="recents-del" aria-label={t('security.removePasskeyNamed', { name: k.name })} onClick={() => void act(t('security.removePasskey'), () => removePasskey(k.id), t('security.passkeyRemoved'))}><ShellIcon name="close" size={16}/></button></div>)}
+      <button className="modal-btn secondary" onClick={() => void act(t('security.passkeySetup'), addKey, t('security.passkeyAdded'))}><ShellIcon name="plus" size={16}/>{t('security.addPasskey')}</button>
       {sessions.length > 0 && sessions.map(s => (
         <div className="model-row" key={s.id}>
           <span className="model-dot" />
           <div className="model-name-group">
-            <span className="model-name">{sessionLabel(s.userAgent)}</span>
+            <span className="model-name">{sessionLabel(t, s.userAgent)}</span>
             <span className="model-quant">
-              {s.ip || 'unknown IP'} · last seen {new Date(s.lastSeenAt).toLocaleString(appLocale())}
+              {s.ip || t('security.unknownIp')} · {t('security.lastSeen', { date: new Date(s.lastSeenAt).toLocaleString(appLocale()) })}
             </span>
           </div>
-          <button className="recents-del" title="Revoke session" aria-label={`Revoke session ${sessionLabel(s.userAgent)}`} onClick={() => void act('Revoke session', () => revokeSession(s.id), 'Session revoked.')}><ShellIcon name="close" size={16}/></button>
+          <button className="recents-del" title={t('security.revokeSession')} aria-label={t('security.revokeSessionNamed', { device: sessionLabel(t, s.userAgent) })} onClick={() => void act(t('security.revokeSession'), () => revokeSession(s.id), t('security.sessionRevoked'))}><ShellIcon name="close" size={16}/></button>
         </div>
       ))}
-      <button className="modal-btn secondary" onClick={() => void act('Sign out', async () => { await logout(); window.location.reload(); }, 'Signed out.')}>Sign out</button>
+      <button className="modal-btn secondary" onClick={() => void act(t('security.signOut'), async () => { await logout(); window.location.reload(); }, t('security.signedOut'))}>{t('security.signOut')}</button>
     </div>
     </fieldset>
     {busy && <p role="status">{busy}…</p>}
     {notice && <p className="route-note" role="status">{notice}</p>}
-    {error && <><p className="modal-err" role="alert">{error}</p><button className="modal-btn secondary" disabled={!!busy || loading} onClick={() => void load()}>{loading ? 'Loading…' : 'Reload profile'}</button></>}
+    {error && <><p className="modal-err" role="alert">{error}</p><button className="modal-btn secondary" disabled={!!busy || loading} onClick={() => void load()}>{loading ? t('settings.loading') : t('security.reloadProfile')}</button></>}
     <AppPasswords />
   </div>;
 }
@@ -153,6 +156,7 @@ function SecurityCard(): JSX.Element {
  *  the real gate — /api/users returns 403 to non-admins regardless of what the
  *  navigation shows — so this only decides what is worth rendering. */
 function UsersCard(): JSX.Element {
+  const t = useT();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [denied, setDenied] = useState(false);
@@ -176,7 +180,7 @@ function UsersCard(): JSX.Element {
       setDenied(profile.user.role !== 'admin');
       if (profile.user.role === 'admin') await refreshUsers();
     } catch {
-      setError('Users could not be loaded. Please try again.');
+      setError(t('users.loadError'));
     } finally { setLoading(false); }
   };
   useEffect(() => { void load(); }, []);
@@ -193,10 +197,10 @@ function UsersCard(): JSX.Element {
         if (globalSuccess) setNotice(success);
         else setFeedback(prev => ({ ...prev, [key]: { notice: success } }));
         try { await refreshUsers(); }
-        catch { setError('The change succeeded, but the updated users could not be loaded. Reload users to confirm the saved state.'); }
+        catch { setError(t('users.refreshError')); }
       }
     } catch (e) {
-      const message = e instanceof Error && e.message ? e.message : `${label} could not be confirmed. Reload users to check the saved state, then try again.`;
+      const message = e instanceof Error && e.message ? e.message : t('users.unconfirmed', { action: label });
       setFeedback(prev => ({ ...prev, [key]: { error: message } }));
     } finally {
       pending.current.delete(key);
@@ -206,15 +210,15 @@ function UsersCard(): JSX.Element {
   const copyLink = async (key: string, link: string, label: string) => {
     try {
       await navigator.clipboard.writeText(link);
-      setFeedback(prev => ({ ...prev, [key]: { notice: `${label} copied.`, link } }));
+      setFeedback(prev => ({ ...prev, [key]: { notice: t('users.copied', { link: label }), link } }));
     } catch {
-      setFeedback(prev => ({ ...prev, [key]: { error: `${label} was created, but copying failed. Copy the link below or try copying again.`, link } }));
+      setFeedback(prev => ({ ...prev, [key]: { error: t('users.copyFailed', { link: label }), link } }));
     }
   };
-  const createLink = (key: string, recoveryId?: string) => act(key, recoveryId ? 'Create recovery link' : 'Create invitation', async () => {
+  const createLink = (key: string, recoveryId?: string) => act(key, recoveryId ? t('users.createRecovery') : t('users.createInvitation'), async () => {
     const result = recoveryId ? await createRecovery(recoveryId) : await createInvitation();
     const link = `${window.location.origin}/?${recoveryId ? 'recovery' : 'invite'}=${encodeURIComponent(result.token)}`;
-    await copyLink(key, link, recoveryId ? 'Recovery link' : 'Single-use invitation (expires in 24 hours)');
+    await copyLink(key, link, recoveryId ? t('users.recoveryLink') : t('users.singleUseInvitation'));
   }, '', false);
   const actionFeedback = (key: string) => {
     const value = feedback[key];
@@ -223,30 +227,30 @@ function UsersCard(): JSX.Element {
       {value?.error && <p className="modal-err" role="alert">{value.error}</p>}
       {value?.notice && <p className="route-note" role="status">{value.notice}</p>}
       {value?.link && <div>
-        <label className="field">Created link<input className="modal-input" readOnly value={value.link} onFocus={e => e.currentTarget.select()} /></label>
-        <button className="popup-tab" disabled={!!busy[key]} onClick={() => void copyLink(key, value.link!, key === 'invitation' ? 'Invitation link' : 'Recovery link')}>Copy link again</button>
+        <label className="field">{t('users.createdLink')}<input className="modal-input" readOnly value={value.link} onFocus={e => e.currentTarget.select()} /></label>
+        <button className="popup-tab" disabled={!!busy[key]} onClick={() => void copyLink(key, value.link!, key === 'invitation' ? t('users.invitationLink') : t('users.recoveryLink'))}>{t('users.copyAgain')}</button>
       </div>}
     </>;
   };
-  if (!user) return <div><h2>Users</h2>{loading ? <p role="status">Loading users…</p> : <><p className="route-note" role="alert">{error}</p><button className="btn btn-secondary" onClick={() => void load()}>Retry users</button></>}</div>;
-  if (denied) return <div><div className="rail-label">Users</div><p className="route-note">Administrator access is required to manage accounts.</p></div>;
+  if (!user) return <div><h2>{t('settings.section.users')}</h2>{loading ? <p role="status">{t('users.loading')}</p> : <><p className="route-note" role="alert">{error}</p><button className="btn btn-secondary" onClick={() => void load()}>{t('users.retry')}</button></>}</div>;
+  if (denied) return <div><div className="rail-label">{t('settings.section.users')}</div><p className="route-note">{t('users.adminRequired')}</p></div>;
   return <div>
-    <div className="rail-label" style={{ marginBottom: 12 }}>Users</div>
+    <div className="rail-label" style={{ marginBottom: 12 }}>{t('settings.section.users')}</div>
     {notice && <p className="route-note" role="status">{notice}</p>}
     <div className="card-list">
-      {users.length === 0 && !loading && <p className="route-note">No users returned by the server.</p>}
+      {users.length === 0 && !loading && <p className="route-note">{t('users.empty')}</p>}
       {users.map(u => <div key={u.id}>
-        <div className="model-row"><div className="model-name-group"><span className="model-name">{u.displayName}</span><span className="model-quant">@{u.username} · {u.role}{u.disabled ? ' · disabled' : ''}</span></div>{u.id !== user.id && <>
-          <button className="popup-tab" disabled={!!busy[u.id] || loading} onClick={() => void act(u.id, u.disabled ? 'Enable account' : 'Disable account', () => setUserDisabled(u.id, !u.disabled), 'Account updated.')}>{u.disabled ? 'Enable' : 'Disable'}</button>
-          <button className="popup-tab" disabled={!!busy[u.id] || loading} onClick={() => void createLink(u.id, u.id)}>Recovery</button>
-          <button className="recents-del" title="Delete user" aria-label={`Delete user ${u.username}`} disabled={!!busy[u.id] || loading} onClick={() => { const typed = window.prompt(`Type ${u.username} to permanently delete this noevia account. Remote corpus files will be preserved.`); if (typed === u.username) void act(u.id, 'Delete account', () => deleteUser(u.id, typed), 'Account deleted.', true, true); }}><ShellIcon name="close" size={16}/></button>
+        <div className="model-row"><div className="model-name-group"><span className="model-name">{u.displayName}</span><span className="model-quant">@{u.username} · {u.role}{u.disabled ? ` · ${t('users.disabled')}` : ''}</span></div>{u.id !== user.id && <>
+          <button className="popup-tab" disabled={!!busy[u.id] || loading} onClick={() => void act(u.id, u.disabled ? t('users.enableAccount') : t('users.disableAccount'), () => setUserDisabled(u.id, !u.disabled), t('users.accountUpdated'))}>{u.disabled ? t('users.enable') : t('users.disable')}</button>
+          <button className="popup-tab" disabled={!!busy[u.id] || loading} onClick={() => void createLink(u.id, u.id)}>{t('users.recovery')}</button>
+          <button className="recents-del" title={t('users.deleteUser')} aria-label={t('users.deleteUserNamed', { username: u.username })} disabled={!!busy[u.id] || loading} onClick={() => { const typed = window.prompt(t('users.deletePrompt', { username: u.username })); if (typed === u.username) void act(u.id, t('users.deleteAccount'), () => deleteUser(u.id, typed), t('users.accountDeleted'), true, true); }}><ShellIcon name="close" size={16}/></button>
         </>}</div>{actionFeedback(u.id)}
       </div>)}
-      <button className="modal-btn secondary" disabled={!!busy.invitation || loading} onClick={() => void createLink('invitation')}><ShellIcon name="plus" size={16}/>Copy invitation link</button>
+      <button className="modal-btn secondary" disabled={!!busy.invitation || loading} onClick={() => void createLink('invitation')}><ShellIcon name="plus" size={16}/>{t('users.copyInvitation')}</button>
       {actionFeedback('invitation')}
     </div>
     {error && <p className="modal-err" role="alert">{error}</p>}
-    <button className="popup-tab" disabled={loading || Object.keys(busy).length > 0} onClick={() => void load()}>{loading ? 'Loading…' : 'Reload users'}</button>
+    <button className="popup-tab" disabled={loading || Object.keys(busy).length > 0} onClick={() => void load()}>{loading ? t('settings.loading') : t('users.reload')}</button>
   </div>;
 }
 
@@ -254,6 +258,7 @@ function UsersCard(): JSX.Element {
  *  endpoints, add one via the shared ProviderForm, and remove non-default ones.
  *  Keys live server-side only — the list shows masked hints, never plaintext. */
 function ProvidersCard(): JSX.Element {
+  const t = useT();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [adding, setAdding] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -262,7 +267,7 @@ function ProvidersCard(): JSX.Element {
   const refresh = async () => {
     setLoading(true); setErr(null);
     try { const r = await fetchProviders(); setProviders(r.providers); }
-    catch { setErr('Connections could not be loaded. Check your connection and retry.'); }
+    catch { setErr(t('providers.loadError')); }
     finally { setLoading(false); }
   };
   useEffect(() => { void refresh(); }, []);
@@ -273,16 +278,16 @@ function ProvidersCard(): JSX.Element {
       await deleteProvider(id);
       await refresh();
     } catch {
-      setErr('Connection could not be removed. Try again.');
+      setErr(t('providers.removeError'));
     } finally { setRemoving(null); }
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div className="settings-title"><h1>AI providers</h1><p>Local and connected inference providers available to noevia.</p></div>
-      {loading && <p role="status">Loading connections…</p>}
-      {!loading && !err && providers.length === 0 && <p className="route-note">No connections saved. Connect a provider to make its models available.</p>}
-      {err && <><p className="modal-err" role="alert">{err}</p><button className="modal-btn secondary" disabled={loading || !!removing} onClick={() => void refresh()}>Retry connections</button></>}
+      <div className="settings-title"><h1>{t('settings.section.providers')}</h1><p>{t('providers.intro')}</p></div>
+      {loading && <p role="status">{t('providers.loading')}</p>}
+      {!loading && !err && providers.length === 0 && <p className="route-note">{t('providers.empty')}</p>}
+      {err && <><p className="modal-err" role="alert">{err}</p><button className="modal-btn secondary" disabled={loading || !!removing} onClick={() => void refresh()}>{t('providers.retry')}</button></>}
       <div className="card-list">
         {providers.map((p) => (
           <div key={p.id} className="model-row">
@@ -292,12 +297,12 @@ function ProvidersCard(): JSX.Element {
               <span className="model-quant">{p.baseUrl}</span>
             </div>
             {p.isDefault ? (
-              <span className="model-role">default · always on</span>
+              <span className="model-role">{t('providers.defaultAlwaysOn')}</span>
             ) : (
               <>
-                {p.apiKeyMasked && <span className="model-quant">key {p.apiKeyMasked}</span>}
-                <button className="recents-del" title="Remove provider" aria-label={`Remove ${p.label}`} disabled={loading || !!removing} onClick={() => void remove(p.id)}>
-                  {removing === p.id ? 'Removing…' : <ShellIcon name="close" size={16}/>}
+                {p.apiKeyMasked && <span className="model-quant">{t('providers.keyHint', { key: p.apiKeyMasked })}</span>}
+                <button className="recents-del" title={t('providers.remove')} aria-label={t('providers.removeNamed', { name: p.label })} disabled={loading || !!removing} onClick={() => void remove(p.id)}>
+                  {removing === p.id ? t('providers.removing') : <ShellIcon name="close" size={16}/>}
                 </button>
               </>
             )}
@@ -309,7 +314,7 @@ function ProvidersCard(): JSX.Element {
         <ProviderForm
           autoFocus
           allowShared
-          cancelLabel="Cancel"
+          cancelLabel={t('common.cancel')}
           onCancel={() => setAdding(false)}
           onConnected={() => {
             setAdding(false);
@@ -319,12 +324,10 @@ function ProvidersCard(): JSX.Element {
       ) : (
         <>
           <button className="modal-btn secondary" style={{ width: 'fit-content' }} onClick={() => setAdding(true)}>
-            <ShellIcon name="plus" size={16}/>Connect a provider
+            <ShellIcon name="plus" size={16}/>{t('providers.connect')}
           </button>
           <p className="route-note">
-            Any OpenAI-compatible /chat/completions endpoint works (Anthropic, OpenAI,
-            OpenRouter…). Keys are stored server-side and never returned in plaintext.
-            Pick a provider per project from the model popup.
+            {t('providers.note')}
           </p>
         </>
       )}

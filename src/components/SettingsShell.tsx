@@ -18,6 +18,7 @@ import { MemorySettings } from './personalization/MemorySettings';
 import { LanguageSettings } from './personalization/LanguageSettings';
 import { KeyboardSettings } from './shortcuts/KeyboardSettings';
 import { useT } from '../i18n';
+import '../i18n/settings';
 import type { MessageKey, Translate } from '../i18n';
 
 type Item = [id: string, label: string, keywords?: string];

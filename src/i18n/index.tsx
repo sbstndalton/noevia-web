@@ -3,14 +3,14 @@
 // or after the account record loads. `t()` is for code outside React (a class boundary, a toast).
 import { useEffect, useMemo, useState } from 'react';
 import { PREFERENCES_CHANGED, currentPreferences, useAccountPreferences } from '../user-preferences';
-import { CATALOGUES, resolveInterfaceLocale, translate, translatePlural } from './core';
-import { loadCatalogue } from './loaders';
+import { resolveInterfaceLocale, translate, translatePlural } from './core';
+import { catalogueSettled, loadEverything } from './loaders';
 
 /** Fired when a catalogue chunk arrives, so everything using useT() swaps from English. */
 export const CATALOGUE_LOADED = 'noevia:catalogue-loaded';
 function ensureCatalogue(locale: string): void {
-  if (CATALOGUES[locale]) return;
-  void loadCatalogue(locale).then((ok) => { if (ok && typeof window !== 'undefined') window.dispatchEvent(new Event(CATALOGUE_LOADED)); });
+  if (catalogueSettled(locale)) return;
+  void loadEverything(locale).then((ok) => { if (ok && typeof window !== 'undefined') window.dispatchEvent(new Event(CATALOGUE_LOADED)); });
 }
 import type { MessageKey, Params } from './core';
 
@@ -47,7 +47,8 @@ export function useT(): Translate {
   }, []);
   const locale = interfaceLocale(preference);
   // English renders at once; the locale's chunk swaps in when it resolves (cached afterwards).
-  const ready = !!CATALOGUES[locale];
+  // Once Settings code has loaded, its segment for the locale counts too.
+  const ready = catalogueSettled(locale);
   useEffect(() => { if (!ready) ensureCatalogue(locale); }, [locale, ready]);
   return useMemo(() => bind(locale), [locale, ready]);
 }

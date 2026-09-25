@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { createProvider, testProvider } from '../api';
 import type { Provider } from '../types';
+import { useT } from '../i18n';
+// The setup wizard uses this form too, so it registers the Settings strings for its own chunk.
+import '../i18n/settings';
 
 const PRESETS: Record<string, { label: string; url: string }> = {
   custom: { label: '', url: '' },
@@ -31,11 +34,12 @@ export interface ProviderFormProps {
 export function ProviderForm({
   onConnected,
   onCancel,
-  cancelLabel = 'Skip — set up later in Settings',
+  cancelLabel,
   allowShared = false,
-  submitLabel = 'Connect provider',
+  submitLabel,
   autoFocus = false,
 }: ProviderFormProps): JSX.Element {
+  const t = useT();
   const [label, setLabel] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
@@ -63,7 +67,7 @@ export function ProviderForm({
       });
       onConnected?.(provider);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'connect failed');
+      setErr(e instanceof Error ? e.message : t('providers.form.failed'));
     } finally {
       setBusy(false);
     }
@@ -73,7 +77,7 @@ export function ProviderForm({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <select
         className="modal-input"
-        aria-label="Provider type"
+        aria-label={t('providers.form.type')}
         defaultValue="custom"
         onChange={(e) => {
           const p = PRESETS[e.target.value];
@@ -81,7 +85,7 @@ export function ProviderForm({
           setBaseUrl(p.url);
         }}
       >
-        <option value="custom">Custom OpenAI-compatible</option>
+        <option value="custom">{t('providers.form.custom')}</option>
         <option value="openai">OpenAI</option>
         <option value="openrouter">OpenRouter</option>
         <option value="ollama">Ollama</option>
@@ -90,45 +94,44 @@ export function ProviderForm({
       </select>
       <input
         className="modal-input"
-        aria-label="Provider name"
-        placeholder="Name (e.g. OpenRouter)"
+        aria-label={t('providers.form.name')}
+        placeholder={t('providers.form.namePlaceholder')}
         value={label}
         autoFocus={autoFocus}
         onChange={(e) => setLabel(e.target.value)}
       />
       <input
         className="modal-input"
-        aria-label="Provider base URL"
-        placeholder="Base URL (e.g. https://openrouter.ai/api/v1)"
+        aria-label={t('providers.form.baseUrl')}
+        placeholder={t('providers.form.baseUrlPlaceholder')}
         value={baseUrl}
         onChange={(e) => setBaseUrl(e.target.value)}
       />
       <input
         className="modal-input"
         type="password"
-        aria-label="Provider API key"
-        placeholder="API key (stored server-side only)"
+        aria-label={t('providers.form.apiKey')}
+        placeholder={t('providers.form.apiKeyPlaceholder')}
         value={apiKey}
         onChange={(e) => setApiKey(e.target.value)}
       />
       <input
         className="modal-input"
-        aria-label="Default model"
-        placeholder="Default model (optional)"
+        aria-label={t('providers.form.defaultModel')}
+        placeholder={t('providers.form.defaultModelPlaceholder')}
         value={defaultModel}
         onChange={(e) => setDefaultModel(e.target.value)}
       />
       {allowShared && (
         <label className="route-note">
-          <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} /> Share as an
-          administrator-managed default
+          <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} /> {t('providers.form.shared')}
         </label>
       )}
       {err && <p className="modal-err">{err}</p>}
       <div style={{ display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 8 }}>
         {onCancel && (
           <button type="button" className="modal-btn secondary" onClick={onCancel}>
-            {cancelLabel}
+            {cancelLabel ?? t('providers.form.skip')}
           </button>
         )}
         <button
@@ -137,7 +140,7 @@ export function ProviderForm({
           disabled={!label.trim() || !baseUrl.trim() || busy}
           onClick={() => void submit()}
         >
-          {busy ? 'Connecting…' : submitLabel}
+          {busy ? t('providers.form.connecting') : submitLabel ?? t('providers.form.submit')}
         </button>
       </div>
     </div>

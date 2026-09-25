@@ -2199,3 +2199,8 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .connector-tool-search { display:block; width:min(100%, 360px); min-height:44px; margin:12px 0; padding:8px 12px; font:inherit; color:var(--text-primary); background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:var(--radius-md); }
 .connector-tool-search:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
 @media (max-width:480px) { .connector-trust dl > div { grid-template-columns:1fr; gap:3px; } }
+
+/* Longer translations (#285): the admin badge may shrink and wrap beside its group name, and a
+   long search placeholder ends in an ellipsis instead of being cut mid-word. */
+.settings-navigation h2 .settings-nav-badge { white-space: normal; flex: 0 1 auto; min-width: 0; text-align: center; }
+.settings-search input { text-overflow: ellipsis; }

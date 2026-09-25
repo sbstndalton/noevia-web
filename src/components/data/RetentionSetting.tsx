@@ -3,11 +3,14 @@ import type { JSX } from 'react';
 import { apiFetch } from '../../api';
 import { ConfirmDialog } from '../ContextMenu';
 import { notifyWorkspaceChanged, useWorkspaceChanged } from './workspace-changed';
+import { useT } from '../../i18n';
 
+const LOAD_ERROR = 'load';
 type State = { days: number; periods: number[]; preview: Record<string, number> };
 
 /** Delete old chats: off by default; turning it on shows how many chats go right away and asks first. */
 export function RetentionSetting(): JSX.Element {
+  const t = useT();
   const [state, setState] = useState<State | null>(null);
   const [pending, setPending] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -16,7 +19,7 @@ export function RetentionSetting(): JSX.Element {
 
   const load = useCallback(() => {
     apiFetch('/api/account/retention').then(async (r) => { if (!r.ok) throw Error(); setState(await r.json()); })
-      .catch(() => setError('The retention setting could not be loaded.'));
+      .catch(() => setError(LOAD_ERROR));
   }, []);
   useEffect(load, [load]);
   useWorkspaceChanged(load);
@@ -26,10 +29,10 @@ export function RetentionSetting(): JSX.Element {
     try {
       const r = await apiFetch('/api/account/retention', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ days, confirmDeletes }) });
       const body = await r.json().catch(() => ({}));
-      if (!r.ok) throw Error(body.error || 'Could not save. Try again.');
-      setStatus(days ? `Chats not updated for ${days} days are deleted automatically.${body.deleted ? ` Deleted ${body.deleted} now.` : ''} Pinned chats are kept.` : 'Old chats are kept.');
+      if (!r.ok) throw Error(body.error || t('common.saveFailed'));
+      setStatus(days ? [t('data.retentionOn', { days }), body.deleted ? t('data.deletedNow', { count: body.deleted }) : '', t('data.pinnedKept')].filter(Boolean).join(' ') : t('data.retentionOff'));
       if (body.deleted) notifyWorkspaceChanged(); else load();
-    } catch (e) { setError(e instanceof Error ? e.message : 'Could not save. Try again.'); }
+    } catch (e) { setError(e instanceof Error ? e.message : t('common.saveFailed')); }
     finally { setBusy(false); setPending(null); }
   };
 
@@ -43,25 +46,25 @@ export function RetentionSetting(): JSX.Element {
       const fresh: State = await r.json();
       setState(fresh);
       if ((fresh.preview[String(days)] || 0) > 0) setPending(days); else void apply(days);
-    } catch { setError('The retention setting could not be checked. Try again.'); }
+    } catch { setError(t('data.retentionCheckError')); }
     finally { setBusy(false); }
   };
 
   return <>
     <div className="set-row">
-      <div className="set-row-text"><span className="set-row-label">Delete old chats</span><span className="set-row-desc">Chats not updated for the chosen time are deleted for good, including from other devices. Pinned chats are always kept; archived chats are not exempt. Export first if you want a copy.</span></div>
+      <div className="set-row-text"><span className="set-row-label">{t('data.deleteOld')}</span><span className="set-row-desc">{t('data.deleteOldDesc')}</span></div>
       <div className="set-row-control">
-        <select aria-label="Delete old chats" value={state?.days ?? 0} disabled={!state || busy} onChange={(e) => void choose(Number(e.currentTarget.value))}>
-          <option value={0}>Never</option>
-          {(state?.periods || [30, 90, 365]).map((days) => <option key={days} value={days}>After {days} days</option>)}
+        <select aria-label={t('data.deleteOld')} value={state?.days ?? 0} disabled={!state || busy} onChange={(e) => void choose(Number(e.currentTarget.value))}>
+          <option value={0}>{t('data.never')}</option>
+          {(state?.periods || [30, 90, 365]).map((days) => <option key={days} value={days}>{t('data.afterDays', { days })}</option>)}
         </select>
       </div>
     </div>
     {status && <p className="route-note" role="status">{status}</p>}
-    {error && <p className="modal-err" role="alert">{error}</p>}
+    {error && <p className="modal-err" role="alert">{error === LOAD_ERROR ? t('data.retentionLoadError') : error}</p>}
     {pending !== null && state && <ConfirmDialog danger
-      title={`Delete ${state.preview[String(pending)]} old chat${state.preview[String(pending)] === 1 ? '' : 's'} now?`}
-      body={`${state.preview[String(pending)]} chat${state.preview[String(pending)] === 1 ? ' has' : 's have'} not been updated for ${pending} days and will be deleted now, and others as they reach that age. This cannot be undone.`}
-      confirmLabel="Delete old chats" onConfirm={() => void apply(pending, state.preview[String(pending)] || 0)} onCancel={() => setPending(null)} />}
+      title={t.plural('data.confirmTitle', state.preview[String(pending)] || 0)}
+      body={t.plural('data.confirmBody', state.preview[String(pending)] || 0, { days: pending })}
+      confirmLabel={t('data.deleteOld')} onConfirm={() => void apply(pending, state.preview[String(pending)] || 0)} onCancel={() => setPending(null)} />}
   </>;
 }

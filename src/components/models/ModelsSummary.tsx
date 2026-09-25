@@ -5,10 +5,12 @@ import type { AutoRoles } from '../../api';
 import { fetchAutoRoles } from '../../api';
 import { notifyModelsChanged, useModelsChanged } from '../../models-changed';
 import { installedSummary } from '../../models-summary';
+import { useT } from '../../i18n';
 
 /** Settings keeps only what answers "is the engine fine and where does Auto go";
  *  everything you act on lives in the model manager page. */
 export function ModelsSummary({ models, modelsError, health, stats, onOpen }: { models: InstalledModel[]; modelsError: string | null; health: HealthState; stats: LiveStats | null; onOpen: () => void }): JSX.Element {
+  const t = useT();
   const [roles, setRoles] = useState<{ configured: boolean; roles: AutoRoles | null } | null>(null);
   const [rolesError, setRolesError] = useState(false);
   const load = () => { fetchAutoRoles().then((v) => { setRoles(v); setRolesError(false); }).catch(() => setRolesError(true)); };
@@ -20,16 +22,17 @@ export function ModelsSummary({ models, modelsError, health, stats, onOpen }: { 
   // on demand used to leave it stale, so this read "none loaded" beside a Loaded card (#205).
   // Opening the summary asks again.
   useEffect(() => { notifyModelsChanged(); }, []);
-  const routing = rolesError ? 'Could not be read' : !roles ? 'Loading…' : roles.configured && roles.roles
-    ? `Fast: ${roles.roles.fast} · Smart: ${roles.roles.smart}${roles.roles.vision ? ` · Vision: ${roles.roles.vision}` : ''}` : 'Not configured';
+  const routing = rolesError ? t('models.routingError') : !roles ? t('settings.loading') : roles.configured && roles.roles
+    ? `${t('models.roles', { fast: roles.roles.fast, smart: roles.roles.smart })}${roles.roles.vision ? ` · ${t('models.vision', { vision: roles.roles.vision })}` : ''}` : t('models.notConfigured');
+  const installed = installedSummary(models, { count: (n) => t.plural('models.count', n), loaded: (names) => t('models.loaded', { names }), noneLoaded: t('models.noneLoaded') });
   return <div className="mm-summary">
-    <div className="settings-title"><h1>Models &amp; routing</h1><p>A summary of the engine. Downloads, per-model settings, hardware and benchmarks are in the model manager.</p></div>
+    <div className="settings-title"><h1>{t('settings.section.models')}</h1><p>{t('models.intro')}</p></div>
     {modelsError && <p role="alert" className="modal-err">{modelsError}</p>}
     <div className="card-list">
-      <div className="model-row"><span className={`model-dot${health.inferenceUp ? '' : ' down'}`}/><span className="model-name">Engine</span><span className="model-role">{health.inferenceUp ? 'available' : 'unavailable'}{stats?.tokensPerSecond != null ? ` · ${stats.tokensPerSecond.toFixed(1)} tok/s last reported` : ''}</span></div>
-      <div className="model-row"><span className="model-name">Installed</span><span className="model-role">{modelsError ? 'Not available' : installedSummary(models)}</span></div>
-      <div className="model-row"><span className="model-name">Auto routing</span><span className="model-role">{routing}</span></div>
+      <div className="model-row"><span className={`model-dot${health.inferenceUp ? '' : ' down'}`}/><span className="model-name">{t('models.engine')}</span><span className="model-role">{health.inferenceUp ? t('models.available') : t('models.unavailable')}{stats?.tokensPerSecond != null ? ` · ${t('models.rate', { rate: stats.tokensPerSecond.toFixed(1) })}` : ''}</span></div>
+      <div className="model-row"><span className="model-name">{t('models.installed')}</span><span className="model-role">{modelsError ? t('models.notAvailable') : installed}</span></div>
+      <div className="model-row"><span className="model-name">{t('models.autoRouting')}</span><span className="model-role">{routing}</span></div>
     </div>
-    <button className="modal-btn primary" onClick={onOpen}>Open model manager</button>
+    <button className="modal-btn primary" onClick={onOpen}>{t('models.openManager')}</button>
   </div>;
 }
