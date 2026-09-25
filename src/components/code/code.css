@@ -28,6 +28,9 @@
 .code-actions .btn { min-height: 44px; }
 
 .code-tasks { display: flex; flex-direction: column; gap: 10px; }
+.code-tasks-heading { display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:10px; margin-bottom:2px; }
+.code-tasks-heading h2 { margin:0 0 3px; font-size:var(--text-input); font-weight:600; }
+.code-tasks-heading .btn { min-height:44px; }
 .code-task { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-card); }
 .code-task header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .code-task h3 { margin: 0; font-size: var(--text-callout); font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
@@ -35,7 +38,7 @@
 .code-task.is-running .code-status, .code-task.is-queued .code-status { border-color: var(--accent); color: var(--text); }
 .code-task.is-waiting_approval .code-status { border-color: var(--accent); color: var(--text); font-weight: 600; }
 .code-task.is-failed .code-status, .code-task.is-interrupted .code-status { border-color: var(--danger); color: var(--danger); }
-.code-meta, .code-stage { margin: 0; font-size: var(--text-caption); color: var(--text-secondary); overflow-wrap: anywhere; }
+.code-meta, .code-stage { margin: 0; font-size: var(--text-caption); color: var(--text-secondary); overflow-wrap: anywhere; font-variant-numeric:tabular-nums; }
 .code-plan { min-width: 0; max-height: min(40vh, 22rem); overflow: auto; padding: 10px 12px; border-radius: 10px; background: var(--bg-surface); }
 .code-plan:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .code-plan h4 { margin: 0 0 6px; font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); }
@@ -48,6 +51,12 @@
 .code-output h4 { margin: 0; font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); }
 .code-output > p { margin: 0; font-size: var(--text-footnote); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .code-output > .code-output-note { font-size: var(--text-caption2); color: var(--text-secondary); }
+.code-output-details { display: block; }
+.code-output-details > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-size: var(--text-caption); font-weight: 600; }
+.code-output-details > summary::before { content: '▸'; margin-right: 8px; }
+.code-output-details[open] > summary::before { transform: rotate(90deg); }
+.code-output-details > summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.code-output-details[open] > summary { margin-bottom: 6px; }
 
 /* The approval card. Deliberately plain and unmissable: the arguments are the point. */
 .code-approval { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--accent); border-radius: 10px; background: var(--bg); }

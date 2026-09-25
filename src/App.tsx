@@ -48,6 +48,7 @@ import type {
 import { ChatView } from './components/ChatView';
 import { ModelPopup } from './components/ModelPopup';
 import { ProjectView } from './components/ProjectView';
+import { ActiveCodeTasks } from './components/code/ActiveCodeTasks';
 import { Coding, Diary, ModelManager, Projects, Settings, ViewLoading, prefetchViewsWhenIdle } from './lazy-views';
 import type { SettingsSection } from './components/SettingsShell';
 import { FeaturePreview } from './components/PreviewPanel';
@@ -73,7 +74,7 @@ type View =
   | { kind: 'plugins' }
   | { kind: 'archived' }
   | { kind: 'models'; model?: string }
-  | { kind: 'project'; id: string }
+  | { kind: 'project'; id: string; codeRequest?: string }
   | { kind: 'chat'; chatId: string; projectId?: string | null };
 
 function uid(): string {
@@ -1210,6 +1211,8 @@ export default function App(): JSX.Element {
 
       <div className={`app-stack pane${settingsOpen ? ' has-settings' : ''}`}>
       <div className="app-main" ref={appMain}>
+      {/* In flow at the top of the pane: it pushes the view down rather than covering its header. */}
+      {featureFlags.codeHarness === true && <ActiveCodeTasks onOpenProject={(id) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}/>}
       {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="Coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
       <div className="chat-views" style={{display:appMode==='code'&&showPreviews?'none':'contents'}}>
       {view.kind === 'plugins' && <PluginsView onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/>}
@@ -1237,6 +1240,7 @@ export default function App(): JSX.Element {
         <ProjectView
           key={activeProject.id}
           modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null)}
+          codeRequest={view.codeRequest}
           onOpenModels={() => setPopupOpen(true)}
           onEdit={() => setEditingProjectId(activeProject.id)}
           project={activeProject}

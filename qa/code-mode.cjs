@@ -173,9 +173,12 @@ const TASK='12345678-1234-4234-8234-123456789012';
    await page.getByRole('button',{name:'Cancel task'}).click();
    await page.getByText('Reported as proposed.').waitFor();
    await page.getByText('4 tool calls · 1 allowed · 1 declined · 0 refused by noevia').waitFor();
-   assert.ok((await page.getByRole('region',{name:'Assistant output'}).textContent()).includes('I checked the path.'));
-   await page.getByRole('region',{name:'Assistant output'}).scrollIntoViewIfNeeded();
-   await page.getByRole('region',{name:'Assistant output'}).evaluate(el=>{el.scrollTop=0;});
+   // A finished task's output is collapsed behind a disclosure (#257); opening it shows the same text.
+   const finishedOutput=page.locator('details.code-output-details').first();
+   assert.equal(await finishedOutput.evaluate(el=>el.open),false,'finished output starts collapsed');
+   await finishedOutput.locator('summary').click();
+   assert.ok((await finishedOutput.textContent()).includes('I checked the path.'));
+   await finishedOutput.scrollIntoViewIfNeeded();
    if(shots)await page.screenshot({path:`${shots}/code-output-completed-${width}-${theme}.png`});
    // Where it went through the egress proxy, and where it was refused (by name, so the next task can ask).
    await page.getByText('Reached pypi.org (3)').waitFor();
@@ -193,12 +196,14 @@ const TASK='12345678-1234-4234-8234-123456789012';
      task({id:'t',task:'Truncated task',status:'completed',assistantOutput:{text:'x'.repeat(32768),truncated:true}}),
      task({id:'n',task:'Silent task',status:'completed',assistantOutput:null})];
    await page.getByRole('tab',{name:/Chats/}).click();await page.getByRole('tab',{name:'Code'}).click();
+   await page.locator('details.code-output-details').first().waitFor();
+   await page.locator('details.code-output-details').evaluateAll(els=>els.forEach(el=>{el.open=true;}));
    await page.getByText('Partial before failure.').waitFor();
    await page.getByText('Flushed before restart.').waitFor();
    await page.getByText('Showing the first 32 KiB of output.').waitFor();
    await page.getByText('Last reported before failure.').waitFor();
    await page.getByText('Reported as skipped.').waitFor();
-   assert.equal(await page.getByRole('region',{name:'Assistant output'}).count(),3,'null output has no section');
+   assert.equal(await page.locator('.code-output').count(),3,'null output has no section');
    assert.equal(await page.getByRole('region',{name:'Reported plan'}).count(),2,'null plan has no section');
    assert.equal(await page.locator('.code-plan input').count(),0,'no invented progress controls');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow (32KiB output)');
@@ -206,12 +211,16 @@ const TASK='12345678-1234-4234-8234-123456789012';
    if(shots)await page.screenshot({path:`${shots}/code-truncated-${width}-${theme}.png`});
    await navClick(page,'Projects');await page.locator('.project-card').filter({hasText:'Field notes'}).first().click();
    await page.getByRole('tab',{name:'Code'}).click();
+   await page.locator('details.code-output-details').first().waitFor();
+   await page.locator('details.code-output-details').evaluateAll(els=>els.forEach(el=>{el.open=true;}));
    await page.getByText('Only the field project sees this.').waitFor();
    await page.getByText('Only the field project sees this plan.').waitFor();
    assert.equal(await page.getByText('Partial before failure.').count(),0,'another project cannot see task output');
    assert.equal(await page.getByText('Last reported before failure.').count(),0,'another project cannot see task plan');
    await navClick(page,'Projects');await page.locator('.project-card').filter({hasText:'Battery notes'}).first().click();
    await page.getByRole('tab',{name:'Code'}).click();
+   await page.locator('details.code-output-details').first().waitFor();
+   await page.locator('details.code-output-details').evaluateAll(els=>els.forEach(el=>{el.open=true;}));
    await page.getByText('Partial before failure.').waitFor();
    await page.close();
   }

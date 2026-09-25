@@ -1,0 +1,15 @@
+/* A slim banner row at the top of the workspace pane, in normal flow: it pushes the view down
+   instead of floating over headings, header icons or the composer. */
+.active-code-entry { flex:none; position:relative; z-index:1; margin:var(--space-2) var(--space-6) 0; color:var(--text-primary); background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:var(--radius-control); animation:motion-enter var(--motion-quick) var(--ease-quick) both; }
+.active-code-entry summary { min-height:40px; display:flex; align-items:center; padding:0 var(--space-4); font-size:var(--text-footnote); font-weight:600; cursor:pointer; }
+.active-code-entry summary:focus-visible, .active-code-entry button:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
+.active-code-entry ul { list-style:none; margin:0; padding:0 var(--space-4) var(--space-2); max-height:min(40vh, 260px); overflow:auto; }
+.active-code-entry li { display:flex; flex-direction:column; gap:4px; padding:10px 0; border-top:1px solid var(--border-subtle); font-size:var(--text-footnote); }
+.active-code-entry li > span, .active-code-entry li > small { overflow-wrap:anywhere; }
+.active-code-entry li > small { color:var(--text-secondary); }
+.active-code-entry button { align-self:flex-start; min-height:44px; padding:6px 0; border:0; background:none; color:var(--accent-text); font:inherit; font-weight:600; cursor:pointer; text-align:left; }
+.active-code-entry p { margin:0; padding:0 var(--space-4) var(--space-2); font-size:var(--text-footnote); color:var(--text-secondary); }
+/* Phones: the navigation toggle floats at the top-left (8px, 44px square); the banner shares its row. */
+@media (max-width:519px) { .active-code-entry { margin:calc(8px + env(safe-area-inset-top)) var(--space-2) 0 60px; } .active-code-entry summary { min-height:44px; } }
+:root[data-layout="mobile"] .active-code-entry { margin:calc(8px + env(safe-area-inset-top)) var(--space-2) 0 60px; }
+@media (prefers-reduced-motion: reduce) { .active-code-entry { animation:none; } }

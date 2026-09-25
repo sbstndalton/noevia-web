@@ -685,3 +685,34 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .plugins-page .connector-page .row-label { font-weight: 600; }
 .plugins-page .connector-page .row-desc { color: var(--text-secondary); font-size: var(--text-footnote); overflow-wrap: anywhere; }
 .plugins-page .connector-page .group.surface { border-radius: var(--radius-lg); overflow: hidden; }
+
+/* Project instruction inventory stays compact; long file names and instructions wrap on phones. */
+.plugins-project-picker { display: flex; align-items: center; gap: var(--space-2); color: var(--text-secondary); font-size: var(--text-footnote); }
+.plugins-project-picker select { max-width: min(100%, 28rem); min-height: 44px; }
+.plugin-grid-installed { grid-template-columns: 1fr; }
+.plugin-grid-installed .plugin-card { align-items: center; }
+.plugin-grid-installed details { margin-top: var(--space-2); max-width: 100%; }
+.plugin-grid-installed summary { cursor: pointer; color: var(--text-primary); }
+.plugin-grid-installed pre { overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.plugin-url-review { display: grid; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-md); background: var(--nav-hover); color: var(--text-primary); overflow-wrap: anywhere; }
+.plugin-url-review p { margin: 0; line-height: var(--leading-body); }
+.plugin-url-address { overflow-wrap: anywhere; }
+
+.plugin-tool-detail { margin-top: var(--space-2); overflow-wrap: anywhere; }
+.plugin-tool-detail summary { cursor: pointer; color: var(--text-primary); }
+.plugin-tool-detail ul { margin: var(--space-2) 0; padding-left: 1.25rem; }
+.plugin-tool-detail li { margin-bottom: var(--space-2); }
+.plugin-tool-detail li b, .plugin-tool-detail li span { display: block; }
+.plugin-tool-detail p { margin: var(--space-2) 0 0; }
+
+.plugin-preview-tools { margin: 0; padding-left: 1.25rem; max-height: 18rem; overflow-y: auto; }
+.plugin-preview-tools li { margin-bottom: var(--space-2); }
+.plugin-preview-tools li strong, .plugin-preview-tools li span { display: block; }
+
+.plugin-url-fields { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+
+/* Integration review (#260): the Yours/Discover switch sizes to its options like the Skills/Connectors/Plugins
+   switch above it, and disclosure summaries read at the card's footnote size. */
+.plugins-directory > .glass-seg { align-self: flex-start; width: max-content; }
+.plugin-grid-installed summary, .plugin-tool-detail summary { font-size: var(--text-footnote); }

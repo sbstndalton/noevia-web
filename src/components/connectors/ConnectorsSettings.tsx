@@ -41,6 +41,35 @@ const SUGGESTIONS = [
 
 const when = (ms?: number | null) => (ms ? new Date(ms).toLocaleString(appLocale(), { dateStyle: 'medium', timeStyle: 'short' }) : 'never');
 
+function TrustReview({ origin, scope, tools, connected }: { origin: string; scope: string; tools: Tool[]; connected: boolean }): JSX.Element {
+  const readable = tools.filter((tool) => !tool.write && tool.mode !== 'block').length;
+  const writable = tools.filter((tool) => tool.write && tool.mode !== 'block').length;
+  const blocked = tools.filter((tool) => tool.mode === 'block').length;
+  return <section className="connector-trust" aria-label="Connection access review">
+    <h2>Access review</h2>
+    <dl>
+      <div><dt>Destination</dt><dd>{origin}</dd></div>
+      <div><dt>Scope</dt><dd>{scope}</dd></div>
+      <div><dt>Tools</dt><dd>{readable} read · {writable} write or delete · {blocked} blocked</dd></div>
+    </dl>
+    <p>{connected ? 'Enabled tools can send the data needed for a request to this service.' : 'These tool permissions take effect after this account connects.'} Every write or delete still needs your approval before it runs.</p>
+  </section>;
+}
+
+function ToolReview({ tools, busy, setMode }: { tools: Tool[]; busy: string; setMode: (tools: string[], mode: ToolMode) => void }): JSX.Element {
+  const [query, setQuery] = useState('');
+  const matching = tools.filter((tool) => `${tool.label} ${tool.name}`.toLowerCase().includes(query.trim().toLowerCase()));
+  const groups: [string, Tool[]][] = [['Read-only tools', matching.filter((tool) => !tool.write)], ['Write and delete tools', matching.filter((tool) => tool.write)]];
+  return <>
+    <h2>Tool permissions</h2>
+    <p className="lede lede-tight">Read tools can use this connection without a write approval when allowed. Writes and deletes always ask before they run. Blocked tools cannot run.</p>
+    {tools.length > 0 && <input className="connector-tool-search" type="search" aria-label="Find a connector tool" placeholder="Find a tool…" value={query} onChange={(event) => setQuery(event.target.value)} />}
+    {tools.length === 0 && <p className="route-note">No tools are available to review yet.</p>}
+    {query && matching.length === 0 && <p className="route-note" role="status">No tools match “{query}”.</p>}
+    {groups.map(([title, group]) => group.length > 0 && <PermGroup key={title} title={title} tools={group} busy={busy} setMode={setMode}/>)}
+  </>;
+}
+
 export function DriveLogo({ size = 24 }: { size?: number }): JSX.Element {
   return <svg width={size} height={size} viewBox="0 0 87.3 78" aria-hidden="true">
     <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
@@ -145,7 +174,6 @@ function DrivePage({ drive, isAdmin, onBack, onChange, onActionStart, reload, on
   const disconnect = () => act('disconnect', () => call<Drive>('/api/connectors/gdrive/disconnect', 'POST', {})).then(() => setConfirmOff(false));
   const setMode = (tools: string[], mode: ToolMode) => void act(`policy:${tools.join(',')}`, () => call<Drive>('/api/connectors/gdrive/policy', 'PUT', { tools, mode }));
   const connected = drive.state === 'connected';
-  const groups: [string, Tool[]][] = [['Read-only tools', drive.tools.filter((t) => !t.write)], ['Write and delete tools', drive.tools.filter((t) => t.write)]];
 
   return <div className="connector-page">
     <button className="crumb-link" onClick={onBack}><ShellIcon name="arrow"/>Connectors</button>
@@ -157,6 +185,7 @@ function DrivePage({ drive, isAdmin, onBack, onChange, onActionStart, reload, on
       </div>
     </div>
     <p className="lede">Lets noevia search, read and save files in your Drive. It only sees files it created or that were shared with it (Google’s <em>drive.file</em> access), never the rest of your Drive.</p>
+    <TrustReview origin="Google Drive · Google account" scope="This account; files noevia created or you shared with it" tools={drive.tools} connected={connected}/>
     {(error || (drive.message && drive.state !== 'pending')) && <p className="route-note" role="alert">{error || drive.message}</p>}
 
     {confirmOff && <div className="confirm-strip surface" role="alert">
@@ -194,9 +223,7 @@ function DrivePage({ drive, isAdmin, onBack, onChange, onActionStart, reload, on
       <div className="suggest">{SUGGESTIONS.map((s) => <button key={s} className="chip" onClick={() => onStartChat(s)}>{s}<ShellIcon name="arrow-right" size={14}/></button>)}</div>
     </>}
 
-    <h2>Tool permissions</h2>
-    <p className="lede lede-tight">Choose when noevia may use each tool. Writes always show you what will change before they run.</p>
-    {groups.map(([title, tools]) => <PermGroup key={title} title={title} tools={tools} busy={busy} setMode={setMode}/>)}
+    <ToolReview tools={drive.tools} busy={busy} setMode={setMode}/>
     {!connected && drive.state !== 'not-configured' && <p className="preview-footnote">These apply as soon as Drive is connected.</p>}
   </div>;
 }
@@ -237,7 +264,6 @@ function NextcloudPage({ nc, onBack, onChange }: { nc: Nextcloud; onBack: () => 
     try { onChange(await call<Nextcloud>('/api/connectors/nextcloud/policy', 'PUT', { tools, mode })); }
     catch (e) { setError((e as Error).message); } finally { setBusy(''); }
   };
-  const groups: [string, Tool[]][] = [['Read-only tools', nc.tools.filter((t) => !t.write)], ['Write and delete tools', nc.tools.filter((t) => t.write)]];
   return <div className="connector-page">
     <button className="crumb-link" onClick={onBack}><ShellIcon name="arrow"/>Connectors</button>
     <div className="conn-head">
@@ -250,6 +276,7 @@ function NextcloudPage({ nc, onBack, onChange }: { nc: Nextcloud; onBack: () => 
       </div>
     </div>
     <p className="lede">Your own Nextcloud, reached with the connection you set under <b>Settings → Diary &amp; storage</b>. noevia sends your app password only to that address, only for your requests, and only to the server an administrator listed.</p>
+    <TrustReview origin={nc.baseUrl || 'Nextcloud address set by the server administrator'} scope="This account; project toolboxes choose which tools are offered in chat" tools={nc.tools} connected={nc.state === 'connected'}/>
     {(error || nc.message) && <p className="route-note" role={error || nc.state === 'error' ? 'alert' : 'status'}>{error || nc.message}</p>}
     {nc.baseUrl && <div className="group surface"><div className="row">
       <div className="row-text"><span className="row-label">Address</span><span className="row-desc">{nc.baseUrl}</span></div>
@@ -259,9 +286,7 @@ function NextcloudPage({ nc, onBack, onChange }: { nc: Nextcloud; onBack: () => 
         <span className="row-desc">{nc.boxes.map((b) => `${b.label} (${b.toolCount})`).join(' · ')}. A project chooses which of these it uses.</span></div>
     </div></div>}
     {nc.tools.length > 0 && <>
-      <h2>Tool permissions</h2>
-      <p className="lede lede-tight">Choose when noevia may use each tool. Writes always show you what will change before they run.</p>
-      {groups.map(([title, tools]) => tools.length > 0 && <PermGroup key={title} title={title} tools={tools} busy={busy} setMode={(t, m) => void setMode(t, m)}/>)}
+      <ToolReview tools={nc.tools} busy={busy} setMode={(t, m) => void setMode(t, m)}/>
       {nc.state !== 'connected' && <p className="preview-footnote">These apply as soon as Nextcloud is connected.</p>}
     </>}
   </div>;

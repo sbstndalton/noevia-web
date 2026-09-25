@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch, fetchProfile } from '../../api';
 import { ShellIcon } from '../ShellIcon';
@@ -15,7 +15,8 @@ export function customiseTab(value: string | null | undefined): CustomiseTab {
 }
 interface Item { why?: string; id: string; name: string; publisher: string; description: string; version: string; url: string; remote: boolean; installable?: boolean; notInstallable?: string; needsKey?: boolean; headers?: KeyHeader[] }
 interface KeyHeader { name: string; required: boolean; secret: boolean; description: string; template: string | null }
-interface Added { id: string; registryName: string; title: string; declaredHeaders?: KeyHeader[]; toolCount: number | null; error: string | null; keyHeaders?: string[]; oauth?: boolean; personal?: boolean; redirectUri?: string; oauthClient?: { manual: boolean; clientId: string | null; hasSecret: boolean; redirectUri: string; issuer: string } | null }
+interface ProjectSkill { file: string; name: string; description: string; version: string; content: string; status: 'review' | 'updated' | 'enabled' | 'disabled' | 'invalid'; error: string; missingTools: string[] }
+interface Added { id: string; registryName: string; title: string; declaredHeaders?: KeyHeader[]; toolCount: number | null; tools?: { name: string; description: string }[]; toolsTruncated?: boolean; error: string | null; keyHeaders?: string[]; oauth?: boolean; personal?: boolean; redirectUri?: string; oauthClient?: { manual: boolean; clientId: string | null; hasSecret: boolean; redirectUri: string; issuer: string } | null }
 
 /** Open the sign-in in a new tab from inside the click (or the browser blocks it), then point it at the URL. */
 const tools = (n: number | null | undefined) => `${n ?? '…'} tool${n === 1 ? '' : 's'}`;
@@ -42,15 +43,45 @@ export function PluginsView({ onStartChat, embedded = false, projects = [], onPr
     {tab === 'connectors'
       ? <div className="plugins-connected"><h2 className="plugins-subhead">Connected</h2><ConnectorsSettings hideTitle isAdmin={isAdmin} onStartChat={onStartChat}/></div>
       : tab === 'plugins'
-        ? <div className="plugins-connected"><h2 className="plugins-subhead">Installed MCP servers</h2><SignInServers/><KeyServers/><p className="plugins-note">Each MCP server is a toolbox a project chooses; every write it offers still asks before it runs.{isAdmin ? '' : ' Adding servers is an administrator action.'}</p><h2 className="plugins-subhead">Discover</h2><Directory key="mcp" kind="mcp" projects={projects} onProjectsChanged={onProjectsChanged} isAdmin={isAdmin}/></div>
-        : <><p className="plugins-note">Installed skills are listed in each project’s instruction skills. Browse below to add one to a project.</p><h2 className="plugins-subhead">Discover</h2><Directory key="skills" kind="skills" projects={projects} onProjectsChanged={onProjectsChanged} isAdmin={isAdmin}/></>}
+        ? <div className="plugins-connected"><h2 className="plugins-subhead">Installed MCP servers</h2><SignInServers/><KeyServers/><p className="plugins-note">Each MCP server is a toolbox a project chooses; every write it offers still asks before it runs.{isAdmin ? '' : ' Adding servers is an administrator action.'}</p><h2 className="plugins-subhead">Library</h2><Directory key="mcp" kind="mcp" projects={projects} onProjectsChanged={onProjectsChanged} isAdmin={isAdmin}/></div>
+        : <><p className="plugins-note">Installed skills are listed in each project’s instruction skills. Browse below to add one to a project.</p><h2 className="plugins-subhead">Library</h2><Directory key="skills" kind="skills" projects={projects} onProjectsChanged={onProjectsChanged} isAdmin={isAdmin}/></>}
   </div>;
   return embedded ? body : <main className="main plugins-view">{body}</main>;
 }
 
 function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp' | 'skills'; projects: { id: string; name: string }[]; onProjectsChanged?: () => void; isAdmin: boolean }): JSX.Element {
   const [added, setAdded] = useState<Added[]>([]);
-  useEffect(() => { if (kind !== 'mcp' || !isAdmin) return; apiFetch('/api/admin/mcp-directory').then((r) => r.json()).then((d) => setAdded(d.servers || [])).catch(() => undefined); }, [kind, isAdmin]);
+  const [addedStatus, setAddedStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [addedAttempt, setAddedAttempt] = useState(0);
+  useEffect(() => {
+    if (kind !== 'mcp' || !isAdmin) return;
+    let live = true;
+    setAddedStatus('loading');
+    apiFetch('/api/admin/mcp-directory').then(async (r) => { if (!r.ok) throw new Error('Could not load added servers.'); return r.json(); })
+      .then((d) => { if (live) { setAdded(d.servers || []); setAddedStatus('ready'); } })
+      .catch(() => { if (live) setAddedStatus('error'); });
+    return () => { live = false; };
+  }, [kind, isAdmin, addedAttempt]);
+  const [mode, setMode] = useState<'yours' | 'discover'>('yours');
+  const [yourQuery, setYourQuery] = useState('');
+  const [skillProject, setSkillProject] = useState(projects[0]?.id || '');
+  useEffect(() => {
+    if (kind === 'skills' && !projects.some((project) => project.id === skillProject)) {
+      setSkillProject(projects[0]?.id || '');
+    }
+  }, [kind, projects, skillProject]);
+  const [projectSkills, setProjectSkills] = useState<ProjectSkill[]>([]);
+  const [skillsStatus, setSkillsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [skillsAttempt, setSkillsAttempt] = useState(0);
+  useEffect(() => {
+    if (kind !== 'skills' || !skillProject) return;
+    let live = true; setSkillsStatus('loading');
+    apiFetch(`/api/projects/${encodeURIComponent(skillProject)}/instruction-skills`)
+      .then(async (r) => { const data = await r.json(); if (!r.ok || !Array.isArray(data.skills)) throw new Error(data.error || 'Could not load skills.'); return data.skills as ProjectSkill[]; })
+      .then((skills) => { if (live) { setProjectSkills(skills); setSkillsStatus('ready'); } })
+      .catch(() => { if (live) setSkillsStatus('error'); });
+    return () => { live = false; };
+  }, [kind, skillProject, skillsAttempt]);
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<Item[] | null>(null);
   const [error, setError] = useState('');
@@ -65,15 +96,18 @@ function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp'
     return () => { live = false; };
   }, [kind]);
   useEffect(() => {
+    if (mode === 'yours') return;
     let live = true;
     const t = window.setTimeout(() => {
-      setError('');
+      setItems(null); setError('');
       apiFetch(`/api/plugins/directory?kind=${kind}&q=${encodeURIComponent(query.trim())}`)
         .then(async (r) => { const data = await r.json().catch(() => ({})); if (!live) return; setSource(data.source ?? null); if (!r.ok) throw new Error(data.error || 'The directory could not be reached.'); setItems(data.items); })
         .catch((e) => { if (live) { setError((e as Error).message); setItems([]); } });
     }, query ? 300 : 0);
     return () => { live = false; window.clearTimeout(t); };
-  }, [kind, query, attempt]);
+  }, [kind, mode, query, attempt]);
+  const matchingSkills = [...projectSkills].filter((skill) => `${skill.name} ${skill.file} ${skill.description}`.toLocaleLowerCase().includes(yourQuery.trim().toLocaleLowerCase())).sort((a, b) => (a.name || a.file).localeCompare(b.name || b.file) || a.file.localeCompare(b.file));
+  const matchingAdded = [...added].filter((a) => `${a.title} ${a.registryName}`.toLocaleLowerCase().includes(yourQuery.trim().toLocaleLowerCase())).sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
   const card = (i: Item, starter = false) => <li key={(starter ? 'starter:' : '') + i.id} className="plugin-card surface">
         <span className="plugin-card-icon"><ShellIcon name={kind === 'mcp' ? 'server' : 'sparkles'} size={20}/></span>
         <span className="plugin-card-text">
@@ -84,12 +118,41 @@ function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp'
         </span>
         <span className="plugin-card-actions">
           {i.url && <a className="btn btn-secondary btn-sm plugin-card-link" href={i.url} target="_blank" rel="noreferrer noopener" aria-label={`View ${i.name}`}>View</a>}
-          {kind === 'skills' && <AddSkill skill={i} projects={projects} onAdded={onProjectsChanged}/>}
+          {kind === 'skills' && <AddSkill skill={i} projects={projects} installedIn={(skillsStatus === 'ready' ? projectSkills : []).filter((s) => s.file === `${i.id}/SKILL.md`).map(() => skillProject)} onAdded={() => { setSkillsAttempt((n) => n + 1); onProjectsChanged?.(); }}/>}
           {kind === 'mcp' && isAdmin && <AddServer item={i} added={added.find((a) => a.registryName === i.id)} onChange={setAdded}/>}
         </span>
 </li>;
   return <section className="plugins-directory" aria-label={kind === 'mcp' ? 'MCP servers' : 'Skills'}>
-    <div className="settings-search plugins-search"><ShellIcon name="search" size={16}/><input aria-label={kind === 'mcp' ? 'Search MCP servers' : 'Search skills'} placeholder={kind === 'mcp' ? 'Search MCP servers' : 'Search skills'} value={query} onChange={(e) => setQuery(e.target.value)}/></div>
+    <SegmentedControl label={kind === 'mcp' ? 'MCP server inventory' : 'Skill inventory'} value={mode} onChange={setMode} options={[["yours", kind === 'mcp' ? "Added" : "In a project"], ["discover", "Discover"]]}/>
+    {kind === 'skills' && mode === 'yours' ? <>
+      <label className="plugins-project-picker">Project <select value={skillProject} onChange={(e) => setSkillProject(e.target.value)}>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+      <div className="settings-search plugins-search"><ShellIcon name="search" size={16}/><input aria-label="Search project skills" placeholder="Search skills by name or file" value={yourQuery} onChange={(e) => setYourQuery(e.target.value)}/></div>
+      <p className="plugins-note">Instruction files in this project. Enabled versions guide replies; they do not grant tools or write permission. Review, enable or remove files from the project.</p>
+      {!skillProject ? <p className="plugins-note">Create a project to keep instruction skills.</p>
+        : skillsStatus === 'loading' ? <p className="plugins-note" role="status">Loading project skills…</p>
+        : skillsStatus === 'error' ? <p className="route-note" role="alert">Could not load project skills. <button className="btn btn-secondary btn-sm" onClick={() => setSkillsAttempt((n) => n + 1)}>Try again</button></p>
+        : matchingSkills.length ? <ul className="plugin-grid plugin-grid-installed">{matchingSkills.map((skill) => <li key={skill.file} className="plugin-card surface"><span className="plugin-card-text"><b>{skill.name || skill.file}</b><small className="plugin-publisher">Project file · {skill.status === 'enabled' ? 'Enabled' : skill.status === 'review' || skill.status === 'updated' ? 'Review required' : skill.status === 'invalid' ? 'Needs correction' : 'Disabled'}</small><small>{skill.file}{skill.version ? ` · v${skill.version}` : ''}</small>{skill.description && <small>{skill.description}</small>}<details><summary>View instructions and scope</summary><p>Instructions for this project only. Required tools are never enabled automatically.</p>{skill.missingTools?.length > 0 && <p>Requires: {skill.missingTools.join(', ')}</p>}{skill.error && <p role="alert">{skill.error}</p>}<pre>{skill.content}</pre></details></span></li>)}</ul>
+        : <p className="plugins-note" role="status">{yourQuery ? `No project skills match “${yourQuery}”.` : 'No instruction skills in this project. Discover one or upload a Markdown skill in the project.'}</p>}
+    </> : kind === 'mcp' && mode === 'yours' ? <>
+      <div className="settings-search plugins-search"><ShellIcon name="search" size={16}/><input aria-label="Search added MCP servers" placeholder="Search added servers by name or source" value={yourQuery} onChange={(e) => setYourQuery(e.target.value)}/></div>
+      <p className="plugins-note">Servers added to this noevia. A project must select one to use its tools, and every tool asks before it runs.</p>
+      {!isAdmin ? <p className="plugins-note">An administrator manages this inventory.</p>
+        : addedStatus === 'loading' ? <p className="plugins-note" role="status">Loading added servers…</p>
+        : addedStatus === 'error' ? <p className="route-note" role="alert">Could not load added servers. <button className="btn btn-secondary btn-sm" onClick={() => setAddedAttempt((n) => n + 1)}>Try again</button></p>
+        : matchingAdded.length ? <ul className="plugin-grid">{matchingAdded.map((a) =>
+          <li key={a.id} className="plugin-card surface">
+            <span className="plugin-card-icon"><ShellIcon name="server" size={20}/></span>
+            <span className="plugin-card-text"><b>{a.title}</b><small className="plugin-publisher">{a.registryName.startsWith('url:') ? 'Added by URL' : 'Public MCP registry'} · {a.error ? 'Needs attention' : `${tools(a.toolCount)} available`}</small><small>{a.registryName.startsWith('url:') ? a.registryName.slice(4) : a.registryName}</small>
+              <details className="plugin-tool-detail"><summary>Available tools{a.tools?.length ? ` (${a.toolCount ?? a.tools.length})` : ''}</summary>
+                {a.tools?.length ? <ul>{a.tools.map((tool) => <li key={tool.name}><b>{tool.name}</b>{tool.description && <span>{tool.description}</span>}</li>)}</ul> : <p>{a.error ? 'Tools are unavailable while this server needs attention.' : 'No tools discovered yet.'}</p>}
+                {a.toolsTruncated && <p>Showing the first 40 tools.</p>}
+                <p>A project must select this toolbox. Every call asks for approval.</p>
+              </details></span>
+            <span className="plugin-card-actions"><AddServer item={{ id: a.registryName, name: a.title, publisher: '', description: '', version: '', url: '', remote: true, installable: true, headers: a.declaredHeaders }} added={a} onChange={setAdded}/></span>
+          </li>)}</ul>
+        : <p className="plugins-note" role="status">{yourQuery ? `No added servers match “${yourQuery}”.` : 'No MCP servers added yet. Explore the directory to add one.'}</p>}
+    </> : <>
+      <div className="settings-search plugins-search"><ShellIcon name="search" size={16}/><input aria-label={kind === 'mcp' ? 'Search MCP servers' : 'Search skills'} placeholder={kind === 'mcp' ? 'Search MCP servers' : 'Search skills'} value={query} onChange={(e) => setQuery(e.target.value)}/></div>
     <p className="plugins-note">{kind === 'mcp'
       ? (isAdmin ? 'Published by their authors in the public MCP registry, not reviewed by noevia. Administrators can add hosted servers: each becomes a toolbox a project has to choose, it never receives your passwords, and every one of its tools asks before it runs.' : 'Published by their authors in the public MCP registry, not reviewed by noevia. An administrator can add hosted servers for everyone on this noevia.')
       : 'Skills published by Anthropic. Add one to a project and it arrives switched off: review it in the project’s instruction skills, then enable it. Only the written instructions are copied; scripts a skill bundles are never downloaded or run.'}
@@ -97,15 +160,6 @@ function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp'
     {error && <p className="route-note" role="alert">{error} <button className="btn btn-secondary btn-sm" onClick={() => setAttempt((n) => n + 1)}>Try again</button></p>}
     {kind === 'mcp' && isAdmin && <AddByUrl onChange={setAdded}/>}
     {items === null ? <p className="plugins-note" aria-live="polite">Loading…</p> : !error && items.length === 0 ? <p className="plugins-note">Nothing matches “{query}”.</p> : null}
-    {/* Servers added by URL have no registry entry of their own; list them here so they can be
-        managed (user roadmap: custom MCP server by URL). */}
-    {kind === 'mcp' && isAdmin && added.some((a) => a.registryName.startsWith('url:')) && <ul className="plugin-grid">
-      {added.filter((a) => a.registryName.startsWith('url:')).map((a) => <li key={a.id} className="plugin-card surface">
-        <span className="plugin-card-icon"><ShellIcon name="server" size={20}/></span>
-        <span className="plugin-card-text"><b>{a.title}</b><small className="plugin-publisher">Added by URL</small><small>{a.registryName.slice(4)}</small></span>
-        <span className="plugin-card-actions"><AddServer item={{ id: a.registryName, name: a.title, publisher: '', description: '', version: '', url: '', remote: true, installable: true, headers: a.declaredHeaders }} added={a} onChange={setAdded}/></span>
-      </li>)}
-    </ul>}
     {!query && starters.length > 0 && <section className="plugins-starters" aria-label="Recommended by noevia">
       <h2 className="plugins-subhead">Recommended by noevia</h2>
       <ul className="plugin-grid">{starters.map((i) => card(i, true))}</ul>
@@ -113,18 +167,18 @@ function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp'
     {!query && starters.length > 0 && items && items.length > 0 && <h2 className="plugins-subhead">{kind === 'mcp' ? 'All MCP servers' : 'All skills'}</h2>}
     <ul className="plugin-grid">
       {items?.map((i) => card(i))}
-    </ul>
+    </ul></>}
   </section>;
 }
 
 /** Add one published skill to a chosen project. It arrives needing review, never enabled. */
-function AddSkill({ skill, projects, onAdded }: { skill: Item; projects: { id: string; name: string }[]; onAdded?: () => void }): JSX.Element {
+function AddSkill({ skill, projects, installedIn = [], onAdded }: { skill: Item; projects: { id: string; name: string }[]; installedIn?: string[]; onAdded?: () => void }): JSX.Element {
   const [open, setOpen] = useState(false);
   const [project, setProject] = useState('');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
   if (!projects.length) return <button className="btn btn-secondary btn-sm plugin-card-link" disabled title="Create a project first">Add to project</button>;
-  if (!open) return <span className="plugin-add"><button className="btn btn-secondary btn-sm plugin-card-link" aria-label={`Add ${skill.name} to a project`} onClick={() => { setOpen(true); setNote(null); }}>Add to project</button>{note && <small role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</small>}</span>;
+  if (!open) return <span className="plugin-add">{installedIn.length > 0 && <small>In selected project</small>}<button className="btn btn-secondary btn-sm plugin-card-link" aria-label={`Add ${skill.name} to a project`} onClick={() => { setOpen(true); setNote(null); }}>Add to project</button>{note && <small role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</small>}</span>;
   const add = async () => {
     setBusy(true); setNote(null);
     try {
@@ -332,34 +386,59 @@ function AddByUrl({ onChange }: { onChange: (servers: Added[]) => void }): JSX.E
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ title: '', url: '', headerName: '', headerValue: '', keyMode: 'personal' as 'personal' | 'shared' });
   const [busy, setBusy] = useState(false);
+  const [review, setReview] = useState(false);
+  const [preview, setPreview] = useState<{ requiresSignIn: boolean; toolCount: number | null; tools: { name: string; description: string }[]; toolsTruncated: boolean; previewToken: string } | null>(null);
+  const revision = useRef(0);
+  const resetReview = () => { revision.current++; setReview(false); setPreview(null); };
   const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
-  const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const set = (k: keyof typeof form) => (e: { target: { value: string } }) => { resetReview(); setForm((f) => ({ ...f, [k]: e.target.value })); };
+  const check = async () => {
+    const current = revision.current;
+    setBusy(true); setNote(null);
+    try {
+      const r = await apiFetch('/api/admin/mcp-directory/custom/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const data = await r.json().catch(() => ({}));
+      if (current !== revision.current) return;
+      if (!r.ok) throw new Error(data.error || 'Could not preview this server.');
+      setPreview(data); setReview(true);
+    } catch (e) { if (current === revision.current) setNote({ text: (e as Error).message, error: true }); }
+    finally { setBusy(false); }
+  };
   const submit = () => void signInTab(async () => {
     setBusy(true); setNote(null);
     try {
-      const r = await apiFetch('/api/admin/mcp-directory/custom', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const r = await apiFetch('/api/admin/mcp-directory/custom', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, previewToken: preview?.previewToken }) });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok) { setNote({ text: d.error || 'That did not work.', error: true }); return null; }
+      if (!r.ok) { if (r.status === 409) resetReview(); setNote({ text: d.error || 'That did not work.', error: true }); return null; }
       onChange(d.servers || []);
-      if (d.signIn) { setNote({ text: 'Finish signing in in the new tab.' }); return d.signIn; }
+      if (d.signIn) { setNote({ text: 'Sign in with this server in the new tab. Its tools will be discovered after sign-in; review the available tools before selecting its toolbox in a project.' }); return d.signIn; }
       if (d.needsClient) { setNote({ text: 'This server needs an app registered by hand. Use “Set up app” on its card below.', error: true }); setOpen(false); return null; }
-      setNote({ text: `Added with ${tools(d.server?.toolCount ?? 0)}. Choose it under a project’s Tools.` });
-      setOpen(false); setForm({ title: '', url: '', headerName: '', headerValue: '', keyMode: 'personal' });
+      setNote({ text: `Connected. noevia discovered ${tools(d.server?.toolCount ?? 0)}. Review its toolbox before selecting it in a project; each tool call still asks for approval.` });
+      setOpen(false); resetReview(); setForm({ title: '', url: '', headerName: '', headerValue: '', keyMode: 'personal' });
       return null;
     } finally { setBusy(false); }
   }).catch((e) => setNote({ text: (e as Error).message, error: true }));
   if (!open) return <p className="plugins-note"><button className="btn btn-secondary btn-sm" onClick={() => { setOpen(true); setNote(null); }}>Add a server by URL</button>{note && <> <span role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</span></>}</p>;
-  return <form className="plugin-key-form plugin-url-form" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+  return <form className="plugin-key-form plugin-url-form" onSubmit={(e) => { e.preventDefault(); if (busy) return; if (review && preview) submit(); else void check(); }}>
+    <fieldset className="plugin-url-fields" disabled={busy}>
     <label><span>Name</span><input required value={form.title} onChange={set('title')} placeholder="What this server is"/></label>
     <label><span>Address</span><input required type="url" inputMode="url" autoComplete="off" spellCheck={false} value={form.url} onChange={set('url')} placeholder="https://example.com/mcp"/></label>
     <label><span>Sign-in header (optional)</span><input autoComplete="off" spellCheck={false} value={form.headerName} onChange={set('headerName')} placeholder="Authorization"/></label>
     {form.headerName && <label><span>Its value</span><input type="password" autoComplete="off" value={form.headerValue} onChange={set('headerValue')} placeholder="Bearer …"/></label>}
     {form.headerName && <fieldset className="plugin-key-mode"><legend>Who uses this key</legend>
-      <label><input type="radio" name="url-mode" checked={form.keyMode === 'personal'} onChange={() => setForm((f) => ({ ...f, keyMode: 'personal' }))}/> Each person uses their own key</label>
-      <label><input type="radio" name="url-mode" checked={form.keyMode === 'shared'} onChange={() => setForm((f) => ({ ...f, keyMode: 'shared' }))}/> Everyone uses this key</label>
+      <label><input type="radio" name="url-mode" checked={form.keyMode === 'personal'} onChange={() => { resetReview(); setForm((f) => ({ ...f, keyMode: 'personal' })); }}/> Each person uses their own key</label>
+      <label><input type="radio" name="url-mode" checked={form.keyMode === 'shared'} onChange={() => { resetReview(); setForm((f) => ({ ...f, keyMode: 'shared' })); }}/> Everyone uses this key</label>
     </fieldset>}
-    <small className="plugin-key-note">noevia checks the address is a public https host and that the server answers before saving it. If it asks for a sign-in instead, you will be sent to sign in. It becomes its own toolbox, gets no passwords, and every one of its tools asks before it runs.</small>
-    <span className="plugin-key-actions"><button className="btn btn-primary btn-sm" disabled={busy}>{busy ? 'Checking…' : 'Add server'}</button><button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setOpen(false)}>Cancel</button></span>
+    </fieldset>
+    {review ? <div className="plugin-url-review" role="group" aria-label="Review server access">
+      <b>Review before connecting</b>
+      <p><strong>Server:</strong> {form.title} · <span className="plugin-url-address">{form.url}</span></p>
+      <p><strong>Data access:</strong> Requests to this external server can send conversation context and tool arguments when its toolbox is selected.</p>
+      {preview?.requiresSignIn ? <p>The server requires sign-in. Tool details are unavailable until sign-in completes.</p> : <><p><strong>Discovered tools:</strong> {preview?.toolCount ?? 0}{preview?.toolsTruncated ? ' (first 40 shown)' : ''}</p><ul className="plugin-preview-tools">{preview?.tools.map((tool) => <li key={tool.name}><strong>{tool.name}</strong>{tool.description && <span>{tool.description}</span>}</li>)}</ul></>}
+      <p><strong>Credential:</strong> {form.headerName ? `${form.headerName} header; ${form.keyMode === 'shared' ? 'shared with everyone who uses this toolbox' : 'used only for your requests'}.` : 'No header supplied. The server may ask you to sign in.'}</p>
+      <p><strong>Control:</strong> A project must select the toolbox. Tools may change later; every call still asks for approval.</p>
+    </div> : <small className="plugin-key-note">Preview checks the public HTTPS address and asks the server for its tools without saving it. Review the destination and discovered tools before connecting.</small>}
+    <span className="plugin-key-actions"><button className="btn btn-primary btn-sm" disabled={busy}>{busy ? (review ? 'Connecting…' : 'Checking…') : review ? 'Connect reviewed server' : 'Preview tools'}</button><button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => { setOpen(false); resetReview(); }}>Cancel</button></span>
     {note && <small role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</small>}
   </form>;
 }

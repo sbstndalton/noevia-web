@@ -54,6 +54,7 @@ export function UsageView(): JSX.Element {
   // silently removed the toggle too; ask the profile directly instead.
   const [isAdmin,setIsAdmin]=useState(false);
   const [window_, setWindow] = useState<'7' | '30' | 'all'>('30');
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -78,6 +79,7 @@ export function UsageView(): JSX.Element {
   // Column-major weeks so the grid reads left-to-right in time, like a
   // contribution graph: each column is a week, each row a weekday.
   const grid = data.days;
+  const activeDay = grid.find((day) => day.day === selectedDay) ?? grid[grid.length - 1];
   const firstWeekday = grid.length ? new Date(`${grid[0].day}T12:00:00`).getDay() : 0;
   const cells = [...Array.from({ length: firstWeekday }, () => null), ...grid];
   const weeks = Math.max(1, Math.ceil(cells.length / 7));
@@ -123,7 +125,7 @@ export function UsageView(): JSX.Element {
 
     <section className="usage-section">
       <div className="usage-section-head">
-        <div><h2>Activity</h2><p>The last {data.retentionDays} days, in {data.timeZone} time.</p></div>
+        <div><h2>Activity</h2><p>The last {data.retentionDays} days, in {data.timeZone} time. A response counts when its provider reports usage; cancelled or unreported responses may be absent.</p></div>
       </div>
       {grid.length === 0 && <p className="route-note">No daily activity recorded yet.</p>}
       <div className="usage-heatmap-scroll">
@@ -141,13 +143,26 @@ export function UsageView(): JSX.Element {
             <div className="usage-weekdays" aria-hidden="true">
               {['', 'Mon', '', 'Wed', '', 'Fri', ''].map((label, i) => <span key={i}>{label}</span>)}
             </div>
-            <div className="usage-heatmap" role="img" aria-label={`Daily activity for the last ${data.retentionDays} days. ${data.activeDays} active days.`}>
+            <div className="usage-heatmap" role="group" aria-label={`Daily activity for the last ${data.retentionDays} days. ${data.activeDays} active days. Select a day for details.`}>
               {cells.map((d, i) => d === null
                 ? <span key={`pad-${i}`} className="usage-cell is-pad" />
-                : <span
+                : <button
                     key={d.day}
+                    type="button"
                     className={`usage-cell level-${level(d.input + d.output, busiest)}`}
-                    title={`${d.day} · ${compact(d.input + d.output)} tokens · ${d.replies} ${d.replies === 1 ? 'reply' : 'replies'}`}
+                    aria-label={`${d.day}: ${d.replies} ${d.replies === 1 ? 'response' : 'responses'}, ${d.input} input tokens, ${d.output} output tokens`}
+                    aria-pressed={activeDay?.day === d.day}
+                    tabIndex={activeDay?.day === d.day ? 0 : -1}
+                    onClick={() => setSelectedDay(d.day)}
+                    onKeyDown={(event) => {
+                      const offset = { ArrowDown: 1, ArrowUp: -1, ArrowRight: 7, ArrowLeft: -7 }[event.key as 'ArrowDown' | 'ArrowUp' | 'ArrowRight' | 'ArrowLeft'];
+                      const target = event.key === 'Home' ? 0 : event.key === 'End' ? grid.length - 1 : offset === undefined ? -1 : Math.max(0, Math.min(grid.length - 1, grid.findIndex((day) => day.day === d.day) + offset));
+                      if (target < 0) return;
+                      event.preventDefault();
+                      setSelectedDay(grid[target].day);
+                      const targetButton = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('button')[target];
+                      targetButton?.focus();
+                    }}
                   />)}
             </div>
           </div>
@@ -157,6 +172,11 @@ export function UsageView(): JSX.Element {
         <span>{data.activeDays} active days</span>
         <span className="usage-scale">Less {[0, 1, 2, 3, 4].map((l) => <i key={l} className={`usage-cell level-${l}`} />)} More</span>
       </div>
+      {activeDay && <div className="usage-day-detail" aria-live="polite">
+        <label htmlFor="usage-day-picker">Inspect a day</label>
+        <input id="usage-day-picker" type="date" min={grid[0].day} max={grid[grid.length - 1].day} value={activeDay.day} onChange={(event) => setSelectedDay(event.target.value)} />
+        <p><strong>{activeDay.day}</strong> · {activeDay.replies.toLocaleString()} {activeDay.replies === 1 ? 'response' : 'responses'} · {activeDay.input.toLocaleString()} input tokens · {activeDay.output.toLocaleString()} output tokens</p>
+      </div>}
     </section>
 
     <section className="usage-section">

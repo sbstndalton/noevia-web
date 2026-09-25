@@ -4,6 +4,7 @@ import type { JSX } from 'react';
 import type { InstalledModel, Project, ProjectMode } from '../types';
 import { ShellIcon } from './ShellIcon';
 import { CloseButton } from './CloseButton';
+import { FolderPicker } from './FolderPicker';
 
 /** Project identity and behavior. Reference files are managed on Sources. */
 export function EditProjectModal({
@@ -31,6 +32,9 @@ export function EditProjectModal({
   const bothModes = modes.includes('chat') && modes.includes('code');
   const [addError, setAddError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [folders, setFolders] = useState(project.sourceFolders || []);
+  const [pickingFolder, setPickingFolder] = useState(false);
+  const linkedFolders = folders.filter((folder) => folder !== project.projectFolder);
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -53,6 +57,7 @@ export function EditProjectModal({
         modes,
         // Sharing only means something across two modes; with one, it is saved off.
         sharedContext: bothModes ? shared : { chat: false, code: false },
+        ...(JSON.stringify(folders) !== JSON.stringify(project.sourceFolders || []) ? { sourceFolders: folders } : {}),
       });
       onClose();
     } catch (e) {
@@ -138,6 +143,16 @@ export function EditProjectModal({
           {project.projectFolder ? <p className="storage-path"><ShellIcon name="folder"/><span>{project.projectFolder}</span></p>
             : <small>A folder is created on your first document upload when storage is connected.</small>}
         </div>
+        <div className="field project-edit-folders">
+          <span>Linked reference folders</span>
+          <small>Read files from these storage folders. Removing a link leaves its files in storage.</small>
+          {linkedFolders.length ? <ul className="source-list">{linkedFolders.map((folder) => <li key={folder}>
+            <span className="source-name" title={folder}><ShellIcon name="folder"/>{folder}</span>
+            <button type="button" className="btn btn-ghost btn-sm" disabled={saving} aria-label={`Unlink ${folder}`} onClick={() => setFolders((current) => current.filter((item) => item !== folder))}>Unlink</button>
+          </li>)}</ul> : <small>No reference folders linked.</small>}
+          <button type="button" className="btn btn-secondary btn-sm" disabled={saving} onClick={() => setPickingFolder(true)}>Link folder</button>
+          <small>Changes are applied when you save this project.</small>
+        </div>
       </div>
 
       {addError && <p role="alert" className="modal-err project-save-error">{addError}</p>}
@@ -145,6 +160,8 @@ export function EditProjectModal({
         <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
         <button className="btn btn-primary" onClick={() => void save()} disabled={!name.trim() || !modes.length || saving}>{saving ? 'Saving…' : 'Save'}</button>
       </footer>
+
+      {pickingFolder && <FolderPicker onClose={() => setPickingFolder(false)} onPick={(path) => { setFolders((current) => [...new Set([...current, path])]); setPickingFolder(false); }} />}
 
     </dialog>
   );

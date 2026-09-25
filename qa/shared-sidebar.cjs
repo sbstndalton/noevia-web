@@ -32,8 +32,9 @@ const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit
   await page.getByRole('button',{name:'Customise',exact:true}).click();
   await page.getByRole('heading',{name:'Customise'}).waitFor();
   await page.getByRole('button',{name:'Google Drive'}).waitFor();
-  await page.getByRole('radio',{name:'Plugins'}).click();await page.getByText('fixture-server').waitFor();
-  await page.getByRole('radio',{name:'Skills',exact:true}).click();await page.getByText('Pdf',{exact:true}).waitFor();
+  // Each category opens on what is already yours (#260); the directory is under Discover.
+  await page.getByRole('radio',{name:'Plugins'}).click();await page.getByRole('radio',{name:'Discover',exact:true}).click();await page.getByText('fixture-server').waitFor();
+  await page.getByRole('radio',{name:'Skills',exact:true}).click();await page.getByRole('radio',{name:'Discover',exact:true}).click();await page.getByText('Pdf',{exact:true}).waitFor();
   const starters=page.getByRole('region',{name:'Recommended by noevia'});await starters.getByText('Create and edit Word documents.').waitFor();
   await page.getByRole('textbox',{name:'Search skills'}).fill('pd');await starters.waitFor({state:'hidden'});await page.getByRole('textbox',{name:'Search skills'}).fill('');
   await page.screenshot({path:`${out}/shared-${theme}-plugins.png`});
