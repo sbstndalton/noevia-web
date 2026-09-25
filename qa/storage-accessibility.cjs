@@ -21,6 +21,7 @@ const assert=require('node:assert/strict');
       else if(path.endsWith('/test')){tested=route.request().postDataJSON();body={ok:true};}
       else if(path.includes('/files')){body={entries:[{name:'Examples',path:'Examples',isDir:true,size:null},{name:'note.md',path:'note.md',isDir:false,size:10}]};if(failure==='browse'){status=502;body={error:'Synthetic browse failure'};}}
       else if(path.endsWith('/file')){status=502;body={error:'Synthetic read failure'};}
+      else if(path==='/api/account/preferences'){body={notifications:{replyFinished:true,approvalNeeded:true},sendKey:'enter',locale:'system'};}
       else throw Error('Unexpected API: '+path);
       await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
     });

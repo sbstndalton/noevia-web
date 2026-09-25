@@ -76,7 +76,11 @@ async function layout(page, label) {
           await external.click();await page.getByText('Your saved storage connection couldn’t be loaded',{exact:false}).waitFor();
           assert.equal(await page.getByRole('button',{name:'Grant Nextcloud access',exact:true}).isDisabled(),true);
           await page.unroute('**/api/integrations/storage');await host.click();await external.click();
-          await page.waitForFunction(()=>document.querySelector('select[aria-label="Diary storage type"]')?.value==='webdav');
+          await page.waitForFunction(() => {
+            const options = Array.from(document.querySelectorAll('label')).filter(l => l.textContent === 'Storage type');
+            const select = options[0] && document.getElementById(options[0].htmlFor);
+            return select && select.value === 'webdav';
+          });
           assert.equal(await page.getByPlaceholder('WebDAV base URL').inputValue(),connection.baseUrl);
           await page.getByRole('button',{name:'Skip — set up later in Settings',exact:true}).click();
           assert.equal((await api(page,'/api/integrations/storage',undefined,'GET')).body.kind,'webdav');

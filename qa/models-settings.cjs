@@ -24,6 +24,9 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   if(p==='/api/profile'||p==='/api/auth/session')return json({user:{id:'qa',username:'admin',displayName:'Synthetic admin',role:'admin',diaryEnabled:true,onboarded:true},passkeys:[]});
   if(p==='/api/models/capabilities')return json({kind:'llamacpp',admin:true,presets:true,download:true,runtimeOptions:false,modelManagement:true});
   if(p==='/api/models/installed')return json([{name:'Qwen-9B',labels:['vision'],loaded:true,sizeGB:5.6,maxContext:262144,source:'preset',canDelete:false,status:'loaded'},{name:'Gemma-E2B',labels:[],loaded:false,sizeGB:3,maxContext:131072,source:'preset',canDelete:false,status:'unloaded'},...(extraRegistered?[{name:'new-model-Q4_K_M',labels:[],loaded:false,sizeGB:2,maxContext:8192,source:'preset',canDelete:false,status:'unloaded'}]:[])]);
+  if(p==='/api/models/estimate')return json({model:url.searchParams.get('model')||'Qwen-9B',budgetGib:13.5,chat:true,sizeable:true,arch:'qwen35',nativeCtx:262144,modelGib:5.56,pinnedGib:0,reserveGib:1,safety:0.1,moe:false,
+   rows:[8192,32768,65536,131072,262144].map(ctx=>({ctx,kvQ8Gib:ctx/65536})),current:{ctx:32768,kv:'q8_0'}});
+  if(p==='/api/models/hardware')return json({systemGB:29,gpus:[{name:'AMD Radeon 880M/890M',capacityGB:2,sharedGB:14.5}]});
   if(p==='/api/models/autotune')return json({history:[],job:{id:'t1',model:'Qwen-9B',status:'passed',phase:'Done',steps:[
    {kind:'spec',id:'off',label:'Off',status:'measured',score:19.1,workloads:[{workload:'list',gen:19,drafted:0,accepted:0},{workload:'prose',gen:19.2,drafted:0,accepted:0},{workload:'code',gen:19.1,drafted:0,accepted:0}]},
    {kind:'spec',id:'mtp',label:'MTP (engine defaults)',status:'measured',score:33.4,workloads:[{workload:'list',gen:40.2,drafted:84,accepted:82},{workload:'prose',gen:23.2,drafted:144,accepted:59},{workload:'code',gen:36.9,drafted:120,accepted:96}]},
@@ -122,7 +125,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await dialog.getByRole('button',{name:'Create settings'}).first().waitFor();
  // Configure via Library → Settings
  await dialog.getByRole('article',{name:'Qwen-9B'}).getByRole('button',{name:'Tune'}).click();
- await dialog.getByRole('heading',{name:'Qwen-9B',level:3}).waitFor();
+ await dialog.getByRole('heading',{name:'Qwen-9B',level:1}).waitFor();
  await dialog.getByText('Raw file & backups').click();
  assert.match(await dialog.getByLabel('models.ini contents').innerText(),/\[Qwen-9B\]/);
  assert.ok(await dialog.getByText(/models\.ini\.bak-1/).isVisible());
@@ -135,10 +138,10 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await dialog.getByRole('button',{name:'Tune for this machine'}).click();
  await dialog.getByText(/Recommended: 256K tokens on cowork-llama-1/).waitFor();
  // Why the recommendation is lower than memory allows, measured context on this machine, and MTP availability.
- await dialog.getByText(/Memory would allow 1024K; limited because prompt speed not measured yet/).waitFor();
+ await dialog.getByText(/Memory would allow 1,024K; limited because prompt speed not measured yet/).waitFor();
  await dialog.getByText(/IQ3_XXS is below Q4/).waitFor();
  await dialog.getByText(/MTP layers built in/).waitFor();
- await dialog.getByText(/Saved: MTP \(engine defaults\) at 33.4 tokens\/s \(\+75% over off\), micro-batch 1024/).waitFor();
+ await dialog.getByText(/Saved: MTP \(engine defaults\), 33.4 tokens\/s\./).waitFor();
  assert.equal(await dialog.getByRole('progressbar').getAttribute('value'),'50','progress bar shows how far the run got');
  await dialog.getByText('50% of this model').waitFor();
  assert.match(await dialog.getByRole('region',{name:'Auto-tune steps'}).innerText(),/measured earlier/,'reused measurements are labelled');
@@ -232,7 +235,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await dialog.getByRole('button',{name:'Download',exact:true}).click();
  assert.equal(downloadBodies.at(-1).target,'archive');await dialog.getByText(/Queued model-Q4_K_M.gguf and 1 companion file/).waitFor();
  await dialog.getByRole('button',{name:'Set up this model'}).click();
- await dialog.getByRole('heading',{name:'new-model-Q4_K_M',level:3}).waitFor();assert.ok(await dialog.getByText('Defaults from the model file.').isVisible());
+ await dialog.getByRole('heading',{name:'new-model-Q4_K_M',level:1}).waitFor();assert.ok(await dialog.getByText('Defaults from the model file.').isVisible());
 
  // A finished download must reach the rest of the app WITHOUT remounting anything.
  // Both halves of the 2026-09-15 "downloaded models don't appear until later"

@@ -14,7 +14,6 @@ import '../../src/styles/primitives.css';
 import '../../src/styles/overlays.css';
 import '../../src/styles/phone.css';
 import '../../src/styles/materials.css';
-import '../../src/styles/material3.css';
 
 function WrapperDialog({ onClose }: { onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);

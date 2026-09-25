@@ -21,6 +21,11 @@ const {createFixture}=require('./diary-fixture.cjs');
   await page.route('**/api/models/capabilities',r=>r.fulfill({json:{kind:'llamacpp',admin,presets:true,runtimeOptions:false,modelManagement:admin}}));
   await page.route('**/api/toolboxes',r=>r.fulfill({json:{toolboxes:[{id:'core',label:'Core',description:'Clock and project files.',toolCount:2,estTokens:180,source:'builtin',available:true}],mcp:{configured:false,servers:[]}}}));
   await page.route('**/api/models/installed',r=>r.fulfill({json:[{name:'Embedding fixture',labels:['embeddings'],loaded:true},{name:'Ranking fixture',labels:['reranking'],loaded:false},{name:'Cold chat',labels:[],loaded:false}]}));
+  // Opening Tune lands on the model manager's detail view, whose "Will it fit?" step
+  // needs these even though this script never exercises them directly.
+  await page.route('**/api/models/estimate*',r=>r.fulfill({json:{model:'Cold chat',budgetGib:13.5,chat:true,sizeable:true,arch:'qwen35',nativeCtx:32768,modelGib:1,pinnedGib:0,reserveGib:1,safety:0.1,moe:false,
+   rows:[8192,16384,32768].map(ctx=>({ctx,kvQ8Gib:ctx/65536})),current:{ctx:8192,kv:'q8_0'}}}));
+  await page.route('**/api/models/hardware',r=>r.fulfill({json:{systemGB:29,gpus:[{name:'AMD Radeon 880M/890M',capacityGB:2,sharedGB:14.5}]}}));
   // Switching to Manual is the only write the panel makes here.
   await page.route('**/api/projects/*/config',async r=>{project.routing='manual';await r.fulfill({json:{project}});});
 
