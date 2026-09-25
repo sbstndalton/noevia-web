@@ -20,7 +20,7 @@ export function DecisionServiceSettings({ onSaved }: { onSaved: () => Promise<vo
   };
   return <section aria-labelledby="decision-setup-title" className="decision-service-settings">
     <h2 id="decision-setup-title">Decision service setup</h2>
-    <p className="preview-footnote">System-One routing and Step supervision share this service. Your answering models and OpenRouter or OpenAI-compatible providers stay in AI providers and Models &amp; routing.</p>
+    <p className="preview-footnote">System-One routing, Step supervision and Tool gate share this service. Your answering models and OpenRouter or OpenAI-compatible providers stay in AI providers and Models &amp; routing.</p>
     {error && <p ref={errorRef} tabIndex={-1} className="route-note" role="alert">{error}</p>}
     <form className="set-rows" onSubmit={e=>{e.preventDefault();void act('save');}}>
       <div className="set-row"><div className="set-row-text"><label className="set-row-label" htmlFor="decision-url">Decision endpoint</label><p className="set-row-desc" id="decision-url-help">A private Laya-compatible decision API. This is separate from a chat-completions URL. Saving applies immediately; it does not download or load a model.</p></div>
