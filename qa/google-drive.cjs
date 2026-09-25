@@ -31,7 +31,7 @@ const PORT=31383,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
    await settings.getByText('Last restore test').waitFor();
    return settings;
   };
-  const close=async(s)=>{const c=s.getByRole('button',{name:'Close settings'});await (await c.isVisible()?c:s.getByRole('button',{name:'Back to app'})).click();};
+  const close=async(s)=>{await s.getByRole('button',{name:'Close settings'}).click();};
 
   // 1. Not connected: one button, no commands anywhere, at every width and theme.
   await page.reload();

@@ -4,7 +4,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'error.panel.title': "Dit paneel kan niet worden weergegeven",
   'error.panel.body': "Probeer het opnieuw of kies een andere categorie.",
   'error.panel.retry': "Opnieuw proberen",
-  'settings.backToApp': "Terug naar app",
+  'settings.back': "Terug",
   'settings.search': "Zoek in instellingen",
   'settings.clearSearchLabel': "Zoekopdracht in instellingen wissen",
   'settings.accessError': "Toegang tot het account kon niet worden gecontroleerd.",

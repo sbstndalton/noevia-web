@@ -38,7 +38,7 @@ const {createFixture}=require('./diary-fixture.cjs');
        assert.ok(await settings.evaluate(el=>el.scrollWidth<=el.clientWidth),`Settings ${section} must fit`);
        await settings.getByRole('button',{name:'All settings'}).click();
      }
-     await reachable(settings.getByRole('button',{name:'Back to app',exact:true}),height);
+     await reachable(settings.getByRole('button',{name:'Close settings',exact:true}),height);
    }
    await page.keyboard.press('Escape');
    // Below 600px navigation lives in the drawer; everything else is in the sidebar.

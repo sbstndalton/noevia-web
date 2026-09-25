@@ -4,7 +4,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'error.panel.title': "Den här panelen kunde inte visas",
   'error.panel.body': "Försök igen eller välj en annan kategori.",
   'error.panel.retry': "Försök igen",
-  'settings.backToApp': "Tillbaka till appen",
+  'settings.back': "Tillbaka",
   'settings.search': "Sök i inställningar",
   'settings.clearSearchLabel': "Rensa sökningen i inställningar",
   'settings.accessError': "Det gick inte att kontrollera åtkomsten till kontot.",

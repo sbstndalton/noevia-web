@@ -4,7 +4,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'error.panel.title': "Dette panelet kunne ikke vises",
   'error.panel.body': "Prøv igjen, eller velg en annen kategori.",
   'error.panel.retry': "Prøv igjen",
-  'settings.backToApp': "Tilbake til appen",
+  'settings.back': "Tilbake",
   'settings.search': "Søk i innstillinger",
   'settings.clearSearchLabel': "Tøm søket i innstillinger",
   'settings.accessError': "Kunne ikke sjekke tilgangen til kontoen.",

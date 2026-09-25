@@ -4,7 +4,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'error.panel.title': "No se ha podido mostrar este panel",
   'error.panel.body': "Vuelve a intentarlo o elige otra categoría de ajustes.",
   'error.panel.retry': "Reintentar",
-  'settings.backToApp': "Volver a la app",
+  'settings.back': "Volver",
   'settings.search': "Buscar ajustes",
   'settings.clearSearchLabel': "Borrar la búsqueda de ajustes",
   'settings.accessError': "No se ha podido comprobar el acceso a la cuenta.",

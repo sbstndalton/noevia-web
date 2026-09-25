@@ -4,7 +4,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'error.panel.title': "Dieser Bereich konnte nicht angezeigt werden",
   'error.panel.body': "Versuche es erneut oder wähle eine andere Kategorie.",
   'error.panel.retry': "Erneut laden",
-  'settings.backToApp': "Zurück zur App",
+  'settings.back': "Zurück",
   'settings.search': "Einstellungen durchsuchen",
   'settings.clearSearchLabel': "Suche in den Einstellungen löschen",
   'settings.accessError': "Kontozugriff konnte nicht geprüft werden.",

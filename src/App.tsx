@@ -18,6 +18,7 @@ import {
   deleteChat,
   deleteFreeChat,
   deleteProject,
+  fetchAutoRoles,
   fetchChatHistoryRevision,
   fetchHealth,
   fetchInstalledModels,
@@ -64,6 +65,7 @@ import { mergeTranscripts } from './transcript-merge';
 import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, shouldSaveChat, upsertChatMeta } from './chat-save';
 import { readLastPlace, writeLastPlace, clearLastPlace } from './last-view';
 import { currentRoutingDecision } from './current-routing';
+import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, withoutChat, withoutProject, type NavState } from './settings-nav';
 import { useT } from './i18n';
 
 type View =
@@ -88,12 +90,14 @@ export default function App(): JSX.Element {
   const [settingsKey, setSettingsKey] = useState(0);
   const openSettings = (section: SettingsSection = 'general') => {
     // Connecting services moved to Plugins (user review, 2026-09-19); old links land there.
-    if (section === 'connectors') { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'plugins' }); return; }
+    if (section === 'connectors') { pendingFromSettingsRef.current = 'connectors'; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'plugins' }); return; }
     setSettingsSection(section); setSettingsKey((k) => k + 1); setSettingsOpen(true); };
-  // `model` opens that model's tuning view directly; without it, the model list.
-  const openModelManager = (model?: string) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); };
+  // `model` opens that model's tuning view directly; without it, the model list. Models &
+  // routing is always treated as a Settings page (it has its own "back to Settings" control),
+  // so it never becomes the view Settings' close returns to, regardless of how it was opened.
+  const openModelManager = (model?: string) => { pendingFromSettingsRef.current = 'models'; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); };
   useEffect(() => { const open = () => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'plugins' }); }; window.addEventListener('noevia:open-customise', open); return () => window.removeEventListener('noevia:open-customise', open); }, []);
-  useEffect(() => { const open = (e: Event) => { const model = (e as CustomEvent<{ model?: string }>).detail?.model; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
+  useEffect(() => { const open = (e: Event) => { const model = (e as CustomEvent<{ model?: string }>).detail?.model; pendingFromSettingsRef.current = 'models'; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account'); return fresh || !!readLastPlace()?.settings; });
   const [appMode, setAppMode] = useState<'chat'|'code'>('chat');
   // The Code page is chosen in the shared sidebar, so it lives here rather than in the workspace.
@@ -125,6 +129,24 @@ export default function App(): JSX.Element {
   // Latest view for async callbacks (a delete resolving after the person moved elsewhere).
   const viewRef = useRef(view);
   viewRef.current = view;
+  // #304: Settings-launched detours (Models & routing, Customise, Archived, Diary) must never
+  // become the view Settings' close/back returns to — otherwise closing Settings from one of
+  // them just re-shows the detour, and its own "back to Settings" affordance re-opens Settings,
+  // looping forever. `pendingFromSettingsRef` is set immediately before a detour's setView so
+  // the effect below can tell it apart from a real navigation.
+  const navRef = useRef<NavState<View>>(restoreNavState(view, { kind: 'chat', chatId: `c-${uid()}`, projectId: null }));
+  const pendingFromSettingsRef = useRef<string | null>(null);
+  // Skip the mount's own run: navRef already holds the restoreNavState-computed value above
+  // (which, unlike this effect, knows a restored detour view is never a valid return target).
+  // Treating that first render as an ordinary direct navigation would blindly overwrite it with
+  // the detour itself, undoing the reload fix.
+  const navMounted = useRef(false);
+  useEffect(() => {
+    if (view.kind === 'preview') return;
+    if (!navMounted.current) { navMounted.current = true; return; }
+    navRef.current = nextNavState(navRef.current, view, { fromSettingsSection: pendingFromSettingsRef.current });
+    pendingFromSettingsRef.current = null;
+  }, [view]);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -219,10 +241,20 @@ export default function App(): JSX.Element {
       .catch(() => setModelsError('Model manager unavailable or disabled.'));
   }, []);
 
+  // Whether Auto routing (Fast/Smart) is actually configured server-side: a free chat's composer
+  // label must say Auto only when the server would really route it that way (#305) — otherwise
+  // (no roles picked yet) the server falls back to whatever model is loaded, and the label should
+  // say so too rather than promise a routing decision that will not happen.
+  const [autoRolesConfigured, setAutoRolesConfigured] = useState(false);
+  const refreshAutoRoles = useCallback(() => {
+    fetchAutoRoles().then((r) => setAutoRolesConfigured(r.configured)).catch(() => setAutoRolesConfigured(false));
+  }, []);
+
   // Settings can download, register, rename, delete, load or unload a model.
   // The chat's own list is fetched once at start-up, so without this the header
   // and model picker kept showing the pre-change set until a reload.
   useModelsChanged(refreshModels);
+  useModelsChanged(refreshAutoRoles);
 
   const workspaceRequest = useRef(0);
   useEffect(() => () => { workspaceRequest.current += 1; }, []);
@@ -274,6 +306,7 @@ export default function App(): JSX.Element {
   useEffect(() => {
     refreshProjects();
     refreshModels();
+    refreshAutoRoles();
     fetchProfile().then((profile) => {
       setDiaryEnabled(profile.user.diaryEnabled);
       setAccountId(profile.user.id);
@@ -296,15 +329,22 @@ export default function App(): JSX.Element {
       fetchHealth().then(setHealth).catch(() => setHealth((prev) => ({ ...prev, inferenceUp: false })));
     }, 30_000);
     return () => clearInterval(t);
-  }, [refreshModels, refreshProjects]);
+  }, [refreshAutoRoles, refreshModels, refreshProjects]);
 
   useEffect(() => prefetchViewsWhenIdle(), []);
 
   // Remember where you are, so a reload returns here. `preview` is skipped: an
-  // unbuilt surface is not somewhere to come back to.
+  // unbuilt surface is not somewhere to come back to. A Settings-launched detour (Models &
+  // routing, Customise, Archived, Diary) is never written as the place itself (#304): reloading
+  // mid-detour must not turn it into a permanent return target that Settings' close resolves
+  // back into forever — the return target underneath it is written instead.
   useEffect(() => {
     if (view.kind === 'preview') return;
-    writeLastPlace({ user: accountId, view, settings: settingsOpen ? settingsSection : null });
+    // The return target is never 'preview' by construction (this same guard runs before every
+    // view change reaches navRef); the cast only tells TypeScript what the runtime already
+    // guarantees.
+    const toPersist = persistedView(navRef.current, view) as Exclude<View, { kind: 'preview' }>;
+    writeLastPlace({ user: accountId, view: toPersist, settings: settingsOpen ? settingsSection : null });
   }, [view, settingsOpen, settingsSection, accountId]);
 
   // A restored project or project chat that no longer exists (deleted on another
@@ -978,6 +1018,10 @@ export default function App(): JSX.Element {
         .then(() => {
           refreshProjects();
           setView({ kind: 'projects' });
+          // Settings' close must never resolve back into a deleted project (or a chat inside
+          // it) — that view is gone even if it was not the one on screen (e.g. reached this
+          // project via a chat, then opened Models & routing before deleting it elsewhere).
+          navRef.current = withoutProject(navRef.current, id, { kind: 'projects' });
         })
         .catch(() => undefined);
     },
@@ -1019,6 +1063,9 @@ export default function App(): JSX.Element {
             if (projectId) setView({ kind: 'project', id: projectId });
             else startFreeChat();
           }
+          // As above (deleting a project): Settings' close must never resolve back into a
+          // deleted chat, on screen or not.
+          navRef.current = withoutChat(navRef.current, chatId, projectId ? { kind: 'project', id: projectId } : { kind: 'chat', chatId: `c-${uid()}`, projectId: null });
           refreshProjects();
           return true;
         })
@@ -1238,7 +1285,7 @@ export default function App(): JSX.Element {
       {view.kind === 'project' && activeProject && (
         <ProjectView
           key={activeProject.id}
-          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null)}
+          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured)}
           codeRequest={view.codeRequest}
           onOpenModels={() => setPopupOpen(true)}
           onEdit={() => setEditingProjectId(activeProject.id)}
@@ -1261,7 +1308,7 @@ export default function App(): JSX.Element {
           chatId={view.chatId}
           title={activeChatMeta?.title ?? (view.projectId ? tr('sidebar.newTask') : tr('common.newChat'))}
           projectName={activeProject?.name ?? null}
-          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null)}
+          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured)}
           installedModels={modelsLoaded && !modelsError ? models : null}
           messages={messages}
           onEditMessage={editAndResend}
@@ -1304,11 +1351,19 @@ export default function App(): JSX.Element {
           initialSection={settingsSection}
           onSection={setSettingsSection}
           appearanceStatus={appearanceStatus} appearanceError={appearanceError} retryAppearance={retryAppearance}
-          onClose={() => setSettingsOpen(false)}
+          onClose={() => {
+            // #304: land back where the user actually was, not on a Settings-launched detour
+            // (Models & routing, Customise, Archived, Diary) — forgetting it now means a second
+            // close never re-shows it, even if a detour's own "back" re-opened Settings.
+            const { view: target, next } = resolveSettingsClose(navRef.current);
+            navRef.current = next;
+            setView(target);
+            setSettingsOpen(false);
+          }}
           onClosing={() => { if (view.kind !== 'preview') writeLastPlace({ user: accountId, view, settings: null }); }}
           onStartChat={startFreeChatWith}
-          onOpenArchived={() => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'archived' }); }}
-          onOpenDiary={diaryEnabled ? () => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'diary' }); } : undefined}
+          onOpenArchived={() => { pendingFromSettingsRef.current = 'data'; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'archived' }); }}
+          onOpenDiary={diaryEnabled ? () => { pendingFromSettingsRef.current = 'diary'; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'diary' }); } : undefined}
           theme={theme}
           onTheme={setTheme}
           preference={preference}
@@ -1333,7 +1388,7 @@ export default function App(): JSX.Element {
         stats={stats}
         reply={view.kind === 'chat' ? replyTelemetryByChat[view.chatId] || null : null}
         routingDecision={routingDecision}
-        modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null)}
+        modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured)}
       />}
       {view.kind === 'chat' && activeProject && appMode === 'chat' && (
         <Inspector

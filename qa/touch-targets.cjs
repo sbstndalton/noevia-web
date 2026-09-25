@@ -29,7 +29,7 @@ const {createFixture}=require('./diary-fixture.cjs');
     await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
    });
    const dialog=page.getByRole('region',{name:'Settings'});await dialog.waitFor();
-   found.push(...await measure(page,'.settings-back, .settings-detail > header .shell-icon-button'));
+   found.push(...await measure(page,'.settings-back, .settings-nav-head .shell-icon-button, .settings-detail > header .shell-icon-button'));
    const small=found.filter(f=>f.w<44||f.h<44).map(f=>`${f.sel} "${f.label}" ${f.w}x${f.h}`);
    assert.ok(found.length>=7,`too few controls measured at ${width}: ${found.length}`);
    assert.deepEqual(small,[],`${width}px touch targets under 44px`);

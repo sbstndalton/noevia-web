@@ -4,7 +4,7 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'error.panel.title': "Impossible d’afficher ce panneau",
   'error.panel.body': "Réessayez ou choisissez une autre catégorie de réglages.",
   'error.panel.retry': "Réessayer",
-  'settings.backToApp': "Retour à l’app",
+  'settings.back': "Retour",
   'settings.search': "Rechercher dans les réglages",
   'settings.clearSearchLabel': "Effacer la recherche dans les réglages",
   'settings.accessError': "Impossible de vérifier l’accès au compte.",

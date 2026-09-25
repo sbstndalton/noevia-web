@@ -6,7 +6,7 @@ export const EN_GB_SETTINGS = {
   'error.panel.title': 'This panel couldn’t be displayed',
   'error.panel.body': 'You can retry or choose another settings category.',
   'error.panel.retry': 'Retry panel',
-  'settings.backToApp': 'Back to app',
+  'settings.back': 'Back',
   'settings.search': 'Search settings',
   'settings.clearSearchLabel': 'Clear settings search',
   'settings.accessError': 'Account access could not be checked.',

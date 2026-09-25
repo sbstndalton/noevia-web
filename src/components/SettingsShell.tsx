@@ -195,8 +195,15 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   return <section ref={stage} className={`settings-stage${closing ? ' is-closing' : ''}`} data-view={view} role="region" aria-label={t('settings.title')}>
     <aside className="settings-navigation">
       <div className="settings-nav-head">
-        <button className="settings-back" onClick={close}><ShellIcon name="arrow"/>{t('settings.backToApp')}</button>
+        {/* #305: the old "Back to app" button here duplicated the X (both closed Settings). It
+            is gone — the mobile drill-in's own back is the "All settings" chevron in the detail
+            header below (.settings-list-back), which already only appears when there is a
+            section to step back to; X (here in list view, in the detail header otherwise) is
+            the only close. */}
         <h1 className="settings-nav-title">{t('settings.title')}</h1>
+        {/* The section list (mobile only) hides the detail pane's Close button along with the
+            rest of the detail pane, so it needs its own — still the same single close action. */}
+        {view === 'list' && <CloseButton onClick={close} label={t('settings.close')}/>}
       </div>
       <div className="settings-search"><ShellIcon name="search" size={16}/><input aria-label={t('settings.search')} placeholder={t('settings.search')} value={query} onChange={e => setQuery(e.target.value)}/>{query && <button className="settings-search-clear" onClick={clearSearch} aria-label={t('settings.clearSearchLabel')}><ShellIcon name="close" size={16}/></button>}</div>
       {profileError && <p className="route-note" role="alert">{t('settings.accessError')} <button className="popup-tab" onClick={() => setProfileAttempt(n => n + 1)}>{t('settings.retryAccess')}</button></p>}
@@ -214,7 +221,9 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
       <header>
         <button className="shell-icon-button settings-list-back" onClick={showList} aria-label={t('settings.allSettings')}><ShellIcon name="chevron-left"/></button>
         <span>{title}</span>
-        <CloseButton onClick={close} label={t('settings.close')}/>
+        {/* Mounted only in detail view: the list view renders its own (#305), so exactly one
+            "Close settings" button ever exists — no ambiguity for queries or assistive tech. */}
+        {view === 'detail' && <CloseButton onClick={close} label={t('settings.close')}/>}
       </header>
       <div className="settings-detail-scroll" key={section} tabIndex={-1} aria-label={title}>
         <SettingsPanelBoundary>

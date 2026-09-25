@@ -30,12 +30,23 @@ export const LOCAL_MODEL_FALLBACK = 'local model';
 export function modelChoiceLabel(
   choice: { routing?: string; model?: string; provider?: string } | null | undefined,
   installed: { name: string; loaded?: boolean }[] | null,
+  // Whether Auto routing (Fast/Smart) is actually configured server-side (fetchAutoRoles().configured).
+  // Defaults true: most callers (a project) never reach the branch this guards, and existing tests
+  // exercise the null-choice case explicitly either way.
+  autoRolesConfigured = true,
 ): string {
   if (choice?.routing === 'auto') return 'Auto (Fast/Smart)';
   if (choice?.model) {
     if (!choice.provider && installed && !installed.some(m => m.name === choice.model)) return 'No model selected';
     return choice.model;
   }
+  // No choice at all means a free chat (no project): it starts on Auto rather than whatever
+  // happens to be loaded (#305) — loading a specific model for every quick chat wastes a load
+  // and energy, and it is not a choice the person made for this chat. But only when the server
+  // would really route it that way: without Fast/Smart roles configured it falls back to the
+  // loaded model server-side too (chat.cjs), and the label must not promise a routing decision
+  // that will not happen.
+  if (!choice) return autoRolesConfigured ? 'Auto (Fast/Smart)' : (installed?.find(m => m.loaded)?.name ?? LOCAL_MODEL_FALLBACK);
   return installed?.find(m => m.loaded)?.name ?? LOCAL_MODEL_FALLBACK;
 }
 
