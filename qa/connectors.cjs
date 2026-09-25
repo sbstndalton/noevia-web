@@ -4,6 +4,7 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
+const {withLocale}=require('./qa-locale.cjs');
 const shots=process.env.QA_SCREENSHOTS||'/tmp';
 (async()=>{
  const fixture=createFixture(31415);await fixture.listen();
@@ -11,7 +12,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  try{
   for(const [width,height] of [[1440,900],[768,1024],[390,844]])for(const theme of ['light','dark']){
    const phone=width<700;
-   const page=await browser.newPage({viewport:{width,height},colorScheme:theme,isMobile:phone,hasTouch:width<1024});page.on('pageerror',e=>errors.push(e.message));
+   const page=await browser.newPage(withLocale({viewport:{width,height},colorScheme:theme,isMobile:phone,hasTouch:width<1024}));page.on('pageerror',e=>errors.push(e.message));
    await page.goto('http://localhost:31415');await page.getByPlaceholder('Message noevia…').waitFor();
    await page.evaluate(()=>fetch('/api/connectors/gdrive/disconnect',{method:'POST'}));
    if(await page.getByRole('button',{name:'Open navigation',exact:true}).isVisible())await page.getByRole('button',{name:'Open navigation',exact:true}).click();

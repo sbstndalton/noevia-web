@@ -4,6 +4,7 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),http=require('node:http');
 const {spawn}=require('node:child_process');
+const {withLocale}=require('./qa-locale.cjs');
 const port=31295,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'..'),shots=process.env.QA_SCREENSHOTS||'/tmp';
 (async()=>{
  const seen=[];
@@ -22,7 +23,7 @@ const port=31295,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'.
   assert.equal((await api('/api/setup/complete',{setupCode:fs.readFileSync(path.join(dir,'first-run-setup-code'),'utf8').trim(),publicOrigin:origin,username:'notifyqa',displayName:'Synthetic Notify QA',password:'synthetic notifications password',diaryEnabled:false})).status,201);
   assert.ok((await api('/api/profile/onboarding',{})).status<300);
   const project=(await api('/api/projects',{name:'Synthetic alerts',model:'synthetic-model',toolboxes:[]})).body;
-  const ctx=await browser.newContext({viewport:{width:1440,height:900}});await ctx.addCookies([...cookies].map(([name,value])=>({name,value,url:origin})));
+  const ctx=await browser.newContext(withLocale({viewport:{width:1440,height:900}}));await ctx.addCookies([...cookies].map(([name,value])=>({name,value,url:origin})));
   await ctx.addInitScript(()=>{
    window.__notes=[];window.__hidden=false;let permission='default';
    class Recording{constructor(title,options){window.__notes.push({title,body:options&&options.body,tag:options&&options.tag});}close(){}static get permission(){return permission;}static async requestPermission(){permission='granted';return permission;}}

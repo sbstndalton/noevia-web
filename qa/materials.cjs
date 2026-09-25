@@ -3,6 +3,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {createFixture}=require('./diary-fixture.cjs');
 const {navClick}=require('./nav.cjs');
+const {withLocale}=require('./qa-locale.cjs');
 const output=process.env.QA_SCREENSHOTS||'/tmp/noevia-material-audit';
 const modes=['editorial','glass','contemporary']; // theme families (#249), formerly soft/liquid/material
 const sections=process.env.QA_SECTIONS?.split('|')||['Appearance & language','Assistant & style','Usage','Your data & privacy','Diary & storage','Security and login','Account','Connected apps','AI providers','Users','Web address','Models & routing','Features','Experimental','Backups','Service status','Capabilities (status)'];
@@ -11,7 +12,7 @@ const sections=process.env.QA_SECTIONS?.split('|')||['Appearance & language','As
  const browser=await chromium.launch({headless:true,channel:'chrome'});const results=[],errors=[];
  try{
  for(const width of [375,768,1440])for(const theme of ['light','dark'])for(const material of modes){
-  const page=await browser.newPage({viewport:{width,height:950},hasTouch:width<768});
+  const page=await browser.newPage(withLocale({viewport:{width,height:950},hasTouch:width<768}));
   page.on('pageerror',e=>errors.push({width,theme,material,error:e.message}));
   await page.addInitScript(({theme,material})=>{localStorage.setItem('cowork-theme',theme);localStorage.setItem('noevia:theme-family',material);},{theme,material});
   const user={id:'synthetic-material-qa',username:'materialqa',displayName:'Material QA',role:'admin',diaryEnabled:true,onboarded:true};

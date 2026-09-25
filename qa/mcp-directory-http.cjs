@@ -6,6 +6,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),http=require('node:http');
 const {spawn}=require('node:child_process');
 const {startFakeGoogle}=require('./fake-google.cjs');
+const {withLocale}=require('./qa-locale.cjs');
 const port=31436,llmPort=31437,regPort=31438,mcpPort=31439,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'..'),shots=process.env.QA_SCREENSHOTS||'/tmp';
 const NAME='io.github.synthetic/forecast';process.env.NOEVIA_QA_ALLOW_LOOPBACK_MCP='1'; // mcpItems runs here too
 let calls=0;const offered=[];
@@ -79,7 +80,7 @@ function startModel(){
   assert.ok((await admin('/api/connectors/gdrive/connect',{})).status<300);
   await until(async()=>(await admin('/api/connectors')).body.connectors[0].state==='connected');
 
-  const ctx=await browser.newContext({viewport:{width:1440,height:900}});
+  const ctx=await browser.newContext(withLocale({viewport:{width:1440,height:900}}));
   const {cookies}=await admin('/api/connectors');await ctx.addCookies([...cookies].map(([name,value])=>({name,value,url:origin})));
   const page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/api/plugins/directory*',async r=>{if(r.request().url().includes('starters=1'))return r.fulfill({json:{items:[]}});const res=await fetch(`http://127.0.0.1:${regPort}/v0/servers`);const d=await res.json();
@@ -144,7 +145,7 @@ function startModel(){
   assert.equal(pRow.personal,true);assert.deepEqual(pRow.keyHeaders,[],'no shared key');
   assert.ok((await other('/api/projects',{name:'Member Keys',model:'synthetic-model',toolboxes:['core',pRow.id]})).status<300);
   await other('/api/profile/onboarding',{});
-  const kctx=await browser.newContext({viewport:{width:1280,height:900}});
+  const kctx=await browser.newContext(withLocale({viewport:{width:1280,height:900}}));
   const {cookies:kc}=await other('/api/connectors');await kctx.addCookies([...kc].map(([name,value])=>({name,value,url:origin})));
   const kp=await kctx.newPage();kp.on('pageerror',e=>errors.push(e.message));await kp.goto(origin);
   const kset=kp.getByRole('region',{name:'Settings'});await kset.or(kp.locator('.sidebar').getByText('Member Keys',{exact:true})).first().waitFor();
@@ -172,7 +173,7 @@ function startModel(){
   await page.getByText(/Signed in\. 1 tool available/).waitFor({timeout:30000});
   const oauthId=(await admin('/api/admin/mcp-directory')).body.servers.find(x=>x.oauth).id;
   // Member: project with the box, but no sign-in yet → not offered.
-  const mctx=await browser.newContext({viewport:{width:1280,height:900}});
+  const mctx=await browser.newContext(withLocale({viewport:{width:1280,height:900}}));
   const {cookies:mc}=await other('/api/connectors');await mctx.addCookies([...mc].map(([name,value])=>({name,value,url:origin})));
   assert.ok((await other('/api/projects',{name:'Member OAuth',model:'synthetic-model',toolboxes:['core',oauthId]})).status<300);
   await other('/api/profile/onboarding',{});

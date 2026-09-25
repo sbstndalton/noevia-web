@@ -4,6 +4,7 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');const {navClick}=require('./nav.cjs');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
+const {withLocale}=require('./qa-locale.cjs');
 const shots=process.env.QA_SCREENSHOTS||'';
 const TASK='12345678-1234-4234-8234-123456789012';
 (async()=>{
@@ -11,7 +12,7 @@ const TASK='12345678-1234-4234-8234-123456789012';
  const browser=await chromium.launch({headless:true,channel:'chrome'});const errors=[];
  try{
   for(const [width,height] of [[375,812],[768,1024],[1440,900]])for(const theme of ['light','dark']){
-   const page=await browser.newPage({viewport:{width,height},isMobile:width<768,hasTouch:width<768});page.on('pageerror',e=>errors.push(e.message));
+   const page=await browser.newPage(withLocale({viewport:{width,height},isMobile:width<768,hasTouch:width<768}));page.on('pageerror',e=>errors.push(e.message));
    await page.addInitScript(({theme,material})=>{localStorage.setItem('cowork-theme',theme);localStorage.setItem('noevia:material',material);},{theme,material:process.env.QA_MATERIAL||'soft'});
    const base={goal:'',instructions:'',memories:[],files:[],assets:[],chats:[],toolboxes:['core'],createdAt:1000,updatedAt:1000,modes:['chat']};
    await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[{...base,id:'p1',name:'Battery notes'},{...base,id:'p2',name:'Field notes'}],freeChats:[]}}));

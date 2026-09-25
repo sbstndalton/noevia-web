@@ -3,12 +3,13 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 const { navClick } = require('./nav.cjs');
+const { withLocale } = require('./qa-locale.cjs');
 (async () => {
   const fixture = createFixture(31421); await fixture.listen();
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   try {
     for (const width of [375, 768, 1440]) {
-      const page = await browser.newPage({ viewport: { width, height: 950 }, hasTouch: width < 768 });
+      const page = await browser.newPage(withLocale({ viewport: { width, height: 950 }, hasTouch: width < 768 }));
       const errors = []; page.on('pageerror', e => errors.push(e.message));
       const projects = ['HomeLab', 'Writing & research', 'An unusually long project name that still needs to be readable'].map((name, i) => ({
         id: `p${i}`, name, goal: ['Keep the server boring.', 'Collect sources and develop ideas for the next essay.', 'A place for the next small adventure.'][i],

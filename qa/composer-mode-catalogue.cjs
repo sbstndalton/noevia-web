@@ -5,6 +5,7 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {spawn,execFileSync}=require('node:child_process');
+const {withLocale}=require('./qa-locale.cjs');
 const port=31436,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'..'),shots=process.env.QA_SCREENSHOTS||'/tmp';
 
 (async()=>{
@@ -27,7 +28,7 @@ const port=31436,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'.
   assert.equal(permitted.boxes.find(b=>b.id==='code').state,'available');
   const me=(await api('/api/profile')).body;
   for(const width of [375,1440]) for(const scheme of ['light','dark']){
-   const ctx=await browser.newContext({viewport:{width,height:width<500?812:900},colorScheme:scheme});
+   const ctx=await browser.newContext(withLocale({viewport:{width,height:width<500?812:900},colorScheme:scheme}));
    await ctx.addCookies([...cookies].map(([name,value])=>({name,value,url:origin})));
    await ctx.addInitScript(([user,pid])=>{localStorage.setItem('noevia:last-view',JSON.stringify({user,view:{kind:'chat',chatId:'c-modeqa',projectId:pid},settings:null}));},[me?.user?.id||me?.id||null,project.id]);
    const page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));

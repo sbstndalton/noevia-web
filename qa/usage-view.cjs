@@ -4,6 +4,7 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
+const {withLocale}=require('./qa-locale.cjs');
 // Below 600px the settings button lives in the navigation drawer, and the
 // shell animates in, so wait for it to settle before clicking.
 async function openSettings(page){
@@ -27,7 +28,7 @@ const day=n=>{const d=new Date();d.setDate(d.getDate()-n);return `${d.getFullYea
    activeDays:2,currentStreak:2,longestStreak:2,models:[{name:'qwen3-30b',...totals(10000,3200,6)},{name:'qwen3-4b',...totals(3000,1000,2)}],
    retentionDays:365,timeZone:'Europe/Oslo',...extra});
   const open=async(width,theme,payload)=>{
-   const page=await browser.newPage({viewport:{width,height:950},isMobile:width<768,hasTouch:width<768});
+   const page=await browser.newPage(withLocale({viewport:{width,height:950},isMobile:width<768,hasTouch:width<768}));
    page.on('pageerror',e=>errors.push(e.message));
    await page.addInitScript(t=>localStorage.setItem('cowork-theme',t),theme);
    await page.route('**/api/usage**',r=>r.fulfill({json:payload}));

@@ -7,11 +7,12 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
+const {withLocale}=require('./qa-locale.cjs');
 (async()=>{
  const fixture=createFixture(31356);await fixture.listen();
  const browser=await chromium.launch({headless:true,channel:'chrome'});
  try{
- const page=await browser.newPage({viewport:{width:1440,height:950}});
+ const page=await browser.newPage(withLocale({viewport:{width:1440,height:950}}));
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  let displayName='Synthetic admin';
  await page.route('**/api/**',async route=>{

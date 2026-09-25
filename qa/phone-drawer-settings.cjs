@@ -4,13 +4,14 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
+const {withLocale}=require('./qa-locale.cjs');
 const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
 (async()=>{
  const fixture=createFixture(31377);await fixture.listen();
  const browser=await chromium.launch({headless:true,channel:'chrome'});const errors=[];
  try{
  for(const [w,h,touch] of [[500,761,false],[390,844,true],[375,667,true],[320,568,true]])for(const theme of ['light','dark']){
-  const page=await browser.newPage({viewport:{width:w,height:h},hasTouch:touch,isMobile:touch,reducedMotion:'reduce'});
+  const page=await browser.newPage(withLocale({viewport:{width:w,height:h},hasTouch:touch,isMobile:touch,reducedMotion:'reduce'}));
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(t=>localStorage.setItem('cowork-theme',t),theme);
   const chat=(id,pinned=false)=>({id,title:`Synthetic ${id}`,updatedAt:1000,pinned,messages:[]});
@@ -46,7 +47,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
  // Settings on a phone: stacked rows share one left edge; theme previews show their own
  // theme; the selected-theme ring follows the chosen accent.
  for(const [w,theme,accent] of [[500,'light','cool'],[500,'dark','warm'],[390,'dark','sage']]){
-  const page=await browser.newPage({viewport:{width:w,height:761},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage(withLocale({viewport:{width:w,height:761},reducedMotion:'reduce'}));page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(([t,a])=>{localStorage.setItem('cowork-theme',t);localStorage.setItem('cowork-palette',a);localStorage.setItem('cowork-palette-'+t,a);},[theme,accent]);
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
   await page.getByRole('button',{name:'Open navigation',exact:true}).click();
@@ -65,7 +66,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
 
  // A blank home shows no row of unavailable metrics (#239); in particular never a red "Inference offline".
  {
-  const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,isMobile:true});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage(withLocale({viewport:{width:390,height:844},hasTouch:true,isMobile:true}));page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/api/stats',()=>{});
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
   await page.waitForTimeout(300);
@@ -76,7 +77,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
  // Touch: every Settings field is 16px (iOS zooms below that); Material's three options stay
  // on screen at 320px; Projects counts only active projects and its filter spans the row.
  for(const [w,h] of [[320,568],[390,844]]){
-  const page=await browser.newPage({viewport:{width:w,height:h},hasTouch:true,isMobile:true,reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage(withLocale({viewport:{width:w,height:h},hasTouch:true,isMobile:true,reducedMotion:'reduce'}));page.on('pageerror',e=>errors.push(e.message));
   const proj=(i,archived=false)=>({id:`q${i}`,name:`Synthetic project ${i}`,archived,updatedAt:1000,files:[],chats:[{id:`qc${i}`,title:'c',updatedAt:1,messages:[]}]});
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[proj(0),proj(1),proj(2,true),proj(3,true)],freeChats:[]}}));
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
@@ -104,7 +105,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
  // Material 3: sticky pieces match the drawer (no bands), New chat is an extended FAB in
  // primary-container, the active destination is a pill, the composer a 28px container.
  for(const theme of ['light','dark']){
-  const page=await browser.newPage({viewport:{width:1360,height:729},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage(withLocale({viewport:{width:1360,height:729},reducedMotion:'reduce'}));page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(t=>{localStorage.setItem('cowork-theme',t);localStorage.setItem('noevia:material','material');},theme);
   const chat=(id,pinned=false)=>({id,title:`Synthetic ${id}`,updatedAt:1000,pinned,messages:[]});
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[{id:'p0',name:'Synthetic project 0',updatedAt:1000,files:[],chats:[]}],freeChats:[chat('pinned',true),...Array.from({length:14},(_,i)=>chat(`recent${i}`))]}}));
@@ -127,7 +128,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
  // Desktop, short window: the sidebar is one scrolling plane — no nested scrollers, every
  // chat rendered, the last one reachable by scrolling the sidebar itself, Diary pinned.
  for(const material of ['liquid','material','soft']){
-  const page=await browser.newPage({viewport:{width:1400,height:729},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage(withLocale({viewport:{width:1400,height:729},reducedMotion:'reduce'}));page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(m=>{localStorage.setItem('noevia:material',m);localStorage.setItem('cowork-theme','dark');},material);
   const chat=(id,pinned=false)=>({id,title:`Synthetic ${id}`,updatedAt:1000,pinned,messages:[]});
   await page.route('**/api/features',r=>r.fulfill({json:{flags:{previews:true}}}));
@@ -153,7 +154,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
  // Collapsed desktop rail, like ChatGPT's: icons only, equal 40px (M3: its rail), no lists,
  // headings or status text, the avatar at the bottom edge.
  for(const material of ['liquid','material','soft']){
-  const page=await browser.newPage({viewport:{width:1400,height:800},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage(withLocale({viewport:{width:1400,height:800},reducedMotion:'reduce'}));page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(m=>localStorage.setItem('noevia:material',m),material);
   await page.route('**/api/toolboxes',r=>r.fulfill({json:{toolboxes:[],mcp:{configured:true,discovered:176,servers:[{id:'a'}]}}}));
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[{id:'p0',name:'Synthetic project 0',updatedAt:1000,files:[],chats:[]}],freeChats:[{id:'c0',title:'Synthetic c0',updatedAt:1,pinned:true,messages:[]},{id:'c1',title:'Synthetic c1',updatedAt:1,messages:[]}]}}));
@@ -178,7 +179,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
  // Like Claude: the light/dark switch is in the account menu and Search sits beside the
  // account; the menu opens in full from the collapsed rail; Code never blanks while loading.
  for(const collapsedRail of [false,true]){
-  const page=await browser.newPage({viewport:{width:1400,height:800},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage(withLocale({viewport:{width:1400,height:800},reducedMotion:'reduce'}));page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(c=>{localStorage.setItem('cowork-theme','light');localStorage.setItem('noevia:sidebar-collapsed',c?'1':'0');},collapsedRail);
   await page.route('**/api/features',r=>r.fulfill({json:{flags:{previews:true}}}));
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
@@ -208,7 +209,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
  // Thinking is a menu of levels. A closed sidebar stays closed across Chat ⇄ Code. No
  // control uses a text glyph as its icon, and icon-only buttons are centred.
  {
-  const page=await browser.newPage({viewport:{width:1360,height:820},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage(withLocale({viewport:{width:1360,height:820},reducedMotion:'reduce'}));page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/api/features',r=>r.fulfill({json:{flags:{previews:true}}}));
   await page.route('**/api/reasoning-settings*',r=>r.fulfill({json:{default:'default',effort:'default',mode:'hint',admin:true}}));
   const saved=[];await page.route('**/api/projects/q0/config',r=>{saved.push(r.request().postDataJSON());return r.fulfill({json:{ok:true}});});
@@ -248,7 +249,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
  // Diary in the bottom bar; the Chat/Code thumb slides both ways; project colours everywhere
  // with the icon beside its name; the phone Code drawer opens and closes from its toggle.
  {
-  const page=await browser.newPage({viewport:{width:1300,height:760}});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage(withLocale({viewport:{width:1300,height:760}}));page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/api/features',r=>r.fulfill({json:{flags:{previews:true}}}));
   const proj={id:'k0',name:'Coloured',icon:'chart',color:'#64b888',updatedAt:1000,files:[],assets:[],memories:[],instructions:'',goal:'',sourceFolders:[],chats:[],toolboxes:['core'],createdAt:1};
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[proj],freeChats:[]}}));
@@ -270,7 +271,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   const toChat=await track('.sidebar.pane .app-mode-switch > .glass-thumb');
   assert.ok(new Set(toChat).size>=3,`and back to Chat ${toChat}`);
   await page.close();
-  const phone=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,isMobile:true});phone.on('pageerror',e=>errors.push(e.message));
+  const phone=await browser.newPage(withLocale({viewport:{width:390,height:844},hasTouch:true,isMobile:true}));phone.on('pageerror',e=>errors.push(e.message));
   await phone.route('**/api/features',r=>r.fulfill({json:{flags:{previews:true}}}));
   await phone.goto('http://localhost:31377');await phone.getByPlaceholder('Message noevia…').waitFor();
   await phone.getByRole('button',{name:'Open navigation',exact:true}).tap();await phone.getByRole('button',{name:'Code',exact:true}).first().tap();await phone.getByPlaceholder(/Describe a task/).waitFor();
@@ -293,7 +294,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
  // rows start their icons and titles on one line in every material.
  {
   const iphone='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
-  const page=await browser.newPage({viewport:{width:375,height:812},hasTouch:true,isMobile:true,userAgent:iphone});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage(withLocale({viewport:{width:375,height:812},hasTouch:true,isMobile:true,userAgent:iphone}));page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/api/reasoning-settings*',r=>r.fulfill({json:{default:'default',effort:'default',mode:'hint',admin:true}}));
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[{id:'v0',name:'Finances',updatedAt:1000,files:[],assets:[],memories:[],instructions:'',goal:'',sourceFolders:[],chats:[],toolboxes:['core'],createdAt:1}],freeChats:[]}}));
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
@@ -309,7 +310,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.close();
  }
  for(const material of ['liquid','material','soft']){
-  const page=await browser.newPage({viewport:{width:1280,height:800}});
+  const page=await browser.newPage(withLocale({viewport:{width:1280,height:800}}));
   await page.addInitScript(m=>localStorage.setItem('noevia:material',m),material);
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[{id:'r0',name:'Pinned project',pinned:true,updatedAt:1,files:[],chats:[],createdAt:1},{id:'r1',name:'Finances',updatedAt:1,files:[],chats:[],createdAt:1}],freeChats:[{id:'rc',title:'Testing',updatedAt:2,messages:[]}]}}));
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
@@ -323,7 +324,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
  // No square focus ring inside the rounded composer; with a software keyboard open (iOS shrinks
  // the visible viewport and scrolls the page by offsetTop) the app covers exactly what is visible.
  {
-  const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,isMobile:true,userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage(withLocale({viewport:{width:390,height:844},hasTouch:true,isMobile:true,userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'}));page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{const v=new EventTarget();Object.assign(v,{height:844,width:390,scale:1,offsetTop:0,offsetLeft:0});Object.defineProperty(window,'visualViewport',{value:v});window.__kb=(h,top)=>{v.height=h;v.offsetTop=top;v.dispatchEvent(new Event('resize'));v.dispatchEvent(new Event('scroll'));};});
   await page.goto('http://localhost:31377');const ta=page.getByPlaceholder('Message noevia…');await ta.waitFor();await ta.focus();
   assert.equal(await ta.evaluate(e=>getComputedStyle(e).outlineStyle),'none','no square focus ring on the text area');

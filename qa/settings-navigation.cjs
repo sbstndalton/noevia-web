@@ -2,6 +2,7 @@
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
+const { withLocale } = require('./qa-locale.cjs');
 
 (async () => {
   const fixture = createFixture(31420);
@@ -9,7 +10,7 @@ const { createFixture } = require('./diary-fixture.cjs');
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   try {
     for (const width of [375, 768, 1440]) {
-      const page = await browser.newPage({ viewport: { width, height: 950 } });
+      const page = await browser.newPage(withLocale({ viewport: { width, height: 950 } }));
       await page.goto('http://localhost:31420');
       await page.getByRole('textbox', { name: 'Message', exact: true }).waitFor();
       await page.getByTitle('Settings', { exact: true }).click();

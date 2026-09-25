@@ -104,6 +104,24 @@ const RUNS = [['de-DE', 375], ['de-DE', 1440], ['fr-FR', 375]];
       assert.equal(prefs.locale, 'system');
       await page.close();
     }
+    // #283: since #281 a 'system' locale preference follows the browser, and Playwright's own
+    // default locale is en-US — every other QA script now needs an en-GB context (qa-locale.cjs)
+    // to see the British labels it asserts on. Prove both spellings actually work: the sidebar's
+    // Customise/Customize button under an en-US browser vs. an en-GB one (account preference left
+    // at 'system' throughout, i.e. the default a fresh browser gets).
+    for (const [locale, label] of [['en-US', 'Customize'], ['en-GB', 'Customise']]) {
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, locale });
+      page.on('pageerror', (e) => errors.push(`${locale} sidebar: ${e.message}`));
+      const user = { id: 'synthetic-locale-qa', username: 'localeqa', displayName: 'Synthetic Locale QA', role: 'member', diaryEnabled: false, onboarded: true };
+      await page.route('**/api/profile', (r) => r.fulfill({ json: { user, passkeys: [] } }));
+      await page.route('**/api/auth/session', (r) => r.fulfill({ json: { user, passkeys: [] } }));
+      await page.route('**/api/profile/appearance', (r) => r.fulfill({ json: { theme: 'light', light: 'iris', dark: 'iris' } }));
+      await page.route('**/api/account/preferences', (r) => r.fulfill({ json: { notifications: { replyFinished: true, approvalNeeded: true }, sendKey: 'enter', locale: 'system' } }));
+      await page.route('**/api/workspace', (r) => r.fulfill({ json: { projects: [], freeChats: [] } }));
+      await page.goto(`http://localhost:${PORT}`);
+      await page.getByRole('button', { name: label, exact: true }).waitFor();
+      await page.close();
+    }
     assert.deepEqual(errors, []);
     console.log(`i18n locale QA passed; screenshots in ${out}`);
   } finally { await browser.close(); await fixture.close?.(); }

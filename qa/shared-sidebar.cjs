@@ -4,13 +4,14 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
+const {withLocale}=require('./qa-locale.cjs');
 const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
 const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 (async()=>{
  const fixture=createFixture(31378);await fixture.listen();
  const browser=await browser_();async function browser_(){return chromium.launch({headless:true,channel:'chrome'});}
  const errors=[];
- const setup=async(opts)=>{const page=await browser.newPage(opts);page.on('pageerror',e=>errors.push(e.message));
+ const setup=async(opts)=>{const page=await browser.newPage(withLocale(opts));page.on('pageerror',e=>errors.push(e.message));
   const chat=(id,pinned=false)=>({id,title:`Synthetic ${id}`,updatedAt:1000,pinned,messages:[]});
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:Array.from({length:6},(_,i)=>({id:`p${i}`,name:`Synthetic project ${i}`,updatedAt:1000,files:[],chats:[]})),freeChats:Array.from({length:30},(_,i)=>chat(`recent${i}`))}}));
   await page.route('**/api/features',r=>r.fulfill({json:{flags:{previews:true}}}));

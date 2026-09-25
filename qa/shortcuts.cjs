@@ -2,12 +2,13 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
+const {withLocale}=require('./qa-locale.cjs');
 const shots=process.env.QA_SCREENSHOTS||'/tmp';
 (async()=>{
  const fixture=createFixture(31358);await fixture.listen();
  const browser=await chromium.launch({headless:true,channel:'chrome'});
  try{
-  const page=await browser.newPage({viewport:{width:1440,height:900}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage(withLocale({viewport:{width:1440,height:900}}));const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/api/**',route=>{const p=new URL(route.request().url()).pathname,json=b=>route.fulfill({json:b});
    if(p==='/api/profile'||p==='/api/auth/session')return json({user:{id:'qa',username:'keysqa',displayName:'Keys QA',role:'admin',diaryEnabled:true,onboarded:true},passkeys:[]});
    if(p==='/api/models/installed')return json([]);return route.continue();});
