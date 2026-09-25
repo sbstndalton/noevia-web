@@ -1,13 +1,15 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchProfile, logout } from '../api';
+import { useT } from '../i18n';
 import { ShellIcon } from './ShellIcon';
 // Account, preferences and sign-out in one menu, as Claude's is (user review, 2026-09-18):
 // the light/dark switch moved here from the sidebar head. It stays open after switching,
 // so the change is seen from where it was made.
 export function AccountMenu({ onSettings, theme, onToggleTheme }: { onSettings:(section?:'general'|'usage')=>void; theme?:'light'|'dark'; onToggleTheme?:()=>void }) {
+  const t=useT();
   const [open,setOpen]=useState(false);
-  const [name,setName]=useState('Your account');
+  const [name,setName]=useState(()=>t('account.defaultName'));
   const [error,setError]=useState('');
   const ref=useRef<HTMLDivElement>(null);
   const trigger=useRef<HTMLButtonElement>(null);
@@ -34,14 +36,14 @@ export function AccountMenu({ onSettings, theme, onToggleTheme }: { onSettings:(
     return()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',key);};
   },[open]);
   return <div className="account-area" ref={ref}>
-    {open&&createPortal(<div ref={pop} className="account-popover overlay is-floating" aria-label="Account options" style={at?{position:'fixed',left:at.left,bottom:at.bottom,top:'auto'}:{position:'fixed',visibility:'hidden'}}><div className="account-popover-head"><strong>{name}</strong><span>Personal workspace</span></div>
-      <button onClick={()=>{setOpen(false);onSettings();}}><ShellIcon name="settings"/>Settings</button>
-      <button onClick={()=>{setOpen(false);onSettings('usage');}}><ShellIcon name="grid"/>Usage</button>
-      {onToggleTheme&&<button onClick={onToggleTheme}><ShellIcon name={theme==='dark'?'sun':'moon'}/>{theme==='dark'?'Light mode':'Dark mode'}</button>}
+    {open&&createPortal(<div ref={pop} className="account-popover overlay is-floating" aria-label={t('account.optionsLabel')} style={at?{position:'fixed',left:at.left,bottom:at.bottom,top:'auto'}:{position:'fixed',visibility:'hidden'}}><div className="account-popover-head"><strong>{name}</strong><span>{t('account.personalWorkspace')}</span></div>
+      <button onClick={()=>{setOpen(false);onSettings();}}><ShellIcon name="settings"/>{t('account.settings')}</button>
+      <button onClick={()=>{setOpen(false);onSettings('usage');}}><ShellIcon name="grid"/>{t('account.usage')}</button>
+      {onToggleTheme&&<button onClick={onToggleTheme}><ShellIcon name={theme==='dark'?'sun':'moon'}/>{theme==='dark'?t('account.lightMode'):t('account.darkMode')}</button>}
       <div className="account-divider"/>
-      <button onClick={()=>void logout().then(()=>window.location.reload()).catch(()=>setError('Could not sign out. Please retry.'))}><ShellIcon name="arrow"/>Log out</button>
+      <button onClick={()=>void logout().then(()=>window.location.reload()).catch(()=>setError(t('account.signOutError')))}><ShellIcon name="arrow"/>{t('account.logOut')}</button>
       {error&&<p role="alert">{error}</p>}
     </div>,document.body)}
-    <button ref={trigger} className="account-trigger" aria-expanded={open} aria-label={`Account menu for ${name}`} onClick={()=>setOpen(!open)}><span className="shell-avatar">{name.slice(0,2).toUpperCase()}</span><span className="account-name">{name}</span><ShellIcon name="down" size={14}/></button>
+    <button ref={trigger} className="account-trigger" aria-expanded={open} aria-label={t('account.menuLabel',{name})} onClick={()=>setOpen(!open)}><span className="shell-avatar">{name.slice(0,2).toUpperCase()}</span><span className="account-name">{name}</span><ShellIcon name="down" size={14}/></button>
   </div>;
 }

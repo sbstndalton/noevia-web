@@ -8,6 +8,7 @@ import { fillTemplate, markdownOutline, resolveMarkdownPath, wikiLinkCandidates,
 import { MarkdownPreview } from './DiaryModal';
 import { ShellIcon } from './ShellIcon';
 import { LocalGraph } from './diary-graph/LocalGraph';
+import { useT } from '../i18n';
 
 type Props = {
   navigationKey: number; file: DiaryFile; text: string; busy: boolean; error: string; status: string;
@@ -24,6 +25,7 @@ type Props = {
 
 /** Editing is a page surface. The parent retains the source across app navigation. */
 export function DiaryMarkdownWorkspace(input: Props) {
+  const t = useT();
   const [trashWorking,setTrashWorking]=useState(false);
   const p={...input,busy:input.busy || trashWorking};
   const [mode, setMode] = useState<'source' | 'preview' | 'split'>('split');
@@ -43,7 +45,7 @@ export function DiaryMarkdownWorkspace(input: Props) {
     try{
       const found=await p.onSearch(kind==='backlinks'?'':p.folderPath,kind==='backlinks'?p.file.path:query,controller.signal,kind,kind==='text'?filters:undefined);
       if(!controller.signal.aborted)setReport(found);
-    }catch(e){if(searchAbort.current===controller)setSearchError(controller.signal.aborted?'Search stopped. Try a smaller folder or retry.':e instanceof Error?e.message:'Search failed.');}
+    }catch(e){if(searchAbort.current===controller)setSearchError(controller.signal.aborted?t('diary.workspace.searchStopped'):e instanceof Error?e.message:t('diary.workspace.searchFailed'));}
     finally{window.clearTimeout(timeout);if(searchAbort.current===controller)setSearching(false);}
   };
   const heading = useRef<HTMLHeadingElement>(null);
@@ -122,41 +124,41 @@ export function DiaryMarkdownWorkspace(input: Props) {
     window.setTimeout(()=>URL.revokeObjectURL(url),1000);
   };
   const downloadWorkspace=async()=>{
-    setExporting(true);setExportError('');setExportStatus('Reading and verifying stored files…');
+    setExporting(true);setExportError('');setExportStatus(t('diary.workspace.readingFiles'));
     const controller=new AbortController(),timer=window.setTimeout(()=>controller.abort(),300000);
     try {
       const response=await apiFetch('/api/diary/workspace-export',{signal:controller.signal});
-      if(!response.ok){const body=await response.json();throw Error(body.error || 'Export failed. Please retry.');}
-      if(!response.headers.get('content-type')?.startsWith('application/zip'))throw Error('Unexpected export response. Please retry.');
-      setExportStatus('Preparing download…');
+      if(!response.ok){const body=await response.json();throw Error(body.error || t('diary.workspace.exportFailed'));}
+      if(!response.headers.get('content-type')?.startsWith('application/zip'))throw Error(t('diary.workspace.unexpectedExportResponse'));
+      setExportStatus(t('diary.workspace.preparingDownload'));
       const blob=await response.blob(),url=URL.createObjectURL(blob);
       const anchor=document.createElement('a');anchor.href=url;anchor.download='noevia-workspace.zip';anchor.click();
-      window.setTimeout(()=>URL.revokeObjectURL(url),60000);setExportStatus('Download ready. Check your browser downloads.');
-    }catch(e){setExportStatus('');setExportError(controller.signal.aborted?'Export timed out. Retry when storage is available.':e instanceof Error?e.message:'Export failed. Please retry.');}
+      window.setTimeout(()=>URL.revokeObjectURL(url),60000);setExportStatus(t('diary.workspace.downloadReady'));
+    }catch(e){setExportStatus('');setExportError(controller.signal.aborted?t('diary.workspace.exportTimedOut'):e instanceof Error?e.message:t('diary.workspace.exportFailed'));}
     finally{window.clearTimeout(timer);setExporting(false);}
   };
-  return <section className="diary-markdown-workspace" aria-label="Markdown workspace" onKeyDown={e=>{
+  return <section className="diary-markdown-workspace" aria-label={t('diary.workspace.ariaLabel')} onKeyDown={e=>{
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='s') {
       e.preventDefault(); if (!p.busy && !p.stored && p.file.path) p.onSave();
     }
   }}>
-    <header className="diary-workspace-heading"><div><h1 ref={heading} tabIndex={-1}>Markdown workspace</h1><p>{p.local ? 'Folder on this computer' : 'Saved Diary storage'} · explicit saves</p></div><button className="modal-btn secondary" disabled={p.busy} onClick={p.onClose}>Back to Diary</button></header>
+    <header className="diary-workspace-heading"><div><h1 ref={heading} tabIndex={-1}>{t('diary.workspace.title')}</h1><p>{p.local ? t('diary.workspace.folderOnComputer') : t('diary.workspace.savedDiaryStorage')} · {t('diary.workspace.explicitSaves')}</p></div><button className="modal-btn secondary" disabled={p.busy} onClick={p.onClose}>{t('diary.workspace.backToDiary')}</button></header>
     <div className="diary-workspace-body">
       <div className="diary-workspace-document">
-        <label className="diary-editor-path">File path<input value={p.file.path} readOnly={p.file.content!==null || !!p.stored} disabled={p.busy} onChange={e=>p.onPath(e.target.value)} /></label>
-        <div className="diary-editor-tabs" role="group" aria-label="Editor view">{(['source','preview','split'] as const).map(value=><button key={value} className="popup-tab" aria-pressed={mode===value} onClick={()=>setMode(value)}>{value==='source'?'Edit Markdown':value==='preview'?'Preview':'Source & preview'}</button>)}</div>
-        <p className="diary-editor-state" role="status">{p.busy ? p.status || 'Working…' : p.error ? 'Save or load needs attention · draft kept' : dirty ? 'Unsaved changes' : p.status || 'No unsaved changes'}</p>
+        <label className="diary-editor-path">{t('diary.workspace.filePath')}<input value={p.file.path} readOnly={p.file.content!==null || !!p.stored} disabled={p.busy} onChange={e=>p.onPath(e.target.value)} /></label>
+        <div className="diary-editor-tabs" role="group" aria-label={t('diary.workspace.editorView')}>{(['source','preview','split'] as const).map(value=><button key={value} className="popup-tab" aria-pressed={mode===value} onClick={()=>setMode(value)}>{value==='source'?t('diary.workspace.editMarkdown'):value==='preview'?t('diary.workspace.preview'):t('diary.workspace.sourceAndPreview')}</button>)}</div>
+        <p className="diary-editor-state" role="status">{p.busy ? p.status || t('diary.workspace.working') : p.error ? t('diary.workspace.needsAttention') : dirty ? t('diary.workspace.unsavedChanges') : p.status || t('diary.workspace.noUnsavedChanges')}</p>
         {p.error && <p className="conn-banner" role="alert">{p.error}</p>}
-        {p.syncPending && <p className="conn-banner">Local copy saved. Online sync needs attention; use Retry save / sync in Diary to retry the existing guarded sync.</p>}
-        {fresh && templates && templates.length>0 && <div className="diary-template-row" role="group" aria-label="Start from a template">
-          <span>Start from</span>
-          {templates.map(t=><button key={t.path} type="button" className="popup-tab" disabled={p.busy} onClick={()=>useTemplate(t.content)}>
-            {(t.path.split('/').pop()||t.path).replace(/\.md$/i,'')}
+        {p.syncPending && <p className="conn-banner">{t('diary.workspace.syncPendingNote')}</p>}
+        {fresh && templates && templates.length>0 && <div className="diary-template-row" role="group" aria-label={t('diary.workspace.startFromTemplate')}>
+          <span>{t('diary.workspace.startFrom')}</span>
+          {templates.map(tpl=><button key={tpl.path} type="button" className="popup-tab" disabled={p.busy} onClick={()=>useTemplate(tpl.content)}>
+            {(tpl.path.split('/').pop()||tpl.path).replace(/\.md$/i,'')}
           </button>)}
         </div>}
         <div className="diary-editor-panes">
-          <section hidden={mode==='preview'} className="diary-source-pane"><label htmlFor="diary-markdown-source">Markdown source</label>
-            <textarea ref={source} id="diary-markdown-source" className="diary-md-input" aria-label="Markdown content"
+          <section hidden={mode==='preview'} className="diary-source-pane"><label htmlFor="diary-markdown-source">{t('diary.workspace.markdownSource')}</label>
+            <textarea ref={source} id="diary-markdown-source" className="diary-md-input" aria-label={t('diary.workspace.markdownContent')}
               value={p.text} disabled={p.busy} spellCheck={false}
               // Deliberately still a textarea: `role="combobox"` would replace the role this
               // control has had all along, and writing Markdown is what it is for. The
@@ -179,9 +181,9 @@ export function DiaryMarkdownWorkspace(input: Props) {
                 }
               }}/>
             {matches.length>0 && <p id="diary-wiki-suggestions-status" className="diary-wiki-status" role="status">
-              {matches.length} {matches.length===1?'file':'files'} match; arrow keys to choose, Enter to insert, Escape to dismiss.
+              {t.plural('diary.workspace.filesMatch', matches.length)}
             </p>}
-            {matches.length>0 && <ul className="diary-wiki-suggestions" id="diary-wiki-suggestions" role="listbox" aria-label="Files you could link to">
+            {matches.length>0 && <ul className="diary-wiki-suggestions" id="diary-wiki-suggestions" role="listbox" aria-label={t('diary.workspace.filesYouCouldLink')}>
               {matches.map((match,i)=><li key={match.path} id={`diary-wiki-option-${i}`} role="option" aria-selected={i===(suggest?.active ?? 0)}>
                 {/* Mouse down, not click: blur would close the list before a click landed. */}
                 <button type="button" className={i===(suggest?.active ?? 0)?'is-active':''} onMouseDown={e=>{e.preventDefault();accept(match.name);}}>
@@ -190,7 +192,7 @@ export function DiaryMarkdownWorkspace(input: Props) {
               </li>)}
             </ul>}
           </section>
-          {mode!=='source' && <section aria-label="Markdown preview" aria-busy={p.text!==deferredText}><h2 className="diary-pane-label">Preview</h2><MarkdownPreview text={deferredText || 'This file is empty.'} properties internalLink={href=>{const path=resolveMarkdownPath(p.file.path,href);return path ? ()=>p.onOpen(path) : undefined;}}
+          {mode!=='source' && <section aria-label={t('diary.workspace.markdownPreview')} aria-busy={p.text!==deferredText}><h2 className="diary-pane-label">{t('diary.workspace.preview')}</h2><MarkdownPreview text={deferredText || t('diary.workspace.fileIsEmpty')} properties internalLink={href=>{const path=resolveMarkdownPath(p.file.path,href);return path ? ()=>p.onOpen(path) : undefined;}}
           wikiLink={link=>{
             // A heading link with no file before the "#" points inside this file; there is
             // nothing to open, so it reads as text rather than as a link that does nothing.
@@ -201,43 +203,43 @@ export function DiaryMarkdownWorkspace(input: Props) {
             return path ? ()=>p.onOpen(path) : undefined;
           }} /></section>}
         </div>
-        {p.stored && <section className="diary-stored-version"><h2>Current stored version</h2><p>Your draft is retained above. Reconcile it with this source, then accept the reviewed version as the next save base. The next save checks the reviewed version again.</p><pre>{p.stored.content ?? 'This file no longer exists.'}</pre><div className="diary-workspace-file-actions"><button className="modal-btn secondary" disabled={p.busy} onClick={p.onRebase}>Keep draft with this save base</button><button className="modal-btn secondary" disabled={p.busy} onClick={p.onReload}>Discard draft and reload</button></div></section>}
-        <footer className="diary-workspace-save"><button className="modal-btn secondary" onClick={downloadDraft}>Download Markdown</button><span>{p.status || '⌘/Ctrl + S to save'}</span><button className="modal-btn secondary" disabled={p.busy} onClick={p.onCompare}>Compare stored version</button><button className="modal-btn primary" disabled={p.busy || !p.file.path || !!p.stored} onClick={p.onSave}>{p.busy?'Working…':'Save'}</button></footer>
+        {p.stored && <section className="diary-stored-version"><h2>{t('diary.workspace.currentStoredVersion')}</h2><p>{t('diary.workspace.reconcileHint')}</p><pre>{p.stored.content ?? t('diary.workspace.fileNoLongerExists')}</pre><div className="diary-workspace-file-actions"><button className="modal-btn secondary" disabled={p.busy} onClick={p.onRebase}>{t('diary.workspace.keepDraft')}</button><button className="modal-btn secondary" disabled={p.busy} onClick={p.onReload}>{t('diary.workspace.discardAndReload')}</button></div></section>}
+        <footer className="diary-workspace-save"><button className="modal-btn secondary" onClick={downloadDraft}>{t('diary.workspace.downloadMarkdown')}</button><span>{p.status || t('diary.workspace.saveShortcut')}</span><button className="modal-btn secondary" disabled={p.busy} onClick={p.onCompare}>{t('diary.workspace.compareStoredVersion')}</button><button className="modal-btn primary" disabled={p.busy || !p.file.path || !!p.stored} onClick={p.onSave}>{p.busy?t('diary.workspace.working'):t('diary.workspace.save')}</button></footer>
       </div>
-      <aside className="diary-workspace-navigation" aria-label="Workspace navigation">
-        <details className="diary-workspace-files" open><summary>Markdown files</summary>
-          <div className="diary-file-breadcrumb"><button className="popup-tab" disabled={p.busy} onClick={()=>p.onFolder('')}>Diary folder</button>{p.folderPath && <><span>/ {p.folderPath}</span><button className="popup-tab" disabled={p.busy} onClick={()=>p.onFolder(p.folderPath.split('/').slice(0,-1).join('/'))}>Up</button></>}</div>
-          <label className="diary-workspace-filter">Filter this folder<input value={filter} onChange={e=>setFilter(e.target.value)} type="search" /></label>
-          <div className="diary-workspace-file-actions"><button className="popup-tab" disabled={p.busy} onClick={p.onNew}>New file</button><button className="popup-tab" disabled={p.busy || p.filesLoading} onClick={p.onRefresh}>Refresh files</button></div>
-          {p.filesLoading ? <p role="status">Loading files…</p> : p.filesError ? <div role="alert"><p>{p.filesError}</p><button className="popup-tab" onClick={p.onRefresh}>Retry file list</button></div> : <nav className="diary-file-list" aria-label="Markdown files">{rows.map(file=><button key={file.path} title={file.path} disabled={p.busy} aria-current={!file.isDir && file.path===p.file.path?'page':undefined} onClick={()=>file.isDir?p.onFolder(file.path):p.onOpen(file.path)}><ShellIcon name={file.isDir?'folder':'book'} size={16}/>{file.name}</button>)}{!rows.length && <p>{filter ? 'No matching files in this folder.' : 'No Markdown files in this folder.'}</p>}</nav>}
+      <aside className="diary-workspace-navigation" aria-label={t('diary.workspace.navigation')}>
+        <details className="diary-workspace-files" open><summary>{t('diary.workspace.markdownFiles')}</summary>
+          <div className="diary-file-breadcrumb"><button className="popup-tab" disabled={p.busy} onClick={()=>p.onFolder('')}>{t('diary.context.diaryFolder')}</button>{p.folderPath && <><span>/ {p.folderPath}</span><button className="popup-tab" disabled={p.busy} onClick={()=>p.onFolder(p.folderPath.split('/').slice(0,-1).join('/'))}>{t('diary.context.up')}</button></>}</div>
+          <label className="diary-workspace-filter">{t('diary.workspace.filterFolder')}<input value={filter} onChange={e=>setFilter(e.target.value)} type="search" /></label>
+          <div className="diary-workspace-file-actions"><button className="popup-tab" disabled={p.busy} onClick={p.onNew}>{t('diary.workspace.newFile')}</button><button className="popup-tab" disabled={p.busy || p.filesLoading} onClick={p.onRefresh}>{t('diary.workspace.refreshFiles')}</button></div>
+          {p.filesLoading ? <p role="status">{t('diary.context.loadingFiles')}</p> : p.filesError ? <div role="alert"><p>{p.filesError}</p><button className="popup-tab" onClick={p.onRefresh}>{t('diary.context.retryFileList')}</button></div> : <nav className="diary-file-list" aria-label={t('diary.workspace.markdownFiles')}>{rows.map(file=><button key={file.path} title={file.path} disabled={p.busy} aria-current={!file.isDir && file.path===p.file.path?'page':undefined} onClick={()=>file.isDir?p.onFolder(file.path):p.onOpen(file.path)}><ShellIcon name={file.isDir?'folder':'book'} size={16}/>{file.name}</button>)}{!rows.length && <p>{filter ? t('diary.workspace.noMatchingFiles') : t('diary.workspace.noMarkdownFiles')}</p>}</nav>}
         </details>
-        <details className="diary-workspace-export"><summary>Export workspace</summary>
-          <p>{p.local ? 'Whole-workspace ZIP export is available for saved Diary storage. This folder is already on your computer; copy it with your file manager.' : 'Download all stored files, including Markdown, attachments and empty folders, with a checksum manifest. Unsaved drafts and optional chat attachments are not included. Up to 5,000 files, 64 MiB per file and 256 MiB total.'}</p>
-          {!p.local && <button className="modal-btn secondary" disabled={p.busy || exporting} onClick={()=>void downloadWorkspace()}>{exporting?'Preparing ZIP…':'Download workspace ZIP'}</button>}
+        <details className="diary-workspace-export"><summary>{t('diary.workspace.exportWorkspace')}</summary>
+          <p>{p.local ? t('diary.workspace.exportLocalNote') : t('diary.workspace.exportOnlineNote')}</p>
+          {!p.local && <button className="modal-btn secondary" disabled={p.busy || exporting} onClick={()=>void downloadWorkspace()}>{exporting?t('diary.workspace.preparingZip'):t('diary.workspace.downloadWorkspaceZip')}</button>}
           {exportStatus && <p role="status">{exportStatus}</p>}{exportError && <p role="alert">{exportError}</p>}
         </details>
         <DiaryWorkspaceTrash enabled={!p.local && !!p.managed} busy={p.busy} file={p.file} dirty={dirty || !!p.stored || p.syncPending} onWorking={setTrashWorking} onChanged={p.onRefresh}/>
         <DiaryWorkspaceImport enabled={!p.local && !!p.managed} busy={p.busy} onImported={p.onRefresh}/>
-        <details className="diary-workspace-search"><summary>Search &amp; backlinks</summary><p>Search stored Markdown in this folder and its subfolders. Up to 50 files / 4 MiB per search; unsaved text is not included.</p><form onSubmit={e=>{e.preventDefault();void search();}}><label className="diary-workspace-filter">Search text<input type="search" minLength={2} maxLength={200} required={!hasFilter} value={query} onChange={e=>setQuery(e.target.value)}/></label>
-          <label className="diary-workspace-filter">From date<input type="date" value={filters.from || ''} onChange={e=>setFilters({...filters,from:e.target.value})}/></label>
-          <label className="diary-workspace-filter">Through date<input type="date" min={filters.from} value={filters.to || ''} onChange={e=>setFilters({...filters,to:e.target.value})}/></label>
-          <label className="diary-workspace-filter">Hashtag<input placeholder="#tag" maxLength={81} value={filters.tag || ''} onChange={e=>setFilters({...filters,tag:e.target.value})}/></label>
-          <p>Dates match filenames beginning YYYY-MM-DD. Undated files are excluded when a date is set. Tags match whole #hashtags in prose and the <code>tags:</code> property, ignoring case and code.</p>
-          <button className="popup-tab" disabled={searching || (!hasFilter && query.trim().length<2) || (query.trim().length>0 && query.trim().length<2)}>Search contents</button>
-          {hasFilter && <button type="button" className="popup-tab" onClick={()=>setFilters({})}>Clear filters</button>}</form><button className="popup-tab" disabled={searching || !p.file.path} onClick={()=>void search('backlinks')}>Find links to this file</button><p>Backlinks scan the Diary folder within the same bounds. Relative Markdown links and Obsidian-style <code>[[wiki links]]</code> both count; anchors are ignored, so a link to a heading still finds the file.</p>
-          {searching && <p role="status">Searching stored files…</p>}{searchError && <p role="alert">{searchError}</p>}
-          {report && <div><p role="status">{report.results.length} {searchKind==='backlinks'?'linking files':'matches'} · {report.scanned} files checked{report.partial?' · Partial results':''}{report.skipped?` · ${report.skipped} unreadable items`:''}</p>{report.partial && <p>Some files were not searched. Choose a smaller folder to narrow the search.</p>}{report.results.map(result=><button className="diary-search-result" key={result.path} disabled={p.busy} onClick={()=>p.onOpen(result.path)}><strong>{result.path}</strong><span>{result.snippet}</span></button>)}
+        <details className="diary-workspace-search"><summary>{t('diary.workspace.searchAndBacklinks')}</summary><p>{t('diary.workspace.searchHint')}</p><form onSubmit={e=>{e.preventDefault();void search();}}><label className="diary-workspace-filter">{t('diary.workspace.searchText')}<input type="search" minLength={2} maxLength={200} required={!hasFilter} value={query} onChange={e=>setQuery(e.target.value)}/></label>
+          <label className="diary-workspace-filter">{t('diary.workspace.fromDate')}<input type="date" value={filters.from || ''} onChange={e=>setFilters({...filters,from:e.target.value})}/></label>
+          <label className="diary-workspace-filter">{t('diary.workspace.throughDate')}<input type="date" min={filters.from} value={filters.to || ''} onChange={e=>setFilters({...filters,to:e.target.value})}/></label>
+          <label className="diary-workspace-filter">{t('diary.workspace.hashtag')}<input placeholder="#tag" maxLength={81} value={filters.tag || ''} onChange={e=>setFilters({...filters,tag:e.target.value})}/></label>
+          <p>{t('diary.workspace.dateFilterHint')}</p>
+          <button className="popup-tab" disabled={searching || (!hasFilter && query.trim().length<2) || (query.trim().length>0 && query.trim().length<2)}>{t('diary.workspace.searchContents')}</button>
+          {hasFilter && <button type="button" className="popup-tab" onClick={()=>setFilters({})}>{t('diary.workspace.clearFilters')}</button>}</form><button className="popup-tab" disabled={searching || !p.file.path} onClick={()=>void search('backlinks')}>{t('diary.workspace.findLinksToFile')}</button><p>{t('diary.workspace.backlinksHint')}</p>
+          {searching && <p role="status">{t('diary.workspace.searchingFiles')}</p>}{searchError && <p role="alert">{searchError}</p>}
+          {report && <div><p role="status">{t('diary.workspace.searchSummary', { results: searchKind==='backlinks'?t.plural('diary.workspace.linkingFiles', report.results.length):t.plural('diary.workspace.matches', report.results.length), checked: t.plural('diary.workspace.filesChecked', report.scanned) })}{report.partial?` · ${t('diary.workspace.partialResults')}`:''}{report.skipped?` · ${t.plural('diary.workspace.unreadableItems', report.skipped)}`:''}</p>{report.partial && <p>{t('diary.workspace.someFilesNotSearched')}</p>}{report.results.map(result=><button className="diary-search-result" key={result.path} disabled={p.busy} onClick={()=>p.onOpen(result.path)}><strong>{result.path}</strong><span>{result.snippet}</span></button>)}
             {/* Notes that name this one without linking it. Shown, never rewritten: turning a
                 mention into a link is an edit to someone's note, and edits here are explicit. */}
-            {searchKind==='backlinks' && report.mentions && <section className="diary-mentions" aria-label="Unlinked mentions">
-              <h3>Unlinked mentions ({report.mentions.length})</h3>
+            {searchKind==='backlinks' && report.mentions && <section className="diary-mentions" aria-label={t('diary.workspace.unlinkedMentions')}>
+              <h3>{t('diary.workspace.unlinkedMentionsCount', { count: report.mentions.length })}</h3>
               {report.mentions.length===0
-                ? <p>No other note names this one without linking it.</p>
+                ? <p>{t('diary.workspace.noOtherNoteNames')}</p>
                 : report.mentions.map(result=><button className="diary-search-result" key={result.path} disabled={p.busy} onClick={()=>p.onOpen(result.path)}><strong>{result.path}</strong><span>{result.snippet}</span></button>)}
             </section>}</div>}
         </details>
         <LocalGraph path={p.file.path} text={p.text} root={p.folderPath} busy={p.busy} onSearch={p.onSearch} onOpen={p.onOpen}/>
-        <details className="diary-workspace-outline"><summary>Outline ({outline.length})</summary>{outline.length ? outline.map(item=><button key={item.offset} className="popup-tab" onClick={()=>jump(item.offset)}>{item.label}</button>) : <p>Add Markdown headings to navigate this file.</p>}</details>
+        <details className="diary-workspace-outline"><summary>{t('diary.workspace.outlineCount', { count: outline.length })}</summary>{outline.length ? outline.map(item=><button key={item.offset} className="popup-tab" onClick={()=>jump(item.offset)}>{item.label}</button>) : <p>{t('diary.workspace.addHeadings')}</p>}</details>
       </aside>
     </div>
   </section>;

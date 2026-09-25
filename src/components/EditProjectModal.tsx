@@ -5,6 +5,7 @@ import type { InstalledModel, Project, ProjectMode } from '../types';
 import { ShellIcon } from './ShellIcon';
 import { CloseButton } from './CloseButton';
 import { FolderPicker } from './FolderPicker';
+import { useT } from '../i18n';
 
 /** Project identity and behavior. Reference files are managed on Sources. */
 export function EditProjectModal({
@@ -18,6 +19,7 @@ export function EditProjectModal({
   onSave: (patch: Partial<Project>) => void | Promise<void>;
   onClose: () => void;
 }): JSX.Element {
+  const t = useT();
   const ref = useRef<HTMLDialogElement>(null);
   const [icon, setIcon] = useState(project.icon || 'folder');
   const [color, setColor] = useState(project.color || 'default');
@@ -61,7 +63,7 @@ export function EditProjectModal({
       });
       onClose();
     } catch (e) {
-      setAddError(e instanceof Error ? e.message : 'Could not save the project.');
+      setAddError(e instanceof Error ? e.message : t('projects.edit.saveError'));
     } finally { setSaving(false); }
   };
 
@@ -69,96 +71,96 @@ export function EditProjectModal({
     <dialog
       className="edit-project-modal aero dialog-sheet"
       ref={ref}
-      aria-label={`Edit ${project.name}`}
+      aria-label={t('projects.edit.dialogLabel', { name: project.name })}
       onCancel={(e) => { e.preventDefault(); onClose(); }}
     >
       <header>
-        <h2>Edit project</h2>
+        <h2>{t('projects.edit.title')}</h2>
         <CloseButton onClick={onClose}/>
       </header>
 
       <div className="edit-project-body">
         <div className="project-name-field">
           <ProjectIdentityPicker icon={icon} color={color} onChange={(i,c)=>{setIcon(i);setColor(c);}}/>
-          <input aria-label="Project name" className="modal-input" value={name} onChange={(e) => setName(e.target.value)} />
+          <input aria-label={t('projects.edit.nameLabel')} className="modal-input" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <fieldset className="field project-modes">
-          <legend>Available in</legend>
+          <legend>{t('projects.edit.availableIn')}</legend>
           <div className="project-mode-options">
-            {([['chat', 'Chat', ''], ['cowork', 'Cowork', 'not built yet'], ['code', 'Code', 'preview']] as [ProjectMode, string, string][]).map(([mode, label, note]) => (
+            {([['chat', t('projects.modeChat'), ''], ['cowork', t('projects.modeCowork'), t('projects.edit.notBuiltYet')], ['code', t('projects.modeCode'), t('projects.edit.preview')]] as [ProjectMode, string, string][]).map(([mode, label, note]) => (
               <label key={mode} className="mm-check"><input type="checkbox" checked={modes.includes(mode)} onChange={(e) => toggleMode(mode, e.target.checked)} />{label}{note && <small> · {note}</small>}</label>
             ))}
           </div>
-          <small>{modes.length ? 'The project appears in these modes. Chat projects show in the sidebar and accept messages.' : 'Choose at least one mode.'}</small>
+          <small>{modes.length ? t('projects.edit.modesHint') : t('projects.edit.chooseMode')}</small>
         </fieldset>
         {bothModes && <fieldset className="field project-modes">
-          <legend>Shared context</legend>
+          <legend>{t('projects.edit.sharedContext')}</legend>
           <div className="project-mode-options">
-            <label className="mm-check"><input type="checkbox" checked={shared.code} onChange={(e) => setShared((s) => ({ ...s, code: e.target.checked }))} />Code tasks see this project<small> · goal, instructions, memories, recent chat titles</small></label>
-            <label className="mm-check"><input type="checkbox" checked={shared.chat} onChange={(e) => setShared((s) => ({ ...s, chat: e.target.checked }))} />Chats see recent Code tasks<small> · what was asked and how it ended</small></label>
+            <label className="mm-check"><input type="checkbox" checked={shared.code} onChange={(e) => setShared((s) => ({ ...s, code: e.target.checked }))} />{t('projects.edit.codeSeesProject')}<small> · {t('projects.edit.codeSeesProjectDetail')}</small></label>
+            <label className="mm-check"><input type="checkbox" checked={shared.chat} onChange={(e) => setShared((s) => ({ ...s, chat: e.target.checked }))} />{t('projects.edit.chatSeesCode')}<small> · {t('projects.edit.chatSeesCodeDetail')}</small></label>
           </div>
-          <small>Off by default. Nothing leaves your account; Code still asks before every action.</small>
+          <small>{t('projects.edit.sharedContextHint')}</small>
         </fieldset>}
         <label className="field">
-          <span>Project instructions</span>
+          <span>{t('projects.edit.instructions')}</span>
           <textarea className="modal-input" rows={3} value={instructions}
-            placeholder="How should the AI respond in this project?"
+            placeholder={t('projects.edit.instructionsPlaceholder')}
             onChange={(e) => setInstructions(e.target.value)} />
         </label>
         <details className="project-extra-settings">
-          <summary>More settings</summary>
+          <summary>{t('projects.edit.moreSettings')}</summary>
         <label className="field">
-          <span>Description</span>
+          <span>{t('projects.edit.description')}</span>
           <input
             className="modal-input"
             value={goal}
-            placeholder="What this project is for"
+            placeholder={t('projects.edit.descriptionPlaceholder')}
             onChange={(e) => setGoal(e.target.value)}
           />
         </label>
 
         <label className="field">
-          <span>Thinking effort</span>
+          <span>{t('projects.edit.thinkingEffort')}</span>
           <select className="modal-input" value={effort} onChange={e => setEffort(e.target.value as typeof effort)}>
-            <option value="inherit">Inherit deployment default</option><option value="default">Provider default</option>
-            <option value="low">Low</option><option value="high">High</option>
+            <option value="inherit">{t('projects.edit.effortInherit')}</option><option value="default">{t('projects.edit.effortDefault')}</option>
+            <option value="low">{t('projects.edit.effortLow')}</option><option value="high">{t('projects.edit.effortHigh')}</option>
           </select>
-          <small>Unverified providers use a best-effort hint. The request mode is shown with each reply.</small>
+          <small>{t('projects.edit.effortHint')}</small>
         </label>
         <label className="field">
-          <span>Default model</span>
+          <span>{t('projects.edit.defaultModel')}</span>
           <select className="modal-input" value={model} onChange={(e) => setModel(e.target.value)}>
-            <option value="">Use the loaded model</option>
+            <option value="">{t('projects.edit.useLoadedModel')}</option>
             {models.map((m) => (
-              <option key={m.name} value={m.name}>{m.name}{m.loaded ? ' · loaded' : ''}</option>
+              <option key={m.name} value={m.name}>{m.name}{m.loaded ? ` · ${t('projects.edit.loaded')}` : ''}</option>
             ))}
           </select>
-          <small>New chats in this project start on this model.</small>
+          <small>{t('projects.edit.defaultModelHint')}</small>
         </label>
 
         </details>
         <div className="field project-storage-summary">
-          <span>Upload folder</span>
-          <small>Text files and PDFs you upload are saved here. Manage reference files on the project’s Sources tab.</small>
+          <span>{t('projects.edit.uploadFolder')}</span>
+          <small>{t('projects.edit.uploadFolderHint')}</small>
           {project.projectFolder ? <p className="storage-path"><ShellIcon name="folder"/><span>{project.projectFolder}</span></p>
-            : <small>A folder is created on your first document upload when storage is connected.</small>}
+            : <small>{t('projects.edit.folderOnFirstUpload')}</small>}
         </div>
         <div className="field project-edit-folders">
-          <span>Linked reference folders</span>
-          <small>Read files from these storage folders. Removing a link leaves its files in storage.</small>
+          <span>{t('projects.edit.linkedFolders')}</span>
+          <small>{t('projects.edit.linkedFoldersHint')}</small>
           {linkedFolders.length ? <ul className="source-list">{linkedFolders.map((folder) => <li key={folder}>
             <span className="source-name" title={folder}><ShellIcon name="folder"/>{folder}</span>
-            <button type="button" className="btn btn-ghost btn-sm" disabled={saving} aria-label={`Unlink ${folder}`} onClick={() => setFolders((current) => current.filter((item) => item !== folder))}>Unlink</button>
-          </li>)}</ul> : <small>No reference folders linked.</small>}
-          <button type="button" className="btn btn-secondary btn-sm" disabled={saving} onClick={() => setPickingFolder(true)}>Link folder</button>
-          <small>Changes are applied when you save this project.</small>
+            <button type="button" className="btn btn-ghost btn-sm" disabled={saving} aria-label={t('projects.edit.unlinkFolder', { folder })} onClick={() => setFolders((current) => current.filter((item) => item !== folder))}>{t('projects.edit.unlink')}</button>
+          </li>)}</ul> : <small>{t('projects.edit.noFoldersLinked')}</small>}
+          <button type="button" className="btn btn-secondary btn-sm" disabled={saving} onClick={() => setPickingFolder(true)}>{t('projects.edit.linkFolder')}</button>
+          <small>{t('projects.edit.changesAppliedOnSave')}</small>
         </div>
       </div>
 
       {addError && <p role="alert" className="modal-err project-save-error">{addError}</p>}
       <footer>
-        <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" onClick={() => void save()} disabled={!name.trim() || !modes.length || saving}>{saving ? 'Saving…' : 'Save'}</button>
+        <button className="btn btn-secondary" onClick={onClose}>{t('projects.cancel')}</button>
+        <button className="btn btn-primary" onClick={() => void save()} disabled={!name.trim() || !modes.length || saving}>{saving ? t('projects.edit.saving') : t('projects.edit.save')}</button>
       </footer>
 
       {pickingFolder && <FolderPicker onClose={() => setPickingFolder(false)} onPick={(path) => { setFolders((current) => [...new Set([...current, path])]); setPickingFolder(false); }} />}

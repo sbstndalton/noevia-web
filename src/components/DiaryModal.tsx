@@ -2,11 +2,13 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { CloseButton } from './CloseButton';
 import { readFrontmatter } from '../diary-markdown';
+import { useT } from '../i18n';
 export function DiaryModal({ title, onClose, children, className = '' }: { className?: string; title: string; onClose: () => void; children: ReactNode }) {
+  const t = useT();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => { const previous = document.activeElement as HTMLElement; ref.current?.showModal(); return () => { ref.current?.close(); previous?.focus(); }; }, []);
   return <dialog ref={ref} className={`diary-modal aero dialog-sheet ${className}`} aria-label={title} onCancel={e => { e.preventDefault(); onClose(); }}>
-    <header><h2>{title}</h2><CloseButton onClick={onClose} label="Close dialog"/></header>
+    <header><h2>{title}</h2><CloseButton onClick={onClose} label={t('diary.modal.closeDialog')}/></header>
     {children}
   </dialog>;
 }
@@ -19,11 +21,12 @@ const SAFE_LINK = /^(https?:|mailto:)/i;
 /** A fenced block, rendered whole rather than one <pre> per line, with its
  *  language and a copy button. */
 function CodeBlock({ code, lang }: { code: string; lang: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   return (
     <div className="md-code">
       <div className="md-code-bar">
-        <span>{lang || 'text'}</span>
+        <span>{lang || t('diary.markdown.plainText')}</span>
         <button
           type="button"
           onClick={() => {
@@ -33,7 +36,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
             );
           }}
         >
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? t('diary.markdown.copied') : t('diary.markdown.copy')}
         </button>
       </div>
       <pre><code>{code}</code></pre>
@@ -59,6 +62,7 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
    *  message that opens with three dashes is not a note with properties. */
   properties?: boolean;
 }) {
+  const t = useT();
   // React escapes all source text. Raw HTML is deliberately never interpreted.
   // Order matters in this alternation: ** before *, so bold is not consumed by
   // the italic branch. The link branch allows one level of nested parentheses
@@ -81,7 +85,7 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
         const open = wikiLink({ target, heading, alias });
         return open
           ? <button key={i} className="diary-markdown-link" onClick={open}>{label}</button>
-          : <span key={i} className="diary-markdown-link-missing" title="No file of that name here">{label}</span>;
+          : <span key={i} className="diary-markdown-link-missing" title={t('diary.markdown.noFileOfThatName')}>{label}</span>;
       }
       if (part.startsWith('`')) return <code key={i}>{part.slice(1, -1)}</code>;
       if (part.startsWith('[')) {
@@ -105,10 +109,10 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
   const lines = source.replace(/<!--[^]*?-->/g, '').split('\n');
   const out: ReactNode[] = [];
   if (front && (front.fields.length || front.unparsed.length)) {
-    out.push(<dl className="markdown-properties" key="properties" aria-label="Properties">
+    out.push(<dl className="markdown-properties" key="properties" aria-label={t('diary.markdown.properties')}>
       {front.fields.map((field, i) => <Fragment key={`${field.key}-${i}`}>
         <dt>{field.key}</dt>
-        <dd>{field.values.length ? field.values.join(', ') : <span className="markdown-property-empty">empty</span>}</dd>
+        <dd>{field.values.length ? field.values.join(', ') : <span className="markdown-property-empty">{t('diary.markdown.empty')}</span>}</dd>
       </Fragment>)}
       {/* Lines this reader does not understand are shown as written rather than dropped: the
           file says something, and hiding it would be the one unforgivable thing here. */}

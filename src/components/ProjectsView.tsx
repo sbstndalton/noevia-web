@@ -11,6 +11,9 @@ import { PlusIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
 import { EmptyState } from './EmptyState';
 import { readTextSources, describeRejection } from '../sources';
+import { useT } from '../i18n';
+import type { Translate } from '../i18n';
+import '../i18n/projects';
 
 interface ProjectsViewProps {
   projects: Project[];
@@ -21,18 +24,19 @@ interface ProjectsViewProps {
   onDelete: (id: string) => void;
 }
 
-function timeAgo(ts: number): string {
+function timeAgo(t: Translate, ts: number): string {
   const mins = Math.floor((Date.now() - ts) / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 1) return t('projects.timeAgo.justNow');
+  if (mins < 60) return t.plural('projects.timeAgo.minutes', mins);
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+  if (hours < 24) return t.plural('projects.timeAgo.hours', hours);
   const days = Math.floor(hours / 24);
-  if (days === 1) return 'yesterday';
-  return `${days} days ago`;
+  if (days === 1) return t('projects.timeAgo.yesterday');
+  return t.plural('projects.timeAgo.days', days);
 }
 
 export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDelete, onEdit }: ProjectsViewProps): JSX.Element {
+  const t = useT();
   const [creating, setCreating] = useState(false);
   const tabsId = useId();
   const searchRef = useRef<HTMLInputElement>(null);
@@ -55,17 +59,17 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
     <div className="main projects-workspace">
       <div className="settings-scroll">
         <div className="projects-hero">
-          <div><h1>Projects</h1>
+          <div><h1>{t('projects.title')}</h1>
           <p className="projects-hero-sub">
             {projects.length === 0
-              ? 'Keep related chats and files together.'
-              : `${activeProjects.length} ${activeProjects.length === 1 ? 'project' : 'projects'} · ${chatCount} ${chatCount === 1 ? 'chat' : 'chats'}`}
+              ? t('projects.heroEmpty')
+              : `${t.plural('projects.count.projects', activeProjects.length)} · ${t.plural('projects.count.chats', chatCount)}`}
           </p></div>
           {/* With no projects the empty state carries the one primary action. */}
-          {projects.length > 0 && <button className="btn btn-primary" onClick={() => setCreating(true)}><PlusIcon /><span>New project</span></button>}
+          {projects.length > 0 && <button className="btn btn-primary" onClick={() => setCreating(true)}><PlusIcon /><span>{t('projects.newProject')}</span></button>}
         </div>
         <div className="projects-head">
-          <div className="seg" role="tablist" aria-label="Project list" onKeyDown={e => {
+          <div className="seg" role="tablist" aria-label={t('projects.listLabel')} onKeyDown={e => {
             if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
             e.preventDefault();
             const next = e.key === 'Home' ? 'active' : e.key === 'End' ? 'archived' : tab === 'active' ? 'archived' : 'active';
@@ -73,62 +77,62 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
             e.currentTarget.querySelector<HTMLButtonElement>(`[data-project-tab="${next}"]`)?.focus();
           }}>
             <button role="tab" id={`${tabsId}-active`} data-project-tab="active" aria-controls={`${tabsId}-panel`} tabIndex={tab === 'active' ? 0 : -1} aria-selected={tab === 'active'} className={tab === 'active' ? 'is-selected' : ''} onClick={() => setTab('active')}>
-              Your projects
+              {t('projects.tabYours')}
             </button>
             <button role="tab" id={`${tabsId}-archived`} data-project-tab="archived" aria-controls={`${tabsId}-panel`} tabIndex={tab === 'archived' ? 0 : -1} aria-selected={tab === 'archived'} className={tab === 'archived' ? 'is-selected' : ''} onClick={() => setTab('archived')}>
-              Archived{archivedCount ? ` (${archivedCount})` : ''}
+              {archivedCount ? t('projects.tabArchivedCount', { count: archivedCount }) : t('projects.tabArchived')}
             </button>
           </div>
           <input
             ref={searchRef}
             className="projects-search"
             type="search"
-            aria-label="Filter projects"
-            placeholder="Filter projects…"
+            aria-label={t('projects.filterLabel')}
+            placeholder={t('projects.filterPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <select className="projects-sort" aria-label="Sort projects" value={sort} onChange={(e) => setSort(e.target.value as 'recent' | 'name')}>
-            <option value="recent">Recent activity</option>
-            <option value="name">Name</option>
+          <select className="projects-sort" aria-label={t('projects.sortLabel')} value={sort} onChange={(e) => setSort(e.target.value as 'recent' | 'name')}>
+            <option value="recent">{t('projects.sortRecent')}</option>
+            <option value="name">{t('projects.sortName')}</option>
           </select>
         </div>
 
         <div role="tabpanel" id={`${tabsId}-panel`} aria-labelledby={`${tabsId}-${tab}`}>
         {projects.length === 0 ? (
-          <EmptyState icon="folder" title="No projects yet"
-            action={<button className="btn btn-primary" onClick={() => setCreating(true)}><PlusIcon /><span>New project</span></button>}>
-            A project keeps chats, files and instructions together.
+          <EmptyState icon="folder" title={t('projects.emptyTitle')}
+            action={<button className="btn btn-primary" onClick={() => setCreating(true)}><PlusIcon /><span>{t('projects.newProject')}</span></button>}>
+            {t('projects.emptyBody')}
           </EmptyState>
         ) : (
           <div className="projects-grid">
             {visibleProjects.length === 0 && (
-              <EmptyState compact icon={query.trim() ? 'search' : 'archive'} title={query.trim() ? 'No matching projects' : tab === 'archived' ? 'No archived projects' : 'No active projects'}
-                action={query.trim() ? <button className="modal-btn secondary" onClick={clearFilter}>Clear filter</button> : tab === 'active' ? <button className="modal-btn secondary" onClick={() => setTab('archived')}>View archived projects</button> : undefined}>
-                {query.trim() ? `No project names or descriptions match “${query.trim()}”.` : tab === 'archived' ? 'Projects you archive appear here.' : 'Your projects are archived. Open the archive to restore one, or create a new project.'}
+              <EmptyState compact icon={query.trim() ? 'search' : 'archive'} title={query.trim() ? t('projects.noMatchTitle') : tab === 'archived' ? t('projects.noArchivedTitle') : t('projects.noActiveTitle')}
+                action={query.trim() ? <button className="modal-btn secondary" onClick={clearFilter}>{t('projects.clearFilter')}</button> : tab === 'active' ? <button className="modal-btn secondary" onClick={() => setTab('archived')}>{t('projects.viewArchived')}</button> : undefined}>
+                {query.trim() ? t('projects.noMatchBody', { query: query.trim() }) : tab === 'archived' ? t('projects.noArchivedBody') : t('projects.noActiveBody')}
               </EmptyState>
             )}
             {visibleProjects.map((p) => (
               <article key={p.id} className="project-card surface">
                 <div className="project-card-top">
                   <span className="project-badge" aria-hidden="true"><ProjectIcon project={p} size={24}/></span>
-                  <h2 className="project-card-name"><button className="project-card-open" onClick={() => onOpenProject(p.id)} aria-label={`Open project ${p.name}`}>{p.name}</button></h2>
-                  <button className="project-card-options" aria-label={`Project options for ${p.name}`} onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setMenu({project:p,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more"/></button>
+                  <h2 className="project-card-name"><button className="project-card-open" onClick={() => onOpenProject(p.id)} aria-label={t('projects.openProject', { name: p.name })}>{p.name}</button></h2>
+                  <button className="project-card-options" aria-label={t('projects.optionsFor', { name: p.name })} onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setMenu({project:p,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more"/></button>
                 </div>
                 {p.goal && <p className="project-card-goal">{p.goal}</p>}
                 <div className="project-card-meta">
-                  {p.pinned && <span className="project-card-pin"><ShellIcon name="pin" size={14}/>Pinned</span>}
-                  {p.archived && <span className="project-chip">Archived</span>}
-                  <span className="project-chip">{p.chats.length} {p.chats.length === 1 ? 'chat' : 'chats'}</span>
-                  {p.files.length > 0 && <span className="project-chip">{p.files.length} {p.files.length === 1 ? 'file' : 'files'}</span>}
-                  {p.modes?.length && (p.modes.length > 1 || p.modes[0] !== 'chat') ? <span className="project-chip" aria-label={`Available in ${p.modes.join(', ')}`}>{p.modes.map((m) => m === 'chat' ? 'Chat' : m === 'cowork' ? 'Cowork' : 'Code').join(' · ')}</span> : null}
-                  <time className="project-card-time" dateTime={new Date(p.updatedAt).toISOString()} title={`Updated ${new Date(p.updatedAt).toLocaleString(appLocale())}`}>{timeAgo(p.updatedAt)}</time>
+                  {p.pinned && <span className="project-card-pin"><ShellIcon name="pin" size={14}/>{t('projects.pinned')}</span>}
+                  {p.archived && <span className="project-chip">{t('projects.archived')}</span>}
+                  <span className="project-chip">{t.plural('projects.count.chats', p.chats.length)}</span>
+                  {p.files.length > 0 && <span className="project-chip">{t.plural('projects.count.files', p.files.length)}</span>}
+                  {p.modes?.length && (p.modes.length > 1 || p.modes[0] !== 'chat') ? <span className="project-chip" aria-label={t('projects.availableIn', { modes: p.modes.join(', ') })}>{p.modes.map((m) => m === 'chat' ? t('projects.modeChat') : m === 'cowork' ? t('projects.modeCowork') : t('projects.modeCode')).join(' · ')}</span> : null}
+                  <time className="project-card-time" dateTime={new Date(p.updatedAt).toISOString()} title={t('projects.updatedAt', { date: new Date(p.updatedAt).toLocaleString(appLocale()) })}>{timeAgo(t, p.updatedAt)}</time>
                   {p.archived && (
                     <button
                       className="btn btn-secondary btn-sm"
                       onClick={(e) => { e.stopPropagation(); onPatch(p.id, { archived: false }); }}
                     >
-                      Restore
+                      {t('projects.restore')}
                     </button>
                   )}
                 </div>
@@ -140,12 +144,12 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
       </div>
 
       {menu && <ContextMenu at={menu.at} onClose={()=>setMenu(null)} items={[
-        {label:'Project settings',icon:<ShellIcon name="settings"/>,onSelect:()=>onEdit(menu.project.id)},
-        {label:menu.project.pinned?'Unpin project':'Pin project',icon:<ShellIcon name="pin"/>,onSelect:()=>onPatch(menu.project.id,{pinned:!menu.project.pinned})},
-        {label:menu.project.archived?'Restore project':'Archive project',icon:<ShellIcon name="folder"/>,onSelect:()=>onPatch(menu.project.id,{archived:!menu.project.archived})},
-        {label:'Delete project',danger:true,onSelect:()=>setConfirmDelete(menu.project.id)}
+        {label:t('projects.menu.settings'),icon:<ShellIcon name="settings"/>,onSelect:()=>onEdit(menu.project.id)},
+        {label:menu.project.pinned?t('projects.menu.unpin'):t('projects.menu.pin'),icon:<ShellIcon name="pin"/>,onSelect:()=>onPatch(menu.project.id,{pinned:!menu.project.pinned})},
+        {label:menu.project.archived?t('projects.menu.restore'):t('projects.menu.archive'),icon:<ShellIcon name="folder"/>,onSelect:()=>onPatch(menu.project.id,{archived:!menu.project.archived})},
+        {label:t('projects.menu.delete'),danger:true,onSelect:()=>setConfirmDelete(menu.project.id)}
       ]}/>}
-      {confirmDelete && <ConfirmDialog title={`Delete ${projects.find(p=>p.id===confirmDelete)?.name || 'project'}?`} body="This permanently deletes the project and its chats. This cannot be undone." confirmLabel="Delete project" danger onCancel={()=>setConfirmDelete(null)} onConfirm={()=>{onDelete(confirmDelete);setConfirmDelete(null);}}/>}
+      {confirmDelete && <ConfirmDialog title={t('projects.confirmDeleteTitle', { name: projects.find(p=>p.id===confirmDelete)?.name || t('projects.aProject') })} body={t('projects.confirmDeleteBody')} confirmLabel={t('projects.confirmDeleteConfirm')} danger onCancel={()=>setConfirmDelete(null)} onConfirm={()=>{onDelete(confirmDelete);setConfirmDelete(null);}}/>}
       {creating && (
         <CreateProjectModal
           onClose={() => setCreating(false)}
@@ -163,6 +167,7 @@ function CreateProjectModal({
   onClose: () => void;
   onCreate: ProjectsViewProps['onCreate'];
 }): JSX.Element {
+  const t = useT();
   const dialog = useModalDialog();
   const [icon, setIcon] = useState('folder');
   const [color, setColor] = useState('default');
@@ -177,7 +182,7 @@ function CreateProjectModal({
   const addFiles = async (list: FileList | null) => {
     if (!list) return;
     const { accepted, rejected } = await readTextSources(Array.from(list).slice(0, 10));
-    setErr(rejected.length ? `Not added — ${describeRejection(rejected)}.` : null);
+    setErr(rejected.length ? t('projects.notAdded', { reason: describeRejection(rejected) }) : null);
     setFiles((prev) => [...prev.filter((f) => !accepted.some((a) => a.name === f.name)), ...accepted].slice(0, 10));
   };
 
@@ -200,58 +205,58 @@ function CreateProjectModal({
       await onCreate({ icon, color, name: name.trim(), goal: goal.trim(), instructions, files });
       onClose();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'create failed');
+      setErr(e instanceof Error ? e.message : t('projects.createFailed'));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <dialog ref={dialog} className="modal-overlay native-modal" aria-label="Create a project" onCancel={(e) => { e.preventDefault(); onClose(); }} onClick={onClose}>
+    <dialog ref={dialog} className="modal-overlay native-modal" aria-label={t('projects.createLabel')} onCancel={(e) => { e.preventDefault(); onClose(); }} onClick={onClose}>
       <div className="modal-card aero dialog-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>Create a project</h2>
+          <h2>{t('projects.createTitle')}</h2>
           <CloseButton onClick={onClose}/>
         </div>
 
         <ProjectIdentityPicker icon={icon} color={color} onChange={(i,c)=>{setIcon(i);setColor(c);}}/>
-        <label className="modal-label" htmlFor="proj-name">What are you working on?</label>
+        <label className="modal-label" htmlFor="proj-name">{t('projects.nameQuestion')}</label>
         <input
           id="proj-name"
           className="modal-input"
-          placeholder="Name your project"
+          placeholder={t('projects.namePlaceholder')}
           value={name}
           autoFocus
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void submit()}
         />
 
-        <label className="modal-label" htmlFor="proj-goal">What are you trying to achieve?</label>
+        <label className="modal-label" htmlFor="proj-goal">{t('projects.goalQuestion')}</label>
         <textarea
           id="proj-goal"
           className="modal-input"
-          placeholder="Describe your project, goals, subject, etc…"
+          placeholder={t('projects.goalPlaceholder')}
           value={goal}
           onChange={(e) => setGoal(e.target.value)}
         />
 
-        <label className="modal-label" htmlFor="proj-instr">Instructions (how the AI should behave here)</label>
+        <label className="modal-label" htmlFor="proj-instr">{t('projects.instructionsLabel')}</label>
         <textarea
           id="proj-instr"
           className="modal-input"
-          placeholder="e.g. Show code first, explain key tradeoffs, and keep answers concise."
+          placeholder={t('projects.instructionsPlaceholder')}
           value={instructions}
           onChange={(e) => setInstructions(e.target.value)}
         />
 
-        <label className="modal-label">Knowledge files (text files injected into every chat)</label>
+        <label className="modal-label">{t('projects.filesLabel')}</label>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <label className="modal-filepick">
             <input type="file" multiple accept=".txt,.md,.json,.csv,.yml,.yaml,.ts,.tsx,.js,.jsx,.py,.sh,.html,.css" onChange={(e) => void addFiles(e.target.files)} />
-            <span>Add text files</span>
+            <span>{t('projects.addFiles')}</span>
           </label>
           <button className="modal-filepick" style={{ background: 'none', cursor: 'pointer' }} onClick={() => setBrowsing(true)}>
-            <span>Pull from storage</span>
+            <span>{t('projects.pullFromStorage')}</span>
           </button>
         </div>
         {browsing && (
@@ -276,9 +281,9 @@ function CreateProjectModal({
         {err && <p className="modal-err">{err}</p>}
 
         <div className="modal-actions">
-          <button className="modal-btn secondary" onClick={onClose}>Cancel</button>
+          <button className="modal-btn secondary" onClick={onClose}>{t('projects.cancel')}</button>
           <button className="modal-btn primary" onClick={() => void submit()} disabled={!name.trim() || busy}>
-            {busy ? 'Creating…' : 'Create project'}
+            {busy ? t('projects.creating') : t('projects.createProject')}
           </button>
         </div>
       </div>

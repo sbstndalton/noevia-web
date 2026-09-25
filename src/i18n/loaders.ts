@@ -27,7 +27,32 @@ export const SETTINGS_LOADERS: Record<string, () => Promise<Catalogue>> = {
   'pt-BR': () => import('./settings/pt-BR').then((m) => m.PT_BR_SETTINGS),
   'sv-SE': () => import('./settings/sv-SE').then((m) => m.SV_SE_SETTINGS),
 };
-const SEGMENT_LOADERS: Record<Segment, Record<string, () => Promise<Catalogue>>> = { settings: SETTINGS_LOADERS };
+/** The Projects segment of each locale (#289). Requested only once ProjectsView has loaded and
+ *  registered its English part (projects/index.ts), never on the first screen. */
+export const PROJECTS_LOADERS: Record<string, () => Promise<Catalogue>> = {
+  'de-DE': () => import('./projects/de-DE').then((m) => m.DE_DE_PROJECTS),
+  'es-ES': () => import('./projects/es-ES').then((m) => m.ES_ES_PROJECTS),
+  'fr-FR': () => import('./projects/fr-FR').then((m) => m.FR_FR_PROJECTS),
+  'it-IT': () => import('./projects/it-IT').then((m) => m.IT_IT_PROJECTS),
+  'nb-NO': () => import('./projects/nb-NO').then((m) => m.NB_NO_PROJECTS),
+  'nl-NL': () => import('./projects/nl-NL').then((m) => m.NL_NL_PROJECTS),
+  'pt-BR': () => import('./projects/pt-BR').then((m) => m.PT_BR_PROJECTS),
+  'sv-SE': () => import('./projects/sv-SE').then((m) => m.SV_SE_PROJECTS),
+};
+
+/** The Diary segment of each locale (#289). Requested only once DiaryView has loaded and
+ *  registered its English part (diary/index.ts), never on the first screen. */
+export const DIARY_LOADERS: Record<string, () => Promise<Catalogue>> = {
+  'de-DE': () => import('./diary/de-DE').then((m) => m.DE_DE_DIARY),
+  'es-ES': () => import('./diary/es-ES').then((m) => m.ES_ES_DIARY),
+  'fr-FR': () => import('./diary/fr-FR').then((m) => m.FR_FR_DIARY),
+  'it-IT': () => import('./diary/it-IT').then((m) => m.IT_IT_DIARY),
+  'nb-NO': () => import('./diary/nb-NO').then((m) => m.NB_NO_DIARY),
+  'nl-NL': () => import('./diary/nl-NL').then((m) => m.NL_NL_DIARY),
+  'pt-BR': () => import('./diary/pt-BR').then((m) => m.PT_BR_DIARY),
+  'sv-SE': () => import('./diary/sv-SE').then((m) => m.SV_SE_DIARY),
+};
+const SEGMENT_LOADERS: Record<Segment, Record<string, () => Promise<Catalogue>>> = { settings: SETTINGS_LOADERS, projects: PROJECTS_LOADERS, diary: DIARY_LOADERS };
 
 const pending = new Map<string, Promise<boolean>>();
 const failed = new Set<string>();

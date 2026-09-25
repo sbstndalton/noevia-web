@@ -23,6 +23,7 @@ import { BrowserPanel } from './browser/BrowserPanel';
 import { useBrowserAccess } from './browser/useBrowserAccess';
 import { EmptyState } from './EmptyState';
 import { useT } from '../i18n';
+import type { Translate } from '../i18n';
 
 /** First free "name", "name (2)", "name (3)", … avoiding collisions. */
 function uniqueName(name: string, existing: { name: string }[]): string {
@@ -67,15 +68,15 @@ function outputsOf(project: Project): { name: string; base: string; date: string
     .sort((a, b) => b.base.localeCompare(a.base));
 }
 
-function timeAgo(ts: number): string {
+function timeAgo(t: Translate, ts: number): string {
   const mins = Math.floor((Date.now() - ts) / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 1) return t('projects.timeAgo.justNow');
+  if (mins < 60) return t.plural('projects.timeAgo.minutes', mins);
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+  if (hours < 24) return t.plural('projects.timeAgo.hours', hours);
   const days = Math.floor(hours / 24);
-  if (days === 1) return 'yesterday';
-  return `${days} days ago`;
+  if (days === 1) return t('projects.timeAgo.yesterday');
+  return t.plural('projects.timeAgo.days', days);
 }
 
 export function ProjectView({
@@ -121,17 +122,17 @@ export function ProjectView({
     if (!list || busyDocs) return;
     const files = Array.from(list);
     setAddError(''); setBusyDocs(true);
-    setUploadRows(files.map(f => ({ name: f.name, stage: 'Queued', started: Date.now() })));
+    setUploadRows(files.map(f => ({ name: f.name, stage: t('projects.view.queued'), started: Date.now() })));
     const update = (i: number, value: { stage: string; percent?: number; finished?: number }) => setUploadRows(rows => rows.map((r, n) => n === i ? { ...r, percent: undefined, ...value } : r));
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       try {
-        if (file.size > uploadLimit(file.name)) throw new Error('File exceeds the limit: 25 MB, or 60 MB for PDF reduction');
-        update(i, { stage: 'Reading file' });
+        if (file.size > uploadLimit(file.name)) throw new Error(t('projects.view.fileTooLarge'));
+        update(i, { stage: t('projects.view.readingFile') });
         const result = await uploadProjectFile(project.id, { name: file.name, dataBase64: await fileToBase64(file) }, value => update(i, value));
-        update(i, { stage: result.attachment?.reduction?.note || 'Saved', percent: 100, finished: Date.now() });
+        update(i, { stage: result.attachment?.reduction?.note || t('projects.view.saved'), percent: 100, finished: Date.now() });
         onRefresh();
-      } catch (err) { update(i, { stage: err instanceof Error ? err.message : 'Upload failed', finished: Date.now() }); }
+      } catch (err) { update(i, { stage: err instanceof Error ? err.message : t('projects.view.uploadFailed'), finished: Date.now() }); }
     }
     setBusyDocs(false);
   };
@@ -140,7 +141,7 @@ export function ProjectView({
     setSyncing(true);
     setAddError('');
     try { await onSave(project.id, {sourceFolders: folders}); }
-    catch (e) { setAddError(e instanceof Error ? e.message : 'Could not update linked folders.'); }
+    catch (e) { setAddError(e instanceof Error ? e.message : t('projects.view.folderUpdateError')); }
     finally { setSyncing(false); }
   };
 
@@ -148,7 +149,7 @@ export function ProjectView({
     try {
       await deleteProjectFile(project.id, path);
     } catch (e) {
-      setAddError(e instanceof Error ? e.message : 'Could not delete that file');
+      setAddError(e instanceof Error ? e.message : t('projects.view.deleteFileError'));
     }
     onRefresh();
   };
@@ -156,7 +157,7 @@ export function ProjectView({
   const chats = [...project.chats]
     .filter((c) => !c.archived)
     .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || b.updatedAt - a.updatedAt);
-  const groups = ['Documents', 'Images', 'Text', 'Other'];
+  const groupKeys = [['Documents', 'projects.view.groupDocuments'], ['Images', 'projects.view.groupImages'], ['Text', 'projects.view.groupText'], ['Other', 'projects.view.groupOther']] as const;
   const fileGroup = (f: Project['files'][number]) => f.attachment?.group || (f.document ? 'Documents' : 'Text');
 
   const sourceCount = project.files.length + (project.assets || []).filter((a) => !a.sourceName).length;
@@ -178,29 +179,29 @@ export function ProjectView({
             <div className="project-head-main">
               <h1 className="project-title"><ProjectIcon project={project} size={30}/>{project.name}</h1>
               {project.goal && <p className="project-goal">{project.goal}</p>}
-              <p className="project-detail-meta">{project.archived ? 'Archived · ' : ''}{project.chats.length} {project.chats.length === 1 ? 'chat' : 'chats'} · Updated <time dateTime={new Date(project.updatedAt).toISOString()} title={new Date(project.updatedAt).toLocaleString()}>{timeAgo(project.updatedAt)}</time></p>
+              <p className="project-detail-meta">{project.archived ? `${t('projects.archived')} · ` : ''}{t.plural('projects.count.chats', project.chats.length)} · {t('projects.view.updatedLabel')} <time dateTime={new Date(project.updatedAt).toISOString()} title={new Date(project.updatedAt).toLocaleString()}>{timeAgo(t, project.updatedAt)}</time></p>
             </div>
             <div className="project-head-actions">
-              {chatEnabled && <button className="btn btn-secondary btn-sm" onClick={() => onNewChat(project.id)}>New chat</button>}
-              <button className="btn btn-secondary btn-sm" onClick={onEdit}>Project settings</button>
+              {chatEnabled && <button className="btn btn-secondary btn-sm" onClick={() => onNewChat(project.id)}>{t('projects.view.newChat')}</button>}
+              <button className="btn btn-secondary btn-sm" onClick={onEdit}>{t('projects.view.projectSettings')}</button>
             </div>
           </header>
 
-          <div className="seg project-tabs" role="tablist" aria-label="Project">
+          <div className="seg project-tabs" role="tablist" aria-label={t('projects.view.tablistLabel')}>
             <button role="tab" aria-selected={tab === 'chats'} className={tab === 'chats' ? 'is-selected' : ''} onClick={() => setTab('chats')}>
-              Chats{chats.length ? ` (${chats.length})` : ''}
+              {chats.length ? t('projects.view.tabChatsCount', { count: chats.length }) : t('projects.view.tabChats')}
             </button>
             <button role="tab" aria-selected={tab === 'sources'} className={tab === 'sources' ? 'is-selected' : ''} onClick={() => setTab('sources')}>
-              Sources{project.files.length + (project.assets || []).filter(a => !a.sourceName).length ? ` (${project.files.length + (project.assets || []).filter(a => !a.sourceName).length})` : ''}
+              {sourceCount ? t('projects.view.tabSourcesCount', { count: sourceCount }) : t('projects.view.tabSources')}
             </button>
             {researchAccess && <button role="tab" aria-selected={tab === 'research'} className={tab === 'research' ? 'is-selected' : ''} onClick={() => setTab('research')}>
-              Research
+              {t('projects.view.tabResearch')}
             </button>}
             {codeAccess && <button role="tab" aria-selected={tab === 'code'} className={tab === 'code' ? 'is-selected' : ''} onClick={() => setTab('code')}>
-              Code
+              {t('projects.view.tabCode')}
             </button>}
             {browserAccess && <button role="tab" aria-selected={tab === 'browser'} className={tab === 'browser' ? 'is-selected' : ''} onClick={() => setTab('browser')}>
-              Browser
+              {t('projects.view.tabBrowser')}
             </button>}
           </div>
 
@@ -215,27 +216,27 @@ export function ProjectView({
               {/* Outputs are documents noevia made here, not files you uploaded,
                   so they sit above the chats rather than among the sources. */}
               {outputs.length > 0 && (
-                <section className="project-outputs" aria-label="Outputs">
-                  <h2 className="rail-label">Outputs ({outputs.length})</h2>
+                <section className="project-outputs" aria-label={t('projects.view.outputs')}>
+                  <h2 className="rail-label">{t('projects.view.outputsCount', { count: outputs.length })}</h2>
                   <ul className="output-row">
                     {outputs.slice(0, 8).map((o) => (
                       <li key={o.name}>
                         <a className="output-card surface" href={`/api/projects/${encodeURIComponent(project.id)}/documents/original?name=${encodeURIComponent(o.name)}`} download>
                           <ShellIcon name="file"/>
                           <span className="output-name">{o.base.slice(20) || o.base}</span>
-                          <span className="output-meta">Research report · {o.date}</span>
+                          <span className="output-meta">{t('projects.view.researchReport', { date: o.date })}</span>
                         </a>
                         {o.sources && (
-                          <a className="output-sources" href={`/api/projects/${encodeURIComponent(project.id)}/documents/original?name=${encodeURIComponent(o.sources)}`} download>Sources</a>
+                          <a className="output-sources" href={`/api/projects/${encodeURIComponent(project.id)}/documents/original?name=${encodeURIComponent(o.sources)}`} download>{t('projects.view.sources')}</a>
                         )}
                       </li>
                     ))}
                   </ul>
                 </section>
               )}
-              {chats.length > 0 && <h2 className="rail-label">Recent chats</h2>}
+              {chats.length > 0 && <h2 className="rail-label">{t('projects.view.recentChats')}</h2>}
               {chats.length === 0 ? (
-                <EmptyState icon="chat" title="No chats yet">Ask something below to start the first chat in {project.name}. Its instructions and sources come along.</EmptyState>
+                <EmptyState icon="chat" title={t('projects.view.noChatsTitle')}>{t('projects.view.noChatsBody', { name: project.name })}</EmptyState>
               ) : (
                 <ul className="chat-index">
                   {chats.map((c) => (
@@ -244,21 +245,21 @@ export function ProjectView({
                         <span className="chat-index-main">
                           <span className="chat-index-title">
                             {c.pinned && <ShellIcon name="pin" size={14}/>}
-                            <span>{c.title || 'New task'}</span>
+                            <span>{c.title || t('projects.view.newTask')}</span>
                           </span>
                           {/* The title is the first message, so until a second
                               one arrives the preview repeats it verbatim. */}
                           {c.preview && c.preview.trim() !== (c.title || '').trim() && (
                             <span className="chat-index-preview">{c.preview}</span>
                           )}
-                          {streamingChats[c.id] && <span className="chat-index-status"><span className="chat-working" aria-hidden="true"><i /><i /><i /></span>Generating response</span>}
+                          {streamingChats[c.id] && <span className="chat-index-status"><span className="chat-working" aria-hidden="true"><i /><i /><i /></span>{t('projects.view.generatingResponse')}</span>}
                         </span>
-                        <time className="chat-index-time" dateTime={new Date(c.updatedAt).toISOString()} title={new Date(c.updatedAt).toLocaleString()}>{timeAgo(c.updatedAt)}</time>
+                        <time className="chat-index-time" dateTime={new Date(c.updatedAt).toISOString()} title={new Date(c.updatedAt).toLocaleString()}>{timeAgo(t, c.updatedAt)}</time>
                       </button>
                       <button
                         className="recents-del"
-                        title="Delete chat"
-                        aria-label={`Delete ${c.title || 'chat'}`}
+                        title={t('projects.view.deleteChat')}
+                        aria-label={t('projects.view.deleteNamed', { name: c.title || t('projects.view.chat') })}
                         onClick={() => onDeleteChat(project.id, c.id)}
                       >
                         <ShellIcon name="close" size={16}/>
@@ -272,45 +273,46 @@ export function ProjectView({
             <div className="project-scroll project-sources">
               <InstructionSkills key={project.id} projectId={project.id} updatedAt={project.updatedAt} onRefresh={onRefresh} onFiles={setSkillFiles} />
               <p className="rail-empty">
-                Reference files and images available to chats in this project.
+                {t('projects.view.referenceFilesHint')}
               </p>
 
               <section className="project-storage-summary">
-                <h3>Upload folder</h3>
-                <p className="rail-empty">Files are saved under this upload folder in Documents, Images, Text, or Other. Without connected storage, noevia keeps the originals.</p>
+                <h3>{t('projects.view.uploadFolder')}</h3>
+                <p className="rail-empty">{t('projects.view.uploadFolderBody')}</p>
                 {project.projectFolder ? <p className="storage-path"><ShellIcon name="folder"/><span>{project.projectFolder}</span></p>
-                  : <p className="rail-empty">A folder is created on your first upload when storage is connected.</p>}
+                  : <p className="rail-empty">{t('projects.edit.folderOnFirstUpload')}</p>}
               </section>
               <details className="project-linked-folders">
-                <summary>Linked reference folders ({linkedFolders.length})</summary>
-                <p className="rail-empty">Read files from other storage folders without moving them. Refresh to pick up changes; unlinking keeps the original files.</p>
+                <summary>{t('projects.view.linkedFoldersCount', { count: linkedFolders.length })}</summary>
+                <p className="rail-empty">{t('projects.view.linkedFoldersBody')}</p>
                 <ul className="source-list">{(project.sourceFolders || []).filter(f=>f!==project.projectFolder).map(f=><li key={f}>
                   <span className="source-name" title={f}><ShellIcon name="folder"/> {f}</span>
                 </li>)}</ul>
-                <button className="btn btn-secondary btn-sm" onClick={onEdit}>Edit linked folders</button>
-                <p className="source-status">Linked folders refresh when you return and about every five minutes while this project is open. Refresh pauses during chat generation, while offline, or when this tab is hidden.</p>
+                <button className="btn btn-secondary btn-sm" onClick={onEdit}>{t('projects.view.editLinkedFolders')}</button>
+                <p className="source-status">{t('projects.view.linkedFoldersRefreshNote')}</p>
               </details>
               <div className="source-actions">
-                <button className="btn btn-secondary btn-sm" disabled={syncing || busyDocs} onClick={()=>void updateFolders(project.sourceFolders || [])}>{syncing ? 'Refreshing…' : 'Refresh from storage'}</button>
+                <button className="btn btn-secondary btn-sm" disabled={syncing || busyDocs} onClick={()=>void updateFolders(project.sourceFolders || [])}>{syncing ? t('projects.view.refreshing') : t('projects.view.refreshFromStorage')}</button>
               </div>
 
               <div className="source-actions">
                 <label className={`btn btn-secondary btn-sm${busyDocs ? ' is-busy' : ''}`}>
-                  {busyDocs ? 'Uploading files…' : 'Upload files'}
+                  {busyDocs ? t('projects.view.uploadingFiles') : t('projects.view.uploadFiles')}
                   <input type="file" multiple disabled={busyDocs} style={{ display: 'none' }} onChange={e => { void addFiles(e.target.files); e.target.value = ''; }} />
                 </label>
-                <button className="btn btn-secondary btn-sm" onClick={() => setBrowsing(true)}>Import text from storage</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => setBrowsing(true)}>{t('projects.view.importFromStorage')}</button>
               </div>
-              <p className="rail-empty">Up to 25 MB per file. PDFs up to 60 MB are compressed automatically, with a text-only fallback if needed. Documents such as DOCX are accepted; archive bundles are not. Files without a reader stay available as originals.</p>
-              {uploadRows.length > 0 && <details open={busyDocs}><summary>{busyDocs ? 'Uploading files…' : `Upload results (${uploadRows.length})${uploadRows.some(r => r.stage !== 'Saved') ? ' · some files were not added' : ' · saved'}`}</summary><ul className="source-list upload-progress" aria-label="Upload progress" aria-live="polite">{uploadRows.map((r, i) => <li key={i}>
-                <span><strong>{r.name}</strong><small className="source-status">{r.stage}{r.percent !== undefined ? ` · ${r.percent}%` : ''} · {Math.max(0, Math.round(((r.finished || now) - r.started) / 1000))}s</small></span>
+              <p className="rail-empty">{t('projects.view.uploadLimitsNote')}</p>
+              {uploadRows.length > 0 && <details open={busyDocs}><summary>{busyDocs ? t('projects.view.uploadingFiles') : t('projects.view.uploadResults', { count: uploadRows.length, status: uploadRows.some(r => r.stage !== t('projects.view.saved')) ? t('projects.view.someNotAdded') : t('projects.view.savedStatus') })}</summary><ul className="source-list upload-progress" aria-label={t('projects.view.uploadProgress')} aria-live="polite">{uploadRows.map((r, i) => <li key={i}>
+                <span><strong>{r.name}</strong><small className="source-status">{r.stage}{r.percent !== undefined ? ` · ${r.percent}%` : ''} · {t('projects.view.seconds', { count: Math.max(0, Math.round(((r.finished || now) - r.started) / 1000)) })}</small></span>
               </li>)}</ul></details>}
-              {groups.map(group => {
+              {groupKeys.map(([group, groupKey]) => {
                 const files = project.files.filter(f => fileGroup(f) === group);
                 const legacyImages = group === 'Images' ? (project.assets || []).filter(a => !a.sourceName) : [];
                 if (!files.length && !legacyImages.length) return null;
-                return <section key={group} aria-label={group}>
-                  <h3 className="rail-label">{group} ({files.length + legacyImages.length})</h3>
+                const label = t(groupKey);
+                return <section key={group} aria-label={label}>
+                  <h3 className="rail-label">{t('projects.view.groupCount', { group: label, count: files.length + legacyImages.length })}</h3>
                   <ul className="source-list">{files.map(f => {
                     // Deletable mirrors the server's ownsFile: a file sitting directly in an
                     // attached folder (its own or a linked one) may be deleted from storage.
@@ -323,15 +325,15 @@ export function ProjectView({
                     return <li key={f.name}>
                       {f.attachment?.assetId && <img className="source-thumbnail" src={projectImageUrl(project.id, f.attachment.assetId)} alt="" />}
                       <span className="source-name" title={f.name}><ShellIcon name="file"/><span>{f.name.split('/').pop()}
-                        <small className="source-status">{skillFiles.includes(f.name) ? 'Instruction skill · review and enable above' : f.document ? sourceStatus(f) : f.attachment?.state === 'stored' ? (f.attachment.reason || 'Original stored · reader not available yet') : f.attachment?.state === 'vision' ? 'Uploaded · image read when you send a message' : f.attachment?.state === 'partial' ? (f.attachment.reason || 'Text preview limited · original kept') : 'Text ready'}</small>
-                        <small className="source-status">{f.source ? f.name : 'Stored in noevia'}{f.attachment ? ` · ${(f.attachment.bytes / 1024 / 1024).toFixed(2)} MB` : ''}</small>
-                        {undeletableSynced && <small className="source-status">Synced from {f.source}; remove it in storage.</small>}
+                        <small className="source-status">{skillFiles.includes(f.name) ? t('projects.view.instructionSkill') : f.document ? sourceStatus(f) : f.attachment?.state === 'stored' ? (f.attachment.reason || t('projects.view.originalStored')) : f.attachment?.state === 'vision' ? t('projects.view.uploadedImage') : f.attachment?.state === 'partial' ? (f.attachment.reason || t('projects.view.textPreviewLimited')) : t('projects.view.textReady')}</small>
+                        <small className="source-status">{f.source ? f.name : t('projects.view.storedInNoevia')}{f.attachment ? ` · ${(f.attachment.bytes / 1024 / 1024).toFixed(2)} MB` : ''}</small>
+                        {undeletableSynced && <small className="source-status">{t('projects.view.syncedFrom', { source: f.source || '' })}</small>}
                       </span></span>
-                      {(f.attachment || f.document?.byteHash) && <a className="btn btn-ghost btn-sm" href={`/api/projects/${encodeURIComponent(project.id)}/${f.attachment ? 'uploads' : 'documents'}/original?name=${encodeURIComponent(f.name)}`} download>Original</a>}
-                      {!undeletableSynced && <button className="btn btn-ghost btn-sm" aria-label={`${deletable ? 'Delete' : 'Remove'} ${f.name}`} onClick={() => deletable ? setConfirmDelete(f.name) : onPatch(project.id, { files: filesAfterRemoval(project.files, f.name) })}>{deletable ? 'Delete' : 'Remove'}</button>}
+                      {(f.attachment || f.document?.byteHash) && <a className="btn btn-ghost btn-sm" href={`/api/projects/${encodeURIComponent(project.id)}/${f.attachment ? 'uploads' : 'documents'}/original?name=${encodeURIComponent(f.name)}`} download>{t('projects.view.original')}</a>}
+                      {!undeletableSynced && <button className="btn btn-ghost btn-sm" aria-label={t(deletable ? 'projects.view.deleteNamed' : 'projects.view.removeNamed', { name: f.name })} onClick={() => deletable ? setConfirmDelete(f.name) : onPatch(project.id, { files: filesAfterRemoval(project.files, f.name) })}>{deletable ? t('projects.view.delete') : t('projects.view.remove')}</button>}
                     </li>;
                   })}
-                  {legacyImages.map(a => <li key={a.id}><img className="source-thumbnail" src={projectImageUrl(project.id, a.id)} alt=""/><span className="source-name"><span>{a.name}<small className="source-status">Earlier upload · stored in noevia. Refresh to copy to connected storage.</small></span></span><button className="btn btn-ghost btn-sm" onClick={() => setConfirmImageDelete(a.id)}>Remove</button></li>)}
+                  {legacyImages.map(a => <li key={a.id}><img className="source-thumbnail" src={projectImageUrl(project.id, a.id)} alt=""/><span className="source-name"><span>{a.name}<small className="source-status">{t('projects.view.earlierUpload')}</small></span></span><button className="btn btn-ghost btn-sm" onClick={() => setConfirmImageDelete(a.id)}>{t('projects.view.remove')}</button></li>)}
                   </ul>
                 </section>;
               })}
@@ -342,32 +344,32 @@ export function ProjectView({
           {/* Starting a chat from the project page is the point of being here,
               so the composer is present rather than a button that empties into
               a blank chat. */}
-          {!chatEnabled && <p className="route-note" role="status">This project is not enabled for Chat. Turn Chat on under Project settings → Available in to send messages here.</p>}
+          {!chatEnabled && <p className="route-note" role="status">{t('projects.view.chatDisabled')}</p>}
           {/* Research and Code each have their own way to start something; a chat composer
               under them is a second, unrelated send button taking half the height. */}
           <div className="project-composer" hidden={!chatEnabled || tab === 'research' || tab === 'code' || tab === 'browser'}>
             {/* What rides along with the next message, stated before it is sent
                 rather than discovered afterwards. Each chip opens what it counts. */}
-            <ul className="composer-context-chips" aria-label="Context sent with every message in this project">
+            <ul className="composer-context-chips" aria-label={t('projects.view.contextChipsLabel')}>
               <li>
                 <button type="button" className="chip" onClick={() => setPanel(panel === 'instructions' ? null : 'instructions')}>
-                  Instructions{project.instructions ? '' : ' · none yet'}
+                  {project.instructions ? t('projects.view.instructions') : t('projects.view.instructionsNone')}
                 </button>
               </li>
               <li>
                 <button type="button" className="chip" onClick={() => setPanel(panel === 'memory' ? null : 'memory')}>
-                  Memory · {project.memories.length}
+                  {t('projects.view.memoryCount', { count: project.memories.length })}
                 </button>
               </li>
               <li>
                 <button type="button" className="chip" onClick={() => setTab('sources')}>
-                  Sources · {sourceCount}
+                  {t('projects.view.sourcesCount', { count: sourceCount })}
                 </button>
               </li>
               {linkedFolders.length > 0 && (
                 <li>
                   <button type="button" className="chip" onClick={() => setTab('sources')}>
-                    Linked folders · {linkedFolders.length}
+                    {t('projects.view.linkedFoldersChip', { count: linkedFolders.length })}
                   </button>
                 </li>
               )}
@@ -384,27 +386,27 @@ export function ProjectView({
               <ComposerActions key={project.id} project={project} disabled={composerBusy || busyDocs || syncing} onChanged={onRefresh} onModels={onOpenModels} onBusy={setComposerBusy} onStatus={setComposerStatus} />
               <ComposerModel label={modelLabel} onClick={onOpenModels} />
           <ReasoningControl project={project} disabled={composerBusy || busyDocs || syncing} onChanged={onRefresh} />
-              <button className="send-btn glass glass-lens is-primary is-press" onClick={send} disabled={!draft.trim() || composerBusy || busyDocs || syncing} title="Send" aria-label="Send">
+              <button className="send-btn glass glass-lens is-primary is-press" onClick={send} disabled={!draft.trim() || composerBusy || busyDocs || syncing} title={t('projects.view.send')} aria-label={t('projects.view.send')}>
                 <SendIcon />
               </button>
             </div>
             {composerStatus && <div className="composer-action-status" role="status">{composerStatus}</div>}
             <button className="project-newchat" onClick={() => onNewChat(project.id)}>
-              or open an empty chat in {project.name}
+              {t('projects.view.openEmptyChat', { name: project.name })}
             </button>
           </div>
         </div>
 
         <div className="project-rail">
           <RailRow
-            label="Instructions"
-            hint={project.instructions ? `${project.instructions.length} chars` : 'Add'}
+            label={t('projects.view.instructions')}
+            hint={project.instructions ? t('projects.view.charsCount', { count: project.instructions.length }) : t('projects.view.add')}
             onClick={() => setPanel(panel === 'instructions' ? null : 'instructions')}
           />
           {panel === 'instructions' && (
             <RailTextarea
               value={project.instructions}
-              placeholder="How the AI should behave in every chat of this project…"
+              placeholder={t('projects.view.instructionsPlaceholder')}
               onChange={(v) => onPatch(project.id, { instructions: v })}
               onFile={(text) => onPatch(project.id, { instructions: text })}
               fileMode="replace"
@@ -412,56 +414,56 @@ export function ProjectView({
           )}
 
           <RailRow
-            label="Memory"
-            hint={project.memories.length ? `${project.memories.length} line${project.memories.length === 1 ? '' : 's'}` : 'Edit'}
+            label={t('projects.view.memory')}
+            hint={project.memories.length ? t.plural('projects.view.lineCount', project.memories.length) : t('projects.view.edit')}
             onClick={() => setPanel(panel === 'memory' ? null : 'memory')}
           />
           {panel === 'memory' && (
             <RailTextarea
               value={project.memories.join('\n')}
-              placeholder="One memory per line — e.g. Prefer concise answers with runnable examples"
+              placeholder={t('projects.view.memoryPlaceholder')}
               onChange={(v) => onPatch(project.id, { memories: v.split('\n').map((x) => x.trim()).filter(Boolean) })}
               onFile={(text) => onPatch(project.id, { memories: [...project.memories, ...text.split('\n').map((x) => x.trim()).filter(Boolean)] })}
               fileMode="append"
             />
           )}
 
-          <RailRow label="Sources" hint={`${sourceCount}`} onClick={() => setTab('sources')} />
+          <RailRow label={t('projects.view.sources')} hint={`${sourceCount}`} onClick={() => setTab('sources')} />
 
           <RailRow
-            label="Context"
-            hint={panel === 'context' ? 'Hide' : 'Show'}
+            label={t('projects.view.context')}
+            hint={panel === 'context' ? t('projects.view.hide') : t('projects.view.show')}
             onClick={() => setPanel(panel === 'context' ? null : 'context')}
           />
           {panel === 'context' && (
             <div className="rail-context">
-              <p><span>Model</span><span>{modelLabel}</span></p>
-              <p><span>Thinking</span><span>{project.reasoningEffort && project.reasoningEffort !== 'default' ? project.reasoningEffort : 'Default'}</span></p>
-              <p><span>Toolboxes</span><span>{(project.toolboxes || ['core']).join(', ')}</span></p>
-              <p><span>Upload folder</span><span>{project.projectFolder || 'Created on first upload'}</span></p>
-              <p><span>Linked folders</span><span>{linkedFolders.length}</span></p>
-              <p><span>Outputs</span><span>{outputs.length}</span></p>
+              <p><span>{t('projects.view.model')}</span><span>{modelLabel}</span></p>
+              <p><span>{t('projects.view.thinking')}</span><span>{project.reasoningEffort && project.reasoningEffort !== 'default' ? project.reasoningEffort : t('projects.view.default')}</span></p>
+              <p><span>{t('projects.view.toolboxes')}</span><span>{(project.toolboxes || ['core']).join(', ')}</span></p>
+              <p><span>{t('projects.view.uploadFolder')}</span><span>{project.projectFolder || t('projects.view.createdOnFirstUpload')}</span></p>
+              <p><span>{t('projects.view.linkedFolders')}</span><span>{linkedFolders.length}</span></p>
+              <p><span>{t('projects.view.outputs')}</span><span>{outputs.length}</span></p>
             </div>
           )}
 
           {/* Listed because the sample's project screen has it; it does nothing
               yet, and says so rather than pretending. */}
           <div className="rail-row-btn is-unavailable" aria-disabled="true">
-            <span className="rail-row-label">Scheduled</span>
-            <span className="rail-row-hint">Not yet available</span>
+            <span className="rail-row-label">{t('projects.view.scheduled')}</span>
+            <span className="rail-row-hint">{t('projects.view.notYetAvailable')}</span>
           </div>
 
           <p className="rail-empty" style={{ marginTop: 10 }}>
-            Instructions, sources, and memory ride along with every chat in this project.
+            {t('projects.view.railFooterNote')}
           </p>
         </div>
       </div>
 
       {confirmDelete && (
         <ConfirmDialog
-          title={`Delete ${confirmDelete.split('/').pop()}?`}
-          body={`This deletes the file from your storage at ${confirmDelete}, not just from this project. If that folder is shared or synced, it goes everywhere. This cannot be undone.`}
-          confirmLabel="Delete file"
+          title={t('projects.view.deleteFileTitle', { name: confirmDelete.split('/').pop() || '' })}
+          body={t('projects.view.deleteFileBody', { path: confirmDelete })}
+          confirmLabel={t('projects.view.deleteFile')}
           danger
           onCancel={() => setConfirmDelete(null)}
           onConfirm={() => { const path = confirmDelete; setConfirmDelete(null); void removeFile(path); }}
@@ -469,9 +471,9 @@ export function ProjectView({
       )}
       {confirmImageDelete && (
         <ConfirmDialog
-          title="Remove this image?"
-          body="This deletes the earlier upload from noevia's own storage. This cannot be undone."
-          confirmLabel="Remove image"
+          title={t('projects.view.removeImageTitle')}
+          body={t('projects.view.removeImageBody')}
+          confirmLabel={t('projects.view.removeImage')}
           danger
           onCancel={() => setConfirmImageDelete(null)}
           onConfirm={() => {
@@ -479,7 +481,7 @@ export function ProjectView({
             setConfirmImageDelete(null);
             void deleteProjectImage(project.id, assetId)
               .then(onRefresh)
-              .catch((e: unknown) => setAddError(e instanceof Error ? e.message : 'Could not remove that image'));
+              .catch((e: unknown) => setAddError(e instanceof Error ? e.message : t('projects.view.removeImageError')));
           }}
         />
       )}
@@ -524,6 +526,7 @@ function RailTextarea({
   onFile?: (content: string) => void;
   fileMode?: 'replace' | 'append';
 }): JSX.Element {
+  const t = useT();
   const addFile = async (list: FileList | null) => {
     const f = list?.[0];
     if (!f || f.size > UPLOAD_CAP || !onFile) return;
@@ -549,7 +552,7 @@ function RailTextarea({
               e.target.value = '';
             }}
           />
-          <span>{fileMode === 'append' ? 'Append .md / .txt' : 'Replace with .md / .txt'}</span>
+          <span>{fileMode === 'append' ? t('projects.view.appendFile') : t('projects.view.replaceFile')}</span>
         </label>
       )}
     </div>
