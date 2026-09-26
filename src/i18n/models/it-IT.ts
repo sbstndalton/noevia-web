@@ -60,6 +60,8 @@ export const IT_IT_MODELS: ModelsCatalogue = {
   'mm.route.pick': "— scegli un modello —",
   'mm.route.loadedOption': "{model} · caricato",
   'mm.route.notInstalledOption': "{model} · non installato",
+  'mm.route.unsuitableOption': "{model} · non adatto a questo ruolo",
+  'mm.route.unsuitableWarning': "{model} non è adatto a questo ruolo. Scegli un altro modello o impostalo su nessuno, quindi salva.",
   'mm.route.save': "Salva l’instradamento",
   'mm.route.howAuto': "Come decide Auto",
   'mm.defaultMode.title': "Modalità modello predefinita",

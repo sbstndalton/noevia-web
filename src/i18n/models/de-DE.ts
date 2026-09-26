@@ -60,6 +60,8 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.route.pick': "— Modell wählen —",
   'mm.route.loadedOption': "{model} · geladen",
   'mm.route.notInstalledOption': "{model} · nicht installiert",
+  'mm.route.unsuitableOption': "{model} · für diese Rolle ungeeignet",
+  'mm.route.unsuitableWarning': "{model} ist für diese Rolle ungeeignet. Wählen Sie ein anderes Modell oder stellen Sie es auf „keins“ und speichern Sie.",
   'mm.route.save': "Routing speichern",
   'mm.route.howAuto': "Wie Auto entscheidet",
   'mm.defaultMode.title': "Standard-Modellmodus",

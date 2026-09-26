@@ -60,6 +60,8 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.route.pick': "— välj en modell —",
   'mm.route.loadedOption': "{model} · inläst",
   'mm.route.notInstalledOption': "{model} · inte installerad",
+  'mm.route.unsuitableOption': "{model} · inte lämplig för denna roll",
+  'mm.route.unsuitableWarning': "{model} är inte lämplig för denna roll. Välj en annan modell eller ställ in den på ingen och spara.",
   'mm.route.save': "Spara routning",
   'mm.route.howAuto': "Så bestämmer Auto",
   'mm.defaultMode.title': "Standardläge för modell",

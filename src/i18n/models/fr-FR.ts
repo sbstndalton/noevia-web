@@ -60,6 +60,8 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.route.pick': "— choisir un modèle —",
   'mm.route.loadedOption': "{model} · chargé",
   'mm.route.notInstalledOption': "{model} · non installé",
+  'mm.route.unsuitableOption': "{model} · non adapté à ce rôle",
+  'mm.route.unsuitableWarning': "{model} ne convient pas à ce rôle. Choisissez un autre modèle ou réglez-le sur aucun, puis enregistrez.",
   'mm.route.save': "Enregistrer le routage",
   'mm.route.howAuto': "Comment Auto décide",
   'mm.defaultMode.title': "Mode de modèle par défaut",

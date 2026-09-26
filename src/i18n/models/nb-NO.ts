@@ -60,6 +60,8 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.route.pick': "— velg en modell —",
   'mm.route.loadedOption': "{model} · lastet",
   'mm.route.notInstalledOption': "{model} · ikke installert",
+  'mm.route.unsuitableOption': "{model} · ikke egnet for denne rollen",
+  'mm.route.unsuitableWarning': "{model} er ikke egnet for denne rollen. Velg en annen modell eller sett den til ingen, og lagre.",
   'mm.route.save': "Lagre ruting",
   'mm.route.howAuto': "Slik bestemmer Auto",
   'mm.defaultMode.title': "Standard modellmodus",

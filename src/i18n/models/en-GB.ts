@@ -66,6 +66,8 @@ export const EN_GB_MODELS = {
   'mm.route.pick': '— pick a model —',
   'mm.route.loadedOption': '{model} · loaded',
   'mm.route.notInstalledOption': '{model} · not installed',
+  'mm.route.unsuitableOption': '{model} · not suitable for this role',
+  'mm.route.unsuitableWarning': '{model} is not suitable for this role. Choose another model or set it to none, then save.',
   'mm.route.save': 'Save routing',
   'mm.route.howAuto': 'How Auto decides',
   'mm.defaultMode.title': 'Default model mode',

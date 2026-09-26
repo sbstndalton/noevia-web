@@ -60,6 +60,8 @@ export const PT_BR_MODELS: ModelsCatalogue = {
   'mm.route.pick': "— escolha um modelo —",
   'mm.route.loadedOption': "{model} · carregado",
   'mm.route.notInstalledOption': "{model} · não instalado",
+  'mm.route.unsuitableOption': "{model} · não adequado para esta função",
+  'mm.route.unsuitableWarning': "{model} não é adequado para esta função. Escolha outro modelo ou defina como nenhum e salve.",
   'mm.route.save': "Salvar roteamento",
   'mm.route.howAuto': "Como o Auto decide",
   'mm.defaultMode.title': "Modo de modelo padrão",

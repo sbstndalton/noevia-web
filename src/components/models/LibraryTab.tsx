@@ -12,6 +12,7 @@ import { MiddleTruncate } from '../MiddleTruncate';
 import { AutoTune } from './AutoTune';
 import { isSystemModel } from '../../model-system';
 import { isChatGenerationModel } from '../../model-kind';
+import { bytesToModelSizeGB, formatModelSizeGB } from '../../model-size';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 
@@ -95,7 +96,9 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
       return true;
     })
     .sort((a, b) => {
-      if (sort === 'size') return (fileFor(b.name)?.bytes ?? b.sizeGB ?? 0) - (fileFor(a.name)?.bytes ?? a.sizeGB ?? 0);
+      // #443: sizeGB is decimal GB, not bytes — scale it up so a model with no file-scan entry
+      // yet still sorts on the same axis as one that has bytes, instead of always sorting last.
+      if (sort === 'size') return (fileFor(b.name)?.bytes ?? (b.sizeGB != null ? b.sizeGB * 1e9 : 0)) - (fileFor(a.name)?.bytes ?? (a.sizeGB != null ? a.sizeGB * 1e9 : 0));
       if (sort === 'modified') return (fileFor(b.name)?.modified || '').localeCompare(fileFor(a.name)?.modified || '');
       return a.name.localeCompare(b.name);
     });
@@ -136,7 +139,11 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     </div>
     {orphanFiles.length > 0 && <section className="mm-panel"><h3>{t('mm.library.orphans')}</h3>
       <p className="mm-note">{t('mm.library.orphansNote')}</p>
-      <ul className="mm-list">{orphanFiles.map(f => <li key={f.key}><span>{f.name}<small>{f.size}{f.subdir ? ` · ${f.subdir}/` : ''}</small></span>
+      {/* #443: orphan files have no InstalledModel counterpart to share sizeGB with, but the
+          scan still reports a raw byte count — reformat it through the same shared math so an
+          orphan's size uses the same convention as every registered model's, rather than the
+          external service's own (differently-based) formatted string. */}
+      <ul className="mm-list">{orphanFiles.map(f => <li key={f.key}><span>{f.name}<small>{formatModelSizeGB(bytesToModelSizeGB(f.bytes)) || f.size}{f.subdir ? ` · ${f.subdir}/` : ''}</small></span>
         <button className="modal-btn secondary" onClick={() => onConfigure(f.name.replace(/\.gguf$/i, ''))}>{t('mm.createSettings')}</button></li>)}</ul></section>}
     {unregistered.length > 0 && orphanFiles.length === 0 && <p className="mm-note">{t('mm.library.unconfigured', { files: unregistered.join(', ') })}</p>}
   </div>;
@@ -161,7 +168,12 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
   return <article className={`model-card surface${open ? ' is-open' : ''}`} data-state={state} aria-label={m.name}>
     <header className="model-card-head"><h3 className="model-card-name"><MiddleTruncate text={m.name}/></h3><span className="model-card-state">{m.failed ? t('mm.card.failed') : m.loaded ? t('mm.loaded') : t('mm.card.unloaded')}</span></header>
     <p className="model-card-meta">
-      {(file?.size || m.sizeGB != null) && <span>{file?.size || `${m.sizeGB} GB`}</span>}
+      {/* #443: this used to prefer file.size — a string formatted by the external Model Loader
+          service, which most likely uses binary GiB while calling it "GB" — over m.sizeGB (the
+          composer's decimal-GB number), so the same file showed two different sizes depending on
+          which page you were on. m.sizeGB, run through the same shared formatter the composer
+          uses, is now the only source: same field, same rounding, same label everywhere. */}
+      {formatModelSizeGB(m.sizeGB) && <span>{formatModelSizeGB(m.sizeGB)}</span>}
       {m.maxContext != null && <span>{t('mm.card.trainedFor', { tokens: tokens(m.maxContext) })}</span>}
       {file?.shape && <span>{file.shape.label}</span>}
       {file?.projector && <span className="model-card-tag">{t('mm.card.vision')}</span>}
@@ -245,7 +257,7 @@ function DeleteModel({ model: m, file, onDeleted }: { model: InstalledModel; fil
   };
   if (!confirming) return <button className="popup-tab model-card-danger" aria-label={t('mm.delete.label', { model: m.name })} onClick={() => setConfirming(true)}>{t('mm.delete')}</button>;
   return <div className="model-card-confirm" role="group" aria-label={t('mm.delete.label', { model: m.name })}>
-    <p>{file ? t(file.projector ? 'mm.delete.confirmFileProjector' : 'mm.delete.confirmFile', { file: file.name, size: file.size }) : t('mm.delete.confirmCache')}</p>
+    <p>{file ? t(file.projector ? 'mm.delete.confirmFileProjector' : 'mm.delete.confirmFile', { file: file.name, size: formatModelSizeGB(bytesToModelSizeGB(file.bytes)) || file.size }) : t('mm.delete.confirmCache')}</p>
     {file && file.sections.length > 0 && <label className="mm-check"><input type="checkbox" checked={removeSettings} onChange={e => setRemoveSettings(e.target.checked)}/>{t('mm.delete.alsoSettings', { sections: file.sections.join(', ') })}</label>}
     <button className="popup-tab model-card-danger" disabled={busy} onClick={() => void run()}>{busy ? t('mm.delete.deleting') : t('mm.delete.files')}</button>
     <button className="popup-tab" onClick={() => setConfirming(false)}>{t('mm.keep')}</button>

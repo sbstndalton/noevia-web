@@ -150,12 +150,18 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
 
   // Fast/Smart/Code route chat-generation prompts — an embedding, reranking or routing model
   // (Laya) there fails every request through it, matching the server-side guard on save
-  // (chat-model-kind.cjs's nonChatAliases, PUT /api/auto-roles, #343/#409). Vision keeps its own
-  // allowed-kind rule below (a vision/multimodal label, not this chat-generation check):
-  // matchesModelUse('all') only excludes embedding/reranking labels, which is what a vision
-  // model is judged by, not isChatGenerationModel.
+  // (chat-model-kind.cjs's nonChatAliases, PUT /api/auto-roles, #343/#409).
   const chatModels = models.filter((m) => isChatGenerationModel(m.name, m.labels));
-  const visionModels = models.filter((m) => matchesModelUse(m.labels, 'all'));
+  // #442: Vision used matchesModelUse(labels, 'all'), which only excludes embedding/reranking
+  // labels and has no concept of a system/routing model — Laya (labels: []) passed straight
+  // through. The 'vision' label itself is reliable, not a guess: it comes from the model's own
+  // GGUF architecture metadata (server/llamacpp-manager.cjs's nativeLabels(), which reads
+  // model.architecture.input_modalities from the native router regardless of load state — see
+  // "native loaded and cold capability labels" in llamacpp-manager.test.cjs) rather than a
+  // name/size heuristic, so requiring it — on top of the same isChatGenerationModel filter as
+  // the other roles — both excludes Laya and narrows to models the server actually reported as
+  // able to read images.
+  const visionModels = chatModels.filter((m) => matchesModelUse(m.labels, 'vision'));
   const valueFor = (role: 'fast' | 'smart' | 'vision' | 'code') => pending[role] ?? info?.roles?.[role] ?? '';
 
   const save = async () => {
@@ -186,15 +192,26 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
     {!!info?.missing?.length && <p className="mm-note warn" role="alert">{t(info.missing.length === 1 ? 'mm.route.missingOne' : 'mm.route.missingSeveral', { models: info.missing.map((m) => `${t(ROUTE_ROLE[m.role])} (${m.model})`).join(', ') })}</p>}
     {view !== 'loading' && view !== 'error' && <>
     <div className="mm-form route-roles">
-      {(['fast', 'smart', 'vision', 'code'] as const).map((role) => { const roleModels = role === 'vision' ? visionModels : chatModels; return <label key={role}>
+      {(['fast', 'smart', 'vision', 'code'] as const).map((role) => { const roleModels = role === 'vision' ? visionModels : chatModels;
+        const saved = info?.roles?.[role];
+        // A saved role can name a model that either (a) no longer exists, or (b) — #442 follow-up
+        // — is still installed but no longer fits this role's filter: Vision was narrowed to
+        // chat + vision-labelled models, so a role saved before that change (or naming Laya, or a
+        // chat model with no vision label) has no matching <option> here even though the model is
+        // real. Without this fallback the controlled <select> silently falls back to "— none —"
+        // while valueFor(role) still sends the stale name on Save, which the server's #442 guard
+        // then 400s with no visible explanation. Keep it selectable either way, but say which case
+        // it is: "not installed" (gone) vs "not suitable for this role" (installed, wrong kind).
+        const savedUnavailable = !!saved && !roleModels.some((m) => m.name === saved);
+        const savedInstalled = savedUnavailable && models.some((m) => m.name === saved);
+        return <label key={role}>
         {t(ROUTE_ROLE[role])}
         <select value={valueFor(role)} disabled={busy} onChange={(e) => setPending((prev) => ({ ...prev, [role]: e.target.value }))}>
           <option value="">{role === 'vision' || role === 'code' ? t('mm.route.none') : t('mm.route.pick')}</option>
           {roleModels.map((m) => <option key={m.name} value={m.name}>{m.loaded ? t('mm.route.loadedOption', { model: m.name }) : m.name}</option>)}
-          {/* A role can name a model that is no longer installed; keep it
-              selectable so saving does not silently drop it. */}
-          {info?.roles?.[role] && !models.some((m) => m.name === info.roles?.[role]) && <option value={info.roles[role]}>{t('mm.route.notInstalledOption', { model: info.roles[role] ?? '' })}</option>}
+          {savedUnavailable && <option value={saved}>{t(savedInstalled ? 'mm.route.unsuitableOption' : 'mm.route.notInstalledOption', { model: saved ?? '' })}</option>}
         </select>
+        {savedInstalled && <p className="mm-note warn" role="alert">{t('mm.route.unsuitableWarning', { model: saved ?? '' })}</p>}
       </label>; })}
     </div>
     <div className="mm-actions">

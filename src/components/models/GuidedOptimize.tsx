@@ -3,6 +3,7 @@ import type { JSX } from 'react';
 import { apiFetch } from '../../api';
 import type { InstalledModel } from '../../types';
 import { isSystemModel } from '../../model-system';
+import { roundModelSizeGB } from '../../model-size';
 import { EvidenceList } from './EvidenceList';
 import { ctxShort, num } from './mm';
 import type { EstimateInputs, Hardware, Verdict } from './guided';
@@ -115,7 +116,10 @@ function TuneStep({ model, sizeGB, chat }: { model: string; sizeGB: number | nul
   if (!chat) return <div className="mm-guided-step"><h4><span className="mm-step-n" aria-hidden="true">2</span>{t('mm.tune.title')}</h4><p className="mm-note">{t('mm.tune.notChat')}</p></div>;
   return <div className="mm-guided-step">
     <h4><span className="mm-step-n" aria-hidden="true">2</span>{t('mm.tune.title')} <small>{t('mm.tune.hint')}</small></h4>
-    <p className="mm-note">{t('mm.tune.time', { low: time.low, high: time.high })}{sizeGB ? ` ${t('mm.tune.fileSize', { size: `${num(sizeGB, 1)} GB` })}` : ''}. <strong>{t('mm.tune.chatPauses')}</strong>{t('mm.tune.pauseAfter')}</p>
+    {/* #443: round through the same shared math every other model-size display uses (this one
+        keeps num()'s locale-aware digit formatting on top, rather than the plain string
+        formatModelSizeGB returns, since this is embedded in a translated sentence). */}
+    <p className="mm-note">{t('mm.tune.time', { low: time.low, high: time.high })}{sizeGB ? ` ${t('mm.tune.fileSize', { size: `${num(roundModelSizeGB(sizeGB), 1)} GB` })}` : ''}. <strong>{t('mm.tune.chatPauses')}</strong>{t('mm.tune.pauseAfter')}</p>
     <ol className="mm-preflight">{TUNE_STEPS.map((s) => <li key={s.id}><strong>{TUNE_STEP[s.id] ? t(TUNE_STEP[s.id][0]) : s.label}</strong> — {TUNE_STEP[s.id] ? t(TUNE_STEP[s.id][1]) : s.what}</li>)}</ol>
     <p className="mm-note mm-warn" role="note">{t('mm.tune.floor', { floor: KV_FLOOR })}</p>
     {last && <p className="mm-note">{t('mm.tune.last', { date: new Date(last.at).toLocaleDateString(appLocale()), result: [last.specLabel || t('mm.tune.saved'), ...(last.generation ? [t('mm.tokensPerSecond', { rate: num(last.generation) })] : []), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv })] : []), ...(last.context ? [t('mm.tune.context', { tokens: num(last.context, 0) })] : [])].join(', ') })}{belowKvFloor(last.kv) ? ` ${t('mm.tune.lastBelowFloor')}` : ''}</p>}

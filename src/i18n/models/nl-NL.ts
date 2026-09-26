@@ -60,6 +60,8 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.route.pick': "— kies een model —",
   'mm.route.loadedOption': "{model} · geladen",
   'mm.route.notInstalledOption': "{model} · niet geïnstalleerd",
+  'mm.route.unsuitableOption': "{model} · niet geschikt voor deze rol",
+  'mm.route.unsuitableWarning': "{model} is niet geschikt voor deze rol. Kies een ander model of zet het op geen, en sla op.",
   'mm.route.save': "Routering opslaan",
   'mm.route.howAuto': "Hoe Auto beslist",
   'mm.defaultMode.title': "Standaard modelmodus",
