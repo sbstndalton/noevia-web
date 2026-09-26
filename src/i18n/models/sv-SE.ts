@@ -540,6 +540,7 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.hw.up': "igång i {uptime}",
   'mm.hw.serving': "erbjuder {model}",
   'mm.hw.noModel': "ingen modell inläst",
+  'mm.hw.stateUnavailable': "Modellstatus inte tillgänglig: {reason}",
   'mm.hw.restartFailed': "Senaste omstarten misslyckades: {error}",
   'mm.hw.readingsUnavailable': "Mätvärden inte tillgängliga: {error}",
   'mm.hw.gpus': "{count} GPU:er",

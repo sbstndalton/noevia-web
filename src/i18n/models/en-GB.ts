@@ -555,6 +555,7 @@ export const EN_GB_MODELS = {
   'mm.hw.up': 'up {uptime}',
   'mm.hw.serving': 'serving {model}',
   'mm.hw.noModel': 'no model loaded',
+  'mm.hw.stateUnavailable': 'Model state unavailable: {reason}',
   'mm.hw.restartFailed': 'Last restart failed: {error}',
   'mm.hw.readingsUnavailable': 'Readings unavailable: {error}',
   'mm.hw.gpus': '{count} GPUs',

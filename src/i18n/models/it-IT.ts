@@ -540,6 +540,7 @@ export const IT_IT_MODELS: ModelsCatalogue = {
   'mm.hw.up': "attivo da {uptime}",
   'mm.hw.serving': "serve {model}",
   'mm.hw.noModel': "nessun modello caricato",
+  'mm.hw.stateUnavailable': "Stato del modello non disponibile: {reason}",
   'mm.hw.restartFailed': "Ultimo riavvio non riuscito: {error}",
   'mm.hw.readingsUnavailable': "Letture non disponibili: {error}",
   'mm.hw.gpus': "{count} GPU",

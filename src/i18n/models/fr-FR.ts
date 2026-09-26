@@ -540,6 +540,7 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.hw.up': "actif depuis {uptime}",
   'mm.hw.serving': "sert {model}",
   'mm.hw.noModel': "aucun modèle chargé",
+  'mm.hw.stateUnavailable': "État du modèle indisponible : {reason}",
   'mm.hw.restartFailed': "Le dernier redémarrage a échoué : {error}",
   'mm.hw.readingsUnavailable': "Relevés indisponibles : {error}",
   'mm.hw.gpus': "{count} GPU",

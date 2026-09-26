@@ -540,6 +540,7 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.hw.up': "oppe i {uptime}",
   'mm.hw.serving': "leverer {model}",
   'mm.hw.noModel': "ingen modell lastet",
+  'mm.hw.stateUnavailable': "Modellstatus utilgjengelig: {reason}",
   'mm.hw.restartFailed': "Siste omstart mislyktes: {error}",
   'mm.hw.readingsUnavailable': "Målinger utilgjengelige: {error}",
   'mm.hw.gpus': "{count} GPU-er",

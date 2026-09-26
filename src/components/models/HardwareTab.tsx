@@ -50,7 +50,10 @@ export function HardwareTab() {
 // Docker's container states in the words the rest of the app uses.
 const ENGINE_STATUS: Record<string, MessageKey> = { exited: 'mm.hw.status.exited', created: 'mm.hw.status.created', restarting: 'mm.hw.status.restarting', paused: 'mm.hw.status.paused', dead: 'mm.hw.status.dead', removing: 'mm.hw.status.removing' };
 
-function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; hostTotalGB?: number }) {
+// Exported for the render-level regression test (issue #341): the model state note is the
+// only part of this card that renders synchronously from props, so the test targets it
+// directly rather than the whole panel's effect-driven fetches.
+export function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; hostTotalGB?: number }) {
   const gpu = b.stats.gpu, cont = b.stats.container, pts = b.history;
   const times = pts.map(p => p.ts);
   const unified = gpu?.memory_kind === 'unified';
@@ -58,10 +61,18 @@ function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; hostTotalGB
   const memUsed = gpu ? (unified ? gpu.vram_used_gb + gpu.shared_used_gb : gpu.vram_used_gb) : 0;
   const running = b.status === 'running';
   const t = useT();
+  // The loader only knows loaded_model is really empty once a probe has actually succeeded
+  // (issue #341): a skipped or failed probe (unknown port, refused, timeout, bad response)
+  // sets probe_error instead, and must never be shown as the confident "no model loaded".
+  const modelState = b.loaded_model
+    ? t('mm.hw.serving', { model: b.loaded_model })
+    : b.probe_error
+      ? t('mm.hw.stateUnavailable', { reason: b.probe_error })
+      : t('mm.hw.noModel');
   return <section className="mm-panel" aria-labelledby={`mm-engine-${b.name}`}>
     <header className="mm-panel-head">
       <div><h3 id={`mm-engine-${b.name}`}>{b.name}</h3>
-        <p className="mm-note">{b.image}{b.uptime ? ` · ${t('mm.hw.up', { uptime: b.uptime })}` : ''} · {b.loaded_model ? t('mm.hw.serving', { model: b.loaded_model }) : t('mm.hw.noModel')}</p></div>
+        <p className="mm-note">{b.image}{b.uptime ? ` · ${t('mm.hw.up', { uptime: b.uptime })}` : ''} · {modelState}</p></div>
       <span className={`mm-pill ${running ? 'is-good' : 'is-bad'}`}>{running ? t('mm.hw.status.running') : ENGINE_STATUS[b.status] ? t(ENGINE_STATUS[b.status]) : t('mm.hw.status.unknown')}</span>
     </header>
     {b.last_restart_error && <p role="alert" className="modal-err">{t('mm.hw.restartFailed', { error: b.last_restart_error })}</p>}

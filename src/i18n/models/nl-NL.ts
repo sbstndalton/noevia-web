@@ -540,6 +540,7 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.hw.up': "actief sinds {uptime}",
   'mm.hw.serving': "biedt {model} aan",
   'mm.hw.noModel': "geen model geladen",
+  'mm.hw.stateUnavailable': "Modelstatus niet beschikbaar: {reason}",
   'mm.hw.restartFailed': "Laatste herstart mislukt: {error}",
   'mm.hw.readingsUnavailable': "Metingen niet beschikbaar: {error}",
   'mm.hw.gpus': "{count} GPU’s",
