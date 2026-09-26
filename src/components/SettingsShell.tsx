@@ -19,6 +19,7 @@ import { LanguageSettings } from './personalization/LanguageSettings';
 import { KeyboardSettings } from './shortcuts/KeyboardSettings';
 import { useT } from '../i18n';
 import { SETTINGS_SECTION_ALIASES } from '../routes';
+import { closeFocusTarget } from '../settings-focus';
 import '../i18n/settings';
 import type { MessageKey, Translate } from '../i18n';
 
@@ -102,7 +103,7 @@ const reducedMotion = () => typeof window !== 'undefined' && (document.documentE
 
 export type SettingsSection = 'general' | 'usage' | 'models' | 'connectors' | 'keyboard' | 'data' | 'notifications' | 'memory' | 'status';
 
-export function SettingsShell(props: SettingsViewProps & {initialSection?:SettingsSection|string;onSection?:(id:string,opts?:{replace?:boolean})=>void;appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; onClosing?:()=>void; onStartChat?:(prompt:string)=>void; onOpenArchived?:()=>void; onOpenDiary?:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void; preference?:'light'|'dark'|'system'; onPreference?:(preference:'light'|'dark'|'system')=>void}) {
+export function SettingsShell(props: SettingsViewProps & {initialSection?:SettingsSection|string;onSection?:(id:string,opts?:{replace?:boolean})=>void;appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; onClosing?:()=>void; onStartChat?:(prompt:string)=>void; onOpenArchived?:()=>void; onOpenDiary?:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void; preference?:'light'|'dark'|'system'; onPreference?:(preference:'light'|'dark'|'system')=>void; opener?: { current: HTMLElement | null }}) {
   // 'general' is the historical name for the first page; it now opens Appearance. Anything that is
   // not a section name (a click event handed through by mistake) counts as no choice.
   const named = typeof props.initialSection === 'string' && props.initialSection !== 'general' ? resolveSection(props.initialSection) : null;
@@ -132,10 +133,23 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
 
   // Settings takes the chat's place rather than floating over it: focus moves in, and goes back
   // to whatever opened it when it leaves.
+  //
+  // #401: reading `document.activeElement` here (on mount) is too late for a caller that unmounts
+  // its own trigger in the same commit that opens Settings (the account menu closes its popover
+  // — including the "Settings" button just clicked — via the same batched update that sets
+  // Settings open, so by the time this effect runs the trigger is already gone and activeElement
+  // has already reverted to <body>). The opener is captured by the caller instead, before that
+  // happens, and handed down; `document.activeElement` remains the fallback for callers (the
+  // `⌘,` shortcut) that never captured one. If neither is usable any more, land on the composer —
+  // the one control guaranteed to exist in every view Settings can be opened from.
+  const opener = props.opener;
   useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
+    const previous = opener?.current ?? (document.activeElement as HTMLElement | null);
     stage.current?.querySelector<HTMLElement>('[aria-current="page"], .settings-navigation nav button')?.focus({ preventScroll: true });
-    return () => { if (previous?.isConnected) previous.focus({ preventScroll: true }); };
+    return () => {
+      closeFocusTarget(previous, document.querySelector<HTMLElement>('.composer-input'))?.focus({ preventScroll: true });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Leaving plays the entrance backwards, then hands control back.

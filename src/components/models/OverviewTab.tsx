@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch, fetchAutoRoles } from '../../api';
 import type { InstalledModel } from '../../types';
+import { appLocale } from '../../user-preferences';
 import { errorText, mm, num } from './mm';
 import type { Stuck } from './guided';
 import { canPromptSuite, groupByRole, recoveryItems, roleOf } from './guided';
@@ -71,7 +72,7 @@ function QualityPanel({ models, modelsError, roles, onOpen, onTab }: { models: I
           {canPromptSuite(g.role) && <small className="mm-role-evidence">{ev === undefined ? t('mm.overview.readingEvidence') : ev === null ? t('mm.overview.noEvidence')
             : [t('mm.overview.context', { state: ctx ? evState(ctx.state) : t('mm.overview.ev.unverified') }) + (ctx?.value?.ctx ? ` · ${t('mm.tokensCount', { tokens: num(ctx.value.ctx, 0) })}` : ''),
                t('mm.overview.speed', { state: speed ? evState(speed.state) : t('mm.overview.ev.unverified') }) + (typeof speed?.value?.rate === 'number' ? ` · ${t('mm.tokensPerSecond', { rate: num(speed.value.rate) })}` : ''),
-               ...(ev.map((e) => e.at || 0).some(Boolean) ? [t('mm.overview.measured', { date: new Date(Math.max(...ev.map((e) => e.at || 0))).toLocaleDateString(t.locale) })] : [])].join(' · ')}</small>}
+               ...(ev.map((e) => e.at || 0).some(Boolean) ? [t('mm.overview.measured', { date: new Date(Math.max(...ev.map((e) => e.at || 0))).toLocaleDateString(appLocale()) })] : [])].join(' · ')}</small>}
           {g.role !== 'routing' && <button type="button" className="modal-btn secondary" onClick={() => onOpen(m.name)}>{canPromptSuite(g.role) ? t('mm.overview.optimize') : t('mm.details')}</button>}
         </li>;
       })}</ul>

@@ -221,6 +221,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'settings.loading': "Cargando…",
   'security.heading': "Seguridad",
   'security.unknownDevice': "Dispositivo desconocido",
+  'security.thisDevice': "este dispositivo",
   'security.browser': "Navegador",
   'security.loadError': "No se pudo cargar el perfil. Comprueba tu conexión y vuelve a intentarlo.",
   'security.refreshError': "El cambio se aplicó, pero no se pudo cargar el perfil actualizado. Vuelve a cargarlo antes de hacer otro cambio.",

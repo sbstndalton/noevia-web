@@ -52,7 +52,7 @@ interface SidebarProps {
   onDeleteProject: (id: string) => void;
   onOpenDiary: () => void;
   diaryEnabled: boolean;
-  onOpenSettings: (section?: 'general'|'usage'|'connectors') => void;
+  onOpenSettings: (section?: 'general'|'usage'|'connectors', opener?: HTMLElement | null) => void;
   health: HealthState;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
@@ -188,7 +188,7 @@ export function Sidebar({
     const r = el.getBoundingClientRect();
     setTip(prev => ({ text, x: r.right + 10, y: r.top + r.height / 2, warm: !!prev }));
   };
-  const openSettings = (section?: 'general' | 'usage' | 'connectors') => { setExpanded(false); onOpenSettings(section); };
+  const openSettings = (section?: 'general' | 'usage' | 'connectors', opener?: HTMLElement | null) => { setExpanded(false); onOpenSettings(section, opener); };
   const trapDrawer = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!mobile || !expanded) return;
     if (e.key === 'Escape' && !e.defaultPrevented) {

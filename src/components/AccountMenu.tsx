@@ -7,7 +7,7 @@ import { useMenuNav } from '../menu-nav';
 // Account, preferences and sign-out in one menu, as Claude's is (user review, 2026-09-18):
 // the light/dark switch moved here from the sidebar head. It stays open after switching,
 // so the change is seen from where it was made.
-export function AccountMenu({ onSettings, theme, onToggleTheme }: { onSettings:(section?:'general'|'usage')=>void; theme?:'light'|'dark'; onToggleTheme?:()=>void }) {
+export function AccountMenu({ onSettings, theme, onToggleTheme }: { onSettings:(section?:'general'|'usage', opener?: HTMLElement | null)=>void; theme?:'light'|'dark'; onToggleTheme?:()=>void }) {
   const t=useT();
   const [open,setOpen]=useState(false);
   const [name,setName]=useState(()=>t('account.defaultName'));
@@ -36,8 +36,11 @@ export function AccountMenu({ onSettings, theme, onToggleTheme }: { onSettings:(
   useMenuNav(open,pop,trigger,close);
   return <div className="account-area" ref={ref}>
     {open&&createPortal(<div ref={pop} className="account-popover overlay is-floating" role="menu" aria-label={t('account.optionsLabel')} style={at?{position:'fixed',left:at.left,bottom:at.bottom,top:'auto'}:{position:'fixed',visibility:'hidden'}}><div className="account-popover-head"><strong>{name}</strong><span>{t('account.personalWorkspace')}</span></div>
-      <button role="menuitem" onClick={()=>{setOpen(false);onSettings();}}><ShellIcon name="settings"/>{t('account.settings')}</button>
-      <button role="menuitem" onClick={()=>{setOpen(false);onSettings('usage');}}><ShellIcon name="grid"/>{t('account.usage')}</button>
+      {/* #401: the trigger (this button) is what the caller sees as "the Settings control" and,
+          unlike this popover's own items, stays mounted after the popover closes — capture it
+          before setOpen(false) unmounts the clicked item, so Settings can hand focus back to it. */}
+      <button role="menuitem" onClick={()=>{const opener=trigger.current;setOpen(false);onSettings(undefined,opener);}}><ShellIcon name="settings"/>{t('account.settings')}</button>
+      <button role="menuitem" onClick={()=>{const opener=trigger.current;setOpen(false);onSettings('usage',opener);}}><ShellIcon name="grid"/>{t('account.usage')}</button>
       {onToggleTheme&&<button role="menuitem" onClick={onToggleTheme}><ShellIcon name={theme==='dark'?'sun':'moon'}/>{theme==='dark'?t('account.lightMode'):t('account.darkMode')}</button>}
       <div className="account-divider"/>
       <button role="menuitem" onClick={()=>void logout().then(()=>window.location.reload()).catch(()=>setError(t('account.signOutError')))}><ShellIcon name="arrow"/>{t('account.logOut')}</button>

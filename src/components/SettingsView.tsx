@@ -36,7 +36,7 @@ export function SettingsView({ models, modelsError, health, stats, diaryEnabled,
     {section === 'security' && <SecurityCard />}
     {section === 'users' && <UsersCard />}
     {section === 'diary' && <><div className="settings-title"><h1>{t('settings.section.diary')}</h1><p>{t('diarySettings.lede')}</p></div><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
-    {section === 'providers' && <ProvidersCard />}
+    {section === 'providers' && <ProvidersCard health={health} />}
     {section === 'models' && <ModelsSummary models={models} modelsError={modelsError} health={health} stats={stats} onOpen={onOpenModelManager}/>}
     {section === 'status' && <><McpStatus /><h2>{t('serviceStatus.connected')}</h2><div className="card-list">{([['inference', t('serviceStatus.inference'), health.inferenceUp], ['diary', t('serviceStatus.diary'), diaryEnabled ? health.diaryUp : null]] as const).map(([id, label, up])=><div className="model-row" key={id}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?t('models.available'):up===false?t('models.unavailable'):t('serviceStatus.notAvailable')}</span></div>)}
       {/* #340: tri-state — 'degraded' means the index is installed but the embedding endpoint
@@ -142,15 +142,23 @@ function SecurityCard(): JSX.Element {
   return <div>
     <div className="settings-title"><h1>{t('settings.section.security')}</h1><p>{t('security.intro', { username: user.username })}</p></div>
     <fieldset className="settings-action-group" disabled={!!busy || loading}><div className="card-list">
-      {passkeys.map(k => <div className="model-row" key={k.id}><span className="model-dot"/><div className="model-name-group"><span className="model-name">{k.name}</span><span className="model-quant">{k.backedUp ? t('security.syncedPasskey') : k.deviceType}</span></div><button className="recents-del" aria-label={t('security.removePasskeyNamed', { name: k.name })} onClick={() => void act(t('security.removePasskey'), () => removePasskey(k.id), t('security.passkeyRemoved'))}><ShellIcon name="close" size={16}/></button></div>)}
+      {/* #404: a passkey has no online/offline state to show — it is a registered credential, not
+          a live connection — so, per PRODUCT.md's "nothing fake", it gets no status dot at all
+          (the same no-dot pattern Users' account rows already use) rather than a decorative one. */}
+      {passkeys.map(k => <div className="model-row" key={k.id}><div className="model-name-group"><span className="model-name">{k.name}</span><span className="model-quant">{k.backedUp ? t('security.syncedPasskey') : k.deviceType}</span></div><button className="recents-del" aria-label={t('security.removePasskeyNamed', { name: k.name })} onClick={() => void act(t('security.removePasskey'), () => removePasskey(k.id), t('security.passkeyRemoved'))}><ShellIcon name="close" size={16}/></button></div>)}
       <button className="modal-btn secondary" onClick={() => void act(t('security.passkeySetup'), addKey, t('security.passkeyAdded'))}><ShellIcon name="plus" size={16}/>{t('security.addPasskey')}</button>
+      {/* #404: the dot was hard-coded green for every row regardless of which session the browser
+          is actually using. `s.current` (GET /api/profile marks the calling request's own
+          session) is real state — this device vs. every other one — so it drives the same
+          model-dot classes the rest of the app uses for good/off, and the text spells out what
+          the colour means instead of leaving it to guesswork. */}
       {sessions.length > 0 && sessions.map(s => (
         <div className="model-row" key={s.id}>
-          <span className="model-dot" />
+          <span className={`model-dot${s.current ? '' : ' down'}`} />
           <div className="model-name-group">
             <span className="model-name">{sessionLabel(t, s.userAgent)}</span>
             <span className="model-quant">
-              {s.ip || t('security.unknownIp')} · {t('security.lastSeen', { date: new Date(s.lastSeenAt).toLocaleString(appLocale()) })}
+              {s.ip || t('security.unknownIp')} · {t('security.lastSeen', { date: new Date(s.lastSeenAt).toLocaleString(appLocale()) })}{s.current ? ` · ${t('security.thisDevice')}` : ''}
             </span>
           </div>
           <button className="recents-del" title={t('security.revokeSession')} aria-label={t('security.revokeSessionNamed', { device: sessionLabel(t, s.userAgent) })} onClick={() => void act(t('security.revokeSession'), () => revokeSession(s.id), t('security.sessionRevoked'))}><ShellIcon name="close" size={16}/></button>
@@ -273,7 +281,7 @@ function UsersCard(): JSX.Element {
 /** Connect-a-provider flow (step 9): list connected OpenAI-compatible
  *  endpoints, add one via the shared ProviderForm, and remove non-default ones.
  *  Keys live server-side only — the list shows masked hints, never plaintext. */
-function ProvidersCard(): JSX.Element {
+function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
   const t = useT();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [adding, setAdding] = useState(false);
@@ -307,13 +315,19 @@ function ProvidersCard(): JSX.Element {
       <div className="card-list">
         {providers.map((p) => (
           <div key={p.id} className="model-row">
-            <span className="model-dot" />
+            {/* #404: the dot was hard-coded green for every provider, connected or not. The
+                default provider is the one `/api/health` actually probes (the same signal
+                Service status and the model picker already show as `model-dot`/`down`), so it
+                gets a real state; an added provider has no passive reachability signal (only an
+                on-demand "Test connection" during setup), so — per PRODUCT.md's "nothing fake" —
+                it gets no dot rather than a fabricated one. */}
+            {p.isDefault && <span className={`model-dot${health.inferenceUp ? '' : ' down'}`} />}
             <div className="model-name-group">
               <span className="model-name">{p.label}</span>
               <span className="model-quant">{p.baseUrl}</span>
             </div>
             {p.isDefault ? (
-              <span className="model-role">{t('providers.defaultAlwaysOn')}</span>
+              <span className="model-role">{t('providers.defaultAlwaysOn')} · {health.inferenceUp === true ? t('models.available') : health.inferenceUp === false ? t('models.unavailable') : t('serviceStatus.notAvailable')}</span>
             ) : (
               <>
                 {p.apiKeyMasked && <span className="model-quant">{t('providers.keyHint', { key: p.apiKeyMasked })}</span>}

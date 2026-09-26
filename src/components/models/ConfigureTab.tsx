@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../api';
 import { isSystemModel } from '../../model-system';
+import { appLocale } from '../../user-preferences';
 import { bytes, ctxShort, errorText, mm, num, tokens } from './mm';
 import { NativeCalibration } from '../NativeCalibration';
 import { AutoTune } from './AutoTune';
@@ -55,7 +56,7 @@ export function ConfigureTab({ initial, onSaved, onSelect }: { initial?: string;
       <pre className="mm-raw mm-mono" aria-label={t('mm.configure.rawLabel')}>{list.raw || t('mm.configure.empty')}</pre>
       {list.backups.length > 0
         ? <><p className="mm-note">{t.plural('mm.configure.backups', list.backups.length)}</p>
-          <ul className="mm-hints mm-mono">{list.backups.map(([file, mtime, size]) => <li key={file}>{file} · {new Date(mtime * 1000).toLocaleString(t.locale)} · {size} B</li>)}</ul></>
+          <ul className="mm-hints mm-mono">{list.backups.map(([file, mtime, size]) => <li key={file}>{file} · {new Date(mtime * 1000).toLocaleString(appLocale())} · {size} B</li>)}</ul></>
         : <p className="mm-note">{t('mm.configure.noBackups')}</p>}
     </div></details>}
   </div>;

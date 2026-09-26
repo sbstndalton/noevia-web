@@ -116,7 +116,12 @@ export default function App(): JSX.Element {
   const [settingsSection,setSettingsSection] = useState<string>(() => (initialRoute?.kind === 'settings' ? initialRoute.section : initialNav.stored?.settings) ?? 'general');
   // Each open is a fresh Settings: reopening while the last one is still animating out replaces it.
   const [settingsKey, setSettingsKey] = useState(0);
-  const openSettings = (section: SettingsSection = 'general') => {
+  // #401: whatever opened Settings (an explicit opener, or else whatever had focus when this ran)
+  // so Settings can hand focus back to it on close instead of the mount-time `document.activeElement`
+  // read, which a caller that unmounts its own trigger (the account menu) has already lost by then.
+  const settingsOpenerRef = useRef<HTMLElement | null>(null);
+  const openSettings = (section: SettingsSection = 'general', opener?: HTMLElement | null) => {
+    settingsOpenerRef.current = opener !== undefined ? opener : (typeof document !== 'undefined' ? (document.activeElement as HTMLElement | null) : null);
     // Connecting services moved to Plugins (user review, 2026-09-19); old links land there.
     if (section === 'connectors') { pendingFromSettingsRef.current = 'connectors'; setSettingsOpen(false); setAppMode('chat'); setCustomiseTab('connectors'); setView({ kind: 'plugins' }); return; }
     setSettingsSection(section); setSettingsKey((k) => k + 1); setSettingsOpen(true); };
@@ -1557,6 +1562,7 @@ export default function App(): JSX.Element {
         <Settings.View
           key={settingsKey}
           initialSection={settingsSection}
+          opener={settingsOpenerRef}
           onSection={onSettingsSection}
           appearanceStatus={appearanceStatus} appearanceError={appearanceError} retryAppearance={retryAppearance}
           onClose={() => {

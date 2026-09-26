@@ -63,7 +63,7 @@ export function NativeCalibration({ model, onChanged, autoFocus = false }: { mod
   return <section className="native-calibration" aria-labelledby={`calibration-${model}`}>
     <h4 id={`calibration-${model}`} ref={heading} tabIndex={-1}>{t('mm.calibration.title')}</h4>
     <p>{t('mm.calibration.intro')}</p>
-    {last && !running && <p className="native-calibration-last">{t('mm.calibration.lastBefore', { date: new Date(last.at).toLocaleString(t.locale) })}<strong>{t('mm.tokensCount', { tokens: tokens(last.appliedCtx || 0) })}</strong>{t('mm.calibration.lastAfter', { seconds: last.promptBudgetSeconds || 120 })}</p>}
+    {last && !running && <p className="native-calibration-last">{t('mm.calibration.lastBefore', { date: new Date(last.at).toLocaleString(appLocale()) })}<strong>{t('mm.tokensCount', { tokens: tokens(last.appliedCtx || 0) })}</strong>{t('mm.calibration.lastAfter', { seconds: last.promptBudgetSeconds || 120 })}</p>}
     {running && !mine && <p role="status">{t('mm.calibration.otherModel', { model: job?.model ?? '' })}</p>}
     {mine && <div className="native-calibration-job" aria-live="polite">
       <p role="status"><strong>{mine.status === 'running' ? mine.phase : mine.status === 'passed' ? t('mm.calibration.saved', { tokens: tokens(mine.result?.appliedCtx || 0) }) : mine.status === 'cancelled' ? t('mm.queue.cancelled') : mine.status === 'interrupted' ? t('mm.autotune.interrupted') : t('mm.calibration.failed')}</strong>

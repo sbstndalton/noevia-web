@@ -221,6 +221,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'settings.loading': "Laster inn…",
   'security.heading': "Sikkerhet",
   'security.unknownDevice': "Ukjent enhet",
+  'security.thisDevice': "denne enheten",
   'security.browser': "Nettleser",
   'security.loadError': "Profilen kunne ikke lastes inn. Sjekk tilkoblingen og prøv igjen.",
   'security.refreshError': "Endringen ble lagret, men den oppdaterte profilen kunne ikke lastes inn. Last inn på nytt før du gjør flere endringer.",

@@ -3,6 +3,7 @@ import type { JSX } from 'react';
 import { apiFetch } from '../../api';
 import { isSystemModel } from '../../model-system';
 import { useT } from '../../i18n';
+import { appLocale } from '../../user-preferences';
 import { num } from './mm';
 
 type Step = { id: string; label: string; status: string; reason?: string; generation?: number; promptPerSecond?: number; ctx?: number };
@@ -100,7 +101,7 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   if (system) return <p className="mm-note" role="status">{t('model.systemLabel')}{t('mm.autotune.systemNote')}</p>;
   return <div className="mm-autotune">
     {!model && scan && !running && <p className="mm-note" role="status">{scan.models.length ? t.plural('mm.autotune.needList', scan.models.length, { models: scan.models.join(', ') }) : t('mm.autotune.needNone', { count: 0 })} {t('mm.autotune.skipped', { count: scan.skipped.length })}</p>}
-    {last && !running && <p className="mm-note" role="status">{t('mm.autotune.lastBefore', { date: new Date(last.at).toLocaleString(t.locale) })}<strong>{last.specLabel}</strong>{', ' + [t('mm.tokensPerSecond', { rate: last.generation }), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv }), t('mm.tune.context', { tokens: last.context != null ? num(last.context, 0) : '' })] : []), ...(last.ubatch ? [t('mm.autotune.ubatch', { size: last.ubatch })] : [])].join(', ')}.</p>}
+    {last && !running && <p className="mm-note" role="status">{t('mm.autotune.lastBefore', { date: new Date(last.at).toLocaleString(appLocale()) })}<strong>{last.specLabel}</strong>{', ' + [t('mm.tokensPerSecond', { rate: last.generation }), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv }), t('mm.tune.context', { tokens: last.context != null ? num(last.context, 0) : '' })] : []), ...(last.ubatch ? [t('mm.autotune.ubatch', { size: last.ubatch })] : [])].join(', ')}.</p>}
     {mine && <div>
       <div className="mm-autotune-status" aria-live="polite">
         <p className="mm-note"><strong>{mine.status === 'running' ? mine.phase : mine.status === 'passed' ? t('mm.autotune.tuned') : mine.status === 'cancelled' ? t('mm.queue.cancelled') : mine.status === 'interrupted' ? t('mm.autotune.interrupted') : t('mm.hw.status.dead')}</strong>{mine.error ? ' — ' + mine.error : ''}</p>

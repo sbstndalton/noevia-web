@@ -221,6 +221,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'settings.loading': "Wird geladen…",
   'security.heading': "Sicherheit",
   'security.unknownDevice': "Unbekanntes Gerät",
+  'security.thisDevice': "dieses Gerät",
   'security.browser': "Browser",
   'security.loadError': "Das Profil konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.",
   'security.refreshError': "Die Änderung wurde übernommen, aber das aktualisierte Profil konnte nicht geladen werden. Lade es erneut, bevor du weitere Änderungen vornimmst.",

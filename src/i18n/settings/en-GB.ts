@@ -223,6 +223,7 @@ export const EN_GB_SETTINGS = {
   'settings.loading': "Loading…",
   'security.heading': "Security",
   'security.unknownDevice': "Unknown device",
+  'security.thisDevice': "this device",
   'security.browser': "Browser",
   'security.loadError': "Profile could not be loaded. Check your connection and retry.",
   'security.refreshError': "The change succeeded, but the updated profile could not be loaded. Retry loading before making another change.",

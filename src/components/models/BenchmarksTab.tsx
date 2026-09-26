@@ -4,6 +4,7 @@ import { ago, errorText, mm, num, tokens } from './mm';
 import { fetchInstalledModels } from '../../api';
 import { splitChatSections } from '../../model-kind';
 import { useT } from '../../i18n';
+import { appLocale } from '../../user-preferences';
 
 type Prompt = { id: number; name: string; body: string };
 type Job = { run_id: number; status: string; backend: string; total: number; done: number; current: string; error: string; unit: string; lines: string[]; pct: number; elapsed: number; eta: number; active: boolean };
@@ -37,7 +38,7 @@ export function BenchmarksTab() {
     </>}
     <section className="mm-panel" aria-labelledby="mm-runs"><h3 id="mm-runs">{t('mm.bench.past')}</h3>
       {data.runs.length === 0 ? <p className="mm-note">{t('mm.bench.noRuns')}</p> : <ul className="mm-list">{data.runs.map(r => <li key={r.id}>
-        <span>{t('mm.bench.run', { id: r.id })} · {new Date(r.started_at * 1000).toLocaleString(t.locale)}<small>{r.backend} · {r.status}{r.note ? ` · ${r.note}` : ''}</small></span>
+        <span>{t('mm.bench.run', { id: r.id })} · {new Date(r.started_at * 1000).toLocaleString(appLocale())}<small>{r.backend} · {r.status}{r.note ? ` · ${r.note}` : ''}</small></span>
         <button className="modal-btn secondary" aria-expanded={openRun === r.id} onClick={() => setOpenRun(openRun === r.id ? null : r.id)}>{openRun === r.id ? t('mm.bench.hide') : t('mm.bench.view')}</button>
       </li>)}</ul>}
     </section>

@@ -2,6 +2,7 @@ import { useEffect, useState, type JSX } from 'react';
 import { apiFetch } from '../api';
 import { ConfirmDialog } from './ContextMenu';
 import { useT } from '../i18n';
+import { appLocale } from '../user-preferences';
 
 type Connector = { id: string; name: string; createdAt: number };
 
@@ -67,7 +68,11 @@ export default function DiaryConnectors(): JSX.Element {
             <div className="model-row" key={c.id}>
               <div className="model-name-group">
                 <span className="model-name">{c.name}</span>
-                <span className="model-quant">{t('diarySettings.connectors.added', { date: new Date(c.createdAt).toLocaleDateString(t.locale) })}</span>
+                {/* #405: was t.locale (the interface-text locale, which "system" resolves via a
+                    coarse language match) — appLocale() is the formatter every other date/number
+                    in the app uses; "system" there means undefined, i.e. the real browser Intl
+                    default, so this and Security's sessions no longer disagree on day/month order. */}
+                <span className="model-quant">{t('diarySettings.connectors.added', { date: new Date(c.createdAt).toLocaleDateString(appLocale()) })}</span>
               </div>
               <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setRevoking(c)}>{t('diarySettings.connectors.revoke')}</button>
             </div>

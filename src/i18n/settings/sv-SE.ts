@@ -221,6 +221,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'settings.loading': "Läser in…",
   'security.heading': "Säkerhet",
   'security.unknownDevice': "Okänd enhet",
+  'security.thisDevice': "den här enheten",
   'security.browser': "Webbläsare",
   'security.loadError': "Profilen kunde inte läsas in. Kontrollera anslutningen och försök igen.",
   'security.refreshError': "Ändringen gick igenom, men den uppdaterade profilen kunde inte läsas in. Läs in den igen innan du gör fler ändringar.",

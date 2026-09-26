@@ -10,6 +10,7 @@ import { belowKvFloor, budgetFor, canPromptSuite, estimateGib, KV_FLOOR, KV_GUID
 import type { BudgetKind, Recommendation } from './guided';
 import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
+import { appLocale } from '../../user-preferences';
 import { ROLE_KEY, stuckStatus } from './mm-text';
 
 const VERDICT: Record<Verdict, MessageKey> = { fits: 'mm.verdict.fits', tight: 'mm.verdict.tight', no: 'mm.verdict.no' };
@@ -117,7 +118,7 @@ function TuneStep({ model, sizeGB, chat }: { model: string; sizeGB: number | nul
     <p className="mm-note">{t('mm.tune.time', { low: time.low, high: time.high })}{sizeGB ? ` ${t('mm.tune.fileSize', { size: `${num(sizeGB, 1)} GB` })}` : ''}. <strong>{t('mm.tune.chatPauses')}</strong>{t('mm.tune.pauseAfter')}</p>
     <ol className="mm-preflight">{TUNE_STEPS.map((s) => <li key={s.id}><strong>{TUNE_STEP[s.id] ? t(TUNE_STEP[s.id][0]) : s.label}</strong> — {TUNE_STEP[s.id] ? t(TUNE_STEP[s.id][1]) : s.what}</li>)}</ol>
     <p className="mm-note mm-warn" role="note">{t('mm.tune.floor', { floor: KV_FLOOR })}</p>
-    {last && <p className="mm-note">{t('mm.tune.last', { date: new Date(last.at).toLocaleDateString(t.locale), result: [last.specLabel || t('mm.tune.saved'), ...(last.generation ? [t('mm.tokensPerSecond', { rate: num(last.generation) })] : []), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv })] : []), ...(last.context ? [t('mm.tune.context', { tokens: num(last.context, 0) })] : [])].join(', ') })}{belowKvFloor(last.kv) ? ` ${t('mm.tune.lastBelowFloor')}` : ''}</p>}
+    {last && <p className="mm-note">{t('mm.tune.last', { date: new Date(last.at).toLocaleDateString(appLocale()), result: [last.specLabel || t('mm.tune.saved'), ...(last.generation ? [t('mm.tokensPerSecond', { rate: num(last.generation) })] : []), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv })] : []), ...(last.context ? [t('mm.tune.context', { tokens: num(last.context, 0) })] : [])].join(', ') })}{belowKvFloor(last.kv) ? ` ${t('mm.tune.lastBelowFloor')}` : ''}</p>}
     {failed && <p className="mm-note mm-warn" role="status">{t(mine!.error ? 'mm.tune.failedError' : 'mm.tune.failed', { status: stuckStatus(t, String(mine!.status)), error: mine!.error ?? '' })} {t(last ? 'mm.tune.failedKeepLast' : 'mm.tune.failedKeep')}</p>}
     <div className="mm-actions"><button type="button" className="modal-btn secondary" onClick={goTune}>{t('mm.tune.go')}</button></div>
   </div>;

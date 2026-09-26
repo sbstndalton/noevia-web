@@ -40,7 +40,7 @@ export const CUSTOMISE_TABS: readonly CustomiseTab[] = ['skills', 'connectors', 
 
 /** Old Settings section ids that moved: links and saved places resolve to the new home. Lives
  *  here (SettingsShell re-exports it) so a URL is canonical before the Settings chunk loads. */
-export const SETTINGS_SECTION_ALIASES: Record<string, string> = { general: 'appearance', archived: 'data', language: 'appearance', shortcuts: 'keyboard', instructions: 'personalization' };
+export const SETTINGS_SECTION_ALIASES: Record<string, string> = { general: 'appearance', archived: 'data', language: 'appearance', shortcuts: 'keyboard', instructions: 'personalization', account: 'profile' };
 
 // Chat and project ids are stored sanitised to this alphabet (server/chat-lists.cjs safeChatId,
 // projects.cjs `proj-…`), so anything else cannot name one and is not worth a round trip.

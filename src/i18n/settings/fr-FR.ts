@@ -221,6 +221,7 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'settings.loading': "Chargement…",
   'security.heading': "Sécurité",
   'security.unknownDevice': "Appareil inconnu",
+  'security.thisDevice': "cet appareil",
   'security.browser': "Navigateur",
   'security.loadError': "Impossible de charger le profil. Vérifiez votre connexion et réessayez.",
   'security.refreshError': "La modification a réussi, mais le profil mis à jour n’a pas pu être chargé. Rechargez-le avant d’effectuer une autre modification.",

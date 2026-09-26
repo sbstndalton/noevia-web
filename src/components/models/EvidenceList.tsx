@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch } from '../../api';
 import { useT } from '../../i18n';
+import { appLocale } from '../../user-preferences';
 import { num } from './mm';
 import type { MessageKey } from '../../i18n';
 
@@ -62,7 +63,7 @@ export function EvidenceList({ model }: { model: string }): JSX.Element | null {
       <h4>{t('mm.evidence.qualification')}</h4>
       <ul>{rows.map((row) => <li key={row.category} data-state={row.state}>
         <strong>{own(LABEL, row.category)}</strong>
-        <span>{own(STATE, row.state)}{row.category === 'context_capacity' && row.value?.ctx ? ` · ${t('mm.tokensCount', { tokens: num(row.value.ctx, 0) })}` : ''}{row.category === 'mtp_acceptance' && typeof row.value?.rate === 'number' ? ` · ${t('mm.evidence.accepted', { pct: Math.round(row.value.rate * 100) })}` : ''}{row.category === 'throughput' && typeof row.value?.rate === 'number' ? ` · ${t('mm.tokensPerSecond', { rate: num(row.value.rate) })}` : ''}{row.at ? ` · ${new Date(row.at).toLocaleDateString(t.locale)}` : ''}</span>
+        <span>{own(STATE, row.state)}{row.category === 'context_capacity' && row.value?.ctx ? ` · ${t('mm.tokensCount', { tokens: num(row.value.ctx, 0) })}` : ''}{row.category === 'mtp_acceptance' && typeof row.value?.rate === 'number' ? ` · ${t('mm.evidence.accepted', { pct: Math.round(row.value.rate * 100) })}` : ''}{row.category === 'throughput' && typeof row.value?.rate === 'number' ? ` · ${t('mm.tokensPerSecond', { rate: num(row.value.rate) })}` : ''}{row.at ? ` · ${new Date(row.at).toLocaleDateString(appLocale())}` : ''}</span>
         {row.limitations.length > 0 && row.state !== 'unverified' && <small>{row.limitations.join(' · ')}</small>}
         {row.category === 'vision' && <button type="button" className="modal-btn secondary" disabled={checking} onClick={() => void recheck()} title={t('mm.evidence.recheckTitle')}>{checking ? t('mm.checking') : t('mm.evidence.recheck')}</button>}
       </li>)}</ul>
@@ -71,7 +72,7 @@ export function EvidenceList({ model }: { model: string }): JSX.Element | null {
     {hasExternal && <section className="mm-evidence mm-evidence-external" aria-label={t('mm.evidence.externalFor', { model })}>
       <h4>{t('mm.evidence.model')} <span className="mm-evidence-badge" title={t('mm.evidence.badgeTitle')}>{t('mm.evidence.badge')}</span></h4>
       <ul><li data-state={external!.state}>
-        <span>{own(EXTERNAL_STATE, external!.state)}{external!.value?.license ? ` · ${t('mm.evidence.license', { license: external!.value.license })}` : ''}{external!.at ? ` · ${t('mm.evidence.retrieved', { date: new Date(external!.at).toLocaleDateString(t.locale) })}` : ''}</span>
+        <span>{own(EXTERNAL_STATE, external!.state)}{external!.value?.license ? ` · ${t('mm.evidence.license', { license: external!.value.license })}` : ''}{external!.at ? ` · ${t('mm.evidence.retrieved', { date: new Date(external!.at).toLocaleDateString(appLocale()) })}` : ''}</span>
         {external!.value?.cardExcerpt && <p>{external!.value.cardExcerpt}</p>}
         {external!.value?.evaluationClaims && external!.value.evaluationClaims.length > 0 && <ul>
           {external!.value.evaluationClaims.map((c, i) => <li key={i}>{[c.task, c.dataset, c.metric, c.value].filter(Boolean).join(' · ')}</li>)}

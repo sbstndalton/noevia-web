@@ -221,6 +221,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'settings.loading': "Laden…",
   'security.heading': "Beveiliging",
   'security.unknownDevice': "Onbekend apparaat",
+  'security.thisDevice': "dit apparaat",
   'security.browser': "Browser",
   'security.loadError': "Het profiel kon niet worden geladen. Controleer je verbinding en probeer het opnieuw.",
   'security.refreshError': "De wijziging is gelukt, maar het bijgewerkte profiel kon niet worden geladen. Laad het opnieuw voordat je nog iets wijzigt.",

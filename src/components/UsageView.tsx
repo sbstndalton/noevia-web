@@ -37,18 +37,20 @@ function Stat({ label, value, hint, name }: { label: string; value: string; hint
 }
 
 /** 14 → "2 pm" (or "14 Uhr"). The hour a person recognises, not a 24-hour bucket index;
- *  English keeps its 12-hour clock, other languages their own. */
-function hourLabel(hour: number, locale: string): string {
+ *  English keeps its 12-hour clock, other languages their own. `locale` is `appLocale()` — the
+ *  same formatter every other date/number on this page already uses (#405) — so `undefined`
+ *  ("system": let the browser's own Intl default decide, including its hour cycle) is expected. */
+function hourLabel(hour: number, locale: string | undefined): string {
   try {
-    return new Intl.DateTimeFormat(locale, { hour: 'numeric', hour12: locale.startsWith('en') ? true : undefined }).format(new Date(2000, 0, 1, hour));
+    return new Intl.DateTimeFormat(locale, { hour: 'numeric', hour12: locale?.startsWith('en') ? true : undefined }).format(new Date(2000, 0, 1, hour));
   } catch {
     const shown = hour % 12 === 0 ? 12 : hour % 12;
     return `${shown} ${hour < 12 ? 'am' : 'pm'}`;
   }
 }
 
-/** Short month and weekday names in the interface language. */
-const shortName = (locale: string, date: Date, part: 'month' | 'weekday') => {
+/** Short month and weekday names, formatted with `appLocale()` (#405). */
+const shortName = (locale: string | undefined, date: Date, part: 'month' | 'weekday') => {
   try { return new Intl.DateTimeFormat(locale, { [part]: 'short' }).format(date); } catch { return new Intl.DateTimeFormat('en-GB', { [part]: 'short' }).format(date); }
 };
 
@@ -95,7 +97,7 @@ export function UsageView(): JSX.Element {
   const monthMarks: { col: number; label: string }[] = [];
   grid.forEach((d, i) => {
     const date = new Date(`${d.day}T12:00:00`);
-    if (date.getDate() === 1) monthMarks.push({ col: Math.floor((i + firstWeekday) / 7), label: shortName(t.locale, date, 'month') });
+    if (date.getDate() === 1) monthMarks.push({ col: Math.floor((i + firstWeekday) / 7), label: shortName(appLocale(), date, 'month') });
   });
 
   return <>
@@ -148,7 +150,7 @@ export function UsageView(): JSX.Element {
                 to tell which row a square belongs to. */}
             <div className="usage-weekdays" aria-hidden="true">
               {/* 2024-01-01 was a Monday; rows are Sunday first, labelled on Mon, Wed and Fri. */}
-              {[null, 1, null, 3, null, 5, null].map((d, i) => <span key={i}>{d === null ? '' : shortName(t.locale, new Date(2024, 0, d), 'weekday')}</span>)}
+              {[null, 1, null, 3, null, 5, null].map((d, i) => <span key={i}>{d === null ? '' : shortName(appLocale(), new Date(2024, 0, d), 'weekday')}</span>)}
             </div>
             <div className="usage-heatmap" role="group" aria-label={t('usage.heatmapLabel', { count: data.retentionDays, active: t.plural('usage.activeDays', data.activeDays) })}>
               {cells.map((d, i) => d === null
@@ -188,7 +190,7 @@ export function UsageView(): JSX.Element {
 
     <section className="usage-section">
       <div className="usage-stat-grid">
-        <Stat label={t('usage.peakHour')} value={data.peakHour ? hourLabel(data.peakHour.hour, t.locale) : '—'} hint={data.peakHour ? t('usage.peakHourHint', { replies: t.plural('usage.replies', data.peakHour.replies, { count: data.peakHour.replies.toLocaleString(appLocale()) }), zone: data.timeZone }) : t('usage.peakHourEmpty')} />
+        <Stat label={t('usage.peakHour')} value={data.peakHour ? hourLabel(data.peakHour.hour, appLocale()) : '—'} hint={data.peakHour ? t('usage.peakHourHint', { replies: t.plural('usage.replies', data.peakHour.replies, { count: data.peakHour.replies.toLocaleString(appLocale()) }), zone: data.timeZone }) : t('usage.peakHourEmpty')} />
         <Stat label={t('usage.favouriteModel')} value={data.models[0]?.name || '—'} hint={data.models[0] ? t('usage.favouriteModelHint', { tokens: compact(data.models[0].input + data.models[0].output) }) : undefined} name />
         <Stat label={t('usage.toolCalls')} value={compact(toolCalls)} hint={toolCalls ? t.plural('usage.toolsUsed', data.tools.length) : t('usage.toolCallsEmpty')} />
         <Stat label={t('usage.currentStreak')} value={t.plural('usage.dayCount', data.currentStreak)} hint={t('usage.currentStreakHint')} />
