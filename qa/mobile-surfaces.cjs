@@ -58,7 +58,8 @@ const origin='http://localhost:31261',web=path.resolve(__dirname,'..'),shots=pro
 
   // ── Settings with the keyboard open ──
   await page.getByRole('button',{name:'Open navigation',exact:true}).click();
-  await page.waitForTimeout(400);await page.screenshot({path:`${shots}/noevia-mobile-before-account.png`});await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+  // The account popover is role="menu" with role="menuitem" rows (#345/#351), not buttons.
+  await page.waitForTimeout(400);await page.screenshot({path:`${shots}/noevia-mobile-before-account.png`});await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
   const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
   // Phones open Settings on its list; Profile is one tap in.
   await settings.getByRole('button',{name:'Account',exact:true}).click();

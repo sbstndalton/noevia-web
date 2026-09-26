@@ -54,8 +54,9 @@ const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit
   assert.ok(await page.locator('.diary-mount').evaluate(el=>getComputedStyle(el).display!=='none'),'Diary is showing');
   // Back to Code returns to the page it was on.
   await page.getByRole('button',{name:'Code',exact:true}).click();await page.locator('.coding-header',{hasText:'Pull requests'}).waitFor();
-  // Settings from Code returns to Code.
-  await page.locator('.side-footer .account-trigger').click();await page.getByRole('button',{name:'Settings',exact:true}).click();
+  // Settings from Code returns to Code. The account popover is role="menu" with role="menuitem"
+  // rows (#345/#351), not buttons.
+  await page.locator('.side-footer .account-trigger').click();await page.getByRole('menuitem',{name:'Settings',exact:true}).click();
   await page.getByRole('region',{name:'Settings'}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Connectors'}).count(),0,'Connectors moved to Plugins');
   await page.getByRole('button',{name:'Close settings'}).click();await page.getByRole('region',{name:'Settings'}).waitFor({state:'detached'});

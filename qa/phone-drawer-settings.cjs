@@ -51,7 +51,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.addInitScript(([t,a])=>{localStorage.setItem('cowork-theme',t);localStorage.setItem('cowork-palette',a);localStorage.setItem('cowork-palette-'+t,a);},[theme,accent]);
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
   await page.getByRole('button',{name:'Open navigation',exact:true}).click();
-  await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+  await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
   await page.getByRole('button',{name:'Account',exact:true}).first().click();await page.locator('.settings-detail .set-row-label').first().waitFor();
   const lefts=await page.evaluate(()=>[...document.querySelectorAll('.settings-detail .set-row-label')].map(e=>Math.round(e.getBoundingClientRect().left)));
   assert.equal(new Set(lefts).size,1,`${w} ${theme}: Profile labels share one edge ${lefts}`);
@@ -88,7 +88,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   const fr=await page.evaluate(()=>{const f=document.querySelector('.projects-search').getBoundingClientRect(),c=document.querySelector('.project-card').getBoundingClientRect();return Math.abs(f.right-c.right);});
   assert.ok(fr<=1,`${w}: filter spans the row like the cards (${fr}px short)`);
   await page.getByRole('button',{name:'Open navigation',exact:true}).click();
-  await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+  await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
   for(const name of ['Security and login','Your data & privacy','Appearance & language','Diary & storage']){
    await page.locator('.settings-navigation nav button').filter({hasText:name}).first().click();await page.locator('.settings-detail').waitFor();
    const small=await page.evaluate(()=>[...document.querySelectorAll('.settings-detail :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea,select)')].filter(e=>e.offsetParent&&parseFloat(getComputedStyle(e).fontSize)<16).map(e=>(e.getAttribute('aria-label')||e.tagName)+' '+getComputedStyle(e).fontSize));
@@ -116,12 +116,16 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
    return {side:cs(side).backgroundColor,heads,fab:cs(q('.new-chat-btn')).backgroundColor,fabRadius:cs(q('.new-chat-btn')).borderTopLeftRadius,
     primaryContainer:root.getPropertyValue('--md-primary-container').trim(),active:cs(q('.side-nav .nav-item[aria-current=page]')).borderTopLeftRadius,
     composerRadius:cs(q('.composer-inner')).borderTopLeftRadius,font:cs(document.body).fontFamily,
-    surface:(()=>{const p=document.createElement('i');p.style.background='var(--bg-surface)';document.body.append(p);const c=cs(p).backgroundColor;p.remove();return c;})(),radiusControl:root.getPropertyValue('--radius-control').trim(),radiusSurface:root.getPropertyValue('--radius-surface').trim()};});
+    surface:(()=>{const p=document.createElement('i');p.style.background='var(--bg-surface)';document.body.append(p);const c=cs(p).backgroundColor;p.remove();return c;})(),
+    primaryContainerColor:(()=>{const p=document.createElement('i');p.style.background='var(--md-primary-container)';document.body.append(p);const c=cs(p).backgroundColor;p.remove();return c;})(),
+    radiusControl:root.getPropertyValue('--radius-control').trim(),radiusOverlay:root.getPropertyValue('--radius-overlay').trim(),radiusSurface:root.getPropertyValue('--radius-surface').trim(),radiusButton:root.getPropertyValue('--radius-button').trim()};});
   for(const h of m.heads)assert.equal(h,m.side,`${theme} M3: sticky sidebar pieces share the drawer colour ${JSON.stringify(m)}`);
-  // Contemporary (was Material 3) now follows the shared visual system (#245): New chat is a flat
-  // outlined control, rows and the composer take the family's radius roles, and the UI face is Geist.
-  assert.equal(m.fab,m.surface,`${theme} Contemporary: New chat is flat on the surface fill`);
-  assert.equal(m.fabRadius,m.radiusControl);assert.equal(m.active,m.radiusControl,`${theme} Contemporary: rows share the control radius`);assert.equal(m.composerRadius,m.radiusSurface);assert.match(m.font,/^Geist/,'Contemporary sets its UI face');
+  // #315 restored the FAB for Contemporary's New chat (primary-container, 16px/--radius-overlay
+  // corners) and made every row a pill (--radius-button: 999px), superseding #245's flat/outlined
+  // control and shared control-radius rows for Contemporary specifically; the composer keeps the
+  // family's surface radius, and the UI face is still Geist.
+  assert.equal(m.fab,m.primaryContainerColor,`${theme} Contemporary: New chat is the primary-container FAB`);
+  assert.equal(m.fabRadius,m.radiusOverlay,`${theme} Contemporary: New chat uses the overlay radius`);assert.equal(m.active,m.radiusButton,`${theme} Contemporary: rows are pills (--radius-button)`);assert.equal(m.composerRadius,m.radiusSurface);assert.match(m.font,/^Geist/,'Contemporary sets its UI face');
   await page.close();
  }
 
@@ -189,9 +193,9 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   const menu=page.locator('.account-popover');await menu.waitFor();
   const inView=await menu.evaluate(el=>{const r=el.getBoundingClientRect();return [...el.querySelectorAll('button')].every(b=>{const q=b.getBoundingClientRect();return b.contains(document.elementFromPoint(q.x+q.width/2,q.y+q.height/2));})&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;});
   assert.ok(inView,`${collapsedRail?'collapsed':'expanded'}: account menu fully visible and clickable`);
-  await menu.getByRole('button',{name:'Dark mode',exact:true}).click();
+  await menu.getByRole('menuitem',{name:'Dark mode',exact:true}).click();
   assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'dark','the account menu switches the theme');
-  await menu.getByRole('button',{name:'Light mode',exact:true}).waitFor();
+  await menu.getByRole('menuitem',{name:'Light mode',exact:true}).waitFor();
   await page.keyboard.press('Escape');
   if(!collapsedRail){
    await page.addInitScript(()=>{window.requestIdleCallback=()=>0;});
@@ -304,7 +308,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   const spill=await page.evaluate(()=>{const c=document.querySelector('.composer-inner').getBoundingClientRect();return [...document.querySelectorAll('.composer-inner button')].filter(b=>{const q=b.getBoundingClientRect();return q.width&&(q.right>c.right-1||q.left<c.left+1);}).map(b=>b.getAttribute('aria-label'));});
   assert.deepEqual(spill,[],'composer controls stay inside the composer at 375px');
   await page.getByRole('button',{name:'Open navigation',exact:true}).click();
-  await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();await page.locator('.settings-navigation nav button').first().waitFor();
+  await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();await page.locator('.settings-navigation nav button').first().waitFor();
   const list=await page.evaluate(()=>{const n=document.querySelector('.settings-navigation'),b=n.querySelector('nav button');return {w:Math.round(n.getBoundingClientRect().width),fs:parseFloat(getComputedStyle(b).fontSize)};});
   assert.ok(list.w>=370&&list.fs>=15,`Settings list is full width with readable labels on an iPhone ${JSON.stringify(list)}`);
   await page.close();
@@ -337,6 +341,6 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.close();
  }
  assert.deepEqual(errors,[]);
- console.log('PASS phone drawer: full drawer from Diary, Diary in the bottom bar, only the account row pinned, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Contemporary has no sticky bands, a flat New chat, rows on the control radius, the composer on the surface radius and its own UI face; on a short desktop the sidebar is one scrolling plane with every chat, in each material; collapsed, it is an icon-only rail with the avatar at the bottom that survives a reload and expands from its empty space; light/dark is in the account menu with Search beside the account, the menu opens in full from the rail, and Code never blanks while loading; the composer + is a centred SVG without a duplicate model entry, Thinking is a menu of levels, a closed sidebar stays closed across Chat and Code, and no icon is a text glyph; icon + text buttons keep their icon at the start and hover options never cover a title; Diary is in the bottom bar, the Chat/Code thumb slides both ways, project colours show in the sidebar and on cards, and the phone Code drawer opens and closes; the mode switch is a small track in the header row, the phone drawer is full width with search on top, and switching mode closes it; on an iPhone Settings is a full-width list, the composer fits at 375px, and rows and headings line up in every material; no square focus ring inside the composer, and the app follows an open keyboard.');
+ console.log('PASS phone drawer: full drawer from Diary, Diary in the bottom bar, only the account row pinned, no rows under it, Plugins reachable, row menus unclipped beside their row without resetting scroll (four viewports, both themes); Settings rows share one edge, theme previews show their own theme, the selected ring follows the accent; the inference strip is neutral before its first reading; Settings fields are 16px on touch, the Material track fits at 320px, Projects counts active projects and its filter spans the row; Contemporary has no sticky bands, a primary-container FAB New chat, pill rows, the composer on the surface radius and its own UI face; on a short desktop the sidebar is one scrolling plane with every chat, in each material; collapsed, it is an icon-only rail with the avatar at the bottom that survives a reload and expands from its empty space; light/dark is in the account menu with Search beside the account, the menu opens in full from the rail, and Code never blanks while loading; the composer + is a centred SVG without a duplicate model entry, Thinking is a menu of levels, a closed sidebar stays closed across Chat and Code, and no icon is a text glyph; icon + text buttons keep their icon at the start and hover options never cover a title; Diary is in the bottom bar, the Chat/Code thumb slides both ways, project colours show in the sidebar and on cards, and the phone Code drawer opens and closes; the mode switch is a small track in the header row, the phone drawer is full width with search on top, and switching mode closes it; on an iPhone Settings is a full-width list, the composer fits at 375px, and rows and headings line up in every material; no square focus ring inside the composer, and the app follows an open keyboard.');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

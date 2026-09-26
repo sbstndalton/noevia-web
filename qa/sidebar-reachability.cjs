@@ -20,7 +20,15 @@ const {createFixture}=require('./diary-fixture.cjs');
  assert.ok(await history.evaluate(el=>el.clientHeight>0),`${width}x${height}: history collapsed`);
  async function reach(locator){
  await locator.scrollIntoViewIfNeeded();
- const probe=await locator.evaluate((el,h)=>{const r=el.getBoundingClientRect();const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {ok:r.width>=44&&r.height>=44&&r.y>=-1&&r.bottom<=h+1&&el.contains(hit),rect:[r.x,r.y,r.width,r.height].map(Math.round),hit:hit?.className?.baseVal??hit?.className};},height);
+ // A menu's own 1ms "reduced motion" enter animation (motion.css) can still be one frame from
+ // settled when Playwright's actionability check first sees it visible; a few retries clear
+ // that without hiding a genuinely wrong size or position.
+ let probe;
+ for(let attempt=0;attempt<10;attempt++){
+ probe=await locator.evaluate((el,h)=>{const r=el.getBoundingClientRect();const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {ok:r.width>=44&&r.height>=44&&r.y>=-1&&r.bottom<=h+1&&el.contains(hit),rect:[r.x,r.y,r.width,r.height].map(Math.round),hit:hit?.className?.baseVal??hit?.className};},height);
+ if(probe.ok)break;
+ await locator.page().waitForTimeout(30);
+ }
  assert.ok(probe.ok,`${width}x${height} ${theme}: target unreachable or smaller than 44px: ${await locator.getAttribute('aria-label')} ${JSON.stringify(probe)}`);
  }
  for(const name of ['Options for Synthetic pinned','Expand chats in Synthetic project 0','Options for Synthetic nested0','Options for Synthetic project 4','Options for Synthetic recent11']){
@@ -65,8 +73,9 @@ const {createFixture}=require('./diary-fixture.cjs');
   await drawer.getByRole('button',{name:'Projects',exact:true}).first().click();await drawer.waitFor({state:'hidden'});
   await page.getByRole('heading',{name:'Projects',level:1}).waitFor();
   // Opening Settings from the drawer's account menu closes the drawer behind it.
+  // The account popover is role="menu" with role="menuitem" rows (#345/#351), not buttons.
   await toggle.click();await drawer.waitFor();
-  await drawer.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+  await drawer.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
   await drawer.waitFor({state:'hidden'});await page.getByRole('region',{name:'Settings'}).waitFor();await page.keyboard.press('Escape');
   await toggle.click();await drawer.waitFor();await page.setViewportSize({width:1440,height:900});
   await page.waitForFunction(()=>!document.querySelector('.nav-drawer-backdrop'));

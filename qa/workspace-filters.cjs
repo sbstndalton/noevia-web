@@ -15,11 +15,11 @@ const assert=require('node:assert/strict');const {createFixture}=require('./diar
   await workspace.getByLabel('Markdown content',{exact:true}).fill('Unsaved draft #different');
   await workspace.getByText('Search & backlinks',{exact:true}).click();
   await workspace.getByLabel('From date',{exact:true}).fill('2024-02-29');await workspace.getByLabel('Through date',{exact:true}).fill('2024-03-01');await workspace.getByLabel('Hashtag',{exact:true}).fill('#WORK');
-  await workspace.getByRole('button',{name:'Search contents',exact:true}).click();await workspace.getByText('1 matches · 2 files checked',{exact:true}).waitFor();
+  await workspace.getByRole('button',{name:'Search contents',exact:true}).click();await workspace.getByText('1 match · 2 files checked',{exact:true}).waitFor();
   assert.match(await workspace.locator('.diary-search-result').innerText(),/2024-02-29.md/);
   assert.equal(await workspace.getByLabel('Markdown content',{exact:true}).inputValue(),'Unsaved draft #different');
   await workspace.getByLabel('Hashtag',{exact:true}).fill('home');assert.equal(await workspace.locator('.diary-search-result').count(),0,'Changed filters invalidate old results');
-  await workspace.getByRole('button',{name:'Search contents',exact:true}).click();await workspace.getByText('1 matches · 2 files checked',{exact:true}).waitFor();assert.match(await workspace.locator('.diary-search-result').innerText(),/2024-03-01.md/);
+  await workspace.getByRole('button',{name:'Search contents',exact:true}).click();await workspace.getByText('1 match · 2 files checked',{exact:true}).waitFor();assert.match(await workspace.locator('.diary-search-result').innerText(),/2024-03-01.md/);
   await workspace.getByRole('button',{name:'Clear filters',exact:true}).click();assert.equal(await workspace.getByLabel('From date',{exact:true}).inputValue(),'');assert.equal(await workspace.getByRole('button',{name:'Search contents',exact:true}).isEnabled(),false);
   await workspace.getByLabel('Hashtag',{exact:true}).fill('work');await workspace.getByRole('button',{name:'Search contents',exact:true}).click();await workspace.getByText('3 matches · 4 files checked',{exact:true}).waitFor();
   await workspace.getByLabel('From date',{exact:true}).scrollIntoViewIfNeeded();
