@@ -5,7 +5,7 @@ import { useT } from '../i18n';
 
 type Status = { mode: 'managed' | 'legacy'; backup: 'not_configured' | 'pending' | 'failed' | 'complete'; lastBackedUp: number | null; error?: string };
 type Preview = { fingerprint: string; fileCount: number; bytes: number; files: { path: string; bytes: number; sha256: string }[] };
-export function DiaryStorageStatus({ busy, revision, onMode, onImported, onBusyChange }: { busy: boolean; revision: number; onMode: (mode: 'managed' | 'legacy') => void; onImported: () => void; onBusyChange: (busy: boolean) => void }) {
+export function DiaryStorageStatus({ busy, revision, onMode, onImported, onBusyChange, active = true }: { busy: boolean; revision: number; onMode: (mode: 'managed' | 'legacy') => void; onImported: () => void; onBusyChange: (busy: boolean) => void; active?: boolean }) {
   const t = useT();
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState('');
@@ -13,6 +13,7 @@ export function DiaryStorageStatus({ busy, revision, onMode, onImported, onBusyC
   const [preview, setPreview] = useState<Preview | null>(null);
   const [working, setWorking] = useState(false);
   useEffect(() => {
+    if (!active) return; // paused while the Diary view is hidden; re-runs (and refreshes) on activation
     let stopped = false, running = false, timer: ReturnType<typeof setInterval> | null = null;
     let current: Status | null = null;
     async function poll() {
@@ -47,7 +48,7 @@ export function DiaryStorageStatus({ busy, revision, onMode, onImported, onBusyC
       window.removeEventListener('focus', onFocusOrVisibility);
       document.removeEventListener('visibilitychange', onFocusOrVisibility);
     };
-  }, [revision, onMode]);
+  }, [revision, onMode, active]);
   async function importDiary(commit: boolean) {
     setWorking(true); onBusyChange(true); setError('');
     try {

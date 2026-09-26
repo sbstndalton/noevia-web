@@ -31,7 +31,13 @@ import '../i18n/diary';
 import { diaryExchangeTarget } from '../diary-conversation';
 import type { DiaryTurn as Turn } from '../diary-conversation';
 type Pending = { before: string | null; content: string };
-export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
+// `active` is false while the Diary view is mounted but hidden behind another
+// view (App.tsx keeps it alive so an in-progress draft, open editor, and
+// scroll position survive switching to chat and back). Data-fetching effects
+// below gate on `active` so a hidden Diary makes zero /api/diary requests;
+// switching a still-mounted instance back to active re-runs those effects to
+// pick up anything that changed while it was hidden.
+export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolean | null; active?: boolean }) {
   const t = useT();
   const [extrasEnabled, setExtrasEnabled] = useState(false);
   const [extraProject, setExtraProject] = useState<Project | null>(null);
@@ -155,6 +161,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const [recoveryNotice,setRecoveryNotice]=useState('');
   useEffect(()=>{
     if(folder){setRecovering(false);setRecoveryNotice('');return;}
+    if(!active)return; // paused while hidden; re-runs (and refreshes immediately) on activation
     let stopped=false, polling=true;
     const target=day || localDay();
     const recover=async()=>{
@@ -175,7 +182,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     };
     void recover();const timer=setInterval(()=>void recover(),5000);
     return()=>{stopped=true;clearInterval(timer);};
-  },[day,folder,revision]);
+  },[day,folder,revision,active]);
   const scope = day || (month ? `month:${month}` : 'home');
   const conversation = turns[scope] || [];
   const { scrollRef, onScroll, follow } = useChatScroll(scope, turns, !!day);
@@ -189,6 +196,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
   const emptyDiary = overview.ready && !months.length && !overview.memory.length && !overview.sources.length;
 
   useEffect(() => {
+    if (!active) return; // paused while hidden; re-runs (and refreshes) on activation
     const request = ++storageRequest.current;
     setStorageError('');
     void fetchStorage().then(value => {
@@ -197,8 +205,9 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       if (request === storageRequest.current) setStorageError(t('diary.errors.storageLoadFailed'));
     });
     return () => { storageRequest.current += 1; };
-  }, [revision, storageAttempt]);
+  }, [revision, storageAttempt, active]);
   useEffect(() => {
+    if (!active) return; // paused while hidden; re-runs (and refreshes) on activation
     let stale = false;
     const load = async () => {
       setOverview(prev => ({...prev,ready:false,failed:false}));
@@ -238,8 +247,9 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     };
     void load().catch(e => { if (!stale) { setError(String(e)); setOverview(prev => ({...prev,ready:false,failed:true})); } });
     return () => { stale = true; };
-  }, [folder, localFiles, month, revision, today]);
+  }, [folder, localFiles, month, revision, today, active]);
   useEffect(() => {
+    if (!active) return; // paused while hidden; re-runs (and refreshes) on activation
     let stale = false;
     setFiles([]); setFilesError(''); setFilesLoading(true);
     if (folder) {
@@ -252,7 +262,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
       setFiles([...entries.values()]); setFilesLoading(false);
     } else void listFiles(filePath).then(r => { if (!stale) setFiles(r.files); }).catch(e => { if (!stale) setFilesError(e instanceof Error ? e.message : String(e)); }).finally(()=>{if(!stale)setFilesLoading(false);});
     return () => { stale = true; };
-  }, [folder, localFiles, filePath, revision, fileRevision]);
+  }, [folder, localFiles, filePath, revision, fileRevision, active]);
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => { if (busyRef.current || draft.trim() || pendingCount || (editor && editText !== editor.content)) { e.preventDefault(); e.returnValue = ''; } };
     window.addEventListener('beforeunload', warn);
@@ -514,7 +524,7 @@ export function DiaryView({ inferenceUp }: { inferenceUp?: boolean | null }) {
     </section><DiaryContextPanel filesLoading={filesLoading} filesError={filesError} retryFiles={()=>setFileRevision(n=>n+1)} recovery={folder && <section><label className="diary-sync-toggle"><input type="checkbox" checked={localRecoveryEnabled} disabled={busy || !recoveryOwner} onChange={e=>void toggleLocalRecovery(e.target.checked)} />{t('diary.recovery.saveOnBrowser')}</label><p className="diary-context-note">{t('diary.recovery.storesNote')}</p></section>} busy={busy} files={files} filePath={filePath} setFilePath={setFilePath} openFile={openFile}
       newFile={newEditor}
       chooseStorage={() => setWizard('choose')} pendingCount={pendingCount} pendingLocal={Object.keys(pendingLocal).length > 0}
-      managed={storageMode === 'managed'} storageStatus={<DiaryStorageStatus onBusyChange={value=>{busyRef.current=value;setBusy(value);}} busy={busy} revision={revision} onMode={setStorageMode} onImported={()=>{setRevision(n=>n+1);setWizard(null);}} />} folderName={folder?.name} savedLabel={savedLabel} corpusRoot={storage?.corpusRoot} sync={sync} setSync={setSync} disconnect={disconnect} /></div>
+      managed={storageMode === 'managed'} storageStatus={<DiaryStorageStatus active={active} onBusyChange={value=>{busyRef.current=value;setBusy(value);}} busy={busy} revision={revision} onMode={setStorageMode} onImported={()=>{setRevision(n=>n+1);setWizard(null);}} />} folderName={folder?.name} savedLabel={savedLabel} corpusRoot={storage?.corpusRoot} sync={sync} setSync={setSync} disconnect={disconnect} /></div>
     {extraModels && extraProject && <ModelPopup projects={[extraProject]} activeProject={extraProject} onClose={()=>setExtraModels(false)} onProjectsChanged={()=>void refreshExtraProject()} />}
     {extraFiles && <DiaryModal title={t('diary.attachments.title')} onClose={()=>setExtraFiles(false)}><p>{t('diary.attachments.storedSeparately')}</p>{(extraProject?.files || []).map(file=><div className="model-row" key={file.name}><span>{file.name}<small> · {file.attachment?.state || file.document?.state || t('diary.attachments.ready')}</small></span><button className="popup-tab" disabled={busy || extraBusy} onClick={()=>void (async()=>{if(!extraProject || !window.confirm(t('diary.confirm.deleteAttachment', { name: file.name })))return;setExtraBusy(true);try{await deleteProjectFile(extraProject.id,file.name);await refreshExtraProject();}catch(err){setExtraStatus(String(err));}finally{setExtraBusy(false);}})()}>{t('diary.attachments.delete')}</button></div>)}</DiaryModal>}
 

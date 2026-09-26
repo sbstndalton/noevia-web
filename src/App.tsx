@@ -1327,7 +1327,7 @@ export default function App(): JSX.Element {
         />
       )}
 
-      {diaryEnabled && <div className="diary-mount" style={{ display: view.kind === 'diary' ? 'contents' : 'none' }}><Suspense fallback={<ViewLoading name="diary" active={view.kind === 'diary' && appMode === 'chat' && !settingsOpen} />}><Diary.View inferenceUp={health.inferenceUp} /></Suspense></div>}
+      {diaryEnabled && <div className="diary-mount" style={{ display: view.kind === 'diary' ? 'contents' : 'none' }}><Suspense fallback={<ViewLoading name="diary" active={view.kind === 'diary' && appMode === 'chat' && !settingsOpen} />}><Diary.View inferenceUp={health.inferenceUp} active={view.kind === 'diary'} /></Suspense></div>}
 
       {popupOpen && (
         <ModelPopup
