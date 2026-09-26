@@ -58,6 +58,13 @@
 .markdown-preview h2 { font-size:var(--text-title1); margin:24px 0 12px; }
 .markdown-preview h3 { font-size:var(--text-title3); margin:20px 0 10px; }
 .markdown-preview h4 { font-size:var(--text-callout); color:var(--text-secondary); margin:22px 0 10px; }
+/* Levels 4-6 (h4-h6) share the secondary-text treatment h4 already had; each drops one step down
+   the type scale so all six Markdown heading levels stay distinct (#388). Level 6 (the deepest,
+   doubled up on the <h6> tag since HTML has no seventh level) gets its own modifier to keep it
+   one step below level 5. */
+.markdown-preview h5 { font-size:var(--text-footnote); font-weight:600; color:var(--text-secondary); margin:18px 0 8px; }
+.markdown-preview h6 { font-size:var(--text-caption); font-weight:600; color:var(--text-secondary); margin:16px 0 8px; }
+.markdown-preview h6.md-h6-2 { font-size:var(--text-caption2); font-weight:500; }
 .markdown-preview pre { white-space:pre-wrap; margin:0; background:var(--bg); padding:0 12px; font-size:var(--text-footnote); }
 
 /* Fenced blocks render whole, with a language bar and a copy button. */
@@ -68,6 +75,19 @@
 .md-code-bar button:hover { background:var(--nav-hover); color:var(--text); }
 .md-code pre { margin:0; padding:12px; background:none; overflow-x:auto; white-space:pre; }
 .md-code code { font-size:var(--text-caption); line-height:1.6; }
+
+/* A Markdown image (#390): a `data:` source is already fully inside the message, so it renders
+   directly. A remote source cannot become an <img> even on request — the server's CSP is
+   `img-src 'self' data:`, so the browser would block it — so this chip is a real link that opens
+   the image in a new tab instead. Sized and bordered like the code block's own bar above so it
+   reads as the same family of "content the model referenced but this renderer is holding back a
+   step". */
+.md-image { max-width:100%; border-radius:var(--radius-card); display:block; margin:8px 0; }
+.md-image-chip { display:inline-flex; align-items:center; gap:10px; margin:8px 0; padding:8px 14px; max-width:100%; border:1px solid var(--border-subtle); border-radius:var(--radius-card); background:var(--bg-canvas); color:inherit; font:inherit; text-align:left; text-decoration:none; cursor:pointer; transition:background var(--duration-fast) var(--ease-spring), border-color var(--duration-fast) var(--ease-spring); }
+.md-image-chip:hover { background:var(--bg-surface-hover); border-color:var(--control-border); }
+.md-image-chip-text { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.md-image-chip-alt { font-size:var(--text-footnote); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.md-image-chip-host { font-size:var(--text-caption2); color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* List pips take the accent, so structure reads at a glance. */
 .md-pip { color:var(--accent-text); font-weight:600; }

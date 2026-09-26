@@ -292,6 +292,9 @@ export const SV_SE: Catalogue = {
   'diary.markdown.noFileOfThatName': "Ingen fil med det namnet här",
   'diary.markdown.properties': "Egenskaper",
   'diary.markdown.empty': "tom",
+  'diary.markdown.image.alt': "Bild",
+  'diary.markdown.image.load': "Öppnas i en ny flik",
+  'diary.markdown.image.ariaLabel': "Öppna bild: {alt} från {host} — öppnas i en ny flik",
   'diary.modal.closeDialog': "Stäng dialogruta",
   'settings.title': "Inställningar",
 
@@ -375,6 +378,7 @@ export const SV_SE: Catalogue = {
   'chat.empty.projectIntro': "Projektets filer och instruktioner är klara.",
   'chat.noModel': "Ingen modell är installerad på servern än, så svar kan inte starta.",
   'chat.openModels': "Öppna Modeller och routning",
+  'chat.jumpToLatest': "Hoppa till senaste",
   'msg.copy': "Kopiera",
   'msg.copied': "Kopierad",
   'msg.regenerate': "Regenerera",

@@ -304,6 +304,22 @@ body { margin: 0; background: var(--bg); }
   max-width: 760px; width: 100%; margin: 0 auto;
 }
 
+/* Shown once the reader scrolls away from the bottom (#387). Rendered as the transcript's own
+   last flex child and stuck there — it rides the scroll container it lives in rather than a
+   pixel offset guessed against the composer's (variable) height, so it lands in the same place on
+   phone as on desktop with no extra layout. Same pill shape and hover treatment as the retry
+   affordance below. Reachable by keyboard like any other button; its aria-label carries the "why"
+   since the arrow glyph alone is decorative. */
+.jump-to-latest {
+  position: sticky; bottom: 8px; align-self: center; z-index: 2;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-pill);
+  color: var(--text); cursor: pointer;
+  font-family: var(--font-ui); font-size: var(--text-caption); font-weight: 600;
+  padding: 6px 14px; box-shadow: var(--shadow-pop);
+}
+.jump-to-latest:hover { color: var(--accent-text); border-color: var(--accent-2); background: var(--accent-2-soft); }
+
 .msg { display: flex; flex-direction: column; gap: 6px; }
 .msg-sender {
   font-size: var(--text-caption2); font-weight: 700; letter-spacing: 0.04em;

@@ -292,6 +292,9 @@ export const NL_NL: Catalogue = {
   'diary.markdown.noFileOfThatName': "Geen bestand met die naam hier",
   'diary.markdown.properties': "Eigenschappen",
   'diary.markdown.empty': "leeg",
+  'diary.markdown.image.alt': "Afbeelding",
+  'diary.markdown.image.load': "Opent in een nieuw tabblad",
+  'diary.markdown.image.ariaLabel': "Afbeelding openen: {alt} van {host} — opent in een nieuw tabblad",
   'diary.modal.closeDialog': "Dialoogvenster sluiten",
   'settings.title': "Instellingen",
 
@@ -375,6 +378,7 @@ export const NL_NL: Catalogue = {
   'chat.empty.projectIntro': "De bestanden en instructies van je project staan klaar.",
   'chat.noModel': "Er is nog geen model geïnstalleerd op deze server, dus antwoorden kunnen niet starten.",
   'chat.openModels': "Modellen en routering openen",
+  'chat.jumpToLatest': "Naar het laatste bericht",
   'msg.copy': "Kopiëren",
   'msg.copied': "Gekopieerd",
   'msg.regenerate': "Opnieuw genereren",

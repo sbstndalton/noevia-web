@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { CloseButton } from './CloseButton';
 import { readFrontmatter } from '../diary-markdown';
 import { useT } from '../i18n';
+import { Icon } from './icons/Icon';
+import { classifyImageSrc, imageHost } from '../markdown-image';
 export function DiaryModal({ title, onClose, children, className = '' }: { className?: string; title: string; onClose: () => void; children: ReactNode }) {
   const t = useT();
   const ref = useRef<HTMLDialogElement>(null);
@@ -44,6 +46,37 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
   );
 }
 
+/** `![alt](src)`, rendered as a real `<img>` only for a source that cannot leave the server
+ *  unasked (see `markdown-image.ts`). A remote source cannot be a click-to-load `<img>` either:
+ *  the server's own CSP is `img-src 'self' data:` (server/index.cjs), so a remote `<img>` src is
+ *  blocked by the browser even after the reader asks for it — loosening that policy would defeat
+ *  the reason it exists. So a remote source instead opens as a real link, in a new tab, only on
+ *  request; anything this renderer has no sanitiser for falls back to plain text, exactly like the
+ *  link branch above it. */
+function MarkdownImage({ alt, src }: { alt: string; src: string }) {
+  const t = useT();
+  const kind = classifyImageSrc(src);
+  if (kind === 'unsafe') return <span>{alt || src} ({src})</span>;
+  if (kind === 'inline') return <img className="md-image" src={src} alt={alt} loading="lazy" />;
+  const host = imageHost(src);
+  const label = alt || t('diary.markdown.image.alt');
+  return (
+    <a
+      href={src}
+      target="_blank"
+      rel="noopener noreferrer nofollow"
+      className="md-image-chip"
+      aria-label={t('diary.markdown.image.ariaLabel', { alt: label, host })}
+    >
+      <Icon name="external-link" size={14} strokeWidth={1.75} />
+      <span className="md-image-chip-text">
+        <span className="md-image-chip-alt">{label}</span>
+        <span className="md-image-chip-host">{host} · {t('diary.markdown.image.load')}</span>
+      </span>
+    </a>
+  );
+}
+
 function splitRow(line: string): string[] {
   // Drop the leading and trailing pipe, then split. A trailing empty cell from
   // "| a | b |" is an artefact of the delimiter, not a column.
@@ -70,9 +103,16 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
   // ")" and truncated the href mid-URL.
   const inline = (line: string) =>
     line.split(wikiLink
-      ? /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[\[[^\[\]\n]*\]\]|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g
-      : /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g).map((part, i) => {
+      ? /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[\[[^\[\]\n]*\]\]|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g
+      : /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g).map((part, i) => {
       if (part.startsWith('**')) return <strong key={i}>{part.slice(2, -2)}</strong>;
+      // Checked before the plain-link branch below: `![alt](src)` contains `[alt](src)` as a
+      // substring, so without its own branch the leading "!" leaked as stray text while the rest
+      // was treated as a link (#390).
+      if (part.startsWith('![')) {
+        const split = part.indexOf('](');
+        return <MarkdownImage key={i} alt={part.slice(2, split)} src={part.slice(split + 2, -1)} />;
+      }
       if (wikiLink && part.startsWith('[[') && part.endsWith(']]')) {
         const body = part.slice(2, -2);
         const bar = body.indexOf('|');
@@ -155,10 +195,17 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
       continue;
     }
 
-    if (/^#### /.test(line)) { out.push(<h4 key={i}>{inline(line.slice(5))}</h4>); continue; }
-    if (/^# /.test(line)) { out.push(<h2 key={i}>{inline(line.slice(2))}</h2>); continue; }
-    if (/^## /.test(line)) { out.push(<h3 key={i}>{inline(line.slice(3))}</h3>); continue; }
+    // Six CommonMark levels map to five real heading tags (h1 is reserved for the page's own
+    // title, never a chat reply) plus a modifier class for the deepest one, so every level stays
+    // visually distinct instead of two levels colliding on one tag and the deepest two not
+    // rendering as headings at all (#388). Longest prefix checked first since e.g. `/^### /`
+    // would also be true of a `#### ` line's first four characters.
+    if (/^###### /.test(line)) { out.push(<h6 className="md-h6-2" key={i}>{inline(line.slice(7))}</h6>); continue; }
+    if (/^##### /.test(line)) { out.push(<h6 key={i}>{inline(line.slice(6))}</h6>); continue; }
+    if (/^#### /.test(line)) { out.push(<h5 key={i}>{inline(line.slice(5))}</h5>); continue; }
     if (/^### /.test(line)) { out.push(<h4 key={i}>{inline(line.slice(4))}</h4>); continue; }
+    if (/^## /.test(line)) { out.push(<h3 key={i}>{inline(line.slice(3))}</h3>); continue; }
+    if (/^# /.test(line)) { out.push(<h2 key={i}>{inline(line.slice(2))}</h2>); continue; }
     // Ordered lists keep the model's own numbering rather than restarting per
     // line, which is what a real <ol> would do to a streamed, line-at-a-time
     // render. Indented bullets are common in model output, so keep the indent.
@@ -182,7 +229,23 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
       out.push(<p className="md-bullet" key={i} style={bullet[1] ? { paddingInlineStart: bullet[1].length * 8 } : undefined}><span className="md-pip">•</span> {inline(bullet[2])}</p>);
       continue;
     }
-    if (/^> /.test(line)) { out.push(<blockquote key={i}>{inline(line.slice(2))}</blockquote>); continue; }
+    // Consecutive `>`-prefixed lines are one quoted passage, not one box per line (#389): collect
+    // the whole run before emitting a single <blockquote>, the same way the fenced-code branch
+    // above collects to its closing fence. A bare ">" (no trailing text) is a blank line inside
+    // the quote, kept as its own line break rather than ending the block early.
+    if (/^> /.test(line) || line === '>') {
+      const quoted: string[] = [line === '>' ? '' : line.slice(2)];
+      while (i + 1 < lines.length && (/^> /.test(lines[i + 1]) || lines[i + 1] === '>')) {
+        i += 1;
+        quoted.push(lines[i] === '>' ? '' : lines[i].slice(2));
+      }
+      out.push(
+        <blockquote key={i}>
+          {quoted.map((q, n) => <Fragment key={n}>{n > 0 && <br />}{inline(q)}</Fragment>)}
+        </blockquote>,
+      );
+      continue;
+    }
     if (/^(\s*[-*_]){3,}\s*$/.test(line)) { out.push(<hr key={i} />); continue; }
     out.push(line.trim() ? <p key={i}>{inline(line)}</p> : <div className="md-space" key={i} />);
   }

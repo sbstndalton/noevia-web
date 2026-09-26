@@ -2,10 +2,11 @@ import { ChatContext } from './ChatContext';
 import { useChatScroll } from '../useChatScroll';
 import { ReasoningControl } from './ReasoningControl';
 import { ProjectIcon } from './ProjectIdentity';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import type { Message, MessageStats, Project, InstalledModel, RoutingDecision } from '../types';
 import { ChevronLeft, SendIcon, SlidersIcon } from './Icons';
+import { Icon } from './icons/Icon';
 import { ComposerModel } from './ComposerModel';
 import { MarkdownPreview } from './DiaryModal';
 import { ModelPopup } from './ModelPopup';
@@ -23,6 +24,7 @@ import { ToolCatalogue } from './ToolCatalogue';
 import { CoworkTaskCard } from './CoworkTaskCard';
 import { decideDispatch, type ChatMode } from '../chat-mode';
 import { insertMention, turnBoxesFor, type PermittedBox } from '../tool-catalogue';
+import { onCancelEdit, focusAfterRender, type EditFocusState } from '../edit-focus';
 
 /** What one send carries besides its text: per-turn boxes, a fallback notice, or a Cowork task. */
 export interface SendTurn { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string } }
@@ -245,8 +247,17 @@ export function ChatView({
   // button rather than letting it fall to <body> (#355); keyed per message since more than
   // one bubble can exist.
   const editTriggers = useRef<Map<string, HTMLButtonElement>>(new Map());
-  const cancelEdit = (id: string) => { setEditingId(null); editTriggers.current.get(id)?.focus(); };
-  const { scrollRef, onScroll, follow } = useChatScroll(chatId, messages, true, streaming);
+  const editFocus = useRef<EditFocusState>({ pendingFocusId: null });
+  const cancelEdit = (id: string) => { editFocus.current = onCancelEdit(id); setEditingId(null); };
+  // The trigger button unmounts (and drops out of editTriggers) the instant editingId is set, and
+  // only remounts on the render where it goes back to null — after this effect's own render, so
+  // by the time it runs the map entry cancelEdit needs is back (#355).
+  useLayoutEffect(() => {
+    const { focusId, next } = focusAfterRender(editingId, editFocus.current);
+    editFocus.current = next;
+    if (focusId) editTriggers.current.get(focusId)?.focus();
+  }, [editingId]);
+  const { scrollRef, onScroll, follow, atBottom } = useChatScroll(chatId, messages, true, streaming);
   // When the current stream began, for the live elapsed counter. Reset on each
   // new stream rather than on every message change, or the timer would restart
   // mid-reply as tokens arrive.
@@ -462,6 +473,12 @@ export function ChatView({
             </div>
           );
         })}
+        {!atBottom && messages.length > 0 && (
+          <button type="button" className="jump-to-latest" onClick={follow} aria-label={t('chat.jumpToLatest')}>
+            <Icon name="arrow-down" size={13} strokeWidth={2.25} />
+            {t('chat.jumpToLatest')}
+          </button>
+        )}
       </div>
 
       <div className="composer">

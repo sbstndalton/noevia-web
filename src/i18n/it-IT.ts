@@ -292,6 +292,9 @@ export const IT_IT: Catalogue = {
   'diary.markdown.noFileOfThatName': "Nessun file con questo nome qui",
   'diary.markdown.properties': "Proprietà",
   'diary.markdown.empty': "vuoto",
+  'diary.markdown.image.alt': "Immagine",
+  'diary.markdown.image.load': "Si apre in una nuova scheda",
+  'diary.markdown.image.ariaLabel': "Apri immagine: {alt} da {host} — si apre in una nuova scheda",
   'diary.modal.closeDialog': "Chiudi finestra di dialogo",
   'settings.title': "Impostazioni",
 
@@ -375,6 +378,7 @@ export const IT_IT: Catalogue = {
   'chat.empty.projectIntro': "File e istruzioni del progetto sono pronti.",
   'chat.noModel': "Su questo server non è ancora installato alcun modello, quindi le risposte non possono partire.",
   'chat.openModels': "Apri Modelli e instradamento",
+  'chat.jumpToLatest': "Vai all'ultimo",
   'msg.copy': "Copia",
   'msg.copied': "Copiato",
   'msg.regenerate': "Rigenera",
