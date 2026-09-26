@@ -159,12 +159,12 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
             <span>{t('modelPopup.modelId')}</span>
             <input className="modal-input" placeholder={t('modelPopup.modelIdPlaceholder')} value={cloudModel}
               onChange={(e) => setCloudModel(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && cloudModel.trim()) void save('cloud-model', { model: cloudModel.trim() }); }} />
+              onKeyDown={(e) => { if (e.key === 'Enter' && cloudModel.trim()) void save('cloud-model', { model: cloudModel.trim(), routing: 'manual' }); }} />
           </label>
           <div className="mp-row-end">
             <span className="mp-hint">{activeProject.model ? t('modelPopup.current', { model: activeProject.model }) : t('modelPopup.noModel')}</span>
             <button className="modal-btn primary" disabled={!cloudModel.trim() || busy !== null}
-              onClick={() => void save('cloud-model', { model: cloudModel.trim() })}>{t('modelPopup.set')}</button>
+              onClick={() => void save('cloud-model', { model: cloudModel.trim(), routing: 'manual' })}>{t('modelPopup.set')}</button>
           </div>
         </> : <>
           {modelsLoading && <p role="status" className="rail-empty">{t('modelPopup.loading')}</p>}
@@ -174,7 +174,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
           <div className="mp-models">
             {shownModels.map((m) => <div key={m.name} className="mp-model-item">
               <button className="model-row mp-model" aria-pressed={activeProject.model === m.name}
-                disabled={busy !== null} onClick={() => void save(m.name, { model: m.name })}>
+                disabled={busy !== null} onClick={() => void save(m.name, { model: m.name, routing: 'manual' })}>
                 <span className={`model-dot${m.loaded ? '' : ' down'}`} />
                 <div className="model-name-group">
                   <MiddleTruncate className="model-name" text={m.name}/>
