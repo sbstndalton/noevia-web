@@ -154,6 +154,10 @@ export const EN_GB = {
   'projects.edit.dialogLabel': 'Edit {name}',
   'projects.edit.title': 'Edit project',
   'projects.edit.nameLabel': 'Project name',
+  // #398: mirrors projects.nameLengthCounter/-Label (the create dialog), kept in this
+  // catalogue because the rest of the edit dialog's strings live here too.
+  'projects.edit.nameLengthCounter': '{count}/{max}',
+  'projects.edit.nameLengthCounterLabel': '{count} of {max} characters used',
   'projects.edit.availableIn': 'Available in',
   'projects.edit.notBuiltYet': 'not built yet',
   'projects.edit.preview': 'preview',

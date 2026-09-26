@@ -45,6 +45,8 @@ export const NB_NO_PROJECTS: ProjectsCatalogue = {
   'projects.createTitle': "Opprett et prosjekt",
   'projects.nameQuestion': "Hva jobber du med?",
   'projects.namePlaceholder': "Gi prosjektet et navn",
+  'projects.nameLengthCounter': "{count}/{max}",
+  'projects.nameLengthCounterLabel': "{count} av {max} tegn brukt",
   'projects.goalQuestion': "Hva prøver du å oppnå?",
   'projects.goalPlaceholder': "Beskriv prosjektet, mål, tema osv.",
   'projects.instructionsLabel': "Instruksjoner (hvordan AI-en skal oppføre seg her)",

@@ -45,6 +45,8 @@ export const SV_SE_PROJECTS: ProjectsCatalogue = {
   'projects.createTitle': "Skapa ett projekt",
   'projects.nameQuestion': "Vad arbetar du med?",
   'projects.namePlaceholder': "Namnge ditt projekt",
+  'projects.nameLengthCounter': "{count}/{max}",
+  'projects.nameLengthCounterLabel': "{count} av {max} tecken använda",
   'projects.goalQuestion': "Vad försöker du uppnå?",
   'projects.goalPlaceholder': "Beskriv ditt projekt, mål, ämne osv.",
   'projects.instructionsLabel': "Instruktioner (hur AI:n ska bete sig här)",

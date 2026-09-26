@@ -149,6 +149,8 @@ export const ES_ES: Catalogue = {
   'projects.edit.dialogLabel': "Editar {name}",
   'projects.edit.title': "Editar proyecto",
   'projects.edit.nameLabel': "Nombre del proyecto",
+  'projects.edit.nameLengthCounter': "{count}/{max}",
+  'projects.edit.nameLengthCounterLabel': "{count} de {max} caracteres usados",
   'projects.edit.availableIn': "Disponible en",
   'projects.edit.notBuiltYet': "aún no disponible",
   'projects.edit.preview': "vista previa",

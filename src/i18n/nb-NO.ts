@@ -149,6 +149,8 @@ export const NB_NO: Catalogue = {
   'projects.edit.dialogLabel': "Rediger {name}",
   'projects.edit.title': "Rediger prosjekt",
   'projects.edit.nameLabel': "Prosjektnavn",
+  'projects.edit.nameLengthCounter': "{count}/{max}",
+  'projects.edit.nameLengthCounterLabel': "{count} av {max} tegn brukt",
   'projects.edit.availableIn': "Tilgjengelig i",
   'projects.edit.notBuiltYet': "ikke bygget ennå",
   'projects.edit.preview': "forhåndsvisning",

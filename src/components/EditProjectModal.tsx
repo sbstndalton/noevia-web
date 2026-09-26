@@ -1,10 +1,12 @@
 import { ProjectIdentityPicker } from './ProjectIdentity';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, ProjectMode } from '../types';
 import { ShellIcon } from './ShellIcon';
 import { CloseButton } from './CloseButton';
 import { FolderPicker } from './FolderPicker';
+import { useModalDialog } from './useModalDialog';
+import { PROJECT_NAME_MAX_LENGTH } from '../project-limits';
 import { useT } from '../i18n';
 
 /** Project identity and behavior. Reference files are managed on Sources. */
@@ -20,7 +22,7 @@ export function EditProjectModal({
   onClose: () => void;
 }): JSX.Element {
   const t = useT();
-  const ref = useRef<HTMLDialogElement>(null);
+  const ref = useModalDialog();
   const [icon, setIcon] = useState(project.icon || 'folder');
   const [color, setColor] = useState(project.color || 'default');
   const [name, setName] = useState(project.name);
@@ -37,12 +39,7 @@ export function EditProjectModal({
   const [folders, setFolders] = useState(project.sourceFolders || []);
   const [pickingFolder, setPickingFolder] = useState(false);
   const linkedFolders = folders.filter((folder) => folder !== project.projectFolder);
-
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    ref.current?.showModal();
-    return () => { ref.current?.close(); previous?.focus(); };
-  }, []);
+  const nameNearLimit = name.length >= PROJECT_NAME_MAX_LENGTH - 10;
 
   const save = async () => {
     const trimmed = name.trim();
@@ -82,7 +79,20 @@ export function EditProjectModal({
       <div className="edit-project-body">
         <div className="project-name-field">
           <ProjectIdentityPicker icon={icon} color={color} onChange={(i,c)=>{setIcon(i);setColor(c);}}/>
-          <input aria-label={t('projects.edit.nameLabel')} className="modal-input" value={name} onChange={(e) => setName(e.target.value)} />
+          <input
+            aria-label={t('projects.edit.nameLabel')}
+            className="modal-input"
+            value={name}
+            maxLength={PROJECT_NAME_MAX_LENGTH}
+            data-initial-focus
+            onChange={(e) => setName(e.target.value)}
+          />
+          <small
+            className={`project-name-counter${nameNearLimit ? ' is-near-limit' : ''}`}
+            aria-label={t('projects.edit.nameLengthCounterLabel', { count: name.length, max: PROJECT_NAME_MAX_LENGTH })}
+          >
+            {t('projects.edit.nameLengthCounter', { count: name.length, max: PROJECT_NAME_MAX_LENGTH })}
+          </small>
         </div>
         <fieldset className="field project-modes">
           <legend>{t('projects.edit.availableIn')}</legend>

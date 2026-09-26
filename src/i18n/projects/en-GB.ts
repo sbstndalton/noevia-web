@@ -47,6 +47,10 @@ export const EN_GB_PROJECTS = {
   'projects.createTitle': 'Create a project',
   'projects.nameQuestion': 'What are you working on?',
   'projects.namePlaceholder': 'Name your project',
+  // #398: the server truncates a name at this length; the counter makes that visible up front
+  // instead of after the dialog closes. Digits/slash render as-is; the label is what's spoken.
+  'projects.nameLengthCounter': '{count}/{max}',
+  'projects.nameLengthCounterLabel': '{count} of {max} characters used',
   'projects.goalQuestion': 'What are you trying to achieve?',
   'projects.goalPlaceholder': 'Describe your project, goals, subject, etc…',
   'projects.instructionsLabel': 'Instructions (how the AI should behave here)',

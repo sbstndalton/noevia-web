@@ -147,6 +147,10 @@ export function ProjectView({
   useEffect(() => { if (!busyDocs) return; const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, [busyDocs]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmImageDelete, setConfirmImageDelete] = useState<string | null>(null);
+  // #397: this delete is permanent (unlike the sidebar's quick-archive, #362, which is
+  // reversible via Archived), so it goes through the same confirm-before-destroy pattern as
+  // "Delete file"/"Remove image" above, reusing the sidebar's own delete-chat copy.
+  const [confirmDeleteChat, setConfirmDeleteChat] = useState<{ id: string; title: string } | null>(null);
 
   const addFiles = async (list: FileList | null) => {
     if (!list || busyDocs) return;
@@ -290,7 +294,7 @@ export function ProjectView({
                         className="recents-del"
                         title={t('projects.view.deleteChat')}
                         aria-label={t('projects.view.deleteNamed', { name: c.title || t('projects.view.chat') })}
-                        onClick={() => onDeleteChat(project.id, c.id)}
+                        onClick={() => setConfirmDeleteChat({ id: c.id, title: c.title || t('sidebar.thisChat') })}
                       >
                         <ShellIcon name="close" size={16}/>
                       </button>
@@ -513,6 +517,16 @@ export function ProjectView({
               .then(onRefresh)
               .catch((e: unknown) => setAddError(e instanceof Error ? e.message : t('projects.view.removeImageError')));
           }}
+        />
+      )}
+      {confirmDeleteChat && (
+        <ConfirmDialog
+          title={t('sidebar.confirmDeleteChatTitle', { name: confirmDeleteChat.title })}
+          body={t('sidebar.confirmDeleteChatBody')}
+          confirmLabel={t('sidebar.deleteChat')}
+          danger
+          onCancel={() => setConfirmDeleteChat(null)}
+          onConfirm={() => { const chatId = confirmDeleteChat.id; setConfirmDeleteChat(null); onDeleteChat(project.id, chatId); }}
         />
       )}
       {browsing && (

@@ -149,6 +149,8 @@ export const SV_SE: Catalogue = {
   'projects.edit.dialogLabel': "Redigera {name}",
   'projects.edit.title': "Redigera projekt",
   'projects.edit.nameLabel': "Projektnamn",
+  'projects.edit.nameLengthCounter': "{count}/{max}",
+  'projects.edit.nameLengthCounterLabel': "{count} av {max} tecken använda",
   'projects.edit.availableIn': "Tillgänglig i",
   'projects.edit.notBuiltYet': "inte klart ännu",
   'projects.edit.preview': "förhandsvisning",

@@ -45,6 +45,8 @@ export const ES_ES_PROJECTS: ProjectsCatalogue = {
   'projects.createTitle': "Crear un proyecto",
   'projects.nameQuestion': "¿En qué estás trabajando?",
   'projects.namePlaceholder': "Ponle nombre a tu proyecto",
+  'projects.nameLengthCounter': "{count}/{max}",
+  'projects.nameLengthCounterLabel': "{count} de {max} caracteres usados",
   'projects.goalQuestion': "¿Qué intentas lograr?",
   'projects.goalPlaceholder': "Describe tu proyecto, objetivos, tema, etc.",
   'projects.instructionsLabel': "Instrucciones (cómo debe comportarse la IA aquí)",

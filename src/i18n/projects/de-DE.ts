@@ -45,6 +45,8 @@ export const DE_DE_PROJECTS: ProjectsCatalogue = {
   'projects.createTitle': "Projekt erstellen",
   'projects.nameQuestion': "Woran arbeitest du?",
   'projects.namePlaceholder': "Projekt benennen",
+  'projects.nameLengthCounter': "{count}/{max}",
+  'projects.nameLengthCounterLabel': "{count} von {max} Zeichen verwendet",
   'projects.goalQuestion': "Was möchtest du erreichen?",
   'projects.goalPlaceholder': "Beschreibe dein Projekt, Ziele, Thema usw. …",
   'projects.instructionsLabel': "Anweisungen (wie sich die KI hier verhalten soll)",

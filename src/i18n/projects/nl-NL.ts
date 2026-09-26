@@ -45,6 +45,8 @@ export const NL_NL_PROJECTS: ProjectsCatalogue = {
   'projects.createTitle': "Een project maken",
   'projects.nameQuestion': "Waar werk je aan?",
   'projects.namePlaceholder': "Geef je project een naam",
+  'projects.nameLengthCounter': "{count}/{max}",
+  'projects.nameLengthCounterLabel': "{count} van {max} tekens gebruikt",
   'projects.goalQuestion': "Wat probeer je te bereiken?",
   'projects.goalPlaceholder': "Beschrijf je project, doelen, onderwerp, enz.",
   'projects.instructionsLabel': "Instructies (hoe de AI zich hier moet gedragen)",

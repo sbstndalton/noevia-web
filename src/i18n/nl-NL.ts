@@ -149,6 +149,8 @@ export const NL_NL: Catalogue = {
   'projects.edit.dialogLabel': "{name} bewerken",
   'projects.edit.title': "Project bewerken",
   'projects.edit.nameLabel': "Projectnaam",
+  'projects.edit.nameLengthCounter': "{count}/{max}",
+  'projects.edit.nameLengthCounterLabel': "{count} van {max} tekens gebruikt",
   'projects.edit.availableIn': "Beschikbaar in",
   'projects.edit.notBuiltYet': "nog niet gebouwd",
   'projects.edit.preview': "voorbeeld",

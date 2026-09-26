@@ -11,6 +11,7 @@ import { PlusIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
 import { EmptyState } from './EmptyState';
 import { readTextSources, describeRejection } from '../sources';
+import { PROJECT_NAME_MAX_LENGTH } from '../project-limits';
 import { useT } from '../i18n';
 import type { Translate } from '../i18n';
 import '../i18n/projects';
@@ -226,10 +227,17 @@ function CreateProjectModal({
           className="modal-input"
           placeholder={t('projects.namePlaceholder')}
           value={name}
+          maxLength={PROJECT_NAME_MAX_LENGTH}
           data-initial-focus
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void submit()}
         />
+        <small
+          className={`project-name-counter${name.length >= PROJECT_NAME_MAX_LENGTH - 10 ? ' is-near-limit' : ''}`}
+          aria-label={t('projects.nameLengthCounterLabel', { count: name.length, max: PROJECT_NAME_MAX_LENGTH })}
+        >
+          {t('projects.nameLengthCounter', { count: name.length, max: PROJECT_NAME_MAX_LENGTH })}
+        </small>
 
         <label className="modal-label" htmlFor="proj-goal">{t('projects.goalQuestion')}</label>
         <textarea

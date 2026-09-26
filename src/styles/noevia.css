@@ -395,6 +395,14 @@ button:disabled { opacity: .5; cursor: default; }
 .project-name-field .project-identity-picker > summary { border:0; border-right:1px solid var(--border); border-radius:0; padding:14px; }
 .project-name-field .project-identity-picker > summary > span { display:none; }
 .project-name-field .modal-input { min-width:0; margin:0; border:0; background:none; }
+/* #398: the length cap is invisible until it silently truncates on the server; this counter
+   makes it visible up front and turns to the warning role once only a few characters remain.
+   Block by default (the create dialog's plain label/input stack); inside the edit dialog's
+   .project-name-field row it becomes an inline companion instead, costing no extra vertical
+   rhythm there. */
+.project-name-counter { display:block; margin:6px 2px 0; font-size:var(--text-caption2); color:var(--text-faint); text-align:right; }
+.project-name-counter.is-near-limit { color:var(--md-warning); font-weight:600; }
+.project-name-field .project-name-counter { flex-shrink:0; margin:0; padding:0 14px; text-align:left; white-space:nowrap; }
 .project-extra-settings, .project-linked-folders { margin:16px 0; }
 .project-extra-settings > summary, .project-linked-folders > summary { cursor:pointer; padding:10px 0; color:var(--text-secondary); }
 .project-extra-settings[open] > summary { margin-bottom:12px; }
