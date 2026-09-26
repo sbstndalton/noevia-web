@@ -440,6 +440,7 @@ body { margin: 0; background: var(--bg); }
 .model-row.is-workhorse { border-color: var(--accent-text); }
 .model-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); flex-shrink: 0; }
 .model-dot.down { background: var(--text-off); }
+.model-dot.warn { background: var(--status-warning); }
 .model-name-group { flex-grow: 1; display: flex; align-items: baseline; min-width: 0; }
 .model-name { font-size: var(--text-footnote); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .model-quant { font-size: var(--text-caption); color: var(--text-faint); margin-left: 8px; }

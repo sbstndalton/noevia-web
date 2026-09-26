@@ -13,7 +13,7 @@ import { FAMILIES, FAMILY_SPECS } from '../theme-family';
 import type { Family } from '../theme-family';
 import { Logo } from './Icons';
 import { useT } from '../i18n';
-import type { MessageKey } from '../i18n';
+import type { MessageKey, Translate } from '../i18n';
 
 /** The accent palettes, restored at the user's request (2026-09-18). Each name says what
  *  it looks like rather than what it is called internally. */
@@ -266,6 +266,27 @@ function ProfileCard(): JSX.Element {
   </section>;
 }
 
+// #340: ragAvailable() alone only ever meant "native index deps installed" — a restarting or
+// unreachable embedding service left it true while semantic search returned nothing. `retrieval`
+// is the tri-state that distinguishes that from a real outage; a deployment that only sends the
+// older boolean (mixed-version rollout) still gets a truthful available/unavailable read.
+export function retrievalState(health: HealthState | null): 'available' | 'degraded' | 'unavailable' | null {
+  if (!health) return null;
+  if (health.retrieval) return health.retrieval;
+  if (health.ragAvailable == null) return null;
+  return health.ragAvailable ? 'available' : 'unavailable';
+}
+
+export function retrievalDescription(health: HealthState | null, t: Translate): string {
+  return retrievalState(health) === 'degraded' ? t('capabilities.retrievalDegradedNote') : t('capabilities.retrievalDesc');
+}
+
+export function retrievalBadge(health: HealthState | null, t: Translate, badge: (on: boolean | null, onText: string, offText: string) => JSX.Element): JSX.Element {
+  const state = retrievalState(health);
+  if (state === 'degraded') return <span className="set-badge is-warn">{t('capabilities.retrievalDegraded')}</span>;
+  return badge(state === null ? null : state === 'available', t('capabilities.available'), t('capabilities.noIndex'));
+}
+
 // What this deployment can actually do, with the real state of each. These are
 // reported rather than toggled: every one of them is either configured by the
 // operator (tools, retrieval) or has its own screen (the Diary), and a second
@@ -295,8 +316,8 @@ function CapabilitiesCard(): JSX.Element {
       <Row label={t('capabilities.tools')} description={t('capabilities.toolsDesc')}>
         {badge(tools ? tools.configured && !tools.error : null, tools ? t.plural('capabilities.toolboxes', tools.count) : t('common.on'), tools?.error ? t('capabilities.unavailable') : t('capabilities.notConfigured'))}
       </Row>
-      <Row label={t('capabilities.retrieval')} description={t('capabilities.retrievalDesc')}>
-        {badge(health ? health.ragAvailable ?? false : null, t('capabilities.available'), t('capabilities.noIndex'))}
+      <Row label={t('capabilities.retrieval')} description={retrievalDescription(health, t)}>
+        {retrievalBadge(health, t, badge)}
       </Row>
       <Row label={t('capabilities.inference')} description={t('capabilities.inferenceDesc')}>
         {badge(health ? health.inferenceUp : null, t('capabilities.reachable'), t('capabilities.unreachable'))}

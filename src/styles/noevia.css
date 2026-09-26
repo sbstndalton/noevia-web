@@ -322,7 +322,7 @@ button:disabled { opacity: .5; cursor: default; }
   background: var(--status-danger);
   box-shadow: inset 0 1px 1px rgb(255 255 255 / 40%), 0 0 4px color-mix(in srgb, var(--status-danger) 25%, transparent);
 }
-.status-dot:not(.is-up):not(.is-down), .model-dot.down { box-shadow: none; }
+.status-dot:not(.is-up):not(.is-down), .model-dot.down, .model-dot.warn { box-shadow: none; }
 
 /* Project identity: color is a label, not another card surface. */
 .project-icon { flex-shrink:0; }
@@ -1574,6 +1574,7 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .set-name-field input { min-height: 44px; min-width: 0; width: 190px; padding: 6px 10px; border: 1px solid var(--control-border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
 .set-badge { font-size: var(--text-caption); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--control-border); color: var(--text-secondary); }
 .set-badge.is-on { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-2-soft); }
+.set-badge.is-warn { border-color: var(--status-warning); color: var(--status-warning); }
 
 @media (max-width: 620px) {
   .set-row { flex-direction: column; align-items: stretch; }

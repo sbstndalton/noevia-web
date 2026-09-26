@@ -38,7 +38,20 @@ export function SettingsView({ models, modelsError, health, stats, diaryEnabled,
     {section === 'diary' && <><div className="settings-title"><h1>{t('settings.section.diary')}</h1><p>{t('diarySettings.lede')}</p></div><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
     {section === 'providers' && <ProvidersCard />}
     {section === 'models' && <ModelsSummary models={models} modelsError={modelsError} health={health} stats={stats} onOpen={onOpenModelManager}/>}
-    {section === 'status' && <><McpStatus /><h2>{t('serviceStatus.connected')}</h2><div className="card-list">{([['inference', t('serviceStatus.inference'), health.inferenceUp], ['diary', t('serviceStatus.diary'), diaryEnabled ? health.diaryUp : null], ['retrieval', t('serviceStatus.retrieval'), health.ragAvailable]] as const).map(([id, label, up])=><div className="model-row" key={id}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?t('models.available'):up===false?t('models.unavailable'):t('serviceStatus.notAvailable')}</span></div>)}</div><h2>{t('serviceStatus.liveEngine')}</h2><div className="settings-stat-row"><div><span title={t('serviceStatus.rateTitle')}>{t('serviceStatus.rate')}</span><strong>{stats?.tokensPerSecond?.toFixed(1) ?? '—'}</strong></div><div><span>{t('serviceStatus.requests')}</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${stats.vramGb.toFixed(1)} GB`:'—'}</strong></div></div></>}
+    {section === 'status' && <><McpStatus /><h2>{t('serviceStatus.connected')}</h2><div className="card-list">{([['inference', t('serviceStatus.inference'), health.inferenceUp], ['diary', t('serviceStatus.diary'), diaryEnabled ? health.diaryUp : null]] as const).map(([id, label, up])=><div className="model-row" key={id}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?t('models.available'):up===false?t('models.unavailable'):t('serviceStatus.notAvailable')}</span></div>)}
+      {/* #340: tri-state — 'degraded' means the index is installed but the embedding endpoint
+          could not be reached; ragAvailable() alone (native deps only) cannot tell the two apart.
+          Older/mixed deployments that only send ragAvailable fall back to the boolean. */}
+      {(() => {
+        const retrieval = health.retrieval ?? (health.ragAvailable == null ? null : health.ragAvailable ? 'available' : 'unavailable');
+        const dotClass = retrieval === 'available' ? '' : retrieval === 'degraded' ? ' warn' : ' down';
+        const roleText = retrieval === 'available' ? t('models.available') : retrieval === 'degraded' ? t('serviceStatus.retrieval.degraded') : retrieval === 'unavailable' ? t('models.unavailable') : t('serviceStatus.notAvailable');
+        return <>
+          <div className="model-row" key="retrieval"><span className={`model-dot${dotClass}`}/><span className="model-name">{t('serviceStatus.retrieval')}</span><span className="model-role">{roleText}</span></div>
+          {retrieval === 'degraded' && <p className="route-note">{t('serviceStatus.retrieval.degradedNote')}</p>}
+        </>;
+      })()}
+      </div><h2>{t('serviceStatus.liveEngine')}</h2><div className="settings-stat-row"><div><span title={t('serviceStatus.rateTitle')}>{t('serviceStatus.rate')}</span><strong>{stats?.tokensPerSecond?.toFixed(1) ?? '—'}</strong></div><div><span>{t('serviceStatus.requests')}</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${stats.vramGb.toFixed(1)} GB`:'—'}</strong></div></div></>}
   </div>;
 }
 
