@@ -366,6 +366,7 @@ export const PT_BR: Catalogue = {
   'composer.upload.extras': "usado só com os extras ativos",
   'composer.upload.nextMessage': "pronto para a próxima mensagem",
   'composer.upload.allChats': "disponível em todos os chats do projeto",
+  'composer.dropHint': "Solte os arquivos aqui para anexá-los",
   'composer.noRecent': "Nenhum chat ainda. Seus chats recentes vão aparecer aqui depois da primeira mensagem.",
 
   'mode.session': "Modo da sessão",

@@ -366,6 +366,7 @@ export const NB_NO: Catalogue = {
   'composer.upload.extras': "brukes bare når ekstra er på",
   'composer.upload.nextMessage': "klar for neste melding",
   'composer.upload.allChats': "tilgjengelig i alle chatter i prosjektet",
+  'composer.dropHint': "Slipp filer her for å legge dem ved",
   'composer.noRecent': "Ingen chatter ennå. Nylige chatter vises her etter den første meldingen din.",
 
   'mode.session': "Øktmodus",

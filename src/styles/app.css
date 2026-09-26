@@ -319,6 +319,10 @@ body { margin: 0; background: var(--bg); }
   padding: 6px 14px; box-shadow: var(--shadow-pop);
 }
 .jump-to-latest:hover { color: var(--accent-text); border-color: var(--accent-2); background: var(--accent-2-soft); }
+/* #436: 27px tall was well under a touch target; the fine-pointer pill shape (padding, radius,
+   font) is untouched — only the coarse-pointer hit area grows, matching the sibling composer and
+   overlay controls' own `min-height: 44px` pattern. */
+@media (pointer: coarse) { .jump-to-latest { min-height: 44px; } }
 
 .msg { display: flex; flex-direction: column; gap: 6px; }
 .msg-sender {
@@ -341,6 +345,23 @@ body { margin: 0; background: var(--bg); }
 /* Staggered by an eighth of the loop so the three dots read as one wave. */
 .typing i:nth-child(2) { animation-delay: calc(var(--motion-async) / 8); }
 .typing i:nth-child(3) { animation-delay: calc(var(--motion-async) / 4); }
+
+/* #437: drag-and-drop lands anywhere on the chat pane, not just the composer bar — same
+   attachment pipeline the picker uses. `is-drag-over` and the overlay are tokens only, per
+   lint:design; the outline is a full 2px box (all four sides), not a one-sided accent bar, so it
+   does not read as the "side-tab" pattern that rule flags. */
+.chat-workspace { position: relative; }
+.chat-workspace.is-drag-over { outline: 2px dashed var(--accent-2); outline-offset: -2px; }
+.chat-drop-overlay {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-2-soft); pointer-events: none;
+}
+.chat-drop-overlay span {
+  background: var(--bg-surface); border: 1px solid var(--accent-2); border-radius: var(--radius-lg);
+  padding: 10px 18px; font-family: var(--font-ui); font-size: var(--text-callout); font-weight: 600;
+  color: var(--accent-2);
+}
 
 /* ── Composer ────────────────────────────────────────────── */
 

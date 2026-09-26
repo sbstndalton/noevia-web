@@ -366,6 +366,7 @@ export const NL_NL: Catalogue = {
   'composer.upload.extras': "alleen gebruikt met extra’s aan",
   'composer.upload.nextMessage': "klaar voor je volgende bericht",
   'composer.upload.allChats': "beschikbaar in alle chats van dit project",
+  'composer.dropHint': "Zet bestanden hier neer om ze toe te voegen",
   'composer.noRecent': "Nog geen chats. Je recente chats verschijnen hier na je eerste bericht.",
 
   'mode.session': "Sessiemodus",

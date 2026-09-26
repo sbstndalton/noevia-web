@@ -373,6 +373,9 @@ export const EN_GB = {
   'composer.upload.extras': 'used only while extras are on',
   'composer.upload.nextMessage': 'ready for your next message',
   'composer.upload.allChats': 'available to all chats in this project',
+  // #437: shown while a file is dragged over the composer/chat pane, and announced the same way
+  // to a screen reader — dropping runs the exact same validation and upload path as the picker.
+  'composer.dropHint': 'Drop files here to attach',
   'composer.noRecent': 'No chats yet. Your recent chats will appear here after your first message.',
 
   'mode.session': 'Session mode',

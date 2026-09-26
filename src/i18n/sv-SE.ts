@@ -366,6 +366,7 @@ export const SV_SE: Catalogue = {
   'composer.upload.extras': "används bara när extra är på",
   'composer.upload.nextMessage': "redo för ditt nästa meddelande",
   'composer.upload.allChats': "tillgänglig i alla chattar i projektet",
+  'composer.dropHint': "Släpp filer här för att bifoga dem",
   'composer.noRecent': "Inga chattar än. Dina senaste chattar visas här efter ditt första meddelande.",
 
   'mode.session': "Sessionsläge",

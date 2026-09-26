@@ -1,11 +1,97 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties, DragEvent, ReactNode } from 'react';
 import type { Project, Toolbox } from '../types';
 import { fetchToolboxes, saveProjectConfig, uploadProjectFile } from '../api';
 import { fileToBase64, uploadLimit } from '../sources';
 import { appLocale } from '../user-preferences';
 import { ShellIcon } from './ShellIcon';
-import { useT } from '../i18n';
+import { useT, type Translate } from '../i18n';
+
+/** Everything the shared upload path needs, whether the files came from the hidden `<input
+ *  type="file">` or a drop (#437) — same shape as the props {@link ComposerActions} already
+ *  takes, so both call sites are guaranteed the same validation, size limits and error copy. */
+export interface AttachmentSink {
+  project: Project | null; disabled: boolean; diary?: boolean; chatOnly?: boolean;
+  onChanged: () => void | Promise<void>; onBusy: (busy: boolean) => void; onStatus: (status: string) => void;
+}
+
+/** The one attachment pipeline: size check, base64 read, `uploadProjectFile`, per-file status and
+ *  failure copy, then a single summary line. Extracted so drag-and-drop (#437) is a second way to
+ *  call this, never a second implementation of it. */
+export async function uploadAttachments(sink: AttachmentSink, files: File[], t: Translate): Promise<void> {
+  const { project, disabled, diary = false, chatOnly = false, onChanged, onBusy, onStatus } = sink;
+  if (!project || !files.length || disabled) return;
+  onBusy(true);
+  const failures: string[] = [], notices: string[] = [];
+  const started = Date.now();
+  for (const [index, file] of files.entries()) {
+    const status = (stage: string) => onStatus(`${index + 1}/${files.length} · ${file.name} · ${stage} · ${Math.round((Date.now() - started) / 1000)}s`);
+    try {
+      if (file.size > uploadLimit(file.name)) throw new Error(t('composer.upload.tooLarge'));
+      status(t('composer.upload.reading'));
+      const result = await uploadProjectFile(project.id, { name: file.name, dataBase64: await fileToBase64(file) }, value => status(`${value.stage}${value.percent == null ? '' : ` ${value.percent}%`}`));
+      if (result.attachment?.reduction?.note) notices.push(`${file.name}: ${result.attachment.reduction.note}`);
+    } catch (err) { failures.push(`${file.name}: ${err instanceof Error ? err.message : t('composer.upload.failed')}`); }
+  }
+  try { await onChanged(); }
+  finally {
+    onStatus(failures.length ? t('composer.upload.partial', { saved: files.length - failures.length, total: files.length, failures: failures.join('; ') }) : `${t.plural('composer.upload.saved', files.length, { target: chatOnly ? t('composer.upload.thisChat') : project.name })} · ${t(diary ? 'composer.upload.extras' : chatOnly ? 'composer.upload.nextMessage' : 'composer.upload.allChats')}${notices.length ? ' · ' + notices.join('; ') : ''}`);
+    onBusy(false);
+  }
+}
+
+/** True only for a drag carrying files — a dragged link or selected text also fires these events,
+ *  and must be left to the browser's own handling rather than treated as a (zero-file) drop. */
+function isFileDrag(event: DragEvent): boolean {
+  const types = event.dataTransfer?.types;
+  return !!types && Array.from(types).includes('Files');
+}
+
+/** Drag-and-drop onto the composer or, spread onto a bigger wrapper, the whole chat pane (#437) —
+ *  same {@link uploadAttachments} pipeline the picker uses, so the same limits and error text
+ *  apply and multiple files follow the picker's own rules. Ignores anything that is not a file
+ *  drag (a dragged link or selection) and never fires while `sink.disabled` or project-less. */
+export function useAttachmentDrop(sink: AttachmentSink): { isDragOver: boolean; dropProps: {
+  onDragEnter: (event: DragEvent) => void; onDragOver: (event: DragEvent) => void;
+  onDragLeave: (event: DragEvent) => void; onDrop: (event: DragEvent) => void;
+} } {
+  const t = useT();
+  const [isDragOver, setDragOver] = useState(false);
+  // Nested elements each fire enter/leave as the pointer crosses their edges; a depth counter
+  // (rather than the boolean state itself) is what tells a leave of a child from leaving the zone.
+  const depth = useRef(0);
+  const canDrop = !sink.disabled && !!sink.project;
+  // Plain closures, recreated each render like the rest of this component's handlers — always
+  // reading the sink/translator passed in on *this* render rather than a memoized, possibly stale
+  // one from a `useCallback` dependency list.
+  const onDragEnter = (event: DragEvent) => {
+    if (!isFileDrag(event)) return;
+    event.preventDefault();
+    if (!canDrop) return;
+    depth.current += 1;
+    setDragOver(true);
+  };
+  const onDragOver = (event: DragEvent) => {
+    if (!isFileDrag(event)) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = canDrop ? 'copy' : 'none';
+  };
+  const onDragLeave = (event: DragEvent) => {
+    if (!isFileDrag(event)) return;
+    depth.current = Math.max(0, depth.current - 1);
+    if (depth.current === 0) setDragOver(false);
+  };
+  const onDrop = (event: DragEvent) => {
+    if (!isFileDrag(event)) return;
+    event.preventDefault();
+    depth.current = 0;
+    setDragOver(false);
+    if (!canDrop) return;
+    const files = Array.from(event.dataTransfer?.files ?? []);
+    if (files.length) void uploadAttachments(sink, files, t);
+  };
+  return { isDragOver, dropProps: { onDragEnter, onDragOver, onDragLeave, onDrop } };
+}
 
 /** Composer shortcuts use the existing project APIs; enabling tools never approves a write. */
 export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus, header, diary = false, chatOnly = false }: {
@@ -69,25 +155,12 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
     catch (err) { setError(err instanceof Error ? err.message : t('composer.toolsSaveError')); }
     finally { setSaving(false); onBusy(false); }
   };
+  // The picker's own call into the shared pipeline (#437) — closing the menu first is specific to
+  // this trigger (a drop has no menu open to begin with); everything after that is one path.
   const upload = async (files: File[]) => {
-    if (!project || !files.length || disabled) return;
-    setOpen(false); onBusy(true);
-    const failures: string[] = [], notices: string[] = [];
-    const started = Date.now();
-    for (const [index, file] of files.entries()) {
-      const status = (stage: string) => onStatus(`${index + 1}/${files.length} · ${file.name} · ${stage} · ${Math.round((Date.now() - started) / 1000)}s`);
-      try {
-        if (file.size > uploadLimit(file.name)) throw new Error(t('composer.upload.tooLarge'));
-        status(t('composer.upload.reading'));
-        const result = await uploadProjectFile(project.id, { name: file.name, dataBase64: await fileToBase64(file) }, value => status(`${value.stage}${value.percent == null ? '' : ` ${value.percent}%`}`));
-        if(result.attachment?.reduction?.note)notices.push(`${file.name}: ${result.attachment.reduction.note}`);
-      } catch (err) { failures.push(`${file.name}: ${err instanceof Error ? err.message : t('composer.upload.failed')}`); }
-    }
-    try { await onChanged(); }
-    finally {
-      onStatus(failures.length ? t('composer.upload.partial', { saved: files.length - failures.length, total: files.length, failures: failures.join('; ') }) : `${t.plural('composer.upload.saved', files.length, { target: chatOnly ? t('composer.upload.thisChat') : project.name })} · ${t(diary ? 'composer.upload.extras' : chatOnly ? 'composer.upload.nextMessage' : 'composer.upload.allChats')}${notices.length ? ' · '+notices.join('; ') : ''}`);
-      onBusy(false);
-    }
+    if (!files.length) return;
+    setOpen(false);
+    await uploadAttachments({ project, disabled, diary, chatOnly, onChanged, onBusy, onStatus }, files, t);
   };
   const tokens = boxes.filter(box => effectiveSelected.includes(box.id)).reduce((sum, box) => sum + box.estTokens, 0);
   return <div className="composer-actions" ref={root} onKeyDown={event => {

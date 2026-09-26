@@ -13,7 +13,7 @@ import { ModelPopup } from './ModelPopup';
 import { ToolCalls } from './ToolCalls';
 import { ComposerTextarea } from './ComposerTextarea';
 import { modelChoiceLabel } from '../model-guidance';
-import { ComposerActions } from './ComposerActions';
+import { ComposerActions, useAttachmentDrop } from './ComposerActions';
 import { apiFetch } from '../api';
 import { isDisplayableRoutingDecision } from '../current-routing';
 import { useAccountPreferences, appLocale } from '../user-preferences';
@@ -26,6 +26,7 @@ import { decideDispatch, type ChatMode } from '../chat-mode';
 import { insertMention, turnBoxesFor, type PermittedBox } from '../tool-catalogue';
 import { readDraft, writeDraft, clearDraft } from '../chat-drafts';
 import { onCancelEdit, focusAfterRender, type EditFocusState } from '../edit-focus';
+import { isCoarsePointerDevice } from '../composer-focus';
 
 /** What one send carries besides its text: per-turn boxes, a fallback notice, or a Cowork task. */
 export interface SendTurn { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string } }
@@ -262,6 +263,32 @@ export function ChatView({
     if (focusId) editTriggers.current.get(focusId)?.focus();
   }, [editingId]);
   const { scrollRef, onScroll, follow, atBottom } = useChatScroll(chatId, messages, true, streaming);
+  // #435: the composer textarea is `disabled` for the duration of a send, which most browsers
+  // resolve by blurring it to <body> — nothing then puts focus back. Two different guarantees,
+  // on the same falling edge of `streaming`:
+  //  - Stop is a deliberate action on the composer, so focus always returns to it, even though
+  //    the Stop/Send button is the same DOM node across the transition (same element type at the
+  //    same position — React reuses it, so a mouse click leaves focus sitting on that button, not
+  //    on <body>) — `stopRequestedRef` marks that this particular end-of-stream was asked for.
+  //  - A send that runs to completion only reclaims focus if it is still sitting on <body> — i.e.
+  //    the composer held it going in and nothing else has claimed it since. A user who clicked
+  //    into something else during the reply keeps their own focus exactly where they put it.
+  // Neither guarantee applies on a coarse pointer (touch): programmatically focusing a text field
+  // there pops the on-screen keyboard over the reply the person is trying to read, which is a
+  // worse outcome than leaving focus on <body>. `isCoarsePointerDevice` is the one thing worth
+  // pulling out into its own module — it needs no ref, no DOM beyond `window`, so it has its own
+  // test independent of this effect.
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const wasStreamingRef = useRef(streaming);
+  const stopRequestedRef = useRef(false);
+  useEffect(() => {
+    const wasStreaming = wasStreamingRef.current;
+    wasStreamingRef.current = streaming;
+    if (!wasStreaming || streaming || typeof document === 'undefined' || isCoarsePointerDevice()) return;
+    const stopped = stopRequestedRef.current;
+    stopRequestedRef.current = false;
+    if (stopped || document.activeElement === document.body) composerRef.current?.focus();
+  }, [streaming]);
   // When the current stream began, for the live elapsed counter. Reset on each
   // new stream rather than on every message change, or the timer would restart
   // mid-reply as tokens arrive.
@@ -318,9 +345,20 @@ export function ChatView({
     clearDraft(chatId);
     setTurnBoxes([]);
   };
+  // #437: the whole chat pane is the drop target, not just the composer bar, so a file dropped
+  // anywhere over the transcript still attaches — through the exact same pipeline (validation,
+  // size limits, error copy) `ComposerActions`'s own picker uses below.
+  const { isDragOver, dropProps } = useAttachmentDrop({
+    project: project || freeContext, disabled: streaming || actionBusy, chatOnly: !project,
+    onChanged: refreshContext, onBusy: setActionBusy, onStatus: setActionStatus,
+  });
 
   return (
-    <div className={`main chat-workspace${messages.length === 0 ? ' is-empty' : ''}`}>
+    <div className={`main chat-workspace${messages.length === 0 ? ' is-empty' : ''}${isDragOver ? ' is-drag-over' : ''}`} {...dropProps}>
+      {isDragOver && (
+        <div className="chat-drop-overlay" aria-hidden="true"><span>{t('composer.dropHint')}</span></div>
+      )}
+      <span className="sr-only" role="status" aria-live="polite">{isDragOver ? t('composer.dropHint') : ''}</span>
       {freeModels && freeContext && <ModelPopup projects={[freeContext]} activeProject={{...freeContext, name: title}} onClose={()=>setFreeModels(false)} onProjectsChanged={()=>void refreshContext()} />}
       <div className="chat-header">
         <div className="header-titles">
@@ -511,6 +549,7 @@ export function ChatView({
         </ComposerModeBar>
         <div className="composer-inner chat-composer-inner pane">
           <ComposerTextarea
+            ref={composerRef}
             aria-label={t('composer.message')}
             rows={2}
             placeholder={t('composer.placeholder')}
@@ -523,7 +562,7 @@ export function ChatView({
           <ComposerModel label={modelLabel} onClick={openModels} />
           <ReasoningControl project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} />
           {streaming ? (
-            <button className="send-btn glass glass-lens is-primary is-press" onClick={onStop} title={t('composer.stop')} aria-label={t('composer.stop')}>
+            <button className="send-btn glass glass-lens is-primary is-press" onClick={() => { stopRequestedRef.current = true; onStop(); }} title={t('composer.stop')} aria-label={t('composer.stop')}>
               <span aria-hidden="true">&#9632;</span>
             </button>
           ) : (
