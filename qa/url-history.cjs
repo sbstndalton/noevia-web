@@ -225,7 +225,29 @@ const nav = (page) => page.locator('#app-navigation');
     // A path the server does not know is its usual JSON 404, never the app shell.
     const junk = await page.request.get(`${ORIGIN}/definitely/not/a/place`);
     assert.equal(junk.status(), 404);
+    assert.match(junk.headers()['content-type'] || '', /application\/json/, 'an unknown top-level path is still JSON, never HTML');
     pass('a junk path reached through history opens a new chat; the server still 404s it');
+
+    // ── #406: /c/, /p/, /c and /p (a truncated or id-stripped chat/project link) get the SPA
+    // shell — same as /c/<bogus-id> — instead of breaking out to a raw JSON 404. /api/* keeps
+    // its own contract regardless (never HTML), and an unrelated unknown path keeps its 404.
+    for (const p of ['/c/', '/p/', '/c', '/p']) {
+      const direct = await page.request.get(`${ORIGIN}${p}`);
+      assert.equal(direct.status(), 200, `${p}: direct request`);
+      assert.match(direct.headers()['content-type'] || '', /text\/html/, `${p}: served as HTML`);
+    }
+    await page.goto(`${ORIGIN}/c/`);
+    await page.getByRole('textbox', { name: 'Message', exact: true }).waitFor();
+    // The shell loads, then the client's own routing (routes.ts) reads the empty id as a new
+    // chat and normalises the address to '/' — same as any other alternative spelling.
+    await atPath(page, '/', 'a truncated /c/ link is read as a new chat and the address normalises');
+    await page.goto(`${ORIGIN}/p`);
+    await page.getByRole('textbox', { name: 'Message', exact: true }).waitFor();
+    const apiStillJson = await page.request.get(`${ORIGIN}/api/nope`);
+    assert.match(apiStillJson.headers()['content-type'] || '', /application\/json/, '/api/* is never HTML, even alongside the new /c //p fallback');
+    const stillUnknown = await page.request.get(`${ORIGIN}/definitely-not-a-route-xyz`);
+    assert.equal(stillUnknown.status(), 404, 'an unrelated unknown top-level path keeps its JSON 404');
+    pass('/c/, /p/, /c and /p serve the SPA shell (a new chat) instead of a raw JSON 404; /api/* and other unknown paths are unaffected');
 
     // ── signed out at a deep link -> sign in -> back at the deep link
     state.signedIn = false;

@@ -10,6 +10,7 @@ import { ContextMenu, ConfirmDialog } from './ContextMenu';
 import type { MenuItem } from './ContextMenu';
 import { fetchToolboxes, fetchProfile } from '../api';
 import type { McpStatus } from '../api';
+import { notifyWorkspaceChanged } from './data/workspace-changed';
 import { mcpFooterSummary } from '../mcp-summary';
 import { ShellIcon } from './ShellIcon';
 import type { ChatMeta, HealthState, Project } from '../types';
@@ -227,14 +228,50 @@ export function Sidebar({
   // calling .focus() on another element synchronously would blur it (and thus commit)
   // before the input has actually unmounted — wrong for Escape, and a double commit for
   // Enter. By the next frame the row has already re-rendered without the input.
-  const returnFocusToRow = (id: string) => { requestAnimationFrame(() => optionsTriggers.current.get(id)?.focus()); };
+  const returnFocusToRow = (id: string) => {
+    requestAnimationFrame(() => {
+      const el = optionsTriggers.current.get(id);
+      if (!el) return;
+      // The row's own Options button is hidden (`display:none`, phone.css `@media(hover:hover)`)
+      // until the row is hovered or something inside it is `:focus-visible` — by the time this
+      // runs, the row is neither (the mouse is elsewhere and the rename input just unmounted), so
+      // a genuinely display:none element cannot take DOM focus and `.focus()` silently no-ops,
+      // dropping focus to <body> (#355, reopened: the rename Escape/Enter paths hit this exact
+      // trap that the sidebar-search trigger — never inside a hover-hidden container — does not).
+      // Force it visible for the single frame it takes to land focus; once focused, the CSS's own
+      // `:has(:focus-visible)` rule keeps it visible for as long as it has focus, so the inline
+      // override can be removed immediately after.
+      const actions = el.closest<HTMLElement>('.row-actions');
+      const restore = actions?.style.display;
+      if (actions) actions.style.display = 'flex';
+      el.focus();
+      if (actions) { if (restore) actions.style.display = restore; else actions.style.removeProperty('display'); }
+    });
+  };
   // Quick-archive from the row action has no confirmation, so it needs a way back (#362):
   // an undo toast, matching the shape of the app's existing save-error toast.
   const [archiveUndo, setArchiveUndo] = useState<{ chat: ChatMeta; projectId: string | null } | null>(null);
   const archiveUndoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (archiveUndoTimer.current) clearTimeout(archiveUndoTimer.current); }, []);
+  // onPatchChat (App.tsx) saves and updates this component's own `chats` prop once the save
+  // lands, but it does not broadcast noevia:workspace-changed the way the Archived page's
+  // Restore does — so a second, already-mounted workspace reader (Settings → Your data &
+  // privacy's archived count, or the Archived page in another tab) never learns the toast's
+  // Undo happened (#362, reopened). Watch `chats` for the patch actually landing (not merely
+  // requested) and notify then, once, so nothing races ahead of the save it is reporting.
+  const pendingNotify = useRef<{ id: string; archived: boolean } | null>(null);
+  useEffect(() => {
+    const pending = pendingNotify.current;
+    if (!pending) return;
+    const chat = chats.find((c) => c.id === pending.id);
+    if (chat && !!chat.archived === pending.archived) {
+      pendingNotify.current = null;
+      notifyWorkspaceChanged();
+    }
+  }, [chats]);
   const archiveChat = (c: ChatMeta, projectId: string | null) => {
     if (archiveUndoTimer.current) clearTimeout(archiveUndoTimer.current);
+    pendingNotify.current = { id: c.id, archived: true };
     onPatchChat(projectId, c.id, { archived: true });
     setArchiveUndo({ chat: c, projectId });
     archiveUndoTimer.current = setTimeout(() => setArchiveUndo(null), 6000);
@@ -242,6 +279,7 @@ export function Sidebar({
   const undoArchive = () => {
     if (!archiveUndo) return;
     if (archiveUndoTimer.current) clearTimeout(archiveUndoTimer.current);
+    pendingNotify.current = { id: archiveUndo.chat.id, archived: false };
     onPatchChat(archiveUndo.projectId, archiveUndo.chat.id, { archived: false });
     setArchiveUndo(null);
   };
