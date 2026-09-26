@@ -2,6 +2,8 @@ import type { Catalogue } from './en-GB';
 
 export const NB_NO: Catalogue = {
   'common.cancel': "Avbryt",
+  'common.undo': "Angre",
+  'common.dismiss': "Avvis",
   'common.save': "Lagre",
   'common.saving': "Lagrer…",
   'common.saved': "Lagret.",
@@ -34,6 +36,7 @@ export const NB_NO: Catalogue = {
   'sidebar.projectOrdering': "Rekkefølge på prosjekter",
   'sidebar.projectName': "Prosjektnavn",
   'sidebar.chatName': "Chatnavn",
+  'sidebar.renameChatLabel': "Gi chatten nytt navn",
   'sidebar.expandChatsIn': "Vis chatter i {name}",
   'sidebar.collapseChatsIn': "Skjul chatter i {name}",
   'sidebar.openNamed': "Åpne {name}",
@@ -49,6 +52,7 @@ export const NB_NO: Catalogue = {
   'sidebar.showFewer': "Vis færre",
   'sidebar.viewAll': "Vis alle {count} chatter",
   'sidebar.archivedChats': "Arkiverte chatter",
+  'sidebar.chatArchivedToast': "Chat arkivert",
   'sidebar.navigation': "Navigasjon",
   'sidebar.openNavigation': "Åpne navigasjon",
   'sidebar.closeNavigation': "Lukk navigasjon",

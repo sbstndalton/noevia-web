@@ -68,3 +68,22 @@ export function insertMention(draft: string, name: string): string {
   const base = draft === '/' ? '' : draft.replace(/\/$/, '');
   return `${base}${base && !/\s$/.test(base) ? ' ' : ''}@${name} `;
 }
+
+export interface CataloguePlacement { top: string; bottom: string; maxHeight: number }
+
+/**
+ * Where the catalogue panel opens relative to its trigger (#353). It normally opens upward
+ * from the composer, but an empty new chat can put the trigger high enough that the panel's
+ * usual height pushes its header off the top of the viewport. Flip below when there is more
+ * room there, and always clamp to what actually fits so the search box stays visible either way
+ * (mirrors the measure-then-flip approach in ComposerActions). Both `top` and `bottom` are
+ * always returned (one of them `'auto'`) so the inline style fully overrides the CSS default
+ * instead of combining with it.
+ */
+export function placeCatalogue(rect: { top: number; bottom: number }, viewportHeight: number): CataloguePlacement {
+  const gap = 8, min = 240, cap = 440;
+  const above = rect.top - gap, below = viewportHeight - rect.bottom - gap;
+  const useBelow = above < min && below > above;
+  const maxHeight = Math.max(120, Math.min(cap, useBelow ? below : above));
+  return { top: useBelow ? `calc(100% + ${gap}px)` : 'auto', bottom: useBelow ? 'auto' : `calc(100% + ${gap}px)`, maxHeight };
+}

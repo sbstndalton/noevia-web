@@ -2,6 +2,8 @@ import type { Catalogue } from './en-GB';
 
 export const SV_SE: Catalogue = {
   'common.cancel': "Avbryt",
+  'common.undo': "Ångra",
+  'common.dismiss': "Avvisa",
   'common.save': "Spara",
   'common.saving': "Sparar…",
   'common.saved': "Sparat.",
@@ -34,6 +36,7 @@ export const SV_SE: Catalogue = {
   'sidebar.projectOrdering': "Projektordning",
   'sidebar.projectName': "Projektnamn",
   'sidebar.chatName': "Chattnamn",
+  'sidebar.renameChatLabel': "Byt namn på chatten",
   'sidebar.expandChatsIn': "Visa chattar i {name}",
   'sidebar.collapseChatsIn': "Dölj chattar i {name}",
   'sidebar.openNamed': "Öppna {name}",
@@ -49,6 +52,7 @@ export const SV_SE: Catalogue = {
   'sidebar.showFewer': "Visa färre",
   'sidebar.viewAll': "Visa alla {count} chattar",
   'sidebar.archivedChats': "Arkiverade chattar",
+  'sidebar.chatArchivedToast': "Chatten arkiverad",
   'sidebar.navigation': "Navigering",
   'sidebar.openNavigation': "Öppna navigering",
   'sidebar.closeNavigation': "Stäng navigering",

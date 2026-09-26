@@ -226,7 +226,7 @@ function CreateProjectModal({
           className="modal-input"
           placeholder={t('projects.namePlaceholder')}
           value={name}
-          autoFocus
+          data-initial-focus
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void submit()}
         />

@@ -197,6 +197,11 @@ export function ChatView({
   const [draft, setDraft] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
+  // Cancelling an edit (or the Escape shortcut) returns focus to the message's own Edit
+  // button rather than letting it fall to <body> (#355); keyed per message since more than
+  // one bubble can exist.
+  const editTriggers = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const cancelEdit = (id: string) => { setEditingId(null); editTriggers.current.get(id)?.focus(); };
   const { scrollRef, onScroll, follow } = useChatScroll(chatId, messages, true, streaming);
   // When the current stream began, for the live elapsed counter. Reset on each
   // new stream rather than on every message change, or the timer would restart
@@ -352,7 +357,7 @@ export function ChatView({
                       rows={Math.min(12, editDraft.split('\n').length + 1)}
                       onChange={(e) => setEditDraft(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Escape') { setEditingId(null); return; }
+                        if (e.key === 'Escape') { cancelEdit(m.id); return; }
                         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                           e.preventDefault();
                           const text = editDraft.trim();
@@ -365,6 +370,7 @@ export function ChatView({
                     />
                     <div className="msg-edit-actions">
                       <button
+                        className="btn btn-primary"
                         onClick={() => {
                           const text = editDraft.trim();
                           if (!text) return;
@@ -375,7 +381,7 @@ export function ChatView({
                       >
                         Save &amp; re-run
                       </button>
-                      <button className="secondary" onClick={() => setEditingId(null)}>Cancel</button>
+                      <button className="btn btn-secondary" onClick={() => cancelEdit(m.id)}>Cancel</button>
                       <small>Everything after this message is replaced.</small>
                     </div>
                   </div>
@@ -383,6 +389,7 @@ export function ChatView({
                   <div className="msg-user-row">
                     <p style={{ whiteSpace: 'pre-wrap' }}>{m.content}</p>
                     <button
+                      ref={(el) => { if (el) editTriggers.current.set(m.id, el); else editTriggers.current.delete(m.id); }}
                       className="msg-edit-btn"
                       onClick={() => { setEditingId(m.id); setEditDraft(m.content); }}
                       disabled={streaming || actionBusy || mode === 'cowork'}

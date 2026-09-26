@@ -2,6 +2,8 @@ import type { Catalogue } from './en-GB';
 
 export const IT_IT: Catalogue = {
   'common.cancel': "Annulla",
+  'common.undo': "Annulla",
+  'common.dismiss': "Ignora",
   'common.save': "Salva",
   'common.saving': "Salvataggio…",
   'common.saved': "Salvato.",
@@ -34,6 +36,7 @@ export const IT_IT: Catalogue = {
   'sidebar.projectOrdering': "Ordine dei progetti",
   'sidebar.projectName': "Nome del progetto",
   'sidebar.chatName': "Nome della chat",
+  'sidebar.renameChatLabel': "Rinomina chat",
   'sidebar.expandChatsIn': "Mostra le chat di {name}",
   'sidebar.collapseChatsIn': "Nascondi le chat di {name}",
   'sidebar.openNamed': "Apri {name}",
@@ -49,6 +52,7 @@ export const IT_IT: Catalogue = {
   'sidebar.showFewer': "Mostra meno",
   'sidebar.viewAll': "Mostra tutte le {count} chat",
   'sidebar.archivedChats': "Chat archiviate",
+  'sidebar.chatArchivedToast': "Chat archiviata",
   'sidebar.navigation': "Navigazione",
   'sidebar.openNavigation': "Apri navigazione",
   'sidebar.closeNavigation': "Chiudi navigazione",

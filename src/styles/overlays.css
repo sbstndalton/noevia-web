@@ -203,6 +203,10 @@ dialog.confirm-dialog.dialog-sheet { width: min(420px, calc(100vw - 32px)); }
 .save-error button { border-radius: var(--radius-sm); }
 [data-family='editorial'] .save-error { background: var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; }
 [data-family='contemporary'] .save-error { background: var(--md-surface-container-high); backdrop-filter: none; -webkit-backdrop-filter: none; }
+/* A neutral notice variant of the same toast shape (e.g. the sidebar archive-undo, #362):
+   no danger tint, and role="status" rather than "alert" at the call site. */
+.save-error.is-notice { border-color: var(--border); }
+[data-family='editorial'] .save-error.is-notice { border-color: var(--rule-strong); }
 .route-note { margin: var(--space-2) 2px 0; font-size: var(--text-footnote); color: var(--text-secondary); line-height: var(--leading-snug); }
 
 /* ── Empty states ──────────────────────────────────────────────────────────

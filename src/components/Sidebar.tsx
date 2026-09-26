@@ -1,5 +1,6 @@
 import { SidebarLabel } from './SidebarLabel';
 import { orderedProjects, recentChats, readSidebarOrder, moveProject } from '../sidebar-order';
+import { normalizeRenameDraft } from '../rename-draft';
 import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
@@ -214,6 +215,35 @@ export function Sidebar({
   const [renameSource,setRenameSource]=useState<'nested' | 'list'>('list');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
+  // Where keyboard focus goes back to once a transient control (search, rename, the
+  // options menu) closes, instead of falling to <body> (#355). Keyed by row id so more
+  // than one row's Options button can be tracked at once; the search rail button is the
+  // sensible default when search was opened from the ⌘K shortcut rather than a click.
+  const optionsTriggers = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const railSearchButton = useRef<HTMLButtonElement>(null);
+  const searchTrigger = useRef<HTMLButtonElement | null>(null);
+  // Deferred to the next frame: the rename input still has an onBlur that commits, and
+  // calling .focus() on another element synchronously would blur it (and thus commit)
+  // before the input has actually unmounted — wrong for Escape, and a double commit for
+  // Enter. By the next frame the row has already re-rendered without the input.
+  const returnFocusToRow = (id: string) => { requestAnimationFrame(() => optionsTriggers.current.get(id)?.focus()); };
+  // Quick-archive from the row action has no confirmation, so it needs a way back (#362):
+  // an undo toast, matching the shape of the app's existing save-error toast.
+  const [archiveUndo, setArchiveUndo] = useState<{ chat: ChatMeta; projectId: string | null } | null>(null);
+  const archiveUndoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (archiveUndoTimer.current) clearTimeout(archiveUndoTimer.current); }, []);
+  const archiveChat = (c: ChatMeta, projectId: string | null) => {
+    if (archiveUndoTimer.current) clearTimeout(archiveUndoTimer.current);
+    onPatchChat(projectId, c.id, { archived: true });
+    setArchiveUndo({ chat: c, projectId });
+    archiveUndoTimer.current = setTimeout(() => setArchiveUndo(null), 6000);
+  };
+  const undoArchive = () => {
+    if (!archiveUndo) return;
+    if (archiveUndoTimer.current) clearTimeout(archiveUndoTimer.current);
+    onPatchChat(archiveUndo.projectId, archiveUndo.chat.id, { archived: false });
+    setArchiveUndo(null);
+  };
   // The hover card lives in .spaces, which is overflow-y:auto — an absolutely
   // positioned card is clipped by it, which made the card useless. Render it
   // fixed at a measured point instead, after a delay so it does not flash
@@ -245,7 +275,9 @@ export function Sidebar({
   const startRename = (id: string, current: string, source: 'nested' | 'list' = 'list') => {
     setRenameSource(source);
     setRenamingId(id);
-    setRenameDraft(current);
+    // A title can carry embedded newlines (from the first line of a multi-line message); the
+    // single-line input drops them silently, gluing the words on either side together (#360).
+    setRenameDraft(normalizeRenameDraft(current));
   };
 
   const commitRename = (projectId: string | null, isChat: boolean) => {
@@ -326,8 +358,8 @@ export function Sidebar({
   ];
   const chatActions = (c: ChatMeta, projectId: string | null, source: 'nested' | 'list' = 'list') => <div className="row-actions">
     <button className="row-action" aria-label={t(c.pinned ? 'sidebar.unpinNamed' : 'sidebar.pinNamed', { name: c.title || t('sidebar.chatFallback') })} title={c.pinned ? t('sidebar.unpinChat') : t('sidebar.pinChat')} aria-pressed={!!c.pinned} onClick={()=>onPatchChat(projectId,c.id,{pinned:!c.pinned})}><ShellIcon name="pin" size={18}/></button>
-    <button className="row-action" aria-label={t('sidebar.archiveNamed', { name: c.title || t('sidebar.chatFallback') })} title={t('sidebar.archiveChat')} onClick={()=>onPatchChat(projectId,c.id,{archived:true})}><ShellIcon name="archive" size={18}/></button>
-    <button className="row-action" aria-label={t('sidebar.optionsFor', { name: c.title || t('sidebar.chatFallback') })} aria-haspopup="menu" aria-expanded={menu?.kind==='chat' && menu.id===c.id} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'chat',id:c.id,projectId,source,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={20}/></button>
+    <button className="row-action" aria-label={t('sidebar.archiveNamed', { name: c.title || t('sidebar.chatFallback') })} title={t('sidebar.archiveChat')} onClick={()=>archiveChat(c,projectId)}><ShellIcon name="archive" size={18}/></button>
+    <button ref={el=>{if(el)optionsTriggers.current.set(c.id,el);else optionsTriggers.current.delete(c.id);}} className="row-action" aria-label={t('sidebar.optionsFor', { name: c.title || t('sidebar.chatFallback') })} aria-haspopup="menu" aria-expanded={menu?.kind==='chat' && menu.id===c.id} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'chat',id:c.id,projectId,source,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={20}/></button>
   </div>;
   const projectNames = new Map(projects.map((p) => [p.id, p.name]));
   const renderChat = (c: ChatMeta) => (
@@ -342,14 +374,18 @@ export function Sidebar({
                 {renamingId === c.id && renameSource==='list' ? (
                   <input
                     className="proj-rename-input"
+                    aria-label={t('sidebar.renameChatLabel')}
                     value={renameDraft}
                     autoFocus
                     onFocus={(e) => e.currentTarget.select()}
                     onChange={(e) => setRenameDraft(e.target.value)}
                     onBlur={() => commitRename(c.projectId ?? null, true)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') commitRename(c.projectId ?? null, true);
-                      if (e.key === 'Escape') setRenamingId(null);
+                      // Enter/Escape are keyboard-driven, so the row's Options button (the
+                      // trigger that opened Rename) is the sensible place for focus to land
+                      // (#355); a blur from clicking elsewhere leaves focus where the click put it.
+                      if (e.key === 'Enter') { commitRename(c.projectId ?? null, true); returnFocusToRow(c.id); }
+                      if (e.key === 'Escape') { setRenamingId(null); returnFocusToRow(c.id); }
                     }}
                   />
                 ) : (
@@ -395,7 +431,7 @@ export function Sidebar({
     >
       <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? t('sidebar.closeNavigation') : collapsed ? t('sidebar.expandNavigation') : t('sidebar.collapseNavigation')} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div>{/* Like Claude's: a small icon-only Chat/Code switch at the end of the header row. Switching
           closes the phone drawer, so the new mode is what you see. */}{showPreviews && <ModeSwitch compact mode={mode} onCode={() => { setExpanded(false); onEnterCode(); }} onChat={() => { setExpanded(false); onEnterChat?.(); }}/>}</div>
-      {/* On a phone the drawer always shows the search field under its header, as Claude's does. */}{(searching || (mobile && expanded))&&<input className="shell-search" autoFocus={searching} aria-label={t('sidebar.search')} placeholder={t('sidebar.searchPlaceholder')} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');}}}/>}
+      {/* On a phone the drawer always shows the search field under its header, as Claude's does. */}{(searching || (mobile && expanded))&&<input className="shell-search" autoFocus={searching} aria-label={t('sidebar.search')} placeholder={t('sidebar.searchPlaceholder')} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');(searchTrigger.current||railSearchButton.current)?.focus();}}}/>}
 
       {/* Floats over the list as it scrolls, as ChatGPT's New chat does. */}
       <div className="side-new">
@@ -428,7 +464,7 @@ export function Sidebar({
         </button>
       </nav>}
 
-      <div className="rail-tools"><button className="shell-icon-button" aria-label={t('sidebar.search')} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(true);}}><ShellIcon name="search"/></button><button className="shell-icon-button" aria-label={t('sidebar.showPinned')} onClick={()=>{setCollapsed(false);setExpanded(true);setClosedGroups(g=>({...g,Pinned:false}));}}><ShellIcon name="pin"/></button></div>
+      <div className="rail-tools"><button ref={railSearchButton} className="shell-icon-button" aria-label={t('sidebar.search')} onClick={e=>{setCollapsed(false);setExpanded(true);setSearching(true);searchTrigger.current=e.currentTarget;}}><ShellIcon name="search"/></button><button className="shell-icon-button" aria-label={t('sidebar.showPinned')} onClick={()=>{setCollapsed(false);setExpanded(true);setClosedGroups(g=>({...g,Pinned:false}));}}><ShellIcon name="pin"/></button></div>
       {code ? <div className="sidebar-history coding-history">
         <div className="spaces side-scroll"><div className="sidebar-section-head"><span className="section-label">{t('sidebar.codingProjects')}</span></div><p className="side-hint">{t('sidebar.codingProjectsEmpty')}</p></div>
         <div className="spaces side-scroll"><div className="sidebar-section-head"><span className="section-label">{t('sidebar.tasks')}</span></div><p className="side-hint">{t('sidebar.tasksEmpty')}</p></div>
@@ -441,16 +477,16 @@ export function Sidebar({
           {group==='Pinned' && (!closedGroups[group] || query) && visibleChats.filter(c=>c.pinned).map(renderChat)}
           {(!closedGroups[group] || query) && entries.map(p=><div className="project-branch" key={p.id}>
             <div className={`proj-row${activeProjectId===p.id && activeView!=='projects'?' is-active':''}`} onContextMenu={e=>{e.preventDefault();setMenu({kind:'project',id:p.id,projectId:null,at:{x:e.clientX,y:e.clientY}});}}>
-              {renamingId===p.id ? <input className="proj-rename-input" aria-label={t('sidebar.projectName')} value={renameDraft} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(null,false)} onKeyDown={e=>{if(e.key==='Enter')commitRename(null,false);if(e.key==='Escape')setRenamingId(null);}}/> : <><button className="project-expand" data-tip={p.name} aria-label={t(openProjects[p.id]?'sidebar.collapseChatsIn':'sidebar.expandChatsIn', { name: p.name })} aria-expanded={!!openProjects[p.id]} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:!prev[p.id]}));}}><ProjectIcon project={p} size={18}/></button><button className="project-disclosure" aria-label={t('sidebar.openNamed', { name: p.name })} onMouseEnter={e=>openHover(p.id,e.currentTarget)} onMouseLeave={closeHover} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:true}));onOpenProject(p.id);setExpanded(false);}}><SidebarLabel text={p.name}/></button></>}
+              {renamingId===p.id ? <input className="proj-rename-input" aria-label={t('sidebar.projectName')} value={renameDraft} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(null,false)} onKeyDown={e=>{if(e.key==='Enter'){commitRename(null,false);returnFocusToRow(p.id);}if(e.key==='Escape'){setRenamingId(null);returnFocusToRow(p.id);}}}/> : <><button className="project-expand" data-tip={p.name} aria-label={t(openProjects[p.id]?'sidebar.collapseChatsIn':'sidebar.expandChatsIn', { name: p.name })} aria-expanded={!!openProjects[p.id]} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:!prev[p.id]}));}}><ProjectIcon project={p} size={18}/></button><button className="project-disclosure" aria-label={t('sidebar.openNamed', { name: p.name })} onMouseEnter={e=>openHover(p.id,e.currentTarget)} onMouseLeave={closeHover} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:true}));onOpenProject(p.id);setExpanded(false);}}><SidebarLabel text={p.name}/></button></>}
 
               <div className="row-actions">
-                <button className="row-action" aria-label={t('sidebar.optionsFor', { name: p.name })} aria-haspopup="menu" aria-expanded={menu?.kind==='project' && menu.id===p.id} onClick={e=>{closeHover();const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'project',id:p.id,projectId:null,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={22}/></button>
+                <button ref={el=>{if(el)optionsTriggers.current.set(p.id,el);else optionsTriggers.current.delete(p.id);}} className="row-action" aria-label={t('sidebar.optionsFor', { name: p.name })} aria-haspopup="menu" aria-expanded={menu?.kind==='project' && menu.id===p.id} onClick={e=>{closeHover();const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'project',id:p.id,projectId:null,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={22}/></button>
                 <button className="row-action" aria-label={t('sidebar.newChatIn', { name: p.name })} title={t('sidebar.newChatInProject')} onClick={()=>{onNewProjectChat(p.id);setExpanded(false);}}><ShellIcon name="compose" size={20}/></button>
               </div>
             </div>
             {openProjects[p.id] && <div className="project-children">
               {(p.chats || []).filter(c=>!c.archived && !c.pinned).sort((a,b)=>b.updatedAt-a.updatedAt).map(c=><div className="chat-row" key={c.id}>
-                {renamingId===c.id && renameSource==='nested' ? <input className="proj-rename-input" aria-label={t('sidebar.chatName')} value={renameDraft} autoFocus onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(p.id,true)} onKeyDown={e=>{if(e.key==='Enter')commitRename(p.id,true);if(e.key==='Escape')setRenamingId(null);}}/> : <button className={`nested-chat-title${activeChatId===c.id?' is-active':''}`} onClick={()=>{onOpenChat(c.id,p.id);setExpanded(false);}}><SidebarLabel text={c.title || t('common.newChat')}/>{streamingChats[c.id] && <span aria-label={t('sidebar.stillGenerating')}> ···</span>}</button>}
+                {renamingId===c.id && renameSource==='nested' ? <input className="proj-rename-input" aria-label={t('sidebar.renameChatLabel')} value={renameDraft} autoFocus onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(p.id,true)} onKeyDown={e=>{if(e.key==='Enter'){commitRename(p.id,true);returnFocusToRow(c.id);}if(e.key==='Escape'){setRenamingId(null);returnFocusToRow(c.id);}}}/> : <button className={`nested-chat-title${activeChatId===c.id?' is-active':''}`} onClick={()=>{onOpenChat(c.id,p.id);setExpanded(false);}}><SidebarLabel text={c.title || t('common.newChat')}/>{streamingChats[c.id] && <span aria-label={t('sidebar.stillGenerating')}> ···</span>}</button>}
                 {chatActions(c,p.id,'nested')}
               </div>)}
               {!p.chats?.some(c=>!c.archived && !c.pinned) && <p>{p.chats?.some(c=>!c.archived && c.pinned)?t('sidebar.chatsPinnedAbove'):t('sidebar.noChatsYet')}</p>}
@@ -522,6 +558,16 @@ export function Sidebar({
         />
       )}
 
+      {/* Quick-archive has no confirmation, so it needs a way back (#362): a reversible-action
+          toast, not an alert — same shape as the app's save-error toast. */}
+      {archiveUndo && (
+        <div className="save-error is-notice" role="status">
+          <span>{t('sidebar.chatArchivedToast')}</span>
+          <button className="btn btn-secondary" onClick={undoArchive}>{t('common.undo')}</button>
+          <button onClick={() => setArchiveUndo(null)} aria-label={t('common.dismiss')}><ShellIcon name="close" size={16}/></button>
+        </div>
+      )}
+
       <div className="side-footer" ref={footer}>{mcp?.configured && (() => {
         // With several servers, one being down is a partial outage, not an
         // outage — say which, rather than reporting the whole integration dead.
@@ -543,7 +589,7 @@ export function Sidebar({
             <span className="status-text">{label}</span>
           </div>
         );
-      })()}{/* Inference status lives in the workspace status pill and the chat banner; one place is enough. */}<div className="side-footer-row"><AccountMenu onSettings={openSettings} theme={theme} onToggleTheme={onToggleTheme}/>{diaryEnabled && <button className={`shell-icon-button side-footer-diary${activeView === 'diary' ? ' is-active' : ''}`} aria-label={t('sidebar.diary')} title={t('sidebar.diary')} aria-current={activeView === 'diary' ? 'page' : undefined} onClick={() => { onOpenDiary(); setExpanded(false); }}><ShellIcon name="diary"/></button>}{/* Search sits beside the account, as in Claude. */}<button className="shell-icon-button side-footer-search" aria-label={t('sidebar.search')} aria-expanded={searching} onClick={()=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching)setQuery('');}}><ShellIcon name="search"/></button></div></div>
+      })()}{/* Inference status lives in the workspace status pill and the chat banner; one place is enough. */}<div className="side-footer-row"><AccountMenu onSettings={openSettings} theme={theme} onToggleTheme={onToggleTheme}/>{diaryEnabled && <button className={`shell-icon-button side-footer-diary${activeView === 'diary' ? ' is-active' : ''}`} aria-label={t('sidebar.diary')} title={t('sidebar.diary')} aria-current={activeView === 'diary' ? 'page' : undefined} onClick={() => { onOpenDiary(); setExpanded(false); }}><ShellIcon name="diary"/></button>}{/* Search sits beside the account, as in Claude. */}<button className="shell-icon-button side-footer-search" aria-label={t('sidebar.search')} aria-expanded={searching} onClick={e=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching){setQuery('');}else{searchTrigger.current=e.currentTarget;}}}><ShellIcon name="search"/></button></div></div>
     </div>
   </>);
 }

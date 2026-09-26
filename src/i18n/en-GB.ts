@@ -5,6 +5,8 @@
 // as parameters and never translated.
 export const EN_GB = {
   'common.cancel': 'Cancel',
+  'common.undo': 'Undo',
+  'common.dismiss': 'Dismiss',
   'common.save': 'Save',
   'common.saving': 'Saving…',
   'common.saved': 'Saved.',
@@ -37,6 +39,7 @@ export const EN_GB = {
   'sidebar.projectOrdering': 'Project ordering',
   'sidebar.projectName': 'Project name',
   'sidebar.chatName': 'Chat name',
+  'sidebar.renameChatLabel': 'Rename chat',
   'sidebar.expandChatsIn': 'Expand chats in {name}',
   'sidebar.collapseChatsIn': 'Collapse chats in {name}',
   'sidebar.openNamed': 'Open {name}',
@@ -52,6 +55,7 @@ export const EN_GB = {
   'sidebar.showFewer': 'Show fewer',
   'sidebar.viewAll': 'View all {count} chats',
   'sidebar.archivedChats': 'Archived chats',
+  'sidebar.chatArchivedToast': 'Chat archived',
   'sidebar.navigation': 'Navigation',
   'sidebar.openNavigation': 'Open navigation',
   'sidebar.closeNavigation': 'Close navigation',

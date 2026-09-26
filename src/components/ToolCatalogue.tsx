@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import type { FocusEvent, JSX, KeyboardEvent } from 'react';
+import type { CSSProperties, FocusEvent, JSX, KeyboardEvent } from 'react';
 import { fetchPermittedTools } from '../api';
-import { filterCatalogue, type CatalogueEntry, type PermittedBox } from '../tool-catalogue';
+import { filterCatalogue, placeCatalogue, type CatalogueEntry, type PermittedBox } from '../tool-catalogue';
 import type { ChatMode } from '../chat-mode';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
@@ -30,11 +30,23 @@ export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, on
   const [error, setError] = useState<{ kind: 'load' } | { kind: 'server'; text: string } | null>(null);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
+  const [layout, setLayout] = useState<CSSProperties>({});
   const input = useRef<HTMLInputElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const root = useRef<HTMLDivElement>(null);
   // Refreshed on project or mode change (the server caches per account for a short TTL).
   useEffect(() => { setBoxes(null); }, [projectId, mode]);
+  // Flip below the trigger when there isn't enough room above; always clamp to what fits (#353).
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const rect = root.current?.getBoundingClientRect();
+      if (!rect) return;
+      setLayout(placeCatalogue(rect, window.innerHeight));
+    };
+    place(); window.addEventListener('resize', place); window.addEventListener('scroll', place, true);
+    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
+  }, [open]);
   useEffect(() => {
     if (!open || boxes) return;
     let live = true;
@@ -86,7 +98,7 @@ export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, on
     </button>
     {/* No dialog role: this is a combobox (the search input) plus a listbox (below), not a
         modal — a dialog role here would contradict the trigger's aria-haspopup="listbox" (#345). */}
-    {open && <div className="tool-catalogue-panel overlay" aria-label={t('tools.catalogue')}>
+    {open && <div className="tool-catalogue-panel overlay" style={layout} aria-label={t('tools.catalogue')}>
       <input ref={input} className="tool-catalogue-search" type="search" role="combobox" aria-expanded="true" aria-autocomplete="list"
         aria-controls={`${id}-list`} aria-activedescendant={rows.length ? `${id}-opt-${active}` : undefined}
         placeholder={t('tools.search')} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={onKey} />
