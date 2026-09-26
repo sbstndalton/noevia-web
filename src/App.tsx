@@ -10,6 +10,8 @@ import { notifyIfAway } from './components/notifications/notify';
 import { notifyModelsChanged, useModelsChanged } from './models-changed';
 import { modelChoiceLabel } from './model-guidance';
 import { applyReplyTelemetry, beginReplyTelemetry, finishReplyTelemetry, lastReplyTelemetry } from './reply-telemetry';
+import { shouldShowStatsBar } from './statsbar-visibility';
+import { planRegenerate } from './regenerate';
 import { TOOL_RESULT_LIMIT } from './components/ToolCalls';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
@@ -939,6 +941,20 @@ export default function App(): JSX.Element {
     [activeChatMeta, handleSend, streamingChats, view],
   );
 
+  // #356: Regenerate replaces the last completed assistant reply by re-running the same user
+  // turn — the same truncate-and-resend `handleSend` path Retry and Edit-and-re-run already use,
+  // not a new endpoint. planRegenerate (regenerate.ts) does the guarding and truncation and
+  // returns only the original user text plus the transcript before it, so nothing of the old
+  // reply itself (routing decision, telemetry, thinking) can leak into the resend.
+  const regenerateLast = useCallback((chatId: string, messageId: string) => {
+    if (streamingChats[chatId]) return;
+    const msgs = messagesRef.current[chatId] ?? [];
+    const plan = planRegenerate(msgs, messageId);
+    if (!plan) return;
+    const projectId = view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
+    void handleSend(chatId, projectId, plan.userText, plan.base);
+  }, [activeChatMeta, handleSend, streamingChats, view]);
+
   const startFreeChat = useCallback(() => {
     const chatId = `c-${uid()}`;
     loadedChats.current.add(chatId);
@@ -1321,6 +1337,7 @@ export default function App(): JSX.Element {
           mode={activeMode}
           onModeChange={changeMode}
           onRetry={retryLast}
+          onRegenerate={regenerateLast}
           onStop={() => { if (view.kind === 'chat') abortStream(view.chatId); }}
           onBack={activeProject ? () => setView({ kind: 'project', id: activeProject.id }) : null}
           onOpenModels={() => setPopupOpen(true)}
@@ -1386,10 +1403,12 @@ export default function App(): JSX.Element {
         />
         </Suspense>
       )}
-      {/* A blank chat shows no row of unavailable metrics; they return with the first reply (#239). */}
+      {/* #365: chats only — it used to render on every view (Customise, Settings, Archived,
+          Models & routing, Diary) and overlapped Diary's calendar header there. A blank chat
+          shows no row of unavailable metrics; they return with the first reply (#239). */}
       {/* A live stream in this session wins; otherwise reply rehydrates from the chat's own last
           completed message so a reload or navigation does not fake an engine outage (#357). */}
-      {!(view.kind === 'chat' && messages.length === 0 && !replyTelemetryByChat[view.chatId]) && <StatsBar
+      {shouldShowStatsBar(view.kind, messages.length, view.kind === 'chat' && !!replyTelemetryByChat[view.chatId]) && <StatsBar
         stats={stats}
         reply={view.kind === 'chat' ? replyTelemetryByChat[view.chatId] || lastReplyTelemetry(messages) : null}
         routingDecision={routingDecision}

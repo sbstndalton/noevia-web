@@ -847,6 +847,26 @@ button:disabled { cursor: not-allowed; }
 .msg-edit-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .msg-edit-actions small { color: var(--text-secondary); font-size: var(--text-caption2); }
 
+/* Copy / Regenerate on an assistant reply (#356): same reveal-on-hover-or-focus behaviour as the
+   user message's Edit button just above, so the two affordances read as one family. */
+.msg-actions { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.msg-action-btn {
+  opacity: 0;
+  transition: opacity var(--motion-quick) var(--ease-quick);
+  font-size: var(--text-caption2);
+  font-family: var(--font-ui);
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.msg:hover .msg-action-btn,
+.msg-action-btn:focus-visible { opacity: 0.85; }
+.msg-action-btn:hover:not(:disabled) { opacity: 1; border-color: var(--accent-2); color: var(--accent-text); background: var(--accent-2-soft); }
+.msg-action-btn:disabled { opacity: 0.35; cursor: default; }
+
 /* ── Usage & activity ─────────────────────────────────────────────────────
    Numbers first, chrome second: the stat cards carry the answer and the
    heat map gives it shape over time. */

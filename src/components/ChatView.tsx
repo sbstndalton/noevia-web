@@ -42,6 +42,7 @@ interface ChatViewProps {
   mode?: ChatMode;
   onModeChange?: (mode: ChatMode, newSession: boolean) => void;
   onRetry: (chatId: string, messageId: string) => void;
+  onRegenerate: (chatId: string, messageId: string) => void;
   onEditMessage: (chatId: string, messageId: string, text: string) => void;
   chatId: string;
   onStop: () => void;
@@ -134,6 +135,48 @@ function MessageMeta({ stats }: { stats?: MessageStats }): JSX.Element | null {
   return <div className="msg-meta">{parts.join(' · ')}</div>;
 }
 
+// #356: Copy (every finished reply) and Regenerate (the last one only) — hover/focus actions
+// matching the existing "Edit and re-run" and code-block Copy affordances rather than a new
+// visual language. Copy takes the reply's own Markdown source (`content`), never the rendered
+// HTML and never the thinking block, which lives in a separate field entirely.
+export function MessageActions({ content, canRegenerate, onRegenerate, regenerateDisabled }: {
+  content: string;
+  canRegenerate: boolean;
+  onRegenerate: () => void;
+  regenerateDisabled: boolean;
+}): JSX.Element {
+  const t = useT();
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="msg-actions">
+      <button
+        type="button"
+        className="msg-action-btn"
+        onClick={() => {
+          void navigator.clipboard?.writeText(content).then(
+            () => { setCopied(true); setTimeout(() => setCopied(false), 1200); },
+            () => undefined,
+          );
+        }}
+        aria-label={t('msg.copy')}
+      >
+        {copied ? t('msg.copied') : t('msg.copy')}
+      </button>
+      {canRegenerate && (
+        <button
+          type="button"
+          className="msg-action-btn"
+          onClick={onRegenerate}
+          disabled={regenerateDisabled}
+          aria-label={t('msg.regenerate')}
+        >
+          {t('msg.regenerate')}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // Elapsed-time ticker shown while a reply is still streaming, so a long
 // local-model generation does not look hung.
 export function LiveTimer({ startedAt }: { startedAt: number }): JSX.Element {
@@ -160,6 +203,7 @@ export function ChatView({
   mode = 'chat',
   onModeChange = () => {},
   onRetry,
+  onRegenerate,
   onEditMessage,
   chatId,
   onStop,
@@ -350,6 +394,16 @@ export function ChatView({
                     </div>
                   ) : (
                     !m.error && <MessageMeta stats={m.stats} />
+                  )}
+                  {/* Copy on every finished reply; Regenerate only on the last one, and never
+                      while it (or anything else in this chat) is still streaming (#356). */}
+                  {m.content && !m.error && !(streaming && isLast) && (
+                    <MessageActions
+                      content={m.content}
+                      canRegenerate={isLast && !m.coworkTask}
+                      onRegenerate={() => onRegenerate(chatId, m.id)}
+                      regenerateDisabled={streaming || actionBusy}
+                    />
                   )}
                 </div>
               ) : (
