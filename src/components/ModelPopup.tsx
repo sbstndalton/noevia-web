@@ -1,4 +1,4 @@
-import { matchesModelUse } from '../model-guidance';
+import { isChatGenerationModel } from '../model-kind';
 import { MiddleTruncate } from './MiddleTruncate';
 import { useModelsChanged } from '../models-changed';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -80,7 +80,10 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
   useEffect(refresh, [refresh]);
   useModelsChanged(refresh);
 
-  const chatModels = models.filter((m) => matchesModelUse(m.labels, 'all'));
+  // Embedding/reranking models and Laya (the internal routing model) cannot answer a chat
+  // prompt — matchesModelUse('all') only excluded the former, so Laya slipped through as a
+  // pickable Manual model with no server-side guard on this path either until now (#409).
+  const chatModels = models.filter((m) => isChatGenerationModel(m.name, m.labels));
   // A long catalogue gets a filter; a handful of models does not need one.
   const [modelQuery, setModelQuery] = useState('');
   const shownModels = chatModels.filter((m) => m.name.toLowerCase().includes(modelQuery.trim().toLowerCase()));

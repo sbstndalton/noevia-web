@@ -5,6 +5,7 @@ import type { InstalledModel, Project, RouteRule } from '../../types';
 import { fetchAutoRoles, setAutoRoles as putAutoRoles, fetchRoutingDefault, putRoutingDefault } from '../../api';
 import { SegmentedControl } from '../SegmentedControl';
 import { matchesModelUse, modelChoiceLabel } from '../../model-guidance';
+import { isChatGenerationModel } from '../../model-kind';
 import { ReasoningControl } from '../ReasoningControl';
 import { SamplingPresetsControl } from '../SamplingPresetsControl';
 import { BenchmarksTab, PromptsTab } from './BenchmarksTab';
@@ -147,9 +148,14 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
   useEffect(() => { let live = true; fetchAutoRoles().then((v) => { if (live) setInfo(v); }).catch(() => { if (live) setError(t('mm.route.loadError')); }); return () => { live = false; }; }, []);
   useModelsChanged(loadRoles);
 
-  // Embedding and reranking models cannot answer a chat, so they are never
-  // offered for a role — picking one produces a model that 400s every request.
-  const chatModels = models.filter((m) => matchesModelUse(m.labels, 'all'));
+  // Fast/Smart/Code route chat-generation prompts — an embedding, reranking or routing model
+  // (Laya) there fails every request through it, matching the server-side guard on save
+  // (chat-model-kind.cjs's nonChatAliases, PUT /api/auto-roles, #343/#409). Vision keeps its own
+  // allowed-kind rule below (a vision/multimodal label, not this chat-generation check):
+  // matchesModelUse('all') only excludes embedding/reranking labels, which is what a vision
+  // model is judged by, not isChatGenerationModel.
+  const chatModels = models.filter((m) => isChatGenerationModel(m.name, m.labels));
+  const visionModels = models.filter((m) => matchesModelUse(m.labels, 'all'));
   const valueFor = (role: 'fast' | 'smart' | 'vision' | 'code') => pending[role] ?? info?.roles?.[role] ?? '';
 
   const save = async () => {
@@ -180,16 +186,16 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
     {!!info?.missing?.length && <p className="mm-note warn" role="alert">{t(info.missing.length === 1 ? 'mm.route.missingOne' : 'mm.route.missingSeveral', { models: info.missing.map((m) => `${t(ROUTE_ROLE[m.role])} (${m.model})`).join(', ') })}</p>}
     {view !== 'loading' && view !== 'error' && <>
     <div className="mm-form route-roles">
-      {(['fast', 'smart', 'vision', 'code'] as const).map((role) => <label key={role}>
+      {(['fast', 'smart', 'vision', 'code'] as const).map((role) => { const roleModels = role === 'vision' ? visionModels : chatModels; return <label key={role}>
         {t(ROUTE_ROLE[role])}
         <select value={valueFor(role)} disabled={busy} onChange={(e) => setPending((prev) => ({ ...prev, [role]: e.target.value }))}>
           <option value="">{role === 'vision' || role === 'code' ? t('mm.route.none') : t('mm.route.pick')}</option>
-          {chatModels.map((m) => <option key={m.name} value={m.name}>{m.loaded ? t('mm.route.loadedOption', { model: m.name }) : m.name}</option>)}
+          {roleModels.map((m) => <option key={m.name} value={m.name}>{m.loaded ? t('mm.route.loadedOption', { model: m.name }) : m.name}</option>)}
           {/* A role can name a model that is no longer installed; keep it
               selectable so saving does not silently drop it. */}
           {info?.roles?.[role] && !models.some((m) => m.name === info.roles?.[role]) && <option value={info.roles[role]}>{t('mm.route.notInstalledOption', { model: info.roles[role] ?? '' })}</option>}
         </select>
-      </label>)}
+      </label>; })}
     </div>
     <div className="mm-actions">
       <button className="modal-btn primary" disabled={busy} onClick={() => void save()}>{busy ? t('mm.saving') : t('mm.route.save')}</button>
