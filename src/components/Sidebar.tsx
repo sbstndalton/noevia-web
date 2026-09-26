@@ -10,6 +10,7 @@ import { ContextMenu, ConfirmDialog } from './ContextMenu';
 import type { MenuItem } from './ContextMenu';
 import { fetchToolboxes, fetchProfile } from '../api';
 import type { McpStatus } from '../api';
+import { mcpFooterSummary } from '../mcp-summary';
 import { ShellIcon } from './ShellIcon';
 import type { ChatMeta, HealthState, Project } from '../types';
 import { Logo } from './Icons';
@@ -569,24 +570,14 @@ export function Sidebar({
       )}
 
       <div className="side-footer" ref={footer}>{mcp?.configured && (() => {
-        // With several servers, one being down is a partial outage, not an
-        // outage — say which, rather than reporting the whole integration dead.
-        const servers = mcp.servers ?? [];
-        const down = servers.filter((sv) => sv.error);
-        const degraded = down.length > 0 || (!servers.length && !!mcp.error);
-        const allDown = servers.length > 0 && down.length === servers.length;
-        const label = !degraded
-          ? `MCP · ${mcp.discovered ?? 0} tools${servers.length > 1 ? ` · ${servers.length} servers` : ''}`
-          : allDown || !servers.length
-            ? 'MCP · unavailable'
-            : `MCP · ${mcp.discovered ?? 0} tools · ${down.map((sv) => sv.id).join(', ')} down`;
+        const summary = mcpFooterSummary(mcp, t);
         return (
           <div
-            className={`mcp-row${degraded ? ' is-degraded' : ''}`}
-            title={down.map((sv) => `${sv.id}: ${sv.error}`).join('\n') || undefined}
+            className={`mcp-row${summary.degraded ? ' is-degraded' : ''}`}
+            title={summary.title}
           >
-            <span className="status-dot" style={{ background: allDown || (!servers.length && mcp.error) ? 'var(--status-danger)' : degraded ? 'var(--status-warning)' : 'var(--status-good)' }} />
-            <span className="status-text">{label}</span>
+            <span className="status-dot" style={{ background: summary.danger ? 'var(--status-danger)' : summary.degraded ? 'var(--status-warning)' : 'var(--status-good)' }} />
+            <span className="status-text">{summary.label}</span>
           </div>
         );
       })()}{/* Inference status lives in the workspace status pill and the chat banner; one place is enough. */}<div className="side-footer-row"><AccountMenu onSettings={openSettings} theme={theme} onToggleTheme={onToggleTheme}/>{diaryEnabled && <button className={`shell-icon-button side-footer-diary${activeView === 'diary' ? ' is-active' : ''}`} aria-label={t('sidebar.diary')} title={t('sidebar.diary')} aria-current={activeView === 'diary' ? 'page' : undefined} onClick={() => { onOpenDiary(); setExpanded(false); }}><ShellIcon name="diary"/></button>}{/* Search sits beside the account, as in Claude. */}<button className="shell-icon-button side-footer-search" aria-label={t('sidebar.search')} aria-expanded={searching} onClick={e=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching){setQuery('');}else{searchTrigger.current=e.currentTarget;}}}><ShellIcon name="search"/></button></div></div>

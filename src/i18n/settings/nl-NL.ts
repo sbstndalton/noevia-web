@@ -640,6 +640,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'serviceStatus.mcp.unconfigured3': " in de omgeving van deze installatie in op items van de vorm ",
   'serviceStatus.mcp.unconfigured4': ". Als hier eerder gekoppelde tools verschenen, is die variabele waarschijnlijk uit het Compose-bestand van de installatie verdwenen.",
   'serviceStatus.mcp.builtIn': "ingebouwd",
+  'serviceStatus.mcp.added': "toegevoegd",
   'serviceStatus.mcp.catalogueUnavailable': "Catalogus niet beschikbaar",
   'serviceStatus.mcp.discovered.one': "{count} tool gevonden",
   'serviceStatus.mcp.discovered.other': "{count} tools gevonden",

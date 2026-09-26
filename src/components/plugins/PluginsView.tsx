@@ -159,7 +159,7 @@ function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp'
               </details></span>
             <span className="plugin-card-actions"><AddServer item={{ id: a.registryName, name: a.title, publisher: '', description: '', version: '', url: '', remote: true, installable: true, headers: a.declaredHeaders }} added={a} onChange={setAdded}/></span>
           </li>)}</ul>
-        : <p className="plugins-note" role="status">{yourQuery ? t('customise.noAddedServersMatch', { query: yourQuery }) : t('customise.noAddedServers')}</p>}
+        : <p className="plugins-note" role="status">{yourQuery ? t('customise.noAddedServersMatch', { query: yourQuery }) : <>{t('customise.noAddedServers')} {t('customise.builtInServersNote')} <button type="button" className="link-button" onClick={() => window.dispatchEvent(new Event('noevia:open-service-status'))}>{t('customise.viewServiceStatus')}</button></>}</p>}
     </> : <>
       <div className="settings-search plugins-search"><ShellIcon name="search" size={16}/><input aria-label={kind === 'mcp' ? t('customise.searchMcpPlaceholder') : t('customise.searchSkillsDiscoverPlaceholder')} placeholder={kind === 'mcp' ? t('customise.searchMcpPlaceholder') : t('customise.searchSkillsDiscoverPlaceholder')} value={query} onChange={(e) => setQuery(e.target.value)}/></div>
     <p className="plugins-note">{kind === 'mcp'

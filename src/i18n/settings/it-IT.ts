@@ -640,6 +640,7 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'serviceStatus.mcp.unconfigured3': " nell’ambiente di questa installazione con voci ",
   'serviceStatus.mcp.unconfigured4': ". Se qui prima comparivano strumenti collegati, molto probabilmente il file Compose dell’installazione ha perso quella variabile.",
   'serviceStatus.mcp.builtIn': "integrato",
+  'serviceStatus.mcp.added': "aggiunto",
   'serviceStatus.mcp.catalogueUnavailable': "Catalogo non disponibile",
   'serviceStatus.mcp.discovered.one': "{count} strumento trovato",
   'serviceStatus.mcp.discovered.other': "{count} strumenti trovati",

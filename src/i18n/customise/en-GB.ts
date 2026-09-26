@@ -55,11 +55,16 @@ export const EN_GB_CUSTOMISE = {
   'customise.projectMustSelect': 'A project must select this toolbox. Every call asks for approval.',
   'customise.noAddedServersMatch': 'No added servers match “{query}”.',
   'customise.noAddedServers': 'No MCP servers added yet. Explore the directory to add one.',
+  // #366: this list is admin-added servers only — the built-in ones (and any this deployment's
+  // environment configures) are always on and never show up here, which otherwise reads like a
+  // contradiction next to the sidebar's server count.
+  'customise.builtInServersNote': 'Built-in servers configured for this deployment are always on and do not appear here.',
+  'customise.viewServiceStatus': 'View them in Service status',
   'customise.searchMcpPlaceholder': 'Search MCP servers',
   'customise.searchSkillsDiscoverPlaceholder': 'Search skills',
   'customise.mcpDirectoryNoteAdmin': 'Published by their authors in the public MCP registry, not reviewed by noevia. Administrators can add hosted servers: each becomes a toolbox a project has to choose, it never receives your passwords, and every one of its tools asks before it runs.',
   'customise.mcpDirectoryNoteMember': 'Published by their authors in the public MCP registry, not reviewed by noevia. An administrator can add hosted servers for everyone on this noevia.',
-  'customise.skillsDirectoryNote': 'Skills published by Anthropic. Add one to a project and it arrives switched off: review it in the project’s instruction skills, then enable it. Only the written instructions are copied; scripts a skill bundles are never downloaded or run.',
+  'customise.skillsDirectoryNote': 'Skills published by Anthropic. Add one to a project and it arrives switched off: review it in the project’s instruction skills, then enable it. Only the written instructions are copied; scripts bundled with a skill are never downloaded or run.',
   'customise.source': 'Source:',
   'customise.addServerByUrl': 'Add a server by URL',
   'customise.loading': 'Loading…',

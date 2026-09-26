@@ -52,6 +52,8 @@ export const PT_BR_CUSTOMISE: CustomiseCatalogue = {
   'customise.projectMustSelect': "Um projeto precisa selecionar esta caixa de ferramentas. Toda chamada pede aprovação.",
   'customise.noAddedServersMatch': "Nenhum servidor adicionado corresponde a “{query}”.",
   'customise.noAddedServers': "Nenhum servidor MCP adicionado ainda. Explore o diretório para adicionar um.",
+  'customise.builtInServersNote': "Servidores integrados configurados para esta implantação estão sempre ativos e não aparecem aqui.",
+  'customise.viewServiceStatus': "Veja-os em Service status",
   'customise.searchMcpPlaceholder': "Pesquisar servidores MCP",
   'customise.searchSkillsDiscoverPlaceholder': "Pesquisar habilidades",
   'customise.mcpDirectoryNoteAdmin': "Publicados por seus autores no registro público de MCP, não revisados pelo noevia. Os administradores podem adicionar servidores hospedados: cada um se torna uma caixa de ferramentas que um projeto precisa escolher, nunca recebe suas senhas, e cada uma de suas ferramentas pergunta antes de ser executada.",

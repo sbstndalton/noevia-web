@@ -239,6 +239,8 @@ button:disabled { opacity: .5; cursor: default; }
 .coding-welcome h1 { font-weight: 500; font-size: var(--text-large); }
 .code-emblem { color: var(--text-secondary); }
 .coding-composer { margin: 0 auto auto; max-width: 744px; }
+/* #368: the Code project picker sits where the composer would — same width, same centering. */
+.coding-project-picker { margin: 0 auto; max-width: 744px; width: 100%; }
 .coding-quick-actions { gap: 10px; }
 .coding-sidebar .shell-sidebar-head > strong { font-weight: 600; }
 .coding-side-panel { font-family: var(--font-ui); }

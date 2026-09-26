@@ -20,7 +20,7 @@ export function McpStatus() {
     {unconfigured&&<p className="route-note">{t('serviceStatus.mcp.unconfigured1')}<code>core</code>{t('serviceStatus.mcp.unconfigured2')}<code>MCP_SERVERS</code>{t('serviceStatus.mcp.unconfigured3')}<code>id|url|auth</code>{t('serviceStatus.mcp.unconfigured4')}</p>}
     {!!servers.length&&<div className="card-list">{servers.map(server=><div className="model-row" key={server.id}>
       <span className={`model-dot${server.error||server.missingCurated?' down':''}`} />
-      <div className="model-name-group"><span className="model-name">{server.id}{server.auth==='internal'&&<span className="model-role"> · {t('serviceStatus.mcp.builtIn')}</span>}</span><span className="model-quant">{server.error?t('serviceStatus.mcp.catalogueUnavailable'):`${t.plural('serviceStatus.mcp.discovered',server.discovered)}${server.missingCurated?` · ${t.plural('serviceStatus.mcp.missing',server.missingCurated)}`:''}`}{server.checkedAt?` · ${t('serviceStatus.mcp.checked',{ time: new Date(server.checkedAt).toLocaleTimeString(appLocale()) })}`:''}</span></div>
+      <div className="model-name-group"><span className="model-name">{server.id}<span className="model-role"> · {server.directory?t('serviceStatus.mcp.added'):t('serviceStatus.mcp.builtIn')}</span></span><span className="model-quant">{server.error?t('serviceStatus.mcp.catalogueUnavailable'):`${t.plural('serviceStatus.mcp.discovered',server.discovered)}${server.missingCurated?` · ${t.plural('serviceStatus.mcp.missing',server.missingCurated)}`:''}`}{server.checkedAt?` · ${t('serviceStatus.mcp.checked',{ time: new Date(server.checkedAt).toLocaleTimeString(appLocale()) })}`:''}</span></div>
     </div>)}</div>}
     <p className="route-note">{t('serviceStatus.mcp.cacheNote')}</p>
   </section>;

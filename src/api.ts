@@ -255,7 +255,11 @@ export interface McpServerStatus {
   id: string;
   /** Mirrors the server's parser in index.cjs: `bearer` comes from a
    *  `bearer:ENV_NAME` entry and was missing here. */
-  auth: 'nextcloud' | 'bearer' | 'internal' | 'none';
+  auth: 'nextcloud' | 'bearer' | 'internal' | 'none' | 'directory' | 'oauth' | 'personal';
+  /** True only for a server an administrator added through the MCP directory (Plugins → Added,
+   *  #366); everything else is configured for this deployment (the internal server or an
+   *  MCP_SERVERS/MCP_SERVER_URL entry) and never appears in that list. */
+  directory?: boolean;
   error: string | null;
   discovered: number;
 }

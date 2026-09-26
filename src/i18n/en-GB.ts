@@ -62,6 +62,11 @@ export const EN_GB = {
   'sidebar.expandNavigation': 'Expand navigation',
   'sidebar.collapseNavigation': 'Collapse navigation',
   'sidebar.diary': 'Diary',
+  // #366: the footer's server count and Plugins → Added count different things — say so rather
+  // than let them look contradictory. Always shown with more than one server, so no singular form.
+  'sidebar.mcpServersBuiltIn': '{count} servers (built-in)',
+  'sidebar.mcpServersPartlyAdded': '{count} servers ({added} added)',
+  'sidebar.mcpBuiltInTooltip': 'Configured for this deployment. Plugins → Added lists only servers an administrator added there.',
   'sidebar.lastUsed': 'Last used',
   'sidebar.manualOrder': 'Manual order',
   'sidebar.moveUp': 'Move up',

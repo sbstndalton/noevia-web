@@ -640,6 +640,7 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'serviceStatus.mcp.unconfigured3': " dans l’environnement de ce déploiement avec des entrées ",
   'serviceStatus.mcp.unconfigured4': ". Si des outils connectés apparaissaient ici auparavant, le fichier Compose du déploiement a très probablement perdu cette variable.",
   'serviceStatus.mcp.builtIn': "intégré",
+  'serviceStatus.mcp.added': "ajouté",
   'serviceStatus.mcp.catalogueUnavailable': "Catalogue indisponible",
   'serviceStatus.mcp.discovered.one': "{count} outil découvert",
   'serviceStatus.mcp.discovered.other': "{count} outils découverts",

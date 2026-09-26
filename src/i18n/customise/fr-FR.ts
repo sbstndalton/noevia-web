@@ -52,6 +52,8 @@ export const FR_FR_CUSTOMISE: CustomiseCatalogue = {
   'customise.projectMustSelect': "Un projet doit sélectionner cette boîte à outils. Chaque appel demande une approbation.",
   'customise.noAddedServersMatch': "Aucun serveur ajouté ne correspond à « {query} ».",
   'customise.noAddedServers': "Aucun serveur MCP ajouté pour l’instant. Parcourez l’annuaire pour en ajouter un.",
+  'customise.builtInServersNote': "Les serveurs intégrés configurés pour ce déploiement sont toujours actifs et n’apparaissent pas ici.",
+  'customise.viewServiceStatus': "Les voir dans Service status",
   'customise.searchMcpPlaceholder': "Rechercher des serveurs MCP",
   'customise.searchSkillsDiscoverPlaceholder': "Rechercher des compétences",
   'customise.mcpDirectoryNoteAdmin': "Publiés par leurs auteurs dans le registre MCP public, non vérifiés par noevia. Les administrateurs peuvent ajouter des serveurs hébergés : chacun devient une boîte à outils qu’un projet doit choisir, il ne reçoit jamais vos mots de passe, et chacun de ses outils demande confirmation avant de s’exécuter.",

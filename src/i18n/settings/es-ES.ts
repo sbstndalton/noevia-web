@@ -640,6 +640,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'serviceStatus.mcp.unconfigured3': " en el entorno de este despliegue con entradas ",
   'serviceStatus.mcp.unconfigured4': ". Si antes aparecían aquí herramientas conectadas, lo más probable es que el archivo Compose del despliegue haya perdido esa variable.",
   'serviceStatus.mcp.builtIn': "integrado",
+  'serviceStatus.mcp.added': "añadido",
   'serviceStatus.mcp.catalogueUnavailable': "Catálogo no disponible",
   'serviceStatus.mcp.discovered.one': "{count} herramienta encontrada",
   'serviceStatus.mcp.discovered.other': "{count} herramientas encontradas",

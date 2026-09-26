@@ -52,6 +52,8 @@ export const NL_NL_CUSTOMISE: CustomiseCatalogue = {
   'customise.projectMustSelect': "Een project moet deze gereedschapskist kiezen. Elke aanroep vraagt om goedkeuring.",
   'customise.noAddedServersMatch': "Geen toegevoegde servers komen overeen met “{query}”.",
   'customise.noAddedServers': "Nog geen MCP-servers toegevoegd. Verken de directory om er een toe te voegen.",
+  'customise.builtInServersNote': "Ingebouwde servers die voor deze implementatie zijn geconfigureerd, staan altijd aan en verschijnen hier niet.",
+  'customise.viewServiceStatus': "Bekijk ze bij Service status",
   'customise.searchMcpPlaceholder': "MCP-servers doorzoeken",
   'customise.searchSkillsDiscoverPlaceholder': "Skills doorzoeken",
   'customise.mcpDirectoryNoteAdmin': "Gepubliceerd door hun auteurs in het openbare MCP-register, niet beoordeeld door noevia. Beheerders kunnen gehoste servers toevoegen: elke wordt een gereedschapskist die een project moet kiezen, hij ontvangt nooit je wachtwoorden, en elke tool ervan vraagt eerst om bevestiging.",

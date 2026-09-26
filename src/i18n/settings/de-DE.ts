@@ -640,6 +640,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'serviceStatus.mcp.unconfigured3': " in der Umgebung dieser Installation auf Einträge der Form ",
   'serviceStatus.mcp.unconfigured4': ". Wenn hier früher verbundene Tools erschienen, hat die Compose-Datei der Installation diese Variable sehr wahrscheinlich verloren.",
   'serviceStatus.mcp.builtIn': "integriert",
+  'serviceStatus.mcp.added': "hinzugefügt",
   'serviceStatus.mcp.catalogueUnavailable': "Katalog nicht verfügbar",
   'serviceStatus.mcp.discovered.one': "{count} Tool gefunden",
   'serviceStatus.mcp.discovered.other': "{count} Tools gefunden",

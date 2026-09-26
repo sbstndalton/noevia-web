@@ -644,6 +644,9 @@ export const EN_GB_SETTINGS = {
   'serviceStatus.mcp.unconfigured3': " in this deployment's environment to ",
   'serviceStatus.mcp.unconfigured4': " entries. If connected tools used to appear here, the deployment's Compose file has most likely lost that variable.",
   'serviceStatus.mcp.builtIn': "built-in",
+  // #366: every server is tagged one or the other, so this list and Plugins → Added never look
+  // like they disagree about what "added" means.
+  'serviceStatus.mcp.added': "added",
   'serviceStatus.mcp.catalogueUnavailable': "Catalogue unavailable",
   'serviceStatus.mcp.discovered.one': "{count} tool discovered",
   'serviceStatus.mcp.discovered.other': "{count} tools discovered",

@@ -98,6 +98,9 @@ export default function App(): JSX.Element {
   const openModelManager = (model?: string) => { pendingFromSettingsRef.current = 'models'; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); };
   useEffect(() => { const open = () => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'plugins' }); }; window.addEventListener('noevia:open-customise', open); return () => window.removeEventListener('noevia:open-customise', open); }, []);
   useEffect(() => { const open = (e: Event) => { const model = (e as CustomEvent<{ model?: string }>).detail?.model; pendingFromSettingsRef.current = 'models'; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
+  // #366: Plugins → Added's empty state links here so "built-in" isn't just a claim — an admin can
+  // see those servers listed, tagged built-in vs added, in the same place Service status already shows them.
+  useEffect(() => { const open = () => openSettings('status'); window.addEventListener('noevia:open-service-status', open); return () => window.removeEventListener('noevia:open-service-status', open); }, []);
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account'); return fresh || !!readLastPlace()?.settings; });
   const [appMode, setAppMode] = useState<'chat'|'code'>('chat');
   // The Code page is chosen in the shared sidebar, so it lives here rather than in the workspace.
@@ -1259,7 +1262,7 @@ export default function App(): JSX.Element {
       <div className="app-main" ref={appMain}>
       {/* In flow at the top of the pane: it pushes the view down rather than covering its header. */}
       {featureFlags.codeHarness === true && <ActiveCodeTasks onOpenProject={(id) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}/>}
-      {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
+      {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects} onOpenProjectCode={(id) => { setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
       <div className="chat-views" style={{display:appMode==='code'&&showPreviews?'none':'contents'}}>
       {view.kind === 'plugins' && <Suspense fallback={<ViewLoading name="customise" active={appMode === 'chat' && !settingsOpen} />}><Customise.View onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/></Suspense>}
       {view.kind === 'archived' && <ArchivedChatsView onDelete={handleDeleteChat} onOpenData={() => openSettings('data')}/>}

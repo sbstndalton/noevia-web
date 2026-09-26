@@ -640,6 +640,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'serviceStatus.mcp.unconfigured3': " i miljøet til denne installasjonen til oppføringer på formen ",
   'serviceStatus.mcp.unconfigured4': ". Hvis tilkoblede verktøy tidligere vistes her, har Compose-filen til installasjonen mest sannsynlig mistet den variabelen.",
   'serviceStatus.mcp.builtIn': "innebygd",
+  'serviceStatus.mcp.added': "lagt til",
   'serviceStatus.mcp.catalogueUnavailable': "Katalog utilgjengelig",
   'serviceStatus.mcp.discovered.one': "{count} verktøy funnet",
   'serviceStatus.mcp.discovered.other': "{count} verktøy funnet",

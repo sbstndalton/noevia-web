@@ -640,6 +640,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'serviceStatus.mcp.unconfigured3': " i den här installationens miljö som poster på formen ",
   'serviceStatus.mcp.unconfigured4': ". Om anslutna verktyg tidigare visades här har installationens Compose-fil troligen tappat den variabeln.",
   'serviceStatus.mcp.builtIn': "inbyggd",
+  'serviceStatus.mcp.added': "tillagd",
   'serviceStatus.mcp.catalogueUnavailable': "Katalogen är inte tillgänglig",
   'serviceStatus.mcp.discovered.one': "{count} verktyg hittat",
   'serviceStatus.mcp.discovered.other': "{count} verktyg hittade",
