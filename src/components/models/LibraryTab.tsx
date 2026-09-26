@@ -102,6 +102,12 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   const shownFiles = new Set(servable.map(m => fileFor(m.name)?.key).filter(Boolean));
   const orphanFiles = filterOrphanFiles(files.filter(f => !shownFiles.has(f.key)), query, filter);
   return <div className="mm-tab">
+    {/* #430: the page's <h1> ("Models & routing") was followed directly by each model card's
+        own <h3> — no <h2> anywhere on the page. This section heading (visually hidden; the
+        "Your models" tab already carries the visible label) restores a valid h1 → h2 → h3
+        sequence for every card, plus the optional auto-tuning/orphan-files <h3> sections below,
+        without changing what the page looks like. */}
+    <h2 className="sr-only">{t('mm.tab.yours')}</h2>
     <div className="mm-library-bar">
       <p className="mm-note" role="status">{models ? <>{t.plural('mm.library.count', installed.length, { shown: servable.length })}{needle ? t('mm.library.matching', { query: query.trim() }) : ''}{filter !== 'all' ? t('mm.library.afterFiltering') : ''}</> : t('mm.library.loading')}
         {disk && <> · <span data-testid="models-disk">{t('mm.library.disk', { free: disk.freeH, total: disk.totalH, used: disk.usedPct.toFixed(0) })}</span></>}

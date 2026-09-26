@@ -159,9 +159,9 @@ button:disabled { opacity: .5; cursor: default; }
 .composer-hint { text-align: center; font-size: var(--text-caption2); padding-top: 10px; line-height: 1.5; }
 .chat-workspace.is-empty .transcript { flex: 0 0 auto; margin-top: auto; padding-bottom: 16px; }
 .chat-workspace.is-empty .empty-state { padding: 32px 0 12px; gap: 12px; }
-.chat-workspace.is-empty .empty-state h2 { font-size: clamp(25px, 3vw, 32px); font-weight: 500; letter-spacing: -.9px; color: var(--text-primary); text-align: center; }
+.chat-workspace.is-empty .empty-state h1 { font-size: clamp(25px, 3vw, 32px); font-weight: 500; letter-spacing: -.9px; color: var(--text-primary); text-align: center; }
 .chat-workspace.is-empty .composer { margin-bottom: auto; padding-top: 12px; }
-.empty-state h2 { font-weight: 500; color: var(--text-primary); }
+.empty-state h1 { font-weight: 500; color: var(--text-primary); }
 .tool-chip, .model-name { font-family: var(--font-ui); }
 .tool-approval { border-radius: 12px; }
 .tool-approval-actions .btn { min-height: 44px; height: auto; }
@@ -599,7 +599,10 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 /* Study 02: preserve app navigation and screen regions; redesign their hierarchy. */
 /* Existing six theme/palette combinations remain authoritative. */
 /* Typography carries the hierarchy; ornament does not. */
-.projects-head { padding-bottom:0;margin-bottom:0;align-items:center; }
+/* #428: the tab row's tallest child (the seg buttons, or Sort/New once they wrap onto their own
+   line at phone width) used to sit flush against this border-bottom divider with zero clearance —
+   padding-bottom restores the same var(--space-2) gap every other divider gets. */
+.projects-head { padding-bottom:var(--space-2);margin-bottom:0;align-items:center; }
 .projects-head .seg { gap:25px;align-self:stretch; }
 .projects-head .seg button { border-radius:0;background:none;padding:18px 0;border-bottom:2px solid transparent; }
 .projects-head .seg button.is-selected { background:none;border-bottom-color:var(--text-primary);color:var(--text-primary);font-weight:600;border-radius:0; }
@@ -669,8 +672,12 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 /* Writing and form controls remain opaque. */
 .composer-inner,.project-composer .composer-inner { background:var(--bg-surface);border:1px solid var(--control-border);border-radius:16px;box-shadow:0 4px 14px #00000008; }
 .settings-shell,.settings-navigation { background:var(--bg-app); }
-/* Restore a visible search affordance; the previous bare placeholder read as a label. */
-.projects-head .projects-search { border:1px solid var(--control-border);border-radius:8px;padding:9px 12px;margin-bottom:8px;min-height:38px; }
+/* Restore a visible search affordance; the previous bare placeholder read as a label.
+   #428: no margin-bottom here — same reasoning as the comment above .projects-sort: an
+   asymmetric bottom margin is included in the flex line's centred box, so it visually shifted
+   this control ~4px above Sort/New project instead of sharing their centre. .projects-head's
+   own flex `gap` already spaces a wrapped row. */
+.projects-head .projects-search { border:1px solid var(--control-border);border-radius:8px;padding:9px 12px;min-height:38px; }
 @media(max-width:700px){.projects-head .projects-search{margin-top:12px}.project-card{min-height:210px}.project-card-goal{-webkit-line-clamp:3}.app-mode-switch{padding:3px;gap:3px}.app-mode-switch button{min-height:36px}}
 @media(prefers-reduced-transparency:reduce),(prefers-contrast:more){.app-mode-switch,.account-popover,.ctx-menu,.popup{background:var(--bg-surface);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;border-color:var(--control-border)}.sidebar{background:var(--bg-chrome)}}
 @supports not (backdrop-filter:blur(1px)){.app-mode-switch,.account-popover,.ctx-menu,.popup{background:var(--bg-surface)}}

@@ -29,6 +29,9 @@ const DIARY_LEFT_TOLERANCE = 2;
 // must share a vertical centre and neither may run into the tab-row divider beneath them.
 const COLUMN_TOLERANCE = 1;
 const VCENTER_TOLERANCE = 2;
+// #428: the filter input must share Sort/New project's centre within 1px whenever all three
+// render on the same visual row (any width wide enough that the row does not wrap).
+const FILTER_VCENTER_TOLERANCE = 1;
 
 function probeProjectsLayout() {
   const rect = (el) => {
@@ -40,9 +43,12 @@ function probeProjectsLayout() {
     h1: rect(document.querySelector('.projects-title h1')),
     firstTab: rect(document.querySelector('.seg [role=tab]')),
     firstCard: rect(document.querySelector('.project-card, .projects-grid > *')),
+    search: rect(document.querySelector('.projects-search')),
     sort: rect(document.querySelector('.projects-sort')),
     newBtn: rect(document.querySelector('.projects-new')),
     head: rect(document.querySelector('.projects-head')),
+    seg: rect(document.querySelector('.seg')),
+    spaceUnit: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--space-2')) || 8,
   };
 }
 
@@ -149,20 +155,36 @@ async function run(browser, cfg, report) {
       findings.push({ kind: 'projects-column-mismatch', tag, lefts, tolerance: COLUMN_TOLERANCE });
     }
   }
-  // Once Sort and New project wrap onto their own row at phone width, they must read as one row:
-  // matching vertical centres, and neither may overlap the tab-row divider beneath them.
-  if (phone) {
-    if (!layout.sort || !layout.newBtn || !layout.head) {
-      findings.push({ kind: 'projects-sort-new-missing', tag, layout });
-    } else {
-      const center = (r) => (r.top + r.bottom) / 2;
-      const dCenter = Math.abs(center(layout.sort) - center(layout.newBtn));
-      if (dCenter > VCENTER_TOLERANCE) {
-        findings.push({ kind: 'projects-sort-new-vcenter-mismatch', tag, sort: layout.sort, newBtn: layout.newBtn, delta: dCenter, tolerance: VCENTER_TOLERANCE });
+  // Sort and New project must always read as one row: matching vertical centres (checked at
+  // every width, not only once they wrap onto their own line at phone width), and neither may
+  // crowd the tab-row divider beneath them.
+  if (!layout.sort || !layout.newBtn || !layout.head) {
+    findings.push({ kind: 'projects-sort-new-missing', tag, layout });
+  } else {
+    const center = (r) => (r.top + r.bottom) / 2;
+    const overlaps = (a, b) => a && b && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+    const dCenter = Math.abs(center(layout.sort) - center(layout.newBtn));
+    if (dCenter > VCENTER_TOLERANCE) {
+      findings.push({ kind: 'projects-sort-new-vcenter-mismatch', tag, sort: layout.sort, newBtn: layout.newBtn, delta: dCenter, tolerance: VCENTER_TOLERANCE });
+    }
+    // #428 (1440px): the filter input drifted ~4px above Sort/New project on the one-row
+    // (non-wrapped) layout. Only compared when it actually shares their row — once it wraps
+    // onto its own line above them (narrow widths), the two rows are not expected to align.
+    if (layout.search && overlaps(layout.search, layout.sort) && overlaps(layout.search, layout.newBtn)) {
+      const dFilter = Math.max(Math.abs(center(layout.search) - center(layout.sort)), Math.abs(center(layout.search) - center(layout.newBtn)));
+      if (dFilter > FILTER_VCENTER_TOLERANCE) {
+        findings.push({ kind: 'projects-filter-sort-new-vcenter-mismatch', tag, search: layout.search, sort: layout.sort, newBtn: layout.newBtn, delta: dFilter, tolerance: FILTER_VCENTER_TOLERANCE });
       }
-      const dividerY = layout.head.bottom;
-      if (layout.sort.bottom > dividerY + 0.5 || layout.newBtn.bottom > dividerY + 0.5) {
-        findings.push({ kind: 'projects-sort-new-overlaps-divider', tag, sort: layout.sort, newBtn: layout.newBtn, dividerY });
+    }
+    // #428 (390px): the tab-row divider ran along the bottom edge of whichever row (the seg
+    // tabs, the filter input, or Sort/New once wrapped) sits lowest, with no clearance at all.
+    // Every present control needs at least one --space-2 of clearance above the divider, at
+    // every width — not only once wrapped.
+    const dividerY = layout.head.bottom;
+    const spaceUnit = layout.spaceUnit || 8;
+    for (const [name, r] of [['seg', layout.seg], ['search', layout.search], ['sort', layout.sort], ['newBtn', layout.newBtn]]) {
+      if (r && r.bottom > dividerY - spaceUnit + 0.5) {
+        findings.push({ kind: 'projects-control-crowds-divider', tag, control: name, rect: r, dividerY, spaceUnit });
       }
     }
   }

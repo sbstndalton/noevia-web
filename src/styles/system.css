@@ -14,14 +14,14 @@
 /* ── Type ─────────────────────────────────────────────────────────────────────
    Display face for greetings and page titles; the interface face for everything else.
    Sizes keep the existing --text-* scale (lint:design enforces it). Diary keeps its own. */
-.app .chat-workspace .empty-state h2,
+.app .chat-workspace .empty-state h1,
 :is(.settings-title, .projects-head, .archived-head, .coding-welcome, .auth-card) h1,
 .project-main h1.project-title {
   font-family: var(--font-display);
   font-weight: var(--display-weight, 600);
   letter-spacing: var(--display-tracking, -0.02em);
 }
-.app .chat-workspace .empty-state h2 { color: var(--text-primary); line-height: var(--leading-tight); }
+.app .chat-workspace .empty-state h1 { color: var(--text-primary); line-height: var(--leading-tight); }
 
 /* ── Sidebar hierarchy ────────────────────────────────────────────────────────
    Destinations (New chat, Projects, Diary…) read first; history reads second; section

@@ -51,7 +51,7 @@ const DISPLAY = { editorial: 'Fraunces', contemporary: 'Geist', glass: 'Sora' };
         const state = await page.evaluate(() => {
           const root = document.documentElement;
           const inner = document.querySelector('.composer-inner');
-          const h = document.querySelector('.chat-workspace .empty-state h2');
+          const h = document.querySelector('.chat-workspace .empty-state h1');
           const side = document.querySelector('.app .sidebar.pane');
           const stack = document.querySelector('.app .app-stack.pane');
           return {
@@ -122,6 +122,24 @@ const DISPLAY = { editorial: 'Fraunces', contemporary: 'Geist', glass: 'Sora' };
       const sheetStyle = await sheet.evaluate((e) => ({ radius: getComputedStyle(e).borderTopLeftRadius, filter: getComputedStyle(e).backdropFilter }));
       if (family === 'contemporary') assert.equal(sheetStyle.radius, '28px', 'M3 sheets and dialogs take 28px');
       if (family === 'glass') assert.match(sheetStyle.filter, /blur\(/, 'glass sheet is frosted');
+      // #316: no model, no active project (this fixture's Home context) — ModelChooser's
+      // early-return "Open a project…" line used to sit flush against the panel's left edge
+      // (.mp-col's padding never applied to it), clipping the round "O" against the panel's own
+      // overflow:hidden. A real inset, not just non-negative overlap, is the actual fix.
+      const emptyLine = sheet.locator('.rail-empty');
+      await emptyLine.waitFor();
+      // Measure the rendered glyph itself (a Range around the first character), not the
+      // element's own border box — .rail-empty carries no margin, so its box stays flush
+      // against .mp-body regardless of padding; only the glyph's own position proves the text
+      // actually got breathing room instead of being clipped against the panel edge.
+      const emptyInset = await page.evaluate(([panelSel, lineSel]) => {
+        const panel = document.querySelector(panelSel), line = document.querySelector(lineSel);
+        const textNode = line.firstChild;
+        const range = document.createRange();
+        range.setStart(textNode, 0); range.setEnd(textNode, 1);
+        return range.getBoundingClientRect().left - panel.getBoundingClientRect().left;
+      }, ['.mp-panel', '.rail-empty']);
+      assert.ok(emptyInset >= 12, `${family} model-sheet empty state's first glyph has a real left inset, not clipped against the panel edge: ${emptyInset}px`);
       await shot('sheet');
       await page.keyboard.press('Escape');
       if (await sheet.isVisible()) await page.mouse.click(5, 5);

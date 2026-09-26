@@ -355,7 +355,13 @@ export function ChatView({
       <div className="transcript" ref={scrollRef} onScroll={onScroll}>
         {messages.length === 0 && (
           <div className="empty-state">
-            <h2>{projectName ? <>{projectLead[0]}{project && <ProjectIcon project={project} size={26}/>}{projectName}{projectLead[1]}</> : t('chat.empty.title')}</h2>
+            {/* #429: this is the page's only heading — Home (no project) and a project's own
+                fresh chat (view.kind==='chat', mutually exclusive with ProjectView's own
+                <h1 className="project-title">) both rendered no <h1> at all, only this <h2>,
+                which itself only exists while the transcript is empty. Visual size/weight is
+                unchanged; only the semantic level moves up to close the gap ahead of
+                "Recent chats" (<h2 id="home-recents-title">) below it. */}
+            <h1>{projectName ? <>{projectLead[0]}{project && <ProjectIcon project={project} size={26}/>}{projectName}{projectLead[1]}</> : t('chat.empty.title')}</h1>
             <p>
               {projectName ? t('chat.empty.projectIntro') : t('chat.empty.intro')}
             </p>

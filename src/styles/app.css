@@ -375,7 +375,7 @@ body { margin: 0; background: var(--bg); }
   flex-grow: 1; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 10px; color: var(--text-faint); padding: 40px;
 }
-.empty-state h2 { margin: 0; font-size: var(--text-headline); font-weight: 700; color: var(--text-secondary); }
+.empty-state h1 { margin: 0; font-size: var(--text-headline); font-weight: 700; color: var(--text-secondary); }
 .empty-state p { margin: 0; font-size: var(--text-footnote); max-width: 420px; text-align: center; line-height: 1.6; }
 
 /* ── Diary view ──────────────────────────────────────────── */
@@ -789,7 +789,7 @@ button:disabled { cursor: not-allowed; }
 .composer-input { resize: vertical; min-height: 48px; max-height: 220px; line-height: 1.65; }
 .send-btn { width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; }
 .composer-hint { font-size: var(--text-caption2); line-height: 1.6; padding-top: 10px; color: var(--text-secondary); }
-.empty-state h2, .diary-zero-hero h2 { font-size: clamp(24px, 3vw, 34px); font-weight: 600; letter-spacing: -.04em; }
+.empty-state h1, .diary-zero-hero h2 { font-size: clamp(24px, 3vw, 34px); font-weight: 600; letter-spacing: -.04em; }
 .empty-state p, .diary-zero-hero p { max-width: 48ch; margin-left: auto; margin-right: auto; line-height: 1.8; color: var(--text-secondary); }
 .projects-head h1 { letter-spacing: -.04em; }
 .month-card, .project-card { border-radius: 16px; padding: 24px; }

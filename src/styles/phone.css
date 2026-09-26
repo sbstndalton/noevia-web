@@ -77,7 +77,7 @@
   /* An empty chat greets you at the top of the column, not in the middle of it. */
   .app .chat-workspace.is-empty > .transcript { flex: 1; margin-top: 0; justify-content: flex-start; padding-top: var(--space-6); }
   .app .chat-workspace.is-empty .empty-state { flex-grow: 0; padding: var(--space-6) 0 0; }
-  .app .chat-workspace.is-empty .empty-state h2 { font-size: var(--text-title1); }
+  .app .chat-workspace.is-empty .empty-state h1 { font-size: var(--text-title1); }
   .app .chat-workspace.is-empty > .composer { margin-bottom: 0; padding-top: 6px; }
   .app .chat-workspace .composer-inner.pane { padding: 10px 10px 8px; }
 }
@@ -564,6 +564,12 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .mp-body { padding: 0; flex: 1; min-height: 0; overflow: hidden; }
 .mp-grid { display: grid; grid-template-columns: 1fr; min-height: 0; height: 100%; overflow-y: auto; }
 .mp-col { display: flex; flex-direction: column; gap: 10px; padding: 16px; min-width: 0; }
+/* #316: with no active project (Home/a free chat), ModelChooser returns a bare .rail-empty
+   line instead of the .mp-col grid — .mp-col supplies the panel's only horizontal inset, so
+   that line sat flush against .mp-body's left edge, and with zero padding + this panel's own
+   overflow:hidden, the round "O" of "Open a project…" rendered clipped in every theme family.
+   Same inset as .mp-col, in every theme family and at every width. */
+.mp-body > .rail-empty { padding: 16px; }
 .mp-col-title { margin: 0; font-size: var(--text-footnote); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); }
 .mp-col-tools { border-top: 1px solid var(--border-subtle); }
 @media (min-width: 720px) {

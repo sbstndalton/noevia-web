@@ -41,15 +41,24 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   assert.equal(loads.length,2);assert.equal(loads[0].save_options,undefined);assert.equal(loads[1].save_options,true);assert.equal(loads[0].ctx_size,32768);assert.match(loads[0].llamacpp_args,/--tensor-split 1,1/);assert.match(loads[0].llamacpp_args,/--spec-type draft-mtp/);
   assert.equal(await page.getByRole('combobox',{name:'Enable MTP for Unsupported',exact:true}).isDisabled(),true);
   await navClick(page,'New chat');
+  // #333/#365: the inference-details footer (and the MTP acceptance bar inside it) only renders
+  // once the current chat has at least one message or telemetry (#239/#357) — a blank New chat
+  // no longer shows it (statsbar-visibility.ts, tests/statsbar-visibility.test.cjs). Establish
+  // that with one synthetic exchange before checking MTP acceptance.
+  const box=page.getByRole('textbox',{name:'Message',exact:true});
+  await box.fill('Synthetic MTP telemetry check');await box.press('Enter');
+  await page.getByText('Synthetic chat answer',{exact:true}).waitFor();
   // The inference pill starts collapsed; MTP acceptance lives in its details.
   // Wide screens show the details with no control; phones reveal them from the bar.
   const pill=page.getByRole('region',{name:'Inference details'}).locator('button.stats-bar');if(await pill.count()&&(await pill.getAttribute('aria-expanded'))!=='true')await pill.click();
-  await page.getByRole('progressbar',{name:'MTP acceptance for Synthetic native'}).waitFor();assert.equal(await page.getByRole('progressbar').getAttribute('value'),'0.75');
-  for(const diary of [false,true]){
-   if(diary)await navClick(page,'Diary');
-   for(const width of [375,768,1440]){await page.setViewportSize({width,height:950});const footer=page.getByRole('region',{name:'Inference details'});assert.equal(await footer.isVisible(),true);assert.equal(await footer.locator('summary').count(),0);assert.ok(await footer.evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-   if(process.env.QA_SCREENSHOTS)await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/mtp-${diary}-${width}.png`});}
-  }
+  const mtpBar=page.getByRole('progressbar',{name:'MTP acceptance for Synthetic native'});await mtpBar.waitFor();assert.equal(await mtpBar.getAttribute('value'),'0.75');
+  for(const width of [375,768,1440]){await page.setViewportSize({width,height:950});const footer=page.getByRole('region',{name:'Inference details'});assert.equal(await footer.isVisible(),true);assert.equal(await footer.locator('summary').count(),0);assert.ok(await footer.evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   if(process.env.QA_SCREENSHOTS)await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/mtp-chat-${width}.png`});}
+  // #365: the footer belongs to chats only now — it deliberately no longer renders on Diary (it
+  // used to overlap Diary's own calendar header there). Confirmed absent, not just hidden.
+  await navClick(page,'Diary');
+  await page.waitForTimeout(300);
+  assert.equal(await page.getByRole('region',{name:'Inference details'}).count(),0,'Diary no longer shows the inference-details footer (#365)');
   metricsAvailable=false;
   assert.equal((await api(page,'/api/chat',{spaceId:'diary',message:'Synthetic telemetry test',history:[]})).status,200);
   let sample=(await api(page,'/api/stats')).body.mtp[0];assert.equal(sample.rate,.5);assert.equal(sample.source,'last response');
@@ -64,6 +73,6 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   const invite=await api(page,'/api/admin/invitations',{role:'member'}),member=await browser.newPage();await member.goto(origin);
   assert.equal((await api(member,'/api/auth/invitations/accept',{token:invite.body.token,username:'memberqa',displayName:'Member',password:'synthetic member password',diaryEnabled:false})).status,201);
   assert.equal((await api(member,'/api/models/load',{name:'Synthetic native',mtp:true})).status,403);
-  console.log('PASS MTP selector, pre-load flag/options preservation, post-success persistence, failed-load safety, unsupported/member rejection and always-visible Chat/Diary acceptance bar');
+  console.log('PASS MTP selector, pre-load flag/options preservation, post-success persistence, failed-load safety, unsupported/member rejection, the chat-only inference-details/MTP acceptance bar (#365) and its deliberate absence on Diary');
  }catch(e){for(const p of browser.contexts().flatMap(c=>c.pages())){console.error(await p.locator('body').innerText());await p.screenshot({path:'/tmp/noevia-mtp-failure.png'});}throw e;}finally{await browser.close();server.kill('SIGTERM');await once(server,'exit');await new Promise(r=>upstream.close(r));fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
