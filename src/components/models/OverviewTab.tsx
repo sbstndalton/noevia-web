@@ -89,7 +89,11 @@ function RecoverPanel({ onTab }: { onTab: (tab: 'discover' | 'hardware') => void
     const [autotune, calibration, downloads, engines] = await Promise.all([
       read('/api/models/autotune?model='), read('/api/models/calibration?model='),
       mm<{ jobs: { id: string; filename: string; repo: string; status: string; error: string | null }[] }>('downloads').then((v) => v.jobs || []).catch(() => []),
-      mm<{ backends: Backend[] }>('backends').then((v) => v.backends).catch(() => null),
+      // `v.backends` is missing rather than `[]` when the endpoint answers with an unexpected or
+      // malformed body (a stale server, a proxy swallowing the route) — `?? null` keeps that the
+      // same "unavailable" state as a rejected request instead of a bare `undefined` that crashes
+      // the `!backends.length` read below.
+      mm<{ backends: Backend[] }>('backends').then((v) => v.backends ?? null).catch(() => null),
     ]);
     setItems(recoveryItems({ autotune, calibration, downloads, now: Date.now() })); setBackends(engines);
   }, []);

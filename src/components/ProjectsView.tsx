@@ -59,15 +59,16 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
   return (
     <div className="main projects-workspace">
       <div className="settings-scroll">
-        <div className="projects-hero">
-          <div><h1>{t('projects.title')}</h1>
-          <p className="projects-hero-sub">
+        {/* #413: one page-header pattern (display title + intro, shared with Settings and
+            Customise) instead of Projects' own oversized hero — see docs/design-notes/page-headers.md.
+            The primary action moves down beside the tabs, where every other page's header-adjacent
+            action already lives (no title ever carries an inline control). */}
+        <div className="settings-title projects-title"><h1>{t('projects.title')}</h1>
+          <p>
             {projects.length === 0
               ? t('projects.heroEmpty')
               : `${t.plural('projects.count.projects', activeProjects.length)} · ${t.plural('projects.count.chats', chatCount)}`}
-          </p></div>
-          {/* With no projects the empty state carries the one primary action. */}
-          {projects.length > 0 && <button className="btn btn-primary" onClick={() => setCreating(true)}><PlusIcon /><span>{t('projects.newProject')}</span></button>}
+          </p>
         </div>
         <div className="projects-head">
           <div className="seg" role="tablist" aria-label={t('projects.listLabel')} onKeyDown={e => {
@@ -97,6 +98,8 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
             <option value="recent">{t('projects.sortRecent')}</option>
             <option value="name">{t('projects.sortName')}</option>
           </select>
+          {/* With no projects the empty state carries the one primary action. */}
+          {projects.length > 0 && <button className="btn btn-primary projects-new" onClick={() => setCreating(true)}><PlusIcon /><span>{t('projects.newProject')}</span></button>}
         </div>
 
         <div role="tabpanel" id={`${tabsId}-panel`} aria-labelledby={`${tabsId}-${tab}`}>

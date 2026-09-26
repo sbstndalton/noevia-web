@@ -85,9 +85,14 @@ label.select > svg { position: absolute; right: 10px; pointer-events: none; colo
 .noevia-switch:focus-visible, .settings-detail .set-row-control input[type='checkbox']:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 /* ── Settings pages ─────────────────────────────────────────────────────── */
-.settings-stage .settings-title { margin: 0 0 var(--settings-title-gap); }
-.settings-stage .settings-title h1, .settings-stage .connector-page h1 { margin: 0; font-family: var(--font-display); font-size: var(--text-title1); font-weight: 600; letter-spacing: var(--tracking-title); line-height: var(--leading-tight); }
-.settings-stage .settings-title p, .settings-stage .lede { margin: var(--space-2) 0 0; max-width: 64ch; color: var(--text-secondary); font-size: var(--text-callout); line-height: var(--leading-body); }
+/* #413: the page-title block (display title + intro) is shared by every Settings category
+   (.settings-stage) and by top-level pages built the same way — Projects, the model manager —
+   which wrap their own content in .settings-scroll instead of the Settings dialog's stage. Only
+   the title block itself generalises here; the group/section rhythm below stays Settings-only,
+   since Projects has no groups to space. */
+:is(.settings-stage, .settings-scroll) .settings-title { margin: 0 0 var(--settings-title-gap); }
+:is(.settings-stage, .settings-scroll) .settings-title h1, .settings-stage .connector-page h1 { margin: 0; font-family: var(--font-display); font-size: var(--text-title1); font-weight: 600; letter-spacing: var(--tracking-title); line-height: var(--leading-tight); }
+:is(.settings-stage, .settings-scroll) .settings-title p, .settings-stage .lede { margin: var(--space-2) 0 0; max-width: 64ch; color: var(--text-secondary); font-size: var(--text-callout); line-height: var(--leading-body); }
 .settings-stage .lede-tight { margin-top: calc(-1 * var(--space-1)); margin-bottom: var(--space-3); }
 .settings-stage h2:where(:not(.settings-navigation h2)) { margin: var(--settings-group-gap) 0 var(--settings-content-gap); font-size: var(--text-headline); font-weight: 600; letter-spacing: var(--tracking-title); }
 /* Rhythm (#372; tokens.css spacing roles): every category reads the same steps. The page title is
@@ -116,8 +121,8 @@ label.select > svg { position: absolute; right: 10px; pointer-events: none; colo
 .settings-stage .settings-live-content > :not(.settings-title, h2) + :is(div, section) { margin-top: calc(var(--settings-group-gap) - var(--settings-content-gap)); }
 .settings-stage .settings-live-content > section > .route-note { margin-block: var(--settings-content-gap) 0; }
 /* Users: the reload and any error sit a content step below the list, not jammed under it. */
-.settings-stage .settings-users > :is(.card-list, .modal-err) + :is(.modal-err, .popup-tab) { margin-top: var(--settings-content-gap); }
-.settings-stage .card-list > .route-note:first-child { margin-top: 0; }
+.settings-stage .settings-users > :is(.card-list, .set-rows, .users-add, .modal-err) + :is(.modal-err, .popup-tab) { margin-top: var(--settings-content-gap); }
+.settings-stage :is(.card-list, .set-rows) > .route-note:first-child { margin-top: 0; }
 .settings-stage .rail-label { margin: var(--space-8) 0 var(--space-3); font-size: var(--text-headline); }
 
 /* A group of rows is one surface; rows divide with hairlines. */

@@ -15,7 +15,7 @@
    Display face for greetings and page titles; the interface face for everything else.
    Sizes keep the existing --text-* scale (lint:design enforces it). Diary keeps its own. */
 .app .chat-workspace .empty-state h2,
-:is(.settings-title, .projects-hero, .projects-head, .archived-head, .coding-welcome, .auth-card) h1,
+:is(.settings-title, .projects-head, .archived-head, .coding-welcome, .auth-card) h1,
 .project-main h1.project-title {
   font-family: var(--font-display);
   font-weight: var(--display-weight, 600);

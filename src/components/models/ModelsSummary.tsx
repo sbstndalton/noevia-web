@@ -28,7 +28,9 @@ export function ModelsSummary({ models, modelsError, health, stats, onOpen }: { 
   return <div className="mm-summary">
     <div className="settings-title"><h1>{t('settings.section.models')}</h1><p>{t('models.intro')}</p></div>
     {modelsError && <p role="alert" className="modal-err">{modelsError}</p>}
-    <div className="card-list">
+    {/* #414: the grouped surface (.set-rows), not a bare .card-list — see noevia.css's
+        .set-rows .model-row rules for the row treatment this now shares with Users/Service status. */}
+    <div className="set-rows">
       <div className="model-row"><span className={`model-dot${health.inferenceUp ? '' : ' down'}`}/><span className="model-name">{t('models.engine')}</span><span className="model-role">{health.inferenceUp ? t('models.available') : t('models.unavailable')}{stats?.tokensPerSecond != null ? ` · ${t('models.rate', { rate: stats.tokensPerSecond.toFixed(1) })}` : ''}</span></div>
       <div className="model-row"><span className="model-name">{t('models.installed')}</span><span className="model-role">{modelsError ? t('models.notAvailable') : installed}</span></div>
       <div className="model-row"><span className="model-name">{t('models.autoRouting')}</span><span className="model-role">{routing}</span></div>

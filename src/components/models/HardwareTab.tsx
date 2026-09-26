@@ -22,8 +22,11 @@ export function HardwareTab() {
   const tRef = useRef(t); tRef.current = t;
   useEffect(() => {
     let live = true;
+    // `b.backends`/`h.history` are missing rather than `[]`/`null` when an endpoint answers with
+    // an unexpected body — the same defensive default as OverviewTab's RecoverPanel, so `host[...]`
+    // and `backends.length` below never read off an undefined value.
     const tick = () => Promise.all([mm<{ backends: Backend[] }>('backends'), mm<{ history: HostPoint[] }>('host')])
-      .then(([b, h]) => { if (live) { setBackends(b.backends); setHost(h.history); setError(''); } })
+      .then(([b, h]) => { if (live) { setBackends(b.backends ?? null); setHost(h.history || []); setError(''); } })
       .catch(e => { if (live) setError(errorText(e, tRef.current('mm.hw.unavailable'))); });
     void tick();
     const timer = setInterval(() => { if (document.visibilityState === 'visible') void tick(); }, 2000);

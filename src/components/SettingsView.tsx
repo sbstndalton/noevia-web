@@ -38,7 +38,9 @@ export function SettingsView({ models, modelsError, health, stats, diaryEnabled,
     {section === 'diary' && <><div className="settings-title"><h1>{t('settings.section.diary')}</h1><p>{t('diarySettings.lede')}</p></div><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
     {section === 'providers' && <ProvidersCard health={health} />}
     {section === 'models' && <ModelsSummary models={models} modelsError={modelsError} health={health} stats={stats} onOpen={onOpenModelManager}/>}
-    {section === 'status' && <><div className="settings-title"><h1>{t('settings.section.status')}</h1></div><McpStatus /><h2>{t('serviceStatus.connected')}</h2><div className="card-list">{([['inference', t('serviceStatus.inference'), health.inferenceUp], ['diary', t('serviceStatus.diary'), diaryEnabled ? health.diaryUp : null]] as const).map(([id, label, up])=><div className="model-row" key={id}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?t('models.available'):up===false?t('models.unavailable'):t('serviceStatus.notAvailable')}</span></div>)}
+    {/* #414: the "Connected" list moves onto .set-rows, the same grouped surface Appearance/Data
+        already use, instead of the bare .card-list (see noevia.css's .set-rows .model-row rules). */}
+    {section === 'status' && <><div className="settings-title"><h1>{t('settings.section.status')}</h1></div><McpStatus /><h2>{t('serviceStatus.connected')}</h2><div className="set-rows">{([['inference', t('serviceStatus.inference'), health.inferenceUp], ['diary', t('serviceStatus.diary'), diaryEnabled ? health.diaryUp : null]] as const).map(([id, label, up])=><div className="model-row" key={id}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?t('models.available'):up===false?t('models.unavailable'):t('serviceStatus.notAvailable')}</span></div>)}
       {/* #340: tri-state — 'degraded' means the index is installed but the embedding endpoint
           could not be reached; ragAvailable() alone (native deps only) cannot tell the two apart.
           Older/mixed deployments that only send ragAvailable fall back to the boolean. */}
@@ -72,7 +74,7 @@ function DiaryAddonCard({ enabled, onChange }: { enabled: boolean; onChange: (en
       setBusy(false);
     }
   };
-  return <div><div className="rail-label" style={{ marginBottom: 12 }}>{t('diarySettings.optionalApps')}</div><div className="card-list">
+  return <div><div className="rail-label" style={{ marginBottom: 12 }}>{t('diarySettings.optionalApps')}</div><div className="set-rows">
     <div className="model-row"><span className={`model-dot${enabled ? '' : ' down'}`} /><div className="model-name-group"><span className="model-name">{t('serviceStatus.diary')}</span><span className="model-quant">{t('diarySettings.diaryDesc')}</span></div><button className="popup-tab" disabled={busy} onClick={() => void toggle()}>{busy ? t('diarySettings.saving') : enabled ? t('diarySettings.disable') : t('diarySettings.enable')}</button></div>
   </div>{error && <p className="modal-err" role="alert">{error}</p>}<p className="route-note">{t('diarySettings.savedNote')}</p></div>;
 }
@@ -262,7 +264,10 @@ function UsersCard(): JSX.Element {
   return <div className="settings-users">
     {title}
     {notice && <p className="route-note" role="status">{notice}</p>}
-    <div className="card-list">
+    {/* #414: the account list moves onto .set-rows (the same grouped surface Appearance/Data use)
+        instead of a borderless .card-list; "Copy invitation link" sits below it, as every other
+        .set-rows' own "add" action already does (MemorySettings.tsx's .memory-add). */}
+    <div className="set-rows">
       {users.length === 0 && !loading && <p className="route-note">{t('users.empty')}</p>}
       {users.map(u => <div key={u.id}>
         <div className="model-row"><div className="model-name-group"><span className="model-name">{u.displayName}</span><span className="model-quant">@{u.username} · {u.role}{u.disabled ? ` · ${t('users.disabled')}` : ''}</span></div>{u.id !== user.id && <>
@@ -271,6 +276,8 @@ function UsersCard(): JSX.Element {
           <button className="recents-del" title={t('users.deleteUser')} aria-label={t('users.deleteUserNamed', { username: u.username })} disabled={!!busy[u.id] || loading} onClick={() => { const typed = window.prompt(t('users.deletePrompt', { username: u.username })); if (typed === u.username) void act(u.id, t('users.deleteAccount'), () => deleteUser(u.id, typed), t('users.accountDeleted'), true, true); }}><ShellIcon name="close" size={16}/></button>
         </>}</div>{actionFeedback(u.id)}
       </div>)}
+    </div>
+    <div className="users-add">
       <button className="modal-btn secondary" disabled={!!busy.invitation || loading} onClick={() => void createLink('invitation')}><ShellIcon name="plus" size={16}/>{t('users.copyInvitation')}</button>
       {actionFeedback('invitation')}
     </div>

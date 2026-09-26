@@ -523,6 +523,10 @@
   --settings-group-gap: var(--space-10);  /* one group → the next group's heading */
   --settings-content-gap: var(--space-3); /* heading or description → the group itself */
   --settings-heading-gap: var(--space-1); /* heading → its own description */
+  /* #413: Diary's compact top bar and its own composer/calendar column used one fluid gutter
+     (.diary-compose) and one fixed inset (.chat-header) — a ~30px gap at 1440px. Both now read
+     this one value; see docs/design-notes/page-headers.md. */
+  --diary-gutter: clamp(16px, 4vw, 64px);
 
   /* Radius hierarchy (brief §18): compact → row → card/menu → pane/modal → pill. */
   --radius-xs: 6px;

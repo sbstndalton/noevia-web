@@ -122,6 +122,12 @@ button:disabled { opacity: .5; cursor: default; }
 
 /* Chat: one reading column, unboxed assistant prose, and a grounded composer. */
 .chat-header { min-height: 64px; padding: 16px 68px 16px 28px; border-bottom: 0; background: transparent; }
+/* #413: Diary keeps its own compact top bar rather than a page title — a deliberate full-bleed
+   workspace, documented in docs/design-notes/page-headers.md — but its left edge must track the
+   diary content's own responsive gutter (.diary-compose, .diary-calendar-section) instead of
+   chat's fixed 28px inset; they disagreed by ~30px at 1440px. Left edge and type scale only:
+   .diary-home-link already matches chat's own .header-title (--text-callout/500). */
+.diary-header { padding-left: var(--diary-gutter); }
 .header-title, .crumb-back { font-size: var(--text-callout); font-weight: 500; }
 .model-pill { background: transparent; padding: 7px 9px; border-radius: 8px; color: var(--text-primary); }
 .model-pill:hover { background: var(--nav-hover); }
@@ -168,12 +174,18 @@ button:disabled { opacity: .5; cursor: default; }
 .stats-label, .stats-value { font-weight: 400; }
 
 /* Project library: a measured grid, plain metadata, and a clear page header. */
-.projects-workspace .settings-scroll { padding: 0 36px; }
-.projects-hero, .projects-head, .projects-grid { max-width: 1000px; padding-left: 0; padding-right: 0; }
-.projects-hero { padding-top: 76px; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
-.projects-hero h1 { font-size: var(--text-large); font-weight: 600; letter-spacing: -.9px; }
-.projects-hero-sub { margin-top: 8px; }
-.projects-head { padding-top: 32px; padding-bottom: 18px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+/* #413: Projects reads the same page-title pattern as Settings/Customise (docs/design-notes/
+   page-headers.md) — the title's own size and top inset come from .settings-title, generalised
+   to .settings-scroll pages in primitives.css; only the content column's own width stays 1000px. */
+.projects-workspace .settings-scroll { padding: var(--space-10) 36px 0; }
+/* app.css's .projects-head/.projects-grid rules are left over from the old centred-hero layout
+   and still carry margin-inline:auto — reset it here so the tab row and card grid sit flush left
+   in the same content column as .projects-title, instead of centring within a wider .settings-scroll. */
+.projects-head, .projects-grid { max-width: 1000px; margin-inline: 0; padding-left: 0; padding-right: 0; }
+.projects-title { max-width: 1000px; }
+/* padding-top:0 removes app.css's redundant 18px — .settings-title's own margin-bottom already
+   supplies the standard title→content gap every other .settings-scroll page uses. */
+.projects-head { padding-top: 0; padding-bottom: 18px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
 .projects-head .projects-search { margin-left: auto; flex: 0 1 230px; min-width: 130px; border-radius: 9px; background: transparent; }
 .seg { background: transparent; border: 0; padding: 0; gap: 5px; }
 .seg button { color: var(--text-secondary); font-size: var(--text-footnote); font-weight: 400; padding: 8px 12px; }
@@ -264,10 +276,10 @@ button:disabled { opacity: .5; cursor: default; }
 @media (max-width: 519px) {
   .app-main { margin: 0; }
   .sidebar:not(.coding-sidebar) { padding-top: 12px; }
+  /* .main.projects-workspace already clears the floating nav-drawer toggle (padding-top: 60px,
+     below); the scroll area itself only needs its own horizontal inset here. */
   .projects-workspace .settings-scroll { padding: 0 20px; }
-  .projects-hero { padding-top: 64px; flex-wrap: wrap; gap: 16px; }
-  .projects-hero h1 { font-size: var(--text-title1); }
-  .projects-head { padding-top: 24px; padding-right: 0; gap: 12px; }
+  .projects-head { padding-right: 0; gap: 12px; }
   .projects-head .projects-search { flex: 1 1 100%; max-width: none; }
   .project-card { padding: 18px; }
   .project-card-x { opacity: 1; }
@@ -302,6 +314,12 @@ button:disabled { opacity: .5; cursor: default; }
 .sidebar .sidebar-history .spaces { overflow: visible; flex-shrink: 0; }
 .sidebar-history .divider { display: none; }
 .sidebar .sidebar-history .section-label { margin-top: 18px; }
+/* #415: the Code-mode sidebar's own project/task lists reuse .project-disclosure (the same row a
+   chat-mode project uses to open) rather than inventing a new row style. */
+.coding-project-list, .coding-task-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.coding-project-list .project-disclosure, .coding-task-list .project-disclosure { width: 100%; }
+.coding-task-status { flex: none; font-size: var(--text-caption2); font-weight: 500; color: var(--text-secondary); }
+.coding-task-status-waiting_approval { color: var(--accent-text); }
 .msg[data-role='user'] .msg-user-row { max-width: 100%; background: var(--bg-surface-hover); border-radius: 18px; }
 .assistant-card .msg-meta { border: 0; font-family: var(--font-ui); margin-top: 8px; }
 @media (max-width: 900px) { .project-rail { display: flex; } }
@@ -520,7 +538,7 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 .diary-layout { overflow: hidden; }
 .diary-primary { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
 .diary-content-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-anchor: none; padding: 32px clamp(16px, 4vw, 64px); }
-.diary-composer-dock { flex: none; padding: 8px clamp(16px, 4vw, 64px) 12px; background: var(--bg-app); }
+.diary-composer-dock { flex: none; padding: 8px var(--diary-gutter) 12px; background: var(--bg-app); }
 .diary-composer-dock .diary-compose { margin: 0 auto; }
 .diary-primary > .diary-save-status { flex: none; margin: 0; padding: 0 20px 8px; }
 .diary-context { min-height: 0; overflow-y: auto; }
@@ -581,16 +599,16 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 /* Study 02: preserve app navigation and screen regions; redesign their hierarchy. */
 /* Existing six theme/palette combinations remain authoritative. */
 /* Typography carries the hierarchy; ornament does not. */
-.projects-hero h1 { font-size:var(--text-hero);line-height:1.05;font-weight:600;letter-spacing:-2.4px; }
-.projects-hero-sub { font-size:var(--text-footnote);margin-top:14px;color:var(--text-secondary); }
-.projects-hero { align-items:center; }
-.projects-head { padding-top:38px;padding-bottom:0;margin-bottom:0;align-items:center; }
+.projects-head { padding-bottom:0;margin-bottom:0;align-items:center; }
 .projects-head .seg { gap:25px;align-self:stretch; }
 .projects-head .seg button { border-radius:0;background:none;padding:18px 0;border-bottom:2px solid transparent; }
 .projects-head .seg button.is-selected { background:none;border-bottom-color:var(--text-primary);color:var(--text-primary);font-weight:600;border-radius:0; }
 .projects-head .projects-search { border:0;border-radius:0;background:none;width:210px;padding:12px 0;box-shadow:none; }
 .projects-head .projects-search:focus { outline:2px solid var(--focus-ring);outline-offset:2px; }
-.projects-sort { box-sizing:border-box; min-height:38px; margin-bottom:8px; padding:0 30px 0 12px; color:var(--text-primary); background:var(--bg-surface); border:1px solid var(--control-border); border-radius:var(--radius-sm); font-family:var(--font-ui); font-size:var(--text-footnote); }
+/* No margin-bottom here (removed on #427 review): .projects-head's own flex gap already spaces
+   wrapped rows, and a per-child bottom margin was inflating this control's cross-axis share of
+   its wrapped line, offsetting it a few px above New project instead of centring with it. */
+.projects-sort { box-sizing:border-box; min-height:38px; padding:0 30px 0 12px; color:var(--text-primary); background:var(--bg-surface); border:1px solid var(--control-border); border-radius:var(--radius-sm); font-family:var(--font-ui); font-size:var(--text-footnote); }
 /* Same control size as the filter field beside it: 38px, 44px on touch and narrow screens. */
 @media (pointer: coarse), (max-width: 640px) { .projects-sort { min-height:44px; } }
 [data-family='contemporary'] .projects-sort { background:transparent; border-color:var(--md-outline); border-radius:4px; }
@@ -634,7 +652,7 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 .project-title { font-size:var(--text-display);line-height:1.15;letter-spacing:-1.4px;font-weight:600; }
 .settings-title h1 { font-size:var(--text-large);letter-spacing:-.8px;font-weight:600; }
 .settings-shell { border-radius:12px; }
-@media(max-width:700px){.projects-hero h1{font-size:var(--text-display);letter-spacing:-1.5px}.projects-head .seg{gap:18px}.projects-head{padding-top:24px;flex-wrap:wrap}.projects-head .projects-search{flex-basis:100%;width:100%;min-width:0;margin-bottom:5px}.projects-grid{gap:16px;padding-top:20px}.project-card{min-height:228px;padding:22px}.project-card-top{row-gap:20px}.project-card-name{font-size:var(--text-title3)}.diary-landing h1{font-size:var(--text-large);letter-spacing:-.9px}.project-title{font-size:var(--text-large)}}
+@media(max-width:700px){.projects-head .seg{gap:18px}.projects-head{flex-wrap:wrap}.projects-head .projects-search{flex-basis:100%;width:100%;min-width:0;margin-bottom:5px}.projects-grid{gap:16px;padding-top:20px}.project-card{min-height:228px;padding:22px}.project-card-top{row-gap:20px}.project-card-name{font-size:var(--text-title3)}.diary-landing h1{font-size:var(--text-large);letter-spacing:-.9px}.project-title{font-size:var(--text-large)}}
 /* Study 03. Blur belongs on bounded surfaces, never the sidebar ancestor:
    filtering the ancestor traps its account menu behind the app-main layer. */
 .sidebar {
@@ -799,6 +817,17 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 .settings-detail .model-name-group { display:flex; flex-direction:column; align-items:flex-start; flex:1 1 0; width:auto; min-width:0; gap:5px; }
 .settings-detail .model-quant { margin:0; line-height:1.55; white-space:normal; }
 .settings-detail .card-list { gap:10px; }
+/* #414: Users, Service status's "Connected" list, Models summary and the Diary toggle move onto
+   .set-rows — the one grouped surface Appearance/Data/Notifications already use — instead of a
+   borderless list (Users) or a stack of individually bordered cards (Service status, Models). The
+   container now carries the surface (border/shadow/background from .settings-stage .set-rows in
+   primitives.css); each row loses its own card look and takes a hairline instead, same as every
+   other .set-rows. Scoped to .model-row so panels still on .card-list are unaffected. */
+.settings-detail .set-rows .model-row { padding: var(--space-3) var(--space-4); border: 0; border-radius: 0; background: transparent; min-height: 44px; }
+.settings-detail .set-rows > .model-row + .model-row,
+.settings-detail .settings-users .set-rows > div + div { border-top: 1px solid var(--border-subtle); }
+.settings-detail .set-rows > .route-note { padding: 0 var(--space-4) var(--space-2); }
+.users-add { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); margin-top: var(--settings-content-gap); }
 .settings-detail .route-note { font-size:var(--text-footnote); line-height:1.6; margin-block:12px; }
 .settings-detail .rail-label { margin-top:4px; }
 .settings-detail .settings-section-heading { align-items:flex-start; }
@@ -1602,7 +1631,7 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .model-manager-head { padding: 18px 0 6px; }
 .model-manager-head .settings-back { padding-inline-start: 0; }
 .mm-summary { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; width: 100%; }
-.mm-summary .card-list { align-self: stretch; min-width: 0; }
+.mm-summary .set-rows { align-self: stretch; min-width: 0; }
 /* The routing summary line ("Fast: … · Smart: … · Vision: …") can outgrow the card at
    narrow widths; wrap it instead of letting it run past the card's right edge. On a single
    line the shrunk box hugs its content either way, so left-aligning here does not change the

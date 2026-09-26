@@ -1420,6 +1420,7 @@ export default function App(): JSX.Element {
         onCodePage={setCodePage}
         onEnterCode={() => setAppMode('code')}
         onEnterChat={() => setAppMode('chat')}
+        onOpenProjectCode={(id) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}
         onOpenPlugins={() => { setAppMode('chat'); setCustomiseTab('connectors'); setView({ kind: 'plugins' }); }}
         onOpenArchived={() => { setAppMode('chat'); setView({ kind: 'archived' }); }}
         onPreview={(title) => setView({kind:'preview',title})}

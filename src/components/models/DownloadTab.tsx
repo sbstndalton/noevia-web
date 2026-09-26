@@ -67,10 +67,13 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'fit' }:
   };
   const refreshJobs = async () => {
     try {
-      const v = await mm<{ jobs: Job[] }>('downloads'); setJobs(v.jobs);
+      // `v.jobs` is missing rather than `[]` when the endpoint answers with an unexpected body —
+      // `|| []` matches every other reader of this same shape (RecoverPanel's own `downloads`
+      // read) instead of crashing the queue on `jobs.some(...)` below.
+      const v = await mm<{ jobs: Job[] }>('downloads'); const jobs = v.jobs || []; setJobs(jobs);
       // Jobs already done on the first read finished earlier (possibly deleted since): never re-register them.
-      if (!seeded.current) { seeded.current = true; v.jobs.filter(j => j.status === 'done').forEach(j => finished.current.add(j.id)); }
-      const done = v.jobs.filter(j => j.status === 'done' && !finished.current.has(j.id));
+      if (!seeded.current) { seeded.current = true; jobs.filter(j => j.status === 'done').forEach(j => finished.current.add(j.id)); }
+      const done = jobs.filter(j => j.status === 'done' && !finished.current.has(j.id));
       if (done.length) {
         done.forEach(j => finished.current.add(j.id));
         const notes: string[] = [];

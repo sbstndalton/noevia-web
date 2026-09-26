@@ -1,4 +1,7 @@
 import { SidebarLabel } from './SidebarLabel';
+import { useCodeAccess } from './code/useCodeAccess';
+import { useActiveCodeTasks } from './code/useActiveCodeTasks';
+import { CodingProjectList, CodingTaskList } from './CodingSidebarLists';
 import { orderedProjects, recentChats, readSidebarOrder, moveProject } from '../sidebar-order';
 import { normalizeRenameDraft } from '../rename-draft';
 import { ProjectIcon } from './ProjectIdentity';
@@ -38,6 +41,10 @@ interface SidebarProps {
   onNewChat: () => void;
   onNewProjectChat: (projectId: string) => void;
   onEnterCode: () => void;
+  /** Opens a project's own Code tab (#415): the same navigation `ActiveCodeTasks` and
+   *  `CodingWorkspace`'s project picker already use, wired here so the sidebar's own
+   *  "CODING PROJECTS"/"TASKS" sections can send an admin to real work instead of a dead end. */
+  onOpenProjectCode?: (id: string) => void;
   onPreview?: (title: string) => void;
   /** features.previews: show the unbuilt Scheduled/Plugins/Explore and Code surfaces. */
   showPreviews?: boolean;
@@ -76,6 +83,7 @@ export function Sidebar({
   onNewChat,
   onNewProjectChat,
   onEnterCode,
+  onOpenProjectCode,
   mode = 'chat',
   codePage = 'New task',
   onCodePage,
@@ -205,6 +213,14 @@ export function Sidebar({
   };
   const [query, setQuery] = useState('');
   const code = mode === 'code';
+  // #415: the sidebar's own "CODING PROJECTS"/"TASKS" sections were unconditionally the "not
+  // connected yet" stub, even once #368 made the main Code panel real. Access is per admin and the
+  // feature flag, not per project (server/routes/code.cjs checks the flag and the role before it
+  // ever looks at the project id), so the first project stands in for "can this viewer reach Code
+  // mode at all" — the same shortcut CodingWorkspace's own picker already takes. Both probes are
+  // gated to Code mode so a chat-mode session never pays for a fetch it will not use.
+  const codeAccess = useCodeAccess(projects[0]?.id ?? '-', code);
+  const codeTasks = useActiveCodeTasks(code && codeAccess);
   // One menu model for both entity types, opened from a right-click or the
   // hamburger. Destructive choices route through `confirm` rather than an
   // inline two-step arm, so the subject is named before anything happens.
@@ -523,8 +539,21 @@ export function Sidebar({
 
       <div className="rail-tools"><button ref={railSearchButton} className="shell-icon-button" aria-label={t('sidebar.search')} onClick={e=>{setCollapsed(false);setExpanded(true);setSearching(true);searchTrigger.current=e.currentTarget;}}><ShellIcon name="search"/></button><button className="shell-icon-button" aria-label={t('sidebar.showPinned')} onClick={()=>{setCollapsed(false);setExpanded(true);setClosedGroups(g=>({...g,Pinned:false}));}}><ShellIcon name="pin"/></button></div>
       {code ? <div className="sidebar-history coding-history">
-        <div className="spaces side-scroll"><div className="sidebar-section-head"><span className="section-label">{t('sidebar.codingProjects')}</span></div><p className="side-hint">{t('sidebar.codingProjectsEmpty')}</p></div>
-        <div className="spaces side-scroll"><div className="sidebar-section-head"><span className="section-label">{t('sidebar.tasks')}</span></div><p className="side-hint">{t('sidebar.tasksEmpty')}</p></div>
+        <div className="spaces side-scroll"><div className="sidebar-section-head"><span className="section-label">{t('sidebar.codingProjects')}</span></div>
+          {/* #415: real projects once access is confirmed — the same list CodingWorkspace's own
+              picker uses — instead of a permanent "not connected" claim next to a main panel that
+              proves otherwise. A viewer without Code access still sees the honest original copy. */}
+          {codeAccess && projects.length
+            ? <CodingProjectList projects={projects} onOpen={(id) => { onOpenProjectCode?.(id); setExpanded(false); }}/>
+            : <p className="side-hint">{codeAccess ? t('sidebar.createProjectHint') : t('sidebar.codingProjectsEmpty')}</p>}
+        </div>
+        <div className="spaces side-scroll"><div className="sidebar-section-head"><span className="section-label">{t('sidebar.tasks')}</span></div>
+          {codeAccess && codeTasks.error
+            ? <p className="side-hint" role="alert">{codeTasks.error}</p>
+            : codeAccess && codeTasks.tasks.length
+            ? <CodingTaskList tasks={codeTasks.tasks} onOpen={(projectId) => { onOpenProjectCode?.(projectId); setExpanded(false); }}/>
+            : <p className="side-hint">{t('sidebar.tasksEmpty')}</p>}
+        </div>
       </div> : <div className="sidebar-history">
       {['Pinned','Projects'].map(group => {
         const entries = visibleProjects.filter(p=>group==='Pinned'?p.pinned:!p.pinned);

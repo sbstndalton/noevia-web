@@ -506,7 +506,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
     <p className="composer-hint">{busy ? t('diary.compose.workingOnDiary') : day ? t('diary.compose.writingToDay', { day: dayLabel(day) }) : t('diary.compose.localTimeHint')}</p>
   </div>;
   return <main className="main diary-workspace">
-    <header className="chat-header"><div className="diary-breadcrumb"><button className="diary-home-link" disabled={busy} onClick={()=>editor?closeEditor():navigate(null)}>{t('diary.title')}</button>{month && <><span>/</span><button className="popup-tab" disabled={busy} onClick={()=>navigate(month)}>{monthLabel(month)}</button></>}{day && <span>/ {new Date(`${day}T12:00:00`).getDate()}</span>}</div><span className="diary-private">{t('diary.privateDiary')}</span></header>
+    <header className="chat-header diary-header"><div className="diary-breadcrumb"><button className="diary-home-link" disabled={busy} onClick={()=>editor?closeEditor():navigate(null)}>{t('diary.title')}</button>{month && <><span>/</span><button className="popup-tab" disabled={busy} onClick={()=>navigate(month)}>{monthLabel(month)}</button></>}{day && <span>/ {new Date(`${day}T12:00:00`).getDate()}</span>}</div><span className="diary-private">{t('diary.privateDiary')}</span></header>
     <div className="diary-layout" style={editor?{display:'none'}:undefined}><section className="diary-primary"><div className="diary-content-scroll" ref={scrollRef} onScroll={onScroll}>
       {inferenceUp === false && <p className="conn-banner">{t('diary.banners.inferenceDown')}</p>}
       {error && <p className="conn-banner" role="alert">{error}</p>}{!editor && editorError && <p className="conn-banner" role="alert">{editorError}</p>}

@@ -48,7 +48,9 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     setError('');
     const listed = fetchInstalledModels().then((installed) => { setModels(installed); return installed; });
     const local = mm<{ models: FileEntry[]; unregistered: string[] }>('models').catch(() => null);
-    void mm<{ status: Record<string, Update> }>('models/updates').then((u) => setUpdates(u.status)).catch(() => undefined);
+    // `u.status` is missing rather than `{}` when the endpoint answers with an unexpected body —
+    // `|| {}` keeps `updates[...]` a safe lookup instead of crashing on an undefined record.
+    void mm<{ status: Record<string, Update> }>('models/updates').then((u) => setUpdates(u.status || {})).catch(() => undefined);
     void apiFetch('/api/models/capabilities').then(r => r.json()).then((caps) => { setRuntimeOptions(caps?.runtimeOptions === true); setCanTune(caps?.admin === true && caps?.autotune === true); }).catch(() => undefined);
     void mm<{ modelsDir?: { disk?: { freeH: string; totalH: string; usedPct: number } | null } }>('overview').then((o) => setDisk(o?.modelsDir?.disk ?? null)).catch(() => undefined);
     try {
