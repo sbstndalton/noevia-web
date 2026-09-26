@@ -89,12 +89,33 @@ function createFixture(port = 31239) {
         event({type:'usage',promptTokens:12,completionTokens:34,totalTokens:46,tokensPerSecond:77});
         event({type:'done'});res.end();return;
       }
+      if(body.message==='markdown lists synthetic') {
+        // #431: a nested bullet list, a nested ordered list, and a task list — the same shape the
+        // live tester used to find the bug (flat `<p class="md-bullet">`, no `<ul>/<ol>/<li>`).
+        event({type:'delta',text:'- Item A\n  - Sub item A1\n  - Sub item A2\n- Item B\n\n1. First\n2. Second\n   1. Nested second\n\n- [ ] Not done yet\n- [x] Already done\n'});
+        event({type:'done'});res.end();return;
+      }
       if(body.message==='long synthetic') {
         let chunk=0;
         const timer=setInterval(()=>{
           event({type:'delta',text:('Synthetic streaming paragraph '+(++chunk)+'. ').repeat(20)+'\n\n'});
           if(chunk===80){clearInterval(timer);event({type:'diary',decision:'skip'});event({type:'done'});res.end();}
         },60);
+        pending.add(res);res.on('close',()=>{clearInterval(timer);pending.delete(res);});return;
+      }
+      if(body.message==='fast token stream synthetic') {
+        // #387 (reopened): token-by-token cadence much closer to a fast local model
+        // (~12ms/token, comparable to the 26-80 tok/s the roadmap measures) than
+        // 'long synthetic' above — the tight cadence is the point: it leaves the browser
+        // less time between chunks to dispatch the native `scroll` event a real wheel/touch/
+        // keyboard gesture produces before the next chunk's pin-to-bottom effect can re-run.
+        let word=0;
+        const timer=setInterval(()=>{
+          word++;
+          event({type:'delta',text:'word'+word+' '});
+          if(word%7===0)event({type:'delta',text:'\n\n'}); // occasional paragraph breaks to grow height in bursts
+          if(word===500){clearInterval(timer);event({type:'diary',decision:'skip'});event({type:'done'});res.end();}
+        },12);
         pending.add(res);res.on('close',()=>{clearInterval(timer);pending.delete(res);});return;
       }
       setTimeout(()=>{

@@ -85,6 +85,71 @@ function splitRow(line: string): string[] {
 
 const TABLE_DIVIDER = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
 
+/** #431: one parsed list-item line — bulleted, ordered, or a GFM task ("- [ ]"/"- [x]"), keeping
+ *  its own indent depth (raw leading-whitespace length) so a contiguous run of these can be
+ *  rebuilt into a properly nested tree instead of one flat, indent-styled paragraph per line. */
+type ListLine = { ordered: boolean; num?: string; task?: 'x' | ' '; indent: number; content: string };
+
+function parseListLine(line: string): ListLine | null {
+  // Ordered lists keep the model's own starting number (as an <ol start>) rather than restarting
+  // at 1, which is what a real <ol> would otherwise do to a streamed, line-at-a-time render.
+  const ordered = /^(\s*)(\d+)\. (.*)$/.exec(line);
+  if (ordered) return { ordered: true, num: ordered[2], indent: ordered[1].length, content: ordered[3] };
+  const bullet = /^(\s*)[-*+] (.*)$/.exec(line);
+  if (bullet) {
+    const task = /^\[( |x|X)\] (.*)$/.exec(bullet[2]);
+    if (task) return { ordered: false, task: task[1].toLowerCase() === 'x' ? 'x' : ' ', indent: bullet[1].length, content: task[2] };
+    return { ordered: false, indent: bullet[1].length, content: bullet[2] };
+  }
+  return null;
+}
+
+/** #431: rebuild a contiguous run of `ListLine`s (from `parseListLine`) into real, nested
+ *  `<ul>`/`<ol>`/`<li>` — so a screen reader gets "list, N items" and per-item context instead of
+ *  N unrelated paragraphs, while the visible result stays the same family of look (see the
+ *  `.md-list`/`::marker`/`.md-task-box` rules in diary-tab.css). Deeper indentation nests a new
+ *  list inside the previous item, exactly one level per call; a change of marker type (bullet vs.
+ *  ordered) at the *same* indent ends the current list rather than mixing markers inside one — the
+ *  same "start a new list" rule CommonMark uses. Streaming-safe: this is a pure function of the
+ *  full current text on every render, same as the rest of this renderer, so a list that is still
+ *  growing mid-stream just grows its last `<li>` — nothing here holds state across renders. */
+function buildList(items: ListLine[], pos: number, indent: number, inline: (line: string) => ReactNode): [ReactNode, number] {
+  const ordered = items[pos].ordered;
+  const start = ordered ? Number(items[pos].num) : undefined;
+  const lis: ReactNode[] = [];
+  let i = pos;
+  while (i < items.length && items[i].indent === indent && items[i].ordered === ordered) {
+    const item = items[i];
+    const key = i;
+    i += 1;
+    let nested: ReactNode = null;
+    if (i < items.length && items[i].indent > indent) {
+      const [node, next] = buildList(items, i, items[i].indent, inline);
+      nested = node;
+      i = next;
+    }
+    if (item.task !== undefined) {
+      lis.push(
+        <li key={key} className={`md-task${item.task === 'x' ? ' md-task-done' : ''}`}>
+          <label className="md-task-label">
+            {/* A real, disabled checkbox: assistive tech announces "checkbox, checked/not checked"
+                for each item, not just a coloured span with a checkmark character (#431). */}
+            <input type="checkbox" className="md-task-box" checked={item.task === 'x'} disabled readOnly />
+            {inline(item.content)}
+          </label>
+          {nested}
+        </li>,
+      );
+    } else {
+      lis.push(<li key={key}>{inline(item.content)}{nested}</li>);
+    }
+  }
+  const node = ordered
+    ? <ol className="md-list" start={start}>{lis}</ol>
+    : <ul className="md-list">{lis}</ul>;
+  return [node, i];
+}
+
 export function MarkdownPreview({ text, internalLink, wikiLink, properties = false }: {
   text: string;
   internalLink?: (href: string) => (() => void) | undefined;
@@ -206,27 +271,30 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
     if (/^### /.test(line)) { out.push(<h4 key={i}>{inline(line.slice(4))}</h4>); continue; }
     if (/^## /.test(line)) { out.push(<h3 key={i}>{inline(line.slice(3))}</h3>); continue; }
     if (/^# /.test(line)) { out.push(<h2 key={i}>{inline(line.slice(2))}</h2>); continue; }
-    // Ordered lists keep the model's own numbering rather than restarting per
-    // line, which is what a real <ol> would do to a streamed, line-at-a-time
-    // render. Indented bullets are common in model output, so keep the indent.
-    const ordered = /^(\s*)(\d+)\. (.*)$/.exec(line);
-    if (ordered) {
-      out.push(<p className="md-bullet" key={i} style={ordered[1] ? { paddingInlineStart: ordered[1].length * 8 } : undefined}><span className="md-pip">{ordered[2]}.</span> {inline(ordered[3])}</p>);
-      continue;
-    }
-    const bullet = /^(\s*)[-*+] (.*)$/.exec(line);
-    if (bullet) {
-      // GFM task lists: a leading [ ] / [x] becomes a checkbox indicator.
-      const task = /^\[( |x|X)\] (.*)$/.exec(bullet[2]);
-      if (task) {
-        out.push(
-          <p className={`md-bullet md-task${task[1].toLowerCase() === 'x' ? ' md-task-done' : ''}`} key={i} style={bullet[1] ? { paddingInlineStart: bullet[1].length * 8 } : undefined}>
-            <span className="md-task-box" aria-hidden="true">{task[1].toLowerCase() === 'x' ? '✓' : ''}</span> {inline(task[2])}
-          </p>,
-        );
-        continue;
+    // #431: bulleted, ordered and task lists render as real, nested <ul>/<ol>/<li> — collect the
+    // whole contiguous run of list-item lines (any indent, any of the three kinds) up front, the
+    // same way the fenced-code and blockquote branches collect their own runs, then hand it to
+    // `buildList` once so nesting comes from the run as a whole rather than from one line alone.
+    const firstListLine = parseListLine(line);
+    if (firstListLine) {
+      const items: ListLine[] = [firstListLine];
+      let j = i + 1;
+      for (; j < lines.length; j += 1) {
+        const next = parseListLine(lines[j]);
+        if (!next) break;
+        items.push(next);
       }
-      out.push(<p className="md-bullet" key={i} style={bullet[1] ? { paddingInlineStart: bullet[1].length * 8 } : undefined}><span className="md-pip">•</span> {inline(bullet[2])}</p>);
+      // A run can contain more than one list: a marker-type change at the top indent (bullet then
+      // ordered, or back again) ends the current list rather than mixing markers inside one, the
+      // same rule CommonMark uses — so keep calling `buildList` for whatever indent/marker run is
+      // left until the whole collected run of lines is accounted for.
+      let pos = 0;
+      while (pos < items.length) {
+        const [node, next] = buildList(items, pos, items[pos].indent, inline);
+        out.push(<Fragment key={i + pos}>{node}</Fragment>);
+        pos = next;
+      }
+      i = j - 1;
       continue;
     }
     // Consecutive `>`-prefixed lines are one quoted passage, not one box per line (#389): collect

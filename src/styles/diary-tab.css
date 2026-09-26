@@ -89,10 +89,26 @@
 .md-image-chip-alt { font-size:var(--text-footnote); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .md-image-chip-host { font-size:var(--text-caption2); color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-/* List pips take the accent, so structure reads at a glance. */
-.md-pip { color:var(--accent-text); font-weight:600; }
-.md-task-box { display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; border:1.5px solid var(--control-border); border-radius:4px; font-size:var(--text-caption2); line-height:1; color:var(--accent-ink); vertical-align:-2px; }
-.md-task-done .md-task-box { background:var(--nav-active); border-color:var(--control-border); }
+/* #431: bulleted/ordered/task lines are real <ul>/<ol>/<li> now (DiaryModal.tsx's `buildList`), not
+   one indent-styled <p> per line — this is the same visual family as before (accent-coloured
+   markers, compact spacing), just on real list markup so a screen reader gets "list, N items" and
+   per-item context. Nesting is now structural (a child <ul>/<ol> inside its parent <li>) rather than
+   a manual paddingInlineStart guess from raw source indentation, so each level's indent comes from
+   this rule repeating rather than from inline styles. */
+.markdown-preview .md-list { margin:6px 0; padding-inline-start:22px; }
+.markdown-preview .md-list .md-list { margin:0; }
+.markdown-preview .md-list li { white-space:pre-wrap; margin:6px 0; }
+/* The marker itself takes the accent, exactly like the old `.md-pip` span did — just via the
+   browser's own list marker instead of a hand-drawn one, so numbering and bullets are native. */
+.markdown-preview .md-list li::marker { color:var(--accent-text); font-weight:600; }
+.markdown-preview ul.md-list { list-style:disc; }
+.markdown-preview ol.md-list { list-style:decimal; }
+/* Task items get a real checkbox instead of a bullet/number. */
+.markdown-preview .md-list li.md-task { list-style:none; }
+.md-task-label { display:inline-flex; align-items:flex-start; gap:6px; cursor:default; }
+.md-task-box { appearance:none; -webkit-appearance:none; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; margin:3px 0 0; border:1.5px solid var(--control-border); border-radius:4px; color:var(--accent-ink); }
+.md-task-box:checked { background:var(--nav-active); border-color:var(--control-border); }
+.md-task-box:checked::after { content:'✓'; font-size:var(--text-caption2); line-height:1; }
 .md-task-done { color:var(--text-secondary); }
 
 /* Tables were unsupported and rendered as raw pipes. Wide ones scroll in

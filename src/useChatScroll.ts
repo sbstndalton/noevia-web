@@ -33,19 +33,42 @@ export function useChatScroll(scope: string, update: unknown, active = true, lay
   // write that (rarely) does not change `scrollTop` — nothing to scroll — can never leave this
   // stuck and swallow a real scroll-up.
   const programmatic = useRef(false);
+  // #387 (reopened): the scrollTop this hook itself last set, so the auto-scroll effect below can
+  // tell — synchronously, by direct comparison, before deciding whether to pin again — that the
+  // reader moved it since. `null` until the first write.
+  const lastWrittenScrollTop = useRef<number | null>(null);
   const [atBottom, setAtBottom] = useState(true);
 
   const scrollToBottom = (el: HTMLDivElement) => {
-    if (el.scrollTop === el.scrollHeight) return;
-    programmatic.current = true;
-    el.scrollTop = el.scrollHeight;
-    requestAnimationFrame(() => { programmatic.current = false; });
+    if (el.scrollTop !== el.scrollHeight) {
+      programmatic.current = true;
+      el.scrollTop = el.scrollHeight;
+      requestAnimationFrame(() => { programmatic.current = false; });
+    }
+    lastWrittenScrollTop.current = el.scrollTop;
   };
 
-  useLayoutEffect(() => { following.current = true; setAtBottom(true); }, [scope]);
+  useLayoutEffect(() => { following.current = true; setAtBottom(true); lastWrittenScrollTop.current = null; }, [scope]);
   useLayoutEffect(() => {
     const el = scrollRef.current;
-    if (active && el && following.current) scrollToBottom(el);
+    if (!el) return;
+    // A real wheel/touch/keyboard/scrollbar-drag scroll changes `el.scrollTop` immediately, as part
+    // of the browser's own (synchronous, main-thread) handling of that input — well before it gets
+    // around to dispatching the `scroll` DOM event `onScroll` below reads, which is coalesced to
+    // roughly once per animation frame. A fast enough stream (an ordinary local model is comfortably
+    // under 16ms/token) can commit another pin-to-bottom write here before that coalesced event for
+    // the reader's own, perfectly real, scroll ever lands — silently overwriting a scroll-up that
+    // never even got the chance to register as "caused by the user". Comparing the live value against
+    // what this hook itself last wrote closes that race without waiting for the event at all, for
+    // every input method there is, not just the ones with a dedicated JS event (a scrollbar drag has
+    // none). It is the same `isAtBottom`/`nextFollowState` decision `onScroll` makes, just run here,
+    // synchronously, first.
+    if (active && lastWrittenScrollTop.current !== null && el.scrollTop !== lastWrittenScrollTop.current) {
+      const atBottomNow = isAtBottom(el.scrollHeight, el.clientHeight, el.scrollTop);
+      following.current = nextFollowState(following.current, atBottomNow, true);
+      setAtBottom(following.current);
+    }
+    if (active && following.current) scrollToBottom(el);
   }, [scope, update, active, layout]);
 
   const onScroll = () => {
@@ -55,7 +78,13 @@ export function useChatScroll(scope: string, update: unknown, active = true, lay
     programmatic.current = false;
     const atBottomNow = isAtBottom(el.scrollHeight, el.clientHeight, el.scrollTop);
     following.current = nextFollowState(following.current, atBottomNow, causedByUser);
-    if (causedByUser) setAtBottom(following.current);
+    if (causedByUser) {
+      setAtBottom(following.current);
+      // This position has now been accounted for, so the synchronous compare in the auto-scroll
+      // effect above does not re-derive (and potentially re-litigate, against a since-grown
+      // `scrollHeight`) a decision this handler already just made from the same scrollTop value.
+      lastWrittenScrollTop.current = el.scrollTop;
+    }
   };
 
   /** Re-enable follow and jump to the newest message: called on submit, and by a "jump to
