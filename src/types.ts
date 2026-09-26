@@ -200,6 +200,10 @@ export interface InstalledModel {
   status?: string;
   failed?: boolean;
   canDelete?: boolean;
+  /** True when a live sidecar (embedding or reranking) depends on this exact model right now
+   *  (#336) — distinct from canDelete, which keeps the manager's own can_remove meaning and the
+   *  client's existing folder-scan-delete fallback when it is false. */
+  sidecarProtected?: boolean;
   source?: string | null;
   mtp?: {supported:boolean;enabled:boolean;reason:string};
   name: string;

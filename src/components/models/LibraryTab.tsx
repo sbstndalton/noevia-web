@@ -11,6 +11,7 @@ import { useModelsChanged } from '../../models-changed';
 import { MiddleTruncate } from '../MiddleTruncate';
 import { AutoTune } from './AutoTune';
 import { isSystemModel } from '../../model-system';
+import { isChatGenerationModel } from '../../model-kind';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 
@@ -140,6 +141,15 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
   useEffect(() => { if (open && file && !detail) void mm<Detail>(`models/detail?key=${encodeURIComponent(file.key)}`).then(setDetail).catch(() => {}); }, [open, file, detail]);
   const model = detail?.summary?.model || {};
   const system = isSystemModel(m.name);
+  // #343/#336: tuning is a chat-model concept (the Overview copy says so) — hide it for any
+  // embedding/reranking model, not just Laya. Delete stays hidden only for models a live sidecar
+  // actually depends on right now (server-computed sidecarProtected, model-system.cjs
+  // isSidecarModel) — deliberately NOT canDelete: canDelete can be false for other reasons (the
+  // manager's own can_remove), and DeleteModel's run() already falls back to the folder-scan
+  // delete path in exactly that case, so hiding the button on canDelete alone would hide a delete
+  // path that still works and mislabel the model as sidecar-protected when it just isn't one.
+  const chatModel = isChatGenerationModel(m.name, m.labels);
+  const protectedModel = !system && m.sidecarProtected === true;
   return <article className={`model-card surface${open ? ' is-open' : ''}`} data-state={state} aria-label={m.name}>
     <header className="model-card-head"><h3 className="model-card-name"><MiddleTruncate text={m.name}/></h3><span className="model-card-state">{m.failed ? t('mm.card.failed') : m.loaded ? t('mm.loaded') : t('mm.card.unloaded')}</span></header>
     <p className="model-card-meta">
@@ -148,6 +158,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
       {file?.shape && <span>{file.shape.label}</span>}
       {file?.projector && <span className="model-card-tag">{t('mm.card.vision')}</span>}
       {system && <span className="model-card-tag" title={t('mm.card.systemTitle')}>{t('model.systemLabel')}</span>}
+      {protectedModel && <span className="model-card-tag" title={t('mm.card.protectedTitle')}>{t('mm.card.protectedLabel')}</span>}
       {m.labels.filter(l => l !== 'vision').map(l => <span key={l} className="model-card-tag">{l}</span>)}
       {m.source && <span>{m.source === 'preset' ? t('mm.card.sourceFolder') : m.source === 'cache' ? t('mm.card.sourceCache') : m.source}</span>}
       {update?.status === 'stale' && <span className="mm-pill is-warn">{t('mm.card.update', { remote: update.remote })}</span>}
@@ -155,9 +166,9 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
     {file?.badges && file.badges.length > 0 && <p className="model-card-meta">{file.badges.map(b => <span key={b.category} className="model-card-tag">{BADGE[b.category] ? t(BADGE[b.category]) : b.category} {b.rating}/5</span>)}</p>}
     <div className="model-card-actions">
       <button className="popup-tab" disabled={busy} onClick={onToggle}>{busy ? t('mm.working') : m.loaded ? t('mm.card.unload') : t('mm.card.load')}</button>
-      {!system && <button className="popup-tab" onClick={onConfigure}>{t('mm.card.tune')}</button>}
+      {!system && chatModel && <button className="popup-tab" onClick={onConfigure}>{t('mm.card.tune')}</button>}
       <button className="popup-tab" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? t('mm.card.hideDetails') : t('mm.details')}</button>
-      {!system && <DeleteModel model={m} file={file} onDeleted={onDeleted}/>}
+      {!system && !protectedModel && <DeleteModel model={m} file={file} onDeleted={onDeleted}/>}
     </div>
     {runtimeOptions && <MtpControl model={m} onChanged={onRefresh}/>}
     {open && <div className="mm-detail">
@@ -178,6 +189,8 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
       </dl>}
       <EvidenceList model={m.name}/>
       {system ? <p className="mm-note" role="status">{t('model.systemLabel')}{t('mm.card.systemNote')}</p>
+        : protectedModel ? <p className="mm-note" role="status">{t('mm.card.protectedLabel')}{t('mm.card.protectedNote')}</p>
+        : !chatModel ? <p className="mm-note" role="status">{t('mm.card.nonChatNote')}</p>
         : <NativeCalibration model={m.name} onChanged={() => {}}/>}
     </div>}
   </article>;

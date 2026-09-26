@@ -190,6 +190,12 @@ export const EN_GB_MODELS = {
   'mm.card.trainedFor': 'trained for {tokens} tokens',
   'mm.card.vision': 'vision',
   'mm.card.systemTitle': 'Used internally for message routing; not tuned or configured by hand.',
+  // #336: the embedding model (and reranker, when configured) a live sidecar is pointed at —
+  // deleting it crash-loops that sidecar with no fallback to load instead.
+  'mm.card.protectedLabel': 'In use · protected',
+  'mm.card.protectedTitle': 'A running sidecar (embedding or reranking) depends on this model; it cannot be deleted while that is configured.',
+  'mm.card.protectedNote': ' — a running sidecar (embedding or reranking) depends on this model; it cannot be deleted while that is configured.',
+  'mm.card.nonChatNote': 'An embedding or reranking model — tuning applies to chat models only.',
   'mm.card.sourceFolder': 'model folder',
   'mm.card.sourceCache': 'downloaded',
   'mm.card.update': 'Update available ({remote})',
