@@ -16,6 +16,10 @@ export const EN_GB = {
   'common.off': 'Off',
   'common.system': 'System',
   'common.newChat': 'New chat',
+  'nav.notFound.chatTitle': 'This chat isn\'t available',
+  'nav.notFound.chatBody': 'It may have been deleted, or the link belongs to a different account.',
+  'nav.notFound.projectTitle': 'This project isn\'t available',
+  'nav.notFound.projectBody': 'It may have been deleted, or the link belongs to a different account.',
 
   'sidebar.newTask': 'New task',
   'sidebar.code.pullRequests': 'Pull requests',

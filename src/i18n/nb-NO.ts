@@ -13,6 +13,10 @@ export const NB_NO: Catalogue = {
   'common.off': "Av",
   'common.system': "System",
   'common.newChat': "Ny chat",
+  'nav.notFound.chatTitle': "Denne chatten er ikke tilgjengelig",
+  'nav.notFound.chatBody': "Den kan ha blitt slettet, eller lenken tilhører en annen konto.",
+  'nav.notFound.projectTitle': "Dette prosjektet er ikke tilgjengelig",
+  'nav.notFound.projectBody': "Det kan ha blitt slettet, eller lenken tilhører en annen konto.",
 
   'sidebar.newTask': "Ny oppgave",
   'sidebar.code.pullRequests': "Pull-forespørsler",

@@ -18,6 +18,7 @@ import { MemorySettings } from './personalization/MemorySettings';
 import { LanguageSettings } from './personalization/LanguageSettings';
 import { KeyboardSettings } from './shortcuts/KeyboardSettings';
 import { useT } from '../i18n';
+import { SETTINGS_SECTION_ALIASES } from '../routes';
 import '../i18n/settings';
 import type { MessageKey, Translate } from '../i18n';
 
@@ -75,7 +76,7 @@ const ADMIN: Group = { name: 'Server administration', admin: true, items: [
 ] };
 
 /** Old section IDs that moved: saved places and links resolve to the new home. */
-export const SECTION_ALIASES: Record<string, string> = { general: 'appearance', archived: 'data', language: 'appearance', shortcuts: 'keyboard', instructions: 'personalization' };
+export const SECTION_ALIASES: Record<string, string> = SETTINGS_SECTION_ALIASES;
 export function resolveSection(id: string | null | undefined): string | null {
   if (typeof id !== 'string' || !id) return null;
   return SECTION_ALIASES[id] ?? id;
@@ -101,13 +102,23 @@ const reducedMotion = () => typeof window !== 'undefined' && (document.documentE
 
 export type SettingsSection = 'general' | 'usage' | 'models' | 'connectors' | 'keyboard' | 'data' | 'notifications' | 'memory' | 'status';
 
-export function SettingsShell(props: SettingsViewProps & {initialSection?:SettingsSection|string;onSection?:(id:string)=>void;appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; onClosing?:()=>void; onStartChat?:(prompt:string)=>void; onOpenArchived?:()=>void; onOpenDiary?:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void; preference?:'light'|'dark'|'system'; onPreference?:(preference:'light'|'dark'|'system')=>void}) {
+export function SettingsShell(props: SettingsViewProps & {initialSection?:SettingsSection|string;onSection?:(id:string,opts?:{replace?:boolean})=>void;appearanceStatus?:string; appearanceError?:boolean; retryAppearance?:()=>void; onClose:()=>void; onClosing?:()=>void; onStartChat?:(prompt:string)=>void; onOpenArchived?:()=>void; onOpenDiary?:()=>void; theme:'light'|'dark'; onTheme:(theme:'light'|'dark')=>void; preference?:'light'|'dark'|'system'; onPreference?:(preference:'light'|'dark'|'system')=>void}) {
   // 'general' is the historical name for the first page; it now opens Appearance. Anything that is
   // not a section name (a click event handed through by mistake) counts as no choice.
   const named = typeof props.initialSection === 'string' && props.initialSection !== 'general' ? resolveSection(props.initialSection) : null;
   const [section, setSection] = useState<string>(named || 'appearance');
   // Phones show the list and a page as two screens; a named section opens straight on its page.
   const [view, setView] = useState<'list' | 'detail'>(() => named || !phone() ? 'detail' : 'list');
+  // Back/Forward between Settings sections (#359): App hands the section from the address bar back
+  // in. The same value echoing back from our own report is a no-op.
+  const requested = typeof props.initialSection === 'string' && props.initialSection ? resolveSection(props.initialSection === 'general' ? 'appearance' : props.initialSection) : null;
+  const sectionNow = useRef(section);
+  sectionNow.current = section;
+  useEffect(() => {
+    if (!requested || requested === sectionNow.current) return;
+    setSection(requested);
+    setView('detail');
+  }, [requested]);
   const [closing, setClosing] = useState(false);
   const [query, setQuery] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -169,7 +180,9 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   // not be left staring at an empty pane.
   useEffect(() => {
     // Wait for the profile: admin sections appear only once the role is known.
-    if (profileKnown && !groups.some((g) => g.items.some(([id]) => id === section))) setSection('appearance');
+    // Reported as a redirect (#359): the address bar replaces the unavailable section rather than
+    // adding a history entry, or Back would land on it and bounce straight forward again.
+    if (profileKnown && !groups.some((g) => g.items.some(([id]) => id === section))) { setSection('appearance'); props.onSection?.('appearance', { replace: true }); }
   }, [groups, section, profileKnown]);
 
   const title = groups.flatMap(g => g.items).find(([id]) => id === section)?.[1] || t('settings.title');

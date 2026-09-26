@@ -34,9 +34,15 @@ async function signInTab(get: () => Promise<string | null>): Promise<boolean> {
 /** Customise (#238, formerly "Plugins"): Skills, Connectors and Plugins as three tabs. Connectors
  *  are accounts you link (Google Drive and friends); Plugins are MCP servers, installed first and
  *  then the public directory. The view id stays `plugins`, so saved places and links still resolve. */
-export function PluginsView({ onStartChat, embedded = false, projects = [], onProjectsChanged, initialTab }: { onStartChat?: (prompt: string) => void; embedded?: boolean; projects?: { id: string; name: string }[]; onProjectsChanged?: () => void; initialTab?: string }): JSX.Element {
+export function PluginsView({ onStartChat, embedded = false, projects = [], onProjectsChanged, initialTab, onTabChange }: { onStartChat?: (prompt: string) => void; embedded?: boolean; projects?: { id: string; name: string }[]; onProjectsChanged?: () => void; initialTab?: string; onTabChange?: (tab: CustomiseTab) => void }): JSX.Element {
   const t = useT();
   const [tab, setTab] = useState<CustomiseTab>(() => customiseTab(initialTab));
+  // The address bar follows the tab and Back/Forward hand it back in (#359); the echo of our own
+  // report is a no-op.
+  useEffect(() => { if (initialTab) setTab(customiseTab(initialTab)); }, [initialTab]);
+  const reportTab = useRef(onTabChange);
+  reportTab.current = onTabChange;
+  useEffect(() => { reportTab.current?.(tab); }, [tab]);
   const [isAdmin, setIsAdmin] = useState(false);
   useEffect(() => { let live = true; fetchProfile().then((p) => { if (live) setIsAdmin(p.user.role === 'admin'); }).catch(() => undefined); return () => { live = false; }; }, []);
   const body = <div className="plugins-page">

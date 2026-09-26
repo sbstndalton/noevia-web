@@ -13,6 +13,10 @@ export const DE_DE: Catalogue = {
   'common.off': "Aus",
   'common.system': "System",
   'common.newChat': "Neuer Chat",
+  'nav.notFound.chatTitle': "Dieser Chat ist nicht verfügbar",
+  'nav.notFound.chatBody': "Er wurde möglicherweise gelöscht, oder der Link gehört zu einem anderen Konto.",
+  'nav.notFound.projectTitle': "Dieses Projekt ist nicht verfügbar",
+  'nav.notFound.projectBody': "Es wurde möglicherweise gelöscht, oder der Link gehört zu einem anderen Konto.",
 
   'sidebar.newTask': "Neue Aufgabe",
   'sidebar.code.pullRequests': "Pull Requests",

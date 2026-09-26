@@ -13,6 +13,10 @@ export const NL_NL: Catalogue = {
   'common.off': "Uit",
   'common.system': "Systeem",
   'common.newChat': "Nieuwe chat",
+  'nav.notFound.chatTitle': "Deze chat is niet beschikbaar",
+  'nav.notFound.chatBody': "Hij is mogelijk verwijderd, of de link hoort bij een ander account.",
+  'nav.notFound.projectTitle': "Dit project is niet beschikbaar",
+  'nav.notFound.projectBody': "Het is mogelijk verwijderd, of de link hoort bij een ander account.",
 
   'sidebar.newTask': "Nieuwe taak",
   'sidebar.code.pullRequests': "Pull requests",

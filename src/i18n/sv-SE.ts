@@ -13,6 +13,10 @@ export const SV_SE: Catalogue = {
   'common.off': "Av",
   'common.system': "System",
   'common.newChat': "Ny chatt",
+  'nav.notFound.chatTitle': "Den här chatten är inte tillgänglig",
+  'nav.notFound.chatBody': "Den kan ha tagits bort, eller så tillhör länken ett annat konto.",
+  'nav.notFound.projectTitle': "Det här projektet är inte tillgängligt",
+  'nav.notFound.projectBody': "Det kan ha tagits bort, eller så tillhör länken ett annat konto.",
 
   'sidebar.newTask': "Ny uppgift",
   'sidebar.code.pullRequests': "Pull requests",

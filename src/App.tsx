@@ -65,7 +65,9 @@ import { StatsBar } from './components/StatsBar';
 import { settleToolCalls } from './tool-call-state';
 import { mergeTranscripts } from './transcript-merge';
 import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, shouldSaveChat, upsertChatMeta } from './chat-save';
-import { readLastPlace, writeLastPlace, clearLastPlace } from './last-view';
+import { readLastPlace, writeLastPlace, clearLastPlace, type LastPlace } from './last-view';
+import { historyMode, matchPath, parsePath, routeForState, toPath, type CustomiseTab, type ProjectTab, type Route, type SyncedPlace } from './routes';
+import { EmptyState } from './components/EmptyState';
 import { currentRoutingDecision } from './current-routing';
 import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, withoutChat, withoutProject, type NavState } from './settings-nav';
 import { useT } from './i18n';
@@ -84,27 +86,73 @@ function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/** Where a load starts (#359). The address bar comes first: a link or a reload at `/c/…`,
+ *  `/p/…`, `/settings/…` opens that place. A bare `/` (the home-screen icon, a typed address)
+ *  keeps the older behaviour of returning to where you left off on this device
+ *  (`noevia:last-view`). A path that names nothing opens a new chat and is replaced by `/`. */
+type InitialNav = {
+  route: Route | null;
+  /** The saved place the view underneath comes from: always for `/`, and for the two overlays
+   *  (Settings, Code) that have no view of their own. */
+  stored: LastPlace | null;
+};
+function readInitialNav(): InitialNav {
+  const matched = matchPath(window.location.pathname);
+  const stored = readLastPlace();
+  if (!matched) return { route: { kind: 'new' }, stored: null };
+  if (matched.kind === 'new' && !matched.projectId) return { route: null, stored };
+  return { route: matched, stored: matched.kind === 'settings' || matched.kind === 'code' ? stored : null };
+}
+
 export default function App(): JSX.Element {
   const {theme,preference,setTheme,setPreference,appearanceStatus,appearanceError,retryAppearance} = useAppearance();
   const tr = useT();
-  const [settingsSection,setSettingsSection] = useState<string>(() => readLastPlace()?.settings ?? 'general');
+  const [initialNav] = useState(readInitialNav);
+  const initialRoute = initialNav.route;
+  // Chats created in this tab that nobody has written in yet: they have no address of their own
+  // (the bar shows `/`), and are never "not found" (#359).
+  const freshChats = useRef<Set<string>>(new Set());
+  const freshChatId = () => { const id = `c-${uid()}`; freshChats.current.add(id); return id; };
+  const [settingsSection,setSettingsSection] = useState<string>(() => (initialRoute?.kind === 'settings' ? initialRoute.section : initialNav.stored?.settings) ?? 'general');
   // Each open is a fresh Settings: reopening while the last one is still animating out replaces it.
   const [settingsKey, setSettingsKey] = useState(0);
   const openSettings = (section: SettingsSection = 'general') => {
     // Connecting services moved to Plugins (user review, 2026-09-19); old links land there.
-    if (section === 'connectors') { pendingFromSettingsRef.current = 'connectors'; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'plugins' }); return; }
+    if (section === 'connectors') { pendingFromSettingsRef.current = 'connectors'; setSettingsOpen(false); setAppMode('chat'); setCustomiseTab('connectors'); setView({ kind: 'plugins' }); return; }
     setSettingsSection(section); setSettingsKey((k) => k + 1); setSettingsOpen(true); };
   // `model` opens that model's tuning view directly; without it, the model list. Models &
   // routing is always treated as a Settings page (it has its own "back to Settings" control),
   // so it never becomes the view Settings' close returns to, regardless of how it was opened.
   const openModelManager = (model?: string) => { pendingFromSettingsRef.current = 'models'; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); };
-  useEffect(() => { const open = () => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'plugins' }); }; window.addEventListener('noevia:open-customise', open); return () => window.removeEventListener('noevia:open-customise', open); }, []);
+  useEffect(() => { const open = () => { setSettingsOpen(false); setAppMode('chat'); setCustomiseTab('connectors'); setView({ kind: 'plugins' }); }; window.addEventListener('noevia:open-customise', open); return () => window.removeEventListener('noevia:open-customise', open); }, []);
   useEffect(() => { const open = (e: Event) => { const model = (e as CustomEvent<{ model?: string }>).detail?.model; pendingFromSettingsRef.current = 'models'; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'models', model }); }; window.addEventListener('noevia:open-model-settings', open); return () => window.removeEventListener('noevia:open-model-settings', open); }, []);
   // #366: Plugins → Added's empty state links here so "built-in" isn't just a claim — an admin can
   // see those servers listed, tagged built-in vs added, in the same place Service status already shows them.
   useEffect(() => { const open = () => openSettings('status'); window.addEventListener('noevia:open-service-status', open); return () => window.removeEventListener('noevia:open-service-status', open); }, []);
-  const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account'); return fresh || !!readLastPlace()?.settings; });
-  const [appMode, setAppMode] = useState<'chat'|'code'>('chat');
+  const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account');
+    // A new account starts in Settings — unless it signed in at a link to somewhere else (#359).
+    if (initialRoute) return initialRoute.kind === 'settings';
+    return fresh || !!initialNav.stored?.settings; });
+  const [appMode, setAppMode] = useState<'chat'|'code'>(initialRoute?.kind === 'code' ? 'code' : 'chat');
+  // The tab a project and Customise are on, so the address bar can carry it (#359). A project's
+  // tab is kept with its id: another project opens on its own first tab, not on this one.
+  const [projectTab, setProjectTab] = useState<{ id: string; tab: ProjectTab } | null>(() => (initialRoute?.kind === 'project' && initialRoute.tab ? { id: initialRoute.id, tab: initialRoute.tab } : null));
+  const [customiseTab, setCustomiseTab] = useState<CustomiseTab>(() => (initialRoute?.kind === 'customise' ? initialRoute.tab : 'connectors'));
+  // A navigation the app makes on its own (a redirect, a fallback, a normalisation) replaces the
+  // history entry instead of adding one, so Back never lands on a place that bounces forward.
+  // The flag records the render it was raised after; the address-bar sync consumes it on the next
+  // commit, which is the one carrying the state change it belongs to.
+  const renderSeq = useRef(0);
+  renderSeq.current += 1;
+  const thisRender = renderSeq.current;
+  const replaceAfter = useRef<number | null>(null);
+  const markReplace = () => { replaceAfter.current = renderSeq.current; };
+  // Stable on purpose: Settings reports its section from an effect keyed on this callback, so a new
+  // function every render would re-report a stale section and fight Back/Forward.
+  const onSettingsSection = useCallback((id: string, opts?: { replace?: boolean }) => {
+    if (opts?.replace) replaceAfter.current = renderSeq.current;
+    setSettingsSection(id);
+  }, []);
   // The Code page is chosen in the shared sidebar, so it lives here rather than in the workspace.
   const [codePage, setCodePage] = useState('New task');
   // Chat ⇄ Code plays a short entrance on the page, as Claude does, instead of cutting in one frame.
@@ -126,11 +174,27 @@ export default function App(): JSX.Element {
   const featureFlags = useFeatureFlags();
   const showPreviews = featureFlags.previews === true;
   // Turning previews off while in Code must not leave both workspaces hidden.
-  useEffect(() => { if (!showPreviews && appMode === 'code') setAppMode('chat'); }, [showPreviews, appMode]);
+  useEffect(() => { if (!showPreviews && appMode === 'code') { markReplace(); setAppMode('chat'); } }, [showPreviews, appMode]);
   // Reload lands where you left off, not on a new chat. `restored` is kept so the
   // workspace load below can drop a reference to something that no longer exists.
-  const restored = useRef(readLastPlace());
-  const [view, setView] = useState<View>(() => restored.current?.view ?? { kind: 'chat', chatId: `c-${uid()}`, projectId: null });
+  const restored = useRef<LastPlace | null>(initialNav.stored);
+  const [view, setView] = useState<View>(() => {
+    const route = initialRoute;
+    if (route && route.kind !== 'settings' && route.kind !== 'code') {
+      switch (route.kind) {
+        case 'new': return { kind: 'chat', chatId: freshChatId(), projectId: route.projectId ?? null };
+        case 'chat': return { kind: 'chat', chatId: route.chatId, projectId: null };
+        case 'project': return { kind: 'project', id: route.id };
+        case 'customise': return { kind: 'plugins' };
+        case 'models': return route.model ? { kind: 'models', model: route.model } : { kind: 'models' };
+        default: return { kind: route.kind };
+      }
+    }
+    const saved = restored.current?.view;
+    // A saved chat may never have been written in; like a new chat it has no address yet.
+    if (saved?.kind === 'chat') freshChats.current.add(saved.chatId);
+    return saved ?? { kind: 'chat', chatId: freshChatId(), projectId: null };
+  });
   // Latest view for async callbacks (a delete resolving after the person moved elsewhere).
   const viewRef = useRef(view);
   viewRef.current = view;
@@ -139,7 +203,8 @@ export default function App(): JSX.Element {
   // them just re-shows the detour, and its own "back to Settings" affordance re-opens Settings,
   // looping forever. `pendingFromSettingsRef` is set immediately before a detour's setView so
   // the effect below can tell it apart from a real navigation.
-  const navRef = useRef<NavState<View>>(restoreNavState(view, { kind: 'chat', chatId: `c-${uid()}`, projectId: null }));
+  const navRef = useRef<NavState<View>>(null!);
+  if (!navRef.current) navRef.current = restoreNavState(view, { kind: 'chat', chatId: freshChatId(), projectId: null });
   const pendingFromSettingsRef = useRef<string | null>(null);
   // Skip the mount's own run: navRef already holds the restoreNavState-computed value above
   // (which, unlike this effect, knows a restored detour view is never a valid return target).
@@ -189,7 +254,13 @@ export default function App(): JSX.Element {
   const [popupOpen, setPopupOpen] = useState(false);
   // A restored chat must fetch its saved transcript; only a newly created empty
   // chat may skip that read until its first send.
-  const loadedChats = useRef<Set<string>>(new Set(view.kind === 'chat' && !restored.current ? [view.chatId] : []));
+  const loadedChats = useRef<Set<string>>(null!);
+  if (!loadedChats.current) loadedChats.current = new Set([...freshChats.current].filter((id) => !(restored.current?.view.kind === 'chat' && restored.current.view.chatId === id)));
+  // A new chat, known to have nothing to load.
+  const freshChatView = (projectId: string | null = null): View => { const chatId = freshChatId(); loadedChats.current.add(chatId); return { kind: 'chat', chatId, projectId }; };
+  // Chats whose saved transcript has been asked for at least once: only then can one that is in
+  // no list of this account's be called missing (#359).
+  const [historyChecked, setHistoryChecked] = useState<Record<string, true>>({});
   const patchTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const pendingPatches = useRef<Record<string, Partial<Project>>>({});
   const lastSourceSync = useRef<Record<string, number>>({});
@@ -320,8 +391,10 @@ export default function App(): JSX.Element {
       if (restored.current && restored.current.user && restored.current.user !== profile.user.id) {
         restored.current = null;
         clearLastPlace();
-        setSettingsOpen(false);
-        setView({ kind: 'chat', chatId: `c-${uid()}`, projectId: null });
+        // Settings named in the address bar stays open; only a saved one is someone else's.
+        if (initialRoute?.kind !== 'settings') setSettingsOpen(false);
+        markReplace();
+        setView(freshChatView());
       }
     }).catch(() => undefined);
     fetchHealth()
@@ -362,7 +435,7 @@ export default function App(): JSX.Element {
     const stale =
       (place.view.kind === 'project' && !projectExists(place.view.id)) ||
       (place.view.kind === 'chat' && !!place.view.projectId && !projectExists(place.view.projectId));
-    if (stale) setView({ kind: 'chat', chatId: `c-${uid()}`, projectId: null });
+    if (stale) { markReplace(); setView(freshChatView()); }
   }, [workspaceLoaded, projects]);
 
   // Engine-wide totals and hardware are a background snapshot. Request-local
@@ -412,6 +485,7 @@ export default function App(): JSX.Element {
             coworkTask: h.coworkTask,
           }));
         setMessagesByChat((prev) => ({ ...prev, [id]: resolveLoadedHistory(prev[id] ?? [], loaded) }));
+        setHistoryChecked((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
         return loaded;
       })
       .catch(() => {
@@ -482,6 +556,99 @@ export default function App(): JSX.Element {
 
   const messages: Message[] = view.kind === 'chat' ? messagesByChat[view.chatId] ?? [] : [];
   const routingDecision = currentRoutingDecision(messages, view.kind === 'chat' && appMode === 'chat');
+
+  // ── The address bar (#359) ──────────────────────────────────────────────────────────────
+  // The path is derived from what is on screen (src/routes.ts), so every one of the many places
+  // that navigate — the sidebar, recents, a project's chat list, Settings' close, a deleted chat
+  // falling back — moves the address bar without having to know it exists.
+  const freshChatOpen = view.kind === 'chat' && freshChats.current.has(view.chatId) && !activeChatMeta && messages.length === 0 && !streamingChats[view.chatId];
+  const route = routeForState({
+    view, settingsOpen, settingsSection, codeMode: appMode === 'code',
+    projectTab: view.kind === 'project' && projectTab?.id === view.id ? projectTab.tab : undefined,
+    customiseTab, freshChat: freshChatOpen,
+  });
+  const routePath = route ? toPath(route) : null;
+  const syncedPlace = useRef<SyncedPlace | null>(null);
+  // Every commit, not on deps: the replace flag must be consumed by the first commit after it
+  // was raised even when that commit leaves the path alone.
+  useEffect(() => {
+    const flagged = replaceAfter.current !== null && thisRender > replaceAfter.current;
+    if (flagged) replaceAfter.current = null;
+    if (!route || !routePath) return;
+    const next: SyncedPlace = { path: routePath, kind: route.kind, chatId: view.kind === 'chat' ? view.chatId : null };
+    const mode = historyMode(syncedPlace.current, next, { current: window.location.pathname, forceReplace: flagged });
+    if (mode === 'push') window.history.pushState({ noevia: 1 }, '', routePath);
+    else if (mode === 'replace') window.history.replaceState({ noevia: 1 }, '', routePath);
+    syncedPlace.current = next;
+  });
+
+  // Back/Forward: show the place the entry names. Refs, not state, because the listener is
+  // registered once. Settings is an overlay: stepping to a Settings entry opens it over whatever
+  // is underneath, stepping off one closes it (no exit animation — the page is already moving).
+  const allChatsRef = useRef(allChats);
+  allChatsRef.current = allChats;
+  const settingsOpenRef = useRef(settingsOpen);
+  settingsOpenRef.current = settingsOpen;
+  const applyRoute = useRef<(route: Route) => void>(() => undefined);
+  applyRoute.current = (target: Route) => {
+    if (target.kind === 'settings') {
+      setSettingsSection(target.section);
+      if (!settingsOpenRef.current) { setSettingsKey((k) => k + 1); setSettingsOpen(true); }
+      return;
+    }
+    setSettingsOpen(false);
+    if (target.kind === 'code') { setAppMode('code'); return; }
+    setAppMode('chat');
+    const current = viewRef.current;
+    switch (target.kind) {
+      case 'new': {
+        const reuse = current.kind === 'chat' && freshChats.current.has(current.chatId) && !(messagesRef.current[current.chatId]?.length) && (current.projectId ?? null) === (target.projectId ?? null);
+        if (!reuse) setView(freshChatView(target.projectId ?? null));
+        return;
+      }
+      case 'chat': {
+        if (current.kind === 'chat' && current.chatId === target.chatId) return;
+        const meta = allChatsRef.current.find((c) => c.id === target.chatId);
+        setView({ kind: 'chat', chatId: target.chatId, projectId: meta?.projectId ?? null });
+        return;
+      }
+      case 'project':
+        setProjectTab({ id: target.id, tab: target.tab ?? 'chats' });
+        if (!(current.kind === 'project' && current.id === target.id)) setView({ kind: 'project', id: target.id });
+        return;
+      case 'customise':
+        setCustomiseTab(target.tab);
+        if (current.kind !== 'plugins') setView({ kind: 'plugins' });
+        return;
+      case 'models':
+        // Models & routing is always a Settings page (#304): never the place Settings' close returns to.
+        if (current.kind === 'models' && current.model === target.model) return;
+        pendingFromSettingsRef.current = 'models';
+        setView(target.model ? { kind: 'models', model: target.model } : { kind: 'models' });
+        return;
+      default:
+        if (current.kind !== target.kind) setView({ kind: target.kind });
+    }
+  };
+  useEffect(() => {
+    const onPop = () => applyRoute.current(parsePath(window.location.pathname));
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  // A chat opened by its address carries no project until the chat list says which one it is in.
+  useEffect(() => {
+    if (view.kind === 'chat' && !view.projectId && activeChatMeta?.projectId) setView({ ...view, projectId: activeChatMeta.projectId });
+  }, [view, activeChatMeta]);
+
+  // Not this account's, or no longer anyone's (#359). Every read is scoped to the signed-in
+  // account on the server, so another account's chat or project id finds nothing here — it is
+  // shown exactly like a deleted one, with nothing about it (not even a title) to show.
+  const chatMissing = view.kind === 'chat' && workspaceLoaded && !activeChatMeta && !freshChats.current.has(view.chatId)
+    && !!historyChecked[view.chatId] && messages.length === 0 && !streamingChats[view.chatId];
+  const projectMissing = workspaceLoaded && ((view.kind === 'project' && !activeProject)
+    // A new chat addressed into a project (`/p/<id>/new`) that this account does not have.
+    || (view.kind === 'chat' && freshChatOpen && !!view.projectId && !projects.some((p) => p.id === view.projectId)));
 
   const persist = useCallback((chatId: string, msgs: Message[]) => {
     // Reasoning, tool activity and cost are persisted too, so reopening a
@@ -956,7 +1123,7 @@ export default function App(): JSX.Element {
   }, [activeChatMeta, handleSend, streamingChats, view]);
 
   const startFreeChat = useCallback(() => {
-    const chatId = `c-${uid()}`;
+    const chatId = freshChatId();
     loadedChats.current.add(chatId);
     setMessagesByChat((prev) => ({ ...prev, [chatId]: [] }));
     setView({ kind: 'chat', chatId, projectId: null });
@@ -964,7 +1131,7 @@ export default function App(): JSX.Element {
 
   // A prompt suggestion (Settings → Connectors) starts a new chat and sends it once that chat is on screen.
   const startFreeChatWith = useCallback((text: string) => {
-    const chatId = `c-${uid()}`;
+    const chatId = freshChatId();
     loadedChats.current.add(chatId);
     pendingFirstSend.current = { chatId, projectId: null, text };
     setMessagesByChat((prev) => ({ ...prev, [chatId]: [] }));
@@ -983,7 +1150,7 @@ export default function App(): JSX.Element {
 
   const startProjectChat = useCallback(
     (projectId: string) => {
-      const chatId = `c-${uid()}`;
+      const chatId = freshChatId();
       loadedChats.current.add(chatId);
       setMessagesByChat((prev) => ({ ...prev, [chatId]: [] }));
       setView({ kind: 'chat', chatId, projectId });
@@ -1002,7 +1169,7 @@ export default function App(): JSX.Element {
   // fires once the view is the one we are sending into.
   const startProjectChatWith = useCallback(
     (projectId: string, text: string) => {
-      const chatId = `c-${uid()}`;
+      const chatId = freshChatId();
       // Without this the lazy-history effect fetches this brand-new chat's
       // (empty) history and overwrites the message we are about to send.
       loadedChats.current.add(chatId);
@@ -1036,6 +1203,8 @@ export default function App(): JSX.Element {
       deleteProject(id)
         .then(() => {
           refreshProjects();
+          // The deleted project's address is dead: replace it rather than leave it behind Back.
+          if (viewRef.current.kind === 'project' && viewRef.current.id === id) markReplace();
           setView({ kind: 'projects' });
           // Settings' close must never resolve back into a deleted project (or a chat inside
           // it) — that view is gone even if it was not the one on screen (e.g. reached this
@@ -1079,12 +1248,13 @@ export default function App(): JSX.Element {
           // Only the open chat moves the view: a project chat returns to its project, a free chat
           // to a fresh new chat, so the next message does not go to the deleted id.
           if (viewRef.current.kind === 'chat' && viewRef.current.chatId === chatId) {
+            markReplace();
             if (projectId) setView({ kind: 'project', id: projectId });
             else startFreeChat();
           }
           // As above (deleting a project): Settings' close must never resolve back into a
           // deleted chat, on screen or not.
-          navRef.current = withoutChat(navRef.current, chatId, projectId ? { kind: 'project', id: projectId } : { kind: 'chat', chatId: `c-${uid()}`, projectId: null });
+          navRef.current = withoutChat(navRef.current, chatId, projectId ? { kind: 'project', id: projectId } : freshChatView());
           refreshProjects();
           return true;
         })
@@ -1143,7 +1313,7 @@ export default function App(): JSX.Element {
     if (view.kind !== 'chat') return;
     const projectId = view.projectId ?? activeChatMeta?.projectId ?? null;
     if (newSession) {
-      const chatId = `c-${uid()}`;
+      const chatId = freshChatId();
       loadedChats.current.add(chatId);
       setPendingModes(prev => ({ ...prev, [chatId]: mode }));
       setMessagesByChat(prev => ({ ...prev, [chatId]: [] }));
@@ -1245,7 +1415,7 @@ export default function App(): JSX.Element {
         onCodePage={setCodePage}
         onEnterCode={() => setAppMode('code')}
         onEnterChat={() => setAppMode('chat')}
-        onOpenPlugins={() => { setAppMode('chat'); setView({ kind: 'plugins' }); }}
+        onOpenPlugins={() => { setAppMode('chat'); setCustomiseTab('connectors'); setView({ kind: 'plugins' }); }}
         onOpenArchived={() => { setAppMode('chat'); setView({ kind: 'archived' }); }}
         onPreview={(title) => setView({kind:'preview',title})}
         showPreviews={showPreviews}
@@ -1280,7 +1450,7 @@ export default function App(): JSX.Element {
       {featureFlags.codeHarness === true && <ActiveCodeTasks onOpenProject={(id) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}/>}
       {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects} onOpenProjectCode={(id) => { setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
       <div className="chat-views" style={{display:appMode==='code'&&showPreviews?'none':'contents'}}>
-      {view.kind === 'plugins' && <Suspense fallback={<ViewLoading name="customise" active={appMode === 'chat' && !settingsOpen} />}><Customise.View onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects}/></Suspense>}
+      {view.kind === 'plugins' && <Suspense fallback={<ViewLoading name="customise" active={appMode === 'chat' && !settingsOpen} />}><Customise.View onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects} initialTab={customiseTab} onTabChange={setCustomiseTab}/></Suspense>}
       {view.kind === 'archived' && <ArchivedChatsView onDelete={handleDeleteChat} onOpenData={() => openSettings('data')}/>}
 
       {view.kind === 'preview' && showPreviews && <FeaturePreview title={view.title}/> }
@@ -1306,6 +1476,8 @@ export default function App(): JSX.Element {
           key={activeProject.id}
           modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured)}
           codeRequest={view.codeRequest}
+          requestedTab={projectTab?.id === activeProject.id ? projectTab.tab : undefined}
+          onTabChange={(tab, { replace }) => { if (replace) markReplace(); setProjectTab((prev) => (prev?.id === activeProject.id && prev.tab === tab ? prev : { id: activeProject.id, tab })); }}
           onOpenModels={() => setPopupOpen(true)}
           onEdit={() => setEditingProjectId(activeProject.id)}
           project={activeProject}
@@ -1319,8 +1491,24 @@ export default function App(): JSX.Element {
           onDeleteChat={handleDeleteChat}
         />
       )}
+      {projectMissing && (
+        <main className="main">
+          <EmptyState icon="folder" title={tr('nav.notFound.projectTitle')}
+            action={<button className="btn btn-primary" onClick={() => setView({ kind: 'projects' })}>{tr('sidebar.projects')}</button>}>
+            {tr('nav.notFound.projectBody')}
+          </EmptyState>
+        </main>
+      )}
 
-      {view.kind === 'chat' && (
+      {chatMissing && (
+        <main className="main">
+          <EmptyState icon="chat" title={tr('nav.notFound.chatTitle')}
+            action={<button className="btn btn-primary" onClick={startFreeChat}>{tr('common.newChat')}</button>}>
+            {tr('nav.notFound.chatBody')}
+          </EmptyState>
+        </main>
+      )}
+      {view.kind === 'chat' && !chatMissing && !projectMissing && (
         <ChatView
           project={activeProject ?? null}
           onProjectChanged={refreshProjects}
@@ -1369,7 +1557,7 @@ export default function App(): JSX.Element {
         <Settings.View
           key={settingsKey}
           initialSection={settingsSection}
-          onSection={setSettingsSection}
+          onSection={onSettingsSection}
           appearanceStatus={appearanceStatus} appearanceError={appearanceError} retryAppearance={retryAppearance}
           onClose={() => {
             // #304: land back where the user actually was, not on a Settings-launched detour

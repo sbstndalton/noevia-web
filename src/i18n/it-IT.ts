@@ -13,6 +13,10 @@ export const IT_IT: Catalogue = {
   'common.off': "Disattivo",
   'common.system': "Sistema",
   'common.newChat': "Nuova chat",
+  'nav.notFound.chatTitle': "Questa chat non è disponibile",
+  'nav.notFound.chatBody': "Potrebbe essere stata eliminata, oppure il link appartiene a un altro account.",
+  'nav.notFound.projectTitle': "Questo progetto non è disponibile",
+  'nav.notFound.projectBody': "Potrebbe essere stato eliminato, oppure il link appartiene a un altro account.",
 
   'sidebar.newTask': "Nuova attività",
   'sidebar.code.pullRequests': "Pull request",

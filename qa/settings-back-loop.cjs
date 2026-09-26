@@ -68,21 +68,35 @@ require('node:fs').mkdirSync(shots,{recursive:true});
   // ── #304 (HIGH, Opus review): reloading mid-detour must not turn the loop back on. Opening
   // Models & routing, then reloading without ever closing Settings, used to persist the detour
   // itself as "last place" — so the very first Settings close after the reload resolved right
-  // back into it. Reload now restores the chat underneath instead (persistedView, App.tsx).
+  // back into it. Since #359 the reload shows the page its address names (/models), but the
+  // detour is still never the return target: Settings' back then close lands in chat, and
+  // the saved last place (used for a bare `/`) is still the chat underneath (persistedView).
   await page.getByTitle('Settings',{exact:true}).click();
   await page.getByRole('region',{name:'Settings',exact:true}).getByRole('button',{name:'Models & routing',exact:true}).click();
   await page.getByRole('region',{name:'Settings',exact:true}).getByRole('button',{name:'Open model manager'}).click();
   await page.locator('.model-manager-page').waitFor();
+  assert.equal(new URL(page.url()).pathname,'/models','Models & routing has its own address (#359)');
   await page.reload();
+  await page.locator('.model-manager-page').waitFor();
+  await page.locator('.model-manager-page').getByRole('button',{name:'Settings',exact:true}).click();
+  await page.getByRole('heading',{name:'Models & routing',exact:true}).waitFor();
+  const settingsAfterReload=page.getByRole('region',{name:'Settings',exact:true});
+  await settingsAfterReload.getByRole('heading',{name:'Models & routing',exact:true}).waitFor();
+  await settingsAfterReload.getByRole('button',{name:'Close settings'}).click();
+  await settingsAfterReload.waitFor({state:'detached'}).catch(()=>{});
   await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();
-  assert.equal(await page.locator('.model-manager-page').count(),0,'a reload from mid-detour lands in chat, not Models & routing');
-  console.log('PASS settings-back-loop: a reload from mid-detour restores the chat underneath, not the detour (#304).');
+  assert.equal(await page.locator('.model-manager-page').count(),0,'after a reload mid-detour, Settings close lands in chat, not Models & routing');
+  await page.goto('http://localhost:31421/');
+  await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();
+  assert.equal(await page.locator('.model-manager-page').count(),0,'a bare / restores the chat underneath, not the detour');
+  console.log('PASS settings-back-loop: a reload from mid-detour never makes the detour the return target (#304, #359).');
 
   // ── #304 (HIGH, defensive fallback): data written before this fix (or any other stale record)
   // can still hand back a detour view directly on restore. Force exactly that and confirm
   // Settings' own back/close still never loops — restoreNavState's fresh fallback.
   await page.evaluate(() => localStorage.setItem('noevia:last-view', JSON.stringify({ user: 'qa', view: { kind: 'models' }, settings: null })));
-  await page.reload();
+  // A bare / is where the saved place applies (#359: any other address names its own place).
+  await page.goto('http://localhost:31421/');
   await page.locator('.model-manager-page').waitFor();
   for(let i=0;i<2;i++){
    await page.locator('.model-manager-page').getByRole('button',{name:'Settings',exact:true}).click();

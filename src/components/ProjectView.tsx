@@ -6,7 +6,8 @@ import { ComposerTextarea } from './ComposerTextarea';
 import { sourceStatus } from '../source-status';
 import { ShellIcon } from './ShellIcon';
 import { ProjectIcon } from './ProjectIdentity';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { ProjectTab } from '../routes';
 import type { JSX } from 'react';
 import type { Project } from '../types';
 import { SendIcon } from './Icons';
@@ -40,6 +41,12 @@ function uniqueName(name: string, existing: { name: string }[]): string {
 interface ProjectViewProps {
   project: Project;
   codeRequest?: string;
+  /** The tab the address bar names (#359): applied on open and on Back/Forward. A gated tab
+   *  (research, code, browser) waits until this account's access to it is confirmed. */
+  requestedTab?: ProjectTab;
+  /** Every tab change, so the address bar follows. `replace` marks one the view made itself (an
+   *  access fallback, a code request, the tab it opened on) rather than one the person chose. */
+  onTabChange?: (tab: ProjectTab, opts: { replace: boolean }) => void;
   onNewChat: (projectId: string) => void;
   onSendFirst: (projectId: string, text: string) => void;
   onSave: (projectId: string, patch: Partial<Project>) => Promise<void>;
@@ -82,6 +89,8 @@ function timeAgo(t: Translate, ts: number): string {
 export function ProjectView({
   project,
   codeRequest,
+  requestedTab,
+  onTabChange,
   onNewChat,
   onSendFirst,
   onSave,
@@ -98,14 +107,35 @@ export function ProjectView({
   const [composerBusy, setComposerBusy] = useState(false);
   const [composerStatus, setComposerStatus] = useState('');
   const [panel, setPanel] = useState<'instructions' | 'memory' | 'context' | null>(null);
-  const [tab, setTab] = useState<'chats' | 'sources' | 'research' | 'code' | 'browser'>('chats');
+  const [tab, setTab] = useState<ProjectTab>(() => (requestedTab === 'sources' ? 'sources' : 'chats'));
   const researchAccess = useResearchAccess(project.id);
   const codeAccess = useCodeAccess(project.id);
   const browserAccess = useBrowserAccess(project.id);
-  useEffect(() => { if (codeRequest && codeAccess) setTab('code'); }, [codeRequest, codeAccess]);
-  useEffect(() => { if (tab === 'research' && !researchAccess) setTab('chats'); }, [tab, researchAccess]);
-  useEffect(() => { if (tab === 'code' && !codeAccess) setTab('chats'); }, [tab, codeAccess]);
-  useEffect(() => { if (tab === 'browser' && !browserAccess) setTab('chats'); }, [tab, browserAccess]);
+  // A tab change the view makes on its own is reported as a redirect, not a navigation (#359).
+  const autoTab = useRef(true);
+  const setTabAuto = (next: ProjectTab) => { autoTab.current = true; setTab(next); };
+  // A gated tab named by the address bar, held until its access check answers.
+  const wantedTab = useRef<ProjectTab | null>(requestedTab && requestedTab !== 'chats' && requestedTab !== 'sources' ? requestedTab : null);
+  const pick = (next: ProjectTab) => { wantedTab.current = null; autoTab.current = false; setTab(next); };
+  const allowed = (next: ProjectTab) => next === 'chats' || next === 'sources' || (next === 'research' && researchAccess) || (next === 'code' && codeAccess) || (next === 'browser' && browserAccess);
+  const tabNow = useRef(tab);
+  tabNow.current = tab;
+  useEffect(() => {
+    if (!requestedTab || requestedTab === tabNow.current) return;
+    if (allowed(requestedTab)) { wantedTab.current = null; setTabAuto(requestedTab); } else wantedTab.current = requestedTab;
+    // Access flags are deliberately not deps here: the effect below applies a held tab once they answer.
+  }, [requestedTab]);
+  useEffect(() => {
+    const wanted = wantedTab.current;
+    if (wanted && allowed(wanted)) { wantedTab.current = null; setTabAuto(wanted); }
+  }, [researchAccess, codeAccess, browserAccess]);
+  const reportTab = useRef(onTabChange);
+  reportTab.current = onTabChange;
+  useEffect(() => { reportTab.current?.(tab, { replace: autoTab.current }); autoTab.current = false; }, [tab]);
+  useEffect(() => { if (codeRequest && codeAccess) setTabAuto('code'); }, [codeRequest, codeAccess]);
+  useEffect(() => { if (tab === 'research' && !researchAccess) setTabAuto('chats'); }, [tab, researchAccess]);
+  useEffect(() => { if (tab === 'code' && !codeAccess) setTabAuto('chats'); }, [tab, codeAccess]);
+  useEffect(() => { if (tab === 'browser' && !browserAccess) setTabAuto('chats'); }, [tab, browserAccess]);
   const [draft, setDraft] = useState('');
   const [skillFiles, setSkillFiles] = useState<string[]>([]);
   const [syncing, setSyncing] = useState(false);
@@ -188,19 +218,19 @@ export function ProjectView({
           </header>
 
           <div className="seg project-tabs" role="tablist" aria-label={t('projects.view.tablistLabel')}>
-            <button role="tab" aria-selected={tab === 'chats'} className={tab === 'chats' ? 'is-selected' : ''} onClick={() => setTab('chats')}>
+            <button role="tab" aria-selected={tab === 'chats'} className={tab === 'chats' ? 'is-selected' : ''} onClick={() => pick('chats')}>
               {chats.length ? t('projects.view.tabChatsCount', { count: chats.length }) : t('projects.view.tabChats')}
             </button>
-            <button role="tab" aria-selected={tab === 'sources'} className={tab === 'sources' ? 'is-selected' : ''} onClick={() => setTab('sources')}>
+            <button role="tab" aria-selected={tab === 'sources'} className={tab === 'sources' ? 'is-selected' : ''} onClick={() => pick('sources')}>
               {sourceCount ? t('projects.view.tabSourcesCount', { count: sourceCount }) : t('projects.view.tabSources')}
             </button>
-            {researchAccess && <button role="tab" aria-selected={tab === 'research'} className={tab === 'research' ? 'is-selected' : ''} onClick={() => setTab('research')}>
+            {researchAccess && <button role="tab" aria-selected={tab === 'research'} className={tab === 'research' ? 'is-selected' : ''} onClick={() => pick('research')}>
               {t('projects.view.tabResearch')}
             </button>}
-            {codeAccess && <button role="tab" aria-selected={tab === 'code'} className={tab === 'code' ? 'is-selected' : ''} onClick={() => setTab('code')}>
+            {codeAccess && <button role="tab" aria-selected={tab === 'code'} className={tab === 'code' ? 'is-selected' : ''} onClick={() => pick('code')}>
               {t('projects.view.tabCode')}
             </button>}
-            {browserAccess && <button role="tab" aria-selected={tab === 'browser'} className={tab === 'browser' ? 'is-selected' : ''} onClick={() => setTab('browser')}>
+            {browserAccess && <button role="tab" aria-selected={tab === 'browser'} className={tab === 'browser' ? 'is-selected' : ''} onClick={() => pick('browser')}>
               {t('projects.view.tabBrowser')}
             </button>}
           </div>
@@ -362,13 +392,13 @@ export function ProjectView({
                 </button>
               </li>
               <li>
-                <button type="button" className="chip" onClick={() => setTab('sources')}>
+                <button type="button" className="chip" onClick={() => pick('sources')}>
                   {t('projects.view.sourcesCount', { count: sourceCount })}
                 </button>
               </li>
               {linkedFolders.length > 0 && (
                 <li>
-                  <button type="button" className="chip" onClick={() => setTab('sources')}>
+                  <button type="button" className="chip" onClick={() => pick('sources')}>
                     {t('projects.view.linkedFoldersChip', { count: linkedFolders.length })}
                   </button>
                 </li>
@@ -428,7 +458,7 @@ export function ProjectView({
             />
           )}
 
-          <RailRow label={t('projects.view.sources')} hint={`${sourceCount}`} onClick={() => setTab('sources')} />
+          <RailRow label={t('projects.view.sources')} hint={`${sourceCount}`} onClick={() => pick('sources')} />
 
           <RailRow
             label={t('projects.view.context')}

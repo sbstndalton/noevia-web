@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import type { FormEvent, JSX, ReactNode } from 'react';
 import { acceptInvitation, completeRecovery, fetchSession, passkeyLoginOptions, passkeyLoginVerify, passkeyRegistrationOptions, passkeyRegistrationVerify, passwordLogin, probeSession, setupStatus } from '../api';
 import { isIpAddressHost } from '../browser-support';
+import { safeReturnPath } from '../routes';
 import type { AuthUser } from '../api';
 
 // Only first-run and resumed onboarding need the wizard, and only passkey
@@ -51,7 +52,10 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
       else await passwordLogin(username, password);
       const session = await fetchSession();
       setOnboardingUser(session.user);
-      window.history.replaceState({}, '', '/');
+      // Back to the address the sign-in was shown at (#359) — a shared link to a chat opens that
+      // chat once signed in. safeReturnPath only ever yields a same-origin path this app makes,
+      // and drops the invite token from the address.
+      window.history.replaceState({}, '', safeReturnPath(window.location.pathname));
       setScreen(session.user.onboarded === false ? 'wizard-resume' : 'secure');
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not continue'); }
     finally { setBusy(false); }
@@ -66,7 +70,10 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
       await passkeyLoginVerify(challenge.challengeToken, response);
       const session = await fetchSession();
       setOnboardingUser(session.user);
-      window.history.replaceState({}, '', '/');
+      // Back to the address the sign-in was shown at (#359) — a shared link to a chat opens that
+      // chat once signed in. safeReturnPath only ever yields a same-origin path this app makes,
+      // and drops the invite token from the address.
+      window.history.replaceState({}, '', safeReturnPath(window.location.pathname));
       setScreen(session.user.onboarded === false ? 'wizard-resume' : 'ready');
     } catch (e) {
       setError(
