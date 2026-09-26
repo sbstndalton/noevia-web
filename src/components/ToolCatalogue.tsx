@@ -79,7 +79,18 @@ export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, on
     if (row.kind === 'tool') { onMention(row.name); close(); }
     else if (!row.active) onToggle(row.boxId);
   };
-  const close = () => { onOpenChange(false); requestAnimationFrame(() => trigger.current?.focus()); };
+  // #345 (reopened): closing used to call onOpenChange(false) first and defer the trigger's
+  // .focus() to the next animation frame. onOpenChange(false) unmounts the search input — the
+  // element that has focus at this point — synchronously, within the same event; the browser
+  // resolves a focused element's removal by moving focus to <body> immediately, before that
+  // deferred frame ever runs. The rAF's own .focus() call landed too late to matter live (it
+  // raced the unmount and lost — reproduced consistently there even though this repo's own
+  // synthetic tests, running lighter frames, didn't always lose the race). Fixed to match this
+  // app's own working pattern for the same problem (ContextMenu.tsx, ComposerActions.tsx):
+  // move focus to the trigger FIRST, synchronously, while the input this call is racing against
+  // still holds it — an ordinary focus handoff with a real relatedTarget, not a fall-to-<body>
+  // — and only then unmount the panel.
+  const close = () => { trigger.current?.focus(); onOpenChange(false); };
   const onKey = (event: KeyboardEvent<HTMLInputElement>) => {
     const last = rows.length - 1;
     if (event.key === 'ArrowDown') { event.preventDefault(); setActive(a => Math.min(last, a + 1)); }

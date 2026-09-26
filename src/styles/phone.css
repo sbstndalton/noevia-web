@@ -258,10 +258,18 @@
    The options were laid over the end of the title on a transparent background, so the
    title showed through them. They are now in the row's own flow: hidden until the row is
    hovered or focused, then the title makes room and ends in an ellipsis. Touch screens,
-   which have no hover, always show them (noevia.css). */
+   which have no hover, always show them (noevia.css).
+   #418: `display:none` removes the buttons from the page's focus order entirely (Chrome's
+   native Tab walk skips them and drops to <body> for one stop, the same class of bug #416
+   found for programmatic .focus() calls into this container) — a keyboard user could never
+   reach "Options"/"New chat in project" by tabbing forward. Collapsed to zero-width and
+   `overflow:hidden` instead of `display:none`, so the buttons stay real Tab stops (and
+   `:focus-within` reveals the row as soon as any part of it — not just a hidden button that
+   already has focus-visible — takes focus, so the reveal happens a step ahead of Tab
+   reaching them, not after). */
 @media (hover: hover) {
-  .app .sidebar.pane :is(.proj-row, .chat-row) .row-actions { position: static; display: none; opacity: 1; background: none; pointer-events: auto; flex: none; }
-  .app .sidebar.pane :is(.proj-row, .chat-row):is(:hover, :has(:focus-visible), :has([aria-expanded='true'])) .row-actions { display: flex; }
+  .app .sidebar.pane :is(.proj-row, .chat-row) .row-actions { position: static; display: flex; width: 0; overflow: hidden; opacity: 0; background: none; pointer-events: none; flex: none; }
+  .app .sidebar.pane :is(.proj-row, .chat-row):is(:hover, :has(:focus-visible), :has([aria-expanded='true']), :focus-within) .row-actions { width: auto; overflow: visible; opacity: 1; pointer-events: auto; }
   .app .sidebar.pane :is(.proj-row, .chat-row) > :is(button, .nav-item, .project-disclosure, .nested-chat-title):not(.row-action):not(.project-expand) { min-width: 0; flex: 1 1 auto; }
   .app .sidebar.pane .proj-row > .project-expand { flex: none; }
 }

@@ -165,9 +165,9 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
     </p>
     {file?.badges && file.badges.length > 0 && <p className="model-card-meta">{file.badges.map(b => <span key={b.category} className="model-card-tag">{BADGE[b.category] ? t(BADGE[b.category]) : b.category} {b.rating}/5</span>)}</p>}
     <div className="model-card-actions">
-      <button className="popup-tab" disabled={busy} onClick={onToggle}>{busy ? t('mm.working') : m.loaded ? t('mm.card.unload') : t('mm.card.load')}</button>
-      {!system && chatModel && <button className="popup-tab" onClick={onConfigure}>{t('mm.card.tune')}</button>}
-      <button className="popup-tab" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? t('mm.card.hideDetails') : t('mm.details')}</button>
+      <button className="popup-tab" disabled={busy} aria-label={t(m.loaded ? 'mm.card.unloadNamed' : 'mm.card.loadNamed', { model: m.name })} onClick={onToggle}>{busy ? t('mm.working') : m.loaded ? t('mm.card.unload') : t('mm.card.load')}</button>
+      {!system && chatModel && <button className="popup-tab" aria-label={t('mm.card.tuneNamed', { model: m.name })} onClick={onConfigure}>{t('mm.card.tune')}</button>}
+      <button className="popup-tab" aria-expanded={open} aria-label={t(open ? 'mm.card.hideDetailsNamed' : 'mm.card.detailsNamed', { model: m.name })} onClick={() => setOpen(!open)}>{open ? t('mm.card.hideDetails') : t('mm.details')}</button>
       {!system && !protectedModel && <DeleteModel model={m} file={file} onDeleted={onDeleted}/>}
     </div>
     {runtimeOptions && <MtpControl model={m} onChanged={onRefresh}/>}
@@ -235,7 +235,7 @@ function DeleteModel({ model: m, file, onDeleted }: { model: InstalledModel; fil
       throw Error(t('mm.delete.noFiles'));
     } catch (e) { setError(errorText(e, t('mm.deleteFailed'))); } finally { setBusy(false); }
   };
-  if (!confirming) return <button className="popup-tab model-card-danger" onClick={() => setConfirming(true)}>{t('mm.delete')}</button>;
+  if (!confirming) return <button className="popup-tab model-card-danger" aria-label={t('mm.delete.label', { model: m.name })} onClick={() => setConfirming(true)}>{t('mm.delete')}</button>;
   return <div className="model-card-confirm" role="group" aria-label={t('mm.delete.label', { model: m.name })}>
     <p>{file ? t(file.projector ? 'mm.delete.confirmFileProjector' : 'mm.delete.confirmFile', { file: file.name, size: file.size }) : t('mm.delete.confirmCache')}</p>
     {file && file.sections.length > 0 && <label className="mm-check"><input type="checkbox" checked={removeSettings} onChange={e => setRemoveSettings(e.target.checked)}/>{t('mm.delete.alsoSettings', { sections: file.sections.join(', ') })}</label>}

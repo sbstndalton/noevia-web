@@ -203,6 +203,15 @@ export const EN_GB_MODELS = {
   'mm.card.load': 'Load',
   'mm.card.tune': 'Tune',
   'mm.card.hideDetails': 'Hide details',
+  // #421: the card's own aria-label carries the model name, but it sits on the <article>
+  // wrapper — it isn't inherited by the buttons inside it, so a screen reader/switch-access
+  // user who has already tabbed to a button, or is scanning a flat list of same-named buttons
+  // across every installed model, cannot tell which model any one of them acts on.
+  'mm.card.unloadNamed': 'Unload {model}',
+  'mm.card.loadNamed': 'Load {model}',
+  'mm.card.tuneNamed': 'Tune {model}',
+  'mm.card.detailsNamed': 'Details for {model}',
+  'mm.card.hideDetailsNamed': 'Hide details for {model}',
   'mm.card.fromCache': 'This model is served from the download cache; its file details are not in the model folder.',
   'mm.card.arch': 'Architecture',
   'mm.card.params': 'Parameters',

@@ -250,9 +250,28 @@ export function Sidebar({
   };
   // Quick-archive from the row action has no confirmation, so it needs a way back (#362):
   // an undo toast, matching the shape of the app's existing save-error toast.
-  const [archiveUndo, setArchiveUndo] = useState<{ chat: ChatMeta; projectId: string | null } | null>(null);
+  const [archiveUndo, setArchiveUndo] = useState<{ chat: ChatMeta; projectId: string | null; keyboardInitiated: boolean } | null>(null);
   const archiveUndoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const undoButtonRef = useRef<HTMLButtonElement>(null);
   useEffect(() => () => { if (archiveUndoTimer.current) clearTimeout(archiveUndoTimer.current); }, []);
+  const armAutoDismiss = () => {
+    if (archiveUndoTimer.current) clearTimeout(archiveUndoTimer.current);
+    archiveUndoTimer.current = setTimeout(() => setArchiveUndo(null), 6000);
+  };
+  // #362 (reopened again, keyboard-specific): the toast used to rely on the ordinary forward-Tab
+  // order to reach Undo, but it renders near the bottom of the sidebar, just above the footer —
+  // and the archived row itself (where focus was, for a keyboard activation) is removed from the
+  // DOM in that same instant, dropping focus to <body>. The next Tab press then restarts from the
+  // top of the sidebar, nowhere near Undo, well before the 6s window runs out. For a
+  // keyboard-initiated archive, put focus on Undo directly the moment the toast appears — the
+  // next frame, matching this file's own returnFocusToRow idiom, so the just-removed row has
+  // actually unmounted first — and pause the auto-dismiss for as long as the toast holds focus,
+  // so a user who is still deciding is never timed out from under them.
+  useEffect(() => {
+    if (!archiveUndo?.keyboardInitiated) return;
+    const frame = requestAnimationFrame(() => undoButtonRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [archiveUndo]);
   // onPatchChat (App.tsx) saves and updates this component's own `chats` prop once the save
   // lands, but it does not broadcast noevia:workspace-changed the way the Archived page's
   // Restore does — so a second, already-mounted workspace reader (Settings → Your data &
@@ -269,12 +288,11 @@ export function Sidebar({
       notifyWorkspaceChanged();
     }
   }, [chats]);
-  const archiveChat = (c: ChatMeta, projectId: string | null) => {
-    if (archiveUndoTimer.current) clearTimeout(archiveUndoTimer.current);
+  const archiveChat = (c: ChatMeta, projectId: string | null, keyboardInitiated: boolean) => {
     pendingNotify.current = { id: c.id, archived: true };
     onPatchChat(projectId, c.id, { archived: true });
-    setArchiveUndo({ chat: c, projectId });
-    archiveUndoTimer.current = setTimeout(() => setArchiveUndo(null), 6000);
+    setArchiveUndo({ chat: c, projectId, keyboardInitiated });
+    armAutoDismiss();
   };
   const undoArchive = () => {
     if (!archiveUndo) return;
@@ -397,7 +415,7 @@ export function Sidebar({
   ];
   const chatActions = (c: ChatMeta, projectId: string | null, source: 'nested' | 'list' = 'list') => <div className="row-actions">
     <button className="row-action" aria-label={t(c.pinned ? 'sidebar.unpinNamed' : 'sidebar.pinNamed', { name: c.title || t('sidebar.chatFallback') })} title={c.pinned ? t('sidebar.unpinChat') : t('sidebar.pinChat')} aria-pressed={!!c.pinned} onClick={()=>onPatchChat(projectId,c.id,{pinned:!c.pinned})}><ShellIcon name="pin" size={18}/></button>
-    <button className="row-action" aria-label={t('sidebar.archiveNamed', { name: c.title || t('sidebar.chatFallback') })} title={t('sidebar.archiveChat')} onClick={()=>archiveChat(c,projectId)}><ShellIcon name="archive" size={18}/></button>
+    <button className="row-action" aria-label={t('sidebar.archiveNamed', { name: c.title || t('sidebar.chatFallback') })} title={t('sidebar.archiveChat')} onClick={(e)=>archiveChat(c,projectId,e.detail===0)}><ShellIcon name="archive" size={18}/></button>
     <button ref={el=>{if(el)optionsTriggers.current.set(c.id,el);else optionsTriggers.current.delete(c.id);}} className="row-action" aria-label={t('sidebar.optionsFor', { name: c.title || t('sidebar.chatFallback') })} aria-haspopup="menu" aria-expanded={menu?.kind==='chat' && menu.id===c.id} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'chat',id:c.id,projectId,source,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={20}/></button>
   </div>;
   const projectNames = new Map(projects.map((p) => [p.id, p.name]));
@@ -600,9 +618,11 @@ export function Sidebar({
       {/* Quick-archive has no confirmation, so it needs a way back (#362): a reversible-action
           toast, not an alert — same shape as the app's save-error toast. */}
       {archiveUndo && (
-        <div className="save-error is-notice" role="status">
+        <div className="save-error is-notice" role="status"
+          onFocus={() => { if (archiveUndoTimer.current) { clearTimeout(archiveUndoTimer.current); archiveUndoTimer.current = null; } }}
+          onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) armAutoDismiss(); }}>
           <span>{t('sidebar.chatArchivedToast')}</span>
-          <button className="btn btn-secondary" onClick={undoArchive}>{t('common.undo')}</button>
+          <button ref={undoButtonRef} className="btn btn-secondary" onClick={undoArchive}>{t('common.undo')}</button>
           <button onClick={() => setArchiveUndo(null)} aria-label={t('common.dismiss')}><ShellIcon name="close" size={16}/></button>
         </div>
       )}

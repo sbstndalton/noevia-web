@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { JSX, KeyboardEvent } from 'react';
 import { SegmentedControl } from './SegmentedControl';
 import { LayoutModeChoice, layoutModeDescription } from './LayoutMode';
@@ -77,6 +77,7 @@ function FamilyPreview({ family, mode, palette }: { family: Family; mode: 'light
 
 export function FamilyChoice({ onChange }: { onChange?: () => void }): JSX.Element {
   const t = useT();
+  const uid = useId();
   const [chosen, setChosen] = useState<Family>(() => readPreference('family'));
   const [palette, setPalette] = useState<Palette>(() => currentPalette());
   useEffect(() => {
@@ -98,14 +99,21 @@ export function FamilyChoice({ onChange }: { onChange?: () => void }): JSX.Eleme
   return <div className="family-choice" role="radiogroup" aria-label={t('appearance.family')} onKeyDown={onKey}>
     {FAMILIES.map((name) => {
       const spec = FAMILY_SPECS[name];
+      const nameId = `${uid}-name-${name}`, descId = `${uid}-desc-${name}`;
       return <button key={name} type="button" role="radio" data-choice={name} aria-checked={chosen === name} tabIndex={chosen === name ? 0 : -1}
-        className="family-tile" onClick={() => choose(name)}>
-        <span className="family-tile-previews">
+        aria-labelledby={`${nameId} ${descId}`} className="family-tile" onClick={() => choose(name)}>
+        {/* #420: name-from-content otherwise starts with these previews' own mock chat UI (two
+            copies, light+dark) — ~200 characters of identical filler before the one word that
+            actually distinguishes the three tiles. Each preview root is already aria-hidden, but
+            Chrome's real accessible-name computation was still folding that text in; explicit
+            aria-labelledby bypasses name-from-content entirely rather than depending on it, and
+            aria-hidden here too costs nothing and removes any doubt for other readers of this. */}
+        <span className="family-tile-previews" aria-hidden="true">
           <FamilyPreview family={name} mode="light" palette={palette} />
           <FamilyPreview family={name} mode="dark" palette={palette} />
         </span>
-        <span className="family-tile-name">{spec.label}</span>
-        <span className="family-tile-desc">{t(`appearance.family.${name}` as MessageKey)} {spec.display === spec.ui ? t('appearance.family.setIn', { font: spec.ui }) : t('appearance.family.pair', { display: spec.display, ui: spec.ui })}</span>
+        <span className="family-tile-name" id={nameId}>{spec.label}</span>
+        <span className="family-tile-desc" id={descId}>{t(`appearance.family.${name}` as MessageKey)} {spec.display === spec.ui ? t('appearance.family.setIn', { font: spec.ui }) : t('appearance.family.pair', { display: spec.display, ui: spec.ui })}</span>
       </button>;
     })}
   </div>;

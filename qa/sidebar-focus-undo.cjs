@@ -1,14 +1,24 @@
-// #355 (reopened) / #362 (reopened): real-browser regressions the earlier PRs' source-text-only
-// tests missed. Offline: a synthetic in-memory fixture (createFixture, diary-fixture.cjs) answers
-// every /api call — no inference, storage, Diary or network. Covers:
+// #355 (reopened) / #362 (reopened, twice) / #418: real-browser regressions the earlier PRs'
+// source-text-only tests missed. Offline: a synthetic in-memory fixture (createFixture,
+// diary-fixture.cjs) answers every /api call — no inference, storage, Diary or network. Covers:
+//   - #418: the ordinary forward Tab walk through a pinned chat row and a project row reaches
+//     every row-action button (Pin/Unpin, Archive, Options; a project's Options/New chat), never
+//     dropping to <body> for a stop — `.row-actions` was `display:none` outside hover/focus-within
+//     (phone.css, unconditionally under (hover:hover), i.e. every real desktop browser, not just
+//     small viewports as the surrounding comment implied), which removes an element from the
+//     page's native focus order entirely
 //   - sidebar search Escape returns focus to the search trigger, not <body>
 //   - inline chat rename Escape (cancel) and Enter (commit) both return focus to the row's
-//     Options button, not <body> — the row's own row-actions are display:none (phone.css,
-//     @media(hover:hover)) except on :hover/:focus-within, which is what dropped focus before
+//     Options button, not <body> — programmatically focusing into a then-`display:none`
+//     row-actions container silently no-ops, which is what dropped focus before
 //   - quick-archive's toast Undo actually restores the chat: the API body carries archived:false
 //     and the chat reappears in the sidebar's own (re-rendered) recent-chats list
 //   - the same Undo also reaches an already-mounted, independent workspace reader (Settings ->
 //     Your data & privacy's archived-chat count), which onPatchChat alone does not refresh
+//   - #362 (reopened again): a keyboard-initiated quick-archive puts focus directly on the
+//     toast's Undo button (it used to rely on the ordinary Tab order, which the archived row's
+//     own removal from the DOM broke the same way #418 did), and Undo restores the chat when
+//     activated by a real Enter keypress, not just a click
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
@@ -32,9 +42,12 @@ const activeElement = (page) => page.evaluate(() => ({
     page.on('pageerror', (e) => errors.push(e.message));
 
     const chat = (id, extra = {}) => ({ id, title: `Synthetic ${id}`, updatedAt: 1000, archived: false, messages: [], ...extra });
-    let freeChats = [chat('a'), chat('b'), chat('c')];
+    // A pinned chat and a pinned project (both empty of their own chats) so #418's Tab walk has
+    // a pinned-row and a project-row to cross, matching the two markups the issue named.
+    let freeChats = [chat('a', { pinned: true }), chat('b'), chat('c')];
+    const projects = [{ id: 'p1', name: 'Project X', pinned: true, chats: [] }];
     const patches = [];
-    await page.route('**/api/workspace', (r) => r.fulfill({ json: { projects: [], freeChats } }));
+    await page.route('**/api/workspace', (r) => r.fulfill({ json: { projects, freeChats } }));
     await page.route('**/api/freechats', async (r) => {
       if (r.request().method() === 'POST') {
         const body = r.request().postDataJSON();
@@ -47,6 +60,30 @@ const activeElement = (page) => page.evaluate(() => ({
 
     await page.goto('http://localhost:31462');
     await page.getByPlaceholder('Message noevia…').waitFor();
+
+    // ── #418: Tab through the pinned chat row and the project row reaches every row-action
+    // button, never <body> ──
+    await page.getByRole('button', { name: 'New chat', exact: true }).first().click();
+    const tabbed = [];
+    for (let i = 0; i < 12; i += 1) {
+      await page.keyboard.press('Tab');
+      const state = await activeElement(page);
+      // Captured in the same step as the Tab that landed here, while this element still holds
+      // focus — a stale re-query after focus has moved on would see the reveal-on-focus CSS
+      // already reverted, and wrongly look zero-size regardless of this fix.
+      const rect = await page.evaluate(() => { const r = document.activeElement?.getBoundingClientRect(); return r ? { width: r.width, height: r.height } : null; });
+      tabbed.push({ ...state, rect });
+    }
+    assert.equal(tabbed.filter((s) => s.isBody).length, 0, `Tab must never land on <body>: ${JSON.stringify(tabbed)}`);
+    const byLabel = new Map(tabbed.map((s) => [s.label, s]));
+    for (const expected of ['Unpin Synthetic a', 'Archive Synthetic a', 'Options for Synthetic a', 'Options for Project X', 'New chat in Project X']) {
+      const s = byLabel.get(expected);
+      assert.ok(s, `Tab walk must reach "${expected}": saw ${JSON.stringify(tabbed.map((t) => t.label))}`);
+      // Also a real, visible target once focused (not a zero-size element that merely happens to
+      // be in the DOM) — the :focus-within reveal actually ran.
+      assert.ok(s.rect && s.rect.width > 0 && s.rect.height > 0, `"${expected}" must have a real, nonzero box once focused`);
+    }
+    pass('Tab through a pinned chat row and a project row reaches every row-action button, never <body>, each with a real visible box');
 
     // ── #355: sidebar search Escape returns focus to the trigger that opened it ──
     await page.getByRole('button', { name: 'Search projects and chats', exact: true }).first().click();
@@ -122,6 +159,33 @@ const activeElement = (page) => page.evaluate(() => ({
     assert.equal(await page.locator('.chat-row', { hasText: 'Synthetic a' }).count(), 1, 'Undo actually re-renders the chat back into the sidebar list');
     assert.equal((await archivedCount.innerText()).trim(), '0 archived chats', 'Undo also reaches the already-open Settings count, not just this component\'s own state');
     pass('quick-archive Undo sends archived:false and restores the chat to the sidebar list and to another already-mounted workspace reader');
+
+    // ── #362 (reopened again): a keyboard-initiated quick-archive must put focus directly on
+    // the toast's Undo button — the archived row (and thus focus, for a keyboard activation) is
+    // removed from the DOM in the same instant, so relying on the ordinary Tab order to find a
+    // toast that renders near the sidebar's footer left a keyboard user with no realistic path to
+    // it before the 6s auto-dismiss. A real Enter keypress (not .click()) on the row's own
+    // Archive button is what a keyboard user actually does; Chrome reports that click's
+    // event.detail as 0, which is what the fix keys off. ──
+    const rowB = page.locator('.chat-row', { hasText: 'Synthetic b' });
+    await rowB.hover();
+    await rowB.getByRole('button', { name: /Archive/ }).focus();
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(50);
+    assert.equal(await page.locator('.chat-row', { hasText: 'Synthetic b' }).count(), 0, 'archiving removes the row from the sidebar list');
+    const afterKeyboardArchive = await activeElement(page);
+    assert.equal(afterKeyboardArchive.isBody, false, 'a keyboard-initiated archive must not drop focus to <body>');
+    const activeText = await page.evaluate(() => document.activeElement?.textContent ?? null);
+    assert.equal(activeText, 'Undo', 'focus must land directly on the toast\'s Undo button');
+    // Still reachable well inside the 6s window: activate it the same way a keyboard user would.
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(50);
+    const lastKeyboardPatch = patches.at(-1);
+    const restoredB = lastKeyboardPatch?.chats?.find((c) => c.id === 'b');
+    assert.ok(restoredB, 'keyboard-activated Undo sends a save that includes the archived chat');
+    assert.equal(restoredB.archived, false, 'keyboard-activated Undo\'s save body carries archived:false');
+    assert.equal(await page.locator('.chat-row', { hasText: 'Synthetic b' }).count(), 1, 'keyboard-activated Undo restores the chat to the sidebar list');
+    pass('a keyboard-initiated quick-archive puts focus on the toast\'s Undo button, not <body>, and Enter on it restores the chat');
 
     assert.deepEqual(errors, [], 'no page errors');
     console.log(`PASS sidebar-focus-undo: all ${passed} scenarios.`);

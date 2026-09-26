@@ -90,7 +90,9 @@ require('node:fs').mkdirSync(shots, { recursive: true });
     });
 
     const card = dialog.getByRole('article', { name: 'Fast-Model' });
-    await card.getByRole('button', { name: 'Delete', exact: true }).click();
+    // #421: the Delete button's own accessible name now names the model (aria-label, matching
+    // the card's own aria-label rather than a bare, ambiguous "Delete" repeated on every card).
+    await card.getByRole('button', { name: 'Delete Fast-Model', exact: true }).click();
     await card.getByRole('button', { name: 'Delete files' }).click();
 
     // The card must be gone WITHOUT a reload: wait only long enough to observe it, and assert
@@ -113,7 +115,7 @@ require('node:fs').mkdirSync(shots, { recursive: true });
     });
     const folderCard = dialog.getByRole('article', { name: 'Folder-Model' });
     await folderCard.waitFor();
-    await folderCard.getByRole('button', { name: 'Delete', exact: true }).click();
+    await folderCard.getByRole('button', { name: 'Delete Folder-Model', exact: true }).click();
     await folderCard.getByRole('button', { name: 'Delete files' }).click();
     await dialog.getByRole('article', { name: 'Folder-Model' }).waitFor({ state: 'detached', timeout: 2000 });
     assert.equal(proxyDeleteCalls, 1, 'exactly one proxy delete call reached the server for the folder model');

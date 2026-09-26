@@ -63,6 +63,15 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
   const [autoInfo, setAutoInfo] = useState<{ configured: boolean; roles: AutoRoles | null } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // Every busy-gated control here (the Auto/Manual toggle, a model row, the provider
+  // select, a toolbox checkbox…) shares `disabled={busy !== null}`, so the control the
+  // user just activated — and which therefore still has focus — becomes disabled for the
+  // duration of the save. Browsers force-blur a focused element the instant it becomes
+  // disabled, so focus falls to <body> until the user's next Tab press (#419). Remember
+  // what had focus when a save started and, once busy clears and the control is enabled
+  // again, put focus back — but only if it actually fell away, so a user who tabbed
+  // onward during the save keeps where they moved to.
+  const focusOnIdle = useRef<HTMLElement | null>(null);
   const [cloudModel, setCloudModel] = useState('');
   // Tuning lives on the admin-only model manager; members would only reach an "unavailable" page.
   const [canTune, setCanTune] = useState(false);
@@ -94,11 +103,21 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
 
   const save = async (key: string, patch: Record<string, unknown>) => {
     if (!activeProject) return;
+    focusOnIdle.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setBusy(key); setErr(null);
     try { await saveProjectConfig(activeProject.id, patch); onChanged(); }
     catch (e) { setErr(e instanceof Error ? e.message : t('modelPopup.saveError')); }
     finally { setBusy(null); }
   };
+  // Runs once the re-render that clears `busy` has actually committed, so the control is
+  // enabled again by the time `.focus()` is called — calling it any earlier would silently
+  // no-op against the still-disabled element, same as the bug this fixes.
+  useEffect(() => {
+    if (busy !== null) return;
+    const el = focusOnIdle.current;
+    focusOnIdle.current = null;
+    if (el && document.activeElement === document.body && document.contains(el)) el.focus();
+  }, [busy]);
 
   // An unset selection means the server default (core only), so the first
   // toggle has to materialise that default before changing it — otherwise

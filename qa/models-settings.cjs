@@ -117,10 +117,11 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  assert.equal(await dialog.getByTestId('models-disk').innerText(),'Models folder: 139.7 GB free of 465.7 GB (70% used).');
  const gemma=dialog.getByRole('article',{name:'Gemma-E2B'});
  await gemma.getByRole('button',{name:'Details'}).click();await gemma.getByText('gemma4',{exact:true}).waitFor();assert.ok(await gemma.getByText('5.1 B').isVisible());
- await gemma.getByRole('button',{name:'Delete',exact:true}).click();
+ // #421: the Delete button's own accessible name now carries the model name too.
+ await gemma.getByRole('button',{name:'Delete Gemma-E2B',exact:true}).click();
  assert.ok(await gemma.getByText(/Delete Gemma-E2B.gguf \(3.0 GB\)/).isVisible());
  await gemma.getByRole('button',{name:'Delete files'}).click();
- await dialog.getByRole('article',{name:'Gemma-E2B'}).getByRole('button',{name:'Delete',exact:true}).waitFor();
+ await dialog.getByRole('article',{name:'Gemma-E2B'}).getByRole('button',{name:'Delete Gemma-E2B',exact:true}).waitFor();
  assert.deepEqual(deleted,['g/Gemma-E2B.gguf']);assert.ok(calls.includes('DELETE /api/model-manager/sections/Gemma-E2B'));
  await dialog.getByRole('button',{name:'Create settings'}).first().waitFor();
  // Configure via Library → Settings
