@@ -219,7 +219,11 @@ export function ChatView({
 
 
   const openModels = () => { if (!project && freeContext) setFreeModels(true); else onOpenModels(); };
-  if (!project && freeContext) modelLabel = freeContext.routing === 'auto' || freeContext.model ? modelChoiceLabel(freeContext, installedModels ?? null) : modelLabel;
+  // Always defer to the chat's own context object once it exists, exactly like a project (App.tsx)
+  // does — gating this on routing==='auto' || model let a manual choice with no model yet picked
+  // silently keep showing the inherited Auto default, disagreeing with the picker reading the same
+  // object directly (#352).
+  if (!project && freeContext) modelLabel = modelChoiceLabel(freeContext, installedModels ?? null);
   const coworkAccess = useCoworkAccess(project?.id ?? null);
   const [repository, setRepository] = useState<string | null>(null);
   useEffect(() => {

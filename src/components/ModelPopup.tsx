@@ -100,7 +100,12 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
   // An unset selection means the server default (core only), so the first
   // toggle has to materialise that default before changing it — otherwise
   // deselecting core would read as "unset" and silently re-enable it.
-  const selectedBoxes = activeProject?.toolboxes ?? ['core'];
+  // A connected connector is never in the project's own toolboxes list (it isn't picked here,
+  // it's connected in Settings), but the chat loop sends it every turn regardless — count it as
+  // selected too, or the tool list and token budget under-report what actually goes out (#354).
+  const connectorIds = toolboxes.filter((b) => b.connector).map((b) => b.id);
+  const rawSelectedBoxes = activeProject?.toolboxes ?? ['core'];
+  const selectedBoxes = connectorIds.length ? [...new Set([...rawSelectedBoxes, ...connectorIds])] : rawSelectedBoxes;
   const chosen = toolboxes.filter((b) => selectedBoxes.includes(b.id));
   const selectedTokens = chosen.reduce((n, b) => n + b.estTokens, 0);
   const selectedTools = chosen.reduce((n, b) => n + b.toolCount, 0);
@@ -198,11 +203,14 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
       {toolboxes.map((box) => {
         const on = selectedBoxes.includes(box.id);
         return <label key={box.id} className="mp-tool">
-          <input type="checkbox" checked={on} disabled={busy !== null}
-            onChange={() => void save(`box-${box.id}`, { toolboxes: on ? selectedBoxes.filter((b) => b !== box.id) : [...selectedBoxes, box.id] })} />
+          {/* A connector is on because it's connected (Settings → Connectors), not because it's
+              picked here — show it as always-on rather than a checkbox nobody can uncheck. */}
+          <input type="checkbox" checked={on} disabled={busy !== null || box.connector}
+            onChange={() => void save(`box-${box.id}`, { toolboxes: on ? rawSelectedBoxes.filter((b) => b !== box.id) : [...rawSelectedBoxes, box.id] })} />
           <span>
             <strong>{box.label}</strong>
             {box.source === 'mcp' && <span className="mp-tag">MCP</span>}
+            {box.connector && <span className="mp-tag">{t('tools.onForChat')}</span>}
             <span className="mp-hint"> · {t.plural('modelPopup.toolCount', box.toolCount)}</span>
             <span className="mp-tool-desc">{box.description}</span>
           </span>

@@ -9,7 +9,7 @@ import { ShortcutsDialog } from './components/shortcuts/ShortcutsDialog';
 import { notifyIfAway } from './components/notifications/notify';
 import { notifyModelsChanged, useModelsChanged } from './models-changed';
 import { modelChoiceLabel } from './model-guidance';
-import { applyReplyTelemetry, beginReplyTelemetry, finishReplyTelemetry } from './reply-telemetry';
+import { applyReplyTelemetry, beginReplyTelemetry, finishReplyTelemetry, lastReplyTelemetry } from './reply-telemetry';
 import { TOOL_RESULT_LIMIT } from './components/ToolCalls';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
@@ -1384,9 +1384,11 @@ export default function App(): JSX.Element {
         </Suspense>
       )}
       {/* A blank chat shows no row of unavailable metrics; they return with the first reply (#239). */}
+      {/* A live stream in this session wins; otherwise reply rehydrates from the chat's own last
+          completed message so a reload or navigation does not fake an engine outage (#357). */}
       {!(view.kind === 'chat' && messages.length === 0 && !replyTelemetryByChat[view.chatId]) && <StatsBar
         stats={stats}
-        reply={view.kind === 'chat' ? replyTelemetryByChat[view.chatId] || null : null}
+        reply={view.kind === 'chat' ? replyTelemetryByChat[view.chatId] || lastReplyTelemetry(messages) : null}
         routingDecision={routingDecision}
         modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured)}
       />}

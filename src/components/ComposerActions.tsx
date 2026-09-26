@@ -55,6 +55,12 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
     document.addEventListener('pointerdown', outside);
     return () => { active = false; document.removeEventListener('pointerdown', outside); };
   }, [open]);
+  // A connected connector (e.g. Google Drive) is never in the project's own toolboxes list — the
+  // chat loop adds it on top because the account connected it (Settings → Connectors) — but it is
+  // sent every turn regardless, so it must count as enabled here too, or the tool list and token
+  // budget under-report what the next message actually sends (#354).
+  const connectorIds = boxes.filter(box => box.connector).map(box => box.id);
+  const effectiveSelected = connectorIds.length ? [...new Set([...selected, ...connectorIds])] : selected;
   const toggle = async (id: string) => {
     if (!project || saving || disabled) return;
     const next = selected.includes(id) ? selected.filter(value => value !== id) : [...selected, id];
@@ -83,7 +89,7 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
       onBusy(false);
     }
   };
-  const tokens = boxes.filter(box => selected.includes(box.id)).reduce((sum, box) => sum + box.estTokens, 0);
+  const tokens = boxes.filter(box => effectiveSelected.includes(box.id)).reduce((sum, box) => sum + box.estTokens, 0);
   return <div className="composer-actions" ref={root} onKeyDown={event => {
     if (event.key === 'Escape') { event.stopPropagation(); setOpen(false); trigger.current?.focus(); }
   }}>
@@ -102,14 +108,16 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
       <span className="composer-menu-label">{diary ? t('composer.toolsExtras') : chatOnly ? t('composer.toolsChat') : t('composer.toolsProject')}</span>
       {loading ? <p className="composer-menu-note">{t('composer.loadingTools')}</p> : <>
         {(['builtin', 'mcp'] as const).flatMap(source => boxes.filter(box => box.source === source)).map(box => {
-          const on = selected.includes(box.id);
-          return <button type="button" key={box.id} className="composer-menu-row composer-tool-option" role="menuitemcheckbox" aria-checked={on} disabled={!project || saving || disabled} onClick={() => void toggle(box.id)} title={t('composer.toolCount', { description: box.description, count: box.toolCount })}>
+          const on = effectiveSelected.includes(box.id);
+          // A connector is on because it's connected (Settings → Connectors), not picked here —
+          // show it as already-enabled rather than a checkbox nobody can turn off from this menu.
+          return <button type="button" key={box.id} className="composer-menu-row composer-tool-option" role="menuitemcheckbox" aria-checked={on} disabled={!project || saving || disabled || box.connector} onClick={() => void toggle(box.id)} title={t('composer.toolCount', { description: box.description, count: box.toolCount })}>
             <ShellIcon name={box.source === 'mcp' ? 'connectors' : 'tools'} size={18}/><span>{box.label}<small>{box.description}</small></span>
             <span className="composer-menu-check" aria-hidden="true">{on && <ShellIcon name="check" size={18}/>}</span>
           </button>;
         })}
         {!boxes.length && <p className="composer-menu-note">{t('composer.noTools')}</p>}
-        {boxes.length > 0 && <p className="composer-menu-note">{selected.length ? t('composer.tokensNote', { tokens: tokens.toLocaleString(appLocale()) }) : t('composer.noToolsSelected')}</p>}
+        {boxes.length > 0 && <p className="composer-menu-note">{effectiveSelected.length ? t('composer.tokensNote', { tokens: tokens.toLocaleString(appLocale()) }) : t('composer.noToolsSelected')}</p>}
       </>}
       {error && <p className="composer-menu-note" role="alert">{error}</p>}
       {/* One inventory (#238): the menu links to Customise rather than growing a second manager. */}

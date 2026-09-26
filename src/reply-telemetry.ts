@@ -1,4 +1,4 @@
-import type { ReplyTelemetry } from './types';
+import type { Message, ReplyTelemetry } from './types';
 
 export interface ReplyTelemetryEvent {
   phase?: 'waiting' | 'streaming' | 'complete';
@@ -42,6 +42,31 @@ export function applyReplyTelemetry(previous: ReplyTelemetry | undefined, event:
     }];
   }
   return next;
+}
+
+/** Rehydrates the status bar's last-reply stats from the chat's own stored history (#357):
+ *  after a reload or navigation, replyTelemetryByChat starts empty (it only ever held live-stream
+ *  state), so the bar showed "Not reported" as if the engine had failed even though the reply's
+ *  numbers were saved right there on the message. Only the very last message can describe the
+ *  chat's current reply — mirrors currentRoutingDecision's convention (current-routing.ts).
+ *
+ *  timeToFirstToken is never stored per message (only elapsedMs, the total), so it stays null here
+ *  rather than being guessed from elapsedMs — an honest "Not reported" beats a fabricated number. */
+export function lastReplyTelemetry(messages: Message[]): ReplyTelemetry | null {
+  const latest = messages[messages.length - 1];
+  if (latest?.role !== 'assistant' || !latest.stats) return null;
+  const { promptTokens, completionTokens, totalTokens, tokensPerSecond } = latest.stats;
+  if (promptTokens == null && completionTokens == null && totalTokens == null && tokensPerSecond == null) return null;
+  return {
+    phase: 'complete',
+    model: latest.senderLabel ?? null,
+    timeToFirstToken: null,
+    inputTokens: promptTokens ?? null,
+    outputTokens: completionTokens ?? null,
+    totalTokens: totalTokens ?? null,
+    tokensPerSecond: tokensPerSecond ?? null,
+    mtp: [],
+  };
 }
 
 export function finishReplyTelemetry(

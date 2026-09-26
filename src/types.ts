@@ -291,4 +291,8 @@ export interface Toolbox {
   source: 'builtin' | 'mcp';
   toolCount: number;
   estTokens: number;
+  /** A connector (e.g. Google Drive): only ever present here when this account has it connected,
+   *  since its on/off state lives in Settings → Connectors, not a project's own toolboxes list
+   *  (#354). Every reader must count it as enabled and never offer it as a checkbox to toggle. */
+  connector?: boolean;
 }
