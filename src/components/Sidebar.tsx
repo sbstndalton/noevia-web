@@ -11,6 +11,7 @@ import { AccountMenu } from './AccountMenu';
 import { ModeSwitch } from './ModeSwitch';
 import { ContextMenu, ConfirmDialog } from './ContextMenu';
 import type { MenuItem } from './ContextMenu';
+import { buildSearchResults, searchResultKey } from '../sidebar-search';
 import { fetchToolboxes, fetchProfile } from '../api';
 import type { McpStatus } from '../api';
 import { notifyWorkspaceChanged } from './data/workspace-changed';
@@ -385,6 +386,41 @@ export function Sidebar({
   // The chat sidebar lists projects enabled for Chat; the Projects page lists all of them.
   const visibleProjects = sortedProjects.filter(p=>(!p.modes?.length || p.modes.includes('chat')) && p.name.toLowerCase().includes(query.toLowerCase()));
   const visibleChats = recentChats(chats).filter(c=>(c.title || '').toLowerCase().includes(query.toLowerCase()));
+  const pinnedChats = visibleChats.filter(c=>c.pinned);
+  const pinnedProjects = visibleProjects.filter(p=>p.pinned);
+  const unpinnedProjects = visibleProjects.filter(p=>!p.pinned);
+  const unpinnedChats = visibleChats.filter(c=>!c.pinned);
+  const boundedRecentChats = query || allRecents ? unpinnedChats : unpinnedChats.slice(0, RECENT_LIMIT);
+  // #439: while a query narrows the lists, ArrowDown/ArrowUp/Enter move through this exact,
+  // flat, DOM-order list (pinned chats, pinned projects, unpinned projects, recent chats) —
+  // the same order the groups below render them in — via real roving focus on each result's
+  // own button (searchResultRefs), not a duplicate/virtual list.
+  const searchResults = query ? buildSearchResults(pinnedChats, pinnedProjects, unpinnedProjects, boundedRecentChats) : [];
+  const searchResultIndex = new Map(searchResults.map((r, i) => [searchResultKey(r.kind, r.id), i]));
+  const searchResultRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const focusSearchResultAt = (index: number): boolean => {
+    const r = searchResults[index];
+    const el = r && searchResultRefs.current.get(searchResultKey(r.kind, r.id));
+    if (!el) return false;
+    el.focus();
+    return true;
+  };
+  const registerSearchResult = (kind: 'chat' | 'project', id: string) => (el: HTMLElement | null) => {
+    const key = searchResultKey(kind, id);
+    if (el) searchResultRefs.current.set(key, el); else searchResultRefs.current.delete(key);
+  };
+  // Escape on a focused result returns focus to the search field (one level of "back"); a
+  // second Escape, now on the field itself, falls through to the field's own handler below,
+  // which keeps the existing #355 clear/close behaviour intact.
+  const onSearchResultKeyDown = (kind: 'chat' | 'project', id: string) => (e: React.KeyboardEvent) => {
+    if (!query) return;
+    const index = searchResultIndex.get(searchResultKey(kind, id));
+    if (index === undefined) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); focusSearchResultAt(index + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (index <= 0) searchInputRef.current?.focus(); else focusSearchResultAt(index - 1); }
+    else if (e.key === 'Escape') { e.preventDefault(); searchInputRef.current?.focus(); }
+  };
   const manualItems = (p: Project): MenuItem[] => {
     if(order.sort!=='manual')return [];
     const peers=sortedProjects.filter(x=>!!x.pinned===!!p.pinned);
@@ -489,13 +525,15 @@ export function Sidebar({
                   />
                 ) : (
                   <button
+                    ref={registerSearchResult('chat', c.id)}
                     className="nav-item"
                     onClick={() => onOpenChat(c.id, c.projectId ?? null)}
+                    onKeyDown={onSearchResultKeyDown('chat', c.id)}
                     title={c.title}
                     data-tip={c.title || t('common.newChat')}
                   >
                     <ShellIcon name={c.pinned ? 'pin' : 'chat'} size={17}/>
-                    <SidebarLabel text={c.title || t('common.newChat')}/>
+                    <SidebarLabel text={c.title || t('common.newChat')} highlight={query}/>
                     {/* Project context tells identically titled chats apart (#239). */}
                     {c.projectId && projectNames.get(c.projectId) && <span className="chat-row-context">{projectNames.get(c.projectId)}</span>}
                     {streamingChats[c.id] && (
@@ -530,7 +568,14 @@ export function Sidebar({
     >
       <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? t('sidebar.closeNavigation') : collapsed ? t('sidebar.expandNavigation') : t('sidebar.collapseNavigation')} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div>{/* Like Claude's: a small icon-only Chat/Code switch at the end of the header row. Switching
           closes the phone drawer, so the new mode is what you see. */}{showPreviews && <ModeSwitch compact mode={mode} onCode={() => { setExpanded(false); onEnterCode(); }} onChat={() => { setExpanded(false); onEnterChat?.(); }}/>}</div>
-      {/* On a phone the drawer always shows the search field under its header, as Claude's does. */}{(searching || (mobile && expanded))&&<input className="shell-search" autoFocus={searching} aria-label={t('sidebar.search')} placeholder={t('sidebar.searchPlaceholder')} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');(searchTrigger.current||railSearchButton.current)?.focus();}}}/>}
+      {/* On a phone the drawer always shows the search field under its header, as Claude's does. */}{(searching || (mobile && expanded))&&<>
+      {/* #439: ArrowDown enters the results (focusSearchResultAt); a first Escape from a result
+          (onSearchResultKeyDown, below) only returns focus here, so this Escape — reached only
+          when the field already had focus — keeps the pre-existing #355 clear/close behaviour. */}
+      <input ref={searchInputRef} className="shell-search" autoFocus={searching} aria-label={t('sidebar.search')} placeholder={t('sidebar.searchPlaceholder')} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setSearching(false);setQuery('');(searchTrigger.current||railSearchButton.current)?.focus();return;}if(e.key==='ArrowDown'&&searchResults.length){e.preventDefault();focusSearchResultAt(0);}}}/>
+      {/* Announces how many results a query narrowed the lists to (#439). */}
+      {query && <span className="sr-only" role="status" aria-live="polite">{t.plural('sidebar.searchResults', searchResults.length)}</span>}
+      </>}
 
       {/* Floats over the list as it scrolls, as ChatGPT's New chat does. */}
       <div className="side-new">
@@ -582,14 +627,14 @@ export function Sidebar({
         </div>
       </div> : <div className="sidebar-history">
       {['Pinned','Projects'].map(group => {
-        const entries = visibleProjects.filter(p=>group==='Pinned'?p.pinned:!p.pinned);
-        if(group==='Pinned' && !entries.length && !visibleChats.some(c=>c.pinned))return null;
+        const entries = group==='Pinned' ? pinnedProjects : unpinnedProjects;
+        if(group==='Pinned' && !entries.length && !pinnedChats.length)return null;
         return <div className={`spaces side-scroll side-scroll-${group.toLowerCase()}`} key={group}>
           <div className="sidebar-section-head"><button className="section-label section-toggle" aria-label={t('sidebar.sectionNamed', { name: group==='Projects' ? t('sidebar.projects') : t('sidebar.pinned') })} aria-expanded={!closedGroups[group]} onClick={()=>setClosedGroups(g=>({...g,[group]:!g[group]}))}>{group==='Projects' ? t('sidebar.yourProjects') : t('sidebar.pinned')}</button>{group==='Projects' && <button className="row-action section-options" aria-label={t('sidebar.projectOrdering')} aria-haspopup="menu" aria-expanded={!!sorting} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setSorting({x:r.left,y:r.bottom+4});}}><ShellIcon name="more" size={20}/></button>}</div>
-          {group==='Pinned' && (!closedGroups[group] || query) && visibleChats.filter(c=>c.pinned).map(renderChat)}
+          {group==='Pinned' && (!closedGroups[group] || query) && pinnedChats.map(renderChat)}
           {(!closedGroups[group] || query) && entries.map(p=><div className="project-branch" key={p.id}>
             <div className={`proj-row${activeProjectId===p.id && activeView!=='projects'?' is-active':''}`} onContextMenu={e=>{e.preventDefault();setMenu({kind:'project',id:p.id,projectId:null,at:{x:e.clientX,y:e.clientY}});}}>
-              {renamingId===p.id ? <input className="proj-rename-input" aria-label={t('sidebar.projectName')} value={renameDraft} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(null,false)} onKeyDown={e=>{const row=e.currentTarget.closest<HTMLElement>('.proj-row');if(e.key==='Enter'){commitRename(null,false);returnFocusToRow(p.id,row);}if(e.key==='Escape'){setRenamingId(null);returnFocusToRow(p.id,row);}}}/> : <><button className="project-expand" data-tip={p.name} aria-label={t(openProjects[p.id]?'sidebar.collapseChatsIn':'sidebar.expandChatsIn', { name: p.name })} aria-expanded={!!openProjects[p.id]} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:!prev[p.id]}));}}><ProjectIcon project={p} size={18}/></button><button className="project-disclosure" aria-label={t('sidebar.openNamed', { name: p.name })} onMouseEnter={e=>openHover(p.id,e.currentTarget)} onMouseLeave={closeHover} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:true}));onOpenProject(p.id);setExpanded(false);}}><SidebarLabel text={p.name}/></button></>}
+              {renamingId===p.id ? <input className="proj-rename-input" aria-label={t('sidebar.projectName')} value={renameDraft} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(null,false)} onKeyDown={e=>{const row=e.currentTarget.closest<HTMLElement>('.proj-row');if(e.key==='Enter'){commitRename(null,false);returnFocusToRow(p.id,row);}if(e.key==='Escape'){setRenamingId(null);returnFocusToRow(p.id,row);}}}/> : <><button className="project-expand" data-tip={p.name} aria-label={t(openProjects[p.id]?'sidebar.collapseChatsIn':'sidebar.expandChatsIn', { name: p.name })} aria-expanded={!!openProjects[p.id]} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:!prev[p.id]}));}}><ProjectIcon project={p} size={18}/></button><button ref={registerSearchResult('project', p.id)} className="project-disclosure" aria-label={t('sidebar.openNamed', { name: p.name })} onMouseEnter={e=>openHover(p.id,e.currentTarget)} onMouseLeave={closeHover} onKeyDown={onSearchResultKeyDown('project', p.id)} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:true}));onOpenProject(p.id);setExpanded(false);}}><SidebarLabel text={p.name} highlight={query}/></button></>}
 
               <div className="row-actions">
                 <button ref={el=>{if(el)optionsTriggers.current.set(p.id,el);else optionsTriggers.current.delete(p.id);}} className="row-action" aria-label={t('sidebar.optionsFor', { name: p.name })} aria-haspopup="menu" aria-expanded={menu?.kind==='project' && menu.id===p.id} onClick={e=>{closeHover();const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'project',id:p.id,projectId:null,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={22}/></button>
@@ -597,7 +642,7 @@ export function Sidebar({
               </div>
             </div>
             {openProjects[p.id] && <div className="project-children">
-              {(p.chats || []).filter(c=>!c.archived && !c.pinned).sort((a,b)=>b.updatedAt-a.updatedAt).map(c=><div className="chat-row" key={c.id}>
+              {(p.chats || []).filter(c=>!c.archived && !c.pinned).sort((a,b)=>b.updatedAt-a.updatedAt).map(c=><div className="chat-row" key={c.id} onContextMenu={e=>{e.preventDefault();setMenu({kind:'chat',id:c.id,projectId:p.id,source:'nested',at:{x:e.clientX,y:e.clientY}});}}>
                 {renamingId===c.id && renameSource==='nested' ? <input className="proj-rename-input" aria-label={t('sidebar.renameChatLabel')} value={renameDraft} autoFocus onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(p.id,true)} onKeyDown={e=>{const row=e.currentTarget.closest<HTMLElement>('.chat-row');if(e.key==='Enter'){commitRename(p.id,true);returnFocusToRow(c.id,row);}if(e.key==='Escape'){setRenamingId(null);returnFocusToRow(c.id,row);}}}/> : <button className={`nested-chat-title${activeChatId===c.id?' is-active':''}`} onClick={()=>{onOpenChat(c.id,p.id);setExpanded(false);}}><SidebarLabel text={c.title || t('common.newChat')}/>{streamingChats[c.id] && <span aria-label={t('sidebar.stillGenerating')}> ···</span>}</button>}
                 {chatActions(c,p.id,'nested')}
               </div>)}
@@ -608,18 +653,16 @@ export function Sidebar({
         </div>;
       })}
 
-      {visibleChats.some(c=>!c.pinned) && (
+      {unpinnedChats.length > 0 && (
         <>
           <div className="divider" />
           <div className="spaces side-scroll side-scroll-chats">
             <button className="section-label section-toggle" aria-expanded={!closedGroups.Chats} onClick={()=>setClosedGroups(g=>({...g,Chats:!g.Chats}))}>{t('sidebar.recentChats')}</button>
-            {(!closedGroups.Chats || query) && (() => {
-              const recent = visibleChats.filter(c=>!c.pinned);
-              const bounded = query || allRecents ? recent : recent.slice(0, RECENT_LIMIT);
-              return <div className="recent-children">{bounded.map(renderChat)}
-                {!query && recent.length > RECENT_LIMIT && <button className="side-more" aria-expanded={allRecents} onClick={()=>setAllRecents(v=>!v)}>{allRecents ? t('sidebar.showFewer') : t('sidebar.viewAll', { count: recent.length })}</button>}
-              </div>;
-            })()}
+            {(!closedGroups.Chats || query) && (
+              <div className="recent-children">{boundedRecentChats.map(renderChat)}
+                {!query && unpinnedChats.length > RECENT_LIMIT && <button className="side-more" aria-expanded={allRecents} onClick={()=>setAllRecents(v=>!v)}>{allRecents ? t('sidebar.showFewer') : t('sidebar.viewAll', { count: unpinnedChats.length })}</button>}
+              </div>
+            )}
 
           </div>
         </>

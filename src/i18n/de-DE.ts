@@ -29,6 +29,8 @@ export const DE_DE: Catalogue = {
   'sidebar.customise': "Anpassen",
   'sidebar.search': "Projekte und Chats durchsuchen",
   'sidebar.searchPlaceholder': "Projekte und Chats suchen…",
+  'sidebar.searchResults.one': "{count} Ergebnis",
+  'sidebar.searchResults.other': "{count} Ergebnisse",
   'sidebar.showPinned': "Angeheftete anzeigen",
   'sidebar.codingProjects': "Coding-Projekte",
   'sidebar.codingProjectsEmpty': "Keine Coding-Projekte verbunden. Repositorys lassen sich in einem künftigen Update verbinden.",

@@ -29,6 +29,8 @@ export const NB_NO: Catalogue = {
   'sidebar.customise': "Tilpass",
   'sidebar.search': "Søk i prosjekter og chatter",
   'sidebar.searchPlaceholder': "Søk i prosjekter og chatter…",
+  'sidebar.searchResults.one': "{count} resultat",
+  'sidebar.searchResults.other': "{count} resultater",
   'sidebar.showPinned': "Vis festede",
   'sidebar.codingProjects': "Kodeprosjekter",
   'sidebar.codingProjectsEmpty': "Ingen kodeprosjekter tilkoblet. Å koble til et repo kommer i en senere oppdatering.",

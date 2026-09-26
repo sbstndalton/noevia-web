@@ -29,6 +29,8 @@ export const NL_NL: Catalogue = {
   'sidebar.customise': "Aanpassen",
   'sidebar.search': "Zoek in projecten en chats",
   'sidebar.searchPlaceholder': "Zoek in projecten en chats…",
+  'sidebar.searchResults.one': "{count} resultaat",
+  'sidebar.searchResults.other': "{count} resultaten",
   'sidebar.showPinned': "Vastgezette items tonen",
   'sidebar.codingProjects': "Codeprojecten",
   'sidebar.codingProjectsEmpty': "Geen codeprojecten gekoppeld. Een repository koppelen komt in een volgende update.",

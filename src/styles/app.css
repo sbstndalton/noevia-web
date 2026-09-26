@@ -211,6 +211,8 @@ body { margin: 0; background: var(--bg); }
 .chat-row .recents-del:focus-visible { opacity: 1; }
 .chat-row.is-active .nav-item { background: var(--bg-active); color: var(--text); }
 .chat-row.is-active .nav-item .nav-name { font-weight: 700; color: var(--text); }
+/* #439: the sidebar search box's matched substring, in a project or chat row's label. */
+.sidebar-search-highlight { background: var(--accent-2-soft); color: var(--accent-text); border-radius: 3px; font-weight: 600; }
 /* Retry affordance on a failed assistant bubble. */
 .msg-retry {
   align-self: flex-start;

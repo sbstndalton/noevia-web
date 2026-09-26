@@ -29,6 +29,8 @@ export const PT_BR: Catalogue = {
   'sidebar.customise': "Personalizar",
   'sidebar.search': "Buscar projetos e chats",
   'sidebar.searchPlaceholder': "Buscar projetos e chats…",
+  'sidebar.searchResults.one': "{count} resultado",
+  'sidebar.searchResults.other': "{count} resultados",
   'sidebar.showPinned': "Mostrar fixados",
   'sidebar.codingProjects': "Projetos de código",
   'sidebar.codingProjectsEmpty': "Nenhum projeto de código conectado. Conectar um repositório chega em uma próxima atualização.",

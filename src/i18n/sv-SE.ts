@@ -29,6 +29,8 @@ export const SV_SE: Catalogue = {
   'sidebar.customise': "Anpassa",
   'sidebar.search': "Sök i projekt och chattar",
   'sidebar.searchPlaceholder': "Sök i projekt och chattar…",
+  'sidebar.searchResults.one': "{count} resultat",
+  'sidebar.searchResults.other': "{count} resultat",
   'sidebar.showPinned': "Visa fästa",
   'sidebar.codingProjects': "Kodprojekt",
   'sidebar.codingProjectsEmpty': "Inga kodprojekt anslutna. Att ansluta ett repo kommer i en framtida uppdatering.",

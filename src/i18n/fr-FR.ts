@@ -29,6 +29,8 @@ export const FR_FR: Catalogue = {
   'sidebar.customise': "Personnaliser",
   'sidebar.search': "Rechercher projets et discussions",
   'sidebar.searchPlaceholder': "Rechercher projets et discussions…",
+  'sidebar.searchResults.one': "{count} résultat",
+  'sidebar.searchResults.other': "{count} résultats",
   'sidebar.showPinned': "Afficher les éléments épinglés",
   'sidebar.codingProjects': "Projets de code",
   'sidebar.codingProjectsEmpty': "Aucun projet de code connecté. La connexion d’un dépôt arrivera dans une prochaine mise à jour.",

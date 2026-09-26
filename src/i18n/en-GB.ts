@@ -32,6 +32,8 @@ export const EN_GB = {
   'sidebar.customise': 'Customise',
   'sidebar.search': 'Search projects and chats',
   'sidebar.searchPlaceholder': 'Search projects and chats…',
+  'sidebar.searchResults.one': '{count} result',
+  'sidebar.searchResults.other': '{count} results',
   'sidebar.showPinned': 'Show pinned items',
   'sidebar.codingProjects': 'Coding projects',
   'sidebar.codingProjectsEmpty': 'No coding projects connected. Connecting a repository is coming in a future update.',
