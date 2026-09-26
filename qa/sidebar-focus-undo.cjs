@@ -11,6 +11,9 @@
 //   - inline chat rename Escape (cancel) and Enter (commit) both return focus to the row's
 //     Options button, not <body> — programmatically focusing into a then-`display:none`
 //     row-actions container silently no-ops, which is what dropped focus before
+//   - #355 (reopened a third time): inline PROJECT rename Escape and Enter also return focus to
+//     the project row's own Options button, not <body>, checked at 0ms and again at 500ms so a
+//     fix that only "eventually" recovers focus (or never does) cannot pass by accident
 //   - quick-archive's toast Undo actually restores the chat: the API body carries archived:false
 //     and the chat reappears in the sidebar's own (re-rendered) recent-chats list
 //   - the same Undo also reaches an already-mounted, independent workspace reader (Settings ->
@@ -19,6 +22,10 @@
 //     toast's Undo button (it used to rely on the ordinary Tab order, which the archived row's
 //     own removal from the DOM broke the same way #418 did), and Undo restores the chat when
 //     activated by a real Enter keypress, not just a click
+//   - #362 (reopened a fourth time): the row's own "…" menu Archive item goes through the same
+//     archive+undo path as the hover quick-archive icon, both at 1440px and at 500px (≤700px,
+//     where the quick-archive icon itself is hidden and the "…" menu is the only reachable way
+//     to archive a chat) — not just a plain onPatchChat with no toast and no way back
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
@@ -128,6 +135,48 @@ const activeElement = (page) => page.evaluate(() => ({
     assert.equal(afterEnter.label, 'Options for Synthetic a');
     pass('inline rename Enter returns focus to the row\'s Options button, not <body>');
 
+    // ── #355 (reopened a third time): inline PROJECT rename Escape returns focus to the
+    // project row's own Options button, not <body> — checked immediately and again at 500ms. ──
+    const projRow = page.locator('.proj-row', { hasText: 'Project X' });
+    const projRenameInput = page.locator('.proj-rename-input');
+    await projRow.hover();
+    await projRow.getByRole('button', { name: 'Options for Project X', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Rename', exact: true }).click();
+    await projRenameInput.waitFor();
+    assert.equal((await activeElement(page)).tag, 'INPUT', 'the project rename input takes focus when it opens');
+    await page.keyboard.press('Escape');
+    // The focus restore is deferred to the next animation frame (returnFocusToRow), so a check
+    // truly at 0ms — before the browser has painted that frame at all — would fail even for a
+    // correct fix; bound the wait to one frame's worth of slack, not the multi-second recovery
+    // the live bug never gave (0s/0.5s/2.5s were all <body> there).
+    await page.waitForFunction(() => document.activeElement !== document.body, null, { timeout: 200 }).catch(() => undefined);
+    const immediateProjEscape = await activeElement(page);
+    assert.equal(immediateProjEscape.isBody, false, 'project rename Escape must not drop focus to <body> at 0ms');
+    assert.equal(immediateProjEscape.label, 'Options for Project X', 'project rename Escape at 0ms must land on the row\'s Options button');
+    await page.waitForTimeout(500);
+    const afterProjEscape = await activeElement(page);
+    assert.equal(afterProjEscape.isBody, false, 'project rename Escape must not drop focus to <body> at 500ms');
+    assert.equal(afterProjEscape.tag, 'BUTTON');
+    assert.equal(afterProjEscape.label, 'Options for Project X');
+    pass('project-row rename Escape returns focus to the row\'s Options button at 0ms and 500ms, not <body>');
+
+    // ── #355 (reopened a third time): same for Enter (commit, unchanged text) ──
+    await projRow.hover();
+    await projRow.getByRole('button', { name: 'Options for Project X', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Rename', exact: true }).click();
+    await projRenameInput.waitFor();
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => document.activeElement !== document.body, null, { timeout: 200 }).catch(() => undefined);
+    const immediateProjEnter = await activeElement(page);
+    assert.equal(immediateProjEnter.isBody, false, 'project rename Enter must not drop focus to <body> at 0ms');
+    assert.equal(immediateProjEnter.label, 'Options for Project X', 'project rename Enter at 0ms must land on the row\'s Options button');
+    await page.waitForTimeout(500);
+    const afterProjEnter = await activeElement(page);
+    assert.equal(afterProjEnter.isBody, false, 'project rename Enter must not drop focus to <body> at 500ms');
+    assert.equal(afterProjEnter.tag, 'BUTTON');
+    assert.equal(afterProjEnter.label, 'Options for Project X');
+    pass('project-row rename Enter returns focus to the row\'s Options button at 0ms and 500ms, not <body>');
+
     // ── #362: open Settings -> Your data & privacy first. Settings is an overlay (a sibling of
     // .app-stack, not inside it) so the Sidebar stays mounted and interactive underneath it —
     // this is how a tester can watch a second, independently-fetched workspace reader while
@@ -186,6 +235,47 @@ const activeElement = (page) => page.evaluate(() => ({
     assert.equal(restoredB.archived, false, 'keyboard-activated Undo\'s save body carries archived:false');
     assert.equal(await page.locator('.chat-row', { hasText: 'Synthetic b' }).count(), 1, 'keyboard-activated Undo restores the chat to the sidebar list');
     pass('a keyboard-initiated quick-archive puts focus on the toast\'s Undo button, not <body>, and Enter on it restores the chat');
+
+    // ── #362 (reopened a fourth time): the row's own "…" menu Archive item, at 1440px, goes
+    // through the same archive+undo path as the hover quick-archive icon (the toast appears and
+    // Undo restores the chat) — not a plain onPatchChat with no way back. ──
+    const rowC = page.locator('.chat-row', { hasText: 'Synthetic c' });
+    await rowC.hover();
+    await rowC.getByRole('button', { name: /Options for/ }).click();
+    await page.getByRole('menuitem', { name: 'Archive', exact: true }).click();
+    await page.waitForTimeout(50);
+    assert.equal(await page.locator('.chat-row', { hasText: 'Synthetic c' }).count(), 0, 'row-menu Archive removes the row from the sidebar list at 1440px');
+    const toastWide = page.locator('.save-error.is-notice[role="status"]');
+    await toastWide.waitFor();
+    await toastWide.getByRole('button', { name: 'Undo', exact: true }).click();
+    await page.waitForTimeout(50);
+    assert.equal(await page.locator('.chat-row', { hasText: 'Synthetic c' }).count(), 1, 'row-menu Archive\'s Undo restores the chat at 1440px');
+    pass('row menu Archive at 1440px goes through the same undo-toast path as the hover quick-archive icon, and Undo restores the chat');
+
+    // ── #362 (reopened a fourth time): at ≤700px the hover quick-archive icon is hidden and the
+    // "…" menu is the only reachable way to archive — it must still go through the undo toast.
+    // Settings (opened above) covers the whole view below 520px, hiding the drawer toggle
+    // entirely — close it first, the same way a real narrow-viewport user would. ──
+    await page.keyboard.press('Escape');
+    await page.getByRole('region', { name: 'Settings' }).waitFor({ state: 'detached', timeout: 2000 }).catch(() => undefined);
+    await page.setViewportSize({ width: 500, height: 900 });
+    await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
+    const rowANarrow = page.locator('.chat-row', { hasText: 'Synthetic a' });
+    // The row's own action buttons are still hover/focus-within-revealed even under the narrow
+    // breakpoint (only the *quick* pin/archive icons are additionally collapsed down to just
+    // Options there) — this headless browser still has real hover capability, unlike an actual
+    // touch device, so the same reveal step as the 1440px case applies.
+    await rowANarrow.hover();
+    await rowANarrow.getByRole('button', { name: /Options for/ }).click();
+    await page.getByRole('menuitem', { name: 'Archive', exact: true }).click();
+    await page.waitForTimeout(50);
+    assert.equal(await page.locator('.chat-row', { hasText: 'Synthetic a' }).count(), 0, 'row-menu Archive removes the row from the sidebar list at 500px');
+    const toastNarrow = page.locator('.save-error.is-notice[role="status"]');
+    await toastNarrow.waitFor();
+    await toastNarrow.getByRole('button', { name: 'Undo', exact: true }).click();
+    await page.waitForTimeout(50);
+    assert.equal(await page.locator('.chat-row', { hasText: 'Synthetic a' }).count(), 1, 'row-menu Archive\'s Undo restores the chat at 500px');
+    pass('row menu Archive at 500px (≤700px, the only reachable archive path there) goes through the undo-toast path, and Undo restores the chat');
 
     assert.deepEqual(errors, [], 'no page errors');
     console.log(`PASS sidebar-focus-undo: all ${passed} scenarios.`);

@@ -244,24 +244,43 @@ export function Sidebar({
   // calling .focus() on another element synchronously would blur it (and thus commit)
   // before the input has actually unmounted — wrong for Escape, and a double commit for
   // Enter. By the next frame the row has already re-rendered without the input.
-  const returnFocusToRow = (id: string) => {
+  //
+  // The row's own Options button is hover/`:focus-within`-revealed: at desktop width
+  // `.row-actions` sits at `opacity:0; pointer-events:none` outside `:hover`/`:has(:focus-visible)`
+  // (noevia.css), and under `(hover:none), (max-width:700px)` (phone.css) it additionally
+  // collapses to `width:0; overflow:hidden`. By the time this runs the mouse is elsewhere and the
+  // rename input has just unmounted, so neither reveal condition holds — force the properties that
+  // actually gate it (not `display`, which was never what hid it here) visible for the single
+  // frame it takes to land focus; once focused, the CSS's own `:has(:focus-visible)` rule keeps it
+  // revealed for as long as it holds focus, so the inline override can be removed right after.
+  // #355 (reopened, project rows): if the trigger is still unreachable for any reason this
+  // override doesn't cover (e.g. it raced its own unmount), fall back to the row's own
+  // always-visible button — its nav-item/project-disclosure/nested-chat-title, looked up from
+  // `row` (the enclosing `.chat-row`/`.proj-row`, which never unmounts across a rename) at focus
+  // time, since that button doesn't exist in the DOM until the rename input itself has unmounted
+  // — the same "never drop to <body>" guarantee, one step further, rather than a silent no-op.
+  const returnFocusToRow = (id: string, row?: HTMLElement | null) => {
     requestAnimationFrame(() => {
-      const el = optionsTriggers.current.get(id);
-      if (!el) return;
-      // The row's own Options button is hidden (`display:none`, phone.css `@media(hover:hover)`)
-      // until the row is hovered or something inside it is `:focus-visible` — by the time this
-      // runs, the row is neither (the mouse is elsewhere and the rename input just unmounted), so
-      // a genuinely display:none element cannot take DOM focus and `.focus()` silently no-ops,
-      // dropping focus to <body> (#355, reopened: the rename Escape/Enter paths hit this exact
-      // trap that the sidebar-search trigger — never inside a hover-hidden container — does not).
-      // Force it visible for the single frame it takes to land focus; once focused, the CSS's own
-      // `:has(:focus-visible)` rule keeps it visible for as long as it has focus, so the inline
-      // override can be removed immediately after.
-      const actions = el.closest<HTMLElement>('.row-actions');
-      const restore = actions?.style.display;
-      if (actions) actions.style.display = 'flex';
-      el.focus();
-      if (actions) { if (restore) actions.style.display = restore; else actions.style.removeProperty('display'); }
+      const trigger = optionsTriggers.current.get(id);
+      const actions = trigger?.closest<HTMLElement>('.row-actions');
+      const restore = actions
+        ? { opacity: actions.style.opacity, pointerEvents: actions.style.pointerEvents, width: actions.style.width, overflow: actions.style.overflow }
+        : null;
+      if (actions) {
+        actions.style.opacity = '1';
+        actions.style.pointerEvents = 'auto';
+        actions.style.width = 'auto';
+        actions.style.overflow = 'visible';
+      }
+      const fallback = row?.querySelector<HTMLElement>('.nav-item, .project-disclosure, .nested-chat-title');
+      const target = trigger && trigger.getClientRects().length ? trigger : fallback;
+      target?.focus();
+      if (actions && restore) {
+        if (restore.opacity) actions.style.opacity = restore.opacity; else actions.style.removeProperty('opacity');
+        if (restore.pointerEvents) actions.style.pointerEvents = restore.pointerEvents; else actions.style.removeProperty('pointer-events');
+        if (restore.width) actions.style.width = restore.width; else actions.style.removeProperty('width');
+        if (restore.overflow) actions.style.overflow = restore.overflow; else actions.style.removeProperty('overflow');
+      }
     });
   };
   // Quick-archive from the row action has no confirmation, so it needs a way back (#362):
@@ -413,7 +432,14 @@ export function Sidebar({
     {
       label: t('sidebar.archive'),
       icon:<ShellIcon name="archive"/>,
-      onSelect: () => onPatchChat(c.projectId ?? null, c.id, { archived: true }),
+      // #362 (reopened a fourth time): this used to call onPatchChat directly, which archives
+      // with no confirmation and no way back. At >=700px that's merely inconsistent with the
+      // hover quick-archive icon's undo toast; at <=700px (phone.css hides the quick-archive icon
+      // there) this menu item is the *only* reachable way to archive a chat, so skipping
+      // archiveChat's toast left touch/narrow users with zero recovery path. Route through the
+      // same archive+undo path regardless of width; a menu selection is never a bare keydown on
+      // the row itself, so keyboardInitiated stays false, matching the hover icon's own click path.
+      onSelect: () => archiveChat(c, c.projectId ?? null, false),
     },
     {
       label: t('sidebar.deleteChat'),
@@ -457,8 +483,8 @@ export function Sidebar({
                       // Enter/Escape are keyboard-driven, so the row's Options button (the
                       // trigger that opened Rename) is the sensible place for focus to land
                       // (#355); a blur from clicking elsewhere leaves focus where the click put it.
-                      if (e.key === 'Enter') { commitRename(c.projectId ?? null, true); returnFocusToRow(c.id); }
-                      if (e.key === 'Escape') { setRenamingId(null); returnFocusToRow(c.id); }
+                      if (e.key === 'Enter') { commitRename(c.projectId ?? null, true); returnFocusToRow(c.id, e.currentTarget.closest<HTMLElement>('.chat-row')); }
+                      if (e.key === 'Escape') { setRenamingId(null); returnFocusToRow(c.id, e.currentTarget.closest<HTMLElement>('.chat-row')); }
                     }}
                   />
                 ) : (
@@ -563,7 +589,7 @@ export function Sidebar({
           {group==='Pinned' && (!closedGroups[group] || query) && visibleChats.filter(c=>c.pinned).map(renderChat)}
           {(!closedGroups[group] || query) && entries.map(p=><div className="project-branch" key={p.id}>
             <div className={`proj-row${activeProjectId===p.id && activeView!=='projects'?' is-active':''}`} onContextMenu={e=>{e.preventDefault();setMenu({kind:'project',id:p.id,projectId:null,at:{x:e.clientX,y:e.clientY}});}}>
-              {renamingId===p.id ? <input className="proj-rename-input" aria-label={t('sidebar.projectName')} value={renameDraft} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(null,false)} onKeyDown={e=>{if(e.key==='Enter'){commitRename(null,false);returnFocusToRow(p.id);}if(e.key==='Escape'){setRenamingId(null);returnFocusToRow(p.id);}}}/> : <><button className="project-expand" data-tip={p.name} aria-label={t(openProjects[p.id]?'sidebar.collapseChatsIn':'sidebar.expandChatsIn', { name: p.name })} aria-expanded={!!openProjects[p.id]} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:!prev[p.id]}));}}><ProjectIcon project={p} size={18}/></button><button className="project-disclosure" aria-label={t('sidebar.openNamed', { name: p.name })} onMouseEnter={e=>openHover(p.id,e.currentTarget)} onMouseLeave={closeHover} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:true}));onOpenProject(p.id);setExpanded(false);}}><SidebarLabel text={p.name}/></button></>}
+              {renamingId===p.id ? <input className="proj-rename-input" aria-label={t('sidebar.projectName')} value={renameDraft} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(null,false)} onKeyDown={e=>{const row=e.currentTarget.closest<HTMLElement>('.proj-row');if(e.key==='Enter'){commitRename(null,false);returnFocusToRow(p.id,row);}if(e.key==='Escape'){setRenamingId(null);returnFocusToRow(p.id,row);}}}/> : <><button className="project-expand" data-tip={p.name} aria-label={t(openProjects[p.id]?'sidebar.collapseChatsIn':'sidebar.expandChatsIn', { name: p.name })} aria-expanded={!!openProjects[p.id]} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:!prev[p.id]}));}}><ProjectIcon project={p} size={18}/></button><button className="project-disclosure" aria-label={t('sidebar.openNamed', { name: p.name })} onMouseEnter={e=>openHover(p.id,e.currentTarget)} onMouseLeave={closeHover} onClick={()=>{closeHover();setOpenProjects(prev=>({...prev,[p.id]:true}));onOpenProject(p.id);setExpanded(false);}}><SidebarLabel text={p.name}/></button></>}
 
               <div className="row-actions">
                 <button ref={el=>{if(el)optionsTriggers.current.set(p.id,el);else optionsTriggers.current.delete(p.id);}} className="row-action" aria-label={t('sidebar.optionsFor', { name: p.name })} aria-haspopup="menu" aria-expanded={menu?.kind==='project' && menu.id===p.id} onClick={e=>{closeHover();const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'project',id:p.id,projectId:null,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={22}/></button>
@@ -572,7 +598,7 @@ export function Sidebar({
             </div>
             {openProjects[p.id] && <div className="project-children">
               {(p.chats || []).filter(c=>!c.archived && !c.pinned).sort((a,b)=>b.updatedAt-a.updatedAt).map(c=><div className="chat-row" key={c.id}>
-                {renamingId===c.id && renameSource==='nested' ? <input className="proj-rename-input" aria-label={t('sidebar.renameChatLabel')} value={renameDraft} autoFocus onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(p.id,true)} onKeyDown={e=>{if(e.key==='Enter'){commitRename(p.id,true);returnFocusToRow(c.id);}if(e.key==='Escape'){setRenamingId(null);returnFocusToRow(c.id);}}}/> : <button className={`nested-chat-title${activeChatId===c.id?' is-active':''}`} onClick={()=>{onOpenChat(c.id,p.id);setExpanded(false);}}><SidebarLabel text={c.title || t('common.newChat')}/>{streamingChats[c.id] && <span aria-label={t('sidebar.stillGenerating')}> ···</span>}</button>}
+                {renamingId===c.id && renameSource==='nested' ? <input className="proj-rename-input" aria-label={t('sidebar.renameChatLabel')} value={renameDraft} autoFocus onChange={e=>setRenameDraft(e.target.value)} onBlur={()=>commitRename(p.id,true)} onKeyDown={e=>{const row=e.currentTarget.closest<HTMLElement>('.chat-row');if(e.key==='Enter'){commitRename(p.id,true);returnFocusToRow(c.id,row);}if(e.key==='Escape'){setRenamingId(null);returnFocusToRow(c.id,row);}}}/> : <button className={`nested-chat-title${activeChatId===c.id?' is-active':''}`} onClick={()=>{onOpenChat(c.id,p.id);setExpanded(false);}}><SidebarLabel text={c.title || t('common.newChat')}/>{streamingChats[c.id] && <span aria-label={t('sidebar.stillGenerating')}> ···</span>}</button>}
                 {chatActions(c,p.id,'nested')}
               </div>)}
               {!p.chats?.some(c=>!c.archived && !c.pinned) && <p>{p.chats?.some(c=>!c.archived && c.pinned)?t('sidebar.chatsPinnedAbove'):t('sidebar.noChatsYet')}</p>}
