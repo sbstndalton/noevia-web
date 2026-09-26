@@ -15,7 +15,7 @@ async function openSettings(page){
  if(await toggle.isVisible()){await toggle.click();await page.getByRole('dialog',{name:'Navigation'}).waitFor();}
  // The account menu carries Settings at every width; the header icon does not.
  await page.getByRole('button',{name:/Account menu for/}).locator('visible=true').first().click();
- await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+ await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
 }
 const day=n=>{const d=new Date();d.setDate(d.getDate()-n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 (async()=>{

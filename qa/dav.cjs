@@ -38,7 +38,7 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   const headers={Authorization:'Basic '+Buffer.from('adminqa:'+credential.password).toString('base64')};
   assert.equal((await fetch(dav+'/dav/adminqa/entry.md',{headers})).status,403);
   assert.equal((await api(admin,'/api/profile/sharing',{scope:'lan'},'PUT')).status,400);
-  await admin.reload();await admin.getByRole('button',{name:/Account menu for/}).click();await admin.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();await admin.getByRole('button',{name:'Diary & storage',exact:true}).click();
+  await admin.reload();await admin.getByRole('button',{name:/Account menu for/}).click();await admin.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();await admin.getByRole('button',{name:'Diary & storage',exact:true}).click();
   await admin.getByLabel('Diary sharing access').selectOption('lan');assert.equal(await admin.getByRole('button',{name:'Save sharing',exact:true}).isDisabled(),true);
   await admin.getByRole('checkbox',{name:/I understand plain HTTP/}).check();await admin.getByRole('button',{name:'Save sharing',exact:true}).click();
   await admin.getByLabel('Diary sharing URL').waitFor();assert.equal(await admin.getByLabel('Diary sharing URL').inputValue(),dav+'/dav/adminqa/');

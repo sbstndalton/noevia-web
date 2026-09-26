@@ -29,7 +29,7 @@ function entries(buf){const out={};let at=0;while(buf.readUInt32LE(at)===0x04034
    await page.setViewportSize({width,height:width<768?760:900});await page.emulateMedia({colorScheme:theme});
    await page.goto(origin);await page.waitForLoadState('networkidle');
    const nav=page.getByRole('button',{name:'Open navigation',exact:true});if(await nav.isVisible().catch(()=>false))await nav.click();
-   await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+   await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
    const dialog=page.getByRole('region',{name:'Settings'});await dialog.waitFor();
    await dialog.getByRole('button',{name:'Your data & privacy',exact:true}).click();
    await dialog.getByRole('heading',{name:'Your data & privacy',level:1}).waitFor();
@@ -52,7 +52,7 @@ function entries(buf){const out={};let at=0;while(buf.readUInt32LE(at)===0x04034
     // Round trip 2: a deleted chat comes back under a new id and appears in the sidebar without a reload.
     assert.ok((await api('/api/freechats/c-free-1',undefined,'DELETE')).status<300);
     await page.reload();await page.waitForLoadState('networkidle');
-    await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+    await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
     await dialog.waitFor();await dialog.getByRole('button',{name:'Your data & privacy',exact:true}).click();
     await dialog.getByLabel('Conversations file').setInputFiles(zipPath);
     await dialog.getByRole('status').filter({hasText:'Imported 1 chat. 1 was already here.'}).waitFor();
@@ -63,7 +63,7 @@ function entries(buf){const out={};let at=0;while(buf.readUInt32LE(at)===0x04034
     await page.getByText('Synthetic packing list').first().waitFor();
     // A file that is not an export is refused with a clear message.
     fs.writeFileSync(path.join(dir,'bad.json'),'{"hello":1}');
-    await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+    await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
     await dialog.waitFor();await dialog.getByRole('button',{name:'Your data & privacy',exact:true}).click();
     await dialog.getByLabel('Conversations file').setInputFiles(path.join(dir,'bad.json'));
     await dialog.getByRole('alert').filter({hasText:'Choose a conversations.json from a noevia conversations export.'}).waitFor();
@@ -71,7 +71,7 @@ function entries(buf){const out={};let at=0;while(buf.readUInt32LE(at)===0x04034
     await page.keyboard.press('Escape');
     assert.ok((await api(`/api/projects/${project.id}/chats`,{chats:[{id:'c-proj-1',title:'Cell chemistry',updatedAt:Date.now(),archived:true}]})).status<300);
     await page.reload();await page.waitForLoadState('networkidle');
-    await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+    await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
     await dialog.waitFor();await dialog.getByRole('button',{name:'Your data & privacy',exact:true}).click();
     // Archived chats have their own view (#232); Data settings links to it.
     await dialog.getByRole('button',{name:'Manage archived chats'}).click();await dialog.waitFor({state:'hidden'});
@@ -83,7 +83,7 @@ function entries(buf){const out={};let at=0;while(buf.readUInt32LE(at)===0x04034
     await view.getByLabel('Search archived chats').fill('');await archived.getByText('Cell chemistry').waitFor({state:'detached'});
     const chats=(await api('/api/workspace')).body.projects.find(x=>x.id===project.id).chats;
     assert.equal(chats.find(c=>c.id==='c-proj-1').archived,false);
-    await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+    await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
     await dialog.waitFor();await dialog.getByRole('button',{name:'Your data & privacy',exact:true}).click();
     // Delete old chats: confirmation shows the count; pinned old chats are kept.
     const old=Date.now()-120*86400000;

@@ -26,7 +26,7 @@ const {createFixture}=require('./diary-fixture.cjs');
     const toggle=page.getByRole('button',{name:'Open navigation',exact:true});
     if(await toggle.isVisible().catch(()=>false))await toggle.click();
     await page.locator('.account-trigger').click();
-    await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+    await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
    });
    const dialog=page.getByRole('region',{name:'Settings'});await dialog.waitFor();
    found.push(...await measure(page,'.settings-back, .settings-nav-head .shell-icon-button, .settings-detail > header .shell-icon-button'));

@@ -43,7 +43,7 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   await page.reload();
   await page.getByPlaceholder('Message noevia…').waitFor();
   await page.getByRole('button',{name:/Account menu for/}).locator('visible=true').first().click();
-  await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+  await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
   await page.getByRole('button',{name:'Diary & storage',exact:true}).locator('visible=true').first().click();
   const section=page.locator('section[aria-label="Diary connectors"]');
   await section.waitFor();

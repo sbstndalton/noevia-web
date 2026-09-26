@@ -23,10 +23,18 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   let settings=page.getByRole('navigation',{name:'Settings categories'});
   if(!await settings.isVisible().catch(()=>false)){
    if(w<600)await page.getByRole('button',{name:'Open navigation',exact:true}).click();
-   await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('button',{name:'Settings',exact:true}).click();
+   await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
   }
   await settings.waitFor();
-  const admin=await page.locator('.settings-nav-admin').count();
+  // The admin group only renders once the profile fetch resolves and sets isAdmin
+  // (SettingsShell.tsx); the nav container itself is visible a render earlier, so
+  // check right after `waitFor()` can race that state update. Poll briefly instead
+  // of trusting the first read.
+  let admin=await page.locator('.settings-nav-admin').count();
+  for(let attempt=0;attempt<10&&(admin>0)!==(role==='admin');attempt++){
+   await page.waitForTimeout(30);
+   admin=await page.locator('.settings-nav-admin').count();
+  }
   assert.equal(admin>0,role==='admin',`${tag}: admin group only for admins`);
   await page.screenshot({path:`${out}/settings-${tag}.png`});
   await page.close();
