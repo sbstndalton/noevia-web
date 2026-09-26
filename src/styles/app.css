@@ -1129,7 +1129,7 @@ button:disabled { cursor: not-allowed; }
   background: var(--bg-surface); color: var(--text); font-family: var(--font-ui);
   width: min(420px, calc(100vw - 32px)); box-shadow: var(--shadow-pop);
 }
-.confirm-dialog::backdrop { background: rgba(0,0,0,.5); backdrop-filter: blur(2px); }
+.confirm-dialog::backdrop { background: var(--scrim); backdrop-filter: blur(var(--scrim-blur)); }
 .confirm-dialog h2 { margin: 0 0 8px; font-size: var(--text-headline); }
 .confirm-dialog p { margin: 0 0 20px; font-size: var(--text-footnote); line-height: 1.6; color: var(--text-secondary); }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
@@ -1157,7 +1157,7 @@ button:disabled { cursor: not-allowed; }
   box-shadow: var(--shadow-pop); overflow: hidden;
   display: flex; flex-direction: column;
 }
-.edit-project-modal::backdrop { background: rgba(0,0,0,.5); backdrop-filter: blur(2px); }
+.edit-project-modal::backdrop { background: var(--scrim); backdrop-filter: blur(var(--scrim-blur)); }
 .edit-project-modal header,
 .edit-project-modal footer {
   display: flex; align-items: center; gap: 12px; padding: 16px 20px; flex-shrink: 0;

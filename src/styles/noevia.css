@@ -418,7 +418,7 @@ button:disabled { opacity: .5; cursor: default; }
 }
 
 dialog.folder-picker { position:fixed; inset:0; width:min(560px,calc(100vw - 32px)); height:min(480px,calc(100dvh - 32px)); margin:auto; box-sizing:border-box; color:var(--text-primary); }
-dialog.folder-picker::backdrop { background:rgba(0,0,0,.4); backdrop-filter:blur(3px); }
+dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(var(--scrim-blur)); }
 
 .project-sources > .rail-label { margin:24px 0 8px; font-size:var(--text-body); text-transform:none; letter-spacing:normal; font-weight:600; color:var(--text-primary); }
 

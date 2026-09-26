@@ -20,6 +20,10 @@
 //                  tokens.css (--motion-immediate/-quick/-considered/-async). tokens.css defines them.
 //   undefined-token  var(--x) where --x is defined in no stylesheet or script (a fallback such as
 //                  var(--surface, #fff) then silently pins one theme's colour).
+//   backdrop-scrim a modal ::backdrop with a literal rgba()/hex background or a literal blur()
+//                  instead of var(--scrim) / var(--scrim-blur) (#346), so Reduce transparency
+//                  and Increase contrast cannot flatten it from one place. Family/theme overlays
+//                  ([data-family], :has(), :root:not()) on an already-tokenized base rule are exempt.
 // Silence a deliberate case on the line itself or the line above:  /* design-lint: allow <rule> — reason */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -55,6 +59,21 @@ function lint(text, file = '') {
       if (y1 < 0 || y1 > 1 || y2 < 0 || y2 > 1) push('overshoot-ease', `${m[0]} overshoots; use an ease-out curve`);
     }
     for (const _ of line.matchAll(/background-clip\s*:\s*text/g)) push('gradient-text', 'gradient text');
+    // #346: a modal ::backdrop dims the page behind it; every one of those rules should read
+    // --scrim / --scrim-blur (tokens.css) instead of its own rgba()/blur(), so Reduce
+    // transparency and Increase contrast can flatten every dialog's scrim from one place.
+    // Family/theme overlays that layer onto an already-tokenized base rule ([data-family],
+    // :has(), :root:not()) are a separate, pre-existing dialog-sheet system (#249) and are
+    // exempt here rather than folded into this fix.
+    for (const m of line.matchAll(/([^{};]*::backdrop[^{};]*)\{([^}]*)\}/g)) {
+      const sel = m[1].trim();
+      if (/\[data-family|:has\(|:root:not\(/.test(sel)) continue;
+      const body = m[2];
+      const bg = body.match(/background(?:-color)?\s*:\s*([^;]+)/);
+      if (bg && /rgba?\(|#[0-9a-fA-F]{3,8}\b/.test(bg[1]) && !/var\(\s*--scrim\b/.test(bg[1])) push('backdrop-scrim', `${sel}::backdrop background ${bg[1].trim()} bypasses the --scrim token`);
+      const bf = body.match(/backdrop-filter\s*:\s*([^;]+)/);
+      if (bf && /blur\(/.test(bf[1]) && !/var\(\s*--scrim-blur\b/.test(bf[1])) push('backdrop-scrim', `${sel}::backdrop backdrop-filter ${bf[1].trim()} bypasses the --scrim-blur token`);
+    }
     for (const m of line.matchAll(/(?<![-\w])font-size\s*:\s*([\d.]+)(px|rem)\b/g)) {
       if (m[2] === 'rem' || !TYPE_SCALE.has(Number(m[1]))) push('type-scale', `${m[1]}${m[2]} is off the type scale; use a --text-* token`);
     }

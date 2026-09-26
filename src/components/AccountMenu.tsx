@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchProfile, logout } from '../api';
 import { useT } from '../i18n';
 import { ShellIcon } from './ShellIcon';
+import { useMenuNav } from '../menu-nav';
 // Account, preferences and sign-out in one menu, as Claude's is (user review, 2026-09-18):
 // the light/dark switch moved here from the sidebar head. It stays open after switching,
 // so the change is seen from where it was made.
@@ -30,20 +31,18 @@ export function AccountMenu({ onSettings, theme, onToggleTheme }: { onSettings:(
   useEffect(()=>{
     if(!open)return;
     pop.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
-    const close=(e:PointerEvent)=>{const t=e.target as Node;if(!ref.current?.contains(t)&&!pop.current?.contains(t))setOpen(false);};
-    const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){setOpen(false);trigger.current?.focus();}};
-    document.addEventListener('pointerdown',close);document.addEventListener('keydown',key);
-    return()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',key);};
   },[open]);
+  const close=useCallback(()=>setOpen(false),[]);
+  useMenuNav(open,pop,trigger,close);
   return <div className="account-area" ref={ref}>
-    {open&&createPortal(<div ref={pop} className="account-popover overlay is-floating" aria-label={t('account.optionsLabel')} style={at?{position:'fixed',left:at.left,bottom:at.bottom,top:'auto'}:{position:'fixed',visibility:'hidden'}}><div className="account-popover-head"><strong>{name}</strong><span>{t('account.personalWorkspace')}</span></div>
-      <button onClick={()=>{setOpen(false);onSettings();}}><ShellIcon name="settings"/>{t('account.settings')}</button>
-      <button onClick={()=>{setOpen(false);onSettings('usage');}}><ShellIcon name="grid"/>{t('account.usage')}</button>
-      {onToggleTheme&&<button onClick={onToggleTheme}><ShellIcon name={theme==='dark'?'sun':'moon'}/>{theme==='dark'?t('account.lightMode'):t('account.darkMode')}</button>}
+    {open&&createPortal(<div ref={pop} className="account-popover overlay is-floating" role="menu" aria-label={t('account.optionsLabel')} style={at?{position:'fixed',left:at.left,bottom:at.bottom,top:'auto'}:{position:'fixed',visibility:'hidden'}}><div className="account-popover-head"><strong>{name}</strong><span>{t('account.personalWorkspace')}</span></div>
+      <button role="menuitem" onClick={()=>{setOpen(false);onSettings();}}><ShellIcon name="settings"/>{t('account.settings')}</button>
+      <button role="menuitem" onClick={()=>{setOpen(false);onSettings('usage');}}><ShellIcon name="grid"/>{t('account.usage')}</button>
+      {onToggleTheme&&<button role="menuitem" onClick={onToggleTheme}><ShellIcon name={theme==='dark'?'sun':'moon'}/>{theme==='dark'?t('account.lightMode'):t('account.darkMode')}</button>}
       <div className="account-divider"/>
-      <button onClick={()=>void logout().then(()=>window.location.reload()).catch(()=>setError(t('account.signOutError')))}><ShellIcon name="arrow"/>{t('account.logOut')}</button>
+      <button role="menuitem" onClick={()=>void logout().then(()=>window.location.reload()).catch(()=>setError(t('account.signOutError')))}><ShellIcon name="arrow"/>{t('account.logOut')}</button>
       {error&&<p role="alert">{error}</p>}
     </div>,document.body)}
-    <button ref={trigger} className="account-trigger" aria-expanded={open} aria-label={t('account.menuLabel',{name})} onClick={()=>setOpen(!open)}><span className="shell-avatar">{name.slice(0,2).toUpperCase()}</span><span className="account-name">{name}</span><ShellIcon name="down" size={14}/></button>
+    <button ref={trigger} className="account-trigger" aria-haspopup="menu" aria-expanded={open} aria-label={t('account.menuLabel',{name})} onClick={()=>setOpen(!open)}><span className="shell-avatar">{name.slice(0,2).toUpperCase()}</span><span className="account-name">{name}</span><ShellIcon name="down" size={14}/></button>
   </div>;
 }

@@ -611,6 +611,12 @@
   --glass-prism-warm: color-mix(in srgb, var(--md-tertiary) 12%, transparent);
   --glass-blur: 14px;
 
+  /* The dimming layer behind a modal <dialog> (#346): every ::backdrop reads these two
+     instead of hard-coding its own rgba()/blur(), so Reduce transparency and Increase
+     contrast (below) can turn the blur off and make the scrim opaque in one place. */
+  --scrim: rgba(0, 0, 0, .5);
+  --scrim-blur: 2px;
+
   /* Legacy aliases still read by app.css / noevia.css until releases 2–5 replace them. */
   --bg: var(--bg-app);
   --bg-sidebar: var(--bg-chrome);
@@ -660,4 +666,9 @@ html:root[data-motion='reduced'], html:root[data-motion='reduced'][data-family] 
 /* Reduced transparency: panes and glass go opaque, blur off. */
 @media (prefers-reduced-transparency: reduce) {
   :root { --pane-fill: var(--md-surface-container-low); --glass-fill: var(--md-surface-container-high); --glass-menu: var(--md-surface-container-high); --pane-blur: 0px; --glass-blur: 0px; }
+}
+/* Dialog scrims (#346): same floor, so page content behind a modal never shows through
+   legibly once transparency is reduced or contrast is increased. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  :root { --scrim: rgba(0, 0, 0, .82); --scrim-blur: 0px; }
 }

@@ -87,7 +87,7 @@
 .diary-save-status { font-size:var(--text-footnote); color:var(--accent-2); max-width:800px; margin:16px auto; }
 .diary-pending { padding:16px; border:1px solid var(--accent); border-radius:12px; display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:var(--text-footnote); }
 .diary-modal { color:var(--text); background:var(--bg-card); border:1px solid var(--border); border-radius:22px; width:min(820px,calc(100vw - 32px)); max-height:85vh; padding:26px; box-shadow:var(--shadow-pop); }
-.diary-modal::backdrop { background:rgba(0,0,0,.45); backdrop-filter:blur(3px); }
+.diary-modal::backdrop { background:var(--scrim); backdrop-filter:blur(var(--scrim-blur)); }
 .diary-modal header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; }
 .diary-modal header h2 { font-size:var(--text-title3); margin:0; }
 .diary-modal footer { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:20px; }
