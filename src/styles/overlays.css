@@ -207,7 +207,7 @@ dialog.confirm-dialog.dialog-sheet { width: min(420px, calc(100vw - 32px)); }
    no danger tint, and role="status" rather than "alert" at the call site. */
 .save-error.is-notice { border-color: var(--border); }
 [data-family='editorial'] .save-error.is-notice { border-color: var(--rule-strong); }
-.route-note { margin: var(--space-2) 2px 0; font-size: var(--text-footnote); color: var(--text-secondary); line-height: var(--leading-snug); }
+.route-note { margin: var(--space-2) 0 0; font-size: var(--text-footnote); color: var(--text-secondary); line-height: var(--leading-snug); }
 
 /* ── Empty states ──────────────────────────────────────────────────────────
    What is missing, why, and at most one way forward. The symbol is quiet: it

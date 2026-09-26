@@ -456,7 +456,7 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 
 /* ── Plugins ── */
 .plugins-view { overflow-y: auto; }
-.plugins-page { width: min(760px, 100%); margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-8); display: flex; flex-direction: column; gap: var(--space-4); box-sizing: border-box; }
+.plugins-page { width: min(760px, 100%); margin: 0 auto; padding: var(--space-10) var(--space-4) var(--space-8); display: flex; flex-direction: column; gap: var(--space-4); box-sizing: border-box; }
 .plugins-head h1 { margin: 0 0 var(--space-1); font-size: var(--text-title1); }
 .plugins-head p { margin: 0 0 var(--space-4); color: var(--text-secondary); }
 .plugins-note { margin: 0; color: var(--text-secondary); font-size: var(--text-footnote); line-height: 1.45; }
@@ -469,7 +469,11 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .plugin-card-text small { color: var(--text-secondary); font-size: var(--text-footnote); line-height: 1.4; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .plugin-card-text .plugin-publisher { -webkit-line-clamp: 1; }
 .plugin-card-text .plugin-why { color: var(--text-primary); -webkit-line-clamp: 2; }
-.plugins-subhead { margin: var(--space-3) 0 0; font-size: var(--text-headline); font-weight: 600; }
+/* #377: Customise groups follow the Settings rhythm: 40px between groups, a heading 8px over what it
+   heads. Both tabs lay their groups out in the same flex column, so the steps match. */
+.plugins-connected { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.plugins-subhead { margin: calc(var(--settings-group-gap) - var(--space-4)) 0 calc(var(--space-2) - var(--space-4)); font-size: var(--text-headline); font-weight: 600; }
+.plugins-connected > .plugins-subhead:first-child { margin-top: var(--space-2); }
 .plugins-directory, .plugins-starters { display: flex; flex-direction: column; gap: var(--space-3); }
 .plugin-card-link { flex: none; align-self: center; }
 @media (pointer: coarse) { .plugin-card-link { min-height: 44px; display: inline-flex; align-items: center; } }
@@ -488,7 +492,9 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
   :root:not([data-device='desktop']) .app .chat-workspace.is-empty > .transcript { justify-content: center; padding-top: 0; }
   :root:not([data-device='desktop']) .app .chat-workspace.is-empty .empty-state { flex-grow: 0; }
 }
-@media (min-height: 760px) { .app .coding-content, .main.plugins-view { justify-content: safe center; } }
+/* #377: Customise stays top-aligned like every other page: centred, its header jumped up and down as
+   tabs of different heights were chosen. */
+@media (min-height: 760px) { .app .coding-content { justify-content: safe center; } }
 /* "Using: Drive, Tasks": which toolboxes the router offered for this reply. */
 .tool-scope { display: block; margin: 0 0 4px; color: var(--text-faint); font-size: var(--text-caption, 12px); }
 
@@ -716,3 +722,14 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
    switch above it, and disclosure summaries read at the card's footnote size. */
 .plugins-directory > .glass-seg { align-self: flex-start; width: max-content; }
 .plugin-grid-installed summary, .plugin-tool-detail summary { font-size: var(--text-footnote); }
+
+/* Touch targets (#380; PRODUCT.md: 44px on phones). The Chat/Cowork toggle, segmented controls, message actions, the
+   code block's Copy and a project chat's delete stay visually compact; on a touch screen an
+   invisible hit area centred on each grows it to 44px without moving anything around it. */
+@media (pointer: coarse) {
+  :is(.glass-seg > button, .composer-mode-toggle button, .md-code-bar button, .msg-action-btn, .recents-del) { position: relative; }
+  :is(.glass-seg > button, .composer-mode-toggle button, .md-code-bar button, .msg-action-btn, .recents-del)::after {
+    content: ''; position: absolute; left: 0; right: 0; top: 50%; height: max(100%, var(--target-min)); transform: translateY(-50%);
+  }
+  .recents-del::after { left: 50%; right: auto; width: max(100%, var(--target-min)); transform: translate(-50%, -50%); }
+}

@@ -3,6 +3,11 @@
 // scroll for a last line. Content that is genuinely long (a chat list, a transcript) is left
 // to scroll: fitting only applies while the overflow is small, and never below MIN.
 const MIN = 0.82;
+// Settings categories (#381) are read one after another and share one type scale and rhythm;
+// a category shrunk by a fifth next to one at full size reads as broken spacing. They still fit
+// a genuine last line (about one row of overflow), never more.
+const MIN_BY_AREA: readonly [string, number][] = [['.settings-detail-scroll', 0.94]];
+const minFor = (area: HTMLElement): number => MIN_BY_AREA.find(([selector]) => area.matches(selector))?.[1] ?? MIN;
 // And the reverse on phones and tablets (user review, 2026-09-19): a page much shorter than a
 // tall screen grows, up to MAX, so a zoomed-out phone uses its height instead of leaving a
 // band of nothing. Desktop browsers keep the size the user zoomed to.
@@ -31,11 +36,12 @@ function fit(area: HTMLElement): void {
   const pad = parseFloat(s.paddingTop) + parseFloat(s.paddingBottom);
   if (overflow() <= 1) { grow(area, pad); return; }
   const ratio = (area.clientHeight - pad) / (area.scrollHeight - pad);
-  if (!(ratio >= MIN)) return;
+  const min = minFor(area);
+  if (!(ratio >= min)) return;
   const children = [...area.children].filter((c): c is HTMLElement => c instanceof HTMLElement && getComputedStyle(c).position !== 'fixed');
   if (!children.length) return;
   let f = Math.floor(ratio * 1000) / 1000;
-  for (let pass = 0; pass < 3 && f >= MIN; pass++) {
+  for (let pass = 0; pass < 3 && f >= min; pass++) {
     for (const c of children) c.style.zoom = String(f);
     fitted.set(area, children);
     const left = overflow();

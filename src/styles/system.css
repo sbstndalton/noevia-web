@@ -114,16 +114,18 @@
 
 /* ── Settings → Appearance: family previews ───────────────────────────────── */
 .family-choice { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); width: 100%; }
-.family-tile-previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+/* #376: one inset all round (12px); the name and description start on the previews' edge, 12px
+   below them, and sit 4px apart as one caption. */
+.family-tile-previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin-bottom: var(--space-2); }
 .family-tile {
-  display: grid; gap: var(--space-2); padding: var(--space-2); min-width: 0; text-align: left; cursor: pointer;
+  display: grid; gap: var(--space-1); padding: var(--space-3); min-width: 0; text-align: left; cursor: pointer;
   border: 1px solid var(--edge-flat); border-radius: var(--radius-overlay); background: transparent; color: var(--text-primary);
   transition: border-color var(--motion-immediate) var(--ease-immediate), background-color var(--motion-immediate) var(--ease-immediate);
 }
 @media (hover: hover) { .family-tile:hover { background: var(--nav-hover); } }
 .family-tile[aria-checked='true'] { border-color: var(--focus-ring); box-shadow: 0 0 0 1px var(--focus-ring); }
-.family-tile-name { font-size: var(--text-footnote); font-weight: 600; padding: 0 var(--space-1); }
-.family-tile-desc { font-size: var(--text-caption); color: var(--text-secondary); line-height: var(--leading-snug); padding: 0 var(--space-1) var(--space-1); }
+.family-tile-name { font-size: var(--text-footnote); font-weight: 600; }
+.family-tile-desc { font-size: var(--text-caption); color: var(--text-secondary); line-height: var(--leading-snug); }
 .family-preview {
   display: grid; gap: 6px; padding: var(--space-3); min-height: 132px; overflow: hidden; pointer-events: none;
   background: var(--bg-app); color: var(--text-primary); font-family: var(--font-ui);

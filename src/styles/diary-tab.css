@@ -21,7 +21,7 @@
 .diary-landing h1 { font-size:clamp(28px,3.2vw,44px); line-height:1.2; letter-spacing:-1.3px; margin:14px 0; font-weight:600; }
 .diary-intro { color:var(--text-secondary); font-size:var(--text-callout); line-height:1.7; }
 .diary-compose { margin:30px auto 0; max-width:800px; text-align:left; }
-.diary-compose > label { display:block; font-size:var(--text-footnote); font-weight:600; margin:0 4px 10px; color:var(--text-secondary); }
+.diary-compose > label { display:block; font-size:var(--text-footnote); font-weight:600; margin:0 0 var(--space-2); color:var(--text-secondary); }
 .diary-landing .diary-compose > label { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
 .diary-compose .composer-inner { padding:18px; border:1px solid var(--border); border-radius:22px; box-shadow:var(--shadow-card); }
 .diary-compose .composer-input { font-size:var(--text-input); min-height:88px; }

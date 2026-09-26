@@ -145,7 +145,10 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   const opener = props.opener;
   useEffect(() => {
     const previous = opener?.current ?? (document.activeElement as HTMLElement | null);
-    stage.current?.querySelector<HTMLElement>('[aria-current="page"], .settings-navigation nav button')?.focus({ preventScroll: true });
+    // The current section first (#374): a combined selector list would match whichever comes
+    // first in the document, so a direct link to /settings/keyboard focused Appearance instead.
+    const root = stage.current;
+    (root?.querySelector<HTMLElement>('.settings-navigation nav [aria-current="page"]') ?? root?.querySelector<HTMLElement>('.settings-navigation nav button'))?.focus({ preventScroll: true });
     return () => {
       closeFocusTarget(previous, document.querySelector<HTMLElement>('.composer-input'))?.focus({ preventScroll: true });
     };

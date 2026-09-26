@@ -85,17 +85,45 @@ label.select > svg { position: absolute; right: 10px; pointer-events: none; colo
 .noevia-switch:focus-visible, .settings-detail .set-row-control input[type='checkbox']:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 /* ── Settings pages ─────────────────────────────────────────────────────── */
-.settings-stage .settings-title { margin: 0 0 var(--space-6); }
+.settings-stage .settings-title { margin: 0 0 var(--settings-title-gap); }
 .settings-stage .settings-title h1, .settings-stage .connector-page h1 { margin: 0; font-family: var(--font-display); font-size: var(--text-title1); font-weight: 600; letter-spacing: var(--tracking-title); line-height: var(--leading-tight); }
 .settings-stage .settings-title p, .settings-stage .lede { margin: var(--space-2) 0 0; max-width: 64ch; color: var(--text-secondary); font-size: var(--text-callout); line-height: var(--leading-body); }
 .settings-stage .lede-tight { margin-top: calc(-1 * var(--space-1)); margin-bottom: var(--space-3); }
-.settings-stage h2:not(.settings-navigation h2) { margin: var(--space-10) 0 var(--space-3); font-size: var(--text-headline); font-weight: 600; letter-spacing: var(--tracking-title); }
+.settings-stage h2:where(:not(.settings-navigation h2)) { margin: var(--settings-group-gap) 0 var(--settings-content-gap); font-size: var(--text-headline); font-weight: 600; letter-spacing: var(--tracking-title); }
+/* Rhythm (#372; tokens.css spacing roles): every category reads the same steps. The page title is
+   the only thing above the first group; a heading sits 4px over its own description and 12px
+   over its group; groups are 40px apart. Sections are flex columns (noevia.css), so margins
+   never collapse: each step is written once, here. */
+.settings-stage .settings-section { gap: var(--settings-content-gap); }
+.settings-stage .settings-section + .settings-section { margin-top: var(--settings-group-gap); }
+.settings-stage :is(.settings-title + h2, .settings-title + * > h2:first-child, .settings-section > h2:first-child) { margin-top: 0; }
+.settings-stage .settings-section > h2 { margin-bottom: 0; }
+.settings-stage .settings-section > h2:not(:first-child) { margin-top: calc(var(--settings-group-gap) - var(--settings-content-gap)); }
+.settings-stage .settings-section > :is(p, .route-note) { margin-block: 0; }
+.settings-stage .settings-section > h2 + :is(p, .set-row-desc, .lede) { margin-top: calc(var(--settings-heading-gap) - var(--settings-content-gap)); }
+/* A heading that shares its line with an action (#373: Service status → Reload) carries the step on
+   the row, so the action lines up with the heading instead of floating above it. */
+.settings-stage .settings-section-heading { align-items: center; margin: var(--settings-group-gap) 0 var(--settings-content-gap); }
+.settings-stage .settings-section-heading > h2 { margin: 0; }
+.settings-stage :is(.settings-title + * > .settings-section-heading:first-child, .settings-section > .settings-section-heading:first-child) { margin-top: 0; }
+/* The older panels (Security, Users, Diary & storage, AI providers, Models, Service status)
+   stack their blocks in .settings-live-content, a flex column whose own 28px gap used to add to
+   every heading's margin. It now speaks the same steps: a content step between a heading and
+   its block, the group step before a heading and between two blocks. */
+.settings-stage .settings-live-content { gap: var(--settings-content-gap); }
+.settings-stage .settings-live-content > .settings-title { margin-bottom: calc(var(--settings-title-gap) - var(--settings-content-gap)); }
+.settings-stage .settings-live-content > h2 { margin: calc(var(--settings-group-gap) - var(--settings-content-gap)) 0 0; }
+.settings-stage .settings-live-content > :not(.settings-title, h2) + :is(div, section) { margin-top: calc(var(--settings-group-gap) - var(--settings-content-gap)); }
+.settings-stage .settings-live-content > section > .route-note { margin-block: var(--settings-content-gap) 0; }
+/* Users: the reload and any error sit a content step below the list, not jammed under it. */
+.settings-stage .settings-users > :is(.card-list, .modal-err) + :is(.modal-err, .popup-tab) { margin-top: var(--settings-content-gap); }
+.settings-stage .card-list > .route-note:first-child { margin-top: 0; }
 .settings-stage .rail-label { margin: var(--space-8) 0 var(--space-3); font-size: var(--text-headline); }
 
 /* A group of rows is one surface; rows divide with hairlines. */
 .settings-stage .set-rows, .settings-stage .group { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); box-shadow: var(--shadow-1); overflow: hidden; }
 .settings-stage .set-rows + .set-rows { margin-top: var(--space-4); }
-.settings-stage .set-row, .settings-stage .group > .row, .settings-stage .group .row { display: flex; align-items: center; gap: var(--space-6); min-height: 64px; padding: var(--space-4) var(--space-5); margin: 0; border: 0; }
+.settings-stage .set-row, .settings-stage .group > .row, .settings-stage .group .row { display: flex; align-items: center; gap: var(--space-6); min-height: var(--group-row-min); padding: var(--group-inset-block) var(--group-inset-inline); margin: 0; border: 0; }
 .settings-stage .set-row + .set-row, .settings-stage .group .row + .row { border-top: 1px solid var(--border-subtle); }
 .settings-stage :is(.set-row-text, .row-text) { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .settings-stage :is(.set-row-label, .row-label) { font-size: var(--text-callout); font-weight: 500; color: var(--text-primary); }
@@ -186,7 +214,7 @@ button.connector-card:focus-visible { outline: 2px solid var(--focus-ring); outl
 }
 
 @media (max-width: 700px) {
-  .settings-stage .set-row, .settings-stage .group .row { flex-wrap: wrap; gap: var(--space-3); padding: var(--space-4); }
+  .settings-stage .set-row, .settings-stage .group .row { flex-wrap: wrap; gap: var(--space-3); padding: var(--group-inset-block) var(--group-inset-inline); }
   .settings-stage :is(.set-row-text, .row-text) { flex-basis: 100%; }
   .settings-stage .set-row:has(> .set-row-control > .noevia-switch) .set-row-text, .settings-stage .row:has(> .glass-switch) .row-text { flex-basis: 0; }
   :is(.btn, .modal-btn, .popup-tab), label.select > select, .settings-detail select:not(.mobile-settings-section) { min-height: 44px; }
@@ -261,15 +289,14 @@ button.connector-card:focus-visible { outline: 2px solid var(--focus-ring); outl
 
 .settings-stage .set-row-stacked > .set-row-text { flex: none; }
 
-/* Appearance is one sequence of decisions, with quiet dividers like the
-   settings references. Keep saved material skins and shared control geometry. */
-.settings-stage .appearance-section > h2:first-child { margin-top: 0; }
-.settings-stage .appearance-section > .set-rows { background: transparent; border: 0; border-radius: 0; box-shadow: none; overflow: visible; }
-.settings-stage .appearance-section .set-row { padding: var(--space-5) 0; gap: var(--space-3); }
-.settings-stage .appearance-section .set-row:first-child { padding-top: var(--space-2); }
+/* Appearance uses the same grouped surface as every other category (#371). It used to strip the
+   group to a borderless list with no inline row padding, which left its content flush against
+   the fill that Contemporary and Glass paint on every group. Rows here stack their control
+   under the label, so they get a little more air between the two. */
+.settings-stage .appearance-section .set-row { gap: var(--space-3); padding-block: calc(var(--group-inset-block) + var(--space-1)); }
 .settings-stage .appearance-section .set-row-desc { max-width: 64ch; line-height: var(--leading-body); }
-.settings-stage .appearance-section .theme-choice { padding: var(--space-1); }
-.settings-stage .appearance-section .accent-choice { padding: var(--space-1); }
+/* Swatches start on the label's edge; the row inset leaves room for the selection ring. */
+.settings-stage .appearance-section :is(.theme-choice, .accent-choice) { padding: 0; }
 
 /* Project library: a native primary action and independent secondary actions.
    The stretched title button keeps the whole card clickable without nesting buttons. */

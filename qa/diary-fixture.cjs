@@ -14,10 +14,12 @@ function createFixture(port = 31239) {
   const server = http.createServer(async (req,res) => {
     const url = new URL(req.url,'http://localhost');
     if (!url.pathname.startsWith('/api/')) {
-      let file = path.join(__dirname,'../dist',url.pathname === '/'?'index.html':url.pathname);
+      // QA_DIST serves a build written elsewhere (npm run build -- --outDir X) instead of ../dist.
+      const dist = path.resolve(process.env.QA_DIST || path.join(__dirname,'../dist'));
+      let file = path.join(dist,url.pathname === '/'?'index.html':url.pathname);
       // The client's own places (/c/<id>, /settings/<section>…) get the shell, as the real server does (#359).
-      if ((!file.startsWith(path.resolve(__dirname,'../dist')+'/') || !fs.existsSync(file)) && isClientRoute(url.pathname)) file = path.join(__dirname,'../dist','index.html');
-      if (!file.startsWith(path.resolve(__dirname,'../dist')+'/') || !fs.existsSync(file)) { res.writeHead(404); return res.end(); }
+      if ((!file.startsWith(dist+'/') || !fs.existsSync(file)) && isClientRoute(url.pathname)) file = path.join(dist,'index.html');
+      if (!file.startsWith(dist+'/') || !fs.existsSync(file)) { res.writeHead(404); return res.end(); }
       if(process.env.LOCAL_RECOVERY_QA==='1' && url.pathname==='/') {
         res.setHeader('Content-Type','text/html');
         return res.end(fs.readFileSync(file,'utf8').replace('<head>',`<head><script>

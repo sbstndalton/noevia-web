@@ -63,7 +63,10 @@
 .app-stack.has-settings:has(.settings-stage.is-closing) > .app-main { --enter-from: scale(.98); animation: motion-enter var(--motion-quick) var(--ease-quick) both; }
 
 .settings-stage .settings-navigation { width: auto; display: flex; flex-direction: column; min-height: 0; padding: var(--space-4) var(--space-2); border: 0; border-right: 1px solid var(--border-subtle); background: transparent; }
-.settings-stage .settings-nav-head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: 0 var(--space-2) var(--space-4); }
+/* One leading edge for the whole column (#374, HIG sidebars): row fills and the search field share the
+   outer edge (--space-2 in from the pane); the title, group labels, search icon and row icons share
+   the inner edge (--space-3 further in). */
+.settings-stage .settings-nav-head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: 0 var(--space-3) var(--space-4); }
 .settings-stage .settings-nav-title { margin: 0; font-family: var(--font-display); font-size: var(--text-title2); font-weight: 600; letter-spacing: var(--tracking-title); }
 .settings-stage .settings-back { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; color: var(--text-secondary); font-size: var(--text-footnote); }
 .settings-stage .settings-back:hover { color: var(--text-primary); }
@@ -74,16 +77,23 @@
 .settings-stage .settings-search-empty strong { color: var(--text-primary); font-weight: 500; }
 .settings-stage .settings-search-empty p { line-height: var(--leading-body); margin: var(--space-2) 0 var(--space-4); }
 .settings-stage .settings-detail-scroll:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -4px; }
-.settings-stage .settings-search { margin: 0 var(--space-1) var(--space-2); padding: 7px 10px; gap: 8px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-secondary); }
+.settings-stage .settings-search { margin: 0 0 var(--space-2); padding: 7px calc(var(--space-3) - 1px); gap: 8px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-secondary); }
 .settings-stage .settings-search input { font-size: var(--text-footnote); }
 .settings-stage .settings-search:focus-within { border-color: var(--focus-ring); }
 .settings-stage .settings-navigation nav { overflow-y: auto; min-height: 0; padding: 0; }
-.settings-stage .settings-navigation nav section h2 { margin: var(--space-5) 10px var(--space-1); font-size: var(--text-caption); font-weight: 500; letter-spacing: var(--tracking-caption); color: var(--text-secondary); }
-.settings-stage .settings-navigation nav button { gap: 10px; min-height: 44px; margin: 1px 0; padding: 6px 10px; border-radius: var(--radius-sm); color: var(--text-secondary); font-size: var(--text-callout); font-weight: 400;
+.settings-stage .settings-navigation nav section h2 { margin: var(--space-5) var(--space-3) var(--space-1); font-size: var(--text-caption); font-weight: 500; letter-spacing: var(--tracking-caption); color: var(--text-secondary); }
+.settings-stage .settings-navigation nav button { gap: 10px; min-height: 44px; margin: 1px 0; padding: 6px var(--space-3); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: var(--text-callout); font-weight: 400;
   transition: background-color var(--duration-instant) var(--ease-standard), color var(--duration-instant) var(--ease-standard); }
 .settings-stage .settings-navigation nav button > svg:last-child { display: none; }
 .settings-stage .settings-navigation nav button:hover { background: var(--nav-hover); color: var(--text-primary); }
 .settings-stage .settings-navigation nav button.is-active { background: var(--selected); color: var(--on-selected); font-weight: 500; box-shadow: none; }
+/* Rows fill the scrolling list edge to edge, so an outside focus ring would be cut off by the
+   list's overflow; draw it just inside the row instead. */
+.settings-stage .settings-navigation nav button:focus-visible { outline-offset: -2px; }
+/* #375: "Server administration" and its "Admins only" badge: the badge drops under the label as a
+   whole pill when both do not fit on one line, instead of each wrapping onto two lines. */
+.settings-stage .settings-navigation nav section.settings-nav-admin h2 { flex-wrap: wrap; row-gap: var(--space-1); column-gap: var(--space-2); }
+.settings-stage .settings-navigation h2 .settings-nav-badge { flex: none; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .settings-stage .settings-detail { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .settings-stage .settings-detail > header { position: absolute; top: var(--space-3); right: var(--space-3); z-index: 2; height: auto; padding: 0; border: 0; background: none; }
 .settings-stage .settings-detail > header > span, .settings-stage .settings-list-back { display: none; }
@@ -100,8 +110,12 @@
 @media (max-width: 820px) {
   .settings-stage { grid-template-columns: 1fr; border-radius: 0; }
   .settings-stage[data-view='list'] .settings-detail, .settings-stage[data-view='detail'] .settings-navigation { display: none; }
-  .settings-stage .settings-navigation { border-right: 0; padding: calc(env(safe-area-inset-top) + var(--space-2)) var(--space-3) var(--space-4); }
-  .settings-stage .settings-nav-head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: 0 0 var(--space-3); }
+  .settings-stage .settings-navigation { border-right: 0; padding: calc(env(safe-area-inset-top) + var(--space-1)) var(--space-3) var(--space-4); }
+  /* #379: the list's close button sits in the same top bar, at the same point, as the detail view's
+     (iOS: bar first, large title under it), so stepping in and out never moves it. */
+  .settings-stage .settings-nav-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-2); row-gap: var(--space-1); padding: 0 0 var(--space-3); }
+  .settings-stage .settings-nav-head > .shell-icon-button { grid-row: 1; grid-column: 2; width: 44px; height: 44px; margin-right: calc(-1 * var(--space-1)); }
+  .settings-stage .settings-nav-head > .settings-nav-title { grid-row: 2; grid-column: 1 / -1; }
   .settings-stage .settings-back { min-height: 44px; padding: 0 var(--space-2); margin-left: calc(-1 * var(--space-2)); color: var(--md-primary); font-size: var(--text-callout); }
   .settings-stage .settings-nav-title { margin: 0; font-family: var(--font-display); font-size: var(--text-title1); font-weight: 600; letter-spacing: var(--tracking-title); }
   .settings-stage .settings-search { margin: 0 0 var(--space-2); min-height: 44px; }
@@ -131,8 +145,10 @@
 :root[data-layout="mobile"] .settings-stage { grid-template-columns: 1fr; border-radius: 0; }
 :root[data-layout="mobile"] .settings-stage[data-view='list'] .settings-detail,
 :root[data-layout="mobile"] .settings-stage[data-view='detail'] .settings-navigation { display: none; }
-:root[data-layout="mobile"] .settings-stage .settings-navigation { border-right: 0; padding: calc(env(safe-area-inset-top) + var(--space-2)) var(--space-3) var(--space-4); }
-:root[data-layout="mobile"] .settings-stage .settings-nav-head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: 0 0 var(--space-3); }
+:root[data-layout="mobile"] .settings-stage .settings-navigation { border-right: 0; padding: calc(env(safe-area-inset-top) + var(--space-1)) var(--space-3) var(--space-4); }
+:root[data-layout="mobile"] .settings-stage .settings-nav-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-2); row-gap: var(--space-1); padding: 0 0 var(--space-3); }
+:root[data-layout="mobile"] .settings-stage .settings-nav-head > .shell-icon-button { grid-row: 1; grid-column: 2; width: 44px; height: 44px; margin-right: calc(-1 * var(--space-1)); }
+:root[data-layout="mobile"] .settings-stage .settings-nav-head > .settings-nav-title { grid-row: 2; grid-column: 1 / -1; }
 :root[data-layout="mobile"] .settings-stage .settings-back { min-height: 44px; padding: 0 var(--space-2); margin-left: calc(-1 * var(--space-2)); color: var(--md-primary); font-size: var(--text-callout); }
 :root[data-layout="mobile"] .settings-stage .settings-nav-title { margin: 0; font-family: var(--font-display); font-size: var(--text-title1); font-weight: 600; letter-spacing: var(--tracking-title); }
 :root[data-layout="mobile"] .settings-stage .settings-search { margin: 0 0 var(--space-2); min-height: 44px; }

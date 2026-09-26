@@ -204,6 +204,9 @@ button:disabled { opacity: .5; cursor: default; }
 .chat-index-time { font-variant-numeric:tabular-nums; }
 @media (max-width:480px) { .chat-index-row { gap:8px; align-items:flex-start; } .chat-index-time { max-width:80px; text-align:right; } }
 .project-composer .composer-inner { max-width: none; }
+/* Diary (#378): the prompt, the composer and the calendar above share one column, so the composer
+   fills the compose box instead of keeping the chat composer's narrower centred measure. */
+.diary-compose .composer-inner { max-width: none; }
 
 /* Settings and diary use the same typography and restrained surfaces. */
 .settings-shell { width: min(1060px,calc(100vw - 64px)); height: min(780px,calc(100dvh - 64px)); background: var(--bg-app); border-radius: 16px; }

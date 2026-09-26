@@ -475,7 +475,7 @@ body { margin: 0; background: var(--bg); }
 .route-task { flex-grow: 1; font-size: var(--text-footnote); }
 .route-arrow { color: var(--text-faint); display: flex; }
 .route-model { font-size: var(--text-caption); font-weight: 700; margin-left: 10px; }
-.route-note { margin: 8px 2px 0; font-size: var(--text-caption2); color: var(--text-faint); }
+.route-note { margin: 8px 0 0; font-size: var(--text-caption2); color: var(--text-faint); }
 
 .cloud-note {
   border: 1px dashed var(--border); border-radius: var(--radius-card);

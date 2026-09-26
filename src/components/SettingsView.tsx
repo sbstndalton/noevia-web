@@ -38,7 +38,7 @@ export function SettingsView({ models, modelsError, health, stats, diaryEnabled,
     {section === 'diary' && <><div className="settings-title"><h1>{t('settings.section.diary')}</h1><p>{t('diarySettings.lede')}</p></div><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
     {section === 'providers' && <ProvidersCard health={health} />}
     {section === 'models' && <ModelsSummary models={models} modelsError={modelsError} health={health} stats={stats} onOpen={onOpenModelManager}/>}
-    {section === 'status' && <><McpStatus /><h2>{t('serviceStatus.connected')}</h2><div className="card-list">{([['inference', t('serviceStatus.inference'), health.inferenceUp], ['diary', t('serviceStatus.diary'), diaryEnabled ? health.diaryUp : null]] as const).map(([id, label, up])=><div className="model-row" key={id}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?t('models.available'):up===false?t('models.unavailable'):t('serviceStatus.notAvailable')}</span></div>)}
+    {section === 'status' && <><div className="settings-title"><h1>{t('settings.section.status')}</h1></div><McpStatus /><h2>{t('serviceStatus.connected')}</h2><div className="card-list">{([['inference', t('serviceStatus.inference'), health.inferenceUp], ['diary', t('serviceStatus.diary'), diaryEnabled ? health.diaryUp : null]] as const).map(([id, label, up])=><div className="model-row" key={id}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?t('models.available'):up===false?t('models.unavailable'):t('serviceStatus.notAvailable')}</span></div>)}
       {/* #340: tri-state — 'degraded' means the index is installed but the embedding endpoint
           could not be reached; ragAvailable() alone (native deps only) cannot tell the two apart.
           Older/mixed deployments that only send ragAvailable fall back to the boolean. */}
@@ -256,10 +256,11 @@ function UsersCard(): JSX.Element {
       </div>}
     </>;
   };
-  if (!user) return <div><h2>{t('settings.section.users')}</h2>{loading ? <p role="status">{t('users.loading')}</p> : <><p className="route-note" role="alert">{error}</p><button className="btn btn-secondary" onClick={() => void load()}>{t('users.retry')}</button></>}</div>;
-  if (denied) return <div><div className="rail-label">{t('settings.section.users')}</div><p className="route-note">{t('users.adminRequired')}</p></div>;
-  return <div>
-    <div className="rail-label" style={{ marginBottom: 12 }}>{t('settings.section.users')}</div>
+  const title = <div className="settings-title"><h1>{t('settings.section.users')}</h1></div>;
+  if (!user) return <div>{title}{loading ? <p role="status">{t('users.loading')}</p> : <><p className="route-note" role="alert">{error}</p><button className="btn btn-secondary" onClick={() => void load()}>{t('users.retry')}</button></>}</div>;
+  if (denied) return <div>{title}<p className="route-note">{t('users.adminRequired')}</p></div>;
+  return <div className="settings-users">
+    {title}
     {notice && <p className="route-note" role="status">{notice}</p>}
     <div className="card-list">
       {users.length === 0 && !loading && <p className="route-note">{t('users.empty')}</p>}
