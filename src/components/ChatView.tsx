@@ -24,6 +24,7 @@ import { ToolCatalogue } from './ToolCatalogue';
 import { CoworkTaskCard } from './CoworkTaskCard';
 import { decideDispatch, type ChatMode } from '../chat-mode';
 import { insertMention, turnBoxesFor, type PermittedBox } from '../tool-catalogue';
+import { readDraft, writeDraft, clearDraft } from '../chat-drafts';
 import { onCancelEdit, focusAfterRender, type EditFocusState } from '../edit-focus';
 
 /** What one send carries besides its text: per-turn boxes, a fallback notice, or a Cowork task. */
@@ -240,7 +241,10 @@ export function ChatView({
   };
   const [actionBusy, setActionBusy] = useState(false);
   const [actionStatus, setActionStatus] = useState('');
-  const [draft, setDraft] = useState('');
+  // #393: seeded from this chat's own saved draft (if any) rather than always
+  // starting blank, so a page reload restores it the same way switching back
+  // to the chat does — see the `[chatId]` effect below and chat-drafts.ts.
+  const [draft, setDraft] = useState(() => readDraft(chatId));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
   // Cancelling an edit (or the Escape shortcut) returns focus to the message's own Edit
@@ -265,11 +269,16 @@ export function ChatView({
   useEffect(() => {
     if (streaming) streamStart.current = Date.now();
   }, [streaming]);
-  // An in-progress edit must not survive switching chats.
+  // An in-progress edit must not survive switching chats. Nor must an unsent
+  // composer draft (#393): ChatView is not remounted on chat switch (no
+  // `key={chatId}`, deliberately — that would also drop scroll position and
+  // in-flight streaming state), so `draft` has to be swapped for the newly
+  // opened chat's own saved draft here rather than relying on fresh state.
   useEffect(() => {
     setActionStatus('');
     setEditingId(null);
     setEditDraft('');
+    setDraft(readDraft(chatId));
   }, [chatId]);
 
 
@@ -293,6 +302,10 @@ export function ChatView({
   const onDraft = (value: string) => {
     if (value === '/' && draft === '') { setCatalogueOpen(true); return; }
     setDraft(value);
+    // Written under the chatId captured by *this* call, not read from a later
+    // effect — keeps a fast chat switch from ever saving one chat's keystroke
+    // under another chat's key (#393).
+    writeDraft(chatId, value);
   };
   const submit = () => {
     const text = draft.trim();
@@ -302,6 +315,7 @@ export function ChatView({
     if (decision.harness === 'cowork' && repository) onSend(text, { cowork: { repository } });
     else onSend(text, { turnToolboxes: turnBoxesFor(text, permitted, turnBoxes), notice: decision.notice });
     setDraft('');
+    clearDraft(chatId);
     setTurnBoxes([]);
   };
 
@@ -487,7 +501,7 @@ export function ChatView({
           access={coworkAccess} repository={repository} onRepository={setRepository} onModeChange={onModeChange}>
           <ToolCatalogue open={catalogueOpen} onOpenChange={setCatalogueOpen} projectId={project?.id ?? null} mode={mode}
             toggled={turnBoxes} onToggle={id => setTurnBoxes(prev => prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id])}
-            onMention={name => setDraft(d => insertMention(d, name))} onBoxes={setPermitted} disabled={streaming || actionBusy} />
+            onMention={name => { const next = insertMention(draft, name); setDraft(next); writeDraft(chatId, next); }} onBoxes={setPermitted} disabled={streaming || actionBusy} />
         </ComposerModeBar>
         <div className="composer-inner chat-composer-inner pane">
           <ComposerTextarea
