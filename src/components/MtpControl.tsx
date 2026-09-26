@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { apiFetch } from '../api';
+import { apiFetch, fetchProfile } from '../api';
 import type { InstalledModel } from '../types';
 import { useT } from '../i18n';
 export function MtpControl({model,onChanged}:{model:InstalledModel;onChanged:()=>void}) {
@@ -7,7 +7,9 @@ export function MtpControl({model,onChanged}:{model:InstalledModel;onChanged:()=
   const [admin,setAdmin]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const t=useT();
   useEffect(()=>{setEnabled(model.mtp?.enabled ?? false);},[model.name,model.mtp?.enabled]);
-  useEffect(()=>{void apiFetch('/api/profile').then(r=>r.json()).then(v=>setAdmin(v.user?.role==='admin')).catch(()=>{});},[]);
+  // #422: goes through the shared fetchProfile() cache instead of its own raw apiFetch('/api/profile')
+  // — this was one of the four independent /api/profile calls firing on a single page load.
+  useEffect(()=>{let live=true;void fetchProfile().then(p=>{if(live)setAdmin(p.user.role==='admin');}).catch(()=>{});return()=>{live=false;};},[]);
   const apply=async()=>{setBusy(true);setError('');try{
     const r=await apiFetch('/api/models/load',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:model.name,mtp:enabled})});
     const v=await r.json();if(!r.ok)throw new Error(v.error || t('mm.mtp.failed'));onChanged();

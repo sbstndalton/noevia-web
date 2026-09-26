@@ -15,11 +15,20 @@ import type {
   WorkspaceInfo,
 } from './types';
 import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser';
+import { cached, invalidateCached } from './request-cache';
 
 function cookie(name: string): string {
   const item = document.cookie.split(';').map((x) => x.trim()).find((x) => x.startsWith(`${name}=`));
   return item ? decodeURIComponent(item.slice(name.length + 1)) : '';
 }
+
+// #422: `fetchProfile()` is called independently by every component that needs the signed-in
+// user (App, Sidebar, AccountMenu, MtpControl, GeneralSettings, DiaryView, UsageView,
+// SettingsShell, PluginsView…) — none of them knows the others are asking the same question on
+// the same page load. `PROFILE_KEY` is the shared cache slot; see request-cache.ts for the
+// in-flight/TTL mechanics and every `invalidateCached(PROFILE_KEY)` call below for the points
+// that must not let a stale profile survive a change (a save, a sign-out, a dropped session).
+const PROFILE_KEY = 'noevia:profile';
 
 export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
@@ -27,7 +36,12 @@ export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {})
   const csrf = cookie('cowork_csrf');
   if (csrf && !['GET', 'HEAD', 'OPTIONS'].includes(method)) headers.set('X-CSRF-Token', csrf);
   const response = await fetch(input, { ...init, headers, credentials: 'same-origin' });
-  if (response.status === 401) window.dispatchEvent(new Event('cowork:unauthorized'));
+  if (response.status === 401) {
+    // The session that the cached profile belonged to is gone — a signed-in read served from
+    // cache after this point would be a different (stale) answer than the server now gives.
+    invalidateCached(PROFILE_KEY);
+    window.dispatchEvent(new Event('cowork:unauthorized'));
+  }
   return response;
 }
 
@@ -43,24 +57,24 @@ export const probeSession = (): Promise<AuthUser | null> =>
   fetch('/api/auth/session', { credentials: 'same-origin' })
     .then((r) => (r.ok ? r.json().then((j: { user: AuthUser }) => j.user) : null))
     .catch(() => null);
-export const logout = () => postJson<{ ok: true }>('/api/auth/logout', {});
+export const logout = () => postJson<{ ok: true }>('/api/auth/logout', {}).then((v) => { invalidateCached(PROFILE_KEY); return v; });
 export const passkeyLoginOptions = (username: string) => postJson<{ options: PublicKeyCredentialRequestOptionsJSON; challengeToken: string }>('/api/auth/login/passkey/options', { username });
 export const passkeyLoginVerify = (challengeToken: string, response: unknown) => postJson<{ user: AuthUser }>('/api/auth/login/passkey/verify', { challengeToken, response });
 export const passkeyRegistrationOptions = () => postJson<{ options: PublicKeyCredentialCreationOptionsJSON; challengeToken: string }>('/api/auth/passkeys/register/options', {});
-export const passkeyRegistrationVerify = (challengeToken: string, response: unknown, name: string) => postJson<{ verified: boolean }>('/api/auth/passkeys/register/verify', { challengeToken, response, name });
+export const passkeyRegistrationVerify = (challengeToken: string, response: unknown, name: string) => postJson<{ verified: boolean }>('/api/auth/passkeys/register/verify', { challengeToken, response, name }).then(v => { invalidateCached(PROFILE_KEY); return v; });
 export const acceptInvitation = (body: { token: string; username: string; displayName: string; password: string; diaryEnabled: boolean }) => postJson<{ user: AuthUser }>('/api/auth/invitations/accept', body);
 export interface PasskeyInfo { id: string; name: string; deviceType: string; backedUp: boolean; createdAt: number; lastUsedAt?: number | null }
 export interface SessionInfo { id: string; createdAt: number; lastSeenAt: number; expiresAt: number; userAgent?: string | null; ip?: string | null;
   /** #404: whether this row is the session the request that fetched the list was made with —
    *  "this device" versus every other signed-in session — not a liveness check. */
   current?: boolean }
-export const fetchProfile = () => getJson<unknown>('/api/profile').then(parseProfile);
-export const revokeSession = (id: string) => apiFetch(`/api/auth/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(r => { if (!r.ok) throw new Error('session revoke failed'); });
-export const updateProfile = (displayName: string) => apiFetch('/api/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ displayName }) }).then(r => { if (!r.ok) throw new Error('profile update failed'); return r.json(); });
-export const updateFeatures = (diaryEnabled: boolean) => putJson<{ diaryEnabled: boolean }>('/api/profile/features', { diaryEnabled });
+export const fetchProfile = () => cached(PROFILE_KEY, () => getJson<unknown>('/api/profile').then(parseProfile));
+export const revokeSession = (id: string) => apiFetch(`/api/auth/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(r => { if (!r.ok) throw new Error('session revoke failed'); invalidateCached(PROFILE_KEY); });
+export const updateProfile = (displayName: string) => apiFetch('/api/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ displayName }) }).then(r => { if (!r.ok) throw new Error('profile update failed'); return r.json(); }).then(v => { invalidateCached(PROFILE_KEY); return v; });
+export const updateFeatures = (diaryEnabled: boolean) => putJson<{ diaryEnabled: boolean }>('/api/profile/features', { diaryEnabled }).then(v => { invalidateCached(PROFILE_KEY); return v; });
 /** Marks the setup wizard as finished for this account (resumability gate). */
-export const completeOnboarding = () => postJson<{ onboarded: boolean }>('/api/profile/onboarding', {});
-export const removePasskey = (id: string) => apiFetch(`/api/auth/passkeys/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(r => { if (!r.ok) throw new Error('Passkey could not be removed'); return r.json(); });
+export const completeOnboarding = () => postJson<{ onboarded: boolean }>('/api/profile/onboarding', {}).then(v => { invalidateCached(PROFILE_KEY); return v; });
+export const removePasskey = (id: string) => apiFetch(`/api/auth/passkeys/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(r => { if (!r.ok) throw new Error('Passkey could not be removed'); return r.json(); }).then(v => { invalidateCached(PROFILE_KEY); return v; });
 export const fetchUsers = () => getJson<unknown>('/api/admin/users').then(parseUsers);
 export const createInvitation = (role: 'admin' | 'member' = 'member') => postJson<{ token: string; expiresAt: number }>('/api/admin/invitations', { role });
 export const setUserDisabled = (id: string, disabled: boolean) => putJson<{ ok: true }>(`/api/admin/users/${encodeURIComponent(id)}/disabled`, { disabled });
