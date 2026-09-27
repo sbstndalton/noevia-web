@@ -41,13 +41,13 @@ export function highlightSegments(text: string, query: string): HighlightSegment
   return segments.length ? segments : [{ key: 0, text, match: false }];
 }
 
-export type SearchResultKind = 'chat' | 'project';
+export type SearchResultKind = 'chat' | 'project' | 'destination';
 export interface SearchResultRef {
   kind: SearchResultKind;
   id: string;
 }
 
-/** The flat, DOM-order list of sidebar search results: pinned chats, then pinned projects,
+/** The flat, DOM-order list of sidebar search results: destinations, pinned chats, pinned projects,
  *  then unpinned projects, then the (bounded) recent chats — the same order Sidebar.tsx
  *  renders them in once a query narrows the lists. ArrowDown/ArrowUp walk this array; Enter
  *  activates the button at the current index (a native button click, not modelled here). */
@@ -56,13 +56,21 @@ export function buildSearchResults(
   pinnedProjects: readonly { id: string }[],
   unpinnedProjects: readonly { id: string }[],
   recentChats: readonly { id: string }[],
+  destinations: readonly { id: string }[] = [],
 ): SearchResultRef[] {
   return [
+    ...destinations.map((d) => ({ kind: 'destination' as const, id: d.id })),
     ...pinnedChats.map((c) => ({ kind: 'chat' as const, id: c.id })),
     ...pinnedProjects.map((p) => ({ kind: 'project' as const, id: p.id })),
     ...unpinnedProjects.map((p) => ({ kind: 'project' as const, id: p.id })),
     ...recentChats.map((c) => ({ kind: 'chat' as const, id: c.id })),
   ];
+}
+
+/** Match the label the person can actually see, including the current interface locale. */
+export function matchingDestinations<T extends { label: string }>(destinations: readonly T[], query: string): T[] {
+  const needle = query.trim().toLocaleLowerCase();
+  return needle ? destinations.filter((d) => d.label.toLocaleLowerCase().includes(needle)) : [];
 }
 
 /** A stable string key for a search result, used both to look an element up in the ref map

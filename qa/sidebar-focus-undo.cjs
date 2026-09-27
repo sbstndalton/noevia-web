@@ -93,15 +93,15 @@ const activeElement = (page) => page.evaluate(() => ({
     pass('Tab through a pinned chat row and a project row reaches every row-action button, never <body>, each with a real visible box');
 
     // ── #355: sidebar search Escape returns focus to the trigger that opened it ──
-    await page.getByRole('button', { name: 'Search projects and chats', exact: true }).first().click();
-    const search = page.getByPlaceholder('Search projects and chats…');
+    await page.getByRole('button', { name: 'Search noevia', exact: true }).first().click();
+    const search = page.getByPlaceholder('Search chats, projects and pages…');
     await search.waitFor();
     await search.fill('Synthetic a');
     await page.keyboard.press('Escape');
     const afterSearch = await activeElement(page);
     assert.equal(afterSearch.isBody, false, 'search Escape must not drop focus to <body>');
     assert.equal(afterSearch.tag, 'BUTTON');
-    assert.equal(afterSearch.label, 'Search projects and chats');
+    assert.equal(afterSearch.label, 'Search noevia');
     pass('sidebar search Escape returns focus to the search trigger button');
 
     // ── #355: inline rename Escape returns focus to the row's Options button ──

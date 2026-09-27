@@ -11,7 +11,8 @@ import { AccountMenu } from './AccountMenu';
 import { ModeSwitch } from './ModeSwitch';
 import { ContextMenu, ConfirmDialog } from './ContextMenu';
 import type { MenuItem } from './ContextMenu';
-import { buildSearchResults, searchResultKey } from '../sidebar-search';
+import { buildSearchResults, matchingDestinations, searchResultKey } from '../sidebar-search';
+import type { SearchResultKind } from '../sidebar-search';
 import { fetchToolboxes, fetchProfile } from '../api';
 import type { McpStatus } from '../api';
 import { notifyWorkspaceChanged } from './data/workspace-changed';
@@ -405,11 +406,18 @@ export function Sidebar({
   const unpinnedProjects = visibleProjects.filter(p=>!p.pinned);
   const unpinnedChats = visibleChats.filter(c=>!c.pinned);
   const boundedRecentChats = query || allRecents ? unpinnedChats : unpinnedChats.slice(0, RECENT_LIMIT);
-  // #439: while a query narrows the lists, ArrowDown/ArrowUp/Enter move through this exact,
-  // flat, DOM-order list (pinned chats, pinned projects, unpinned projects, recent chats) —
+  const destinations = matchingDestinations([
+    { id: 'projects', label: t('sidebar.projects'), icon: 'folder', open: onOpenProjects },
+    { id: 'customise', label: t('sidebar.customise'), icon: 'plugins', open: onOpenPlugins },
+    ...(diaryEnabled ? [{ id: 'diary', label: t('sidebar.diary'), icon: 'diary', open: onOpenDiary }] : []),
+    ...(onOpenArchived ? [{ id: 'archived', label: t('sidebar.archivedChats'), icon: 'archive', open: onOpenArchived }] : []),
+    { id: 'settings', label: t('settings.title'), icon: 'settings', open: () => openSettings(undefined, searchTrigger.current || railSearchButton.current) },
+  ], query);
+  // While a query narrows the lists, ArrowDown/ArrowUp/Enter move through this exact,
+  // flat, DOM-order list (destinations, pinned chats, pinned projects, unpinned projects, recent chats) —
   // the same order the groups below render them in — via real roving focus on each result's
   // own button (searchResultRefs), not a duplicate/virtual list.
-  const searchResults = query ? buildSearchResults(pinnedChats, pinnedProjects, unpinnedProjects, boundedRecentChats) : [];
+  const searchResults = query ? buildSearchResults(code ? [] : pinnedChats, code ? [] : pinnedProjects, code ? [] : unpinnedProjects, code ? [] : boundedRecentChats, destinations) : [];
   const searchResultIndex = new Map(searchResults.map((r, i) => [searchResultKey(r.kind, r.id), i]));
   const searchResultRefs = useRef<Map<string, HTMLElement>>(new Map());
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -420,14 +428,14 @@ export function Sidebar({
     el.focus();
     return true;
   };
-  const registerSearchResult = (kind: 'chat' | 'project', id: string) => (el: HTMLElement | null) => {
+  const registerSearchResult = (kind: SearchResultKind, id: string) => (el: HTMLElement | null) => {
     const key = searchResultKey(kind, id);
     if (el) searchResultRefs.current.set(key, el); else searchResultRefs.current.delete(key);
   };
   // Escape on a focused result returns focus to the search field (one level of "back"); a
   // second Escape, now on the field itself, falls through to the field's own handler below,
   // which keeps the existing #355 clear/close behaviour intact.
-  const onSearchResultKeyDown = (kind: 'chat' | 'project', id: string) => (e: React.KeyboardEvent) => {
+  const onSearchResultKeyDown = (kind: SearchResultKind, id: string) => (e: React.KeyboardEvent) => {
     if (!query) return;
     const index = searchResultIndex.get(searchResultKey(kind, id));
     if (index === undefined) return;
@@ -435,6 +443,16 @@ export function Sidebar({
     else if (e.key === 'ArrowUp') { e.preventDefault(); if (index <= 0) searchInputRef.current?.focus(); else focusSearchResultAt(index - 1); }
     else if (e.key === 'Escape') { e.preventDefault(); searchInputRef.current?.focus(); }
   };
+  const destinationResults = query && destinations.length > 0 && <div className="spaces side-scroll side-scroll-destinations">
+    <div className="sidebar-section-head"><span className="section-label">{t('sidebar.destinations')}</span></div>
+    {destinations.map(destination => <button
+      key={destination.id}
+      ref={registerSearchResult('destination', destination.id)}
+      className="nav-item side-destination"
+      onKeyDown={onSearchResultKeyDown('destination', destination.id)}
+      onClick={() => { destination.open?.(); setExpanded(false); setSearching(false); setQuery(''); }}
+    ><ShellIcon name={destination.icon} size={17}/><SidebarLabel text={destination.label} highlight={query}/></button>)}
+  </div>;
   const manualItems = (p: Project): MenuItem[] => {
     if(order.sort!=='manual')return [];
     const peers=sortedProjects.filter(x=>!!x.pinned===!!p.pinned);
@@ -599,7 +617,7 @@ export function Sidebar({
       </button>
       </div>
 
-      {code ? <nav className="side-nav" aria-label={t('sidebar.codingNavigation')}>
+      {!query && (code ? <nav className="side-nav" aria-label={t('sidebar.codingNavigation')}>
         {CODE_PAGES.map(([page,icon,key])=><button key={page} className={`nav-item${codePage===page?' is-active':''}`} aria-label={t(key)} aria-current={codePage===page?'page':undefined} onClick={()=>onCodePage?.(page)}>
           <ShellIcon name={icon} size={17}/>
           <span className="nav-name">{t(key)}</span>
@@ -620,10 +638,13 @@ export function Sidebar({
           <ShellIcon name="plugins" size={17}/>
           <span className="nav-name">{t('sidebar.customise')}</span>
         </button>
-      </nav>}
+      </nav>)}
 
       <div className="rail-tools"><button ref={railSearchButton} className="shell-icon-button" aria-label={t('sidebar.search')} onClick={e=>{setCollapsed(false);setExpanded(true);setSearching(true);searchTrigger.current=e.currentTarget;}}><ShellIcon name="search"/></button><button className="shell-icon-button" aria-label={t('sidebar.showPinned')} onClick={()=>{setCollapsed(false);setExpanded(true);setClosedGroups(g=>({...g,Pinned:false}));}}><ShellIcon name="pin"/></button></div>
       {code ? <div className="sidebar-history coding-history">
+        {destinationResults}
+        {query && searchResults.length === 0 && <p className="side-hint" role="status">{t('sidebar.noSearchResults')}</p>}
+        {!query && <>
         <div className="spaces side-scroll"><div className="sidebar-section-head"><span className="section-label">{t('sidebar.codingProjects')}</span></div>
           {/* #415: real projects once access is confirmed — the same list CodingWorkspace's own
               picker uses — instead of a permanent "not connected" claim next to a main panel that
@@ -645,7 +666,10 @@ export function Sidebar({
             ? <CodingTaskList tasks={codeTasks.tasks} onOpen={(projectId) => { onOpenProjectCode?.(projectId); setExpanded(false); }}/>
             : <p className="side-hint">{t('sidebar.tasksEmpty')}</p>}
         </div>
+        </>}
       </div> : <div className="sidebar-history">
+      {destinationResults}
+      {query && searchResults.length === 0 && <p className="side-hint" role="status">{t('sidebar.noSearchResults')}</p>}
       {['Pinned','Projects'].map(group => {
         const entries = group==='Pinned' ? pinnedProjects : unpinnedProjects;
         if(group==='Pinned' && !entries.length && !pinnedChats.length)return null;
@@ -669,7 +693,7 @@ export function Sidebar({
               {!p.chats?.some(c=>!c.archived && !c.pinned) && <p>{p.chats?.some(c=>!c.archived && c.pinned)?t('sidebar.chatsPinnedAbove'):t('sidebar.noChatsYet')}</p>}
             </div>}
           </div>)}
-          {!entries.length && group==='Projects' && <p className="side-hint">{query?t('sidebar.noMatchingProjects'):t('sidebar.createProjectHint')}</p>}
+          {!entries.length && group==='Projects' && !query && <p className="side-hint">{t('sidebar.createProjectHint')}</p>}
         </div>;
       })}
 
@@ -688,7 +712,7 @@ export function Sidebar({
         </>
       )}
 
-      {onOpenArchived && <button className={`side-more side-archived${activeView === 'archived' ? ' is-active' : ''}`} aria-current={activeView === 'archived' ? 'page' : undefined} onClick={()=>{onOpenArchived();setExpanded(false);}}><ShellIcon name="archive" size={16}/><span>{t('sidebar.archivedChats')}</span></button>}
+      {onOpenArchived && !query && <button className={`side-more side-archived${activeView === 'archived' ? ' is-active' : ''}`} aria-current={activeView === 'archived' ? 'page' : undefined} onClick={()=>{onOpenArchived();setExpanded(false);}}><ShellIcon name="archive" size={16}/><span>{t('sidebar.archivedChats')}</span></button>}
       </div>}
 
       {tip && <div className={`rail-tip${tip.warm ? ' is-warm' : ''}`} role="tooltip" style={{ top: tip.y, left: tip.x }}>{tip.text}</div>}

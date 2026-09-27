@@ -79,8 +79,8 @@ const activeElement = (page) => page.evaluate(() => {
     await page.getByPlaceholder('Message noevia…').waitFor();
 
     // ── #439(a): type a query, ArrowDown enters the results, Down/Up move, Enter opens ──
-    await page.getByRole('button', { name: 'Search projects and chats', exact: true }).first().click();
-    const search = page.getByPlaceholder('Search projects and chats…');
+    await page.getByRole('button', { name: 'Search noevia', exact: true }).first().click();
+    const search = page.getByPlaceholder('Search chats, projects and pages…');
     await search.waitFor();
     await search.fill('audit');
     await page.waitForTimeout(30);
@@ -126,7 +126,7 @@ const activeElement = (page) => page.evaluate(() => {
 
     // ── #439(b): matched text is wrapped in <mark>, case-insensitively, and a query full of
     // regex metacharacters never throws ──
-    await page.getByRole('button', { name: 'Search projects and chats', exact: true }).first().click();
+    await page.getByRole('button', { name: 'Search noevia', exact: true }).first().click();
     await search.waitFor();
     await search.fill('AUDIT');
     await page.waitForTimeout(30);

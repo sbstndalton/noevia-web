@@ -1433,7 +1433,7 @@ export default function App(): JSX.Element {
         activeChatId={view.kind === 'chat' ? view.chatId : null}
         onNewChat={startFreeChat}
         onNewProjectChat={startProjectChat}
-        onOpenProjects={() => setView({ kind: 'projects' })}
+        onOpenProjects={() => { setAppMode('chat'); setView({ kind: 'projects' }); }}
         onOpenProject={(id) => setView({ kind: 'project', id })}
         onOpenChat={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
         onDeleteChat={handleDeleteChat}

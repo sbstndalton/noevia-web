@@ -18,7 +18,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   await page.keyboard.press(`${mod}+Slash`);
   const help=page.getByRole('dialog',{name:'Keyboard shortcuts'});await help.waitFor();
   const text=await help.innerText();
-  for(const label of ['Search projects and chats','New chat','Open Settings','Show keyboard shortcuts'])assert.ok(text.includes(label),label);
+  for(const label of ['Search noevia','New chat','Open Settings','Show keyboard shortcuts'])assert.ok(text.includes(label),label);
   assert.ok(text.includes(mod==='Meta'?'⌘K':'Ctrl+K'),text);
   for(const theme of ['light','dark']){await page.emulateMedia({colorScheme:theme});await page.screenshot({path:`${shots}/shortcuts-1440-${theme}.png`});}
   await page.keyboard.press('Escape');await help.waitFor({state:'detached'});
@@ -29,7 +29,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
   // Search opens the rail's field with focus, even from inside the message box.
   await page.getByRole('textbox',{name:'Message',exact:true}).click();
   await page.keyboard.press(`${mod}+KeyK`);
-  const search=page.getByRole('textbox',{name:'Search projects and chats'});await search.waitFor();
+  const search=page.getByRole('textbox',{name:'Search noevia'});await search.waitFor();
   assert.equal(await search.evaluate(el=>el===document.activeElement),true);
   await page.keyboard.press('Escape');
   // New chat lands in an empty chat.

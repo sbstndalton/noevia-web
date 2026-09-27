@@ -175,7 +175,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   const sb=await page.locator('.sidebar').boundingBox();await page.mouse.click(sb.x+sb.width/2,sb.y+sb.height*0.7);
   assert.ok(await page.locator('.sidebar').evaluate(s=>!s.classList.contains('is-collapsed')),`${material}: clicking the empty rail expands it`);
   await page.getByRole('button',{name:'Collapse navigation',exact:true}).click();
-  await page.getByRole('button',{name:'Search projects and chats'}).last().click();
+  await page.getByRole('button',{name:'Search noevia'}).last().click();
   assert.ok(await page.locator('.sidebar').evaluate(s=>!s.classList.contains('is-collapsed')),`${material}: rail Search opens the sidebar`);
   await page.close();
  }

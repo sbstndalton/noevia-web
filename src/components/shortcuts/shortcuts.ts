@@ -4,7 +4,7 @@ export type ShortcutId = 'search' | 'newChat' | 'settings' | 'help';
 export type Shortcut = { id: ShortcutId; key: string; shift?: boolean; label: string };
 
 export const SHORTCUTS: Shortcut[] = [
-  { id: 'search', key: 'k', label: 'Search projects and chats' },
+  { id: 'search', key: 'k', label: 'Search noevia' },
   { id: 'newChat', key: 'o', shift: true, label: 'New chat' },
   { id: 'settings', key: ',', label: 'Open Settings' },
   { id: 'help', key: '/', label: 'Show keyboard shortcuts' },

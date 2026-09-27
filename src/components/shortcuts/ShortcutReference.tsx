@@ -7,7 +7,7 @@ import type { MessageKey } from '../../i18n';
 
 // The reference rows are built in English from the handler table; their text is looked up here.
 const LABEL_KEYS: Record<string, MessageKey> = {
-  'Search projects and chats': 'keyboard.action.search', 'New chat': 'keyboard.action.newChat', 'Open Settings': 'keyboard.action.settings',
+  'Search noevia': 'keyboard.action.search', 'New chat': 'keyboard.action.newChat', 'Open Settings': 'keyboard.action.settings',
   'Show keyboard shortcuts': 'keyboard.action.help', 'Show keyboard shortcuts (outside a text field)': 'keyboard.action.helpAnywhere',
   'Send a message': 'keyboard.action.send', 'New line in a message': 'keyboard.action.newline', 'Save an edited message and re-run': 'keyboard.action.saveEdit',
   'Cancel editing a message': 'keyboard.action.cancelEdit', 'Close a dialog, menu, search or Settings': 'keyboard.action.close', 'Move between menu items': 'keyboard.action.moveMenu',
