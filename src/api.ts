@@ -19,6 +19,7 @@ import type {
 } from './types';
 import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser';
 import { cached, invalidateCached, clearRequestCache } from './request-cache';
+import { API_MAJOR, hasApiMajorMismatch, hasApiMajorMismatchHeader } from './api-contract';
 
 function cookie(name: string): string {
   const item = document.cookie.split(';').map((x) => x.trim()).find((x) => x.startsWith(`${name}=`));
@@ -39,6 +40,10 @@ export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {})
   const csrf = cookie('cowork_csrf');
   if (csrf && !['GET', 'HEAD', 'OPTIONS'].includes(method)) headers.set('X-CSRF-Token', csrf);
   const response = await fetch(input, { ...init, headers, credentials: 'same-origin' });
+  if (hasApiMajorMismatch(response)) {
+    window.dispatchEvent(new Event('noevia:api-mismatch'));
+    throw new Error('The noevia app and server use different API versions. Reload the page.');
+  }
   if (response.status === 401) {
     // The session that the cached profile belonged to is gone — a signed-in read served from
     // cache after this point would be a different (stale) answer than the server now gives.
@@ -120,6 +125,11 @@ export async function uploadProjectFile(id: string, body: { name: string; dataBa
     xhr.onerror = () => reject(new Error('Upload connection failed; retry.'));
     xhr.ontimeout = () => reject(new Error('Upload timed out; retry.'));
     xhr.onload = () => {
+      if (hasApiMajorMismatchHeader(xhr.getResponseHeader?.('X-Noevia-API') ?? null, xhr.status)) {
+        window.dispatchEvent(new Event('noevia:api-mismatch'));
+        reject(new Error(`The noevia app requires API ${API_MAJOR}. Reload the page.`));
+        return;
+      }
       if (xhr.status === 401) { clearRequestCache(); window.dispatchEvent(new Event('cowork:unauthorized')); }
       try { const value = JSON.parse(xhr.responseText); if (xhr.status >= 400) reject(new Error(value.error || 'Upload failed')); else resolve(value); }
       catch { reject(new Error('Invalid upload response')); }

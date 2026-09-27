@@ -4,13 +4,14 @@ import { acceptInvitation, completeRecovery, fetchSession, passkeyLoginOptions, 
 import { isIpAddressHost } from '../browser-support';
 import { safeReturnPath } from '../routes';
 import type { AuthUser } from '../api';
+import { checkApiCompatibility } from '../api-contract';
 
 // Only first-run and resumed onboarding need the wizard, and only passkey
 // actions need WebAuthn, so neither delays the sign-in screen or the app.
 const SetupWizard = lazy(() => import('./SetupWizard').then((m) => ({ default: m.SetupWizard })));
 const webauthn = () => import('@simplewebauthn/browser');
 
-type Screen = 'checking' | 'wizard' | 'wizard-resume' | 'login' | 'secure' | 'ready';
+type Screen = 'checking' | 'incompatible' | 'wizard' | 'wizard-resume' | 'login' | 'secure' | 'ready';
 
 export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
   const [onboardingUser, setOnboardingUser] = useState<AuthUser | null>(null);
@@ -25,22 +26,39 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
   const recovery = new URLSearchParams(window.location.search).get('recovery');
 
   useEffect(() => {
-    // Both requests start together: on a slow link each round trip counts.
-    // The session probe stays quiet on 401 — signed out is a normal answer here.
-    const session = probeSession();
-    setupStatus().then(async (s) => {
-      if (!s.configured) { setScreen('wizard'); return; }
-      // Resumable onboarding: an authenticated user whom onboarding hasn't
-      // marked complete goes back into the wizard instead of an app that may
-      // not be usable yet. Pre-wizard/legacy users are onboarded by default.
-      const user = await session;
-      if (!user) { setScreen('login'); return; }
-      setOnboardingUser(user);
-      setScreen(user.onboarded === false ? 'wizard-resume' : 'ready');
-    }).catch(() => { setError('Could not reach noevia.'); setScreen('login'); });
-    const lock = () => setScreen('login');
+    let active = true;
+    let blocked = false;
+    void (async () => {
+      // Check before session/setup calls so a newly deployed browser bundle
+      // never starts authenticated work against an incompatible core.
+      const compatibility = await checkApiCompatibility();
+      if (!active || blocked) return;
+      if (compatibility === 'mismatch') { blocked = true; setScreen('incompatible'); return; }
+      // These can run together once the API major is known or reachability is
+      // uncertain; the existing connection error path handles offline startup.
+      const session = probeSession();
+      try {
+        const s = await setupStatus();
+        if (!active || blocked) return;
+        if (!s.configured) { setScreen('wizard'); return; }
+        const user = await session;
+        if (!active || blocked) return;
+        if (!user) { setScreen('login'); return; }
+        setOnboardingUser(user);
+        setScreen(user.onboarded === false ? 'wizard-resume' : 'ready');
+      } catch {
+        if (active && !blocked) { setError('Could not reach noevia.'); setScreen('login'); }
+      }
+    })();
+    const lock = () => { if (!blocked) setScreen('login'); };
+    const incompatible = () => { blocked = true; setScreen('incompatible'); };
     window.addEventListener('cowork:unauthorized', lock);
-    return () => window.removeEventListener('cowork:unauthorized', lock);
+    window.addEventListener('noevia:api-mismatch', incompatible);
+    return () => {
+      active = false;
+      window.removeEventListener('cowork:unauthorized', lock);
+      window.removeEventListener('noevia:api-mismatch', incompatible);
+    };
   }, []);
 
   const submit = async (event: FormEvent) => {
@@ -100,6 +118,11 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
   if (screen === 'ready') return <>{children}</>;
   const opening = <main className="auth-screen"><div className="auth-card"><h1>Opening noevia…</h1></div></main>;
   if (screen === 'checking') return opening;
+  if (screen === 'incompatible') return <main className="auth-screen"><section className="auth-card" role="alert">
+    <div className="auth-mark" aria-hidden="true">n</div><h1>Update required</h1>
+    <p>This noevia app and server use different API versions. Reload the page to get the current app.</p>
+    <button type="button" onClick={() => window.location.reload()}>Reload page</button>
+  </section></main>;
   if (screen === 'wizard') return <Suspense fallback={opening}><SetupWizard mode="fresh" onFinished={() => setScreen('ready')} /></Suspense>;
   if (screen === 'wizard-resume' && onboardingUser) return <Suspense fallback={opening}><SetupWizard key={onboardingUser.id} mode={onboardingUser.role === 'member' ? 'invited' : 'resume'} initialUser={onboardingUser} onFinished={() => setScreen('ready')} /></Suspense>;
   if (screen === 'secure') return <main className="auth-screen"><section className="auth-card">

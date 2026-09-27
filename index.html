@@ -13,10 +13,7 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="apple-mobile-web-app-title" content="noevia" />
-    <!-- Start the sign-in checks while the app bundle downloads; AuthGate's
-         same-origin fetches pick these responses up instead of waiting. -->
-    <link rel="preload" href="/api/setup/status" as="fetch" crossorigin />
-    <link rel="preload" href="/api/auth/session" as="fetch" crossorigin />
+    <!-- AuthGate checks the API major before making session/setup requests. -->
     <script src="/theme.js"></script>
     <script src="/layout-mode.js"></script>
     <script defer src="/lens.js"></script>
