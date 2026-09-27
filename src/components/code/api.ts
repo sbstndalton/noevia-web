@@ -1,4 +1,5 @@
 import { apiFetch } from '../../api';
+import { cached } from '../../request-cache';
 
 /** noevia's own action classes, as `server/code-actions.cjs` names them. */
 export type CodeAction = 'read_repository' | 'edit_file' | 'execute_command' | 'install_dependency'
@@ -53,6 +54,15 @@ const base = (projectId: string) => `/api/projects/${encodeURIComponent(projectI
 const post = (url: string, body?: unknown) => apiFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) });
 
 export const fetchCode = (projectId: string) => apiFetch(base(projectId)).then(r => read<CodeState>(r));
+/** #458: `useCodeAccess` mounts once from `CodingWorkspace` and once from `Sidebar` on the same
+ *  `/code` load, each independently calling `fetchCode(projectId)` to answer the same yes/no
+ *  question for the same id — doubling every request in the probe sequence #450 already
+ *  documented. `cached()` (request-cache.ts, the same mechanism #425 gave
+ *  fetchProfile/fetchFeatureFlags) shares one in-flight/settled probe per project id between
+ *  them, so `/code` makes exactly one `/api/projects/<id>/code` request per id, not two.
+ *  `fetchCode` itself stays uncached: `CodePanel`'s own polling of task status needs a fresh
+ *  answer every call, not a briefly-stale one. */
+export const fetchCodeAccess = (projectId: string) => cached(`noevia:code-access:${projectId}`, () => fetchCode(projectId));
 export const startTask = (projectId: string, body: StartTask) => post(base(projectId), body).then(r => read<{ taskId: string; branch: string }>(r));
 export const fetchTask = (projectId: string, id: string) => apiFetch(`${base(projectId)}/${id}`).then(r => read<CodeTask>(r));
 export const cancelTask = (projectId: string, id: string) => post(`${base(projectId)}/${id}/cancel`).then(r => read<CodeTask>(r));

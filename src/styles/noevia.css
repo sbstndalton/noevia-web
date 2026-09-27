@@ -973,6 +973,20 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
   backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
 }
 .coding-side-panel details { padding:16px 0; }
+/* #450: a neutral loading state while useCodeAccess resolves — same footprint as the welcome
+   hero + composer it stands in for, so the real content (or the honest stub) settling in is not
+   itself a layout jump. The blocks pulse together, the same shared loop the composer's own
+   "thinking" dots use (motion.css); reduced motion stops it globally. */
+.coding-checking { display:flex; flex-direction:column; align-items:center; gap:22px; margin:auto; width:100%; max-width:744px; box-sizing:border-box; }
+.coding-skeleton-block { border-radius:12px; background:var(--bg-surface-hover); --pulse-low:.4; animation:motion-pulse var(--motion-async) var(--ease-async) infinite; }
+.coding-skeleton-hero { display:flex; flex-direction:column; align-items:center; gap:12px; width:100%; }
+.coding-skeleton-emblem { width:52px; height:52px; border-radius:50%; }
+.coding-skeleton-title { width:min(360px,70%); height:28px; }
+.coding-skeleton-subtitle { width:min(460px,85%); height:16px; }
+.coding-skeleton-composer { box-sizing:border-box; width:100%; padding:18px; border:1px solid var(--control-border); border-radius:22px; background:color-mix(in srgb,var(--bg-surface) 68%,transparent); display:flex; flex-direction:column; gap:14px; }
+.coding-skeleton-chips { display:flex; gap:10px; }
+.coding-skeleton-chip { width:120px; height:32px; }
+.coding-skeleton-textarea { height:96px; }
 .coding-sidebar .shell-sidebar-head { gap:6px; flex-wrap:wrap; }
 .coding-sidebar .shell-sidebar-head > strong { white-space:nowrap; }
 .coding-sidebar .nav-item.is-active { border-radius:12px; background:var(--nav-active); box-shadow:inset 0 1px var(--glass-rim); }

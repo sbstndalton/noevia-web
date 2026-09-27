@@ -109,7 +109,11 @@ export function ProjectView({
   const [panel, setPanel] = useState<'instructions' | 'memory' | 'context' | null>(null);
   const [tab, setTab] = useState<ProjectTab>(() => (requestedTab === 'sources' ? 'sources' : 'chats'));
   const researchAccess = useResearchAccess(project.id);
-  const codeAccess = useCodeAccess(project.id);
+  // Tri-state (#450): 'checking' while the probe for this real project id is in flight, distinct
+  // from a confirmed 'denied' — see the effects below that must not bounce out of the Code tab
+  // (or navigate a held request into it) on the strength of "not allowed yet" alone.
+  const codeAccessState = useCodeAccess(project.id);
+  const codeAccess = codeAccessState === 'allowed';
   const browserAccess = useBrowserAccess(project.id);
   // A tab change the view makes on its own is reported as a redirect, not a navigation (#359).
   const autoTab = useRef(true);
@@ -134,7 +138,10 @@ export function ProjectView({
   useEffect(() => { reportTab.current?.(tab, { replace: autoTab.current }); autoTab.current = false; }, [tab]);
   useEffect(() => { if (codeRequest && codeAccess) setTabAuto('code'); }, [codeRequest, codeAccess]);
   useEffect(() => { if (tab === 'research' && !researchAccess) setTabAuto('chats'); }, [tab, researchAccess]);
-  useEffect(() => { if (tab === 'code' && !codeAccess) setTabAuto('chats'); }, [tab, codeAccess]);
+  // Only a confirmed denial bounces out of the tab — 'checking' (e.g. right after switching
+  // projects, while the new project's own probe is in flight) must not read as "not allowed" and
+  // kick the viewer back to Chats before the real answer has even arrived (#450).
+  useEffect(() => { if (tab === 'code' && codeAccessState === 'denied') setTabAuto('chats'); }, [tab, codeAccessState]);
   useEffect(() => { if (tab === 'browser' && !browserAccess) setTabAuto('chats'); }, [tab, browserAccess]);
   const [draft, setDraft] = useState('');
   const [skillFiles, setSkillFiles] = useState<string[]>([]);

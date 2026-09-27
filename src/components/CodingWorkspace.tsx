@@ -11,18 +11,49 @@ import { useCodeAccess } from './code/useCodeAccess';
  *  `<CodePanel>`, gated by the same `useCodeAccess`). This landing page has no project to run a
  *  task in, so a viewer who could use that harness gets a picker into the real thing instead of
  *  the honest "not connected yet" stub everyone else still sees. */
-export function CodingWorkspace({ page, onStartChat, projects, onProjectsChanged, onOpenProjectCode }: { page: string; onStartChat?: (prompt: string) => void; projects?: { id: string; name: string }[]; onProjectsChanged?: () => void; onOpenProjectCode?: (projectId: string) => void }) {
+export function CodingWorkspace({ page, onStartChat, projects, projectsLoaded = true, onProjectsChanged, onOpenProjectCode }: { page: string; onStartChat?: (prompt: string) => void; projects?: { id: string; name: string }[]; projectsLoaded?: boolean; onProjectsChanged?: () => void; onOpenProjectCode?: (projectId: string) => void }) {
   const [draft,setDraft]=useState('');
   const [panel,setPanel]=useState(false);
   const list = projects ?? [];
   // Access is per admin and the feature flag, not per project (server/routes/code.cjs checks the
   // flag and the role before it ever looks at the project id) — any real project answers the same
-  // way, so the first one stands in for "can this viewer reach Code mode at all".
-  const codeAccess = useCodeAccess(list[0]?.id ?? '-');
-  const canOpenProjectCode = codeAccess && !!onOpenProjectCode;
+  // way, so the first one stands in for "can this viewer reach Code mode at all". useCodeAccess
+  // itself never probes a placeholder id (#450): with no real id yet it reports 'checking'.
+  const accessProbe = useCodeAccess(list[0]?.id ?? '');
+  // Zero projects, once the list has actually finished loading (`projectsLoaded`), is a real,
+  // decided answer — there is no id left to probe, and the outcome (the honest stub) is the same
+  // whether or not this viewer would otherwise have access. Only *not knowing yet* whether the
+  // list is genuinely empty (it is still loading) should read as 'checking'; otherwise a viewer
+  // with zero projects would see the loading skeleton forever.
+  const codeAccess = accessProbe === 'checking' && projectsLoaded && list.length === 0 ? 'denied' : accessProbe;
+  const checking = codeAccess === 'checking';
+  const canOpenProjectCode = codeAccess === 'allowed' && !!onOpenProjectCode;
+  // 'Checking' must read as neither claim below is true yet — not "no execution" (denied, wrong
+  // for an admin who does have access) and not "runs in a project" (not confirmed yet either).
+  const newTaskBadge = checking ? 'Checking Code access…' : canOpenProjectCode ? 'Runs in a project' : 'Interface preview · no execution';
   return <div className="coding-workspace">
-    <main className="coding-main"><header className="coding-header"><span>{page}</span><div><span className="preview-badge">{page==='New task'&&canOpenProjectCode?'Runs in a project':'Interface preview · no execution'}</span><button className="shell-icon-button" aria-label="Toggle coding side panel" aria-expanded={panel} onClick={()=>setPanel(!panel)}><ShellIcon name="panel"/></button></div></header><div className="coding-content">{page==='New task'?(canOpenProjectCode?<CodeProjectPicker projects={list} onOpen={onOpenProjectCode!}/>:<><div className="coding-welcome"><span className="code-emblem"><ShellIcon name="code" size={28}/></span><h1>What should we build next?</h1><p>A focused space for code, projects, and the work ahead.</p></div><div className="coding-quick-actions">{['Build a feature','Review code','Fix a bug'].map(label=><button disabled key={label}>{label}</button>)}</div><div className="coding-composer"><div className="coding-context-chips"><button disabled><ShellIcon name="folder"/>Select project</button><button disabled><ShellIcon name="git"/>Choose branch</button><button disabled>Local environment</button></div><label className="coding-draft-label" htmlFor="coding-draft">Describe a coding task</label><textarea id="coding-draft" value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Describe a task or ask a coding question…" rows={3}/><div className="coding-composer-footer"><div><button disabled><ShellIcon name="plus" size={14}/>Add context</button><button disabled>Auto</button></div><div><button disabled>Select model</button><button className="code-submit" disabled aria-label="Run task — not connected"><ShellIcon name="arrow-up" size={16}/></button></div></div><p className="preview-footnote">Draft only. Running tasks, reading repositories, and editing code are not connected yet.</p></div></>):page==='Plugins'?<PluginsView embedded onStartChat={onStartChat} projects={projects} onProjectsChanged={onProjectsChanged}/>:<PreviewPanel title={page} description="This area belongs to your coding workspace. Its functionality will be added later." items={page==='Pull requests'?['Open pull requests','Code reviews','Checks and status']:page==='Scheduled'?['Scheduled coding tasks','Run history']:['Environments','Worktrees','Hooks','Artifacts']}/>}</div></main>
+    <main className="coding-main"><header className="coding-header"><span>{page}</span><div><span className="preview-badge">{page==='New task'?newTaskBadge:'Interface preview · no execution'}</span><button className="shell-icon-button" aria-label="Toggle coding side panel" aria-expanded={panel} onClick={()=>setPanel(!panel)}><ShellIcon name="panel"/></button></div></header><div className="coding-content">{page==='New task'?(checking?<CodingAccessSkeleton/>:canOpenProjectCode?<CodeProjectPicker projects={list} onOpen={onOpenProjectCode!}/>:<><div className="coding-welcome"><span className="code-emblem"><ShellIcon name="code" size={28}/></span><h1>What should we build next?</h1><p>A focused space for code, projects, and the work ahead.</p></div><div className="coding-quick-actions">{['Build a feature','Review code','Fix a bug'].map(label=><button disabled key={label}>{label}</button>)}</div><div className="coding-composer"><div className="coding-context-chips"><button disabled><ShellIcon name="folder"/>Select project</button><button disabled><ShellIcon name="git"/>Choose branch</button><button disabled>Local environment</button></div><label className="coding-draft-label" htmlFor="coding-draft">Describe a coding task</label><textarea id="coding-draft" value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Describe a task or ask a coding question…" rows={3}/><div className="coding-composer-footer"><div><button disabled><ShellIcon name="plus" size={14}/>Add context</button><button disabled>Auto</button></div><div><button disabled>Select model</button><button className="code-submit" disabled aria-label="Run task — not connected"><ShellIcon name="arrow-up" size={16}/></button></div></div><p className="preview-footnote">Draft only. Running tasks, reading repositories, and editing code are not connected yet.</p></div></>):page==='Plugins'?<PluginsView embedded onStartChat={onStartChat} projects={projects} onProjectsChanged={onProjectsChanged}/>:<PreviewPanel title={page} description="This area belongs to your coding workspace. Its functionality will be added later." items={page==='Pull requests'?['Open pull requests','Code reviews','Checks and status']:page==='Scheduled'?['Scheduled coding tasks','Run history']:['Environments','Worktrees','Hooks','Artifacts']}/>}</div></main>
     {panel&&<aside className="coding-side-panel"><h2>Workspace</h2>{['Files','Changes','Terminal'].map(label=><details key={label}><summary>{label}</summary><p>No project connected. This panel is a preview.</p></details>)}</aside>}
+  </div>;
+}
+
+/** Neutral loading state for the "New task" page while `useCodeAccess` is still 'checking'
+ *  (#450) — same footprint as the welcome hero + composer it replaces, so settling into the real
+ *  content (or the honest stub) is not itself a layout jump. Never asserts "connected" or
+ *  "not connected"; the pulse (shared with typing/working dots, `motion.css`) is the only motion
+ *  and stops under reduced motion. Exported for tests. */
+export function CodingAccessSkeleton() {
+  return <div className="coding-checking" role="status">
+    <span className="sr-only">Checking Code access…</span>
+    <div className="coding-skeleton-hero" aria-hidden="true">
+      <span className="coding-skeleton-block coding-skeleton-emblem"/>
+      <span className="coding-skeleton-block coding-skeleton-title"/>
+      <span className="coding-skeleton-block coding-skeleton-subtitle"/>
+    </div>
+    <div className="coding-skeleton-composer" aria-hidden="true">
+      <div className="coding-skeleton-chips"><span className="coding-skeleton-block coding-skeleton-chip"/><span className="coding-skeleton-block coding-skeleton-chip"/><span className="coding-skeleton-block coding-skeleton-chip"/></div>
+      <span className="coding-skeleton-block coding-skeleton-textarea"/>
+    </div>
   </div>;
 }
 

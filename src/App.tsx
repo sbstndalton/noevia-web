@@ -1426,6 +1426,7 @@ export default function App(): JSX.Element {
         onPreview={(title) => setView({kind:'preview',title})}
         showPreviews={showPreviews}
         projects={projects}
+        projectsLoaded={workspaceLoaded}
         chats={allChats}
         activeView={view.kind}
         activeProjectId={activeProject?.id ?? null}
@@ -1454,7 +1455,7 @@ export default function App(): JSX.Element {
       <div className="app-main" ref={appMain}>
       {/* In flow at the top of the pane: it pushes the view down rather than covering its header. */}
       {featureFlags.codeHarness === true && <ActiveCodeTasks onOpenProject={(id) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}/>}
-      {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects} onOpenProjectCode={(id) => { setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
+      {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} projectsLoaded={workspaceLoaded} onProjectsChanged={refreshProjects} onOpenProjectCode={(id) => { setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
       <div className="chat-views" style={{display:appMode==='code'&&showPreviews?'none':'contents'}}>
       {view.kind === 'plugins' && <Suspense fallback={<ViewLoading name="customise" active={appMode === 'chat' && !settingsOpen} />}><Customise.View onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects} initialTab={customiseTab} onTabChange={setCustomiseTab}/></Suspense>}
       {view.kind === 'archived' && <ArchivedChatsView onDelete={handleDeleteChat} onOpenData={() => openSettings('data')}/>}

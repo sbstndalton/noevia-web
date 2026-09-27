@@ -27,6 +27,11 @@ const CODE_PAGES: [page: string, icon: string, key: MessageKey][] = [['Pull requ
 
 interface SidebarProps {
   projects: Project[];
+  /** Whether `projects` reflects the server's answer at least once — vs. still being the empty
+   *  initial state while the workspace loads. Lets the "CODING PROJECTS" section (#450) tell
+   *  "no projects yet, still loading" (stay blank) apart from "confirmed zero projects" (show the
+   *  honest hint), instead of treating an empty list as decided from the very first render. */
+  projectsLoaded?: boolean;
   chats: ChatMeta[];
   activeView: 'diary' | 'settings' | 'projects' | 'project' | 'chat' | 'preview' | 'models' | 'plugins' | 'archived';
   /** Archived chats (#232): the management view outside Settings. */
@@ -77,6 +82,7 @@ const RECENT_LIMIT = 15;
 
 export function Sidebar({
   projects,
+  projectsLoaded = true,
   chats,
   activeView,
   activeProjectId,
@@ -220,7 +226,15 @@ export function Sidebar({
   // ever looks at the project id), so the first project stands in for "can this viewer reach Code
   // mode at all" — the same shortcut CodingWorkspace's own picker already takes. Both probes are
   // gated to Code mode so a chat-mode session never pays for a fetch it will not use.
-  const codeAccess = useCodeAccess(projects[0]?.id ?? '-', code);
+  // Tri-state (#450): no placeholder id — with no real project yet this reports 'checking'
+  // rather than 404ing a probe against '-' and asserting "no coding projects" while the real
+  // list is still loading.
+  const codeAccessProbe = useCodeAccess(projects[0]?.id ?? '', code);
+  // As in CodingWorkspace (#450): zero projects is only a decided 'denied' once the workspace has
+  // actually loaded — otherwise an admin with real projects still loading would see the
+  // "no coding projects" hint flash before their real list (and its own access probe) arrive.
+  const codeAccessState = codeAccessProbe === 'checking' && projectsLoaded && projects.length === 0 ? 'denied' : codeAccessProbe;
+  const codeAccess = codeAccessState === 'allowed';
   const codeTasks = useActiveCodeTasks(code && codeAccess);
   // One menu model for both entity types, opened from a right-click or the
   // hamburger. Destructive choices route through `confirm` rather than an
@@ -613,13 +627,19 @@ export function Sidebar({
         <div className="spaces side-scroll"><div className="sidebar-section-head"><span className="section-label">{t('sidebar.codingProjects')}</span></div>
           {/* #415: real projects once access is confirmed — the same list CodingWorkspace's own
               picker uses — instead of a permanent "not connected" claim next to a main panel that
-              proves otherwise. A viewer without Code access still sees the honest original copy. */}
+              proves otherwise. A viewer without Code access still sees the honest original copy.
+              #450: while access is still 'checking' (no real project id yet, or its probe is in
+              flight), this section stays blank rather than asserting either claim. */}
           {codeAccess && projects.length
             ? <CodingProjectList projects={projects} onOpen={(id) => { onOpenProjectCode?.(id); setExpanded(false); }}/>
+            : codeAccessState === 'checking'
+            ? null
             : <p className="side-hint">{codeAccess ? t('sidebar.createProjectHint') : t('sidebar.codingProjectsEmpty')}</p>}
         </div>
         <div className="spaces side-scroll"><div className="sidebar-section-head"><span className="section-label">{t('sidebar.tasks')}</span></div>
-          {codeAccess && codeTasks.error
+          {codeAccessState === 'checking'
+            ? null
+            : codeAccess && codeTasks.error
             ? <p className="side-hint" role="alert">{codeTasks.error}</p>
             : codeAccess && codeTasks.tasks.length
             ? <CodingTaskList tasks={codeTasks.tasks} onOpen={(projectId) => { onOpenProjectCode?.(projectId); setExpanded(false); }}/>
