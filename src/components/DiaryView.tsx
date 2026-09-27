@@ -22,7 +22,7 @@ import { isFocusable } from '../focus-utils';
 import { apiFetch, fetchProfile, deleteProjectFile, fetchDiaryMonth, fetchDiarySource, fetchStorage, streamChat } from '../api';
 import type { StorageConnection } from '../api';
 import { dateInText, dayLabel, localDay, monthLabel, splitDays } from '../diary-data';
-import { DiaryRequestError, directoryPicker, directoryPickerBlockedReason, listFiles, randomSessionId, readFile, saveLocal, scanLocal, syncFileChange, writeFile } from '../diary-workspace';
+import { DiaryRequestError, directoryPicker, directoryPickerBlockedReason, invalidateFileListings, listFiles, randomSessionId, readFile, saveLocal, scanLocal, syncFileChange, writeFile } from '../diary-workspace';
 import type { DiaryFile, DirectoryHandle, FileEntry } from '../diary-workspace';
 import { DiaryModal, MarkdownPreview } from './DiaryModal';
 import { StoragePicker } from './StoragePicker';
@@ -99,6 +99,13 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   const [editorStatus, setEditorStatus] = useState('');
   const [storedVersion, setStoredVersion] = useState<DiaryFile | null>(null);
   const [revision, setRevision] = useState(0);
+  // #456: every place that bumps `revision`/`fileRevision` to make the effects below refetch
+  // represents a moment the Diary's server-side file listing may have changed (a capture landed
+  // on disk, a storage reconnect, a manual refresh) — invalidate the shared `listFiles` cache
+  // (`diary-workspace.ts`) at the same points, so the refetch those bumps trigger is never served
+  // the pre-change cached listing.
+  const bumpRevision = () => { invalidateFileListings(); setRevision(n => n + 1); };
+  const bumpFileRevision = () => { invalidateFileListings(); setFileRevision(n => n + 1); };
   const session = useRef(randomSessionId());
   const [recoveryOwner,setRecoveryOwner]=useState('');
   const [localRecoveryEnabled,setLocalRecoveryEnabled]=useState(false);
@@ -388,7 +395,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
       const saved = decision === 'logged' || decision === 'ok';
       progress(saved ? t('diary.progress.entrySaved') : t('diary.progress.noEntrySaved'));
       setStatus(saved ? t('diary.status.savedTo', { day: dayLabel(entryDay) }) : t('diary.status.conversationOnly'));
-      setRevision(n => n+1);
+      bumpRevision();
     } catch (e) {
       const cancelled = extraAbort.current?.signal.aborted;
       extraAbort.current = null;
@@ -396,7 +403,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
       setExtraStatus(cancelled ? t('diary.status.contextCancelledNoSend') : '');
       patchReply({tools:calls.map(call => call?.status === 'pending' ? {...call,status:'denied',approvalId:undefined,args:t('diary.errors.contextEndedBeforeApproval')} : call)});
       if (!answered && !diaryStarted) { setDraft(message); setTurns(previous => ({ ...previous, [entryDay]: displayHistory })); }
-      if(diaryStarted && !folder)setRevision(n=>n+1);
+      if(diaryStarted && !folder)bumpRevision();
       if (cancelled) throw new Error(t('diary.status.contextCancelledNoSend'));
       throw e;
     }
@@ -453,7 +460,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
           catch(e){setEditorStatus(t('diary.editor.savedLocallySyncAttention'));setEditorError(e instanceof Error?e.message:String(e));}
         }
       } else {setEditor(await writeFile({...editor,content:editText}));setEditorStatus(t('diary.editor.saved'));}
-      setRevision(n=>n+1);
+      bumpRevision();
     } catch(e) {
       if(e instanceof DiaryRequestError && e.status===409){
         try {setStoredVersion(await currentFile(editor.path));}
@@ -486,7 +493,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   const disconnect = () => {
     if (busy || Object.keys(pendingLocal).length) return;
     if (pendingCount && !window.confirm(t('diary.confirm.someFilesNotSynced'))) return;
-    setFolder(null); setPendingSync({}); pendingSyncRef.current = {}; setLocalFiles({}); setTurns({}); setMonth(null); setDay(null); setFilePath(''); setRevision(n=>n+1);
+    setFolder(null); setPendingSync({}); pendingSyncRef.current = {}; setLocalFiles({}); setTurns({}); setMonth(null); setDay(null); setFilePath(''); bumpRevision();
   };
 
   const blockedReason = wizard === 'local' ? directoryPickerBlockedReason() : null;
@@ -522,14 +529,14 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
       <div className="diary-composer-dock">{composer}</div>
       {status && <p className="diary-save-status" role="status">{status}</p>}
 
-    </section><DiaryContextPanel filesLoading={filesLoading} filesError={filesError} retryFiles={()=>setFileRevision(n=>n+1)} recovery={folder && <section><label className="diary-sync-toggle"><input type="checkbox" checked={localRecoveryEnabled} disabled={busy || !recoveryOwner} onChange={e=>void toggleLocalRecovery(e.target.checked)} />{t('diary.recovery.saveOnBrowser')}</label><p className="diary-context-note">{t('diary.recovery.storesNote')}</p></section>} busy={busy} files={files} filePath={filePath} setFilePath={setFilePath} openFile={openFile}
+    </section><DiaryContextPanel filesLoading={filesLoading} filesError={filesError} retryFiles={()=>bumpFileRevision()} recovery={folder && <section><label className="diary-sync-toggle"><input type="checkbox" checked={localRecoveryEnabled} disabled={busy || !recoveryOwner} onChange={e=>void toggleLocalRecovery(e.target.checked)} />{t('diary.recovery.saveOnBrowser')}</label><p className="diary-context-note">{t('diary.recovery.storesNote')}</p></section>} busy={busy} files={files} filePath={filePath} setFilePath={setFilePath} openFile={openFile}
       newFile={newEditor}
       chooseStorage={() => setWizard('choose')} pendingCount={pendingCount} pendingLocal={Object.keys(pendingLocal).length > 0}
-      managed={storageMode === 'managed'} storageStatus={<DiaryStorageStatus active={active} onBusyChange={value=>{busyRef.current=value;setBusy(value);}} busy={busy} revision={revision} onMode={setStorageMode} onImported={()=>{setRevision(n=>n+1);setWizard(null);}} />} folderName={folder?.name} savedLabel={savedLabel} corpusRoot={storage?.corpusRoot} sync={sync} setSync={setSync} disconnect={disconnect} /></div>
+      managed={storageMode === 'managed'} storageStatus={<DiaryStorageStatus active={active} onBusyChange={value=>{busyRef.current=value;setBusy(value);}} busy={busy} revision={revision} onMode={setStorageMode} onImported={()=>{bumpRevision();setWizard(null);}} />} folderName={folder?.name} savedLabel={savedLabel} corpusRoot={storage?.corpusRoot} sync={sync} setSync={setSync} disconnect={disconnect} /></div>
     {extraModels && extraProject && <ModelPopup projects={[extraProject]} activeProject={extraProject} onClose={()=>setExtraModels(false)} onProjectsChanged={()=>void refreshExtraProject()} />}
     {extraFiles && <DiaryModal title={t('diary.attachments.title')} onClose={()=>setExtraFiles(false)}><p>{t('diary.attachments.storedSeparately')}</p>{(extraProject?.files || []).map(file=><div className="model-row" key={file.name}><span>{file.name}<small> · {file.attachment?.state || file.document?.state || t('diary.attachments.ready')}</small></span><button className="popup-tab" disabled={busy || extraBusy} onClick={()=>void (async()=>{if(!extraProject || !window.confirm(t('diary.confirm.deleteAttachment', { name: file.name })))return;setExtraBusy(true);try{await deleteProjectFile(extraProject.id,file.name);await refreshExtraProject();}catch(err){setExtraStatus(String(err));}finally{setExtraBusy(false);}})()}>{t('diary.attachments.delete')}</button></div>)}</DiaryModal>}
 
-    {wizard && <DiaryModal title={t('diary.wizard.title')} onClose={()=>{if(!busy)setWizard(null);}}>{error&&<p className="conn-banner" role="alert">{error}</p>}{wizard==='choose'?<div className="diary-storage-options"><button className="month-card surface" disabled={busy} onClick={()=>setWizard('local')}><strong>{t('diary.wizard.browserFolder')}</strong><span>{t('diary.wizard.browserFolderHint')}</span></button><button className="month-card surface" disabled={busy || !!folder} onClick={()=>setWizard('online')}><strong>{storageMode === 'managed' ? t('diary.wizard.backupConnection') : t('diary.wizard.existingConnection')}</strong><span>{storageMode === 'managed' ? t('diary.wizard.backupConnectionHint') : t('diary.wizard.existingConnectionHint')}</span></button>{folder&&<p>{t('diary.wizard.returnToSavedStorage')}</p>}</div>:wizard==='local'?<div className="diary-wizard-step"><p>{t('diary.wizard.selectFolder')}</p><p>{t('diary.wizard.smbHint')}</p><label className="diary-sync-toggle"><input type="checkbox" checked={sync} onChange={e=>setSync(e.target.checked)} />{t('diary.wizard.alsoSyncTo', { label: savedLabel })}</label><p className="diary-context-note">{t('diary.wizard.diaryTextSentNote')}</p>{blockedReason==='insecure-context'&&<p role="alert">{t('diary.wizard.insecureContext')}</p>}{blockedReason==='unsupported'&&<p role="alert">{t('diary.wizard.unsupportedBrowser')}</p>}<button className="modal-btn primary" disabled={busy || !directoryPicker()} onClick={connectLocal}>{t('diary.wizard.chooseFolder')}</button><button className="modal-btn secondary" disabled={busy} onClick={()=>setWizard('choose')}>{t('diary.wizard.back')}</button></div>:<StoragePicker onlineOnly backupOnly={storageMode === 'managed'} onSaved={value=>{storageRequest.current+=1;setStorageError('');setStorage(value);setWizard(null);setFilePath('');setRevision(n=>n+1);setTurns({});}} />}</DiaryModal>}
+    {wizard && <DiaryModal title={t('diary.wizard.title')} onClose={()=>{if(!busy)setWizard(null);}}>{error&&<p className="conn-banner" role="alert">{error}</p>}{wizard==='choose'?<div className="diary-storage-options"><button className="month-card surface" disabled={busy} onClick={()=>setWizard('local')}><strong>{t('diary.wizard.browserFolder')}</strong><span>{t('diary.wizard.browserFolderHint')}</span></button><button className="month-card surface" disabled={busy || !!folder} onClick={()=>setWizard('online')}><strong>{storageMode === 'managed' ? t('diary.wizard.backupConnection') : t('diary.wizard.existingConnection')}</strong><span>{storageMode === 'managed' ? t('diary.wizard.backupConnectionHint') : t('diary.wizard.existingConnectionHint')}</span></button>{folder&&<p>{t('diary.wizard.returnToSavedStorage')}</p>}</div>:wizard==='local'?<div className="diary-wizard-step"><p>{t('diary.wizard.selectFolder')}</p><p>{t('diary.wizard.smbHint')}</p><label className="diary-sync-toggle"><input type="checkbox" checked={sync} onChange={e=>setSync(e.target.checked)} />{t('diary.wizard.alsoSyncTo', { label: savedLabel })}</label><p className="diary-context-note">{t('diary.wizard.diaryTextSentNote')}</p>{blockedReason==='insecure-context'&&<p role="alert">{t('diary.wizard.insecureContext')}</p>}{blockedReason==='unsupported'&&<p role="alert">{t('diary.wizard.unsupportedBrowser')}</p>}<button className="modal-btn primary" disabled={busy || !directoryPicker()} onClick={connectLocal}>{t('diary.wizard.chooseFolder')}</button><button className="modal-btn secondary" disabled={busy} onClick={()=>setWizard('choose')}>{t('diary.wizard.back')}</button></div>:<StoragePicker onlineOnly backupOnly={storageMode === 'managed'} onSaved={value=>{storageRequest.current+=1;setStorageError('');setStorage(value);setWizard(null);setFilePath('');bumpRevision();setTurns({});}} />}</DiaryModal>}
     {editor && <DiaryMarkdownWorkspace navigationKey={editorNavigation} file={editor} text={editText} busy={busy} error={editorError} status={editorStatus} stored={storedVersion} managed={storageMode === 'managed'} local={!!folder} syncPending={!!pendingSync[editor.path]}
       files={files} folderPath={filePath} filesLoading={filesLoading} filesError={filesError}
       onText={setEditText} onPath={path=>setEditor({...editor,path})} onFolder={setFilePath} onOpen={openFile} onNew={newEditor}
@@ -552,7 +559,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
           return {files:[...entries.values()]};
         },read:async(file)=>({path:file,content:snapshot[file] ?? null,version:null})});
       }}
-      onRefresh={()=>setFileRevision(n=>n+1)} onSave={saveEditor} onCompare={compareStored} onRebase={()=>acceptStored(false)} onReload={()=>acceptStored(true)} onClose={closeEditor} />}
+      onRefresh={()=>bumpFileRevision()} onSave={saveEditor} onCompare={compareStored} onRebase={()=>acceptStored(false)} onReload={()=>acceptStored(true)} onClose={closeEditor} />}
 
   </main>;
 }

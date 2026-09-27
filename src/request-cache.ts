@@ -24,25 +24,49 @@
 interface Entry<T> {
   promise: Promise<T>;
   expiresAt: number;
+  pending: boolean;
 }
 
 const DEFAULT_TTL_MS = 4000;
+const MAX_ENTRIES = 128;
 const store = new Map<string, Entry<unknown>>();
 
 export function cached<T>(key: string, load: () => Promise<T>, ttlMs: number = DEFAULT_TTL_MS): Promise<T> {
   const now = Date.now();
   const hit = store.get(key) as Entry<T> | undefined;
-  if (hit && hit.expiresAt > now) return hit.promise;
+  if (hit && (hit.pending || hit.expiresAt > now)) return hit.promise;
+  // Directory listings add one key per path. Retire expired one-off paths and
+  // cap unusually rapid browsing so this short-lived cache cannot grow forever.
+  for (const [storedKey, entry] of store) if (!entry.pending && entry.expiresAt <= now) store.delete(storedKey);
   const promise = load();
-  store.set(key, { promise, expiresAt: now + ttlMs });
+  if (store.size >= MAX_ENTRIES) {
+    for (const [storedKey, entry] of store) {
+      if (!entry.pending) { store.delete(storedKey); break; }
+    }
+  }
+  // If every slot is in flight, return this request without caching it. An older
+  // in-flight read remains shared, and the cache still has a fixed upper bound.
+  if (store.size >= MAX_ENTRIES) return promise;
+  const entry: Entry<T> = { promise, expiresAt: Infinity, pending: true };
+  store.set(key, entry);
   // A rejected request must not keep poisoning every reader for the rest of the TTL window —
   // drop it immediately so the next call retries instead of replaying the same failure.
-  promise.catch(() => {
-    if (store.get(key)?.promise === promise) store.delete(key);
-  });
+  void promise.then(
+    () => { entry.pending = false; entry.expiresAt = Date.now() + ttlMs; },
+    () => { if (store.get(key) === entry) store.delete(key); },
+  );
   return promise;
 }
 
 export function invalidateCached(key: string): void {
   store.delete(key);
+}
+
+/** Remove a resource family without retaining a new generation of keys after every edit. */
+export function invalidateCachedPrefix(prefix: string): void {
+  for (const key of store.keys()) if (key.startsWith(prefix)) store.delete(key);
+}
+
+export function clearRequestCache(): void {
+  store.clear();
 }

@@ -1,4 +1,5 @@
 import { apiFetch } from './api';
+import { cached, invalidateCachedPrefix } from './request-cache';
 export interface DiaryFile { path: string; content: string | null; version: string | null }
 export interface FileEntry { path: string; name: string; isDir: boolean }
 export class DiaryRequestError extends Error {
@@ -10,17 +11,24 @@ export async function diaryRequest<T>(path: string, body?: unknown, method = 'PO
   if (!r.ok) throw new DiaryRequestError(value.error || 'Diary request failed', r.status);
   return value;
 }
+// The overview and file pane share directory reads. Writes/refreshes remove every
+// listing; signalled searches stay independent so one caller cannot cancel another.
+const FILE_LIST_PREFIX = 'diary:files:';
+export function invalidateFileListings(): void { invalidateCachedPrefix(FILE_LIST_PREFIX); }
 export async function listFiles(path = '', signal?: AbortSignal): Promise<{files:FileEntry[]}> {
-  const value=await diaryRequest<{files:FileEntry[]}>('files?path='+encodeURIComponent(path),undefined,'GET',signal);
-  if(!value || !Array.isArray(value.files) || value.files.length>500 || value.files.some(f=>!f || typeof f.path!=='string' || typeof f.name!=='string' || typeof f.isDir!=='boolean'))throw Error('File list was invalid. Try refreshing this folder.');
-  return value;
+  const load = async () => {
+    const value = await diaryRequest<{files:FileEntry[]}>('files?path='+encodeURIComponent(path),undefined,'GET',signal);
+    if(!value || !Array.isArray(value.files) || value.files.length>500 || value.files.some(f=>!f || typeof f.path!=='string' || typeof f.name!=='string' || typeof f.isDir!=='boolean'))throw Error('File list was invalid. Try refreshing this folder.');
+    return value;
+  };
+  return signal ? load() : cached(FILE_LIST_PREFIX + path, load);
 }
 function checkedFile(value: DiaryFile, path: string): DiaryFile {
   if(!value || value.path!==path || (value.content!==null && typeof value.content!=='string') || (value.version!==null && typeof value.version!=='string'))throw Error('File response was invalid. Your draft has been kept; compare storage before retrying.');
   return value;
 }
 export const readFile = async (path: string, signal?: AbortSignal) => checkedFile(await diaryRequest<DiaryFile>('file', { path }, 'POST', signal), path);
-export const writeFile = async (file: DiaryFile) => checkedFile(await diaryRequest<DiaryFile>('file', file, 'PUT'), file.path);
+export const writeFile = async (file: DiaryFile) => { const result = checkedFile(await diaryRequest<DiaryFile>('file', file, 'PUT'), file.path); invalidateFileListings(); return result; };
 interface LocalFileHandle {
   kind: 'file'; name: string;
   getFile(): Promise<File>;

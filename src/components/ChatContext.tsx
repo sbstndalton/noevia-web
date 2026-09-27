@@ -11,6 +11,14 @@ export function ChatContext({chatId,projectId,messages,streaming,onBusy}:{chatId
  // The server's figure only changes when a request is prepared, so it is read when the chat
  // opens and again when a reply finishes -- not every three seconds for every open chat, which
  // is what this used to do.
+ //
+ // #457: this used to also depend on `messages.length`, meaning "refetch when a reply finishes" --
+ // but on a fresh navigation to an existing chat, `messages` starts empty and is then populated a
+ // moment later once the separate history fetch resolves, so that 0-to-N transition re-ran this
+ // effect a second time for the *same* chatId while still not streaming, doubling the initial
+ // read. `streaming` alone already carries the intended signal: it goes true right when a send
+ // starts and back to false right when a reply finishes, for every send (streamed or not), so its
+ // falling edge is the one and only "a reply just finished" trigger this effect needs.
  useEffect(()=>{setMeter(null);setStatus('');},[chatId]);
  useEffect(()=>{
   if(streaming)return;
@@ -19,7 +27,7 @@ export function ChatContext({chatId,projectId,messages,streaming,onBusy}:{chatId
    .then(async r=>{if(r.ok){const data=await r.json();if(active)setMeter(data.meter);}})
    .catch(()=>{/* keep the last observation */});
   return()=>{active=false;};
- },[chatId,streaming,messages.length]);
+ },[chatId,streaming]);
  const compact=async()=>{controller.current=new AbortController();setBusy(true);onBusy(true);setStatus('Compacting older messages…');try {
   for await(const event of streamChat({spaceId:projectId?'project':'free',chatId,projectId,message:'',compactOnly:true,history:messages.filter(m=>!m.error&&m.content).map(m=>({role:m.role,content:m.content}))},controller.current.signal)){if(event.type==='error')throw Error(event.text);if(event.type==='status')setStatus(event.text||'Compacting…');}
   const r=await apiFetch(`/api/chats/${encodeURIComponent(chatId)}/context-window`);if(r.ok)setMeter((await r.json()).meter);setStatus('Compacted. Full transcript retained. Summaries may omit details; original messages remain available.');
