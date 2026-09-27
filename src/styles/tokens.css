@@ -528,25 +528,26 @@
      this one value; see docs/design-notes/page-headers.md. */
   --diary-gutter: clamp(16px, 4vw, 64px);
 
-  /* Radius hierarchy (brief §18): compact → row → card/menu → pane/modal → pill. */
-  --radius-xs: 6px;
-  --radius-sm: 8px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  --radius-2xl: 28px;
-  --radius-pill: 999px;
-  /* Three shape roles every shared component uses (#245); families retune them in themes.css.
-     control: buttons, sidebar rows, New chat, menu items, fields · overlay: menus, popovers,
-     cards · surface: the composer, panels, dialogs. */
-  --radius-control: var(--radius-md);
-  --radius-button: var(--radius-control); /* Contemporary: M3 pill buttons (#313) */
-  --radius-overlay: var(--radius-lg);
-  --radius-surface: var(--radius-xl);
+  /* Shape roles: families own these values; component CSS only consumes roles.
+     Small legacy scale names are aliases so older surfaces follow the same family. */
+  --radius-control: 10px;
+  --radius-button: var(--radius-control);
+  --radius-overlay: 14px;
+  --radius-surface: 20px;
   --radius-card: var(--radius-overlay);
-  --radius-bubble: var(--radius-lg);
+  --radius-bubble: var(--radius-overlay);
   --radius-panel: var(--radius-surface);
-  --radius-input: var(--radius-surface);
+  --radius-input: var(--radius-control);
+  --radius-button-inset: max(2px, calc(var(--radius-button) - 2px));
+  --radius-inset: max(2px, calc(var(--radius-control) - 2px));
+  --radius-xs: max(2px, calc(var(--radius-control) - 4px));
+  --radius-sm: var(--radius-inset);
+  --radius-md: var(--radius-control);
+  --radius-lg: var(--radius-overlay);
+  --radius-xl: var(--radius-surface);
+  --radius-2xl: var(--radius-surface);
+  /* Circles (avatars, send/add), status chips, switches and their knobs retain geometry. */
+  --radius-pill: 999px;
 
   /* Motion contract (#247). Four purposes, each one duration and one easing; nothing else
      in the app names a raw timing. Enter and exit ease out, on-screen movement eases in and

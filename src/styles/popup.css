@@ -4,7 +4,7 @@
   font-size: var(--text-caption); font-weight: 600;
   color: var(--text-secondary);
   background: none; border: none; cursor: pointer;
-  padding: 6px 10px; border-radius: 8px;
+  padding: 6px 10px; border-radius: var(--radius-card);
 }
 .popup-tab:hover:not(:disabled) { background: var(--bg-assistant); color: var(--text); }
 .popup-tab:disabled { opacity: 0.5; cursor: default; }

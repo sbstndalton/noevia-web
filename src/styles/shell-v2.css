@@ -199,7 +199,7 @@
 .app .send-btn.glass { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--md-on-primary); border-color: transparent; }
 .app .send-btn.glass:disabled { opacity: .45; }
 .app .send-btn.glass svg { stroke: currentColor; }
-.app .model-pill.composer-model.glass { min-height: 30px; padding: 4px 12px; border-radius: var(--radius-pill); color: var(--text-primary); font-size: var(--text-footnote); font-weight: 500; background-color: transparent; }
+.app .model-pill.composer-model.glass { min-height: 30px; padding: 4px 12px; border-radius: var(--radius-control); color: var(--text-primary); font-size: var(--text-footnote); font-weight: 500; background-color: transparent; }
 @media (max-width: 519px) { .app .send-btn.glass { width: 44px; height: 44px; } .app .model-pill.composer-model.glass { min-height: 44px; } }
 @media (max-width: 700px) { .app .settings-stage .settings-detail > header { display: flex; } }
 

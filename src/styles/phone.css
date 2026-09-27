@@ -208,7 +208,7 @@
 .reasoning-control.is-menu { flex-direction: row; align-items: center; }
 .app .reasoning-pill.glass {
   display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 4px 10px 4px 12px;
-  border-radius: var(--radius-pill); color: var(--text-primary); font: inherit; font-size: var(--text-footnote); white-space: nowrap; line-height: 1;
+  border-radius: var(--radius-control); color: var(--text-primary); font: inherit; font-size: var(--text-footnote); white-space: nowrap; line-height: 1;
 }
 .app .reasoning-pill .reasoning-pill-value { color: var(--text-secondary); }
 .app .reasoning-pill > svg { display: block; color: var(--text-secondary); transition: transform var(--duration-fast) var(--ease-standard); }
@@ -341,15 +341,15 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .shell-sidebar-head > .app-mode-switch.is-compact { margin: 0 0 0 auto; }
 .app-mode-switch.is-compact {
   display: inline-flex; flex-direction: row; flex: none; gap: 0; height: 28px; padding: 1px; margin: 0;
-  border: 0; border-radius: 7px; background: color-mix(in srgb, var(--text-primary) 6%, transparent); box-shadow: none;
+  border: 0; border-radius: var(--radius-control); background: color-mix(in srgb, var(--text-primary) 6%, transparent); box-shadow: none;
 }
 .app-mode-switch.is-compact > button {
-  display: grid; place-items: center; width: 34px; height: 26px; min-height: 26px; padding: 0; border: 0; border-radius: 5px;
+  display: grid; place-items: center; width: 34px; height: 26px; min-height: 26px; padding: 0; border: 0; border-radius: var(--radius-button);
   background: transparent; box-shadow: none; color: var(--text-secondary); font-size: 0;
 }
 .app-mode-switch.is-compact > button.is-selected { color: var(--text-primary); }
-.app-mode-switch.is-compact > .glass-thumb { border-radius: 5px; }
-[data-family='contemporary'] .app-mode-switch.is-compact { border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px var(--md-outline); }
+.app-mode-switch.is-compact > .glass-thumb { border-radius: var(--radius-button-inset); }
+[data-family='contemporary'] .app-mode-switch.is-compact { border-radius: var(--radius-pill); background: transparent; box-shadow: inset 0 0 0 1px var(--md-outline); }
 [data-family='contemporary'] .app-mode-switch.is-compact > button { border-radius: 0; }
 @media (pointer: coarse) { .app-mode-switch.is-compact { height: 40px; } .app-mode-switch.is-compact > button { width: 44px; height: 36px; } }
 /* Collapsed rail: the header stacks, and the switch runs down under the expand button. */
@@ -579,8 +579,8 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 }
 
 /* Auto | Manual as one segmented switch, the hint under the chosen side. */
-.mp-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 3px; border-radius: 12px; background: var(--nav-hover); }
-.mp-mode-btn { border: 0 !important; border-radius: 9px !important; background: transparent; box-shadow: none !important; align-items: center !important; text-align: center; padding: 8px 10px; }
+.mp-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 3px; border-radius: var(--radius-control); background: var(--nav-hover); }
+.mp-mode-btn { border: 0 !important; border-radius: var(--radius-control) !important; background: transparent; box-shadow: none !important; align-items: center !important; text-align: center; padding: 8px 10px; }
 .mp-mode-btn[aria-pressed="true"] { background: var(--bg-surface, var(--bg)) !important; box-shadow: var(--shadow-1) !important; }
 .mp-mode-btn span { font-size: var(--text-caption2, 11px); }
 
@@ -588,20 +588,20 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .mp-model-area { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
 .mp-models { max-height: none; gap: 4px; }
 .mp-model-item { align-items: center; gap: 4px; }
-.mp-model.model-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; border-radius: 10px; border: 1px solid transparent; background: transparent; }
+.mp-model.model-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; border-radius: var(--radius-control); border: 1px solid transparent; background: transparent; }
 .mp-model.model-row:hover:not(:disabled) { background: var(--nav-hover); }
 .mp-model.model-row[aria-pressed="true"] { background: var(--accent-2-soft, var(--nav-active)); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
 .mp-model .model-name-group { align-items: baseline; gap: 8px; }
 .mp-model .model-role { display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-caption, 12px); color: var(--text-secondary); }
 .mp-model[aria-pressed="true"] .model-role { color: var(--accent-ink, var(--accent)); font-weight: 600; }
-.mp-model-item .mp-tune { width: 44px; height: 44px; min-height: 44px; flex: none; border-radius: 10px; color: var(--text-secondary); }
+.mp-model-item .mp-tune { width: 44px; height: 44px; min-height: 44px; flex: none; border-radius: var(--radius-control); color: var(--text-secondary); }
 
 /* Tools: compact rows and a budget meter. */
-.mp-budget { height: 6px; border-radius: 999px; background: var(--nav-hover); overflow: hidden; }
+.mp-budget { height: 6px; border-radius: var(--radius-pill); background: var(--nav-hover); overflow: hidden; }
 .mp-budget > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: none; }
 .mp-budget.is-over > span { background: var(--danger, #c0392b); }
 .mp-tool-list { display: flex; flex-direction: column; gap: 2px; }
-.mp-tool { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 10px; cursor: pointer; }
+.mp-tool { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: var(--radius-control); cursor: pointer; }
 /* Nine tool rows should leave room for the cost hint inside the 640px picker column. */
 .mp-col-tools .mp-tool { padding-block: 7px; }
 .mp-tool:hover { background: var(--nav-hover); }
@@ -641,11 +641,11 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .mm-scanning { color: var(--text-faint); }
 /* Models page toolbar: tabs, search and filters on one line, wrapping cleanly when narrow. */
 .mm-toolbar-one { display: flex !important; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding-bottom: var(--space-3); border-bottom: 1px solid var(--border-subtle); margin-bottom: var(--space-3); }
-.mm-toolbar-one .mm-tabs-row { display: flex !important; flex: none; border-bottom: 0 !important; padding: 3px !important; border-radius: 12px; background: var(--nav-hover); gap: 2px; }
-.mm-toolbar-one .mm-tabs-row button { min-height: 34px; padding: 6px 14px; border-radius: 9px; }
+.mm-toolbar-one .mm-tabs-row { display: flex !important; flex: none; border-bottom: 0 !important; padding: 3px !important; border-radius: var(--radius-control); background: var(--nav-hover); gap: 2px; }
+.mm-toolbar-one .mm-tabs-row button { min-height: 34px; padding: 6px 14px; border-radius: var(--radius-button); }
 .mm-toolbar-one .mm-tabs-row button.is-active { background: var(--bg-app); box-shadow: var(--shadow-1); }
 .mm-toolbar-one .mm-tabs-select { display: none !important; }
-.mm-search-inline { flex: 1 1 220px; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px; min-height: 40px; border: 1px solid var(--control-border); border-radius: 12px; background: var(--bg-app); color: var(--text-secondary); }
+.mm-search-inline { flex: 1 1 220px; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px; min-height: 40px; border: 1px solid var(--control-border); border-radius: var(--radius-input); background: var(--bg-app); color: var(--text-secondary); }
 .mm-search-inline input { flex: 1; min-width: 0; border: 0 !important; outline: none; background: transparent; box-shadow: none !important; padding: 0 !important; min-height: 38px; font: inherit; color: var(--text-primary); }
 .mm-search-inline:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .mm-search-inline input:focus-visible { outline: none !important; }

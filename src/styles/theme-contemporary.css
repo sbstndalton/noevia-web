@@ -108,7 +108,7 @@
 
 /* ── Messages: the user's turn is a tonal bubble; replies sit on the surface. ── */
 [data-family='contemporary'] .msg[data-role='user'] .msg-user-row, [data-family='contemporary'] .msg-user .msg-user-row {
-  background: var(--md-secondary-container); color: var(--md-on-secondary-container); border-color: transparent; box-shadow: none; border-radius: 20px 20px 4px 20px;
+  background: var(--md-secondary-container); color: var(--md-on-secondary-container); border-color: transparent; box-shadow: none; border-radius: var(--radius-bubble) var(--radius-bubble) var(--radius-input) var(--radius-bubble);
 }
 [data-family='contemporary'] .msg[data-role='user'] .msg-user-row > p {
   color: var(--md-on-secondary-container);
@@ -152,7 +152,7 @@
 
 /* ── Outlined text fields: 4px corners, outline, 2px primary on focus. ── */
 [data-family='contemporary'] :is(.modal-input, .projects-head .projects-search, .set-name-field input, .settings-detail input:not([type=checkbox]):not([type=radio]):not([type=range]), .settings-detail textarea, .settings-detail select, label.select > select, .shell-search) {
-  background: transparent; border-color: var(--md-outline); border-radius: 4px; box-shadow: none; color: var(--md-on-surface);
+  background: transparent; border-color: var(--md-outline); border-radius: var(--radius-input); box-shadow: none; color: var(--md-on-surface);
 }
 [data-family='contemporary'] :is(.modal-input, .projects-head .projects-search, .set-name-field input, .settings-detail input, .settings-detail textarea, .settings-detail select, label.select > select, .shell-search):focus {
   outline: none; border-color: var(--md-primary); box-shadow: inset 0 0 0 1px var(--md-primary);
@@ -238,7 +238,7 @@
 
 /* Settings search: one outlined field (the container holds the icon and the input). */
 [data-family='contemporary'] .settings-stage .settings-search {
-  background: transparent; border-color: var(--md-outline); border-radius: 4px; box-shadow: none;
+  background: transparent; border-color: var(--md-outline); border-radius: var(--radius-input); box-shadow: none;
 }
 [data-family='contemporary'] .settings-stage .settings-search:focus-within {
   border-color: var(--md-primary); box-shadow: inset 0 0 0 1px var(--md-primary);

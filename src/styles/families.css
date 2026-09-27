@@ -187,6 +187,13 @@
   backdrop-filter: blur(var(--glass-panel-blur)) saturate(var(--glass-panel-saturate));
   -webkit-backdrop-filter: blur(var(--glass-panel-blur)) saturate(var(--glass-panel-saturate));
 }
+/* Foreground overlays can be nested inside another backdrop root (#493). Their own
+   blur cannot reliably sample intervening content, so separation comes from a dense
+   tint even when filtering is unsupported. Keep the pane/reading layers translucent. */
+:root[data-family='glass'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .tool-catalogue-panel, .confirm-dialog.aero, .mp-panel.aero, .dialog-sheet.aero) {
+  --glass-pane-fill: var(--glass-overlay);
+}
+[data-family='glass'] .identity-options { background: var(--glass-overlay); }
 /* The chrome (sidebar) is the thinnest layer; the reading plane is denser so text stays AA. */
 [data-family='glass'] .app .sidebar.pane { --glass-pane-fill: var(--bg-chrome); box-shadow: inset 1px 1px 0 var(--glass-inner-border), inset -1px -1px 0 var(--glass-lower-rim), var(--elev-raised); }
 [data-family='glass'] .app .app-stack.pane { --glass-pane-fill: var(--glass-plane); box-shadow: inset 1px 1px 0 var(--glass-inner-border), inset -1px -1px 0 var(--glass-lower-rim), var(--elev-raised); }
@@ -240,13 +247,17 @@
 [data-family='glass'] .family-tile[aria-checked='true'] { box-shadow: 0 0 0 2px var(--focus-ring), inset 1px 1px 0 var(--glass-inner-border); }
 [data-family='glass'] .msg[data-role='user'] .msg-user-row {
   background: color-mix(in srgb, var(--md-primary-container) 72%, transparent); border-color: var(--glass-inner-border);
-  backdrop-filter: blur(12px) saturate(1.6); -webkit-backdrop-filter: blur(12px) saturate(1.6);
+  /* Reading content does not establish another backdrop root for its own controls. */
+  backdrop-filter: none; -webkit-backdrop-filter: none;
 }
 /* Fluid motion: overlays enter with a longer, softer glide and a slight scale. */
 [data-family='glass'] :is(.ctx-menu, .account-popover, .composer-actions-panel, .tool-catalogue-panel) { --enter-from: translateY(6px) scale(.97); }
 
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   [data-family='glass'] body { background: var(--bg-app); }
+  [data-family='glass'] .msg[data-role='user'] .msg-user-row { background: var(--md-primary-container); }
+  [data-family='glass'] .settings-stage .settings-navigation { background: var(--bg-chrome); }
+  [data-family='glass'] :is(.project-card, .family-tile, .settings-stage .set-rows, .settings-stage .group) { background: var(--bg-surface); border-color: var(--control-border); }
   [data-family='glass'] :is(.app .sidebar.pane, .app .app-stack.pane)::after { display: none; }
   [data-family='glass'] :is(.app .sidebar.pane, .app .app-stack.pane, .app .composer-inner, .ctx-menu, .account-popover, .popup, .composer-actions-panel, .tool-catalogue-panel, .confirm-dialog.aero, .mp-panel.aero, .dialog-sheet.aero) {
     background: var(--bg-surface); border-color: var(--control-border); backdrop-filter: none; -webkit-backdrop-filter: none;

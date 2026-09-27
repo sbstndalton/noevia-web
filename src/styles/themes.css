@@ -58,7 +58,9 @@
   --radius-control: 8px;
   --radius-overlay: 16px;
   --radius-surface: 28px;
-  --radius-button: 999px;
+  --radius-button: var(--radius-pill);
+  --radius-input: 4px;
+  --radius-bubble: 20px;
   --motion-immediate: 90ms;
   --motion-quick: 150ms;
   --motion-considered: 300ms;
@@ -119,9 +121,10 @@
   --glass-panel-saturate: 1.8;
   --glass-refraction-shift: 10px;
   --surface-raised: var(--glass-sheet);
-  --surface-overlay: var(--glass-sheet);
+  --surface-overlay: var(--glass-overlay);
 }
 [data-family='glass'][data-theme='light'] {
+  --glass-overlay: color-mix(in srgb, var(--md-surface-container-lowest) 97%, transparent);
   --glass-canvas-peak: color-mix(in srgb, var(--md-primary) 36%, var(--md-surface));
   --glass-canvas-peak-2: color-mix(in srgb, var(--md-tertiary) 42%, var(--md-surface));
   --glass-canvas-peak-3: color-mix(in srgb, var(--md-secondary) 34%, var(--md-surface));
@@ -136,6 +139,7 @@
   --elev-overlay: inset 0 1px 0 rgba(255, 255, 255, .8), 0 24px 56px -16px rgba(var(--shadow-rgb), .32), 0 4px 12px -4px rgba(var(--shadow-rgb), .10);
 }
 [data-family='glass']:not([data-theme='light']) {
+  --glass-overlay: color-mix(in srgb, var(--md-surface-container-high) 97%, transparent);
   --glass-canvas-peak: color-mix(in srgb, var(--md-primary) 46%, var(--md-surface));
   --glass-canvas-peak-2: color-mix(in srgb, var(--md-tertiary) 38%, var(--md-surface));
   --glass-canvas-peak-3: color-mix(in srgb, var(--md-secondary) 30%, var(--md-surface));
@@ -153,5 +157,5 @@
 /* Contrast and transparency preferences flatten every family onto opaque, outlined steps. */
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   :root[data-family] { --surface-raised: var(--bg-surface); --surface-overlay: var(--bg-surface); --edge-raised: var(--control-border); }
-  :root[data-family='glass'] { --bg-chrome: var(--md-surface-container-low); --glass-plane: var(--md-surface-container-lowest); --glass-sheet: var(--md-surface-container-low); --glass-panel-blur: 0px; --glass-refraction-shift: 0px; }
+  :root[data-family='glass'] { --bg-chrome: var(--md-surface-container-low); --glass-plane: var(--md-surface-container-lowest); --glass-sheet: var(--md-surface-container-low); --glass-overlay: var(--md-surface-container-low); --glass-panel-blur: 0px; --glass-refraction-shift: 0px; }
 }

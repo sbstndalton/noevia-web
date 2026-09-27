@@ -1,9 +1,9 @@
 // Theme families × light/dark × widths (#245, #247, #249) against synthetic APIs only: no
 // model, no inference, no Diary, no live services. Serves the built app from ../dist.
 //   PLAYWRIGHT_MODULE=~/noevia-local-test/node_modules/playwright-core node qa/theme-families.cjs
-// Screenshots (375 and 1440): home, chat, composer with Chat/Cowork (Cowork chosen), a menu
-// open, the model sheet, and Settings → Appearance with the family previews. 768 is checked for
-// overflow only. #313 adds per-family signatures (Contemporary: tonal, shadowless composer and
+// Screenshots at every QA_WIDTHS viewport (default 375,768,1440): home, chat, composer
+// with Chat/Cowork (Cowork chosen), a menu, model sheet, Settings → Appearance previews,
+// and every reading font/density combination. Each viewport also checks overflow. #313 adds per-family signatures (Contemporary: tonal, shadowless composer and
 // pill buttons; Glass: blurred translucent panes over a coloured atmosphere; Editorial: flat,
 // ruled paper) and the hover pull (translate ≤ 3px, no tilt, not clinging, off for touch and reduced motion).
 // Contact sheet afterwards: node qa/families-contact-sheet.cjs <shots-dir>
@@ -14,6 +14,7 @@ const assert = require('node:assert/strict'), fs = require('node:fs'), path = re
 const { createFixture } = require('./diary-fixture.cjs');
 const out = process.env.QA_SCREENSHOTS || '/tmp/families-shots';
 const PORT = 31461;
+const widths = (process.env.QA_WIDTHS || '375,768,1440').split(',').map(Number);
 const FAMILIES = { editorial: 'Editorial', contemporary: 'Contemporary', glass: 'Glass' };
 const DISPLAY = { editorial: 'Fraunces', contemporary: 'Geist', glass: 'Sora' };
 
@@ -23,7 +24,7 @@ const DISPLAY = { editorial: 'Fraunces', contemporary: 'Geist', glass: 'Sora' };
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   const errors = [], results = [];
   try {
-    for (const width of [375, 768, 1440]) for (const theme of ['light', 'dark']) for (const family of Object.keys(FAMILIES)) {
+    for (const width of widths) for (const theme of ['light', 'dark']) for (const family of Object.keys(FAMILIES)) {
       const touch = width < 768;
       const page = await browser.newPage(withLocale({ viewport: { width, height: width < 768 ? 812 : 900 }, hasTouch: touch, isMobile: touch }));
       page.on('pageerror', (e) => errors.push({ width, theme, family, error: e.message }));
@@ -32,7 +33,7 @@ const DISPLAY = { editorial: 'Fraunces', contemporary: 'Geist', glass: 'Sora' };
       await page.addInitScript(({ theme, legacy, family, migrate }) => {
         localStorage.setItem('cowork-theme', theme);
         if (migrate) localStorage.setItem('noevia:material', legacy); else localStorage.setItem('noevia:theme-family', family);
-      }, { theme, legacy, family, migrate: width === 375 });
+      }, { theme, legacy, family, migrate: width < 768 });
       const user = { id: 'synthetic-theme-qa', username: 'themeqa', displayName: 'Theme QA', role: 'member', diaryEnabled: false, onboarded: true };
       const chat = (id, title) => ({ id, title, updatedAt: 1000, pinned: false, messages: [] });
       await page.route('**/api/profile', (r) => r.fulfill({ json: { user, passkeys: [] } }));
@@ -73,7 +74,7 @@ const DISPLAY = { editorial: 'Fraunces', contemporary: 'Geist', glass: 'Sora' };
         assert.equal(state.family, family, `${width} ${theme} ${family} ${name}: data-family`);
         assert.equal(state.overflow, false, `${width} ${theme} ${family} ${name}: horizontal overflow`);
         if (state.composerTransition) assert.doesNotMatch(state.composerTransition, /\ball\b/, 'composer names its transitions');
-        if (width !== 768) await page.screenshot({ path: path.join(out, `${family}-${theme}-${width}-${name}.png`) });
+        await page.screenshot({ path: path.join(out, `${family}-${theme}-${width}-${name}.png`) });
       };
 
       // Home: the greeting in the family's display face, the composer as the one raised surface.
@@ -173,6 +174,15 @@ const DISPLAY = { editorial: 'Fraunces', contemporary: 'Geist', glass: 'Sora' };
       await page.getByText('four purposes, one contract').waitFor();
       await page.waitForTimeout(250);
       await shot('chat');
+      // Every reading setting on actual synthetic message content, independent of UI font.
+      const readingFonts = new Set();
+      for (const density of ['comfortable', 'compact']) for (const font of ['sans', 'serif', 'mono']) {
+        await page.evaluate(({ density, font }) => { document.documentElement.dataset.density = density; document.documentElement.dataset.chatFont = font; }, { density, font });
+        readingFonts.add(await page.locator('.msg[data-role="assistant"] .markdown-preview').first().evaluate(e => getComputedStyle(e).fontFamily));
+        await shot(`reading-${density}-${font}`);
+      }
+      assert.equal(readingFonts.size, 3, 'all three chat reading fonts resolve distinctly');
+      await page.evaluate(() => { document.documentElement.dataset.density = 'comfortable'; document.documentElement.dataset.chatFont = 'sans'; });
 
       // Settings → Appearance: the family previews, each a live sample in light and dark.
       await page.getByTitle('Settings', { exact: true }).first().click();

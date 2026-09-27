@@ -230,7 +230,7 @@ html[data-lens='svg'] .glass-seg.is-moving > .glass-thumb, html[data-lens='svg']
   background: transparent;
 }
 [data-family='contemporary'] .surface {
-  background: var(--md-surface-container-low); border-color: transparent; box-shadow: none; border-radius: 12px;
+  background: var(--md-surface-container-low); border-color: transparent; box-shadow: none; border-radius: var(--radius-control);
 }
 [data-family='contemporary'] .glass {
   background: var(--md-secondary-container); color: var(--md-on-secondary-container); border-color: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;

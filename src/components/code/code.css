@@ -6,14 +6,14 @@
 .code-field { display: flex; flex-direction: column; gap: 6px; }
 .code-field > label { font-size: var(--text-caption); font-weight: 600; }
 .code-field select, .code-field input, .code-field textarea {
-  width: 100%; box-sizing: border-box; min-height: 44px; padding: 10px 12px; border-radius: 10px;
+  width: 100%; box-sizing: border-box; min-height: 44px; padding: 10px 12px; border-radius: var(--radius-input);
   border: 1px solid var(--control-border); background: var(--bg); color: var(--text); font: inherit; font-size: var(--text-callout); line-height: 1.5;
 }
 .code-field textarea { min-height: 76px; resize: vertical; }
 .code-field select:focus-visible, .code-field input:focus-visible, .code-field textarea:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .code-choices { display: flex; flex-wrap: wrap; gap: 12px 20px; }
 .code-choices > .code-field { flex: 1 1 260px; min-width: 0; }
-.code-capabilities { margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; }
+.code-capabilities { margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-control); }
 .code-capabilities legend { padding: 0 4px; font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); }
 .code-capability-list { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; }
 .code-capability { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: var(--text-footnote); }
@@ -39,14 +39,14 @@
 .code-task.is-waiting_approval .code-status { border-color: var(--accent); color: var(--text); font-weight: 600; }
 .code-task.is-failed .code-status, .code-task.is-interrupted .code-status { border-color: var(--danger); color: var(--danger); }
 .code-meta, .code-stage { margin: 0; font-size: var(--text-caption); color: var(--text-secondary); overflow-wrap: anywhere; font-variant-numeric:tabular-nums; }
-.code-plan { min-width: 0; max-height: min(40vh, 22rem); overflow: auto; padding: 10px 12px; border-radius: 10px; background: var(--bg-surface); }
+.code-plan { min-width: 0; max-height: min(40vh, 22rem); overflow: auto; padding: 10px 12px; border-radius: var(--radius-card); background: var(--bg-surface); }
 .code-plan:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .code-plan h4 { margin: 0 0 6px; font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); }
 .code-plan ul { margin: 8px 0 0; padding-left: 20px; font-size: var(--text-footnote); line-height: 1.5; }
 .code-plan li { overflow-wrap: anywhere; }
 .code-plan li + li { margin-top: 6px; }
 .code-plan-note { margin: 0; font-size: var(--text-caption2); line-height: 1.5; color: var(--text-secondary); }
-.code-output { min-width: 0; max-height: min(40vh, 22rem); overflow: auto; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px; background: var(--bg-surface); }
+.code-output { min-width: 0; max-height: min(40vh, 22rem); overflow: auto; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: var(--radius-card); background: var(--bg-surface); }
 .code-output:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .code-output h4 { margin: 0; font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); }
 .code-output > p { margin: 0; font-size: var(--text-footnote); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -59,10 +59,10 @@
 .code-output-details[open] > summary { margin-bottom: 6px; }
 
 /* The approval card. Deliberately plain and unmissable: the arguments are the point. */
-.code-approval { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--accent); border-radius: 10px; background: var(--bg); }
+.code-approval { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--accent); border-radius: var(--radius-card); background: var(--bg); }
 .code-approval-title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--text-footnote); font-weight: 600; overflow-wrap: anywhere; }
 .code-approval-args {
-  margin: 0; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-surface);
+  margin: 0; padding: 10px 12px; border-radius: var(--radius-card); border: 1px solid var(--border); background: var(--bg-surface);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--text-caption2); line-height: 1.5;
   white-space: pre-wrap; overflow-wrap: anywhere; max-height: 40vh; overflow-y: auto;
 }

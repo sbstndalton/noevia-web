@@ -1,4 +1,4 @@
-/* Visual system (#245). Loads LAST, after every family sheet, so the shared surfaces have one
+/* Visual system (#245). Loads before families.css, so the shared surfaces have one
    definition. Everything here reads the scales in tokens.css (radius roles, --elev-* with
    their fills and edges, the motion contract) which each theme family retunes in themes.css.
 
@@ -70,7 +70,7 @@
 }
 
 /* ── Buttons: flat, one radius, press feedback ────────────────────────────── */
-:root :is(.btn, .modal-btn) { border-radius: var(--radius-control); }
+:root :is(.btn, .modal-btn, .popup-tab) { border-radius: var(--radius-button); }
 :root :is(.btn, .modal-btn, .send-btn):active:not(:disabled) { transform: scale(.97); }
 :root .send-btn { transition: background-color var(--motion-immediate) var(--ease-immediate), transform var(--motion-immediate) var(--ease-immediate); }
 
@@ -95,7 +95,7 @@
 .composer-mode-toggle { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; isolation: isolate; }
 .composer-mode-toggle::before {
   content: ''; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 3px);
-  border-radius: var(--radius-pill); background: var(--text-primary);
+  border-radius: var(--radius-button-inset); background: var(--text-primary);
   transition: transform var(--motion-considered) var(--ease-considered);
 }
 .composer-mode-toggle[data-mode='cowork']::before { transform: translateX(calc(100% + 2px)); }
@@ -149,9 +149,22 @@
 .family-preview-menu > span { padding: 2px 6px; border-radius: max(3px, calc(var(--radius-overlay) - 8px)); }
 .family-preview-menu > span:first-child { background: var(--selected); color: var(--on-selected); }
 .family-preview-controls { display: flex; gap: 6px; align-items: center; font-size: var(--text-caption2); }
-.family-preview-button { padding: 2px 8px; border: 1px solid var(--edge-raised); border-radius: var(--radius-control); background: var(--bg-surface); }
+.family-preview-button { padding: 2px 8px; border: 1px solid var(--edge-raised); border-radius: var(--radius-button); background: var(--bg-surface); }
 .family-preview-button.is-primary { background: var(--md-primary); color: var(--md-on-primary); border-color: transparent; }
 @media (max-width: 420px) {
   .family-preview { padding: var(--space-2); min-height: 120px; }
   .family-preview-menu { display: none; }
+}
+
+/* Shared shape roles cover legacy toolbar tabs and fields.
+   Deliberate exceptions: circular send/add/avatar affordances; status chips and switches;
+   M3 underlined tabs and square menu rows; flush edges of full-screen phone sheets. */
+:root :is(.seg, .glass-seg, .composer-mode-toggle) { border-radius: var(--radius-button); }
+:root :is(.seg > button, .glass-seg > button, .glass-seg > .glass-thumb, .composer-mode-toggle > button) { border-radius: var(--radius-button-inset); }
+:root .projects-head .seg > button { border-radius: 0; }
+:root .glass-seg[data-wrapped='true'] { border-radius: var(--radius-control); }
+:root :is(.model-pill, .reasoning-pill, .tool-catalogue-trigger) { border-radius: var(--radius-button); }
+:root :is(.confirm-dialog.aero, .mp-panel.aero, .dialog-sheet.aero) { border-radius: var(--radius-surface); }
+@media (max-width: 700px) {
+  :root :is(.confirm-dialog.aero, .mp-panel.aero, .dialog-sheet.aero) { border-radius: var(--radius-surface) var(--radius-surface) 0 0; }
 }
