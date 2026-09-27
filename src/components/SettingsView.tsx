@@ -22,6 +22,7 @@ import type { Translate } from '../i18n';
 export interface SettingsViewProps {
   section?: string;
   models: InstalledModel[];
+  modelsLoaded: boolean;
   routes: RouteRule[];
   modelsError: string | null;
   projects: Project[];
@@ -33,14 +34,14 @@ export interface SettingsViewProps {
   onDiaryEnabledChange: (enabled: boolean) => void;
 }
 
-export function SettingsView({ models, modelsError, health, stats, diaryEnabled, onDiaryEnabledChange, onOpenModelManager, section = 'profile' }: SettingsViewProps): JSX.Element {
+export function SettingsView({ models, modelsLoaded, modelsError, health, stats, diaryEnabled, onDiaryEnabledChange, onOpenModelManager, section = 'profile' }: SettingsViewProps): JSX.Element {
   const t = useT();
   return <div className="settings-live-content">
     {section === 'security' && <SecurityCard />}
     {section === 'users' && <UsersCard />}
     {section === 'diary' && <><div className="settings-title"><h1>{t('settings.section.diary')}</h1><p>{t('diarySettings.lede')}</p></div><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
     {section === 'providers' && <ProvidersCard health={health} />}
-    {section === 'models' && <ModelsSummary models={models} modelsError={modelsError} health={health} stats={stats} onOpen={onOpenModelManager}/>}
+    {section === 'models' && <ModelsSummary models={models} modelsLoaded={modelsLoaded} modelsError={modelsError} health={health} stats={stats} onOpen={onOpenModelManager}/>}
     {/* #414: the "Connected" list moves onto .set-rows, the same grouped surface Appearance/Data
         already use, instead of the bare .card-list (see noevia.css's .set-rows .model-row rules). */}
     {section === 'status' && <><div className="settings-title"><h1>{t('settings.section.status')}</h1></div><McpStatus /><h2>{t('serviceStatus.connected')}</h2><div className="set-rows">{([['inference', t('serviceStatus.inference'), health.inferenceUp], ['diary', t('serviceStatus.diary'), diaryEnabled ? health.diaryUp : null]] as const).map(([id, label, up])=><div className="model-row" key={id}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?t('models.available'):up===false?t('models.unavailable'):t('serviceStatus.notAvailable')}</span></div>)}

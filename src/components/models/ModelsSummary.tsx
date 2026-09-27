@@ -9,7 +9,7 @@ import { useT } from '../../i18n';
 
 /** Settings keeps only what answers "is the engine fine and where does Auto go";
  *  everything you act on lives in the model manager page. */
-export function ModelsSummary({ models, modelsError, health, stats, onOpen }: { models: InstalledModel[]; modelsError: string | null; health: HealthState; stats: LiveStats | null; onOpen: () => void }): JSX.Element {
+export function ModelsSummary({ models, modelsLoaded, modelsError, health, stats, onOpen }: { models: InstalledModel[]; modelsLoaded: boolean; modelsError: string | null; health: HealthState; stats: LiveStats | null; onOpen: () => void }): JSX.Element {
   const t = useT();
   const [roles, setRoles] = useState<{ configured: boolean; roles: AutoRoles | null } | null>(null);
   const [rolesError, setRolesError] = useState(false);
@@ -32,7 +32,7 @@ export function ModelsSummary({ models, modelsError, health, stats, onOpen }: { 
         .set-rows .model-row rules for the row treatment this now shares with Users/Service status. */}
     <div className="set-rows">
       <div className="model-row"><span className={`model-dot${health.inferenceUp ? '' : ' down'}`}/><span className="model-name">{t('models.engine')}</span><span className="model-role">{health.inferenceUp ? t('models.available') : t('models.unavailable')}{stats?.tokensPerSecond != null ? ` · ${t('models.rate', { rate: stats.tokensPerSecond.toFixed(1) })}` : ''}</span></div>
-      <div className="model-row"><span className="model-name">{t('models.installed')}</span><span className="model-role">{modelsError ? t('models.notAvailable') : installed}</span></div>
+      <div className="model-row"><span className="model-name">{t('models.installed')}</span><span className="model-role" aria-live="polite">{modelsError ? t('models.notAvailable') : modelsLoaded ? installed : t('settings.loading')}</span></div>
       <div className="model-row"><span className="model-name">{t('models.autoRouting')}</span><span className="model-role">{routing}</span></div>
     </div>
     <button className="modal-btn primary" onClick={onOpen}>{t('models.openManager')}</button>

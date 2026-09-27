@@ -17,12 +17,12 @@ const EV_STATE: Record<string, MessageKey> = { verified: 'mm.overview.ev.verifie
 const ROUTE_BADGE: Record<'fast' | 'smart' | 'vision' | 'code', MessageKey> = { fast: 'mm.overview.route.fast', smart: 'mm.overview.route.smart', vision: 'mm.overview.route.vision', code: 'mm.overview.route.code' };
 
 /** Installed models by role with their evidence and route badges, then what needs attention. */
-export function OverviewTab({ models, modelsError, onOpen, onTab }: { models: InstalledModel[]; modelsError: string | null; onOpen: (name: string) => void; onTab: (tab: 'discover' | 'hardware' | 'benchmarks') => void }): JSX.Element {
+export function OverviewTab({ models, modelsLoaded, modelsError, onOpen, onTab }: { models: InstalledModel[]; modelsLoaded: boolean; modelsError: string | null; onOpen: (name: string) => void; onTab: (tab: 'discover' | 'hardware' | 'benchmarks') => void }): JSX.Element {
   const [roles, setRoles] = useState<Roles | null>(null);
   useEffect(() => { let live = true; fetchAutoRoles().then((v) => { if (live) setRoles(v); }).catch(() => undefined); return () => { live = false; }; }, []);
   return <div className="mm-overview">
     <RecoverPanel onTab={onTab}/>
-    <QualityPanel models={models} modelsError={modelsError} roles={roles} onOpen={onOpen} onTab={onTab}/>
+    <QualityPanel models={models} modelsLoaded={modelsLoaded} modelsError={modelsError} roles={roles} onOpen={onOpen} onTab={onTab}/>
   </div>;
 }
 
@@ -32,7 +32,7 @@ function routesFor(name: string, roles: Roles | null): MessageKey[] {
   return (['fast', 'smart', 'vision', 'code'] as const).filter((k) => r[k] === name).map((k) => ROUTE_BADGE[k]);
 }
 
-function QualityPanel({ models, modelsError, roles, onOpen, onTab }: { models: InstalledModel[]; modelsError: string | null; roles: Roles | null; onOpen: (name: string) => void; onTab: (tab: 'benchmarks') => void }): JSX.Element {
+function QualityPanel({ models, modelsLoaded, modelsError, roles, onOpen, onTab }: { models: InstalledModel[]; modelsLoaded: boolean; modelsError: string | null; roles: Roles | null; onOpen: (name: string) => void; onTab: (tab: 'benchmarks') => void }): JSX.Element {
   const t = useT();
   const [evidence, setEvidence] = useState<Record<string, Evidence[] | null>>({});
   const evState = (state: string) => (EV_STATE[state] ? t(EV_STATE[state]) : state);
@@ -53,7 +53,8 @@ function QualityPanel({ models, modelsError, roles, onOpen, onTab }: { models: I
       <button type="button" className="modal-btn secondary" onClick={() => onTab('benchmarks')}>{t('mm.overview.runSuite')}</button></div>
     <p className="mm-note">{t('mm.overview.qualityNote')}</p>
     {modelsError && <p role="alert" className="modal-err">{modelsError}</p>}
-    {!groups.length && !modelsError && <p className="mm-note">{t('mm.overview.noModels')}</p>}
+    {!modelsLoaded && !modelsError && <p className="mm-note" role="status">{t('mm.library.loading')}</p>}
+    {modelsLoaded && !groups.length && !modelsError && <p className="mm-note">{t('mm.overview.noModels')}</p>}
     {groups.map((g) => <div key={g.role} className="mm-role-group">
       <h4>{t(ROLE_KEY[g.role])} <small>{g.models.length}</small></h4>
       <ul className="mm-role-list">{g.models.map((m) => {

@@ -51,7 +51,7 @@ const AUTO_EXPLAINED: MessageKey[] = ['mm.route.explain1', 'mm.route.explain2', 
 //
 // Discover is the download flow, deliberately named for what it is rather than
 // for the mechanism — you are looking for a model you do not have yet.
-export function ModelsSettings({ models, routes, projects, modelsError, initialModel = '' }: { models: InstalledModel[]; routes: RouteRule[]; projects: Project[]; modelsError: string | null; initialModel?: string }): JSX.Element {
+export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsError, initialModel = '' }: { models: InstalledModel[]; modelsLoaded: boolean; routes: RouteRule[]; projects: Project[]; modelsError: string | null; initialModel?: string }): JSX.Element {
   // Six places rather than one long scroll: routing, hardware, benchmarks and the prompt
   // library were stacked under the model list, where nothing was findable (user review,
   // 2026-09-20).
@@ -113,7 +113,7 @@ export function ModelsSettings({ models, routes, projects, modelsError, initialM
     </nav>
 
     <div role="tabpanel" aria-label={t(TABS.find(([id]) => id === tab)?.[1] ?? 'mm.tab.yours')}>
-      {tab === 'overview' && <OverviewTab models={models} modelsError={modelsError} onOpen={openModel} onTab={go} />}
+      {tab === 'overview' && <OverviewTab models={models} modelsLoaded={modelsLoaded} modelsError={modelsError} onOpen={openModel} onTab={go} />}
       {tab === 'yours' && <LibraryTab query={query} sort={sort} filter={filter} onConfigure={openModel} onChanged={changed} />}
       {tab === 'discover' && <DownloadTab query={query} sort={hfSort} onDownloaded={changed} onSetUp={openModel} />}
       {tab === 'routing' && <RoutingSection models={models} modelsError={modelsError} />}

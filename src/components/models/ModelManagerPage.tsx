@@ -9,7 +9,7 @@ import '../../i18n/models';
 
 /** The model manager as a page of its own. It outgrew the settings dialog:
  *  catalogues, benchmarks and hardware charts need the full width. */
-export function ModelManagerPage({ onBack, ...props }: { onBack: () => void; initialModel?: string; models: InstalledModel[]; routes: RouteRule[]; projects: Project[]; modelsError: string | null }): JSX.Element {
+export function ModelManagerPage({ onBack, ...props }: { onBack: () => void; initialModel?: string; models: InstalledModel[]; modelsLoaded: boolean; routes: RouteRule[]; projects: Project[]; modelsError: string | null }): JSX.Element {
   const t = useT();
   return <div className="main model-manager-page">
     <div className="settings-scroll">

@@ -1463,7 +1463,7 @@ export default function App(): JSX.Element {
       {view.kind === 'preview' && showPreviews && <FeaturePreview title={view.title}/> }
       {view.kind === 'models' && (
         <Suspense fallback={<ViewLoading name="Models" active={appMode === 'chat' && !settingsOpen} />}>
-          <ModelManager.View key={view.model || 'list'} initialModel={view.model} onBack={() => openSettings('models')} models={models} routes={routes} projects={projects} modelsError={modelsError} />
+          <ModelManager.View key={view.model || 'list'} initialModel={view.model} onBack={() => openSettings('models')} models={models} modelsLoaded={modelsLoaded} routes={routes} projects={projects} modelsError={modelsError} />
         </Suspense>
       )}
       {view.kind === 'projects' && (
@@ -1585,6 +1585,7 @@ export default function App(): JSX.Element {
           preference={preference}
           onPreference={setPreference}
           models={models}
+          modelsLoaded={modelsLoaded}
           routes={routes}
           modelsError={modelsError}
           projects={projects}
