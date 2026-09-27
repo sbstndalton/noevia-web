@@ -206,9 +206,23 @@
   opacity: .3;
   filter: blur(6px) saturate(1.4);
 }
-/* Sticky strips inside the sidebar blur what scrolls beneath rather than painting a slab. */
-[data-family='glass'] .app .sidebar.pane :is(.side-new, .side-permanent, .side-footer),
-[data-family='glass'] .app .sidebar.pane .sidebar-history .side-scroll > :is(.sidebar-section-head, .section-label):first-child { background: transparent; }
+/* Sticky strips inside the sidebar: the backdrop-filter blur these strips already carry
+   (phone.css) is real where it renders, but .sidebar.pane above is itself a frosted pane with
+   its own backdrop-filter, which makes it a backdrop root — nested inside that, a sticky
+   strip's own backdrop-filter silently fails to sample the rows scrolling beneath it (#448;
+   confirmed in Chromium: removing the parent's backdrop-filter alone made the child's blur
+   render). Rather than depend on a nested backdrop-filter that may not paint, give these
+   strips an unconditional translucent tint instead of the plain transparent they used to have.
+   --glass-pane-fill/--bg-chrome (what the pane itself is filled with) is deliberately the
+   thinnest, most see-through layer in the glass hierarchy (themes.css) — mixing from it still
+   leaves scrolled text readable even at high strength, so it is the wrong source here. Mixing
+   from the opaque surface tone instead, with a touch of --glass-sheet for the on-family tint,
+   gives real, un-compounded coverage while staying translucent — still blurring on top wherever
+   backdrop-filter does work — so scrolled text stays hidden even when the blur is a no-op. */
+[data-family='glass'] .app .sidebar.pane:not(.is-collapsed) :is(.side-new, .side-permanent, .side-footer),
+[data-family='glass'] .app .sidebar.pane:not(.is-collapsed) .sidebar-history .side-scroll > :is(.sidebar-section-head, .section-label):first-child {
+  background: color-mix(in srgb, var(--md-surface-container-low) 88%, var(--glass-sheet) 12%);
+}
 [data-family='glass'] .app .sidebar.pane:not(.is-collapsed) .side-new::after { background: none; }
 [data-family='glass'] .app .sidebar.pane .side-new { box-shadow: none; }
 [data-family='glass'] .app .app-stack.pane .chat-header { background: transparent; }
