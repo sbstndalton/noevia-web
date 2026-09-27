@@ -130,6 +130,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   const [profileAttempt, setProfileAttempt] = useState(0);
   const t = useT();
   const stage = useRef<HTMLElement>(null);
+  const pendingInitialNavFocus = useRef<HTMLElement | null>(null);
   const onClose = useRef(props.onClose);
   onClose.current = props.onClose;
 
@@ -150,8 +151,25 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
     // The current section first (#374): a combined selector list would match whichever comes
     // first in the document, so a direct link to /settings/keyboard focused Appearance instead.
     const root = stage.current;
-    (root?.querySelector<HTMLElement>('.settings-navigation nav [aria-current="page"]') ?? root?.querySelector<HTMLElement>('.settings-navigation nav button'))?.focus({ preventScroll: true });
+    const current = root?.querySelector<HTMLElement>('.settings-navigation nav [aria-current="page"]');
+    const first = root?.querySelector<HTMLElement>('.settings-navigation nav button');
+    const target = current ?? first;
+    target?.focus({ preventScroll: true });
+    // An admin deep link can mount before the profile reveals its nav entry. Remember the
+    // temporary first-row focus so it can follow the requested section when it appears.
+    // The narrow layout moves focus into the detail pane in its own effect below. Once
+    // focus leaves this row, even if it later returns, the user owns its position.
+    let cancelPendingFocus: (() => void) | null = null;
+    if (!current && target && !phone() && document.activeElement === target) {
+      pendingInitialNavFocus.current = target;
+      cancelPendingFocus = () => {
+        if (pendingInitialNavFocus.current === target) pendingInitialNavFocus.current = null;
+      };
+      target.addEventListener('blur', cancelPendingFocus, { once: true });
+    }
     return () => {
+      if (target && cancelPendingFocus) target.removeEventListener('blur', cancelPendingFocus);
+      if (pendingInitialNavFocus.current === target) pendingInitialNavFocus.current = null;
       // #401 reopened: at the narrow nav/detail width, opening Settings from the account menu
       // collapses the sidebar drawer (Sidebar.tsx's own `openSettings` calls `setExpanded(false)`
       // before handing off) and it stays collapsed — the drawer does not reopen on its own when
@@ -226,6 +244,16 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   }, [profileAttempt]);
 
   const groups: Group[] = useMemo(() => localiseGroups([...PERSONAL, ...(isAdmin ? [ADMIN] : [])], t), [isAdmin, t]);
+
+  useEffect(() => {
+    if (!profileKnown || !pendingInitialNavFocus.current) return;
+    const temporary = pendingInitialNavFocus.current;
+    pendingInitialNavFocus.current = null;
+    // Profile loading must not pull focus away from a control the user reached meanwhile.
+    if (document.activeElement !== temporary || phone()) return;
+    const current = stage.current?.querySelector<HTMLElement>('.settings-navigation nav [aria-current="page"]');
+    if (current && current !== temporary) current.focus({ preventScroll: true });
+  }, [profileKnown, groups]);
 
   // A member who was viewing an admin section (or a stale saved section) must
   // not be left staring at an empty pane.
