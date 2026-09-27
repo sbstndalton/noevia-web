@@ -81,10 +81,12 @@ function QualityPanel({ models, modelsError, roles, onOpen, onTab }: { models: I
 }
 
 function RecoverPanel({ onTab }: { onTab: (tab: 'discover' | 'hardware') => void }): JSX.Element {
-  const [items, setItems] = useState<Stuck[] | null>(null), [backends, setBackends] = useState<Backend[] | null>(null);
+  // undefined is a check in progress; null is a completed check with no usable response.
+  const [items, setItems] = useState<Stuck[] | null>(null), [backends, setBackends] = useState<Backend[] | null | undefined>(undefined);
   const t = useT();
   const [error, setError] = useState(''), [note, setNote] = useState(''), [busy, setBusy] = useState(''), [confirmed, setConfirmed] = useState(false);
   const load = useCallback(async () => {
+    setBackends(undefined);
     const read = (path: string) => apiFetch(path).then(async (r) => (r.ok ? (await r.json()).job ?? null : null)).catch(() => null);
     const [autotune, calibration, downloads, engines] = await Promise.all([
       read('/api/models/autotune?model='), read('/api/models/calibration?model='),
@@ -118,11 +120,12 @@ function RecoverPanel({ onTab }: { onTab: (tab: 'discover' | 'hardware') => void
   return <section className="mm-panel" aria-labelledby="mm-recover">
     <div className="mm-panel-head"><h3 id="mm-recover">{t('mm.recover.title')}</h3>
       <button type="button" className="modal-btn secondary" onClick={() => void load()}>{t('mm.recover.checkAgain')}</button></div>
-    <div className="mm-loader-row"><span className={`model-dot${backends && !unhealthy.length ? '' : ' down'}`}/><strong>{t('mm.recover.loader')}</strong>
-      <span className="mm-loader-state">{backends === null ? t('mm.recover.healthUnavailable') : !backends.length ? t('mm.recover.noEngine') : unhealthy.length
+    <div className="mm-loader-row"><span aria-hidden="true" className={`model-dot${backends === undefined ? ' pending' : backends && !unhealthy.length ? '' : ' down'}`}/><strong>{t('mm.recover.loader')}</strong>
+      <span className="mm-loader-state" aria-live="polite">{backends === undefined ? t('mm.recover.checkingLoader') : backends === null ? t('mm.recover.healthUnavailable') : !backends.length ? t('mm.recover.noEngine') : unhealthy.length
         ? unhealthy.map((b) => `${b.name}: ${b.probe_error || b.last_restart_error || b.status}`).join(' · ')
         : backends.map((b) => (b.loaded_model ? t('mm.recover.runningWith', { engine: b.name, model: b.loaded_model }) : t('mm.recover.running', { engine: b.name }))).join(' · ')}</span>
       <button type="button" className="mm-guided-link" onClick={() => onTab('hardware')}>{t('mm.recover.openLogs')}</button></div>
+    {backends === null && <p className="mm-note">{t('mm.recover.healthUnavailableHelp')}</p>}
     {items === null && <p className="mm-note" role="status">{t('mm.recover.checking')}</p>}
     {items?.length === 0 && <p className="mm-note" role="status">{t('mm.recover.none')}</p>}
     {!!items?.length && <ul className="mm-recover-list">{items.map((item) => <li key={item.kind + item.id}>

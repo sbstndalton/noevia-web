@@ -2255,6 +2255,7 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .mm-recover-list li > div { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; flex: 1 1 240px; overflow-wrap: anywhere; }
 .mm-recover-list small { color: var(--text-secondary); font-size: var(--text-caption); }
 .mm-loader-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); min-width: 0; }
+.mm-loader-row .model-dot.pending { background: var(--text-off); box-shadow: none; }
 .mm-loader-state { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; color: var(--text-secondary); font-size: var(--text-footnote); }
 .connector-trust { margin:20px 0 24px; padding:18px 20px; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); }
 .connector-trust h2 { margin:0 0 14px; font-size:var(--text-callout); }
