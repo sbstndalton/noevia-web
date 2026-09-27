@@ -1,7 +1,7 @@
 import { apiFetch } from '../../api';
 import { cached, invalidateCached } from '../../request-cache';
 
-export type FeatureName = 'stepSupervision' | 'systemOneRouting' | 'toolGate' | 'previews' | 'diaryMcpWrite' | 'deepResearch' | 'offsiteBackup' | 'toolRouter' | 'codeHarness' | 'browserExecutor' | 'kiwix';
+export type FeatureName = 'stepSupervision' | 'systemOneRouting' | 'toolGate' | 'previews' | 'diaryMcpWrite' | 'deepResearch' | 'offsiteBackup' | 'toolRouter' | 'codeHarness' | 'browserExecutor' | 'kiwix' | 'chatgptOAuth';
 export type FeatureFlags = Partial<Record<FeatureName, boolean>>;
 export interface FeatureInfo { name: FeatureName; label: string; description: string; enabled: boolean; source: 'default' | 'env' | 'admin'; locked: boolean; env: string; pendingRestart?: boolean; experimental?: boolean; unavailable?: string | null }
 

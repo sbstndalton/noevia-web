@@ -3,6 +3,9 @@ import { parseUsage, parseUsers, parseProfile, parseProviders } from './settings
 // which holds credentials server-side.
 
 import type {
+  ChatGptDeviceLogin,
+  ChatGptPoll,
+  ChatGptStatus,
   ChatMeta,
   DiaryCorpus,
   HealthState,
@@ -214,6 +217,18 @@ export function createProvider(body: { label: string; baseUrl: string; apiKey?: 
   return postJson('/api/providers', body);
 }
 export function testProvider(body: { baseUrl: string; apiKey?: string }): Promise<{ ok: true; models: string[] }> { return postJson('/api/providers/test', body); }
+
+// Sign in with ChatGPT (#447). The server answers 404 on all of these while the feature is off.
+export const fetchChatGptStatus = (): Promise<ChatGptStatus> => getJson('/api/providers/chatgpt');
+export const startChatGptLogin = (): Promise<ChatGptDeviceLogin> => postJson('/api/providers/chatgpt/device', {});
+export const pollChatGptLogin = (loginId: string): Promise<ChatGptPoll> => postJson('/api/providers/chatgpt/device/poll', { loginId });
+export const cancelChatGptLogin = (loginId: string): Promise<{ ok: boolean }> => postJson('/api/providers/chatgpt/device/cancel', { loginId });
+export const fetchChatGptModels = (): Promise<{ models: string[] }> => getJson('/api/providers/chatgpt/models');
+export async function disconnectChatGpt(): Promise<{ ok: boolean }> {
+  const res = await apiFetch('/api/providers/chatgpt', { method: 'DELETE' });
+  if (!res.ok) throw new Error(await describeFailure(res, 'Disconnecting ChatGPT failed'));
+  return res.json() as Promise<{ ok: boolean }>;
+}
 
 export function deleteProvider(id: string): Promise<{ ok: boolean }> {
   return apiFetch(`/api/providers/${encodeURIComponent(id)}`, { method: 'DELETE' }).then((res) => {

@@ -12,6 +12,8 @@ import { createInvitation, createRecovery, deleteProvider, deleteUser, fetchProf
 import type { AuthUser, PasskeyInfo, SessionInfo } from '../api';
 import { startRegistration } from '@simplewebauthn/browser';
 import { ProviderForm } from './ProviderForm';
+import { ChatGptConnect } from './ChatGptConnect';
+import { useFeatureFlags } from './features/useFeatureFlags';
 import { afterLayoutSettles, pickFocusable } from '../focus-utils';
 import { StoragePicker } from './StoragePicker';
 import { useT } from '../i18n';
@@ -292,6 +294,8 @@ function UsersCard(): JSX.Element {
  *  Keys live server-side only — the list shows masked hints, never plaintext. */
 function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
   const t = useT();
+  // #447: Sign in with ChatGPT exists only while the server's feature flag is on.
+  const chatgptOn = useFeatureFlags().chatgptOAuth === true;
   const [providers, setProviders] = useState<Provider[]>([]);
   const [adding, setAdding] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -330,7 +334,8 @@ function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
       {!loading && !err && providers.length === 0 && <p className="route-note">{t('providers.empty')}</p>}
       {err && <><p className="modal-err" role="alert">{err}</p><button className="modal-btn secondary" disabled={loading || !!removing} onClick={() => void refresh()}>{t('providers.retry')}</button></>}
       <div className="card-list">
-        {providers.map((p) => (
+        {/* #447: a ChatGPT connection is shown once, as the Sign in with ChatGPT card below. */}
+        {providers.filter((p) => p.kind !== 'chatgpt-oauth').map((p) => (
           <div key={p.id} className="model-row">
             {/* #404: the dot was hard-coded green for every provider, connected or not. The
                 default provider is the one `/api/health` actually probes (the same signal
@@ -356,6 +361,8 @@ function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
           </div>
         ))}
       </div>
+
+      {chatgptOn && <ChatGptConnect onChanged={() => void refresh()} />}
 
       {adding ? (
         <ProviderForm

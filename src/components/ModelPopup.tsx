@@ -11,7 +11,7 @@ import { useT } from '../i18n';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, Provider, Toolbox } from '../types';
 import type { AutoRoles, McpStatus } from '../api';
-import { apiFetch, fetchAutoRoles, fetchInstalledModels, fetchProviders, fetchToolboxes, saveProjectConfig } from '../api';
+import { apiFetch, fetchAutoRoles, fetchChatGptModels, fetchInstalledModels, fetchProviders, fetchToolboxes, saveProjectConfig } from '../api';
 
 interface ModelPopupProps {
   projects: Project[];
@@ -101,6 +101,16 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
   const activeProviderId = activeProject?.provider === 'lemonade' ? defaultProviderId : activeProject?.provider || defaultProviderId;
   const activeProvider = providers.find((p) => p.id === activeProviderId);
   const auto = activeProject?.routing === 'auto';
+  // #447: a ChatGPT connection lists the account's own models; free text only if that list fails.
+  const chatgptActive = activeProvider?.kind === 'chatgpt-oauth';
+  const [accountModels, setAccountModels] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (!chatgptActive) { setAccountModels(null); return; }
+    let live = true;
+    setAccountModels(null);
+    fetchChatGptModels().then((r) => { if (live) setAccountModels(Array.isArray(r.models) && r.models.length ? r.models : []); }).catch(() => { if (live) setAccountModels([]); });
+    return () => { live = false; };
+  }, [chatgptActive]);
 
   const save = async (key: string, patch: Record<string, unknown>) => {
     if (!activeProject) return;
@@ -175,7 +185,17 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
 
         {err && <div role="alert"><p className="rail-empty">{err}</p><button className="popup-tab" disabled={modelsLoading || busy !== null} onClick={refresh}>{t('modelPopup.retry')}</button></div>}
 
-        {activeProvider && !activeProvider.managed ? <>
+        {chatgptActive && accountModels === null ? <p role="status" className="rail-empty">{t('modelPopup.loading')}</p>
+        : chatgptActive && accountModels && accountModels.length > 0 ? <div className="mp-models">
+            {accountModels.map((id) => <div key={id} className="mp-model-item">
+              <button className="model-row mp-model" aria-pressed={activeProject.model === id}
+                disabled={busy !== null} onClick={() => void save(id, { model: id, routing: 'manual' })}>
+                <div className="model-name-group"><MiddleTruncate className="model-name" text={id}/></div>
+                <span className="model-role">{busy === id ? t('modelPopup.switching') : activeProject.model === id ? <><ShellIcon name="check" size={15}/>{t('modelPopup.selected')}</> : ''}</span>
+              </button>
+            </div>)}
+          </div>
+        : activeProvider && !activeProvider.managed ? <>
           {/* A hosted API has no catalogue to list and no download flow, so the
               model is whatever id the provider documents. */}
           <label className="mp-field">

@@ -142,7 +142,21 @@ export interface Provider {
   managed?: boolean;
   shared?: boolean;
   defaultModel?: string;
+  /** Sign in with ChatGPT (#447): the account's own private connection, sent to an external service. */
+  kind?: 'chatgpt-oauth';
+  external?: boolean;
+  connection?: ChatGptConnectionState;
 }
+
+export type ChatGptConnectionState = 'connected' | 'reconnect' | 'disconnected';
+/** GET /api/providers/chatgpt: never a token, only the state and a masked account. */
+export interface ChatGptStatus {
+  state: ChatGptConnectionState;
+  account?: { email: string | null; plan: string | null };
+  providerId?: string;
+}
+export interface ChatGptDeviceLogin { loginId: string; userCode: string; verificationUrl: string; interval: number; expiresAt: number }
+export interface ChatGptPoll { state: 'pending' | 'connected' | 'expired'; interval?: number; account?: { email: string | null; plan: string | null } }
 
 /** A named conversation inside a project (or free-floating). */
 export interface ChatMeta {
