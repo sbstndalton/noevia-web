@@ -20,6 +20,8 @@ import { KeyboardSettings } from './shortcuts/KeyboardSettings';
 import { useT } from '../i18n';
 import { SETTINGS_SECTION_ALIASES } from '../routes';
 import { closeFocusTarget } from '../settings-focus';
+import { afterLayoutSettles, pickFocusable } from '../focus-utils';
+import { isCoarsePointerDevice } from '../composer-focus';
 import '../i18n/settings';
 import type { MessageKey, Translate } from '../i18n';
 
@@ -150,7 +152,39 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
     const root = stage.current;
     (root?.querySelector<HTMLElement>('.settings-navigation nav [aria-current="page"]') ?? root?.querySelector<HTMLElement>('.settings-navigation nav button'))?.focus({ preventScroll: true });
     return () => {
-      closeFocusTarget(previous, document.querySelector<HTMLElement>('.composer-input'))?.focus({ preventScroll: true });
+      // #401 reopened: at the narrow nav/detail width, opening Settings from the account menu
+      // collapses the sidebar drawer (Sidebar.tsx's own `openSettings` calls `setExpanded(false)`
+      // before handing off) and it stays collapsed — the drawer does not reopen on its own when
+      // Settings closes — so `previous` (the account trigger) can be `.isConnected` and still
+      // unfocusable (`display: none`, per `noevia.css`'s `.sidebar:not(.is-expanded)` rule at
+      // <=519px) for the rest of the session. Re-querying the DOM at close time (instead of only
+      // the two things captured at mount) lets the fallback notice a drawer that *did* become
+      // visible again by the time Settings actually unmounts, and fall through when it did not.
+      // `afterLayoutSettles` waits a frame (with a timer fallback for a hidden tab, where rAF
+      // never fires) so this reads the drawer's class toggle after it has actually taken visual
+      // effect, not mid-commit.
+      //
+      // `.nav-drawer-toggle` ("Open navigation") sits outside the drawer it opens — it stays
+      // mounted and visible at the same <=519px width the drawer collapses at, in every view
+      // Settings can be opened from, since Sidebar (and its toggle) never unmounts — so it is
+      // the right narrow-width fallback: a real, always-native-focusable `<button>`, not a
+      // heading (`.app-main h1`/`h2` report a real layout box but a `tabIndex` of `-1` — a
+      // `<h1>` with no `tabindex` is never a valid focus target; `isFocusable` in `focus-utils.ts`
+      // now rejects it, so it never quietly failed here again). At >519px `.nav-drawer-toggle`
+      // itself is `display:none` (`noevia.css`), so `isFocusable` skips it there and this still
+      // falls through past it correctly. The composer is the last resort, guaranteed to exist in
+      // every view Settings opens from — but never on a coarse pointer (touch): programmatically
+      // focusing a text field there pops the on-screen keyboard over whatever the person just
+      // closed Settings to look at, a worse outcome than leaving focus on `<body>` (same tradeoff
+      // `ChatView.tsx`'s `isCoarsePointerDevice` guard already makes for #435).
+      afterLayoutSettles(() => {
+        const fallback = pickFocusable<HTMLElement>(
+          document.querySelector<HTMLElement>('.account-trigger'),
+          document.querySelector<HTMLElement>('.nav-drawer-toggle'),
+          isCoarsePointerDevice() ? null : document.querySelector<HTMLElement>('.composer-input'),
+        );
+        closeFocusTarget(previous, fallback)?.focus({ preventScroll: true });
+      });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

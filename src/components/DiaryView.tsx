@@ -18,6 +18,7 @@ import { ComposerTextarea } from './ComposerTextarea';
 import { DiaryCalendar } from './DiaryCalendar';
 import { DiaryContextPanel } from './DiaryContextPanel';
 import { useEffect, useRef, useState } from 'react';
+import { isFocusable } from '../focus-utils';
 import { apiFetch, fetchProfile, deleteProjectFile, fetchDiaryMonth, fetchDiarySource, fetchStorage, streamChat } from '../api';
 import type { StorageConnection } from '../api';
 import { dateInText, dayLabel, localDay, monthLabel, splitDays } from '../diary-data';
@@ -412,7 +413,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
     busyRef.current=true;setBusy(true);setEditorError('');setEditorStatus(label);
     try { await action(); }
     catch(e) { setEditorError(e instanceof Error?e.message:String(e));setEditorStatus(t('diary.editor.operationFailed')); }
-    finally {busyRef.current=false;setBusy(false);if(restoreFocus)requestAnimationFrame(()=>{if(previousFocus?.isConnected && (document.activeElement===document.body || document.activeElement===previousFocus))previousFocus.focus({preventScroll:true});});}
+    finally {busyRef.current=false;setBusy(false);if(restoreFocus)requestAnimationFrame(()=>{if(isFocusable(previousFocus) && (document.activeElement===document.body || document.activeElement===previousFocus))previousFocus.focus({preventScroll:true});});}
   };
   const canLeaveEditor = () => !editor || (editor.content!==null && editText===editor.content) || window.confirm(t('diary.confirm.discardEdits'));
   const currentFile = async (path: string): Promise<DiaryFile> => folder ? {path,content:(await scanLocal(folder))[path] ?? null,version:null} : readFile(path);
