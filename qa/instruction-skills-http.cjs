@@ -28,23 +28,33 @@ function client(){const cookies=new Map();return async(url,body,method=body===un
   const api=client();for(let i=0;i<100;i++){try{if((await api('/api/setup/status')).status===200)break;}catch{}await new Promise(r=>setTimeout(r,50));}
   let r=await api('/api/setup/complete',{setupCode:fs.readFileSync(path.join(dir,'first-run-setup-code'),'utf8').trim(),publicOrigin:origin,username:'skillqa',displayName:'Synthetic Skill QA',password:'synthetic skill review password',diaryEnabled:false});assert.equal(r.status,201,r.text);
   await api('/api/profile/onboarding',{});
-  const content='---\nname: Weekly review\ndescription: Summarize decisions and next actions\nversion: 1\nrequires: core, nextcloud-notes\n---\nSKILL-BODY-CANARY: Draft a review citing only the selected notes. Propose saving through the normal approval gate.';
+  const content='---\nname: Weekly review\ndescription: Summarize decisions and next actions\nversion: 1\nrequires: core\n---\nSKILL-BODY-CANARY: Draft a review citing only the selected notes. Propose saving through the normal approval gate.';
   r=await api('/api/projects',{name:'Synthetic instruction skills',model:'synthetic',toolboxes:['core'],files:[{name:'review.md',content},{name:'notes.txt',content:'SYNTHETIC-NOTES: A decision and two next actions.'}]});assert.equal(r.status,200,r.text);const project=r.body;
   const route=`/api/projects/${project.id}/instruction-skills`;
   r=await api(route);assert.equal(r.body.skills[0].status,'review');const hash=r.body.skills[0].hash;
+  const portable=`${route}/manifests`;
+  r=await api(portable);assert.equal(r.status,200,r.text);const portableSkill=r.body.skills[0];
+  assert.equal(portableSkill.version,hash);assert.ok(!JSON.stringify(r.body).includes('SKILL-BODY-CANARY'));
+  const contentRoute=`${portable}/${portableSkill.id}/content?version=${hash}`;
+  assert.equal((await api(contentRoute)).status,409);
   const chat=()=>api('/api/chat',{spaceId:project.id,projectId:project.id,chatId:'skills-'+Date.now(),message:'Review the notes.',history:[]});
   requests.length=0;await chat();assert.ok(!JSON.stringify(requests).includes('SKILL-BODY-CANARY'));assert.ok(JSON.stringify(requests).includes('SYNTHETIC-NOTES'));
   r=await api(route,{file:'review.md',hash:'stale',enabled:true},'PUT');assert.equal(r.status,409);
   r=await api(route,{file:'review.md',hash,enabled:true},'PUT');assert.equal(r.status,200,r.text);assert.equal(r.body.skills[0].status,'enabled');
+  r=await api(contentRoute);assert.equal(r.status,200,r.text);assert.equal(r.body.content,content);
+  assert.equal((await api(`${portable}/${portableSkill.id}/content?version=${'0'.repeat(64)}`)).status,409);
   requests.length=0;readSkill=true;r=await chat();assert.ok(r.text.includes('Loaded instruction skill'),r.text);assert.ok(JSON.stringify(requests).includes('SKILL-BODY-CANARY'));
   r=await api(route,{file:'review.md',enabled:false},'PUT');assert.equal(r.body.skills[0].status,'disabled');
+  assert.equal((await api(contentRoute)).status,409);
   requests.length=0;r=await chat();assert.ok(!JSON.stringify(requests).includes('SKILL-BODY-CANARY'));assert.ok(r.text.includes('disabled'),r.text);
   await api(route,{file:'review.md',hash,enabled:true},'PUT');
   await api(`/api/projects/${project.id}/config`,{files:[{name:'review.md',content:content+'\nVersion changed.'},{name:'notes.txt',content:'SYNTHETIC-NOTES'}]});
   r=await api(route);assert.equal(r.body.skills[0].status,'updated');
+  assert.equal((await api(contentRoute)).status,409);
   const invite=await api('/api/admin/invitations',{role:'member'});const other=client();
   r=await other('/api/auth/invitations/accept',{token:invite.body.token,username:'skillother',displayName:'Other synthetic user',password:'synthetic other account password',diaryEnabled:false});assert.ok(r.status<300,r.text);
   assert.equal((await other(route)).status,404);assert.equal((await other(route,{file:'review.md',hash,enabled:true},'PUT')).status,404);
+  assert.equal((await other(portable)).status,404);assert.equal((await other(contentRoute)).status,404);
   console.log('PASS: real HTTP review/enable/disable/update, stale-hash 409, full handler source exclusion and tool loading, guessed disabled read blocked, tenant isolation.');
   if(process.env.KEEP_QA==='1'){console.log('Browser fixture: '+origin+' — skillqa / synthetic skill review password — project '+project.id);await new Promise(resolve=>{process.once('SIGINT',resolve);process.once('SIGTERM',resolve);});}
  }finally{server.kill('SIGTERM');await new Promise(r=>server.once('exit',r));await new Promise(r=>upstream.close(r));fs.rmSync(dir,{recursive:true,force:true});}
