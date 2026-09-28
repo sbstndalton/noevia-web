@@ -750,3 +750,48 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
   }
   .recents-del::after { left: 50%; right: auto; width: max(100%, var(--target-min)); transform: translate(-50%, -50%); }
 }
+
+/* ── Everything fits the viewport (#530) ─────────────────────────────────────
+   On a phone nothing may be wider than the screen: content wraps, truncates, or scrolls inside
+   its own box (code blocks and tables), never the page or a panel. qa/mobile-overflow-530.cjs
+   walks every surface at 320–430px and fails on anything that sticks out. These are the shared
+   causes it found; they apply at every size because the same bugs exist on a desktop, where
+   there is usually enough room to hide them (the drawer scrolled 10px sideways there too).
+
+   A word longer than its line breaks instead of pushing past its box: long URLs, file names,
+   project names in a heading or a description. break-word rather than anywhere, because it acts
+   only on a word that would overflow and leaves min-content alone, so nothing that fits today
+   moves. Zero specificity, so a component that wants one line and an ellipsis still gets it. */
+:where(h1, h2, h3, h4, h5, h6, p, li, dt, dd, blockquote, figcaption, label, legend, small, summary) { overflow-wrap: break-word; }
+
+/* Recent chats' header is a flex-column child with 10px side margins; width: 100% (noevia.css)
+   made it 20px wider than its column, so the drawer scrolled sideways. It stretches instead. */
+.app .sidebar .spaces > .section-toggle { width: auto; align-self: stretch; }
+
+/* Sidebar titles end in "…". The title text is an inline-block so it can slide when a long title
+   is hovered or focused (noevia.css), but an atomic inline is cut, not ellipsised: a long title
+   stopped mid-letter and its box ran far past the row. At rest it is capped at the row; the
+   marquee lifts the cap while it runs. SidebarLabel still measures the full width (scrollWidth). */
+.sidebar .sidebar-label-text { max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
+.sidebar :is(.proj-row, .chat-row):is(:hover, :has(:focus-visible)) .sidebar-label.is-overflowing .sidebar-label-text { max-width: none; overflow: visible; }
+
+/* Grids whose tracks must not grow past their container for one long item: 1fr alone has a
+   min-content floor, minmax(0, 1fr) does not. */
+.tool-catalogue-main { grid-template-columns: minmax(0, 1fr); overflow-wrap: anywhere; }
+.identity-colors { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+.identity-icons { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.identity-colors button, .identity-icons button { min-width: 0; padding-inline: 0; }
+/* A connector's account line is often one long address. */
+.connector-text { overflow-wrap: anywhere; }
+/* A status badge never runs past its container: at phone sizes it wraps ("Connected as
+   <account>" was wider than the card). */
+.badge { max-width: 100%; }
+@media (max-width: 767px), (max-height: 599px) { .badge { white-space: normal; } }
+/* The row-end delete keeps its 44px touch area (above) inside its row. The rule that centres that
+   area on the 28px button lost to the shared :is() rule's higher specificity, so the area hung
+   16px past the button, beyond the row's end, and the project page scrolled sideways. Centred
+   (element-qualified so it wins), it reaches 8px either side, which the end margin makes room for. */
+@media (pointer: coarse) {
+  button.recents-del::after { left: 50%; right: auto; width: max(100%, var(--target-min)); transform: translate(-50%, -50%); }
+  .recents-del { margin-inline-end: calc((var(--target-min) - 28px) / 2); }
+}

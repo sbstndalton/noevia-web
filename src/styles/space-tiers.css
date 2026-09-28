@@ -230,3 +230,52 @@
 @media (max-width: 767px) and (pointer: coarse), (max-height: 599px) and (pointer: coarse) {
   .composer-mode-toggle button { min-height: 44px; }
 }
+
+/* ── Tier 2, #530: denser phone layouts ───────────────────────────────────── */
+/* More fits on a phone: the space between things shrinks, never the things themselves. Rows keep
+   their 44px touch targets, fields their 16px text (phone.css), body text its size. Measured by
+   qa/mobile-overflow-530.cjs at 390x844 (rows fully on screen, before → after). */
+@media (max-width: 767px), (max-height: 599px) {
+  /* Settings: the Compact density steps (tokens.css) — each vertical spacing role one notch down
+     on the 4pt scale; the inline inset is unchanged. */
+  :root {
+    --group-inset-block: var(--space-3);
+    --group-row-min: var(--space-12);
+    --settings-title-gap: var(--space-6);
+    --settings-group-gap: var(--space-8);
+    --settings-content-gap: var(--space-2);
+  }
+  /* A row whose only control is a switch keeps it beside its label instead of on a line of its
+     own (the ≤620px stacking in noevia.css is for wide controls: selects, fields, tiles). */
+  .settings-stage .set-row:has(> .set-row-control > :is(input[type='checkbox'], [role='switch']):only-child) { flex-direction: row; align-items: center; }
+  .settings-stage .set-row:has(> .set-row-control > :is(input[type='checkbox'], [role='switch']):only-child) > .set-row-control { width: auto; }
+  /* The settings list: the title shares the close button's bar, and the groups sit closer. */
+  :root .settings-stage .settings-nav-head { padding-bottom: var(--space-2); }
+  :root .settings-stage .settings-nav-head > .settings-nav-title { grid-row: 1; grid-column: 1; }
+  :root .settings-stage .settings-search { margin-bottom: var(--space-1); }
+  :root .settings-stage .settings-navigation nav section h2 { margin-top: var(--space-3); }
+  :root .settings-stage .settings-navigation nav section.settings-nav-admin { margin-top: var(--space-2); }
+  :root .settings-stage .settings-navigation nav button { margin-block: 0; }
+  :root .settings-stage .settings-detail-scroll { padding-top: var(--space-3); }
+
+  /* The drawer: tighter head, search and group spacing; rows touch (each is its own 44px row). */
+  :root .app .sidebar.pane .shell-sidebar-head { padding-bottom: var(--space-1); }
+  :root .app .sidebar.pane input.shell-search { margin-block: var(--space-1); }
+  :root .app .sidebar.pane button.new-chat-btn.glass { margin-bottom: var(--space-1); }
+  :root .app .sidebar.pane :is(.side-nav, .spaces) { gap: 0; }
+  :root .app .sidebar.pane .sidebar-history .side-scroll > .sidebar-section-head:first-child { margin-top: var(--space-2); }
+  :root .app .sidebar.pane .sidebar-history .side-scroll > .section-label:first-child { margin-top: var(--space-2); margin-bottom: 0; }
+  :root .app .sidebar.pane .side-footer { padding-top: var(--space-1); }
+  :root .app .sidebar.pane.is-expanded .side-footer { padding-bottom: calc(var(--space-1) + env(safe-area-inset-bottom)); }
+
+  /* Menus and the model sheet: rows at their 44px floor, less padding around them. */
+  :root .ctx-menu { gap: 0; }
+  :root .reasoning-level { padding-block: var(--space-1); }
+  :root .mp-panel.is-phone-sheet .mp-head { padding-block: var(--space-2); }
+  :root .mp-panel.is-phone-sheet .mp-col { padding: var(--space-3) var(--space-4); }
+
+  /* The conversation: a shorter header and less air between turns. */
+  :root .app .chat-workspace .chat-header { min-height: 52px; padding-top: var(--space-2); padding-bottom: var(--space-1); }
+  :root .app .chat-workspace > .transcript { padding-top: var(--space-4); gap: var(--space-5); }
+  :root .msg-user .msg-user-row, :root .msg[data-role='user'] .msg-user-row { padding: var(--space-2) var(--space-4); }
+}
