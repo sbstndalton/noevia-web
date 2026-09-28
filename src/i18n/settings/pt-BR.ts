@@ -328,6 +328,7 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'providers.form.skip': "Pular: configurar depois em Configurações",
   'providers.form.connecting': "Conectando…",
   'providers.form.submit': "Conectar provedor",
+  'providers.form.nvidiaNote': "Serviço de teste: apenas para testes, e a NVIDIA registra as solicitações. O texto do diário, suas ferramentas e as imagens de projetos nunca são enviados. Não coloque dados pessoais ou confidenciais nessas conversas.",
   'providers.chatgpt.title': "Entrar com o ChatGPT",
   'providers.chatgpt.external': "Externo",
   'providers.chatgpt.notConnected': "Use sua própria conta do ChatGPT como provedor privado. Só você pode usá-lo.",

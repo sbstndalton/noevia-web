@@ -13,7 +13,18 @@ const PRESETS: Record<string, { label: string; url: string }> = {
   ollama: { label: 'Ollama', url: 'http://host.docker.internal:11434/v1' },
   lmstudio: { label: 'LM Studio', url: 'http://host.docker.internal:1234/v1' },
   lemonade: { label: 'Lemonade', url: 'http://host.docker.internal:13305/v1' },
+  nvidia: { label: 'NVIDIA Build (free trial)', url: 'https://integrate.api.nvidia.com/v1' },
 };
+
+/** Mirrors the server's trial-terms host rule (provider-egress.cjs): nvidia.com or any subdomain. */
+function isNvidiaHost(baseUrl: string): boolean {
+  try {
+    const host = new URL(baseUrl.trim()).hostname.toLowerCase().replace(/\.+$/, '');
+    return host === 'nvidia.com' || host.endsWith('.nvidia.com');
+  } catch {
+    return false;
+  }
+}
 
 export interface ProviderFormProps {
   /** Called after the provider is created. Receives the created provider. */
@@ -91,6 +102,7 @@ export function ProviderForm({
         <option value="ollama">Ollama</option>
         <option value="lmstudio">LM Studio</option>
         <option value="lemonade">Lemonade</option>
+        <option value="nvidia">NVIDIA Build (free trial)</option>
       </select>
       <input
         className="modal-input"
@@ -122,6 +134,7 @@ export function ProviderForm({
         value={defaultModel}
         onChange={(e) => setDefaultModel(e.target.value)}
       />
+      {isNvidiaHost(baseUrl) && <p className="route-note">{t('providers.form.nvidiaNote')}</p>}
       {allowShared && (
         <label className="route-note">
           <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} /> {t('providers.form.shared')}

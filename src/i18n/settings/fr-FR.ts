@@ -328,6 +328,7 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'providers.form.skip': "Passer : configurer plus tard dans Réglages",
   'providers.form.connecting': "Connexion…",
   'providers.form.submit': "Connecter le fournisseur",
+  'providers.form.nvidiaNote': "Service d'essai : réservé aux tests, et NVIDIA journalise les requêtes. Le texte du journal, ses outils et les images de projet ne lui sont jamais envoyés. N'y mettez ni données personnelles ni données confidentielles.",
   'providers.chatgpt.title': "Se connecter avec ChatGPT",
   'providers.chatgpt.external': "Externe",
   'providers.chatgpt.notConnected': "Utilisez votre propre compte ChatGPT comme fournisseur privé. Vous seul pouvez l’utiliser.",

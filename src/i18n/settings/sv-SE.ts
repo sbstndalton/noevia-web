@@ -328,6 +328,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'providers.form.skip': "Hoppa över – konfigurera senare i Inställningar",
   'providers.form.connecting': "Ansluter…",
   'providers.form.submit': "Anslut leverantör",
+  'providers.form.nvidiaNote': "Provtjänst: endast för testning, och NVIDIA loggar förfrågningar. Dagbokstext, dagboksverktyg och projektbilder skickas aldrig dit. Lägg inte personuppgifter eller konfidentiella uppgifter i de här chattarna.",
   'providers.chatgpt.title': "Logga in med ChatGPT",
   'providers.chatgpt.external': "Extern",
   'providers.chatgpt.notConnected': "Använd ditt eget ChatGPT-konto som privat leverantör. Bara du kan använda den.",

@@ -328,6 +328,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'providers.form.skip': "Hopp over – sett opp senere i Innstillinger",
   'providers.form.connecting': "Kobler til…",
   'providers.form.submit': "Koble til leverandør",
+  'providers.form.nvidiaNote': "Prøvetjeneste: kun for testing, og NVIDIA logger forespørsler. Dagbokstekst, dagbokverktøy og prosjektbilder sendes aldri dit. Ikke legg inn personopplysninger eller konfidensielle data i disse samtalene.",
   'providers.chatgpt.title': "Logg inn med ChatGPT",
   'providers.chatgpt.external': "Ekstern",
   'providers.chatgpt.notConnected': "Bruk din egen ChatGPT-konto som privat leverandør. Bare du kan bruke den.",

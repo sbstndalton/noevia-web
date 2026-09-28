@@ -328,6 +328,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'providers.form.skip': "Overslaan – later instellen in Instellingen",
   'providers.form.connecting': "Verbinden…",
   'providers.form.submit': "Aanbieder koppelen",
+  'providers.form.nvidiaNote': "Proefdienst: alleen voor testen, en NVIDIA logt verzoeken. Dagboektekst, dagboektools en projectafbeeldingen worden er nooit naartoe gestuurd. Zet geen persoonlijke of vertrouwelijke gegevens in deze chats.",
   'providers.chatgpt.title': "Inloggen met ChatGPT",
   'providers.chatgpt.external': "Extern",
   'providers.chatgpt.notConnected': "Gebruik je eigen ChatGPT-account als privéprovider. Alleen jij kunt het gebruiken.",

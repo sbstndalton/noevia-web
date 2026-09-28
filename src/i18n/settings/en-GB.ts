@@ -329,6 +329,7 @@ export const EN_GB_SETTINGS = {
   'providers.form.skip': "Skip — set up later in Settings",
   'providers.form.connecting': "Connecting…",
   'providers.form.submit': "Connect provider",
+  'providers.form.nvidiaNote': "Trial service: for testing only, and NVIDIA logs requests. Diary text, Diary tools and project images are never sent to it. Do not put personal or confidential data in these chats.",
   'providers.chatgpt.title': "Sign in with ChatGPT",
   'providers.chatgpt.external': "External",
   'providers.chatgpt.notConnected': "Use your own ChatGPT account as a private provider. Only you can use it.",
