@@ -1,0 +1,100 @@
+/* Calendar logo tokens. Geometry and the default artwork remain unchanged. */
+:root[data-logo-palette="spring"] {
+  --logo-dark: #479252;
+  --logo-mid: #70AF54;
+  --logo-light: #ACCD70;
+  --logo-twig: #967453;
+  --logo-detail: #35563B;
+}
+:root[data-logo-palette="summer"] {
+  --logo-dark: #176044;
+  --logo-mid: #398356;
+  --logo-light: #6AAB6F;
+  --logo-twig: #876446;
+  --logo-detail: #244632;
+}
+:root[data-logo-palette="autumn"] {
+  --logo-dark: #9D4030;
+  --logo-mid: #C77B2D;
+  --logo-light: #DAB84F;
+  --logo-twig: #876044;
+  --logo-detail: #603F29;
+}
+:root[data-logo-palette="winter"] {
+  --logo-dark: #708C8A;
+  --logo-mid: #99B5AE;
+  --logo-light: #D4DFDA;
+  --logo-twig: #7C8077;
+  --logo-detail: #435753;
+}
+:root[data-logo-palette="rose"] {
+  --logo-dark: #9D3656;
+  --logo-mid: #CE627D;
+  --logo-light: #EDADB2;
+  --logo-twig: #93746C;
+  --logo-detail: #683E4B;
+}
+:root[data-logo-palette="clover"] {
+  --logo-dark: #176B40;
+  --logo-mid: #3B9D52;
+  --logo-light: #8BC46B;
+  --logo-twig: #8B7350;
+  --logo-detail: #274D32;
+}
+:root[data-logo-palette="harvest"] {
+  --logo-dark: #343C32;
+  --logo-mid: #BA5925;
+  --logo-light: #E6A444;
+  --logo-twig: #716047;
+  --logo-detail: #363C2E;
+}
+:root[data-logo-palette="festive"] {
+  --logo-dark: #237046;
+  --logo-mid: #B94646;
+  --logo-light: #88B28C;
+  --logo-twig: #8A6948;
+  --logo-detail: #4A4235;
+}
+:root[data-logo-palette]:not([data-logo-palette="default"]) {
+  --logo-dark-body-0: color-mix(in srgb, var(--logo-dark), white 18%);
+  --logo-dark-body-1: var(--logo-dark);
+  --logo-dark-body-2: color-mix(in srgb, var(--logo-dark), black 25%);
+  --logo-dark-pet-0: var(--logo-twig);
+  --logo-dark-pet-1: color-mix(in srgb, var(--logo-twig), var(--logo-dark) 50%);
+  --logo-dark-pet-2: var(--logo-dark);
+  --logo-dark-base-0: var(--logo-detail);
+  --logo-dark-base-1: var(--logo-detail);
+  --logo-mid-body-0: color-mix(in srgb, var(--logo-mid), white 18%);
+  --logo-mid-body-1: var(--logo-mid);
+  --logo-mid-body-2: color-mix(in srgb, var(--logo-mid), black 25%);
+  --logo-mid-pet-0: var(--logo-twig);
+  --logo-mid-pet-1: color-mix(in srgb, var(--logo-twig), var(--logo-mid) 50%);
+  --logo-mid-pet-2: var(--logo-mid);
+  --logo-mid-base-0: var(--logo-detail);
+  --logo-mid-base-1: var(--logo-detail);
+  --logo-light-body-0: color-mix(in srgb, var(--logo-light), white 18%);
+  --logo-light-body-1: var(--logo-light);
+  --logo-light-body-2: color-mix(in srgb, var(--logo-light), black 25%);
+  --logo-light-pet-0: var(--logo-twig);
+  --logo-light-pet-1: color-mix(in srgb, var(--logo-twig), var(--logo-light) 50%);
+  --logo-light-pet-2: var(--logo-light);
+  --logo-light-base-0: var(--logo-detail);
+  --logo-light-base-1: var(--logo-detail);
+  --logo-bough-0: color-mix(in srgb, var(--logo-twig), white 30%);
+  --logo-bough-1: var(--logo-twig);
+  --logo-bough-2: color-mix(in srgb, var(--logo-twig), black 20%);
+  --logo-bough-3: color-mix(in srgb, var(--logo-twig), black 40%);
+  --logo-dark-curl-0: color-mix(in srgb, var(--logo-dark), white 55%);
+  --logo-dark-curl-1: color-mix(in srgb, var(--logo-dark), white 30%);
+}
+.logo-preview-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  padding-inline: var(--group-inset-inline);
+}
+.logo-preview-mark { display: inline-flex; }
+.logo-preview-mark .noevia-logo { width: 44px; height: 44px; }
+.logo-preview-controls .route-note { flex-basis: 100%; margin: 0; }

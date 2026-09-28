@@ -9,18 +9,26 @@ import { LEAF_LOGO, type LeafLogoNode } from './leafLogoGeometry';
 //
 // '@ID' in attribute values is replaced with a per-instance prefix so
 // gradient/clip ids never collide when several logos share a page.
-function renderLeafNodes(nodes: LeafLogoNode[], prefix: string): JSX.Element[] {
+function renderLeafNodes(nodes: LeafLogoNode[], prefix: string, gradient = ''): JSX.Element[] {
   return nodes.map((n, i) => {
     const attrs: Record<string, string | number> = { key: i };
     for (const [k, v] of Object.entries(n.attrs)) attrs[k] = typeof v === 'string' ? v.replace(/@ID/g, prefix) : v;
-    return createElement(n.tag, attrs, n.children ? renderLeafNodes(n.children, prefix) : undefined);
+    if (n.tag === 'stop' && typeof attrs.stopColor === 'string') {
+      const token = `--logo-${gradient}-${i}`;
+      attrs.stopColor = `var(${token}, ${attrs.stopColor})`;
+    }
+    for (const paint of ['fill', 'stroke']) {
+      if (typeof attrs[paint] === 'string' && attrs[paint].startsWith('#')) attrs[paint] = `var(--logo-detail, ${attrs[paint]})`;
+    }
+    const childGradient = typeof n.attrs.id === 'string' ? n.attrs.id.replace('@ID-', '') : gradient;
+    return createElement(n.tag, attrs, n.children ? renderLeafNodes(n.children, prefix, childGradient) : undefined);
   });
 }
 
 export function Logo(): JSX.Element {
   const prefix = `noevia-logo-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   return (
-    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+    <svg className="noevia-logo" width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
       {renderLeafNodes(LEAF_LOGO, prefix)}
     </svg>
   );

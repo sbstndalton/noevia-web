@@ -12,6 +12,8 @@ import type { Palette } from '../appearance';
 import { FAMILIES, FAMILY_SPECS } from '../theme-family';
 import type { Family } from '../theme-family';
 import { Logo } from './Icons';
+import { previewLogo } from '../logo-appearance';
+import { nextLogoPalette, type LogoPalette } from '../logo-calendar';
 import { useT } from '../i18n';
 import type { MessageKey, Translate } from '../i18n';
 
@@ -157,7 +159,36 @@ export function CapabilitiesSettings(): JSX.Element {
   </>;
 }
 
-export function AppearanceSettings({ theme, onTheme, preference, onPreference, appearanceStatus, appearanceError, retryAppearance }: {
+function LogoChoice({ isAdmin }: { isAdmin: boolean }): JSX.Element {
+  const t = useT();
+  const [mode, setMode] = useState(() => readPreference('logo'));
+  const [preview, setPreview] = useState<LogoPalette | null>(null);
+  useEffect(() => () => previewLogo(null), []);
+  const reset = () => { setPreview(null); previewLogo(null); };
+  return <>
+    <Row label={t('appearance.logo')} description={t('appearance.logoDesc')}>
+      <Choice name="logo" label={t('appearance.logo')} onChange={() => { setMode(readPreference('logo')); reset(); }} options={[
+        ['default', t('appearance.logo.default')], ['seasonal', t('appearance.logo.seasonal')], ['monthly', t('appearance.logo.monthly')],
+      ]} />
+    </Row>
+    {mode !== 'default' && <Row label={t('appearance.logo.hemisphere')} description={t('appearance.logo.calendarDesc')}>
+      <Choice name="hemisphere" label={t('appearance.logo.hemisphere')} onChange={reset} options={[
+        ['north', t('appearance.logo.north')], ['south', t('appearance.logo.south')],
+      ]} />
+    </Row>}
+    {isAdmin && <div className="logo-preview-controls">
+      <span className="logo-preview-mark"><Logo /></span>
+      <button className="modal-btn secondary" onClick={() => {
+        const next = nextLogoPalette(preview ?? 'default'); setPreview(next); previewLogo(next);
+      }}>{t('appearance.logo.test')}</button>
+      {preview !== null && <button className="modal-btn secondary" onClick={reset}>{t('appearance.logo.reset')}</button>}
+      <span className="route-note" role="status">{preview === null ? t('appearance.logo.previewHint') : t('appearance.logo.previewing', { palette: t(`appearance.logo.palette.${preview}`) })}</span>
+    </div>}
+  </>;
+}
+
+export function AppearanceSettings({ isAdmin = false, theme, onTheme, preference, onPreference, appearanceStatus, appearanceError, retryAppearance }: {
+  isAdmin?: boolean;
   theme: 'light' | 'dark';
   onTheme: (theme: 'light' | 'dark') => void;
   preference?: 'light' | 'dark' | 'system';
@@ -196,6 +227,7 @@ export function AppearanceSettings({ theme, onTheme, preference, onPreference, a
         <Row label={t('appearance.family')} description={t('appearance.familyDesc')}>
           <FamilyChoice onChange={bump} />
         </Row>
+        <LogoChoice isAdmin={isAdmin} />
       </div>
       <h2>{t('appearance.reading')}</h2>
       <div className="set-rows">

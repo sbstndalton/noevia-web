@@ -324,7 +324,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
         ) : section === 'profile' ? (
           <ProfileSettings />
         ) : section === 'appearance' ? (
-          <><AppearanceSettings theme={props.theme} onTheme={props.onTheme} preference={props.preference} onPreference={props.onPreference} appearanceStatus={props.appearanceStatus}
+          <><AppearanceSettings isAdmin={isAdmin} theme={props.theme} onTheme={props.onTheme} preference={props.preference} onPreference={props.onPreference} appearanceStatus={props.appearanceStatus}
             appearanceError={props.appearanceError} retryAppearance={props.retryAppearance} /><LanguageSettings onOpen={open}/></>
         ) : section === 'keyboard' ? (
           <KeyboardSettings />

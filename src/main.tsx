@@ -1,3 +1,5 @@
+import { startLogoAppearance } from './logo-appearance';
+import './styles/logo-calendar.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
@@ -23,6 +25,7 @@ import './styles/theme-contemporary.css';
 import './styles/system.css';
 import './styles/families.css';
 
+startLogoAppearance();
 startFitToViewport();
 startInterfaceLanguage();
 startHoverPull();
