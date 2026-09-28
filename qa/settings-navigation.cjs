@@ -1,5 +1,6 @@
 // Synthetic settings navigation: responsive layouts, search, focus and themes.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
@@ -13,7 +14,7 @@ const { withLocale } = require('./qa-locale.cjs');
       const page = await browser.newPage(withLocale({ viewport: { width, height: 950 } }));
       await page.goto('http://localhost:31420');
       await page.getByRole('textbox', { name: 'Message', exact: true }).waitFor();
-      await page.getByTitle('Settings', { exact: true }).click();
+      await openSettings(page);
       const settings = page.getByRole('region', { name: 'Settings', exact: true });
       await settings.getByRole('button', { name:'Appearance & language',exact: true }).click();
       await settings.getByRole('heading', { name:'Appearance & language',exact: true }).waitFor();

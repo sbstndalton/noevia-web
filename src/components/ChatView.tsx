@@ -53,6 +53,9 @@ interface ChatViewProps {
   onBack: (() => void) | null;
   onOpenModels: () => void;
   onOpenSettings: () => void;
+  /** #510: the header's sliders open this chat's own settings — its project's, or, for a chat
+   *  outside a project, its model and tools — instead of a second way into Settings. */
+  onEditProject?: (projectId: string) => void;
   /** Home only (#239): the latest chats to pick up from, with their project names. */
   recent?: { id: string; title: string; projectId: string | null; projectName: string | null; updatedAt: number }[];
   onOpenRecent?: (chatId: string, projectId: string | null) => void;
@@ -214,6 +217,7 @@ export function ChatView({
   onBack,
   onOpenModels,
   onOpenSettings,
+  onEditProject,
   recent,
   onOpenRecent,
 }: ChatViewProps): JSX.Element {
@@ -279,6 +283,7 @@ export function ChatView({
   // pulling out into its own module — it needs no ref, no DOM beyond `window`, so it has its own
   // test independent of this effect.
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const composerBox = useRef<HTMLDivElement | null>(null);
   const wasStreamingRef = useRef(streaming);
   const stopRequestedRef = useRef(false);
   useEffect(() => {
@@ -310,6 +315,9 @@ export function ChatView({
 
 
   const openModels = () => { if (!project && freeContext) setFreeModels(true); else onOpenModels(); };
+  // #510: the header's sliders open this chat's own settings (Settings is in the account menu).
+  const headerSettings = project && onEditProject ? { label: t('sidebar.projectSettings'), open: () => onEditProject(project.id) }
+    : { label: t('modelPopup.title'), open: openModels };
   // Always defer to the chat's own context object once it exists, exactly like a project (App.tsx)
   // does — gating this on routing==='auto' || model let a manual choice with no model yet picked
   // silently keep showing the inherited Auto default, disagreeing with the picker reading the same
@@ -377,7 +385,7 @@ export function ChatView({
           </span>
         </div>
         <div className="header-controls">
-          <button className="icon-btn" onClick={onOpenSettings} title={t('settings.title')} aria-label={t('settings.title')}>
+          <button className="icon-btn" onClick={headerSettings.open} title={headerSettings.label} aria-label={headerSettings.label}>
             <SlidersIcon size={15} />
           </button>
         </div>
@@ -539,13 +547,14 @@ export function ChatView({
         )}
       </div>
 
-      <div className="composer">
+      <div className="composer" ref={composerBox}>
         <ChatContext key={chatId} chatId={chatId} projectId={project?.id || null} messages={messages} streaming={streaming} onBusy={setActionBusy} />
         <ComposerModeBar mode={mode} messageCount={messages.length} projectId={project?.id ?? null} disabled={streaming || actionBusy}
           access={coworkAccess} repository={repository} onRepository={setRepository} onModeChange={onModeChange}>
           <ToolCatalogue open={catalogueOpen} onOpenChange={setCatalogueOpen} projectId={project?.id ?? null} mode={mode}
             toggled={turnBoxes} onToggle={id => setTurnBoxes(prev => prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id])}
-            onMention={name => { const next = insertMention(draft, name); setDraft(next); writeDraft(chatId, next); }} onBoxes={setPermitted} disabled={streaming || actionBusy} />
+            onMention={name => { const next = insertMention(draft, name); setDraft(next); writeDraft(chatId, next); }} onBoxes={setPermitted} disabled={streaming || actionBusy}
+            focusFallback={() => composerBox.current?.querySelector<HTMLElement>('.composer-add')?.focus()} />
         </ComposerModeBar>
         <div className="composer-inner chat-composer-inner pane">
           <ComposerTextarea
@@ -558,7 +567,8 @@ export function ChatView({
             onValue={onDraft}
             onSubmit={submit}
           />
-          <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={setActionStatus} />
+          <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={setActionStatus}
+            browseTools={{ onOpen: () => setCatalogueOpen(true), count: turnBoxes.length }} />
           <ComposerModel label={modelLabel} onClick={openModels} />
           <ReasoningControl project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} />
           {streaming ? (

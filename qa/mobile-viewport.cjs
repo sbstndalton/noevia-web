@@ -1,5 +1,6 @@
 // Synthetic APIs only. Exercise touch layouts and keyboard-sized visual viewports.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
@@ -27,7 +28,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    assert.ok(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth),'Model dialog must not overflow horizontally');
    await reachable(dialog.getByTitle('Close',{exact:true}),height);
    await dialog.getByTitle('Close',{exact:true}).click();
-   await page.getByTitle('Settings',{exact:true}).click();
+   await openSettings(page);
    const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
    assert.ok(await settings.evaluate(el=>el.scrollWidth<=el.clientWidth),'Settings must not overflow horizontally');
    if(width<700){

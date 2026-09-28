@@ -14,6 +14,7 @@
 // reporting "3.1 GB" (the mismatched external string), the exact ~7% gap #443 was filed against.
 // This asserts both surfaces show the identical string for that model.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 
@@ -91,7 +92,7 @@ const MODELS = [
       return json({});
     });
     await settingsPage.goto('http://localhost:31900');
-    await settingsPage.getByTitle('Settings', { exact: true }).click();
+    await openSettings(settingsPage);
     const settings = settingsPage.getByRole('region', { name: 'Settings' });
     await settings.getByRole('button', { name: 'Models & routing' }).click();
     await settings.getByRole('button', { name: 'Open model manager' }).click();

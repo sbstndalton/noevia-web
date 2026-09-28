@@ -8,6 +8,7 @@
 // ruled paper) and the hover pull (translate ≤ 3px, no tilt, not clinging, off for touch and reduced motion).
 // Contact sheet afterwards: node qa/families-contact-sheet.cjs <shots-dir>
 const os = require('node:os');
+const {openSettings}=require('./nav.cjs');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || `${os.homedir()}/noevia-local-test/node_modules/playwright-core`);
 const { withLocale } = require('./qa-locale.cjs');
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
@@ -185,7 +186,7 @@ const DISPLAY = { editorial: 'Fraunces', contemporary: 'Geist', glass: 'Sora' };
       await page.evaluate(() => { document.documentElement.dataset.density = 'comfortable'; document.documentElement.dataset.chatFont = 'sans'; });
 
       // Settings → Appearance: the family previews, each a live sample in light and dark.
-      await page.getByTitle('Settings', { exact: true }).first().click();
+      await openSettings(page);
       const settings = page.getByRole('region', { name: 'Settings', exact: true });
       await settings.waitFor();
       const back = settings.getByRole('button', { name: 'All settings', exact: true });

@@ -2,6 +2,7 @@
 // Auto, and the Settings back control only ever appears when there is a section to step back to.
 // Synthetic fixture and APIs only.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
 const {withLocale}=require('./qa-locale.cjs');
@@ -43,7 +44,7 @@ require('node:fs').mkdirSync(shots,{recursive:true});
 
   // ── #304: Settings -> Models & routing -> back -> Settings -> close -> chat, 3 times, no loop.
   for(let i=0;i<3;i++){
-   await page.getByTitle('Settings',{exact:true}).click();
+   await openSettings(page);
    const settings=page.getByRole('region',{name:'Settings',exact:true});
    await settings.getByRole('button',{name:'Models & routing',exact:true}).click();
    await settings.getByRole('button',{name:'Open model manager'}).click();
@@ -71,7 +72,7 @@ require('node:fs').mkdirSync(shots,{recursive:true});
   // back into it. Since #359 the reload shows the page its address names (/models), but the
   // detour is still never the return target: Settings' back then close lands in chat, and
   // the saved last place (used for a bare `/`) is still the chat underneath (persistedView).
-  await page.getByTitle('Settings',{exact:true}).click();
+  await openSettings(page);
   await page.getByRole('region',{name:'Settings',exact:true}).getByRole('button',{name:'Models & routing',exact:true}).click();
   await page.getByRole('region',{name:'Settings',exact:true}).getByRole('button',{name:'Open model manager'}).click();
   await page.locator('.model-manager-page').waitFor();
@@ -112,7 +113,7 @@ require('node:fs').mkdirSync(shots,{recursive:true});
    if(i===0){
     // Reopen the same way a person would (composer -> model settings), so the second close is a
     // real repeat of the same scenario, not just an already-empty page.
-    await page.getByTitle('Settings',{exact:true}).click();
+    await openSettings(page);
     await page.getByRole('region',{name:'Settings',exact:true}).getByRole('button',{name:'Models & routing',exact:true}).click();
     await page.getByRole('region',{name:'Settings',exact:true}).getByRole('button',{name:'Open model manager'}).click();
     await page.locator('.model-manager-page').waitFor();
@@ -132,7 +133,7 @@ require('node:fs').mkdirSync(shots,{recursive:true});
   // "Back to app" duplicate of X is gone (#305); the mobile drill-in's back control is the
   // "All settings" chevron in the detail header, which already only ever appears there.
   await page.setViewportSize({width:1440,height:950});
-  await page.getByTitle('Settings',{exact:true}).click();
+  await openSettings(page);
   let settings=page.getByRole('region',{name:'Settings',exact:true});
   await settings.waitFor();
   assert.equal(await settings.getByRole('button',{name:'All settings',exact:true}).count(),0,'1440: no back control at the Settings root');
@@ -141,7 +142,7 @@ require('node:fs').mkdirSync(shots,{recursive:true});
   await settings.waitFor({state:'detached'});
 
   await page.setViewportSize({width:375,height:812});
-  await page.getByTitle('Settings',{exact:true}).click();
+  await openSettings(page);
   settings=page.getByRole('region',{name:'Settings',exact:true});
   await settings.waitFor();
   assert.equal(await settings.getByRole('button',{name:'All settings',exact:true}).count(),0,'375: no back control on the section list either');

@@ -3,6 +3,7 @@
 // Real app, Chrome's virtual authenticator, two loopback names: old.localhost → new.localhost,
 // with WEBAUTHN_RP_ID pinned to the old name as on the live server.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {spawn}=require('node:child_process');
 const PORT=31385,OLD=`http://old.localhost:${PORT}`,NEW=`http://new.localhost:${PORT}`,web=path.resolve(__dirname,'..');
@@ -20,7 +21,7 @@ const PORT=31385,OLD=`http://old.localhost:${PORT}`,NEW=`http://new.localhost:${
   await cdp.send('WebAuthn.addVirtualAuthenticator',{options:{protocol:'ctap2',transport:'internal',hasResidentKey:true,hasUserVerification:true,isUserVerified:true,automaticPresenceSimulation:true}});
   const api=(url,body)=>page.evaluate(async({url,body})=>{const csrf=decodeURIComponent(document.cookie.split(';').map(s=>s.trim()).find(s=>s.startsWith('cowork_csrf='))?.slice(12)||'');const r=await fetch(url,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:body===undefined?undefined:JSON.stringify(body)});return {status:r.status,body:await r.json().catch(()=>null)};},{url,body});
   const addPasskeyInSettings=async()=>{
-   await page.getByTitle('Settings',{exact:true}).click();
+   await openSettings(page);
    const s=page.getByRole('region',{name:'Settings'});await s.waitFor();
    await s.getByRole('button',{name:'Security and login',exact:true}).click();
    await s.getByRole('button',{name:'Add passkey',exact:true}).click();
@@ -42,7 +43,7 @@ const PORT=31385,OLD=`http://old.localhost:${PORT}`,NEW=`http://new.localhost:${
   await page.getByRole('button',{name:'Sign in with password'}).click();
   // 3. The live bug: noevia offers to create a passkey here; it must work, made for the new name.
   const secure=page.getByRole('button',{name:'Create a passkey'});
-  await Promise.race([secure.waitFor(),page.getByTitle('Settings',{exact:true}).waitFor()]);
+  await Promise.race([secure.waitFor(),page.getByRole('button',{name:/Account menu for/}).waitFor()]);
   assert.ok(await secure.isVisible(),'noevia offers a passkey for the new address');
   const made=page.waitForResponse(r=>r.url().endsWith('/api/auth/passkeys/register/verify'));
   await secure.click();
@@ -62,7 +63,7 @@ const PORT=31385,OLD=`http://old.localhost:${PORT}`,NEW=`http://new.localhost:${
   await page.goto(NEW);
   await page.getByLabel('Username').fill('pkqa');
   await page.getByRole('button',{name:'Use a passkey (recommended)'}).click();
-  await page.getByTitle('Settings',{exact:true}).waitFor({timeout:15000});
+  await page.getByRole('button',{name:/Account menu for/}).waitFor({timeout:15000});
   console.log('PASS passkey rename: passkey made at the old address; after the address change a new passkey is added at the new address and signs in there.');
  }finally{await browser.close();server.kill('SIGKILL');fs.rmSync(data,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

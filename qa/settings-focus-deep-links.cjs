@@ -67,9 +67,9 @@ const PORT = 31461;
       await page.getByRole('menuitem', { name: 'Settings', exact: true }).click();
     }, accountTrigger, 'Account menu -> Settings');
 
-    // 3) The chat header's own Settings control (the sliders icon next to the chat title).
-    const headerSettings = page.getByTitle('Settings', { exact: true });
-    await openAndClose(async () => headerSettings.click(), headerSettings, 'the chat header Settings control');
+    // 3) #510: the chat header's sliders no longer open Settings (they duplicated the account
+    //    menu); they open this chat's own model and tools. qa/phone-declutter-510.cjs covers them.
+    assert.equal(await page.locator('.chat-header').getByTitle('Settings', { exact: true }).count(), 0, 'the chat header must not duplicate Settings');
 
     assert.deepEqual(errors, [], `uncaught page errors: ${errors.join('; ')}`);
 
@@ -85,7 +85,7 @@ const PORT = 31461;
     await page.goto(`http://localhost:${PORT}/settings/status`);
     await settings().getByRole('heading', { name: 'Connected services', level: 2 }).waitFor();
 
-    console.log('PASS settings focus + deep links: closing Settings (Escape and Close) from the composer shortcut, the account menu and the chat header all return focus to their own opener; /settings/account, /settings/address and /settings/status each open their own section.');
+    console.log('PASS settings focus + deep links: closing Settings (Escape and Close) from the composer shortcut and the account menu return focus to their own opener; the chat header no longer duplicates Settings; /settings/account, /settings/address and /settings/status each open their own section.');
   } finally {
     await browser.close();
     await fixture.close();

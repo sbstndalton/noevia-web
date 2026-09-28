@@ -54,8 +54,10 @@ export function ReasoningControl({ project, disabled, onChanged, global = false 
     const hint=t('composer.thinking.hint',{mode});
     return <span className="reasoning-control is-menu">
       <button ref={trigger} type="button" className="reasoning-pill glass glass-lens is-press" aria-label={t('composer.thinking.ariaLabel')} aria-haspopup="menu" aria-expanded={!!menuAt} title={hint} disabled={disabled||saving}
-        onClick={()=>{const r=trigger.current!.getBoundingClientRect();setMenuAt(menuAt?null:{x:r.right-280,y:r.top});}}>
-        <span>{t('composer.thinking.label')}</span><span className="reasoning-pill-value">{current}</span><ShellIcon name="down" size={14}/>
+        data-level={value} onClick={()=>{const r=trigger.current!.getBoundingClientRect();setMenuAt(menuAt?null:{x:r.right-280,y:r.top});}}>
+        {/* #510: a phone shows the symbol in place of the word, and the level only when it is not Auto. */}
+        <span className="reasoning-pill-icon" aria-hidden="true"><ShellIcon name="thinking" size={16}/></span>
+        <span className="reasoning-pill-label">{t('composer.thinking.label')}</span><span className="reasoning-pill-value">{current}</span><ShellIcon name="down" size={14}/>
       </button>
       {menuAt&&<ContextMenu at={menuAt} placement="above" label={t('composer.thinking.ariaLabel')} onClose={()=>setMenuAt(null)}
         items={levels.map(([v,label,description])=>({label,description,selected:v===value,onSelect:()=>{if(v!==value)void save(v);}}))}/>}

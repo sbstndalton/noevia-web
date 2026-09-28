@@ -94,8 +94,11 @@ export function useAttachmentDrop(sink: AttachmentSink): { isDragOver: boolean; 
 }
 
 /** Composer shortcuts use the existing project APIs; enabling tools never approves a write. */
-export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus, header, diary = false, chatOnly = false }: {
+export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus, header, diary = false, chatOnly = false, browseTools }: {
   header?: ReactNode; diary?: boolean; chatOnly?: boolean;
+  /** #510: on a phone the standalone Tools button above the composer is hidden, and this row in
+   *  the + menu opens the same catalogue. Wider screens hide the row and keep the button. */
+  browseTools?: { onOpen: () => void; count: number };
   project: Project | null; disabled: boolean; onChanged: () => void | Promise<void>;
   /** Unused: the model is chosen from the composer's model control, not duplicated here. */
   onModels?: () => void; onBusy: (busy: boolean) => void; onStatus: (status: string) => void;
@@ -169,7 +172,9 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
     {/* Like Claude's: a centred SVG plus, and a menu of what can be added — files first, then
         the tools this chat may use, each ticked when on. The model lives in its own control on
         the other side of the composer, so it is not repeated here. */}
-    <button ref={trigger} type="button" className="composer-add glass glass-lens is-press" aria-label={t('composer.addFilesAndTools')} aria-expanded={open} aria-controls={panelId} disabled={disabled || saving} onClick={() => setOpen(!open)}><ShellIcon name="plus" size={18}/></button>
+    <button ref={trigger} type="button" className="composer-add glass glass-lens is-press" aria-label={browseTools?.count ? `${t('composer.addFilesAndTools')} · ${t('tools.forMessage', { count: browseTools.count })}` : t('composer.addFilesAndTools')} aria-expanded={open} aria-controls={panelId} disabled={disabled || saving} onClick={() => setOpen(!open)}><ShellIcon name="plus" size={18}/>
+      {/* #510: where the Tools button is hidden, the + carries how many toolboxes the next message adds. */}
+      {!!browseTools?.count && <span className="composer-add-badge" aria-hidden="true">{browseTools.count}</span>}</button>
     <input ref={input} hidden type="file" multiple onChange={event => { const files = Array.from(event.target.files || []); event.target.value = ''; void upload(files); }} />
     {open && <div id={panelId} className="composer-actions-panel overlay" style={menuLayout} role="region" aria-label={t('composer.filesAndTools')}>
       {header}
@@ -177,6 +182,9 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
         <ShellIcon name="attach" size={18}/><span>{t('composer.addFiles')}<small>{diary ? t('composer.keptSeparate') : chatOnly ? t('composer.savedWithChat') : t('composer.savedTo', { name: project?.name ?? t('composer.theProject') })} · {t('composer.sizeLimit')}</small></span>
       </button>
       {!project && <p className="composer-menu-note">{diary ? t('composer.extrasNote') : t('composer.openProjectNote')}</p>}
+      {browseTools && <button type="button" className="composer-menu-row composer-browse-tools" disabled={disabled} onClick={() => { setOpen(false); browseTools.onOpen(); }}>
+        <ShellIcon name="tools" size={18}/><span>{t('tools.trigger')}<small>{browseTools.count ? t('tools.forMessage', { count: browseTools.count }) : t('tools.catalogue')}</small></span>
+      </button>}
       <div className="composer-menu-divider" role="separator"/>
       <span className="composer-menu-label">{diary ? t('composer.toolsExtras') : chatOnly ? t('composer.toolsChat') : t('composer.toolsProject')}</span>
       {loading ? <p className="composer-menu-note">{t('composer.loadingTools')}</p> : <>

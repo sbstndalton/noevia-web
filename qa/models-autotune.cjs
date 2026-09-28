@@ -1,5 +1,6 @@
 // UI-only fixture: no real models, accounts, inference or storage calls.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 const pending = (id, label) => ({ id, label, status: 'pending', steps: [{ id: id + '-one', label: label + ' test', status: 'pending' }] });
@@ -54,7 +55,7 @@ const pending = (id, label) => ({ id, label, status: 'pending', steps: [{ id: id
       return route.continue();
     });
     await page.goto('http://localhost:31347');
-    await page.getByTitle('Settings', { exact: true }).click();
+    await openSettings(page);
     const settings = page.getByRole('region', { name: 'Settings' });
     await settings.getByRole('button', { name: 'Models & routing' }).click();
     await settings.getByRole('button', { name: 'Open model manager' }).click();

@@ -2,6 +2,7 @@
 // all accent palettes, and representative controls/fields/cards/menus/sheets.
 // QA_DIST=/tmp/build QA_SCREENSHOTS=/tmp/theme-shots node qa/theme-shape-material-492.cjs
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+const {openSettings}=require('./nav.cjs');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||`${os.homedir()}/noevia-local-test/node_modules/playwright-core`);
 const {createFixture}=require('./diary-fixture.cjs');
 const {withLocale}=require('./qa-locale.cjs');
@@ -61,7 +62,7 @@ async function radius(page,selector){return page.locator(selector).first().evalu
    await page.locator('.composer .model-pill').first().click();await page.locator('.mp-panel').waitFor();await page.waitForTimeout(320);
    check(await radius(page,'.mp-panel')===`${shape.surface}px`,`${name}: dialog/sheet radius`);await shot('sheet');await page.keyboard.press('Escape');
    if(await page.locator('.mp-panel').isVisible())await page.mouse.click(2,2);
-   await page.getByTitle('Settings',{exact:true}).first().click();
+   await openSettings(page);
    const settings=page.getByRole('region',{name:'Settings',exact:true});await settings.waitFor();
    const back=settings.getByRole('button',{name:'All settings',exact:true});if(await back.isVisible())await back.click();
    await settings.locator('.settings-navigation').getByRole('button',{name:'Appearance & language',exact:true}).click();

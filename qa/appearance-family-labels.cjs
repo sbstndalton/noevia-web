@@ -4,6 +4,7 @@
 // tile's name — ~200 characters of identical filler before the one word that actually
 // distinguishes the three. Offline: synthetic Settings only, no inference/storage/network.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
@@ -22,7 +23,7 @@ const { withLocale } = require('./qa-locale.cjs');
 
     await page.goto('http://localhost:31472');
     await page.getByPlaceholder('Message noevia…').waitFor();
-    await page.getByTitle('Settings', { exact: true }).click();
+    await openSettings(page);
     const dialog = page.getByRole('region', { name: 'Settings' });
     await dialog.getByRole('button', { name: 'Appearance & language', exact: true }).click();
     await dialog.getByRole('heading', { name: 'Appearance & language', level: 1 }).waitFor();

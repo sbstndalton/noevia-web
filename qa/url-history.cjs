@@ -10,6 +10,7 @@
 // (not found, no title); junk reached through history; sign-in returning to the deep link; the
 // phone drawer with Back.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 const path = require('node:path');
@@ -151,7 +152,7 @@ const nav = (page) => page.locator('#app-navigation');
     // ── Settings: open, change section, Escape, then Back through all of it
     await page.goto(`${ORIGIN}/c/${CHAT_A.id}`);
     await page.getByText('Synthetic alpha reply').waitFor();
-    await page.getByTitle('Settings', { exact: true }).click();
+    await openSettings(page);
     const settings = page.getByRole('region', { name: 'Settings', exact: true });
     await settings.waitFor();
     await atPath(page, '/settings/appearance', 'opening Settings gives it an address');

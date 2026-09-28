@@ -1,5 +1,6 @@
 // Real settings UI, deferred synthetic APIs; no backup or Google request leaves localhost.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert=require('node:assert/strict'),{createFixture}=require('./diary-fixture.cjs');
 const tick=p=>p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
 (async()=>{
@@ -20,7 +21,7 @@ const tick=p=>p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAni
     return r.fulfill(failPost?{status:500,json:{error:'Backup action failed'}}:{json:{ok:true}});
    }return r.continue();
   });
-  await page.goto(origin);await page.getByTitle('Settings',{exact:true}).click();const settings=page.getByRole('region',{name:'Settings',exact:true});
+  await page.goto(origin);await openSettings(page);const settings=page.getByRole('region',{name:'Settings',exact:true});
   await settings.getByRole('button',{name:'Backups',exact:true}).click();while(!initial)await tick(page);
   const button=name=>settings.getByRole('button',{name,exact:true});assert.equal(await button('Back up now').count(),0);await initial.fulfill({json:status(1)});
   const count=settings.locator('.set-row').filter({hasText:'Snapshots kept'}).locator('.set-row-value');

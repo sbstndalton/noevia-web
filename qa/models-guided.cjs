@@ -1,6 +1,7 @@
 // UI-only fixture for the guided model manager (#204): no real models, inference or storage.
 // Synthetic numbers in realistic ranges (a 9B Q5 hybrid model on a 32 GiB shared-memory GPU).
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 const OUT = process.env.QA_SCREENSHOTS || '/tmp';
@@ -47,7 +48,7 @@ const rows = [4096, 8192, 16384, 32768, 65536, 131072, 262144].map(ctx => ({ ctx
       return route.continue();
     });
     await page.goto('http://localhost:31351');
-    await page.getByTitle('Settings', { exact: true }).click();
+    await openSettings(page);
     const settings = page.getByRole('region', { name: 'Settings' });
     await settings.getByRole('button', { name: 'Models & routing' }).click();
     await settings.getByRole('button', { name: 'Open model manager' }).click();

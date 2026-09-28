@@ -1,5 +1,6 @@
 // Browser contract for native context calibration against synthetic APIs only.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
@@ -29,7 +30,7 @@ const {createFixture}=require('./diary-fixture.cjs');
  });
  await page.goto('http://localhost:31329');
  // Calibration lives in the model manager page (Settings → Models & routing → Open model manager), under a model's details.
- await page.getByTitle('Settings',{exact:true}).click();
+ await openSettings(page);
  await page.getByRole('button',{name:'Models & routing'}).click();
  await page.getByRole('button',{name:'Open model manager'}).click();
  await page.getByRole('article',{name:'synthetic/new-model:Q4_K_M'}).getByRole('button',{name:'Details'}).click();

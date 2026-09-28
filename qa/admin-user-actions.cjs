@@ -1,5 +1,6 @@
 // Synthetic admin and clipboard failures; never touches real accounts.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
@@ -22,7 +23,7 @@ const {createFixture}=require('./diary-fixture.cjs');
   if(p==='/api/admin/invitations'){invitations++;return route.fulfill(failLink?{status:500,json:{error:'Synthetic token failure'}}:{json:{token:'synthetic-invitation',expiresAt:1}});}
   return route.continue();
  });
- await page.goto(origin);await page.getByTitle('Settings',{exact:true}).click();
+ await page.goto(origin);await openSettings(page);
  const settings=page.getByRole('region',{name:'Settings',exact:true});await settings.getByRole('button',{name:'Users',exact:true}).click();
  const row=()=>settings.locator('.model-row').filter({hasText:'@member'});
  const alert=async text=>{const value=settings.locator('[role="alert"]');for(let i=0;i<60;i++){if((await value.allTextContents()).some(item=>item.includes(text)))return value;await page.waitForTimeout(50);}throw new Error(`Expected alert containing ${text}`);};

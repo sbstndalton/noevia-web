@@ -104,7 +104,12 @@ async function openPage(browser, width, prefs, extra) {
 }
 
 async function openSettings(page, title) {
-  await page.getByTitle(title, { exact: true }).first().click();
+  // #510: the chat header's sliders open the chat's own settings; Settings is in the account menu.
+  await page.locator('.account-trigger, .nav-drawer-toggle').filter({ visible: true }).first().waitFor();
+  const toggle = page.locator('.nav-drawer-toggle');
+  if (await toggle.isVisible()) await toggle.click();
+  await page.locator('.account-trigger').filter({ visible: true }).first().click();
+  await page.locator('.account-popover').getByRole('menuitem', { name: title, exact: true }).click();
   const settings = page.getByRole('region', { name: title, exact: true });
   await settings.waitFor();
   return settings;

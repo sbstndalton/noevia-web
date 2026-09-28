@@ -66,7 +66,10 @@ export function ComposerModeBar({ mode, messageCount, projectId, disabled, acces
           aria-checked={option === mode} aria-describedby={`${id}-${option}`} tabIndex={option === mode ? 0 : -1}
           disabled={disabled} onClick={() => choose(option)}>{MODE_LABELS[option].label}</button>)}
       </div>
-      <span className="composer-mode-harness" aria-live="polite">
+      {/* #510: data-caption lets a phone drop the plain "Runs a conversational reply" line while
+          keeping the Cowork repository choice and the "will send as chat" warning. */}
+      <span className="composer-mode-harness" aria-live="polite"
+        data-caption={decision.harness === 'cowork' ? 'cowork' : mode === 'cowork' && decision.reason ? 'fallback' : 'chat'}>
         {decision.harness === 'cowork'
           ? <>{t('mode.runsCoding')}{' '}
             {access.repositories.length > 1

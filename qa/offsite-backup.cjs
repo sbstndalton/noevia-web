@@ -1,6 +1,7 @@
 // D7: real app + a local fake S3 endpoint (never a real provider). Backup, retention and restore
 // test through the admin API and the Settings page; the fake store must never see plaintext.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),http=require('node:http'),crypto=require('node:crypto');
 const {spawn}=require('node:child_process');
 const PORT=31381,S3=31382,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'..'),shots=process.env.QA_SCREENSHOTS||'';
@@ -43,7 +44,7 @@ function fakeS3(objects){
   for(const width of [375,768,1440])for(const theme of ['light','dark']){
    await page.setViewportSize({width,height:width<768?812:900});
    await page.evaluate(t=>localStorage.setItem('cowork-theme',t),theme);await page.reload();
-   await page.getByTitle('Settings',{exact:true}).click();
+   await openSettings(page);
    const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
    await settings.getByRole('button',{name:'Backups',exact:true}).click();
    await settings.getByText('Last restore test').waitFor();

@@ -5,6 +5,7 @@
 // public/theme.js restores before paint, so the thing worth asserting is that
 // the attribute really changes the page and really survives a reload.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
 const {withLocale}=require('./qa-locale.cjs');
@@ -26,7 +27,7 @@ const {withLocale}=require('./qa-locale.cjs');
   return route.continue();
  });
  await page.goto('http://localhost:31356');
- await page.getByTitle('Settings',{exact:true}).click();
+ await openSettings(page);
  const dialog=page.getByRole('region',{name:'Settings'});
  // Opening Settings lands on General; Account keeps identity separate.
  await dialog.getByRole('button',{name:'Appearance & language',exact:true}).waitFor();

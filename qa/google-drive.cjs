@@ -2,6 +2,7 @@
 // device sign-in and uploads the encrypted store itself; the page only ever sees a code, the
 // account email and the copy's result. Real app, fake Google (qa/fake-google.cjs), synthetic data.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
 const {spawn}=require('node:child_process');
 const {startFakeGoogle}=require('./fake-google.cjs');
@@ -25,7 +26,7 @@ const PORT=31383,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
   await api('/api/profile/onboarding',{});
   assert.equal((await api('/api/admin/offsite-backup/run',{})).status,200);
   const open=async(width)=>{
-   await page.getByTitle('Settings',{exact:true}).click();
+   await openSettings(page);
    const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
    await settings.getByRole('button',{name:'Backups',exact:true}).click();
    await settings.getByText('Last restore test').waitFor();

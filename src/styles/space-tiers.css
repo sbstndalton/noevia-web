@@ -1,0 +1,84 @@
+/* #510: decluttering follows the space the window has, not the device (owner rule,
+   2026-09-28). A roomy window shows everything; as width OR height shrinks, low-value lines go
+   first, and only phone-sized space gets the full treatment. Viewport queries, not container
+   queries: tier 1 already starts at 1023px, which absorbs the sidebar's width, and the JS parts
+   (src/space-tier.ts) can then read the same queries with matchMedia. Keep the two in step.
+
+     Tier 0  >= 1024 wide and >= 760 tall   everything, identical to before #510
+     Tier 1  <  1024 wide or  <  760 tall   (max-width: 1023px), (max-height: 759px)
+             greeting subtitle, the plain "Runs a conversational reply" caption and the
+             healthy MCP line go; Recent chats shows 3 when narrow, none when short
+     Tier 2  <  768 wide  or  <  600 tall   (max-width: 767px), (max-height: 599px)
+             everything in tier 1, plus: composer on the bottom edge, no Recent chats, Tools in
+             the + menu (a badge on + counts toolboxes added for the next message), compact
+             model and Thinking pills, one ⋯ per project row (JS), quiet drawer search and New chat
+
+   Everything hidden stays reachable: Recent chats in the sidebar, Tools in the + menu, a
+   project's new chat in its ⋯ menu, the MCP summary in Settings → Service status (and any
+   problem still shows in the footer). Loads last, after families.css, because it lightens
+   controls the families restyle. */
+
+/* Defaults for the parts only tier 2 shows. */
+.app .composer-model .model-pill-short, .app .reasoning-pill .reasoning-pill-icon, .composer-add-badge { display: none; }
+.composer-add { position: relative; }
+@media (min-width: 768px) and (min-height: 600px) {
+  .composer-actions-panel .composer-browse-tools { display: none; }
+}
+
+/* ── Tier 1: constrained ──────────────────────────────────────────────────── */
+@media (max-width: 1023px), (max-height: 759px) {
+  .app .chat-workspace.is-empty .empty-state > p:not(.home-diagnostic) { display: none; }
+  .composer-mode-harness[data-caption='chat'] { display: none; }
+  .app .sidebar.pane .side-footer .mcp-row:not(.is-degraded) { display: none; }
+  .app .chat-workspace .home-recents li:nth-child(n + 4) { display: none; }
+}
+@media (max-height: 759px) {
+  .app .chat-workspace .home-recents { display: none; }
+}
+
+/* ── Tier 2: phone-sized ──────────────────────────────────────────────────── */
+@media (max-width: 767px), (max-height: 599px) {
+  /* Home: one greeting, then the composer (the bottom-edge layout is phone.css's chat surface,
+     which uses this same query). */
+  .app .chat-workspace .home-recents { display: none; }
+
+  /* Chat / Cowork is a small control of its own. The caption stays when it carries something
+     (the Cowork repository, or why a Cowork turn will go as chat) and may wrap under it. */
+  .composer-mode-bar { margin-bottom: 6px; gap: 6px; }
+  .composer-mode-row { flex-wrap: nowrap; gap: var(--space-2); }
+  .composer-mode-row:has(.composer-mode-harness:not([data-caption='chat'])) { flex-wrap: wrap; }
+  .composer-mode-harness { min-width: 0; }
+  .composer-mode-harness select { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .composer-mode-toggle button { padding: 0 var(--space-3); }
+  /* Tools opens from the composer's + menu; the catalogue still anchors to this spot. */
+  .composer-mode-row .tool-catalogue-trigger { display: none; }
+  .composer-add-badge {
+    display: grid; place-items: center; position: absolute; top: -2px; right: -2px;
+    min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+    background: var(--md-primary); color: var(--md-on-primary); font-size: var(--text-caption2); font-weight: 600; line-height: 1;
+  }
+
+  /* Composer pills: "Auto" for the Auto router, and Thinking as a symbol. */
+  .app .composer-model .model-pill-label.has-short { display: none; }
+  .app .composer-model .model-pill-short { display: inline-block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app .reasoning-pill .reasoning-pill-icon { display: inline-grid; place-items: center; color: var(--text-secondary); }
+  .app .reasoning-pill > .reasoning-pill-label { display: none; }
+  .app .reasoning-pill[data-level='inherit'] > .reasoning-pill-value { display: none; }
+  .app .reasoning-pill.glass { justify-content: center; min-width: 44px; padding-inline: 10px 8px; }
+
+  /* Sidebar: search and New chat are quiet rows, as in Claude. Width, not colour, for the
+     search border: noevia.css pins every field's border colour with !important. */
+  :root .app .sidebar.pane input.shell-search {
+    border-width: 0; padding: 10px 12px; background: var(--nav-hover); box-shadow: none; border-radius: var(--radius-control);
+  }
+  :root .app .sidebar.pane button.new-chat-btn.glass {
+    background: transparent; border-color: transparent; box-shadow: none;
+  }
+  :root .app .sidebar.pane button.new-chat-btn.glass:is(:hover, :active, :focus-visible) { background: var(--nav-hover); }
+  /* One ⋯ per project row; its menu carries "New chat in project" (Sidebar.tsx, tier 2). */
+  .app .sidebar.pane .proj-row .row-action-new { display: none; }
+}
+
+@media (max-width: 767px) and (pointer: coarse), (max-height: 599px) and (pointer: coarse) {
+  .composer-mode-toggle button { min-height: 44px; }
+}

@@ -18,10 +18,13 @@ const PERMISSION_LABEL: Record<CatalogueEntry['permission'], MessageKey> = {
  * next message only. Unavailable entries stay listed with their reason and cannot be chosen.
  * Keyboard: type to filter, arrows/Home/End to move, Enter to choose, Escape to close.
  */
-export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, onToggle, onMention, onBoxes, disabled }: {
+export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, onToggle, onMention, onBoxes, disabled, focusFallback }: {
   open: boolean; onOpenChange: (open: boolean) => void; projectId: string | null; mode: ChatMode;
   toggled: string[]; onToggle: (boxId: string) => void; onMention: (name: string) => void;
   onBoxes: (boxes: PermittedBox[]) => void; disabled: boolean;
+  /** #510: where focus goes on close when the trigger is not rendered (a phone opens the
+   *  catalogue from the composer's + menu and hides this trigger). */
+  focusFallback?: () => void;
 }): JSX.Element {
   const id = useId();
   const t = useT();
@@ -90,7 +93,11 @@ export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, on
   // move focus to the trigger FIRST, synchronously, while the input this call is racing against
   // still holds it — an ordinary focus handoff with a real relatedTarget, not a fall-to-<body>
   // — and only then unmount the panel.
-  const close = () => { trigger.current?.focus(); onOpenChange(false); };
+  const close = () => {
+    const button = trigger.current;
+    if (button && button.getClientRects().length) button.focus(); else focusFallback?.();
+    onOpenChange(false);
+  };
   const onKey = (event: KeyboardEvent<HTMLInputElement>) => {
     const last = rows.length - 1;
     if (event.key === 'ArrowDown') { event.preventDefault(); setActive(a => Math.min(last, a + 1)); }

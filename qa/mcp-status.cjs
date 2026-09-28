@@ -5,6 +5,7 @@
 // nothing naming what to set. On 2026-09-15 the live Compose file had lost
 // MCP_SERVERS and this card was the only surface that could have said so.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
@@ -24,7 +25,7 @@ const {createFixture}=require('./diary-fixture.cjs');
   return route.continue();
  });
  await page.goto('http://localhost:31347');
- await page.getByTitle('Settings',{exact:true}).click();
+ await openSettings(page);
  const dialog=page.getByRole('region',{name:'Settings'});
  await dialog.getByRole('button',{name:'Service status'}).click();
 

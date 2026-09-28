@@ -1,6 +1,6 @@
 // Bug hunt (area f): primary controls on touch screens are at least 44px in both dimensions (WCAG 2.5.5
 // enhanced / platform guidance). Synthetic APIs only.
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');const {navClick}=require('./nav.cjs');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');const {navClick,openSettings}=require('./nav.cjs');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
@@ -20,14 +20,8 @@ const {createFixture}=require('./diary-fixture.cjs');
    await page.locator('.project-card').first().click();await page.getByRole('tab',{name:/Chats/}).waitFor();
    found.push(...await measure(page,'.project-tabs [role=tab], .composer-add, .project-newchat, [aria-label="Thinking effort"]'));
    // A reload returns to where you were, so recovering by reloading lands back on the
-   // project rather than on a chat; go through the account menu instead.
-   await page.getByTitle('Settings',{exact:true}).first().click().catch(async()=>{
-    // The account menu lives in the rail, which is a drawer at phone widths.
-    const toggle=page.getByRole('button',{name:'Open navigation',exact:true});
-    if(await toggle.isVisible().catch(()=>false))await toggle.click();
-    await page.locator('.account-trigger').click();
-    await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
-   });
+   // project rather than on a chat; openSettings goes through the account menu.
+   await openSettings(page);
    const dialog=page.getByRole('region',{name:'Settings'});await dialog.waitFor();
    found.push(...await measure(page,'.settings-back, .settings-nav-head .shell-icon-button, .settings-detail > header .shell-icon-button'));
    const small=found.filter(f=>f.w<44||f.h<44).map(f=>`${f.sel} "${f.label}" ${f.w}x${f.h}`);

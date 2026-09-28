@@ -1,5 +1,6 @@
 // Dynamic theme family (was material) and accessibility preferences against synthetic APIs only.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
@@ -14,7 +15,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    await page.route('**/api/account/instructions',r=>r.fulfill({json:{text:'',style:'default',updatedAt:null,maxChars:4000}}));
    {let useProjectMemories=true;await page.route('**/api/account/memory',r=>{if(r.request().method()==='PUT')useProjectMemories=!!r.request().postDataJSON().useProjectMemories;return r.fulfill({json:{memories:[],useProjectMemories,updatedAt:null,maxItems:50,maxItemChars:300}});});}
    await page.goto('http://localhost:31452');await page.getByPlaceholder('Message noevia…').waitFor();
-   await page.getByTitle('Settings',{exact:true}).click();
+   await openSettings(page);
    const settings=page.getByRole('region',{name:'Settings',exact:true});
    const material=settings.getByRole('radiogroup',{name:'Theme family'});
    const motion=settings.getByRole('radiogroup',{name:'Motion'});

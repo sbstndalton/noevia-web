@@ -1,5 +1,6 @@
 // Synthetic Web address transport failures. The fixture is loopback only; no live settings change.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 
@@ -38,7 +39,7 @@ const admin = { id: 'synthetic-admin', username: 'fixture', displayName: 'Synthe
       });
 
       await page.goto('http://localhost:31457');
-      await page.getByTitle('Settings', { exact: true }).click();
+      await openSettings(page);
       const settings = page.getByRole('region', { name: 'Settings', exact: true });
       await settings.getByRole('button', { name: 'Web address', exact: true }).click();
       await settings.getByRole('alert').filter({ hasText: 'could not be loaded' }).waitFor();
@@ -86,7 +87,7 @@ const admin = { id: 'synthetic-admin', username: 'fixture', displayName: 'Synthe
       return route.fulfill({ json: original });
     });
     await page.goto('http://localhost:31457');
-    await page.getByTitle('Settings', { exact: true }).click();
+    await openSettings(page);
     const settings = page.getByRole('region', { name: 'Settings', exact: true });
     await settings.getByRole('button', { name: 'Web address', exact: true }).click();
     await requested;

@@ -15,6 +15,7 @@ import { buildSearchResults, matchingDestinations, searchResultKey } from '../si
 import type { SearchResultKind } from '../sidebar-search';
 import { fetchToolboxes, fetchProfile } from '../api';
 import type { McpStatus } from '../api';
+import { useSpaceTier } from '../space-tier';
 import { notifyWorkspaceChanged } from './data/workspace-changed';
 import { mcpFooterSummary } from '../mcp-summary';
 import { ShellIcon } from './ShellIcon';
@@ -147,6 +148,9 @@ export function Sidebar({
   // the CSS viewport a desktop browser reports, so matchMedia alone misses it. Honour the forced
   // layout the same way the stylesheet does.
   const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && (window.matchMedia('(max-width: 519px)').matches || document.documentElement.dataset.layout === 'mobile'));
+  // #510: in phone-sized space (tier 2) each project row keeps one ⋯ and its new-chat pencil
+  // moves into that menu.
+  const phoneRows = useSpaceTier() === 2;
   const drawer = useRef<HTMLDivElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
@@ -451,6 +455,7 @@ export function Sidebar({
   };
 
   const projectMenu = (p: Project): MenuItem[] => [
+    ...(phoneRows ? [{ label: t('sidebar.newChatInProject'), icon:<ShellIcon name="compose"/>, onSelect: () => { onNewProjectChat(p.id); setExpanded(false); } }] : []),
     ...manualItems(p),
     { label: t('sidebar.rename'), icon:<ShellIcon name="edit"/>, onSelect: () => startRename(p.id, p.name) },
     { label: t('sidebar.projectSettings'), icon:<ShellIcon name="settings"/>, onSelect: () => onEditProject(p.id) },
@@ -670,7 +675,7 @@ export function Sidebar({
 
               <div className="row-actions">
                 <button ref={el=>{if(el)optionsTriggers.current.set(p.id,el);else optionsTriggers.current.delete(p.id);}} className="row-action" aria-label={t('sidebar.optionsFor', { name: p.name })} aria-haspopup="menu" aria-expanded={menu?.kind==='project' && menu.id===p.id} onClick={e=>{closeHover();const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'project',id:p.id,projectId:null,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={22}/></button>
-                <button className="row-action" aria-label={t('sidebar.newChatIn', { name: p.name })} title={t('sidebar.newChatInProject')} onClick={()=>{onNewProjectChat(p.id);setExpanded(false);}}><ShellIcon name="compose" size={20}/></button>
+                <button className="row-action row-action-new" aria-label={t('sidebar.newChatIn', { name: p.name })} title={t('sidebar.newChatInProject')} onClick={()=>{onNewProjectChat(p.id);setExpanded(false);}}><ShellIcon name="compose" size={20}/></button>
               </div>
             </div>
             {openProjects[p.id] && <div className="project-children">

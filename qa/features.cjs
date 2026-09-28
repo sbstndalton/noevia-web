@@ -1,5 +1,6 @@
 // D5: preview surfaces follow features.previews, and the admin Features page toggles it. Synthetic APIs only.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
 const shots=process.env.QA_SCREENSHOTS||'';
@@ -24,7 +25,7 @@ const shots=process.env.QA_SCREENSHOTS||'';
    await page.goto('http://localhost:31341');
    await page.getByPlaceholder('Message noevia…').waitFor();
    assert.equal(await page.locator('.app-mode-switch').count(),0,`Code switch hidden by default ${width}`);
-   await page.getByTitle('Settings',{exact:true}).click();
+   await openSettings(page);
    const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
    await settings.getByRole('button',{name:'Features',exact:true}).click();
    const toggle=settings.getByRole('switch',{name:'Preview surfaces'});await toggle.waitFor();

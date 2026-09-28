@@ -20,6 +20,7 @@
 // column, and settings nav button labels are not clipped (full label text is present, not
 // ellipsis-truncated to a narrow icon-only column).
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
 const shots=process.env.QA_SCREENSHOTS||'/tmp/noevia-r11-shots';
@@ -37,7 +38,7 @@ require('node:fs').mkdirSync(shots,{recursive:true});
   await page.waitForFunction(()=>document.documentElement.dataset.layout==='mobile');
   const rootBox=await page.locator('#root').boundingBox();
   assert.ok(rootBox && rootBox.width<=430,`#root should be capped at 430px by the forced mobile preview, got ${rootBox&&rootBox.width}`);
-  await page.getByTitle('Settings',{exact:true}).click();
+  await openSettings(page);
   const d=page.getByRole('region',{name:'Settings'});await d.waitFor();
   // The fix under test: SettingsShell's phone() now honours data-layout, so it opens on the
   // single 'list' pane like a real phone instead of jumping straight to 'detail'.
@@ -90,7 +91,7 @@ require('node:fs').mkdirSync(shots,{recursive:true});
   const autoPage=await autoCtx.newPage();autoPage.on('pageerror',e=>errors.push(e.message));
   await autoPage.goto('http://localhost:31411');await autoPage.getByPlaceholder('Message noevia…').waitFor();
   assert.notEqual(await autoPage.evaluate(()=>document.documentElement.dataset.layout),'mobile','Automatic mode must never set data-layout="mobile"');
-  await autoPage.getByTitle('Settings',{exact:true}).click();
+  await openSettings(autoPage);
   const autoD=autoPage.getByRole('region',{name:'Settings'});await autoD.waitFor();
   assert.equal(await autoD.getAttribute('data-view'),'detail','desktop Settings still opens straight on the two-pane detail view outside the forced mobile preview');
   await autoD.getByRole('button',{name:'Appearance & language',exact:true}).click();

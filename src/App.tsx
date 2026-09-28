@@ -1537,6 +1537,7 @@ export default function App(): JSX.Element {
           onBack={activeProject ? () => setView({ kind: 'project', id: activeProject.id }) : null}
           onOpenModels={() => setPopupOpen(true)}
           onOpenSettings={() => openSettings()}
+          onEditProject={setEditingProjectId}
           recent={view.projectId ? undefined : recentChats(allChats).filter((c) => c.id !== view.chatId).slice(0, 5).map((c) => ({ id: c.id, title: c.title, projectId: c.projectId ?? null, projectName: c.projectId ? projects.find((p) => p.id === c.projectId)?.name ?? null : null, updatedAt: c.updatedAt }))}
           onOpenRecent={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
         />

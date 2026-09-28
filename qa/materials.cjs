@@ -2,7 +2,7 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {createFixture}=require('./diary-fixture.cjs');
-const {navClick}=require('./nav.cjs');
+const {navClick,openSettings}=require('./nav.cjs');
 const {withLocale}=require('./qa-locale.cjs');
 const output=process.env.QA_SCREENSHOTS||'/tmp/noevia-material-audit';
 const modes=['editorial','glass','contemporary']; // theme families (#249), formerly soft/liquid/material
@@ -47,7 +47,7 @@ const sections=process.env.QA_SECTIONS?.split('|')||['Appearance & language','As
    if(width!==768)await page.screenshot({path:path.join(output,`${width}-${theme}-${material}-${surface.replace(/[^a-z0-9]+/gi,'-')}.png`)});
   };
   await inspect('Chat');
-  await page.getByTitle('Settings',{exact:true}).click();
+  await openSettings(page);
   const settings=page.getByRole('region',{name:'Settings',exact:true});await settings.waitFor();
   for(const section of sections){
    const back=settings.getByRole('button',{name:'All settings',exact:true});if(await back.isVisible())await back.click();

@@ -1,5 +1,6 @@
 // A8/HIG: appearance follows the device by default, can be pinned, and System tracks live changes.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {openSettings}=require('./nav.cjs');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
 const shots=process.env.QA_SCREENSHOTS||'';
@@ -16,7 +17,7 @@ const shots=process.env.QA_SCREENSHOTS||'';
    const mode=()=>page.evaluate(()=>[document.documentElement.dataset.theme,document.documentElement.dataset.themePreference]);
    assert.deepEqual(await mode(),['light','system'],'a new browser follows a light device');
    await page.emulateMedia({colorScheme:'dark'});await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
-   await page.getByTitle('Settings',{exact:true}).click();
+   await openSettings(page);
    const d=page.getByRole('region',{name:'Settings'});await d.waitFor();
    await d.getByRole('button',{name:'Appearance & language',exact:true}).click();
    const system=d.getByRole('button',{name:'System'});await system.waitFor();
