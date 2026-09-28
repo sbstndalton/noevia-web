@@ -142,6 +142,8 @@ export interface Provider {
   managed?: boolean;
   shared?: boolean;
   defaultModel?: string;
+  /** The person's stated context window in tokens (#536); absent means the server default. */
+  contextTokens?: number;
   /** Sign in with ChatGPT (#447): the account's own private connection, sent to an external service. */
   kind?: 'chatgpt-oauth';
   external?: boolean;

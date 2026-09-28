@@ -2272,3 +2272,10 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
    long search placeholder ends in an ellipsis instead of being cut mid-word. */
 .settings-navigation h2 .settings-nav-badge { white-space: normal; flex: 0 1 auto; min-width: 0; text-align: center; }
 .settings-search input { text-overflow: ellipsis; }
+
+/* Providers: edit in place (#535). The row's Edit and Remove buttons stay together at the end of
+   the row (on narrow widths too, where a lone button takes margin-left:auto), and the edit form
+   sits directly under its row, inset to line up with the row's text. */
+.settings-detail .provider-row-actions { display: flex; align-items: center; gap: var(--space-1); flex-shrink: 0; margin-left: auto; }
+.settings-detail .provider-edit { padding: var(--space-2) var(--space-4) var(--space-4); min-width: 0; }
+.settings-detail .provider-edit .route-note { margin: 0; }

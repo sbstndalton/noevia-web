@@ -232,10 +232,15 @@ export function fetchProviders(): Promise<{ providers: Provider[] }> {
   return getJson<unknown>('/api/providers').then(parseProviders);
 }
 
-export function createProvider(body: { label: string; baseUrl: string; apiKey?: string; defaultModel?: string; shared?: boolean }): Promise<Provider> {
+export function createProvider(body: { label: string; baseUrl: string; apiKey?: string; defaultModel?: string; shared?: boolean; contextTokens?: number | null }): Promise<Provider> {
   return postJson('/api/providers', body);
 }
-export function testProvider(body: { baseUrl: string; apiKey?: string }): Promise<{ ok: true; models: string[] }> { return postJson('/api/providers/test', body); }
+/** Edit in place (#535). Leave `apiKey` out to keep the stored key; `contextTokens: null` clears it. */
+export function updateProvider(id: string, body: { label: string; baseUrl: string; apiKey?: string; defaultModel: string; contextTokens: number | null }): Promise<Provider> {
+  return putJson(`/api/providers/${encodeURIComponent(id)}`, body);
+}
+/** `providerId` lets the server probe with that provider's stored key (same origin only) when none is typed. */
+export function testProvider(body: { baseUrl: string; apiKey?: string; providerId?: string }): Promise<{ ok: true; models: string[] }> { return postJson('/api/providers/test', body); }
 
 // Sign in with ChatGPT (#447). The server answers 404 on all of these while the feature is off.
 export const fetchChatGptStatus = (): Promise<ChatGptStatus> => getJson('/api/providers/chatgpt');

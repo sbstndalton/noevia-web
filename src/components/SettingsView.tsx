@@ -5,7 +5,7 @@ import DiarySharing from './DiarySharing';
 import DiaryConnectors from './DiaryConnectors';
 import AppPasswords from './AppPasswords';
 import { ModelsSummary } from './models/ModelsSummary';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import type { HealthState, InstalledModel, LiveStats, Project, Provider, RouteRule } from '../types';
 import { createInvitation, createRecovery, deleteProvider, deleteUser, fetchProfile, fetchProviders, fetchUsers, logout, passkeyRegistrationOptions, passkeyRegistrationVerify, removePasskey, revokeSession, setUserDisabled, updateFeatures } from '../api';
@@ -302,6 +302,10 @@ function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [removing, setRemoving] = useState<string | null>(null);
+  // #535: the row being edited in place (its id), and whether this account may edit shared rows.
+  const [editing, setEditing] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const editRefs = useRef(new Map<string, HTMLElement>());
   // #446: neither Cancel nor a successful add moved focus anywhere, so when the form (or the
   // Cancel button inside it) unmounted, focus fell through to <body>. `connectButtonRef` is the
   // "Connect a provider" button Cancel should return to; `rowRefs` lets a successful add land on
@@ -317,6 +321,12 @@ function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
     finally { setLoading(false); }
   };
   useEffect(() => { void refresh(); }, []);
+  // The server is the authority (a member's PUT on a shared row is 403); this only hides the button.
+  useEffect(() => { fetchProfile().then((p) => setIsAdmin(p.user.role === 'admin'), () => setIsAdmin(false)); }, []);
+  const canEdit = (p: Provider) => !p.isDefault && p.kind !== 'chatgpt-oauth' && (!p.shared || isAdmin);
+  const focusEdit = (id: string) => afterLayoutSettles(() => {
+    pickFocusable<HTMLElement>(editRefs.current.get(id) ?? null, connectButtonRef.current)?.focus({ preventScroll: true });
+  });
 
   const remove = async (id: string) => {
     setRemoving(id); setErr(null);
@@ -337,7 +347,8 @@ function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
       <div className="card-list">
         {/* #447: a ChatGPT connection is shown once, as the Sign in with ChatGPT card below. */}
         {providers.filter((p) => p.kind !== 'chatgpt-oauth').map((p) => (
-          <div key={p.id} className="model-row">
+          <Fragment key={p.id}>
+          <div className="model-row">
             {/* #404: the dot was hard-coded green for every provider, connected or not. The
                 default provider is the one `/api/health` actually probes (the same signal
                 Service status and the model picker already show as `model-dot`/`down`), so it
@@ -354,12 +365,36 @@ function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
             ) : (
               <>
                 {p.apiKeyMasked && <span className="model-quant">{t('providers.keyHint', { key: p.apiKeyMasked })}</span>}
-                <button ref={(el) => { if (el) rowRefs.current.set(p.id, el); else rowRefs.current.delete(p.id); }} className="recents-del" title={t('providers.remove')} aria-label={t('providers.removeNamed', { name: p.label })} disabled={loading || !!removing} onClick={() => void remove(p.id)}>
-                  {removing === p.id ? t('providers.removing') : <ShellIcon name="close" size={16}/>}
-                </button>
+                {p.contextTokens && <span className="model-quant">{t('providers.contextHint', { tokens: p.contextTokens.toLocaleString(appLocale()) })}</span>}
+                <span className="provider-row-actions">
+                  {canEdit(p) && (
+                    <button ref={(el) => { if (el) editRefs.current.set(p.id, el); else editRefs.current.delete(p.id); }} className="recents-del" title={t('providers.edit')} aria-label={t('providers.editNamed', { name: p.label })} aria-expanded={editing === p.id} disabled={loading || !!removing} onClick={() => setEditing(editing === p.id ? null : p.id)}>
+                      <ShellIcon name="pencil" size={16}/>
+                    </button>
+                  )}
+                  <button ref={(el) => { if (el) rowRefs.current.set(p.id, el); else rowRefs.current.delete(p.id); }} className="recents-del" title={t('providers.remove')} aria-label={t('providers.removeNamed', { name: p.label })} disabled={loading || !!removing} onClick={() => void remove(p.id)}>
+                    {removing === p.id ? t('providers.removing') : <ShellIcon name="close" size={16}/>}
+                  </button>
+                </span>
               </>
             )}
           </div>
+          {editing === p.id && canEdit(p) && (
+            <div className="provider-edit" role="group" aria-label={t('providers.editNamed', { name: p.label })}>
+              <ProviderForm
+                key={p.id}
+                autoFocus
+                provider={p}
+                cancelLabel={t('common.cancel')}
+                onCancel={() => { setEditing(null); focusEdit(p.id); }}
+                onSaved={() => {
+                  setEditing(null);
+                  void refresh().then(() => focusEdit(p.id));
+                }}
+              />
+            </div>
+          )}
+          </Fragment>
         ))}
       </div>
 
