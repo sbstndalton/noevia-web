@@ -160,7 +160,7 @@
   color: var(--md-primary); border-bottom-color: transparent;
 }
 [data-family='contemporary'] .projects-head .seg button.is-selected::after {
-  content: ''; position: absolute; left: 0; right: 0; bottom: 0; block-size: 3px; border-radius: 3px 3px 0 0; background: var(--md-primary);
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; block-size: 3px; border-radius: var(--radius-pill) var(--radius-pill) 0 0; background: var(--md-primary);
 }
 [data-family='contemporary'] .projects-head {
   border-bottom-color: var(--md-outline-variant);
@@ -200,7 +200,7 @@
   background: var(--md-surface-container-low); border-radius: var(--radius-surface) var(--radius-surface) 0 0;
 }
   [data-family='contemporary'] :is(.confirm-dialog, .dialog-sheet)::before, [data-family='contemporary'] .dialog-grabber {
-  border-radius: 2px; background: var(--md-on-surface-variant); opacity: .4;
+  border-radius: var(--radius-pill); background: var(--md-on-surface-variant); opacity: .4;
 }
 }
 

@@ -106,7 +106,7 @@
 /* Task items get a real checkbox instead of a bullet/number. */
 .markdown-preview .md-list li.md-task { list-style:none; }
 .md-task-label { display:inline-flex; align-items:flex-start; gap:6px; cursor:default; }
-.md-task-box { appearance:none; -webkit-appearance:none; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; margin:3px 0 0; border:1.5px solid var(--control-border); border-radius:4px; color:var(--accent-ink); }
+.md-task-box { appearance:none; -webkit-appearance:none; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; margin:3px 0 0; border:1.5px solid var(--control-border); border-radius:var(--radius-mark); color:var(--accent-ink); }
 .md-task-box:checked { background:var(--nav-active); border-color:var(--control-border); }
 .md-task-box:checked::after { content:'✓'; font-size:var(--text-caption2); line-height:1; }
 .md-task-done { color:var(--text-secondary); }

@@ -116,8 +116,9 @@ const DISPLAY = { editorial: 'Fraunces', contemporary: 'Geist', glass: 'Sora' };
       await shot('menu');
       await page.keyboard.press('Escape');
 
-      // A sheet: the model picker (a dialog on desktop, a bottom sheet on phones).
-      await page.locator('.composer .model-pill').first().click();
+      // A sheet: the model picker (a dialog on desktop, a bottom sheet on phones). #529: the
+      // phone composer's compact model button (#527) is .composer-model without .model-pill.
+      await page.locator('.composer .composer-model').first().click();
       const sheet = page.locator('.mp-panel');
       await sheet.waitFor();
       await page.waitForTimeout(400);

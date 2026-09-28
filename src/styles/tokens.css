@@ -546,6 +546,9 @@
   --radius-lg: var(--radius-overlay);
   --radius-xl: var(--radius-surface);
   --radius-2xl: var(--radius-surface);
+  /* Data marks and inline highlights smaller than a control (usage cells, chart swatches, a
+     search match, a task checkbox): a quarter of the family's control corner (#529). */
+  --radius-mark: max(2px, calc(var(--radius-control) / 4));
   /* Circles (avatars, send/add), status chips, switches and their knobs retain geometry. */
   --radius-pill: 999px;
 

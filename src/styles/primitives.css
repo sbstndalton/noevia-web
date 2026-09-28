@@ -171,7 +171,7 @@ button.connector-card:focus-visible { outline: 2px solid var(--focus-ring); outl
 .connector-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .connector-text b { font-size: var(--text-callout); font-weight: 600; }
 .connector-text small { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--text-secondary); font-size: var(--text-footnote); }
-.logo { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 12px; background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary); }
+.logo { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: var(--radius-control); background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary); }
 
 .crumb-link { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 6px; margin-left: -6px; border: 0; border-radius: var(--radius-sm); background: none;
   color: var(--text-secondary); font: inherit; font-size: var(--text-footnote); cursor: pointer; }

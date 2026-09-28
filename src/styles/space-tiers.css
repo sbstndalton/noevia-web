@@ -60,7 +60,7 @@
   .composer-mode-row .tool-catalogue-trigger { display: none; }
   .composer-add-badge {
     display: grid; place-items: center; position: absolute; top: -2px; right: -2px;
-    min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+    min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--radius-pill);
     background: var(--md-primary); color: var(--md-on-primary); font-size: var(--text-caption2); font-weight: 600; line-height: 1;
   }
 
@@ -73,13 +73,16 @@
   .app .reasoning-pill.glass { justify-content: center; min-width: 44px; padding-inline: 10px 8px; }
 
   /* Sidebar: search and New chat are quiet rows, as in Claude. Width, not colour, for the
-     search border: noevia.css pins every field's border colour with !important. */
+     search border: noevia.css pins every field's border colour with !important. #529: search
+     keeps the field corner and New chat, now a row, the rows' corner (Contemporary's rows are
+     pills, families.css), instead of Contemporary's 16px FAB corner on a flat row. */
   :root .app .sidebar.pane input.shell-search {
-    border-width: 0; padding: 10px 12px; background: var(--nav-hover); box-shadow: none; border-radius: var(--radius-control);
+    border-width: 0; padding: 10px 12px; background: var(--nav-hover); box-shadow: none; border-radius: var(--radius-input);
   }
   :root .app .sidebar.pane button.new-chat-btn.glass {
-    background: transparent; border-color: transparent; box-shadow: none;
+    background: transparent; border-color: transparent; box-shadow: none; border-radius: var(--radius-control);
   }
+  :root[data-family='contemporary'] .app .sidebar.pane button.new-chat-btn.glass { border-radius: var(--radius-button); }
   :root .app .sidebar.pane button.new-chat-btn.glass:is(:hover, :active, :focus-visible) { background: var(--nav-hover); }
   /* One ⋯ per project row; its menu carries "New chat in project" (Sidebar.tsx, tier 2). */
   .app .sidebar.pane .proj-row .row-action-new { display: none; }
@@ -120,10 +123,11 @@
     color: var(--text-secondary); font-size: var(--text-caption); line-height: 1.35; overflow-wrap: anywhere;
   }
 
-  /* One line tall until you type, then it grows (ComposerTextarea) up to about six lines. */
+  /* One line tall until you type, then it grows (ComposerTextarea) up to about six lines. The
+     card keeps the family's surface corner, like the composer at every other size (#529). */
   .app .chat-workspace .composer-inner.chat-composer-inner.is-compact {
     grid-template-columns: auto auto minmax(0, 1fr) auto; column-gap: 2px; row-gap: 0;
-    padding: 2px 6px 4px; align-items: center; border-radius: 24px;
+    padding: 2px 6px 4px; align-items: center; border-radius: var(--radius-surface);
   }
   .chat-composer-inner.is-compact > .composer-input {
     grid-column: 1 / -1; grid-row: 1; min-height: 0; max-height: 160px; padding: 10px 10px 4px; line-height: 1.5;
@@ -139,17 +143,26 @@
   /* Chat / Cowork as a chip: the chosen mode by name, the other as a symbol. Each is a 44px
      target; the chip itself is drawn 30px tall inside it. */
   .composer-mode-toggle.is-compact { display: inline-flex; align-self: center; padding: 0; gap: 0; border: 0; background: transparent; }
-  /* No sliding thumb (system.css): the chosen chip draws its own background. */
+  /* No sliding thumb (system.css): the two chips differ in width, so the chosen one draws its
+     own highlight. #529: the highlight is a pseudo-element with the family's control corner (a
+     30px band painted inside the 44px button showed square corners), and it fades and settles
+     into the newly chosen chip on the considered token instead of jumping. Reduced motion
+     removes the transition (motion.css); the label colour and weight still change at once. */
   .composer-mode-toggle.is-compact::before { content: none; }
   .composer-mode-toggle.is-compact button {
+    position: relative; isolation: isolate;
     display: inline-flex; align-items: center; justify-content: center; gap: 5px;
-    min-width: 44px; min-height: 44px; padding: 0 9px; border-radius: 10px;
+    min-width: 44px; min-height: 44px; padding: 0 9px;
     background: transparent; color: var(--text-secondary); font-size: var(--text-footnote); font-weight: 500;
   }
-  .composer-mode-toggle.is-compact button[aria-checked='true'] {
-    color: var(--text-primary);
-    background: linear-gradient(var(--nav-hover), var(--nav-hover)) center / 100% 30px no-repeat;
+  .composer-mode-toggle.is-compact button::before {
+    content: ''; position: absolute; z-index: -1; inset: 7px 0; pointer-events: none;
+    border-radius: var(--radius-control); background: var(--nav-hover);
+    opacity: 0; transform: scale(.92);
+    transition: opacity var(--motion-considered) var(--ease-considered), transform var(--motion-considered) var(--ease-considered);
   }
+  .composer-mode-toggle.is-compact button[aria-checked='true'] { color: var(--text-primary); }
+  .composer-mode-toggle.is-compact button[aria-checked='true']::before { opacity: 1; transform: none; }
   .composer-mode-toggle.is-compact button[aria-checked='false'] .composer-mode-name {
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
   }
@@ -158,7 +171,7 @@
   /* Model and thinking: plain text, no pill. */
   .app .composer-model.is-compact {
     display: inline-flex; align-items: center; gap: 5px; min-width: 44px; min-height: 44px; max-width: 100%;
-    padding: 0 8px; border: 0; border-radius: 10px; background: transparent; box-shadow: none;
+    padding: 0 8px; border: 0; border-radius: var(--radius-control); background: transparent; box-shadow: none;
     color: var(--text-secondary); font: 500 var(--text-footnote)/1.2 var(--font-ui); white-space: nowrap; cursor: pointer;
   }
   .app .composer-model.is-compact:hover:not(:disabled), .app .composer-model.is-compact:active { background: var(--nav-hover); }

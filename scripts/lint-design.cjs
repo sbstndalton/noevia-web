@@ -24,6 +24,12 @@
 //                  instead of var(--scrim) / var(--scrim-blur) (#346), so Reduce transparency
 //                  and Increase contrast cannot flatten it from one place. Family/theme overlays
 //                  ([data-family], :has(), :root:not()) on an already-tokenized base rule are exempt.
+//   radius-token   a border-radius (or a corner longhand) that does not come from the shape tokens
+//                  (#529), so one family's corners drift apart. Each corner value must be
+//                  var(--radius-*) with no literal fallback, a calc()/max()/min()/clamp() built on
+//                  a --radius-* token (a concentric inset), or one of RADIUS_ALLOW: 0 (square),
+//                  50% (circle), 999px (pill; prefer var(--radius-pill)) and inherit.
+//                  tokens.css and themes.css define the tokens and are exempt.
 // Silence a deliberate case on the line itself or the line above:  /* design-lint: allow <rule> — reason */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -40,6 +46,25 @@ function* files(target) {
 // Mirrors the --text-* tokens in src/styles/tokens.css (HIG text styles, sized for the web).
 const TYPE_SCALE = new Set([11, 12, 13, 14, 15, 16, 17, 20, 22, 26, 32, 40, 52]);
 const WEIGHTS = new Set(['400', '500', '600', '700', 'normal', 'bold', 'inherit']);
+// #529: the only literal corners a component may write. Everything else reads a --radius-* role.
+const RADIUS_ALLOW = new Set(['0', '0px', '50%', '999px', 'inherit']);
+const RADIUS_DECL = /(?<![-\w])(border(?:-(?:top|bottom)-(?:left|right)|-(?:start|end)-(?:start|end))?-radius)\s*:\s*([^;}]*)/g;
+
+/** The corner values of a border-radius declaration that do not come from the shape tokens. */
+function untokenizedRadii(value) {
+  const parts = [];
+  let depth = 0, current = '';
+  for (const ch of value.replace(/!important/, '').trim()) {
+    if (ch === '(') depth++;
+    if (ch === ')') depth--;
+    if (depth === 0 && (/\s/.test(ch) || ch === '/')) { if (current) parts.push(current); current = ''; continue; }
+    current += ch;
+  }
+  if (current) parts.push(current);
+  return parts.filter((part) => !(RADIUS_ALLOW.has(part)
+    || /^var\(\s*--radius-[\w-]+\s*\)$/.test(part)
+    || (/^(calc|max|min|clamp)\(/.test(part) && /var\(\s*--radius-[\w-]+\s*\)/.test(part) && !/var\(\s*--radius-[\w-]+\s*,/.test(part))));
+}
 
 function lint(text, file = '') {
   const findings = [];
@@ -82,6 +107,12 @@ function lint(text, file = '') {
     }
     for (const m of line.matchAll(/--[\w-]*weight[\w-]*\s*:\s*([\w]+)/g)) {
       if (!WEIGHTS.has(m[1])) push('font-weight', `weight token ${m[1]}; use 400, 500, 600 or 700`);
+    }
+    if (/\.css$/.test(file) && !/(^|\/)(tokens|themes)\.css$/.test(file)) {
+      for (const m of line.matchAll(RADIUS_DECL)) {
+        const bad = untokenizedRadii(m[2]);
+        if (bad.length) push('radius-token', `${m[1]}: ${m[2].trim().slice(0, 50)} hard-codes ${bad.join(' ')}; use a --radius-* token (0, 50%, 999px and inherit are the only literals)`);
+      }
     }
     // motion.css owns the reduced-motion floor (1ms) and documents the rules in prose.
     if (/\.css$/.test(file) && !/(^|\/)motion\.css$/.test(file)) {
@@ -127,4 +158,4 @@ if (require.main === module) {
   process.exitCode = all.length ? 1 : 0;
 }
 
-module.exports = { lint, undefinedTokens, TYPE_SCALE };
+module.exports = { lint, undefinedTokens, untokenizedRadii, TYPE_SCALE, RADIUS_ALLOW };

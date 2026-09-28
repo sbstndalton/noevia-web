@@ -8,6 +8,16 @@
    with --ease-quick, move on screen with --ease-considered, loop with --ease-async; motion is
    never the only signal — every state it accompanies also changes text, colour or an icon. */
 
+/* The travel parameters belong to the element that animates, never to its descendants (#529).
+   As ordinary custom properties they inherited: the phone drawer and bottom sheet slide without
+   fading (--enter-opacity: 1), so every menu, popover and toast drawn inside them inherited
+   "don't fade" and entered with a 3px nudge and no visible motion, and an element that set no
+   --enter-from of its own would have inherited its container's full-width slide. Registered as
+   non-inherited, each element reads its own value or the keyframe's fallback. */
+@property --enter-from { syntax: '*'; inherits: false; }
+@property --enter-opacity { syntax: '<number>'; inherits: false; initial-value: 0; }
+@property --exit-to { syntax: '*'; inherits: false; }
+
 /* 1. Enter — menus, popovers, tooltips, dialogs, sheets, drawers, pages, the inspector.
    Only a `from` frame, so the element ends on its own transform (the rail tooltip keeps its
    translateY(-50%)). --enter-from sets the travel; --enter-opacity 1 makes it slide only. */

@@ -1,6 +1,7 @@
 // #492/#493: real app, synthetic routes only. Chrome runs every family × mode × width,
 // all accent palettes, and representative controls/fields/cards/menus/sheets.
 // QA_DIST=/tmp/build QA_SCREENSHOTS=/tmp/theme-shots node qa/theme-shape-material-492.cjs
+// #529: the model control is .composer-model; the phone composer's compact button (#527) is not a .model-pill.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const {openSettings}=require('./nav.cjs');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||`${os.homedir()}/noevia-local-test/node_modules/playwright-core`);
@@ -32,7 +33,7 @@ async function radius(page,selector){return page.locator(selector).first().evalu
     await shot(`home-${palette}`);
    }
    await page.evaluate(()=>document.documentElement.dataset.palette='iris');
-   for(const [selector,role] of [['.composer-inner','surface'],['.composer-mode-toggle','button'],['.tool-catalogue-trigger','button'],['.composer .model-pill','control']]){
+   for(const [selector,role] of [['.composer-inner','surface'],['.composer-mode-toggle','button'],['.tool-catalogue-trigger','button'],['.composer .composer-model','control']]){
     const actual=await radius(page,selector);check(actual===`${shape[role]}px`,`${name} ${selector}: ${role} role`,actual);
    }
    // A token perturbation proves propagation, rather than only checking coincidental pixels.
@@ -59,7 +60,7 @@ async function radius(page,selector){return page.locator(selector).first().evalu
     await cdp.send('Emulation.setEmulatedMedia',{features:[]});await cdp.detach();
    }
    await page.keyboard.press('Escape');
-   await page.locator('.composer .model-pill').first().click();await page.locator('.mp-panel').waitFor();await page.waitForTimeout(320);
+   await page.locator('.composer .composer-model').first().click();await page.locator('.mp-panel').waitFor();await page.waitForTimeout(320);
    check(await radius(page,'.mp-panel')===`${shape.surface}px`,`${name}: dialog/sheet radius`);await shot('sheet');await page.keyboard.press('Escape');
    if(await page.locator('.mp-panel').isVisible())await page.mouse.click(2,2);
    await openSettings(page);
