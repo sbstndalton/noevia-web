@@ -45,11 +45,6 @@
 .app .sidebar.pane .new-chat-btn.glass::before, .app .sidebar.pane .new-chat-btn.glass::after { display: none !important; }
 .app .sidebar.pane .new-chat-btn.glass:hover { background: var(--bg-surface-hover); }
 .app .sidebar.pane .new-chat-btn.glass:active { background: var(--bg-surface-active); transform: scale(.98); }
-.app .sidebar.pane .side-new { background: var(--bg-chrome); }
-/* The sticky New chat strip is chrome: only Glass blurs what scrolls under it. */
-:root:not([data-family='glass']) .app .sidebar.pane .side-new { backdrop-filter: none; -webkit-backdrop-filter: none; }
-.app .sidebar.pane:not(.is-collapsed) .side-new::after { background: linear-gradient(var(--bg-chrome), transparent); }
-
 /* ── Composer: raised ─────────────────────────────────────────────────────────
    Every composer (chat, project, and the Diary dock, which already followed the material) is
    the same raised surface. */

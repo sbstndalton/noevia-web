@@ -84,9 +84,11 @@
 
 /* ── The sidebar is one scrolling plane, like ChatGPT's (user review, 2026-09-18) ──
    Top destinations (New chat, Projects, Diary, Plugins), then Projects, Pinned and
-   Recent chats as flat labelled lists, all in one surface that scrolls together. Only
-   the account row stays pinned to the bottom edge. No nested scrollers, no tree lines. */
-.app .sidebar.pane { overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; scroll-padding-bottom: calc(var(--side-foot-h) + 16px); }
+   Recent chats as flat labelled lists, all in one surface that scrolls together. The
+   account row sits outside the scroller, so rows never paint behind it. No nested scrollers, no tree lines. */
+.app .sidebar.pane { overflow: hidden; }
+.app .sidebar.pane .sidebar-scroll { display: flex; flex-direction: column; gap: var(--space-1); flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; scroll-padding-block: var(--space-2); }
+.app .sidebar.pane .sidebar-scroll > * { flex-shrink: 0; }
 .app .sidebar.pane > * { flex-shrink: 0; }
 .app .sidebar.pane .sidebar-history { display: flex; flex-direction: column; gap: 0; flex: none; overflow: visible; margin-bottom: var(--space-3); }
 .app .sidebar.pane .sidebar-history .side-scroll { overflow: visible; max-height: none; }
@@ -98,18 +100,16 @@
 /* Recent chats are a flat list like the others: no indent, no tree line. */
 .app .sidebar.pane .recent-children { margin-left: 0; padding-left: 0; border-left: 0; }
 /* The account row holds the bottom edge; short content leaves it at the bottom too. */
-.app .sidebar.pane { --side-foot-h: 60px; }
 .app .sidebar.pane .side-footer {
-  position: sticky; bottom: 0; z-index: 1; margin-top: auto;
+  position: relative; z-index: 1; margin-top: auto;
   min-height: 60px; padding-bottom: env(safe-area-inset-bottom);
   border-top: 1px solid var(--border-subtle);
-  background: var(--pane-fill); backdrop-filter: blur(var(--pane-blur)); -webkit-backdrop-filter: blur(var(--pane-blur));
+  background: transparent;
 }
-/* The footer owns the rail's bottom inset, so nothing scrolls past underneath it. */
+/* The footer owns the rail's bottom inset. */
 .app .sidebar.pane:not(.coding-sidebar):not(.is-collapsed) { padding-bottom: 0; }
 .app .sidebar.pane:not(.coding-sidebar):not(.is-collapsed) .side-footer { padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom)); }
 .app .sidebar.pane.is-expanded .side-footer { padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom)); }
-[data-family='editorial'] .app .sidebar.pane .side-footer { background: var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; }
 
 /* ── The accent palettes (Settings → General) ───────────────────────────
    Each tile carries its own `data-palette`, so the swatch is drawn by the very
@@ -135,15 +135,20 @@
 /* A short screen has no room to reserve two rows at the bottom: the sticky panes would
    sit on top of the list they are meant to sit below. There, everything scrolls. */
 @media (max-height: 600px) {
-  .app .sidebar.pane .side-footer { position: static; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .app .sidebar.pane { overflow-y: auto; }
+  .app .sidebar.pane .sidebar-scroll { display: contents; }
+  .app .sidebar.pane .side-footer { position: static; }
 }
-[data-short-viewport] .app .sidebar.pane .side-footer { position: static; backdrop-filter: none; -webkit-backdrop-filter: none; }
+[data-short-viewport] .app .sidebar.pane { overflow-y: auto; }
+[data-short-viewport] .app .sidebar.pane .sidebar-scroll { display: contents; }
+[data-short-viewport] .app .sidebar.pane .side-footer { position: static; }
 
 /* ── Collapsed rail, like ChatGPT's (user review, 2026-09-18) ───────────────
    One column of equal icon buttons: expand, the Chat/Code switch, New chat, Search,
    Projects, Diary, Plugins, Pinned — and the avatar at the bottom. No lists, headings
    or status text; the plane rules above must not bring them back. */
 @media (min-width: 520px) {
+  .app .sidebar.pane.is-collapsed .sidebar-scroll { display: contents; }
   .app .sidebar.pane.is-collapsed { width: 60px; min-width: 60px; padding: var(--space-3) 0; align-items: center; overflow: hidden; gap: 4px; }
   .app .sidebar.pane.is-collapsed :is(.sidebar-history, .section-label, .side-hint, .mcp-row, .side-logo, .shell-search) { display: none; }
   .app .sidebar.pane.is-collapsed .shell-sidebar-head { padding: 0 0 var(--space-2); justify-content: center; }
@@ -334,13 +339,13 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 
 /* ── Header row like Claude's (user review, 2026-09-18) ─────────────────────────
    [collapse or close] logo ········ [Chat|Code]. The mode switch is a small icon-only track
-   (28px, 1px inset, 34×26 segments) at the end of the row, keeping the liquid-glass thumb. */
+   (30px, 2px inset, 34×26 segments) at the end of the row, keeping the liquid-glass thumb. */
 :is(.app .sidebar.pane, .coding-sidebar) .shell-sidebar-head { display: flex; align-items: center; gap: var(--space-2); }
 :is(.app .sidebar.pane, .coding-sidebar) .shell-sidebar-head .side-head-actions { order: -1; margin: 0; }
 .coding-sidebar .shell-sidebar-head .side-expand { order: -1; margin: 0; }
 .shell-sidebar-head > .app-mode-switch.is-compact { margin: 0 0 0 auto; }
 .app-mode-switch.is-compact {
-  display: inline-flex; flex-direction: row; flex: none; gap: 0; height: 28px; padding: 1px; margin: 0;
+  display: inline-flex; flex-direction: row; flex: none; gap: 0; height: 30px; padding: 2px; margin: 0;
   border: 0; border-radius: var(--radius-control); background: color-mix(in srgb, var(--text-primary) 6%, transparent); box-shadow: none;
 }
 .app-mode-switch.is-compact > button {
@@ -350,13 +355,18 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .app-mode-switch.is-compact > button.is-selected { color: var(--text-primary); }
 .app-mode-switch.is-compact > .glass-thumb { border-radius: var(--radius-button-inset); }
 [data-family='contemporary'] .app-mode-switch.is-compact { border-radius: var(--radius-pill); background: transparent; box-shadow: inset 0 0 0 1px var(--md-outline); }
-[data-family='contemporary'] .app-mode-switch.is-compact > button { border-radius: 0; }
-@media (pointer: coarse) { .app-mode-switch.is-compact { height: 40px; } .app-mode-switch.is-compact > button { width: 44px; height: 36px; } }
+[data-family='contemporary'] .app-mode-switch.is-compact > button { border-radius: var(--radius-button-inset); }
+@media (pointer: coarse) { .app-mode-switch.is-compact { height: 48px; } .app-mode-switch.is-compact > button { width: 44px; height: 44px; min-height: 44px; } }
 /* Collapsed rail: the header stacks, and the switch runs down under the expand button. */
 @media (min-width: 520px) {
   :is(.app .sidebar.pane, .coding-sidebar).is-collapsed .shell-sidebar-head { flex-direction: column; gap: 6px; }
-  :is(.app .sidebar.pane, .coding-sidebar).is-collapsed .shell-sidebar-head > .app-mode-switch.is-compact { margin: 0; flex-direction: column; height: auto; width: 36px; }
+  :is(.app .sidebar.pane, .coding-sidebar).is-collapsed .shell-sidebar-head > .app-mode-switch.is-compact { margin: 0; flex-direction: column; align-items: center; height: auto; width: 38px; }
   :is(.app .sidebar.pane, .coding-sidebar).is-collapsed .app-mode-switch.is-compact > button { width: 34px; height: 30px; min-height: 30px; }
+}
+/* Stacking the rail must not undo the touch targets above. */
+@media (min-width: 520px) and (pointer: coarse) {
+  :is(.app .sidebar.pane, .coding-sidebar).is-collapsed .shell-sidebar-head > .app-mode-switch.is-compact { width: 48px; }
+  :is(.app .sidebar.pane, .coding-sidebar).is-collapsed .app-mode-switch.is-compact > button { width: 44px; height: 44px; min-height: 44px; }
 }
 /* Phone: the drawer is the full width of the screen, as Claude's is, with the search field
    under the header instead of the Search icon in the bottom bar. */
@@ -425,17 +435,12 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 :root:not([data-device='desktop']), :root:not([data-device='desktop']) body { overflow: hidden; overscroll-behavior: none; }
 :root:not([data-device='desktop']) .app { position: fixed; left: 0; right: 0; top: var(--visible-viewport-top, 0px); height: var(--visible-viewport-height, 100dvh); }
 
-/* ── One sidebar for Chat and Code (user review, 2026-09-19) ─────────────────
-   New chat (New task in Code) floats over the list as it scrolls, as in ChatGPT: the
-   list slides underneath it on the same material as the account row at the bottom. */
+/* Keep New chat available while scrolling. Only its rounded button paints a surface. */
 .app .sidebar.pane .side-new {
-  position: sticky; top: calc(-1 * var(--space-3)); z-index: 2;
+  position: sticky; top: 0; z-index: 2;
   margin-top: calc(-1 * var(--space-1)); padding-top: var(--space-1);
-  background: var(--pane-fill); backdrop-filter: blur(var(--pane-blur)); -webkit-backdrop-filter: blur(var(--pane-blur));
-  box-shadow: calc(-1 * var(--space-4)) 0 0 var(--pane-fill), var(--space-4) 0 0 var(--pane-fill);
 }
 .app .sidebar.pane .side-new .new-chat-btn.glass { width: 100%; }
-[data-family='editorial'] .app .sidebar.pane .side-new { background: var(--bg-app); box-shadow: calc(-1 * var(--space-4)) 0 0 var(--bg-app), var(--space-4) 0 0 var(--bg-app); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .app .sidebar.pane.is-collapsed .side-new { position: static; margin: 0; padding: 0; background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; display: flex; justify-content: center; width: 100%; }
 .app .sidebar.pane.is-collapsed .side-new .new-chat-btn.glass { width: 40px; }
 .app .sidebar.pane .coding-history .side-hint { margin: 0; padding: 2px 2px 0; color: var(--text-secondary); font-size: var(--text-footnote); line-height: 1.4; }
@@ -455,9 +460,6 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .app-stack:not(.has-settings) > .app-main.mode-enter { --enter-from: translateY(4px); animation: motion-enter var(--motion-considered) var(--ease-considered) both; }
 /* Moving from one rail item to the next swaps the name instantly, as native tooltips do. */
 .rail-tip.is-warm { animation: none; }
-/* A soft edge where the list slides under New chat, not a hard cut. */
-.app .sidebar.pane:not(.is-collapsed) .side-new::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 10px; pointer-events: none; background: linear-gradient(var(--pane-fill), transparent); }
-[data-family='editorial'] .app .sidebar.pane:not(.is-collapsed) .side-new::after { background: linear-gradient(var(--bg-app), transparent); }
 
 /* The Code page now sits in the shared shell, beside the shared sidebar. */
 .app-main > .code-mount .coding-workspace, .app-main .coding-workspace { flex: 1; min-height: 0; height: auto; }

@@ -17,7 +17,9 @@ export function ModeSwitch({ mode, onChat, onCode, compact = false }: { mode: Mo
     if (!node) return;
     const place = (target: Mode) => {
       const button = node.querySelector<HTMLElement>(`[data-mode="${target}"]`);
-      if (!button) return;
+      // Switching modes closes the phone drawer. Hidden controls measure zero;
+      // keep the last geometry until ResizeObserver sees the reopened drawer.
+      if (!button || !button.offsetWidth || !button.offsetHeight) return;
       node.style.setProperty('--thumb-x', `${button.offsetLeft}px`);
       node.style.setProperty('--thumb-y', `${button.offsetTop}px`);
       node.style.setProperty('--thumb-w', `${button.offsetWidth}px`);
@@ -25,6 +27,7 @@ export function ModeSwitch({ mode, onChat, onCode, compact = false }: { mode: Mo
     };
     let timer = 0, frame = 0;
     const slide = (from: Mode) => {
+      if (!node.offsetWidth) return;
       node.classList.add('is-settling');
       place(from);
       void node.offsetWidth; // commit the starting position before transitions come back
@@ -34,7 +37,7 @@ export function ModeSwitch({ mode, onChat, onCode, compact = false }: { mode: Mo
       node.classList.add('is-moving');
       cancelAnimationFrame(frame); window.clearTimeout(timer);
       frame = requestAnimationFrame(() => place(mode));
-      timer = window.setTimeout(() => node.classList.remove('is-moving'), 420);
+      timer = window.setTimeout(() => { place(mode); node.classList.remove('is-moving'); }, 420);
     };
     slide(lastMode ?? mode);
     // The chat sidebar is only hidden while Code is open, not replaced; when it is shown again
@@ -47,7 +50,7 @@ export function ModeSwitch({ mode, onChat, onCode, compact = false }: { mode: Mo
       shown = now;
     });
     observer?.observe(node);
-    return () => { cancelAnimationFrame(frame); window.clearTimeout(timer); observer?.disconnect(); };
+    return () => { cancelAnimationFrame(frame); window.clearTimeout(timer); observer?.disconnect(); node.classList.remove('is-moving', 'is-settling'); };
   }, [mode]);
   return (
     <div ref={track} className={`app-mode-switch has-thumb${compact ? ' is-compact' : ''}`} role="group" aria-label="Workspace mode">

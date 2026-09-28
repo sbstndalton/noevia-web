@@ -31,12 +31,12 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
    await plugins.evaluate((el,t)=>{const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);if(!el.contains(hit))throw Error(t+': Plugins covered by '+(hit?.className||hit?.tagName));},`${tag} ${label}`);};
   await open();await drawer.waitFor();await check('from chat');
   const orow=page.locator('.chat-row').filter({hasText:'Synthetic recent7'});await orow.scrollIntoViewIfNeeded();if(!touch)await orow.hover();const opts=page.getByRole('button',{name:'Options for Synthetic recent7',exact:true});
-  const before=await page.locator('.sidebar').evaluate(el=>el.scrollTop);await opts.click();
+  const before=await page.locator('.sidebar').evaluate(el=>el.scrollTop+(el.querySelector('.sidebar-scroll')?.scrollTop||0));await opts.click();
   const menu=page.getByRole('menu');await menu.waitFor();
   const m=await menu.evaluate(el=>{const r=el.getBoundingClientRect();const items=[...el.querySelectorAll('[role=menuitem]')].map(i=>{const q=i.getBoundingClientRect();return i.contains(document.elementFromPoint(q.x+q.width/2,q.y+q.height/2));});return {r:[r.left,r.top,r.right,r.bottom,innerWidth,innerHeight],inside:r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight,items};});
   assert.ok(m.inside&&m.items.every(Boolean),`${tag}: row menu fully visible ${JSON.stringify(m)}`);
   const trig=await opts.boundingBox(),mb=await menu.boundingBox();assert.ok(Math.abs(mb.y-(trig.y+trig.height))<=trig.height+mb.height,`${tag}: menu sits by its row`);
-  assert.equal(await page.locator('.sidebar').evaluate(el=>el.scrollTop),before,`${tag}: opening a menu keeps the drawer scroll`);
+  assert.equal(await page.locator('.sidebar').evaluate(el=>el.scrollTop+(el.querySelector('.sidebar-scroll')?.scrollTop||0)),before,`${tag}: opening a menu keeps the drawer scroll`);
   await page.screenshot({path:`${out}/phone-review-${tag}-menu.png`});
   await page.keyboard.press('Escape');await menu.waitFor({state:'hidden'});
   await page.getByRole('button',{name:'Diary',exact:true}).click();await drawer.waitFor({state:'hidden'});
@@ -84,7 +84,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.getByRole('button',{name:'Open navigation',exact:true}).click();
   await page.getByRole('dialog',{name:'Navigation'}).getByRole('button',{name:'Projects',exact:true}).first().click();
   await page.getByRole('heading',{name:'Projects',level:1}).waitFor();
-  assert.match(await page.locator('.projects-hero-sub').innerText(),/^2 projects · 2 chats$/,`${w}: headline counts active projects`);
+  assert.match(await page.locator('.projects-title > p').innerText(),/^2 projects · 2 chats$/,`${w}: headline counts active projects`);
   const fr=await page.evaluate(()=>{const f=document.querySelector('.projects-search').getBoundingClientRect(),c=document.querySelector('.project-card').getBoundingClientRect();return Math.abs(f.right-c.right);});
   assert.ok(fr<=1,`${w}: filter spans the row like the cards (${fr}px short)`);
   await page.getByRole('button',{name:'Open navigation',exact:true}).click();
@@ -93,7 +93,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
    await page.locator('.settings-navigation nav button').filter({hasText:name}).first().click();await page.locator('.settings-detail').waitFor();
    const small=await page.evaluate(()=>[...document.querySelectorAll('.settings-detail :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea,select)')].filter(e=>e.offsetParent&&parseFloat(getComputedStyle(e).fontSize)<16).map(e=>(e.getAttribute('aria-label')||e.tagName)+' '+getComputedStyle(e).fontSize));
    assert.deepEqual(small,[],`${w} ${name}: fields under 16px on touch`);
-   if(name==='General'){const seg=page.getByRole('radiogroup',{name:'Theme family'});await seg.getByRole('radio',{name:/^Contemporary/}).click();await page.waitForTimeout(300);
+   if(name==='Appearance & language'){const seg=page.getByRole('radiogroup',{name:'Theme family'});await seg.getByRole('radio',{name:/^Contemporary/}).click();await page.waitForTimeout(300);
     const g=await seg.evaluate(t=>{const q=t.getBoundingClientRect(),on=t.querySelector('[aria-checked="true"]').getBoundingClientRect();return {inScreen:q.left>=0&&q.right<=innerWidth,onVisible:on.left>=q.left-1&&on.right<=q.right+1,family:document.documentElement.dataset.family};});
     assert.ok(g.inScreen&&g.onVisible&&g.family==='contemporary',`${w}: family previews fit and show the choice ${JSON.stringify(g)}`);
     await seg.getByRole('radio',{name:/^Editorial/}).click();}
@@ -102,7 +102,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.close();
  }
 
- // Material 3: sticky pieces match the drawer (no bands), New chat is an extended FAB in
+ // Material 3: headings reveal the drawer (no bands), New chat is an extended FAB in
  // primary-container, the active destination is a pill, the composer a 28px container.
  for(const theme of ['light','dark']){
   const page=await browser.newPage(withLocale({viewport:{width:1360,height:729},reducedMotion:'reduce'}));page.on('pageerror',e=>errors.push(e.message));
@@ -119,7 +119,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
     surface:(()=>{const p=document.createElement('i');p.style.background='var(--bg-surface)';document.body.append(p);const c=cs(p).backgroundColor;p.remove();return c;})(),
     primaryContainerColor:(()=>{const p=document.createElement('i');p.style.background='var(--md-primary-container)';document.body.append(p);const c=cs(p).backgroundColor;p.remove();return c;})(),
     radiusControl:root.getPropertyValue('--radius-control').trim(),radiusOverlay:root.getPropertyValue('--radius-overlay').trim(),radiusSurface:root.getPropertyValue('--radius-surface').trim(),radiusButton:root.getPropertyValue('--radius-button').trim()};});
-  for(const h of m.heads)assert.equal(h,m.side,`${theme} M3: sticky sidebar pieces share the drawer colour ${JSON.stringify(m)}`);
+  for(const h of m.heads)assert.equal(h,'rgba(0, 0, 0, 0)',`${theme} M3: headings and footer reveal the continuous drawer surface ${JSON.stringify(m)}`);
   // #315 restored the FAB for Contemporary's New chat (primary-container, 16px/--radius-overlay
   // corners) and made every row a pill (--radius-button: 999px), superseding #245's flat/outlined
   // control and shared control-radius rows for Contemporary specifically; the composer keeps the
@@ -142,14 +142,14 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   // Recents are bounded (#239); "View all" expands them in place.
   assert.equal(await page.locator('.recent-children .chat-row').count(),15,`${material}: recents bounded`);
   await page.getByRole('button',{name:'View all 16 chats'}).click();
-  const r=await page.evaluate(async()=>{const side=document.querySelector('.sidebar');
+  const r=await page.evaluate(async()=>{const side=document.querySelector('.sidebar'),scroll=side.querySelector('.sidebar-scroll');
    const nested=[...side.querySelectorAll('*')].filter(e=>/(auto|scroll)/.test(getComputedStyle(e).overflowY)&&e.scrollHeight>e.clientHeight+1).map(e=>e.className.toString());
    const rows=side.querySelectorAll('.recent-children .chat-row').length;
-   side.scrollTop=side.scrollHeight;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+   scroll.scrollTop=scroll.scrollHeight;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
    const last=[...side.querySelectorAll('.recent-children .chat-row')].at(-1).getBoundingClientRect(),foot=side.querySelector('.side-footer').getBoundingClientRect(),sb=side.getBoundingClientRect();
-   return {sideScrolls:getComputedStyle(side).overflowY==='auto'&&side.scrollHeight>side.clientHeight,nested,rows,lastAboveFooter:last.bottom<=foot.top+1,footerAtBottom:sb.bottom-foot.bottom<=1,diaryInNav:!!side.querySelector('.side-footer-row [aria-label=Diary]')};});
-  assert.ok(r.sideScrolls,`${material}: the sidebar itself scrolls ${JSON.stringify(r)}`);
-  assert.deepEqual(r.nested,[],`${material}: no nested scrollers`);
+   return {sideScrolls:getComputedStyle(scroll).overflowY==='auto'&&scroll.scrollHeight>scroll.clientHeight,nested,rows,lastAboveFooter:last.bottom<=foot.top+1,footerAtBottom:sb.bottom-foot.bottom<=1,diaryInNav:!!side.querySelector('.side-footer-row [aria-label=Diary]')};});
+  assert.ok(r.sideScrolls,`${material}: the navigation plane scrolls ${JSON.stringify(r)}`);
+  assert.deepEqual(r.nested,['sidebar-scroll'],`${material}: exactly one navigation scroller`);
   assert.equal(r.rows,16,`${material}: every recent chat is in the sidebar`);
   assert.ok(r.lastAboveFooter&&r.footerAtBottom&&r.diaryInNav,`${material}: last chat reachable above the pinned account row; Diary in the bottom bar ${JSON.stringify(r)}`);
   await page.close();
@@ -237,7 +237,8 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('button')].filter(b=>{const s=b.querySelector(':scope > svg');return s&&b.innerText.trim()&&getComputedStyle(s).display==='block'&&getComputedStyle(s).marginLeft!=='0px';}).map(b=>b.innerText.trim())),[],'icon + text buttons keep the icon at the start');assert.deepEqual(await glyphs(),[],'no text-glyph icons');
   // Hover options sit beside the title, like ChatGPT's, never over it.
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[],freeChats:[{id:'h0',title:'Synthetic chat with a deliberately long title that must fade',updatedAt:2,messages:[]}]}}));
-  await page.reload();await page.getByPlaceholder('Message noevia…').waitFor();
+  // The fixture no longer contains q0; leave its project URL before testing free chats.
+  await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
   const hrow=page.locator('.chat-row').first();await hrow.hover();
   const ov=await hrow.evaluate(el=>{const l=el.querySelector('.sidebar-label').getBoundingClientRect(),a=el.querySelector('.row-actions').getBoundingClientRect();return {shown:a.width>0,overlap:l.right-a.left};});
   assert.ok(ov.shown&&ov.overlap<=0.5,`hover options never cover the title ${JSON.stringify(ov)}`);
@@ -287,7 +288,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.equal(await phone.locator('.sidebar.pane').evaluate(e=>e.classList.contains('is-expanded')),false,'switching to Chat leaves the drawer closed');
   await phone.getByRole('button',{name:'Open navigation',exact:true}).tap();
   const d=await phone.evaluate(()=>{const s=document.querySelector('.sidebar.is-expanded'),h=s.querySelector('.shell-sidebar-head'),sw=h.querySelector('.app-mode-switch.is-compact'),logo=h.querySelector('.side-logo');const r=s.getBoundingClientRect(),q=sw.getBoundingClientRect(),l=logo.getBoundingClientRect();return {fullWidth:Math.round(r.width)>=innerWidth-1,switchAfterLogo:q.left>l.right,switchH:Math.round(q.height),search:!!s.querySelector('.shell-search')};});
-  assert.ok(d.fullWidth&&d.switchAfterLogo&&d.search&&d.switchH<=40,`phone drawer like Claude's ${JSON.stringify(d)}`);
+  assert.ok(d.fullWidth&&d.switchAfterLogo&&d.search&&d.switchH>=44&&d.switchH<=48,`phone drawer like Claude's ${JSON.stringify(d)}`);
   await phone.getByRole('button',{name:'Code',exact:true}).tap();await phone.getByPlaceholder(/Describe a task/).waitFor();
   assert.equal(await phone.locator('.sidebar.pane').evaluate(e=>e.classList.contains('is-expanded')),false,'switching to Code closes the drawer');
   await phone.close();

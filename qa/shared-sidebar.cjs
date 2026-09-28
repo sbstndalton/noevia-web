@@ -24,11 +24,11 @@ const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit
   await page.evaluate(t=>{localStorage.setItem('cowork-theme',t);localStorage.setItem('noevia:sidebar-collapsed','0');},theme);await page.reload();await page.getByPlaceholder('Message noevia…').waitFor();
   const side=page.locator('.sidebar.pane');
   // Sticky New chat: scroll the list, the button stays at the top of the rail.
-  await side.evaluate(el=>el.scrollTop=600);await page.waitForTimeout(50);
+  await page.locator('.sidebar-scroll').evaluate(el=>el.scrollTop=600);await page.waitForTimeout(50);
   const stuck=await page.evaluate(()=>{const s=document.querySelector('.sidebar.pane').getBoundingClientRect(),b=document.querySelector('.new-chat-btn').getBoundingClientRect();const hit=document.elementFromPoint(b.x+b.width/2,b.y+b.height/2);return {top:b.top-s.top,visible:!!hit?.closest('.new-chat-btn')};});
   assert.ok(stuck.top>=0&&stuck.top<24&&stuck.visible,`New chat floats over the scrolled list ${JSON.stringify(stuck)}`);
   await page.screenshot({path:`${out}/shared-${theme}-sticky.png`});
-  await side.evaluate(el=>el.scrollTop=0);
+  await page.locator('.sidebar-scroll').evaluate(el=>el.scrollTop=0);
   // Plugins is a real page with Google Drive and the directory.
   await page.getByRole('button',{name:'Customise',exact:true}).click();
   await page.getByRole('heading',{name:'Customise'}).waitFor();

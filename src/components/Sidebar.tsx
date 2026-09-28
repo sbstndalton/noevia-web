@@ -150,19 +150,6 @@ export function Sidebar({
   const drawer = useRef<HTMLDivElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
-  const footer = useRef<HTMLDivElement>(null);
-  // On a phone Diary sticks exactly one footer above the bottom edge. The footer's height
-  // depends on what it holds (the MCP line, the account row), so measure it, not assume it.
-  useEffect(() => {
-    const el = footer.current, side = drawer.current;
-    if (!el || !side || typeof ResizeObserver === 'undefined') return;
-    // A closed drawer is display:none and measures 0; keep the last real height instead.
-    const sync = () => { const h = Math.ceil(el.getBoundingClientRect().height); if (h > 0) side.style.setProperty('--side-foot-h', `${h}px`); };
-    const observer = new ResizeObserver(sync);
-    observer.observe(el);
-    sync();
-    return () => observer.disconnect();
-  }, [expanded]);
   useEffect(() => {
     const query = window.matchMedia('(max-width: 519px)');
     const change = () => { const narrow = query.matches || document.documentElement.dataset.layout === 'mobile'; setMobile(narrow); if (!narrow) setExpanded(false); };
@@ -598,6 +585,7 @@ export function Sidebar({
         if (collapsed && !mobile && !(e.target as HTMLElement).closest('button, a, input')) setCollapsed(false);
       }}
     >
+      <div className="sidebar-scroll">
       <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? t('sidebar.closeNavigation') : collapsed ? t('sidebar.expandNavigation') : t('sidebar.collapseNavigation')} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div>{/* Like Claude's: a small icon-only Chat/Code switch at the end of the header row. Switching
           closes the phone drawer, so the new mode is what you see. */}{showPreviews && <ModeSwitch compact mode={mode} onCode={() => { setExpanded(false); onEnterCode(); }} onChat={() => { setExpanded(false); onEnterChat?.(); }}/>}</div>
       {/* On a phone the drawer always shows the search field under its header, as Claude's does. */}{(searching || (mobile && expanded))&&<>
@@ -609,7 +597,7 @@ export function Sidebar({
       {query && <span className="sr-only" role="status" aria-live="polite">{t.plural('sidebar.searchResults', searchResults.length)}</span>}
       </>}
 
-      {/* Floats over the list as it scrolls, as ChatGPT's New chat does. */}
+      {/* New chat sticks inside the navigation scroller; the footer stays outside it. */}
       <div className="side-new">
       <button className="new-chat-btn glass" onClick={()=>{if(code)onCodePage?.('New task');else onNewChat();setExpanded(false);}} title={code?t('sidebar.newTask'):t('common.newChat')} data-tip={code?t('sidebar.newTask'):t('common.newChat')}>
         <ShellIcon name="compose" size={17}/>
@@ -715,6 +703,8 @@ export function Sidebar({
       {onOpenArchived && !query && <button className={`side-more side-archived${activeView === 'archived' ? ' is-active' : ''}`} aria-current={activeView === 'archived' ? 'page' : undefined} onClick={()=>{onOpenArchived();setExpanded(false);}}><ShellIcon name="archive" size={16}/><span>{t('sidebar.archivedChats')}</span></button>}
       </div>}
 
+      </div>
+
       {tip && <div className={`rail-tip${tip.warm ? ' is-warm' : ''}`} role="tooltip" style={{ top: tip.y, left: tip.x }}>{tip.text}</div>}
       {hover && (() => {
         const p = projects.find((x) => x.id === hover.id);
@@ -769,7 +759,7 @@ export function Sidebar({
         </div>
       )}
 
-      <div className="side-footer" ref={footer}>{mcp?.configured && (() => {
+      <div className="side-footer">{mcp?.configured && (() => {
         const summary = mcpFooterSummary(mcp, t);
         return (
           <div

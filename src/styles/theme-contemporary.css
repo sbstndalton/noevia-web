@@ -26,12 +26,6 @@
   background: rgba(0, 0, 0, .32); backdrop-filter: none; -webkit-backdrop-filter: none;
 }
 }
-/* Sticky pieces inside the drawer take the drawer's own colour, not the page's. */
-[data-family='contemporary'] .app .sidebar.pane .sidebar-history .side-scroll > :is(.sidebar-section-head, .section-label):first-child,
-[data-family='contemporary'] .app .sidebar.pane :is(.side-permanent, .side-footer) {
-  background: var(--md-surface-container-low); backdrop-filter: none; -webkit-backdrop-filter: none;
-}
-
 /* ── Navigation drawer destinations: 56px, pill active indicator, label-large. ── */
 /* Rows take the family's control radius (system.css), not M3 pills: one shape for every row. */
 [data-family='contemporary'] .app .sidebar.pane :is(.nav-item, .proj-row, .chat-row):hover {
@@ -58,12 +52,12 @@
   justify-content: center;
 }
 
-/* Chat / Code switch in the drawer: a two-segment M3 segmented button. */
+/* Chat / Code uses tonal selection with an inset rounded button (#503). */
 [data-family='contemporary'] .app-mode-switch {
   background: transparent; border-color: var(--md-outline); border-radius: var(--radius-pill); box-shadow: none; overflow: hidden;
 }
 [data-family='contemporary'] .app-mode-switch button {
-  border-radius: 0; color: var(--md-on-surface); background: transparent; box-shadow: none;
+  border-radius: var(--radius-button-inset); color: var(--md-on-surface); background: transparent; box-shadow: none;
 }
 [data-family='contemporary'] .app-mode-switch button + button {
   border-left-color: var(--md-outline);
