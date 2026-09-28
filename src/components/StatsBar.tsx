@@ -14,6 +14,10 @@ interface StatsBarProps {
   routingDecision?: RoutingDecision | null;
   /** What the composer says it will send to — so the strip names the model that answered. */
   modelLabel?: string;
+  /** #527, phone-sized space: `announce` keeps only the screen-reader live line in the page, and
+   *  `sheet` is the visible block inside the model sheet (one line that expands, as on a phone,
+   *  without a second live region). The default is unchanged. */
+  variant?: 'default' | 'sheet' | 'announce';
 }
 
 function fmt(n: number | null, digits = 1, suffix = ''): string {
@@ -56,9 +60,9 @@ function usePhone(): boolean {
 /** Inference status under the composer: on a phone a single line (status, model, speed) that
  *  expands into plain-language details; on a desktop the same details, always open, laid out
  *  across the width instead of stacked. Purely presentational: App owns the /api/stats poll. */
-export function StatsBar({ stats, reply, routingDecision, modelLabel }: StatsBarProps): JSX.Element {
+export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 'default' }: StatsBarProps): JSX.Element {
   const t = useT();
-  const phone = usePhone();
+  const phone = usePhone() || variant === 'sheet';
   const [userOpen, setUserOpen] = useState(readOpen);
   const rootRef = useRef<HTMLElement>(null);
   // The routing panel is an anchored popover (it must not grow the strip or squeeze the
@@ -71,10 +75,12 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel }: StatsBar
       if (!panel) return;
       panel.open = false;
       panel.querySelector('summary')?.focus();
+      // In the model sheet this Escape closes the routing panel, not the sheet around it.
+      if (variant === 'sheet') event.preventDefault();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [variant]);
   const active = reply?.phase === 'waiting' || reply?.phase === 'streaming';
   // A completed external-provider reply is valid even when the separately
   // polled native engine is down. Do not relabel that reply as offline.
@@ -141,6 +147,8 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel }: StatsBar
     </dl>
   );
 
+  const announcer = <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveAnnouncement}</span>;
+  if (variant === 'announce') return <div className="stats-announcer">{announcer}</div>;
   // Wide: one row, no control — there is nothing to reveal.
   if (!phone) {
     return (
@@ -154,8 +162,8 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel }: StatsBar
   }
 
   return (
-    <section ref={rootRef} className={`stats-disclosure${open ? ' is-open' : ''}`} aria-label={t('stats.ariaLabel')}>
-      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveAnnouncement}</span>
+    <section ref={rootRef} className={`stats-disclosure${open ? ' is-open' : ''}${variant === 'sheet' ? ' is-sheet' : ''}`} aria-label={t('stats.ariaLabel')}>
+      {variant !== 'sheet' && announcer}
       <button type="button" className="stats-bar" aria-expanded={open} aria-controls="stats-details" onClick={toggle}
         title={open ? t('stats.hide') : t('stats.show')}>
         {status(true)}

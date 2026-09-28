@@ -8,7 +8,7 @@ import { roleSummary } from '../routing-copy';
 import { CloseButton } from './CloseButton';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import type { InstalledModel, Project, Provider, Toolbox } from '../types';
 import type { AutoRoles, McpStatus } from '../api';
 import { apiFetch, fetchAutoRoles, fetchChatGptModels, fetchInstalledModels, fetchProviders, fetchToolboxes, saveProjectConfig } from '../api';
@@ -19,6 +19,10 @@ interface ModelPopupProps {
   onClose: () => void;
   onProjectsChanged: () => void;
   onOpenModelSettings?: (model?: string) => void;
+  /** #527, the phone model sheet: the live status block above the model list, and the Thinking
+   *  section after it. Left out, the panel is exactly the Model and tools panel it always was. */
+  status?: ReactNode;
+  thinking?: ReactNode;
 }
 
 // The chat box's model control, and deliberately only that: pick Auto or one
@@ -29,9 +33,10 @@ interface ModelPopupProps {
 // in Settings → Models & routing. This panel used to carry all of it, which
 // made the common action (switch model) compete for space with administration
 // nobody performs mid-conversation.
-export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged, onOpenModelSettings: openSettingsProp }: ModelPopupProps): JSX.Element {
+export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged, onOpenModelSettings: openSettingsProp, status, thinking }: ModelPopupProps): JSX.Element {
   const dialog = useModalDialog();
   const t = useT();
+  const phoneSheet = !!(status || thinking);
   const openSettings = (model?: string) => {
     if (openSettingsProp) return openSettingsProp(model);
     onClose(); window.dispatchEvent(new CustomEvent('noevia:open-model-settings', { detail: { model } }));
@@ -39,22 +44,26 @@ export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged
   return (
     <dialog ref={dialog} className="native-modal model-dialog-backdrop" aria-label={t('modelPopup.title')}
       onCancel={(e) => { e.preventDefault(); onClose(); }} onClick={onClose}>
-      <div className="mp-panel aero dialog-sheet" onClick={(e) => e.stopPropagation()}>
+      <div className={`mp-panel aero dialog-sheet${phoneSheet ? ' is-phone-sheet' : ''}`} onClick={(e) => e.stopPropagation()}>
         <header className="mp-head">
-          <h2><small>{t('modelPopup.title')}</small>{activeProject ? activeProject.name : t('modelPopup.model')}</h2>
+          {/* #527: the phone sheet opens on its heading, so the status block at the top is what is
+              read and seen first; left to itself, initial focus would land on the first field (a
+              model filter or a tool checkbox) and scroll the sheet past it. */}
+          <h2 {...(phoneSheet ? { tabIndex: -1, 'data-initial-focus': '' } : {})}><small>{t('modelPopup.title')}</small>{activeProject ? activeProject.name : t('modelPopup.model')}</h2>
           <button className="btn btn-ghost btn-sm mp-settings" onClick={() => openSettings()}><ShellIcon name="settings" size={16}/>{t('modelPopup.settings')}</button>
           <CloseButton onClick={onClose}/>
         </header>
         <div className="mp-body">
-          <ModelChooser projects={projects} activeProject={activeProject} onChanged={onProjectsChanged} onOpenSettings={openSettings} />
+          <ModelChooser projects={projects} activeProject={activeProject} onChanged={onProjectsChanged} onOpenSettings={openSettings} before={status} afterModel={thinking} />
         </div>
       </div>
     </dialog>
   );
 }
 
-function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
+function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, before, afterModel }: {
   projects: Project[]; activeProject: Project | null; onChanged: () => void; onOpenSettings: (model?: string) => void;
+  before?: ReactNode; afterModel?: ReactNode;
 }): JSX.Element {
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [modelsLoading, setModelsLoading] = useState(true);
@@ -156,6 +165,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
 
 
   return <div className="mp-grid">
+    {before}
     <section className="mp-col mp-col-model" aria-label={t('modelPopup.model')}>
     <h3 className="mp-col-title">{t('modelPopup.model')}</h3>
     <div className="mp-mode" role="group" aria-label={t('modelPopup.modeLabel')}>
@@ -233,6 +243,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings }: {
     )}
 
     </section>
+    {afterModel}
     {toolboxes.length > 0 && <section className="mp-col mp-col-tools" aria-label={t('modelPopup.tools')}>
       <div className="mp-section-head">
         <h3 className="mp-col-title">{t('modelPopup.tools')}</h3>

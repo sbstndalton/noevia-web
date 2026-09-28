@@ -13,6 +13,12 @@
              the + menu (a badge on + counts toolboxes added for the next message), compact
              model and Thinking pills, one ⋯ per project row (JS), quiet drawer search and New chat
 
+   #527 adds, in tier 2: the composer floats over the conversation (no band behind it), one line
+   tall until you type, with one control row inside it: +, a Chat/Cowork chip, the model and
+   thinking level as plain text, and send. The live inference strip, the routing decision and the
+   context meter move into the model sheet, with a small dot on the model button while a reply
+   generates. The mode caption shows only when it says something (Cowork repository, a warning).
+
    Everything hidden stays reachable: Recent chats in the sidebar, Tools in the + menu, a
    project's new chat in its ⋯ menu, the MCP summary in Settings → Service status (and any
    problem still shows in the footer). Loads last, after families.css, because it lightens
@@ -78,6 +84,135 @@
   /* One ⋯ per project row; its menu carries "New chat in project" (Sidebar.tsx, tier 2). */
   .app .sidebar.pane .proj-row .row-action-new { display: none; }
 }
+
+/* ── Tier 2, #527: the compact floating composer ──────────────────────────── */
+@media (max-width: 767px), (max-height: 599px) {
+  /* The composer floats over the transcript. The transcript runs to the bottom edge and keeps
+     room under its last message for the composer (--composer-h, measured by ChatView), and a
+     short fade from transparent keeps text sliding under the composer's edges legible. :root
+     outweighs phone.css's .is-empty variants. */
+  .app .chat-workspace { position: relative; --chat-fade: var(--md-surface-container-low); }
+  [data-family='editorial'] .app .chat-workspace { --chat-fade: var(--bg-app); }
+  [data-family='contemporary'] .app .chat-workspace { --chat-fade: var(--md-surface); }
+  [data-family='glass'] .app .chat-workspace { --chat-fade: var(--glass-plane); }
+  :root .app .chat-workspace > .transcript { padding-bottom: calc(var(--composer-h, 120px) + var(--space-3)); }
+  :root .app .chat-workspace > .composer {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; margin: 0;
+    /* The home-indicator inset, except while a software keyboard covers it (viewport.js). */
+    padding: 18px 10px max(8px, calc(env(safe-area-inset-bottom) - (100dvh - var(--visible-viewport-height, 100dvh))));
+    background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--chat-fade) 88%, transparent) 18px);
+    pointer-events: none;
+  }
+  :root .app .chat-workspace > .composer > * { pointer-events: auto; }
+  :root .app .chat-workspace .jump-to-latest { bottom: calc(var(--composer-h, 120px) + 8px); }
+
+  /* No mode row: the caption line appears only when it carries information. */
+  .composer-mode-bar.is-slim { margin: 0 auto; gap: 4px; }
+  .composer-mode-bar.is-slim:has(.composer-mode-harness:not([data-caption='chat']), .composer-mode-confirm) { margin-bottom: 6px; }
+  .composer-mode-bar.is-slim .composer-mode-harness { padding-inline: 12px; line-height: 1.35; }
+  /* Compaction runs from the model sheet but disables the composer: say so beside it. The live
+     region is always there (ChatContext); it only takes space while compacting or after a failure. */
+  .composer > .chat-context-live:not(.is-visible) {
+    position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .composer > .chat-context-live.is-visible {
+    max-width: 744px; margin: 0 auto 6px; padding-inline: 12px;
+    color: var(--text-secondary); font-size: var(--text-caption); line-height: 1.35; overflow-wrap: anywhere;
+  }
+
+  /* One line tall until you type, then it grows (ComposerTextarea) up to about six lines. */
+  .app .chat-workspace .composer-inner.chat-composer-inner.is-compact {
+    grid-template-columns: auto auto minmax(0, 1fr) auto; column-gap: 2px; row-gap: 0;
+    padding: 2px 6px 4px; align-items: center; border-radius: 24px;
+  }
+  .chat-composer-inner.is-compact > .composer-input {
+    grid-column: 1 / -1; grid-row: 1; min-height: 0; max-height: 160px; padding: 10px 10px 4px; line-height: 1.5;
+  }
+  .chat-composer-inner.is-compact > .composer-actions { grid-column: 1; grid-row: 2; }
+  .chat-composer-inner.is-compact > .composer-mode-toggle { grid-column: 2; grid-row: 2; }
+  .chat-composer-inner.is-compact > .composer-model { grid-column: 3; grid-row: 2; justify-self: end; }
+  .chat-composer-inner.is-compact > .send-btn { grid-column: 4; grid-row: 2; }
+  .chat-composer-inner.is-compact > .composer-actions .composer-add.glass {
+    background: transparent; box-shadow: none; border-color: transparent;
+  }
+
+  /* Chat / Cowork as a chip: the chosen mode by name, the other as a symbol. Each is a 44px
+     target; the chip itself is drawn 30px tall inside it. */
+  .composer-mode-toggle.is-compact { display: inline-flex; align-self: center; padding: 0; gap: 0; border: 0; background: transparent; }
+  /* No sliding thumb (system.css): the chosen chip draws its own background. */
+  .composer-mode-toggle.is-compact::before { content: none; }
+  .composer-mode-toggle.is-compact button {
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    min-width: 44px; min-height: 44px; padding: 0 9px; border-radius: 10px;
+    background: transparent; color: var(--text-secondary); font-size: var(--text-footnote); font-weight: 500;
+  }
+  .composer-mode-toggle.is-compact button[aria-checked='true'] {
+    color: var(--text-primary);
+    background: linear-gradient(var(--nav-hover), var(--nav-hover)) center / 100% 30px no-repeat;
+  }
+  .composer-mode-toggle.is-compact button[aria-checked='false'] .composer-mode-name {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .composer-mode-toggle.is-compact button > svg { flex: none; }
+
+  /* Model and thinking: plain text, no pill. */
+  .app .composer-model.is-compact {
+    display: inline-flex; align-items: center; gap: 5px; min-width: 44px; min-height: 44px; max-width: 100%;
+    padding: 0 8px; border: 0; border-radius: 10px; background: transparent; box-shadow: none;
+    color: var(--text-secondary); font: 500 var(--text-footnote)/1.2 var(--font-ui); white-space: nowrap; cursor: pointer;
+  }
+  .app .composer-model.is-compact:hover:not(:disabled), .app .composer-model.is-compact:active { background: var(--nav-hover); }
+  .app .composer-model.is-compact .composer-model-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary); }
+  .app .composer-model.is-compact .composer-model-thinking { flex: none; }
+  .composer-model-live {
+    flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--md-primary);
+    --pulse-low: .3; animation: motion-pulse var(--motion-async) var(--ease-async) infinite;
+  }
+
+  /* The model sheet: live status first, then the model, Thinking, and tools. */
+  /* One scrolling column at every tier-2 size, including short wide windows. */
+  .mp-panel.is-phone-sheet { width: min(560px, 100%); }
+  .mp-panel.is-phone-sheet .mp-grid { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+  .mp-panel.is-phone-sheet .mp-col { max-height: none; overflow: visible; }
+  .mp-panel.is-phone-sheet .mp-head h2:focus { outline: none; }
+  .mp-panel.is-phone-sheet .mp-col-tools { border-left: 0; border-top: 1px solid var(--border-subtle); background: transparent; }
+  .mp-panel.is-phone-sheet .mp-status:not(:has(.stats-disclosure, .mp-context-slot > *)) { display: none; }
+  .mp-panel.is-phone-sheet .mp-status { gap: 6px; padding-bottom: 12px; }
+  .mp-status .stats-disclosure.is-sheet {
+    display: flex; flex-direction: column; align-items: stretch; gap: 4px; margin: 0; padding: 0;
+    border: 0; background: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+  .mp-status .stats-disclosure.is-sheet .stats-bar { width: 100%; min-height: 44px; justify-content: flex-start; padding: 6px 12px; border-radius: var(--radius-control); }
+  .mp-status .stats-disclosure.is-sheet .stats-bar > svg { margin-left: auto; }
+  .mp-status .stats-disclosure.is-sheet .stats-details { width: 100%; }
+  .mp-status .stats-disclosure.is-sheet > .routing-details,
+  .mp-status .stats-disclosure.is-sheet > .routing-details[open] {
+    position: static; width: auto; max-width: none; max-height: none; box-shadow: none; overflow: visible;
+  }
+  .mp-status .chat-context-meter, .mp-status .chat-context-meter:not([open]) {
+    width: 100%; max-width: none; margin: 0; box-sizing: border-box;
+    padding: 6px 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-control); background: transparent;
+  }
+  .mp-status .chat-context-meter summary > span:first-child { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+  .mp-status .chat-context-meter summary { justify-content: space-between; min-height: 32px; align-items: center; color: var(--text-secondary); }
+  .mp-status .chat-context-meter[open] { max-height: none; }
+  .reasoning-control.is-list { display: flex; flex-direction: column; gap: 8px; max-width: none; font-size: inherit; color: inherit; border-top: 1px solid var(--border-subtle); }
+  .reasoning-levels { display: flex; flex-direction: column; gap: 2px; }
+  .reasoning-level {
+    display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px;
+    border: 1px solid transparent; border-radius: var(--radius-control); background: transparent;
+    color: var(--text-primary); text-align: left; font: inherit; cursor: pointer;
+  }
+  .reasoning-level:hover:not(:disabled) { background: var(--nav-hover); }
+  .reasoning-level[aria-pressed='true'] { background: var(--accent-2-soft, var(--nav-active)); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+  .reasoning-level:disabled { cursor: default; opacity: .6; }
+  .reasoning-level[aria-disabled='true'] { cursor: progress; }
+  .reasoning-level-text { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+  .reasoning-level-text strong { font-size: var(--text-callout); font-weight: 500; }
+  .reasoning-control.is-list .reasoning-level-text small { font-size: var(--text-caption); color: var(--text-secondary); }
+  .reasoning-level > svg { flex: none; color: var(--md-primary); }
+}
+@media (prefers-reduced-motion: reduce) { .composer-model-live { animation: none; } }
 
 @media (max-width: 767px) and (pointer: coarse), (max-height: 599px) and (pointer: coarse) {
   .composer-mode-toggle button { min-height: 44px; }

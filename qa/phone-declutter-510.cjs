@@ -4,6 +4,8 @@
 // trims Recent chats; tier 2 (< 768 wide or < 600 tall) is the full phone treatment: bottom
 // composer, no Recent chats, Tools in +, compact pills, one ⋯ per project row, quiet drawer
 // controls. At every width the header sliders open this chat's own settings, not Settings.
+// #527 then made the tier-2 composer compact: Chat/Cowork moved inside it and Thinking joined the
+// model button ("Auto · Auto"); qa/phone-composer-527.cjs covers that in depth.
 // Everything moved stays reachable. Built app, synthetic fixture: every API answer below is
 // invented, nothing reaches inference, storage or a diary.
 // npm run build -- --outDir /tmp/x && QA_DIST=/tmp/x QA_SCREENSHOTS=<dir> node qa/phone-declutter-510.cjs
@@ -46,7 +48,8 @@ async function open(browser, { width, height, mcpError = null, family = null, co
   await page.route('**/api/models/installed', r => r.fulfill({ json: [{ name: 'synthetic-model-Q4_K_M', labels: [] }] }));
   await page.goto(origin);
   await page.getByRole('textbox', { name: 'Message', exact: true }).waitFor();
-  await page.getByRole('button', { name: 'Thinking effort', exact: true }).waitFor();
+  // Tier 2 (#527) has no Thinking pill: the level rides on the model button.
+  await page.getByRole('button', { name: /^Choose model: / }).first().waitFor();
   await page.waitForTimeout(150);
   return page;
 }
@@ -138,16 +141,20 @@ async function tier2ItemsStay(page, name) {
       check(!(await visible(page, '.chat-workspace .composer-hint')), `${name}: keyboard hint hidden`);
       const modeGroup = page.getByRole('radiogroup', { name: /./ });
       check(await modeGroup.isVisible(), `${name}: Chat/Cowork switch still reachable`);
+      // #527: the switch is inside the composer; no row of its own above it.
+      check(await page.locator('.chat-workspace .chat-composer-inner [role="radiogroup"]').count() === 1, `${name}: mode switch sits in the composer`);
       const modeBar = await box(page.locator('.composer-mode-bar'));
-      check(modeBar && modeBar.height <= 52, `${name}: mode switch is one compact row`, modeBar);
+      check(!modeBar || modeBar.height <= 1, `${name}: no separate mode row`, modeBar);
       const composer = await box(page.locator('.chat-workspace .chat-composer-inner'));
       check(composer && height - (composer.y + composer.height) <= 40, `${name}: composer bottom within 40px of the viewport bottom`, composer);
-      const model = page.getByRole('button', { name: 'Choose model: Auto (Fast/Smart)', exact: true });
-      check((await model.innerText()).trim() === 'Auto', `${name}: model pill shows a short label`, await model.innerText());
-      check((await page.getByRole('button', { name: 'Thinking effort', exact: true }).innerText()).trim() === '', `${name}: Thinking pill is icon-only at Auto`);
+      const MODEL = 'Choose model: Auto (Fast/Smart) · Thinking: Auto';
+      const model = page.getByRole('button', { name: MODEL, exact: true });
+      check((await model.innerText()).replace(/\s+/g, ' ').trim() === 'Auto · Auto', `${name}: model button shows the short label and the thinking level`, await model.innerText());
+      check(await page.getByRole('button', { name: 'Thinking effort', exact: true }).count() === 0, `${name}: no separate Thinking pill`);
       const row = [];
-      for (const label of ['Add files and tools', 'Choose model: Auto (Fast/Smart)', 'Thinking effort', 'Send']) {
-        const b = await box(page.getByRole('button', { name: label, exact: true })); row.push({ label, ...b });
+      for (const [label, control] of [['Add files and tools', page.getByRole('button', { name: 'Add files and tools', exact: true })], ['Chat', page.getByRole('radio', { name: 'Chat' })],
+        [MODEL, model], ['Send', page.getByRole('button', { name: 'Send', exact: true })]]) {
+        const b = await box(control); row.push({ label, ...b });
         if (width < 768) check(b && b.width >= 44 && b.height >= 44, `${name}: ${label} is a 44px target`, b);
       }
       check(row.every((b, i) => i === 0 || b.x >= row[i - 1].x + row[i - 1].width - 0.5), `${name}: composer controls sit side by side`, row);

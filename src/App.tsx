@@ -11,6 +11,7 @@ import { notifyModelsChanged, useModelsChanged } from './models-changed';
 import { modelChoiceLabel } from './model-guidance';
 import { applyReplyTelemetry, beginReplyTelemetry, finishReplyTelemetry, lastReplyTelemetry } from './reply-telemetry';
 import { shouldShowStatsBar } from './statsbar-visibility';
+import { useSpaceTier } from './space-tier';
 import { planRegenerate } from './regenerate';
 import { TOOL_RESULT_LIMIT } from './components/ToolCalls';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -561,6 +562,16 @@ export default function App(): JSX.Element {
 
   const messages: Message[] = view.kind === 'chat' ? messagesByChat[view.chatId] ?? [] : [];
   const routingDecision = currentRoutingDecision(messages, view.kind === 'chat' && appMode === 'chat');
+  // #527: in phone-sized space the inference strip leaves the page for the model sheet (ChatView);
+  // only its screen-reader announcements stay here. The same gate decides whether it shows at all.
+  const phoneSpace = useSpaceTier() === 2;
+  const showStats = shouldShowStatsBar(view.kind, messages.length, view.kind === 'chat' && !!replyTelemetryByChat[view.chatId]);
+  const statsProps = {
+    stats,
+    reply: view.kind === 'chat' ? replyTelemetryByChat[view.chatId] || lastReplyTelemetry(messages) : null,
+    routingDecision,
+    modelLabel: modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured),
+  };
 
   // ── The address bar (#359) ──────────────────────────────────────────────────────────────
   // The path is derived from what is on screen (src/routes.ts), so every one of the many places
@@ -1540,6 +1551,7 @@ export default function App(): JSX.Element {
           onEditProject={setEditingProjectId}
           recent={view.projectId ? undefined : recentChats(allChats).filter((c) => c.id !== view.chatId).slice(0, 5).map((c) => ({ id: c.id, title: c.title, projectId: c.projectId ?? null, projectName: c.projectId ? projects.find((p) => p.id === c.projectId)?.name ?? null : null, updatedAt: c.updatedAt }))}
           onOpenRecent={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
+          sheetStatus={phoneSpace && showStats ? <StatsBar {...statsProps} variant="sheet" /> : null}
         />
       )}
 
@@ -1606,12 +1618,7 @@ export default function App(): JSX.Element {
           shows no row of unavailable metrics; they return with the first reply (#239). */}
       {/* A live stream in this session wins; otherwise reply rehydrates from the chat's own last
           completed message so a reload or navigation does not fake an engine outage (#357). */}
-      {shouldShowStatsBar(view.kind, messages.length, view.kind === 'chat' && !!replyTelemetryByChat[view.chatId]) && <StatsBar
-        stats={stats}
-        reply={view.kind === 'chat' ? replyTelemetryByChat[view.chatId] || lastReplyTelemetry(messages) : null}
-        routingDecision={routingDecision}
-        modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured)}
-      />}
+      {showStats && <StatsBar {...statsProps} variant={phoneSpace ? 'announce' : 'default'} />}
       {view.kind === 'chat' && activeProject && appMode === 'chat' && (
         <Inspector
           project={activeProject ?? null}

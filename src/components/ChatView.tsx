@@ -1,9 +1,9 @@
 import { ChatContext } from './ChatContext';
 import { useChatScroll } from '../useChatScroll';
-import { ReasoningControl } from './ReasoningControl';
+import { ReasoningControl, thinkingLevelLabel, useReasoningSettings } from './ReasoningControl';
 import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import type { Message, MessageStats, Project, InstalledModel, RoutingDecision } from '../types';
 import { ChevronLeft, SendIcon, SlidersIcon } from './Icons';
 import { Icon } from './icons/Icon';
@@ -19,7 +19,7 @@ import { isDisplayableRoutingDecision } from '../current-routing';
 import { useAccountPreferences, appLocale } from '../user-preferences';
 import { sendHintText, useT } from '../i18n';
 import { isApple } from './shortcuts/shortcuts';
-import { ComposerModeBar, useCoworkAccess } from './ComposerModeBar';
+import { ComposerModeBar, ModeCaption, ModeConfirm, ModeToggle, useCoworkAccess, useModeSwitch } from './ComposerModeBar';
 import { ToolCatalogue } from './ToolCatalogue';
 import { CoworkTaskCard } from './CoworkTaskCard';
 import { decideDispatch, type ChatMode } from '../chat-mode';
@@ -27,6 +27,7 @@ import { insertMention, turnBoxesFor, type PermittedBox } from '../tool-catalogu
 import { readDraft, writeDraft, clearDraft } from '../chat-drafts';
 import { onCancelEdit, focusAfterRender, type EditFocusState } from '../edit-focus';
 import { isCoarsePointerDevice } from '../composer-focus';
+import { useSpaceTier } from '../space-tier';
 
 /** What one send carries besides its text: per-turn boxes, a fallback notice, or a Cowork task. */
 export interface SendTurn { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string } }
@@ -59,6 +60,9 @@ interface ChatViewProps {
   /** Home only (#239): the latest chats to pick up from, with their project names. */
   recent?: { id: string; title: string; projectId: string | null; projectName: string | null; updatedAt: number }[];
   onOpenRecent?: (chatId: string, projectId: string | null) => void;
+  /** #527: in phone-sized space the live inference block (model, speed, routing) is not in the
+   *  page; App hands it here and it shows in the model sheet. Null when the strip would be hidden. */
+  sheetStatus?: ReactNode;
 }
 
 /** "12s", "1m 05s": how long the thinking took, the way people say it. */
@@ -220,10 +224,12 @@ export function ChatView({
   onEditProject,
   recent,
   onOpenRecent,
+  sheetStatus = null,
 }: ChatViewProps): JSX.Element {
   const [freeModels, setFreeModels] = useState(false);
   const { sendKey } = useAccountPreferences();
   const t = useT();
+  const phone = useSpaceTier() === 2;
   // The project name (with its icon) sits wherever the language puts {project}.
   const projectLead = t('chat.empty.project').split('{project}');
   const keyHint = sendHintText(t, sendKey, typeof navigator !== 'undefined' && isApple(navigator.platform || navigator.userAgent));
@@ -284,6 +290,24 @@ export function ChatView({
   // test independent of this effect.
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const composerBox = useRef<HTMLDivElement | null>(null);
+  // #527: on a phone the composer floats over the transcript, which keeps room under its last
+  // message for the composer's height (--composer-h), staying pinned to the bottom as it grows.
+  const workspaceRef = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    const root = workspaceRef.current, box = composerBox.current;
+    if (!root || !box) return;
+    if (!phone || typeof ResizeObserver === 'undefined') { root.style.removeProperty('--composer-h'); return; }
+    const sync = () => {
+      const scroller = scrollRef.current;
+      const pinned = !!scroller && scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 4;
+      root.style.setProperty('--composer-h', `${Math.ceil(box.getBoundingClientRect().height)}px`);
+      if (pinned && scroller) scroller.scrollTop = scroller.scrollHeight;
+    };
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(box);
+    return () => { observer.disconnect(); root.style.removeProperty('--composer-h'); };
+  }, [phone]);
   const wasStreamingRef = useRef(streaming);
   const stopRequestedRef = useRef(false);
   useEffect(() => {
@@ -314,7 +338,15 @@ export function ChatView({
   }, [chatId]);
 
 
-  const openModels = () => { if (!project && freeContext) setFreeModels(true); else onOpenModels(); };
+  // #527: phone-sized space gets the compact floating composer, and the model button opens one
+  // bottom sheet with the model, Thinking and the live status (see the render below).
+  const [phoneSheet, setPhoneSheet] = useState(false);
+  const [contextSlot, setContextSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => { if (!phone) setPhoneSheet(false); }, [phone]);
+  const openModels = () => {
+    if (phone && (project || freeContext)) { setPhoneSheet(true); return; }
+    if (!project && freeContext) setFreeModels(true); else onOpenModels();
+  };
   // #510: the header's sliders open this chat's own settings (Settings is in the account menu).
   const headerSettings = project && onEditProject ? { label: t('sidebar.projectSettings'), open: () => onEditProject(project.id) }
     : { label: t('modelPopup.title'), open: openModels };
@@ -328,6 +360,11 @@ export function ChatView({
   useEffect(() => {
     setRepository(current => current && coworkAccess.repositories.includes(current) ? current : coworkAccess.repositories[0] ?? null);
   }, [coworkAccess.repositories]);
+  const modeSwitch = useModeSwitch({ mode, messageCount: messages.length, projectId: project?.id ?? null, access: coworkAccess, repository, onModeChange });
+  const chatConfig = project || freeContext;
+  // The phone model button names a thinking level only when the sheet can offer one; with the
+  // effort settings unavailable the sheet has no Thinking section, so the button drops the suffix.
+  const thinkingAvailable = !!useReasoningSettings(chatConfig, phone);
   const [catalogueOpen, setCatalogueOpen] = useState(false);
   const [turnBoxes, setTurnBoxes] = useState<string[]>([]);
   const [permitted, setPermitted] = useState<PermittedBox[]>([]);
@@ -361,12 +398,25 @@ export function ChatView({
     onChanged: refreshContext, onBusy: setActionBusy, onStatus: setActionStatus,
   });
 
+  const catalogue = <ToolCatalogue open={catalogueOpen} onOpenChange={setCatalogueOpen} projectId={project?.id ?? null} mode={mode}
+    toggled={turnBoxes} onToggle={id => setTurnBoxes(prev => prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id])}
+    onMention={name => { const next = insertMention(draft, name); setDraft(next); writeDraft(chatId, next); }} onBoxes={setPermitted} disabled={streaming || actionBusy}
+    focusFallback={() => composerBox.current?.querySelector<HTMLElement>('.composer-add')?.focus()} />;
+
   return (
-    <div className={`main chat-workspace${messages.length === 0 ? ' is-empty' : ''}${isDragOver ? ' is-drag-over' : ''}`} {...dropProps}>
+    <div ref={workspaceRef} className={`main chat-workspace${messages.length === 0 ? ' is-empty' : ''}${isDragOver ? ' is-drag-over' : ''}`} {...dropProps}>
       {isDragOver && (
         <div className="chat-drop-overlay" aria-hidden="true"><span>{t('composer.dropHint')}</span></div>
       )}
       <span className="sr-only" role="status" aria-live="polite">{isDragOver ? t('composer.dropHint') : ''}</span>
+      {phone && phoneSheet && chatConfig && <ModelPopup projects={[chatConfig]} activeProject={project ?? { ...chatConfig, name: title }}
+        onClose={() => setPhoneSheet(false)} onProjectsChanged={() => void refreshContext()}
+        status={<section className="mp-col mp-status" aria-labelledby="mp-status-title">
+          <h3 className="mp-col-title" id="mp-status-title">{t('stats.ariaLabel')}</h3>
+          {sheetStatus}
+          <div ref={setContextSlot} className="mp-context-slot"/>
+        </section>}
+        thinking={<ReasoningControl variant="list" project={chatConfig} disabled={streaming || actionBusy} onChanged={refreshContext} />} />}
       {freeModels && freeContext && <ModelPopup projects={[freeContext]} activeProject={{...freeContext, name: title}} onClose={()=>setFreeModels(false)} onProjectsChanged={()=>void refreshContext()} />}
       <div className="chat-header">
         <div className="header-titles">
@@ -548,19 +598,31 @@ export function ChatView({
       </div>
 
       <div className="composer" ref={composerBox}>
-        <ChatContext key={chatId} chatId={chatId} projectId={project?.id || null} messages={messages} streaming={streaming} onBusy={setActionBusy} />
-        <ComposerModeBar mode={mode} messageCount={messages.length} projectId={project?.id ?? null} disabled={streaming || actionBusy}
-          access={coworkAccess} repository={repository} onRepository={setRepository} onModeChange={onModeChange}>
-          <ToolCatalogue open={catalogueOpen} onOpenChange={setCatalogueOpen} projectId={project?.id ?? null} mode={mode}
-            toggled={turnBoxes} onToggle={id => setTurnBoxes(prev => prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id])}
-            onMention={name => { const next = insertMention(draft, name); setDraft(next); writeDraft(chatId, next); }} onBoxes={setPermitted} disabled={streaming || actionBusy}
-            focusFallback={() => composerBox.current?.querySelector<HTMLElement>('.composer-add')?.focus()} />
-        </ComposerModeBar>
-        <div className="composer-inner chat-composer-inner pane">
+        <ChatContext key={chatId} chatId={chatId} projectId={project?.id || null} messages={messages} streaming={streaming} onBusy={setActionBusy}
+          portalTo={phone ? (phoneSheet ? contextSlot : null) : undefined} />
+        {phone ? (
+          // #527: no separate mode row on a phone. The toggle sits in the composer; this slim line
+          // only appears when the caption says something (the Cowork repository, or that a Cowork
+          // turn will go as chat), and anchors the tool catalogue that the + menu opens.
+          <div className="composer-mode-bar is-slim" data-caption={modeSwitch.caption}>
+            <div className="composer-mode-row">
+              {/* The plain chat line is hidden by the tier-1 rule; the live region itself stays put. */}
+              <ModeCaption state={modeSwitch} disabled={streaming || actionBusy} onRepository={setRepository} />
+              {catalogue}
+            </div>
+            <ModeConfirm state={modeSwitch} />
+          </div>
+        ) : (
+          <ComposerModeBar mode={mode} messageCount={messages.length} projectId={project?.id ?? null} disabled={streaming || actionBusy}
+            access={coworkAccess} repository={repository} onRepository={setRepository} onModeChange={onModeChange}>
+            {catalogue}
+          </ComposerModeBar>
+        )}
+        <div className={`composer-inner chat-composer-inner pane${phone ? ' is-compact' : ''}`}>
           <ComposerTextarea
             ref={composerRef}
             aria-label={t('composer.message')}
-            rows={2}
+            rows={phone ? 1 : 2}
             placeholder={t('composer.placeholder')}
             value={draft}
             disabled={streaming || actionBusy}
@@ -569,8 +631,10 @@ export function ChatView({
           />
           <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={setActionStatus}
             browseTools={{ onOpen: () => setCatalogueOpen(true), count: turnBoxes.length }} />
-          <ComposerModel label={modelLabel} onClick={openModels} />
-          <ReasoningControl project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} />
+          {phone && <ModeToggle state={modeSwitch} disabled={streaming || actionBusy} compact />}
+          <ComposerModel label={modelLabel} onClick={openModels}
+            compact={phone ? { thinking: chatConfig && thinkingAvailable ? thinkingLevelLabel(t, chatConfig.reasoningEffort) : null, live: streaming } : undefined} />
+          {!phone && <ReasoningControl project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} />}
           {streaming ? (
             <button className="send-btn glass glass-lens is-primary is-press" onClick={() => { stopRequestedRef.current = true; onStop(); }} title={t('composer.stop')} aria-label={t('composer.stop')}>
               <span aria-hidden="true">&#9632;</span>

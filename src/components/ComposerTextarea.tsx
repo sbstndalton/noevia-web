@@ -38,7 +38,18 @@ export const ComposerTextarea = forwardRef<HTMLTextAreaElement, Omit<TextareaHTM
   // clear right after send) never flashes the old height first; a plain useEffect would.
   useLayoutEffect(() => {
     if (innerRef.current) syncComposerHeight(innerRef.current);
-  }, [value]);
+  }, [value, rest.rows]);
+  // The surface's CSS (max-height, padding, width) can change without the value changing: a
+  // resize across a space tier (#527's phone composer is one row with its own max-height), a
+  // rotation, or wrapping at a new width. Re-measure then too, or an empty box keeps the old
+  // height and a long draft stays clipped without its scrollbar.
+  useLayoutEffect(() => {
+    const el = innerRef.current;
+    if (!el || typeof window === 'undefined') return;
+    const resync = () => syncComposerHeight(el);
+    window.addEventListener('resize', resync);
+    return () => window.removeEventListener('resize', resync);
+  }, []);
   return (
     <textarea
       title={hint}
