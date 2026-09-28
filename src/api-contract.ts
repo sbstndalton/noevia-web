@@ -34,3 +34,33 @@ export function hasApiMajorMismatch(response: Response): boolean {
 export function hasApiMajorMismatchHeader(major: string | null, status: number): boolean {
   return status < 500 && isDifferentMajor(major);
 }
+
+// Version-pinned Skill invocation (#272), additive to POST /api/chat as `skill`.
+// `version` is the manifest's SHA-256 version, or its human label together with
+// `contentHash`. Only the reviewed, enabled content of the chat's project resolves.
+export type SkillPin = `skill_${string}@${string}` | { id: string; version?: string; contentHash?: string };
+
+// Echoed on the chat stream's `meta` event (and the durable turn) when a pin resolved.
+export interface PinnedSkillRecord {
+  id: string;
+  file: string;
+  name: string;
+  versionLabel: string;
+  version: string;
+  contentHash: string;
+  origin: 'published' | 'project-file' | 'attached-folder';
+}
+
+// `code` on a refused pin's JSON error body; the request never reached a model.
+export type SkillPinErrorCode =
+  | 'skill_pin_invalid'            // 400 malformed pin, or a pin on compaction
+  | 'skill_pin_requires_project'   // 400 no project chat
+  | 'skill_pin_unsupported_mode'   // 400 Cowork-mode request
+  | 'skill_not_found'              // 404 not a Skill of this project (or tenant)
+  | 'skill_version_unknown'        // 404 no such version in this project
+  | 'skill_version_changed'        // 409 the reviewed version was replaced on disk
+  | 'skill_version_unreviewed'     // 409 this exact version awaits review
+  | 'skill_disabled'               // 409
+  | 'skill_hash_mismatch'          // 409 version, label and content hash disagree
+  | 'skill_invalid'                // 422
+  | 'skill_unsupported_requirements'; // 422
