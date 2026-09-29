@@ -8,6 +8,7 @@ import type { Stuck } from './guided';
 import { canPromptSuite, groupByRole, recoveryItems, roleOf } from './guided';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
+import { describeBackendError } from './backend-errors';
 import { ROLE_KEY, stuckStatus } from './mm-text';
 
 type Evidence = { category: string; state: string; value: { ctx?: number; rate?: number } | null; at: number | null };
@@ -125,7 +126,7 @@ function RecoverPanel({ onTab }: { onTab: (tab: 'discover' | 'hardware') => void
       <button type="button" className="modal-btn secondary" onClick={() => void load()}>{t('mm.recover.checkAgain')}</button></div>
     <div className="mm-loader-row"><span aria-hidden="true" className={`model-dot${backends === undefined ? ' pending' : backends && !unhealthy.length ? '' : ' down'}`}/><strong>{t('mm.recover.loader')}</strong>
       <span className="mm-loader-state" aria-live="polite">{backends === undefined ? t('mm.recover.checkingLoader') : backends === null ? t('mm.recover.healthUnavailable') : !backends.length ? t('mm.recover.noEngine') : unhealthy.length
-        ? unhealthy.map((b) => `${b.name}: ${b.probe_error || b.last_restart_error || b.status}`).join(' · ')
+        ? unhealthy.map((b) => `${b.name}: ${b.probe_error ? describeBackendError(t, b.probe_error) : b.last_restart_error || b.status}`).join(' · ')
         : backends.map((b) => (b.loaded_model ? t('mm.recover.runningWith', { engine: b.name, model: b.loaded_model }) : t('mm.recover.running', { engine: b.name }))).join(' · ')}</span>
       <button type="button" className="mm-guided-link" onClick={() => onTab('hardware')}>{t('mm.recover.openLogs')}</button></div>
     {backends === null && <p className="mm-note">{t('mm.recover.healthUnavailableHelp')}</p>}

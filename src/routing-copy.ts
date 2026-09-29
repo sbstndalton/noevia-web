@@ -13,3 +13,11 @@ export function roleSummary(roles: { fast?: string; smart?: string; vision?: str
   return [t('routing.fast', { model: roles.fast || notSet }), t('routing.smart', { model: roles.smart || notSet }),
     ...(roles.vision ? [t('routing.vision', { model: roles.vision })] : []), ...(roles.code ? [t('routing.code', { model: roles.code })] : [])].join(' · ');
 }
+
+/** #616: the server sends stable role ids with English descriptions (the same text the router's
+ *  classifier reads). The interface words the description from the catalogue by id, and keeps the
+ *  server's own text only for an id it has no wording for. */
+export const ROUTE_ROLE_IDS = ['fast', 'smart', 'code'] as const;
+export function routeDescription(t: T, id: string, serverLabel: string): string {
+  return (ROUTE_ROLE_IDS as readonly string[]).includes(id) ? t(`chat.route.desc.${id}` as MessageKey) : serverLabel;
+}

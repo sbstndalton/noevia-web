@@ -9,6 +9,7 @@ import { roleSummary } from '../routing-copy';
 import { CloseButton } from './CloseButton';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
+import { toolboxCopy } from '../toolbox-copy';
 import type { JSX, ReactNode } from 'react';
 import type { InstalledModel, Project, Provider, Toolbox } from '../types';
 import type { AutoRoles, McpStatus } from '../api';
@@ -263,11 +264,11 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
           <input type="checkbox" checked={on} disabled={busy !== null || box.connector}
             onChange={() => void save(`box-${box.id}`, { toolboxes: on ? rawSelectedBoxes.filter((b) => b !== box.id) : [...rawSelectedBoxes, box.id] })} />
           <span>
-            <strong>{box.label}</strong>
+            <strong>{toolboxCopy(t, box).label}</strong>
             {box.source === 'mcp' && <span className="mp-tag">MCP</span>}
             {box.connector && <span className="mp-tag">{t('tools.onForChat')}</span>}
             <span className="mp-hint"> · {t.plural('modelPopup.toolCount', box.toolCount)}</span>
-            <span className="mp-tool-desc">{box.description}</span>
+            <span className="mp-tool-desc">{toolboxCopy(t, box).description}</span>
           </span>
         </label>;
       })}

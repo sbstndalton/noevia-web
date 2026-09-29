@@ -5,6 +5,7 @@ import { filterCatalogue, placeCatalogue, type CatalogueEntry, type PermittedBox
 import type { ChatMode } from '../chat-mode';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
+import { toolboxCopy } from '../toolbox-copy';
 import type { MessageKey } from '../i18n';
 import { keepFocusOnMouseDown, shouldClosePanelOnBlur } from '../tool-catalogue-focus';
 
@@ -75,7 +76,7 @@ export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, on
     if (!open) return;
     if (shouldClosePanelOnBlur(root.current, event.relatedTarget as Node | null)) onOpenChange(false);
   };
-  const rows = useMemo(() => filterCatalogue(boxes ?? [], query), [boxes, query]);
+  const rows = useMemo(() => filterCatalogue((boxes ?? []).map(box => ({ ...box, ...toolboxCopy(t, box) })), query), [boxes, query, t]);
   useEffect(() => { setActive(0); }, [query]);
   const choose = (row: CatalogueEntry | undefined) => {
     if (!row || row.permission === 'unavailable') return;

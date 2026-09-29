@@ -8,6 +8,7 @@ import { ShellIcon } from './ShellIcon';
 import { uploadUnreadableReason } from '../source-status';
 import { formatPercent } from '../number-format';
 import { useT, type Translate } from '../i18n';
+import { toolboxCopy } from '../toolbox-copy';
 
 /** Everything the shared upload path needs, whether the files came from the hidden `<input
  *  type="file">` or a drop (#437) — same shape as the props {@link ComposerActions} already
@@ -196,8 +197,8 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
           const on = effectiveSelected.includes(box.id);
           // A connector is on because it's connected (Settings → Connectors), not picked here —
           // show it as already-enabled rather than a checkbox nobody can turn off from this menu.
-          return <button type="button" key={box.id} className="composer-menu-row composer-tool-option" role="menuitemcheckbox" aria-checked={on} disabled={!project || saving || disabled || box.connector} onClick={() => void toggle(box.id)} title={t('composer.toolCount', { description: box.description, count: box.toolCount })}>
-            <ShellIcon name={box.source === 'mcp' ? 'connectors' : 'tools'} size={18}/><span>{box.label}<small>{box.description}</small></span>
+          return <button type="button" key={box.id} className="composer-menu-row composer-tool-option" role="menuitemcheckbox" aria-checked={on} disabled={!project || saving || disabled || box.connector} onClick={() => void toggle(box.id)} title={t('composer.toolCount', { description: toolboxCopy(t, box).description, count: box.toolCount })}>
+            <ShellIcon name={box.source === 'mcp' ? 'connectors' : 'tools'} size={18}/><span>{toolboxCopy(t, box).label}<small>{toolboxCopy(t, box).description}</small></span>
             <span className="composer-menu-check" aria-hidden="true">{on && <ShellIcon name="check" size={18}/>}</span>
           </button>;
         })}

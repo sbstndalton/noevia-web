@@ -4,6 +4,7 @@ import { TimeChart } from './TimeChart';
 import { duration, errorText, gib, human, mm, num, pct } from './mm';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
+import { describeBackendError } from './backend-errors';
 
 type Card = { index: number; name: string; util_pct: number; vram_used_gb: number; vram_total_gb: number; temp_c: number; power_w: number; shared_used_gb: number; shared_total_gb: number; clock_mhz: number; device: string };
 type Gpu = { vendor: string; name: string; util_pct: number; vram_used_gb: number; vram_total_gb: number; temp_c: number; power_w: number; gpu_count: number; cards: Card[]; memory_kind: 'dedicated' | 'unified'; shared_used_gb: number; shared_total_gb: number; clock_mhz: number; source: string; measured: boolean };
@@ -70,7 +71,7 @@ export function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; host
   const modelState = b.loaded_model
     ? t('mm.hw.serving', { model: b.loaded_model })
     : b.probe_error
-      ? t('mm.hw.stateUnavailable', { reason: b.probe_error })
+      ? t('mm.hw.stateUnavailable', { reason: describeBackendError(t, b.probe_error) })
       : t('mm.hw.noModel');
   const statusLabel = running ? t('mm.hw.status.running') : ENGINE_STATUS[b.status] ? t(ENGINE_STATUS[b.status]) : t('mm.hw.status.unknown');
   // #603: only a running engine has an uptime. The service sends none for a stopped one, and an
@@ -85,7 +86,7 @@ export function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; host
       <span className={`mm-pill ${running ? 'is-good' : 'is-bad'}`}>{statusLabel}</span>
     </header>
     {b.last_restart_error && <p role="alert" className="modal-err">{t('mm.hw.restartFailed', { error: b.last_restart_error })}</p>}
-    {!b.stats.ok && <p className="mm-note">{t('mm.hw.readingsUnavailable', { error: b.stats.error ?? '' })}</p>}
+    {!b.stats.ok && <p className="mm-note">{t('mm.hw.readingsUnavailable', { error: describeBackendError(t, b.stats.error) })}</p>}
     {gpu && <>
       <p className="mm-gpu-name"><strong>{gpu.name}</strong>{gpu.gpu_count > 1 ? ` · ${t('mm.hw.gpus', { count: gpu.gpu_count })}` : ''}</p>
       {unified && (() => { const risk = sharedMemoryRisk({ unified, sharedTotalGB: gpu.shared_total_gb, hostTotalGB }); return risk.risky ? <p className="mm-note warn" role="alert">{t('mm.hw.sharedRisk', { borrow: num(risk.borrowGB ?? 0, 0), host: num(risk.hostGB ?? 0, 0), left: num(Math.max(0, risk.leftGB ?? 0)), cap: num(risk.capGB ?? 0, 0) })}</p> : null; })()}

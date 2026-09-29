@@ -511,8 +511,9 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 
 /* Long model names keep their start and their size/quantization ending; the middle gives way. */
 .mid-trunc { display: inline-flex; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; }
-.mid-trunc-head { flex: 0 1 auto; min-width: 1.5em; overflow: hidden; text-overflow: ellipsis; }
-.mid-trunc-tail { flex: none; }
+/* #620: a flex item drops a space at its edge; `pre` keeps the one at the cut ("Compagnon| de journal"). */
+.mid-trunc-head { flex: 0 1 auto; min-width: 1.5em; overflow: hidden; text-overflow: ellipsis; white-space: pre; }
+.mid-trunc-tail { flex: none; white-space: pre; }
 .model-pill .mid-trunc.model-pill-label { overflow: hidden; }
 .model-name.mid-trunc { display: inline-flex; }
 .mp-model-search { margin: 0 0 var(--space-2); }

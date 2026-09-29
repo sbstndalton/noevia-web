@@ -17,6 +17,7 @@ import { modelChoiceLabel } from '../model-guidance';
 import { ComposerActions, useAttachmentDrop } from './ComposerActions';
 import { apiFetch } from '../api';
 import { isDisplayableRoutingDecision } from '../current-routing';
+import { routeDescription } from '../routing-copy';
 import { useAccountPreferences, appLocale } from '../user-preferences';
 import { sendHintText, useT } from '../i18n';
 import type { MessageKey } from '../i18n';
@@ -102,6 +103,8 @@ export function ThinkingBlock({ text, live, ms }: { text: string; live: boolean;
   );
 }
 
+// Where the Settings link sits inside the translated sentence: word order differs per language.
+const SETTINGS_MARK = '\u0000';
 const ROUTE_REASONS = ['disabled', 'no-backend', 'missing-roles', 'deadline', 'no-backend-answered', 'low-confidence', 'rejected'] as const;
 
 export function RoutingDetails({ decision }: { decision: RoutingDecision }) {
@@ -122,8 +125,8 @@ export function RoutingDetails({ decision }: { decision: RoutingDecision }) {
       <p>{decision.status === 'accepted' ? t('chat.route.accepted') : t('chat.route.fallback', { reason })}{Number.isFinite(decision.latencyMs) ? ` · ${formatNumber(Math.round(decision.latencyMs!), t.locale, 0)} ms` : ''}</p>
       {selectedRole && selectedRole !== decision.effectiveRole && <p>{t('chat.route.selectedUsed', { selected: selectedRole, used: decision.effectiveRole })}</p>}
       {offered.length > 0 && <ul>{offered.map(option => <li key={option.id}>
-        <span><strong>{option.id}</strong> · {option.label}</span>
-        <span>{Object.hasOwn(scores, option.id) && Number.isFinite(scores[option.id]) ? String(scores[option.id]) : '—'}</span>
+        <span><strong>{option.id}</strong> · {routeDescription(t, option.id, option.label)}</span>
+        <span>{Object.hasOwn(scores, option.id) && Number.isFinite(scores[option.id]) ? formatNumber(scores[option.id], t.locale, { max: 4 }) : '—'}</span>
       </li>)}</ul>}
       <small>{t('chat.route.scoresNote')}</small>
     </div>
@@ -461,8 +464,8 @@ export function ChatView({
 
       {inferenceUp === false && (
         <div className="conn-banner" role="status">
-          Inference is unreachable right now — messages will fail until it's back.
-          Check the model backend in <button className="conn-banner-link" onClick={onOpenSettings}>Settings</button>.
+          {t('chat.offline.text')}{' '}
+          {t('chat.offline.check', { settings: SETTINGS_MARK }).split(SETTINGS_MARK).flatMap((part, i) => i === 0 ? [part] : [<button key="settings" className="conn-banner-link" onClick={onOpenSettings}>{t('chat.offline.settings')}</button>, part])}
         </div>
       )}
 
@@ -496,7 +499,7 @@ export function ChatView({
                 <div className="assistant-card">
                   {m.reasoningMode && m.reasoningMode !== 'off' && <small className="reasoning-result">Effort: {m.reasoningEffort} · {m.reasoningMode === 'real' ? 'provider parameter' : 'best-effort hint'}</small>}
                   {m.warning && <p className="msg-warning" role="status">{m.warning}</p>}
-                  {(m.toolScope || m.skillScope) && <small className="tool-scope" title="What noevia gave the model for this reply">{m.toolScope && <>Using: {m.toolScope}</>}{m.toolScope && m.skillScope && ' · '}{m.skillScope && <>Skill: {m.skillScope}</>}</small>}
+                  {(m.toolScope || m.skillScope) && <small className="tool-scope" title={t('chat.scope.title')}>{m.toolScope && t('chat.scope.using', { tools: m.toolScope === 'all tools' ? t('chat.scope.allTools') : m.toolScope })}{m.toolScope && m.skillScope && ' · '}{m.skillScope && t('chat.scope.skill', { name: m.skillScope })}</small>}
                   {m.routingDecision && <RoutingDetails decision={m.routingDecision} />}
                   {m.reasoning ? <ThinkingBlock text={m.reasoning} ms={m.reasoningMs} live={!!thinkingLive && !m.content} /> : null}
                   {m.toolCalls && m.toolCalls.length > 0 ? <ToolCalls calls={m.toolCalls} /> : null}
@@ -572,7 +575,7 @@ export function ChatView({
                           onEditMessage(chatId, m.id, text);
                         }
                       }}
-                      aria-label="Edit your message and re-run from here"
+                      aria-label={t('chat.edit.inputAria')}
                     />
                     <div className="msg-edit-actions">
                       <button
@@ -585,10 +588,10 @@ export function ChatView({
                         }}
                         disabled={streaming || !editDraft.trim()}
                       >
-                        Save &amp; re-run
+                        {t('chat.edit.save')}
                       </button>
-                      <button className="btn btn-secondary" onClick={() => cancelEdit(m.id)}>Cancel</button>
-                      <small>Everything after this message is replaced.</small>
+                      <button className="btn btn-secondary" onClick={() => cancelEdit(m.id)}>{t('common.cancel')}</button>
+                      <small>{t('chat.edit.note')}</small>
                     </div>
                   </div>
                 ) : (
@@ -599,10 +602,10 @@ export function ChatView({
                       className="msg-edit-btn"
                       onClick={() => { setEditingId(m.id); setEditDraft(m.content); }}
                       disabled={streaming || actionBusy || mode === 'cowork'}
-                      title={mode === 'cowork' ? 'Cowork tasks are not re-run by editing; send a new task instead' : 'Edit this message and re-run the conversation from here'}
-                      aria-label="Edit and re-run from this message"
+                      title={mode === 'cowork' ? t('chat.edit.coworkTitle') : t('chat.edit.title')}
+                      aria-label={t('chat.edit.aria')}
                     >
-                      ✎ Edit
+                      ✎ {t('chat.edit.button')}
                     </button>
                   </div>
                 )

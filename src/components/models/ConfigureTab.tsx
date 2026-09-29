@@ -149,7 +149,7 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
     <AutoconfigPanel name={name} onFill={fill}/>
     <div className="mm-form">
       {data.schema.map(tier => <details key={tier.tier} className="mm-tier" open={tier.open || tier.fields.some(f => draft[f.key])}>
-        <summary>{tierTitle(tier)}{tier.fields.some(f => draft[f.key]) ? <small>{t('mm.editor.set', { count: tier.fields.filter(f => draft[f.key]).length })}</small> : null}</summary>
+        <summary>{tierTitle(tier)}{tier.fields.some(f => draft[f.key]) ? <small>{t.plural('mm.editor.set', tier.fields.filter(f => draft[f.key]).length)}</small> : null}</summary>
         <div className="mm-fields">{tier.fields.map(f => <FieldInput key={f.key} field={f} value={draft[f.key] || ''} onChange={v => setDraft({ ...draft, [f.key]: v })}/>)}</div>
       </details>)}
       <label>{t('mm.editor.otherOptions')}<textarea rows={4} className="mm-mono" value={extras} onChange={e => setExtras(e.target.value)} placeholder={t('mm.editor.otherPlaceholder')}/></label>

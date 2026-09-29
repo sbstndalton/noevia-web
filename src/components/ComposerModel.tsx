@@ -14,6 +14,8 @@ export function ComposerModel({ label, onClick, disabled = false, hint, compact 
   // #510: in phone-sized space the Auto router reads "Auto"; the full name stays the tooltip and
   // the accessible name. Only this known label is shortened — a model's own name is never cut.
   const short = label === AUTO_LABEL ? 'Auto' : '';
+  // #615: the pill's full text follows the interface language; model names are shown as they are.
+  if (label === AUTO_LABEL) label = t('composer.autoFastSmart');
   if (compact) {
     const name = t('composer.chooseModel', { name: label }) + (compact.thinking ? ` · ${t('composer.thinking.label')}: ${compact.thinking}` : '');
     return <button type="button" className={`composer-model is-compact${compact.live ? ' is-live' : ''}`} onClick={onClick} disabled={disabled}
