@@ -11,12 +11,12 @@ import '../../i18n/models';
  *  catalogues, benchmarks and hardware charts need the full width. */
 export function ModelManagerPage({ onBack, ...props }: { onBack: () => void; initialModel?: string; models: InstalledModel[]; modelsLoaded: boolean; routes: RouteRule[]; projects: Project[]; modelsError: string | null }): JSX.Element {
   const t = useT();
-  return <div className="main model-manager-page">
+  return <main className="main model-manager-page">
     <div className="settings-scroll">
       <div className="model-manager-head">
         <button className="settings-back" onClick={onBack}><ShellIcon name="arrow"/>{t('settings.title')}</button>
       </div>
       <ModelsSettings {...props} />
     </div>
-  </div>;
+  </main>;
 }

@@ -295,7 +295,7 @@ export function ChatView({
   const composerBox = useRef<HTMLDivElement | null>(null);
   // #527: on a phone the composer floats over the transcript, which keeps room under its last
   // message for the composer's height (--composer-h), staying pinned to the bottom as it grows.
-  const workspaceRef = useRef<HTMLDivElement | null>(null);
+  const workspaceRef = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => {
     const root = workspaceRef.current, box = composerBox.current;
     if (!root || !box) return;
@@ -414,7 +414,7 @@ export function ChatView({
   const skillPicker = <SkillPinSelect options={skillOptions} value={skillPin} onChange={setSkillPin} disabled={streaming || actionBusy} />;
 
   return (
-    <div ref={workspaceRef} className={`main chat-workspace${messages.length === 0 ? ' is-empty' : ''}${isDragOver ? ' is-drag-over' : ''}`} {...dropProps}>
+    <main ref={workspaceRef} className={`main chat-workspace${messages.length === 0 ? ' is-empty' : ''}${isDragOver ? ' is-drag-over' : ''}`} {...dropProps}>
       {isDragOver && (
         <div className="chat-drop-overlay" aria-hidden="true"><span>{t('composer.dropHint')}</span></div>
       )}
@@ -667,6 +667,6 @@ export function ChatView({
           </button></li>)}</ul> : <p className="home-recent-empty">{t('composer.noRecent')}</p>}
         </section>}
       </div>
-    </div>
+    </main>
   );
 }

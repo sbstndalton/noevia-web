@@ -57,7 +57,7 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
     .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || (sort === 'name' ? a.name.localeCompare(b.name) : b.updatedAt - a.updatedAt) || a.name.localeCompare(b.name));
 
   return (
-    <div className="main projects-workspace">
+    <main className="main projects-workspace">
       <div className="settings-scroll">
         {/* #413: one page-header pattern (display title + intro, shared with Settings and
             Customise) instead of Projects' own oversized hero — see docs/design-notes/page-headers.md.
@@ -160,7 +160,7 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
           onCreate={onCreate}
         />
       )}
-    </div>
+    </main>
   );
 }
 
