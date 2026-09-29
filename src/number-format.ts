@@ -35,3 +35,56 @@ export function localizeLeadingNumber(text: string, locale: string | undefined):
   const decimals = m[2]?.length ?? 0;
   return formatNumber(Number(`${m[1]}${m[2] ? `.${m[2]}` : ''}`), locale, decimals) + m[3];
 }
+
+const percentCache = new Map<string, Intl.NumberFormat>();
+
+/** A percentage in the locale's own percent format ("27 %" in de/fr, "27%" in en). `pct` is in
+ *  percent points (27 means 27 %), which is how the model manager and the stats strip carry it. */
+export function formatPercent(pct: number, locale: string | undefined, digits: FractionDigits = 0): string {
+  const min = typeof digits === 'number' ? digits : digits.min ?? 0;
+  const max = typeof digits === 'number' ? digits : digits.max;
+  const key = `${locale ?? ''}|${min}|${max}`;
+  let f = percentCache.get(key);
+  if (!f) {
+    const options = { style: 'percent' as const, minimumFractionDigits: min, maximumFractionDigits: max };
+    try { f = new Intl.NumberFormat(locale, options); } catch { f = new Intl.NumberFormat(undefined, options); }
+    percentCache.set(key, f);
+  }
+  return f.format(pct / 100);
+}
+
+const unitCache = new Map<string, Intl.NumberFormat | null>();
+function unitFormatter(locale: string | undefined, unit: string): Intl.NumberFormat | null {
+  const key = `${locale ?? ''}|${unit}`;
+  const hit = unitCache.get(key);
+  if (hit !== undefined) return hit;
+  let f: Intl.NumberFormat | null = null;
+  try { f = new Intl.NumberFormat(locale, { style: 'unit', unit, unitDisplay: 'short', maximumFractionDigits: 0 }); } catch { f = null; }
+  unitCache.set(key, f);
+  return f;
+}
+
+const ENGLISH_UNIT: Record<string, string> = { day: 'd', hour: 'h', minute: 'm', second: 's' };
+
+/** A span of seconds as at most two units, the same shape the server used to build (s, m, h m,
+ *  d h), in the locale's own unit names ("1 Std. 14 Min.", "13 T 15 Std."). Uses
+ *  Intl.DurationFormat where the browser has it, then Intl.NumberFormat unit formatting, and last
+ *  the compact English letters ("1h 14m") if neither can format the locale. */
+export function formatDuration(totalSeconds: number, locale: string | undefined): string {
+  const secs = Math.max(0, Math.floor(Number.isFinite(totalSeconds) ? totalSeconds : 0));
+  const d = Math.floor(secs / 86400), h = Math.floor((secs % 86400) / 3600), m = Math.floor((secs % 3600) / 60);
+  const parts: [string, number][] = secs < 60 ? [['second', secs]] : secs < 3600 ? [['minute', m]]
+    : secs < 86400 ? [['hour', h], ['minute', m]] : [['day', d], ['hour', h]];
+  const DurationFormat = (Intl as unknown as { DurationFormat?: new (l?: string, o?: object) => { format(v: object): string } }).DurationFormat;
+  // DurationFormat leaves out zero-valued units, so an all-zero span ("0 s") would come out empty.
+  if (DurationFormat && parts.some(([, v]) => v > 0)) {
+    try { return new DurationFormat(locale, { style: 'short' }).format(Object.fromEntries(parts.map(([u, v]) => [`${u}s`, v]))); } catch { /* fall through */ }
+  }
+  const formatted: string[] = [];
+  for (const [unit, value] of parts) {
+    const f = unitFormatter(locale, unit);
+    if (!f) return parts.map(([u, v]) => `${v}${ENGLISH_UNIT[u]}`).join(' ');
+    formatted.push(f.format(value));
+  }
+  return formatted.join(' ');
+}

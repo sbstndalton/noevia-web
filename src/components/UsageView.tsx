@@ -4,12 +4,13 @@ import type { JSX } from 'react';
 import { fetchProfile, fetchUsage } from '../api';
 import type { UsageSummary, UsageTotals } from '../types';
 import { useT } from '../i18n';
+import { formatNumber } from '../number-format';
 
 function compact(n: number): string {
-  if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
-  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}k`;
-  return String(n);
+  if (n >= 1e9) return `${formatNumber(n / 1e9, appLocale(), 1)}B`;
+  if (n >= 1e6) return `${formatNumber(n / 1e6, appLocale(), 1)}M`;
+  if (n >= 1e3) return `${formatNumber(n / 1e3, appLocale(), 1)}k`;
+  return formatNumber(n, appLocale(), 0);
 }
 
 // Five buckets, thresholds derived from the busiest day in the window rather

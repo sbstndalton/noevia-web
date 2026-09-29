@@ -4,6 +4,7 @@ import type { JSX } from 'react';
 import { apiFetch } from '../../api';
 import { copyText, GoogleDriveConnect, RecoveryKeyLink } from './GoogleDriveSetup';
 import type { GoogleState } from './GoogleDriveSetup';
+import { formatNumber } from '../../number-format';
 
 interface Status {
   enabled: boolean; ready: boolean; reason: string | null; busy: string | null; schedule: string; retention: string; destination: string | null; paths: number;
@@ -15,7 +16,7 @@ interface Status {
 }
 
 const when = (ms?: number | null) => (ms ? new Date(ms).toLocaleString(appLocale()) : 'Never');
-const size = (n: number) => (n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
+const size = (n: number) => (n < 1024 * 1024 ? `${formatNumber(Math.max(1, Math.round(n / 1024)), appLocale(), 0)} KB` : `${formatNumber(n / 1024 / 1024, appLocale(), 1)} MB`);
 
 async function call<T>(url: string, method = 'GET'): Promise<T> {
   const r = await apiFetch(url, { method, headers: method === 'POST' ? { 'Content-Type': 'application/json' } : undefined, body: method === 'POST' ? '{}' : undefined });

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../api';
 import { isSystemModel } from '../../model-system';
 import { appLocale } from '../../user-preferences';
-import { bytes, ctxShort, errorText, mm, num, tokens } from './mm';
+import { bytes, ctxShort, errorText, mm, num, pct, tokens } from './mm';
 import { NativeCalibration } from '../NativeCalibration';
 import { AutoTune } from './AutoTune';
 import { dismissFolderModel } from './register';
@@ -10,7 +10,7 @@ import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 
 type Field = { key: string; label: string; kind: 'int' | 'text' | 'bool' | 'select'; choices: string[]; placeholder: string; help: string };
-type Tier = { tier: string; open: boolean; fields: Field[] };
+type Tier = { tier: string; tierId?: string | null; open: boolean; fields: Field[] };
 type SectionRow = { name: string; items: [string, string][]; hasFile: boolean; file: string | null; cli: string };
 type SectionsResponse = { revision: string; schema: Tier[]; sections: SectionRow[]; unregistered: string[]; backups: [string, number, number][]; raw?: string };
 type SectionResponse = { name: string; exists: boolean; values: Record<string, string>; extras: string; hints: string[]; revision: string; schema: Tier[] };
@@ -62,11 +62,23 @@ export function ConfigureTab({ initial, onSaved, onSelect }: { initial?: string;
   </div>;
 }
 
+/** Advanced group titles: the id the service sends (#598), or the English label an older service
+ *  sends alone; a group with neither keeps its label. */
+const TIER_KEY: Record<string, MessageKey> = {
+  common: 'mm.tier.common', runtime: 'mm.tier.runtime', rope: 'mm.tier.rope', moe: 'mm.tier.moe', multimodal: 'mm.tier.multimodal',
+  speculative: 'mm.tier.speculative', lora: 'mm.tier.lora', cpu: 'mm.tier.cpu', reasoning: 'mm.tier.reasoning', misc: 'mm.tier.misc',
+};
+const TIER_ID_BY_LABEL: Record<string, string> = {
+  'Common': 'common', 'Runtime tuning': 'runtime', 'RoPE / YaRN': 'rope', 'Mixture-of-Experts offload': 'moe', 'Multimodal / vision': 'multimodal',
+  'Speculative decoding': 'speculative', 'LoRA / control vectors': 'lora', 'CPU threading': 'cpu', 'Reasoning / thinking': 'reasoning', 'Embeddings & misc': 'misc',
+};
+
 function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRow; onChanged: (renamed?: string) => Promise<void> }) {
   const [data, setData] = useState<SectionResponse | null>(null), [draft, setDraft] = useState<Record<string, string>>({}), [extras, setExtras] = useState('');
   const [busy, setBusy] = useState(''), [error, setError] = useState(''), [message, setMessage] = useState(''), [conflict, setConflict] = useState(false);
   const [rename, setRename] = useState(''), [confirmDelete, setConfirmDelete] = useState(false);
   const t = useT();
+  const tierTitle = (x: Tier) => { const key = TIER_KEY[x.tierId || TIER_ID_BY_LABEL[x.tier] || '']; return key ? t(key) : x.tier; };
   const read = async (defaults = false) => {
     setError(''); setConflict(false);
     try { const v = await mm<SectionResponse>(`sections/${encodeURIComponent(name)}${defaults ? '?defaults=true' : ''}`); setData(v); setDraft(v.values); if (!defaults) setExtras(v.extras); setMessage(defaults ? t('mm.editor.defaultsFilled') : ''); }
@@ -137,7 +149,7 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
     <AutoconfigPanel name={name} onFill={fill}/>
     <div className="mm-form">
       {data.schema.map(tier => <details key={tier.tier} className="mm-tier" open={tier.open || tier.fields.some(f => draft[f.key])}>
-        <summary>{tier.tier}{tier.fields.some(f => draft[f.key]) ? <small>{t('mm.editor.set', { count: tier.fields.filter(f => draft[f.key]).length })}</small> : null}</summary>
+        <summary>{tierTitle(tier)}{tier.fields.some(f => draft[f.key]) ? <small>{t('mm.editor.set', { count: tier.fields.filter(f => draft[f.key]).length })}</small> : null}</summary>
         <div className="mm-fields">{tier.fields.map(f => <FieldInput key={f.key} field={f} value={draft[f.key] || ''} onChange={v => setDraft({ ...draft, [f.key]: v })}/>)}</div>
       </details>)}
       <label>{t('mm.editor.otherOptions')}<textarea rows={4} className="mm-mono" value={extras} onChange={e => setExtras(e.target.value)} placeholder={t('mm.editor.otherPlaceholder')}/></label>
@@ -326,7 +338,7 @@ function AutoconfigPanel({ name, onFill }: { name: string; onFill: (values: Reco
         {data && data.measured.n > 0 && <p className="mm-note">{t.plural(data.measured.draft_acc_p50 != null ? 'mm.autoconfig.measuredDraft' : 'mm.autoconfig.measured', data.measured.n, { gen: num(data.measured.gen_p50, 1), low: num(data.measured.gen_p25, 1), high: num(data.measured.gen_p75, 1), prompt: num(data.measured.prompt_p50, 0), accepted: data.measured.draft_acc_p50 != null ? Math.round(data.measured.draft_acc_p50 * 100) : 0 })}</p>}
         {data && data.history.length > 0 && <div className="mm-table-wrap"><table className="mm-table"><caption>{t('mm.autoconfig.history')}</caption>
           <thead><tr><th scope="col">{t('mm.autoconfig.differ')}</th><th scope="col">{t('mm.autoconfig.generation')}</th><th scope="col">{t('mm.autoconfig.requests')}</th></tr></thead>
-          <tbody>{data.history.map(h => <tr key={h.instance}><td>{Object.entries(h.diff).map(([k, v]) => `${k} ${v}`).join(', ') || '—'}{h.is_current ? ` ${t('mm.current')}` : ''}</td><td>{t('mm.tokensPerSecond', { rate: num(h.gen_p50, 1) })} ({h.rel_pct}%)</td><td>{h.n}</td></tr>)}</tbody></table></div>}
+          <tbody>{data.history.map(h => <tr key={h.instance}><td>{Object.entries(h.diff).map(([k, v]) => `${k} ${v}`).join(', ') || '—'}{h.is_current ? ` ${t('mm.current')}` : ''}</td><td>{t('mm.tokensPerSecond', { rate: num(h.gen_p50, 1) })} ({pct(h.rel_pct)})</td><td>{h.n}</td></tr>)}</tbody></table></div>}
         {rec.current_diff.length > 0 && <details className="mm-disclosure"><summary>{t.plural('mm.autoconfig.changes', rec.current_diff.length)}</summary><ul className="mm-hints mm-mono">{rec.current_diff.map(d => <li key={d}>{d}</li>)}</ul></details>}
         {rec.quirks.length > 0 && <details className="mm-disclosure"><summary>{t('mm.autoconfig.notes', { count: rec.quirks.length })}</summary><ul className="mm-hints">{rec.quirks.map(q => <li key={q}>{q}</li>)}</ul></details>}
         <button className="modal-btn primary" onClick={() => onFill(values, rec.displaced)}>{t('mm.autoconfig.fill')}</button>

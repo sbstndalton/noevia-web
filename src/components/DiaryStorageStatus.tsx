@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
 import { shouldPoll } from '../diary-storage-poll';
 import { useT } from '../i18n';
+import { formatNumber } from '../number-format';
+import { appLocale } from '../user-preferences';
 
 type Status = { mode: 'managed' | 'legacy'; backup: 'not_configured' | 'pending' | 'failed' | 'complete'; lastBackedUp: number | null; error?: string };
 type Preview = { fingerprint: string; fileCount: number; bytes: number; files: { path: string; bytes: number; sha256: string }[] };
@@ -73,7 +75,7 @@ export function DiaryStorageStatus({ busy, revision, onMode, onImported, onBusyC
       <button className="popup-tab" disabled={busy || working} onClick={() => void importDiary(false)}>{working ? t('diary.storageStatus.checkingFiles') : t('diary.storageStatus.previewImport')}</button>
     </> : !statusError && <p role="status">{t('diary.storageStatus.checkingStorage')}</p>}
     {preview && <div>
-      <p>{t('diary.storageStatus.readyToCopy', { files: t.plural('diary.storageStatus.fileCount', preview.fileCount), kib: (preview.bytes / 1024).toFixed(1) })}</p>
+      <p>{t('diary.storageStatus.readyToCopy', { files: t.plural('diary.storageStatus.fileCount', preview.fileCount), kib: formatNumber(preview.bytes / 1024, appLocale(), 1) })}</p>
       <details><summary>{t('diary.storageStatus.reviewFileList')}</summary><ul>{preview.files.map(file => <li key={file.path}>{t('diary.storageStatus.fileBytes', { path: file.path, bytes: file.bytes })}</li>)}</ul></details>
       <p className="diary-context-note">{t('diary.storageStatus.checkedAgainNote')}</p>
       <button className="modal-btn primary" disabled={busy || working} onClick={() => void importDiary(true)}>{t('diary.storageStatus.copyAndUseApp')}</button>

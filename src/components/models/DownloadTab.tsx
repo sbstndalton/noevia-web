@@ -114,7 +114,7 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'fit' }:
   const hiddenByFit = filters.showUnsuitable ? 0 : meta?.counts?.hiddenUnsuitable || 0;
   return <div className="mm-tab">
     <p className="mm-lede">{t('mm.discover.lede')}</p>
-    {target && <p className="mm-note" data-testid="download-target">{t('mm.discover.targetBefore')}<strong className="mm-mono">{saveTo ? `${target.hostPath || target.path}/${saveTo}` : target.hostPath || target.path}</strong>{target.disk && !saveTo ? ` · ${t('mm.discover.free', { free: target.disk.freeH })}` : ''}{t('mm.discover.targetAfter')}</p>}
+    {target && <p className="mm-note" data-testid="download-target">{t('mm.discover.targetBefore')}<strong className="mm-mono">{saveTo ? `${target.hostPath || target.path}/${saveTo}` : target.hostPath || target.path}</strong>{target.disk && !saveTo ? ` · ${t('mm.discover.free', { free: human(target.disk.freeH) })}` : ''}{t('mm.discover.targetAfter')}</p>}
     {targets.length > 1 && <label className="mm-select mm-save-to">{t('mm.discover.saveTo')}<select value={saveTo} onChange={e => setSaveTo(e.target.value)}>{targets.map(x => <option key={x.id} value={x.id}>{x.id ? x.label : t('mm.discover.defaultFolder')}</option>)}</select></label>}
     <HfToken/>
     <p className="mm-note" role="status">{searching ? t('mm.discover.searching')

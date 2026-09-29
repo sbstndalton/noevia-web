@@ -6,13 +6,20 @@ import { appLocale } from '../../user-preferences';
 import { num } from './mm';
 import type { MessageKey } from '../../i18n';
 
-type Row = { category: string; state: string; value: { ctx?: number; rate?: number } | null; at: number | null; suite: { name: string; version: number } | null; limitations: string[] };
+type LimitationKey = { id: string; params?: Record<string, number> };
+type Row = { category: string; state: string; value: { ctx?: number; rate?: number } | null; at: number | null; suite: { name: string; version: number } | null; limitations: string[]; limitationKeys?: (LimitationKey | null)[] };
 type CardValue = { license?: string | null; pipelineTag?: string | null; libraryName?: string | null; tags?: string[]; evaluationClaims?: { task: string | null; dataset: string | null; metric: string | null; value: string | null }[]; cardExcerpt?: string | null };
-type External = { category: string; state: string; value: CardValue | null; at: number | null; suite: { name: string; version: number } | null; provenance: { sourceUrl: string; retrievedAt: number } | null; limitations: string[] };
+type External = { category: string; state: string; value: CardValue | null; at: number | null; suite: { name: string; version: number } | null; provenance: { sourceUrl: string; retrievedAt: number } | null; limitations: string[]; limitationKeys?: (LimitationKey | null)[] };
 const LABEL: Record<string, MessageKey> = { context_capacity: 'mm.evidence.label.context', vision: 'mm.evidence.label.vision', mtp_acceptance: 'mm.evidence.label.mtp', throughput: 'mm.evidence.label.throughput' };
 const STATE: Record<string, MessageKey> = {
   verified: 'mm.evidence.state.verified', failed: 'mm.evidence.state.failed', stale: 'mm.evidence.state.stale',
   reported: 'mm.evidence.state.reported', unverified: 'mm.evidence.state.unverified', unavailable: 'mm.evidence.state.unavailable',
+};
+/** Stable ids the server sends beside each recorded limitation sentence (#598). */
+const LIMITATION: Record<string, MessageKey> = {
+  'autotune-quality': 'mm.evidence.lim.autotune-quality', 'autotune-budget': 'mm.evidence.lim.autotune-budget', 'vision-probe': 'mm.evidence.lim.vision-probe',
+  'single-reply': 'mm.evidence.lim.single-reply', 'calibration-budget': 'mm.evidence.lim.calibration-budget', 'benchmark-median': 'mm.evidence.lim.benchmark-median',
+  'source-unverified': 'mm.evidence.lim.source-unverified',
 };
 const EXTERNAL_STATE: Record<string, MessageKey> = {
   reported: 'mm.evidence.external.reported', stale: 'mm.evidence.external.stale', unverified: 'mm.evidence.external.unverified', unavailable: 'mm.evidence.external.unavailable',
@@ -24,6 +31,12 @@ export function EvidenceList({ model }: { model: string }): JSX.Element | null {
   const [external, setExternal] = useState<External | null>(null), [importing, setImporting] = useState(false), [importNote, setImportNote] = useState('');
   const t = useT();
   const tRef = useRef(t); tRef.current = t;
+  // A limitation with a known id is translated; anything else (or a server that sends no ids) keeps the recorded sentence.
+  const limits = (texts: string[], keys?: (LimitationKey | null)[]) => texts.map((text, i) => {
+    const key = keys?.[i];
+    if (!key || !LIMITATION[key.id]) return text;
+    return t(LIMITATION[key.id], Object.fromEntries(Object.entries(key.params || {}).map(([k, v]) => [k, num(v, 0)])));
+  }).join(' · ');
   const own = (map: Record<string, MessageKey>, id: string) => (map[id] ? t(map[id]) : id);
   useEffect(() => {
     let live = true;
@@ -64,7 +77,7 @@ export function EvidenceList({ model }: { model: string }): JSX.Element | null {
       <ul>{rows.map((row) => <li key={row.category} data-state={row.state}>
         <strong>{own(LABEL, row.category)}</strong>
         <span>{own(STATE, row.state)}{row.category === 'context_capacity' && row.value?.ctx ? ` · ${t('mm.tokensCount', { tokens: num(row.value.ctx, 0) })}` : ''}{row.category === 'mtp_acceptance' && typeof row.value?.rate === 'number' ? ` · ${t('mm.evidence.accepted', { pct: Math.round(row.value.rate * 100) })}` : ''}{row.category === 'throughput' && typeof row.value?.rate === 'number' ? ` · ${t('mm.tokensPerSecond', { rate: num(row.value.rate) })}` : ''}{row.at ? ` · ${new Date(row.at).toLocaleDateString(appLocale())}` : ''}</span>
-        {row.limitations.length > 0 && row.state !== 'unverified' && <small>{row.limitations.join(' · ')}</small>}
+        {row.limitations.length > 0 && row.state !== 'unverified' && <small>{limits(row.limitations, row.limitationKeys)}</small>}
         {row.category === 'vision' && <button type="button" className="modal-btn secondary" disabled={checking} onClick={() => void recheck()} title={t('mm.evidence.recheckTitle')}>{checking ? t('mm.checking') : t('mm.evidence.recheck')}</button>}
       </li>)}</ul>
       {note && <p className="mm-note" role="status">{note}</p>}
@@ -78,7 +91,7 @@ export function EvidenceList({ model }: { model: string }): JSX.Element | null {
           {external!.value.evaluationClaims.map((c, i) => <li key={i}>{[c.task, c.dataset, c.metric, c.value].filter(Boolean).join(' · ')}</li>)}
         </ul>}
         {external!.provenance?.sourceUrl && <small>{t('mm.evidence.source', { url: external!.provenance.sourceUrl })}</small>}
-        {external!.limitations.length > 0 && <small>{external!.limitations.join(' · ')}</small>}
+        {external!.limitations.length > 0 && <small>{limits(external!.limitations, external!.limitationKeys)}</small>}
       </li></ul>
       <button type="button" className="modal-btn secondary" disabled={importing} onClick={() => void importEvidence()}>{importing ? t('mm.evidence.fetching') : t('mm.evidence.fetch')}</button>
       {importNote && <p className="mm-note" role="status">{importNote}</p>}

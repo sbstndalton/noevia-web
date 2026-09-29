@@ -13,4 +13,5 @@ export const EN_US_MODELS: ModelsCatalogue = {
   'mm.fit.rec.smallerMoe': 'This model needs about {floor} GiB before any context, and the smallest context does not fit {budget} GiB even with Q5 KV cache. Choose a smaller quantization or configure CPU expert offload in Advanced.',
   'mm.hw.notMeasured': 'No live GPU readings: this llama.cpp image has no GPU monitoring tool and the kernel does not report this GPU. Only the declared memory size ({size}) is known, so utilization charts are hidden.',
   'mm.evidence.license': '{license} license',
+  'mm.bench.status.cancelled': 'Canceled',
 };

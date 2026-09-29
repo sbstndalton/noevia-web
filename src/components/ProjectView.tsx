@@ -27,6 +27,8 @@ import { useBrowserAccess } from './browser/useBrowserAccess';
 import { EmptyState } from './EmptyState';
 import { useT } from '../i18n';
 import type { Translate } from '../i18n';
+import { formatNumber, formatPercent } from '../number-format';
+import { appLocale } from '../user-preferences';
 
 /** First free "name", "name (2)", "name (3)", … avoiding collisions. */
 function uniqueName(name: string, existing: { name: string }[]): string {
@@ -239,7 +241,7 @@ export function ProjectView({
           {f.attachment?.assetId && <img className="source-thumbnail" src={projectImageUrl(project.id, f.attachment.assetId)} alt="" />}
           <span className="source-name" title={f.name}><ShellIcon name="file"/><span>{f.name.split('/').pop()}
             <small className="source-status">{skillFiles.includes(f.name) ? t('projects.view.instructionSkill') : f.document ? sourceStatus(f) : f.attachment?.state === 'stored' ? (f.attachment.reason || t('projects.view.originalStored')) : f.attachment?.state === 'vision' ? t('projects.view.uploadedImage') : f.attachment?.state === 'partial' ? (f.attachment.reason || t('projects.view.textPreviewLimited')) : t('projects.view.textReady')}</small>
-            <small className="source-status">{f.source ? f.name : t('projects.view.storedInNoevia')}{f.attachment ? ` · ${(f.attachment.bytes / 1024 / 1024).toFixed(2)} MB` : ''}</small>
+            <small className="source-status">{f.source ? f.name : t('projects.view.storedInNoevia')}{f.attachment ? ` · ${formatNumber(f.attachment.bytes / 1024 / 1024, appLocale(), 2)} MB` : ''}</small>
             {undeletableSynced && <small className="source-status">{t('projects.view.syncedFrom', { source: f.source || '' })}</small>}
           </span></span>
           {(f.attachment || f.document?.byteHash) && <a className="btn btn-ghost btn-sm" href={`/api/projects/${encodeURIComponent(project.id)}/${f.attachment ? 'uploads' : 'documents'}/original?name=${encodeURIComponent(f.name)}`} download>{t('projects.view.original')}</a>}
@@ -396,7 +398,7 @@ export function ProjectView({
               </div>
               <p className="rail-empty">{t('projects.view.uploadLimitsNote')}</p>
               {uploadRows.length > 0 && <details open={busyDocs}><summary>{busyDocs ? t('projects.view.uploadingFiles') : t('projects.view.uploadResults', { count: uploadRows.length, status: uploadRows.some(r => r.stage !== t('projects.view.saved')) ? t('projects.view.someNotAdded') : t('projects.view.savedStatus') })}</summary><ul className="source-list upload-progress" aria-label={t('projects.view.uploadProgress')} aria-live="polite">{uploadRows.map((r, i) => <li key={i}>
-                <span><strong>{r.name}</strong><small className="source-status">{r.stage}{r.percent !== undefined ? ` · ${r.percent}%` : ''} · {t('projects.view.seconds', { count: Math.max(0, Math.round(((r.finished || now) - r.started) / 1000)) })}</small></span>
+                <span><strong>{r.name}</strong><small className="source-status">{r.stage}{r.percent !== undefined ? ` · ${formatPercent(r.percent, appLocale(), 0)}` : ''} · {t('projects.view.seconds', { count: Math.max(0, Math.round(((r.finished || now) - r.started) / 1000)) })}</small></span>
               </li>)}</ul></details>}
               {groupKeys.map(([group, groupKey]) => {
                 const files = readableFiles.filter(f => fileGroup(f) === group);

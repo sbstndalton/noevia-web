@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom';
 import { ShellIcon } from './ShellIcon';
 import { apiFetch, streamChat } from '../api';
 import type { Message } from '../types';
+import { formatNumber, formatPercent } from '../number-format';
+import { appLocale } from '../user-preferences';
 type Meter = { historyCount:number; model:string; limit:number; limitSource:string; used:number; reserve:number; safety:number; threshold:number; parts:{name:string;tokens:number}[]; compactedAt:number|null; covered:number };
-const fmt=(n:number)=>n>=1000?`${(n/1000).toFixed(1)}k`:String(Math.round(n));
+const fmt=(n:number)=>n>=1000?`${formatNumber(n/1000,appLocale(),1)}k`:formatNumber(Math.round(n),appLocale(),0);
 /** `portalTo` (#527): on a phone the meter lives in the model sheet. The component stays mounted
  *  where it is, so a compaction in progress survives the sheet closing; `null` renders nothing
  *  (the sheet is closed), an element renders the meter there, and leaving it out renders it inline. */
@@ -42,9 +44,9 @@ export function ChatContext({chatId,projectId,messages,streaming,onBusy,portalTo
  // a whole row above the composer to say that, which on a phone is a tenth of the screen.
  const compactable=messages.length>=6;
  if(!meter && !compactable)return null;
- const meterView = <details className={`chat-context-meter${percent>=80?' is-full':''}`}><summary><span>Context window</span><span>{meter?`~${fmt(used)} / ${fmt(meter.limit)} (${percent}%)`:'Not measured yet'}<ShellIcon name="down" size={14}/></span></summary>
+ const meterView = <details className={`chat-context-meter${percent>=80?' is-full':''}`}><summary><span>Context window</span><span>{meter?`~${fmt(used)} / ${fmt(meter.limit)} (${formatPercent(percent,appLocale(),0)})`:'Not measured yet'}<ShellIcon name="down" size={14}/></span></summary>
  {meter&&<><div className="context-stacked-bar" role="meter" aria-label="Estimated chat context used" aria-valuemin={0} aria-valuemax={meter.limit} aria-valuenow={Math.min(used,meter.limit)}>{meter.parts.map((p,i)=><span key={p.name} className={`context-color-${i}`} style={{width:`${p.tokens/meter.limit*100}%`}}/>)}<span className="context-color-3" style={{width:`${(meter.reserve+meter.safety)/meter.limit*100}%`}}/></div>
- <dl>{[...meter.parts,{name:'Thinking & answer reserve',tokens:meter.reserve},{name:'Estimation safety buffer',tokens:meter.safety},{name:'Free space',tokens:Math.max(0,meter.limit-used-meter.reserve-meter.safety)}].map(p=><div key={p.name}><dt>{p.name}</dt><dd>~{fmt(p.tokens)}</dd></div>)}</dl><p>{meter.model} · {meter.limitSource}. Estimates of the prepared request, not account totals.{live>0?' Live output estimated separately.':''}</p><p>Automatic compaction above ~{Math.round(meter.threshold/meter.limit*100)}% input usage; remaining space is reserved for generation and estimation error.</p>{meter.compactedAt&&<p>{meter.covered} older messages summarized. Full transcript retained.</p>}</>}
+ <dl>{[...meter.parts,{name:'Thinking & answer reserve',tokens:meter.reserve},{name:'Estimation safety buffer',tokens:meter.safety},{name:'Free space',tokens:Math.max(0,meter.limit-used-meter.reserve-meter.safety)}].map(p=><div key={p.name}><dt>{p.name}</dt><dd>~{fmt(p.tokens)}</dd></div>)}</dl><p>{meter.model} · {meter.limitSource}. Estimates of the prepared request, not account totals.{live>0?' Live output estimated separately.':''}</p><p>Automatic compaction above ~{formatPercent(Math.round(meter.threshold/meter.limit*100),appLocale(),0)} input usage; remaining space is reserved for generation and estimation error.</p>{meter.compactedAt&&<p>{meter.covered} older messages summarized. Full transcript retained.</p>}</>}
  {!meter&&<p>Measured the next time you send. You can compact a long chat now.</p>}
  <button className="btn btn-secondary btn-sm" disabled={busy||streaming||!compactable} onClick={()=>void compact()}>{busy?'Compacting…':'Compact chat'}</button>{status&&(portalTo===undefined?<p role="status">{status}</p>:<p>{status}</p>)}</details>;
  if(portalTo===undefined)return meterView;

@@ -4,14 +4,16 @@ import { browseStorage, fetchStorage, readStorageFile } from '../api';
 import type { StorageEntry } from '../api';
 import { useModalDialog } from './useModalDialog';
 import { CloseButton } from './CloseButton';
+import { formatNumber } from '../number-format';
+import { appLocale } from '../user-preferences';
 
 export interface PickedFile { name: string; content: string }
 
 function humanSize(size: number | null): string {
   if (size == null) return '';
-  if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  if (size < 1024) return `${formatNumber(size, appLocale(), 0)} B`;
+  if (size < 1024 * 1024) return `${formatNumber(Math.round(size / 1024), appLocale(), 0)} KB`;
+  return `${formatNumber(size / (1024 * 1024), appLocale(), 1)} MB`;
 }
 
 /** Browse the user's connected external storage and pick text files to pull

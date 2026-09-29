@@ -4,6 +4,8 @@ import type { LiveStats, ReplyTelemetry, RoutingDecision } from '../types';
 import { Icon } from './icons/Icon';
 import { RoutingDetails } from './ChatView';
 import { useT } from '../i18n';
+import { appLocale } from '../user-preferences';
+import { formatNumber, formatPercent } from '../number-format';
 import { LOCAL_MODEL_FALLBACK } from '../model-guidance';
 
 interface StatsBarProps {
@@ -22,14 +24,14 @@ interface StatsBarProps {
 
 function fmt(n: number | null, digits = 1, suffix = ''): string {
   if (n == null || !Number.isFinite(n)) return '—';
-  return `${n.toFixed(digits)}${suffix}`;
+  return `${formatNumber(n, appLocale(), digits)}${suffix}`;
 }
 
 function fmtCount(n: number | null): string {
   if (n == null || !Number.isFinite(n)) return '—';
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return String(Math.round(n));
+  if (n >= 1_000_000) return `${formatNumber(n / 1_000_000, appLocale(), 1)}M`;
+  if (n >= 1_000) return `${formatNumber(n / 1_000, appLocale(), 1)}k`;
+  return formatNumber(Math.round(n), appLocale(), 0);
 }
 
 const OPEN_KEY = 'noevia:stats-open';
@@ -126,7 +128,7 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
     stats?.requestCount == null ? null : t.plural('stats.requestsCount', stats.requestCount, { count: fmtCount(stats.requestCount) }),
   ].filter(Boolean);
   const gpuParts = [
-    stats?.gpuPercent == null ? null : fmt(stats.gpuPercent, 0, '%'),
+    stats?.gpuPercent == null ? null : formatPercent(stats.gpuPercent, appLocale(), 0),
     stats?.vramGb == null ? null : t('stats.vram', { value: fmt(stats.vramGb, 1, ' GB') }),
   ].filter(Boolean);
   const replyLabel = active ? t('stats.currentReply') : reply?.phase === 'stopped' ? t('stats.stoppedReply') : reply?.phase === 'error' ? t('stats.failedReply') : t('stats.lastReply');
@@ -142,7 +144,7 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
       <div data-stat="gpu"><dt>{t('stats.gpu')}</dt><dd>{gpuParts.length ? gpuParts.join(' · ') : t('stats.unavailable')}</dd></div>
       {mtp.map(m => <div className="stats-mtp" data-stat="mtp" key={m.model} title={t('stats.mtpTitle', { model: m.model, source: m.source || t('stats.mtpSourceEngineTotal') })}>
         <dt>{t('stats.mtpAcceptance')}{m.source === 'last response' ? (active ? t('stats.mtpCurrentReply') : t('stats.mtpLastReply')) : t('stats.mtpEngineTotal')}</dt>
-        <dd>{m.rate == null ? t('stats.mtpAwaiting') : t('stats.mtpPercent', { value: (m.rate * 100).toFixed(1) })}<progress aria-label={t('stats.mtpAriaLabel', { model: m.model })} max={1} value={m.rate ?? undefined} /></dd>
+        <dd>{m.rate == null ? t('stats.mtpAwaiting') : t('stats.mtpPercent', { value: formatNumber(m.rate * 100, appLocale(), 1) })}<progress aria-label={t('stats.mtpAriaLabel', { model: m.model })} max={1} value={m.rate ?? undefined} /></dd>
       </div>)}
     </dl>
   );

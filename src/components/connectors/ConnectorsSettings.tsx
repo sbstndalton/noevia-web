@@ -9,6 +9,7 @@ import type { ToolMode } from './PermissionControl';
 import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
 import '../../i18n/settings';
+import { formatNumber } from '../../number-format';
 
 interface Tool { name: string; label: string; write: boolean; mode: ToolMode }
 interface Nextcloud {
@@ -219,7 +220,7 @@ function DrivePage({ drive, isAdmin, onBack, onChange, onActionStart, reload, on
     {connected && drive.backup && <div className="group surface backup"><div className="row">
       <div className="row-text"><span className="row-label">{t('connectors.backup.title')}</span><span className="row-desc">
         {drive.backup.copyEnabled
-          ? <>{t('connectors.backup.on', { folder: 'noevia-offsite' })} {drive.backup.copy?.state === 'ok' ? (drive.backup.lastBackup ? t('connectors.backup.lastCopySize', { date: when(t, drive.backup.copy.at), size: (drive.backup.lastBackup.uploadedBytes / 1024 / 1024).toFixed(1) }) : t('connectors.backup.lastCopy', { date: when(t, drive.backup.copy.at) })) : drive.backup.copy?.message || t('connectors.backup.first')}</>
+          ? <>{t('connectors.backup.on', { folder: 'noevia-offsite' })} {drive.backup.copy?.state === 'ok' ? (drive.backup.lastBackup ? t('connectors.backup.lastCopySize', { date: when(t, drive.backup.copy.at), size: formatNumber(drive.backup.lastBackup.uploadedBytes / 1024 / 1024, appLocale(), 1) }) : t('connectors.backup.lastCopy', { date: when(t, drive.backup.copy.at) })) : drive.backup.copy?.message || t('connectors.backup.first')}</>
           : <>{t('connectors.backup.off')}</>}
       </span></div>
       <Switch label={t('connectors.backup.switch')} checked={drive.backup.copyEnabled} disabled={!!busy} onChange={(on) => void act('backup', () => call<Drive>('/api/connectors/gdrive/backup-copy', 'PUT', { enabled: on }))}/>

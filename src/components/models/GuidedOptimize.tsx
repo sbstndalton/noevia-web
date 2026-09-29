@@ -12,7 +12,7 @@ import type { BudgetKind, Recommendation, SamplingPlan } from './guided';
 import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
 import { appLocale } from '../../user-preferences';
-import { ROLE_KEY, stuckStatus } from './mm-text';
+import { ROLE_KEY, specLabel, stuckStatus } from './mm-text';
 
 const VERDICT: Record<Verdict, MessageKey> = { fits: 'mm.verdict.fits', tight: 'mm.verdict.tight', no: 'mm.verdict.no' };
 const TUNE_STEP: Record<string, [MessageKey, MessageKey]> = {
@@ -37,7 +37,7 @@ function recommendationText(t: Translate, rec: Recommendation, budgetGib: number
   if (rec.kind === 'smaller') return t(rec.moe ? 'mm.fit.rec.smallerMoe' : 'mm.fit.rec.smaller', { floor: num(rec.floorGib), budget: num(budgetGib) });
   return rec.reason === 'not-chat' ? t('mm.fit.rec.notChat') : t('mm.fit.rec.noLayout', { arch: rec.arch || t('mm.fit.unknownArch') });
 }
-type TuneStatus = { job: { model?: string; status?: string; error?: string; models?: { model: string; status: string; error?: string }[] } | null; history: { at: number; kv?: string; context?: number; specLabel?: string; generation?: number }[] };
+type TuneStatus = { job: { model?: string; status?: string; error?: string; models?: { model: string; status: string; error?: string }[] } | null; history: { at: number; kv?: string; context?: number; spec?: string; specLabel?: string; generation?: number }[] };
 
 async function getJson<T>(path: string): Promise<T> {
   const r = await apiFetch(path); const v = await r.json().catch(() => ({}));
@@ -139,7 +139,7 @@ function TuneStep({ model, sizeGB, chat }: { model: string; sizeGB: number | nul
       ? <><strong>{t('mm.tune.sampling.recommended')}</strong> {samplingValueList(plan).join(', ')}. {samplingSourceText(t, plan)}{samplingNoteText(t, plan)}</>
       : t('mm.tune.sampling.none')}</p>}
     <p className="mm-note mm-warn" role="note">{t('mm.tune.floor', { floor: KV_FLOOR })}</p>
-    {last && <p className="mm-note">{t('mm.tune.last', { date: new Date(last.at).toLocaleDateString(appLocale()), result: [last.specLabel || t('mm.tune.saved'), ...(last.generation ? [t('mm.tokensPerSecond', { rate: num(last.generation) })] : []), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv })] : []), ...(last.context ? [t('mm.tune.context', { tokens: num(last.context, 0) })] : [])].join(', ') })}{belowKvFloor(last.kv) ? ` ${t('mm.tune.lastBelowFloor')}` : ''}</p>}
+    {last && <p className="mm-note">{t('mm.tune.last', { date: new Date(last.at).toLocaleDateString(appLocale()), result: [specLabel(t, last.spec, last.specLabel) || t('mm.tune.saved'), ...(last.generation ? [t('mm.tokensPerSecond', { rate: num(last.generation) })] : []), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv })] : []), ...(last.context ? [t('mm.tune.context', { tokens: num(last.context, 0) })] : [])].join(', ') })}{belowKvFloor(last.kv) ? ` ${t('mm.tune.lastBelowFloor')}` : ''}</p>}
     {failed && <p className="mm-note mm-warn" role="status">{t(mine!.error ? 'mm.tune.failedError' : 'mm.tune.failed', { status: stuckStatus(t, String(mine!.status)), error: mine!.error ?? '' })} {t(last ? 'mm.tune.failedKeepLast' : 'mm.tune.failedKeep')}</p>}
     <div className="mm-actions"><button type="button" className="modal-btn secondary" onClick={goTune}>{t('mm.tune.go')}</button></div>
   </div>;

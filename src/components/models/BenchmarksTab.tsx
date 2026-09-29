@@ -4,6 +4,7 @@ import { ago, errorText, mm, num, tokens } from './mm';
 import { fetchInstalledModels } from '../../api';
 import { splitChatSections } from '../../model-kind';
 import { useT } from '../../i18n';
+import { benchStatus } from './mm-text';
 import { appLocale } from '../../user-preferences';
 
 type Prompt = { id: number; name: string; body: string };
@@ -38,7 +39,7 @@ export function BenchmarksTab() {
     </>}
     <section className="mm-panel" aria-labelledby="mm-runs"><h3 id="mm-runs">{t('mm.bench.past')}</h3>
       {data.runs.length === 0 ? <p className="mm-note">{t('mm.bench.noRuns')}</p> : <ul className="mm-list">{data.runs.map(r => <li key={r.id}>
-        <span>{t('mm.bench.run', { id: r.id })} · {new Date(r.started_at * 1000).toLocaleString(appLocale())}<small>{r.backend} · {r.status}{r.note ? ` · ${r.note}` : ''}</small></span>
+        <span>{t('mm.bench.run', { id: r.id })} · {new Date(r.started_at * 1000).toLocaleString(appLocale())}<small>{r.backend} · {benchStatus(t, r.status)}{r.note ? ` · ${r.note}` : ''}</small></span>
         <button className="modal-btn secondary" aria-expanded={openRun === r.id} onClick={() => setOpenRun(openRun === r.id ? null : r.id)}>{openRun === r.id ? t('mm.bench.hide') : t('mm.bench.view')}</button>
       </li>)}</ul>}
     </section>
@@ -49,7 +50,7 @@ export function BenchmarksTab() {
 function JobProgress({ job, onCancel }: { job: Job; onCancel: () => Promise<void> }) {
   const t = useT();
   return <section className="mm-panel" aria-live="polite" aria-labelledby="mm-job">
-    <header className="mm-panel-head"><h3 id="mm-job">{job.active ? t('mm.bench.running') : t('mm.bench.last', { status: job.status })}</h3>{job.active && <button className="modal-btn secondary" onClick={() => void onCancel()}>{t('mm.bench.stop')}</button>}</header>
+    <header className="mm-panel-head"><h3 id="mm-job">{job.active ? t('mm.bench.running') : t('mm.bench.last', { status: benchStatus(t, job.status) })}</h3>{job.active && <button className="modal-btn secondary" onClick={() => void onCancel()}>{t('mm.bench.stop')}</button>}</header>
     <progress max={Math.max(1, job.total)} value={job.done} aria-label={t('mm.bench.progress')}/>
     <p className="mm-note">{[t('mm.bench.done', { done: job.done, total: job.total, unit: job.unit }), ...(job.current ? [job.current] : []), t('mm.bench.elapsed', { time: ago(job.elapsed) }), ...(job.eta ? [t('mm.bench.left', { time: ago(job.eta) })] : [])].join(' · ')}</p>
     {job.active && <p className="mm-note">{t('mm.bench.chatWaits')}</p>}
@@ -129,7 +130,7 @@ function RunView({ id, categories }: { id: number; categories: { key: string; la
   const genMax = Math.max(1, ...c.gen.flatMap(g => g.data.filter((x): x is number => x != null)));
   const ttftMax = Math.max(1, ...c.ttft.flatMap(g => g.data.filter((x): x is number => x != null)));
   return <section className="mm-panel" aria-labelledby="mm-run">
-    <h3 id="mm-run">{t('mm.bench.run', { id })} · {run.run.backend} · {run.run.status}</h3>
+    <h3 id="mm-run">{t('mm.bench.run', { id })} · {run.run.backend} · {benchStatus(t, run.run.status)}</h3>
     <p className="mm-note">{t('mm.bench.medians')}</p>
     {prompts.length > 0 && <div className="viz-grid-2">{prompts.map((p, pi) => <Bars key={p} title={t('mm.bench.genSpeed', { prompt: p })} unit=" tok/s" max={genMax} rows={c.aliases.map((a, ai) => ({ label: a, values: [c.gen[pi].data[ai]] }))}/>)}</div>}
     {prompts.length > 0 && <div className="viz-grid-2">{prompts.map((p, pi) => <Bars key={p} title={t('mm.bench.ttft', { prompt: p })} unit=" ms" max={ttftMax} rows={c.aliases.map((a, ai) => ({ label: a, values: [c.ttft[pi].data[ai]] }))}/>)}</div>}

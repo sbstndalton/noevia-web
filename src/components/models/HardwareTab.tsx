@@ -1,14 +1,14 @@
 import { sharedMemoryRisk } from '../../model-guidance';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { TimeChart } from './TimeChart';
-import { errorText, gib, mm, num } from './mm';
+import { duration, errorText, gib, human, mm, num, pct } from './mm';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 
 type Card = { index: number; name: string; util_pct: number; vram_used_gb: number; vram_total_gb: number; temp_c: number; power_w: number; shared_used_gb: number; shared_total_gb: number; clock_mhz: number; device: string };
 type Gpu = { vendor: string; name: string; util_pct: number; vram_used_gb: number; vram_total_gb: number; temp_c: number; power_w: number; gpu_count: number; cards: Card[]; memory_kind: 'dedicated' | 'unified'; shared_used_gb: number; shared_total_gb: number; clock_mhz: number; source: string; measured: boolean };
 type Point = { ts: number; gpu_util: number; vram_used_gb: number; cpu_pct: number; mem_used_gb: number; shared_used_gb: number; temp_c: number; power_w: number };
-type Backend = { name: string; found: boolean; status: string; image: string; uptime: string; started_at: string; loaded_model: string | null; probe_error: string | null; last_restart_error: string | null;
+type Backend = { name: string; found: boolean; status: string; image: string; uptime: string; uptime_s?: number | null; started_at: string; loaded_model: string | null; probe_error: string | null; last_restart_error: string | null;
   stats: { ok: boolean; error: string | null; gpu: Gpu | null; container: { cpu_pct: number; mem_used_gb: number; mem_limit_gb: number } | null }; history: Point[] };
 type HostPoint = { ts: number; cpu_pct: number; mem_used_gb: number; mem_total_gb: number; mem_available_gb: number };
 type Failure = { model: string; status: number; cause: string; title: string; advice: string; evidence: string[] };
@@ -75,7 +75,7 @@ export function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; host
   return <section className="mm-panel" aria-labelledby={`mm-engine-${b.name}`}>
     <header className="mm-panel-head">
       <div><h3 id={`mm-engine-${b.name}`}>{b.name}</h3>
-        <p className="mm-note">{b.image}{b.uptime ? ` · ${t('mm.hw.up', { uptime: b.uptime })}` : ''} · {modelState}</p></div>
+        <p className="mm-note">{b.image}{b.uptime_s != null || b.uptime ? ` · ${t('mm.hw.up', { uptime: b.uptime_s != null ? duration(b.uptime_s) : human(b.uptime) })}` : ''} · {modelState}</p></div>
       <span className={`mm-pill ${running ? 'is-good' : 'is-bad'}`}>{running ? t('mm.hw.status.running') : ENGINE_STATUS[b.status] ? t(ENGINE_STATUS[b.status]) : t('mm.hw.status.unknown')}</span>
     </header>
     {b.last_restart_error && <p role="alert" className="modal-err">{t('mm.hw.restartFailed', { error: b.last_restart_error })}</p>}
@@ -86,7 +86,7 @@ export function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; host
       {unified && <p className="mm-note">{t('mm.hw.unified', { dedicated: gib(gpu.vram_total_gb), shared: gib(gpu.shared_total_gb) })}</p>}
       {!gpu.measured && <p className="mm-note">{t('mm.hw.notMeasured', { size: gib(gpu.vram_total_gb) })}</p>}
       {gpu.measured && <div className="mm-tiles">
-        <Tile label={t('mm.hw.busy')} value={`${num(gpu.util_pct, 0)}%`}/>
+        <Tile label={t('mm.hw.busy')} value={pct(gpu.util_pct)}/>
         <Tile label={unified ? t('mm.hw.gpuMemory') : t('mm.hw.vramInUse')} value={t('mm.hw.ofGib', { used: num(memUsed, 1), total: num(memTotal, 1) })}/>
         {gpu.temp_c > 0 && <Tile label={t('mm.hw.temperature')} value={`${num(gpu.temp_c, 0)} °C`}/>}
         {gpu.power_w > 0 && <Tile label={t('mm.hw.power')} value={`${num(gpu.power_w, 0)} W`}/>}

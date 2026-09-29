@@ -31,6 +31,7 @@ import { isCoarsePointerDevice } from '../composer-focus';
 import { useSpaceTier } from '../space-tier';
 import { SkillPinSelect, useSkillPinOptions } from './SkillPinPicker';
 import type { SkillPin } from '../api-contract';
+import { formatDuration, formatNumber } from '../number-format';
 
 /** What one send carries besides its text: per-turn boxes, a fallback notice, or a Cowork task. */
 /** `skill` (#272) pins one exact reviewed Skill version for this message only. */
@@ -128,9 +129,8 @@ export function RoutingDetails({ decision }: { decision: RoutingDecision }) {
 
 function fmtDuration(ms: number): string {
   const s = ms / 1000;
-  if (s < 60) return `${s.toFixed(1)}s`;
-  const m = Math.floor(s / 60);
-  return `${m}m ${Math.round(s - m * 60)}s`;
+  if (s < 60) return `${formatNumber(s, appLocale(), 1)} s`;
+  return formatDuration(Math.round(s), appLocale());
 }
 
 // Compact per-reply footer: what it cost and how long it took. Mirrors the
@@ -143,11 +143,11 @@ function MessageMeta({ stats }: { stats?: MessageStats }): JSX.Element | null {
   if (stats?.totalTokens) {
     const io =
       stats.promptTokens != null && stats.completionTokens != null
-        ? ` (${stats.promptTokens} in / ${stats.completionTokens} out)`
+        ? ` (${formatNumber(stats.promptTokens, appLocale(), 0)} in / ${formatNumber(stats.completionTokens, appLocale(), 0)} out)`
         : '';
-    parts.push(`${stats.totalTokens} tokens${io}`);
+    parts.push(`${formatNumber(stats.totalTokens, appLocale(), 0)} tokens${io}`);
   }
-  if (stats?.tokensPerSecond) parts.push(`${stats.tokensPerSecond.toFixed(1)} tok/s`);
+  if (stats?.tokensPerSecond) parts.push(`${formatNumber(stats.tokensPerSecond, appLocale(), 1)} tok/s`);
   if (!parts.length) return null;
   return <div className="msg-meta">{parts.join(' · ')}</div>;
 }
