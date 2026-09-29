@@ -86,11 +86,11 @@ export function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; host
       {unified && <p className="mm-note">{t('mm.hw.unified', { dedicated: gib(gpu.vram_total_gb), shared: gib(gpu.shared_total_gb) })}</p>}
       {!gpu.measured && <p className="mm-note">{t('mm.hw.notMeasured', { size: gib(gpu.vram_total_gb) })}</p>}
       {gpu.measured && <div className="mm-tiles">
-        <Tile label={t('mm.hw.busy')} value={`${gpu.util_pct.toFixed(0)}%`}/>
+        <Tile label={t('mm.hw.busy')} value={`${num(gpu.util_pct, 0)}%`}/>
         <Tile label={unified ? t('mm.hw.gpuMemory') : t('mm.hw.vramInUse')} value={t('mm.hw.ofGib', { used: num(memUsed, 1), total: num(memTotal, 1) })}/>
-        {gpu.temp_c > 0 && <Tile label={t('mm.hw.temperature')} value={`${gpu.temp_c.toFixed(0)} °C`}/>}
-        {gpu.power_w > 0 && <Tile label={t('mm.hw.power')} value={`${gpu.power_w.toFixed(0)} W`}/>}
-        {gpu.clock_mhz > 0 && <Tile label={t('mm.hw.clock')} value={`${gpu.clock_mhz.toFixed(0)} MHz`}/>}
+        {gpu.temp_c > 0 && <Tile label={t('mm.hw.temperature')} value={`${num(gpu.temp_c, 0)} °C`}/>}
+        {gpu.power_w > 0 && <Tile label={t('mm.hw.power')} value={`${num(gpu.power_w, 0)} W`}/>}
+        {gpu.clock_mhz > 0 && <Tile label={t('mm.hw.clock')} value={`${num(gpu.clock_mhz, 0)} MHz`}/>}
       </div>}
       {gpu.measured && <div className="viz-grid-2">
         <TimeChart title={t('mm.hw.busy')} unit="%" max={100} digits={0} times={times} series={[{ label: t('mm.hw.busy'), values: pts.map(p => p.gpu_util) }]}/>
@@ -153,7 +153,7 @@ function TestPrompt({ name }: { name: string }) {
     <button className="modal-btn secondary" disabled={busy || !prompt.trim()} onClick={() => void run()}>{busy ? t('mm.test.running') : t('mm.test.run')}</button>
     {error && <p role="alert" className="modal-err">{error}</p>}
     {result && <div className="mm-result"><pre>{String(result.reply || '')}</pre>
-      <p className="mm-note">{[String(result.model), t('mm.test.tokensIn', { tokens: String(result.completion_tokens), seconds: String(result.elapsed_s) }), ...(result.tokens_per_s ? [t('mm.tokensPerSecond', { rate: String(result.tokens_per_s) })] : []), t('mm.test.promptTokens', { tokens: String(result.prompt_tokens) })].join(' · ')}</p></div>}
+      <p className="mm-note">{[String(result.model), t('mm.test.tokensIn', { tokens: num(Number(result.completion_tokens), 0), seconds: num(Number(result.elapsed_s)) }), ...(result.tokens_per_s ? [t('mm.tokensPerSecond', { rate: num(Number(result.tokens_per_s)) })] : []), t('mm.test.promptTokens', { tokens: num(Number(result.prompt_tokens), 0) })].join(' · ')}</p></div>}
   </div>;
 }
 

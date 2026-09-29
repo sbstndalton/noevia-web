@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useT } from '../../i18n';
-import { num } from './mm';
+import { num, numUpTo } from './mm';
 
 export type Series = { label: string; values: (number | null)[] };
 
@@ -44,7 +44,7 @@ export function TimeChart({ title, series, times, max, unit, digits = 1, height 
         <svg width={width} height={height} role="img" aria-label={t('mm.chart.label', { title, minutes: Math.round(span / 60) })} onPointerMove={onMove} onPointerLeave={() => setHover(null)}>
           {[0, 0.5, 1].map(f => <g key={f}>
             <line className="viz-grid" x1={pad.l} x2={pad.l + w} y1={y(top * f)} y2={y(top * f)}/>
-            <text className="viz-axis" x={pad.l - 6} y={y(top * f) + 3} textAnchor="end">{(top * f).toFixed(unit === '%' || top * f >= 100 ? 0 : 1).replace(/\.0$/, '')}{unit === '%' ? '%' : ''}</text>
+            <text className="viz-axis" x={pad.l - 6} y={y(top * f) + 3} textAnchor="end">{numUpTo(top * f, unit === '%' || top * f >= 100 ? 0 : 1)}{unit === '%' ? '%' : ''}</text>
           </g>)}
           <text className="viz-axis" x={pad.l} y={height - 4}>{t('mm.chart.minAgo', { minutes: Math.round(span / 60) })}</text>
           <text className="viz-axis" x={pad.l + w} y={height - 4} textAnchor="end">{t('mm.chart.now')}</text>

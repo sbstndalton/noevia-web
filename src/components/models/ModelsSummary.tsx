@@ -6,6 +6,8 @@ import { fetchAutoRoles } from '../../api';
 import { notifyModelsChanged, useModelsChanged } from '../../models-changed';
 import { installedSummary } from '../../models-summary';
 import { useT } from '../../i18n';
+import { formatNumber } from '../../number-format';
+import { appLocale } from '../../user-preferences';
 
 /** Settings keeps only what answers "is the engine fine and where does Auto go";
  *  everything you act on lives in the model manager page. */
@@ -31,7 +33,7 @@ export function ModelsSummary({ models, modelsLoaded, modelsError, health, stats
     {/* #414: the grouped surface (.set-rows), not a bare .card-list — see noevia.css's
         .set-rows .model-row rules for the row treatment this now shares with Users/Service status. */}
     <div className="set-rows">
-      <div className="model-row"><span className={`model-dot${health.inferenceUp ? '' : ' down'}`}/><span className="model-name">{t('models.engine')}</span><span className="model-role">{health.inferenceUp ? t('models.available') : t('models.unavailable')}{stats?.tokensPerSecond != null ? ` · ${t('models.rate', { rate: stats.tokensPerSecond.toFixed(1) })}` : ''}</span></div>
+      <div className="model-row"><span className={`model-dot${health.inferenceUp ? '' : ' down'}`}/><span className="model-name">{t('models.engine')}</span><span className="model-role">{health.inferenceUp ? t('models.available') : t('models.unavailable')}{stats?.tokensPerSecond != null ? ` · ${t('models.rate', { rate: formatNumber(stats.tokensPerSecond, appLocale(), 1) })}` : ''}</span></div>
       <div className="model-row"><span className="model-name">{t('models.installed')}</span><span className="model-role" aria-live="polite">{modelsError ? t('models.notAvailable') : modelsLoaded ? installed : t('settings.loading')}</span></div>
       <div className="model-row"><span className="model-name">{t('models.autoRouting')}</span><span className="model-role">{routing}</span></div>
     </div>

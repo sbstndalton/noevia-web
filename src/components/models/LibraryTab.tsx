@@ -4,7 +4,8 @@ import type { InstalledModel } from '../../types';
 import { MtpControl } from '../MtpControl';
 import { NativeCalibration } from '../NativeCalibration';
 import { EvidenceList } from './EvidenceList';
-import { errorText, filterOrphanFiles, mm, tokens } from './mm';
+import { errorText, filterOrphanFiles, human, mm, num, tokens } from './mm';
+import { appLocale } from '../../user-preferences';
 import { httpErrorMessage, readErrorBody, runDeleteModelFiles } from './delete-model-sequence';
 import { registerNewFolderModels } from './register';
 import { useModelsChanged } from '../../models-changed';
@@ -22,6 +23,11 @@ type FileEntry = { key: string; name: string; subdir: string; bytes: number; siz
   fit: { name: string; verdict: string; ratio_pct: number }[]; badges: { category: string; rating: number; note: string }[] };
 type Update = { status: string; remote: string; delta_days: number | null };
 type Detail = FileEntry & { path: string; summary: { arch: string; general: Record<string, unknown>; model: Record<string, unknown>; chat_template_features: Record<string, boolean> } };
+// #587: capability tags arrive as English words from the engine ("embeddings", "reranking") and
+// the model manager's shape label ("dense"); known ones are shown in the interface language,
+// anything else (a MoE shape like "128 experts") is shown as reported.
+const TAG: Record<string, MessageKey> = { dense: 'mm.tag.dense', embedding: 'mm.tag.embeddings', embeddings: 'mm.tag.embeddings', rerank: 'mm.tag.reranking', reranking: 'mm.tag.reranking' };
+export const tagLabel = (t: (k: MessageKey) => string, label: string) => { const k = TAG[label.trim().toLowerCase()]; return k ? t(k) : label; };
 const BADGE: Record<string, MessageKey> = { coding: 'mm.badge.coding', writing: 'mm.badge.writing', reasoning: 'mm.badge.reasoning', tools: 'mm.badge.tools', vision: 'mm.badge.vision' };
 
 export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', filter = 'all' }: {
@@ -113,7 +119,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     <h2 className="sr-only">{t('mm.tab.yours')}</h2>
     <div className="mm-library-bar">
       <p className="mm-note" role="status">{models ? <>{t.plural('mm.library.count', installed.length, { shown: servable.length })}{needle ? t('mm.library.matching', { query: query.trim() }) : ''}{filter !== 'all' ? t('mm.library.afterFiltering') : ''}</> : t('mm.library.loading')}
-        {disk && <> · <span data-testid="models-disk">{t('mm.library.disk', { free: disk.freeH, total: disk.totalH, used: disk.usedPct.toFixed(0) })}</span></>}
+        {disk && <> · <span data-testid="models-disk">{t('mm.library.disk', { free: human(disk.freeH), total: human(disk.totalH), used: num(disk.usedPct, 0) })}</span></>}
         {models && !scanned && <span className="mm-scanning"> · {t('mm.library.scanning')}</span>}</p>
       <button className="btn btn-secondary btn-sm" disabled={busy === 'updates'} onClick={() => void checkUpdates()}>{busy === 'updates' ? t('mm.checking') : t('mm.library.checkUpdates')}</button>
       {canTune && <button className="btn btn-secondary btn-sm" aria-expanded={showTune} aria-controls="library-autotune" onClick={() => setShowTune(v => !v)}>{t('mm.library.tuneUntuned')}</button>}
@@ -143,7 +149,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
           scan still reports a raw byte count — reformat it through the same shared math so an
           orphan's size uses the same convention as every registered model's, rather than the
           external service's own (differently-based) formatted string. */}
-      <ul className="mm-list">{orphanFiles.map(f => <li key={f.key}><span>{f.name}<small>{formatModelSizeGB(bytesToModelSizeGB(f.bytes)) || f.size}{f.subdir ? ` · ${f.subdir}/` : ''}</small></span>
+      <ul className="mm-list">{orphanFiles.map(f => <li key={f.key}><span>{f.name}<small>{formatModelSizeGB(bytesToModelSizeGB(f.bytes), appLocale()) || human(f.size)}{f.subdir ? ` · ${f.subdir}/` : ''}</small></span>
         <button className="modal-btn secondary" onClick={() => onConfigure(f.name.replace(/\.gguf$/i, ''))}>{t('mm.createSettings')}</button></li>)}</ul></section>}
     {unregistered.length > 0 && orphanFiles.length === 0 && <p className="mm-note">{t('mm.library.unconfigured', { files: unregistered.join(', ') })}</p>}
   </div>;
@@ -178,13 +184,13 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
           composer's decimal-GB number), so the same file showed two different sizes depending on
           which page you were on. m.sizeGB, run through the same shared formatter the composer
           uses, is now the only source: same field, same rounding, same label everywhere. */}
-      {formatModelSizeGB(m.sizeGB) && <span>{formatModelSizeGB(m.sizeGB)}</span>}
+      {formatModelSizeGB(m.sizeGB, appLocale()) && <span>{formatModelSizeGB(m.sizeGB, appLocale())}</span>}
       {m.maxContext != null && <span>{t('mm.card.trainedFor', { tokens: tokens(m.maxContext) })}</span>}
-      {file?.shape && <span>{file.shape.label}</span>}
+      {file?.shape && <span>{tagLabel(t, file.shape.label)}</span>}
       {file?.projector && <span className="model-card-tag">{t('mm.card.vision')}</span>}
       {system && <span className="model-card-tag" title={t('mm.card.systemTitle')}>{t('model.systemLabel')}</span>}
       {protectedModel && <span className="model-card-tag" title={t('mm.card.protectedTitle')}>{t('mm.card.protectedLabel')}</span>}
-      {m.labels.filter(l => l !== 'vision').map(l => <span key={l} className="model-card-tag">{l}</span>)}
+      {m.labels.filter(l => l !== 'vision').map(l => <span key={l} className="model-card-tag">{tagLabel(t, l)}</span>)}
       {m.source && !missing && <span>{m.source === 'preset' ? t('mm.card.sourceFolder') : m.source === 'cache' ? t('mm.card.sourceCache') : m.source}</span>}
       {update?.status === 'stale' && <span className="mm-pill is-warn">{t('mm.card.update', { remote: update.remote })}</span>}
     </p>
@@ -271,7 +277,7 @@ function DeleteModel({ model: m, file, onDeleted }: { model: InstalledModel; fil
   };
   if (!confirming) return <button className="popup-tab model-card-danger" aria-label={t('mm.delete.label', { model: m.name })} onClick={() => setConfirming(true)}>{t('mm.delete')}</button>;
   return <div className="model-card-confirm" role="group" aria-label={t('mm.delete.label', { model: m.name })}>
-    <p>{file ? t(file.projector ? 'mm.delete.confirmFileProjector' : 'mm.delete.confirmFile', { file: file.name, size: formatModelSizeGB(bytesToModelSizeGB(file.bytes)) || file.size }) : t('mm.delete.confirmCache')}</p>
+    <p>{file ? t(file.projector ? 'mm.delete.confirmFileProjector' : 'mm.delete.confirmFile', { file: file.name, size: formatModelSizeGB(bytesToModelSizeGB(file.bytes), appLocale()) || human(file.size) }) : t('mm.delete.confirmCache')}</p>
     {file && file.sections.length > 0 && <label className="mm-check"><input type="checkbox" checked={removeSettings} onChange={e => setRemoveSettings(e.target.checked)}/>{t('mm.delete.alsoSettings', { sections: file.sections.join(', ') })}</label>}
     <button className="popup-tab model-card-danger" disabled={busy} onClick={() => void run()}>{busy ? t('mm.delete.deleting') : t('mm.delete.files')}</button>
     <button className="popup-tab" onClick={() => setConfirming(false)}>{t('mm.keep')}</button>

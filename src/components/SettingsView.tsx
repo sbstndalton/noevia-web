@@ -1,4 +1,5 @@
 import { appLocale } from '../user-preferences';
+import { formatNumber } from '../number-format';
 import { McpStatus } from './McpStatus';
 import { ShellIcon } from './ShellIcon';
 import DiarySharing from './DiarySharing';
@@ -58,7 +59,7 @@ export function SettingsView({ models, modelsLoaded, modelsError, health, stats,
           {retrieval === 'degraded' && <p className="route-note">{t('serviceStatus.retrieval.degradedNote')}</p>}
         </>;
       })()}
-      </div><h2>{t('serviceStatus.liveEngine')}</h2><div className="settings-stat-row"><div><span title={t('serviceStatus.rateTitle')}>{t('serviceStatus.rate')}</span><strong>{stats?.tokensPerSecond?.toFixed(1) ?? '—'}</strong></div><div><span>{t('serviceStatus.requests')}</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${stats.vramGb.toFixed(1)} GB`:'—'}</strong></div></div></>}
+      </div><h2>{t('serviceStatus.liveEngine')}</h2><div className="settings-stat-row"><div><span title={t('serviceStatus.rateTitle')}>{t('serviceStatus.rate')}</span><strong>{stats?.tokensPerSecond != null ? formatNumber(stats.tokensPerSecond, appLocale(), 1) : '—'}</strong></div><div><span>{t('serviceStatus.requests')}</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${formatNumber(stats.vramGb, appLocale(), 1)} GB`:'—'}</strong></div></div></>}
   </div>;
 }
 

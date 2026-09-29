@@ -230,7 +230,7 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
   {/* Thinking is a separate setting that happens to live beside routing: its own panel, so the
       routing form is one thing to read (user review, 2026-09-20). */}
   <section className="mm-panel">
-    <div className="mm-panel-head"><h3>Thinking</h3></div>
+    <div className="mm-panel-head"><h3>{t('composer.thinking.label')}</h3></div>
     <ReasoningControl global />
   </section>
 

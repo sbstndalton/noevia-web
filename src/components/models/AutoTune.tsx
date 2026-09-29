@@ -106,7 +106,7 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   if (system) return <p className="mm-note" role="status">{t('model.systemLabel')}{t('mm.autotune.systemNote')}</p>;
   return <div className="mm-autotune">
     {!model && scan && !running && <p className="mm-note" role="status">{scan.models.length ? t.plural('mm.autotune.needList', scan.models.length, { models: scan.models.join(', ') }) : t('mm.autotune.needNone', { count: 0 })} {t('mm.autotune.skipped', { count: scan.skipped.length })}</p>}
-    {last && !running && <p className="mm-note" role="status">{t('mm.autotune.lastBefore', { date: new Date(last.at).toLocaleString(appLocale()) })}<strong>{last.specLabel}</strong>{', ' + [t('mm.tokensPerSecond', { rate: last.generation }), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv }), t('mm.tune.context', { tokens: last.context != null ? num(last.context, 0) : '' })] : []), ...(last.ubatch ? [t('mm.autotune.ubatch', { size: last.ubatch })] : [])].join(', ')}.</p>}
+    {last && !running && <p className="mm-note" role="status">{t('mm.autotune.lastBefore', { date: new Date(last.at).toLocaleString(appLocale()) })}<strong>{last.specLabel}</strong>{', ' + [t('mm.tokensPerSecond', { rate: num(last.generation) }), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv }), t('mm.tune.context', { tokens: last.context != null ? num(last.context, 0) : '' })] : []), ...(last.ubatch ? [t('mm.autotune.ubatch', { size: last.ubatch })] : [])].join(', ')}.</p>}
     {mine && <div>
       <div className="mm-autotune-status" aria-live="polite">
         <p className="mm-note"><strong>{mine.status === 'running' ? mine.phase : mine.status === 'passed' ? t('mm.autotune.tuned') : mine.status === 'cancelled' ? t('mm.queue.cancelled') : mine.status === 'interrupted' ? t('mm.autotune.interrupted') : t('mm.hw.status.dead')}</strong>{mine.error ? ' — ' + mine.error : ''}</p>
@@ -126,7 +126,7 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
         {mine.queue && <ul className="mm-list" aria-label={t('mm.autotune.queue')}>{mine.queue.map(item => <li key={item.model}>{item.model} · {item.status}{item.error ? ' — ' + item.error : ''}</li>)}</ul>}
         {mine.steps && mine.steps.length > 0 && <div className="mm-table-wrap" role="region" aria-label={t('mm.autotune.steps')} tabIndex={0}><table className="mm-table"><thead><tr><th>{t('mm.bench.test')}</th><th>{t('mm.autotune.state')}</th></tr></thead>
           <tbody>{mine.steps.map((row, index) => <tr key={row.id || index}><td>{row.label}</td><td>{row.reason || row.status}</td></tr>)}</tbody></table></div>}
-        {mine.result && <p className="mm-note">{t('mm.autotune.savedResult', { spec: mine.result.specLabel, rate: mine.result.generation })}</p>}
+        {mine.result && <p className="mm-note">{t('mm.autotune.savedResult', { spec: mine.result.specLabel, rate: num(mine.result.generation) })}</p>}
         {mine.status === 'interrupted' && <p className="mm-note">{t('mm.autotune.oldRun')}</p>}
       </div>}
       <div className="mm-autotune-models" aria-label={t('mm.autotune.models')}>{shownModels.map(item => <details key={item.model} className="mm-autotune-model" open={item.status === 'running' || item.status === 'failed' || item.status === 'interrupted'}>
@@ -138,12 +138,12 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
           {phase.steps.length > 0 && <div className="mm-table-wrap" role="region" aria-label={t('mm.autotune.phaseSteps', { model: item.model, phase: phase.label })} tabIndex={0}><table className="mm-table">
             <thead><tr><th>{t('mm.bench.test')}</th><th>{t('mm.autotune.state')}</th><th>{t('mm.autotune.measured')}</th></tr></thead>
             <tbody>{phase.steps.map(row => <tr key={row.id}><td>{row.label}</td><td>{row.status}{row.reason ? ' — ' + row.reason : ''}</td>
-              <td className="mm-mono">{row.generation ? t('mm.tokensPerSecond', { rate: row.generation }) : row.promptPerSecond ? t('mm.autotune.promptRate', { rate: row.promptPerSecond }) : row.ctx ? t('mm.tokensCount', { tokens: row.ctx }) : '—'}</td></tr>)}</tbody>
+              <td className="mm-mono">{row.generation ? t('mm.tokensPerSecond', { rate: num(row.generation) }) : row.promptPerSecond ? t('mm.autotune.promptRate', { rate: num(row.promptPerSecond) }) : row.ctx ? t('mm.tokensCount', { tokens: row.ctx }) : '—'}</td></tr>)}</tbody>
           </table></div>}
           </details>
         </li>)}</ol>
         {item.result && <div className="mm-easy-result" role="status"><div className="mm-easy-result-text">
-          <p>{t('mm.autotune.savedBefore')}<strong>{item.result.specLabel}</strong>{t('mm.autotune.savedAt', { rate: item.result.generation })}{item.result.ubatch ? ', ' + t('mm.autotune.ubatch', { size: item.result.ubatch }) + ' (' + t('mm.autotune.promptRate', { rate: item.result.promptPerSecond ?? '' }) + ')' : ''}.</p>
+          <p>{t('mm.autotune.savedBefore')}<strong>{item.result.specLabel}</strong>{t('mm.autotune.savedAt', { rate: num(item.result.generation) })}{item.result.ubatch ? ', ' + t('mm.autotune.ubatch', { size: item.result.ubatch }) + ' (' + t('mm.autotune.promptRate', { rate: item.result.promptPerSecond ?? '' }) + ')' : ''}.</p>
           <p className="mm-note">{t('mm.autotune.resultNote', { kv: item.result.kv ?? '', tokens: item.result.context != null ? num(item.result.context, 0) : '', acceptance: item.result.acceptance == null ? t('mm.autotune.notApplicable') : item.result.acceptance + '%' })}</p>
         </div></div>}
       </details>)}</div>

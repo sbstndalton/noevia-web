@@ -37,8 +37,13 @@ export function bytesToModelSizeGB(bytes: number): number {
 
 /** The full display string ("3.3 GB"), or null when the size is unknown. `null`/`undefined`/
  *  non-finite/non-positive all read as unknown, matching every call site's previous `!= null`
- *  guard. The unit label is hard-coded "GB" because that is the only math this function ever
+ *  guard. `locale` is the interface locale (appLocale()); undefined uses the browser's. The unit label is hard-coded "GB" because that is the only math this function ever
  *  does (decimal, bytes / 1e9) — a value computed with 2**30 must never pass through here. */
-export function formatModelSizeGB(sizeGB: number | null | undefined): string | null {
-  return typeof sizeGB === 'number' && Number.isFinite(sizeGB) && sizeGB > 0 ? `${roundModelSizeGB(sizeGB)} GB` : null;
+export function formatModelSizeGB(sizeGB: number | null | undefined, locale?: string): string | null {
+  if (typeof sizeGB !== 'number' || !Number.isFinite(sizeGB) || sizeGB <= 0) return null;
+  // #587: the number is written in the interface locale ("3,3 GB" in German). Inlined rather than
+  // imported from number-format.ts because tests load this file in isolation.
+  let f: Intl.NumberFormat;
+  try { f = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }); } catch { f = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }); }
+  return `${f.format(roundModelSizeGB(sizeGB))} GB`;
 }

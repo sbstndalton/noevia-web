@@ -1,5 +1,6 @@
 import { isChatGenerationModel } from '../model-kind';
 import { formatModelSizeGB } from '../model-size';
+import { appLocale } from '../user-preferences';
 import { MiddleTruncate } from './MiddleTruncate';
 import { useModelsChanged } from '../models-changed';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -231,7 +232,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
                 <span className={`model-dot${m.loaded ? '' : ' down'}`} />
                 <div className="model-name-group">
                   <MiddleTruncate className="model-name" text={m.name}/>
-                  {formatModelSizeGB(m.sizeGB) && <span className="model-quant">{formatModelSizeGB(m.sizeGB)}</span>}
+                  {formatModelSizeGB(m.sizeGB, appLocale()) && <span className="model-quant">{formatModelSizeGB(m.sizeGB, appLocale())}</span>}
                 </div>
                 <span className="model-role">{busy === m.name ? t('modelPopup.switching') : activeProject.model === m.name ? <><ShellIcon name="check" size={15}/>{t('modelPopup.selected')}</> : m.loaded ? t('modelPopup.loaded') : ''}</span>
               </button>

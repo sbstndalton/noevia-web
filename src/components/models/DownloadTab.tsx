@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { bytes, ctxShort, errorText, mm, tokens } from './mm';
+import { bytes, ctxShort, errorText, human, mm, num, tokens } from './mm';
 import { registerSafeDefaults } from './register';
 import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
@@ -143,7 +143,7 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'fit' }:
       {results.map(r => <li key={r.id}>
         <button className="mm-result-open" disabled={repoBusy === r.id} onClick={() => void openRepo(r.id)}>
           <strong>{r.id}</strong>
-          <small>{[paramLabel(t, r), r.moe ? t('mm.discover.moe') : r.params ? t('mm.discover.dense') : null, r.best ? `${r.best.quant || 'GGUF'} · ${r.best.gb} GB` : null,
+          <small>{[paramLabel(t, r), r.moe ? t('mm.discover.moe') : r.params ? t('mm.discover.dense') : null, r.best ? `${r.best.quant || 'GGUF'} · ${num(r.best.gb)} GB` : null,
             r.vision ? t('mm.card.vision') : null, r.license, t('mm.discover.downloads', { count: tokens(r.downloads) }), r.ageDays <= 45 ? t('mm.discover.updatedDays', { days: r.ageDays }) : r.lastModified ? t('mm.discover.updatedOn', { date: r.lastModified.slice(0, 10) }) : null].filter(Boolean).join(' · ')}</small>
           <span className="mm-result-pills">
             {r.trusted && <span className="mm-pill is-good">{t('mm.discover.trusted')}</span>}
@@ -201,9 +201,9 @@ function Queue({ jobs, registered, onChange, onSetUp }: { jobs: Job[]; registere
       {' '}{t('mm.queue.chooseBefore')}<strong>{t('mm.queue.setUp')}</strong>{t('mm.queue.chooseAfter')}
     </p>}
     <ul className="mm-jobs">{jobs.map(j => <li key={j.id}>
-      <div className="mm-job-head"><strong>{j.filename}</strong><span>{j.status === 'downloading' ? t('mm.queue.progress', { pct: j.pct.toFixed(0), speed: j.speedH, eta: j.etaH }) : j.status === 'done' ? t('mm.queue.done') : j.status === 'error' ? t('mm.queue.failed', { error: j.error || t('mm.unknownError') }) : j.status === 'canceled' ? t('mm.queue.cancelled') : t('mm.queue.queued')}</span></div>
+      <div className="mm-job-head"><strong>{j.filename}</strong><span>{j.status === 'downloading' ? t('mm.queue.progress', { pct: num(j.pct, 0), speed: human(j.speedH), eta: human(j.etaH) }) : j.status === 'done' ? t('mm.queue.done') : j.status === 'error' ? t('mm.queue.failed', { error: j.error || t('mm.unknownError') }) : j.status === 'canceled' ? t('mm.queue.cancelled') : t('mm.queue.queued')}</span></div>
       <progress max={100} value={j.pct} aria-label={t('mm.queue.progressLabel', { file: j.filename })}/>
-      {j.parallel && j.status === 'downloading' && <div className="mm-chunks" aria-label={t('mm.queue.parts')}>{j.chunks.map(c => <span key={c.index} title={t('mm.queue.part', { part: c.index + 1, pct: c.pct.toFixed(0) })}><i style={{ width: `${c.pct}%` }}/></span>)}</div>}
+      {j.parallel && j.status === 'downloading' && <div className="mm-chunks" aria-label={t('mm.queue.parts')}>{j.chunks.map(c => <span key={c.index} title={t('mm.queue.part', { part: c.index + 1, pct: num(c.pct, 0) })}><i style={{ width: `${c.pct}%` }}/></span>)}</div>}
       <small>{t('mm.queue.bytes', { done: bytes(j.downloaded), total: j.bytes ? bytes(j.bytes) : t('mm.queue.unknownSize') })} · {j.repo}</small>
       {['queued', 'downloading'].includes(j.status) && <button className="popup-tab" onClick={() => void act(`downloads/${j.id}/cancel`)}>{t('common.cancel')}</button>}
       {j.status === 'done' && isModelFile(j.filename) && <button className="popup-tab" onClick={() => onSetUp(sectionFor(j.filename))}>{registered.has(j.id) ? t('mm.queue.review') : t('mm.queue.setUp')}</button>}
