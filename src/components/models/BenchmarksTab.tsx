@@ -14,7 +14,7 @@ type Overview = { sections: string[]; sweepArgs: Record<string, string>; prompts
 type Result = { id: number; alias: string; prompt_name: string; rep: number; cold: number; contended: number; err: string; ttft_ms: number | null; ttft_answer_ms: number | null; total_ms: number | null; prompt_n: number | null; gen_n: number | null; gen_tps: number | null; draft_acc: number | null; peak_vram_json: string; truncated: number; response_text: string };
 type Sweep = { id: number; alias: string; test: string; n_prompt: number; n_gen: number; n_depth: number; avg_ts: number; stddev_ts: number };
 type Badge = { alias: string; category: string; rating: number; note: string; run_id: number | null };
-type RunDetail = { run: RunRow; variants: { alias: string; load_ms: number | null }[]; results: Result[]; sweeps: Sweep[]; badges: Record<string, Badge[]>;
+export type RunDetail = { run: RunRow; variants: { alias: string; load_ms: number | null }[]; results: Result[]; sweeps: Sweep[]; badges: Record<string, Badge[]>;
   charts: { capacity_gb: number; aliases: string[]; gen: { label: string; data: (number | null)[] }[]; ttft: { label: string; data: (number | null)[] }[]; vram_labels: string[]; vram_measured: number[]; vram_predicted: (number | null)[] } };
 
 export function BenchmarksTab() {
@@ -119,8 +119,9 @@ function Bars({ title, unit, rows, max }: { title: string; unit: string; rows: {
   </figure>;
 }
 
-function RunView({ id, categories }: { id: number; categories: { key: string; label: string }[] }) {
-  const [run, setRun] = useState<RunDetail | null>(null), [error, setError] = useState('');
+/** `initial` seeds the detail so the view can be rendered without the fetch (render tests). */
+export function RunView({ id, categories, initial }: { id: number; categories: { key: string; label: string }[]; initial?: RunDetail }) {
+  const [run, setRun] = useState<RunDetail | null>(initial ?? null), [error, setError] = useState('');
   const t = useT();
   const load = async () => { try { setRun(await mm<RunDetail>(`benchmark/runs/${id}`)); } catch (e) { setError(errorText(e, t('mm.bench.runUnavailable'))); } };
   useEffect(() => { void load(); }, [id]);
@@ -132,7 +133,7 @@ function RunView({ id, categories }: { id: number; categories: { key: string; la
   return <section className="mm-panel" aria-labelledby="mm-run">
     <h3 id="mm-run">{t('mm.bench.run', { id })} · {run.run.backend} · {benchStatus(t, run.run.status)}</h3>
     <p className="mm-note">{t('mm.bench.medians')}</p>
-    {prompts.length > 0 && <div className="viz-grid-2">{prompts.map((p, pi) => <Bars key={p} title={t('mm.bench.genSpeed', { prompt: p })} unit=" tok/s" max={genMax} rows={c.aliases.map((a, ai) => ({ label: a, values: [c.gen[pi].data[ai]] }))}/>)}</div>}
+    {prompts.length > 0 && <div className="viz-grid-2">{prompts.map((p, pi) => <Bars key={p} title={t('mm.bench.genSpeed', { prompt: p })} unit={` ${t('stats.tokPerSecUnit')}`} max={genMax} rows={c.aliases.map((a, ai) => ({ label: a, values: [c.gen[pi].data[ai]] }))}/>)}</div>}
     {prompts.length > 0 && <div className="viz-grid-2">{prompts.map((p, pi) => <Bars key={p} title={t('mm.bench.ttft', { prompt: p })} unit=" ms" max={ttftMax} rows={c.aliases.map((a, ai) => ({ label: a, values: [c.ttft[pi].data[ai]] }))}/>)}</div>}
     {c.vram_labels.length > 0 && <>
       <ul className="viz-legend"><li><i className="viz-swatch viz-s1"/>{t('mm.bench.peak')}</li><li><i className="viz-swatch viz-s2"/>{t('mm.bench.estimate')}</li></ul>
@@ -140,11 +141,11 @@ function RunView({ id, categories }: { id: number; categories: { key: string; la
     </>}
     {run.sweeps.length > 0 && <div className="mm-table-wrap"><table className="mm-table"><caption>{t('mm.bench.sweepResults')}</caption>
       <thead><tr><th scope="col">{t('mm.projects.model')}</th><th scope="col">{t('mm.bench.test')}</th><th scope="col">{t('mm.bench.depth')}</th><th scope="col">{t('mm.bench.speed')}</th></tr></thead>
-      <tbody>{run.sweeps.map(w => <tr key={w.id}><td>{w.alias}</td><td>{w.n_gen ? t('mm.bench.generate', { tokens: w.n_gen }) : t('mm.bench.read', { tokens: w.n_prompt })}</td><td>{tokens(w.n_depth)}</td><td>{w.avg_ts != null ? num(w.avg_ts, 1) : '—'} ± {w.stddev_ts != null ? num(w.stddev_ts, 1) : '—'} tok/s</td></tr>)}</tbody></table></div>}
+      <tbody>{run.sweeps.map(w => <tr key={w.id}><td>{w.alias}</td><td>{w.n_gen ? t('mm.bench.generate', { tokens: w.n_gen }) : t('mm.bench.read', { tokens: w.n_prompt })}</td><td>{tokens(w.n_depth)}</td><td>{w.avg_ts != null ? num(w.avg_ts, 1) : '—'} ± {w.stddev_ts != null ? num(w.stddev_ts, 1) : '—'} {t('stats.tokPerSecUnit')}</td></tr>)}</tbody></table></div>}
     {run.results.length > 0 && <div className="mm-table-wrap"><table className="mm-table"><caption>{t('mm.bench.every')}</caption>
       <thead><tr><th scope="col">{t('mm.projects.model')}</th><th scope="col">{t('mm.test.prompt')}</th><th scope="col">{t('mm.bench.firstToken')}</th><th scope="col">{t('mm.autoconfig.generation')}</th><th scope="col">{t('mm.bench.notes')}</th></tr></thead>
       <tbody>{run.results.map(r => <tr key={r.id}><td>{r.alias}</td><td>{r.prompt_name} #{r.rep}</td><td>{r.ttft_ms != null ? `${Math.round(r.ttft_ms)} ms` : '—'}{r.ttft_answer_ms && r.ttft_answer_ms !== r.ttft_ms ? <small>{t('mm.bench.answerAt', { ms: Math.round(r.ttft_answer_ms) })}</small> : null}</td>
-        <td>{r.gen_tps != null ? `${num(r.gen_tps, 1)} tok/s` : '—'}<small>{t('mm.tokensCount', { tokens: tokens(r.gen_n) })}{r.draft_acc != null ? ` · ${t('mm.bench.draftAccepted', { pct: Math.round(r.draft_acc * 100) })}` : ''}</small></td>
+        <td>{r.gen_tps != null ? t('mm.tokensPerSecond', { rate: num(r.gen_tps, 1) }) : '—'}<small>{t('mm.tokensCount', { tokens: tokens(r.gen_n) })}{r.draft_acc != null ? ` · ${t('mm.bench.draftAccepted', { pct: Math.round(r.draft_acc * 100) })}` : ''}</small></td>
         <td>{[r.cold ? t('mm.bench.cold') : '', r.contended ? t('mm.bench.contended') : '', r.truncated ? t('mm.bench.truncated') : '', r.err].filter(Boolean).join(' · ') || '—'}
           {r.response_text && <details><summary>{t('mm.bench.output')}</summary><pre className="mm-output">{r.response_text}</pre></details>}</td></tr>)}</tbody></table></div>}
     <h4 className="mm-subhead">{t('mm.bench.ratings')}</h4>
