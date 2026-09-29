@@ -1651,6 +1651,12 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .set-badge.is-on { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-2-soft); }
 .set-badge.is-warn { border-color: var(--status-warning); color: var(--status-warning); }
 
+/* #630: the phone layout preview stacks a row like a real phone (see primitives.css). */
+:root[data-layout="mobile"] .set-row { flex-direction: column; align-items: stretch; }
+:root[data-layout="mobile"] .set-row-control { width: 100%; }
+:root[data-layout="mobile"] .set-row.set-row-inline .set-row-control { width: auto; }
+:root[data-layout="mobile"] .set-row-control :is(select, .set-name-field, .set-name-field input) { width: 100%; }
+:root[data-layout="mobile"] .set-row-control :is(.theme-choice, .palette-picker) { width: 100%; }
 @media (max-width: 620px) {
   .set-row { flex-direction: column; align-items: stretch; }
   .set-row-control { width: 100%; }

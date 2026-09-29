@@ -203,6 +203,18 @@ button.connector-card:focus-visible { outline: 2px solid var(--focus-ring); outl
 .permission-control.glass-seg > button.ask[aria-checked='true'] { color: var(--status-approval); }
 .permission-control.glass-seg > button.block[aria-checked='true'] { color: var(--status-danger); }
 
+/* #630: the phone layout preview (data-layout="mobile") on a wide viewport never matches the
+   max-width media queries below, so the theme row kept its desktop flex layout and clipped the
+   third card. Same phone rules, keyed off the layout attribute. */
+:root[data-layout='mobile'] .settings-stage .set-row > :is(.set-row-text, .accent-choice, .theme-choice) { align-self: stretch; }
+:root[data-layout='mobile'] .settings-stage .theme-choice { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+:root[data-layout='mobile'] .settings-stage .theme-choice button { min-width: 0; }
+/* design-lint: allow side-tab — the left edge draws the preview's sidebar */
+:root[data-layout='mobile'] .settings-stage .theme-choice .theme-swatch { width: 100%; box-sizing: border-box; height: 56px; padding: 10px 8px 10px 14px; border-left-width: 10px; }
+:root[data-layout='mobile'] .settings-stage .theme-choice .theme-swatch i { width: 70%; max-width: 60px; }
+:root[data-layout='mobile'] .settings-stage .accent-choice { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }
+:root[data-layout='mobile'] .settings-stage .accent-choice .accent-tile { width: auto; min-width: 0; }
+
 /* Below 620px a row stacks (noevia.css) while align-items stays centre, which shrank each
    label to its text and centred it: every row started at a different indent. */
 @media (max-width: 620px) {

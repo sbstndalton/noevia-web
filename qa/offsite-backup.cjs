@@ -43,7 +43,7 @@ function fakeS3(objects){
   assert.equal(status.snapshots,1);assert.ok(!JSON.stringify(status).includes('QA-SECRET-VALUE'));
   for(const width of [375,768,1440])for(const theme of ['light','dark']){
    await page.setViewportSize({width,height:width<768?812:900});
-   await page.evaluate(t=>localStorage.setItem('cowork-theme',t),theme);await page.reload();
+   await page.evaluate(t=>localStorage.setItem('cowork-theme',t),theme);await page.goto(origin); // not reload: the address bar can still read /settings/backups after the phone close, and reloading it re-opens Settings with no account menu
    await openSettings(page);
    const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
    await settings.getByRole('button',{name:'Backups',exact:true}).click();
@@ -53,6 +53,7 @@ function fakeS3(objects){
    if(shots)await page.screenshot({path:`${shots}/offsite-${width}-${theme}.png`});
    if(width===1440&&theme==='light'){await settings.getByRole('button',{name:'Back up now'}).click();await settings.getByRole('button',{name:'Back up now'}).waitFor();}
    await settings.getByRole('button',{name:'Close settings'}).click(); // the same close button lives in the list header on phones (#305)
+   await settings.waitFor({state:'detached'}); // let the 240ms close animation finish before navigating away
   }
   assert.deepEqual(errors,[]);
   console.log('PASS offsite backup: real app, fake S3, encrypted objects without plaintext or names, run + retention + restore test, admin settings page 375/768/1440 light/dark.');

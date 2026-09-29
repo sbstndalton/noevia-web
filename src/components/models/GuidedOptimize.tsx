@@ -75,7 +75,7 @@ function FitStep({ model }: { model: string }): JSX.Element {
       setCtx(v.current.ctx || v.rows.find((r) => r.ctx >= 16384)?.ctx || v.rows[0]?.ctx || 0);
       if (v.current.kv && v.current.kv in { f16: 1, q8_0: 1, q5_1: 1, q5_0: 1, q4_0: 1 }) setKv(v.current.kv);
     }).catch((e) => { if (live) setError(e instanceof Error ? e.message : t('mm.fit.unavailable')); });
-    getJson<Hardware>('/api/models/hardware').then((v) => { if (live) setHw(v); }).catch(() => undefined);
+    getJson<Hardware | { supported: false }>('/api/models/hardware').then((v) => { if (live) setHw('supported' in v ? null : v); }).catch(() => undefined);
     return () => { live = false; };
   }, [model]);
   const budget = useMemo(() => { const n = Number(manual); return n > 0 ? { gib: n, source: 'the figure you entered', kind: 'manual' as const, gpu: undefined } : budgetFor(inputs?.budgetGib, hw); }, [manual, inputs, hw]);
