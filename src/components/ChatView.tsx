@@ -11,6 +11,7 @@ import { ComposerModel } from './ComposerModel';
 import { MarkdownPreview } from './DiaryModal';
 import { ModelPopup } from './ModelPopup';
 import { ToolCalls } from './ToolCalls';
+import { SourceChips } from './SourceChips';
 import { ComposerTextarea } from './ComposerTextarea';
 import { modelChoiceLabel } from '../model-guidance';
 import { ComposerActions, useAttachmentDrop } from './ComposerActions';
@@ -60,6 +61,8 @@ interface ChatViewProps {
   /** #510: the header's sliders open this chat's own settings — its project's, or, for a chat
    *  outside a project, its model and tools — instead of a second way into Settings. */
   onEditProject?: (projectId: string) => void;
+  /** #552: a source chip under a reply opens that file in the project's Sources tab. */
+  onOpenSource?: (projectId: string, file: string) => void;
   /** Home only (#239): the latest chats to pick up from, with their project names. */
   recent?: { id: string; title: string; projectId: string | null; projectName: string | null; updatedAt: number }[];
   onOpenRecent?: (chatId: string, projectId: string | null) => void;
@@ -225,6 +228,7 @@ export function ChatView({
   onOpenModels,
   onOpenSettings,
   onEditProject,
+  onOpenSource,
   recent,
   onOpenRecent,
   sheetStatus = null,
@@ -523,6 +527,9 @@ export function ChatView({
                         <span className="typing"><i /><i /><i /></span>
                       </div>
                     )
+                  )}
+                  {project && m.content && !m.error && m.sources && m.sources.length > 0 && (
+                    <SourceChips sources={m.sources} files={project.files} onOpen={onOpenSource ? (file) => onOpenSource(project.id, file) : undefined} />
                   )}
                   {streaming && isLast && !m.error ? (
                     <div className="msg-meta" aria-live="off">

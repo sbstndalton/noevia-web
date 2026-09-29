@@ -44,6 +44,9 @@ interface ProjectViewProps {
   /** The tab the address bar names (#359): applied on open and on Back/Forward. A gated tab
    *  (research, code, browser) waits until this account's access to it is confirmed. */
   requestedTab?: ProjectTab;
+  /** #552: a source to reveal in the Sources tab, from a reply's source chip. `seq` makes a repeat
+   *  request for the same file act again. */
+  focusSource?: { name: string; seq: number } | null;
   /** Every tab change, so the address bar follows. `replace` marks one the view made itself (an
    *  access fallback, a code request, the tab it opened on) rather than one the person chose. */
   onTabChange?: (tab: ProjectTab, opts: { replace: boolean }) => void;
@@ -90,6 +93,7 @@ export function ProjectView({
   project,
   codeRequest,
   requestedTab,
+  focusSource,
   onTabChange,
   onNewChat,
   onSendFirst,
@@ -143,6 +147,20 @@ export function ProjectView({
   // kick the viewer back to Chats before the real answer has even arrived (#450).
   useEffect(() => { if (tab === 'code' && codeAccessState === 'denied') setTabAuto('chats'); }, [tab, codeAccessState]);
   useEffect(() => { if (tab === 'browser' && !browserAccess) setTabAuto('chats'); }, [tab, browserAccess]);
+  // #552: a source chip in a reply opens this file's row: scrolled into view, marked, and focused
+  // so keyboard and screen-reader users land on it.
+  const [citedSource, setCitedSource] = useState<string | null>(null);
+  const revealedSeq = useRef<number | null>(null);
+  useEffect(() => {
+    if (!focusSource || revealedSeq.current === focusSource.seq) return;
+    setCitedSource(focusSource.name);
+    if (tabNow.current !== 'sources') { setTabAuto('sources'); return; }
+    revealedSeq.current = focusSource.seq;
+    const row = Array.from(document.querySelectorAll<HTMLElement>('.source-list > li[data-source-name]')).find((el) => el.dataset.sourceName === focusSource.name);
+    if (!row) return;
+    row.scrollIntoView({ block: 'center' });
+    row.focus({ preventScroll: true });
+  }, [focusSource, tab]);
   const [draft, setDraft] = useState('');
   const [skillFiles, setSkillFiles] = useState<string[]>([]);
   const [syncing, setSyncing] = useState(false);
@@ -363,7 +381,7 @@ export function ProjectView({
                     // what a patch sends, so there is nothing "Remove" could do for it.
                     const deletable = !!f.source && (!!f.attachment || (project.sourceFolders || []).some(d => f.name.startsWith(d + '/') && !f.name.slice(d.length + 1).includes('/')));
                     const undeletableSynced = !!f.source && !deletable;
-                    return <li key={f.name}>
+                    return <li key={f.name} data-source-name={f.name} tabIndex={-1} className={citedSource === f.name ? 'is-cited' : undefined}>
                       {f.attachment?.assetId && <img className="source-thumbnail" src={projectImageUrl(project.id, f.attachment.assetId)} alt="" />}
                       <span className="source-name" title={f.name}><ShellIcon name="file"/><span>{f.name.split('/').pop()}
                         <small className="source-status">{skillFiles.includes(f.name) ? t('projects.view.instructionSkill') : f.document ? sourceStatus(f) : f.attachment?.state === 'stored' ? (f.attachment.reason || t('projects.view.originalStored')) : f.attachment?.state === 'vision' ? t('projects.view.uploadedImage') : f.attachment?.state === 'partial' ? (f.attachment.reason || t('projects.view.textPreviewLimited')) : t('projects.view.textReady')}</small>

@@ -2,6 +2,7 @@ import type { JSX, ReactNode } from 'react';
 import type { InstalledModel, Project } from '../types';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
+import { displayName } from '../source-chips';
 
 function Section({
   title,
@@ -33,11 +34,13 @@ export function Inspector({
   models,
   onConfigureModels,
   onEditProject,
+  onOpenSource,
 }: {
   project: Project | null;
   models: InstalledModel[];
   onConfigureModels: () => void;
   onEditProject: (id: string) => void;
+  onOpenSource?: (projectId: string, file: string) => void;
 }): JSX.Element {
   const t = useT();
   const model = project?.model || models.find((m) => m.loaded)?.name || t('inspector.notSelected');
@@ -77,7 +80,15 @@ export function Inspector({
           >
             {project.files.length ? (
               <ul className="insp-list">
-                {project.files.map((f) => <li key={f.name}>{f.name}</li>)}
+                {/* The file's own name, never the storage path it was synced from, which goes
+                    stale when a project is renamed (#552). It opens the file in Sources. */}
+                {project.files.map((f) => (
+                  <li key={f.name}>
+                    {onOpenSource
+                      ? <button type="button" className="insp-source" title={f.name} aria-label={t('chat.sources.open', { name: displayName(f.name) })} onClick={() => onOpenSource(project.id, f.name)}>{displayName(f.name)}</button>
+                      : displayName(f.name)}
+                  </li>
+                ))}
               </ul>
             ) : (
               <p className="insp-empty">{t('inspector.noSources')}</p>

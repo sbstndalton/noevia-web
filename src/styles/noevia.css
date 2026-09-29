@@ -2283,3 +2283,20 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .settings-detail .provider-row-actions { display: flex; align-items: center; gap: var(--space-1); flex-shrink: 0; margin-left: auto; }
 .settings-detail .provider-edit { padding: var(--space-2) var(--space-4) var(--space-4); min-width: 0; }
 .settings-detail .provider-edit .route-note { margin: 0; }
+
+/* Sources a project reply was grounded in (#552): one chip per file under the reply, wrapping at
+   any width, on the shared .chip look so it follows every theme; keyboard focus uses .chip's ring. */
+.reply-sources { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 8px; margin: 6px 0 0; min-width: 0; }
+.reply-sources-label { font-size: var(--text-caption); color: var(--text-secondary); }
+.reply-sources-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; min-width: 0; }
+.reply-sources-list li { min-width: 0; max-width: 100%; }
+.reply-source-chip { max-width: 100%; padding: 3px 10px; font-size: var(--text-caption); }
+.reply-source-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reply-source-chip.is-gone { cursor: default; color: var(--text-secondary); text-decoration: line-through; }
+.reply-source-chip.is-gone:hover { background: var(--bg-surface); border-color: var(--border-subtle); }
+/* The Sources tab row a chip opened, and the context panel's file buttons. */
+.source-list > li.is-cited { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius-control); }
+.source-list > li:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.insp-source { display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; overflow-wrap: anywhere; }
+.insp-source:hover { color: var(--text-primary); text-decoration: underline; }
+.insp-source:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-control); }

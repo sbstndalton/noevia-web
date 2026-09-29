@@ -466,6 +466,8 @@ export async function* streamChat(
   reasoningEffort?: string;
   route?: string;
   routingDecision?: import('./types').RoutingDecision;
+  /** 'sources' (#552): the project passages placed in the prompt. */
+  sources?: import('./types').SourceRef[];
   phase?: 'waiting' | 'streaming' | 'complete';
   // 'skills_scope' uses `text`: the skills auto-loaded for this reply.
   // 'tools_scope' uses `text`: the toolboxes offered for this reply ('' when not narrowed). // 'fast' | 'smart' when Auto routing picked the model (step 12)

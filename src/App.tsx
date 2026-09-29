@@ -143,6 +143,14 @@ export default function App(): JSX.Element {
   const [appMode, setAppMode] = useState<'chat'|'code'>(initialRoute?.kind === 'code' ? 'code' : 'chat');
   // The tab a project and Customise are on, so the address bar can carry it (#359). A project's
   // tab is kept with its id: another project opens on its own first tab, not on this one.
+  // #552: a file a reply's source chip asked the project's Sources tab to reveal.
+  const [sourceFocus, setSourceFocus] = useState<{ id: string; name: string; seq: number } | null>(null);
+  const sourceSeq = useRef(0);
+  const openProjectSource = (projectId: string, name: string) => {
+    setProjectTab({ id: projectId, tab: 'sources' });
+    setSourceFocus({ id: projectId, name, seq: ++sourceSeq.current });
+    setView({ kind: 'project', id: projectId });
+  };
   const [projectTab, setProjectTab] = useState<{ id: string; tab: ProjectTab } | null>(() => (initialRoute?.kind === 'project' && initialRoute.tab ? { id: initialRoute.id, tab: initialRoute.tab } : null));
   const [customiseTab, setCustomiseTab] = useState<CustomiseTab>(() => (initialRoute?.kind === 'customise' ? initialRoute.tab : 'connectors'));
   // A navigation the app makes on its own (a redirect, a fallback, a normalisation) replaces the
@@ -490,6 +498,7 @@ export default function App(): JSX.Element {
             toolCalls: settleToolCalls(h.toolCalls),
             stats: h.stats,
             coworkTask: h.coworkTask,
+            sources: h.sources,
           }));
         setMessagesByChat((prev) => ({ ...prev, [id]: resolveLoadedHistory(prev[id] ?? [], loaded) }));
         setHistoryChecked((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
@@ -682,6 +691,7 @@ export default function App(): JSX.Element {
       toolCalls: m.toolCalls && m.toolCalls.length ? m.toolCalls : undefined,
       stats: m.stats,
       coworkTask: m.coworkTask,
+      sources: m.sources && m.sources.length ? m.sources : undefined,
     }));
     // Saves for one chat run in order. If another device saved first, merge its copy with ours
     // (nothing either side wrote is dropped), show the merged transcript, and save that.
@@ -689,7 +699,7 @@ export default function App(): JSX.Element {
       if (sendingChats.current.has(chatId)) { deferredMerges.current[chatId] = merged; return; }
       setMessagesByChat((prev) => ({
         ...prev,
-        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats, coworkTask: h.coworkTask })),
+        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats, coworkTask: h.coworkTask, sources: h.sources })),
       }));
     };
     if (!shouldSaveChat(chatId, deletedChats.current)) return;
@@ -854,6 +864,8 @@ export default function App(): JSX.Element {
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, senderLabel: `Assistant · Auto (${ev.route})`, routingDecision: ev.routingDecision } : m)),
             }));
+          } else if (ev.type === 'sources' && Array.isArray(ev.sources)) {
+            setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, sources: ev.sources } : m) }));
           } else if (ev.type === 'skills_scope') {
             setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, skillScope: ev.text || undefined } : m) }));
           } else if (ev.type === 'tools_scope') {
@@ -1498,6 +1510,7 @@ export default function App(): JSX.Element {
           modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured)}
           codeRequest={view.codeRequest}
           requestedTab={projectTab?.id === activeProject.id ? projectTab.tab : undefined}
+          focusSource={sourceFocus?.id === activeProject.id ? sourceFocus : null}
           onTabChange={(tab, { replace }) => { if (replace) markReplace(); setProjectTab((prev) => (prev?.id === activeProject.id && prev.tab === tab ? prev : { id: activeProject.id, tab })); }}
           onOpenModels={() => setPopupOpen(true)}
           onEdit={() => setEditingProjectId(activeProject.id)}
@@ -1552,6 +1565,7 @@ export default function App(): JSX.Element {
           onOpenModels={() => setPopupOpen(true)}
           onOpenSettings={() => openSettings()}
           onEditProject={setEditingProjectId}
+          onOpenSource={openProjectSource}
           recent={view.projectId ? undefined : recentChats(allChats).filter((c) => c.id !== view.chatId).slice(0, 5).map((c) => ({ id: c.id, title: c.title, projectId: c.projectId ?? null, projectName: c.projectId ? projects.find((p) => p.id === c.projectId)?.name ?? null : null, updatedAt: c.updatedAt }))}
           onOpenRecent={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
           sheetStatus={phoneSpace && showStats ? <StatsBar {...statsProps} variant="sheet" /> : null}
@@ -1628,6 +1642,7 @@ export default function App(): JSX.Element {
           models={models}
           onConfigureModels={() => setPopupOpen(true)}
           onEditProject={setEditingProjectId}
+          onOpenSource={openProjectSource}
         />
       )}
       </div>

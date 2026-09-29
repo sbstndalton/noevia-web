@@ -39,7 +39,12 @@ export interface Message {
   coworkTask?: CoworkTaskRef;
   /** A Cowork start that failed keeps its repository so Retry uses the same harness. */
   coworkRepository?: string;
+  /** The project passages placed in this reply's prompt (#552), in prompt order. */
+  sources?: SourceRef[];
 }
+
+/** One project source the model was given for a reply. `file` is the project file's name. */
+export interface SourceRef { id: string; file: string; snippet: string; kind: 'excerpt' | 'file'; score?: number }
 
 /** The code task a Cowork reply started; the card reads its live state from the code API. */
 export interface CoworkTaskRef { projectId: string; taskId: string; repository: string }
@@ -189,6 +194,7 @@ export interface HistoryEntry {
   toolCalls?: ToolCallView[];
   stats?: MessageStats;
   coworkTask?: CoworkTaskRef;
+  sources?: SourceRef[];
 }
 
 export interface WorkspaceInfo {
