@@ -8,9 +8,17 @@ type Translator = (key: MessageKey, params?: Record<string, string | number>) =>
 
 const ROUTES = ['fast', 'smart', 'code'] as const;
 
-/** "Auto (fast)" -> "Auto (Schnell)"; "Stopped" -> "Gestoppt"; any other label (a model name) as it is. */
+/** The compact English label of a not-yet-routed Auto reply (also the composer's model label). */
+export const AUTO_PENDING_LABEL = 'Auto (Fast/Smart)';
+/** Every language-neutral sender token the app stores or draws: the routed Auto labels, the
+ *  pending Auto label and the Stopped token (#626, #643). Each one has a translation. */
+export const SENDER_TOKENS: readonly string[] = [...ROUTES.map((r) => `Auto (${r})`), AUTO_PENDING_LABEL, 'Stopped'];
+
+/** "Auto (fast)" -> "Auto (Schnell)"; "Auto (Fast/Smart)" -> "Auto (Schnell/Smart)"; "Stopped" -> "Gestoppt";
+ *  any other label (a model name) as it is. */
 export function senderLabelText(t: Translator, label: string): string {
   const bare = label.replace(/^Assistant · /, '');
+  if (bare === AUTO_PENDING_LABEL) return t('composer.autoFastSmart');
   const auto = /^Auto \((\w+)\)$/.exec(bare);
   if (auto) {
     const route = (ROUTES as readonly string[]).includes(auto[1]) ? t(`chat.route.name.${auto[1]}` as MessageKey) : auto[1];

@@ -12,7 +12,7 @@ const limit = 4 * 1024 * 1024;
 /** Approval ids are never reusable after recovery. Keep tool outcomes as history. */
 export function recoveryState(state: RecoveryState): RecoveryState {
   const copy = JSON.parse(JSON.stringify(state)) as RecoveryState;
-  if (new TextEncoder().encode(JSON.stringify(copy)).length > limit) throw Error('Browser recovery exceeds 4 MB. Save or discard older conversation text before continuing.');
+  if (new TextEncoder().encode(JSON.stringify(copy)).length > limit) throw Object.assign(Error('Browser recovery exceeds 4 MB. Save or discard older conversation text before continuing.'), { limit: { code: 'recovery', params: { limitBytes: limit } } });
   for (const turns of Object.values(copy.turns)) for (const turn of turns) {
     turn.tools = turn.tools?.filter(Boolean).map(({approvalId: _id, ...tool}) => tool.status === 'pending' || tool.status === 'running'
       ? {...tool, status: 'denied', args: 'Interrupted tool request. No approval was restored.'} : tool);

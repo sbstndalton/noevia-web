@@ -674,6 +674,8 @@ export const EN_GB = {
   'toolbox.label.nextcloud-deck-workflow': 'Deck workflow',
   'toolbox.label.nextcloud-deck-structure': 'Deck structure',
   'toolbox.label.nextcloud-deck-notes': 'Deck comments & files',
+  'toolbox.label.nextcloud-files': 'Nextcloud Files',
+  'toolbox.label.nextcloud-sharing': 'Nextcloud Sharing',
   'toolbox.label.nextcloud-collectives-admin': 'Collectives management',
   // #615 (round 9): the coding harness box and the reasons a tool box is unavailable, worded by code.
   'toolbox.label.code': 'Coding harness',
@@ -924,7 +926,7 @@ export const EN_GB = {
   'code.task.plan.empty': "No entries were reported.",
   'code.task.output.heading': "Assistant output",
   'code.task.output.shortened': "Assistant output (shortened)",
-  'code.task.output.truncated': "Showing the first 32 KiB of output.",
+  'code.task.output.truncated': "Showing the first {size} of output.",
   'code.task.result.tools.one': "{count} tool call",
   'code.task.result.tools.other': "{count} tool calls",
   'code.task.result': "{tools} · {allowed} allowed · {declined} declined · {refused} refused by noevia",

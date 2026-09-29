@@ -663,6 +663,8 @@ export const SV_SE: Catalogue = {
   'toolbox.label.nextcloud-deck-workflow': "Deck-arbetsflöde",
   'toolbox.label.nextcloud-deck-structure': "Deck-struktur",
   'toolbox.label.nextcloud-deck-notes': "Deck-kommentarer och filer",
+  'toolbox.label.nextcloud-files': "Nextcloud-filer",
+  'toolbox.label.nextcloud-sharing': "Nextcloud-delning",
   'toolbox.label.nextcloud-collectives-admin': "Collectives-hantering",
   // #615 (round 9): the coding harness box and the reasons a tool box is unavailable, worded by code.
   'toolbox.label.code': "Kodmiljö",
@@ -913,7 +915,7 @@ export const SV_SE: Catalogue = {
   'code.task.plan.empty': "Inga poster rapporterades.",
   'code.task.output.heading': "Assistentens utdata",
   'code.task.output.shortened': "Assistentens utdata (förkortad)",
-  'code.task.output.truncated': "Visar de första 32 KiB av utdata.",
+  'code.task.output.truncated': "Visar de första {size} av utdata.",
   'code.task.result.tools.one': "{count} verktygsanrop",
   'code.task.result.tools.other': "{count} verktygsanrop",
   'code.task.result': "{tools} · {allowed} tillåtna · {declined} avvisade · {refused} nekade av noevia",

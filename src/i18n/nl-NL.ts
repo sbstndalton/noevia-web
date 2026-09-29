@@ -663,6 +663,8 @@ export const NL_NL: Catalogue = {
   'toolbox.label.nextcloud-deck-workflow': "Deck-workflow",
   'toolbox.label.nextcloud-deck-structure': "Deck-structuur",
   'toolbox.label.nextcloud-deck-notes': "Deck-opmerkingen en bestanden",
+  'toolbox.label.nextcloud-files': "Nextcloud-bestanden",
+  'toolbox.label.nextcloud-sharing': "Nextcloud delen",
   'toolbox.label.nextcloud-collectives-admin': "Collectives-beheer",
   // #615 (round 9): the coding harness box and the reasons a tool box is unavailable, worded by code.
   'toolbox.label.code': "Codeomgeving",
@@ -913,7 +915,7 @@ export const NL_NL: Catalogue = {
   'code.task.plan.empty': "Er zijn geen items gemeld.",
   'code.task.output.heading': "Uitvoer van de assistent",
   'code.task.output.shortened': "Uitvoer van de assistent (ingekort)",
-  'code.task.output.truncated': "De eerste 32 KiB van de uitvoer wordt getoond.",
+  'code.task.output.truncated': "De eerste {size} van de uitvoer wordt getoond.",
   'code.task.result.tools.one': "{count} toolaanroep",
   'code.task.result.tools.other': "{count} toolaanroepen",
   'code.task.result': "{tools} · {allowed} toegestaan · {declined} geweigerd · {refused} geweigerd door noevia",

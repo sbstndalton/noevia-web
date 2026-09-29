@@ -23,6 +23,7 @@ import { apiFetch, fetchProfile, deleteProjectFile, fetchDiaryMonth, fetchDiaryS
 import type { StorageConnection } from '../api';
 import { dateInText, dayLabel as formatDayLabel, localDay, monthLabel as formatMonthLabel, splitDays } from '../diary-data';
 import { appLocale } from '../user-preferences';
+import { diaryErrorText } from '../diary-errors';
 import { DiaryRequestError, directoryPicker, directoryPickerBlockedReason, invalidateFileListings, listFiles, randomSessionId, readFile, saveLocal, scanLocal, syncFileChange, writeFile } from '../diary-workspace';
 import type { DiaryFile, DirectoryHandle, FileEntry } from '../diary-workspace';
 import { DiaryModal, MarkdownPreview } from './DiaryModal';
@@ -135,7 +136,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   };
   useEffect(()=>{
     if(!localRecoveryEnabled || !folder || !recoveryOwner)return;
-    const timer=window.setTimeout(()=>{void persistRecovery().then(()=>setLocalRecoveryError('')).catch(e=>setLocalRecoveryError(String(e.message||e)));},200);
+    const timer=window.setTimeout(()=>{void persistRecovery().then(()=>setLocalRecoveryError('')).catch(e=>setLocalRecoveryError(diaryErrorText(t,e,appLocale())));},200);
     return()=>window.clearTimeout(timer);
   },[localRecoveryEnabled,recoveryOwner,folder,draft,day,month,turns,pendingLocal,pendingSync,editor,editText,busy,storageIdentity]);
   const toggleLocalRecovery=async(enabled:boolean)=>{
@@ -147,7 +148,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
         await forgetLocalRecovery(recoveryOwner,`${recoveryOwner}:${recoverySession.current}`);
         setSavedRecoveries(await listLocalRecovery(recoveryOwner));
       }
-    }catch(e){setLocalRecoveryError(String(e));}
+    }catch(e){setLocalRecoveryError(diaryErrorText(t,e,appLocale()));}
   };
   const restoreLocalRecovery=(record:LocalRecovery)=>{
     if((draft.trim() || (editor && editText!==(editor.content||''))) && !window.confirm(t('diary.confirm.replaceDraft')))return;
@@ -191,7 +192,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
           setTurns(prev=>{const existing=prev[target]||[];return JSON.stringify(existing)===JSON.stringify(restored)?prev:{...prev,[target]:restored};});
         }
         setRecoveryNotice(running?t('diary.status.recoveringActive'):exchanges.some((e:{state:string;kind?:string})=>e.state==='uncertain'&&e.kind!=='preparation')?t('diary.status.uncertainSave'):'');
-      }catch(e){if(!stopped)setRecoveryNotice(e instanceof Error?e.message:t('diary.errors.recoveryGeneric'));}
+      }catch(e){if(!stopped)setRecoveryNotice(e instanceof Error?diaryErrorText(t,e,appLocale()):t('diary.errors.recoveryGeneric'));}
     };
     void recover();const timer=setInterval(()=>void recover(),5000);
     return()=>{stopped=true;clearInterval(timer);};
@@ -285,7 +286,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   const run = async (fn: () => Promise<void>) => {
     if (busyRef.current) return;
     busyRef.current = true; setBusy(true); setError('');
-    try { await fn(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    try { await fn(); } catch (e) { setError(diaryErrorText(t, e, appLocale())); }
     finally { busyRef.current = false; setBusy(false); }
   };
   const syncChanges = async (queue: Record<string,Pending>) => {
@@ -424,7 +425,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
     const previousFocus=document.activeElement as HTMLElement|null;
     busyRef.current=true;setBusy(true);setEditorError('');setEditorStatus(label);
     try { await action(); }
-    catch(e) { setEditorError(e instanceof Error?e.message:String(e));setEditorStatus(t('diary.editor.operationFailed')); }
+    catch(e) { setEditorError(diaryErrorText(t,e,appLocale()));setEditorStatus(t('diary.editor.operationFailed')); }
     finally {busyRef.current=false;setBusy(false);if(restoreFocus)requestAnimationFrame(()=>{if(isFocusable(previousFocus) && (document.activeElement===document.body || document.activeElement===previousFocus))previousFocus.focus({preventScroll:true});});}
   };
   const canLeaveEditor = () => !editor || (editor.content!==null && editText===editor.content) || window.confirm(t('diary.confirm.discardEdits'));
@@ -462,7 +463,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
           const queue={...pendingSyncRef.current,[editor.path]:{before:pendingSyncRef.current[editor.path] ? pendingSyncRef.current[editor.path].before : editor.content,content:editText}};
           pendingSyncRef.current=queue;setPendingSync(queue);
           try{await syncChanges(queue);setEditorStatus(t('diary.editor.savedLocallyAndSynced'));}
-          catch(e){setEditorStatus(t('diary.editor.savedLocallySyncAttention'));setEditorError(e instanceof Error?e.message:String(e));}
+          catch(e){setEditorStatus(t('diary.editor.savedLocallySyncAttention'));setEditorError(diaryErrorText(t,e,appLocale()));}
         }
       } else {setEditor(await writeFile({...editor,content:editText}));setEditorStatus(t('diary.editor.saved'));}
       bumpRevision();

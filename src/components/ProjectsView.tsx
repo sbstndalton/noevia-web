@@ -1,4 +1,5 @@
 import { appLocale } from '../user-preferences';
+import { formatBinaryBytes } from '../number-format';
 import { useId, useRef, useState } from 'react';
 import { useModalDialog } from './useModalDialog';
 import type { JSX } from 'react';
@@ -186,7 +187,7 @@ function CreateProjectModal({
   const addFiles = async (list: FileList | null) => {
     if (!list) return;
     const { accepted, rejected } = await readTextSources(Array.from(list).slice(0, 10));
-    setErr(rejected.length ? t('projects.notAdded', { reason: describeRejection(rejected) }) : null);
+    setErr(rejected.length ? t('projects.notAdded', { reason: describeRejection(rejected, t as Parameters<typeof describeRejection>[1], (bytes) => formatBinaryBytes(bytes, appLocale())) }) : null);
     setFiles((prev) => [...prev.filter((f) => !accepted.some((a) => a.name === f.name)), ...accepted].slice(0, 10));
   };
 

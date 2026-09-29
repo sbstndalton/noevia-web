@@ -26,6 +26,7 @@ import { BrowserPanel } from './browser/BrowserPanel';
 import { useBrowserAccess } from './browser/useBrowserAccess';
 import { EmptyState } from './EmptyState';
 import { useT } from '../i18n';
+import { senderLabelText } from '../chat-labels';
 import type { Translate } from '../i18n';
 import { formatBytes, formatPercent } from '../number-format';
 import { appLocale } from '../user-preferences';
@@ -518,7 +519,7 @@ export function ProjectView({
           />
           {panel === 'context' && (
             <div className="rail-context">
-              <p><span>{t('projects.view.model')}</span><span>{modelLabel}</span></p>
+              <p><span>{t('projects.view.model')}</span><span>{senderLabelText(t, modelLabel)}</span></p>
               <p><span>{t('projects.view.thinking')}</span><span>{project.reasoningEffort && project.reasoningEffort !== 'default' ? project.reasoningEffort : t('projects.view.default')}</span></p>
               <p><span>{t('projects.view.toolboxes')}</span><span>{(project.toolboxes || ['core']).join(', ')}</span></p>
               <p><span>{t('projects.view.uploadFolder')}</span><span>{project.projectFolder || t('projects.view.createdOnFirstUpload')}</span></p>

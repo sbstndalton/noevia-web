@@ -71,20 +71,22 @@ export function randomSessionId(): string {
   const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
+/** An Error carrying the limit's code and numbers so the screen can word it per locale (diary-errors.ts, #640). */
+const limitError = (message: string, code: string, params: Record<string, number>): Error => Object.assign(new Error(message), { limit: { code, params } });
 export async function scanLocal(root: DirectoryHandle): Promise<Record<string, string>> {
   const files: Record<string, string> = {};
   let total = 0, visited = 0;
   async function scan(dir: DirectoryHandle, prefix = '', depth = 0) {
-    if (depth > 10) throw new Error('Folder nesting exceeds 10 levels. Choose a diary subfolder.');
+    if (depth > 10) throw limitError('Folder nesting exceeds 10 levels. Choose a diary subfolder.', 'nesting', { levels: 10 });
     for await (const handle of dir.values()) {
-      if (++visited > 2000) throw new Error('Too many items. Choose a diary subfolder.');
+      if (++visited > 2000) throw limitError('Too many items. Choose a diary subfolder.', 'items', {});
       if (handle.name.startsWith('.')) continue;
       const path = prefix + handle.name;
       if (handle.kind === 'directory') await scan(handle, path + '/', depth + 1);
       else if (path.toLowerCase().endsWith('.md')) {
         const file = await handle.getFile();
         total += file.size;
-        if (file.size > 512*1024 || total > 12*1024*1024 || Object.keys(files).length >= 500) throw new Error('Choose a diary folder with at most 500 Markdown files, 512 KiB per file, and 12 MiB total.');
+        if (file.size > 512*1024 || total > 12*1024*1024 || Object.keys(files).length >= 500) throw limitError('Choose a diary folder with at most 500 Markdown files, 512 KiB per file, and 12 MiB total.', 'folder', { files: 500, fileBytes: 512*1024, totalBytes: 12*1024*1024 });
         files[path] = await file.text();
       }
     }
@@ -93,7 +95,7 @@ export async function scanLocal(root: DirectoryHandle): Promise<Record<string, s
   return files;
 }
 export async function saveLocal(root: DirectoryHandle, path: string, text: string, expected: string | null): Promise<void> {
-  if (new TextEncoder().encode(text).length > 512*1024) throw new Error('Markdown file exceeds the 512 KiB editor limit.');
+  if (new TextEncoder().encode(text).length > 512*1024) throw limitError('Markdown file exceeds the 512 KiB editor limit.', 'fileTooLarge', { limitBytes: 512*1024 });
   const parts = path.split('/');
   if (path.length>500 || /[\u0000-\u001f]/.test(path) || parts.some(p => !p || p.startsWith('.') || p.includes('\\')) || !path.toLowerCase().endsWith('.md')) throw new Error('Invalid Markdown path');
   let dir = root;

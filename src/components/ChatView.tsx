@@ -18,6 +18,7 @@ import { ComposerActions, useAttachmentDrop } from './ComposerActions';
 import { apiFetch } from '../api';
 import { isDisplayableRoutingDecision } from '../current-routing';
 import { routeDescription } from '../routing-copy';
+import { nextStreamStart } from '../stream-start';
 import { effortLineText, messageBodyText, routeRoleName, senderLabelText, statusLineText, toolScopeText } from '../chat-labels';
 import { useAccountPreferences, appLocale } from '../user-preferences';
 import { sendHintText, useT } from '../i18n';
@@ -336,10 +337,13 @@ export function ChatView({
   // When the current stream began, for the live elapsed counter. Reset on each
   // new stream rather than on every message change, or the timer would restart
   // mid-reply as tokens arrive.
+  // The start is taken while rendering, on the render where `streaming` turns true, not in an effect:
+  // an effect runs after that first render has painted, which drew the time since the view mounted
+  // ("1 min") for one frame before it reset to 0 s (#644).
   const streamStart = useRef<number>(Date.now());
-  useEffect(() => {
-    if (streaming) streamStart.current = Date.now();
-  }, [streaming]);
+  const streamingSeen = useRef(streaming);
+  streamStart.current = nextStreamStart(streamingSeen.current, streaming, streamStart.current, Date.now());
+  streamingSeen.current = streaming;
   // An in-progress edit must not survive switching chats. Nor must an unsent
   // composer draft (#393): ChatView is not remounted on chat switch (no
   // `key={chatId}`, deliberately — that would also drop scroll position and

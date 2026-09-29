@@ -48,20 +48,35 @@ export function fileToBase64(file: File): Promise<string> {
  *  save 413 somewhere the user cannot see it. */
 export const MAX_SOURCE_BYTES = 200_000;
 
-export function describeRejection(rejected: { name: string; reason: string }[]): string {
-  return rejected.map((r) => `${r.name} (${r.reason})`).join(', ');
+/** A file refused locally. `reason` is the English sentence; `code`, `size` and `limit` let the screen
+ *  word it in the interface language with the locale's own byte units (#640). */
+export type Rejection = { name: string; reason: string; code: 'image' | 'document' | 'notText' | 'tooLarge'; size?: number; limit?: number };
+type Say = (key: string, params?: Record<string, string | number>) => string;
+
+/** "a.bin (not a text file), b.txt (256 KB, over the 195 KB limit)": in the interface language when
+ *  given the translator and a byte formatter, in the English fallback otherwise. */
+export function describeRejection(rejected: Rejection[], t?: Say, sizeText?: (bytes: number) => string): string {
+  const reasonText = (r: Rejection): string => {
+    if (!t) return r.reason;
+    if (r.code === 'tooLarge') return t('projects.reject.tooLarge', { size: sizeText ? sizeText(r.size ?? 0) : String(r.size ?? 0), limit: sizeText ? sizeText(r.limit ?? MAX_SOURCE_BYTES) : String(r.limit ?? MAX_SOURCE_BYTES) });
+    if (r.code === 'image') return t('projects.reject.image', { group: t('projects.view.groupImages') });
+    if (r.code === 'document') return t('projects.reject.document', { group: t('projects.view.groupDocuments') });
+    return t('projects.reject.notText');
+  };
+  return rejected.map((r) => `${r.name} (${reasonText(r)})`).join(', ');
 }
 
 /** Split a chosen file list into what can be stored and what cannot. */
 export async function readTextSources(
   files: File[],
-): Promise<{ accepted: { name: string; content: string }[]; rejected: { name: string; reason: string }[] }> {
+): Promise<{ accepted: { name: string; content: string }[]; rejected: Rejection[] }> {
   const accepted: { name: string; content: string }[] = [];
-  const rejected: { name: string; reason: string }[] = [];
+  const rejected: Rejection[] = [];
   for (const file of files) {
     if (!isTextFile(file.name)) {
       rejected.push({
         name: file.name,
+        code: isImageFile(file) ? 'image' : isDocumentFile(file.name) ? 'document' : 'notText',
         reason: isImageFile(file)
           ? 'an image — add it under Images'
           : isDocumentFile(file.name)
@@ -71,7 +86,7 @@ export async function readTextSources(
       continue;
     }
     if (file.size > MAX_SOURCE_BYTES) {
-      rejected.push({ name: file.name, reason: `${Math.round(file.size / 1024)} KB, over the ${Math.round(MAX_SOURCE_BYTES / 1024)} KB limit` });
+      rejected.push({ name: file.name, code: 'tooLarge', size: file.size, limit: MAX_SOURCE_BYTES, reason: `${Math.round(file.size / 1024)} KB, over the ${Math.round(MAX_SOURCE_BYTES / 1024)} KB limit` });
       continue;
     }
     accepted.push({ name: file.name, content: await file.text() });

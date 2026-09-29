@@ -7,10 +7,13 @@ import { EmptyState } from '../EmptyState';
 import { ShellIcon } from '../ShellIcon';
 import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
-import { formatNumber, formatPercent } from '../../number-format';
+import { formatBinaryBytes, formatNumber, formatPercent } from '../../number-format';
 import { appLocale } from '../../user-preferences';
 import { around } from '../../text-around';
 import './code.css';
+
+/** How much of the assistant's output the server keeps (server/code-harness.cjs); the note names it in the locale's units. */
+const OUTPUT_PREVIEW_BYTES = 32 * 1024;
 
 const ACTIVE = new Set(['queued', 'running', 'waiting_approval']);
 /** The task's status word, from `code.status.*` (#617). */
@@ -293,12 +296,12 @@ function TaskCard({ task, busy, onDecide, onCancel }: {
     {task.assistantOutput?.text && (active
       ? <section className="code-output" role="region" aria-label={t('code.task.output.heading')} tabIndex={0}>
           <h4>{t('code.task.output.heading')}</h4>
-          {task.assistantOutput.truncated && <p className="code-output-note">{t('code.task.output.truncated')}</p>}
+          {task.assistantOutput.truncated && <p className="code-output-note">{t('code.task.output.truncated', { size: formatBinaryBytes(OUTPUT_PREVIEW_BYTES, appLocale()) })}</p>}
           <p>{task.assistantOutput.text}</p>
         </section>
       : <details className="code-output code-output-details">
           <summary>{task.assistantOutput.truncated ? t('code.task.output.shortened') : t('code.task.output.heading')}</summary>
-          {task.assistantOutput.truncated && <p className="code-output-note">{t('code.task.output.truncated')}</p>}
+          {task.assistantOutput.truncated && <p className="code-output-note">{t('code.task.output.truncated', { size: formatBinaryBytes(OUTPUT_PREVIEW_BYTES, appLocale()) })}</p>}
           <p>{task.assistantOutput.text}</p>
         </details>)}
     {task.result && !active && <p className="code-meta">

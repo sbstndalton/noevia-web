@@ -663,6 +663,8 @@ export const ES_ES: Catalogue = {
   'toolbox.label.nextcloud-deck-workflow': "Flujo de Deck",
   'toolbox.label.nextcloud-deck-structure': "Estructura de Deck",
   'toolbox.label.nextcloud-deck-notes': "Comentarios y archivos de Deck",
+  'toolbox.label.nextcloud-files': "Archivos de Nextcloud",
+  'toolbox.label.nextcloud-sharing': "Uso compartido de Nextcloud",
   'toolbox.label.nextcloud-collectives-admin': "Gestión de Collectives",
   // #615 (round 9): the coding harness box and the reasons a tool box is unavailable, worded by code.
   'toolbox.label.code': "Entorno de código",
@@ -913,7 +915,7 @@ export const ES_ES: Catalogue = {
   'code.task.plan.empty': "No se comunicó ninguna entrada.",
   'code.task.output.heading': "Salida del asistente",
   'code.task.output.shortened': "Salida del asistente (acortada)",
-  'code.task.output.truncated': "Se muestran los primeros 32 KiB de la salida.",
+  'code.task.output.truncated': "Se muestran los primeros {size} de la salida.",
   'code.task.result.tools.one': "{count} llamada a herramienta",
   'code.task.result.tools.other': "{count} llamadas a herramientas",
   'code.task.result': "{tools} · {allowed} permitidas · {declined} rechazadas · {refused} denegadas por noevia",

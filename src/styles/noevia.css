@@ -2340,3 +2340,10 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 :root[data-layout="mobile"] .diary-editor-panes > section { max-height: none; }
 :root[data-layout="mobile"] .diary-editor-tabs [role="status"] { width: 100%; margin-left: 0; }
 :root[data-layout="mobile"] .diary-workspace-filter input { font-size: var(--text-input); min-width: 0; }
+
+/* #640: the phone preview on a wide window. The drawer and its backdrop are position: fixed, which
+   is relative to the browser window, so they opened at the window's left edge and dimmed the whole
+   window instead of the 430px column. #root is the column and is positioned, so absolute keeps both
+   inside it. A real phone (data-device is not "desktop") has the column as its window: fixed is right. */
+:root[data-layout="mobile"][data-device="desktop"] .sidebar:not(.coding-sidebar).is-expanded { position: absolute; width: min(100%, 420px); height: auto; }
+:root[data-layout="mobile"][data-device="desktop"] .nav-drawer-backdrop { position: absolute; }

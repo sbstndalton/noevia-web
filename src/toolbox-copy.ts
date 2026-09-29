@@ -18,7 +18,7 @@ export const TOOLBOX_DESCRIPTION_IDS = [
 ] as const;
 /** Labels that are product names ("Nextcloud Notes") have no label key and stay as they are. */
 export const TOOLBOX_LABEL_IDS = [
-  'core', 'diary', 'project-docs', 'web-search', 'web-crawl', 'nextcloud-calendar-admin', 'nextcloud-file-comments',
+  'core', 'diary', 'project-docs', 'web-search', 'web-crawl', 'nextcloud-calendar-admin', 'nextcloud-file-comments', 'nextcloud-files', 'nextcloud-sharing',
   'nextcloud-mail-send', 'nextcloud-deck-workflow', 'nextcloud-deck-structure', 'nextcloud-deck-notes', 'nextcloud-collectives-admin',
   'offline-wikipedia', 'code',
 ] as const;

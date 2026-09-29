@@ -4,6 +4,7 @@ import type { LiveStats, ReplyTelemetry, RoutingDecision } from '../types';
 import { Icon } from './icons/Icon';
 import { RoutingDetails } from './ChatView';
 import { useT } from '../i18n';
+import { senderLabelText } from '../chat-labels';
 import { appLocale } from '../user-preferences';
 import { formatCompact, formatNumber, formatPercent, formatSizeUnit } from '../number-format';
 import { LOCAL_MODEL_FALLBACK } from '../model-guidance';
@@ -90,7 +91,8 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
   const unknown = stats === null && !active;
   // modelChoiceLabel (model-guidance.ts, loaded outside React so it stays translation-free)
   // falls back to the LOCAL_MODEL_FALLBACK sentinel; translate that one case here.
-  const displayModel = reply?.model || (modelLabel === LOCAL_MODEL_FALLBACK ? t('stats.localModel') : modelLabel) || t('stats.inference');
+  // The Auto labels are stored as language-neutral tokens; senderLabelText words them in the interface language (#643).
+  const displayModel = senderLabelText(t, reply?.model || (modelLabel === LOCAL_MODEL_FALLBACK ? t('stats.localModel') : modelLabel) || t('stats.inference'));
   // Once this chat has request-local telemetry, never substitute an
   // engine-wide sample that may belong to another request or account.
   const replyRate = reply ? reply.tokensPerSecond : stats?.tokensPerSecond ?? null;
