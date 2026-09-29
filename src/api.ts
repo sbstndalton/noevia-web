@@ -15,6 +15,7 @@ import type {
   ModelHistoryEntry,
   Project,
   Provider,
+  ProviderCapabilities,
   Toolbox,
   WorkspaceInfo,
 } from './types';
@@ -233,7 +234,7 @@ export function fetchProviders(): Promise<{ providers: Provider[] }> {
   return getJson<unknown>('/api/providers').then(parseProviders);
 }
 
-export function createProvider(body: { label: string; baseUrl: string; apiKey?: string; defaultModel?: string; shared?: boolean; contextTokens?: number | null }): Promise<Provider> {
+export function createProvider(body: { label: string; baseUrl: string; apiKey?: string; defaultModel?: string; shared?: boolean; contextTokens?: number | null; capabilities?: ProviderCapabilities }): Promise<Provider> {
   return postJson('/api/providers', body);
 }
 /** Edit in place (#535). Leave `apiKey` out to keep the stored key; `contextTokens: null` clears it. */

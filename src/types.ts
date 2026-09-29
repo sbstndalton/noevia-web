@@ -168,6 +168,12 @@ export interface Project {
 }
 
 /** An OpenAI-compatible chat and embedding endpoint. */
+export interface ProviderCapabilities {
+  reasoningEffortParam?: boolean;
+  reasoningEffortModels?: string[];
+  tokenBudgetField?: 'max_tokens' | 'max_completion_tokens';
+}
+
 export interface Provider {
   id: string;
   label: string;
@@ -179,6 +185,8 @@ export interface Provider {
   defaultModel?: string;
   /** The person's stated context window in tokens (#536); absent means the server default. */
   contextTokens?: number;
+  /** What the provider's API accepts (#675); the server fills a preset's default for older rows. */
+  capabilities?: ProviderCapabilities;
   /** Sign in with ChatGPT (#447): the account's own private connection, sent to an external service. */
   kind?: 'chatgpt-oauth';
   external?: boolean;

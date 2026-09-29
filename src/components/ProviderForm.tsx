@@ -1,14 +1,19 @@
 import { useEffect, useId, useState } from 'react';
 import type { JSX } from 'react';
 import { createProvider, testProvider, updateProvider } from '../api';
-import type { Provider } from '../types';
+import type { Provider, ProviderCapabilities } from '../types';
 import { useT } from '../i18n';
 // The setup wizard uses this form too, so it registers the Settings strings for its own chunk.
 import '../i18n/settings';
 
-const PRESETS: Record<string, { label: string; url: string }> = {
+// A preset may declare what its API accepts (#675); the server stores it on the provider row.
+const PRESETS: Record<string, { label: string; url: string; capabilities?: ProviderCapabilities }> = {
   custom: { label: '', url: '' },
-  openai: { label: 'OpenAI', url: 'https://api.openai.com/v1' },
+  openai: {
+    label: 'OpenAI',
+    url: 'https://api.openai.com/v1',
+    capabilities: { reasoningEffortParam: true, reasoningEffortModels: ['gpt-5.4'], tokenBudgetField: 'max_completion_tokens' },
+  },
   openrouter: { label: 'OpenRouter', url: 'https://openrouter.ai/api/v1' },
   ollama: { label: 'Ollama', url: 'http://host.docker.internal:11434/v1' },
   lmstudio: { label: 'LM Studio', url: 'http://host.docker.internal:1234/v1' },
@@ -80,6 +85,8 @@ export function ProviderForm({
   const [label, setLabel] = useState(provider?.label ?? '');
   const [baseUrl, setBaseUrl] = useState(provider?.baseUrl ?? '');
   const [apiKey, setApiKey] = useState('');
+  const [presetKey, setPresetKey] = useState('custom');
+  const presetCapabilities = PRESETS[presetKey]?.capabilities;
   const [defaultModel, setDefaultModel] = useState(provider?.defaultModel ?? '');
   const [contextTokens, setContextTokens] = useState(provider?.contextTokens ? String(provider.contextTokens) : '');
   const [shared, setShared] = useState(false);
@@ -137,6 +144,7 @@ export function ProviderForm({
         apiKey: key || undefined,
         defaultModel: defaultModel.trim() || undefined,
         shared: allowShared && shared,
+        ...(presetCapabilities && PRESETS[presetKey]?.url === url.replace(/\/+$/, '') ? { capabilities: presetCapabilities } : {}),
         ...(context ? { contextTokens: context } : {}),
       });
       onConnected?.(created);
@@ -157,6 +165,7 @@ export function ProviderForm({
           const p = PRESETS[e.target.value];
           setLabel(p.label);
           setBaseUrl(p.url);
+          setPresetKey(e.target.value);
         }}
       >
         <option value="custom">{t('providers.form.custom')}</option>
