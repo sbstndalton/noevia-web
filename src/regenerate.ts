@@ -1,4 +1,5 @@
 import type { Message } from './types';
+import type { SkillPin } from './api-contract';
 
 /** What re-running the last reply needs: the user text that produced it, and the transcript to
  *  resend on top of (everything before that user turn — the same "base" shape `handleSend` in
@@ -6,6 +7,8 @@ import type { Message } from './types';
 export interface RegeneratePlan {
   userText: string;
   base: Message[];
+  /** The Skill pin the original message was sent with (#571), when it had one. */
+  skill?: SkillPin;
 }
 
 /** #356: Regenerate only ever targets the last completed assistant reply, produced by the user
@@ -26,5 +29,5 @@ export function planRegenerate(messages: Message[], messageId: string): Regenera
   if (reply.role !== 'assistant' || reply.error || reply.coworkTask) return null;
   const prompt = messages[index - 1];
   if (prompt.role !== 'user') return null;
-  return { userText: prompt.content, base: messages.slice(0, index - 1) };
+  return { userText: prompt.content, base: messages.slice(0, index - 1), ...(prompt.skill ? { skill: prompt.skill as SkillPin } : {}) };
 }

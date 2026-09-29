@@ -4,10 +4,13 @@
 //   #563  the composer Skill selector does not float, backgroundless, over transcript text
 //   #564  the project home composer has the Skill selector, and the first message carries the pin
 //   #566  Code mode hides archived projects (sidebar list and the "Open a project" grid)
+//   #571-1  the Skill pin is saved with the turn; Regenerate after a reload resends it
+//   #571-2  the phone composer row has a full backing (transcript never shows through), last message not covered
+//   #567  a Skill with bundled scripts: Enable disabled, reason names them; an enabled one reads "Can't be used in chat"
 // Each scenario reports PASS or FAIL on its own line, and the process exits non-zero if any failed,
 // so the same file shows the before (origin/main) and after (this branch) states.
 //
-// Run: PLAYWRIGHT_MODULE=<playwright-core> QA_SCREENSHOTS=<dir> node qa/live-r2-562-567.cjs [562|563|564|566]
+// Run: PLAYWRIGHT_MODULE=<playwright-core> QA_SCREENSHOTS=<dir> node qa/live-r2-562-567.cjs [562|563|564|566|571-1|571-2|567]
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path'), http = require('node:http');
@@ -125,7 +128,7 @@ const skillFile = (dir, name, marker) => ({ name: `${dir}/SKILL.md`, content: `-
     async function scenario(id, title, fn) {
       if (only && only !== String(id)) return;
       try { await fn(); results.push([id, true, title]); console.log(`PASS #${id} ${title}`); }
-      catch (e) { results.push([id, false, title]); console.log(`FAIL #${id} ${title}\n     ${String(e.message).split('\n').slice(0, 3).join('\n     ')}`); }
+      catch (e) { results.push([id, false, title]); console.log(`FAIL #${id} ${title}\n     ${String(e.message).split("\n").slice(0, 12).join('\n     ')}`); }
     }
 
     // #562 ─────────────────────────────────────────────────────────────────────────────────────
@@ -244,6 +247,142 @@ const skillFile = (dir, name, marker) => ({ name: `${dir}/SKILL.md`, content: `-
         assert.equal(await page.getByRole('button', { name: 'Open Archived synthetic coding project' }).count(), 0);
       } finally { await ctx.close(); }
       void liveId;
+    });
+
+    // #571.1 ───────────────────────────────────────────────────────────────────────────────────
+    await scenario('571-1', 'the Skill pin is saved with the turn and Regenerate after a reload resends it', async () => {
+      const { project } = await skillProject('Pin persistence QA', ['pin-persist-chat']);
+      const b = (await manifests(project)).find(m => m.name === 'Skill B');
+      const first = await openView({ kind: 'chat', chatId: 'pin-persist-chat', projectId: project.id });
+      try {
+        await first.page.getByRole('textbox', { name: 'Message', exact: true }).waitFor({ timeout: 15000 });
+        await first.page.getByLabel('Skill for the next message').selectOption({ label: 'Skill B · v1' });
+        await first.page.getByRole('textbox', { name: 'Message', exact: true }).fill('a message sent with a pinned Skill');
+        await first.page.keyboard.press('Enter');
+        await first.page.getByText('Synthetic completed reply.').waitFor({ timeout: 15000 });
+      } finally { await first.ctx.close(); }
+      let stored = [];
+      for (let i = 0; i < 50 && stored.length < 2; i++) { stored = (await api('/api/chats/pin-persist-chat/history')).body?.history || []; if (stored.length < 2) await new Promise(r => setTimeout(r, 100)); }
+      assert.equal(stored.length, 2, 'the exchange was saved');
+      assert.equal(stored[0].skill && stored[0].skill.split('@')[0], b.id, 'the user turn was saved with its pin');
+      assert.match(String(stored[0].skill), /^skill_[a-f0-9]{32}@[a-f0-9]{64}$/);
+      assert.equal('skill' in stored[1], false, 'the reply itself carries no pin');
+      // A different browser context is a reload with no in-memory state at all.
+      const second = await openView({ kind: 'chat', chatId: 'pin-persist-chat', projectId: project.id });
+      try {
+        const bodies = [];
+        second.page.on('request', r => { if (r.method() === 'POST' && new URL(r.url()).pathname === '/api/chat') { try { bodies.push(JSON.parse(r.postData() || '{}')); } catch { } } });
+        await second.page.getByText('Synthetic completed reply.').waitFor({ timeout: 15000 });
+        await second.page.locator('.transcript .msg').last().hover();
+        await second.page.getByRole('button', { name: 'Regenerate' }).click();
+        for (let i = 0; i < 100 && bodies.length < 1; i++) await new Promise(r => setTimeout(r, 100));
+        assert.equal(bodies.length, 1, 'Regenerate sent a request');
+        assert.equal(String(bodies[0].skill), stored[0].skill, 'the resend after a reload carries the same pin, not Automatic');
+      } finally { await second.ctx.close(); }
+    });
+
+    // #571.2 ───────────────────────────────────────────────────────────────────────────────────
+    await scenario('571-2', 'the composer row has a full backing: no transcript shows through beside the Skill selector (375, 500, 768; light and dark)', async () => {
+      const { project } = await skillProject('Composer backing QA', ['backing-chat']);
+      const long = Array.from({ length: 30 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', content: `Synthetic turn ${i}. ${'Padding text so the transcript actually scrolls behind the composer. '.repeat(6)}` }));
+      await api('/api/chats/backing-chat/history', { history: long });
+      const problems = [];
+      const decoder = await browser.newPage(); // a blank page (no CSP) that decodes the screenshots to compare pixels
+      for (const scheme of ['light', 'dark']) {
+        for (const [width, height] of [[375, 700], [500, 900], [768, 900]]) {
+          const { ctx, page } = await openView({ kind: 'chat', chatId: 'backing-chat', projectId: project.id }, { viewport: { width, height }, colorScheme: scheme });
+          try {
+            await page.getByLabel('Skill for the next message').waitFor({ timeout: 15000 });
+            await page.addStyleTag({ content: '.transcript { scroll-behavior: auto !important; } * { transition: none !important; animation: none !important; caret-color: transparent !important; }' });
+            await page.locator('.transcript .msg').last().waitFor();
+            // Put transcript text under the composer row: scroll to the middle of the conversation.
+            await page.evaluate(() => { const t = document.querySelector('.transcript'); t.scrollTop = Math.floor((t.scrollHeight - t.clientHeight) / 2); });
+            await page.waitForTimeout(400);
+            const geo = await page.evaluate(() => {
+              const pin = document.querySelector('.skill-pin'), pr = pin.getBoundingClientRect(), row = pin.parentElement, box = document.querySelector('.composer').getBoundingClientRect();
+              const r = row.getBoundingClientRect(), t = document.querySelector('.transcript').getBoundingClientRect();
+              return { pin: { left: pr.left - 3, right: pr.right + 3, top: pr.top - Math.max(0, r.top) - 3, bottom: pr.bottom - Math.max(0, r.top) + 3 }, x: 0, y: Math.max(0, r.top), width: document.documentElement.clientWidth, height: r.height, composerTop: box.top, transcriptBottom: t.bottom, floating: getComputedStyle(document.querySelector('.composer')).position === 'absolute' };
+            });
+            const clip = { x: geo.x, y: geo.y, width: geo.width, height: Math.max(1, geo.height) };
+            const withText = await page.screenshot({ clip });
+            await page.screenshot({ path: path.join(shots, `571-2-${scheme}-${width}.png`) });
+            await page.addStyleTag({ content: '.transcript { visibility: hidden !important; }' });
+            await page.waitForTimeout(150);
+            const withoutText = await page.screenshot({ clip });
+            // Compared outside the selector's own box (its rounded corners antialias against the
+            // backing). The page paints a faint dither, so "identical" means within a few levels;
+            // text showing through even a 12% veil moves pixels by 20+ levels.
+            const changed = await decoder.evaluate(async ([a, b, hole]) => {
+              const read = async (base64) => { const bmp = await createImageBitmap(await (await fetch('data:image/png;base64,' + base64)).blob()); const c = new OffscreenCanvas(bmp.width, bmp.height), x = c.getContext('2d'); x.drawImage(bmp, 0, 0); return { w: bmp.width, data: x.getImageData(0, 0, bmp.width, bmp.height).data }; };
+              const [pa, pb] = [await read(a), await read(b)];
+              let n = 0, max = 0;
+              for (let i = 0; i < pa.data.length; i += 4) {
+                const col = (i / 4) % pa.w, row = Math.floor(i / 4 / pa.w);
+                if (col >= hole.left && col <= hole.right && row >= hole.top && row <= hole.bottom) continue;
+                const d = Math.max(Math.abs(pa.data[i] - pb.data[i]), Math.abs(pa.data[i + 1] - pb.data[i + 1]), Math.abs(pa.data[i + 2] - pb.data[i + 2]));
+                if (d > 3) n++;
+                if (d > max) max = d;
+              }
+              return { n, max };
+            }, [withText.toString('base64'), withoutText.toString('base64'), geo.pin]);
+            if (changed.n) problems.push(`${scheme} ${width}px: transcript text shows through the composer row (${changed.n} pixels differ, up to ${changed.max} levels; ${geo.floating ? 'floating' : 'in flow'})`);
+            // The floating composer must not cover the last message when scrolled to the end.
+            await page.addStyleTag({ content: '.transcript { visibility: visible !important; }' });
+            const last = await page.evaluate(() => {
+              const t = document.querySelector('.transcript'); t.scrollTop = t.scrollHeight;
+              const lastMsg = [...document.querySelectorAll('.transcript .msg')].pop().getBoundingClientRect();
+              return { bottom: lastMsg.bottom, composerTop: document.querySelector('.composer').getBoundingClientRect().top };
+            });
+            if (last.bottom > last.composerTop + 1) problems.push(`${scheme} ${width}px: the composer covers the last message (${Math.round(last.bottom)} > ${Math.round(last.composerTop)})`);
+          } finally { await ctx.close(); }
+        }
+      }
+      await decoder.close();
+      assert.equal(problems.join('; '), '');
+    });
+
+    // #571.3 (#567) ────────────────────────────────────────────────────────────────────────────
+    await scenario(567, 'a Skill with bundled scripts cannot be enabled (the reason names them), and an enabled one reads "Can\'t be used in chat (has scripts)"', async () => {
+      const plain = (dir, name) => skillFile(dir, name, 'MARKER');
+      const withScripts = await api('/api/projects', { name: 'Scripts QA', model: 'synthetic-model', toolboxes: ['core'], files: [plain('skill-c', 'Skill C'), { name: 'skill-c/scripts/run.sh', content: 'echo synthetic\n' }] });
+      const scriptProject = withScripts.body.project || withScripts.body;
+      const listed = (await api(`/api/projects/${scriptProject.id}/instruction-skills`)).body.skills;
+      assert.deepEqual(listed[0].scripts, ['skill-c/scripts/run.sh'], 'the server reports the bundled script');
+      const openSources = async (id, ctxOpts = {}) => {
+        const view = await openView({ kind: 'project', id }, ctxOpts);
+        await view.page.getByRole('tab', { name: /Sources/ }).click();
+        return view;
+      };
+      // 1. Never enabled: the Enable button is disabled and the reason names the script.
+      const a = await openSources(scriptProject.id);
+      try {
+        const summary = a.page.locator('.instruction-skill summary', { hasText: 'Skill C' });
+        await summary.waitFor({ timeout: 15000 });
+        await summary.click();
+        const enable = a.page.getByRole('button', { name: 'Enable this version' });
+        assert.equal(await enable.isDisabled(), true, 'Enable is disabled');
+        const note = a.page.locator('.instruction-skill [role="note"]');
+        assert.match(await note.innerText(), /Bundled scripts: skill-c\/scripts\/run\.sh/);
+        assert.match(await note.innerText(), /cannot be enabled until they are removed/);
+        await a.page.screenshot({ path: path.join(shots, '567-scripts-disabled.png') });
+      } finally { await a.ctx.close(); }
+      // 2. Already enabled (before its scripts arrived): the summary says it cannot be used in chat.
+      const enabledProject = (await skillProject('Enabled then scripts QA', [])).project;
+      const b = await openView({ kind: 'project', id: enabledProject.id });
+      try {
+        await b.ctx.route('**/instruction-skills', async route => {
+          if (route.request().method() !== 'GET') return route.continue();
+          const response = await route.fetch(), json = await response.json();
+          json.skills = json.skills.map(s => ({ ...s, scripts: ['skill-a/scripts/run.sh'] }));
+          return route.fulfill({ response, json });
+        });
+        await b.page.getByRole('tab', { name: /Sources/ }).click();
+        const summary = b.page.locator('.instruction-skill summary', { hasText: 'Skill A' });
+        await summary.waitFor({ timeout: 15000 });
+        assert.match(await summary.innerText(), /Skill A · Can't be used in chat \(has scripts\)/);
+        assert.doesNotMatch(await summary.innerText(), /· Enabled/);
+        await b.page.screenshot({ path: path.join(shots, '567-scripts-enabled.png') });
+      } finally { await b.ctx.close(); }
     });
   } finally {
     await browser.close();

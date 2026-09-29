@@ -41,6 +41,8 @@ export interface Message {
   coworkRepository?: string;
   /** The project passages placed in this reply's prompt (#552), in prompt order. */
   sources?: SourceRef[];
+  /** On a user turn: the Skill pin it was sent with, `skill_<id>@<sha256>` (#571), so Retry survives a reload. */
+  skill?: string;
 }
 
 /** One project source the model was given for a reply. `file` is the project file's name. */
@@ -195,6 +197,8 @@ export interface HistoryEntry {
   stats?: MessageStats;
   coworkTask?: CoworkTaskRef;
   sources?: SourceRef[];
+  /** User turns only (#571): the exact Skill pin the message was sent with. */
+  skill?: string;
 }
 
 export interface WorkspaceInfo {

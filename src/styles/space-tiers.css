@@ -103,7 +103,12 @@
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; margin: 0;
     /* The home-indicator inset, except while a software keyboard covers it (viewport.js). */
     padding: 18px 10px max(8px, calc(env(safe-area-inset-bottom) - (100dvh - var(--visible-viewport-height, 100dvh))));
-    background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--chat-fade) 88%, transparent) 18px);
+    /* #571: past the 18px fade the whole composer row is an opaque backing. At 88% the transcript still
+       ghosted through around the Skill selector and the mode caption, so the fade now lands on a
+       solid page-coloured layer (which also keeps a translucent glass plane from showing text). */
+    background:
+      linear-gradient(to bottom, transparent, var(--chat-fade) 18px) top / 100% 100% no-repeat,
+      linear-gradient(var(--bg-app), var(--bg-app)) 0 18px / 100% calc(100% - 18px) no-repeat;
     pointer-events: none;
   }
   :root .app .chat-workspace > .composer > * { pointer-events: auto; }

@@ -73,6 +73,7 @@ import { currentRoutingDecision } from './current-routing';
 import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, withoutChat, withoutProject, type NavState } from './settings-nav';
 import { useT } from './i18n';
 import type { SkillPin } from './api-contract';
+import { storablePin } from './skill-pin-store';
 
 type View =
   | { kind: 'diary' }
@@ -499,6 +500,7 @@ export default function App(): JSX.Element {
             stats: h.stats,
             coworkTask: h.coworkTask,
             sources: h.sources,
+            ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}),
           }));
         setMessagesByChat((prev) => ({ ...prev, [id]: resolveLoadedHistory(prev[id] ?? [], loaded) }));
         setHistoryChecked((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
@@ -692,6 +694,7 @@ export default function App(): JSX.Element {
       stats: m.stats,
       coworkTask: m.coworkTask,
       sources: m.sources && m.sources.length ? m.sources : undefined,
+      skill: m.role === 'user' ? m.skill : undefined,
     }));
     // Saves for one chat run in order. If another device saved first, merge its copy with ours
     // (nothing either side wrote is dropped), show the merged transcript, and save that.
@@ -699,7 +702,7 @@ export default function App(): JSX.Element {
       if (sendingChats.current.has(chatId)) { deferredMerges.current[chatId] = merged; return; }
       setMessagesByChat((prev) => ({
         ...prev,
-        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats, coworkTask: h.coworkTask, sources: h.sources })),
+        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats, coworkTask: h.coworkTask, sources: h.sources, ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}) })),
       }));
     };
     if (!shouldSaveChat(chatId, deletedChats.current)) return;
@@ -767,16 +770,16 @@ export default function App(): JSX.Element {
     }).catch(() => undefined);
   }, [refreshProjects]);
 
-  const sentSkillPins = useRef(new Map<string, SkillPin>());
   const handleSend = useCallback(
     async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; notice?: string | null; skill?: SkillPin } = {}) => {
       // `streamingChats` is render state, so two sends in one tick both see it false. The ref
       // is updated synchronously and is the real guard against a duplicate generation.
       if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
       sendingChats.current.add(chatId);
-      const userMsg: Message = { id: uid(), role: 'user', content: text };
-      // #562: remember the pin this message was sent with, so Retry resends the same pin.
-      if (turn.skill) sentSkillPins.current.set(userMsg.id, turn.skill); else sentSkillPins.current.delete(userMsg.id);
+      // #562/#571: the pin travels with the turn (and is saved with the transcript), so Retry and
+      // Regenerate resend the same pin, also after a reload.
+      const sentPin = storablePin(turn.skill);
+      const userMsg: Message = { id: uid(), role: 'user', content: text, ...(sentPin ? { skill: sentPin } : {}) };
       // History still loading: wait for it so the model sees the earlier turns and the load does
       // not land on top of this turn.
       const pendingLoad = base ? undefined : historyLoads.current[chatId];
@@ -1119,9 +1122,10 @@ export default function App(): JSX.Element {
       void handleCoworkSend(chatId, projectId, msgs[index - 1].content, failed.coworkRepository);
       return;
     }
-    // #562: resend with the same pin. If that Skill has since been disabled the server refuses
-    // with a readable 409 instead of quietly running the message as Automatic.
-    const pin = sentSkillPins.current.get(msgs[index - 1].id);
+    // #562/#571: resend with the same pin, read from the persisted turn. If that Skill has since
+    // been disabled the server refuses with a readable 409 instead of quietly running the message
+    // as Automatic.
+    const pin = storablePin(msgs[index - 1].skill);
     void handleSend(chatId, projectId, msgs[index - 1].content, msgs.slice(0, index - 1), pin ? { skill: pin } : {});
   }, [activeChatMeta, handleSend, handleCoworkSend, streamingChats, view]);
 
@@ -1157,7 +1161,7 @@ export default function App(): JSX.Element {
     const plan = planRegenerate(msgs, messageId);
     if (!plan) return;
     const projectId = view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
-    void handleSend(chatId, projectId, plan.userText, plan.base);
+    void handleSend(chatId, projectId, plan.userText, plan.base, plan.skill ? { skill: plan.skill } : {});
   }, [activeChatMeta, handleSend, streamingChats, view]);
 
   const startFreeChat = useCallback(() => {
