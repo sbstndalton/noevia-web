@@ -958,6 +958,7 @@ export const NL_NL: Catalogue = {
   'code.active.openProject': "{name} openen · tabblad Code",
   'chat.approval.group': "Goedkeuring vereist voor {name}",
   'chat.approval.ask': "Toestaan dat {name} wordt uitgevoerd? Dit wijzigt gegevens in je account.",
+  'chat.approval.target': "Bestand dat wordt gewijzigd:",
   'chat.approval.allowOnce': "Eenmalig toestaan",
   'chat.approval.decline': "Weigeren",
   'chat.approval.allowChat': "Toestaan voor deze chat",

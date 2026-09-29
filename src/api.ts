@@ -435,9 +435,10 @@ export async function saveChatHistory(chatId: string, history: HistoryEntry[], b
 //   { type:'meta', model, chatId? } { type:'reasoning', text } { type:'delta', text }
 //   { type:'preamble', text } — delta text from a round that then called tools; move it to reasoning
 //   { type:'tool', index, name, args } — accumulated state, upsert on index
-//   { type:'tool_pending', id, index, name, args } — a WRITE tool is waiting
+//   { type:'tool_pending', id, index, name, args, target? } — a WRITE tool is waiting
 //     for the user. The stream stays open and nothing runs until a decision is
-//     posted to /api/tool-approvals/:id.
+//     posted to /api/tool-approvals/:id. `target` is the resolved project file
+//     an edit would change (#648).
 //   { type:'done', model } { type:'diary', decision }
 //   { type:'telemetry', phase, model?, timeToFirstToken? }
 //   { type:'usage', cumulative prompt/completion/total tokens, provider rate,
@@ -461,6 +462,8 @@ export async function* streamChat(
   args?: string;
   index?: number; // 'tool' events: which call this is, for upsert-by-index
   id?: string; // 'tool_pending': the approval id to post a decision against
+  /** 'tool_pending' (#648): the full stored path of the project file an edit would change. */
+  target?: string;
   decision?: string;
   reasoning?: string;
   reasoningEffort?: string;

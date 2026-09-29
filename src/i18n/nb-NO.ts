@@ -958,6 +958,7 @@ export const NB_NO: Catalogue = {
   'code.active.openProject': "Åpne {name} · Code-fanen",
   'chat.approval.group': "Godkjenning kreves for {name}",
   'chat.approval.ask': "Tillate at {name} kjører? Dette endrer data i kontoen din.",
+  'chat.approval.target': "Filen som endres:",
   'chat.approval.allowOnce': "Tillat én gang",
   'chat.approval.decline': "Avslå",
   'chat.approval.allowChat': "Tillat for denne samtalen",

@@ -958,6 +958,7 @@ export const PT_BR: Catalogue = {
   'code.active.openProject': "Abrir {name} · aba Code",
   'chat.approval.group': "Aprovação necessária para {name}",
   'chat.approval.ask': "Permitir que {name} seja executada? Isso altera dados da sua conta.",
+  'chat.approval.target': "Arquivo que será alterado:",
   'chat.approval.allowOnce': "Permitir uma vez",
   'chat.approval.decline': "Recusar",
   'chat.approval.allowChat': "Permitir para este chat",

@@ -64,7 +64,7 @@ import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
 import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
-import { settleToolCalls } from './tool-call-state';
+import { pendingToolCall, settleToolCalls } from './tool-call-state';
 import { mergeTranscripts } from './transcript-merge';
 import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, shouldSaveChat, upsertChatMeta } from './chat-save';
 import { readLastPlace, writeLastPlace, clearLastPlace, type LastPlace } from './last-view';
@@ -930,12 +930,7 @@ export default function App(): JSX.Element {
             // the chip becomes an approve/deny prompt in place rather than the
             // reply appearing to stall for no reason.
             const at = typeof ev.index === 'number' ? ev.index : Math.max(0, tools.length - 1);
-            tools[at] = {
-              name: ev.name || 'tool',
-              args: ev.args || '',
-              status: 'pending',
-              approvalId: ev.id,
-            };
+            tools[at] = pendingToolCall(ev);
             notifyIfAway('Approval needed', 'A tool is waiting for you in noevia.', `approval-${chatId}`, 'approvalNeeded');
             setMessagesByChat((prev) => ({
               ...prev,

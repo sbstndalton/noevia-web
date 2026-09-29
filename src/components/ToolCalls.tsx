@@ -6,6 +6,7 @@ import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
 import { formatNumber } from '../number-format';
 import { around } from '../text-around';
+import { showDirectionControls } from '../visible-controls';
 
 /** One drawn symbol per outcome — the list used ✓ and ⃠, which render differently on
  *  every platform and are not part of the icon set. */
@@ -43,15 +44,23 @@ function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
   };
   let pretty = call.args;
   try { pretty = JSON.stringify(JSON.parse(call.args || '{}'), null, 1); } catch { /* show it raw */ }
+  // Invisible direction controls would let a name or path display in another order than it acts;
+  // they are printed as visible escapes (#648).
+  pretty = showDirectionControls(pretty);
+  const name = showDirectionControls(call.name);
   // The name is markup (bold), so the sentence is split around it and the words stay in the catalogue.
   const ask = around(t('chat.approval.ask'), 'name');
   return (
-    <div className="tool-approval" role="group" tabIndex={-1} ref={containerRef} aria-label={t('chat.approval.group', { name: call.name })}>
+    <div className="tool-approval" role="group" tabIndex={-1} ref={containerRef} aria-label={t('chat.approval.group', { name })}>
       <span className="tool-approval-ask">
-        {ask[0]}<strong>{call.name}</strong>{ask[1]}
+        {ask[0]}<strong>{name}</strong>{ask[1]}
       </span>
       {/* Full, unabbreviated arguments. Seeing exactly what the model proposes
           IS the gate — no clamp, no scroll-to-hide, no "show more". */}
+      {/* A project file edit names the exact stored file it would change (#648), resolved by the
+          server from the name above. The model may have passed only a bare name. */}
+      {call.target && <span className="tool-approval-ask" data-testid="tool-approval-target">{t('chat.approval.target')}</span>}
+      {call.target && <pre className="tool-approval-args">{showDirectionControls(call.target)}</pre>}
       {pretty && pretty !== '{}' && <pre className="tool-approval-args">{pretty}</pre>}
       <div className="tool-approval-actions">
         <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => void decide('approve')}>

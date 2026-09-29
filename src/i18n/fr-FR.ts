@@ -958,6 +958,7 @@ export const FR_FR: Catalogue = {
   'code.active.openProject': "Ouvrir {name} · onglet Code",
   'chat.approval.group': "Approbation requise pour {name}",
   'chat.approval.ask': "Autoriser l’exécution de {name} ? Cela modifie des données de votre compte.",
+  'chat.approval.target': "Fichier modifié :",
   'chat.approval.allowOnce': "Autoriser une fois",
   'chat.approval.decline': "Refuser",
   'chat.approval.allowChat': "Autoriser pour cette discussion",

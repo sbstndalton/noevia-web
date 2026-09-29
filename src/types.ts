@@ -74,6 +74,8 @@ export interface ToolCallView {
    *  approval is posted against. Reads never enter this state. */
   status?: 'running' | 'pending' | 'done' | 'denied' | 'stopped';
   approvalId?: string;
+  /** A pending project file edit: the full stored path of the file it would change (#648). */
+  target?: string;
   /** What the tool returned, bounded for display and history. */
   result?: string;
 }

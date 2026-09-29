@@ -969,6 +969,7 @@ export const EN_GB = {
   'code.active.openProject': "Open {name} · Code tab",
   'chat.approval.group': "Approval required for {name}",
   'chat.approval.ask': "Allow {name} to run? This changes data in your account.",
+  'chat.approval.target': "File this changes:",
   'chat.approval.allowOnce': "Allow once",
   'chat.approval.decline': "Decline",
   'chat.approval.allowChat': "Allow for this chat",

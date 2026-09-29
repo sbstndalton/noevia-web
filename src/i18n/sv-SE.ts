@@ -958,6 +958,7 @@ export const SV_SE: Catalogue = {
   'code.active.openProject': "Öppna {name} · Code-fliken",
   'chat.approval.group': "Godkännande krävs för {name}",
   'chat.approval.ask': "Tillåta att {name} körs? Det ändrar data i ditt konto.",
+  'chat.approval.target': "Filen som ändras:",
   'chat.approval.allowOnce': "Tillåt en gång",
   'chat.approval.decline': "Avvisa",
   'chat.approval.allowChat': "Tillåt för den här chatten",

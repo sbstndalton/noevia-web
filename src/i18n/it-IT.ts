@@ -958,6 +958,7 @@ export const IT_IT: Catalogue = {
   'code.active.openProject': "Apri {name} · scheda Code",
   'chat.approval.group': "Approvazione richiesta per {name}",
   'chat.approval.ask': "Consentire l’esecuzione di {name}? Modifica dati del tuo account.",
+  'chat.approval.target': "File che verrà modificato:",
   'chat.approval.allowOnce': "Consenti una volta",
   'chat.approval.decline': "Rifiuta",
   'chat.approval.allowChat': "Consenti per questa chat",
