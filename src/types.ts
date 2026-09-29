@@ -29,6 +29,8 @@ export interface Message {
   warning?: string;
   /** Toolboxes the router picked for this reply, shown as "Using: …". */
   toolScope?: string;
+  /** The same toolboxes by stable id (#624), so the "Using:" line can be worded in the interface language. */
+  toolScopeBoxes?: { id: string; label: string; inApp?: boolean }[];
   /** Skills auto-loaded for this reply because the message matched them. */
   skillScope?: string;
   processingStatus?: string;
@@ -320,6 +322,8 @@ export interface Toolbox {
   label: string;
   description: string;
   source: 'builtin' | 'mcp';
+  /** Shipped with noevia (built in, or curated in the MCP manifest): worded from the catalogue by id (#615). */
+  inApp?: boolean;
   toolCount: number;
   estTokens: number;
   /** A connector (e.g. Google Drive): only ever present here when this account has it connected,

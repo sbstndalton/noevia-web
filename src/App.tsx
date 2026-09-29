@@ -71,7 +71,7 @@ import { historyMode, matchPath, parsePath, routeForState, toPath, type Customis
 import { EmptyState } from './components/EmptyState';
 import { currentRoutingDecision } from './current-routing';
 import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, withoutChat, withoutProject, type NavState } from './settings-nav';
-import { useT } from './i18n';
+import { useT, t as translateNow } from './i18n';
 import type { SkillPin } from './api-contract';
 import { storablePin } from './skill-pin-store';
 
@@ -876,7 +876,7 @@ export default function App(): JSX.Element {
           } else if (ev.type === 'skills_scope') {
             setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, skillScope: ev.text || undefined } : m) }));
           } else if (ev.type === 'tools_scope') {
-            setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, toolScope: ev.text || undefined } : m) }));
+            setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, toolScope: ev.text || undefined, toolScopeBoxes: ev.boxes } : m) }));
           } else if (ev.type === 'status' && ev.text) {
             setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, processingStatus: ev.text } : m) }));
           } else if (ev.type === 'warning' && ev.text) {
@@ -1009,7 +1009,7 @@ export default function App(): JSX.Element {
             ...prev,
             [chatId]: (prev[chatId] ?? []).map((m) =>
               m.id === replyId && !m.content && !m.reasoning
-                ? { ...m, content: 'Stopped before a reply was written.', senderLabel: 'Stopped' }
+                ? { ...m, content: translateNow('chat.stopped.content'), senderLabel: 'Stopped' }
                 : m,
             ),
           }));
@@ -1067,7 +1067,7 @@ export default function App(): JSX.Element {
       const existing = loaded ? resolveLoadedHistory(messagesRef.current[chatId] ?? [], loaded) : messagesRef.current[chatId] ?? [];
       const replyId = uid();
       setMessagesByChat(prev => ({ ...prev, [chatId]: [...existing, { id: uid(), role: 'user', content: text },
-        { id: replyId, role: 'assistant', content: '', senderLabel: 'Cowork', processingStatus: 'starting a task…' }] }));
+        { id: replyId, role: 'assistant', content: '', senderLabel: 'Cowork', processingStatus: translateNow('chat.cowork.starting') }] }));
       setStreamingChats(prev => ({ ...prev, [chatId]: true }));
       const sentAt = Date.now();
       queueMetaUpsert(projectId, chatId, (meta) => meta
@@ -1076,10 +1076,11 @@ export default function App(): JSX.Element {
       let patch: Partial<Message>;
       try {
         const task = await startCowork({ projectId, chatId, repository, message: text });
-        patch = { content: `Started a Cowork task in **${task.repository || repository}**${task.branch ? ` on branch \`${task.branch}\`` : ''}.`,
+        const repo = task.repository || repository;
+        patch = { content: task.branch ? translateNow('chat.cowork.startedBranch', { repo, branch: task.branch }) : translateNow('chat.cowork.started', { repo }),
           coworkTask: { projectId, taskId: task.taskId, repository: task.repository || repository }, processingStatus: undefined };
       } catch (err) {
-        patch = { content: `Cowork task did not start — ${err instanceof Error ? err.message : 'unknown error'}`, error: true, coworkRepository: repository, processingStatus: undefined };
+        patch = { content: translateNow('chat.cowork.failed', { reason: err instanceof Error ? err.message : translateNow('chat.cowork.unknownError') }), error: true, coworkRepository: repository, processingStatus: undefined };
       }
       sendingChats.current.delete(chatId);
       setStreamingChats(prev => { const next = { ...prev }; delete next[chatId]; return next; });

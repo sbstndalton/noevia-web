@@ -24,7 +24,7 @@ const LANGS = {
   'de-DE': {
     name: 'German',
     landing: { badge: /Läuft in einem Projekt/, title: 'Projekt öffnen, um Code auszuführen', open: 'Code öffnen', header: 'Neue Aufgabe', listLabel: 'Projekte mit Code-Zugriff' },
-    code: { intro: /Führt ein Coding-Harness in einem eigenen Git-Worktree auf einem eigenen Branch aus/, repository: 'Repository', preparation: 'Prompt-Aufbereitung', direct: 'Direkt', notAvailable: 'nicht verfügbar', prompt: 'Was soll es tun?', legend: 'Was diese Aufgabe darf', read: 'Das Repository lesen', edit: 'Dateien bearbeiten', run: 'Befehle ausführen', install: 'Abhängigkeiten installieren', start: 'Aufgabe starten', tasks: 'Aufgaben' },
+    code: { intro: /Führt ein Coding-Harness in einem eigenen Git-Worktree auf einem eigenen Branch aus/, repository: 'Repository', preparation: 'Prompt-Aufbereitung', direct: 'Direkt', local: 'Lokaler Architekt', notAvailable: 'nicht verfügbar', prompt: 'Was soll es tun?', legend: 'Was diese Aufgabe darf', read: 'Das Repository lesen', edit: 'Dateien bearbeiten', run: 'Befehle ausführen', install: 'Abhängigkeiten installieren', start: 'Aufgabe starten', tasks: 'Aufgaben' },
     address: { h1: 'Webadresse', current: 'Aktuelle Adresse', earlier: 'Frühere Adressen', change: 'Adresse ändern', fresh: 'Neue Adresse', check: 'Prüfen und speichern' },
     features: { h1: 'Funktionen', previews: 'Vorschau-Bereiche', previewsDesc: /Zeigt die noch nicht gebauten Vorschauen/, backups: 'Backups', diary: 'Tagebuch-Anfügewerkzeug' },
     experimental: { h1: 'Experimentell', title: 'Einrichtung des Entscheidungsdienstes', label: 'Endpunkt des Entscheidungsdienstes', astra: 'Astra-Review (Code-Modus)' },
@@ -34,7 +34,7 @@ const LANGS = {
   'fr-FR': {
     name: 'French',
     landing: { badge: /S’exécute dans un projet/, title: 'Ouvrez un projet pour lancer Code', open: 'Ouvrir Code', header: 'Nouvelle tâche', listLabel: 'Projets avec accès à Code' },
-    code: { intro: /Lance un harnais de code dans un worktree git dédié/, repository: 'Dépôt', preparation: 'Préparation du prompt', direct: 'Direct', notAvailable: 'indisponible', prompt: 'Que doit-il faire ?', legend: 'Ce que cette tâche peut faire', read: 'Lire le dépôt', edit: 'Modifier des fichiers', run: 'Exécuter des commandes', install: 'Installer des dépendances', start: 'Démarrer la tâche', tasks: 'Tâches' },
+    code: { intro: /Lance un harnais de code dans un worktree git dédié/, repository: 'Dépôt', preparation: 'Préparation du prompt', direct: 'Direct', local: 'Architecte local', notAvailable: 'indisponible', prompt: 'Que doit-il faire ?', legend: 'Ce que cette tâche peut faire', read: 'Lire le dépôt', edit: 'Modifier des fichiers', run: 'Exécuter des commandes', install: 'Installer des dépendances', start: 'Démarrer la tâche', tasks: 'Tâches' },
     address: { h1: 'Adresse web', current: 'Adresse actuelle', earlier: 'Anciennes adresses', change: 'Modifier l’adresse', fresh: 'Nouvelle adresse', check: 'Vérifier et enregistrer' },
     features: { h1: 'Fonctionnalités', previews: 'Surfaces en aperçu', previewsDesc: /Affiche les aperçus non construits/, backups: 'Sauvegardes', diary: 'Outil d’ajout au Journal' },
     experimental: { h1: 'Expérimental', title: 'Configuration du service de décision', label: 'Point de terminaison de décision', astra: 'Relecture Astra (mode Code)' },
@@ -145,8 +145,8 @@ const ENGLISH = /Open a project to run Code|Code mode runs inside|Open Code|Runs
       const shown = await text(panel);
       assert.match(shown, L.code.intro);
       for (const word of [L.code.preparation, L.code.prompt, L.code.legend, L.code.read, L.code.edit, L.code.run, L.code.install, L.code.start, L.code.tasks]) assert.ok(shown.includes(word), `${word} in: ${shown.slice(0, 300)}`);
-      // The mode the interface knows is translated; one it does not keeps the server's own words.
-      assert.deepEqual(await page.getByLabel(L.code.preparation).locator('option').evaluateAll((os) => os.map((o) => o.textContent)), [L.code.direct, `Local architect — ${L.code.notAvailable}`]);
+      // Every mode the interface has a key for is translated (#627); one it does not keeps the server's own words.
+      assert.deepEqual(await page.getByLabel(L.code.preparation).locator('option').evaluateAll((os) => os.map((o) => o.textContent)), [L.code.direct, `${L.code.local} — ${L.code.notAvailable}`]);
       assert.match(await page.getByLabel(L.code.prompt).getAttribute('placeholder'), /^(Beschreibe die Aufgabe|Décrivez la tâche)/);
       assert.doesNotMatch(shown, ENGLISH, shown);
       assert.ok(await noOverflow(page), 'no horizontal overflow');

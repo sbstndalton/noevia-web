@@ -4,7 +4,7 @@ import type { JSX } from 'react';
 import { apiFetch } from '../../api';
 import { copyText, GoogleDriveConnect, RecoveryKeyLink } from './GoogleDriveSetup';
 import type { GoogleState } from './GoogleDriveSetup';
-import { formatNumber } from '../../number-format';
+import { formatBytes } from '../../number-format';
 import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
 
@@ -22,7 +22,7 @@ interface Status {
 }
 
 const when = (t: Translate, ms?: number | null) => (ms ? new Date(ms).toLocaleString(appLocale()) : t('backups.never'));
-const size = (n: number) => (n < 1024 * 1024 ? `${formatNumber(Math.max(1, Math.round(n / 1024)), appLocale(), 0)} KB` : `${formatNumber(n / 1024 / 1024, appLocale(), 1)} MB`);
+const size = (n: number) => formatBytes(n, appLocale());
 /** The task names the server records in `lastError.during`. */
 const DURING: Record<string, MessageKey> = { backup: 'backups.during.backup', 'restore test': 'backups.during.restoreTest', 'copy to Google Drive': 'backups.during.driveCopy' };
 

@@ -18,6 +18,7 @@ import { ComposerActions, useAttachmentDrop } from './ComposerActions';
 import { apiFetch } from '../api';
 import { isDisplayableRoutingDecision } from '../current-routing';
 import { routeDescription } from '../routing-copy';
+import { senderLabelText, toolScopeText } from '../chat-labels';
 import { useAccountPreferences, appLocale } from '../user-preferences';
 import { sendHintText, useT } from '../i18n';
 import type { MessageKey } from '../i18n';
@@ -494,12 +495,12 @@ export function ChatView({
               {/* The bubble side already says who spoke; only the answering model is worth showing. */}
               {m.role === 'user'
                 ? <span className="msg-sender sr-only">{t('chat.sender.you')}</span>
-                : <span className="msg-sender is-assistant"><span className="sr-only">{t('chat.sender.assistant')} · </span>{(m.senderLabel ?? modelLabel).replace(/^Assistant · /, '')}</span>}
+                : <span className="msg-sender is-assistant"><span className="sr-only">{t('chat.sender.assistant')} · </span>{senderLabelText(t, m.senderLabel ?? modelLabel)}</span>}
               {m.role === 'assistant' ? (
                 <div className="assistant-card">
                   {m.reasoningMode && m.reasoningMode !== 'off' && <small className="reasoning-result">Effort: {m.reasoningEffort} · {m.reasoningMode === 'real' ? 'provider parameter' : 'best-effort hint'}</small>}
                   {m.warning && <p className="msg-warning" role="status">{m.warning}</p>}
-                  {(m.toolScope || m.skillScope) && <small className="tool-scope" title={t('chat.scope.title')}>{m.toolScope && t('chat.scope.using', { tools: m.toolScope === 'all tools' ? t('chat.scope.allTools') : m.toolScope })}{m.toolScope && m.skillScope && ' · '}{m.skillScope && t('chat.scope.skill', { name: m.skillScope })}</small>}
+                  {(m.toolScope || m.skillScope) && <small className="tool-scope" title={t('chat.scope.title')}>{m.toolScope && t('chat.scope.using', { tools: m.toolScope === 'all tools' ? t('chat.scope.allTools') : m.toolScopeBoxes?.length ? toolScopeText(t, m.toolScopeBoxes) : m.toolScope })}{m.toolScope && m.skillScope && ' · '}{m.skillScope && t('chat.scope.skill', { name: m.skillScope })}</small>}
                   {m.routingDecision && <RoutingDetails decision={m.routingDecision} />}
                   {m.reasoning ? <ThinkingBlock text={m.reasoning} ms={m.reasoningMs} live={!!thinkingLive && !m.content} /> : null}
                   {m.toolCalls && m.toolCalls.length > 0 ? <ToolCalls calls={m.toolCalls} /> : null}
@@ -541,7 +542,7 @@ export function ChatView({
                   {streaming && isLast && !m.error ? (
                     <div className="msg-meta" aria-live="off">
                       <LiveTimer startedAt={streamStart.current} />
-                      {m.reasoning && !m.content ? ' · thinking…' : ` · ${m.processingStatus || 'generating…'}`}
+                      {m.reasoning && !m.content ? ` · ${t('chat.status.thinking')}` : ` · ${m.processingStatus || t('chat.status.generating')}`}
                     </div>
                   ) : (
                     !m.error && <MessageMeta stats={m.stats} />

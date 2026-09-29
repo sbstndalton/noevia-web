@@ -1,5 +1,6 @@
 import type { McpStatus } from './api';
 import type { Translate } from './i18n';
+import { formatNumber } from './number-format';
 
 export interface McpFooterSummary {
   /** The sidebar footer's one-line status text. */
@@ -14,7 +15,8 @@ export interface McpFooterSummary {
  *  (#366). `directory` marks a server an administrator added through the MCP directory (Plugins →
  *  Added, PluginsView.tsx); everything else — the internal server or an MCP_SERVERS/
  *  MCP_SERVER_URL entry — is configured for this deployment and was never going to appear there.
- *  The label and tooltip say so, rather than let the two counts look contradictory. */
+ *  The label and tooltip say so, rather than let the two counts look contradictory. Every word and
+ *  number goes through the catalogue and the locale's number format (#627). */
 export function mcpFooterSummary(mcp: McpStatus, t: Translate): McpFooterSummary {
   // With several servers, one being down is a partial outage, not an outage — say which, rather
   // than reporting the whole integration dead.
@@ -23,18 +25,22 @@ export function mcpFooterSummary(mcp: McpStatus, t: Translate): McpFooterSummary
   const degraded = down.length > 0 || (!servers.length && !!mcp.error);
   const allDown = servers.length > 0 && down.length === servers.length;
   const added = servers.filter((sv) => sv.directory).length;
+  const num = (n: number) => formatNumber(n, t.locale, 0);
   const serverNote = servers.length > 1
     ? added === 0
-      ? ` · ${t('sidebar.mcpServersBuiltIn', { count: servers.length })}`
+      ? ` · ${t('sidebar.mcpServersBuiltIn', { count: num(servers.length) })}`
       : added < servers.length
-        ? ` · ${t('sidebar.mcpServersPartlyAdded', { count: servers.length, added })}`
-        : ` · ${servers.length} servers`
+        ? ` · ${t('sidebar.mcpServersPartlyAdded', { count: num(servers.length), added: num(added) })}`
+        : ` · ${t('sidebar.mcpServersAllAdded', { count: num(servers.length) })}`
     : '';
+  const discovered = mcp.discovered ?? 0;
+  // The plural form follows the number; the digits shown follow the locale.
+  const tools = t.plural('sidebar.mcpTools', discovered, { count: num(discovered) });
   const label = !degraded
-    ? `MCP · ${mcp.discovered ?? 0} tools${serverNote}`
+    ? `MCP · ${tools}${serverNote}`
     : allDown || !servers.length
-      ? 'MCP · unavailable'
-      : `MCP · ${mcp.discovered ?? 0} tools · ${down.map((sv) => sv.id).join(', ')} down`;
+      ? `MCP · ${t('sidebar.mcpUnavailable')}`
+      : `MCP · ${tools} · ${t('sidebar.mcpDown', { ids: down.map((sv) => sv.id).join(', ') })}`;
   const title = down.length
     ? down.map((sv) => `${sv.id}: ${sv.error}`).join('\n')
     : servers.length > 1 && added < servers.length

@@ -3,6 +3,8 @@ import type { ToolCallView } from '../types';
 import { useRef, useState } from 'react';
 import { decideToolApproval } from '../api';
 import { ShellIcon } from './ShellIcon';
+import { useT } from '../i18n';
+import { formatNumber } from '../number-format';
 
 /** One drawn symbol per outcome — the list used ✓ and ⃠, which render differently on
  *  every platform and are not part of the icon set. */
@@ -85,13 +87,15 @@ function pretty(text: string): string {
  *  collapsible list with a line per call. A write waiting for approval is
  *  never folded away — its full arguments are the approval gate. */
 export function ToolCalls({ calls }: { calls: ToolCallView[] }): JSX.Element {
+  const t = useT();
+  const n = (count: number) => formatNumber(count, t.locale, 0);
   const list = calls.map(normalise);
   const pending = list.filter((c) => c.status === 'pending' && c.approvalId);
   const settled = list.filter((c) => !(c.status === 'pending' && c.approvalId));
   const running = settled.filter((c) => !c.status || c.status === 'running').length;
   const denied = settled.filter((c) => c.status === 'denied').length;
   const stopped = settled.filter((c) => c.status === 'stopped').length;
-  const summary = [`${list.length} tool ${list.length === 1 ? 'call' : 'calls'}`, running ? `${running} running` : '', denied ? `${denied} declined` : '', stopped ? `${stopped} not run` : '', pending.length ? `${pending.length} awaiting approval` : ''].filter(Boolean).join(' · ');
+  const summary = [t.plural('chat.toolCalls.count', list.length, { count: n(list.length) }), running ? t('chat.toolCalls.running', { count: n(running) }) : '', denied ? t('chat.toolCalls.declined', { count: n(denied) }) : '', stopped ? t('chat.toolCalls.notRun', { count: n(stopped) }) : '', pending.length ? t('chat.toolCalls.awaiting', { count: n(pending.length) }) : ''].filter(Boolean).join(' · ');
   return (
     <div className="tool-calls-wrap">
       {pending.map((c, i) => <PendingToolCall key={`pending-${c.approvalId ?? i}`} call={c} />)}
@@ -102,17 +106,18 @@ export function ToolCalls({ calls }: { calls: ToolCallView[] }): JSX.Element {
             {settled.map((c, i) => {
               const state = c.status === 'denied' ? 'declined' : c.status === 'done' ? 'done' : c.status === 'stopped' ? 'not run' : 'running';
               // The result text is what the model was told; the row says what happened in plain words.
-              const preview = state === 'declined' ? 'You declined this' : state === 'not run' ? 'Stopped before it ran' : c.result !== undefined ? oneLine(c.result) || '(empty result)' : c.args ? oneLine(c.args) : '';
+              const preview = state === 'declined' ? t('chat.toolCalls.previewDeclined') : state === 'not run' ? t('chat.toolCalls.previewNotRun') : c.result !== undefined ? oneLine(c.result) || t('chat.toolCalls.emptyResult') : c.args ? oneLine(c.args) : '';
+              const STATE_LABEL: Record<string, string> = { done: t('chat.toolCalls.state.done'), declined: t('chat.toolCalls.state.declined'), 'not run': t('chat.toolCalls.state.notRun'), running: t('chat.toolCalls.state.running') };
               return (
                 <li key={i} className={`tool-call is-${state.replace(' ', '-')}`}>
                   <details>
                     <summary>
-                      <span className="tool-call-state" role="img" aria-label={state}><ShellIcon name={STATE_ICON[state]} size={14}/></span>
-                      <span className="tool-call-name">{c.name || 'tool'}</span>
+                      <span className="tool-call-state" role="img" aria-label={STATE_LABEL[state]}><ShellIcon name={STATE_ICON[state]} size={14}/></span>
+                      <span className="tool-call-name">{c.name || t('chat.toolCalls.tool')}</span>
                       {preview && <span className="tool-call-preview">{preview}</span>}
                     </summary>
-                    {c.args && <><span className="tool-call-label">Arguments</span><pre>{pretty(c.args)}</pre></>}
-                    {c.result !== undefined && <><span className="tool-call-label">Result</span><pre>{c.result || '(empty)'}</pre></>}
+                    {c.args && <><span className="tool-call-label">{t('chat.toolCalls.arguments')}</span><pre>{pretty(c.args)}</pre></>}
+                    {c.result !== undefined && <><span className="tool-call-label">{t('chat.toolCalls.result')}</span><pre>{c.result || t('chat.toolCalls.empty')}</pre></>}
                   </details>
                 </li>
               );
