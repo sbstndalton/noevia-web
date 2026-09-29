@@ -6,15 +6,18 @@ import { isDecisionStale } from './decision-guard';
 import { EmptyState } from '../EmptyState';
 import { ShellIcon } from '../ShellIcon';
 import { useT } from '../../i18n';
+import type { MessageKey, Translate } from '../../i18n';
 import { formatNumber, formatPercent } from '../../number-format';
 import { appLocale } from '../../user-preferences';
+import { around } from '../../text-around';
 import './code.css';
 
 const ACTIVE = new Set(['queued', 'running', 'waiting_approval']);
-const STATUS: Record<CodeTask['status'], string> = {
-  queued: 'Queued', running: 'Running', waiting_approval: 'Waiting for you',
-  completed: 'Finished', failed: 'Failed', cancelled: 'Cancelled', interrupted: 'Interrupted',
-};
+/** The task's status word, from `code.status.*` (#617). */
+const statusLabel = (t: Translate, status: CodeTask['status']): string => t(`code.status.${status}` as MessageKey);
+/** A catalogue string for a server-supplied id, or the server's own English when the id is not in the catalogue. */
+const byId = (t: Translate, key: string, fallback: string): string => { const text = t(key as MessageKey); return text === key ? fallback : text; };
+const actionLabel = (t: Translate, action: CodeAction): string => byId(t, `code.action.${action}`, ACTION_LABEL[action]);
 const elapsed = (task: CodeTask): string => {
   const end = ACTIVE.has(task.status) ? Date.now() : task.updatedAt;
   const seconds = Math.max(0, Math.floor((end - task.createdAt) / 1000));
@@ -36,6 +39,7 @@ export function CodePanel({ projectId }: { projectId: string }): JSX.Element {
 }
 
 function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
+  const t = useT();
   const [state, setState] = useState<CodeState | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
@@ -131,7 +135,7 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
   const toggle = (action: CodeAction) => setCapabilities(list =>
     (list || []).includes(action) ? (list || []).filter(a => a !== action) : [...(list || []), action]);
 
-  if (!state || !capabilities) return <div className="code-panel"><p className={`code-note${error ? ' is-error' : ''}`} role={error ? 'alert' : 'status'}>{error || 'Loading Code mode…'}</p>{error && <button type="button" className="btn btn-secondary" onClick={() => void load()}>Retry loading tasks</button>}</div>;
+  if (!state || !capabilities) return <div className="code-panel"><p className={`code-note${error ? ' is-error' : ''}`} role={error ? 'alert' : 'status'}>{error || t('code.panel.loading')}</p>{error && <button type="button" className="btn btn-secondary" onClick={() => void load()}>{t('code.panel.retry')}</button>}</div>;
   // Network and installs only mean something where the egress proxy exists; elsewhere they are
   // shown, unavailable, with the reason, rather than offered and then silently not granted.
   const online = state.network === true;
@@ -142,15 +146,14 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
   return <div className="code-panel">
     <section className="code-compose" aria-labelledby="code-heading">
       <div className="code-heading">
-        <h2 id="code-heading">Code</h2>
-        <p>Runs a coding harness in a git worktree of its own, on a branch of its own. Every edit, command,
-          install, delete and push stops here for your answer first, with the arguments in full.</p>
+        <h2 id="code-heading">{t('code.panel.heading')}</h2>
+        <p>{t('code.panel.intro')}</p>
       </div>
       {error && <p className="code-note is-error" role="alert">{error}</p>}
-      {noRepositories && <p className="code-note" role="status">No repository is registered on this server. An administrator adds them with <code>CODE_REPOS</code>.</p>}
+      {noRepositories && <p className="code-note" role="status">{around(t('code.panel.noRepositories'), 'name')[0]}<code>CODE_REPOS</code>{around(t('code.panel.noRepositories'), 'name')[1]}</p>}
 
       <div className="code-field">
-        <label htmlFor="code-repository">Repository</label>
+        <label htmlFor="code-repository">{t('code.panel.repository')}</label>
         <select id="code-repository" value={repository} disabled={noRepositories || running || !!busy}
           onChange={e => setRepository(e.target.value)}>
           {state.repositories.map(r => <option key={r.id} value={r.id}>{r.id}</option>)}
@@ -163,21 +166,21 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
             <p> is not a labelable element, so it carries its own label text. */}
         {state.harnesses.length > 1
           ? <div className="code-field">
-              <label htmlFor="code-harness">Harness</label>
+              <label htmlFor="code-harness">{t('code.panel.harness')}</label>
               <select id="code-harness" value={harness} disabled={running || !!busy} onChange={e => setHarness(e.target.value)}>
                 {state.harnesses.map(h => <option key={h.id} value={h.id}>{h.label}{h.version ? ` ${h.version}` : ''}</option>)}
               </select>
             </div>
           : <div className="code-field">
-              <p className="code-fact"><span>Harness</span>{state.harnesses[0]
+              <p className="code-fact"><span>{t('code.panel.harness')}</span>{state.harnesses[0]
                 ? `${state.harnesses[0].label}${state.harnesses[0].version ? ` ${state.harnesses[0].version}` : ''}`
-                : 'None configured on this server'}</p>
+                : t('code.panel.harnessNone')}</p>
             </div>}
         <div className="code-field">
-          <label htmlFor="code-preparation">Prompt preparation</label>
+          <label htmlFor="code-preparation">{t('code.panel.preparation')}</label>
           <select id="code-preparation" value={preparation} disabled={running || !!busy} onChange={e => setPreparation(e.target.value)}>
             {state.promptPreparation.map(m => <option key={m.id} value={m.id} disabled={!m.available}>
-              {m.label}{m.available ? '' : ' — not available'}</option>)}
+              {byId(t, `code.prep.${m.id}.label`, m.label)}{m.available ? '' : ` — ${t('code.panel.notAvailable')}`}</option>)}
           </select>
           <PreparationNote mode={state.promptPreparation.find(m => m.id === preparation)}/>
         </div>
@@ -187,60 +190,60 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
       <p className={`code-note${state.sandboxed ? '' : ' is-error'}`}>
         {state.sandboxed
           ? online
-            ? 'The harness runs in the sandbox container: no credentials, and no network except the domains below.'
-            : 'The harness runs in the sandbox container: no credentials, and no network at all.'
-          : 'This server runs the harness beside noevia itself. An administrator should point CODE_HARNESS_ENDPOINT at the sandbox container.'}
+            ? t('code.panel.sandboxOnline')
+            : t('code.panel.sandboxOffline')
+          : t('code.panel.notSandboxed')}
       </p>
 
       <div className="code-field">
-        <label htmlFor="code-prompt">What should it do?</label>
+        <label htmlFor="code-prompt">{t('code.panel.promptLabel')}</label>
         <textarea id="code-prompt" rows={3} maxLength={8000} value={prompt} disabled={noRepositories || running || !!busy}
-          placeholder="Describe the task, as you would to a colleague who has the repository open."
+          placeholder={t('code.panel.promptPlaceholder')}
           onChange={e => setPrompt(e.target.value)}/>
       </div>
 
       <fieldset className="code-capabilities">
-        <legend>What this task may do</legend>
-        <p className="code-note">Anything left off is refused outright, without asking you. Anything on still stops at an approval.</p>
+        <legend>{t('code.panel.capabilities')}</legend>
+        <p className="code-note">{t('code.panel.capabilitiesNote')}</p>
         <div className="code-capability-list">
           {state.capabilities.map(action => {
             const unavailable = !online && needsNetwork(action);
             return <label key={action} className={`code-capability${unavailable ? ' is-unavailable' : ''}`}>
               <input type="checkbox" checked={!unavailable && capabilities.includes(action)} disabled={unavailable || running || !!busy} onChange={() => toggle(action)}/>
-              <span>{ACTION_LABEL[action]}</span>
+              <span>{actionLabel(t, action)}</span>
             </label>;
           })}
         </div>
-        {!online && <p className="code-note">Reaching the network and installing dependencies need the egress proxy, which this server does not run, so a task here works offline with what the repository already has.</p>}
+        {!online && <p className="code-note">{t('code.panel.offlineNote')}</p>}
       </fieldset>
 
       {needsDomains && <div className="code-field">
-        <label htmlFor="code-domains">Domains it may reach</label>
+        <label htmlFor="code-domains">{t('code.panel.domainsLabel')}</label>
         <input id="code-domains" value={domains} disabled={running || !!busy} placeholder="registry.npmjs.org, pypi.org"
           onChange={e => setDomains(e.target.value)}/>
-        <p className="code-note">Comma separated. Everything else is blocked at the proxy, not just discouraged.</p>
+        <p className="code-note">{t('code.panel.domainsNote')}</p>
       </div>}
 
       <div className="code-actions">
         <button type="button" className="btn btn-primary" disabled={!prompt.trim() || !repository || running || !!busy}
           onClick={() => act('start', () => startTask(projectId, { repository, prompt, capabilities: capabilities.filter(a => online || !needsNetwork(a)), harness, promptPreparation: preparation,
-            domains: domains.split(',').map(d => d.trim()).filter(Boolean) }), () => setPrompt(''))}>{busy === 'start' ? 'Starting…' : 'Start task'}</button>
+            domains: domains.split(',').map(d => d.trim()).filter(Boolean) }), () => setPrompt(''))}>{busy === 'start' ? t('code.panel.starting') : t('code.panel.start')}</button>
       </div>
-      {running && <p className="code-note" role="status">One task runs per project at a time.</p>}
+      {running && <p className="code-note" role="status">{t('code.panel.oneTask')}</p>}
     </section>
 
-    <section className="code-tasks" aria-label="Coding tasks">
+    <section className="code-tasks" aria-label={t('code.panel.tasksLabel')}>
       <div className="code-tasks-heading">
-        <div><h2>Tasks</h2><p className="code-note" role="status">{state.tasks.filter(task => task.status === 'waiting_approval').length > 0
-          ? `${state.tasks.filter(task => task.status === 'waiting_approval').length} waiting for your decision`
+        <div><h2>{t('code.panel.tasksHeading')}</h2><p className="code-note" role="status">{state.tasks.filter(task => task.status === 'waiting_approval').length > 0
+          ? t.plural('code.panel.tasksWaiting', state.tasks.filter(task => task.status === 'waiting_approval').length)
           : state.tasks.filter(task => ACTIVE.has(task.status)).length > 0
-            ? `${state.tasks.filter(task => ACTIVE.has(task.status)).length} in progress`
-            : `${state.tasks.length} ${state.tasks.length === 1 ? 'task' : 'tasks'} saved`}
-          {state.tasks.some(task => task.status === 'failed' || task.status === 'interrupted') && ' · Some tasks need review'}</p></div>
-        <button type="button" className="btn btn-secondary btn-sm" disabled={!!busy} onClick={() => void load()}>Refresh tasks</button>
+            ? t('code.panel.tasksInProgress', { count: state.tasks.filter(task => ACTIVE.has(task.status)).length })
+            : t.plural('code.panel.tasksSaved', state.tasks.length)}
+          {state.tasks.some(task => task.status === 'failed' || task.status === 'interrupted') && ` · ${t('code.panel.tasksNeedReview')}`}</p></div>
+        <button type="button" className="btn btn-secondary btn-sm" disabled={!!busy} onClick={() => void load()}>{t('code.panel.refresh')}</button>
       </div>
       {state.tasks.length === 0
-        ? <EmptyState icon="code" title="No tasks yet" compact>Describe a task above. Its branch stays in the repository when it finishes.</EmptyState>
+        ? <EmptyState icon="code" title={t('code.panel.emptyTitle')} compact>{t('code.panel.emptyBody')}</EmptyState>
         : state.tasks.map(task => <TaskCard key={task.id} task={task} busy={busy}
           onDecide={(decision, approvalId) => {
             // approvalId is bound in the render that drew the button the person clicked.
@@ -248,7 +251,7 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
             // approval id has since moved on (resolved, replaced, or expired) — sending
             // the stale id would decide the wrong approval, so skip and say why instead.
             const live = latestState.current?.tasks.find(t => t.id === task.id)?.approval?.id;
-            if (isDecisionStale(live, approvalId)) { setError('That approval already changed — refreshing.'); void load(); return; }
+            if (isDecisionStale(live, approvalId)) { setError(t('code.panel.staleApproval')); void load(); return; }
             act(`decide:${task.id}`, () => decideTask(projectId, task.id, approvalId, decision));
           }}
           onCancel={() => act(`cancel:${task.id}`, () => cancelTask(projectId, task.id))}/>)}
@@ -260,24 +263,25 @@ function TaskCard({ task, busy, onDecide, onCancel }: {
   task: CodeTask; busy: string;
   onDecide: (decision: 'approve' | 'approve_all' | 'deny', approvalId: string) => void; onCancel: () => void;
 }): JSX.Element {
+  const t = useT();
   const active = ACTIVE.has(task.status);
-  const updated = new Date(task.updatedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-  const outcome = task.status === 'waiting_approval' ? `Waiting for your decision${task.approval ? `: ${ACTION_LABEL[task.approval.action]}` : ''}`
-    : task.status === 'completed' ? `Finished${task.result?.tools ? ` after ${task.result.tools} tool ${task.result.tools === 1 ? 'call' : 'calls'}` : ''}`
-    : task.status === 'failed' ? 'Stopped with an error'
-    : task.status === 'cancelled' ? 'Cancelled'
-    : task.status === 'interrupted' ? 'Interrupted before completion'
-    : task.stage || STATUS[task.status];
+  const updated = new Date(task.updatedAt).toLocaleString(appLocale() ?? [], { dateStyle: 'medium', timeStyle: 'short' });
+  const outcome = task.status === 'waiting_approval' ? (task.approval ? t('code.task.waitingDecisionFor', { action: actionLabel(t, task.approval.action) }) : t('code.task.waitingDecision'))
+    : task.status === 'completed' ? (task.result?.tools ? t.plural('code.task.finishedAfter', task.result.tools) : statusLabel(t, 'completed'))
+    : task.status === 'failed' ? t('code.task.failedOutcome')
+    : task.status === 'cancelled' ? statusLabel(t, 'cancelled')
+    : task.status === 'interrupted' ? t('code.task.interruptedOutcome')
+    : task.stage || statusLabel(t, task.status);
   return <article className={`code-task is-${task.status}`} aria-busy={active && !task.approval}>
     <header>
-      <h3>{task.task || task.branch || 'Task'}</h3>
-      <span className="code-status">{STATUS[task.status]}</span>
+      <h3>{task.task || task.branch || t('code.task.untitled')}</h3>
+      <span className="code-status">{statusLabel(t, task.status)}</span>
     </header>
-    <p className="code-meta">{[task.branch, task.capabilities.map(a => ACTION_LABEL[a]).join(' · ')].filter(Boolean).join(' · ') || 'Read only'}</p>
-    <p className="code-stage"><span role={task.status === 'waiting_approval' ? 'status' : undefined}>{outcome}</span> · {elapsed(task)} elapsed · Updated <time dateTime={new Date(task.updatedAt).toISOString()}>{updated}</time></p>
+    <p className="code-meta">{[task.branch, task.capabilities.map(a => actionLabel(t, a)).join(' · ')].filter(Boolean).join(' · ') || t('code.task.readOnly')}</p>
+    <p className="code-stage"><span role={task.status === 'waiting_approval' ? 'status' : undefined}>{outcome}</span> · {t('code.task.elapsed', { time: elapsed(task) })} · {t('code.task.updated')} <time dateTime={new Date(task.updatedAt).toISOString()}>{updated}</time></p>
     {task.error && <p className="code-note is-error">{task.error}</p>}
     {task.approval && <ApprovalCard approval={task.approval} busy={busy.startsWith('decide:')} onDecide={onDecide}/>}
-    {active && <div className="code-actions"><button type="button" className="btn btn-secondary" onClick={onCancel} disabled={!!busy}>Cancel task</button></div>}
+    {active && <div className="code-actions"><button type="button" className="btn btn-secondary" onClick={onCancel} disabled={!!busy}>{t('code.task.cancel')}</button></div>}
     {task.plan && <section className="code-plan" role="region" aria-label="Reported plan" tabIndex={0}>
       <h4>Last reported plan</h4>
       <p className="code-plan-note">Reported as {task.plan.status}.</p>
@@ -324,7 +328,8 @@ function NetworkNote({ network }: { network: NetworkActivity }): JSX.Element | n
 
 /** Why a preparation mode is or is not on offer — the measurement, in its own words. */
 function PreparationNote({ mode }: { mode?: PreparationMode }): JSX.Element | null {
-  return mode ? <p className="code-note">{mode.reason}</p> : null;
+  const t = useT();
+  return mode ? <p className="code-note">{byId(t, `code.prep.${mode.id}.reason`, mode.reason)}</p> : null;
 }
 
 /**
@@ -362,24 +367,25 @@ export function TaskMeta({ meta }: { meta: NonNullable<CodeTask['meta']> }): JSX
 export function ApprovalCard({ approval, busy, onDecide }: {
   approval: CodeApproval; busy: boolean; onDecide: (decision: 'approve' | 'approve_all' | 'deny', approvalId: string) => void;
 }): JSX.Element {
+  const t = useT();
   if (approval.action === 'review_change') return <ReviewCard approval={approval} busy={busy} onDecide={onDecide}/>;
   const standing = approval.action !== 'delete' && approval.action !== 'git_push';
   // Bound here, at the render that drew this card, so every click on it carries the id
   // of the approval actually on screen rather than whatever `approval` resolves to later.
   const approvalId = approval.id;
-  return <div className="code-approval" role="group" aria-label="Approval required">
-    <p className="code-approval-title"><ShellIcon name="security" size={16}/>{ACTION_LABEL[approval.action]}{approval.title ? ` — ${approval.title}` : ''}</p>
+  return <div className="code-approval" role="group" aria-label={t('code.approval.group')}>
+    <p className="code-approval-title"><ShellIcon name="security" size={16}/>{actionLabel(t, approval.action)}{approval.title ? ` — ${approval.title}` : ''}</p>
     {approval.reason && <p className="code-note">{approval.reason}</p>}
-    {approval.command && <pre className="code-approval-args" aria-label="Command">{approval.command}</pre>}
-    {approval.diff && <pre className="code-approval-args" aria-label={`Changes to ${approval.diff.path}`}>{approval.diff.newText ?? ''}</pre>}
+    {approval.command && <pre className="code-approval-args" aria-label={t('code.approval.command')}>{approval.command}</pre>}
+    {approval.diff && <pre className="code-approval-args" aria-label={t('code.approval.changesTo', { path: approval.diff.path })}>{approval.diff.newText ?? ''}</pre>}
     {approval.arguments !== null && approval.arguments !== undefined &&
-      <pre className="code-approval-args" aria-label="Arguments">{JSON.stringify(approval.arguments, null, 2)}</pre>}
+      <pre className="code-approval-args" aria-label={t('code.approval.arguments')}>{JSON.stringify(approval.arguments, null, 2)}</pre>}
     <div className="code-approval-actions">
-      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('approve', approvalId)}>Allow once</button>
-      <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => onDecide('deny', approvalId)}>Decline</button>
-      {standing && <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => onDecide('approve_all', approvalId)}>Allow for this task</button>}
+      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('approve', approvalId)}>{t('code.approval.allowOnce')}</button>
+      <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => onDecide('deny', approvalId)}>{t('code.approval.decline')}</button>
+      {standing && <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => onDecide('approve_all', approvalId)}>{t('code.approval.allowTask')}</button>}
     </div>
-    {!standing && <p className="code-note">Deletes and pushes are asked every time.</p>}
+    {!standing && <p className="code-note">{t('code.approval.askedAlways')}</p>}
   </div>;
 }
 
@@ -413,9 +419,10 @@ function ReviewVerdict({ review }: { review: CodeReview }): JSX.Element {
 function ReviewCard({ approval, busy, onDecide }: {
   approval: CodeApproval; busy: boolean; onDecide: (decision: 'approve' | 'approve_all' | 'deny', approvalId: string) => void;
 }): JSX.Element {
+  const t = useT();
   const approvalId = approval.id;
   return <div className="code-approval code-review" role="group" aria-label="Review the finished change">
-    <p className="code-approval-title"><ShellIcon name="security" size={16}/>{ACTION_LABEL.review_change}</p>
+    <p className="code-approval-title"><ShellIcon name="security" size={16}/>{actionLabel(t, 'review_change')}</p>
     {approval.review && <ReviewVerdict review={approval.review}/>}
     {approval.reason && <p className="code-note">{approval.reason}</p>}
     {approval.arguments !== null && approval.arguments !== undefined &&

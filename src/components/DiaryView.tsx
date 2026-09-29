@@ -21,7 +21,8 @@ import { useEffect, useRef, useState } from 'react';
 import { isFocusable } from '../focus-utils';
 import { apiFetch, fetchProfile, deleteProjectFile, fetchDiaryMonth, fetchDiarySource, fetchStorage, streamChat } from '../api';
 import type { StorageConnection } from '../api';
-import { dateInText, dayLabel, localDay, monthLabel, splitDays } from '../diary-data';
+import { dateInText, dayLabel as formatDayLabel, localDay, monthLabel as formatMonthLabel, splitDays } from '../diary-data';
+import { appLocale } from '../user-preferences';
 import { DiaryRequestError, directoryPicker, directoryPickerBlockedReason, invalidateFileListings, listFiles, randomSessionId, readFile, saveLocal, scanLocal, syncFileChange, writeFile } from '../diary-workspace';
 import type { DiaryFile, DirectoryHandle, FileEntry } from '../diary-workspace';
 import { DiaryModal, MarkdownPreview } from './DiaryModal';
@@ -31,6 +32,10 @@ import '../i18n/diary';
 
 import { diaryExchangeTarget } from '../diary-conversation';
 import type { DiaryTurn as Turn } from '../diary-conversation';
+
+// Dates read in the interface's Intl locale, not the browser's (#619).
+const dayLabel = (id: string): string => formatDayLabel(id, appLocale());
+const monthLabel = (id: string): string => formatMonthLabel(id, appLocale());
 type Pending = { before: string | null; content: string };
 // `active` is false while the Diary view is mounted but hidden behind another
 // view (App.tsx keeps it alive so an in-progress draft, open editor, and

@@ -3,7 +3,11 @@ import { cached, invalidateCached } from '../../request-cache';
 
 export type FeatureName = 'stepSupervision' | 'systemOneRouting' | 'toolGate' | 'previews' | 'diaryMcpWrite' | 'deepResearch' | 'offsiteBackup' | 'toolRouter' | 'codeHarness' | 'astraReview' | 'browserExecutor' | 'kiwix' | 'chatgptOAuth' | 'nativeClientAuth';
 export type FeatureFlags = Partial<Record<FeatureName, boolean>>;
-export interface FeatureInfo { name: FeatureName; label: string; description: string; enabled: boolean; source: 'default' | 'env' | 'admin'; locked: boolean; env: string; pendingRestart?: boolean; experimental?: boolean; unavailable?: string | null }
+/** `id` is the flag name and the stable key the label and description are translated by
+ *  (features.item.<id>.*, #618); `label`, `description` and `unavailable` are the server's English,
+ *  the fallback for an id this build has no translation for. `unavailableId` names a reason the
+ *  server can identify (features.unavailable.<id>). */
+export interface FeatureInfo { id?: string; name: FeatureName; label: string; description: string; enabled: boolean; source: 'default' | 'env' | 'admin'; locked: boolean; env: string; pendingRestart?: boolean; experimental?: boolean; unavailable?: string | null; unavailableId?: string | null }
 
 export const FEATURES_CHANGED = 'noevia:features-changed';
 
