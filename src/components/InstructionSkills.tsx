@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../api';
-type Skill = { file: string; hash: string; content: string; name: string; description: string; version: string; valid: boolean; error: string; status: 'review' | 'updated' | 'enabled' | 'disabled' | 'invalid'; missingTools: string[] };
+import type { SkillManifest } from '../api-contract';
+type Skill = { file: string; hash: string; content: string; name: string; description: string; version: string; valid: boolean; error: string; status: 'review' | 'updated' | 'enabled' | 'disabled' | 'invalid'; missingTools: string[];
+  /** #272: provenance and bundled executable files; absent from an older core. */
+  origin?: SkillManifest['origin']; scripts?: string[] };
+/** Where a skill came from (#272). A published copy names its publisher, path and the day it was copied. */
+export function skillOriginText(origin: Skill['origin']): string {
+  if (!origin) return '';
+  if (origin.kind === 'attached-folder') return 'From an attached folder';
+  if (origin.kind !== 'published') return 'Project file';
+  const when = origin.retrievedAt && !Number.isNaN(Date.parse(origin.retrievedAt)) ? ` on ${origin.retrievedAt.slice(0, 10)}` : '';
+  return `Published by ${origin.publisher || 'an external source'}${origin.sourcePath ? ` (${origin.sourcePath})` : ''}, copied${when}`;
+}
 const labels = { review: 'Review required', updated: 'Updated · review required', enabled: 'Enabled', disabled: 'Disabled', invalid: 'Needs correction' };
 export function InstructionSkills({ projectId, updatedAt, onRefresh, onFiles }: { projectId: string; updatedAt: number; onRefresh: () => void | Promise<void>; onFiles: (files: string[]) => void }) {
   const [skills, setSkills] = useState<Skill[]>([]), [error, setError] = useState(''), [busy, setBusy] = useState<string | null>(null);
@@ -71,7 +82,9 @@ export function InstructionSkills({ projectId, updatedAt, onRefresh, onFiles }: 
     {!skills.length && <details><summary>Add an instruction skill</summary><p>Create a Markdown file and upload it using Upload files below. Start it with this restricted frontmatter:</p><pre>{'---\nname: Weekly review\ndescription: Review decisions and next actions\nversion: 1\n---\nRead selected notes and draft a review with source names.'}</pre><p>Optional: requires: core, nextcloud-notes. Requirements never enable tools automatically. Maximum file size: 32 KiB.</p></details>}
     {skills.map(skill => <details key={skill.file} className="instruction-skill">
       <summary>{skill.name || skill.file} · {labels[skill.status]}</summary>
-      <p>{skill.description}</p><p className="source-status">{skill.file} · Version {skill.version || 'not specified'}</p>
+      <p>{skill.description}</p><p className="source-status">{skill.file} · Version {skill.version || 'not specified'} · SHA-256 {skill.hash.slice(0, 12)}</p>
+      {skill.origin && <p className="source-status skill-origin">{skillOriginText(skill.origin)}</p>}
+      {!!skill.scripts?.length && <p role="note">Bundled scripts: {skill.scripts.join(', ')}. Chat never runs Skill scripts, so this skill cannot be used in chat while they are here.</p>}
       {skill.error && <p role="alert">{skill.error}</p>}
       {!!skill.missingTools.length && <p>Required toolboxes not selected: {skill.missingTools.join(', ')}. Select them from the composer’s tools menu to use those steps.</p>}
       <pre aria-label={`Instructions in ${skill.file}`}>{skill.content}</pre>

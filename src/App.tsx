@@ -72,6 +72,7 @@ import { EmptyState } from './components/EmptyState';
 import { currentRoutingDecision } from './current-routing';
 import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, withoutChat, withoutProject, type NavState } from './settings-nav';
 import { useT } from './i18n';
+import type { SkillPin } from './api-contract';
 
 type View =
   | { kind: 'diary' }
@@ -757,7 +758,7 @@ export default function App(): JSX.Element {
   }, [refreshProjects]);
 
   const handleSend = useCallback(
-    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; notice?: string | null } = {}) => {
+    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; notice?: string | null; skill?: SkillPin } = {}) => {
       // `streamingChats` is render state, so two sends in one tick both see it false. The ref
       // is updated synchronously and is the real guard against a duplicate generation.
       if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
@@ -823,6 +824,8 @@ export default function App(): JSX.Element {
             chatId,
             mode: 'chat',
             ...(turn.turnToolboxes && turn.turnToolboxes.length ? { turnToolboxes: turn.turnToolboxes } : {}),
+            // #272: an exact reviewed Skill version for this message; retries and edits send none.
+            ...(turn.skill ? { skill: turn.skill } : {}),
           },
           controller.signal,
         )) {
@@ -1072,7 +1075,7 @@ export default function App(): JSX.Element {
   const activeMode: ChatMode = view.kind === 'chat' ? sessionMode(activeChatMeta?.mode, pendingModes[view.chatId]) : 'chat';
 
   const sendToCurrent = useCallback(
-    (text: string, turn: { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string } } = {}) => {
+    (text: string, turn: { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin } = {}) => {
       if (view.kind !== 'chat') return;
       const chatId = view.chatId;
       const projectId = view.projectId ?? activeChatMeta?.projectId ?? null;

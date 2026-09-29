@@ -63,4 +63,32 @@ export type SkillPinErrorCode =
   | 'skill_disabled'               // 409
   | 'skill_hash_mismatch'          // 409 version, label and content hash disagree
   | 'skill_invalid'                // 422
-  | 'skill_unsupported_requirements'; // 422
+  | 'skill_unsupported_requirements' // 422 a required toolbox this server does not offer
+  | 'skill_requirements_unmet'     // 422 a required toolbox this request does not carry (JSON body also lists `missing`)
+  | 'skill_scripts_unsupported';   // 422 the skill bundles executable scripts, which chat never runs
+
+// `code` on a chat stream `error` event that ends a reply for Skill reasons (#272).
+//   skill_requirements_unmet  the provider cannot use a toolbox the pinned skill requires; no model request was made
+//   skill_revoked             a skill this reply loaded was disabled or changed; nothing after that point ran
+export type SkillStreamErrorCode = 'skill_requirements_unmet' | 'skill_revoked';
+
+// One entry of GET /api/projects/{id}/instruction-skills/manifests (schemaVersion 1). Descriptive
+// only: requirements never enable a tool or skip an approval.
+export interface SkillManifest {
+  schemaVersion: 1;
+  id: string;
+  file: string;
+  name: string;
+  description: string;
+  versionLabel: string;
+  version: string;
+  status: 'review' | 'updated' | 'enabled' | 'disabled' | 'invalid';
+  valid: boolean;
+  error: string;
+  origin: { kind: 'published' | 'project-file' | 'attached-folder'; publisher?: string; repository?: string; sourceRef?: string; sourcePath?: string; digest?: string; retrievedAt?: string };
+  compatibility: string;
+  license: string;
+  requirements: { toolboxes: string[]; allowedTools: string[]; unsupportedToolboxes: string[]; unselectedToolboxes: string[]; scripts: string[] };
+  assets: { file: string; version: string; executable: boolean }[];
+  resolvable: boolean;
+}

@@ -28,9 +28,12 @@ import { readDraft, writeDraft, clearDraft } from '../chat-drafts';
 import { onCancelEdit, focusAfterRender, type EditFocusState } from '../edit-focus';
 import { isCoarsePointerDevice } from '../composer-focus';
 import { useSpaceTier } from '../space-tier';
+import { SkillPinSelect, useSkillPinOptions } from './SkillPinPicker';
+import type { SkillPin } from '../api-contract';
 
 /** What one send carries besides its text: per-turn boxes, a fallback notice, or a Cowork task. */
-export interface SendTurn { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string } }
+/** `skill` (#272) pins one exact reviewed Skill version for this message only. */
+export interface SendTurn { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin }
 
 interface ChatViewProps {
   project: Project | null;
@@ -369,7 +372,12 @@ export function ChatView({
   const [turnBoxes, setTurnBoxes] = useState<string[]>([]);
   const [permitted, setPermitted] = useState<PermittedBox[]>([]);
   // Per-turn choices belong to the next message in this chat only.
-  useEffect(() => { setTurnBoxes([]); setCatalogueOpen(false); setPermitted([]); }, [chatId, mode, project?.id]);
+  // #272: one exact reviewed Skill version for the next message, from the portable manifest API.
+  // Re-read when the project changes and after each reply, so a disabled or edited skill drops out.
+  const [skillPin, setSkillPin] = useState('');
+  useEffect(() => { setTurnBoxes([]); setCatalogueOpen(false); setPermitted([]); setSkillPin(''); }, [chatId, mode, project?.id]);
+  const skillOptions = useSkillPinOptions(project?.id ?? null, `${project?.updatedAt ?? ''}:${streaming}`, mode !== 'cowork');
+  useEffect(() => { if (skillPin && !skillOptions.some(option => option.value === skillPin)) setSkillPin(''); }, [skillOptions, skillPin]);
   // A lone "/" opens the catalogue; typing continues to filter there instead of the message.
   const onDraft = (value: string) => {
     if (value === '/' && draft === '') { setCatalogueOpen(true); return; }
@@ -385,10 +393,11 @@ export function ChatView({
     follow();
     const decision = decideDispatch({ mode, harnessEnabled: coworkAccess.harnessEnabled, canUseCode: coworkAccess.canUseCode, projectId: project?.id ?? null, repository });
     if (decision.harness === 'cowork' && repository) onSend(text, { cowork: { repository } });
-    else onSend(text, { turnToolboxes: turnBoxesFor(text, permitted, turnBoxes), notice: decision.notice });
+    else onSend(text, { turnToolboxes: turnBoxesFor(text, permitted, turnBoxes), notice: decision.notice, ...(skillPin ? { skill: skillPin as SkillPin } : {}) });
     setDraft('');
     clearDraft(chatId);
     setTurnBoxes([]);
+    setSkillPin('');
   };
   // #437: the whole chat pane is the drop target, not just the composer bar, so a file dropped
   // anywhere over the transcript still attaches — through the exact same pipeline (validation,
@@ -402,6 +411,7 @@ export function ChatView({
     toggled={turnBoxes} onToggle={id => setTurnBoxes(prev => prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id])}
     onMention={name => { const next = insertMention(draft, name); setDraft(next); writeDraft(chatId, next); }} onBoxes={setPermitted} disabled={streaming || actionBusy}
     focusFallback={() => composerBox.current?.querySelector<HTMLElement>('.composer-add')?.focus()} />;
+  const skillPicker = <SkillPinSelect options={skillOptions} value={skillPin} onChange={setSkillPin} disabled={streaming || actionBusy} />;
 
   return (
     <div ref={workspaceRef} className={`main chat-workspace${messages.length === 0 ? ' is-empty' : ''}${isDragOver ? ' is-drag-over' : ''}`} {...dropProps}>
@@ -608,14 +618,14 @@ export function ChatView({
             <div className="composer-mode-row">
               {/* The plain chat line is hidden by the tier-1 rule; the live region itself stays put. */}
               <ModeCaption state={modeSwitch} disabled={streaming || actionBusy} onRepository={setRepository} />
-              {catalogue}
+              {catalogue}{skillPicker}
             </div>
             <ModeConfirm state={modeSwitch} />
           </div>
         ) : (
           <ComposerModeBar mode={mode} messageCount={messages.length} projectId={project?.id ?? null} disabled={streaming || actionBusy}
             access={coworkAccess} repository={repository} onRepository={setRepository} onModeChange={onModeChange}>
-            {catalogue}
+            {catalogue}{skillPicker}
           </ComposerModeBar>
         )}
         <div className={`composer-inner chat-composer-inner pane${phone ? ' is-compact' : ''}`}>

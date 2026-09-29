@@ -19,7 +19,7 @@ import type {
 } from './types';
 import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser';
 import { cached, invalidateCached, clearRequestCache } from './request-cache';
-import { API_MAJOR, hasApiMajorMismatch, hasApiMajorMismatchHeader } from './api-contract';
+import { API_MAJOR, hasApiMajorMismatch, hasApiMajorMismatchHeader, type SkillPin } from './api-contract';
 
 function cookie(name: string): string {
   const item = document.cookie.split(';').map((x) => x.trim()).find((x) => x.startsWith(`${name}=`));
@@ -446,7 +446,9 @@ export async function* streamChat(
   body: { spaceId: string; compactOnly?: boolean; extrasEnabled?: boolean; extraContext?: string;
     exchangeId?: string; recoveryId?: string; preparationId?: string; files?: Record<string,string>; entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null;
     /** #236/#237: the session's harness, and boxes added for this turn only. */
-    mode?: 'chat'; turnToolboxes?: string[] },
+    mode?: 'chat'; turnToolboxes?: string[];
+    /** #272: one exact reviewed Skill version for this message, as `skill_<id>@<sha256>`. */
+    skill?: SkillPin },
   signal?: AbortSignal,
 ): AsyncGenerator<{
   type: string;
