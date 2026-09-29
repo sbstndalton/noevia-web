@@ -95,17 +95,33 @@ export function recommend(inputs: EstimateInputs, budgetGib: number, wantCtx = 0
 
 // ── Tuning pre-flight ────────────────────────────────────────────────────────────────────────
 export const TUNE_STEPS = [
+  { id: 'sampling', label: 'Sampling', what: 'Writes the recommended temperature and related sampling defaults for this model family, then loads it once to check it still answers. Skipped if you already set sampling.' },
   { id: 'kv', label: 'KV cache', what: 'Loads the model once per cache type and keeps the fastest one that passes the three quality probes.' },
   { id: 'context', label: 'Context size', what: 'Loads increasing contexts and sends a long prompt at each; keeps the largest that answers within the 120-second budget.' },
   { id: 'drafting', label: 'Drafting', what: 'Compares speculative decoding (MTP or N-gram) with none and keeps it only if it is faster.' },
   { id: 'batch', label: 'Batch and micro-batch', what: 'Tries batch sizes for prompt reading speed.' },
 ] as const;
 
+/** What auto-tune would write for sampling, and where the numbers came from (#308). */
+export type SamplingPlan = { tier: 'model-card' | 'family' | 'preset'; source: string; values: Record<string, number>; family: string | null; note: string | null };
+const SAMPLING_ORDER = ['temperature', 'top_p', 'top_k', 'min_p', 'repeat_penalty'] as const;
+/** The plan's finite values in a fixed order, as "temperature 0.6" style pairs. */
+export function samplingValueList(plan: Pick<SamplingPlan, 'values'> | null | undefined): string[] {
+  const values = plan?.values || {};
+  return SAMPLING_ORDER.filter((k) => typeof values[k] === 'number' && Number.isFinite(values[k])).map((k) => `${k} ${values[k]}`);
+}
+/** Narrows an untrusted evidence response to a plan, or null when it is missing or malformed. */
+export function parseSamplingPlan(raw: unknown): SamplingPlan | null {
+  const p = raw as Partial<SamplingPlan> | null | undefined;
+  if (!p || typeof p !== 'object' || !['model-card', 'family', 'preset'].includes(String(p.tier)) || typeof p.source !== 'string' || !p.values || typeof p.values !== 'object') return null;
+  return { tier: p.tier as SamplingPlan['tier'], source: p.source, values: p.values as Record<string, number>, family: p.family ?? null, note: typeof p.note === 'string' ? p.note : null };
+}
+
 /** A rough wall-clock range for one model's full auto-tune: about a dozen model loads, whose
  *  time grows with file size, plus up to four long-context prompts at 30–120 s each. */
 export function tuneMinutes(modelGib: number | null | undefined): { low: number; high: number } {
   const size = modelGib && modelGib > 0 ? modelGib : 8;
-  const loads = 12;
+  const loads = 13; // the sampling step adds one load to the dozen or so of the other steps
   const low = (loads * (20 + size * 3) + 4 * 30) / 60, high = (loads * (40 + size * 8) + 4 * 120) / 60;
   return { low: Math.max(5, Math.round(low)), high: Math.max(10, Math.round(high)) };
 }

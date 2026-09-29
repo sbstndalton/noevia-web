@@ -32,7 +32,8 @@ const rows = [4096, 8192, 16384, 32768, 65536, 131072, 262144].map(ctx => ({ ctx
         const m = new URL(req.url()).searchParams.get('model');
         const at = Date.parse('2026-09-22T10:00:00Z');
         if (m === 'Synthetic-20B-MoE') return json({ tracked: true, categories: [{ category: 'context_capacity', state: 'failed', value: null, at, suite: null, limitations: ['Long prompt exceeded 120 s'] }, { category: 'throughput', state: 'unverified', value: null, at: null, suite: null, limitations: [] }] });
-        return json({ tracked: true, categories: [{ category: 'context_capacity', state: 'verified', value: { ctx: m === 'Synthetic-4B-Q5' ? 24576 : 16384 }, at, suite: { name: 'calibration', version: 2 }, limitations: [] }, { category: 'throughput', state: 'verified', value: { rate: m === 'Synthetic-4B-Q5' ? 41.2 : 23.8 }, at, suite: null, limitations: [] }] });
+        return json({ tracked: true, categories: [{ category: 'context_capacity', state: 'verified', value: { ctx: m === 'Synthetic-4B-Q5' ? 24576 : 16384 }, at, suite: { name: 'calibration', version: 2 }, limitations: [] }, { category: 'throughput', state: 'verified', value: { rate: m === 'Synthetic-4B-Q5' ? 41.2 : 23.8 }, at, suite: null, limitations: [] }],
+          samplingPlan: { tier: 'family', source: 'Qwen3 family table', values: { temperature: 0.6, top_p: 0.95, top_k: 20, min_p: 0 }, family: 'qwen3', note: 'thinking-mode values', quirks: {}, provenance: null } });
       }
       if (p === '/api/models/estimate') return json({ model: 'Synthetic-9B-Q5', budgetGib: null, chat: true, sizeable: true, arch: 'qwen35', nativeCtx: 262144, modelGib: 6.15, pinnedGib: 1.43, reserveGib: 1, safety: 1.05, moe: false, rows, current: { ctx: 16384, kv: 'q8_0' } });
       if (p === '/api/models/hardware') return json({ source: 'model-manager', cpu: 'Synthetic CPU', systemGB: 64, gpus: [{ id: 'amd_gpu:0', name: 'Synthetic iGPU', capacityGB: 4, sharedGB: 10 }] });
@@ -75,6 +76,10 @@ const rows = [4096, 8192, 16384, 32768, 65536, 131072, 262144].map(ctx => ({ ctx
     await guided.getByText(/below the q5_0 floor/).waitFor();
     await guided.getByLabel('KV cache').selectOption('q8_0');
     await guided.getByText(/Expected time: about/).waitFor();
+    // #308: the recommendation is shown with its source before any run starts.
+    await guided.getByText('Recommended sampling:').waitFor();
+    await guided.getByText(/temperature 0\.6, top_p 0\.95, top_k 20, min_p 0\. Source: Qwen3 family table/).waitFor();
+    await guided.getByText(/^Sampling/).first().waitFor();
     for (const width of [375, 1440]) for (const theme of ['light', 'dark']) {
       await page.setViewportSize({ width, height: 950 });
       await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);

@@ -7,8 +7,8 @@ import { roundModelSizeGB } from '../../model-size';
 import { EvidenceList } from './EvidenceList';
 import { ctxShort, num } from './mm';
 import type { EstimateInputs, Hardware, Verdict } from './guided';
-import { belowKvFloor, budgetFor, canPromptSuite, estimateGib, KV_FLOOR, KV_GUIDED, recommend, roleOf, TUNE_STEPS, tuneMinutes, verdictFor } from './guided';
-import type { BudgetKind, Recommendation } from './guided';
+import { belowKvFloor, budgetFor, canPromptSuite, estimateGib, KV_FLOOR, KV_GUIDED, parseSamplingPlan, recommend, roleOf, samplingValueList, TUNE_STEPS, tuneMinutes, verdictFor } from './guided';
+import type { BudgetKind, Recommendation, SamplingPlan } from './guided';
 import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
 import { appLocale } from '../../user-preferences';
@@ -16,9 +16,11 @@ import { ROLE_KEY, stuckStatus } from './mm-text';
 
 const VERDICT: Record<Verdict, MessageKey> = { fits: 'mm.verdict.fits', tight: 'mm.verdict.tight', no: 'mm.verdict.no' };
 const TUNE_STEP: Record<string, [MessageKey, MessageKey]> = {
+  sampling: ['mm.tune.step.samplingLabel', 'mm.tune.step.sampling'],
   kv: ['mm.autoconfig.kv', 'mm.tune.step.kv'], context: ['mm.tune.step.contextLabel', 'mm.tune.step.context'],
   drafting: ['mm.tune.step.draftingLabel', 'mm.tune.step.drafting'], batch: ['mm.tune.step.batchLabel', 'mm.tune.step.batch'],
 };
+const SAMPLING_TIER: Record<SamplingPlan['tier'], MessageKey> = { 'model-card': 'mm.tune.sampling.tier.card', family: 'mm.tune.sampling.tier.family', preset: 'mm.tune.sampling.tier.preset' };
 const BUDGET_SOURCE: Record<BudgetKind, MessageKey> = { configured: 'mm.fit.source.configured', gpu: 'mm.fit.source.gpu', 'gpu-shared': 'mm.fit.source.gpuShared', system: 'mm.fit.source.system', manual: 'mm.fit.source.manual' };
 /** guided.ts recommend() in the interface language (its `text` is the English original). */
 function recommendationText(t: Translate, rec: Recommendation, budgetGib: number): string {
@@ -98,11 +100,14 @@ function FitStep({ model }: { model: string }): JSX.Element {
 }
 
 function TuneStep({ model, sizeGB, chat }: { model: string; sizeGB: number | null; chat: boolean }): JSX.Element {
-  const [status, setStatus] = useState<TuneStatus | null>(null);
+  const [status, setStatus] = useState<TuneStatus | null>(null), [plan, setPlan] = useState<SamplingPlan | null>(null);
   const t = useT();
   useEffect(() => {
-    let live = true;
+    let live = true; setPlan(null);
     getJson<TuneStatus>('/api/models/autotune?model=' + encodeURIComponent(model)).then((v) => { if (live) setStatus(v); }).catch(() => undefined);
+    // Read-only: the same evidence call the quality step makes. No plan (older server, or no engine
+    // evidence) just hides the line rather than showing an error.
+    getJson<{ samplingPlan?: unknown }>('/api/models/evidence?model=' + encodeURIComponent(model)).then((v) => { if (live) setPlan(parseSamplingPlan(v.samplingPlan)); }).catch(() => undefined);
     return () => { live = false; };
   }, [model]);
   const time = tuneMinutes(sizeGB);
@@ -121,6 +126,9 @@ function TuneStep({ model, sizeGB, chat }: { model: string; sizeGB: number | nul
         formatModelSizeGB returns, since this is embedded in a translated sentence). */}
     <p className="mm-note">{t('mm.tune.time', { low: time.low, high: time.high })}{sizeGB ? ` ${t('mm.tune.fileSize', { size: `${num(roundModelSizeGB(sizeGB), 1)} GB` })}` : ''}. <strong>{t('mm.tune.chatPauses')}</strong>{t('mm.tune.pauseAfter')}</p>
     <ol className="mm-preflight">{TUNE_STEPS.map((s) => <li key={s.id}><strong>{TUNE_STEP[s.id] ? t(TUNE_STEP[s.id][0]) : s.label}</strong> — {TUNE_STEP[s.id] ? t(TUNE_STEP[s.id][1]) : s.what}</li>)}</ol>
+    {plan && <p className="mm-note mm-sampling-plan" role="status">{samplingValueList(plan).length
+      ? <><strong>{t('mm.tune.sampling.recommended')}</strong> {samplingValueList(plan).join(', ')}. {t(SAMPLING_TIER[plan.tier], { source: plan.source })}{plan.note ? ` (${plan.note})` : ''}</>
+      : t('mm.tune.sampling.none')}</p>}
     <p className="mm-note mm-warn" role="note">{t('mm.tune.floor', { floor: KV_FLOOR })}</p>
     {last && <p className="mm-note">{t('mm.tune.last', { date: new Date(last.at).toLocaleDateString(appLocale()), result: [last.specLabel || t('mm.tune.saved'), ...(last.generation ? [t('mm.tokensPerSecond', { rate: num(last.generation) })] : []), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv })] : []), ...(last.context ? [t('mm.tune.context', { tokens: num(last.context, 0) })] : [])].join(', ') })}{belowKvFloor(last.kv) ? ` ${t('mm.tune.lastBelowFloor')}` : ''}</p>}
     {failed && <p className="mm-note mm-warn" role="status">{t(mine!.error ? 'mm.tune.failedError' : 'mm.tune.failed', { status: stuckStatus(t, String(mine!.status)), error: mine!.error ?? '' })} {t(last ? 'mm.tune.failedKeepLast' : 'mm.tune.failedKeep')}</p>}
