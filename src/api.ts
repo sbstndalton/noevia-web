@@ -138,7 +138,7 @@ export async function uploadProjectFile(id: string, body: { name: string; dataBa
   });
   progress({ stage: 'Upload received · waiting for processing' });
   for (;;) {
-    const job = await getJson<{ done: boolean; stage?: string; status?: number; body?: { error?: string; name: string; path: string; bytes: number; attachment?: { reduction?: { note: string } } } }>(response.poll);
+    const job = await getJson<{ done: boolean; stage?: string; status?: number; body?: { error?: string; name: string; path: string; bytes: number; attachment?: { reduction?: { note: string }; state?: string; group?: string; reason?: string }; document?: { state?: string; error?: string } } }>(response.poll);
     if (job.done) {
       if ((job.status || 500) >= 400) throw new Error(job.body?.error || 'Source processing failed');
       invalidateCached(WORKSPACE_KEY);

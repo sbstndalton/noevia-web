@@ -59,3 +59,12 @@ export function resolveSkippedToast(
   const message = sourceRefreshIssues(skipped);
   return { signature, message, show: message };
 }
+
+/** Why an upload that the server accepted is nevertheless not usable, or '' when it is readable.
+ *  "Saved" must never be shown for a file whose text could not be read (#577). */
+export function uploadUnreadableReason(result: { attachment?: { state?: string; group?: string; reason?: string }; document?: { state?: string; error?: string } } | undefined): string {
+  const a = result?.attachment, d = result?.document;
+  if (d?.state === 'failed') return `Not readable${d.error ? ' · ' + d.error : ''}`;
+  if (a && a.state === 'stored' && (a.group === 'Text' || a.group === 'Documents')) return `Not readable · ${a.reason || 'the original is kept, but no text could be read from it'}`;
+  return '';
+}

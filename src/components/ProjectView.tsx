@@ -5,7 +5,7 @@ import { ComposerModel } from './ComposerModel';
 import { ComposerTextarea } from './ComposerTextarea';
 import { SkillPinSelect, useSkillPinOptions } from './SkillPinPicker';
 import type { SkillPin } from '../api-contract';
-import { sourceStatus } from '../source-status';
+import { sourceStatus, uploadUnreadableReason } from '../source-status';
 import { ShellIcon } from './ShellIcon';
 import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
@@ -196,7 +196,7 @@ export function ProjectView({
         if (file.size > uploadLimit(file.name)) throw new Error(t('projects.view.fileTooLarge'));
         update(i, { stage: t('projects.view.readingFile') });
         const result = await uploadProjectFile(project.id, { name: file.name, dataBase64: await fileToBase64(file) }, value => update(i, value));
-        update(i, { stage: result.attachment?.reduction?.note || t('projects.view.saved'), percent: 100, finished: Date.now() });
+        update(i, { stage: uploadUnreadableReason(result) || result.attachment?.reduction?.note || t('projects.view.saved'), percent: 100, finished: Date.now() });
         onRefresh();
       } catch (err) { update(i, { stage: err instanceof Error ? err.message : t('projects.view.uploadFailed'), finished: Date.now() }); }
     }
