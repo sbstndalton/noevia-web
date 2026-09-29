@@ -189,6 +189,7 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.card.protectedTitle': "En körande sidecar (embedding eller reranking) är beroende av den här modellen; den kan inte tas bort så länge det är konfigurerat.",
   'mm.card.protectedNote': " — en körande sidecar (embedding eller reranking) är beroende av den här modellen; den kan inte tas bort så länge det är konfigurerat.",
   'mm.card.nonChatNote': "En embedding- eller reranking-modell — justering gäller endast chattmodeller.",
+  'mm.card.missingNote': "Den här förinställningen pekar på en modellfil som inte finns i modellmappen, så den kan inte väljas, laddas eller justeras. Återställ filen eller ta bort förinställningen.",
   'mm.card.sourceFolder': "modellmapp",
   'mm.card.sourceCache': "nedladdad",
   'mm.card.update': "Uppdatering tillgänglig ({remote})",

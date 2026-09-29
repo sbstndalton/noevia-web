@@ -189,6 +189,7 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.card.protectedTitle': "Ein laufender Sidecar (Embedding oder Reranking) ist von diesem Modell abhängig; es kann nicht gelöscht werden, solange das konfiguriert ist.",
   'mm.card.protectedNote': " – ein laufender Sidecar (Embedding oder Reranking) ist von diesem Modell abhängig; es kann nicht gelöscht werden, solange das konfiguriert ist.",
   'mm.card.nonChatNote': "Ein Embedding- oder Reranking-Modell – Tunen gilt nur für Chat-Modelle.",
+  'mm.card.missingNote': "Dieses Preset verweist auf eine Modelldatei, die nicht im Modellordner liegt; es kann daher nicht ausgewählt, geladen oder getunt werden. Stellen Sie die Datei wieder her oder entfernen Sie das Preset.",
   'mm.card.sourceFolder': "Modellordner",
   'mm.card.sourceCache': "heruntergeladen",
   'mm.card.update': "Update verfügbar ({remote})",

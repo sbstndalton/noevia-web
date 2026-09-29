@@ -189,6 +189,7 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.card.protectedTitle': "En kjørende sidecar (embedding eller reranking) er avhengig av denne modellen; den kan ikke slettes så lenge det er konfigurert.",
   'mm.card.protectedNote': " — en kjørende sidecar (embedding eller reranking) er avhengig av denne modellen; den kan ikke slettes så lenge det er konfigurert.",
   'mm.card.nonChatNote': "En embedding- eller reranking-modell — justering gjelder bare chat-modeller.",
+  'mm.card.missingNote': "Denne forhåndsinnstillingen peker på en modellfil som ikke finnes i modellmappen, så den kan ikke velges, lastes eller justeres. Gjenopprett filen eller fjern forhåndsinnstillingen.",
   'mm.card.sourceFolder': "modellmappe",
   'mm.card.sourceCache': "nedlastet",
   'mm.card.update': "Oppdatering tilgjengelig ({remote})",

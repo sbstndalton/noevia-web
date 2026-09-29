@@ -165,6 +165,11 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
   // path that still works and mislabel the model as sidecar-protected when it just isn't one.
   const chatModel = isChatGenerationModel(m.name, m.labels);
   const protectedModel = !system && m.sidecarProtected === true;
+  // #548: Laya and the in-use embedding/reranker models are run by their own sidecars, so the
+  // engine's Load/Unload would duplicate or break them (the server answers 409 too). #545: a
+  // preset whose file is missing can only fail to load; it is also not tunable.
+  const missing = m.missingFile === true;
+  const engineControls = !system && !protectedModel && !missing;
   return <article className={`model-card surface${open ? ' is-open' : ''}`} data-state={state} aria-label={m.name}>
     <header className="model-card-head"><h3 className="model-card-name"><MiddleTruncate text={m.name}/></h3><span className="model-card-state">{m.failed ? t('mm.card.failed') : m.loaded ? t('mm.loaded') : t('mm.card.unloaded')}</span></header>
     <p className="model-card-meta">
@@ -185,12 +190,12 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
     </p>
     {file?.badges && file.badges.length > 0 && <p className="model-card-meta">{file.badges.map(b => <span key={b.category} className="model-card-tag">{BADGE[b.category] ? t(BADGE[b.category]) : b.category} {b.rating}/5</span>)}</p>}
     <div className="model-card-actions">
-      <button className="popup-tab" disabled={busy} aria-label={t(m.loaded ? 'mm.card.unloadNamed' : 'mm.card.loadNamed', { model: m.name })} onClick={onToggle}>{busy ? t('mm.working') : m.loaded ? t('mm.card.unload') : t('mm.card.load')}</button>
-      {!system && chatModel && <button className="popup-tab" aria-label={t('mm.card.tuneNamed', { model: m.name })} onClick={onConfigure}>{t('mm.card.tune')}</button>}
+      {engineControls && <button className="popup-tab" disabled={busy} aria-label={t(m.loaded ? 'mm.card.unloadNamed' : 'mm.card.loadNamed', { model: m.name })} onClick={onToggle}>{busy ? t('mm.working') : m.loaded ? t('mm.card.unload') : t('mm.card.load')}</button>}
+      {!system && !missing && chatModel && <button className="popup-tab" aria-label={t('mm.card.tuneNamed', { model: m.name })} onClick={onConfigure}>{t('mm.card.tune')}</button>}
       <button className="popup-tab" aria-expanded={open} aria-label={t(open ? 'mm.card.hideDetailsNamed' : 'mm.card.detailsNamed', { model: m.name })} onClick={() => setOpen(!open)}>{open ? t('mm.card.hideDetails') : t('mm.details')}</button>
       {!system && !protectedModel && <DeleteModel model={m} file={file} onDeleted={onDeleted}/>}
     </div>
-    {runtimeOptions && <MtpControl model={m} onChanged={onRefresh}/>}
+    {runtimeOptions && !missing && <MtpControl model={m} onChanged={onRefresh}/>}
     {open && <div className="mm-detail">
       {!detail && file && <p role="status">{t('mm.readingFile')}</p>}
       {!file && <p className="mm-note">{t('mm.card.fromCache')}</p>}
@@ -210,7 +215,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
       <EvidenceList model={m.name}/>
       {system ? <p className="mm-note" role="status">{t('model.systemLabel')}{t('mm.card.systemNote')}</p>
         : protectedModel ? <p className="mm-note" role="status">{t('mm.card.protectedLabel')}{t('mm.card.protectedNote')}</p>
-        : !chatModel ? <p className="mm-note" role="status">{t('mm.card.nonChatNote')}</p>
+        : !chatModel || missing ? <p className="mm-note" role="status">{t(missing ? 'mm.card.missingNote' : 'mm.card.nonChatNote')}</p>
         : <NativeCalibration model={m.name} onChanged={() => {}}/>}
     </div>}
   </article>;

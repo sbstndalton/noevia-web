@@ -102,7 +102,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
   // Embedding/reranking models and Laya (the internal routing model) cannot answer a chat
   // prompt — matchesModelUse('all') only excluded the former, so Laya slipped through as a
   // pickable Manual model with no server-side guard on this path either until now (#409).
-  const chatModels = models.filter((m) => isChatGenerationModel(m.name, m.labels));
+  const chatModels = models.filter((m) => !m.missingFile && isChatGenerationModel(m.name, m.labels));
   // A long catalogue gets a filter; a handful of models does not need one.
   const [modelQuery, setModelQuery] = useState('');
   const shownModels = chatModels.filter((m) => m.name.toLowerCase().includes(modelQuery.trim().toLowerCase()));

@@ -189,6 +189,7 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.card.protectedTitle': "Un side-car en cours d’exécution (embedding ou reclassement) dépend de ce modèle ; il ne peut pas être supprimé tant que cela est configuré.",
   'mm.card.protectedNote': " — un side-car en cours d’exécution (embedding ou reclassement) dépend de ce modèle ; il ne peut pas être supprimé tant que cela est configuré.",
   'mm.card.nonChatNote': "Un modèle d’embedding ou de reclassement — le réglage ne s’applique qu’aux modèles de chat.",
+  'mm.card.missingNote': "Ce préréglage pointe vers un fichier de modèle absent du dossier des modèles ; il ne peut donc pas être choisi, chargé ni réglé. Restaurez le fichier ou supprimez le préréglage.",
   'mm.card.sourceFolder': "dossier des modèles",
   'mm.card.sourceCache': "téléchargé",
   'mm.card.update': "Mise à jour disponible ({remote})",

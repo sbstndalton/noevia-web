@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import { apiFetch, fetchAutoRoles } from '../../api';
+import { apiFetch, fetchAutoRoles, fetchInstalledModels } from '../../api';
 import type { InstalledModel } from '../../types';
 import { appLocale } from '../../user-preferences';
 import { errorText, mm, num } from './mm';
@@ -89,7 +89,7 @@ function RecoverPanel({ onTab }: { onTab: (tab: 'discover' | 'hardware') => void
   const load = useCallback(async () => {
     setBackends(undefined);
     const read = (path: string) => apiFetch(path).then(async (r) => (r.ok ? (await r.json()).job ?? null : null)).catch(() => null);
-    const [autotune, calibration, downloads, engines] = await Promise.all([
+    const [autotune, calibration, downloads, engines, installed] = await Promise.all([
       read('/api/models/autotune?model='), read('/api/models/calibration?model='),
       mm<{ jobs: { id: string; filename: string; repo: string; status: string; error: string | null }[] }>('downloads').then((v) => v.jobs || []).catch(() => []),
       // `v.backends` is missing rather than `[]` when the endpoint answers with an unexpected or
@@ -97,8 +97,10 @@ function RecoverPanel({ onTab }: { onTab: (tab: 'discover' | 'hardware') => void
       // same "unavailable" state as a rejected request instead of a bare `undefined` that crashes
       // the `!backends.length` read below.
       mm<{ backends: Backend[] }>('backends').then((v) => v.backends ?? null).catch(() => null),
+      // #551: runs for models that are no longer installed are history, not something to resume.
+      fetchInstalledModels().then((v) => v.map((m) => m.name)).catch(() => null),
     ]);
-    setItems(recoveryItems({ autotune, calibration, downloads, now: Date.now() })); setBackends(engines);
+    setItems(recoveryItems({ autotune, calibration, downloads, now: Date.now(), installed })); setBackends(engines);
   }, []);
   useEffect(() => { void load(); }, [load]);
   const act = async (item: Stuck, action: Stuck['actions'][number]) => {

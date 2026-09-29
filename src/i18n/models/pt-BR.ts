@@ -189,6 +189,7 @@ export const PT_BR_MODELS: ModelsCatalogue = {
   'mm.card.protectedTitle': "Um sidecar em execução (embedding ou reranking) depende deste modelo; ele não pode ser excluído enquanto isso estiver configurado.",
   'mm.card.protectedNote': " — um sidecar em execução (embedding ou reranking) depende deste modelo; ele não pode ser excluído enquanto isso estiver configurado.",
   'mm.card.nonChatNote': "Um modelo de embedding ou reranking — o ajuste se aplica apenas a modelos de chat.",
+  'mm.card.missingNote': "Esta predefinição aponta para um arquivo de modelo que não está na pasta de modelos, então não pode ser escolhida, carregada nem ajustada. Restaure o arquivo ou remova a predefinição.",
   'mm.card.sourceFolder': "pasta de modelos",
   'mm.card.sourceCache': "baixado",
   'mm.card.update': "Atualização disponível ({remote})",

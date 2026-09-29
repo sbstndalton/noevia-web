@@ -189,6 +189,7 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.card.protectedTitle': "Een actieve sidecar (embedding of reranking) is afhankelijk van dit model; het kan niet worden verwijderd zolang dat is ingesteld.",
   'mm.card.protectedNote': " — een actieve sidecar (embedding of reranking) is afhankelijk van dit model; het kan niet worden verwijderd zolang dat is ingesteld.",
   'mm.card.nonChatNote': "Een embedding- of reranking-model — afstemmen geldt alleen voor chatmodellen.",
+  'mm.card.missingNote': "Deze preset verwijst naar een modelbestand dat niet in de modellenmap staat, dus hij kan niet worden gekozen, geladen of afgestemd. Herstel het bestand of verwijder de preset.",
   'mm.card.sourceFolder': "modelmap",
   'mm.card.sourceCache': "gedownload",
   'mm.card.update': "Update beschikbaar ({remote})",

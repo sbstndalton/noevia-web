@@ -189,6 +189,7 @@ export const ES_ES_MODELS: ModelsCatalogue = {
   'mm.card.protectedTitle': "Un sidecar en ejecución (incrustaciones o reordenación) depende de este modelo; no se puede eliminar mientras esté configurado.",
   'mm.card.protectedNote': ": un sidecar en ejecución (incrustaciones o reordenación) depende de este modelo; no se puede eliminar mientras esté configurado.",
   'mm.card.nonChatNote': "Un modelo de incrustaciones o reordenación: el ajuste solo se aplica a los modelos de chat.",
+  'mm.card.missingNote': "Este preset apunta a un archivo de modelo que no está en la carpeta de modelos, así que no se puede elegir, cargar ni ajustar. Restaura el archivo o elimina el preset.",
   'mm.card.sourceFolder': "carpeta de modelos",
   'mm.card.sourceCache': "descargado",
   'mm.card.update': "Actualización disponible ({remote})",

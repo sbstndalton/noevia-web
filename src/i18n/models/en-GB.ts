@@ -200,6 +200,7 @@ export const EN_GB_MODELS = {
   'mm.card.protectedTitle': 'A running sidecar (embedding or reranking) depends on this model; it cannot be deleted while that is configured.',
   'mm.card.protectedNote': ' — a running sidecar (embedding or reranking) depends on this model; it cannot be deleted while that is configured.',
   'mm.card.nonChatNote': 'An embedding or reranking model — tuning applies to chat models only.',
+  'mm.card.missingNote': "This preset points at a model file that is not in the models folder, so it cannot be chosen, loaded or tuned. Restore the file or remove the preset.",
   'mm.card.sourceFolder': 'model folder',
   'mm.card.sourceCache': 'downloaded',
   'mm.card.update': 'Update available ({remote})',

@@ -151,7 +151,7 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
   // Fast/Smart/Code route chat-generation prompts — an embedding, reranking or routing model
   // (Laya) there fails every request through it, matching the server-side guard on save
   // (chat-model-kind.cjs's nonChatAliases, PUT /api/auto-roles, #343/#409).
-  const chatModels = models.filter((m) => isChatGenerationModel(m.name, m.labels));
+  const chatModels = models.filter((m) => !m.missingFile && isChatGenerationModel(m.name, m.labels));
   // #442: Vision used matchesModelUse(labels, 'all'), which only excludes embedding/reranking
   // labels and has no concept of a system/routing model — Laya (labels: []) passed straight
   // through. The 'vision' label itself is reliable, not a guess: it comes from the model's own

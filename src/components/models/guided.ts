@@ -151,10 +151,17 @@ type DownloadLike = { id: string; filename?: string; repo?: string; status: stri
 /** A running job older than this with no progress is shown as possibly stuck. */
 export const STUCK_AFTER_MS = 2 * 60 * 60 * 1000;
 
-export function recoveryItems({ autotune, calibration, downloads, now }: { autotune: JobLike; calibration: JobLike; downloads: readonly DownloadLike[]; now: number }): Stuck[] {
+/** `installed` is the served model names when they are known (null/undefined when the list could not
+ *  be read, so an outage never hides a real problem). A finished failed/interrupted/cancelled run for a
+ *  model that is no longer installed is history, not something to recover (#551): it is dropped here
+ *  rather than offered a Resume that could only fail. Runs for installed models are untouched, and a
+ *  still-running job is always shown so it can be cancelled. */
+export function recoveryItems({ autotune, calibration, downloads, now, installed }: { autotune: JobLike; calibration: JobLike; downloads: readonly DownloadLike[]; now: number; installed?: readonly string[] | null }): Stuck[] {
   const out: Stuck[] = [];
+  const known = Array.isArray(installed) ? new Set(installed) : null;
   const job = (kind: 'autotune' | 'calibration', j: JobLike) => {
     if (!j?.status) return;
+    if (known && j.status !== 'running' && j.model && !known.has(j.model)) return;
     const stale = j.status === 'running' && !!j.startedAt && now - j.startedAt > STUCK_AFTER_MS;
     if (j.status === 'running' && !stale) return;
     const resumable = kind === 'autotune' && Array.isArray(j.models) && j.status !== 'running';

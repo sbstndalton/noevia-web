@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import { apiFetch } from '../../api';
+import { apiFetch, fetchInstalledModels } from '../../api';
 import { isSystemModel } from '../../model-system';
 import { useT } from '../../i18n';
 import { appLocale } from '../../user-preferences';
@@ -31,6 +31,8 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   const done = useRef(''), request = useRef(0), scanRequest = useRef(0), mutating = useRef(false);
   const changed = useRef(onChanged); changed.current = onChanged;
   const [statusError, setStatusError] = useState('');
+  // #551: served model names, or null when unknown. A run whose models are all uninstalled is history.
+  const [installedNames, setInstalledNames] = useState<string[] | null>(null);
   const refreshScan = useCallback(async () => {
     if (model) return;
     const current = ++scanRequest.current;
@@ -63,7 +65,9 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
     done.current = ''; mutating.current = false;
     setJob(null); setHistory([]); setScan(null); setConfirmed(false); setBusy(false); setError(''); setStatusError('');
     void refresh(); void refreshScan();
-    return () => { ++request.current; ++scanRequest.current; };
+    let live = true;
+    fetchInstalledModels().then((v) => { if (live) setInstalledNames(v.map((m) => m.name)); }).catch(() => { if (live) setInstalledNames(null); });
+    return () => { live = false; ++request.current; ++scanRequest.current; };
   }, [model, refresh, refreshScan]);
   const system = !!model && isSystemModel(model);
   const running = job?.status === 'running';
@@ -90,7 +94,8 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   const shownModels = (mine?.models || []).filter(item => !model || item.model === model);
   const last = history[0];
   const complete = shownModels.reduce((sum, item) => sum + item.phases.filter(phase => phase.status === 'passed').length, 0);
-  const resumable = !!mine?.models && ['cancelled', 'interrupted', 'failed'].includes(mine.status);
+  const resumable = !!mine?.models && ['cancelled', 'interrupted', 'failed'].includes(mine.status)
+    && (!installedNames || mine.models.some(item => installedNames.includes(item.model)));
   const actions = !running && <div className="mm-autotune-actions">
     <label className="mm-check"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />{t('mm.autotune.confirm')}</label>
     <div className="mm-actions">

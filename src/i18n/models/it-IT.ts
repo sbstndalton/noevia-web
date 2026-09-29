@@ -189,6 +189,7 @@ export const IT_IT_MODELS: ModelsCatalogue = {
   'mm.card.protectedTitle': "Un sidecar in esecuzione (embedding o reranking) dipende da questo modello; non può essere eliminato finché è configurato.",
   'mm.card.protectedNote': ": un sidecar in esecuzione (embedding o reranking) dipende da questo modello; non può essere eliminato finché è configurato.",
   'mm.card.nonChatNote': "Un modello di embedding o reranking — la regolazione si applica solo ai modelli di chat.",
+  'mm.card.missingNote': "Questo preset punta a un file di modello che non è nella cartella dei modelli, quindi non può essere scelto, caricato o regolato. Ripristina il file o rimuovi il preset.",
   'mm.card.sourceFolder': "cartella dei modelli",
   'mm.card.sourceCache': "scaricato",
   'mm.card.update': "Aggiornamento disponibile ({remote})",

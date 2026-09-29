@@ -220,6 +220,8 @@ export interface InstalledModel {
    *  (#336) — distinct from canDelete, which keeps the manager's own can_remove meaning and the
    *  client's existing folder-scan-delete fallback when it is false. */
   sidecarProtected?: boolean;
+  /** #545: a models.ini preset whose GGUF is not in the models folder. Listed as failed, never offered for chat, loading or tuning. */
+  missingFile?: boolean;
   source?: string | null;
   mtp?: {supported:boolean;enabled:boolean;reason:string};
   name: string;
