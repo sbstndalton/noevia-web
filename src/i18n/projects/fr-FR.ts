@@ -33,7 +33,7 @@ export const FR_FR_PROJECTS: ProjectsCatalogue = {
   'projects.confirmDeleteTitle': "Supprimer {name} ?",
   'projects.confirmDeleteBody': "Cela supprime définitivement le projet et ses discussions. Les fichiers de votre stockage connecté, y compris le dossier de téléversement du projet, sont conservés et ne sont pas supprimés. Cette action est irréversible.",
   'projects.confirmDeleteConfirm': "Supprimer le projet",
-  'projects.menu.settings': "Paramètres du projet",
+  'projects.menu.settings': "Réglages du projet",
   'projects.menu.unpin': "Détacher le projet",
   'projects.menu.pin': "Épingler le projet",
   'projects.menu.restore': "Restaurer le projet",

@@ -654,7 +654,7 @@ export function Sidebar({
           {codeAccessState === 'checking'
             ? null
             : codeAccess && codeTasks.error
-            ? <p className="side-hint" role="alert">{codeTasks.error}</p>
+            ? <p className="side-hint" role="alert">{t('code.sidebar.statusUnavailable')}</p>
             : codeAccess && codeTasks.tasks.length
             ? <CodingTaskList tasks={codeTasks.tasks} onOpen={(projectId) => { onOpenProjectCode?.(projectId); setExpanded(false); }}/>
             : <p className="side-hint">{t('sidebar.tasksEmpty')}</p>}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { fetchDecisionSettings, saveDecisionSettings, testDecisionSettings } from './api';
 import type { DecisionSettings } from './api';
 import { useT } from '../../i18n';
+import type { MessageKey } from '../../i18n';
 
 export function DecisionServiceSettings({ onSaved }: { onSaved: () => Promise<void> }) {
   const t = useT();
@@ -11,14 +12,15 @@ export function DecisionServiceSettings({ onSaved }: { onSaved: () => Promise<vo
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
   const errorRef = useRef<HTMLParagraphElement>(null);
+  const serverText = (id: string | undefined, english: string) => { if (!id) return english; const key = `decision.msg.${id}` as MessageKey; const text = t(key); return text === key ? english : text; };
   useEffect(() => { let live=true; fetchDecisionSettings().then(value=>{if(live){setDraft(value);setLoaded(true);}}).catch(e=>{if(live)setError(e.message);});return ()=>{live=false;}; }, []);
   const act = async (action: 'save' | 'test') => {
     setBusy(action); setError('');setStatus('');
     try {
       if(action==='save') { const value=await saveDecisionSettings(draft);setDraft(value);await onSaved();setStatus(t('decision.saved')); }
-      // The server's message is English; the follow-up sentence is the interface's.
-      else setStatus(`${(await testDecisionSettings(draft)).message} ${t('decision.saveToApply')}`);
-    } catch(e) {setError((e as Error).message);requestAnimationFrame(()=>errorRef.current?.focus());}
+      // The server's message is English with a stable id (#624); the id is worded from the catalogue.
+      else { const result = await testDecisionSettings(draft); setStatus(`${serverText(result.messageId, result.message)} ${t('decision.saveToApply')}`); }
+    } catch(e) {setError(serverText((e as { id?: string }).id, (e as Error).message));requestAnimationFrame(()=>errorRef.current?.focus());}
     finally {setBusy('');}
   };
   return <section aria-labelledby="decision-setup-title" className="decision-service-settings">

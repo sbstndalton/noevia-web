@@ -282,27 +282,30 @@ function TaskCard({ task, busy, onDecide, onCancel }: {
     {task.error && <p className="code-note is-error">{task.error}</p>}
     {task.approval && <ApprovalCard approval={task.approval} busy={busy.startsWith('decide:')} onDecide={onDecide}/>}
     {active && <div className="code-actions"><button type="button" className="btn btn-secondary" onClick={onCancel} disabled={!!busy}>{t('code.task.cancel')}</button></div>}
-    {task.plan && <section className="code-plan" role="region" aria-label="Reported plan" tabIndex={0}>
-      <h4>Last reported plan</h4>
-      <p className="code-plan-note">Reported as {task.plan.status}.</p>
-      {task.plan.truncated && <p className="code-plan-note">Some plan text was shortened.</p>}
+    {task.plan && <section className="code-plan" role="region" aria-label={t('code.task.plan.region')} tabIndex={0}>
+      <h4>{t('code.task.plan.heading')}</h4>
+      <p className="code-plan-note">{t('code.task.plan.status', { status: byId(t, `code.task.plan.state.${task.plan.status}`, task.plan.status) })}</p>
+      {task.plan.truncated && <p className="code-plan-note">{t('code.task.plan.truncated')}</p>}
       {task.plan.status !== 'skipped' && (task.plan.subQuestions.length
         ? <ul>{task.plan.subQuestions.map((entry, index) => <li key={index}>{entry}</li>)}</ul>
-        : <p className="code-plan-note">No entries were reported.</p>)}
+        : <p className="code-plan-note">{t('code.task.plan.empty')}</p>)}
     </section>}
     {task.assistantOutput?.text && (active
-      ? <section className="code-output" role="region" aria-label="Assistant output" tabIndex={0}>
-          <h4>Assistant output</h4>
-          {task.assistantOutput.truncated && <p className="code-output-note">Showing the first 32 KiB of output.</p>}
+      ? <section className="code-output" role="region" aria-label={t('code.task.output.heading')} tabIndex={0}>
+          <h4>{t('code.task.output.heading')}</h4>
+          {task.assistantOutput.truncated && <p className="code-output-note">{t('code.task.output.truncated')}</p>}
           <p>{task.assistantOutput.text}</p>
         </section>
       : <details className="code-output code-output-details">
-          <summary>Assistant output{task.assistantOutput.truncated ? ' (shortened)' : ''}</summary>
-          {task.assistantOutput.truncated && <p className="code-output-note">Showing the first 32 KiB of output.</p>}
+          <summary>{task.assistantOutput.truncated ? t('code.task.output.shortened') : t('code.task.output.heading')}</summary>
+          {task.assistantOutput.truncated && <p className="code-output-note">{t('code.task.output.truncated')}</p>}
           <p>{task.assistantOutput.text}</p>
         </details>)}
     {task.result && !active && <p className="code-meta">
-      {task.result.tools ?? 0} tool calls · {task.result.allowed ?? 0} allowed · {task.result.refused ?? 0} declined · {task.result.denied ?? 0} refused by noevia
+      {t('code.task.result', {
+        tools: t.plural('code.task.result.tools', task.result.tools ?? 0, { count: formatNumber(task.result.tools ?? 0, appLocale(), 0) }),
+        allowed: formatNumber(task.result.allowed ?? 0, appLocale(), 0), declined: formatNumber(task.result.refused ?? 0, appLocale(), 0), refused: formatNumber(task.result.denied ?? 0, appLocale(), 0),
+      })}
     </p>}
     {task.result?.network && !active && <NetworkNote network={task.result.network}/>}
     {task.review && !active && <ReviewOutcome review={task.review} decision={task.result?.review}/>}
@@ -315,13 +318,14 @@ function TaskCard({ task, busy, onDecide, onCancel }: {
  * networked task could not install something, and naming it is what lets the next task ask for it.
  */
 function NetworkNote({ network }: { network: NetworkActivity }): JSX.Element | null {
-  if (!network.hosts.length) return <p className="code-meta">Network: nothing was requested.</p>;
+  const t = useT();
+  if (!network.hosts.length) return <p className="code-meta">{t('code.network.none')}</p>;
   const reached = network.hosts.filter(h => h.allowed);
   const refused = network.hosts.filter(h => h.refused);
   return <>
-    {reached.length > 0 && <p className="code-meta">Reached {reached.map(h => `${h.host} (${h.allowed})`).join(' · ')}</p>}
+    {reached.length > 0 && <p className="code-meta">{t('code.network.reached', { hosts: reached.map(h => `${h.host} (${h.allowed})`).join(' · ') })}</p>}
     {refused.length > 0 && <p className="code-note is-error">
-      Refused {refused.map(h => `${h.host} (${h.refused})`).join(' · ')}. A task reaches only the domains it names; add one to the next task if it is needed.
+      {t('code.network.refused', { hosts: refused.map(h => `${h.host} (${h.refused})`).join(' · ') })}
     </p>}
   </>;
 }
@@ -354,7 +358,7 @@ export function TaskMeta({ meta }: { meta: NonNullable<CodeTask['meta']> }): JSX
   return <>
     {parts.length > 0 && <p className="code-meta">{parts.join(' · ')}</p>}
     {meta.limitations.length > 0 && <details className="code-limitations">
-      <summary>Not reported by this harness ({meta.limitations.length})</summary>
+      <summary>{t('code.meta.limitations', { count: formatNumber(meta.limitations.length, appLocale(), 0) })}</summary>
       <ul>{meta.limitations.map(l => <li key={l}>{l}</li>)}</ul>
     </details>}
   </>;
@@ -389,24 +393,21 @@ export function ApprovalCard({ approval, busy, onDecide }: {
   </div>;
 }
 
-const SEVERITY: Record<NonNullable<CodeReview['findings']>[number]['severity'], string> = {
-  blocker: 'Blocker', major: 'Major', minor: 'Minor', note: 'Note',
-};
-
 /** Astra's verdict, or the plain reason there is none. Advice, never the decision. */
 function ReviewVerdict({ review }: { review: CodeReview }): JSX.Element {
+  const t = useT();
   if (review.status !== 'completed') {
     return <p className="code-review-verdict is-unreviewed">
-      Not reviewed by Astra{review.reason ? `: ${review.reason}` : '.'}
+      {review.reason ? t('code.review.notReviewedReason', { reason: review.reason }) : t('code.review.notReviewed')}
     </p>;
   }
   const findings = review.findings || [];
   return <>
     <p className={`code-review-verdict is-${review.verdict === 'approve' ? 'approve' : 'changes'}`}>
-      {review.verdict === 'approve' ? 'Astra suggests accepting' : 'Astra requests changes'}{review.summary ? ` — ${review.summary}` : ''}
+      {review.verdict === 'approve' ? t('code.review.suggestsAccepting') : t('code.review.requestsChanges')}{review.summary ? ` — ${review.summary}` : ''}
     </p>
-    {findings.length > 0 && <ul className="code-review-findings" aria-label="Review findings">
-      {findings.map((f, i) => <li key={i}><strong>{SEVERITY[f.severity]}</strong>{f.file ? <> · <code>{f.file}</code></> : null} — {f.message}</li>)}
+    {findings.length > 0 && <ul className="code-review-findings" aria-label={t('code.review.findings')}>
+      {findings.map((f, i) => <li key={i}><strong>{byId(t, `code.review.severity.${f.severity}`, f.severity)}</strong>{f.file ? <> · <code>{f.file}</code></> : null} — {f.message}</li>)}
     </ul>}
   </>;
 }
@@ -421,25 +422,26 @@ function ReviewCard({ approval, busy, onDecide }: {
 }): JSX.Element {
   const t = useT();
   const approvalId = approval.id;
-  return <div className="code-approval code-review" role="group" aria-label="Review the finished change">
+  return <div className="code-approval code-review" role="group" aria-label={t('code.review.group')}>
     <p className="code-approval-title"><ShellIcon name="security" size={16}/>{actionLabel(t, 'review_change')}</p>
     {approval.review && <ReviewVerdict review={approval.review}/>}
     {approval.reason && <p className="code-note">{approval.reason}</p>}
     {approval.arguments !== null && approval.arguments !== undefined &&
-      <pre className="code-approval-args" aria-label="Change to accept">{JSON.stringify(approval.arguments, null, 2)}</pre>}
+      <pre className="code-approval-args" aria-label={t('code.review.changeToAccept')}>{JSON.stringify(approval.arguments, null, 2)}</pre>}
     <div className="code-approval-actions">
-      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('approve', approvalId)}>Accept change</button>
-      <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => onDecide('deny', approvalId)}>Decline</button>
+      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('approve', approvalId)}>{t('code.review.accept')}</button>
+      <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => onDecide('deny', approvalId)}>{t('code.approval.decline')}</button>
     </div>
-    <p className="code-note">Astra’s verdict is advice. Only your answer accepts the change, one change at a time.</p>
+    <p className="code-note">{t('code.review.advice')}</p>
   </div>;
 }
 
 /** What happened at the review, once the task has finished. */
 function ReviewOutcome({ review, decision }: { review: CodeReview; decision?: NonNullable<CodeTask['result']>['review'] }): JSX.Element {
-  return <section className="code-review-outcome" aria-label="Astra review">
+  const t = useT();
+  return <section className="code-review-outcome" aria-label={t('code.review.outcome')}>
     <ReviewVerdict review={review}/>
-    {decision && <p className="code-meta">{decision.accepted ? 'You accepted this change.' : decision.decision === 'timeout'
-      ? 'Nobody answered in time, so the change was not accepted.' : 'The change was not accepted.'} Its branch stays in the repository either way.</p>}
+    {decision && <p className="code-meta">{decision.accepted ? t('code.review.youAccepted') : decision.decision === 'timeout'
+      ? t('code.review.timedOut') : t('code.review.notAccepted')} {t('code.review.branchStays')}</p>}
   </section>;
 }

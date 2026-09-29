@@ -20,6 +20,31 @@ export function senderLabelText(t: Translator, label: string): string {
   return bare;
 }
 
+/** A route role in the interface language ("fast" -> "Schnell"); an id this build does not know stays as it is (#624). */
+export function routeRoleName(t: Translator, role: string): string {
+  return (ROUTES as readonly string[]).includes(role) ? t(`chat.route.name.${role}` as MessageKey) : role;
+}
+
+/** The catalogue's text for a key, or the fallback when the key is not in the catalogue. */
+function byKey(t: Translator, key: string, fallback: string): string {
+  const text = t(key as MessageKey);
+  return text === key ? fallback : text;
+}
+
+/** The "Effort: high · provider parameter" line of a reply, in the interface language (#624). */
+export function effortLineText(t: Translator, effort: string | undefined, mode: string): string {
+  return t('chat.effort.line', {
+    effort: byKey(t, `chat.effort.value.${effort ?? ''}`, effort ?? ''),
+    basis: mode === 'real' ? t('chat.effort.real') : t('chat.effort.hint'),
+  });
+}
+
+/** The in-progress line of a reply. The server sends a stable id with its English text; the id is
+ *  worded from the catalogue and the English stays as the fallback for an id this build lacks (#624). */
+export function statusLineText(t: Translator, id: string | undefined, text: string | undefined): string {
+  return id ? byKey(t, `chat.statusId.${id}`, text ?? '') : text ?? '';
+}
+
 /** The "Using:" list of a reply (#624): each toolbox named by its stable id in the interface
  *  language, joined the way the server joined the English labels. */
 export function toolScopeText(t: Translator, boxes: { id: string; label: string; inApp?: boolean }[]): string {

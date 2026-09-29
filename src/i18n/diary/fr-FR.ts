@@ -295,7 +295,7 @@ export const FR_FR_DIARY: DiaryCatalogue = {
   'diary.import.responseTimedOut': "La réponse a expiré. Réessayez avec le même fichier et dossier pour vérifier en toute sécurité si l’importation s’est terminée.",
   'diary.import.importFailedRetry': "L’importation a échoué. Réessayez avec le même fichier et dossier.",
   'diary.import.title': "Importer l’espace de travail",
-  'diary.import.enabledHint': "Importez un ZIP d’espace de travail noevia dans un nouveau dossier sous Imports. Les fichiers existants et les paramètres du Journal restent intacts. Jusqu’à 32 Mio par ZIP, 5 000 fichiers et 256 Mio décompressés. Les enregistrements de Corbeille exportés restent dans le dossier importé pour une récupération isolée par l’opérateur ; ils ne deviennent pas des notes ou entrées actives dans la Corbeille de ce Journal.",
+  'diary.import.enabledHint': "Importez un ZIP d’espace de travail noevia dans un nouveau dossier sous Imports. Les fichiers existants et les réglages du Journal restent intacts. Jusqu’à 32 Mio par ZIP, 5 000 fichiers et 256 Mio décompressés. Les enregistrements de Corbeille exportés restent dans le dossier importé pour une récupération isolée par l’opérateur ; ils ne deviennent pas des notes ou entrées actives dans la Corbeille de ce Journal.",
   'diary.import.disabledHint': "L’importation ZIP est disponible pour le stockage du journal géré par l’application. Les dossiers du navigateur et le stockage hérité utilisent une restauration isolée par l’opérateur.",
   'diary.import.workspaceZip': "ZIP de l’espace de travail",
   'diary.import.newFolderName': "Nom du nouveau dossier",

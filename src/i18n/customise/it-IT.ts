@@ -53,7 +53,7 @@ export const IT_IT_CUSTOMISE: CustomiseCatalogue = {
   'customise.noAddedServersMatch': "Nessun server aggiunto corrisponde a “{query}”.",
   'customise.noAddedServers': "Nessun server MCP ancora aggiunto. Esplora la directory per aggiungerne uno.",
   'customise.builtInServersNote': "I server integrati configurati per questa distribuzione sono sempre attivi e non compaiono qui.",
-  'customise.viewServiceStatus': "Vedili in Service status",
+  'customise.viewServiceStatus': "Vedili in Stato dei servizi",
   'customise.searchMcpPlaceholder': "Cerca server MCP",
   'customise.searchSkillsDiscoverPlaceholder': "Cerca skill",
   'customise.mcpDirectoryNoteAdmin': "Pubblicati dai rispettivi autori nel registro MCP pubblico, non verificati da noevia. Gli amministratori possono aggiungere server ospitati: ognuno diventa una cassetta degli attrezzi che un progetto deve scegliere, non riceve mai le tue password, e ognuno dei suoi strumenti chiede conferma prima di essere eseguito.",

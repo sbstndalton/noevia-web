@@ -18,7 +18,7 @@ import { ComposerActions, useAttachmentDrop } from './ComposerActions';
 import { apiFetch } from '../api';
 import { isDisplayableRoutingDecision } from '../current-routing';
 import { routeDescription } from '../routing-copy';
-import { senderLabelText, toolScopeText } from '../chat-labels';
+import { effortLineText, routeRoleName, senderLabelText, statusLineText, toolScopeText } from '../chat-labels';
 import { useAccountPreferences, appLocale } from '../user-preferences';
 import { sendHintText, useT } from '../i18n';
 import type { MessageKey } from '../i18n';
@@ -121,12 +121,12 @@ export function RoutingDetails({ decision }: { decision: RoutingDecision }) {
   const scores = decision.scores && typeof decision.scores === 'object' ? decision.scores : {};
   const selectedRole = typeof decision.selectedRole === 'string' && ['fast', 'smart', 'code'].includes(decision.selectedRole) ? decision.selectedRole : null;
   return <details className="thinking-block routing-details">
-    <summary>{t(decision.status === 'fallback' ? 'chat.route.summaryFallback' : 'chat.route.summary', { source, role: decision.effectiveRole })}</summary>
+    <summary>{t(decision.status === 'fallback' ? 'chat.route.summaryFallback' : 'chat.route.summary', { source, role: routeRoleName(t, decision.effectiveRole) })}</summary>
     <div className="routing-details-body">
       <p>{decision.status === 'accepted' ? t('chat.route.accepted') : t('chat.route.fallback', { reason })}{Number.isFinite(decision.latencyMs) ? ` · ${formatNumber(Math.round(decision.latencyMs!), t.locale, 0)} ms` : ''}</p>
-      {selectedRole && selectedRole !== decision.effectiveRole && <p>{t('chat.route.selectedUsed', { selected: selectedRole, used: decision.effectiveRole })}</p>}
+      {selectedRole && selectedRole !== decision.effectiveRole && <p>{t('chat.route.selectedUsed', { selected: routeRoleName(t, selectedRole), used: routeRoleName(t, decision.effectiveRole) })}</p>}
       {offered.length > 0 && <ul>{offered.map(option => <li key={option.id}>
-        <span><strong>{option.id}</strong> · {routeDescription(t, option.id, option.label)}</span>
+        <span><strong>{routeRoleName(t, option.id)}</strong> ·{routeDescription(t, option.id, option.label)}</span>
         <span>{Object.hasOwn(scores, option.id) && Number.isFinite(scores[option.id]) ? formatNumber(scores[option.id], t.locale, { max: 4 }) : '—'}</span>
       </li>)}</ul>}
       <small>{t('chat.route.scoresNote')}</small>
@@ -498,7 +498,7 @@ export function ChatView({
                 : <span className="msg-sender is-assistant"><span className="sr-only">{t('chat.sender.assistant')} · </span>{senderLabelText(t, m.senderLabel ?? modelLabel)}</span>}
               {m.role === 'assistant' ? (
                 <div className="assistant-card">
-                  {m.reasoningMode && m.reasoningMode !== 'off' && <small className="reasoning-result">Effort: {m.reasoningEffort} · {m.reasoningMode === 'real' ? 'provider parameter' : 'best-effort hint'}</small>}
+                  {m.reasoningMode && m.reasoningMode !== 'off' && <small className="reasoning-result">{effortLineText(t, m.reasoningEffort, m.reasoningMode)}</small>}
                   {m.warning && <p className="msg-warning" role="status">{m.warning}</p>}
                   {(m.toolScope || m.skillScope) && <small className="tool-scope" title={t('chat.scope.title')}>{m.toolScope && t('chat.scope.using', { tools: m.toolScope === 'all tools' ? t('chat.scope.allTools') : m.toolScopeBoxes?.length ? toolScopeText(t, m.toolScopeBoxes) : m.toolScope })}{m.toolScope && m.skillScope && ' · '}{m.skillScope && t('chat.scope.skill', { name: m.skillScope })}</small>}
                   {m.routingDecision && <RoutingDetails decision={m.routingDecision} />}
@@ -542,7 +542,7 @@ export function ChatView({
                   {streaming && isLast && !m.error ? (
                     <div className="msg-meta" aria-live="off">
                       <LiveTimer startedAt={streamStart.current} />
-                      {m.reasoning && !m.content ? ` · ${t('chat.status.thinking')}` : ` · ${m.processingStatus || t('chat.status.generating')}`}
+                      {m.reasoning && !m.content ? ` · ${t('chat.status.thinking')}` : ` · ${statusLineText(t, m.processingStatusId, m.processingStatus) || t('chat.status.generating')}`}
                     </div>
                   ) : (
                     !m.error && <MessageMeta stats={m.stats} />

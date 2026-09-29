@@ -34,6 +34,8 @@ export interface Message {
   /** Skills auto-loaded for this reply because the message matched them. */
   skillScope?: string;
   processingStatus?: string;
+  /** The server's stable id for `processingStatus` (#624), so the line can be worded in the interface language. */
+  processingStatusId?: string;
   stats?: MessageStats;
   /** Set when this message was edited and the exchange re-run from here. */
   edited?: boolean;

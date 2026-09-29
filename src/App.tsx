@@ -878,7 +878,7 @@ export default function App(): JSX.Element {
           } else if (ev.type === 'tools_scope') {
             setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, toolScope: ev.text || undefined, toolScopeBoxes: ev.boxes } : m) }));
           } else if (ev.type === 'status' && ev.text) {
-            setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, processingStatus: ev.text } : m) }));
+            setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, processingStatus: ev.text, processingStatusId: typeof ev.id === 'string' ? ev.id : undefined } : m) }));
           } else if (ev.type === 'warning' && ev.text) {
             setMessagesByChat((prev) => ({
               ...prev,

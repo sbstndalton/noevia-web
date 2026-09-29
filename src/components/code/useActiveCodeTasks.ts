@@ -15,7 +15,8 @@ export type { ActiveTask } from './active-tasks';
 export function useActiveCodeTasks(enabled: boolean) {
   const [tasks, setTasks] = useState<ActiveTask[]>([]);
   const [total, setTotal] = useState(0);
-  const [error, setError] = useState('');
+  /** True while the last poll failed; the caller words it in the interface language (#624). */
+  const [error, setError] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const [revision, setRevision] = useState(0);
   useEffect(() => {
@@ -29,12 +30,12 @@ export function useActiveCodeTasks(enabled: boolean) {
       try {
         const response = await apiFetch('/api/code/active');
         if (response.status === 403 || response.status === 404) { if (live) { setUnavailable(true); setTasks([]); setTotal(0); } return; }
-        if (!response.ok) throw new Error(`Task status unavailable (${response.status})`);
+        if (!response.ok) throw new Error('Task status unavailable');
         const body = await response.json().catch(() => null);
         const { tasks: valid, total: count } = parseActiveTasks(body);
-        if (live) { setTasks(valid); setTotal(count); setError(''); }
-      } catch (cause) {
-        if (live) setError(cause instanceof Error ? cause.message : 'Task status unavailable');
+        if (live) { setTasks(valid); setTotal(count); setError(false); }
+      } catch {
+        if (live) setError(true);
       } finally { pending = false; }
     };
     const wake = () => { if (!document.hidden && navigator.onLine) void load(); };

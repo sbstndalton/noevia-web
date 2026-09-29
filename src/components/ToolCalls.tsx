@@ -5,6 +5,7 @@ import { decideToolApproval } from '../api';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
 import { formatNumber } from '../number-format';
+import { around } from '../text-around';
 
 /** One drawn symbol per outcome — the list used ✓ and ⃠, which render differently on
  *  every platform and are not part of the icon set. */
@@ -17,6 +18,7 @@ export const TOOL_RESULT_LIMIT = 4000;
  *  proposes to do is the entire point, so truncating them here would defeat
  *  the gate. */
 function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -28,7 +30,7 @@ function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
       await decideToolApproval(call.approvalId, decision);
     } catch (e) {
       // Most likely the request timed out and the server already denied it.
-      setErr(e instanceof Error ? e.message : 'Could not send the decision');
+      setErr(e instanceof Error ? e.message : t('chat.approval.sendFailed'));
     } finally {
       // Clear the disabled state whether the decision succeeded or failed: a dropped
       // stream must not leave every button stuck disabled with no way to retry.
@@ -41,23 +43,25 @@ function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
   };
   let pretty = call.args;
   try { pretty = JSON.stringify(JSON.parse(call.args || '{}'), null, 1); } catch { /* show it raw */ }
+  // The name is markup (bold), so the sentence is split around it and the words stay in the catalogue.
+  const ask = around(t('chat.approval.ask'), 'name');
   return (
-    <div className="tool-approval" role="group" tabIndex={-1} ref={containerRef} aria-label={`Approval required for ${call.name}`}>
+    <div className="tool-approval" role="group" tabIndex={-1} ref={containerRef} aria-label={t('chat.approval.group', { name: call.name })}>
       <span className="tool-approval-ask">
-        Allow <strong>{call.name}</strong> to run? This changes data in your account.
+        {ask[0]}<strong>{call.name}</strong>{ask[1]}
       </span>
       {/* Full, unabbreviated arguments. Seeing exactly what the model proposes
           IS the gate — no clamp, no scroll-to-hide, no "show more". */}
       {pretty && pretty !== '{}' && <pre className="tool-approval-args">{pretty}</pre>}
       <div className="tool-approval-actions">
         <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => void decide('approve')}>
-          Allow once
+          {t('chat.approval.allowOnce')}
         </button>
         <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => void decide('deny')}>
-          Decline
+          {t('chat.approval.decline')}
         </button>
         <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => void decide('approve_all')}>
-          Allow for this chat
+          {t('chat.approval.allowChat')}
         </button>
       </div>
       {err && <span className="modal-err tool-approval-err">{err}</span>}

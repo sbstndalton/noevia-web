@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch } from '../../api';
 import { useT } from '../../i18n';
-import type { Translate } from '../../i18n';
+import type { MessageKey, Translate } from '../../i18n';
 import { around } from '../../text-around';
 
 /** What the server says about Google Drive. Tokens never leave the server. */
@@ -13,15 +13,23 @@ export interface GoogleState {
   message?: string;
   userCode?: string; verificationUrl?: string; expiresAt?: number;
   email?: string | null;
-  copy?: { state: 'ok' | 'waiting' | 'refused' | 'failed' | 'stale' | 'unknown'; at: number | null; message: string } | null;
+  copy?: { state: 'ok' | 'waiting' | 'refused' | 'failed' | 'stale' | 'unknown'; at: number | null; message: string; messageId?: string; messageParams?: Record<string, string | number> } | null;
 }
 
 const when = (t: Translate, ms?: number | null) => (ms ? new Date(ms).toLocaleString(appLocale()) : t('gdrive.never'));
 
+/** A Drive message by the server's stable id (#624): the catalogue's wording with the server's numbers, or the server's English for an id this build lacks. */
+export function driveMessage(t: Translate, id: string | undefined, params: Record<string, string | number> | undefined, english: string): string {
+  if (!id) return english;
+  const key = `gdrive.msg.${id}` as MessageKey;
+  const text = t(key, params);
+  return text === key ? english : text;
+}
+
 async function post<T = unknown>(url: string): Promise<T> {
   const r = await apiFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
   const body = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(body.error || `Request failed (${r.status})`);
+  if (!r.ok) throw Object.assign(new Error(body.error || `Request failed (${r.status})`), { id: typeof body.errorId === 'string' ? body.errorId : undefined, params: body.errorParams });
   return body as T;
 }
 
@@ -46,8 +54,8 @@ export function copyText(g: GoogleState, t: Translate): { value: string; tone?: 
   if (!c || c.state === 'unknown') return { value: t('gdrive.copy.first') };
   if (c.state === 'ok') return { value: t('gdrive.copy.ok', { when: when(t, c.at) }) };
   if (c.state === 'waiting') return { value: t('gdrive.copy.waiting') };
-  // A refused or failed copy: the server's own message (English), with the time in the locale.
-  return { value: `${c.message}${c.at ? ` (${when(t, c.at)})` : ''}`, tone: 'error' };
+  // A refused or failed copy: the server's message by its id in the interface language (#624), or its English when the id is new, with the time in the locale.
+  return { value: `${driveMessage(t, c.messageId, c.messageParams, c.message)}${c.at ? ` (${when(t, c.at)})` : ''}`, tone: 'error' };
 }
 
 /**
@@ -62,7 +70,7 @@ export function GoogleDriveConnect({ google, onChange }: { google: GoogleState; 
   const [copied, setCopied] = useState(false);
   const act = async (label: string, url: string) => {
     setBusy(label); setError('');
-    try { if (label === 'connect') await connectAndOpen(); else await post(url); } catch (e) { setError((e as Error).message); } finally { setBusy(''); await onChange(); }
+    try { if (label === 'connect') await connectAndOpen(); else await post(url); } catch (e) { setError(driveMessage(t, (e as { id?: string }).id, (e as { params?: Record<string, string | number> }).params, (e as Error).message)); } finally { setBusy(''); await onChange(); }
   };
   // While Google waits for approval, check every few seconds so the page turns green by itself.
   useEffect(() => {

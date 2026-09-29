@@ -53,7 +53,7 @@ export const DE_DE_CUSTOMISE: CustomiseCatalogue = {
   'customise.noAddedServersMatch': "Keine hinzugefügten Server passen zu „{query}“.",
   'customise.noAddedServers': "Noch keine MCP-Server hinzugefügt. Durchsuche das Verzeichnis, um einen hinzuzufügen.",
   'customise.builtInServersNote': "Eingebaute Server, die für dieses Deployment konfiguriert sind, sind immer aktiv und erscheinen hier nicht.",
-  'customise.viewServiceStatus': "In Service status ansehen",
+  'customise.viewServiceStatus': "In Dienststatus ansehen",
   'customise.searchMcpPlaceholder': "MCP-Server durchsuchen",
   'customise.searchSkillsDiscoverPlaceholder': "Skills durchsuchen",
   'customise.mcpDirectoryNoteAdmin': "Von ihren Autoren im öffentlichen MCP-Verzeichnis veröffentlicht, nicht von noevia geprüft. Administratoren können gehostete Server hinzufügen: Jeder wird zu einem Werkzeugkasten, den ein Projekt auswählen muss, er erhält nie deine Passwörter, und jedes seiner Werkzeuge fragt vor der Ausführung nach.",

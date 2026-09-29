@@ -53,7 +53,7 @@ export const NB_NO_CUSTOMISE: CustomiseCatalogue = {
   'customise.noAddedServersMatch': "Ingen lagte til servere samsvarer med «{query}».",
   'customise.noAddedServers': "Ingen MCP-servere lagt til ennå. Utforsk katalogen for å legge til en.",
   'customise.builtInServersNote': "Innebygde tjenere konfigurert for denne utrullingen er alltid på og vises ikke her.",
-  'customise.viewServiceStatus': "Se dem under Service status",
+  'customise.viewServiceStatus': "Se dem under Tjenestestatus",
   'customise.searchMcpPlaceholder': "Søk etter MCP-servere",
   'customise.searchSkillsDiscoverPlaceholder': "Søk etter ferdigheter",
   'customise.mcpDirectoryNoteAdmin': "Publisert av sine forfattere i det offentlige MCP-registeret, ikke gjennomgått av noevia. Administratorer kan legge til hostede servere: hver blir en verktøykasse et prosjekt må velge, den mottar aldri passordene dine, og hvert av verktøyene spør før det kjøres.",

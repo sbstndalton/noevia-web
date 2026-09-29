@@ -31,7 +31,7 @@ export const DE_DE_PROJECTS: ProjectsCatalogue = {
   'projects.restore': "Wiederherstellen",
   'projects.aProject': "Projekt",
   'projects.confirmDeleteTitle': "{name} löschen?",
-  'projects.confirmDeleteBody': "Dies löscht das Projekt und seine Chats dauerhaft. Dateien in Ihrem verbundenen Speicher, auch der Upload-Ordner des Projekts, bleiben erhalten und werden nicht gelöscht. Dies kann nicht rückgängig gemacht werden.",
+  'projects.confirmDeleteBody': "Dies löscht das Projekt und seine Chats dauerhaft. Dateien in deinem verbundenen Speicher, auch der Upload-Ordner des Projekts, bleiben erhalten und werden nicht gelöscht. Dies kann nicht rückgängig gemacht werden.",
   'projects.confirmDeleteConfirm': "Projekt löschen",
   'projects.menu.settings': "Projekteinstellungen",
   'projects.menu.unpin': "Projekt lösen",

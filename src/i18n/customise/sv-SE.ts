@@ -53,7 +53,7 @@ export const SV_SE_CUSTOMISE: CustomiseCatalogue = {
   'customise.noAddedServersMatch': "Inga tillagda servrar matchar ”{query}”.",
   'customise.noAddedServers': "Inga MCP-servrar tillagda ännu. Utforska katalogen för att lägga till en.",
   'customise.builtInServersNote': "Inbyggda servrar som är konfigurerade för den här driftsättningen är alltid på och visas inte här.",
-  'customise.viewServiceStatus': "Se dem under Service status",
+  'customise.viewServiceStatus': "Se dem under Tjänststatus",
   'customise.searchMcpPlaceholder': "Sök MCP-servrar",
   'customise.searchSkillsDiscoverPlaceholder': "Sök färdigheter",
   'customise.mcpDirectoryNoteAdmin': "Publicerade av sina författare i det offentliga MCP-registret, ej granskade av noevia. Administratörer kan lägga till hostade servrar: var och en blir en verktygslåda som ett projekt måste välja, den tar aldrig emot dina lösenord, och vart och ett av dess verktyg frågar innan det körs.",
