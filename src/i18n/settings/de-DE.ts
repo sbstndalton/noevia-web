@@ -240,7 +240,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'appearance.layout.devicePhone': "Telefon",
   'appearance.layout.deviceDesktop': "Desktop",
   'appearance.layout.descPhone': "Automatisch folgt diesem Gerät, das wie ein Telefon oder Tablet aussieht. Desktop zeigt das volle Layout verkleinert an – wie „Desktop-Website anfordern“ im Browser.",
-  'appearance.layout.descDesktop': "Automatisch folgt diesem Gerät, das wie ein Desktop aussieht. Telefon zeigt das kompakte Layout in einer schmalen Spalte – dieser Browser ignoriert die Viewport-Breite eines Telefons, daher deckt die Vorschau Oberfläche, Einstellungen und Modelle ab, nicht jede Ansicht.",
+  'appearance.layout.descDesktop': "Automatisch folgt diesem Gerät, das wie ein Desktop aussieht. Telefon zeigt das kompakte Layout in einer schmalen Spalte – dieser Browser ignoriert die Viewport-Breite eines Telefons, daher deckt die Vorschau Oberfläche, Einstellungen, Modelle und Tagebuch ab, nicht jede Ansicht.",
   'appearance.deviceNote': "Designfamilie, Chat-Schrift, Dichte, Bewegung und Layout gelten nur auf diesem Gerät – wie dicht ein Bildschirm sein soll, hängt vom Bildschirm ab.",
   'appearance.accountNote': "Die Darstellung folgt deinem Konto.",
   'appearance.retry': "Darstellung erneut laden",

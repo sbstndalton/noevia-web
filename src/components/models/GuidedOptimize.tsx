@@ -5,7 +5,7 @@ import type { InstalledModel } from '../../types';
 import { isSystemModel } from '../../model-system';
 import { roundModelSizeGB } from '../../model-size';
 import { EvidenceList } from './EvidenceList';
-import { ctxShort, num } from './mm';
+import { ctxShort, gb, gib, num } from './mm';
 import type { EstimateInputs, Hardware, Verdict } from './guided';
 import { belowKvFloor, budgetFor, canPromptSuite, estimateGib, KV_FLOOR, KV_GUIDED, parseSamplingPlan, samplingPlanParts, recommend, roleOf, samplingValueList, TUNE_STEPS, tuneMinutes, verdictFor } from './guided';
 import type { BudgetKind, Recommendation, SamplingPlan } from './guided';
@@ -30,11 +30,13 @@ function samplingNoteText(t: Translate, plan: SamplingPlan): string {
   const { note, rawNote } = samplingPlanParts(plan);
   return note ? ` (${t('mm.tune.sampling.note.thinkingMode')})` : rawNote ? ` (${rawNote})` : '';
 }
+/** A GiB size in the interface locale, unit included (the catalogue strings carry none, #636). */
+const g = (n: number) => gib(n, { max: 2 });
 const BUDGET_SOURCE: Record<BudgetKind, MessageKey> = { configured: 'mm.fit.source.configured', gpu: 'mm.fit.source.gpu', 'gpu-shared': 'mm.fit.source.gpuShared', system: 'mm.fit.source.system', manual: 'mm.fit.source.manual' };
 /** guided.ts recommend() in the interface language (its `text` is the English original). */
 function recommendationText(t: Translate, rec: Recommendation, budgetGib: number): string {
-  if (rec.kind === 'use') return t(rec.verdict === 'tight' ? 'mm.fit.rec.useTight' : 'mm.fit.rec.use', { ctx: num(rec.ctx, 0), kv: rec.kv, total: num(rec.totalGib), budget: num(budgetGib) });
-  if (rec.kind === 'smaller') return t(rec.moe ? 'mm.fit.rec.smallerMoe' : 'mm.fit.rec.smaller', { floor: num(rec.floorGib), budget: num(budgetGib) });
+  if (rec.kind === 'use') return t(rec.verdict === 'tight' ? 'mm.fit.rec.useTight' : 'mm.fit.rec.use', { ctx: num(rec.ctx, 0), kv: rec.kv, total: g(rec.totalGib), budget: g(budgetGib) });
+  if (rec.kind === 'smaller') return t(rec.moe ? 'mm.fit.rec.smallerMoe' : 'mm.fit.rec.smaller', { floor: g(rec.floorGib), budget: g(budgetGib) });
   return rec.reason === 'not-chat' ? t('mm.fit.rec.notChat') : t('mm.fit.rec.noLayout', { arch: rec.arch || t('mm.fit.unknownArch') });
 }
 type TuneStatus = { job: { model?: string; status?: string; error?: string; models?: { model: string; status: string; error?: string }[] } | null; history: { at: number; kv?: string; context?: number; spec?: string; specLabel?: string; generation?: number }[] };
@@ -98,8 +100,8 @@ function FitStep({ model }: { model: string }): JSX.Element {
     </div>}
     {est && budget && verdict && <div className="mm-fit" data-verdict={verdict} role="status">
       <strong className="mm-fit-verdict">{t(VERDICT[verdict])}</strong>
-      <span>{t('mm.fit.aboutBefore')}<strong>{num(est.totalGib)} GiB</strong>{t('mm.fit.aboutAfter', { budget: num(budget.gib), source: t(BUDGET_SOURCE[budget.kind], { gpu: budget.gpu ?? '' }) })}</span>
-      <small>{[t('mm.fit.model', { gib: num(inputs!.modelGib) }), t('mm.fit.kv', { gib: num(est.kvGib) }), ...(inputs!.pinnedGib ? [t('mm.fit.projector', { gib: num(inputs!.pinnedGib) })] : []), t('mm.fit.reserve', { gib: num(inputs!.reserveGib) })].join(' · ')}{t('mm.fit.margin')}</small>
+      <span>{t('mm.fit.aboutBefore')}<strong>{g(est.totalGib)}</strong>{t('mm.fit.aboutAfter', { budget: g(budget.gib), source: t(BUDGET_SOURCE[budget.kind], { gpu: budget.gpu ?? '' }) })}</span>
+      <small>{[t('mm.fit.model', { gib: g(inputs!.modelGib) }), t('mm.fit.kv', { gib: g(est.kvGib) }), ...(inputs!.pinnedGib ? [t('mm.fit.projector', { gib: g(inputs!.pinnedGib) })] : []), t('mm.fit.reserve', { gib: g(inputs!.reserveGib) })].join(' · ')}{t('mm.fit.margin')}</small>
     </div>}
     {inputs && !budget && <p className="mm-note" role="status">{t('mm.fit.noMemory')}</p>}
     {belowKvFloor(kv) && <p className="mm-note mm-warn" role="note">{t('mm.fit.belowFloor', { floor: KV_FLOOR })}</p>}
@@ -133,7 +135,7 @@ function TuneStep({ model, sizeGB, chat }: { model: string; sizeGB: number | nul
     {/* #443: round through the same shared math every other model-size display uses (this one
         keeps num()'s locale-aware digit formatting on top, rather than the plain string
         formatModelSizeGB returns, since this is embedded in a translated sentence). */}
-    <p className="mm-note">{t('mm.tune.time', { low: time.low, high: time.high })}{sizeGB ? ` ${t('mm.tune.fileSize', { size: `${num(roundModelSizeGB(sizeGB), 1)} GB` })}` : ''}. <strong>{t('mm.tune.chatPauses')}</strong>{t('mm.tune.pauseAfter')}</p>
+    <p className="mm-note">{t('mm.tune.time', { low: time.low, high: time.high })}{sizeGB ? ` ${t('mm.tune.fileSize', { size: gb(roundModelSizeGB(sizeGB)) })}` : ''}. <strong>{t('mm.tune.chatPauses')}</strong>{t('mm.tune.pauseAfter')}</p>
     <ol className="mm-preflight">{TUNE_STEPS.map((s) => <li key={s.id}><strong>{TUNE_STEP[s.id] ? t(TUNE_STEP[s.id][0]) : s.label}</strong> — {TUNE_STEP[s.id] ? t(TUNE_STEP[s.id][1]) : s.what}</li>)}</ol>
     {plan && <p className="mm-note mm-sampling-plan" role="status">{samplingValueList(plan).length
       ? <><strong>{t('mm.tune.sampling.recommended')}</strong> {samplingValueList(plan).join(', ')}. {samplingSourceText(t, plan)}{samplingNoteText(t, plan)}</>

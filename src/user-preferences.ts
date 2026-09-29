@@ -2,7 +2,7 @@
 // #231 locale). The server record (/api/account/preferences) is the truth; a copy is cached in
 // localStorage so the composer and notifications honour the choice before the first fetch
 // returns and when the network is gone. `noevia:` key because cowork-* keys are frozen contracts.
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { apiFetch } from './api';
 
 export type NotificationEvent = 'replyFinished' | 'approvalNeeded';
@@ -107,14 +107,18 @@ export async function savePreferences(patch: { notifications?: Partial<Record<No
   return next;
 }
 
-/** The cached preferences, refreshed from the account once per page load. */
+function subscribePreferences(onChange: () => void): () => void {
+  window.addEventListener(PREFERENCES_CHANGED, onChange);
+  return () => window.removeEventListener(PREFERENCES_CHANGED, onChange);
+}
+
+/** The cached preferences, refreshed from the account once per page load.
+ *  Read through useSyncExternalStore (#635): the account's answer can arrive between a component's
+ *  render and the moment its effects subscribe (a long list of replies mounting, a slow device), and a
+ *  useState copy taken at render then keeps the cached language of another browser until the next
+ *  reload. The store re-reads on subscribing and on every change, so no component can miss it. */
 export function useAccountPreferences(): AccountPreferences {
-  const [value, setValue] = useState(current);
-  useEffect(() => {
-    const update = () => setValue(current);
-    window.addEventListener(PREFERENCES_CHANGED, update);
-    if (!loaded) void loadPreferences().catch(() => undefined);
-    return () => window.removeEventListener(PREFERENCES_CHANGED, update);
-  }, []);
+  const value = useSyncExternalStore(subscribePreferences, currentPreferences, currentPreferences);
+  useEffect(() => { if (!loaded) void loadPreferences().catch(() => undefined); }, []);
   return value;
 }

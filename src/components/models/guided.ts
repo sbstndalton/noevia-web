@@ -86,7 +86,7 @@ export function recommend(inputs: EstimateInputs, budgetGib: number, wantCtx = 0
       }
       const verdict = verdictFor(e.totalGib, budgetGib);
       return { kind: 'use', ctx: e.ctx, kv, totalGib: e.totalGib, verdict,
-        text: `Use ${e.ctx.toLocaleString('en-US')} tokens with ${kv} KV cache (about ${e.totalGib} of ${budgetGib} GiB${verdict === 'tight' ? ', little headroom' : ''}).` };
+        text: `Use ${e.ctx.toLocaleString('en-US')} tokens with ${kv} KV cache (about ${e.totalGib} GiB of ${budgetGib} GiB${verdict === 'tight' ? ', little headroom' : ''}).` };
     }
   }
   const floor = round2((inputs.modelGib + inputs.pinnedGib + inputs.reserveGib) * inputs.safety);

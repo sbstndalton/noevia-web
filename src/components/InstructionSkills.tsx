@@ -3,6 +3,10 @@ import { apiFetch } from '../api';
 import { t as tNow, useT } from '../i18n';
 import type { MessageKey } from '../i18n';
 import type { SkillManifest } from '../api-contract';
+import { formatBinaryUnit } from '../number-format';
+
+/** The server's per-file limit for an instruction skill (server/instruction-skills.cjs MAX_BODY, 32768 bytes). */
+const SKILL_LIMIT_KIB = 32;
 type Skill = { file: string; hash: string; content: string; name: string; description: string; version: string; valid: boolean; error: string; status: 'review' | 'updated' | 'enabled' | 'disabled' | 'invalid'; missingTools: string[];
   /** #272: provenance and bundled executable files; absent from an older core. */
   origin?: SkillManifest['origin']; scripts?: string[] };
@@ -85,7 +89,7 @@ export function InstructionSkills({ projectId, updatedAt, onRefresh, onFiles }: 
     <h3 className="rail-label">{t('projects.skills.heading', { count: skills.length })}</h3>
     <p className="rail-empty">{t('projects.skills.intro')}</p>
     {skills.some(s => s.status === 'review' || s.status === 'updated') && <p role="status">{t('projects.skills.needsReview')}</p>}
-    {!skills.length && <details><summary>{t('projects.skills.addSummary')}</summary><p>{t('projects.skills.addBody')}</p><pre>{'---\nname: Weekly review\ndescription: Review decisions and next actions\nversion: 1\n---\nRead selected notes and draft a review with source names.'}</pre><p>{t('projects.skills.addOptional')}</p></details>}
+    {!skills.length && <details><summary>{t('projects.skills.addSummary')}</summary><p>{t('projects.skills.addBody')}</p><pre>{'---\nname: Weekly review\ndescription: Review decisions and next actions\nversion: 1\n---\nRead selected notes and draft a review with source names.'}</pre><p>{t('projects.skills.addOptional', { limit: formatBinaryUnit(SKILL_LIMIT_KIB, 'KiB', t.locale, 0) })}</p></details>}
     {skills.map(skill => <details key={skill.file} className="instruction-skill">
       <summary>{skill.name || skill.file} · {skill.status === 'enabled' && skill.scripts?.length ? t('projects.skills.scriptsState') : t(STATUS_KEY[skill.status])}</summary>
       <p>{skill.description}</p><p className="source-status">{skill.file} · {t('projects.skills.version', { version: skill.version || t('projects.skills.versionUnspecified') })} · SHA-256 {skill.hash.slice(0, 12)}</p>

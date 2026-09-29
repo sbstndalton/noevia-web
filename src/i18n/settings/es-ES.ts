@@ -240,7 +240,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'appearance.layout.devicePhone': "móvil",
   'appearance.layout.deviceDesktop': "escritorio",
   'appearance.layout.descPhone': "Automático sigue a este dispositivo, que parece un móvil o una tableta. Escritorio muestra el diseño completo reducido, igual que «Ver versión de escritorio» en tu navegador.",
-  'appearance.layout.descDesktop': "Automático sigue a este dispositivo, que parece un ordenador. Móvil previsualiza el diseño compacto en una columna estrecha: este navegador ignora el ancho que indicaría un móvil, así que la vista previa cubre la estructura, los Ajustes y los Modelos, no todas las vistas.",
+  'appearance.layout.descDesktop': "Automático sigue a este dispositivo, que parece un ordenador. Móvil previsualiza el diseño compacto en una columna estrecha: este navegador ignora el ancho que indicaría un móvil, así que la vista previa cubre la estructura, los Ajustes, los Modelos y el Diario, no todas las vistas.",
   'appearance.deviceNote': "La familia de tema, la fuente del chat, la densidad, el movimiento y el diseño se guardan solo en este dispositivo: lo denso que quieres una pantalla depende de la pantalla.",
   'appearance.accountNote': "La apariencia sigue a tu cuenta.",
   'appearance.retry': "Reintentar apariencia",

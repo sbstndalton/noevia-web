@@ -240,7 +240,7 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'appearance.layout.devicePhone': "téléphone",
   'appearance.layout.deviceDesktop': "ordinateur",
   'appearance.layout.descPhone': "Automatique suit cet appareil, qui ressemble à un téléphone ou une tablette. Ordinateur affiche la disposition complète réduite, comme « Version pour ordinateur » dans votre navigateur.",
-  'appearance.layout.descDesktop': "Automatique suit cet appareil, qui ressemble à un ordinateur. Téléphone prévisualise la disposition compacte dans une colonne étroite : ce navigateur ignore la largeur qu’annoncerait un téléphone, donc l’aperçu couvre l’interface, les Réglages et les Modèles, pas toutes les vues.",
+  'appearance.layout.descDesktop': "Automatique suit cet appareil, qui ressemble à un ordinateur. Téléphone prévisualise la disposition compacte dans une colonne étroite : ce navigateur ignore la largeur qu’annoncerait un téléphone, donc l’aperçu couvre l’interface, les Réglages, les Modèles et le Journal, pas toutes les vues.",
   'appearance.deviceNote': "La famille de thème, la police, la densité, les animations et la disposition sont enregistrées sur cet appareil uniquement : la densité voulue dépend de l’écran.",
   'appearance.accountNote': "L’apparence suit votre compte.",
   'appearance.retry': "Recharger l’apparence",

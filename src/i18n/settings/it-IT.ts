@@ -240,7 +240,7 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'appearance.layout.devicePhone': "telefono",
   'appearance.layout.deviceDesktop': "desktop",
   'appearance.layout.descPhone': "Automatico segue questo dispositivo, che sembra un telefono o un tablet. Desktop mostra il layout completo ridimensionato, come «Richiedi sito desktop» nel browser.",
-  'appearance.layout.descDesktop': "Automatico segue questo dispositivo, che sembra un computer. Telefono mostra l’anteprima del layout compatto in una colonna stretta: questo browser ignora la larghezza che indicherebbe un telefono, quindi l’anteprima copre la struttura, le Impostazioni e i Modelli, non ogni vista.",
+  'appearance.layout.descDesktop': "Automatico segue questo dispositivo, che sembra un computer. Telefono mostra l’anteprima del layout compatto in una colonna stretta: questo browser ignora la larghezza che indicherebbe un telefono, quindi l’anteprima copre la struttura, le Impostazioni, i Modelli e il Diario, non ogni vista.",
   'appearance.deviceNote': "Famiglia di temi, carattere della chat, densità, movimento e layout sono salvati solo su questo dispositivo: la densità giusta dipende dallo schermo.",
   'appearance.accountNote': "L’aspetto segue il tuo account.",
   'appearance.retry': "Ricarica aspetto",

@@ -37,6 +37,7 @@ import {
   startCowork,
 } from './api';
 import { sessionMode, type ChatMode } from './chat-mode';
+import { STOPPED_SENDER } from './chat-labels';
 import type {
   ChatMeta,
   HealthState,
@@ -1009,7 +1010,7 @@ export default function App(): JSX.Element {
             ...prev,
             [chatId]: (prev[chatId] ?? []).map((m) =>
               m.id === replyId && !m.content && !m.reasoning
-                ? { ...m, content: translateNow('chat.stopped.content'), senderLabel: 'Stopped' }
+                ? { ...m, senderLabel: STOPPED_SENDER }
                 : m,
             ),
           }));

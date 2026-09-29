@@ -37,13 +37,15 @@ export function bytesToModelSizeGB(bytes: number): number {
 
 /** The full display string ("3.3 GB"), or null when the size is unknown. `null`/`undefined`/
  *  non-finite/non-positive all read as unknown, matching every call site's previous `!= null`
- *  guard. `locale` is the interface locale (appLocale()); undefined uses the browser's. The unit label is hard-coded "GB" because that is the only math this function ever
- *  does (decimal, bytes / 1e9) — a value computed with 2**30 must never pass through here. */
+ *  guard. `locale` is the interface locale (appLocale()); undefined uses the browser's. The unit is always
+ *  the decimal gigabyte, worded by the locale, because that is the only math this function ever does (decimal, bytes / 1e9) — a value computed with 2**30 must never pass through here. */
 export function formatModelSizeGB(sizeGB: number | null | undefined, locale?: string): string | null {
   if (typeof sizeGB !== 'number' || !Number.isFinite(sizeGB) || sizeGB <= 0) return null;
   // #587: the number is written in the interface locale ("3,3 GB" in German). Inlined rather than
   // imported from number-format.ts because tests load this file in isolation.
+  // #636: the unit is the locale's own name for a decimal gigabyte too ("3,3 Go" in French).
+  const options = { style: 'unit' as const, unit: 'gigabyte', unitDisplay: 'short' as const, maximumFractionDigits: 1 };
   let f: Intl.NumberFormat;
-  try { f = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }); } catch { f = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }); }
-  return `${f.format(roundModelSizeGB(sizeGB))} GB`;
+  try { f = new Intl.NumberFormat(locale, options); } catch { f = new Intl.NumberFormat(undefined, options); }
+  return f.format(roundModelSizeGB(sizeGB));
 }

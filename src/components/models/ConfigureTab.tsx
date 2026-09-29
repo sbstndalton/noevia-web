@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../api';
 import { isSystemModel } from '../../model-system';
 import { appLocale } from '../../user-preferences';
-import { bytes, ctxShort, errorText, mm, num, pct, tokens } from './mm';
+import { bytes, ctxShort, errorText, gib, mm, num, pct, tokens } from './mm';
 import { NativeCalibration } from '../NativeCalibration';
 import { AutoTune } from './AutoTune';
 import { dismissFolderModel } from './register';
@@ -342,9 +342,9 @@ function AutoconfigPanel({ name, onFill }: { name: string; onFill: (values: Reco
             <strong>{s.label}{rec.current_spec_profile === s.key ? ` ${t('mm.current')}` : ''}</strong><small>{unusable ? t('mm.autoconfig.noHead') : s.blurb}</small></button>;
         })}</fieldset>}
         {rec.plans.map(p => <div key={p.name} className="mm-table-wrap"><table className="mm-table">
-          <caption>{t(p.fits_at_all ? 'mm.autoconfig.budgetUpTo' : 'mm.autoconfig.budgetNoFit', { name: p.name, gib: num(p.vram_gb, 1), tokens: ctxShort(p.max_ctx) })}</caption>
+          <caption>{t(p.fits_at_all ? 'mm.autoconfig.budgetUpTo' : 'mm.autoconfig.budgetNoFit', { name: p.name, gib: gib(p.vram_gb, 1), tokens: ctxShort(p.max_ctx) })}</caption>
           <thead><tr><th scope="col">{t('mm.easy.context')}</th><th scope="col">{t('mm.autoconfig.weights')}</th><th scope="col">{t('mm.autoconfig.kv')}</th><th scope="col">{t('mm.autoconfig.totalCol')}</th><th scope="col">{t('mm.verdict.fits')}</th></tr></thead>
-          <tbody>{p.rows.filter(r => columns.includes(r.ctx)).map(r => <tr key={r.ctx}><td>{ctxShort(r.ctx)}</td><td>{num(r.model_gb)} GiB</td><td>{num(r.kv_gb)} GiB</td><td>{num(r.total_gb)} GiB</td>
+          <tbody>{p.rows.filter(r => columns.includes(r.ctx)).map(r => <tr key={r.ctx}><td>{ctxShort(r.ctx)}</td><td>{gib(r.model_gb, { max: 2 })}</td><td>{gib(r.kv_gb, { max: 2 })}</td><td>{gib(r.total_gb, { max: 2 })}</td>
             <td>{r.fits ? (r.offload_kind ? (r.offload_kind === 'ngl' ? t('mm.autoconfig.yesCpu', { pct: 100 - r.gpu_pct }) : t('mm.autoconfig.yesExperts')) : t('mm.autoconfig.yes')) : t('mm.autoconfig.no')}</td></tr>)}</tbody>
         </table></div>)}
         {data && data.measured.n > 0 && <p className="mm-note">{t.plural(data.measured.draft_acc_p50 != null ? 'mm.autoconfig.measuredDraft' : 'mm.autoconfig.measured', data.measured.n, { gen: num(data.measured.gen_p50, 1), low: num(data.measured.gen_p25, 1), high: num(data.measured.gen_p75, 1), prompt: num(data.measured.prompt_p50, 0), accepted: data.measured.draft_acc_p50 != null ? Math.round(data.measured.draft_acc_p50 * 100) : 0 })}</p>}

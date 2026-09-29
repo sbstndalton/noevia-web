@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ShellIcon } from '../ShellIcon';
-import { ago, errorText, mm, num, tokens } from './mm';
+import { ago, errorText, gib, mm, num, tokens, unitLabel } from './mm';
 import { fetchInstalledModels } from '../../api';
 import { splitChatSections } from '../../model-kind';
 import { useT } from '../../i18n';
@@ -112,9 +112,9 @@ function Bars({ title, unit, rows, max }: { title: string; unit: string; rows: {
   const series = rows[0]?.values.length || 1;
   const t = useT();
   return <figure className="viz-bars" aria-label={title}><figcaption>{title}</figcaption>
-    <table className="sr-only"><thead><tr><th>{t('mm.projects.model')}</th><th>{unit}</th></tr></thead><tbody>{rows.map(r => <tr key={r.label}><td>{r.label}</td><td>{r.values.map(v => (v == null ? '—' : num(v))).join(' / ')}</td></tr>)}</tbody></table>
+    <table className="sr-only"><thead><tr><th>{t('mm.projects.model')}</th><th>{unitLabel(unit).trim()}</th></tr></thead><tbody>{rows.map(r => <tr key={r.label}><td>{r.label}</td><td>{r.values.map(v => (v == null ? '—' : num(v))).join(' / ')}</td></tr>)}</tbody></table>
     <div aria-hidden="true">{rows.map(r => <div key={r.label} className="viz-bar-row"><span>{r.label}</span><div>{r.values.map((v, i) => <div key={i} className="viz-bar-track">
-      {v == null ? <em>{t('mm.bench.noData')}</em> : <><i className={`viz-bar viz-s${series > 1 ? i + 1 : 1}`} style={{ width: `${Math.min(100, (v / (max || 1)) * 100)}%` }}/><b>{num(v)}{unit}</b></>}
+      {v == null ? <em>{t('mm.bench.noData')}</em> : <><i className={`viz-bar viz-s${series > 1 ? i + 1 : 1}`} style={{ width: `${Math.min(100, (v / (max || 1)) * 100)}%` }}/><b>{num(v)}{unitLabel(unit)}</b></>}
     </div>)}</div></div>)}</div>
   </figure>;
 }
@@ -136,7 +136,7 @@ function RunView({ id, categories }: { id: number; categories: { key: string; la
     {prompts.length > 0 && <div className="viz-grid-2">{prompts.map((p, pi) => <Bars key={p} title={t('mm.bench.ttft', { prompt: p })} unit=" ms" max={ttftMax} rows={c.aliases.map((a, ai) => ({ label: a, values: [c.ttft[pi].data[ai]] }))}/>)}</div>}
     {c.vram_labels.length > 0 && <>
       <ul className="viz-legend"><li><i className="viz-swatch viz-s1"/>{t('mm.bench.peak')}</li><li><i className="viz-swatch viz-s2"/>{t('mm.bench.estimate')}</li></ul>
-      <Bars title={c.capacity_gb ? t('mm.bench.gpuMemoryBudget', { gib: num(c.capacity_gb) }) : t('mm.bench.gpuMemory')} unit=" GiB" max={Math.max(c.capacity_gb, ...c.vram_measured)} rows={c.vram_labels.map((a, i) => ({ label: a, values: [c.vram_measured[i], c.vram_predicted[i]] }))}/>
+      <Bars title={c.capacity_gb ? t('mm.bench.gpuMemoryBudget', { gib: gib(c.capacity_gb, { max: 2 }) }) : t('mm.bench.gpuMemory')} unit=" GiB" max={Math.max(c.capacity_gb, ...c.vram_measured)} rows={c.vram_labels.map((a, i) => ({ label: a, values: [c.vram_measured[i], c.vram_predicted[i]] }))}/>
     </>}
     {run.sweeps.length > 0 && <div className="mm-table-wrap"><table className="mm-table"><caption>{t('mm.bench.sweepResults')}</caption>
       <thead><tr><th scope="col">{t('mm.projects.model')}</th><th scope="col">{t('mm.bench.test')}</th><th scope="col">{t('mm.bench.depth')}</th><th scope="col">{t('mm.bench.speed')}</th></tr></thead>

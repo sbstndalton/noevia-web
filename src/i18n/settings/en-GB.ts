@@ -241,7 +241,7 @@ export const EN_GB_SETTINGS = {
   'appearance.layout.devicePhone': 'phone',
   'appearance.layout.deviceDesktop': 'desktop',
   'appearance.layout.descPhone': 'Automatic follows this device, which looks like a phone or tablet. Desktop renders the full-width layout and scales it down, the same as your browser’s “Request desktop site”.',
-  'appearance.layout.descDesktop': 'Automatic follows this device, which looks like a desktop. Phone previews the compact layout in a phone-width column — this browser ignores the viewport width a phone would report, so the preview covers the shell, Settings and Models rather than every view.',
+  'appearance.layout.descDesktop': 'Automatic follows this device, which looks like a desktop. Phone previews the compact layout in a phone-width column — this browser ignores the viewport width a phone would report, so the preview covers the shell, Settings, Models and the Diary rather than every view.',
   'appearance.deviceNote': 'Theme family, chat font, density, motion and layout are saved on this device only — how dense you want a screen depends on the screen.',
   'appearance.accountNote': 'Appearance follows your account.',
   'appearance.retry': 'Retry appearance',

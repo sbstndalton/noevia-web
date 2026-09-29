@@ -5,7 +5,7 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
 const { spawn } = require('node:child_process'), { once } = require('node:events');
 const { withLocale } = require('./qa-locale.cjs');
 
-async function start({ port, name }) {
+async function start({ port, name, env: extraEnv = {} }) {
   const origin = `http://localhost:${port}`;
   const web = path.resolve(process.env.APP_DIR || path.join(__dirname, '..'));
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), `noevia-${name}-`));
@@ -24,7 +24,7 @@ async function start({ port, name }) {
   await new Promise(r => upstream.listen(port + 100, '127.0.0.1', r));
   const server = spawn(process.execPath, ['server/index.cjs'], { cwd: web, stdio: 'ignore', env: {
     ...process.env, UI_DATA_DIR: dir, UI_PORT: String(port), UI_HOST: '127.0.0.1', PUBLIC_ORIGIN: origin, LEGACY_AUTH_COMPAT: 'false',
-    INFERENCE_BASE_URL: `http://127.0.0.1:${port + 100}`, MODEL_MANAGER_KIND: 'none', MCP_SERVERS: '', MCP_SERVER_URL: '' } });
+    INFERENCE_BASE_URL: `http://127.0.0.1:${port + 100}`, MODEL_MANAGER_KIND: 'none', MCP_SERVERS: '', MCP_SERVER_URL: '', ...extraEnv } });
   for (let i = 0; i < 100; i++) { try { if ((await fetch(origin + '/api/setup/status')).ok) break; } catch { } await new Promise(r => setTimeout(r, 50)); }
   return { origin, dir, requests, async stop() { server.kill('SIGTERM'); await once(server, 'exit'); await new Promise(r => upstream.close(r)); fs.rmSync(dir, { recursive: true, force: true }); } };
 }

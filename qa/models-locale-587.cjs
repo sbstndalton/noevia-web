@@ -39,7 +39,7 @@ const { createFixture } = require('./diary-fixture.cjs');
       if (!p.startsWith('/api/model-manager/')) return p.startsWith('/api/models/') ? json([]) : route.continue();
       const r = p.slice('/api/model-manager/'.length);
       if (r === 'models') return json({ models: installed.map((mo) => ({ key: `f/${mo.name}.gguf`, name: `${mo.name}.gguf`, subdir: 'f', bytes: mo.sizeGB * 1e9, size: `${(mo.sizeGB * 0.93).toFixed(1)} GB`, modified: '2026-09-01', sharded: false, parts: 1, projector: null, sections: [mo.name], modelId: mo.name, file: `f/${mo.name}.gguf`, shape: mo.name === 'Synthetic-Live' ? { arch: 'llama', moe: false, experts: 0, active: 0, label: 'dense' } : null, loadedOn: [], fit: [], badges: [] })), unregistered: [], revision: 'r1' });
-      if (r === 'overview') return json({ modelsDir: { path: '/models', hostPath: '/mnt/models', exists: true, disk: { total: 7.3e12, free: 5.3e12, usedPct: 27, totalH: '7.3 TB', freeH: '5.3 TB' } }, models: installed.length, sections: installed.length, backends: [], activeDownloads: 0, revision: 'r1' });
+      if (r === 'overview') return json({ modelsDir: { path: '/models', hostPath: '/mnt/models', exists: true, disk: { total: 7.3 * 1024 ** 4, free: 5.3 * 1024 ** 4, usedPct: 27, totalH: '7.3 TB', freeH: '5.3 TB' } }, models: installed.length, sections: installed.length, backends: [], activeDownloads: 0, revision: 'r1' });
       if (r === 'models/updates') return json({ status: {} });
       if (r === 'backends') return json({ backends: [{ name: 'llamacpp', found: true, status: 'running', image: 'synthetic', uptime: '1h', started_at: '', loaded_model: 'Synthetic-Live', probe_error: null, last_restart_error: null,
         stats: { ok: true, error: null, gpu: { vendor: 'x', name: 'Synthetic GPU', util_pct: 40, vram_used_gb: 4.9, vram_total_gb: 16.5, temp_c: 50, power_w: 100, gpu_count: 1, cards: [], memory_kind: 'dedicated', shared_used_gb: 0, shared_total_gb: 0, clock_mhz: 1500, source: 's', measured: true }, container: null }, history }] });
@@ -70,11 +70,11 @@ const { createFixture } = require('./diary-fixture.cjs');
     pass('unloaded card says "Nicht geladen", the loaded card keeps the "Entladen" button');
 
     // (b) sizes use the decimal comma
-    assert.match(await chat.locator('.model-card-meta').first().innerText(), /3,3 GB/);
+    assert.match(await chat.locator('.model-card-meta').first().innerText(), /3,3[\u00a0\u202f ]GB/);
     assert.match(await chat.locator('.model-card-meta').first().innerText(), /131\.072/);
     assert.equal(await chat.locator('.model-card-meta').first().innerText().then((s) => /\b3\.3 GB/.test(s)), false);
     const disk = (await dialog.getByTestId('models-disk').innerText()).replace(/\s+/g, ' ');
-    assert.match(disk, /5,3 TB frei von 7,3 TB/);
+    assert.match(disk, /5,3[\u00a0\u202f ]TB frei von 7,3[\u00a0\u202f ]TB/);
     pass(`size "3,3 GB" and folder line "${disk}" use the decimal comma`);
 
     // (c) capability tags are translated

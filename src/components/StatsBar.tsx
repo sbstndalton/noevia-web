@@ -5,7 +5,7 @@ import { Icon } from './icons/Icon';
 import { RoutingDetails } from './ChatView';
 import { useT } from '../i18n';
 import { appLocale } from '../user-preferences';
-import { formatCompact, formatNumber, formatPercent } from '../number-format';
+import { formatCompact, formatNumber, formatPercent, formatSizeUnit } from '../number-format';
 import { LOCAL_MODEL_FALLBACK } from '../model-guidance';
 
 interface StatsBarProps {
@@ -127,7 +127,7 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
   ].filter(Boolean);
   const gpuParts = [
     stats?.gpuPercent == null ? null : formatPercent(stats.gpuPercent, appLocale(), 0),
-    stats?.vramGb == null ? null : t('stats.vram', { value: fmt(stats.vramGb, 1, ' GB') }),
+    stats?.vramGb == null ? null : t('stats.vram', { value: formatSizeUnit(stats.vramGb, 'GB', appLocale(), 1) }),
   ].filter(Boolean);
   const replyLabel = active ? t('stats.currentReply') : reply?.phase === 'stopped' ? t('stats.stoppedReply') : reply?.phase === 'error' ? t('stats.failedReply') : t('stats.lastReply');
   const liveAnnouncement = active

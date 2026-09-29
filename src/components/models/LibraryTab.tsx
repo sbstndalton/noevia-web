@@ -4,7 +4,7 @@ import type { InstalledModel } from '../../types';
 import { MtpControl } from '../MtpControl';
 import { NativeCalibration } from '../NativeCalibration';
 import { EvidenceList } from './EvidenceList';
-import { errorText, filterOrphanFiles, human, mm, num, tokens } from './mm';
+import { errorText, filterOrphanFiles, human, mm, num, size, tokens } from './mm';
 import { appLocale } from '../../user-preferences';
 import { httpErrorMessage, readErrorBody, runDeleteModelFiles } from './delete-model-sequence';
 import { registerNewFolderModels } from './register';
@@ -54,7 +54,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [unregistered, setUnregistered] = useState<string[]>([]);
   const [updates, setUpdates] = useState<Record<string, Update>>({});
-  const [disk, setDisk] = useState<{ freeH: string; totalH: string; usedPct: number } | null>(null);
+  const [disk, setDisk] = useState<{ freeH: string; totalH: string; free?: number; total?: number; usedPct: number } | null>(null);
   const [scanned, setScanned] = useState(false);
   const [canTune, setCanTune] = useState(false), [showTune, setShowTune] = useState(false);
   const [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(''), [filesNote, setFilesNote] = useState(''), [runtimeOptions, setRuntimeOptions] = useState(false);
@@ -71,7 +71,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     // `|| {}` keeps `updates[...]` a safe lookup instead of crashing on an undefined record.
     void mm<{ status: Record<string, Update> }>('models/updates').then((u) => setUpdates(u.status || {})).catch(() => undefined);
     void apiFetch('/api/models/capabilities').then(r => r.json()).then((caps) => { setRuntimeOptions(caps?.runtimeOptions === true); setCanTune(caps?.admin === true && caps?.autotune === true); }).catch(() => undefined);
-    void mm<{ modelsDir?: { disk?: { freeH: string; totalH: string; usedPct: number } | null } }>('overview').then((o) => setDisk(o?.modelsDir?.disk ?? null)).catch(() => undefined);
+    void mm<{ modelsDir?: { disk?: { freeH: string; totalH: string; free?: number; total?: number; usedPct: number } | null } }>('overview').then((o) => setDisk(o?.modelsDir?.disk ?? null)).catch(() => undefined);
     try {
       await listed;
       const scan = await local;
@@ -131,7 +131,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     <h2 className="sr-only">{t('mm.tab.yours')}</h2>
     <div className="mm-library-bar">
       <p className="mm-note" role="status">{models ? <>{t.plural('mm.library.count', installed.length, { shown: servable.length })}{needle ? t('mm.library.matching', { query: query.trim() }) : ''}{filter !== 'all' ? t('mm.library.afterFiltering') : ''}</> : t('mm.library.loading')}
-        {disk && <> · <span data-testid="models-disk">{t('mm.library.disk', { free: human(disk.freeH), total: human(disk.totalH), used: num(disk.usedPct, 0) })}</span></>}
+        {disk && <> · <span data-testid="models-disk">{t('mm.library.disk', { free: typeof disk.free === 'number' ? size(disk.free) : human(disk.freeH), total: typeof disk.total === 'number' ? size(disk.total) : human(disk.totalH), used: num(disk.usedPct, 0) })}</span></>}
         {models && !scanned && <span className="mm-scanning"> · {t('mm.library.scanning')}</span>}</p>
       <button className="btn btn-secondary btn-sm" disabled={busy === 'updates'} onClick={() => void checkUpdates()}>{busy === 'updates' ? t('mm.checking') : t('mm.library.checkUpdates')}</button>
       {canTune && <button className="btn btn-secondary btn-sm" aria-expanded={showTune} aria-controls="library-autotune" onClick={() => setShowTune(v => !v)}>{t('mm.library.tuneUntuned')}</button>}

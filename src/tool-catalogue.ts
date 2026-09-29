@@ -3,10 +3,12 @@
 // of the boxes; nothing here can make an unavailable tool available.
 
 export type ToolPermission = 'allowed' | 'needs-approval' | 'unavailable';
-export interface PermittedTool { name: string; description: string; write: boolean; permission: ToolPermission; reason: string | null }
+export interface PermittedTool { name: string; description: string; write: boolean; permission: ToolPermission; reason: string | null; reasonCode?: string | null }
 export interface PermittedBox {
   id: string; label: string; description: string; source: 'builtin' | 'mcp' | 'code';
-  state: 'available' | 'unavailable'; reason: string | null; active: boolean; tools: PermittedTool[];
+  /** Shipped with noevia, so the client words it from its catalogue by id (#615). */
+  inApp?: boolean;
+  state: 'available' | 'unavailable'; reason: string | null; reasonCode?: string | null; active: boolean; tools: PermittedTool[];
 }
 export interface CatalogueEntry {
   key: string; kind: 'box' | 'tool'; boxId: string; boxLabel: string; name: string; label: string;

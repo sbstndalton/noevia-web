@@ -240,7 +240,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'appearance.layout.devicePhone': "mobil",
   'appearance.layout.deviceDesktop': "dator",
   'appearance.layout.descPhone': "Automatisk följer den här enheten, som ser ut som en mobil eller surfplatta. Dator visar hela layouten nedskalad, som ”Begär datorwebbplats” i webbläsaren.",
-  'appearance.layout.descDesktop': "Automatisk följer den här enheten, som ser ut som en dator. Mobil förhandsvisar den kompakta layouten i en smal kolumn – webbläsaren ignorerar bredden en mobil skulle rapportera, så förhandsvisningen täcker ramen, Inställningar och Modeller, inte alla vyer.",
+  'appearance.layout.descDesktop': "Automatisk följer den här enheten, som ser ut som en dator. Mobil förhandsvisar den kompakta layouten i en smal kolumn – webbläsaren ignorerar bredden en mobil skulle rapportera, så förhandsvisningen täcker ramen, Inställningar, Modeller och Dagbok, inte alla vyer.",
   'appearance.deviceNote': "Temafamilj, chattypsnitt, täthet, rörelse och layout sparas bara på den här enheten – hur tät du vill ha en skärm beror på skärmen.",
   'appearance.accountNote': "Utseendet följer ditt konto.",
   'appearance.retry': "Försök med utseendet igen",

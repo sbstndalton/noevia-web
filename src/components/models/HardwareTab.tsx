@@ -45,7 +45,7 @@ export function HardwareTab() {
       <p className="mm-note">{t('mm.hw.machineNote')}</p>
       <div className="viz-grid-2">
         <TimeChart title={t('mm.hw.cpuAll')} unit="%" max={100} digits={0} times={host.map(p => p.ts)} series={[{ label: t('mm.hw.cpu'), values: host.map(p => p.cpu_pct) }]}/>
-        <TimeChart title={hostNow ? t('mm.hw.memoryOf', { gib: num(hostNow.mem_total_gb, 0) }) : t('mm.hw.memory')} unit="GiB" max={hostNow?.mem_total_gb || 1} times={host.map(p => p.ts)} series={[{ label: t('mm.hw.memory'), values: host.map(p => p.mem_used_gb) }]}/>
+        <TimeChart title={hostNow ? t('mm.hw.memoryOf', { gib: gib(hostNow.mem_total_gb, 0) }) : t('mm.hw.memory')} unit="GiB" max={hostNow?.mem_total_gb || 1} times={host.map(p => p.ts)} series={[{ label: t('mm.hw.memory'), values: host.map(p => p.mem_used_gb) }]}/>
       </div>
     </section>
   </div>;
@@ -89,12 +89,12 @@ export function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; host
     {!b.stats.ok && <p className="mm-note">{t('mm.hw.readingsUnavailable', { error: describeBackendError(t, b.stats.error) })}</p>}
     {gpu && <>
       <p className="mm-gpu-name"><strong>{gpu.name}</strong>{gpu.gpu_count > 1 ? ` · ${t('mm.hw.gpus', { count: gpu.gpu_count })}` : ''}</p>
-      {unified && (() => { const risk = sharedMemoryRisk({ unified, sharedTotalGB: gpu.shared_total_gb, hostTotalGB }); return risk.risky ? <p className="mm-note warn" role="alert">{t('mm.hw.sharedRisk', { borrow: num(risk.borrowGB ?? 0, 0), host: num(risk.hostGB ?? 0, 0), left: num(Math.max(0, risk.leftGB ?? 0)), cap: num(risk.capGB ?? 0, 0) })}</p> : null; })()}
+      {unified && (() => { const risk = sharedMemoryRisk({ unified, sharedTotalGB: gpu.shared_total_gb, hostTotalGB }); return risk.risky ? <p className="mm-note warn" role="alert">{t('mm.hw.sharedRisk', { borrow: gib(risk.borrowGB ?? 0, 0), host: gib(risk.hostGB ?? 0, 0), left: gib(Math.max(0, risk.leftGB ?? 0), { max: 2 }), cap: gib(risk.capGB ?? 0, 0) })}</p> : null; })()}
       {unified && <p className="mm-note">{t('mm.hw.unified', { dedicated: gib(gpu.vram_total_gb), shared: gib(gpu.shared_total_gb) })}</p>}
       {!gpu.measured && <p className="mm-note">{t('mm.hw.notMeasured', { size: gib(gpu.vram_total_gb) })}</p>}
       {gpu.measured && <div className="mm-tiles">
         <Tile label={t('mm.hw.busy')} value={pct(gpu.util_pct)}/>
-        <Tile label={unified ? t('mm.hw.gpuMemory') : t('mm.hw.vramInUse')} value={t('mm.hw.ofGib', { used: num(memUsed, 1), total: num(memTotal, 1) })}/>
+        <Tile label={unified ? t('mm.hw.gpuMemory') : t('mm.hw.vramInUse')} value={t('mm.hw.ofGib', { used: num(memUsed, 1), total: gib(memTotal, 1) })}/>
         {gpu.temp_c > 0 && <Tile label={t('mm.hw.temperature')} value={`${num(gpu.temp_c, 0)} °C`}/>}
         {gpu.power_w > 0 && <Tile label={t('mm.hw.power')} value={`${num(gpu.power_w, 0)} W`}/>}
         {gpu.clock_mhz > 0 && <Tile label={t('mm.hw.clock')} value={`${num(gpu.clock_mhz, 0)} MHz`}/>}
@@ -102,8 +102,8 @@ export function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; host
       {gpu.measured && <div className="viz-grid-2">
         <TimeChart title={t('mm.hw.busy')} unit="%" max={100} digits={0} times={times} series={[{ label: t('mm.hw.busy'), values: pts.map(p => p.gpu_util) }]}/>
         {unified
-          ? <TimeChart title={t('mm.hw.gpuMemoryOf', { gib: num(memTotal, 1) })} unit="GiB" max={memTotal} times={times} series={[{ label: t('mm.hw.shared'), values: pts.map(p => p.shared_used_gb) }, { label: t('mm.hw.dedicated'), values: pts.map(p => p.vram_used_gb) }]}/>
-          : <TimeChart title={t('mm.hw.vramOf', { gib: num(gpu.vram_total_gb, 1) })} unit="GiB" max={gpu.vram_total_gb} times={times} series={[{ label: 'VRAM', values: pts.map(p => p.vram_used_gb) }]}/>}
+          ? <TimeChart title={t('mm.hw.gpuMemoryOf', { gib: gib(memTotal, 1) })} unit="GiB" max={memTotal} times={times} series={[{ label: t('mm.hw.shared'), values: pts.map(p => p.shared_used_gb) }, { label: t('mm.hw.dedicated'), values: pts.map(p => p.vram_used_gb) }]}/>
+          : <TimeChart title={t('mm.hw.vramOf', { gib: gib(gpu.vram_total_gb, 1) })} unit="GiB" max={gpu.vram_total_gb} times={times} series={[{ label: 'VRAM', values: pts.map(p => p.vram_used_gb) }]}/>}
         {gpu.power_w > 0 && <TimeChart title={t('mm.hw.gpuPower')} unit="W" max={Math.max(30, ...pts.map(p => p.power_w)) * 1.1} digits={0} times={times} series={[{ label: t('mm.hw.power'), values: pts.map(p => p.power_w) }]}/>}
         {gpu.temp_c > 0 && <TimeChart title={t('mm.hw.gpuTemperature')} unit="°C" max={100} digits={0} times={times} series={[{ label: t('mm.hw.temperature'), values: pts.map(p => p.temp_c) }]}/>}
       </div>}
@@ -113,7 +113,7 @@ export function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; host
       <p className="mm-note">{t('mm.hw.processNote')} {cont.mem_limit_gb ? t('mm.hw.memLimit', { limit: gib(cont.mem_limit_gb) }) : ''}</p>
       <div className="viz-grid-2">
         <TimeChart title={t('mm.hw.engineCpu')} unit="%" max={Math.max(100, ...pts.map(p => p.cpu_pct))} digits={0} times={times} series={[{ label: t('mm.hw.cpu'), values: pts.map(p => p.cpu_pct) }]}/>
-        <TimeChart title={cont.mem_limit_gb ? t('mm.hw.engineMemoryOf', { gib: num(cont.mem_limit_gb, 0) }) : t('mm.hw.engineMemory')} unit="GiB" max={cont.mem_limit_gb || Math.max(1, ...pts.map(p => p.mem_used_gb)) * 1.2} times={times} series={[{ label: t('mm.hw.memoryShort'), values: pts.map(p => p.mem_used_gb) }]}/>
+        <TimeChart title={cont.mem_limit_gb ? t('mm.hw.engineMemoryOf', { gib: gib(cont.mem_limit_gb, 0) }) : t('mm.hw.engineMemory')} unit="GiB" max={cont.mem_limit_gb || Math.max(1, ...pts.map(p => p.mem_used_gb)) * 1.2} times={times} series={[{ label: t('mm.hw.memoryShort'), values: pts.map(p => p.mem_used_gb) }]}/>
       </div>
     </>}
     <Diagnosis name={b.name} startedAt={b.started_at}/>

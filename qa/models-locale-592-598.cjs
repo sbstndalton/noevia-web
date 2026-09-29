@@ -53,7 +53,7 @@ const PORT = Number(process.env.QA_PORT || 31598);
       if (!p.startsWith('/api/model-manager/')) return p.startsWith('/api/models/') ? json({}) : route.continue();
       const r = p.slice('/api/model-manager/'.length);
       if (r === 'models') return json({ models: installed.map((mo) => ({ key: `f/${mo.name}.gguf`, name: `${mo.name}.gguf`, subdir: 'f', bytes: mo.sizeGB * 1e9, size: '3.1 GB', modified: '2026-09-01', sharded: false, parts: 1, projector: null, sections: [mo.name], modelId: mo.name, file: `f/${mo.name}.gguf`, shape: null, loadedOn: [], fit: [], badges: [] })), unregistered: [], revision: 'r1' });
-      if (r === 'overview') return json({ modelsDir: { path: '/models', hostPath: '/mnt/models', exists: true, disk: { total: 7.3e12, free: 5.3e12, usedPct: 27, totalH: '7.3 TB', freeH: '5.3 TB' } }, models: 1, sections: 1, backends: [], activeDownloads: 0, revision: 'r1' });
+      if (r === 'overview') return json({ modelsDir: { path: '/models', hostPath: '/mnt/models', exists: true, disk: { total: 7.3 * 1024 ** 4, free: 5.3 * 1024 ** 4, usedPct: 27, totalH: '7.3 TB', freeH: '5.3 TB' } }, models: 1, sections: 1, backends: [], activeDownloads: 0, revision: 'r1' });
       if (r === 'models/updates') return json({ status: {} });
       if (r === 'download-targets') return json({ targets: [] });
       if (r === 'downloads') return json({ jobs: [] });
@@ -86,7 +86,7 @@ const PORT = Number(process.env.QA_PORT || 31598);
       const note = dialog.getByTestId('download-target');
       await note.waitFor();
       const text = (await note.innerText()).replace(/\s+/g, ' ');
-      assert.match(text, /5,3 TB frei/, `free space line: ${text}`);
+      assert.match(text, /5,3[\u00a0\u202f ]TB frei/, `free space line: ${text}`);
       assert.doesNotMatch(text, /5\.3 TB/);
     });
 

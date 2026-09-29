@@ -2314,3 +2314,29 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .insp-source { display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; overflow-wrap: anywhere; }
 .insp-source:hover { color: var(--text-primary); text-decoration: underline; }
 .insp-source:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-control); }
+
+/* #637: the Diary in the phone-layout preview. A wide browser never matches the Diary's own
+   max-width queries, so inside the 430px preview column it kept its two-column desktop grid and
+   squeezed the prompt and composer to ~60px. These mirror the effective phone rules of those
+   queries (diary-tab.css 800/1100 and this file's 519/700/1000/1100 blocks), keyed to the same
+   attribute #630 and the shell use; the qa script compares them with a real 430px viewport. */
+:root[data-layout="mobile"] .diary-layout { display: flex; flex-direction: column; overflow-y: auto; grid-template-columns: 1fr; }
+:root[data-layout="mobile"] .diary-primary { flex: none; height: 100%; }
+:root[data-layout="mobile"] .diary-context { flex: none; display: block; border-left: 0; border-top: 1px solid var(--border); max-height: none; overflow: visible; padding: 12px 18px; }
+:root[data-layout="mobile"] .diary-context > section + section { border: 0; margin: 24px 0 0; padding: 0; }
+:root[data-layout="mobile"] .diary-content-scroll { padding: 20px 16px; }
+:root[data-layout="mobile"] .diary-composer-dock { padding: 8px 16px; }
+:root[data-layout="mobile"] .diary-landing { margin-top: 24px; }
+:root[data-layout="mobile"] .diary-landing h1 { font-size: var(--text-large); letter-spacing: -.9px; }
+:root[data-layout="mobile"] .diary-calendar { gap: 3px; }
+:root[data-layout="mobile"] .calendar-day { padding: 6px; height: 44px; border-radius: var(--radius-control); }
+:root[data-layout="mobile"] .diary-calendar-heading h1 { font-size: var(--text-title2); }
+:root[data-layout="mobile"] .diary-modal { padding: 18px; }
+:root[data-layout="mobile"] .diary-storage-options { grid-template-columns: 1fr; }
+:root[data-layout="mobile"] .diary-private { display: none; }
+:root[data-layout="mobile"] .diary-workspace-body { grid-template-columns: minmax(0, 1fr); }
+:root[data-layout="mobile"] .diary-workspace-navigation { grid-row: auto; border-top: 1px solid var(--border-subtle); }
+:root[data-layout="mobile"] .diary-editor-panes, :root[data-layout="mobile"] .diary-markdown-workspace .diary-editor-panes { flex-direction: column; }
+:root[data-layout="mobile"] .diary-editor-panes > section { max-height: none; }
+:root[data-layout="mobile"] .diary-editor-tabs [role="status"] { width: 100%; margin-left: 0; }
+:root[data-layout="mobile"] .diary-workspace-filter input { font-size: var(--text-input); min-width: 0; }

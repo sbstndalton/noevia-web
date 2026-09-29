@@ -5,7 +5,7 @@ import { filterCatalogue, placeCatalogue, type CatalogueEntry, type PermittedBox
 import type { ChatMode } from '../chat-mode';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
-import { toolboxCopy } from '../toolbox-copy';
+import { isInAppBox, toolboxCopy, toolDescriptionText, toolReasonText } from '../toolbox-copy';
 import type { MessageKey } from '../i18n';
 import { keepFocusOnMouseDown, shouldClosePanelOnBlur } from '../tool-catalogue-focus';
 
@@ -76,7 +76,15 @@ export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, on
     if (!open) return;
     if (shouldClosePanelOnBlur(root.current, event.relatedTarget as Node | null)) onOpenChange(false);
   };
-  const rows = useMemo(() => filterCatalogue((boxes ?? []).map(box => ({ ...box, ...toolboxCopy(t, box) })), query), [boxes, query, t]);
+  const rows = useMemo(() => filterCatalogue((boxes ?? []).map(box => {
+    // The composer menu is fed by /api/toolboxes/permitted; an in-app box is worded by id and a
+    // reason by its code, whatever language the server wrote its text in (#615).
+    const inApp = isInAppBox(box);
+    return {
+      ...box, ...toolboxCopy(t, box), reason: toolReasonText(t, box.reasonCode, box.reason),
+      tools: box.tools.map(tool => ({ ...tool, description: toolDescriptionText(t, box.id, inApp, tool.name, tool.description), reason: toolReasonText(t, tool.reasonCode, tool.reason) })),
+    };
+  }), query), [boxes, query, t]);
   useEffect(() => { setActive(0); }, [query]);
   const choose = (row: CatalogueEntry | undefined) => {
     if (!row || row.permission === 'unavailable') return;

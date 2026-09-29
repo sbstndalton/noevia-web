@@ -98,7 +98,7 @@ const SKILL_MD = '---\nname: qa-skill\ndescription: Synthetic skill for the loca
           const r = p.slice('/api/model-manager/'.length);
           const file = { key: `f/${l.pillName}.gguf`, name: `${l.pillName}.gguf`, subdir: 'f', bytes: 3.3e9, size: '3.1 GB', modified: '2026-09-25 14:30', mtime: now, sharded: false, parts: 1, projector: null, sections: [l.pillName], modelId: l.pillName, file: `f/${l.pillName}.gguf`, shape: null, loadedOn: [], fit: [], badges: [] };
           if (r === 'models') return json({ models: [file], unregistered: [], revision: 'r1' });
-          if (r === 'overview') return json({ modelsDir: { path: '/models', hostPath: '/mnt/models', exists: true, disk: { total: 7.3e12, free: 5.3e12, usedPct: 27, totalH: '7.3 TB', freeH: '5.3 TB' } }, models: 1, sections: 1, backends: [], activeDownloads: 0, revision: 'r1' });
+          if (r === 'overview') return json({ modelsDir: { path: '/models', hostPath: '/mnt/models', exists: true, disk: { total: 7.3 * 1024 ** 4, free: 5.3 * 1024 ** 4, usedPct: 27, totalH: '7.3 TB', freeH: '5.3 TB' } }, models: 1, sections: 1, backends: [], activeDownloads: 0, revision: 'r1' });
           if (r === 'settings') return json({ hasToken: false, tokenHint: '' });
           if (r === 'backends') return json({ backends: [stopped] });
           if (r === 'host') return json({ history: [] });

@@ -240,7 +240,7 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'appearance.layout.devicePhone': "celular",
   'appearance.layout.deviceDesktop': "computador",
   'appearance.layout.descPhone': "Automático segue este dispositivo, que parece um celular ou tablet. Computador mostra o layout completo reduzido, como “Versão para computador” no navegador.",
-  'appearance.layout.descDesktop': "Automático segue este dispositivo, que parece um computador. Celular mostra uma prévia do layout compacto em uma coluna estreita — este navegador ignora a largura que um celular informaria, então a prévia cobre a estrutura, as Configurações e os Modelos, não todas as telas.",
+  'appearance.layout.descDesktop': "Automático segue este dispositivo, que parece um computador. Celular mostra uma prévia do layout compacto em uma coluna estreita — este navegador ignora a largura que um celular informaria, então a prévia cobre a estrutura, as Configurações, os Modelos e o Diário, não todas as telas.",
   'appearance.deviceNote': "Família de tema, fonte do chat, densidade, movimento e layout ficam salvos só neste dispositivo — a densidade ideal depende da tela.",
   'appearance.accountNote': "A aparência segue sua conta.",
   'appearance.retry': "Tentar aparência de novo",

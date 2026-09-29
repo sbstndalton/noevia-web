@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useT } from '../../i18n';
-import { num, numUpTo, pct } from './mm';
+import { num, numUpTo, pct, unitLabel } from './mm';
 
 export type Series = { label: string; values: (number | null)[] };
 
@@ -27,7 +27,7 @@ export function TimeChart({ title, series, times, max, unit, digits = 1, height 
   const top = max > 0 ? max : 1;
   const x = (i: number) => pad.l + (n > 1 ? (i / (n - 1)) * w : w);
   const y = (v: number) => pad.t + h - Math.min(1, Math.max(0, v / top)) * h;
-  const fmt = (v: number | null | undefined) => (v == null ? '—' : unit === '%' ? pct(v, digits) : `${num(v, digits)} ${unit}`);
+  const fmt = (v: number | null | undefined) => (v == null ? '—' : unit === '%' ? pct(v, digits) : `${num(v, digits)} ${unitLabel(unit)}`);
   const path = (values: (number | null)[]) => values.reduce((d, v, i) => (v == null ? d : `${d}${d && values[i - 1] != null ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`), '');
   const span = n > 1 ? (times[n - 1] - times[0]) : 0;
   const onMove = (e: React.PointerEvent<SVGSVGElement>) => {

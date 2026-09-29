@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { bytes, ctxShort, errorText, human, mm, num, tokens } from './mm';
+import { bytes, ctxShort, errorText, gb, human, mm, num, size, tokens } from './mm';
 import { registerSafeDefaults } from './register';
 import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
@@ -17,7 +17,7 @@ const paramLabel = (t: Translate, r: Result) => (r.params ? `${r.params}B${r.act
 type Estimate = { key: string; label: string; ctx: number; gpu_layers: number; total_layers: number; speed_pct: number; offload: boolean };
 type Group = { shardBase: string; shards: number | null; bytes: number; size: string; quant: string | null; projector: boolean;
   fit: { name: string; verdict: string; ratio_pct: number; needs_gb?: number; ceiling_gb?: number }[]; files: { path: string; bytes: number; size: string }[]; estimates?: Estimate[]; nativeCtx?: number };
-type Job = { id: string; repo: string; filename: string; status: string; error: string | null; bytes: number; downloaded: number; pct: number; speedH: string; etaH: string; parallel: boolean; chunks: { index: number; pct: number; status: string }[] };
+type Job = { id: string; repo: string; filename: string; status: string; error: string | null; bytes: number; downloaded: number; pct: number; speedH: string; speed?: number; etaH: string; parallel: boolean; chunks: { index: number; pct: number; status: string }[] };
 const VERDICT: Record<string, MessageKey> = { fits: 'mm.verdict.fits', tight: 'mm.verdict.tight', oom: 'mm.verdict.oom', impossible: 'mm.verdict.impossible' };
 
 export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'fit' }: { onDownloaded: () => void; onSetUp: (section: string) => void; query?: string; sort?: string }) {
@@ -36,8 +36,8 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'fit' }:
   const finished = useRef(new Set<string>()), seeded = useRef(false);
   const [targets, setTargets] = useState<{ id: string; label: string; path: string }[]>([]), [saveTo, setSaveTo] = useState('');
   useEffect(() => { void mm<{ targets: { id: string; label: string; path: string }[] }>('download-targets').then(v => setTargets(v.targets || [])).catch(() => undefined); }, []);
-  const [target, setTarget] = useState<{ path: string; hostPath?: string | null; disk?: { freeH: string } | null } | null>(null);
-  useEffect(() => { void mm<{ modelsDir?: { path: string; hostPath?: string | null; disk?: { freeH: string } | null } }>('overview').then(v => setTarget(v.modelsDir || null)).catch(() => undefined); }, []);
+  const [target, setTarget] = useState<{ path: string; hostPath?: string | null; disk?: { freeH: string; free?: number } | null } | null>(null);
+  useEffect(() => { void mm<{ modelsDir?: { path: string; hostPath?: string | null; disk?: { freeH: string; free?: number } | null } }>('overview').then(v => setTarget(v.modelsDir || null)).catch(() => undefined); }, []);
   const [registered, setRegistered] = useState<Set<string>>(new Set());
   const search = async (raw = q) => {
     const term = raw.trim();
@@ -114,11 +114,11 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'fit' }:
   const hiddenByFit = filters.showUnsuitable ? 0 : meta?.counts?.hiddenUnsuitable || 0;
   return <div className="mm-tab">
     <p className="mm-lede">{t('mm.discover.lede')}</p>
-    {target && <p className="mm-note" data-testid="download-target">{t('mm.discover.targetBefore')}<strong className="mm-mono">{saveTo ? `${target.hostPath || target.path}/${saveTo}` : target.hostPath || target.path}</strong>{target.disk && !saveTo ? ` · ${t('mm.discover.free', { free: human(target.disk.freeH) })}` : ''}{t('mm.discover.targetAfter')}</p>}
+    {target && <p className="mm-note" data-testid="download-target">{t('mm.discover.targetBefore')}<strong className="mm-mono">{saveTo ? `${target.hostPath || target.path}/${saveTo}` : target.hostPath || target.path}</strong>{target.disk && !saveTo ? ` · ${t('mm.discover.free', { free: typeof target.disk.free === 'number' ? size(target.disk.free) : human(target.disk.freeH) })}` : ''}{t('mm.discover.targetAfter')}</p>}
     {targets.length > 1 && <label className="mm-select mm-save-to">{t('mm.discover.saveTo')}<select value={saveTo} onChange={e => setSaveTo(e.target.value)}>{targets.map(x => <option key={x.id} value={x.id}>{x.id ? x.label : t('mm.discover.defaultFolder')}</option>)}</select></label>}
     <HfToken/>
     <p className="mm-note" role="status">{searching ? t('mm.discover.searching')
-      : shown ? t('mm.discover.results', { query: shown }) + (meta?.counts ? t('mm.discover.resultsCount', { shown: meta.counts.shown, found: meta.counts.found }) : '') + (meta?.budgetGb ? t('mm.discover.judged', { budget: meta.budgetGb }) : '') + '.'
+      : shown ? t('mm.discover.results', { query: shown }) + (meta?.counts ? t('mm.discover.resultsCount', { shown: meta.counts.shown, found: meta.counts.found }) : '') + (meta?.budgetGb ? t('mm.discover.judged', { budget: gb(meta.budgetGb, { max: 1 }) }) : '') + '.'
         : t('mm.discover.typeToSearch')}</p>
     {error && <p role="alert" className="modal-err">{error} <button className="popup-tab" onClick={() => void search()}>{t('mm.tryAgain')}</button></p>}
     {message && <p role="status" className="mm-note">{message}</p>}
@@ -143,7 +143,7 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'fit' }:
       {results.map(r => <li key={r.id}>
         <button className="mm-result-open" disabled={repoBusy === r.id} onClick={() => void openRepo(r.id)}>
           <strong>{r.id}</strong>
-          <small>{[paramLabel(t, r), r.moe ? t('mm.discover.moe') : r.params ? t('mm.discover.dense') : null, r.best ? `${r.best.quant || 'GGUF'} · ${num(r.best.gb)} GB` : null,
+          <small>{[paramLabel(t, r), r.moe ? t('mm.discover.moe') : r.params ? t('mm.discover.dense') : null, r.best ? `${r.best.quant || 'GGUF'} · ${gb(r.best.gb, { max: 2 })}` : null,
             r.vision ? t('mm.card.vision') : null, r.license, t('mm.discover.downloads', { count: tokens(r.downloads) }), r.ageDays <= 45 ? t('mm.discover.updatedDays', { days: r.ageDays }) : r.lastModified ? t('mm.discover.updatedOn', { date: r.lastModified.slice(0, 10) }) : null].filter(Boolean).join(' · ')}</small>
           <span className="mm-result-pills">
             {r.trusted && <span className="mm-pill is-good">{t('mm.discover.trusted')}</span>}
@@ -201,7 +201,7 @@ function Queue({ jobs, registered, onChange, onSetUp }: { jobs: Job[]; registere
       {' '}{t('mm.queue.chooseBefore')}<strong>{t('mm.queue.setUp')}</strong>{t('mm.queue.chooseAfter')}
     </p>}
     <ul className="mm-jobs">{jobs.map(j => <li key={j.id}>
-      <div className="mm-job-head"><strong>{j.filename}</strong><span>{j.status === 'downloading' ? t('mm.queue.progress', { pct: num(j.pct, 0), speed: human(j.speedH), eta: human(j.etaH) }) : j.status === 'done' ? t('mm.queue.done') : j.status === 'error' ? t('mm.queue.failed', { error: j.error || t('mm.unknownError') }) : j.status === 'canceled' ? t('mm.queue.cancelled') : t('mm.queue.queued')}</span></div>
+      <div className="mm-job-head"><strong>{j.filename}</strong><span>{j.status === 'downloading' ? t('mm.queue.progress', { pct: num(j.pct, 0), speed: typeof j.speed === 'number' ? `${size(j.speed)}/s` : human(j.speedH), eta: human(j.etaH) }) : j.status === 'done' ? t('mm.queue.done') : j.status === 'error' ? t('mm.queue.failed', { error: j.error || t('mm.unknownError') }) : j.status === 'canceled' ? t('mm.queue.cancelled') : t('mm.queue.queued')}</span></div>
       <progress max={100} value={j.pct} aria-label={t('mm.queue.progressLabel', { file: j.filename })}/>
       {j.parallel && j.status === 'downloading' && <div className="mm-chunks" aria-label={t('mm.queue.parts')}>{j.chunks.map(c => <span key={c.index} title={t('mm.queue.part', { part: c.index + 1, pct: num(c.pct, 0) })}><i style={{ width: `${c.pct}%` }}/></span>)}</div>}
       <small>{t('mm.queue.bytes', { done: bytes(j.downloaded), total: j.bytes ? bytes(j.bytes) : t('mm.queue.unknownSize') })} · {j.repo}</small>

@@ -6,6 +6,7 @@ type Step = { ctx: number; kind: 'load' | 'long'; status: 'running' | 'passed' |
 type Job = { id: string; model: string; promptBudgetSeconds?: number; status: 'running' | 'passed' | 'failed' | 'cancelled' | 'interrupted'; phase: string; steps: Step[]; result?: { loadCtx?: number; verifiedCtx?: number; appliedCtx?: number; loaded?: boolean }; error?: string; restored?: boolean; memoryGuard?: string; memoryFloorGib?: number };
 type HistoryEntry = { at: number; promptBudgetSeconds?: number; loadCtx?: number; verifiedCtx?: number; appliedCtx?: number; slots?: number };
 import { appLocale } from '../user-preferences';
+import { formatBinaryUnit } from '../number-format';
 const tokens = (n: number) => new Intl.NumberFormat(appLocale(), { maximumFractionDigits: 0 }).format(n);
 
 export function NativeCalibration({ model, onChanged, autoFocus = false }: { model: string; onChanged: () => void; autoFocus?: boolean }) {
@@ -75,7 +76,7 @@ export function NativeCalibration({ model, onChanged, autoFocus = false }: { mod
         <thead><tr><th scope="col">{t('mm.easy.context')}</th><th scope="col">{t('mm.bench.test')}</th><th scope="col">{t('mm.calibration.result')}</th><th scope="col">{t('mm.calibration.time')}</th></tr></thead>
         <tbody>{mine.steps.map((step, i) => <tr key={i} data-status={step.status}>
           <td>{tokens(step.ctx)}</td><td>{step.kind === 'long' ? t('mm.calibration.long') : t('mm.card.load')}</td>
-          <td>{step.status === 'running' ? (step.progress != null ? t('mm.calibration.prompt', { pct: step.progress }) + (step.etaSeconds != null ? ` · ${t('mm.calibration.left', { seconds: step.etaSeconds })}` : '') : t('mm.test.running')) : step.status === 'passed' ? t('mm.calibration.stepPassed') : step.status === 'skipped' ? t('mm.calibration.stepSkipped') : t('mm.hw.status.dead')}{step.reason ? <small>{step.reason}</small> : null}{step.promptSeconds ? <small>{t('mm.calibration.fullPrompt', { seconds: step.promptSeconds })}</small> : null}{step.promptPerSecond ? <small>{t('mm.calibration.readRate', { rate: tokens(step.promptPerSecond) })}</small> : null}{step.minAvailableGib != null ? <small>{t('mm.calibration.lowestFree', { gib: step.minAvailableGib })}</small> : null}</td>
+          <td>{step.status === 'running' ? (step.progress != null ? t('mm.calibration.prompt', { pct: step.progress }) + (step.etaSeconds != null ? ` · ${t('mm.calibration.left', { seconds: step.etaSeconds })}` : '') : t('mm.test.running')) : step.status === 'passed' ? t('mm.calibration.stepPassed') : step.status === 'skipped' ? t('mm.calibration.stepSkipped') : t('mm.hw.status.dead')}{step.reason ? <small>{step.reason}</small> : null}{step.promptSeconds ? <small>{t('mm.calibration.fullPrompt', { seconds: step.promptSeconds })}</small> : null}{step.promptPerSecond ? <small>{t('mm.calibration.readRate', { rate: tokens(step.promptPerSecond) })}</small> : null}{step.minAvailableGib != null ? <small>{t('mm.calibration.lowestFree', { gib: formatBinaryUnit(step.minAvailableGib ?? 0, 'GiB', appLocale(), { max: 2 }) })}</small> : null}</td>
           <td>{step.seconds != null ? `${step.seconds}s` : ''}</td></tr>)}</tbody></table></div>}
       {mine.status === 'running' && <button className="popup-tab" disabled={busy} onClick={() => void cancel()}>{busy ? t('mm.cancelling') : t('mm.calibration.cancel')}</button>}
     </div>}

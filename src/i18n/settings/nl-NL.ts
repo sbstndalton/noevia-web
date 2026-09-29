@@ -240,7 +240,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'appearance.layout.devicePhone': "telefoon",
   'appearance.layout.deviceDesktop': "desktop",
   'appearance.layout.descPhone': "Automatisch volgt dit apparaat, dat eruitziet als een telefoon of tablet. Desktop toont de volledige indeling verkleind, net als ‘Desktopsite aanvragen’ in je browser.",
-  'appearance.layout.descDesktop': "Automatisch volgt dit apparaat, dat eruitziet als een desktop. Telefoon toont een voorvertoning van de compacte indeling in een smalle kolom – deze browser negeert de breedte die een telefoon zou doorgeven, dus de voorvertoning dekt de basis, Instellingen en Modellen, niet elke weergave.",
+  'appearance.layout.descDesktop': "Automatisch volgt dit apparaat, dat eruitziet als een desktop. Telefoon toont een voorvertoning van de compacte indeling in een smalle kolom – deze browser negeert de breedte die een telefoon zou doorgeven, dus de voorvertoning dekt de basis, Instellingen, Modellen en Dagboek, niet elke weergave.",
   'appearance.deviceNote': "Themafamilie, chatlettertype, dichtheid, beweging en indeling worden alleen op dit apparaat bewaard – hoe vol je een scherm wilt, hangt af van het scherm.",
   'appearance.accountNote': "De weergave volgt je account.",
   'appearance.retry': "Weergave opnieuw laden",

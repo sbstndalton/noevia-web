@@ -18,7 +18,7 @@ import { ComposerActions, useAttachmentDrop } from './ComposerActions';
 import { apiFetch } from '../api';
 import { isDisplayableRoutingDecision } from '../current-routing';
 import { routeDescription } from '../routing-copy';
-import { effortLineText, routeRoleName, senderLabelText, statusLineText, toolScopeText } from '../chat-labels';
+import { effortLineText, messageBodyText, routeRoleName, senderLabelText, statusLineText, toolScopeText } from '../chat-labels';
 import { useAccountPreferences, appLocale } from '../user-preferences';
 import { sendHintText, useT } from '../i18n';
 import type { MessageKey } from '../i18n';
@@ -490,6 +490,8 @@ export function ChatView({
         {messages.map((m, i) => {
           const isLast = i === messages.length - 1;
           const thinkingLive = streaming && isLast && m.role === 'assistant' && !m.content;
+          // The Stopped placeholder is drawn in the language active NOW, never the one it was saved in (#634).
+          const body = messageBodyText(t, m);
           return (
             <div key={m.id} className="msg" data-role={m.role}>
               {/* The bubble side already says who spoke; only the answering model is worth showing. */}
@@ -506,7 +508,7 @@ export function ChatView({
                   {m.toolCalls && m.toolCalls.length > 0 ? <ToolCalls calls={m.toolCalls} /> : null}
                   {m.coworkTask ? <CoworkTaskCard task={m.coworkTask} disabled={streaming || actionBusy}
                     onRetry={() => { const prompt = messages[i - 1]?.role === 'user' ? messages[i - 1].content : ''; if (prompt) onSend(prompt, { cowork: { repository: m.coworkTask!.repository } }); }} /> : null}
-                  {m.content ? (
+                  {body ? (
                     <div className="bubble">
                       {/* Model replies are Markdown. A bare <p> showed the raw
                           source (**bold**, list dashes) and collapsed every
@@ -514,9 +516,9 @@ export function ChatView({
                           of text. Errors stay plain — they are our own strings,
                           not model output. */}
                       {m.error ? (
-                        <p style={{ color: 'var(--accent-text)' }}>{m.content}</p>
+                        <p style={{ color: 'var(--accent-text)' }}>{body}</p>
                       ) : (
-                        <MarkdownPreview text={m.content} />
+                        <MarkdownPreview text={body} />
                       )}
                       {m.error && isLast && (
                         <button
@@ -536,7 +538,7 @@ export function ChatView({
                       </div>
                     )
                   )}
-                  {project && m.content && !m.error && m.sources && m.sources.length > 0 && (
+                  {project && body && !m.error && m.sources && m.sources.length > 0 && (
                     <SourceChips sources={m.sources} files={project.files} onOpen={onOpenSource ? (file) => onOpenSource(project.id, file) : undefined} />
                   )}
                   {streaming && isLast && !m.error ? (
@@ -549,9 +551,9 @@ export function ChatView({
                   )}
                   {/* Copy on every finished reply; Regenerate only on the last one, and never
                       while it (or anything else in this chat) is still streaming (#356). */}
-                  {m.content && !m.error && !(streaming && isLast) && (
+                  {body && !m.error && !(streaming && isLast) && (
                     <MessageActions
-                      content={m.content}
+                      content={body}
                       canRegenerate={isLast && !m.coworkTask}
                       onRegenerate={() => onRegenerate(chatId, m.id)}
                       regenerateDisabled={streaming || actionBusy}

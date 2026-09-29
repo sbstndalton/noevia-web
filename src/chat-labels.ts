@@ -45,6 +45,37 @@ export function statusLineText(t: Translator, id: string | undefined, text: stri
   return id ? byKey(t, `chat.statusId.${id}`, text ?? '') : text ?? '';
 }
 
+/** The Stopped placeholder (#634). A reply the user stopped before any text arrived is saved with
+ *  the language-neutral sender token `Stopped` and NO body; the body is worded here, when drawn, in
+ *  the interface language. Before #634 the translated sentence itself was saved as the body, in
+ *  whichever language was active at Stop, so those stored rows are recognised (by their exact text,
+ *  in any locale) and worded the same way. Editing a catalogue string means keeping the old one here. */
+export const STOPPED_SENDER = 'Stopped';
+export const LEGACY_STOPPED_BODIES: readonly string[] = [
+  'Stopped before a reply was written.',
+  'Gestoppt, bevor eine Antwort geschrieben wurde.',
+  'Detenido antes de escribir una respuesta.',
+  'Arrêté avant l’écriture d’une réponse.',
+  'Interrotto prima che venisse scritta una risposta.',
+  'Stoppet før et svar ble skrevet.',
+  'Gestopt voordat er een antwoord was geschreven.',
+  'Interrompido antes de escrever uma resposta.',
+  'Stoppad innan något svar skrevs.',
+];
+
+type BodyMessage = { role?: string; senderLabel?: string; content: string; error?: boolean; reasoning?: string };
+
+/** True for an assistant reply that is only the Stopped placeholder (the new empty form, or a stored sentence). */
+export function isStoppedPlaceholder(m: BodyMessage): boolean {
+  if (m.role !== 'assistant' || m.error || m.reasoning || m.senderLabel?.replace(/^Assistant · /, '') !== STOPPED_SENDER) return false;
+  return !m.content || LEGACY_STOPPED_BODIES.includes(m.content.trim());
+}
+
+/** The text a message body shows: the placeholder in the interface language, or the message's own text. */
+export function messageBodyText(t: Translator, m: BodyMessage): string {
+  return isStoppedPlaceholder(m) ? t('chat.stopped.content') : m.content;
+}
+
 /** The "Using:" list of a reply (#624): each toolbox named by its stable id in the interface
  *  language, joined the way the server joined the English labels. */
 export function toolScopeText(t: Translator, boxes: { id: string; label: string; inApp?: boolean }[]): string {

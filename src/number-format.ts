@@ -106,7 +106,8 @@ export function formatCompact(n: number, locale: string | undefined): string {
 }
 
 const byteCache = new Map<string, Intl.NumberFormat | null>();
-const BYTE_UNITS = ['byte', 'kilobyte', 'megabyte', 'gigabyte'] as const;
+const BYTE_UNITS = ['byte', 'kilobyte', 'megabyte', 'gigabyte', 'terabyte'] as const;
+const BYTE_LABELS = ['B', 'KB', 'MB', 'GB', 'TB'] as const;
 function byteFormatter(locale: string | undefined, unit: string, digits: number): Intl.NumberFormat | null {
   const key = `${locale ?? ''}|${unit}|${digits}`;
   const hit = byteCache.get(key);
@@ -126,5 +127,75 @@ export function formatBytes(bytes: number, locale: string | undefined): string {
   const digits = i === 0 || value >= 100 ? 0 : 1;
   const f = byteFormatter(locale, BYTE_UNITS[i], digits);
   if (f) return f.format(value);
-  return `${formatNumber(value, locale, digits)} ${['B', 'KB', 'MB', 'GB'][i]}`;
+  return `${formatNumber(value, locale, digits)} ${BYTE_LABELS[i]}`;
+}
+
+/** A quantity already counted in a decimal-labelled unit (a model's 3.3 "GB") in the locale's own
+ *  words: "3,3 Go" in fr, "3,3 GB" in de and en. */
+export function formatSizeUnit(value: number, unit: 'MB' | 'GB' | 'TB', locale: string | undefined, digits: FractionDigits = { max: 2 }): string {
+  const max = typeof digits === 'number' ? digits : digits.max;
+  const min = typeof digits === 'number' ? digits : digits.min ?? 0;
+  const intl = { MB: 'megabyte', GB: 'gigabyte', TB: 'terabyte' }[unit];
+  try { return new Intl.NumberFormat(locale, { style: 'unit', unit: intl, unitDisplay: 'short', minimumFractionDigits: min, maximumFractionDigits: max }).format(value); } catch { /* unknown locale */ }
+  return `${formatNumber(value, locale, digits)} ${unit}`;
+}
+
+// Binary sizes (KiB, MiB, GiB) have no Intl unit. Their names per language: the IEC symbols
+// everywhere except French, whose octet-based names are Kio, Mio, Gio (the CLDR "o" for a byte).
+export type BinaryUnit = 'B' | 'KiB' | 'MiB' | 'GiB' | 'TiB';
+const BINARY_UNITS: BinaryUnit[] = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+const BINARY_LABELS: Record<string, Record<BinaryUnit, string>> = {
+  fr: { B: 'o', KiB: 'Kio', MiB: 'Mio', GiB: 'Gio', TiB: 'Tio' },
+};
+
+/** The locale's name for a binary unit ("Gio" in fr, "GiB" elsewhere). */
+export function binaryUnitLabel(unit: BinaryUnit, locale: string | undefined): string {
+  const language = (locale || '').toLowerCase().split(/[-_]/)[0];
+  return BINARY_LABELS[language]?.[unit] ?? unit;
+}
+
+const gapCache = new Map<string, string>();
+/** The space the locale puts between a number and a unit (a no-break space in fr and de). */
+function unitGap(locale: string | undefined): string {
+  const key = locale ?? '';
+  let gap = gapCache.get(key);
+  if (gap === undefined) {
+    gap = ' ';
+    try {
+      const literal = new Intl.NumberFormat(locale, { style: 'unit', unit: 'gigabyte', unitDisplay: 'short' }).formatToParts(1).find((p) => p.type === 'literal');
+      if (literal) gap = literal.value;
+    } catch { /* keep the plain space */ }
+    gapCache.set(key, gap);
+  }
+  return gap;
+}
+
+/** A value already counted in `unit` (6.64 GiB) with the locale's number format and unit name. */
+export function formatBinaryUnit(value: number, unit: BinaryUnit, locale: string | undefined, digits: FractionDigits = { max: 2 }): string {
+  return `${formatNumber(value, locale, digits)}${unitGap(locale)}${binaryUnitLabel(unit, locale)}`;
+}
+
+/** A byte count in the binary unit that fits ("1,5 GiB", "1,5 Gio" in fr), one decimal below 100. */
+export function formatBinaryBytes(bytes: number, locale: string | undefined): string {
+  let value = Number.isFinite(bytes) && bytes > 0 ? bytes : 0, i = 0;
+  while (value >= 1024 && i < BINARY_UNITS.length - 1) { value /= 1024; i++; }
+  return formatBinaryUnit(value, BINARY_UNITS[i], locale, { max: i === 0 || value >= 100 ? 0 : 1 });
+}
+
+/** A server-formatted size ("5.3 TB", "14 GiB", "10 MB/s"): the number in the locale's format and
+ *  the unit in the locale's words. This is the FALLBACK for a size the server only sent as text;
+ *  where a raw byte count exists, format that with formatBytes. Text that is not "<number> <known
+ *  unit>[rest]" goes through localizeLeadingNumber unchanged otherwise. */
+export function localizeSizeText(text: string, locale: string | undefined): string {
+  const m = /^(\d+)(?:\.(\d+))?[\s ]*(B|KB|MB|GB|TB|KiB|MiB|GiB|TiB)(?![A-Za-z])([\s\S]*)$/.exec(text);
+  if (!m) return localizeLeadingNumber(text, locale);
+  const value = Number(`${m[1]}${m[2] ? `.${m[2]}` : ''}`), decimals = m[2]?.length ?? 0, unit = m[3], rest = m[4];
+  if (unit === 'MB' || unit === 'GB' || unit === 'TB') return formatSizeUnit(value, unit, locale, decimals) + rest;
+  if (unit === 'B') return `${formatNumber(value, locale, 0)}${unitGap(locale)}${binaryUnitLabel('B', locale)}${rest}`;
+  if (unit === 'KB') {
+    // Intl names the kilobyte too ("kB", "ko"); take the name from a one-unit sample.
+    const sample = formatBytes(1024, locale).replace(/^[\d.,\s\u00a0\u202f]+/, '');
+    return `${formatNumber(value, locale, decimals)}${unitGap(locale)}${sample}${rest}`;
+  }
+  return formatBinaryUnit(value, unit as BinaryUnit, locale, decimals) + rest;
 }

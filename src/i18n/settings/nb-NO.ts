@@ -240,7 +240,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'appearance.layout.devicePhone': "mobil",
   'appearance.layout.deviceDesktop': "datamaskin",
   'appearance.layout.descPhone': "Automatisk følger denne enheten, som ser ut som en mobil eller et nettbrett. Datamaskin viser hele oppsettet skalert ned, som «Be om datamaskinversjon» i nettleseren.",
-  'appearance.layout.descDesktop': "Automatisk følger denne enheten, som ser ut som en datamaskin. Mobil forhåndsviser det kompakte oppsettet i en smal kolonne – denne nettleseren ignorerer bredden en mobil ville oppgitt, så forhåndsvisningen dekker rammen, Innstillinger og Modeller, ikke alle visninger.",
+  'appearance.layout.descDesktop': "Automatisk følger denne enheten, som ser ut som en datamaskin. Mobil forhåndsviser det kompakte oppsettet i en smal kolonne – denne nettleseren ignorerer bredden en mobil ville oppgitt, så forhåndsvisningen dekker rammen, Innstillinger, Modeller og Dagbok, ikke alle visninger.",
   'appearance.deviceNote': "Temafamilie, chatskrift, tetthet, bevegelse og oppsett lagres bare på denne enheten – hvor tett du vil ha en skjerm, avhenger av skjermen.",
   'appearance.accountNote': "Utseendet følger kontoen din.",
   'appearance.retry': "Prøv utseende igjen",
