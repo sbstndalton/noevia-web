@@ -12,7 +12,7 @@ import { ROLE_KEY, stuckStatus } from './mm-text';
 
 type Evidence = { category: string; state: string; value: { ctx?: number; rate?: number } | null; at: number | null };
 type Roles = Awaited<ReturnType<typeof fetchAutoRoles>>;
-type Backend = { name: string; found: boolean; status: string; loaded_model: string | null; probe_error: string | null; last_restart_error: string | null };
+type Backend = { name: string; found: boolean; status: string; loaded_model: string | null; probe_error: string | null; unreachable_but_healthy?: boolean; last_restart_error: string | null };
 const EV_STATE: Record<string, MessageKey> = { verified: 'mm.overview.ev.verified', failed: 'mm.overview.ev.failed', stale: 'mm.overview.ev.stale', reported: 'mm.overview.ev.reported', unverified: 'mm.overview.ev.unverified', unavailable: 'mm.overview.ev.unavailable' };
 const ROUTE_BADGE: Record<'fast' | 'smart' | 'vision' | 'code', MessageKey> = { fast: 'mm.overview.route.fast', smart: 'mm.overview.route.smart', vision: 'mm.overview.route.vision', code: 'mm.overview.route.code' };
 
@@ -116,7 +116,7 @@ function RecoverPanel({ onTab }: { onTab: (tab: 'discover' | 'hardware') => void
       await load();
     } catch (e) { setError(errorText(e, t('mm.recover.failed'))); } finally { setBusy(''); }
   };
-  const unhealthy = (backends || []).filter((b) => !b.found || b.status !== 'running' || b.probe_error || b.last_restart_error);
+  const unhealthy = (backends || []).filter((b) => !b.found || b.status !== 'running' || (b.probe_error && !b.unreachable_but_healthy) || b.last_restart_error);
   const needsPause = items?.some((i) => i.actions.includes('resume') || i.actions.includes('retry'));
   return <section className="mm-panel" aria-labelledby="mm-recover">
     <div className="mm-panel-head"><h3 id="mm-recover">{t('mm.recover.title')}</h3>
