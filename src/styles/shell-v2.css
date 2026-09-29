@@ -235,3 +235,29 @@
   .app .sidebar.pane .nav-item, .app .sidebar.pane .new-chat-btn.glass, .app .sidebar.pane .account-trigger { min-height: 44px; }
   .app .model-pill.composer-model.glass, .app :is(.btn, .modal-btn, .popup-tab) { min-height: 44px; }
 }
+
+/* #650: the project overview and a project chat in the Layout setting's Phone preview. A wide window
+   never matches the max-width queries that stack their rails (noevia.css 900/1100, app.css 640 and the
+   min-width: 901px context card above), so inside the 430px column they kept the desktop two-column
+   layout: the project title collapsed to 0px, the chat to ~106px. These mirror the effective phone
+   state of those queries against the attribute #630/#637 use; qa/phone-preview-views-650.cjs sweeps every
+   top-level view and compares the layout with a real 430px viewport. */
+:root[data-layout="mobile"] .app-stack:has(> .noevia-inspector) { display: flex; overflow-y: auto; }
+:root[data-layout="mobile"] .app-stack:has(> .noevia-inspector) > .app-main { flex: 1 0 70dvh; }
+:root[data-layout="mobile"] .app .app-stack.pane > .noevia-inspector { position: static; inset: auto; align-self: auto; flex: none; width: auto; max-width: none; margin: 0; max-height: none;
+  padding: 24px 18px; background: color-mix(in srgb, var(--bg-chrome) 75%, transparent); border: 0; border-top: 1px solid var(--border-subtle); border-radius: 0; box-shadow: none; }
+:root[data-layout="mobile"] .project-layout { flex-direction: column; overflow-y: auto; }
+:root[data-layout="mobile"] .project-main { flex: 1 0 auto; min-height: 65dvh; padding: 20px 16px 14px; }
+:root[data-layout="mobile"] .project-rail { display: flex; width: auto; flex: none; border: 0; border-top: 1px solid var(--border-subtle); padding: 20px 24px; }
+:root[data-layout="mobile"] .project-head { flex-direction: column; align-items: stretch; gap: var(--space-3); }
+:root[data-layout="mobile"] .project-head-actions { flex-wrap: wrap; }
+:root[data-layout="mobile"] .project-main h1 { padding-right: 38px; }
+:root[data-layout="mobile"] .project-main h1.project-title { font-size: var(--text-title1); line-height: 1.2; letter-spacing: -0.4px; }
+/* The Projects library's header row: search and sort wrap under the title instead of squeezing it
+   (noevia.css 519/700 queries). */
+:root[data-layout="mobile"] .projects-head { flex-wrap: wrap; padding-right: 0; gap: 12px; }
+:root[data-layout="mobile"] .projects-head .projects-search { flex: 1 1 100%; width: 100%; max-width: none; min-width: 0; margin: 12px 0 5px; }
+/* Pages without a header row start below the floating drawer button (noevia.css's 519 query). */
+:root[data-layout="mobile"] .main.projects-workspace, :root[data-layout="mobile"] .main.model-manager-page,
+:root[data-layout="mobile"] .main.feature-preview, :root[data-layout="mobile"] .main.project-page { padding-top: 60px; }
+:root[data-layout="mobile"] .model-manager-head { padding-top: 0; }

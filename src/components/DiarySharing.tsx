@@ -1,7 +1,14 @@
 import { useEffect, useState, type JSX } from 'react';
 import { apiFetch } from '../api';
-import { useT } from '../i18n';
-type Sharing = { available:boolean; reason?:string; scope:'off'|'lan'|'public'; endpointScope?:'lan'|'public'; cleartext:boolean; port?:number; url:string; eligible:boolean };
+import { useT, type MessageKey } from '../i18n';
+type Sharing = { available:boolean; reason?:string; reasonId?:string; scope:'off'|'lan'|'public'; endpointScope?:'lan'|'public'; cleartext:boolean; port?:number; url:string; eligible:boolean };
+/** Why sharing is unavailable, in the interface language: the server sends an id it knows how to name, and the
+ *  English sentence it also sends stays as the fallback for an id this client does not have (#652). */
+const REASON_KEYS: Record<string, MessageKey> = { 'not-configured': 'sharing.reason.notConfigured' };
+export function sharingReason(value: { reason?: string; reasonId?: string }, t: (key: MessageKey) => string): string {
+  const key = value.reasonId ? REASON_KEYS[value.reasonId] : undefined;
+  return key ? t(key) : value.reason ?? '';
+}
 export default function DiarySharing(): JSX.Element {
   const t=useT();
   const [value,setValue]=useState<Sharing|null>(null),[scope,setScope]=useState('off'),[ack,setAck]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -15,7 +22,7 @@ export default function DiarySharing(): JSX.Element {
     <p className="route-note">{t('sharing.intro')}</p>
     {value && <>
       <p className="route-note">{t('sharing.current',{access:value.scope === 'off' ? t('sharing.off') : value.scope === 'lan' ? t('sharing.lan') : t('sharing.public')})}</p>
-      {!value.available && <p className="route-note">{value.reason} {t('sharing.staysOff')}</p>}
+      {!value.available && <p className="route-note">{sharingReason(value,t)} {t('sharing.staysOff')}</p>}
       {!value.eligible && <p className="route-note">{t('sharing.ineligible')}</p>}
       <label className="route-note">{t('sharing.access')}<select aria-label={t('sharing.accessLabel')} className="modal-input" value={scope} disabled={busy} onChange={e=>{setScope(e.target.value);setAck(false);}}><option value="off">{t('sharing.off')}</option><option value="lan" disabled={!value.available||!value.eligible||value.endpointScope!=='lan'}>{t('sharing.network')}</option><option value="public" disabled={!value.available||!value.eligible||value.endpointScope!=='public'}>{t('sharing.public')}</option></select></label>
       {scope!=='off' && <p className="route-note">{t('sharing.port',{port:value.port ?? ''})}</p>}

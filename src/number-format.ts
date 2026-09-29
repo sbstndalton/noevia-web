@@ -109,18 +109,23 @@ const byteCache = new Map<string, Intl.NumberFormat | null>();
 const BYTE_UNITS = ['byte', 'kilobyte', 'megabyte', 'gigabyte', 'terabyte'] as const;
 const BYTE_LABELS = ['B', 'KB', 'MB', 'GB', 'TB'] as const;
 function byteFormatter(locale: string | undefined, unit: string, digits: number): Intl.NumberFormat | null {
+  // The byte itself is spelled out (#653): CLDR's short form of "byte" has no plural in English ("109 byte")
+  // and no unit letter in several other locales, while the long form is inflected per locale ("1 byte" /
+  // "109 bytes", "1 octet" / "109 octets"). Kilobytes and up keep their short symbols (kB, ko, MB).
+  const unitDisplay = unit === 'byte' ? 'long' : 'short';
   const key = `${locale ?? ''}|${unit}|${digits}`;
   const hit = byteCache.get(key);
   if (hit !== undefined) return hit;
   let f: Intl.NumberFormat | null = null;
-  try { f = new Intl.NumberFormat(locale, { style: 'unit', unit, unitDisplay: 'short', maximumFractionDigits: digits }); } catch { f = null; }
+  try { f = new Intl.NumberFormat(locale, { style: 'unit', unit, unitDisplay, maximumFractionDigits: digits }); } catch { f = null; }
   byteCache.set(key, f);
   return f;
 }
 
 /** A file size in the unit that fits (B, KB, MB, GB; 1024 steps) with the locale's own separators
  *  and unit names ("2 kB" / "1,5 MB" in de, "2 ko" in fr), so a 2 KB note no longer reads
- *  "0.00 MB" (#610). Whole numbers below 1 KB and from 100 up; one decimal in between. */
+ *  "0.00 MB" (#610). Whole numbers below 1 KB and from 100 up; one decimal in between. Below 1 KB the
+ *  unit is the spelled-out, plural-aware byte ("1 byte", "109 bytes", "109 octets"; #653). */
 export function formatBytes(bytes: number, locale: string | undefined): string {
   let value = Number.isFinite(bytes) && bytes > 0 ? bytes : 0, i = 0;
   while (value >= 1024 && i < BYTE_UNITS.length - 1) { value /= 1024; i++; }

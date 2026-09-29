@@ -75,6 +75,11 @@
   .code-capability-list { flex-direction: column; gap: 0; }
   .code-actions .btn, .code-approval-actions .btn { width: 100%; }
 }
+/* #650: the same phone rules in the Layout setting's Phone preview, where the width query never matches. */
+:root[data-layout="mobile"] .code-compose { padding: 14px; }
+:root[data-layout="mobile"] .code-choices { flex-direction: column; gap: 12px; }
+:root[data-layout="mobile"] .code-capability-list { flex-direction: column; gap: 0; }
+:root[data-layout="mobile"] .code-actions .btn, :root[data-layout="mobile"] .code-approval-actions .btn { width: 100%; }
 
 /* Astra review (#519): the verdict is advice, set above the person's own question. */
 .code-review-verdict { margin: 0; padding: 8px 10px; border-radius: var(--radius-control); border: 1px solid var(--border); background: var(--bg-surface); font-size: var(--text-footnote); line-height: 1.5; overflow-wrap: anywhere; }

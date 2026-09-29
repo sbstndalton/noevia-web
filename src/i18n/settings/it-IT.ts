@@ -503,7 +503,7 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'models.intro': "Un riepilogo del motore. Download, impostazioni per modello, hardware e benchmark si trovano nel gestore dei modelli.",
   'models.routingError': "Impossibile leggere",
   'models.notConfigured': "Non configurato",
-  'models.roles': "Veloce: {fast} · Avanzato: {smart}",
+  'models.roles': "Veloce: {fast} · Esperto: {smart}",
   'models.vision': "Visione: {vision}",
   'models.count.one': "{count} modello",
   'models.count.other': "{count} modelli",

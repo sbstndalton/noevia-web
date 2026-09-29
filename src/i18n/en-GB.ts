@@ -517,6 +517,7 @@ export const EN_GB = {
   'sharing.lan': "LAN endpoint",
   'sharing.public': "Public HTTPS",
   'sharing.staysOff': "Sharing stays off.",
+  'sharing.reason.notConfigured': "The operator has not configured a file-sharing endpoint.",
   'sharing.ineligible': "Requires enabled Diary with server-held local storage. Remote and browser-local folders are not shared.",
   'sharing.access': "Access",
   'sharing.accessLabel': "Diary sharing access",

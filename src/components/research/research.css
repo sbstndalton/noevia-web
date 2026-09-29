@@ -36,3 +36,7 @@
   .research-actions { justify-content: stretch; }
   .research-actions .btn { flex: 1 1 auto; }
 }
+/* #650: the same phone rules in the Layout setting's Phone preview. */
+:root[data-layout="mobile"] .research-compose { padding: 14px; }
+:root[data-layout="mobile"] .research-actions { justify-content: stretch; }
+:root[data-layout="mobile"] .research-actions .btn { flex: 1 1 auto; }

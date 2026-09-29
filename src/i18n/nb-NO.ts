@@ -506,6 +506,7 @@ export const NB_NO: Catalogue = {
   'sharing.lan': "LAN-endepunkt",
   'sharing.public': "Offentlig HTTPS",
   'sharing.staysOff': "Delingen forblir av.",
+  'sharing.reason.notConfigured': "Operatøren har ikke satt opp et endepunkt for fildeling.",
   'sharing.ineligible': "Krever aktivert Dagbok med lokal serverlagring. Eksterne og nettleserlokale mapper deles ikke.",
   'sharing.access': "Tilgang",
   'sharing.accessLabel': "Tilgang til dagbokdeling",

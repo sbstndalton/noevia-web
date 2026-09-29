@@ -503,7 +503,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'models.intro': "Eine Übersicht über die Engine. Downloads, Einstellungen pro Modell, Hardware und Benchmarks findest du im Modellmanager.",
   'models.routingError': "Konnte nicht gelesen werden",
   'models.notConfigured': "Nicht eingerichtet",
-  'models.roles': "Schnell: {fast} · Klug: {smart}",
+  'models.roles': "Schnell: {fast} · Smart: {smart}",
   'models.vision': "Bild: {vision}",
   'models.count.one': "{count} Modell",
   'models.count.other': "{count} Modelle",

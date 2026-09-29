@@ -496,6 +496,14 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
   .app .coding-content { padding: 16px 16px 20px; }
   .main.plugins-view .plugins-page { padding-top: 64px; }
 }
+/* #651: the same, in the Layout setting's Phone preview on a wide window (#650): the max-width query above
+   never matches there, so the title sat under the floating toggle ("w task"). */
+:root[data-layout="mobile"] .app .coding-header { padding-left: 64px; padding-right: 12px; height: 60px; }
+:root[data-layout="mobile"] .app .coding-header .preview-badge { display: none; }
+:root[data-layout="mobile"] .app .coding-content { padding: 16px 16px 20px; }
+:root[data-layout="mobile"] .coding-welcome h1 { font-size: var(--text-title1); }
+:root[data-layout="mobile"] .coding-context-chips, :root[data-layout="mobile"] .coding-composer-footer { flex-wrap: wrap; }
+:root[data-layout="mobile"] .main.plugins-view .plugins-page { padding-top: 64px; }
 
 /* Tall phone screens (a zoomed-out phone, a tablet in portrait): the empty chat's greeting sits
    in the middle of the free height rather than leaving a band of nothing under it. */

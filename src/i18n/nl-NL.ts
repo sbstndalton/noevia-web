@@ -506,6 +506,7 @@ export const NL_NL: Catalogue = {
   'sharing.lan': "LAN-endpoint",
   'sharing.public': "Openbare HTTPS",
   'sharing.staysOff': "Delen blijft uit.",
+  'sharing.reason.notConfigured': "De beheerder heeft geen eindpunt voor bestandsdeling ingesteld.",
   'sharing.ineligible': "Vereist een ingeschakeld Dagboek met lokale serveropslag. Externe en browserlokale mappen worden niet gedeeld.",
   'sharing.access': "Toegang",
   'sharing.accessLabel': "Toegang tot Dagboek delen",

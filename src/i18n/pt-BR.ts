@@ -506,6 +506,7 @@ export const PT_BR: Catalogue = {
   'sharing.lan': "Endpoint de LAN",
   'sharing.public': "HTTPS público",
   'sharing.staysOff': "O compartilhamento continua desativado.",
+  'sharing.reason.notConfigured': "O operador não configurou um ponto de acesso para o compartilhamento de arquivos.",
   'sharing.ineligible': "Requer o Diário ativado com armazenamento local no servidor. Pastas remotas e locais do navegador não são compartilhadas.",
   'sharing.access': "Acesso",
   'sharing.accessLabel': "Acesso ao compartilhamento do Diário",
