@@ -18,6 +18,14 @@ export function modelHistory(messages: Message[]): ModelHistoryEntry[] {
       out.push({ role: 'tool', name: c.name, content: c.result || '', applied: true,
         ...(c.target ? { target: c.target } : {}), ...(c.args ? { args: c.args } : {}) });
     }
+    // #666: writes the user declined (or did not answer in time). The reply that asked for them
+    // has no text after the decline, so the model is told they did not run. The on-screen note
+    // itself is never sent.
+    for (const c of m.toolCalls || []) {
+      if (c && c.status === 'denied' && c.applied !== true && typeof c.name === 'string') {
+        out.push({ role: 'tool', name: c.name, content: c.result || '', declined: true });
+      }
+    }
   }
   return out;
 }
@@ -28,7 +36,14 @@ export function appliedRecord(m: Message): Message | null {
   const applied = appliedCalls(m).length;
   if (m.role !== 'assistant' || !applied) return null;
   // Only the tool list and the note: none of the reply's text, routing, thinking or stats.
-  return { id: m.id, role: 'assistant', content: '', toolCalls: m.toolCalls, paused: { reason: 'stopped', applied } };
+  // #666 review: without the calls that were not approved. A re-run is "try again": the model is
+  // not told those were refused (a new write gets a fresh card anyway). A reply that ended on a
+  // decline keeps saying so in its note.
+  const toolCalls = (m.toolCalls || []).filter((c) => c && c.status !== 'denied');
+  const paused: Message['paused'] = m.paused?.reason === 'declined'
+    ? { reason: 'declined', applied, declined: declinedNames(m.paused.declined) }
+    : { reason: 'stopped', applied };
+  return { id: m.id, role: 'assistant', content: '', toolCalls, paused };
 }
 
 /** The transcript to resend on when the reply at `index` (produced by the user turn right
@@ -60,6 +75,16 @@ export function persistableMessage(m: Message): Message | null {
 /** The `paused` field read back from a saved history entry, if it is well formed. */
 export function storedPause(h: Pick<HistoryEntry, 'paused'>): Message['paused'] {
   const p = h.paused;
-  if (!p || (p.reason !== 'supervision' && p.reason !== 'stopped') || !Number.isInteger(p.applied) || p.applied < 0) return undefined;
+  if (!p || (p.reason !== 'supervision' && p.reason !== 'stopped' && p.reason !== 'declined') || !Number.isInteger(p.applied) || p.applied < 0) return undefined;
+  // A decline whose names did not survive still reads as a decline, in general words.
+  if (p.reason === 'declined') return { reason: 'declined', applied: p.applied, declined: declinedNames(p.declined) };
   return { reason: p.reason, applied: p.applied };
+}
+
+/** #666: the tool names a `paused` event or a saved entry says were declined: tool-name shaped
+ *  strings only, each once, at most a few. Anything else is dropped. */
+export function declinedNames(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const names = value.filter((n): n is string => typeof n === 'string' && /^[\w.-]{1,80}$/.test(n));
+  return Array.from(new Set(names)).slice(0, 8);
 }

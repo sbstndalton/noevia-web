@@ -47,6 +47,7 @@ import type {
   Message,
   Project,
   ProjectFile,
+  ReplyPause,
   ReplyTelemetry,
   ToolCallView,
 } from './types';
@@ -65,7 +66,7 @@ import { EditProjectModal } from './components/EditProjectModal';
 import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
 import { finishedToolCall, pendingToolCall, settleToolCalls } from './tool-call-state';
-import { editBase, modelHistory, persistableMessage, rerunBase, storedPause } from './applied-writes';
+import { declinedNames, editBase, modelHistory, persistableMessage, rerunBase, storedPause } from './applied-writes';
 import { mergeTranscripts } from './transcript-merge';
 import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, shouldSaveChat, upsertChatMeta } from './chat-save';
 import { readLastPlace, writeLastPlace, clearLastPlace, type LastPlace } from './last-view';
@@ -981,10 +982,12 @@ export default function App(): JSX.Element {
           } else if (ev.type === 'paused') {
             // #658: step supervision stopped the reply after tool steps that finished. Not a
             // failure: the reply ends normally ('done' follows) with a note of what was saved.
+            // #666: or the person declined a write, and the reply ended with no model text.
             const applied = typeof ev.applied === 'number' && Number.isInteger(ev.applied) && ev.applied >= 0 ? ev.applied : 0;
+            const pause: ReplyPause = ev.reason === 'declined' ? { reason: 'declined', applied, declined: declinedNames(ev.declined) } : { reason: 'supervision', applied };
             setMessagesByChat((prev) => ({
               ...prev,
-              [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, paused: { reason: 'supervision', applied } } : m)),
+              [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, paused: pause } : m)),
             }));
           } else if (ev.type === 'error') {
             throw new Error(ev.text || 'Generation failed');
@@ -994,7 +997,7 @@ export default function App(): JSX.Element {
             // state, so an approved or refused call stops offering buttons
             // that would now 404.
             const done = typeof ev.index === 'number' ? ev.index : tools.findIndex((t) => t && t.name === ev.name);
-            const chip = finishedToolCall(done >= 0 ? tools[done] : undefined, { name: ev.name, text: ev.text, applied: ev.applied === true, target: ev.target }, TOOL_RESULT_LIMIT);
+            const chip = finishedToolCall(done >= 0 ? tools[done] : undefined, { name: ev.name, text: ev.text, applied: ev.applied === true, target: ev.target, declined: ev.declined === true, notRun: ev.notRun === true }, TOOL_RESULT_LIMIT);
             if (done >= 0) tools[done] = chip; else tools.push(chip);
             setMessagesByChat((prev) => ({
               ...prev,

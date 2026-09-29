@@ -18,14 +18,17 @@ export function pendingToolCall(ev: { name?: string; args?: string; id?: string;
 
 /** The chip for a finished call (#658): the result, and whether it was a write that ran and
  *  succeeded, so later turns can tell the model it is done. Keeps the target the card showed. */
-export function finishedToolCall(previous: ToolCallView | undefined, ev: { name?: string; text?: string; applied?: boolean; target?: string }, resultLimit: number): ToolCallView {
-  const denied = (ev.text || '').startsWith('ERROR: the user');
+export function finishedToolCall(previous: ToolCallView | undefined, ev: { name?: string; text?: string; applied?: boolean; target?: string; declined?: boolean; notRun?: boolean }, resultLimit: number): ToolCallView {
+  // #666 review: the server says so explicitly (`declined`: not approved; `notRun`: skipped after
+  // a decline). Tool text is never read for it: a tool's own "ERROR: the user …" is not a decline.
+  // Saved chats keep the status they were stored with.
+  const denied = ev.declined === true;
   const target = typeof ev.target === 'string' && ev.target ? ev.target : previous?.target;
   return {
     name: ev.name || previous?.name || 'tool',
     args: previous ? previous.args : '',
     result: (ev.text || '').slice(0, resultLimit),
-    status: denied ? 'denied' : 'done',
+    status: denied ? 'denied' : ev.notRun === true ? 'stopped' : 'done',
     ...(target ? { target } : {}),
     ...(previous?.targetKind ? { targetKind: previous.targetKind } : {}),
     ...(ev.applied === true ? { applied: true } : {}),

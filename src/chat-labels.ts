@@ -88,8 +88,16 @@ export function messageBodyText(t: Translator, m: BodyMessage): string {
  *  supervision pausing is not a failure, and a reply that failed after saving a change still
  *  saved it; the note says so in the interface language. */
 export function pausedNoteText(t: Translator & { plural: (key: string, count: number, params?: Record<string, string | number>) => string },
-  pause: { reason: 'supervision' | 'stopped'; applied: number }, formatCount: (n: number) => string = String): string {
+  pause: { reason: 'supervision' | 'stopped' | 'declined'; applied: number; declined?: string[] }, formatCount: (n: number) => string = String): string {
   const count = formatCount(pause.applied);
+  if (pause.reason === 'declined') {
+    // #666: the person declined a write, so the reply ended with no model text. Tool names are
+    // shown as the card showed them.
+    const tools = (pause.declined || []).join(', ');
+    // No tool name to show (a malformed event or saved entry): the same facts in general words.
+    if (!tools) return pause.applied > 0 ? t.plural('chat.paused.stoppedApplied', pause.applied, { count }) : t('chat.paused.declinedNone');
+    return pause.applied > 0 ? t.plural('chat.paused.declinedApplied', pause.applied, { count, tools }) : t('chat.paused.declined', { tools });
+  }
   if (pause.reason === 'supervision') {
     return pause.applied > 0 ? t.plural('chat.paused.supervisionApplied', pause.applied, { count }) : t('chat.paused.supervision');
   }

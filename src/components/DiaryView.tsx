@@ -366,7 +366,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
         if (ev.type === 'tool' || ev.type === 'tool_pending' || ev.type === 'tool_result') {
           const index = ev.index ?? calls.length;
           calls[index] = ev.type === 'tool_result'
-            ? finishedToolCall(calls[index], { name: ev.name, text: ev.text, applied: ev.applied === true, target: ev.target }, TOOL_RESULT_LIMIT) // keeps `applied` and the target (#658)
+            ? finishedToolCall(calls[index], { name: ev.name, text: ev.text, applied: ev.applied === true, target: ev.target, declined: ev.declined === true, notRun: ev.notRun === true }, TOOL_RESULT_LIMIT) // keeps `applied` and the target (#658)
             : ev.type === 'tool_pending' ? pendingToolCall(ev)
             : {name:ev.name || 'tool',args:ev.args || '',status:undefined,approvalId:ev.id};
           patchReply({tools:[...calls]});

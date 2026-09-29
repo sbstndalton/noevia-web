@@ -200,7 +200,8 @@ async function api(page, url, body, method = body === undefined ? 'GET' : 'POST'
     assert.ok(againText.includes(storedPath), 'the card still names the file');
     for (const label of ['Allow once', 'Decline', 'Allow for this chat']) assert.ok(await again.getByRole('button', { name: label, exact: true }).count(), `the card keeps "${label}"`);
     await again.getByRole('button', { name: 'Decline', exact: true }).click();
-    await page.waitForFunction(() => /SYNTHETIC-TURN-OVER/.test(document.querySelector('.transcript')?.innerText || ''), null, { timeout: 30000 });
+    // #666: a decline ends the reply with a fixed note; the model is not asked for more text.
+    await page.waitForFunction(() => /No change was made: you declined project_append_file\./.test(document.querySelector('.transcript')?.innerText || ''), null, { timeout: 30000 });
     assert.equal(String(dav.bodies[storedPath]), `${ORIGINAL}${APPEND}`, 'exactly one append in storage');
     assert.equal(dav.puts.filter((p) => p.path === storedPath).length, 2, 'the upload and the one approved append, nothing else');
     console.log('PASS turn 2: the model was told the change is done; the repeat proposal is flagged on the card with all three actions; declining leaves one append');

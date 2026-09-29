@@ -52,10 +52,13 @@ export interface Message {
   paused?: ReplyPause;
 }
 
-/** Why a reply ended before a final answer, and how many changes it had already saved (#658). */
+/** Why a reply ended before a final answer, and how many changes it had already saved (#658).
+ *  'declined' (#666): the person declined a write on its approval card, so the reply ended with
+ *  no model text; `declined` names the tools they declined. */
 export interface ReplyPause {
-  reason: 'supervision' | 'stopped';
+  reason: 'supervision' | 'stopped' | 'declined';
   applied: number;
+  declined?: string[];
 }
 
 /** One project source the model was given for a reply. `file` is the project file's name. */
@@ -230,7 +233,9 @@ export interface HistoryEntry {
 
 /** One entry of the history sent to /api/chat: a turn, or (#658) a change an earlier reply
  *  already saved, which the server words for the model as done so it is not proposed again. */
-export type ModelHistoryEntry = HistoryEntry | { role: 'tool'; name: string; content: string; applied: true; target?: string; args?: string };
+export type ModelHistoryEntry = HistoryEntry | { role: 'tool'; name: string; content: string; applied: true; target?: string; args?: string }
+  /** #666: a write the user did not approve; the server tells the model it did not run. */
+  | { role: 'tool'; name: string; content: string; declined: true };
 
 export interface WorkspaceInfo {
   projects: Project[];

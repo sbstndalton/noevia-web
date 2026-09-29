@@ -175,19 +175,21 @@ export function MessageActions({ content, canRegenerate, onRegenerate, regenerat
   const [copied, setCopied] = useState(false);
   return (
     <div className="msg-actions">
-      <button
-        type="button"
-        className="msg-action-btn"
-        onClick={() => {
-          void navigator.clipboard?.writeText(content).then(
-            () => { setCopied(true); setTimeout(() => setCopied(false), 1200); },
-            () => undefined,
-          );
-        }}
-        aria-label={t('msg.copy')}
-      >
-        {copied ? t('msg.copied') : t('msg.copy')}
-      </button>
+      {content && (
+        <button
+          type="button"
+          className="msg-action-btn"
+          onClick={() => {
+            void navigator.clipboard?.writeText(content).then(
+              () => { setCopied(true); setTimeout(() => setCopied(false), 1200); },
+              () => undefined,
+            );
+          }}
+          aria-label={t('msg.copy')}
+        >
+          {copied ? t('msg.copied') : t('msg.copy')}
+        </button>
+      )}
       {canRegenerate && (
         <button
           type="button"
@@ -557,8 +559,11 @@ export function ChatView({
                     !m.error && <MessageMeta stats={m.stats} />
                   )}
                   {/* Copy on every finished reply; Regenerate only on the last one, and never
-                      while it (or anything else in this chat) is still streaming (#356). */}
-                  {body && !m.error && !(streaming && isLast) && (
+                      while it (or anything else in this chat) is still streaming (#356). A last
+                      reply that ended on a note with no text (paused, declined, or saved changes;
+                      #667) keeps Regenerate: it re-runs with the record of saved changes and never
+                      replays them (rerunBase). Copy needs text. */}
+                  {(body || (m.paused && isLast && !m.coworkTask)) && !m.error && !(streaming && isLast) && (
                     <MessageActions
                       content={body}
                       canRegenerate={isLast && !m.coworkTask}
