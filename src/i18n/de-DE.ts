@@ -534,7 +534,7 @@ export const DE_DE: Catalogue = {
   'stats.speed': "Geschwindigkeit",
   'stats.speedHint': "Vom Anbieter gemeldete Generierungsrate für diese Chatantwort. Erscheint nur, wenn der Anbieter abschließende Zeitangaben liefert.",
   'stats.tokensPerSecond': "{value} Token/s",
-  'stats.tokPerSecUnit': "Tok/s",
+  'stats.tokPerSecUnit': "Token/s",
   'stats.notReported': "Nicht gemeldet",
   'stats.firstToken': "Erstes Token",
   'stats.firstTokenHint': "Vom Server gemessene Zeit von der Anfrageverarbeitung über Routing und Vorbereitung bis zum Prefill des Anbieters und der ersten echten Ausgabe.",

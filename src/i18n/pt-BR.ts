@@ -534,7 +534,7 @@ export const PT_BR: Catalogue = {
   'stats.speed': "Velocidade",
   'stats.speedHint': "Taxa de geração informada pelo provedor para esta resposta do chat. Só aparece quando o provedor fornece os tempos finais.",
   'stats.tokensPerSecond': "{value} tokens/s",
-  'stats.tokPerSecUnit': "tok/s",
+  'stats.tokPerSecUnit': "tokens/s",
   'stats.notReported': "Não informado",
   'stats.firstToken': "Primeiro token",
   'stats.firstTokenHint': "Tempo observado pelo servidor desde o processamento da solicitação, passando pelo roteamento e preparação, até o prefill do provedor e a primeira saída real.",

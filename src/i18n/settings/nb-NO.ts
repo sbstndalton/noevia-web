@@ -512,7 +512,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'models.engine': "Motor",
   'models.available': "tilgjengelig",
   'models.unavailable': "utilgjengelig",
-  'models.rate': "sist rapportert {rate} tok/s",
+  'models.rate': "sist rapportert {rate} tokens/s",
   'models.installed': "Installert",
   'models.notAvailable': "Ikke tilgjengelig",
   'models.autoRouting': "Automatisk ruting",

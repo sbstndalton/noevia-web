@@ -512,7 +512,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'models.engine': "Engine",
   'models.available': "beschikbaar",
   'models.unavailable': "niet beschikbaar",
-  'models.rate': "laatst gemeld {rate} tok/s",
+  'models.rate': "laatst gemeld {rate} tokens/s",
   'models.installed': "Geïnstalleerd",
   'models.notAvailable': "Niet beschikbaar",
   'models.autoRouting': "Automatische routering",

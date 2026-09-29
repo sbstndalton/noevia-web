@@ -13,7 +13,7 @@ export const ES_ES_FIELDS: Partial<Record<keyof typeof EN_GB_FIELDS, string>> = 
   'mm.field.cache-type-k.label': "Caché KV – cuantización K",
   'mm.field.cache-type-k.help': "Tipo de datos del lado K de la caché KV. q8_0 ahorra mucha VRAM con una pérdida de calidad mínima. f16 = predeterminado.",
   'mm.field.cache-type-v.label': "Caché KV – cuantización V",
-  'mm.field.cache-type-v.help': "Tipo de datos del lado V de la caché KV. Mantenlo igual que K. Bajar de q8_0 ahorra VRAM pero puede salirse sin avisar de la vía rápida de flash-attention de CUDA y ejecutar la atención en la CPU: se midió una evaluación del prompt 15 veces más lenta (1737 -> 115 tok/s) en un 27B con cabezas de 256 de ancho. El retroceso es invisible con prompts cortos, así que si lo cambias, prueba un prompt LARGO y vigila el uso de la GPU.",
+  'mm.field.cache-type-v.help': "Tipo de datos del lado V de la caché KV. Mantenlo igual que K. Bajar de q8_0 ahorra VRAM pero puede salirse sin avisar de la vía rápida de flash-attention de CUDA y ejecutar la atención en la CPU: se midió una evaluación del prompt 15 veces más lenta (1737 -> 115 tokens/s) en un 27B con cabezas de 256 de ancho. El retroceso es invisible con prompts cortos, así que si lo cambias, prueba un prompt LARGO y vigila el uso de la GPU.",
   'mm.field.parallel.label': "Slots paralelos (--np)",
   'mm.field.parallel.help': "Número de slots de generación simultáneos que aloja el servidor. -1 = auto. Cada slot necesita su propia asignación KV.",
   'mm.field.jinja.label': "Activar plantillas --jinja",

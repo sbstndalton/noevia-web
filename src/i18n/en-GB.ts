@@ -545,7 +545,7 @@ export const EN_GB = {
   'stats.speed': 'Speed',
   'stats.speedHint': 'Provider-reported generation rate for this chat reply. It appears only when the provider supplies final timings.',
   'stats.tokensPerSecond': '{value} tokens/s',
-  'stats.tokPerSecUnit': 'tok/s',
+  'stats.tokPerSecUnit': 'tokens/s',
   'stats.notReported': 'Not reported',
   'stats.firstToken': 'First token',
   'stats.firstTokenHint': 'Server-observed time from request handling through routing, preparation and provider prefill to the first real output.',

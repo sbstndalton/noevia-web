@@ -2042,6 +2042,12 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 :root[data-layout="mobile"] .sidebar.is-expanded .rail-tools { display: none; }
 :root[data-layout="mobile"] .nav-drawer-backdrop { display: block; position: fixed; inset: 0; z-index: 55; background: rgb(0 0 0 / .45); }
 :root[data-layout="mobile"] .chat-header, :root[data-layout="mobile"] .diary-header, :root[data-layout="mobile"] .coding-header { padding-left: 60px; }
+/* Project chat header on a phone (#660): the project name and the chat title share one row, and both
+   crumbs shrank in proportion to their text, so a long chat title left the name one letter ("q…").
+   The back link keeps its own width (up to 55% of the row, then it ellipsises), the title takes the rest
+   and ellipsises, and the title keeps a readable minimum. */
+:root[data-layout="mobile"] .header-crumbs .crumb-back { flex: 0 1 auto; }
+:root[data-layout="mobile"] .header-crumbs .header-title { flex: 1 1 0; min-width: 4.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The way out of an empty Discover result, beside the sentence that explains it. */
 .mm-empty-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }

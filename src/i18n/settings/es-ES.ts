@@ -512,7 +512,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'models.engine': "Motor",
   'models.available': "disponible",
   'models.unavailable': "no disponible",
-  'models.rate': "último dato: {rate} tok/s",
+  'models.rate': "último dato: {rate} tokens/s",
   'models.installed': "Instalados",
   'models.notAvailable': "No disponible",
   'models.autoRouting': "Enrutamiento automático",

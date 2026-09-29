@@ -13,7 +13,7 @@ export const FR_FR_FIELDS: Partial<Record<keyof typeof EN_GB_FIELDS, string>> = 
   'mm.field.cache-type-k.label': "Cache KV – quantification K",
   'mm.field.cache-type-k.help': "Type de données du côté K du cache KV. q8_0 économise beaucoup de VRAM pour une perte de qualité minime. f16 = valeur par défaut.",
   'mm.field.cache-type-v.label': "Cache KV – quantification V",
-  'mm.field.cache-type-v.help': "Type de données du côté V du cache KV. Gardez-le égal à K. Descendre sous q8_0 économise de la VRAM mais peut sortir sans bruit du chemin rapide flash-attention CUDA et exécuter l'attention sur le CPU – mesuré 15 fois plus lent à l'évaluation du prompt (1737 -> 115 tok/s) sur un 27B avec des têtes de 256 de large. Le repli est invisible sur les prompts courts ; après un changement, testez donc un prompt LONG et surveillez l'utilisation du GPU.",
+  'mm.field.cache-type-v.help': "Type de données du côté V du cache KV. Gardez-le égal à K. Descendre sous q8_0 économise de la VRAM mais peut sortir sans bruit du chemin rapide flash-attention CUDA et exécuter l'attention sur le CPU – mesuré 15 fois plus lent à l'évaluation du prompt (1737 -> 115 jetons/s) sur un 27B avec des têtes de 256 de large. Le repli est invisible sur les prompts courts ; après un changement, testez donc un prompt LONG et surveillez l'utilisation du GPU.",
   'mm.field.parallel.label': "Slots parallèles (--np)",
   'mm.field.parallel.help': "Nombre de slots de génération simultanés hébergés par le serveur. -1 = auto. Chaque slot a besoin de sa propre allocation KV.",
   'mm.field.jinja.label': "Activer les modèles --jinja",

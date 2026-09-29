@@ -13,7 +13,7 @@ export const SV_SE_FIELDS: Partial<Record<keyof typeof EN_GB_FIELDS, string>> = 
   'mm.field.cache-type-k.label': "KV-cache – K-kvantisering",
   'mm.field.cache-type-k.help': "Datatyp för K-sidan av KV-cachen. q8_0 sparar mycket VRAM med minimal kvalitetsförlust. f16 = standard.",
   'mm.field.cache-type-v.label': "KV-cache – V-kvantisering",
-  'mm.field.cache-type-v.help': "Datatyp för V-sidan av KV-cachen. Håll den lika med K. Att gå under q8_0 sparar VRAM men kan obemärkt falla ur den snabba CUDA-flash-attention-vägen och köra attention på CPU:n: uppmätt 15 gånger långsammare promptutvärdering (1737 -> 115 tok/s) på en 27B med 256 breda huvuden. Reservvägen syns inte på korta prompts, så om du ändrar detta, testa en LÅNG prompt och följ GPU-användningen.",
+  'mm.field.cache-type-v.help': "Datatyp för V-sidan av KV-cachen. Håll den lika med K. Att gå under q8_0 sparar VRAM men kan obemärkt falla ur den snabba CUDA-flash-attention-vägen och köra attention på CPU:n: uppmätt 15 gånger långsammare promptutvärdering (1737 -> 115 tokens/s) på en 27B med 256 breda huvuden. Reservvägen syns inte på korta prompts, så om du ändrar detta, testa en LÅNG prompt och följ GPU-användningen.",
   'mm.field.parallel.label': "Parallella slots (--np)",
   'mm.field.parallel.help': "Antal samtidiga genereringsslots som servern värdar. -1 = automatiskt. Varje slot behöver sin egen KV-allokering.",
   'mm.field.jinja.label': "Aktivera --jinja-mallar",

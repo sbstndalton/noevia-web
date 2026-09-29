@@ -534,7 +534,7 @@ export const NL_NL: Catalogue = {
   'stats.speed': "Snelheid",
   'stats.speedHint': "Door de provider gerapporteerde generatiesnelheid voor dit chatantwoord. Verschijnt alleen wanneer de provider definitieve tijden levert.",
   'stats.tokensPerSecond': "{value} tokens/s",
-  'stats.tokPerSecUnit': "tok/s",
+  'stats.tokPerSecUnit': "tokens/s",
   'stats.notReported': "Niet gerapporteerd",
   'stats.firstToken': "Eerste token",
   'stats.firstTokenHint': "Door de server gemeten tijd van het afhandelen van het verzoek, via routering en voorbereiding, tot de prefill van de provider en de eerste echte uitvoer.",

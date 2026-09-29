@@ -13,7 +13,7 @@ export const PT_BR_FIELDS: Partial<Record<keyof typeof EN_GB_FIELDS, string>> = 
   'mm.field.cache-type-k.label': "Cache KV – quantização K",
   'mm.field.cache-type-k.help': "Tipo de dado do lado K do cache KV. q8_0 economiza bastante VRAM com perda mínima de qualidade. f16 = padrão.",
   'mm.field.cache-type-v.label': "Cache KV – quantização V",
-  'mm.field.cache-type-v.help': "Tipo de dado do lado V do cache KV. Mantenha igual ao K. Ir abaixo de q8_0 economiza VRAM, mas pode sair silenciosamente do caminho rápido de flash-attention do CUDA e rodar a atenção na CPU: medido 15 vezes mais lento na avaliação do prompt (1737 -> 115 tok/s) em um 27B com cabeças de 256 de largura. O retrocesso é invisível em prompts curtos; por isso, se mudar isto, teste um prompt LONGO e observe o uso da GPU.",
+  'mm.field.cache-type-v.help': "Tipo de dado do lado V do cache KV. Mantenha igual ao K. Ir abaixo de q8_0 economiza VRAM, mas pode sair silenciosamente do caminho rápido de flash-attention do CUDA e rodar a atenção na CPU: medido 15 vezes mais lento na avaliação do prompt (1737 -> 115 tokens/s) em um 27B com cabeças de 256 de largura. O retrocesso é invisível em prompts curtos; por isso, se mudar isto, teste um prompt LONGO e observe o uso da GPU.",
   'mm.field.parallel.label': "Slots paralelos (--np)",
   'mm.field.parallel.help': "Número de slots de geração simultâneos hospedados pelo servidor. -1 = automático. Cada slot precisa da sua própria alocação de KV.",
   'mm.field.jinja.label': "Ativar templates --jinja",

@@ -62,7 +62,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'features.item.stepSupervision.label': "Schrittüberwachung",
   'features.item.stepSupervision.description': "Lässt einen Entscheidungsanbieter zwischen Chat-Schritten raten, ob es weitergehen, Werkzeugergebnisse geprüft oder für eine Prüfung pausiert werden soll. Bei Nichtverfügbarkeit bleibt das bisherige Verhalten. Freigaben und Ausführungslimits gelten weiterhin.",
   'features.item.systemOneRouting.label': "System-One-Routing",
-  'features.item.systemOneRouting.description': "Nutzt den konfigurierten Entscheidungsdienst, um für neue automatisch gerouteten Nachrichten Fast, Smart oder Code zu wählen. Fällt auf den bisherigen Router zurück, wenn er nicht verfügbar ist. Manuelle Modellwahlen bleiben unverändert.",
+  'features.item.systemOneRouting.description': "Nutzt den konfigurierten Entscheidungsdienst, um für neue automatisch geroutete Nachrichten Schnell, Smart oder Code zu wählen. Fällt auf den bisherigen Router zurück, wenn er nicht verfügbar ist. Manuelle Modellwahlen bleiben unverändert.",
   'features.item.toolGate.label': "Werkzeug-Gate",
   'features.item.toolGate.description': "Lässt den Entscheidungsdienst entscheiden, wann eine Nachricht ein Werkzeug braucht, führt dann schreibgeschützte Werkzeuge vorab aus oder verlangt vom Modell einen Aufruf. Schreibvorgänge laufen weiterhin über die Freigabekarte.",
   'features.item.previews.label': "Vorschau-Bereiche",

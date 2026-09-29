@@ -20,6 +20,10 @@ const assert = require('node:assert/strict');
 const { start, signedIn } = require('./sources-panel-lib.cjs');
 
 const MIN_TEXT_WIDTH = 40;
+// #660: in a project chat's header the project name (the breadcrumb's back link) and the chat title share
+// one row; the name was squeezed to 19px ("q…") while the title kept the rest. Each keeps a readable share.
+const MIN_CRUMB_WIDTH = 72;
+const MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
 
 async function mockDiary(page) {
   await page.route('**/api/diary/**', async (route) => {
@@ -65,7 +69,11 @@ const inspect = (min) => {
   }
   const rail = document.querySelector('.project-rail'), main = document.querySelector('.project-main');
   const insp = document.querySelector('.noevia-inspector'), appMain = document.querySelector('.app-main');
+  const crumbName = document.querySelector('.crumb-back > span'), crumbTitle = document.querySelector('.header-crumbs .header-title');
+  const crumbBox = crumbName && crumbName.checkVisibility() ? crumbName.getBoundingClientRect() : null;
   return {
+    crumbName: crumbBox ? Math.round(crumbBox.width) : null,
+    crumbTitle: crumbTitle && crumbTitle.checkVisibility() ? Math.round(crumbTitle.getBoundingClientRect().width) : null,
     narrow: narrow.slice(0, 6), past: past.slice(0, 6),
     pageScroll: document.documentElement.scrollWidth - innerWidth,
     column: col.width,
@@ -89,7 +97,7 @@ const inspect = (min) => {
     assert.equal((await first.api('/api/profile/features', { diaryEnabled: true }, 'PUT')).status, 200);
     const pid = first.project.id;
     // A chat with a short transcript, so the chat view and its context rail have something in them.
-    await first.api(`/api/projects/${pid}/chats`, { chats: [{ id: 'c-sweep-1', title: 'Cell chemistry', updatedAt: Date.now() }] });
+    await first.api(`/api/projects/${pid}/chats`, { chats: [{ id: 'c-sweep-1', title: 'Please add the line "Synthetic marker" to the notes file', updatedAt: Date.now() }] });
     await first.api('/api/chats/c-sweep-1/history', { history: [{ role: 'user', content: 'Which chemistry should the pack use?' }, { role: 'assistant', content: 'Synthetic answer about lithium iron phosphate cells.' }] });
     const storage = await first.ctx.storageState();
     await first.ctx.close();
@@ -120,6 +128,11 @@ const inspect = (min) => {
           assert.equal(await page.evaluate(() => document.documentElement.dataset.layout), 'mobile');
           const m = await page.evaluate(inspect, MIN_TEXT_WIDTH);
           if (shots) await page.screenshot({ path: `${shots}/phone-view-${id}-${width}-${theme}.png` });
+          if (id === 'chat') {
+            assert.notEqual(m.crumbName, null, 'a project chat shows its project name in the header');
+            assert.ok(m.crumbName >= MIN_CRUMB_WIDTH, `the project name in the chat header is ${m.crumbName}px wide (under ${MIN_CRUMB_WIDTH}px); the chat title has ${m.crumbTitle}px`);
+            assert.ok(m.crumbTitle >= MIN_CRUMB_WIDTH, `the chat title in the header is ${m.crumbTitle}px wide (under ${MIN_CRUMB_WIDTH}px)`);
+          }
           assert.deepEqual(m.narrow, [], `text narrower than ${MIN_TEXT_WIDTH}px (column ${Math.round(m.column)}px)`);
           assert.deepEqual(m.past, [], 'elements past the column edge');
           assert.ok(m.pageScroll <= 1, `sideways page scroll of ${m.pageScroll}px`);
@@ -128,6 +141,27 @@ const inspect = (min) => {
         });
         await page.close();
       }
+      await ctx.close();
+    }
+    // #660: a real phone (mobile user agent, 375px, touch, Layout on Automatic) gets the same project chat header.
+    for (const theme of ['light', 'dark']) {
+      if (process.env.QA_ONLY && !'chat'.startsWith(process.env.QA_ONLY)) continue;
+      const ctx = await browser.newContext({ locale: 'en-GB', viewport: { width: 375, height: 812 }, userAgent: MOBILE_UA, isMobile: true, hasTouch: true, storageState: storage });
+      await ctx.addInitScript(([t]) => { localStorage.setItem('cowork-theme', t); localStorage.removeItem('cowork-layout-mode'); }, [theme]);
+      const page = await ctx.newPage();
+      page.on('pageerror', (e) => errors.push(`real phone ${theme}: ${e.message}`));
+      await page.addInitScript(() => localStorage.removeItem('noevia:last-view'));
+      await check(`#660 real phone chat header: 375 ${theme}`, async () => {
+        await page.goto(env.origin + '/c/c-sweep-1');
+        await page.locator('.crumb-back').waitFor({ timeout: 20000 });
+        await page.evaluate((t) => { document.documentElement.dataset.theme = t; }, theme);
+        await page.waitForTimeout(400);
+        const m = await page.evaluate(inspect, MIN_TEXT_WIDTH);
+        if (shots) await page.screenshot({ path: `${shots}/phone-real-chat-375-${theme}.png` });
+        assert.ok(m.crumbName >= MIN_CRUMB_WIDTH, `the project name in the chat header is ${m.crumbName}px wide (under ${MIN_CRUMB_WIDTH}px)`);
+        assert.ok(m.crumbTitle >= MIN_CRUMB_WIDTH, `the chat title in the header is ${m.crumbTitle}px wide (under ${MIN_CRUMB_WIDTH}px)`);
+        assert.ok(m.pageScroll <= 1, `sideways page scroll of ${m.pageScroll}px`);
+      });
       await ctx.close();
     }
     assert.deepEqual(errors.filter((e) => !/ResizeObserver/.test(e)), [], 'page errors');

@@ -512,7 +512,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'models.engine': "Motor",
   'models.available': "tillgänglig",
   'models.unavailable': "inte tillgänglig",
-  'models.rate': "senast rapporterat {rate} tok/s",
+  'models.rate': "senast rapporterat {rate} tokens/s",
   'models.installed': "Installerade",
   'models.notAvailable': "Inte tillgängligt",
   'models.autoRouting': "Automatisk routning",

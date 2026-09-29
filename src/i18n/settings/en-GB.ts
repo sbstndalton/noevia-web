@@ -513,7 +513,7 @@ export const EN_GB_SETTINGS = {
   'models.engine': "Engine",
   'models.available': "available",
   'models.unavailable': "unavailable",
-  'models.rate': "{rate} tok/s last reported",
+  'models.rate': "{rate} tokens/s last reported",
   'models.installed': "Installed",
   'models.notAvailable': "Not available",
   'models.autoRouting': "Auto routing",

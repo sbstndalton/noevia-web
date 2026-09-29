@@ -13,7 +13,7 @@ export const DE_DE_FIELDS: Partial<Record<keyof typeof EN_GB_FIELDS, string>> = 
   'mm.field.cache-type-k.label': "KV-Cache – K-Quantisierung",
   'mm.field.cache-type-k.help': "Datentyp für die K-Seite des KV-Cache. q8_0 spart viel VRAM bei kaum Qualitätsverlust. f16 = Standard.",
   'mm.field.cache-type-v.label': "KV-Cache – V-Quantisierung",
-  'mm.field.cache-type-v.help': "Datentyp für die V-Seite des KV-Cache. Gleich wie K halten. Unterhalb von q8_0 spart VRAM, kann aber unbemerkt den schnellen CUDA-Flash-Attention-Pfad verlassen und Attention auf der CPU rechnen – gemessen 15-fach langsamere Prompt-Verarbeitung (1737 -> 115 tok/s) bei einem 27B-Modell mit 256 breiten Köpfen. Der Rückfall ist bei kurzen Prompts unsichtbar; teste nach einer Änderung daher einen LANGEN Prompt und beobachte die GPU-Auslastung.",
+  'mm.field.cache-type-v.help': "Datentyp für die V-Seite des KV-Cache. Gleich wie K halten. Unterhalb von q8_0 spart VRAM, kann aber unbemerkt den schnellen CUDA-Flash-Attention-Pfad verlassen und Attention auf der CPU rechnen – gemessen 15-fach langsamere Prompt-Verarbeitung (1737 -> 115 Token/s) bei einem 27B-Modell mit 256 breiten Köpfen. Der Rückfall ist bei kurzen Prompts unsichtbar; teste nach einer Änderung daher einen LANGEN Prompt und beobachte die GPU-Auslastung.",
   'mm.field.parallel.label': "Parallele Slots (--np)",
   'mm.field.parallel.help': "Anzahl gleichzeitiger Generierungs-Slots des Servers. -1 = automatisch. Jeder Slot braucht seinen eigenen KV-Speicher.",
   'mm.field.jinja.label': "--jinja-Templates aktivieren",

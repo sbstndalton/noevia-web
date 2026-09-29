@@ -13,7 +13,7 @@ export const NL_NL_FIELDS: Partial<Record<keyof typeof EN_GB_FIELDS, string>> = 
   'mm.field.cache-type-k.label': "KV-cache – K-kwantisatie",
   'mm.field.cache-type-k.help': "Gegevenstype voor de K-kant van de KV-cache. q8_0 bespaart veel VRAM met minimaal kwaliteitsverlies. f16 = standaard.",
   'mm.field.cache-type-v.label': "KV-cache – V-kwantisatie",
-  'mm.field.cache-type-v.help': "Gegevenstype voor de V-kant van de KV-cache. Houd dit gelijk aan K. Onder q8_0 gaan bespaart VRAM, maar kan ongemerkt van het snelle CUDA-flash-attention-pad afvallen en attention op de CPU draaien: gemeten 15x tragere promptevaluatie (1737 -> 115 tok/s) op een 27B met 256 brede heads. De terugval is onzichtbaar bij korte prompts; test na een wijziging dus een LANGE prompt en let op het GPU-gebruik.",
+  'mm.field.cache-type-v.help': "Gegevenstype voor de V-kant van de KV-cache. Houd dit gelijk aan K. Onder q8_0 gaan bespaart VRAM, maar kan ongemerkt van het snelle CUDA-flash-attention-pad afvallen en attention op de CPU draaien: gemeten 15x tragere promptevaluatie (1737 -> 115 tokens/s) op een 27B met 256 brede heads. De terugval is onzichtbaar bij korte prompts; test na een wijziging dus een LANGE prompt en let op het GPU-gebruik.",
   'mm.field.parallel.label': "Parallelle slots (--np)",
   'mm.field.parallel.help': "Aantal gelijktijdige generatieslots dat de server host. -1 = automatisch. Elk slot heeft een eigen KV-toewijzing nodig.",
   'mm.field.jinja.label': "--jinja-templates inschakelen",

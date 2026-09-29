@@ -14,7 +14,7 @@ export const EN_GB_FIELDS = {
   'mm.field.cache-type-k.label': "KV cache — K quant",
   'mm.field.cache-type-k.help': "Data type for the K side of the KV cache. q8_0 is a strong VRAM saver with minimal quality loss. f16 = default.",
   'mm.field.cache-type-v.label': "KV cache — V quant",
-  'mm.field.cache-type-v.help': "Data type for the V side of the KV cache. Keep this equal to K. Going below q8_0 saves VRAM but can silently fall off the CUDA flash-attention fast path and run attention on the CPU — measured 15x slower prompt eval (1737 -> 115 tok/s) on a 27B with a 256-wide head dim. The fallback is invisible on short prompts, so if you change this, benchmark a LONG one and watch GPU utilization.",
+  'mm.field.cache-type-v.help': "Data type for the V side of the KV cache. Keep this equal to K. Going below q8_0 saves VRAM but can silently fall off the CUDA flash-attention fast path and run attention on the CPU — measured 15x slower prompt eval (1737 -> 115 tokens/s) on a 27B with a 256-wide head dim. The fallback is invisible on short prompts, so if you change this, benchmark a LONG one and watch GPU utilization.",
   'mm.field.parallel.label': "Parallel slots (--np)",
   'mm.field.parallel.help': "Number of concurrent generation slots the server hosts. -1 = auto. Each slot needs its own KV allocation.",
   'mm.field.jinja.label': "Enable --jinja templating",
