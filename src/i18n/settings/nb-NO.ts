@@ -707,4 +707,17 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'serviceStatus.mcp.missing.other': "{count} utvalgte verktøy mangler",
   'serviceStatus.mcp.checked': "Sjekket {time}",
   'serviceStatus.mcp.cacheNote': "Katalogsjekker mellomlagres i opptil ti minutter. Et oppført verktøy kan likevel feile hvis påloggingsdetaljene eller tillatelsene endres. Verktøykassene du har valgt og skrivegodkjenningene dine styrer fortsatt hva som kjøres.",
+  // #555: native-app sign-in.
+  'security.devices.title': "Påloggede apper",
+  'security.devices.intro': "Apper du har godkjent med en kode, for eksempel noevia-appen for Mac. Når du trekker tilbake en app, logges den ut ved neste forespørsel.",
+  'security.devices.empty': "Ingen apper er logget på.",
+  'security.devices.loading': "Laster påloggede apper…",
+  'security.devices.lastUsed': "sist brukt {date}",
+  'security.devices.signedIn': "logget på {date}",
+  'security.devices.revoke': "Trekk tilbake",
+  'security.devices.revokeNamed': "Trekk tilbake {name}",
+  'security.devices.revoking': "Trekker tilbake…",
+  'security.devices.revoked': "{name} ble logget ut.",
+  'security.devices.loadError': "Kunne ikke laste påloggede apper. Last inn siden på nytt for å prøve igjen.",
+  'security.devices.revokeError': "Kunne ikke trekke tilbake appen. Prøv igjen.",
 };

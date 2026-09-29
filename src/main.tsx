@@ -1,6 +1,6 @@
 import { startLogoAppearance } from './logo-appearance';
 import './styles/logo-calendar.css';
-import { StrictMode } from 'react';
+import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { AuthGate } from './components/AuthGate';
@@ -33,10 +33,18 @@ startInterfaceLanguage();
 startHoverPull();
 void checkStaleShell();
 
+// #555: /device is where a signed-in person approves a native app's sign-in. It replaces the app
+// (still behind AuthGate) and is its own chunk. The server answers /device with 404 while the
+// nativeClientAuth feature is off, so this only renders when it is on. The path and code are read
+// once here, because AuthGate rewrites the address after a sign-in.
+const DeviceApproval = lazy(() => import('./components/device/DeviceApproval'));
+const devicePage = /^\/device\/?$/.test(window.location.pathname);
+const deviceCode = devicePage ? new URLSearchParams(window.location.search).get('code') ?? '' : '';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthGate>
-      <App />
+      {devicePage ? <Suspense fallback={null}><DeviceApproval initialCode={deviceCode} /></Suspense> : <App />}
     </AuthGate>
   </StrictMode>,
 );

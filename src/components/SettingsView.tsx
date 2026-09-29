@@ -4,6 +4,7 @@ import { ShellIcon } from './ShellIcon';
 import DiarySharing from './DiarySharing';
 import DiaryConnectors from './DiaryConnectors';
 import AppPasswords from './AppPasswords';
+import SignedInDevices from './device/SignedInDevices';
 import { ModelsSummary } from './models/ModelsSummary';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
@@ -104,6 +105,8 @@ function sessionLabel(t: Translate, ua?: string | null): string {
 // Account security only; identity (name, username, role) is the Profile page.
 function SecurityCard(): JSX.Element {
   const t = useT();
+  // #555: native apps signed in with a device code, only while the feature is on.
+  const nativeClients = useFeatureFlags().nativeClientAuth === true;
   const [user, setUser] = useState<AuthUser | null>(null);
   const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
@@ -176,6 +179,7 @@ function SecurityCard(): JSX.Element {
     {busy && <p role="status">{busy}…</p>}
     {notice && <p className="route-note" role="status">{notice}</p>}
     {error && <><p className="modal-err" role="alert">{error}</p><button className="modal-btn secondary" disabled={!!busy || loading} onClick={() => void load()}>{loading ? t('settings.loading') : t('security.reloadProfile')}</button></>}
+    {nativeClients && <SignedInDevices />}
     <AppPasswords />
   </div>;
 }

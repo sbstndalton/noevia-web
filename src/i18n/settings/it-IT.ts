@@ -707,4 +707,17 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'serviceStatus.mcp.missing.other': "{count} strumenti selezionati mancanti",
   'serviceStatus.mcp.checked': "Verificato alle {time}",
   'serviceStatus.mcp.cacheNote': "I controlli del catalogo restano in cache fino a dieci minuti. Uno strumento elencato può comunque non funzionare se le sue credenziali o autorizzazioni cambiano. Le cassette degli attrezzi selezionate e le approvazioni di scrittura continuano a controllare l’esecuzione.",
+  // #555: native-app sign-in.
+  'security.devices.title': "App connesse",
+  'security.devices.intro': "Le app che hai approvato con un codice, come l’app noevia per Mac. Revocandone una, viene disconnessa alla sua richiesta successiva.",
+  'security.devices.empty': "Nessuna app connessa.",
+  'security.devices.loading': "Caricamento delle app connesse…",
+  'security.devices.lastUsed': "ultimo utilizzo {date}",
+  'security.devices.signedIn': "connessa il {date}",
+  'security.devices.revoke': "Revoca",
+  'security.devices.revokeNamed': "Revoca {name}",
+  'security.devices.revoking': "Revoca in corso…",
+  'security.devices.revoked': "{name} è stata disconnessa.",
+  'security.devices.loadError': "Impossibile caricare le app connesse. Ricarica la pagina per riprovare.",
+  'security.devices.revokeError': "Impossibile revocare l’app. Riprova.",
 };

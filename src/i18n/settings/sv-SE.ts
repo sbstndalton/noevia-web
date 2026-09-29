@@ -707,4 +707,17 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'serviceStatus.mcp.missing.other': "{count} utvalda verktyg saknas",
   'serviceStatus.mcp.checked': "Kontrollerad {time}",
   'serviceStatus.mcp.cacheNote': "Katalogkontroller cachas i upp till tio minuter. Ett listat verktyg kan ändå misslyckas om dess inloggningsuppgifter eller behörigheter ändras. Dina valda verktygslådor och skrivgodkännanden styr fortfarande vad som körs.",
+  // #555: native-app sign-in.
+  'security.devices.title': "Inloggade appar",
+  'security.devices.intro': "Appar som du har godkänt med en kod, till exempel noevia-appen för Mac. En återkallad app loggas ut vid nästa begäran.",
+  'security.devices.empty': "Inga appar är inloggade.",
+  'security.devices.loading': "Läser in inloggade appar…",
+  'security.devices.lastUsed': "senast använd {date}",
+  'security.devices.signedIn': "inloggad {date}",
+  'security.devices.revoke': "Återkalla",
+  'security.devices.revokeNamed': "Återkalla {name}",
+  'security.devices.revoking': "Återkallar…",
+  'security.devices.revoked': "{name} loggades ut.",
+  'security.devices.loadError': "Inloggade appar kunde inte läsas in. Läs in sidan igen för att försöka på nytt.",
+  'security.devices.revokeError': "Appen kunde inte återkallas. Försök igen.",
 };

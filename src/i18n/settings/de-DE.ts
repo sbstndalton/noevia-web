@@ -707,4 +707,17 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'serviceStatus.mcp.missing.other': "{count} kuratierte Tools fehlen",
   'serviceStatus.mcp.checked': "Geprüft um {time}",
   'serviceStatus.mcp.cacheNote': "Katalogprüfungen werden bis zu zehn Minuten zwischengespeichert. Ein aufgeführtes Tool kann trotzdem fehlschlagen, wenn sich seine Zugangsdaten oder Berechtigungen ändern. Deine ausgewählten Toolboxen und Schreibfreigaben steuern weiterhin die Ausführung.",
+  // #555: native-app sign-in.
+  'security.devices.title': "Angemeldete Apps",
+  'security.devices.intro': "Apps, die du mit einem Code zugelassen hast, etwa die noevia-App für den Mac. Wenn du eine widerrufst, wird sie bei ihrer nächsten Anfrage abgemeldet.",
+  'security.devices.empty': "Keine Apps angemeldet.",
+  'security.devices.loading': "Angemeldete Apps werden geladen…",
+  'security.devices.lastUsed': "zuletzt genutzt {date}",
+  'security.devices.signedIn': "angemeldet {date}",
+  'security.devices.revoke': "Widerrufen",
+  'security.devices.revokeNamed': "{name} widerrufen",
+  'security.devices.revoking': "Wird widerrufen…",
+  'security.devices.revoked': "{name} wurde abgemeldet.",
+  'security.devices.loadError': "Angemeldete Apps konnten nicht geladen werden. Lade die Seite neu, um es erneut zu versuchen.",
+  'security.devices.revokeError': "Die App konnte nicht widerrufen werden. Versuche es erneut.",
 };

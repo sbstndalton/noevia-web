@@ -712,6 +712,19 @@ export const EN_GB_SETTINGS = {
   'serviceStatus.mcp.missing.other': "{count} curated tools missing",
   'serviceStatus.mcp.checked': "Checked {time}",
   'serviceStatus.mcp.cacheNote': "Catalogue checks are cached for up to ten minutes. A listed tool can still fail if its credentials or permissions change. Your selected toolboxes and write approvals still control execution.",
+  // #555: native-app sign-in.
+  'security.devices.title': "Signed-in apps",
+  'security.devices.intro': "Apps you approved with a code, such as the noevia app for Mac. Revoking one signs it out on its next request.",
+  'security.devices.empty': "No apps are signed in.",
+  'security.devices.loading': "Loading signed-in apps…",
+  'security.devices.lastUsed': "last used {date}",
+  'security.devices.signedIn': "signed in {date}",
+  'security.devices.revoke': "Revoke",
+  'security.devices.revokeNamed': "Revoke {name}",
+  'security.devices.revoking': "Revoking…",
+  'security.devices.revoked': "{name} was signed out.",
+  'security.devices.loadError': "Signed-in apps could not be loaded. Reload the page to try again.",
+  'security.devices.revokeError': "The app could not be revoked. Try again.",
 } as const;
 
 export type SettingsKey = keyof typeof EN_GB_SETTINGS;

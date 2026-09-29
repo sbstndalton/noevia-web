@@ -707,4 +707,17 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'serviceStatus.mcp.missing.other': "{count} geselecteerde tools ontbreken",
   'serviceStatus.mcp.checked': "Gecontroleerd om {time}",
   'serviceStatus.mcp.cacheNote': "Catalogus-controles worden tot tien minuten in de cache bewaard. Een vermelde tool kan alsnog mislukken als de inloggegevens of rechten veranderen. Je gekozen gereedschapskisten en schrijfgoedkeuringen bepalen nog steeds wat er wordt uitgevoerd.",
+  // #555: native-app sign-in.
+  'security.devices.title': "Aangemelde apps",
+  'security.devices.intro': "Apps die je met een code hebt goedgekeurd, zoals de noevia-app voor de Mac. Een ingetrokken app wordt bij zijn volgende verzoek afgemeld.",
+  'security.devices.empty': "Er zijn geen apps aangemeld.",
+  'security.devices.loading': "Aangemelde apps laden…",
+  'security.devices.lastUsed': "laatst gebruikt {date}",
+  'security.devices.signedIn': "aangemeld {date}",
+  'security.devices.revoke': "Intrekken",
+  'security.devices.revokeNamed': "{name} intrekken",
+  'security.devices.revoking': "Intrekken…",
+  'security.devices.revoked': "{name} is afgemeld.",
+  'security.devices.loadError': "Aangemelde apps konden niet worden geladen. Laad de pagina opnieuw om het nog eens te proberen.",
+  'security.devices.revokeError': "De app kon niet worden ingetrokken. Probeer het opnieuw.",
 };

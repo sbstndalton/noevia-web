@@ -707,4 +707,17 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'serviceStatus.mcp.missing.other': "faltan {count} herramientas seleccionadas",
   'serviceStatus.mcp.checked': "Comprobado a las {time}",
   'serviceStatus.mcp.cacheNote': "Las comprobaciones del catálogo se guardan en caché hasta diez minutos. Una herramienta de la lista puede fallar igualmente si cambian sus credenciales o permisos. Tus cajas de herramientas seleccionadas y tus aprobaciones de escritura siguen controlando la ejecución.",
+  // #555: native-app sign-in.
+  'security.devices.title': "Apps con sesión iniciada",
+  'security.devices.intro': "Apps que aprobaste con un código, como la app de noevia para Mac. Al revocar una, se cierra su sesión en su siguiente petición.",
+  'security.devices.empty': "No hay apps con sesión iniciada.",
+  'security.devices.loading': "Cargando apps con sesión iniciada…",
+  'security.devices.lastUsed': "último uso {date}",
+  'security.devices.signedIn': "sesión iniciada {date}",
+  'security.devices.revoke': "Revocar",
+  'security.devices.revokeNamed': "Revocar {name}",
+  'security.devices.revoking': "Revocando…",
+  'security.devices.revoked': "Se ha cerrado la sesión de {name}.",
+  'security.devices.loadError': "No se han podido cargar las apps con sesión iniciada. Recarga la página para volver a intentarlo.",
+  'security.devices.revokeError': "No se ha podido revocar la app. Vuelve a intentarlo.",
 };

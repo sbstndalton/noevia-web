@@ -75,6 +75,31 @@ body { margin: 0; background: var(--bg); }
 .auth-card .auth-option span { display: grid; gap: 3px; }
 .auth-card .auth-option small { display: block; font-weight: 400; }
 
+/* #555: the native-app approval page (components/device/DeviceApproval.tsx). The code is the
+   thing the person compares with the app, so it is large, monospaced and never wraps mid-code. */
+.device-card h1:focus { outline: none; }
+.device-card h1:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 4px; }
+.device-card .device-code {
+  display: block;
+  padding: 14px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--bg-panel);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--text-title2);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: center;
+  white-space: nowrap;
+}
+.device-card .device-code-input { font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.device-card .device-warning { font-size: var(--text-footnote); }
+.device-card .device-link { display: block; padding: 11px 14px; border-radius: var(--radius-button); text-align: center; text-decoration: none; font-weight: 700; }
+.device-card .device-account { color: var(--text); }
+/* A quiet text action: the card's buttons are filled by default (and recoloured later in this file). */
+.auth-card.device-card .device-switch { padding: 4px; background: none; color: var(--text-secondary); font-weight: 500; text-decoration: underline; }
+
 /* Setup wizard */
 .wizard-card { width: min(460px, 100%); }
 .wizard-progress {
