@@ -5,7 +5,7 @@ import { Icon } from './icons/Icon';
 import { RoutingDetails } from './ChatView';
 import { useT } from '../i18n';
 import { appLocale } from '../user-preferences';
-import { formatNumber, formatPercent } from '../number-format';
+import { formatCompact, formatNumber, formatPercent } from '../number-format';
 import { LOCAL_MODEL_FALLBACK } from '../model-guidance';
 
 interface StatsBarProps {
@@ -29,9 +29,7 @@ function fmt(n: number | null, digits = 1, suffix = ''): string {
 
 function fmtCount(n: number | null): string {
   if (n == null || !Number.isFinite(n)) return '—';
-  if (n >= 1_000_000) return `${formatNumber(n / 1_000_000, appLocale(), 1)}M`;
-  if (n >= 1_000) return `${formatNumber(n / 1_000, appLocale(), 1)}k`;
-  return formatNumber(Math.round(n), appLocale(), 0);
+  return formatCompact(Math.round(n), appLocale());
 }
 
 const OPEN_KEY = 'noevia:stats-open';

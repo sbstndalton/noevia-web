@@ -1,6 +1,9 @@
 import type { ModelsCatalogue } from './en-GB';
 
+import { NB_NO_FIELDS } from './fields-nb-NO';
+
 export const NB_NO_MODELS: ModelsCatalogue = {
+  ...NB_NO_FIELDS,
   'mm.title': "Modeller og ruting",
   'mm.lede': "Last ned, konfigurer, mål og rut modellene denne serveren kjører.",
   'mm.allModels': "Alle modeller",

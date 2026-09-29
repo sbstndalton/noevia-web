@@ -1,6 +1,9 @@
 import type { ModelsCatalogue } from './en-GB';
 
+import { PT_BR_FIELDS } from './fields-pt-BR';
+
 export const PT_BR_MODELS: ModelsCatalogue = {
+  ...PT_BR_FIELDS,
   'mm.title': "Modelos e roteamento",
   'mm.lede': "Baixe, configure, meça e roteie os modelos que este servidor executa.",
   'mm.allModels': "Todos os modelos",

@@ -1,6 +1,9 @@
 import type { ModelsCatalogue } from './en-GB';
 
+import { DE_DE_FIELDS } from './fields-de-DE';
+
 export const DE_DE_MODELS: ModelsCatalogue = {
+  ...DE_DE_FIELDS,
   'mm.title': "Modelle & Routing",
   'mm.lede': "Lade die Modelle dieses Servers herunter, konfiguriere, miss und route sie.",
   'mm.allModels': "Alle Modelle",

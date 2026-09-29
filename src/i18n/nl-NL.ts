@@ -631,4 +631,11 @@ export const NL_NL: Catalogue = {
   'device.requestedAt': "Aangevraagd om {time}.",
   'device.approvingAs': "Bij goedkeuren wordt de app aangemeld bij je account: {name} ({username}).",
   'device.switchAccount': "Niet jij? Afmelden",
+  'chat.meta.tokens': "{tokens} tokens",
+  'chat.meta.split': "({input} in / {output} uit)",
+  'code.meta.context': "context {percent} van {size}",
+  'code.meta.commands.one': "{count} opdracht",
+  'code.meta.commands.other': "{count} opdrachten",
+  'code.meta.commandsFailed.one': "{count} opdracht, {failed} mislukt",
+  'code.meta.commandsFailed.other': "{count} opdrachten, {failed} mislukt",
 };

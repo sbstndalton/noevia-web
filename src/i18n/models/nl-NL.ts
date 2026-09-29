@@ -1,6 +1,9 @@
 import type { ModelsCatalogue } from './en-GB';
 
+import { NL_NL_FIELDS } from './fields-nl-NL';
+
 export const NL_NL_MODELS: ModelsCatalogue = {
+  ...NL_NL_FIELDS,
   'mm.title': "Modellen en routering",
   'mm.lede': "Download, configureer, meet en routeer de modellen die deze server draait.",
   'mm.allModels': "Alle modellen",

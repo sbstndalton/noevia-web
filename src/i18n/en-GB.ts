@@ -642,6 +642,13 @@ export const EN_GB = {
   'device.requestedAt': "Requested at {time}.",
   'device.approvingAs': "Approving signs the app in to your account: {name} ({username}).",
   'device.switchAccount': "Not you? Sign out",
+  'chat.meta.tokens': "{tokens} tokens",
+  'chat.meta.split': "({input} in / {output} out)",
+  'code.meta.context': "context {percent} of {size}",
+  'code.meta.commands.one': "{count} command",
+  'code.meta.commands.other': "{count} commands",
+  'code.meta.commandsFailed.one': "{count} command, {failed} failed",
+  'code.meta.commandsFailed.other': "{count} commands, {failed} failed",
 } as const;
 
 export type MessageKey = keyof typeof EN_GB;

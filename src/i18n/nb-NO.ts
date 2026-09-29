@@ -631,4 +631,11 @@ export const NB_NO: Catalogue = {
   'device.requestedAt': "Forespurt kl. {time}.",
   'device.approvingAs': "Når du godkjenner, logges appen på kontoen din: {name} ({username}).",
   'device.switchAccount': "Ikke deg? Logg ut",
+  'chat.meta.tokens': "{tokens} tokens",
+  'chat.meta.split': "({input} inn / {output} ut)",
+  'code.meta.context': "kontekst {percent} av {size}",
+  'code.meta.commands.one': "{count} kommando",
+  'code.meta.commands.other': "{count} kommandoer",
+  'code.meta.commandsFailed.one': "{count} kommando, {failed} mislyktes",
+  'code.meta.commandsFailed.other': "{count} kommandoer, {failed} mislyktes",
 };

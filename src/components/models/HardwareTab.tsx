@@ -8,7 +8,7 @@ import type { MessageKey } from '../../i18n';
 type Card = { index: number; name: string; util_pct: number; vram_used_gb: number; vram_total_gb: number; temp_c: number; power_w: number; shared_used_gb: number; shared_total_gb: number; clock_mhz: number; device: string };
 type Gpu = { vendor: string; name: string; util_pct: number; vram_used_gb: number; vram_total_gb: number; temp_c: number; power_w: number; gpu_count: number; cards: Card[]; memory_kind: 'dedicated' | 'unified'; shared_used_gb: number; shared_total_gb: number; clock_mhz: number; source: string; measured: boolean };
 type Point = { ts: number; gpu_util: number; vram_used_gb: number; cpu_pct: number; mem_used_gb: number; shared_used_gb: number; temp_c: number; power_w: number };
-type Backend = { name: string; found: boolean; status: string; image: string; uptime: string; uptime_s?: number | null; started_at: string; loaded_model: string | null; probe_error: string | null; last_restart_error: string | null;
+type Backend = { name: string; found: boolean; status: string; image: string; uptime?: string | null; uptime_s?: number | null; started_at: string; loaded_model: string | null; probe_error: string | null; last_restart_error: string | null;
   stats: { ok: boolean; error: string | null; gpu: Gpu | null; container: { cpu_pct: number; mem_used_gb: number; mem_limit_gb: number } | null }; history: Point[] };
 type HostPoint = { ts: number; cpu_pct: number; mem_used_gb: number; mem_total_gb: number; mem_available_gb: number };
 type Failure = { model: string; status: number; cause: string; title: string; advice: string; evidence: string[] };
@@ -72,11 +72,17 @@ export function EngineCard({ backend: b, hostTotalGB }: { backend: Backend; host
     : b.probe_error
       ? t('mm.hw.stateUnavailable', { reason: b.probe_error })
       : t('mm.hw.noModel');
+  const statusLabel = running ? t('mm.hw.status.running') : ENGINE_STATUS[b.status] ? t(ENGINE_STATUS[b.status]) : t('mm.hw.status.unknown');
+  // #603: only a running engine has an uptime. The service sends none for a stopped one, and an
+  // older service that still sends the time since it last started must not be shown as uptime,
+  // so a stopped engine reads its state ("Stopped") where the duration would be.
+  const uptimeNote = !running ? statusLabel
+    : b.uptime_s != null || b.uptime ? t('mm.hw.up', { uptime: b.uptime_s != null ? duration(b.uptime_s) : human(b.uptime || '') }) : '';
   return <section className="mm-panel" aria-labelledby={`mm-engine-${b.name}`}>
     <header className="mm-panel-head">
       <div><h3 id={`mm-engine-${b.name}`}>{b.name}</h3>
-        <p className="mm-note">{b.image}{b.uptime_s != null || b.uptime ? ` · ${t('mm.hw.up', { uptime: b.uptime_s != null ? duration(b.uptime_s) : human(b.uptime) })}` : ''} · {modelState}</p></div>
-      <span className={`mm-pill ${running ? 'is-good' : 'is-bad'}`}>{running ? t('mm.hw.status.running') : ENGINE_STATUS[b.status] ? t(ENGINE_STATUS[b.status]) : t('mm.hw.status.unknown')}</span>
+        <p className="mm-note">{b.image}{uptimeNote ? ` · ${uptimeNote}` : ''} · {modelState}</p></div>
+      <span className={`mm-pill ${running ? 'is-good' : 'is-bad'}`}>{statusLabel}</span>
     </header>
     {b.last_restart_error && <p role="alert" className="modal-err">{t('mm.hw.restartFailed', { error: b.last_restart_error })}</p>}
     {!b.stats.ok && <p className="mm-note">{t('mm.hw.readingsUnavailable', { error: b.stats.error ?? '' })}</p>}

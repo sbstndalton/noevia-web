@@ -4,14 +4,9 @@ import type { JSX } from 'react';
 import { fetchProfile, fetchUsage } from '../api';
 import type { UsageSummary, UsageTotals } from '../types';
 import { useT } from '../i18n';
-import { formatNumber } from '../number-format';
+import { formatCompact } from '../number-format';
 
-function compact(n: number): string {
-  if (n >= 1e9) return `${formatNumber(n / 1e9, appLocale(), 1)}B`;
-  if (n >= 1e6) return `${formatNumber(n / 1e6, appLocale(), 1)}M`;
-  if (n >= 1e3) return `${formatNumber(n / 1e3, appLocale(), 1)}k`;
-  return formatNumber(n, appLocale(), 0);
-}
+const compact = (n: number): string => formatCompact(n, appLocale());
 
 // Five buckets, thresholds derived from the busiest day in the window rather
 // than fixed token counts: a local single-user deployment and a shared one

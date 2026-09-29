@@ -1,6 +1,9 @@
 import type { ModelsCatalogue } from './en-GB';
 
+import { SV_SE_FIELDS } from './fields-sv-SE';
+
 export const SV_SE_MODELS: ModelsCatalogue = {
+  ...SV_SE_FIELDS,
   'mm.title': "Modeller och routning",
   'mm.lede': "Ladda ned, konfigurera, mät och routa modellerna som den här servern kör.",
   'mm.allModels': "Alla modeller",

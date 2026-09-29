@@ -1,6 +1,9 @@
 import type { ModelsCatalogue } from './en-GB';
 
+import { IT_IT_FIELDS } from './fields-it-IT';
+
 export const IT_IT_MODELS: ModelsCatalogue = {
+  ...IT_IT_FIELDS,
   'mm.title': "Modelli e instradamento",
   'mm.lede': "Scarica, configura, misura e instrada i modelli eseguiti da questo server.",
   'mm.allModels': "Tutti i modelli",

@@ -88,3 +88,19 @@ export function formatDuration(totalSeconds: number, locale: string | undefined)
   }
   return formatted.join(' ');
 }
+
+const compactCache = new Map<string, Intl.NumberFormat>();
+
+/** A count in the locale's own compact form (#600): "1.2K" and "1.2M" in en, "1,2 Mio." in de,
+ *  "1,2 M" in fr. Below a thousand it is the plain integer. Intl.NumberFormat owns the suffix, so
+ *  no locale keeps an English "k", "M" or "B". */
+export function formatCompact(n: number, locale: string | undefined): string {
+  const key = locale ?? '';
+  let f = compactCache.get(key);
+  if (!f) {
+    const options = { notation: 'compact' as const, compactDisplay: 'short' as const, maximumFractionDigits: 1 };
+    try { f = new Intl.NumberFormat(locale, options); } catch { f = new Intl.NumberFormat(undefined, options); }
+    compactCache.set(key, f);
+  }
+  return f.format(n);
+}

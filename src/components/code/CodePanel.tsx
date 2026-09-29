@@ -5,6 +5,9 @@ import type { CodeAction, CodeApproval, CodeReview, CodeState, CodeTask, Network
 import { isDecisionStale } from './decision-guard';
 import { EmptyState } from '../EmptyState';
 import { ShellIcon } from '../ShellIcon';
+import { useT } from '../../i18n';
+import { formatNumber, formatPercent } from '../../number-format';
+import { appLocale } from '../../user-preferences';
 import './code.css';
 
 const ACTIVE = new Set(['queued', 'running', 'waiting_approval']);
@@ -329,13 +332,19 @@ function PreparationNote({ mode }: { mode?: PreparationMode }): JSX.Element | nu
  * run that could not say how many tokens it used is not evidence that it used none, and §1's
  * whole point is showing evidence rather than a score.
  */
-function TaskMeta({ meta }: { meta: NonNullable<CodeTask['meta']> }): JSX.Element {
+export function TaskMeta({ meta }: { meta: NonNullable<CodeTask['meta']> }): JSX.Element {
+  const t = useT();
   const parts = [
     meta.harnessVersion ? `${meta.harness || 'harness'} ${meta.harnessVersion}` : meta.harness,
-    meta.usage?.total != null ? `${meta.usage.total.toLocaleString()} tokens` : null,
-    // Context used is its own measurement; a harness can report it and not token usage.
-    meta.context ? `context ${meta.context.percent}% of ${meta.context.size.toLocaleString()}` : null,
-    meta.commands ? `${meta.commands} command${meta.commands === 1 ? '' : 's'}${meta.failedCommands ? `, ${meta.failedCommands} failed` : ''}` : null,
+    meta.usage?.total != null ? t('chat.meta.tokens', { tokens: formatNumber(meta.usage.total, appLocale(), 0) }) : null,
+    // Context used is its own measurement; a harness can report it and not token usage (#600: in
+    // the interface language, with the locale's own percent and grouping).
+    meta.context ? t('code.meta.context', { percent: formatPercent(meta.context.percent, appLocale(), 0), size: formatNumber(meta.context.size, appLocale(), 0) }) : null,
+    meta.commands
+      ? meta.failedCommands
+        ? t.plural('code.meta.commandsFailed', meta.commands, { failed: meta.failedCommands })
+        : t.plural('code.meta.commands', meta.commands)
+      : null,
   ].filter(Boolean);
   return <>
     {parts.length > 0 && <p className="code-meta">{parts.join(' · ')}</p>}

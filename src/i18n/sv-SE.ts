@@ -631,4 +631,11 @@ export const SV_SE: Catalogue = {
   'device.requestedAt': "Begärd kl. {time}.",
   'device.approvingAs': "När du godkänner loggas appen in på ditt konto: {name} ({username}).",
   'device.switchAccount': "Inte du? Logga ut",
+  'chat.meta.tokens': "{tokens} token",
+  'chat.meta.split': "({input} in / {output} ut)",
+  'code.meta.context': "kontext {percent} av {size}",
+  'code.meta.commands.one': "{count} kommando",
+  'code.meta.commands.other': "{count} kommandon",
+  'code.meta.commandsFailed.one': "{count} kommando, {failed} misslyckades",
+  'code.meta.commandsFailed.other': "{count} kommandon, {failed} misslyckades",
 };

@@ -631,4 +631,11 @@ export const IT_IT: Catalogue = {
   'device.requestedAt': "Richiesto alle {time}.",
   'device.approvingAs': "Approvando, l’app accede al tuo account: {name} ({username}).",
   'device.switchAccount': "Non sei tu? Esci",
+  'chat.meta.tokens': "{tokens} token",
+  'chat.meta.split': "({input} in entrata / {output} in uscita)",
+  'code.meta.context': "contesto {percent} su {size}",
+  'code.meta.commands.one': "{count} comando",
+  'code.meta.commands.other': "{count} comandi",
+  'code.meta.commandsFailed.one': "{count} comando, {failed} fallito",
+  'code.meta.commandsFailed.other': "{count} comandi, {failed} falliti",
 };

@@ -3,10 +3,10 @@ import { createPortal } from 'react-dom';
 import { ShellIcon } from './ShellIcon';
 import { apiFetch, streamChat } from '../api';
 import type { Message } from '../types';
-import { formatNumber, formatPercent } from '../number-format';
+import { formatCompact, formatPercent } from '../number-format';
 import { appLocale } from '../user-preferences';
 type Meter = { historyCount:number; model:string; limit:number; limitSource:string; used:number; reserve:number; safety:number; threshold:number; parts:{name:string;tokens:number}[]; compactedAt:number|null; covered:number };
-const fmt=(n:number)=>n>=1000?`${formatNumber(n/1000,appLocale(),1)}k`:formatNumber(Math.round(n),appLocale(),0);
+const fmt=(n:number)=>formatCompact(Math.round(n),appLocale());
 /** `portalTo` (#527): on a phone the meter lives in the model sheet. The component stays mounted
  *  where it is, so a compaction in progress survives the sheet closing; `null` renders nothing
  *  (the sheet is closed), an element renders the meter there, and leaving it out renders it inline. */

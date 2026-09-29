@@ -190,7 +190,7 @@ const tier0Snapshot = (page) => page.evaluate(() => {
       const statusText = await status.innerText();
       check(/46\.8/.test(statusText) && /tok\/s/.test(statusText), 'the status block shows the reply speed', statusText);
       check(/routing · fast/.test(statusText), 'the status block shows the routing decision', statusText);
-      check(/8\.2k/.test(statusText) && /Context window/.test(statusText), 'the status block shows context usage', statusText);
+      check(/8\.2K/.test(statusText) && /Context window/.test(statusText), 'the status block shows context usage', statusText);
       await status.locator('.chat-context-meter summary').click();
       check(await status.getByRole('meter', { name: 'Estimated chat context used' }).isVisible(), 'context usage details expand in the sheet');
       check(await status.getByRole('button', { name: 'Compact chat' }).count() === 1, 'compaction stays reachable');

@@ -4,7 +4,10 @@
 // (ModelManagerPage.tsx) imports, so these strings travel in that chunk and never in the
 // first-load bundle. Model names, file names, sizes, numbers, units, quantisation labels and
 // provider names are parameters and stay untranslated.
+import { EN_GB_FIELDS } from './fields-en-GB';
+
 export const EN_GB_MODELS = {
+  ...EN_GB_FIELDS,
   // Page, tabs and toolbar (ModelsSettings.tsx)
   'mm.title': 'Models & routing',
   'mm.lede': 'Download, configure, measure and route the models this server runs.',

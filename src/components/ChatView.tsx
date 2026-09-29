@@ -138,16 +138,17 @@ function fmtDuration(ms: number): string {
 // but only renders what the provider actually reported, so a provider that
 // sends no usage chunk simply shows nothing rather than zeros.
 function MessageMeta({ stats }: { stats?: MessageStats }): JSX.Element | null {
+  const t = useT();
   const parts: string[] = [];
   if (stats?.elapsedMs) parts.push(fmtDuration(stats.elapsedMs));
   if (stats?.totalTokens) {
     const io =
       stats.promptTokens != null && stats.completionTokens != null
-        ? ` (${formatNumber(stats.promptTokens, appLocale(), 0)} in / ${formatNumber(stats.completionTokens, appLocale(), 0)} out)`
+        ? ` ${t('chat.meta.split', { input: formatNumber(stats.promptTokens, appLocale(), 0), output: formatNumber(stats.completionTokens, appLocale(), 0) })}`
         : '';
-    parts.push(`${formatNumber(stats.totalTokens, appLocale(), 0)} tokens${io}`);
+    parts.push(`${t('chat.meta.tokens', { tokens: formatNumber(stats.totalTokens, appLocale(), 0) })}${io}`);
   }
-  if (stats?.tokensPerSecond) parts.push(`${formatNumber(stats.tokensPerSecond, appLocale(), 1)} tok/s`);
+  if (stats?.tokensPerSecond) parts.push(`${formatNumber(stats.tokensPerSecond, appLocale(), 1)} ${t('stats.tokPerSecUnit')}`);
   if (!parts.length) return null;
   return <div className="msg-meta">{parts.join(' · ')}</div>;
 }

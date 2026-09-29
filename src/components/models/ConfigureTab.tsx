@@ -9,7 +9,7 @@ import { dismissFolderModel } from './register';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 
-type Field = { key: string; label: string; kind: 'int' | 'text' | 'bool' | 'select'; choices: string[]; placeholder: string; help: string };
+type Field = { id?: string; key: string; label: string; kind: 'int' | 'text' | 'bool' | 'select'; choices: string[]; placeholder: string; help: string };
 type Tier = { tier: string; tierId?: string | null; open: boolean; fields: Field[] };
 type SectionRow = { name: string; items: [string, string][]; hasFile: boolean; file: string | null; cli: string };
 type SectionsResponse = { revision: string; schema: Tier[]; sections: SectionRow[]; unregistered: string[]; backups: [string, number, number][]; raw?: string };
@@ -271,16 +271,28 @@ function EasySettings({ name, draft, busy, onChange, onUseTuned, onAutoApplied }
   </div>;
 }
 
+/** A field's label or help in the interface language, by the stable id the service sends (#600).
+ *  English and any field without an entry keep the service's own English text, so an older service
+ *  (no id) and a field added after the catalogue both still render. */
+function fieldText(t: ReturnType<typeof useT>, f: Field, part: 'label' | 'help'): string {
+  const english = part === 'label' ? f.label : f.help;
+  if (!english || t.locale.startsWith('en-')) return english;
+  const key = `mm.field.${f.id || f.key}.${part}` as MessageKey;
+  const text = t(key);
+  return text === key ? english : text;
+}
+
 function FieldInput({ field: f, value, onChange }: { field: Field; value: string; onChange: (v: string) => void }) {
   const id = `mm-field-${f.key}`;
   const t = useT();
+  const label = fieldText(t, f, 'label'), help = fieldText(t, f, 'help');
   return <div className="mm-field">
     {f.kind === 'bool'
-      ? <label className="mm-check"><input id={id} type="checkbox" checked={['true', 'on', '1'].includes(value)} onChange={e => onChange(e.target.checked ? 'true' : '')}/>{f.label}</label>
-      : <label htmlFor={id}>{f.label}</label>}
+      ? <label className="mm-check"><input id={id} type="checkbox" checked={['true', 'on', '1'].includes(value)} onChange={e => onChange(e.target.checked ? 'true' : '')}/>{label}</label>
+      : <label htmlFor={id}>{label}</label>}
     {f.kind === 'select' && <select id={id} value={value} onChange={e => onChange(e.target.value)}>{f.choices.map(c => <option key={c} value={c}>{c || t('mm.field.default')}</option>)}</select>}
     {(f.kind === 'int' || f.kind === 'text') && <input id={id} inputMode={f.kind === 'int' ? 'numeric' : undefined} value={value} placeholder={f.placeholder} onChange={e => onChange(e.target.value)}/>}
-    {f.help && <small>{f.help}</small>}
+    {help && <small>{help}</small>}
   </div>;
 }
 
