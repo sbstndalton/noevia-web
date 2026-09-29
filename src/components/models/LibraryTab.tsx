@@ -171,7 +171,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
   const missing = m.missingFile === true;
   const engineControls = !system && !protectedModel && !missing;
   return <article className={`model-card surface${open ? ' is-open' : ''}`} data-state={state} aria-label={m.name}>
-    <header className="model-card-head"><h3 className="model-card-name"><MiddleTruncate text={m.name}/></h3><span className="model-card-state">{m.failed ? t('mm.card.failed') : m.loaded ? t('mm.loaded') : t('mm.card.unloaded')}</span></header>
+    <header className="model-card-head"><h3 className="model-card-name"><MiddleTruncate text={m.name}/></h3><span className="model-card-state">{missing ? t('mm.card.missing') : m.failed ? t('mm.card.failed') : m.loaded ? t('mm.loaded') : t('mm.card.unloaded')}</span></header>
     <p className="model-card-meta">
       {/* #443: this used to prefer file.size — a string formatted by the external Model Loader
           service, which most likely uses binary GiB while calling it "GB" — over m.sizeGB (the
@@ -185,7 +185,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
       {system && <span className="model-card-tag" title={t('mm.card.systemTitle')}>{t('model.systemLabel')}</span>}
       {protectedModel && <span className="model-card-tag" title={t('mm.card.protectedTitle')}>{t('mm.card.protectedLabel')}</span>}
       {m.labels.filter(l => l !== 'vision').map(l => <span key={l} className="model-card-tag">{l}</span>)}
-      {m.source && <span>{m.source === 'preset' ? t('mm.card.sourceFolder') : m.source === 'cache' ? t('mm.card.sourceCache') : m.source}</span>}
+      {m.source && !missing && <span>{m.source === 'preset' ? t('mm.card.sourceFolder') : m.source === 'cache' ? t('mm.card.sourceCache') : m.source}</span>}
       {update?.status === 'stale' && <span className="mm-pill is-warn">{t('mm.card.update', { remote: update.remote })}</span>}
     </p>
     {file?.badges && file.badges.length > 0 && <p className="model-card-meta">{file.badges.map(b => <span key={b.category} className="model-card-tag">{BADGE[b.category] ? t(BADGE[b.category]) : b.category} {b.rating}/5</span>)}</p>}
@@ -195,10 +195,16 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
       <button className="popup-tab" aria-expanded={open} aria-label={t(open ? 'mm.card.hideDetailsNamed' : 'mm.card.detailsNamed', { model: m.name })} onClick={() => setOpen(!open)}>{open ? t('mm.card.hideDetails') : t('mm.details')}</button>
       {!system && !protectedModel && <DeleteModel model={m} file={file} onDeleted={onDeleted}/>}
     </div>
+    {missing && !open && <p className="mm-note" role="status">{t('mm.card.missingNote')}</p>}
     {runtimeOptions && !missing && <MtpControl model={m} onChanged={onRefresh}/>}
     {open && <div className="mm-detail">
       {!detail && file && <p role="status">{t('mm.readingFile')}</p>}
-      {!file && <p className="mm-note">{t('mm.card.fromCache')}</p>}
+      {/* #579: the source line must match what the model actually is. A missing preset says so
+          (even Laya); sidecar models have no file in the folder because their own service runs
+          them; only a genuine download-cache model says it is served from the cache. */}
+      {missing ? <p className="mm-note" role="status">{t('mm.card.missingNote')}</p>
+        : !file && (system || protectedModel) ? <p className="mm-note">{t('mm.card.sidecarSource')}</p>
+        : !file && <p className="mm-note">{t('mm.card.fromCache')}</p>}
       {detail && <dl className="mm-facts">
         <div><dt>{t('mm.card.arch')}</dt><dd>{detail.summary.arch || '—'}</dd></div>
         <div><dt>{t('mm.card.params')}</dt><dd>{String(detail.summary.general?.params || '—')}</dd></div>
@@ -212,10 +218,13 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
         <div><dt>{t('mm.card.modified')}</dt><dd>{detail.modified}</dd></div>
         {Object.entries(detail.summary.chat_template_features || {}).some(([, v]) => v) && <div><dt>{t('mm.card.template')}</dt><dd>{Object.entries(detail.summary.chat_template_features).filter(([, v]) => v).map(([k]) => k.replace(/_/g, ' ')).join(', ')}</dd></div>}
       </dl>}
-      <EvidenceList model={m.name}/>
+      {/* Chat qualification evidence (and its Recheck) only means something for a chat model the
+          engine runs: not Laya, not a sidecar model, not a preset whose file is missing. */}
+      {engineControls && <EvidenceList model={m.name}/>}
       {system ? <p className="mm-note" role="status">{t('model.systemLabel')}{t('mm.card.systemNote')}</p>
         : protectedModel ? <p className="mm-note" role="status">{t('mm.card.protectedLabel')}{t('mm.card.protectedNote')}</p>
-        : !chatModel || missing ? <p className="mm-note" role="status">{t(missing ? 'mm.card.missingNote' : 'mm.card.nonChatNote')}</p>
+        : missing ? null
+        : !chatModel ? <p className="mm-note" role="status">{t('mm.card.nonChatNote')}</p>
         : <NativeCalibration model={m.name} onChanged={() => {}}/>}
     </div>}
   </article>;

@@ -203,6 +203,8 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.card.detailsNamed': "Detaljer för {model}",
   'mm.card.hideDetailsNamed': "Dölj detaljer för {model}",
   'mm.card.fromCache': "Den här modellen hämtas från nedladdningscachen; dess fildetaljer finns inte i modellmappen.",
+  'mm.card.missing': "Filen saknas",
+  'mm.card.sidecarSource': "Den här modellen körs av en egen tjänst (sidecar), inte av chattmotorn; fildetaljerna visas inte här.",
   'mm.card.arch': "Arkitektur",
   'mm.card.params': "Parametrar",
   'mm.card.quant': "Kvantisering",

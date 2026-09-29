@@ -218,6 +218,8 @@ export const EN_GB_MODELS = {
   'mm.card.detailsNamed': 'Details for {model}',
   'mm.card.hideDetailsNamed': 'Hide details for {model}',
   'mm.card.fromCache': 'This model is served from the download cache; its file details are not in the model folder.',
+  'mm.card.missing': 'File missing',
+  'mm.card.sidecarSource': 'This model is run by its own service (sidecar), not by the chat engine; its file details are not shown here.',
   'mm.card.arch': 'Architecture',
   'mm.card.params': 'Parameters',
   'mm.card.quant': 'Quantisation',

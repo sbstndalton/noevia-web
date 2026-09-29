@@ -203,6 +203,8 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.card.detailsNamed': "Details voor {model}",
   'mm.card.hideDetailsNamed': "Details voor {model} verbergen",
   'mm.card.fromCache': "Dit model wordt vanuit de downloadcache aangeboden; de bestandsdetails staan niet in de modelmap.",
+  'mm.card.missing': "Bestand ontbreekt",
+  'mm.card.sidecarSource': "Dit model draait in een eigen dienst (sidecar), niet in de chatengine; de bestandsdetails worden hier niet getoond.",
   'mm.card.arch': "Architectuur",
   'mm.card.params': "Parameters",
   'mm.card.quant': "Kwantisatie",

@@ -203,6 +203,8 @@ export const ES_ES_MODELS: ModelsCatalogue = {
   'mm.card.detailsNamed': "Detalles de {model}",
   'mm.card.hideDetailsNamed': "Ocultar detalles de {model}",
   'mm.card.fromCache': "Este modelo se sirve desde la caché de descargas; los detalles de su archivo no están en la carpeta de modelos.",
+  'mm.card.missing': "Archivo ausente",
+  'mm.card.sidecarSource': "Este modelo lo ejecuta su propio servicio (sidecar), no el motor de chat; aquí no se muestran los detalles de su archivo.",
   'mm.card.arch': "Arquitectura",
   'mm.card.params': "Parámetros",
   'mm.card.quant': "Cuantización",
