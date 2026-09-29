@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { cancelTask, decideTask, fetchCode, startTask } from './api';
-import type { CodeAction, CodeApproval, CodeState, CodeTask, NetworkActivity, PreparationMode } from './api';
+import type { CodeAction, CodeApproval, CodeReview, CodeState, CodeTask, NetworkActivity, PreparationMode } from './api';
 import { isDecisionStale } from './decision-guard';
 import { EmptyState } from '../EmptyState';
 import { ShellIcon } from '../ShellIcon';
@@ -22,6 +22,7 @@ export const ACTION_LABEL: Record<CodeAction, string> = {
   read_repository: 'Read the repository', edit_file: 'Edit files', execute_command: 'Run commands',
   install_dependency: 'Install dependencies', network: 'Reach the network', delete: 'Delete files',
   git_push: 'Push to git', open_browser: 'Open a browser', external_account: 'Use an external account', none: 'Nothing',
+  review_change: 'Accept the finished change',
 };
 
 /** Code mode for one project (spec-agent-execution §3). Rendered only for admins with the feature on. */
@@ -297,6 +298,7 @@ function TaskCard({ task, busy, onDecide, onCancel }: {
       {task.result.tools ?? 0} tool calls · {task.result.allowed ?? 0} allowed · {task.result.refused ?? 0} declined · {task.result.denied ?? 0} refused by noevia
     </p>}
     {task.result?.network && !active && <NetworkNote network={task.result.network}/>}
+    {task.review && !active && <ReviewOutcome review={task.review} decision={task.result?.review}/>}
     {task.meta && !active && <TaskMeta meta={task.meta}/>}
   </article>;
 }
@@ -351,6 +353,7 @@ function TaskMeta({ meta }: { meta: NonNullable<CodeTask['meta']> }): JSX.Elemen
 export function ApprovalCard({ approval, busy, onDecide }: {
   approval: CodeApproval; busy: boolean; onDecide: (decision: 'approve' | 'approve_all' | 'deny', approvalId: string) => void;
 }): JSX.Element {
+  if (approval.action === 'review_change') return <ReviewCard approval={approval} busy={busy} onDecide={onDecide}/>;
   const standing = approval.action !== 'delete' && approval.action !== 'git_push';
   // Bound here, at the render that drew this card, so every click on it carries the id
   // of the approval actually on screen rather than whatever `approval` resolves to later.
@@ -369,4 +372,58 @@ export function ApprovalCard({ approval, busy, onDecide }: {
     </div>
     {!standing && <p className="code-note">Deletes and pushes are asked every time.</p>}
   </div>;
+}
+
+const SEVERITY: Record<NonNullable<CodeReview['findings']>[number]['severity'], string> = {
+  blocker: 'Blocker', major: 'Major', minor: 'Minor', note: 'Note',
+};
+
+/** Astra's verdict, or the plain reason there is none. Advice, never the decision. */
+function ReviewVerdict({ review }: { review: CodeReview }): JSX.Element {
+  if (review.status !== 'completed') {
+    return <p className="code-review-verdict is-unreviewed">
+      Not reviewed by Astra{review.reason ? `: ${review.reason}` : '.'}
+    </p>;
+  }
+  const findings = review.findings || [];
+  return <>
+    <p className={`code-review-verdict is-${review.verdict === 'approve' ? 'approve' : 'changes'}`}>
+      {review.verdict === 'approve' ? 'Astra suggests accepting' : 'Astra requests changes'}{review.summary ? ` — ${review.summary}` : ''}
+    </p>
+    {findings.length > 0 && <ul className="code-review-findings" aria-label="Review findings">
+      {findings.map((f, i) => <li key={i}><strong>{SEVERITY[f.severity]}</strong>{f.file ? <> · <code>{f.file}</code></> : null} — {f.message}</li>)}
+    </ul>}
+  </>;
+}
+
+/**
+ * The last card of a reviewed task (#519). Astra's verdict sits above the question, and the
+ * question is the person's alone: accept or decline, once. There is no standing answer — there is
+ * no later card for one to stand in for — and a card left unanswered expires as a decline.
+ */
+function ReviewCard({ approval, busy, onDecide }: {
+  approval: CodeApproval; busy: boolean; onDecide: (decision: 'approve' | 'approve_all' | 'deny', approvalId: string) => void;
+}): JSX.Element {
+  const approvalId = approval.id;
+  return <div className="code-approval code-review" role="group" aria-label="Review the finished change">
+    <p className="code-approval-title"><ShellIcon name="security" size={16}/>{ACTION_LABEL.review_change}</p>
+    {approval.review && <ReviewVerdict review={approval.review}/>}
+    {approval.reason && <p className="code-note">{approval.reason}</p>}
+    {approval.arguments !== null && approval.arguments !== undefined &&
+      <pre className="code-approval-args" aria-label="Change to accept">{JSON.stringify(approval.arguments, null, 2)}</pre>}
+    <div className="code-approval-actions">
+      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('approve', approvalId)}>Accept change</button>
+      <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => onDecide('deny', approvalId)}>Decline</button>
+    </div>
+    <p className="code-note">Astra’s verdict is advice. Only your answer accepts the change, one change at a time.</p>
+  </div>;
+}
+
+/** What happened at the review, once the task has finished. */
+function ReviewOutcome({ review, decision }: { review: CodeReview; decision?: NonNullable<CodeTask['result']>['review'] }): JSX.Element {
+  return <section className="code-review-outcome" aria-label="Astra review">
+    <ReviewVerdict review={review}/>
+    {decision && <p className="code-meta">{decision.accepted ? 'You accepted this change.' : decision.decision === 'timeout'
+      ? 'Nobody answered in time, so the change was not accepted.' : 'The change was not accepted.'} Its branch stays in the repository either way.</p>}
+  </section>;
 }

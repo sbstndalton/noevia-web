@@ -75,3 +75,13 @@
   .code-capability-list { flex-direction: column; gap: 0; }
   .code-actions .btn, .code-approval-actions .btn { width: 100%; }
 }
+
+/* Astra review (#519): the verdict is advice, set above the person's own question. */
+.code-review-verdict { margin: 0; padding: 8px 10px; border-radius: var(--radius-control); border: 1px solid var(--border); background: var(--bg-surface); font-size: var(--text-footnote); line-height: 1.5; overflow-wrap: anywhere; }
+.code-review-verdict.is-approve { border-color: var(--accent); }
+.code-review-verdict.is-changes, .code-review-verdict.is-unreviewed { border-color: var(--danger); }
+.code-review-findings { margin: 0; padding-left: 20px; font-size: var(--text-footnote); line-height: 1.5; }
+.code-review-findings li { overflow-wrap: anywhere; }
+.code-review-findings li + li { margin-top: 4px; }
+.code-review-findings code { font-size: var(--text-caption2); }
+.code-review-outcome { display: flex; flex-direction: column; gap: 6px; }

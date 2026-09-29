@@ -3,11 +3,23 @@ import { cached } from '../../request-cache';
 
 /** noevia's own action classes, as `server/code-actions.cjs` names them. */
 export type CodeAction = 'read_repository' | 'edit_file' | 'execute_command' | 'install_dependency'
-  | 'network' | 'delete' | 'git_push' | 'open_browser' | 'external_account' | 'none';
+  | 'network' | 'delete' | 'git_push' | 'open_browser' | 'external_account' | 'none'
+  /** The final card of an Astra-reviewed task (#519): accept the change. Never an agent's action. */
+  | 'review_change';
+
+/** Astra's verdict on a finished change (#519), as `server/code-review-verdict.cjs` bounds it. */
+export interface CodeReview {
+  status: 'pending' | 'completed' | 'failed'; reviewer: 'astra'; baseSha: string | null; headSha: string | null;
+  verdict?: 'approve' | 'request_changes'; summary?: string;
+  findings?: { severity: 'blocker' | 'major' | 'minor' | 'note'; file?: string; message: string }[];
+  corrected?: boolean; code?: string; reason?: string; files?: number | null;
+}
 
 export interface CodeApproval {
   id: string; action: CodeAction; title: string; kind: string; command: string; paths: string[];
   reason: string; arguments: unknown; diff: { path: string; oldText: string | null; newText: string | null } | null;
+  /** Only on a `review_change` card: the verdict, or why there is none. */
+  review?: CodeReview | null;
 }
 export interface CodeTask {
   id: string; status: 'queued' | 'running' | 'waiting_approval' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
@@ -28,8 +40,11 @@ export interface CodeTask {
     commands: number; failedCommands: number; messageChunks: number; limitations: string[];
   } | null;
   identityHash: string | null;
+  /** Present only on a task that was reviewed (features.astraReview). */
+  review?: CodeReview;
   result: { stopReason?: string; branch?: string; tools?: number; approvals?: number; allowed?: number; refused?: number; denied?: number;
-    network?: NetworkActivity } | null;
+    network?: NetworkActivity;
+    review?: { reviewed: boolean; verdict: 'approve' | 'request_changes' | null; accepted: boolean; decision: string; headSha: string | null } } | null;
 }
 export interface Harness { id: string; label: string; version: string | null }
 export interface PreparationMode { id: string; label: string; available: boolean; reason: string }
