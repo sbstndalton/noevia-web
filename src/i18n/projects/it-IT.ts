@@ -31,7 +31,7 @@ export const IT_IT_PROJECTS: ProjectsCatalogue = {
   'projects.restore': "Ripristina",
   'projects.aProject': "progetto",
   'projects.confirmDeleteTitle': "Eliminare {name}?",
-  'projects.confirmDeleteBody': "Questa azione elimina definitivamente il progetto e le sue chat. Non può essere annullata.",
+  'projects.confirmDeleteBody': "Questa azione elimina definitivamente il progetto e le sue chat. I file nel tuo archivio collegato, inclusa la cartella di caricamento del progetto, vengono conservati e non eliminati. Non può essere annullata.",
   'projects.confirmDeleteConfirm': "Elimina progetto",
   'projects.menu.settings': "Impostazioni progetto",
   'projects.menu.unpin': "Sblocca progetto",

@@ -478,7 +478,7 @@ export function Sidebar({
       onSelect: () =>
         setConfirm({
           title: t('sidebar.confirmDeleteProjectTitle', { name: p.name }),
-          body: t('sidebar.confirmDeleteProjectBody', { chats: t.plural('sidebar.count.chats', (p.chats || []).length), files: t.plural('sidebar.count.files', (p.files || []).length) }),
+          body: t('sidebar.confirmDeleteProjectBody', { chats: t.plural('sidebar.count.chats', (p.chats || []).length) }),
           confirmLabel: t('sidebar.deleteProject'),
           danger: true,
           run: () => onDeleteProject(p.id),

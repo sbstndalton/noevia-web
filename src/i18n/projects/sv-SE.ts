@@ -31,7 +31,7 @@ export const SV_SE_PROJECTS: ProjectsCatalogue = {
   'projects.restore': "Återställ",
   'projects.aProject': "projekt",
   'projects.confirmDeleteTitle': "Ta bort {name}?",
-  'projects.confirmDeleteBody': "Detta tar bort projektet och dess chattar permanent. Det går inte att ångra.",
+  'projects.confirmDeleteBody': "Detta tar bort projektet och dess chattar permanent. Filer i din anslutna lagring, inklusive projektets uppladdningsmapp, behålls och tas inte bort. Det går inte att ångra.",
   'projects.confirmDeleteConfirm': "Ta bort projekt",
   'projects.menu.settings': "Projektinställningar",
   'projects.menu.unpin': "Ta bort nål från projekt",

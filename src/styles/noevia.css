@@ -580,6 +580,9 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 .instruction-skills { margin-block: 0 24px; min-width: 0; }
 .instruction-skill { padding-block: 12px; border-bottom: 1px solid var(--control-border); }
 .instruction-skills summary { cursor: pointer; overflow-wrap: anywhere; }
+/* #588: bare <p>/<summary> inside Sources fell back to the 16px browser default next to 12px panel copy. */
+.project-sources summary, .project-sources details > p, .instruction-skills p { font-size: var(--text-caption); line-height: 1.55; }
+.project-sources .not-readable-note { color: var(--text-secondary); }
 /* #272: pin one reviewed skill version for the next message (SkillPinPicker.tsx). */
 .skill-pin { display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; max-width: 100%; font-size: var(--text-caption); color: var(--text-muted);
   /* #563: on phone-sized space the composer is absolutely positioned and the transcript scrolls behind it, so a

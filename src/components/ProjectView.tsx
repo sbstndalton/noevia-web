@@ -5,7 +5,7 @@ import { ComposerModel } from './ComposerModel';
 import { ComposerTextarea } from './ComposerTextarea';
 import { SkillPinSelect, useSkillPinOptions } from './SkillPinPicker';
 import type { SkillPin } from '../api-contract';
-import { sourceStatus, uploadUnreadableReason } from '../source-status';
+import { sourceStatus, uploadUnreadableReason, isUnreadableSource } from '../source-status';
 import { ShellIcon } from './ShellIcon';
 import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
@@ -226,7 +226,32 @@ export function ProjectView({
   const groupKeys = [['Documents', 'projects.view.groupDocuments'], ['Images', 'projects.view.groupImages'], ['Text', 'projects.view.groupText'], ['Other', 'projects.view.groupOther']] as const;
   const fileGroup = (f: Project['files'][number]) => f.attachment?.group || (f.document ? 'Documents' : 'Text');
 
-  const sourceCount = project.files.length + (project.assets || []).filter((a) => !a.sourceName).length;
+  const renderFile = (f: Project['files'][number]) => {
+        // Deletable mirrors the server's ownsFile: a file sitting directly in an
+        // attached folder (its own or a linked one) may be deleted from storage.
+        // A synced file that does NOT meet that bar (e.g. reached through a nested
+        // sub-path) can never be detached here either — the config-patch endpoint
+        // rebuilds every synced entry from the project's own record regardless of
+        // what a patch sends, so there is nothing "Remove" could do for it.
+        const deletable = !!f.source && (!!f.attachment || (project.sourceFolders || []).some(d => f.name.startsWith(d + '/') && !f.name.slice(d.length + 1).includes('/')));
+        const undeletableSynced = !!f.source && !deletable;
+        return <li key={f.name} data-source-name={f.name} tabIndex={-1} className={citedSource === f.name ? 'is-cited' : undefined}>
+          {f.attachment?.assetId && <img className="source-thumbnail" src={projectImageUrl(project.id, f.attachment.assetId)} alt="" />}
+          <span className="source-name" title={f.name}><ShellIcon name="file"/><span>{f.name.split('/').pop()}
+            <small className="source-status">{skillFiles.includes(f.name) ? t('projects.view.instructionSkill') : f.document ? sourceStatus(f) : f.attachment?.state === 'stored' ? (f.attachment.reason || t('projects.view.originalStored')) : f.attachment?.state === 'vision' ? t('projects.view.uploadedImage') : f.attachment?.state === 'partial' ? (f.attachment.reason || t('projects.view.textPreviewLimited')) : t('projects.view.textReady')}</small>
+            <small className="source-status">{f.source ? f.name : t('projects.view.storedInNoevia')}{f.attachment ? ` · ${(f.attachment.bytes / 1024 / 1024).toFixed(2)} MB` : ''}</small>
+            {undeletableSynced && <small className="source-status">{t('projects.view.syncedFrom', { source: f.source || '' })}</small>}
+          </span></span>
+          {(f.attachment || f.document?.byteHash) && <a className="btn btn-ghost btn-sm" href={`/api/projects/${encodeURIComponent(project.id)}/${f.attachment ? 'uploads' : 'documents'}/original?name=${encodeURIComponent(f.name)}`} download>{t('projects.view.original')}</a>}
+          {!undeletableSynced && <button className="btn btn-ghost btn-sm" aria-label={t(deletable ? 'projects.view.deleteNamed' : 'projects.view.removeNamed', { name: f.name })} onClick={() => deletable ? setConfirmDelete(f.name) : onPatch(project.id, { files: filesAfterRemoval(project.files, f.name) })}>{deletable ? t('projects.view.delete') : t('projects.view.remove')}</button>}
+        </li>;
+  };
+
+  // #586: an unreadable original is kept and downloadable, but it is not a text source: it has its
+  // own list below and is left out of the groups and every source count.
+  const unreadableFiles = project.files.filter(isUnreadableSource);
+  const readableFiles = project.files.filter((f) => !isUnreadableSource(f));
+  const sourceCount = readableFiles.length + (project.assets || []).filter((a) => !a.sourceName).length;
   const linkedFolders = (project.sourceFolders || []).filter((f) => f !== project.projectFolder);
   const outputs = outputsOf(project);
   const chatEnabled = !project.modes?.length || project.modes.includes('chat');
@@ -374,36 +399,22 @@ export function ProjectView({
                 <span><strong>{r.name}</strong><small className="source-status">{r.stage}{r.percent !== undefined ? ` · ${r.percent}%` : ''} · {t('projects.view.seconds', { count: Math.max(0, Math.round(((r.finished || now) - r.started) / 1000)) })}</small></span>
               </li>)}</ul></details>}
               {groupKeys.map(([group, groupKey]) => {
-                const files = project.files.filter(f => fileGroup(f) === group);
+                const files = readableFiles.filter(f => fileGroup(f) === group);
                 const legacyImages = group === 'Images' ? (project.assets || []).filter(a => !a.sourceName) : [];
                 if (!files.length && !legacyImages.length) return null;
                 const label = t(groupKey);
                 return <section key={group} aria-label={label}>
                   <h3 className="rail-label">{t('projects.view.groupCount', { group: label, count: files.length + legacyImages.length })}</h3>
-                  <ul className="source-list">{files.map(f => {
-                    // Deletable mirrors the server's ownsFile: a file sitting directly in an
-                    // attached folder (its own or a linked one) may be deleted from storage.
-                    // A synced file that does NOT meet that bar (e.g. reached through a nested
-                    // sub-path) can never be detached here either — the config-patch endpoint
-                    // rebuilds every synced entry from the project's own record regardless of
-                    // what a patch sends, so there is nothing "Remove" could do for it.
-                    const deletable = !!f.source && (!!f.attachment || (project.sourceFolders || []).some(d => f.name.startsWith(d + '/') && !f.name.slice(d.length + 1).includes('/')));
-                    const undeletableSynced = !!f.source && !deletable;
-                    return <li key={f.name} data-source-name={f.name} tabIndex={-1} className={citedSource === f.name ? 'is-cited' : undefined}>
-                      {f.attachment?.assetId && <img className="source-thumbnail" src={projectImageUrl(project.id, f.attachment.assetId)} alt="" />}
-                      <span className="source-name" title={f.name}><ShellIcon name="file"/><span>{f.name.split('/').pop()}
-                        <small className="source-status">{skillFiles.includes(f.name) ? t('projects.view.instructionSkill') : f.document ? sourceStatus(f) : f.attachment?.state === 'stored' ? (f.attachment.reason || t('projects.view.originalStored')) : f.attachment?.state === 'vision' ? t('projects.view.uploadedImage') : f.attachment?.state === 'partial' ? (f.attachment.reason || t('projects.view.textPreviewLimited')) : t('projects.view.textReady')}</small>
-                        <small className="source-status">{f.source ? f.name : t('projects.view.storedInNoevia')}{f.attachment ? ` · ${(f.attachment.bytes / 1024 / 1024).toFixed(2)} MB` : ''}</small>
-                        {undeletableSynced && <small className="source-status">{t('projects.view.syncedFrom', { source: f.source || '' })}</small>}
-                      </span></span>
-                      {(f.attachment || f.document?.byteHash) && <a className="btn btn-ghost btn-sm" href={`/api/projects/${encodeURIComponent(project.id)}/${f.attachment ? 'uploads' : 'documents'}/original?name=${encodeURIComponent(f.name)}`} download>{t('projects.view.original')}</a>}
-                      {!undeletableSynced && <button className="btn btn-ghost btn-sm" aria-label={t(deletable ? 'projects.view.deleteNamed' : 'projects.view.removeNamed', { name: f.name })} onClick={() => deletable ? setConfirmDelete(f.name) : onPatch(project.id, { files: filesAfterRemoval(project.files, f.name) })}>{deletable ? t('projects.view.delete') : t('projects.view.remove')}</button>}
-                    </li>;
-                  })}
+                  <ul className="source-list">{files.map(renderFile)}
                   {legacyImages.map(a => <li key={a.id}><img className="source-thumbnail" src={projectImageUrl(project.id, a.id)} alt=""/><span className="source-name"><span>{a.name}<small className="source-status">{t('projects.view.earlierUpload')}</small></span></span><button className="btn btn-ghost btn-sm" onClick={() => setConfirmImageDelete(a.id)}>{t('projects.view.remove')}</button></li>)}
                   </ul>
                 </section>;
               })}
+              {unreadableFiles.length > 0 && <section key="not-readable" className="source-not-readable" aria-label={t('projects.view.groupNotReadable')}>
+                <h3 className="rail-label">{t('projects.view.groupCount', { group: t('projects.view.groupNotReadable'), count: unreadableFiles.length })}</h3>
+                <p className="rail-empty not-readable-note">{t('projects.view.notReadableHint')}</p>
+                <ul className="source-list">{unreadableFiles.map(renderFile)}</ul>
+              </section>}
               {addError && <p className="modal-err source-add-error">{addError}</p>}
             </div>
           )}

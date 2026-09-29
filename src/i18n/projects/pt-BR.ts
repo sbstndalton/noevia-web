@@ -31,7 +31,7 @@ export const PT_BR_PROJECTS: ProjectsCatalogue = {
   'projects.restore': "Restaurar",
   'projects.aProject': "projeto",
   'projects.confirmDeleteTitle': "Excluir {name}?",
-  'projects.confirmDeleteBody': "Isso exclui permanentemente o projeto e suas conversas. Isso não pode ser desfeito.",
+  'projects.confirmDeleteBody': "Isso exclui permanentemente o projeto e suas conversas. Os arquivos do seu armazenamento conectado, incluindo a pasta de envios do projeto, são mantidos e não são excluídos. Isso não pode ser desfeito.",
   'projects.confirmDeleteConfirm': "Excluir projeto",
   'projects.menu.settings': "Configurações do projeto",
   'projects.menu.unpin': "Desafixar projeto",

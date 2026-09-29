@@ -8,7 +8,7 @@ type Skill = { file: string; hash: string; content: string; name: string; descri
 export function skillOriginText(origin: Skill['origin']): string {
   if (!origin) return '';
   if (origin.kind === 'attached-folder') return 'From an attached folder';
-  if (origin.kind !== 'published') return 'Project file';
+  if (origin.kind !== 'published') return 'Uploaded to this project';
   const when = origin.retrievedAt && !Number.isNaN(Date.parse(origin.retrievedAt)) ? ` on ${origin.retrievedAt.slice(0, 10)}` : '';
   return `Published by ${origin.publisher || 'an external source'}${origin.sourcePath ? ` (${origin.sourcePath})` : ''}, copied${when}`;
 }

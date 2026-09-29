@@ -33,7 +33,7 @@ export const EN_GB_PROJECTS = {
   'projects.restore': 'Restore',
   'projects.aProject': 'project',
   'projects.confirmDeleteTitle': 'Delete {name}?',
-  'projects.confirmDeleteBody': 'This permanently deletes the project and its chats. This cannot be undone.',
+  'projects.confirmDeleteBody': 'This permanently deletes the project and its chats. Files in your connected storage, including the project upload folder, are kept and are not deleted. This cannot be undone.',
   'projects.confirmDeleteConfirm': 'Delete project',
   'projects.menu.settings': 'Project settings',
   'projects.menu.unpin': 'Unpin project',

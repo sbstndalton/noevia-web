@@ -68,3 +68,11 @@ export function uploadUnreadableReason(result: { attachment?: { state?: string; 
   if (a && a.state === 'stored' && (a.group === 'Text' || a.group === 'Documents')) return `Not readable · ${a.reason || 'the original is kept, but no text could be read from it'}`;
   return '';
 }
+
+/** Mirrors server/source-readability.cjs: an original whose text could not be read (#586). It is kept
+ *  and downloadable but is not a text source, so it is listed apart and never counted. */
+export function isUnreadableSource(file: ProjectFile): boolean {
+  const a = file.attachment, d = file.document;
+  if (a && a.state === 'stored' && (a.group === 'Text' || a.group === 'Documents')) return true;
+  return !!(d && d.state === 'failed' && !String(file.content || '').trim());
+}

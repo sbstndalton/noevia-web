@@ -31,7 +31,7 @@ export const ES_ES_PROJECTS: ProjectsCatalogue = {
   'projects.restore': "Restaurar",
   'projects.aProject': "proyecto",
   'projects.confirmDeleteTitle': "¿Eliminar {name}?",
-  'projects.confirmDeleteBody': "Esto elimina permanentemente el proyecto y sus chats. Esta acción no se puede deshacer.",
+  'projects.confirmDeleteBody': "Esto elimina permanentemente el proyecto y sus chats. Los archivos de tu almacenamiento conectado, incluida la carpeta de subidas del proyecto, se conservan y no se eliminan. Esta acción no se puede deshacer.",
   'projects.confirmDeleteConfirm': "Eliminar proyecto",
   'projects.menu.settings': "Ajustes del proyecto",
   'projects.menu.unpin': "Desfijar proyecto",

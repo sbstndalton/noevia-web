@@ -31,7 +31,7 @@ export const NB_NO_PROJECTS: ProjectsCatalogue = {
   'projects.restore': "Gjenopprett",
   'projects.aProject': "prosjekt",
   'projects.confirmDeleteTitle': "Slette {name}?",
-  'projects.confirmDeleteBody': "Dette sletter prosjektet og samtalene permanent. Dette kan ikke angres.",
+  'projects.confirmDeleteBody': "Dette sletter prosjektet og samtalene permanent. Filer i den tilkoblede lagringen din, inkludert prosjektets opplastingsmappe, beholdes og slettes ikke. Dette kan ikke angres.",
   'projects.confirmDeleteConfirm': "Slett prosjekt",
   'projects.menu.settings': "Prosjektinnstillinger",
   'projects.menu.unpin': "Fjern feste på prosjekt",

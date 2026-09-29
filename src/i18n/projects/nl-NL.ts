@@ -31,7 +31,7 @@ export const NL_NL_PROJECTS: ProjectsCatalogue = {
   'projects.restore': "Herstellen",
   'projects.aProject': "project",
   'projects.confirmDeleteTitle': "{name} verwijderen?",
-  'projects.confirmDeleteBody': "Dit verwijdert het project en de bijbehorende chats permanent. Dit kan niet ongedaan worden gemaakt.",
+  'projects.confirmDeleteBody': "Dit verwijdert het project en de bijbehorende chats permanent. Bestanden in je gekoppelde opslag, inclusief de uploadmap van het project, blijven bewaard en worden niet verwijderd. Dit kan niet ongedaan worden gemaakt.",
   'projects.confirmDeleteConfirm': "Project verwijderen",
   'projects.menu.settings': "Projectinstellingen",
   'projects.menu.unpin': "Project losmaken",

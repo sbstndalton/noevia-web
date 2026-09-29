@@ -127,6 +127,8 @@ export interface Project {
   /** This project's own folder in storage. Uploads land here, and only files
    *  here may be deleted from within the project. */
   projectFolder?: string;
+  /** Storage path reserved at creation; the first upload creates exactly this folder. */
+  reservedFolder?: string;
   /** Image sources. Stored as bytes on the server, not inline. */
   assets?: ProjectAsset[];
   toolboxes?: string[]; // step 14: named tool sets offered to the model; defaults to ['core']
