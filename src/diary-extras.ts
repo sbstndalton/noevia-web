@@ -1,5 +1,5 @@
 import { streamChat } from './api';
-export type ExtraEvent = { type: string; text?: string; name?: string; args?: string; index?: number; id?: string; /** 'tool_pending' (#648): the file an edit would change. */ target?: string };
+export type ExtraEvent = { type: string; text?: string; name?: string; args?: string; index?: number; id?: string; /** 'tool_pending' (#648): the file an edit would change. */ target?: string; /** #658/#659 */ targetKind?: string; repeatOf?: boolean; applied?: boolean | number };
 /** Optional context is collected before capture; a failed/cancelled collection never starts a diary exchange. */
 export async function prepareDiaryExtras(enabled: boolean, message: string, sessionId: string, onEvent: (event: ExtraEvent) => void, signal?: AbortSignal, recovery?: { recoveryId: string; entryDay: string }) {
   if (!enabled) return '';

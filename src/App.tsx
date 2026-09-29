@@ -64,7 +64,8 @@ import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
 import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
-import { pendingToolCall, settleToolCalls } from './tool-call-state';
+import { finishedToolCall, pendingToolCall, settleToolCalls } from './tool-call-state';
+import { editBase, modelHistory, persistableMessage, rerunBase, storedPause } from './applied-writes';
 import { mergeTranscripts } from './transcript-merge';
 import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, shouldSaveChat, upsertChatMeta } from './chat-save';
 import { readLastPlace, writeLastPlace, clearLastPlace, type LastPlace } from './last-view';
@@ -502,6 +503,7 @@ export default function App(): JSX.Element {
             coworkTask: h.coworkTask,
             sources: h.sources,
             ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}),
+            ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}),
           }));
         setMessagesByChat((prev) => ({ ...prev, [id]: resolveLoadedHistory(prev[id] ?? [], loaded) }));
         setHistoryChecked((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
@@ -684,7 +686,8 @@ export default function App(): JSX.Element {
     // chat shows the same thinking block and stats it had while streaming
     // instead of a bare answer. The server strips these before replaying
     // history to a model, so they cost nothing in prompt tokens.
-    const entries: HistoryEntry[] = msgs.filter((m) => !m.error).map((m) => ({
+    // A failed reply is not saved, except as the record of changes it saved (#658).
+    const entries: HistoryEntry[] = msgs.map(persistableMessage).filter((m): m is Message => m !== null).map((m) => ({
       role: m.role,
       content: m.content,
       model: m.senderLabel,
@@ -696,6 +699,7 @@ export default function App(): JSX.Element {
       coworkTask: m.coworkTask,
       sources: m.sources && m.sources.length ? m.sources : undefined,
       skill: m.role === 'user' ? m.skill : undefined,
+      paused: m.role === 'assistant' ? m.paused : undefined,
     }));
     // Saves for one chat run in order. If another device saved first, merge its copy with ours
     // (nothing either side wrote is dropped), show the merged transcript, and save that.
@@ -703,7 +707,7 @@ export default function App(): JSX.Element {
       if (sendingChats.current.has(chatId)) { deferredMerges.current[chatId] = merged; return; }
       setMessagesByChat((prev) => ({
         ...prev,
-        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats, coworkTask: h.coworkTask, sources: h.sources, ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}) })),
+        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats, coworkTask: h.coworkTask, sources: h.sources, ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}), ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}) })),
       }));
     };
     if (!shouldSaveChat(chatId, deletedChats.current)) return;
@@ -786,7 +790,8 @@ export default function App(): JSX.Element {
       const pendingLoad = base ? undefined : historyLoads.current[chatId];
       const loaded = pendingLoad ? await pendingLoad : null;
       const existing = base ?? (loaded ? resolveLoadedHistory(messagesRef.current[chatId] ?? [], loaded) : messagesRef.current[chatId] ?? []);
-      const history: HistoryEntry[] = existing.filter(m => !m.error).map(m => ({ role: m.role, content: m.content }));
+      // Turns, plus the changes earlier replies saved (also failed or paused ones), marked as done (#658).
+      const history = modelHistory(existing);
       setMessagesByChat(prev => ({ ...prev, [chatId]: [...existing, userMsg] }));
       const replyId = uid();
       setMessagesByChat((prev) => ({
@@ -973,6 +978,14 @@ export default function App(): JSX.Element {
               ...prev,
               [chatId]: finishReplyTelemetry(prev[chatId], 'complete'),
             }));
+          } else if (ev.type === 'paused') {
+            // #658: step supervision stopped the reply after tool steps that finished. Not a
+            // failure: the reply ends normally ('done' follows) with a note of what was saved.
+            const applied = typeof ev.applied === 'number' && Number.isInteger(ev.applied) && ev.applied >= 0 ? ev.applied : 0;
+            setMessagesByChat((prev) => ({
+              ...prev,
+              [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, paused: { reason: 'supervision', applied } } : m)),
+            }));
           } else if (ev.type === 'error') {
             throw new Error(ev.text || 'Generation failed');
           } else if (ev.type === 'tool_result' && ev.name) {
@@ -981,13 +994,7 @@ export default function App(): JSX.Element {
             // state, so an approved or refused call stops offering buttons
             // that would now 404.
             const done = typeof ev.index === 'number' ? ev.index : tools.findIndex((t) => t && t.name === ev.name);
-            const denied = (ev.text || '').startsWith('ERROR: the user');
-            const chip = {
-              name: ev.name,
-              args: done >= 0 && tools[done] ? tools[done].args : '',
-              result: (ev.text || '').slice(0, TOOL_RESULT_LIMIT),
-              status: denied ? ('denied' as const) : ('done' as const),
-            };
+            const chip = finishedToolCall(done >= 0 ? tools[done] : undefined, { name: ev.name, text: ev.text, applied: ev.applied === true, target: ev.target }, TOOL_RESULT_LIMIT);
             if (done >= 0) tools[done] = chip; else tools.push(chip);
             setMessagesByChat((prev) => ({
               ...prev,
@@ -1122,8 +1129,10 @@ export default function App(): JSX.Element {
     // #562/#571: resend with the same pin, read from the persisted turn. If that Skill has since
     // been disabled the server refuses with a readable 409 instead of quietly running the message
     // as Automatic.
+    // #658: a failed reply that had already saved changes stays as their record, so the resend
+    // tells the model they are done instead of replaying them (rerunBase).
     const pin = storablePin(msgs[index - 1].skill);
-    void handleSend(chatId, projectId, msgs[index - 1].content, msgs.slice(0, index - 1), pin ? { skill: pin } : {});
+    void handleSend(chatId, projectId, msgs[index - 1].content, rerunBase(msgs, index), pin ? { skill: pin } : {});
   }, [activeChatMeta, handleSend, handleCoworkSend, streamingChats, view]);
 
   // Edit an earlier message and re-run the conversation from that point.
@@ -1142,7 +1151,8 @@ export default function App(): JSX.Element {
       if (!text) return;
       const projectId =
         view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
-      void handleSend(chatId, projectId, text, msgs.slice(0, index));
+      // #658: the records of changes saved by the dropped replies stay (editBase).
+      void handleSend(chatId, projectId, text, editBase(msgs, index));
     },
     [activeChatMeta, handleSend, streamingChats, view],
   );

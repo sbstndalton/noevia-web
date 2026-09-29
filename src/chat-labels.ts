@@ -84,6 +84,18 @@ export function messageBodyText(t: Translator, m: BodyMessage): string {
   return isStoppedPlaceholder(m) ? t('chat.stopped.content') : m.content;
 }
 
+/** #658: the note on a reply that ended after tool steps had run, saying what was saved. Step
+ *  supervision pausing is not a failure, and a reply that failed after saving a change still
+ *  saved it; the note says so in the interface language. */
+export function pausedNoteText(t: Translator & { plural: (key: string, count: number, params?: Record<string, string | number>) => string },
+  pause: { reason: 'supervision' | 'stopped'; applied: number }, formatCount: (n: number) => string = String): string {
+  const count = formatCount(pause.applied);
+  if (pause.reason === 'supervision') {
+    return pause.applied > 0 ? t.plural('chat.paused.supervisionApplied', pause.applied, { count }) : t('chat.paused.supervision');
+  }
+  return t.plural('chat.paused.stoppedApplied', pause.applied, { count });
+}
+
 /** The "Using:" list of a reply (#624): each toolbox named by its stable id in the interface
  *  language, joined the way the server joined the English labels. */
 export function toolScopeText(t: Translator, boxes: { id: string; label: string; inApp?: boolean }[]): string {

@@ -12,6 +12,7 @@ import type {
   HistoryEntry,
   InstalledModel,
   LiveStats,
+  ModelHistoryEntry,
   Project,
   Provider,
   Toolbox,
@@ -439,13 +440,17 @@ export async function saveChatHistory(chatId: string, history: HistoryEntry[], b
 //     for the user. The stream stays open and nothing runs until a decision is
 //     posted to /api/tool-approvals/:id. `target` is the resolved project file
 //     an edit would change (#648).
+//   { type:'tool_result', index, name, text, applied?, target? } — `applied`: a write that ran
+//     and succeeded (#658)
+//   { type:'paused', reason:'supervision', applied, text } — the reply ends here, normally, after
+//     tool steps that finished; `applied` changes were saved (#658). Followed by 'done'.
 //   { type:'done', model } { type:'diary', decision }
 //   { type:'telemetry', phase, model?, timeToFirstToken? }
 //   { type:'usage', cumulative prompt/completion/total tokens, provider rate,
 //     first-token time and optional MTP accepted/drafted counts }
 export async function* streamChat(
   body: { spaceId: string; compactOnly?: boolean; extrasEnabled?: boolean; extraContext?: string;
-    exchangeId?: string; recoveryId?: string; preparationId?: string; files?: Record<string,string>; entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: HistoryEntry[]; projectId?: string | null; chatId?: string | null;
+    exchangeId?: string; recoveryId?: string; preparationId?: string; files?: Record<string,string>; entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: ModelHistoryEntry[]; projectId?: string | null; chatId?: string | null;
     /** #236/#237: the session's harness, and boxes added for this turn only. */
     mode?: 'chat'; turnToolboxes?: string[];
     /** #272: one exact reviewed Skill version for this message, as `skill_<id>@<sha256>`. */
@@ -462,8 +467,17 @@ export async function* streamChat(
   args?: string;
   index?: number; // 'tool' events: which call this is, for upsert-by-index
   id?: string; // 'tool_pending': the approval id to post a decision against
-  /** 'tool_pending' (#648): the full stored path of the project file an edit would change. */
+  /** 'tool_pending' (#648): the full stored path of the project file an edit would change; for a
+   *  Google Drive write (#659) the Drive file's name and id. 'tool_result': the same, once it ran. */
   target?: string;
+  /** 'tool_pending' (#659): 'drive' or 'drive-new' when `target` is a Google Drive file. */
+  targetKind?: string;
+  /** 'tool_pending' (#658): the same change as one already saved in this chat. */
+  repeatOf?: boolean;
+  /** 'tool_result' (#658): a write that ran and succeeded. 'paused': how many changes were saved. */
+  applied?: boolean | number;
+  /** 'paused' (#658): why the reply ended before a final answer ('supervision'). */
+  reason?: string;
   decision?: string;
   reasoning?: string;
   reasoningEffort?: string;

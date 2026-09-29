@@ -11,7 +11,7 @@ import { ModelPopup } from './ModelPopup';
 import { useChatScroll } from '../useChatScroll';
 import { LiveTimer, ThinkingBlock } from './ChatView';
 import { TOOL_RESULT_LIMIT, ToolCalls } from './ToolCalls';
-import { pendingToolCall } from '../tool-call-state';
+import { finishedToolCall, pendingToolCall } from '../tool-call-state';
 import { prepareDiaryExtras } from '../diary-extras';
 import type { Project, ToolCallView } from '../types';
 import { SendIcon } from './Icons';
@@ -366,7 +366,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
         if (ev.type === 'tool' || ev.type === 'tool_pending' || ev.type === 'tool_result') {
           const index = ev.index ?? calls.length;
           calls[index] = ev.type === 'tool_result'
-            ? {name:ev.name || 'tool',args:calls[index]?.args || '',result:(ev.text || '').slice(0, TOOL_RESULT_LIMIT),status:(ev.text || '').startsWith('ERROR: the user') ? 'denied' : 'done'}
+            ? finishedToolCall(calls[index], { name: ev.name, text: ev.text, applied: ev.applied === true, target: ev.target }, TOOL_RESULT_LIMIT) // keeps `applied` and the target (#658)
             : ev.type === 'tool_pending' ? pendingToolCall(ev)
             : {name:ev.name || 'tool',args:ev.args || '',status:undefined,approvalId:ev.id};
           patchReply({tools:[...calls]});

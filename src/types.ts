@@ -47,6 +47,15 @@ export interface Message {
   sources?: SourceRef[];
   /** On a user turn: the Skill pin it was sent with, `skill_<id>@<sha256>` (#571), so Retry survives a reload. */
   skill?: string;
+  /** #658: the reply ended early after tool steps had run: step supervision paused it, or it
+   *  failed after changes were saved. `applied` is how many changes were saved. Not an error. */
+  paused?: ReplyPause;
+}
+
+/** Why a reply ended before a final answer, and how many changes it had already saved (#658). */
+export interface ReplyPause {
+  reason: 'supervision' | 'stopped';
+  applied: number;
 }
 
 /** One project source the model was given for a reply. `file` is the project file's name. */
@@ -74,8 +83,15 @@ export interface ToolCallView {
    *  approval is posted against. Reads never enter this state. */
   status?: 'running' | 'pending' | 'done' | 'denied' | 'stopped';
   approvalId?: string;
-  /** A pending project file edit: the full stored path of the file it would change (#648). */
+  /** A pending project file edit: the full stored path of the file it would change (#648); for a
+   *  Google Drive write, the Drive file's name and id (#659). Kept on the chip once it ran. */
   target?: string;
+  /** #659: whose file `target` names: a Google Drive file, or a new one. Absent: a project file. */
+  targetKind?: 'drive' | 'drive-new';
+  /** #658: the same tool, target and arguments as a change already saved in this chat. */
+  repeatOf?: boolean;
+  /** #658: a write that ran and succeeded. Later turns tell the model it is done. */
+  applied?: boolean;
   /** What the tool returned, bounded for display and history. */
   result?: string;
 }
@@ -208,7 +224,13 @@ export interface HistoryEntry {
   sources?: SourceRef[];
   /** User turns only (#571): the exact Skill pin the message was sent with. */
   skill?: string;
+  /** Assistant turns (#658): the reply ended early after saving changes. */
+  paused?: ReplyPause;
 }
+
+/** One entry of the history sent to /api/chat: a turn, or (#658) a change an earlier reply
+ *  already saved, which the server words for the model as done so it is not proposed again. */
+export type ModelHistoryEntry = HistoryEntry | { role: 'tool'; name: string; content: string; applied: true; target?: string; args?: string };
 
 export interface WorkspaceInfo {
   projects: Project[];

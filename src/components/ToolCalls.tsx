@@ -59,8 +59,12 @@ function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
           IS the gate — no clamp, no scroll-to-hide, no "show more". */}
       {/* A project file edit names the exact stored file it would change (#648), resolved by the
           server from the name above. The model may have passed only a bare name. */}
-      {call.target && <span className="tool-approval-ask" data-testid="tool-approval-target">{t('chat.approval.target')}</span>}
+      {/* A Google Drive write (#659) names the Drive file (name and id), or the new file's name. */}
+      {call.target && <span className="tool-approval-ask" data-testid="tool-approval-target">{t(call.targetKind === 'drive' ? 'chat.approval.targetDrive' : call.targetKind === 'drive-new' ? 'chat.approval.targetDriveNew' : 'chat.approval.target')}</span>}
       {call.target && <pre className="tool-approval-args">{showDirectionControls(call.target)}</pre>}
+      {/* #658: the same tool, file and arguments as a change already saved in this chat. A flag
+          only: all three actions stay, and nothing is declined for the person. */}
+      {call.repeatOf && <span className="tool-approval-ask tool-approval-repeat" role="note" data-testid="tool-approval-repeat">{t('chat.approval.repeat')}</span>}
       {pretty && pretty !== '{}' && <pre className="tool-approval-args">{pretty}</pre>}
       <div className="tool-approval-actions">
         <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => void decide('approve')}>

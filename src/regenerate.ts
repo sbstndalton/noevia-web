@@ -1,5 +1,6 @@
 import type { Message } from './types';
 import type { SkillPin } from './api-contract';
+import { rerunBase } from './applied-writes';
 
 /** What re-running the last reply needs: the user text that produced it, and the transcript to
  *  resend on top of (everything before that user turn — the same "base" shape `handleSend` in
@@ -29,5 +30,8 @@ export function planRegenerate(messages: Message[], messageId: string): Regenera
   if (reply.role !== 'assistant' || reply.error || reply.coworkTask) return null;
   const prompt = messages[index - 1];
   if (prompt.role !== 'user') return null;
-  return { userText: prompt.content, base: messages.slice(0, index - 1), ...(prompt.skill ? { skill: prompt.skill as SkillPin } : {}) };
+  // #658: a reply that saved changes (approved writes that ran) is replaced, but the user turn and
+  // the record of those changes stay (its tool list and a note; none of its text, routing,
+  // thinking or stats), so the re-run is told they are done instead of making them again.
+  return { userText: prompt.content, base: rerunBase(messages, index), ...(prompt.skill ? { skill: prompt.skill as SkillPin } : {}) };
 }

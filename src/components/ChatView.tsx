@@ -19,7 +19,7 @@ import { apiFetch } from '../api';
 import { isDisplayableRoutingDecision } from '../current-routing';
 import { routeDescription } from '../routing-copy';
 import { nextStreamStart } from '../stream-start';
-import { effortLineText, messageBodyText, routeRoleName, senderLabelText, statusLineText, toolScopeText } from '../chat-labels';
+import { effortLineText, messageBodyText, pausedNoteText, routeRoleName, senderLabelText, statusLineText, toolScopeText } from '../chat-labels';
 import { useAccountPreferences, appLocale } from '../user-preferences';
 import { sendHintText, useT } from '../i18n';
 import type { MessageKey } from '../i18n';
@@ -510,6 +510,9 @@ export function ChatView({
                   {m.routingDecision && <RoutingDetails decision={m.routingDecision} />}
                   {m.reasoning ? <ThinkingBlock text={m.reasoning} ms={m.reasoningMs} live={!!thinkingLive && !m.content} /> : null}
                   {m.toolCalls && m.toolCalls.length > 0 ? <ToolCalls calls={m.toolCalls} /> : null}
+                  {/* #658: the reply ended after tool steps (supervision paused it, or it failed after
+                      saving). Says what was saved, as a note, not as an error. */}
+                  {m.paused && <p className="msg-warning msg-paused" role="status" data-testid="reply-paused">{pausedNoteText(t, m.paused, (n) => formatNumber(n, t.locale, 0))}</p>}
                   {m.coworkTask ? <CoworkTaskCard task={m.coworkTask} disabled={streaming || actionBusy}
                     onRetry={() => { const prompt = messages[i - 1]?.role === 'user' ? messages[i - 1].content : ''; if (prompt) onSend(prompt, { cowork: { repository: m.coworkTask!.repository } }); }} /> : null}
                   {body ? (
