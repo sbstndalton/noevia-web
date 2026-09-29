@@ -82,12 +82,13 @@ export interface DocumentStatus {
   pages?: number;
   truncated?: boolean;
   error?: string;
+  errorId?: string;
   indexing?: string;
   pageStatus?: { number: number; status: string }[];
 }
 
 export interface ProjectFile {
-  attachment?: { id: string; bytes: number; group: string; state: string; reason?: string; assetId?: string; readerVersion?: string };
+  attachment?: { id: string; bytes: number; group: string; state: string; reason?: string; reasonId?: string; reasonParams?: Record<string, string | number>; assetId?: string; readerVersion?: string };
   document?: DocumentStatus;
   name: string;
   content: string;

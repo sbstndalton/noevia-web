@@ -19,6 +19,7 @@ import { apiFetch } from '../api';
 import { isDisplayableRoutingDecision } from '../current-routing';
 import { useAccountPreferences, appLocale } from '../user-preferences';
 import { sendHintText, useT } from '../i18n';
+import type { MessageKey } from '../i18n';
 import { isApple } from './shortcuts/shortcuts';
 import { ComposerModeBar, ModeCaption, ModeConfirm, ModeToggle, useCoworkAccess, useModeSwitch } from './ComposerModeBar';
 import { ToolCatalogue } from './ToolCatalogue';
@@ -85,44 +86,46 @@ export function ThinkingBlock({ text, live, ms }: { text: string; live: boolean;
   // want to read, with the reasoning one click away. `open` is uncontrolled
   // after the first render, so a reader who expands a finished block keeps it
   // expanded.
+  const t = useT();
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  // English keeps its compact "1m 05s"; every other locale names its own units (#608).
+  const took = (span: number) => t.locale.startsWith('en') ? thinkingDuration(span) : formatDuration(Math.max(1, Math.round(span / 1000)), t.locale);
   return (
     <details className="thinking-block" open={live}>
       <summary className={live ? 'thinking-live' : undefined}>
         {/* A time when this client saw the thinking happen; otherwise (an older chat, another
             device) the length, which is what is known. One thinks for a time, not for words. */}
-        {live ? 'Thinking…' : ms ? `Thought for ${thinkingDuration(ms)}` : words ? `Thought · ${words.toLocaleString()} ${words === 1 ? 'word' : 'words'}` : 'Thought process'}
+        {live ? t('chat.think.live') : ms ? t('chat.think.thoughtFor', { duration: took(ms) }) : words ? t.plural('chat.think.words', words, { count: formatNumber(words, t.locale, 0) }) : t('chat.think.process')}
       </summary>
       <div className="thinking-body">{text}</div>
     </details>
   );
 }
 
+const ROUTE_REASONS = ['disabled', 'no-backend', 'missing-roles', 'deadline', 'no-backend-answered', 'low-confidence', 'rejected'] as const;
+
 export function RoutingDetails({ decision }: { decision: RoutingDecision }) {
+  const t = useT();
   if (!isDisplayableRoutingDecision(decision)) return null;
   const source = decision.model === 'convaiinnovations/laya' ? 'Laya'
-    : decision.backend === 'llama-logit' ? 'Local logit'
-    : decision.backend === 'decision-service' ? 'Decision service' : 'Legacy';
-  const fallbackLabel = new Map([
-    ['disabled', 'experiment disabled'], ['no-backend', 'service unavailable'], ['missing-roles', 'roles unavailable'],
-    ['deadline', 'time limit'], ['no-backend-answered', 'service did not answer'],
-    ['low-confidence', 'decision rejected'], ['rejected', 'invalid decision'],
-  ]);
-  const reason = fallbackLabel.get(typeof decision.fallbackReason === 'string' ? decision.fallbackReason : '') || 'decision unavailable';
+    : decision.backend === 'llama-logit' ? t('chat.route.srcLocalLogit')
+    : decision.backend === 'decision-service' ? t('chat.route.srcDecision') : t('chat.route.srcLegacy');
+  const fallbackId = ROUTE_REASONS.find(id => id === decision.fallbackReason) || 'unavailable';
+  const reason = t(`chat.route.why.${fallbackId}` as MessageKey);
   const offered = decision.offered.slice(0, 3).filter(option => option && ['fast', 'smart', 'code'].includes(option.id) && typeof option.label === 'string')
     .map(option => ({ ...option, label: option.label.slice(0, 200) }));
   const scores = decision.scores && typeof decision.scores === 'object' ? decision.scores : {};
   const selectedRole = typeof decision.selectedRole === 'string' && ['fast', 'smart', 'code'].includes(decision.selectedRole) ? decision.selectedRole : null;
   return <details className="thinking-block routing-details">
-    <summary>{source} routing · {decision.effectiveRole}{decision.status === 'fallback' ? ' · fallback' : ''}</summary>
+    <summary>{t(decision.status === 'fallback' ? 'chat.route.summaryFallback' : 'chat.route.summary', { source, role: decision.effectiveRole })}</summary>
     <div className="routing-details-body">
-      <p>{decision.status === 'accepted' ? 'Decision accepted' : `Fallback: ${reason}`}{Number.isFinite(decision.latencyMs) ? ` · ${Math.round(decision.latencyMs!)} ms` : ''}</p>
-      {selectedRole && selectedRole !== decision.effectiveRole && <p>Selected: {selectedRole} · Used: {decision.effectiveRole}</p>}
+      <p>{decision.status === 'accepted' ? t('chat.route.accepted') : t('chat.route.fallback', { reason })}{Number.isFinite(decision.latencyMs) ? ` · ${formatNumber(Math.round(decision.latencyMs!), t.locale, 0)} ms` : ''}</p>
+      {selectedRole && selectedRole !== decision.effectiveRole && <p>{t('chat.route.selectedUsed', { selected: selectedRole, used: decision.effectiveRole })}</p>}
       {offered.length > 0 && <ul>{offered.map(option => <li key={option.id}>
         <span><strong>{option.id}</strong> · {option.label}</span>
         <span>{Object.hasOwn(scores, option.id) && Number.isFinite(scores[option.id]) ? String(scores[option.id]) : '—'}</span>
       </li>)}</ul>}
-      <small>Scores are uncalibrated preferences, not a probability of a correct route. This service does not provide a prose thought process.</small>
+      <small>{t('chat.route.scoresNote')}</small>
     </div>
   </details>;
 }
@@ -487,8 +490,8 @@ export function ChatView({
             <div key={m.id} className="msg" data-role={m.role}>
               {/* The bubble side already says who spoke; only the answering model is worth showing. */}
               {m.role === 'user'
-                ? <span className="msg-sender sr-only">You</span>
-                : <span className="msg-sender is-assistant"><span className="sr-only">Assistant · </span>{(m.senderLabel ?? modelLabel).replace(/^Assistant · /, '')}</span>}
+                ? <span className="msg-sender sr-only">{t('chat.sender.you')}</span>
+                : <span className="msg-sender is-assistant"><span className="sr-only">{t('chat.sender.assistant')} · </span>{(m.senderLabel ?? modelLabel).replace(/^Assistant · /, '')}</span>}
               {m.role === 'assistant' ? (
                 <div className="assistant-card">
                   {m.reasoningMode && m.reasoningMode !== 'off' && <small className="reasoning-result">Effort: {m.reasoningEffort} · {m.reasoningMode === 'real' ? 'provider parameter' : 'best-effort hint'}</small>}

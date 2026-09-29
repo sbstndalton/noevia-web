@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
 import type { SkillManifest, SkillPin } from '../api-contract';
+import { useT } from '../i18n';
 
 // Version-pinned Skill invocation from the web composer (#272). The list comes from the same
 // portable manifest API a native client reads, and the value sent is the exact version core
@@ -43,13 +44,14 @@ export function useSkillPinOptions(projectId: string | null, refreshKey: unknown
 export function SkillPinSelect({ options, value, onChange, disabled }: {
   options: SkillPinOption[]; value: string; onChange: (value: string) => void; disabled?: boolean;
 }) {
+  const t = useT();
   if (!options.length) return null;
   return (
-    <label className="skill-pin" title="Use one reviewed skill version for the next message. Skills do not grant tools or permissions.">
-      <span className="skill-pin-label">Skill</span>
-      <select className="skill-pin-select" aria-label="Skill for the next message" value={value} disabled={disabled}
+    <label className="skill-pin" title={t('skillPin.title')}>
+      <span className="skill-pin-label">{t('skillPin.label')}</span>
+      <select className="skill-pin-select" aria-label={t('skillPin.aria')} value={value} disabled={disabled}
         onChange={event => onChange(event.target.value)}>
-        <option value="">Automatic</option>
+        <option value="">{t('skillPin.automatic')}</option>
         {options.map(option => <option key={option.value} value={option.value} title={option.title}>{option.label}</option>)}
       </select>
     </label>

@@ -494,7 +494,8 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 }
 
 .source-thumbnail { width: 48px; height: 48px; object-fit: contain; border-radius: var(--radius-inset); flex: 0 0 auto; }
-.upload-progress li { align-items: flex-start; }
+.upload-progress li { align-items: flex-start; font-size: var(--text-caption); }
+.upload-progress .upload-name { font-size: var(--text-caption); font-weight: 600; overflow-wrap: anywhere; }
 
 /* Composer actions stay beside the draft; grouped tools expand above it. */
 .composer-actions { position: relative; flex: 0 0 auto; }

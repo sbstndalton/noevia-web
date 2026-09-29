@@ -32,7 +32,7 @@ export async function uploadAttachments(sink: AttachmentSink, files: File[], t: 
       if (file.size > uploadLimit(file.name)) throw new Error(t('composer.upload.tooLarge'));
       status(t('composer.upload.reading'));
       const result = await uploadProjectFile(project.id, { name: file.name, dataBase64: await fileToBase64(file) }, value => status(`${value.stage}${value.percent == null ? '' : ` ${formatPercent(value.percent, appLocale(), 0)}`}`));
-      const unreadable = uploadUnreadableReason(result);
+      const unreadable = uploadUnreadableReason(result, t);
       if (unreadable) { failures.push(`${file.name}: ${unreadable}`); continue; }
       if (result.attachment?.reduction?.note) notices.push(`${file.name}: ${result.attachment.reduction.note}`);
     } catch (err) { failures.push(`${file.name}: ${err instanceof Error ? err.message : t('composer.upload.failed')}`); }

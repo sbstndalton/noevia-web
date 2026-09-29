@@ -882,4 +882,9 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.evidence.lim.calibration-budget': "promptbudget {seconds} s",
   'mm.evidence.lim.benchmark-median': "median av {n} varma, ostörda förfrågningar; beror på promptmix och max tokens",
   'mm.evidence.lim.source-unverified': "overifierat, från källan: publicerat av modellens arkiv, inte mätt lokalt",
+  'mm.tpl.accepts_enable_thinking': "kan slå på och av tänkande",
+  'mm.tpl.accepts_reasoning_effort': "kan justera resonemangsnivån",
+  'mm.tpl.accepts_preserve_thinking': "kan bevara tänkandet",
+  'mm.tpl.uses_think_tags': "använder <think>-taggar",
+  'mm.tpl.uses_channel_thought': "använder kanalen ”thought”",
 };

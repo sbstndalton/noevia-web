@@ -906,6 +906,11 @@ export const EN_GB_MODELS = {
   'mm.evidence.lim.calibration-budget': 'prompt budget {seconds} s',
   'mm.evidence.lim.benchmark-median': 'median of {n} warm, uncontended requests; depends on prompt mix and max tokens',
   'mm.evidence.lim.source-unverified': 'unverified, from source: published by the model repository, not measured locally',
+  'mm.tpl.accepts_enable_thinking': 'accepts enable thinking',
+  'mm.tpl.accepts_reasoning_effort': 'accepts reasoning effort',
+  'mm.tpl.accepts_preserve_thinking': 'accepts preserve thinking',
+  'mm.tpl.uses_think_tags': 'uses think tags',
+  'mm.tpl.uses_channel_thought': 'uses channel thought',
 } as const;
 
 export type ModelsKey = keyof typeof EN_GB_MODELS;

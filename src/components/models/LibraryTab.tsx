@@ -17,10 +17,22 @@ import { bytesToModelSizeGB, formatModelSizeGB } from '../../model-size';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 
-type FileEntry = { key: string; name: string; subdir: string; bytes: number; size: string; modified: string; sharded: boolean; parts: number;
+type FileEntry = { key: string; name: string; subdir: string; bytes: number; size: string; modified: string; mtime?: number; sharded: boolean; parts: number;
   projector: { name: string; bytes: number } | null; sections: string[]; modelId: string; file: string;
   shape: { arch: string; moe: boolean; experts: number; active: number; label: string } | null; loadedOn: string[];
   fit: { name: string; verdict: string; ratio_pct: number }[]; badges: { category: string; rating: number; note: string }[] };
+// #609: the chat-template capabilities arrive as flag ids (accepts_enable_thinking, ...); they are
+// worded by the catalogue, with the raw ids left in the tooltip. An id this build has no words for
+// is shown as its own name.
+const TEMPLATE_FLAGS = new Set(['accepts_enable_thinking', 'accepts_reasoning_effort', 'accepts_preserve_thinking', 'uses_think_tags', 'uses_channel_thought']);
+const templateFlags = (features: Record<string, boolean> | undefined): string[] => Object.entries(features || {}).filter(([, v]) => v).map(([k]) => k);
+/** The file's modified time in the interface locale, like the other dates on the page (#609). The
+ *  server's own "2026-09-25 14:30" is only the fallback when it sent no timestamp. */
+function modifiedText(detail: { mtime?: number; modified: string }, locale: string | undefined): string {
+  if (typeof detail.mtime !== 'number' || !Number.isFinite(detail.mtime) || detail.mtime <= 0) return detail.modified;
+  try { return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(detail.mtime * 1000)); }
+  catch { return detail.modified; }
+}
 type Update = { status: string; remote: string; delta_days: number | null };
 type Detail = FileEntry & { path: string; summary: { arch: string; general: Record<string, unknown>; model: Record<string, unknown>; chat_template_features: Record<string, boolean> } };
 // #587: capability tags arrive as English words from the engine ("embeddings", "reranking") and
@@ -221,8 +233,8 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
         {file?.shape?.moe && <div><dt>{t('mm.card.experts')}</dt><dd>{t('mm.card.expertsValue', { experts: file.shape.experts, active: file.shape.active })}</dd></div>}
         {detail.projector && <div><dt>{t('mm.card.projector')}</dt><dd>{detail.projector.name}</dd></div>}
         <div><dt>{t('mm.card.file')}</dt><dd className="mm-mono">{detail.file}{detail.sharded ? ` (${t('mm.card.parts', { parts: detail.parts })})` : ''}</dd></div>
-        <div><dt>{t('mm.card.modified')}</dt><dd>{detail.modified}</dd></div>
-        {Object.entries(detail.summary.chat_template_features || {}).some(([, v]) => v) && <div><dt>{t('mm.card.template')}</dt><dd>{Object.entries(detail.summary.chat_template_features).filter(([, v]) => v).map(([k]) => k.replace(/_/g, ' ')).join(', ')}</dd></div>}
+        <div><dt>{t('mm.card.modified')}</dt><dd>{modifiedText(detail, appLocale())}</dd></div>
+        {templateFlags(detail.summary.chat_template_features).length > 0 && <div><dt>{t('mm.card.template')}</dt><dd title={templateFlags(detail.summary.chat_template_features).join(', ')}>{templateFlags(detail.summary.chat_template_features).map(k => TEMPLATE_FLAGS.has(k) ? t(`mm.tpl.${k}` as MessageKey) : k.replace(/_/g, ' ')).join(', ')}</dd></div>}
       </dl>}
       {/* Chat qualification evidence (and its Recheck) only means something for a chat model the
           engine runs: not Laya, not a sidecar model, not a preset whose file is missing. */}

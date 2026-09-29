@@ -104,3 +104,27 @@ export function formatCompact(n: number, locale: string | undefined): string {
   }
   return f.format(n);
 }
+
+const byteCache = new Map<string, Intl.NumberFormat | null>();
+const BYTE_UNITS = ['byte', 'kilobyte', 'megabyte', 'gigabyte'] as const;
+function byteFormatter(locale: string | undefined, unit: string, digits: number): Intl.NumberFormat | null {
+  const key = `${locale ?? ''}|${unit}|${digits}`;
+  const hit = byteCache.get(key);
+  if (hit !== undefined) return hit;
+  let f: Intl.NumberFormat | null = null;
+  try { f = new Intl.NumberFormat(locale, { style: 'unit', unit, unitDisplay: 'short', maximumFractionDigits: digits }); } catch { f = null; }
+  byteCache.set(key, f);
+  return f;
+}
+
+/** A file size in the unit that fits (B, KB, MB, GB; 1024 steps) with the locale's own separators
+ *  and unit names ("2 kB" / "1,5 MB" in de, "2 ko" in fr), so a 2 KB note no longer reads
+ *  "0.00 MB" (#610). Whole numbers below 1 KB and from 100 up; one decimal in between. */
+export function formatBytes(bytes: number, locale: string | undefined): string {
+  let value = Number.isFinite(bytes) && bytes > 0 ? bytes : 0, i = 0;
+  while (value >= 1024 && i < BYTE_UNITS.length - 1) { value /= 1024; i++; }
+  const digits = i === 0 || value >= 100 ? 0 : 1;
+  const f = byteFormatter(locale, BYTE_UNITS[i], digits);
+  if (f) return f.format(value);
+  return `${formatNumber(value, locale, digits)} ${['B', 'KB', 'MB', 'GB'][i]}`;
+}

@@ -3,6 +3,7 @@ import type { InstalledModel, Project } from '../types';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
 import { displayName } from '../source-chips';
+import { isUnreadableSource } from '../source-status';
 
 function Section({
   title,
@@ -43,6 +44,9 @@ export function Inspector({
   onOpenSource?: (projectId: string, file: string) => void;
 }): JSX.Element {
   const t = useT();
+  // #586: an original whose text could not be read is not a source (the Sources tab lists it apart
+  // and never counts it), so this rail leaves it out too.
+  const sources = (project?.files || []).filter((f) => !isUnreadableSource(f));
   const model = project?.model || models.find((m) => m.loaded)?.name || t('inspector.notSelected');
 
   return (
@@ -78,11 +82,11 @@ export function Inspector({
             title={t('inspector.sources')}
             action={{ icon: 'new', onClick: () => onEditProject(project.id), aria: t('inspector.addSourcesAria') }}
           >
-            {project.files.length ? (
+            {sources.length ? (
               <ul className="insp-list">
                 {/* The file's own name, never the storage path it was synced from, which goes
                     stale when a project is renamed (#552). It opens the file in Sources. */}
-                {project.files.map((f) => (
+                {sources.map((f) => (
                   <li key={f.name}>
                     {onOpenSource
                       ? <button type="button" className="insp-source" title={f.name} aria-label={t('chat.sources.open', { name: displayName(f.name) })} onClick={() => onOpenSource(project.id, f.name)}>{displayName(f.name)}</button>

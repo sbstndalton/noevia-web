@@ -882,4 +882,9 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.evidence.lim.calibration-budget': "budget de prompt {seconds} s",
   'mm.evidence.lim.benchmark-median': "médiane de {n} requêtes à chaud, sans concurrence ; dépend du mélange de prompts et du maximum de tokens",
   'mm.evidence.lim.source-unverified': "non vérifié, provenant de la source : publié par le dépôt du modèle, non mesuré localement",
+  'mm.tpl.accepts_enable_thinking': "permet d’activer la réflexion",
+  'mm.tpl.accepts_reasoning_effort': "permet de régler l’effort de raisonnement",
+  'mm.tpl.accepts_preserve_thinking': "permet de conserver la réflexion",
+  'mm.tpl.uses_think_tags': "utilise des balises <think>",
+  'mm.tpl.uses_channel_thought': "utilise le canal « thought »",
 };

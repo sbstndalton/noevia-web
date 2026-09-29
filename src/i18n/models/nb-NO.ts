@@ -882,4 +882,9 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.evidence.lim.calibration-budget': "promptbudsjett {seconds} s",
   'mm.evidence.lim.benchmark-median': "median av {n} varme, uforstyrrede forespørsler; avhenger av promptmiks og maks tokens",
   'mm.evidence.lim.source-unverified': "ubekreftet, fra kilden: publisert av modellrepositoriet, ikke målt lokalt",
+  'mm.tpl.accepts_enable_thinking': "kan slå tenkning av og på",
+  'mm.tpl.accepts_reasoning_effort': "kan justere resonneringsinnsats",
+  'mm.tpl.accepts_preserve_thinking': "kan beholde tenkingen",
+  'mm.tpl.uses_think_tags': "bruker <think>-tagger",
+  'mm.tpl.uses_channel_thought': "bruker kanalen «thought»",
 };

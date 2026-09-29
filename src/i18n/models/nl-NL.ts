@@ -882,4 +882,9 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.evidence.lim.calibration-budget': "promptbudget {seconds} s",
   'mm.evidence.lim.benchmark-median': "mediaan van {n} warme, ongestoorde verzoeken; hangt af van promptmix en maximale tokens",
   'mm.evidence.lim.source-unverified': "niet geverifieerd, van de bron: gepubliceerd door de modelrepository, niet lokaal gemeten",
+  'mm.tpl.accepts_enable_thinking': "laat denken aan- en uitzetten toe",
+  'mm.tpl.accepts_reasoning_effort': "laat de redeneerinspanning instellen toe",
+  'mm.tpl.accepts_preserve_thinking': "laat het behouden van denken toe",
+  'mm.tpl.uses_think_tags': "gebruikt <think>-tags",
+  'mm.tpl.uses_channel_thought': "gebruikt het kanaal ‘thought’",
 };

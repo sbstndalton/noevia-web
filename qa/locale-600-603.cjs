@@ -88,7 +88,9 @@ const PORT = Number(process.env.QA_PORT || 31600);
     await check('#600 chat reply meta words are German ("Tokens", "Tok/s") with locale numbers', async () => {
       await page.locator('textarea').first().fill('live tokens synthetic');
       await page.keyboard.press('Enter');
-      const meta = page.locator('.msg-meta').first();
+      // The first .msg-meta is the live timer ("0,0 s · generating…") until the reply finishes; wait
+      // for the finished footer, or this reads the timer when the reply is still being drawn.
+      const meta = page.locator('.msg-meta', { hasText: /Tokens/ }).first();
       await meta.waitFor();
       const text = (await meta.innerText()).replace(/\s+/g, ' ');
       assert.match(text, /46 Tokens \(12 rein \/ 34 raus\)/, `reply meta: ${text}`);
