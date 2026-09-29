@@ -512,6 +512,8 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.tune.sampling.none': "Det anbefales ingen samplingverdier for denne modellen, så motorens standardverdier gjelder.",
   'mm.tune.sampling.tier.card': "Kilde: {source} fra modellkortets repositorium. Oppgitt av utgiveren, ikke målt her.",
   'mm.tune.sampling.tier.family': "Kilde: {source}. En innebygd standardverdi for denne modellfamilien, ikke målt her.",
+  'mm.tune.sampling.tier.familyNamed': "Kilde: familietabellen for {family}. En innebygd standardverdi for denne modellfamilien, ikke målt her.",
+  'mm.tune.sampling.note.thinkingMode': "verdier for tenkemodus",
   'mm.tune.sampling.tier.preset': "Kilde: {source}. Reserveløsning når verken modellkortet eller familietabellen gir verdier.",
   'mm.tune.step.kv': "Laster modellen én gang per buffertype og beholder den raskeste som består de tre kvalitetsprøvene.",
   'mm.tune.step.contextLabel': "Kontekststørrelse",

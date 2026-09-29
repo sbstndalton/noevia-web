@@ -512,6 +512,8 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.tune.sampling.none': "Voor dit model worden geen samplingwaarden aanbevolen, dus de standaardwaarden van de engine blijven gelden.",
   'mm.tune.sampling.tier.card': "Bron: {source} uit de repository van de modelkaart. Opgegeven door de uitgever, hier niet gemeten.",
   'mm.tune.sampling.tier.family': "Bron: {source}. Een ingebouwde standaardwaarde voor deze modelfamilie, hier niet gemeten.",
+  'mm.tune.sampling.tier.familyNamed': "Bron: familietabel {family}. Een ingebouwde standaardwaarde voor deze modelfamilie, hier niet gemeten.",
+  'mm.tune.sampling.note.thinkingMode': "waarden voor de denkmodus",
   'mm.tune.sampling.tier.preset': "Bron: {source}. Terugval wanneer noch de modelkaart noch de familietabel waarden geeft.",
   'mm.tune.step.kv': "Laadt het model één keer per cachetype en houdt het snelste dat de drie kwaliteitstests doorstaat.",
   'mm.tune.step.contextLabel': "Contextgrootte",

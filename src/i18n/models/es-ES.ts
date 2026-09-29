@@ -512,6 +512,8 @@ export const ES_ES_MODELS: ModelsCatalogue = {
   'mm.tune.sampling.none': "No se recomiendan valores de muestreo para este modelo, así que se mantienen los valores por defecto del motor.",
   'mm.tune.sampling.tier.card': "Fuente: {source} del repositorio de la tarjeta del modelo. Indicado por el editor, no medido aquí.",
   'mm.tune.sampling.tier.family': "Fuente: {source}. Un valor por defecto integrado para esta familia de modelos, no medido aquí.",
+  'mm.tune.sampling.tier.familyNamed': "Fuente: tabla de la familia {family}. Un valor por defecto integrado para esta familia de modelos, no medido aquí.",
+  'mm.tune.sampling.note.thinkingMode': "valores del modo de razonamiento",
   'mm.tune.sampling.tier.preset': "Fuente: {source}. Alternativa cuando ni la tarjeta del modelo ni la tabla de familias dan valores.",
   'mm.tune.step.kv': "Carga el modelo una vez por tipo de caché y se queda con el más rápido que supera las tres pruebas de calidad.",
   'mm.tune.step.contextLabel': "Tamaño del contexto",

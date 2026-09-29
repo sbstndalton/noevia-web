@@ -11,7 +11,7 @@ import { useCodeAccess } from './code/useCodeAccess';
  *  `<CodePanel>`, gated by the same `useCodeAccess`). This landing page has no project to run a
  *  task in, so a viewer who could use that harness gets a picker into the real thing instead of
  *  the honest "not connected yet" stub everyone else still sees. */
-export function CodingWorkspace({ page, onStartChat, projects, projectsLoaded = true, onProjectsChanged, onOpenProjectCode }: { page: string; onStartChat?: (prompt: string) => void; projects?: { id: string; name: string }[]; projectsLoaded?: boolean; onProjectsChanged?: () => void; onOpenProjectCode?: (projectId: string) => void }) {
+export function CodingWorkspace({ page, onStartChat, projects, projectsLoaded = true, onProjectsChanged, onOpenProjectCode }: { page: string; onStartChat?: (prompt: string) => void; projects?: { id: string; name: string; archived?: boolean }[]; projectsLoaded?: boolean; onProjectsChanged?: () => void; onOpenProjectCode?: (projectId: string) => void }) {
   const [draft,setDraft]=useState('');
   const [panel,setPanel]=useState(false);
   const list = projects ?? [];
@@ -63,7 +63,9 @@ export function CodingAccessSkeleton() {
  *  `ActiveCodeTasks`'s `onOpenProject` already is). */
 /** Exported for tests: a pure, hook-free presentational component (unlike CodingWorkspace itself,
  *  which resolves access through an effect and so cannot render its "granted" state statically). */
-export function CodeProjectPicker({ projects, onOpen }: { projects: { id: string; name: string }[]; onOpen: (projectId: string) => void }) {
+export function CodeProjectPicker({ projects: all, onOpen }: { projects: { id: string; name: string; archived?: boolean }[]; onOpen: (projectId: string) => void }) {
+  // #566: archived projects are not offered here.
+  const projects = all.filter((p) => !p.archived);
   return <>
     <div className="coding-welcome"><span className="code-emblem"><ShellIcon name="code" size={28}/></span><h1>Open a project to run Code</h1><p>Code mode runs inside each project's own Code tab, with its repository and task history. Pick a project to continue.</p></div>
     {projects.length

@@ -530,6 +530,8 @@ export const EN_GB_MODELS = {
   'mm.tune.sampling.none': 'No sampling values are recommended for this model, so the engine defaults stay in force.',
   'mm.tune.sampling.tier.card': 'Source: {source} from the model card repository. Reported by the publisher, not measured here.',
   'mm.tune.sampling.tier.family': 'Source: {source}. A built-in default for this model family, not measured here.',
+  'mm.tune.sampling.tier.familyNamed': 'Source: {family} family table. A built-in default for this model family, not measured here.',
+  'mm.tune.sampling.note.thinkingMode': 'thinking-mode values',
   'mm.tune.sampling.tier.preset': 'Source: {source}. Fallback when neither the model card nor the family table gives values.',
   'mm.tune.step.kv': 'Loads the model once per cache type and keeps the fastest one that passes the three quality probes.',
   'mm.tune.step.contextLabel': 'Context size',

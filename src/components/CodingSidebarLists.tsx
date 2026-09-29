@@ -8,9 +8,10 @@ import type { ActiveTask } from './code/active-tasks';
  *  data CodingWorkspace's own picker (CodeProjectPicker) already renders. Exported for tests: a
  *  pure, hook-free presentational component, the same shape CodeProjectPicker already is. */
 export function CodingProjectList({ projects, onOpen }: {
-  projects: Pick<Project, 'id' | 'name' | 'icon' | 'color'>[]; onOpen: (id: string) => void;
+  projects: Pick<Project, 'id' | 'name' | 'icon' | 'color' | 'archived'>[]; onOpen: (id: string) => void;
 }): JSX.Element {
-  return <ul className="coding-project-list">{projects.map((p) => <li key={p.id}>
+  // #566: archived projects are hidden here as everywhere else outside the Archived tab.
+  return <ul className="coding-project-list">{projects.filter((p) => !p.archived).map((p) => <li key={p.id}>
     <button className="project-disclosure" aria-label={`Open ${p.name}`} onClick={() => onOpen(p.id)}>
       <ProjectIcon project={p} size={18}/><SidebarLabel text={p.name}/>
     </button>

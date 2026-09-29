@@ -7,7 +7,7 @@ import { roundModelSizeGB } from '../../model-size';
 import { EvidenceList } from './EvidenceList';
 import { ctxShort, num } from './mm';
 import type { EstimateInputs, Hardware, Verdict } from './guided';
-import { belowKvFloor, budgetFor, canPromptSuite, estimateGib, KV_FLOOR, KV_GUIDED, parseSamplingPlan, recommend, roleOf, samplingValueList, TUNE_STEPS, tuneMinutes, verdictFor } from './guided';
+import { belowKvFloor, budgetFor, canPromptSuite, estimateGib, KV_FLOOR, KV_GUIDED, parseSamplingPlan, samplingPlanParts, recommend, roleOf, samplingValueList, TUNE_STEPS, tuneMinutes, verdictFor } from './guided';
 import type { BudgetKind, Recommendation, SamplingPlan } from './guided';
 import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
@@ -21,6 +21,15 @@ const TUNE_STEP: Record<string, [MessageKey, MessageKey]> = {
   drafting: ['mm.tune.step.draftingLabel', 'mm.tune.step.drafting'], batch: ['mm.tune.step.batchLabel', 'mm.tune.step.batch'],
 };
 const SAMPLING_TIER: Record<SamplingPlan['tier'], MessageKey> = { 'model-card': 'mm.tune.sampling.tier.card', family: 'mm.tune.sampling.tier.family', preset: 'mm.tune.sampling.tier.preset' };
+/** The pre-flight's source sentence (#565): family plans name the family and translate "family table". */
+function samplingSourceText(t: Translate, plan: SamplingPlan): string {
+  const { familyName } = samplingPlanParts(plan);
+  return familyName ? t('mm.tune.sampling.tier.familyNamed', { family: familyName }) : t(SAMPLING_TIER[plan.tier], { source: plan.source });
+}
+function samplingNoteText(t: Translate, plan: SamplingPlan): string {
+  const { note, rawNote } = samplingPlanParts(plan);
+  return note ? ` (${t('mm.tune.sampling.note.thinkingMode')})` : rawNote ? ` (${rawNote})` : '';
+}
 const BUDGET_SOURCE: Record<BudgetKind, MessageKey> = { configured: 'mm.fit.source.configured', gpu: 'mm.fit.source.gpu', 'gpu-shared': 'mm.fit.source.gpuShared', system: 'mm.fit.source.system', manual: 'mm.fit.source.manual' };
 /** guided.ts recommend() in the interface language (its `text` is the English original). */
 function recommendationText(t: Translate, rec: Recommendation, budgetGib: number): string {
@@ -127,7 +136,7 @@ function TuneStep({ model, sizeGB, chat }: { model: string; sizeGB: number | nul
     <p className="mm-note">{t('mm.tune.time', { low: time.low, high: time.high })}{sizeGB ? ` ${t('mm.tune.fileSize', { size: `${num(roundModelSizeGB(sizeGB), 1)} GB` })}` : ''}. <strong>{t('mm.tune.chatPauses')}</strong>{t('mm.tune.pauseAfter')}</p>
     <ol className="mm-preflight">{TUNE_STEPS.map((s) => <li key={s.id}><strong>{TUNE_STEP[s.id] ? t(TUNE_STEP[s.id][0]) : s.label}</strong> — {TUNE_STEP[s.id] ? t(TUNE_STEP[s.id][1]) : s.what}</li>)}</ol>
     {plan && <p className="mm-note mm-sampling-plan" role="status">{samplingValueList(plan).length
-      ? <><strong>{t('mm.tune.sampling.recommended')}</strong> {samplingValueList(plan).join(', ')}. {t(SAMPLING_TIER[plan.tier], { source: plan.source })}{plan.note ? ` (${plan.note})` : ''}</>
+      ? <><strong>{t('mm.tune.sampling.recommended')}</strong> {samplingValueList(plan).join(', ')}. {samplingSourceText(t, plan)}{samplingNoteText(t, plan)}</>
       : t('mm.tune.sampling.none')}</p>}
     <p className="mm-note mm-warn" role="note">{t('mm.tune.floor', { floor: KV_FLOOR })}</p>
     {last && <p className="mm-note">{t('mm.tune.last', { date: new Date(last.at).toLocaleDateString(appLocale()), result: [last.specLabel || t('mm.tune.saved'), ...(last.generation ? [t('mm.tokensPerSecond', { rate: num(last.generation) })] : []), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv })] : []), ...(last.context ? [t('mm.tune.context', { tokens: num(last.context, 0) })] : [])].join(', ') })}{belowKvFloor(last.kv) ? ` ${t('mm.tune.lastBelowFloor')}` : ''}</p>}

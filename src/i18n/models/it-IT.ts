@@ -512,6 +512,8 @@ export const IT_IT_MODELS: ModelsCatalogue = {
   'mm.tune.sampling.none': "Per questo modello non sono consigliati valori di campionamento, quindi restano i valori predefiniti del motore.",
   'mm.tune.sampling.tier.card': "Fonte: {source} dal repository della scheda del modello. Dichiarato dall’editore, non misurato qui.",
   'mm.tune.sampling.tier.family': "Fonte: {source}. Un valore predefinito integrato per questa famiglia di modelli, non misurato qui.",
+  'mm.tune.sampling.tier.familyNamed': "Fonte: tabella della famiglia {family}. Un valore predefinito integrato per questa famiglia di modelli, non misurato qui.",
+  'mm.tune.sampling.note.thinkingMode': "valori della modalità di ragionamento",
   'mm.tune.sampling.tier.preset': "Fonte: {source}. Ripiego quando né la scheda del modello né la tabella delle famiglie forniscono valori.",
   'mm.tune.step.kv': "Carica il modello una volta per tipo di cache e tiene il più veloce che supera le tre prove di qualità.",
   'mm.tune.step.contextLabel': "Dimensione del contesto",

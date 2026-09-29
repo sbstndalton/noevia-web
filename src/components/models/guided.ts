@@ -103,7 +103,11 @@ export const TUNE_STEPS = [
 ] as const;
 
 /** What auto-tune would write for sampling, and where the numbers came from (#308). */
-export type SamplingPlan = { tier: 'model-card' | 'family' | 'preset'; source: string; values: Record<string, number>; family: string | null; note: string | null };
+export type SamplingPlan = {
+  tier: 'model-card' | 'family' | 'preset'; source: string; values: Record<string, number>; family: string | null; note: string | null;
+  /** Stable ids (#565): the server's `source`/`note` are English phrases kept for older clients; these let the client translate. */
+  sourceId?: string | null; noteId?: string | null; familyLabel?: string | null;
+};
 const SAMPLING_ORDER = ['temperature', 'top_p', 'top_k', 'min_p', 'repeat_penalty'] as const;
 /** The plan's finite values in a fixed order, as "temperature 0.6" style pairs. */
 export function samplingValueList(plan: Pick<SamplingPlan, 'values'> | null | undefined): string[] {
@@ -114,7 +118,18 @@ export function samplingValueList(plan: Pick<SamplingPlan, 'values'> | null | un
 export function parseSamplingPlan(raw: unknown): SamplingPlan | null {
   const p = raw as Partial<SamplingPlan> | null | undefined;
   if (!p || typeof p !== 'object' || !['model-card', 'family', 'preset'].includes(String(p.tier)) || typeof p.source !== 'string' || !p.values || typeof p.values !== 'object') return null;
-  return { tier: p.tier as SamplingPlan['tier'], source: p.source, values: p.values as Record<string, number>, family: p.family ?? null, note: typeof p.note === 'string' ? p.note : null };
+  const str = (v: unknown) => (typeof v === 'string' && v ? v : null);
+  return { tier: p.tier as SamplingPlan['tier'], source: p.source, values: p.values as Record<string, number>, family: p.family ?? null, note: typeof p.note === 'string' ? p.note : null,
+    sourceId: str(p.sourceId), noteId: str(p.noteId), familyLabel: str(p.familyLabel) };
+}
+const LEGACY_FAMILY_SOURCE = /^(.+) family table$/;
+/** What the pre-flight can translate in a plan (#565): the family's name for "{family} family table"
+ *  and whether the note is the thinking-mode one. Reads the new ids first and falls back to the old
+ *  English strings, so a client newer than its server still translates what it recognises. */
+export function samplingPlanParts(plan: SamplingPlan): { familyName: string | null; note: 'thinking-mode' | null; rawNote: string | null } {
+  const familyName = plan.tier !== 'family' ? null : plan.familyLabel || LEGACY_FAMILY_SOURCE.exec(plan.source)?.[1] || null;
+  const thinking = plan.noteId === 'thinking-mode' || (!plan.noteId && plan.note === 'thinking-mode values');
+  return { familyName, note: thinking ? 'thinking-mode' : null, rawNote: thinking ? null : plan.note };
 }
 
 /** A rough wall-clock range for one model's full auto-tune: about a dozen model loads, whose

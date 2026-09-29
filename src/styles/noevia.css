@@ -581,8 +581,12 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 .instruction-skill { padding-block: 12px; border-bottom: 1px solid var(--control-border); }
 .instruction-skills summary { cursor: pointer; overflow-wrap: anywhere; }
 /* #272: pin one reviewed skill version for the next message (SkillPinPicker.tsx). */
-.skill-pin { display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; max-width: 100%; font-size: var(--text-caption); color: var(--text-muted); }
-.skill-pin-select { min-width: 0; max-width: 16rem; min-height: 32px; font: inherit; color: var(--text-primary); background: transparent; border: 1px solid var(--control-border); border-radius: var(--radius-control); padding-inline: 8px; text-overflow: ellipsis; }
+.skill-pin { display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; max-width: 100%; font-size: var(--text-caption); color: var(--text-muted);
+  /* #563: on phone-sized space the composer is absolutely positioned and the transcript scrolls behind it, so a
+     bare selector floated over message text. A solid page-coloured backing keeps it readable in both themes. */
+  background: var(--bg-app); border-radius: var(--radius-control); padding-inline: var(--space-2); }
+.project-composer > .skill-pin { margin: 0 0 var(--space-3); }
+.skill-pin-select { min-width: 0; max-width: 16rem; min-height: 32px; font: inherit; color: var(--text-primary); background: var(--bg-app); border: 1px solid var(--control-border); border-radius: var(--radius-control); padding-inline: 8px; text-overflow: ellipsis; }
 .skill-pin-select:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .instruction-skills pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; padding: 12px; font-size: var(--text-caption); border: 1px solid var(--control-border); border-radius: var(--radius-control); }
 

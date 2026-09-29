@@ -3,6 +3,8 @@ import { ReasoningControl } from './ReasoningControl';
 import { ComposerActions } from './ComposerActions';
 import { ComposerModel } from './ComposerModel';
 import { ComposerTextarea } from './ComposerTextarea';
+import { SkillPinSelect, useSkillPinOptions } from './SkillPinPicker';
+import type { SkillPin } from '../api-contract';
 import { sourceStatus } from '../source-status';
 import { ShellIcon } from './ShellIcon';
 import { ProjectIcon } from './ProjectIdentity';
@@ -51,7 +53,7 @@ interface ProjectViewProps {
    *  access fallback, a code request, the tab it opened on) rather than one the person chose. */
   onTabChange?: (tab: ProjectTab, opts: { replace: boolean }) => void;
   onNewChat: (projectId: string) => void;
-  onSendFirst: (projectId: string, text: string) => void;
+  onSendFirst: (projectId: string, text: string, skill?: SkillPin) => void;
   onSave: (projectId: string, patch: Partial<Project>) => Promise<void>;
   onOpenChat: (projectId: string, chatId: string) => void;
   onPatch: (projectId: string, patch: Partial<Project>) => void;
@@ -162,6 +164,11 @@ export function ProjectView({
     row.focus({ preventScroll: true });
   }, [focusSource, tab]);
   const [draft, setDraft] = useState('');
+  // #564: the first message of a project chat can pin a Skill, same as inside a chat (#272).
+  const [skillPin, setSkillPin] = useState('');
+  const skillOptions = useSkillPinOptions(project.id, project.updatedAt, true);
+  useEffect(() => { setSkillPin(''); }, [project.id]);
+  useEffect(() => { if (skillPin && !skillOptions.some(option => option.value === skillPin)) setSkillPin(''); }, [skillOptions, skillPin]);
   const [skillFiles, setSkillFiles] = useState<string[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [browsing, setBrowsing] = useState(false);
@@ -227,7 +234,8 @@ export function ProjectView({
     const text = draft.trim();
     if (!chatEnabled || !text || composerBusy || busyDocs || syncing) return;
     setDraft('');
-    onSendFirst(project.id, text);
+    setSkillPin('');
+    onSendFirst(project.id, text, skillPin ? (skillPin as SkillPin) : undefined);
   };
 
   return (
@@ -433,6 +441,7 @@ export function ProjectView({
                 </li>
               )}
             </ul>
+            <SkillPinSelect options={skillOptions} value={skillPin} onChange={setSkillPin} disabled={composerBusy || busyDocs || syncing} />
             <div className="composer-inner chat-composer-inner pane">
               <ComposerTextarea
                 rows={1}

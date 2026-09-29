@@ -512,6 +512,8 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.tune.sampling.none': "Aucune valeur d’échantillonnage n’est recommandée pour ce modèle ; les valeurs par défaut du moteur restent donc en vigueur.",
   'mm.tune.sampling.tier.card': "Source : {source}, issue du dépôt de la fiche du modèle. Indiqué par l’éditeur, non mesuré ici.",
   'mm.tune.sampling.tier.family': "Source : {source}. Une valeur par défaut intégrée pour cette famille de modèles, non mesurée ici.",
+  'mm.tune.sampling.tier.familyNamed': "Source : table de la famille {family}. Une valeur par défaut intégrée pour cette famille de modèles, non mesurée ici.",
+  'mm.tune.sampling.note.thinkingMode': "valeurs du mode réflexion",
   'mm.tune.sampling.tier.preset': "Source : {source}. Solution de repli quand ni la fiche du modèle ni la table des familles ne fournit de valeurs.",
   'mm.tune.step.kv': "Charge le modèle une fois par type de cache et garde le plus rapide qui réussit les trois tests de qualité.",
   'mm.tune.step.contextLabel': "Taille du contexte",

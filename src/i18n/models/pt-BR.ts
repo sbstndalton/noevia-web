@@ -512,6 +512,8 @@ export const PT_BR_MODELS: ModelsCatalogue = {
   'mm.tune.sampling.none': "Nenhum valor de amostragem é recomendado para este modelo, então os padrões do mecanismo continuam valendo.",
   'mm.tune.sampling.tier.card': "Fonte: {source} do repositório do cartão do modelo. Informado pelo publicador, não medido aqui.",
   'mm.tune.sampling.tier.family': "Fonte: {source}. Um padrão embutido para esta família de modelos, não medido aqui.",
+  'mm.tune.sampling.tier.familyNamed': "Fonte: tabela da família {family}. Um padrão embutido para esta família de modelos, não medido aqui.",
+  'mm.tune.sampling.note.thinkingMode': "valores do modo de raciocínio",
   'mm.tune.sampling.tier.preset': "Fonte: {source}. Alternativa quando nem o cartão do modelo nem a tabela de famílias fornecem valores.",
   'mm.tune.step.kv': "Carrega o modelo uma vez por tipo de cache e fica com o mais rápido que passa nos três testes de qualidade.",
   'mm.tune.step.contextLabel': "Tamanho do contexto",

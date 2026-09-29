@@ -644,7 +644,7 @@ export function Sidebar({
               proves otherwise. A viewer without Code access still sees the honest original copy.
               #450: while access is still 'checking' (no real project id yet, or its probe is in
               flight), this section stays blank rather than asserting either claim. */}
-          {codeAccess && projects.length
+          {codeAccess && projects.some((p) => !p.archived)
             ? <CodingProjectList projects={projects} onOpen={(id) => { onOpenProjectCode?.(id); setExpanded(false); }}/>
             : codeAccessState === 'checking'
             ? null

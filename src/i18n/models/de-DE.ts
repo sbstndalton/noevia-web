@@ -512,6 +512,8 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.tune.sampling.none': "Für dieses Modell werden keine Sampling-Werte empfohlen, daher gelten die Standardwerte der Engine.",
   'mm.tune.sampling.tier.card': "Quelle: {source} aus dem Modellkarten-Repository. Vom Herausgeber angegeben, hier nicht gemessen.",
   'mm.tune.sampling.tier.family': "Quelle: {source}. Ein eingebauter Standardwert für diese Modellfamilie, hier nicht gemessen.",
+  'mm.tune.sampling.tier.familyNamed': "Quelle: {family}-Familientabelle. Ein eingebauter Standardwert für diese Modellfamilie, hier nicht gemessen.",
+  'mm.tune.sampling.note.thinkingMode': "Werte für den Denkmodus",
   'mm.tune.sampling.tier.preset': "Quelle: {source}. Ersatz, wenn weder die Modellkarte noch die Familientabelle Werte liefert.",
   'mm.tune.step.kv': "Lädt das Modell einmal pro Cache-Typ und behält den schnellsten, der die drei Qualitätsproben besteht.",
   'mm.tune.step.contextLabel': "Kontextgröße",

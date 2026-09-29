@@ -512,6 +512,8 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.tune.sampling.none': "Inga samplingvärden rekommenderas för den här modellen, så motorns standardvärden gäller.",
   'mm.tune.sampling.tier.card': "Källa: {source} från modellkortets repository. Uppgivet av utgivaren, inte uppmätt här.",
   'mm.tune.sampling.tier.family': "Källa: {source}. Ett inbyggt standardvärde för den här modellfamiljen, inte uppmätt här.",
+  'mm.tune.sampling.tier.familyNamed': "Källa: familjetabellen för {family}. Ett inbyggt standardvärde för den här modellfamiljen, inte uppmätt här.",
+  'mm.tune.sampling.note.thinkingMode': "värden för tänkande-läge",
   'mm.tune.sampling.tier.preset': "Källa: {source}. Reserv när varken modellkortet eller familjetabellen ger värden.",
   'mm.tune.step.kv': "Läser in modellen en gång per cachetyp och behåller den snabbaste som klarar de tre kvalitetsproven.",
   'mm.tune.step.contextLabel': "Kontextstorlek",

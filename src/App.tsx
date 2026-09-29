@@ -246,7 +246,7 @@ export default function App(): JSX.Element {
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [projectError, setProjectError] = useState<string | null>(null);
-  const pendingFirstSend = useRef<{ chatId: string; projectId: string | null; text: string } | null>(null);
+  const pendingFirstSend = useRef<{ chatId: string; projectId: string | null; text: string; skill?: SkillPin } | null>(null);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthState>({ inferenceUp: null, diaryUp: null });
   const [stats, setStats] = useState<LiveStats | null>(null);
@@ -767,6 +767,7 @@ export default function App(): JSX.Element {
     }).catch(() => undefined);
   }, [refreshProjects]);
 
+  const sentSkillPins = useRef(new Map<string, SkillPin>());
   const handleSend = useCallback(
     async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; notice?: string | null; skill?: SkillPin } = {}) => {
       // `streamingChats` is render state, so two sends in one tick both see it false. The ref
@@ -774,6 +775,8 @@ export default function App(): JSX.Element {
       if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
       sendingChats.current.add(chatId);
       const userMsg: Message = { id: uid(), role: 'user', content: text };
+      // #562: remember the pin this message was sent with, so Retry resends the same pin.
+      if (turn.skill) sentSkillPins.current.set(userMsg.id, turn.skill); else sentSkillPins.current.delete(userMsg.id);
       // History still loading: wait for it so the model sees the earlier turns and the load does
       // not land on top of this turn.
       const pendingLoad = base ? undefined : historyLoads.current[chatId];
@@ -834,7 +837,8 @@ export default function App(): JSX.Element {
             chatId,
             mode: 'chat',
             ...(turn.turnToolboxes && turn.turnToolboxes.length ? { turnToolboxes: turn.turnToolboxes } : {}),
-            // #272: an exact reviewed Skill version for this message; retries and edits send none.
+            // #272: an exact reviewed Skill version for this message. Retry resends the same pin (#562);
+            // edits send none.
             ...(turn.skill ? { skill: turn.skill } : {}),
           },
           controller.signal,
@@ -1115,7 +1119,10 @@ export default function App(): JSX.Element {
       void handleCoworkSend(chatId, projectId, msgs[index - 1].content, failed.coworkRepository);
       return;
     }
-    void handleSend(chatId, projectId, msgs[index - 1].content, msgs.slice(0, index - 1));
+    // #562: resend with the same pin. If that Skill has since been disabled the server refuses
+    // with a readable 409 instead of quietly running the message as Automatic.
+    const pin = sentSkillPins.current.get(msgs[index - 1].id);
+    void handleSend(chatId, projectId, msgs[index - 1].content, msgs.slice(0, index - 1), pin ? { skill: pin } : {});
   }, [activeChatMeta, handleSend, handleCoworkSend, streamingChats, view]);
 
   // Edit an earlier message and re-run the conversation from that point.
@@ -1199,12 +1206,12 @@ export default function App(): JSX.Element {
   // by the very navigation that opened it. Hand the message to an effect that
   // fires once the view is the one we are sending into.
   const startProjectChatWith = useCallback(
-    (projectId: string, text: string) => {
+    (projectId: string, text: string, skill?: SkillPin) => {
       const chatId = freshChatId();
       // Without this the lazy-history effect fetches this brand-new chat's
       // (empty) history and overwrites the message we are about to send.
       loadedChats.current.add(chatId);
-      pendingFirstSend.current = { chatId, projectId, text };
+      pendingFirstSend.current = { chatId, projectId, text, ...(skill ? { skill } : {}) };
       setMessagesByChat((prev) => ({ ...prev, [chatId]: [] }));
       setView({ kind: 'chat', chatId, projectId });
     },
@@ -1216,7 +1223,7 @@ export default function App(): JSX.Element {
     if (!pending) return;
     if (view.kind !== 'chat' || view.chatId !== pending.chatId) return;
     pendingFirstSend.current = null;
-    void handleSend(pending.chatId, pending.projectId, pending.text, []);
+    void handleSend(pending.chatId, pending.projectId, pending.text, [], pending.skill ? { skill: pending.skill } : {});
   }, [view, handleSend]);
 
   const handleCreateProject = useCallback(
