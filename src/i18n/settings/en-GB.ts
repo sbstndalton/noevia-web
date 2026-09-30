@@ -33,6 +33,7 @@ export const EN_GB_SETTINGS = {
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Connect a private decision service with COWORK_DECISION_URL, then restart Noevia.",
   'features.unavailable.decisionSetup': "Set up the decision service below before enabling this experiment.",
+  'features.unavailable.decisionUnsupported': "The configured decision service does not support choice decisions, so this experiment cannot run.",
   'features.unavailable.systemOneUrl': "Not configured. Set COWORK_SYSTEM_ONE_URL to a dedicated local llama.cpp decision-model endpoint, then restart the app.",
   'decision.msg.ready': "Decision service is ready. No inference was run.",
   'decision.msg.notReady': "The decision service is not ready or could not be reached. Check the URL and service status.",

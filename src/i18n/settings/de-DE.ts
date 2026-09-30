@@ -54,6 +54,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Verbinde einen privaten Entscheidungsdienst über COWORK_DECISION_URL und starte Noevia dann neu.",
   'features.unavailable.decisionSetup': "Richte den Entscheidungsdienst unten ein, bevor du dieses Experiment aktivierst.",
+  'features.unavailable.decisionUnsupported': "Der konfigurierte Entscheidungsdienst unterstützt keine Auswahlentscheidungen, daher kann dieses Experiment nicht laufen.",
   'features.unavailable.systemOneUrl': "Nicht konfiguriert. Setze COWORK_SYSTEM_ONE_URL auf einen dedizierten lokalen llama.cpp-Entscheidungsmodell-Endpunkt und starte die App dann neu.",
   'decision.msg.ready': "Der Entscheidungsdienst ist bereit. Es wurde keine Inferenz ausgeführt.",
   'decision.msg.notReady': "Der Entscheidungsdienst ist nicht bereit oder nicht erreichbar. Prüfe die URL und den Dienststatus.",

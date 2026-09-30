@@ -54,6 +54,7 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Collega un servizio di decisione privato con COWORK_DECISION_URL, poi riavvia Noevia.",
   'features.unavailable.decisionSetup': "Configura il servizio di decisione qui sotto prima di attivare questo esperimento.",
+  'features.unavailable.decisionUnsupported': "Il servizio di decisione configurato non supporta le decisioni a scelta, quindi questo esperimento non può funzionare.",
   'features.unavailable.systemOneUrl': "Non configurato. Imposta COWORK_SYSTEM_ONE_URL su un endpoint dedicato di un modello di decisione llama.cpp locale, poi riavvia l’app.",
   'decision.msg.ready': "Il servizio di decisione è pronto. Non è stata eseguita alcuna inferenza.",
   'decision.msg.notReady': "Il servizio di decisione non è pronto o non è raggiungibile. Controlla l’URL e lo stato del servizio.",

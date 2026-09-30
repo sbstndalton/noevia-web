@@ -54,6 +54,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Verbind een privé-beslissingsservice via COWORK_DECISION_URL en start Noevia daarna opnieuw.",
   'features.unavailable.decisionSetup': "Stel de beslissingsservice hieronder in voordat je dit experiment inschakelt.",
+  'features.unavailable.decisionUnsupported': "De ingestelde beslissingsservice ondersteunt geen keuzebeslissingen, dus dit experiment kan niet draaien.",
   'features.unavailable.systemOneUrl': "Niet geconfigureerd. Zet COWORK_SYSTEM_ONE_URL op een toegewijd lokaal llama.cpp-eindpunt voor een beslissingsmodel en start de app daarna opnieuw.",
   'decision.msg.ready': "De beslissingsservice is gereed. Er is geen inferentie uitgevoerd.",
   'decision.msg.notReady': "De beslissingsservice is niet gereed of niet bereikbaar. Controleer de URL en de status van de service.",

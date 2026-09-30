@@ -35,3 +35,23 @@ export function planRegenerate(messages: Message[], messageId: string): Regenera
   // thinking or stats), so the re-run is told they are done instead of making them again.
   return { userText: prompt.content, base: rerunBase(messages, index), ...(prompt.skill ? { skill: prompt.skill as SkillPin } : {}) };
 }
+
+/** #682: what a Regenerate or Retry tells the server about the reply it replaces, for the
+ *  text-free outcome record: only the kind of resend and the role/status that reply was routed
+ *  with (enumerated values, never any text). Lets misroutes be counted. */
+export interface ResendOutcome {
+  kind: 'regenerate' | 'retry';
+  role?: 'fast' | 'smart' | 'code';
+  status?: 'accepted' | 'fallback';
+}
+
+export function resendOutcome(kind: ResendOutcome['kind'], reply: Message | undefined): ResendOutcome {
+  const decision = reply?.routingDecision;
+  const role = decision?.effectiveRole;
+  const status = decision?.status;
+  return {
+    kind,
+    ...(role === 'fast' || role === 'smart' || role === 'code' ? { role } : {}),
+    ...(status === 'accepted' || status === 'fallback' ? { status } : {}),
+  };
+}

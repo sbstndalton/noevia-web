@@ -54,6 +54,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Koble til en privat beslutningstjeneste med COWORK_DECISION_URL, og start Noevia på nytt.",
   'features.unavailable.decisionSetup': "Sett opp beslutningstjenesten nedenfor før du slår på dette eksperimentet.",
+  'features.unavailable.decisionUnsupported': "Den konfigurerte beslutningstjenesten støtter ikke valgbeslutninger, så dette eksperimentet kan ikke kjøres.",
   'features.unavailable.systemOneUrl': "Ikke konfigurert. Sett COWORK_SYSTEM_ONE_URL til et dedikert lokalt llama.cpp-endepunkt for beslutningsmodell, og start appen på nytt.",
   'decision.msg.ready': "Beslutningstjenesten er klar. Ingen inferens ble kjørt.",
   'decision.msg.notReady': "Beslutningstjenesten er ikke klar eller kunne ikke nås. Sjekk URL-en og tjenestestatusen.",

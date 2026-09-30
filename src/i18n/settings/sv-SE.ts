@@ -54,6 +54,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Anslut en privat beslutstjänst med COWORK_DECISION_URL och starta sedan om Noevia.",
   'features.unavailable.decisionSetup': "Ställ in beslutstjänsten nedan innan du aktiverar det här experimentet.",
+  'features.unavailable.decisionUnsupported': "Den konfigurerade beslutstjänsten stöder inte valbeslut, så det här experimentet kan inte köras.",
   'features.unavailable.systemOneUrl': "Inte konfigurerad. Sätt COWORK_SYSTEM_ONE_URL till en dedikerad lokal llama.cpp-slutpunkt för beslutsmodell och starta sedan om appen.",
   'decision.msg.ready': "Beslutstjänsten är redo. Ingen inferens kördes.",
   'decision.msg.notReady': "Beslutstjänsten är inte redo eller gick inte att nå. Kontrollera URL:en och tjänstestatusen.",

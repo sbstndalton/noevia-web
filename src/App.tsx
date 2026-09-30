@@ -12,7 +12,7 @@ import { modelChoiceLabel } from './model-guidance';
 import { applyReplyTelemetry, beginReplyTelemetry, finishReplyTelemetry, lastReplyTelemetry } from './reply-telemetry';
 import { shouldShowStatsBar } from './statsbar-visibility';
 import { useSpaceTier } from './space-tier';
-import { planRegenerate } from './regenerate';
+import { planRegenerate, resendOutcome, type ResendOutcome } from './regenerate';
 import { TOOL_RESULT_LIMIT } from './components/ToolCalls';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
@@ -777,7 +777,7 @@ export default function App(): JSX.Element {
   }, [refreshProjects]);
 
   const handleSend = useCallback(
-    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; notice?: string | null; skill?: SkillPin } = {}) => {
+    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; notice?: string | null; skill?: SkillPin; resend?: ResendOutcome } = {}) => {
       // `streamingChats` is render state, so two sends in one tick both see it false. The ref
       // is updated synchronously and is the real guard against a duplicate generation.
       if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
@@ -850,6 +850,7 @@ export default function App(): JSX.Element {
             // #272: an exact reviewed Skill version for this message. Retry resends the same pin (#562);
             // edits send none.
             ...(turn.skill ? { skill: turn.skill } : {}),
+            ...(turn.resend ? { resend: turn.resend } : {}),
           },
           controller.signal,
         )) {
@@ -1135,7 +1136,7 @@ export default function App(): JSX.Element {
     // #658: a failed reply that had already saved changes stays as their record, so the resend
     // tells the model they are done instead of replaying them (rerunBase).
     const pin = storablePin(msgs[index - 1].skill);
-    void handleSend(chatId, projectId, msgs[index - 1].content, rerunBase(msgs, index), pin ? { skill: pin } : {});
+    void handleSend(chatId, projectId, msgs[index - 1].content, rerunBase(msgs, index), { ...(pin ? { skill: pin } : {}), resend: resendOutcome('retry', failed) });
   }, [activeChatMeta, handleSend, handleCoworkSend, streamingChats, view]);
 
   // Edit an earlier message and re-run the conversation from that point.
@@ -1171,7 +1172,7 @@ export default function App(): JSX.Element {
     const plan = planRegenerate(msgs, messageId);
     if (!plan) return;
     const projectId = view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
-    void handleSend(chatId, projectId, plan.userText, plan.base, plan.skill ? { skill: plan.skill } : {});
+    void handleSend(chatId, projectId, plan.userText, plan.base, { ...(plan.skill ? { skill: plan.skill } : {}), resend: resendOutcome('regenerate', msgs[msgs.length - 1]) });
   }, [activeChatMeta, handleSend, streamingChats, view]);
 
   const startFreeChat = useCallback(() => {

@@ -457,7 +457,9 @@ export async function* streamChat(
     /** #236/#237: the session's harness, and boxes added for this turn only. */
     mode?: 'chat'; turnToolboxes?: string[];
     /** #272: one exact reviewed Skill version for this message, as `skill_<id>@<sha256>`. */
-    skill?: SkillPin },
+    skill?: SkillPin;
+    /** #682: this turn re-runs the last one (text-free outcome record). */
+    resend?: import('./regenerate').ResendOutcome },
   signal?: AbortSignal,
 ): AsyncGenerator<{
   type: string;
