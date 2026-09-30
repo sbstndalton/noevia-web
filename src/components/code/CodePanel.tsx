@@ -396,7 +396,7 @@ export function ApprovalCard({ approval, busy, onDecide }: {
   </div>;
 }
 
-/** Astra's verdict, or the plain reason there is none. Advice, never the decision. */
+/** The Planner's verdict, or the plain reason there is none. Advice, never the decision. */
 function ReviewVerdict({ review }: { review: CodeReview }): JSX.Element {
   const t = useT();
   if (review.status !== 'completed') {
@@ -416,7 +416,7 @@ function ReviewVerdict({ review }: { review: CodeReview }): JSX.Element {
 }
 
 /**
- * The last card of a reviewed task (#519). Astra's verdict sits above the question, and the
+ * The last card of a reviewed task (#519). The Planner's verdict sits above the question, and the
  * question is the person's alone: accept or decline, once. There is no standing answer — there is
  * no later card for one to stand in for — and a card left unanswered expires as a decline.
  */

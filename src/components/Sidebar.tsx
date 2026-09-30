@@ -130,7 +130,7 @@ export function Sidebar({
     return ()=>{active=false;};
   },[]);
   useEffect(()=>{if(orderKey)try{localStorage.setItem(orderKey,JSON.stringify(order));}catch{/* Keep working without persistence. */}},[order,orderKey]);
-  // Remembered on this device, as ChatGPT does: a reload keeps the rail collapsed.
+  // Remembered on this device: a reload keeps the rail collapsed.
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('noevia:sidebar-collapsed') === '1'; } catch { return false; } });
   useEffect(() => { try { localStorage.setItem('noevia:sidebar-collapsed', collapsed ? '1' : '0'); } catch { /* per-device convenience only */ } }, [collapsed]);
   const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
@@ -183,7 +183,7 @@ export function Sidebar({
   // Any navigation, including views opened from outside the sidebar (Settings →
   // model manager), closes the drawer so it never covers what just opened.
   useEffect(() => { setExpanded(false); }, [activeView, activeChatId, activeProjectId, mode, codePage]);
-  // A collapsed desktop rail names what is under the pointer, as ChatGPT's does: projects,
+  // A collapsed desktop rail names what is under the pointer: projects,
   // chats and destinations alike. One tooltip for the whole rail, placed beside the row.
   const [tip, setTip] = useState<{ text: string; x: number; y: number; warm?: boolean } | null>(null);
   useEffect(() => { if (!collapsed || mobile) setTip(null); }, [collapsed, mobile]);
@@ -586,14 +586,14 @@ export function Sidebar({
         // Any navigation collapses the rail again, so the overlay never
         // stays over the thing it just navigated to.
         if (expanded && (e.target as HTMLElement).closest('.nav-item')) setExpanded(false);
-        // As in ChatGPT, the empty part of the collapsed rail is itself the expand target.
+        // The empty part of the collapsed rail is itself the expand target.
         if (collapsed && !mobile && !(e.target as HTMLElement).closest('button, a, input')) setCollapsed(false);
       }}
     >
       <div className="sidebar-scroll">
-      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? t('sidebar.closeNavigation') : collapsed ? t('sidebar.expandNavigation') : t('sidebar.collapseNavigation')} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div>{/* Like Claude's: a small icon-only Chat/Code switch at the end of the header row. Switching
+      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? t('sidebar.closeNavigation') : collapsed ? t('sidebar.expandNavigation') : t('sidebar.collapseNavigation')} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div>{/* A small icon-only Chat/Code switch at the end of the header row. Switching
           closes the phone drawer, so the new mode is what you see. */}{showPreviews && <ModeSwitch compact mode={mode} onCode={() => { setExpanded(false); onEnterCode(); }} onChat={() => { setExpanded(false); onEnterChat?.(); }}/>}</div>
-      {/* On a phone the drawer always shows the search field under its header, as Claude's does. */}{(searching || (mobile && expanded))&&<>
+      {/* On a phone the drawer always shows the search field under its header. */}{(searching || (mobile && expanded))&&<>
       {/* #439: ArrowDown enters the results (focusSearchResultAt); a first Escape from a result
           (onSearchResultKeyDown, below) only returns focus here, so this Escape — reached only
           when the field already had focus — keeps the pre-existing #355 clear/close behaviour. */}
@@ -775,7 +775,7 @@ export function Sidebar({
             <span className="status-text">{summary.label}</span>
           </div>
         );
-      })()}{/* Inference status lives in the workspace status pill and the chat banner; one place is enough. */}<div className="side-footer-row"><AccountMenu onSettings={openSettings} theme={theme} onToggleTheme={onToggleTheme}/>{diaryEnabled && <button className={`shell-icon-button side-footer-diary${activeView === 'diary' ? ' is-active' : ''}`} aria-label={t('sidebar.diary')} title={t('sidebar.diary')} aria-current={activeView === 'diary' ? 'page' : undefined} onClick={() => { onOpenDiary(); setExpanded(false); }}><ShellIcon name="diary"/></button>}{/* Search sits beside the account, as in Claude. */}<button className="shell-icon-button side-footer-search" aria-label={t('sidebar.search')} aria-expanded={searching} onClick={e=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching){setQuery('');}else{searchTrigger.current=e.currentTarget;}}}><ShellIcon name="search"/></button></div></div>
+      })()}{/* Inference status lives in the workspace status pill and the chat banner; one place is enough. */}<div className="side-footer-row"><AccountMenu onSettings={openSettings} theme={theme} onToggleTheme={onToggleTheme}/>{diaryEnabled && <button className={`shell-icon-button side-footer-diary${activeView === 'diary' ? ' is-active' : ''}`} aria-label={t('sidebar.diary')} title={t('sidebar.diary')} aria-current={activeView === 'diary' ? 'page' : undefined} onClick={() => { onOpenDiary(); setExpanded(false); }}><ShellIcon name="diary"/></button>}{/* Search sits beside the account. */}<button className="shell-icon-button side-footer-search" aria-label={t('sidebar.search')} aria-expanded={searching} onClick={e=>{setCollapsed(false);setExpanded(true);setSearching(!searching);if(searching){setQuery('');}else{searchTrigger.current=e.currentTarget;}}}><ShellIcon name="search"/></button></div></div>
     </div>
   </>);
 }

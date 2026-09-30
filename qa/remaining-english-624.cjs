@@ -1,7 +1,7 @@
 // #624 (the rest): English left in the German and French UI. The language is set in page memory only
 // (the preferences GET is answered with de-DE / fr-FR); the synthetic account is never changed and
 // nothing touches Diary or real storage.
-//   - Code task card: plan, assistant output, result counts, network note, Astra review (verdict,
+//   - Code task card: plan, assistant output, result counts, network note, Planner review (verdict,
 //     findings, outcome, the accept/decline card) and the "not reported by this harness" line
 //   - Code sidebar note "Task status unavailable" and the header widget's task lines
 //   - the "Harness" label in French
@@ -39,7 +39,7 @@ for (const [locale, name] of [['de-DE', 'DE_DE'], ['fr-FR', 'FR_FR']]) {
 }
 
 // Words the fixed English used to show: none of them may appear in the checked regions.
-const ENGLISH_CODE = /Reported plan|Last reported plan|Reported as|Some plan text|No entries were reported|Assistant output|Showing the first 32|tool calls? ·|allowed ·|declined ·|refused by noevia|Network: nothing|Reached |Refused |Not reported by this harness|Not reviewed by Astra|Astra suggests|Astra requests|Review findings|Accept change|You accepted|Nobody answered|not accepted|Its branch stays|Astra review|Astra’s verdict|Blocker|Major\b/;
+const ENGLISH_CODE = /Reported plan|Last reported plan|Reported as|Some plan text|No entries were reported|Assistant output|Showing the first 32|tool calls? ·|allowed ·|declined ·|refused by noevia|Network: nothing|Reached |Refused |Not reported by this harness|Not reviewed by the Planner|The Planner suggests|The Planner requests|Review findings|Accept change|You accepted|Nobody answered|not accepted|Its branch stays|Planner review|The Planner’s verdict|Blocker|Major\b/;
 const ENGLISH_CHAT = /Effort:|provider parameter|best-effort hint|Generating response|Loading the selected model|Preparing response|Allow once|Allow for this chat|Approval required|This changes data in your account|routing · (fast|smart|code)|\bfast\b|\bsmart\b/;
 
 const flat = (s) => s.replace(/[\s  ]+/g, ' ').trim();
@@ -48,7 +48,7 @@ const routingDecision = { offered: [{ id: 'fast', label: 'Short answer' }, { id:
   selectedRole: 'smart', effectiveRole: 'fast', backend: 'decision-service', model: 'convaiinnovations/laya', calibrated: false, latencyMs: 12, status: 'accepted', fallbackReason: null };
 
 // The Code state: a finished task with everything reported, a running one with cut-off output, and
-// one waiting on the review card (Astra could not review).
+// one waiting on the review card (the Planner could not review).
 const codeState = () => ({
   repositories: [{ id: 'noevia' }], capabilities: ['read_repository', 'edit_file', 'execute_command'], defaultCapabilities: ['read_repository'],
   harnesses: [{ id: 'opencode', label: 'OpenCode', version: '1.18.31' }],
@@ -61,7 +61,7 @@ const codeState = () => ({
       result: { branch: 'noevia/task-done', tools: 4, approvals: 2, allowed: 2, refused: 1, denied: 1,
         network: { allowed: 3, refused: 2, hosts: [{ host: 'github.com', allowed: 0, refused: 2, reason: null }, { host: 'pypi.org', allowed: 3, refused: 0, reason: null }] },
         review: { reviewed: true, verdict: 'request_changes', accepted: false, decision: 'timeout', headSha: null } },
-      review: { status: 'completed', reviewer: 'astra', baseSha: null, headSha: null, verdict: 'request_changes', summary: 'Synthetic summary',
+      review: { status: 'completed', reviewer: 'planner', baseSha: null, headSha: null, verdict: 'request_changes', summary: 'Synthetic summary',
         findings: [{ severity: 'major', file: 'a.js', message: 'Synthetic finding' }, { severity: 'note', message: 'Synthetic note' }] },
       meta: { harness: 'opencode', harnessVersion: '1.18.31', protocolVersion: 1, usage: null, context: null, commands: 0, failedCommands: 0, messageChunks: 1, limitations: ['Synthetic limitation.'] } },
     { id: 'code-run', status: 'running', stage: 'Reading', error: null, createdAt: 3, updatedAt: 4, task: 'Synthetic running task', branch: 'noevia/task-run', identityHash: null,
@@ -70,7 +70,7 @@ const codeState = () => ({
     { id: 'code-wait', status: 'waiting_approval', stage: null, error: null, createdAt: 5, updatedAt: 6, task: 'Synthetic review task', branch: 'noevia/task-wait', identityHash: null,
       capabilities: ['read_repository', 'edit_file'], steps: [], plan: null, assistantOutput: null, result: null, meta: null,
       approval: { id: 'rv1', action: 'review_change', title: 'Accept the change', kind: 'review', command: '', paths: [], reason: '', arguments: { branch: 'noevia/task-wait' }, diff: null,
-        review: { status: 'failed', reviewer: 'astra', baseSha: null, headSha: null, reason: 'Synthetic reviewer offline' } } },
+        review: { status: 'failed', reviewer: 'planner', baseSha: null, headSha: null, reason: 'Synthetic reviewer offline' } } },
   ],
 });
 
@@ -218,7 +218,7 @@ function installChat() {
           assert.equal(await card.locator('.code-plan').getAttribute('aria-label'), t('code.task.plan.region'));
           assert.doesNotMatch(text, ENGLISH_CODE, text);
         });
-        await check(`the Astra verdict, findings and outcome are ${locale} (${tag})`, async () => {
+        await check(`the Planner verdict, findings and outcome are ${locale} (${tag})`, async () => {
           const card = cards.nth(0), text = await all(card.locator('.code-review-outcome'));
           assert.ok(text.includes(t('code.review.requestsChanges')), text);
           assert.ok(text.includes(t('code.review.severity.major')), text);

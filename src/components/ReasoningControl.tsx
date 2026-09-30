@@ -65,7 +65,7 @@ export function ReasoningControl({ project, disabled, onChanged, global = false,
       window.dispatchEvent(new Event('cowork-reasoning-updated'));
     }catch(e){setError(String(e));}finally{setSaving(false);}
   };
-  // In the composer it is a Claude-style control: a glass pill naming the setting with the
+  // In the composer it is a compact control: a glass pill naming the setting with the
   // current level muted beside it, opening an aero menu of levels with what each is for
   // (user review, 2026-09-18). The deployment default in Settings stays a plain select.
   if(!global){

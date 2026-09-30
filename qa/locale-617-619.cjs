@@ -27,7 +27,7 @@ const LANGS = {
     code: { intro: /Führt ein Coding-Harness in einem eigenen Git-Worktree auf einem eigenen Branch aus/, repository: 'Repository', preparation: 'Prompt-Aufbereitung', direct: 'Direkt', local: 'Lokaler Architekt', notAvailable: 'nicht verfügbar', prompt: 'Was soll es tun?', legend: 'Was diese Aufgabe darf', read: 'Das Repository lesen', edit: 'Dateien bearbeiten', run: 'Befehle ausführen', install: 'Abhängigkeiten installieren', start: 'Aufgabe starten', tasks: 'Aufgaben' },
     address: { h1: 'Webadresse', current: 'Aktuelle Adresse', earlier: 'Frühere Adressen', change: 'Adresse ändern', fresh: 'Neue Adresse', check: 'Prüfen und speichern' },
     features: { h1: 'Funktionen', previews: 'Vorschau-Bereiche', previewsDesc: /Zeigt die noch nicht gebauten Vorschauen/, backups: 'Backups', diary: 'Tagebuch-Anfügewerkzeug' },
-    experimental: { h1: 'Experimentell', title: 'Einrichtung des Entscheidungsdienstes', label: 'Endpunkt des Entscheidungsdienstes', astra: 'Astra-Review (Code-Modus)' },
+    experimental: { h1: 'Experimentell', title: 'Einrichtung des Entscheidungsdienstes', label: 'Endpunkt des Entscheidungsdienstes', planner: 'Planer-Review (Code-Modus)' },
     backups: { h1: 'Backups', destination: 'Ziel', schedule: 'Zeitplan', scheduleValue: /Täglich um 02:00 \(Serverzeit\)/, retention: 'Aufbewahrung', retentionValue: /Behält 7 tägliche, 4 wöchentliche und 6 monatliche Snapshots/, snapshots: 'Aufbewahrte Snapshots', last: 'Letztes Backup', connected: /Verbunden · zuletzt kopiert/ },
     weekdays: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'], hasEntries: 'hat Einträge',
   },
@@ -37,12 +37,12 @@ const LANGS = {
     code: { intro: /Lance un harnais de code dans un worktree git dédié/, repository: 'Dépôt', preparation: 'Préparation du prompt', direct: 'Direct', local: 'Architecte local', notAvailable: 'indisponible', prompt: 'Que doit-il faire ?', legend: 'Ce que cette tâche peut faire', read: 'Lire le dépôt', edit: 'Modifier des fichiers', run: 'Exécuter des commandes', install: 'Installer des dépendances', start: 'Démarrer la tâche', tasks: 'Tâches' },
     address: { h1: 'Adresse web', current: 'Adresse actuelle', earlier: 'Anciennes adresses', change: 'Modifier l’adresse', fresh: 'Nouvelle adresse', check: 'Vérifier et enregistrer' },
     features: { h1: 'Fonctionnalités', previews: 'Surfaces en aperçu', previewsDesc: /Affiche les aperçus non construits/, backups: 'Sauvegardes', diary: 'Outil d’ajout au Journal' },
-    experimental: { h1: 'Expérimental', title: 'Configuration du service de décision', label: 'Point de terminaison de décision', astra: 'Relecture Astra (mode Code)' },
+    experimental: { h1: 'Expérimental', title: 'Configuration du service de décision', label: 'Point de terminaison de décision', planner: 'Relecture du Planificateur (mode Code)' },
     backups: { h1: 'Sauvegardes', destination: 'Destination', schedule: 'Planification', scheduleValue: /Tous les jours à 02:00 \(heure du serveur\)/, retention: 'Conservation', retentionValue: /Conserve 7 instantanés quotidiens, 4 hebdomadaires et 6 mensuels/, snapshots: 'Instantanés conservés', last: 'Dernière sauvegarde', connected: /Connecté · dernière copie/ },
     weekdays: ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'], hasEntries: 'a des entrées',
   },
 };
-const ENGLISH = /Open a project to run Code|Code mode runs inside|Open Code|Runs in a project|Runs a coding harness|Prompt preparation|What should it do\?|What this task may do|Read the repository|Edit files|Run commands|Install dependencies|Start task|Web address|Current address|Earlier addresses|Change address|New address|Check and save|Optional capabilities|Preview surfaces|Deep research|Diary append tool|Decision service setup|Decision endpoint|Astra review|Schedule|Retention|Snapshots kept|Last backup|Daily at|Keeps 7 daily|Connected · last copied|Try alternative application logic/;
+const ENGLISH = /Open a project to run Code|Code mode runs inside|Open Code|Runs in a project|Runs a coding harness|Prompt preparation|What should it do\?|What this task may do|Read the repository|Edit files|Run commands|Install dependencies|Start task|Web address|Current address|Earlier addresses|Change address|New address|Check and save|Optional capabilities|Preview surfaces|Deep research|Diary append tool|Decision service setup|Decision endpoint|Planner review|Schedule|Retention|Snapshots kept|Last backup|Daily at|Keeps 7 daily|Connected · last copied|Try alternative application logic/;
 
 (async () => {
   const fixture = createFixture(PORT);
@@ -178,7 +178,7 @@ const ENGLISH = /Open a project to run Code|Code mode runs inside|Open Code|Runs
           for (const f of features.filter((x) => !x.experimental)) assert.ok(!labels.includes(f.label) || (f.label === 'Backups' && locale === 'de-DE'), `${f.name} is still "${f.label}": ${labels.join(' | ')}`);
         }
         if (section === 'experimental') {
-          for (const w of [A.title, A.label, A.astra]) assert.ok(shown.includes(w), `${w} in: ${shown.slice(0, 400)}`);
+          for (const w of [A.title, A.label, A.planner]) assert.ok(shown.includes(w), `${w} in: ${shown.slice(0, 400)}`);
         }
         if (section === 'backups') {
           for (const w of [A.destination, A.schedule, A.retention, A.snapshots, A.last]) assert.ok(shown.includes(w), `${w} in: ${shown}`);

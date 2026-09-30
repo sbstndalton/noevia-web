@@ -1,7 +1,7 @@
 import { apiFetch } from '../../api';
 import { cached, invalidateCached } from '../../request-cache';
 
-export type FeatureName = 'stepSupervision' | 'systemOneRouting' | 'toolGate' | 'previews' | 'diaryMcpWrite' | 'deepResearch' | 'offsiteBackup' | 'toolRouter' | 'codeHarness' | 'astraReview' | 'browserExecutor' | 'kiwix' | 'chatgptOAuth' | 'nativeClientAuth';
+export type FeatureName = 'stepSupervision' | 'systemOneRouting' | 'toolGate' | 'previews' | 'diaryMcpWrite' | 'deepResearch' | 'offsiteBackup' | 'toolRouter' | 'codeHarness' | 'plannerReview' | 'browserExecutor' | 'kiwix' | 'chatgptOAuth' | 'nativeClientAuth';
 export type FeatureFlags = Partial<Record<FeatureName, boolean>>;
 /** `id` is the flag name and the stable key the label and description are translated by
  *  (features.item.<id>.*, #618); `label`, `description` and `unavailable` are the server's English,

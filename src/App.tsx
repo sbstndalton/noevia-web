@@ -174,7 +174,7 @@ export default function App(): JSX.Element {
   }, []);
   // The Code page is chosen in the shared sidebar, so it lives here rather than in the workspace.
   const [codePage, setCodePage] = useState('New task');
-  // Chat ⇄ Code plays a short entrance on the page, as Claude does, instead of cutting in one frame.
+  // Chat ⇄ Code plays a short entrance on the page instead of cutting in one frame.
   const appMain = useRef<HTMLDivElement>(null);
   const firstMode = useRef(true);
   useEffect(() => {
@@ -1143,7 +1143,7 @@ export default function App(): JSX.Element {
   // context: the point is to correct the prompt that led somewhere wrong, so
   // paying to re-send the wrong turns (and letting the model keep reading
   // them) would defeat it. The truncated tail is gone — same trade the
-  // "edit" affordance makes in ChatGPT/Claude.
+  // "edit" affordance makes in other chat apps.
   const editAndResend = useCallback(
     (chatId: string, messageId: string, nextText: string) => {
       if (streamingChats[chatId]) return;
