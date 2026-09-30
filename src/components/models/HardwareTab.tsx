@@ -201,7 +201,7 @@ function Logs({ name }: { name: string }) {
     </div>
     {error && <p role="alert" className="modal-err">{error}</p>}
     {lines && <pre ref={box} onScroll={onScroll} className="mm-log" tabIndex={0} aria-label={t('mm.logs.label')}>{lines.length ? lines.join('\n') : t('mm.logs.none')}</pre>}
-    {lines && <p className="mm-note" role="status">{follow ? (pinned ? t('mm.logs.following') : t('mm.logs.paused')) : t('mm.logs.notFollowing')} · {t('mm.logs.last', { count: Math.min(lines.length, LOG_BUFFER) })} · {t('mm.logs.redacted')}
+    {lines && <p className="mm-note" role="status">{follow ? (pinned ? t('mm.logs.following') : t('mm.logs.paused')) : t('mm.logs.notFollowing')} · {t.plural('mm.logs.last', Math.min(lines.length, LOG_BUFFER))} · {t('mm.logs.redacted')}
       {follow && !pinned && <button className="mm-link" onClick={() => setPinned(true)}> {t('mm.logs.jump')}</button>}</p>}
   </div>;
 }

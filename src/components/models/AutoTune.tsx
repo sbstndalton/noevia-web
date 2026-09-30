@@ -141,7 +141,7 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
       {actions}
       {mine.log && mine.log.length > 0 && (running
         ? <ActivityLog lines={mine.log} startedAt={mine.startedAt ?? mine.log[0].at} live/>
-        : <details className="mm-activity-details"><summary>{t('mm.autotune.whatItDid', { count: mine.log.length })}</summary>
+        : <details className="mm-activity-details"><summary>{t.plural('mm.autotune.whatItDid', mine.log.length)}</summary>
             <ActivityLog lines={mine.log} startedAt={mine.startedAt ?? mine.log[0].at}/>
           </details>)}
       {!mine.models && <div>
