@@ -4,7 +4,7 @@ export const EN_US_SETTINGS: SettingsCatalogue = {
   // #618: Features, Experimental, Web address and Backups pages
   'features.experimentalIntro': "Try alternative application logic for everyone on this server. Each experiment describes the behavior it changes. Turn it off to restore the existing logic. These experiments are not quality-validated.",
   'features.item.stepSupervision.description': "Let a decision provider advise whether to continue, verify tool results or pause for review between chat steps. Keeps existing behavior if unavailable. Approvals and execution limits still apply.",
-  'decision.deadlineHelp': "If the service cannot answer in time, Noevia keeps its existing behavior. Range: 100–1500 ms.",
+  'decision.deadlineHelp': "If the service cannot answer in time, Noevia keeps its existing behavior. Range: 100–2000 ms.",
   'settings.keywords.connectors': 'connectors google drive customize customise plugins skills permissions',
   'appearance.logo': 'Logo colors',
   'appearance.logoDesc': 'Default leaves, seasonal colors or monthly occasions. Saved on this device; the favicon stays unchanged.',
