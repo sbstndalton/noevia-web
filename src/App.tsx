@@ -794,6 +794,10 @@ export default function App(): JSX.Element {
       // Turns, plus the changes earlier replies saved (also failed or paused ones), marked as done (#658).
       const history = modelHistory(existing);
       setMessagesByChat(prev => ({ ...prev, [chatId]: [...existing, userMsg] }));
+      // #679: the user message is saved as the turn starts, not only once the reply ends. If the page
+      // is reloaded mid-reply, the server then keeps the reply (as stopped, with any change it saved)
+      // right after it. The save after the reply runs after this one (per-chat queue) and replaces it.
+      if (!deletedChats.current.has(chatId)) persist(chatId, [...existing, userMsg]);
       const replyId = uid();
       setMessagesByChat((prev) => ({
         ...prev,
@@ -1059,7 +1063,7 @@ export default function App(): JSX.Element {
         }
       }
     },
-    [refreshProjects, streamingChats, queueMetaUpsert],
+    [refreshProjects, streamingChats, queueMetaUpsert, persist],
   );
 
   // A Cowork turn (#236): start a task on the code harness through /api/chat (the server guards
