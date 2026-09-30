@@ -7,7 +7,7 @@ import { roundModelSizeGB } from '../../model-size';
 import { EvidenceList } from './EvidenceList';
 import { ctxShort, gb, gib, num } from './mm';
 import type { EstimateInputs, Hardware, Verdict } from './guided';
-import { belowKvFloor, budgetFor, canPromptSuite, estimateGib, KV_FLOOR, KV_GUIDED, parseSamplingPlan, samplingPlanParts, recommend, roleOf, samplingValueList, TUNE_STEPS, tuneMinutes, verdictFor } from './guided';
+import { belowKvFloor, budgetFor, canPromptSuite, estimateGib, KV_FLOOR, KV_GUIDED, kvCandidatesFrom, parseSamplingPlan, withoutFinalStop, samplingPlanParts, recommend, roleOf, samplingValueList, TUNE_STEPS, tuneMinutes, verdictFor } from './guided';
 import type { BudgetKind, Recommendation, SamplingPlan } from './guided';
 import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
@@ -39,7 +39,7 @@ function recommendationText(t: Translate, rec: Recommendation, budgetGib: number
   if (rec.kind === 'smaller') return t(rec.moe ? 'mm.fit.rec.smallerMoe' : 'mm.fit.rec.smaller', { floor: g(rec.floorGib), budget: g(budgetGib) });
   return rec.reason === 'not-chat' ? t('mm.fit.rec.notChat') : t('mm.fit.rec.noLayout', { arch: rec.arch || t('mm.fit.unknownArch') });
 }
-type TuneStatus = { job: { model?: string; status?: string; error?: string; models?: { model: string; status: string; error?: string }[] } | null; history: { at: number; kv?: string; context?: number; spec?: string; specLabel?: string; generation?: number }[] };
+type TuneStatus = { kvCandidates?: unknown; job: { model?: string; status?: string; error?: string; models?: { model: string; status: string; error?: string }[] } | null; history: { at: number; kv?: string; context?: number; spec?: string; specLabel?: string; generation?: number }[] };
 
 async function getJson<T>(path: string): Promise<T> {
   const r = await apiFetch(path); const v = await r.json().catch(() => ({}));
@@ -125,6 +125,9 @@ function TuneStep({ model, sizeGB, chat, onGoTune }: { model: string; sizeGB: nu
   const last = status?.history?.[0];
   const mine = status?.job && (status.job.models?.find((m) => m.model === model) || (status.job.model === model ? status.job : null));
   const failed = mine && ['failed', 'interrupted', 'cancelled'].includes(String(mine.status));
+  // #328: the note names the cache types this server really tries, in the interface language's list style.
+  const kvTried = kvCandidatesFrom(status?.kvCandidates);
+  const kvList = new Intl.ListFormat(appLocale(), { type: 'conjunction' }).format(kvTried);
   if (!chat) return <div className="mm-guided-step"><h4><span className="mm-step-n" aria-hidden="true">2</span>{t('mm.tune.title')}</h4><p className="mm-note">{t('mm.tune.notChat')}</p></div>;
   return <div className="mm-guided-step">
     <h4><span className="mm-step-n" aria-hidden="true">2</span>{t('mm.tune.title')} <small>{t('mm.tune.hint')}</small></h4>
@@ -136,9 +139,9 @@ function TuneStep({ model, sizeGB, chat, onGoTune }: { model: string; sizeGB: nu
     {plan && <p className="mm-note mm-sampling-plan" role="status">{samplingValueList(plan).length
       ? <><strong>{t('mm.tune.sampling.recommended')}</strong> {samplingValueList(plan).join(', ')}. {samplingSourceText(t, plan)}{samplingNoteText(t, plan)}</>
       : t('mm.tune.sampling.none')}</p>}
-    <p className="mm-note mm-warn" role="note">{t('mm.tune.floor', { floor: KV_FLOOR })}</p>
+    <p className="mm-note mm-warn" role="note">{t('mm.tune.floor', { floor: KV_FLOOR, candidates: kvList })}{kvTried.some(belowKvFloor) ? ` ${t('mm.tune.floorOverride', { floor: KV_FLOOR })}` : ''}</p>
     {last && <p className="mm-note">{t('mm.tune.last', { date: new Date(last.at).toLocaleDateString(appLocale()), result: [specLabel(t, last.spec, last.specLabel) || t('mm.tune.saved'), ...(last.generation ? [t('mm.tokensPerSecond', { rate: num(last.generation) })] : []), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv })] : []), ...(last.context ? [t('mm.tune.context', { tokens: num(last.context, 0) })] : [])].join(', ') })}{belowKvFloor(last.kv) ? ` ${t('mm.tune.lastBelowFloor')}` : ''}</p>}
-    {failed && <p className="mm-note mm-warn" role="status">{t(mine!.error ? 'mm.tune.failedError' : 'mm.tune.failed', { status: stuckStatus(t, String(mine!.status)), error: mine!.error ?? '' })} {t(last ? 'mm.tune.failedKeepLast' : 'mm.tune.failedKeep')}</p>}
+    {failed && <p className="mm-note mm-warn" role="status">{t(mine!.error ? 'mm.tune.failedError' : 'mm.tune.failed', { status: stuckStatus(t, String(mine!.status)), error: withoutFinalStop(mine!.error ?? '') })} {t(last ? 'mm.tune.failedKeepLast' : 'mm.tune.failedKeep')}</p>}
     <div className="mm-actions"><button type="button" className="modal-btn secondary" onClick={onGoTune}>{t('mm.tune.go')}</button></div>
   </div>;
 }

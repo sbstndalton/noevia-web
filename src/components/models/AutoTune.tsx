@@ -3,27 +3,45 @@ import type { JSX } from 'react';
 import { apiFetch, fetchInstalledModels } from '../../api';
 import { isSystemModel } from '../../model-system';
 import { useT } from '../../i18n';
-import type { Translate } from '../../i18n';
+import type { MessageKey, Translate } from '../../i18n';
 import { appLocale } from '../../user-preferences';
 import { num, pct } from './mm';
-import { specLabel } from './mm-text';
+import { probeName, specLabel, stuckStatus } from './mm-text';
+import { appliedSettings, phaseState } from './guided';
 
 type Step = { id: string; label: string; status: string; reason?: string; generation?: number; promptPerSecond?: number; ctx?: number };
 type Extension = { id: string; action: string; why: string; from?: number; to?: number };
 type Result = { spec: string; specLabel: string; generation: number; ubatch: number | null; promptPerSecond: number | null;
   extensions: Extension[]; loaded?: boolean; kv?: string; context?: number; acceptance?: number | null };
 type TunePhase = { id: string; label: string; status: string; steps: Step[]; value?: Record<string, unknown>; reason?: string };
-type TuneModel = { model: string; status: string; phases: TunePhase[]; result?: Result; error?: string };
+type Baseline = { reference: string; probes: string[]; skipped: { id: string; reason?: string; answer?: string }[] };
+type TuneModel = { model: string; status: string; phases: TunePhase[]; result?: Result & { baseline?: Baseline }; error?: string; baseline?: Baseline };
 type Job = { id: string; model: string; status: string; phase: string; models?: TuneModel[]; error?: string; waiting?: boolean;
   startedAt?: number; log?: { at: number; text: string }[]; queueProgress?: { done: number; total: number };
   queue?: { model: string; status: string; error?: string }[]; steps?: Step[]; result?: Result; restored?: boolean };
 type Past = Result & { at: number };
 
 // The keys stay llama.cpp's own; the drafting label and the numbers follow the interface language.
-const savedSummary = (t: Translate, value: Record<string, unknown>) => Object.entries(value)
+const savedSummary = (t: Translate, value: Record<string, unknown>) => value.applied && value.values && typeof value.values === 'object'
+  ? Object.entries(value.values as Record<string, unknown>).map(([key, item]) => key + ' ' + (typeof item === 'number' ? num(item) : String(item))).join(' · ')
+  : Object.entries(value)
   .filter(([key]) => ['kv', 'context', 'specLabel', 'ubatch', 'batch', 'generation', 'promptPerSecond', 'acceptance'].includes(key))
   .map(([key, item]) => key + ' ' + (key === 'specLabel' ? specLabel(t, typeof value.spec === 'string' ? value.spec : undefined, String(item))
     : typeof item === 'number' ? num(item) : String(item))).join(' · ');
+
+const PHASE_STATE: Record<string, MessageKey> = { 'not-applied': 'mm.autotune.notApplied', skipped: 'mm.autotune.skippedStep' };
+const phaseText = (t: Translate, state: string) => (PHASE_STATE[state] ? t(PHASE_STATE[state]) : stuckStatus(t, state));
+const REFERENCE: Record<string, MessageKey> = { f16: 'mm.autotune.reference.f16', current: 'mm.autotune.reference.current' };
+/** #328: which probes this model's own baseline made count, and which it made moot. */
+function BaselineNote({ baseline }: { baseline: Baseline }): JSX.Element {
+  const t = useT();
+  return <div className="mm-note mm-autotune-baseline" role="note">
+    <p>{t('mm.autotune.baseline', { reference: REFERENCE[baseline.reference] ? t(REFERENCE[baseline.reference]) : baseline.reference })}</p>
+    {baseline.skipped.length > 0 && <ul className="mm-hints">{baseline.skipped.map(s => <li key={s.id}>{s.answer
+      ? t('mm.autotune.baselineSkippedAnswer', { probe: probeName(t, s.id), answer: s.answer })
+      : t('mm.autotune.baselineSkipped', { probe: probeName(t, s.id) })}</li>)}</ul>}
+  </div>;
+}
 
 /** A server-owned tune, for one model or all untuned chat models. */
 export function AutoTune({ model = '', onChanged }: { model?: string; onChanged: () => void }): JSX.Element {
@@ -97,7 +115,7 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   const other = model && job && !(job.models?.some(item => item.model === model) ?? job.model === model) && running;
   const shownModels = (mine?.models || []).filter(item => !model || item.model === model);
   const last = history[0];
-  const complete = shownModels.reduce((sum, item) => sum + item.phases.filter(phase => phase.status === 'passed').length, 0);
+  const progress = appliedSettings(shownModels);
   const resumable = !!mine?.models && ['cancelled', 'interrupted', 'failed'].includes(mine.status)
     && (!installedNames || mine.models.some(item => installedNames.includes(item.model)));
   const actions = !running && <div className="mm-autotune-actions">
@@ -116,7 +134,7 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
         <p className="mm-note"><strong>{mine.status === 'running' ? mine.phase : mine.status === 'passed' ? t('mm.autotune.tuned') : mine.status === 'cancelled' ? t('mm.queue.cancelled') : mine.status === 'interrupted' ? t('mm.autotune.interrupted') : t('mm.hw.status.dead')}</strong>{mine.error ? ' — ' + mine.error : ''}</p>
         {mine.queueProgress && <p className="mm-note">{t('mm.autotune.completed', { done: mine.queueProgress.done, total: mine.queueProgress.total })} {running ? t('mm.autotune.now', { model: mine.model }) : ''}</p>}
         {mine.models && <label className="mm-progress"><span className="sr-only">{t('mm.autotune.progress')}</span>
-          <progress value={complete} max={Math.max(1, shownModels.length * 4)}/><span aria-hidden="true">{t('mm.autotune.saved', { done: complete, total: shownModels.length * 4 })}</span>
+          <progress value={progress.done} max={Math.max(1, progress.total)}/><span aria-hidden="true">{t('mm.autotune.saved', { done: progress.done, total: progress.total })}</span>
         </label>}
         {running && <button className="modal-btn secondary mm-cancel-action" disabled={busy} onClick={() => void mutate('/api/models/autotune/cancel')}>{busy ? t('mm.cancelling') : t('mm.autotune.cancel')}</button>}
       </div>
@@ -135,20 +153,22 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
       </div>}
       <div className="mm-autotune-models" aria-label={t('mm.autotune.models')}>{shownModels.map(item => <details key={item.model} className="mm-autotune-model" open={item.status === 'running' || item.status === 'failed' || item.status === 'interrupted'}>
         <summary><strong>{item.model}</strong><span>{item.status}{item.error ? ' — ' + item.error : ''}</span></summary>
-        <ol className="mm-autotune-phases" aria-label={t('mm.autotune.phases', { model: item.model })}>{item.phases.map(phase => <li key={phase.id}>
+        {item.baseline && <BaselineNote baseline={item.baseline}/>}
+        <ol className="mm-autotune-phases" aria-label={t('mm.autotune.phases', { model: item.model })}>{item.phases.map(phase => { const summary = phase.value ? savedSummary(t, phase.value) : ''; return <li key={phase.id}>
           <details className="mm-autotune-phase" open={phase.status === 'running' || phase.status === 'failed' || phase.status === 'interrupted'}>
-            <summary><strong>{phase.label}</strong><span>{phase.status}{phase.reason ? ' — ' + phase.reason : ''}</span>
-              {phase.value && <small>{t('mm.autotune.savedSummary', { summary: savedSummary(t, phase.value) })}</small>}</summary>
+            <summary><strong>{phase.label}</strong><span>{phaseText(t, phaseState(phase))}{phase.reason ? ' — ' + phase.reason : ''}</span>
+              {summary && <small>{t('mm.autotune.savedSummary', { summary })}</small>}</summary>
           {phase.steps.length > 0 && <div className="mm-table-wrap" role="region" aria-label={t('mm.autotune.phaseSteps', { model: item.model, phase: phase.label })} tabIndex={0}><table className="mm-table">
             <thead><tr><th>{t('mm.bench.test')}</th><th>{t('mm.autotune.state')}</th><th>{t('mm.autotune.measured')}</th></tr></thead>
             <tbody>{phase.steps.map(row => <tr key={row.id}><td>{row.label}</td><td>{row.status}{row.reason ? ' — ' + row.reason : ''}</td>
               <td className="mm-mono">{row.generation ? t('mm.tokensPerSecond', { rate: num(row.generation) }) : row.promptPerSecond ? t('mm.autotune.promptRate', { rate: num(row.promptPerSecond) }) : row.ctx ? t('mm.tokensCount', { tokens: row.ctx }) : '—'}</td></tr>)}</tbody>
           </table></div>}
           </details>
-        </li>)}</ol>
+        </li>; })}</ol>
         {item.result && <div className="mm-easy-result" role="status"><div className="mm-easy-result-text">
           <p>{t('mm.autotune.savedBefore')}<strong>{specLabel(t, item.result.spec, item.result.specLabel)}</strong>{t('mm.autotune.savedAt', { rate: num(item.result.generation) })}{item.result.ubatch ? ', ' + t('mm.autotune.ubatch', { size: item.result.ubatch }) + ' (' + t('mm.autotune.promptRate', { rate: item.result.promptPerSecond ?? '' }) + ')' : ''}.</p>
-          <p className="mm-note">{t('mm.autotune.resultNote', { kv: item.result.kv ?? '', tokens: item.result.context != null ? num(item.result.context, 0) : '', acceptance: item.result.acceptance == null ? t('mm.autotune.notApplicable') : pct(item.result.acceptance) })}</p>
+          <p className="mm-note">{t(item.result.baseline?.skipped.length ? 'mm.autotune.resultNoteSkipped' : 'mm.autotune.resultNote', { kv: item.result.kv ?? '', tokens: item.result.context != null ? num(item.result.context, 0) : '', acceptance: item.result.acceptance == null ? t('mm.autotune.notApplicable') : pct(item.result.acceptance),
+            probes: (item.result.baseline?.skipped || []).map(s => probeName(t, s.id)).join(', ') })}</p>
         </div></div>}
       </details>)}</div>
     </div>}

@@ -4,9 +4,10 @@ import { apiFetch } from '../../api';
 import { useT } from '../../i18n';
 import { appLocale } from '../../user-preferences';
 import { num } from './mm';
+import { probeName } from './mm-text';
 import type { MessageKey } from '../../i18n';
 
-type LimitationKey = { id: string; params?: Record<string, number> };
+type LimitationKey = { id: string; params?: Record<string, number | string> };
 type Row = { category: string; state: string; value: { ctx?: number; rate?: number } | null; at: number | null; suite: { name: string; version: number } | null; limitations: string[]; limitationKeys?: (LimitationKey | null)[] };
 type CardValue = { license?: string | null; pipelineTag?: string | null; libraryName?: string | null; tags?: string[]; evaluationClaims?: { task: string | null; dataset: string | null; metric: string | null; value: string | null }[]; cardExcerpt?: string | null };
 type External = { category: string; state: string; value: CardValue | null; at: number | null; suite: { name: string; version: number } | null; provenance: { sourceUrl: string; retrievedAt: number } | null; limitations: string[]; limitationKeys?: (LimitationKey | null)[] };
@@ -19,7 +20,7 @@ const STATE: Record<string, MessageKey> = {
 const LIMITATION: Record<string, MessageKey> = {
   'autotune-quality': 'mm.evidence.lim.autotune-quality', 'autotune-budget': 'mm.evidence.lim.autotune-budget', 'vision-probe': 'mm.evidence.lim.vision-probe',
   'single-reply': 'mm.evidence.lim.single-reply', 'calibration-budget': 'mm.evidence.lim.calibration-budget', 'benchmark-median': 'mm.evidence.lim.benchmark-median',
-  'source-unverified': 'mm.evidence.lim.source-unverified',
+  'source-unverified': 'mm.evidence.lim.source-unverified', 'autotune-baseline-skipped': 'mm.evidence.lim.autotune-baseline-skipped',
 };
 const EXTERNAL_STATE: Record<string, MessageKey> = {
   reported: 'mm.evidence.external.reported', stale: 'mm.evidence.external.stale', unverified: 'mm.evidence.external.unverified', unavailable: 'mm.evidence.external.unavailable',
@@ -35,7 +36,9 @@ export function EvidenceList({ model }: { model: string }): JSX.Element | null {
   const limits = (texts: string[], keys?: (LimitationKey | null)[]) => texts.map((text, i) => {
     const key = keys?.[i];
     if (!key || !LIMITATION[key.id]) return text;
-    return t(LIMITATION[key.id], Object.fromEntries(Object.entries(key.params || {}).map(([k, v]) => [k, num(v, 0)])));
+    // Numbers follow the interface locale; a probe list (#328) names each probe in it.
+    return t(LIMITATION[key.id], Object.fromEntries(Object.entries(key.params || {}).map(([k, v]) => [k, typeof v === 'number' ? num(v, 0)
+      : k === 'probes' ? String(v).split(', ').map(id => probeName(t, id)).join(', ') : String(v)])));
   }).join(' · ');
   const own = (map: Record<string, MessageKey>, id: string) => (map[id] ? t(map[id]) : id);
   useEffect(() => {

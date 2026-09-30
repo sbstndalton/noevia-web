@@ -6,6 +6,7 @@ import { bytes, ctxShort, errorText, gib, mm, num, pct, tokens } from './mm';
 import { NativeCalibration } from '../NativeCalibration';
 import { AutoTune } from './AutoTune';
 import { dismissFolderModel } from './register';
+import { uniqueNames } from './guided';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 
@@ -38,7 +39,9 @@ export function ConfigureTab({ initial, onSaved, onSelect, autoTuneRequest = 0 }
   };
   useEffect(() => { void load(); }, []);
   useEffect(() => { if (initial) setSelected(initial); }, [initial]);
-  const names = list?.sections.map(s => s.name) || [];
+  // #328: each model once. A name is either configured or a file without settings, never both.
+  const names = uniqueNames(list?.sections.map(s => s.name) || []);
+  const unregistered = uniqueNames(list?.unregistered || []).filter(n => !names.includes(n));
   return <div className="mm-tab">
     <p className="mm-lede">{t('mm.configure.lede')}</p>
     {error && <p role="alert" className="modal-err">{error}</p>}
@@ -46,8 +49,8 @@ export function ConfigureTab({ initial, onSaved, onSelect, autoTuneRequest = 0 }
       <label className="mm-grow">{t('mm.projects.model')}<select value={selected} onChange={e => { setSelected(e.target.value); onSelect?.(e.target.value); }}>
         <option value="">{t('mm.configure.choose')}</option>
         <optgroup label={t('mm.configure.configured')}>{names.map(n => <option key={n} value={n}>{n}</option>)}</optgroup>
-        {!!list?.unregistered.length && <optgroup label={t('mm.configure.withoutSettings')}>{list.unregistered.map(n => <option key={n} value={n}>{t('mm.configure.new', { model: n })}</option>)}</optgroup>}
-        {selected && !names.includes(selected) && !list?.unregistered.includes(selected) && <option value={selected}>{t('mm.configure.new', { model: selected })}</option>}
+        {!!unregistered.length && <optgroup label={t('mm.configure.withoutSettings')}>{unregistered.map(n => <option key={n} value={n}>{t('mm.configure.new', { model: n })}</option>)}</optgroup>}
+        {selected && !names.includes(selected) && !unregistered.includes(selected) && <option value={selected}>{t('mm.configure.new', { model: selected })}</option>}
       </select></label>
     </div>
     {selected && list && <SectionEditor key={selected} autoTuneRequest={autoTuneRequest} name={selected} row={list.sections.find(s => s.name === selected)} onChanged={async (renamed) => { await load(); if (renamed !== undefined) { setSelected(renamed); onSelect?.(renamed); } onSaved(); }}/>}
@@ -152,7 +155,7 @@ function SectionEditor({ name, row, onChanged, autoTuneRequest }: { autoTuneRequ
   }, [autoTuneRequest, mode, data]);
   if (!data) return error ? <p role="alert" className="modal-err">{error}</p> : <p role="status">{t('mm.editor.reading')}</p>;
   return <section className="mm-panel" aria-labelledby="mm-section-title">
-    <header className="mm-panel-head"><div><h3 id="mm-section-title">{name}</h3><p className="mm-note">{data.exists ? (row?.hasFile ? row.file : t('mm.editor.fileMissing')) : t('mm.editor.unsaved')}</p></div></header>
+    <header className="mm-panel-head"><div><h3 id="mm-section-title" className="sr-only">{name}</h3><p className="mm-note">{data.exists ? (row?.hasFile ? row.file : t('mm.editor.fileMissing')) : t('mm.editor.unsaved')}</p></div></header>
     <div className="mm-mode" role="group" aria-label={t('mm.editor.detail')}>
       {(['easy', 'advanced'] as const).map(m => <button key={m} aria-pressed={mode === m} className={mode === m ? 'is-active' : ''} onClick={() => setMode(m)}>{m === 'easy' ? t('mm.editor.easy') : t('mm.editor.advanced')}</button>)}
     </div>

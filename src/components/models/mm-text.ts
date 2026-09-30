@@ -24,3 +24,7 @@ const SPEC_KEY: Record<string, MessageKey> = {
  *  label, so the id is translated and the label stays the fallback for an id this build does not
  *  know (#598). */
 export const specLabel = (t: Translate, spec: string | undefined, label: string | undefined) => (spec && SPEC_KEY[spec] ? t(SPEC_KEY[spec]) : label || '');
+
+const PROBE: Record<string, MessageKey> = { arithmetic: 'mm.autotune.probe.arithmetic', extraction: 'mm.autotune.probe.extraction', reasoning: 'mm.autotune.probe.reasoning' };
+/** An auto-tune quality probe's stable id (#328) in the interface language; an unknown id stays as sent. */
+export const probeName = (t: Translate, id: string) => (PROBE[id] ? t(PROBE[id]) : id);

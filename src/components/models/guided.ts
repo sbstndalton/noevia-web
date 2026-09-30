@@ -96,11 +96,41 @@ export function recommend(inputs: EstimateInputs, budgetGib: number, wantCtx = 0
 // ── Tuning pre-flight ────────────────────────────────────────────────────────────────────────
 export const TUNE_STEPS = [
   { id: 'sampling', label: 'Sampling', what: 'Writes the recommended temperature and related sampling defaults for this model family, then loads it once to check it still answers. Skipped if you already set sampling.' },
-  { id: 'kv', label: 'KV cache', what: 'Loads the model once per cache type and keeps the fastest one that passes the three quality probes.' },
+  { id: 'kv', label: 'KV cache', what: 'Loads the model once per cache type and keeps the fastest one that still passes every quality probe the model passes at full precision (f16).' },
   { id: 'context', label: 'Context size', what: 'Loads increasing contexts and sends a long prompt at each; keeps the largest that answers within the 120-second budget.' },
   { id: 'drafting', label: 'Drafting', what: 'Compares speculative decoding (MTP or N-gram) with none and keeps it only if it is faster.' },
   { id: 'batch', label: 'Batch and micro-batch', what: 'Tries batch sizes for prompt reading speed.' },
 ] as const;
+
+// ── Auto-tune results (#328) ────────────────────────────────────────────────────────────────
+type PhaseLike = { id: string; status: string; value?: Record<string, unknown> | null };
+/** How a phase reads in the panel. The server keeps an optional sampling step that did not apply as
+ *  "passed" so the run goes on; it is shown as "not applied" (it was tried and put back) or
+ *  "skipped" (nothing to apply), never as passed. Every other phase keeps its own status. */
+export function phaseState(phase: PhaseLike): string {
+  if (phase.id === 'sampling' && phase.status === 'passed' && phase.value?.skipped) return phase.value.failed ? 'not-applied' : 'skipped';
+  return phase.status;
+}
+/** Settings a run actually saved, out of those it can save: KV cache, context, drafting and batch
+ *  for each model, plus sampling only once it was applied. */
+export function appliedSettings(models: readonly { phases: readonly PhaseLike[] }[]): { done: number; total: number } {
+  let done = 0, total = 0;
+  for (const item of models) for (const phase of item.phases) {
+    const optional = phase.id === 'sampling';
+    const applied = phase.status === 'passed' && !phase.value?.skipped;
+    if (!optional || applied) total++;
+    if (applied) done++;
+  }
+  return { done, total };
+}
+/** A server sentence placed inside a catalogue sentence that brings its own full stop. */
+export const withoutFinalStop = (text: string) => text.replace(/[.。]+\s*$/u, '');
+/** The KV cache types a tune tries: the server's own list when it sends one (#328), else this build's default. */
+export function kvCandidatesFrom(raw: unknown): string[] {
+  return Array.isArray(raw) && raw.length && raw.every((k) => typeof k === 'string' && k in KV_BYTES) ? raw as string[] : [...KV_GUIDED];
+}
+/** Each name once, in first-seen order. */
+export const uniqueNames = (names: readonly string[]) => [...new Set(names)];
 
 /** What auto-tune would write for sampling, and where the numbers came from (#308). */
 export type SamplingPlan = {
