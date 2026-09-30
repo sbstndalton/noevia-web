@@ -59,6 +59,9 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
     try { const saved = sessionStorage.getItem('noevia-models-tab') as Tab | null; return saved && TABS.some(([id]) => id === saved) ? saved : 'yours'; } catch { return 'yours'; }
   });
   const [open, setOpen] = useState<string>(initialModel);
+  // #680: "Go to Auto-tune and apply" (guided panel) asks the editor below to reveal its Auto-tune
+  // panel. A counter, so asking twice in a row still acts.
+  const [autoTuneRequest, setAutoTuneRequest] = useState(0);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<ModelSort>('name');
   const [filter, setFilter] = useState<ModelFilter>('all');
@@ -77,8 +80,8 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
       <button className="modal-btn secondary" onClick={() => setOpen('')}><ShellIcon name="left" size={16}/>{t('mm.allModels')}</button>
       <h1>{open}</h1>
     </div>
-    <GuidedOptimize model={open} installed={models.find((m) => m.name === open)} onOpenTab={go} />
-    <ConfigureTab initial={open} onSaved={changed} onSelect={setOpen} />
+    <GuidedOptimize model={open} installed={models.find((m) => m.name === open)} onOpenTab={go} onGoAutoTune={() => setAutoTuneRequest((n) => n + 1)} />
+    <ConfigureTab initial={open} onSaved={changed} onSelect={setOpen} autoTuneRequest={autoTuneRequest} />
   </div>;
 
   return <div className="mm-root">

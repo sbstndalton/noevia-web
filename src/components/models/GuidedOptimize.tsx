@@ -49,7 +49,7 @@ async function getJson<T>(path: string): Promise<T> {
 
 /** The guided path for one model (#204): estimate, then full auto-tune, then quality. Each step
  *  says whether it only measures or writes settings; nothing here starts a run by itself. */
-export function GuidedOptimize({ model, installed, onOpenTab }: { model: string; installed?: InstalledModel; onOpenTab: (tab: 'benchmarks' | 'hardware') => void }): JSX.Element {
+export function GuidedOptimize({ model, installed, onOpenTab, onGoAutoTune }: { model: string; installed?: InstalledModel; onOpenTab: (tab: 'benchmarks' | 'hardware') => void; onGoAutoTune: () => void }): JSX.Element {
   const role = roleOf(model, installed?.labels || []);
   const t = useT();
   if (isSystemModel(model)) return <section className="mm-panel mm-guided" aria-label={t('mm.guided.title')}>
@@ -60,7 +60,7 @@ export function GuidedOptimize({ model, installed, onOpenTab }: { model: string;
     <p className="mm-note">{t('mm.guided.intro')}</p>
     <ol className="mm-guided-steps">
       <li><FitStep model={model}/></li>
-      <li><TuneStep model={model} sizeGB={installed?.sizeGB ?? null} chat={canPromptSuite(role)}/></li>
+      <li><TuneStep model={model} sizeGB={installed?.sizeGB ?? null} chat={canPromptSuite(role)} onGoTune={onGoAutoTune}/></li>
       <li><QualityStep model={model} chat={canPromptSuite(role)} onOpenTab={onOpenTab}/></li>
     </ol>
   </section>;
@@ -110,7 +110,7 @@ function FitStep({ model }: { model: string }): JSX.Element {
   </div>;
 }
 
-function TuneStep({ model, sizeGB, chat }: { model: string; sizeGB: number | null; chat: boolean }): JSX.Element {
+function TuneStep({ model, sizeGB, chat, onGoTune }: { model: string; sizeGB: number | null; chat: boolean; onGoTune: () => void }): JSX.Element {
   const [status, setStatus] = useState<TuneStatus | null>(null), [plan, setPlan] = useState<SamplingPlan | null>(null);
   const t = useT();
   useEffect(() => {
@@ -125,10 +125,6 @@ function TuneStep({ model, sizeGB, chat }: { model: string; sizeGB: number | nul
   const last = status?.history?.[0];
   const mine = status?.job && (status.job.models?.find((m) => m.model === model) || (status.job.model === model ? status.job : null));
   const failed = mine && ['failed', 'interrupted', 'cancelled'].includes(String(mine.status));
-  const goTune = () => {
-    const box = document.querySelector<HTMLDetailsElement>('.mm-easy-autotune');
-    if (box) { box.open = true; box.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-  };
   if (!chat) return <div className="mm-guided-step"><h4><span className="mm-step-n" aria-hidden="true">2</span>{t('mm.tune.title')}</h4><p className="mm-note">{t('mm.tune.notChat')}</p></div>;
   return <div className="mm-guided-step">
     <h4><span className="mm-step-n" aria-hidden="true">2</span>{t('mm.tune.title')} <small>{t('mm.tune.hint')}</small></h4>
@@ -143,7 +139,7 @@ function TuneStep({ model, sizeGB, chat }: { model: string; sizeGB: number | nul
     <p className="mm-note mm-warn" role="note">{t('mm.tune.floor', { floor: KV_FLOOR })}</p>
     {last && <p className="mm-note">{t('mm.tune.last', { date: new Date(last.at).toLocaleDateString(appLocale()), result: [specLabel(t, last.spec, last.specLabel) || t('mm.tune.saved'), ...(last.generation ? [t('mm.tokensPerSecond', { rate: num(last.generation) })] : []), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv })] : []), ...(last.context ? [t('mm.tune.context', { tokens: num(last.context, 0) })] : [])].join(', ') })}{belowKvFloor(last.kv) ? ` ${t('mm.tune.lastBelowFloor')}` : ''}</p>}
     {failed && <p className="mm-note mm-warn" role="status">{t(mine!.error ? 'mm.tune.failedError' : 'mm.tune.failed', { status: stuckStatus(t, String(mine!.status)), error: mine!.error ?? '' })} {t(last ? 'mm.tune.failedKeepLast' : 'mm.tune.failedKeep')}</p>}
-    <div className="mm-actions"><button type="button" className="modal-btn secondary" onClick={goTune}>{t('mm.tune.go')}</button></div>
+    <div className="mm-actions"><button type="button" className="modal-btn secondary" onClick={onGoTune}>{t('mm.tune.go')}</button></div>
   </div>;
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '../../api';
 import { isSystemModel } from '../../model-system';
 import { appLocale } from '../../user-preferences';
@@ -25,7 +25,7 @@ type Measured = { n: number; gen_p50: number; gen_p25: number; gen_p75: number; 
 type Run = Measured & { instance: string; is_current: boolean; diff: Record<string, string>; rel_pct: number };
 type Auto = { error?: string; section: string; arch: string; params: string; fileBytes: number; model: string; recommendation: Rec; measured: Measured; history: Run[] };
 
-export function ConfigureTab({ initial, onSaved, onSelect }: { initial?: string; onSaved: () => void; onSelect?: (name: string) => void }) {
+export function ConfigureTab({ initial, onSaved, onSelect, autoTuneRequest = 0 }: { initial?: string; onSaved: () => void; onSelect?: (name: string) => void; autoTuneRequest?: number }) {
   const t = useT();
   const [list, setList] = useState<SectionsResponse | null>(null), [selected, setSelected] = useState(initial || ''), [error, setError] = useState('');
   const load = async () => {
@@ -50,7 +50,7 @@ export function ConfigureTab({ initial, onSaved, onSelect }: { initial?: string;
         {selected && !names.includes(selected) && !list?.unregistered.includes(selected) && <option value={selected}>{t('mm.configure.new', { model: selected })}</option>}
       </select></label>
     </div>
-    {selected && list && <SectionEditor key={selected} name={selected} row={list.sections.find(s => s.name === selected)} onChanged={async (renamed) => { await load(); if (renamed !== undefined) { setSelected(renamed); onSelect?.(renamed); } onSaved(); }}/>}
+    {selected && list && <SectionEditor key={selected} autoTuneRequest={autoTuneRequest} name={selected} row={list.sections.find(s => s.name === selected)} onChanged={async (renamed) => { await load(); if (renamed !== undefined) { setSelected(renamed); onSelect?.(renamed); } onSaved(); }}/>}
     {list && !selected && <ul className="mm-list">{list.sections.map(s => <li key={s.name}><span>{s.name}<small>{s.hasFile ? s.file : t('mm.configure.fileMissing')}</small></span><button className="modal-btn secondary" onClick={() => { setSelected(s.name); onSelect?.(s.name); }}>{t('mm.configure.edit')}</button></li>)}</ul>}
     {list && <details className="mm-disclosure"><summary>{t('mm.configure.raw')}</summary><div className="mm-form">
       <pre className="mm-raw mm-mono" aria-label={t('mm.configure.rawLabel')}>{list.raw || t('mm.configure.empty')}</pre>
@@ -73,7 +73,7 @@ const TIER_ID_BY_LABEL: Record<string, string> = {
   'Speculative decoding': 'speculative', 'LoRA / control vectors': 'lora', 'CPU threading': 'cpu', 'Reasoning / thinking': 'reasoning', 'Embeddings & misc': 'misc',
 };
 
-function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRow; onChanged: (renamed?: string) => Promise<void> }) {
+function SectionEditor({ name, row, onChanged, autoTuneRequest }: { autoTuneRequest: number; name: string; row?: SectionRow; onChanged: (renamed?: string) => Promise<void> }) {
   const [data, setData] = useState<SectionResponse | null>(null), [draft, setDraft] = useState<Record<string, string>>({}), [extras, setExtras] = useState('');
   const [busy, setBusy] = useState(''), [error, setError] = useState(''), [message, setMessage] = useState(''), [conflict, setConflict] = useState(false);
   const [rename, setRename] = useState(''), [confirmDelete, setConfirmDelete] = useState(false);
@@ -138,13 +138,25 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
   };
   const [mode, setModeState] = useState<'easy' | 'advanced'>(() => { try { return localStorage.getItem('noevia:model-settings-mode') === 'advanced' ? 'advanced' : 'easy'; } catch { return 'easy'; } });
   const setMode = (next: 'easy' | 'advanced') => { setModeState(next); try { localStorage.setItem('noevia:model-settings-mode', next); } catch { /* optional */ } };
+  // #680: Auto-tune lives in the Easy editor only. A request from the guided panel shows Easy
+  // (without overwriting the saved preference), then opens, scrolls to and focuses that panel.
+  const autoTuneRef = useRef<HTMLDetailsElement>(null), handledTune = useRef(autoTuneRequest);
+  useEffect(() => { if (autoTuneRequest !== handledTune.current && mode === 'advanced') setModeState('easy'); }, [autoTuneRequest, mode]);
+  useEffect(() => {
+    const box = autoTuneRef.current;
+    if (autoTuneRequest === handledTune.current || mode !== 'easy' || !data || !box) return;
+    handledTune.current = autoTuneRequest;
+    box.open = true;
+    box.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    box.querySelector<HTMLElement>(':scope > summary')?.focus({ preventScroll: true });
+  }, [autoTuneRequest, mode, data]);
   if (!data) return error ? <p role="alert" className="modal-err">{error}</p> : <p role="status">{t('mm.editor.reading')}</p>;
   return <section className="mm-panel" aria-labelledby="mm-section-title">
     <header className="mm-panel-head"><div><h3 id="mm-section-title">{name}</h3><p className="mm-note">{data.exists ? (row?.hasFile ? row.file : t('mm.editor.fileMissing')) : t('mm.editor.unsaved')}</p></div></header>
     <div className="mm-mode" role="group" aria-label={t('mm.editor.detail')}>
       {(['easy', 'advanced'] as const).map(m => <button key={m} aria-pressed={mode === m} className={mode === m ? 'is-active' : ''} onClick={() => setMode(m)}>{m === 'easy' ? t('mm.editor.easy') : t('mm.editor.advanced')}</button>)}
     </div>
-    {mode === 'easy' ? <EasySettings name={name} draft={draft} busy={busy !== ''} onChange={(patch) => setDraft({ ...draft, ...patch })} onUseTuned={useTuned} onAutoApplied={() => { void read(); void onChanged(); }}/> : <>
+    {mode === 'easy' ? <EasySettings autoTuneRef={autoTuneRef} name={name} draft={draft} busy={busy !== ''} onChange={(patch) => setDraft({ ...draft, ...patch })} onUseTuned={useTuned} onAutoApplied={() => { void read(); void onChanged(); }}/> : <>
     {data.hints.length > 0 && <ul className="mm-hints">{data.hints.map(h => <li key={h}>{h}</li>)}</ul>}
     <AutoconfigPanel name={name} onFill={fill}/>
     <div className="mm-form">
@@ -190,7 +202,7 @@ const keepChoices = (draft: Record<string, string>) => Object.fromEntries(['spec
 // expose only the two choices people actually weigh. Advanced keeps every field.
 type DraftHeads = { local: string; builtinLayers: number; available: boolean; remote: { repo: string; path: string; size: number }[]; mtpBuild: string | null; repo: string | null; remoteError?: string };
 
-function EasySettings({ name, draft, busy, onChange, onUseTuned, onAutoApplied }: { name: string; draft: Record<string, string>; busy: boolean; onChange: (patch: Record<string, string>) => void; onUseTuned: (values: Record<string, string>, displaced: string[]) => Promise<void>; onAutoApplied: () => void }) {
+function EasySettings({ autoTuneRef, name, draft, busy, onChange, onUseTuned, onAutoApplied }: { autoTuneRef: React.RefObject<HTMLDetailsElement | null>; name: string; draft: Record<string, string>; busy: boolean; onChange: (patch: Record<string, string>) => void; onUseTuned: (values: Record<string, string>, displaced: string[]) => Promise<void>; onAutoApplied: () => void }) {
   const [auto, setAuto] = useState<Auto | null>(null), [tuning, setTuning] = useState(false), [error, setError] = useState('');
   const [verified, setVerified] = useState(0), [heads, setHeads] = useState<DraftHeads | null>(null), [headNote, setHeadNote] = useState('');
   const t = useT();
@@ -246,7 +258,7 @@ function EasySettings({ name, draft, busy, onChange, onUseTuned, onAutoApplied }
       </div>
       <button className="modal-btn primary" disabled={busy} onClick={() => void onUseTuned({ ...rec.values, ...keepChoices(draft) }, rec.displaced)}>{t('mm.easy.useSave')}</button>
     </div>}
-{!system && <details className="mm-disclosure mm-easy-autotune" open>
+{!system && <details ref={autoTuneRef} className="mm-disclosure mm-easy-autotune" open>
       <summary>{t('mm.autotune.apply')} <small>{t('mm.easy.autotuneHint')}</small></summary>
       <AutoTune model={name} onChanged={() => { setAuto(null); onAutoApplied(); }}/>
     </details>}
