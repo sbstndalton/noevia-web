@@ -4,7 +4,7 @@ import { apiFetch } from '../api';
 import { useT } from '../i18n';
 
 type Credential = { id: string; name: string; scope: 'lan' | 'public'; createdAt: number; lastUsedAt: number | null };
-export default function AppPasswords(): JSX.Element {
+export default function AppPasswords({ onOpenSection }: { onOpenSection?: (id: string) => void }): JSX.Element {
   const t = useT();
   const [items, setItems] = useState<Credential[]>([]);
   const [name, setName] = useState('');
@@ -44,6 +44,7 @@ export default function AppPasswords(): JSX.Element {
   return <section aria-label={t('appPasswords.title')} style={{ marginTop: 24 }}>
     <div className="rail-label">{t('appPasswords.title')}</div>
     <p className="route-note">{t('appPasswords.intro')}</p>
+    {onOpenSection && <div style={{ marginBottom: 'var(--space-3, 12px)' }}><p className="route-note">{t('appPasswords.connectHint')}</p><button type="button" className="popup-tab" style={{ marginTop: 'var(--space-2, 8px)' }} onClick={() => onOpenSection('diary')}>{t('appPasswords.connectOpen')}</button></div>}
     <div className="card-list">
       {items.map(item => <div className="model-row" key={item.id}>
         <div className="model-name-group">

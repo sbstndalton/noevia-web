@@ -2353,3 +2353,22 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
    inside it. A real phone (data-device is not "desktop") has the column as its window: fixed is right. */
 :root[data-layout="mobile"][data-device="desktop"] .sidebar:not(.coding-sidebar).is-expanded { position: absolute; width: min(100%, 420px); height: auto; }
 :root[data-layout="mobile"][data-device="desktop"] .nav-drawer-backdrop { position: absolute; }
+
+/* #733 Connect a device: one panel for sharing + app password + address. Enter motion matches the other popovers. */
+.connect-device { margin-block:12px; padding:var(--space-4,16px); background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-card); --enter-from:translateY(-3px); animation:motion-enter var(--motion-quick) var(--ease-quick) both; }
+.connect-device-row { display:flex; align-items:flex-end; gap:8px; }
+.connect-device-row > label { flex:1; min-width:0; }
+.connect-device-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.connect-device-hints { padding-inline-start:20px; }
+@media (prefers-reduced-motion: reduce) { .connect-device { animation:none; } }
+
+/* #733 panel rhythm: every child is its own block separated by one gap token; per-note margins are zeroed so the
+   gap is the only spacing. Values wrap (never cut off) and keep a monospace look. */
+.connect-device { display:flex; flex-direction:column; gap:var(--space-3,12px); }
+.settings-detail .connect-device .route-note, .connect-device .rail-label { margin:0; }
+.connect-device label.route-note { display:flex; flex-direction:column; gap:var(--space-1,4px); }
+.connect-device label.connect-device-check { flex-direction:row; align-items:flex-start; gap:var(--space-2,8px); }
+.connect-device-value { resize:none; overflow:hidden; word-break:break-all; overflow-wrap:anywhere; font-family:var(--font-mono, ui-monospace, monospace); line-height:1.4; display:block; width:100%; box-sizing:border-box; }
+.connect-device-actions { margin-top:0; }
+.connect-device-hints + button { margin-top:var(--space-3,12px); }
+.connect-device-value, .connect-device-row { margin-top:0; }

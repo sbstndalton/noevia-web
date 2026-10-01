@@ -495,6 +495,8 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'appPasswords.scope': "Ambito della credenziale",
   'appPasswords.publicHttps': "Pubblico (HTTPS)",
   'appPasswords.generate': "Genera password per l’app",
+  'appPasswords.connectHint': "Più semplice: collega un dispositivo in Diario e archiviazione, che attiva la condivisione e crea la password per te.",
+  'appPasswords.connectOpen': "Apri Diario e archiviazione",
   'models.intro': "Un riepilogo del motore. Download, impostazioni per modello, hardware e benchmark si trovano nel gestore dei modelli.",
   'models.routingError': "Impossibile leggere",
   'models.notConfigured': "Non configurato",

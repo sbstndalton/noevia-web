@@ -495,6 +495,8 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'appPasswords.scope': "Omfång",
   'appPasswords.publicHttps': "Offentligt (HTTPS)",
   'appPasswords.generate': "Skapa applösenord",
+  'appPasswords.connectHint': "Enklare: anslut en enhet under Dagbok och lagring, som slår på delning och skapar lösenordet åt dig.",
+  'appPasswords.connectOpen': "Öppna Dagbok och lagring",
   'models.intro': "En översikt över motorn. Nedladdningar, inställningar per modell, hårdvara och prestandatester finns i modellhanteraren.",
   'models.routingError': "Kunde inte läsas",
   'models.notConfigured': "Inte konfigurerad",

@@ -1,6 +1,7 @@
-import { useEffect, useState, type JSX } from 'react';
+import { useEffect, useRef, useState, type JSX } from 'react';
 import { apiFetch } from '../api';
 import { useT, type MessageKey } from '../i18n';
+import ConnectDevice from './ConnectDevice';
 type Sharing = { available:boolean; reason?:string; reasonId?:string; scope:'off'|'lan'|'public'; endpointScope?:'lan'|'public'; cleartext:boolean; port?:number; url:string; eligible:boolean };
 /** Why sharing is unavailable, in the interface language: the server sends an id it knows how to name, and the
  *  English sentence it also sends stays as the fallback for an id this client does not have (#652). */
@@ -9,10 +10,13 @@ export function sharingReason(value: { reason?: string; reasonId?: string }, t: 
   const key = value.reasonId ? REASON_KEYS[value.reasonId] : undefined;
   return key ? t(key) : value.reason ?? '';
 }
-export default function DiarySharing(): JSX.Element {
+export default function DiarySharing({ allowConnect = false }: { allowConnect?: boolean }): JSX.Element {
   const t=useT();
-  const [value,setValue]=useState<Sharing|null>(null),[scope,setScope]=useState('off'),[ack,setAck]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
-  useEffect(()=>{void apiFetch('/api/profile/sharing').then(async r=>{if(!r.ok)throw Error(t('sharing.loadError'));const v=await r.json();setValue(v);setScope(v.scope);}).catch(e=>setError(e.message));},[]);
+  const [value,setValue]=useState<Sharing|null>(null),[scope,setScope]=useState('off'),[ack,setAck]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[connecting,setConnecting]=useState(false);
+  const openRef=useRef<HTMLButtonElement>(null),wasOpen=useRef(false);
+  useEffect(()=>{if(connecting)wasOpen.current=true;else if(wasOpen.current){wasOpen.current=false;openRef.current?.focus();}},[connecting]);
+  const load=()=>apiFetch('/api/profile/sharing').then(async r=>{if(!r.ok)throw Error(t('sharing.loadError'));const v=await r.json();setValue(v);setScope(v.scope);}).catch(e=>setError(e.message));
+  useEffect(()=>{void load();},[]);
   const save=async()=>{
     setBusy(true);setError('');
     try{const r=await apiFetch('/api/profile/sharing',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({scope,acknowledgeCleartext:ack})});const v=await r.json();if(!r.ok)throw Error(v.error||t('sharing.saveError'));setValue(v);setScope(v.scope);setAck(false);}
@@ -21,6 +25,8 @@ export default function DiarySharing(): JSX.Element {
   return <section aria-label={t('sharing.title')} style={{marginTop:24}}><div className="rail-label">{t('sharing.title')}</div>
     <p className="route-note">{t('sharing.intro')}</p>
     {value && <>
+      {allowConnect&&value.available&&value.eligible&&!connecting&&<button ref={openRef} type="button" className="modal-btn" onClick={()=>setConnecting(true)}>{t('connect.open')}</button>}
+      {allowConnect&&connecting&&<ConnectDevice onClose={()=>setConnecting(false)} onSharingChange={()=>void load()}/>}
       <p className="route-note">{t('sharing.current',{access:value.scope === 'off' ? t('sharing.off') : value.scope === 'lan' ? t('sharing.lan') : t('sharing.public')})}</p>
       {!value.available && <p className="route-note">{sharingReason(value,t)} {t('sharing.staysOff')}</p>}
       {!value.eligible && <p className="route-note">{t('sharing.ineligible')}</p>}

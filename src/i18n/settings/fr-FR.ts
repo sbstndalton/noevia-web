@@ -495,6 +495,8 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'appPasswords.scope': "Portée de l’identifiant",
   'appPasswords.publicHttps': "Public (HTTPS)",
   'appPasswords.generate': "Générer un mot de passe d’application",
+  'appPasswords.connectHint': "Plus simple : connectez un appareil dans Journal et stockage, qui active le partage et crée le mot de passe pour vous.",
+  'appPasswords.connectOpen': "Ouvrir Journal et stockage",
   'models.intro': "Un résumé du moteur. Les téléchargements, les réglages par modèle, le matériel et les benchmarks se trouvent dans le gestionnaire de modèles.",
   'models.routingError': "Lecture impossible",
   'models.notConfigured': "Non configuré",

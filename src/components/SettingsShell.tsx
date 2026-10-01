@@ -320,7 +320,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
       <div className="settings-detail-scroll" key={section} tabIndex={-1} aria-label={title}>
         <SettingsPanelBoundary>
         {['security', 'users', 'diary', 'providers', 'models', 'status'].includes(section) ? (
-          <SettingsView {...props} section={section}/>
+          <SettingsView {...props} section={section} onOpenSection={open}/>
         ) : section === 'profile' ? (
           <ProfileSettings />
         ) : section === 'appearance' ? (

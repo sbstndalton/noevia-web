@@ -496,6 +496,8 @@ export const EN_GB_SETTINGS = {
   'appPasswords.scope': "Credential scope",
   'appPasswords.publicHttps': "Public (HTTPS)",
   'appPasswords.generate': "Generate app password",
+  'appPasswords.connectHint': "Easier: connect a device in Diary & storage, which turns sharing on and creates the password for you.",
+  'appPasswords.connectOpen': "Open Diary & storage",
   'models.intro': "A summary of the engine. Downloads, per-model settings, hardware and benchmarks are in the model manager.",
   'models.routingError': "Could not be read",
   'models.notConfigured': "Not configured",

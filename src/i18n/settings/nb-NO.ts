@@ -495,6 +495,8 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'appPasswords.scope': "Omfang",
   'appPasswords.publicHttps': "Offentlig (HTTPS)",
   'appPasswords.generate': "Lag app-passord",
+  'appPasswords.connectHint': "Enklere: koble til en enhet under Dagbok og lagring, som slår på deling og lager passordet for deg.",
+  'appPasswords.connectOpen': "Åpne Dagbok og lagring",
   'models.intro': "En oversikt over motoren. Nedlastinger, innstillinger per modell, maskinvare og ytelsestester finner du i modellbehandleren.",
   'models.routingError': "Kunne ikke leses",
   'models.notConfigured': "Ikke konfigurert",

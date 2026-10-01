@@ -495,6 +495,8 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'appPasswords.scope': "Geltungsbereich",
   'appPasswords.publicHttps': "Öffentlich (HTTPS)",
   'appPasswords.generate': "App-Passwort erzeugen",
+  'appPasswords.connectHint': "Einfacher: Verbinde ein Gerät unter Tagebuch & Speicher. Dort wird die Freigabe eingeschaltet und das Passwort für dich erstellt.",
+  'appPasswords.connectOpen': "Tagebuch & Speicher öffnen",
   'models.intro': "Eine Übersicht über die Engine. Downloads, Einstellungen pro Modell, Hardware und Benchmarks findest du im Modellmanager.",
   'models.routingError': "Konnte nicht gelesen werden",
   'models.notConfigured': "Nicht eingerichtet",

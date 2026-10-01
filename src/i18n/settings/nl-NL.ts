@@ -495,6 +495,8 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'appPasswords.scope': "Bereik",
   'appPasswords.publicHttps': "Openbaar (HTTPS)",
   'appPasswords.generate': "App-wachtwoord genereren",
+  'appPasswords.connectHint': "Makkelijker: verbind een apparaat onder Dagboek en opslag; dat zet delen aan en maakt het wachtwoord voor je.",
+  'appPasswords.connectOpen': "Dagboek en opslag openen",
   'models.intro': "Een overzicht van de engine. Downloads, instellingen per model, hardware en benchmarks vind je in modelbeheer.",
   'models.routingError': "Kon niet worden gelezen",
   'models.notConfigured': "Niet ingesteld",

@@ -34,12 +34,14 @@ export interface SettingsViewProps {
   onOpenModelManager: () => void;
   diaryEnabled: boolean;
   onDiaryEnabledChange: (enabled: boolean) => void;
+  /** #733: lets Security link to the Diary & storage page, where "Connect a device" lives. */
+  onOpenSection?: (id: string) => void;
 }
 
-export function SettingsView({ models, modelsLoaded, modelsError, health, stats, diaryEnabled, onDiaryEnabledChange, onOpenModelManager, section = 'profile' }: SettingsViewProps): JSX.Element {
+export function SettingsView({ models, modelsLoaded, modelsError, health, stats, diaryEnabled, onDiaryEnabledChange, onOpenModelManager, onOpenSection, section = 'profile' }: SettingsViewProps): JSX.Element {
   const t = useT();
   return <div className="settings-live-content">
-    {section === 'security' && <SecurityCard />}
+    {section === 'security' && <SecurityCard onOpenSection={onOpenSection} />}
     {section === 'users' && <UsersCard />}
     {section === 'diary' && <><div className="settings-title"><h1>{t('settings.section.diary')}</h1><p>{t('diarySettings.lede')}</p></div><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
     {section === 'providers' && <ProvidersCard health={health} />}
@@ -90,7 +92,7 @@ function StorageCard(): JSX.Element {
   return <div>
     <div className="rail-label" style={{ marginBottom: 12 }}>{t('diarySettings.storage')}</div>
     <StoragePicker />
-    <DiarySharing />
+    <DiarySharing allowConnect />
     <DiaryConnectors />
   </div>;
 }
@@ -104,7 +106,7 @@ function sessionLabel(t: Translate, ua?: string | null): string {
 }
 
 // Account security only; identity (name, username, role) is the Profile page.
-function SecurityCard(): JSX.Element {
+function SecurityCard({ onOpenSection }: { onOpenSection?: (id: string) => void }): JSX.Element {
   const t = useT();
   // #555: native apps signed in with a device code, only while the feature is on.
   const nativeClients = useFeatureFlags().nativeClientAuth === true;
@@ -181,7 +183,7 @@ function SecurityCard(): JSX.Element {
     {notice && <p className="route-note" role="status">{notice}</p>}
     {error && <><p className="modal-err" role="alert">{error}</p><button className="modal-btn secondary" disabled={!!busy || loading} onClick={() => void load()}>{loading ? t('settings.loading') : t('security.reloadProfile')}</button></>}
     {nativeClients && <SignedInDevices />}
-    <AppPasswords />
+    <AppPasswords onOpenSection={onOpenSection} />
   </div>;
 }
 
