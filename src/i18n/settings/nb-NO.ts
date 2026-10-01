@@ -1,15 +1,6 @@
 import type { SettingsCatalogue } from './en-GB';
 
 export const NB_NO_SETTINGS: SettingsCatalogue = {
-  "appearance.logo": "Logofarger",
-  "appearance.logoDesc": "Standardblader, sesongfarger eller månedlige anledninger. Lagres på denne enheten; nettstedsikonet forblir uendret.",
-  "appearance.logo.default": "Standardblader",
-  "appearance.logo.seasonal": "Sesongbasert",
-  "appearance.logo.monthly": "Månedlig",
-  "appearance.logo.hemisphere": "Årstider",
-  "appearance.logo.calendarDesc": "Bruker denne enhetens lokale dato. De øvrige månedene bruker sesongfarger.",
-  "appearance.logo.north": "Nordlige halvkule",
-  "appearance.logo.south": "Sørlige halvkule",
   "appearance.logo.test": "Test neste palett",
   "appearance.logo.reset": "Avslutt forhåndsvisning",
   "appearance.logo.previewHint": "Kun forhåndsvisning. Det lagrede valget ditt forblir uendret.",
@@ -19,10 +10,6 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   "appearance.logo.palette.summer": "Sommer",
   "appearance.logo.palette.autumn": "Høst",
   "appearance.logo.palette.winter": "Vinter",
-  "appearance.logo.palette.rose": "Februar · Rose",
-  "appearance.logo.palette.clover": "Mars · Kløver",
-  "appearance.logo.palette.harvest": "Oktober · Innhøsting",
-  "appearance.logo.palette.festive": "Desember · Festlig",
 
   'error.panel.title': "Dette panelet kunne ikke vises",
   'error.panel.body': "Prøv igjen, eller velg en annen kategori.",

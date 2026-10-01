@@ -11,8 +11,6 @@
 import { FAMILIES, FAMILY_KEY } from './theme-family';
 
 export const PREFERENCES = {
-  logo: { key: 'noevia:logo-calendar', attribute: 'data-logo-calendar', values: ['default', 'seasonal', 'monthly'] as const },
-  hemisphere: { key: 'noevia:logo-hemisphere', attribute: 'data-logo-hemisphere', values: ['north', 'south'] as const },
   chatFont: { key: 'noevia:chat-font', attribute: 'data-chat-font', values: ['sans', 'serif', 'mono'] as const },
   density: { key: 'noevia:density', attribute: 'data-density', values: ['comfortable', 'compact'] as const },
   motion: { key: 'noevia:motion', attribute: 'data-motion', values: ['system', 'reduced'] as const },

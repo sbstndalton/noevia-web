@@ -3,8 +3,9 @@
 // well past a deploy, even though our server sends `Cache-Control: no-cache` with
 // an ETag for index.html and hashed, immutable URLs for /assets/*.js — WebKit's
 // cache for the top-level navigation of a standalone app has been observed to
-// skip revalidation entirely. A stale shell means a stale sidebar Logo, not just
-// a stale favicon, because the JS embedding the mark never gets re-fetched.
+// skip revalidation entirely. A stale shell means a stale sidebar Logo and a stale
+// seasonal favicon (both are built by the bundled JS, favicon.ts), because that JS
+// never gets re-fetched; only the static /icon.svg fallback is served by the HTML.
 //
 // The fix does not rely on anything already present in the (possibly stale) HTML
 // page: it fetches a tiny same-origin resource with `cache: 'no-store'`, which

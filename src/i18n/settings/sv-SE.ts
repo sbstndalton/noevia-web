@@ -1,15 +1,6 @@
 import type { SettingsCatalogue } from './en-GB';
 
 export const SV_SE_SETTINGS: SettingsCatalogue = {
-  "appearance.logo": "Logotypfärger",
-  "appearance.logoDesc": "Standardblad, säsongsfärger eller månatliga tillfällen. Sparas på den här enheten; webbplatsikonen ändras inte.",
-  "appearance.logo.default": "Standardblad",
-  "appearance.logo.seasonal": "Säsongsbaserat",
-  "appearance.logo.monthly": "Månadsvis",
-  "appearance.logo.hemisphere": "Årstider",
-  "appearance.logo.calendarDesc": "Använder enhetens lokala datum. Övriga månader använder säsongsfärger.",
-  "appearance.logo.north": "Norra halvklotet",
-  "appearance.logo.south": "Södra halvklotet",
   "appearance.logo.test": "Testa nästa palett",
   "appearance.logo.reset": "Avsluta förhandsvisning",
   "appearance.logo.previewHint": "Endast förhandsvisning. Ditt sparade val ändras inte.",
@@ -19,10 +10,6 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   "appearance.logo.palette.summer": "Sommar",
   "appearance.logo.palette.autumn": "Höst",
   "appearance.logo.palette.winter": "Vinter",
-  "appearance.logo.palette.rose": "Februari · Ros",
-  "appearance.logo.palette.clover": "Mars · Klöver",
-  "appearance.logo.palette.harvest": "Oktober · Skörd",
-  "appearance.logo.palette.festive": "December · Festligt",
 
   'error.panel.title': "Den här panelen kunde inte visas",
   'error.panel.body': "Försök igen eller välj en annan kategori.",

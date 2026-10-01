@@ -1,15 +1,6 @@
 import type { SettingsCatalogue } from './en-GB';
 
 export const NL_NL_SETTINGS: SettingsCatalogue = {
-  "appearance.logo": "Logokleuren",
-  "appearance.logoDesc": "Standaardbladeren, seizoenskleuren of maandelijkse gelegenheden. Opgeslagen op dit apparaat; het favicon blijft ongewijzigd.",
-  "appearance.logo.default": "Standaardbladeren",
-  "appearance.logo.seasonal": "Seizoensgebonden",
-  "appearance.logo.monthly": "Maandelijks",
-  "appearance.logo.hemisphere": "Seizoenen",
-  "appearance.logo.calendarDesc": "Gebruikt de lokale datum van dit apparaat. De overige maanden gebruiken seizoenskleuren.",
-  "appearance.logo.north": "Noordelijk halfrond",
-  "appearance.logo.south": "Zuidelijk halfrond",
   "appearance.logo.test": "Volgend palet testen",
   "appearance.logo.reset": "Voorbeeld beëindigen",
   "appearance.logo.previewHint": "Alleen een voorbeeld. Je opgeslagen keuze blijft hetzelfde.",
@@ -19,10 +10,6 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   "appearance.logo.palette.summer": "Zomer",
   "appearance.logo.palette.autumn": "Herfst",
   "appearance.logo.palette.winter": "Winter",
-  "appearance.logo.palette.rose": "Februari · Roos",
-  "appearance.logo.palette.clover": "Maart · Klaver",
-  "appearance.logo.palette.harvest": "Oktober · Oogst",
-  "appearance.logo.palette.festive": "December · Feestelijk",
 
   'error.panel.title': "Dit paneel kan niet worden weergegeven",
   'error.panel.body': "Probeer het opnieuw of kies een andere categorie.",

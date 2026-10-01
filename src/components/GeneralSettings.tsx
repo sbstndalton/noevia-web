@@ -159,32 +159,21 @@ export function CapabilitiesSettings(): JSX.Element {
   </>;
 }
 
-function LogoChoice({ isAdmin }: { isAdmin: boolean }): JSX.Element {
+// The logo and favicon follow the season automatically (#698). This palette tester (#309) exists
+// only in development builds; production Appearance has no logo controls.
+function LogoPaletteTester(): JSX.Element {
   const t = useT();
-  const [mode, setMode] = useState(() => readPreference('logo'));
   const [preview, setPreview] = useState<LogoPalette | null>(null);
   useEffect(() => () => previewLogo(null), []);
   const reset = () => { setPreview(null); previewLogo(null); };
-  return <>
-    <Row label={t('appearance.logo')} description={t('appearance.logoDesc')}>
-      <Choice name="logo" label={t('appearance.logo')} onChange={() => { setMode(readPreference('logo')); reset(); }} options={[
-        ['default', t('appearance.logo.default')], ['seasonal', t('appearance.logo.seasonal')], ['monthly', t('appearance.logo.monthly')],
-      ]} />
-    </Row>
-    {mode !== 'default' && <Row label={t('appearance.logo.hemisphere')} description={t('appearance.logo.calendarDesc')}>
-      <Choice name="hemisphere" label={t('appearance.logo.hemisphere')} onChange={reset} options={[
-        ['north', t('appearance.logo.north')], ['south', t('appearance.logo.south')],
-      ]} />
-    </Row>}
-    {isAdmin && <div className="logo-preview-controls">
-      <span className="logo-preview-mark"><Logo /></span>
-      <button className="modal-btn secondary" onClick={() => {
-        const next = nextLogoPalette(preview ?? 'default'); setPreview(next); previewLogo(next);
-      }}>{t('appearance.logo.test')}</button>
-      {preview !== null && <button className="modal-btn secondary" onClick={reset}>{t('appearance.logo.reset')}</button>}
-      <span className="route-note" role="status">{preview === null ? t('appearance.logo.previewHint') : t('appearance.logo.previewing', { palette: t(`appearance.logo.palette.${preview}`) })}</span>
-    </div>}
-  </>;
+  return <div className="logo-preview-controls">
+    <span className="logo-preview-mark"><Logo /></span>
+    <button className="modal-btn secondary" onClick={() => {
+      const next = nextLogoPalette(preview ?? 'default'); setPreview(next); previewLogo(next);
+    }}>{t('appearance.logo.test')}</button>
+    {preview !== null && <button className="modal-btn secondary" onClick={reset}>{t('appearance.logo.reset')}</button>}
+    <span className="route-note" role="status">{preview === null ? t('appearance.logo.previewHint') : t('appearance.logo.previewing', { palette: t(`appearance.logo.palette.${preview}`) })}</span>
+  </div>;
 }
 
 export function AppearanceSettings({ isAdmin = false, theme, onTheme, preference, onPreference, appearanceStatus, appearanceError, retryAppearance }: {
@@ -227,7 +216,7 @@ export function AppearanceSettings({ isAdmin = false, theme, onTheme, preference
         <Row label={t('appearance.family')} description={t('appearance.familyDesc')}>
           <FamilyChoice onChange={bump} />
         </Row>
-        <LogoChoice isAdmin={isAdmin} />
+        {import.meta.env.DEV && isAdmin && <LogoPaletteTester />}
       </div>
       <h2>{t('appearance.reading')}</h2>
       <div className="set-rows">

@@ -1,15 +1,6 @@
 import type { SettingsCatalogue } from './en-GB';
 
 export const DE_DE_SETTINGS: SettingsCatalogue = {
-  "appearance.logo": "Logofarben",
-  "appearance.logoDesc": "Standardblätter, saisonale Farben oder monatliche Anlässe. Auf diesem Gerät gespeichert; das Favicon bleibt unverändert.",
-  "appearance.logo.default": "Standardblätter",
-  "appearance.logo.seasonal": "Saisonal",
-  "appearance.logo.monthly": "Monatlich",
-  "appearance.logo.hemisphere": "Jahreszeiten",
-  "appearance.logo.calendarDesc": "Verwendet das lokale Datum dieses Geräts. In den übrigen Monaten werden saisonale Farben verwendet.",
-  "appearance.logo.north": "Nordhalbkugel",
-  "appearance.logo.south": "Südhalbkugel",
   "appearance.logo.test": "Nächste Palette testen",
   "appearance.logo.reset": "Vorschau beenden",
   "appearance.logo.previewHint": "Nur Vorschau. Deine gespeicherte Auswahl bleibt unverändert.",
@@ -19,10 +10,6 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   "appearance.logo.palette.summer": "Sommer",
   "appearance.logo.palette.autumn": "Herbst",
   "appearance.logo.palette.winter": "Winter",
-  "appearance.logo.palette.rose": "Februar · Rose",
-  "appearance.logo.palette.clover": "März · Klee",
-  "appearance.logo.palette.harvest": "Oktober · Ernte",
-  "appearance.logo.palette.festive": "Dezember · Festlich",
 
   'error.panel.title': "Dieser Bereich konnte nicht angezeigt werden",
   'error.panel.body': "Versuche es erneut oder wähle eine andere Kategorie.",

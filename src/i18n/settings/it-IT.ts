@@ -1,15 +1,6 @@
 import type { SettingsCatalogue } from './en-GB';
 
 export const IT_IT_SETTINGS: SettingsCatalogue = {
-  "appearance.logo": "Colori del logo",
-  "appearance.logoDesc": "Foglie predefinite, colori stagionali o ricorrenze mensili. Salvato su questo dispositivo; la favicon resta invariata.",
-  "appearance.logo.default": "Foglie predefinite",
-  "appearance.logo.seasonal": "Stagionale",
-  "appearance.logo.monthly": "Mensile",
-  "appearance.logo.hemisphere": "Stagioni",
-  "appearance.logo.calendarDesc": "Usa la data locale di questo dispositivo. Negli altri mesi vengono usati i colori stagionali.",
-  "appearance.logo.north": "Emisfero settentrionale",
-  "appearance.logo.south": "Emisfero meridionale",
   "appearance.logo.test": "Prova la tavolozza successiva",
   "appearance.logo.reset": "Termina anteprima",
   "appearance.logo.previewHint": "Solo anteprima. La scelta salvata resta invariata.",
@@ -19,10 +10,6 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   "appearance.logo.palette.summer": "Estate",
   "appearance.logo.palette.autumn": "Autunno",
   "appearance.logo.palette.winter": "Inverno",
-  "appearance.logo.palette.rose": "Febbraio · Rosa",
-  "appearance.logo.palette.clover": "Marzo · Trifoglio",
-  "appearance.logo.palette.harvest": "Ottobre · Raccolto",
-  "appearance.logo.palette.festive": "Dicembre · Festivo",
 
   'error.panel.title': "Impossibile mostrare questo pannello",
   'error.panel.body': "Riprova o scegli un’altra categoria di impostazioni.",
