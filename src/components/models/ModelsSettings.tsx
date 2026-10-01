@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ShellIcon } from '../ShellIcon';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, RouteRule } from '../../types';
-import { fetchAutoRoles, setAutoRoles as putAutoRoles, fetchRoutingDefault, putRoutingDefault } from '../../api';
+import { apiFetch, fetchAutoRoles, setAutoRoles as putAutoRoles, fetchRoutingDefault, putRoutingDefault } from '../../api';
+import { gib as formatGib } from './mm';
 import { SegmentedControl } from '../SegmentedControl';
 import { matchesModelUse, modelChoiceLabel } from '../../model-guidance';
 import { isChatGenerationModel } from '../../model-kind';
@@ -117,7 +118,7 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
 
     <div role="tabpanel" aria-label={t(TABS.find(([id]) => id === tab)?.[1] ?? 'mm.tab.yours')}>
       {tab === 'overview' && <OverviewTab models={models} modelsLoaded={modelsLoaded} modelsError={modelsError} onOpen={openModel} onTab={go} />}
-      {tab === 'yours' && <LibraryTab query={query} sort={sort} filter={filter} onConfigure={openModel} onChanged={changed} />}
+      {tab === 'yours' && <><InferenceBudgetSection /><LibraryTab query={query} sort={sort} filter={filter} onConfigure={openModel} onChanged={changed} /></>}
       {tab === 'discover' && <DownloadTab query={query} sort={hfSort} onDownloaded={changed} onSetUp={openModel} />}
       {tab === 'routing' && <RoutingSection models={models} modelsError={modelsError} />}
       {tab === 'projects' && <ProjectRoutingSection models={models} routes={routes} projects={projects} modelsError={modelsError} />}
@@ -299,5 +300,84 @@ function ProjectRoutingSection({ models, routes, projects, modelsError }: {
     </div> : <p className="mm-note">{t('mm.projects.none')}</p>}
     {routes.some((r) => r.task === 'Diary app') && <p className="mm-note">{t('mm.projects.diary')}</p>}
     <p className="route-note">{t('mm.projects.change')} {loaded.length ? t('mm.projects.loadedNow', { models: loaded.join(', ') }) : t('mm.projects.noneLoaded')}</p>
+  </section>;
+}
+
+// #697: the inference memory budget. The engine holds one model at a time, and a model loads only
+// when its estimate fits this budget; each model's estimate is listed against it. Administrators
+// change the figure here (the deployment's INFERENCE_MEMORY_BUDGET_GIB is only its first value).
+type BudgetEstimate = { totalGib: number | null; cacheRamUnbounded?: boolean };
+type BudgetInfo = { budgetGib: number; source: 'admin' | 'deployment'; defaultGib: number; minGib: number; maxGib: number; limited?: boolean;
+  models: { model: string; loaded: boolean; system: boolean; labels: string[]; estimate: BudgetEstimate | null; fits: boolean | null }[] | null; estimateError?: string };
+function InferenceBudgetSection(): JSX.Element | null {
+  const t = useT();
+  const [info, setInfo] = useState<BudgetInfo | null>(null);
+  const [draft, setDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
+  const [hidden, setHidden] = useState(false);
+  const liveRef = useRef(true);
+  useEffect(() => { liveRef.current = true; return () => { liveRef.current = false; }; }, []);
+  const load = useCallback(() => {
+    apiFetch('/api/models/inference-budget').then(async (r) => {
+      if (!liveRef.current) return;
+      // Not the native engine (404) or not an administrator (403): nothing to show.
+      if (r.status === 404 || r.status === 403) { setHidden(true); return; }
+      if (!r.ok) { setError(t('mm.budget.loadError')); return; }
+      const v = await r.json() as BudgetInfo;
+      if (liveRef.current) { setInfo(v); setDraft(String(v.budgetGib)); }
+    }).catch(() => { if (liveRef.current) setError(t('mm.budget.loadError')); });
+  }, [t]);
+  useEffect(() => { load(); }, [load]);
+  useModelsChanged(load);
+  if (hidden) return null;
+  const gib = (n: number) => formatGib(n, { max: 1 });
+  const save = async () => {
+    if (!info) return;
+    const value = Number(draft.replace(',', '.'));
+    if (!Number.isFinite(value) || value < info.minGib || value > info.maxGib || Math.round(value * 10) / 10 !== value) {
+      setError(t('mm.budget.invalid', { min: gib(info.minGib), max: gib(info.maxGib) })); setStatus(''); return;
+    }
+    setBusy(true); setError(''); setStatus('');
+    try {
+      const r = await apiFetch('/api/models/inference-budget', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ budgetGib: value }) });
+      const body = await r.json().catch(() => ({})) as { minGib?: number; maxGib?: number; errorId?: string };
+      if (!r.ok) { setError(body.errorId === 'invalidBudget' ? t('mm.budget.invalid', { min: gib(body.minGib ?? info.minGib), max: gib(body.maxGib ?? info.maxGib) }) : t('mm.saveError')); return; }
+      setStatus(t('mm.budget.saved'));
+      load();
+    } catch { setError(t('mm.saveError')); }
+    finally { setBusy(false); }
+  };
+  const rows = (info?.models || []).filter((m) => !m.system);
+  const verdict = (m: (typeof rows)[number]) => !m.estimate ? t('mm.budget.unknown') : m.estimate.cacheRamUnbounded ? t('mm.budget.unbounded') : m.fits ? t('mm.budget.fits') : t('mm.budget.over');
+  return <section className="mm-panel" aria-labelledby="mm-budget-title">
+    <div className="mm-panel-head"><h3 id="mm-budget-title">{t('mm.budget.title')}</h3></div>
+    <p className="mm-note">{t('mm.budget.intro')}</p>
+    {!info && !error && <p className="mm-note" role="status">{t('mm.loading')}</p>}
+    {info && <>
+      <div className="mm-form">
+        <label>{t('mm.budget.label')}
+          <input type="number" inputMode="decimal" min={info.minGib} max={info.maxGib} step={0.1} value={draft} disabled={busy}
+            onChange={(e) => { setDraft(e.target.value); setStatus(''); }} />
+        </label>
+        <p className="mm-note">{t('mm.budget.range', { min: gib(info.minGib), max: gib(info.maxGib) })} {info.source === 'admin' ? t('mm.budget.sourceAdmin', { gib: gib(info.defaultGib) }) : t('mm.budget.sourceDeployment')}</p>
+        {info.limited && <p className="mm-note warn">{t('mm.budget.limited', { gib: gib(info.budgetGib) })}</p>}
+      </div>
+      <div className="mm-actions">
+        <button className="modal-btn primary" disabled={busy || draft === String(info.budgetGib)} onClick={() => void save()}>{busy ? t('mm.saving') : t('mm.budget.save')}</button>
+        {status && <span role="status" className="mm-note">{status}</span>}
+      </div>
+      {info.models === null ? <p className="mm-note">{t('mm.budget.estimatesUnavailable')}</p>
+        : rows.length ? <div className="mm-table-wrap"><table className="mm-table">
+          <thead><tr><th scope="col">{t('mm.budget.colModel')}</th><th scope="col">{t('mm.budget.colEstimate')}</th><th scope="col">{t('mm.budget.colVerdict')}</th></tr></thead>
+          <tbody>{rows.map((m) => <tr key={m.model}>
+            <td data-label={t('mm.budget.colModel')}>{m.loaded ? t('mm.budget.loaded', { model: m.model }) : m.model}</td>
+            <td data-label={t('mm.budget.colEstimate')}>{m.estimate?.totalGib != null ? t('mm.budget.of', { gib: gib(m.estimate.totalGib), budget: gib(info.budgetGib) }) : '—'}</td>
+            <td data-label={t('mm.budget.colVerdict')}>{verdict(m)}</td>
+          </tr>)}</tbody>
+        </table></div> : <p className="mm-note">{t('mm.budget.none')}</p>}
+    </>}
+    {error && <p role="alert" className="modal-err">{error}</p>}
   </section>;
 }

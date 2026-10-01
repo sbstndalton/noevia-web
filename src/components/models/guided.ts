@@ -9,7 +9,10 @@ export type EstimateInputs = {
   model: string; budgetGib: number | null; chat: boolean; sizeable: boolean; arch: string; nativeCtx: number | null;
   modelGib: number; pinnedGib: number; reserveGib: number; safety: number; moe: boolean;
   rows: { ctx: number; kvQ8Gib: number }[]; current: { ctx: number | null; kv: string | null };
+  /** #697: the preset's prompt cache (cache-ram) in GiB, outside the 5% margin; null when unbounded. */
+  cacheRamGib?: number | null;
 };
+const cacheOf = (inputs: EstimateInputs) => inputs.cacheRamGib ?? 0;
 export type Hardware = { systemGB: number | null; gpus: { name: string; capacityGB: number | null; sharedGB: number | null }[] };
 export type Verdict = 'fits' | 'tight' | 'no';
 
@@ -48,7 +51,7 @@ export function estimateGib(inputs: EstimateInputs, ctx: number, kv: string): { 
   const per = KV_BYTES[kv];
   if (!row || !per) return null;
   const kvGib = row.kvQ8Gib * (per / KV_BYTES.q8_0);
-  return { ctx: row.ctx, kv, kvGib: round2(kvGib), totalGib: round2((inputs.modelGib + kvGib + inputs.pinnedGib + inputs.reserveGib) * inputs.safety) };
+  return { ctx: row.ctx, kv, kvGib: round2(kvGib), totalGib: round2((inputs.modelGib + kvGib + inputs.pinnedGib + inputs.reserveGib) * inputs.safety + cacheOf(inputs)) };
 }
 
 export function verdictFor(totalGib: number, budgetGib: number): Verdict {
@@ -89,7 +92,7 @@ export function recommend(inputs: EstimateInputs, budgetGib: number, wantCtx = 0
         text: `Use ${e.ctx.toLocaleString('en-US')} tokens with ${kv} KV cache (about ${e.totalGib} GiB of ${budgetGib} GiB${verdict === 'tight' ? ', little headroom' : ''}).` };
     }
   }
-  const floor = round2((inputs.modelGib + inputs.pinnedGib + inputs.reserveGib) * inputs.safety);
+  const floor = round2((inputs.modelGib + inputs.pinnedGib + inputs.reserveGib) * inputs.safety + cacheOf(inputs));
   return { kind: 'smaller', floorGib: floor, moe: inputs.moe, text: `This model needs about ${floor} GiB before any context, and the smallest context does not fit ${budgetGib} GiB even with Q5 KV cache. Choose a smaller quantization${inputs.moe ? ' or configure CPU expert offload in Advanced' : ''}.` };
 }
 

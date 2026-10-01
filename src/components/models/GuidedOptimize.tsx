@@ -101,7 +101,7 @@ function FitStep({ model }: { model: string }): JSX.Element {
     {est && budget && verdict && <div className="mm-fit" data-verdict={verdict} role="status">
       <strong className="mm-fit-verdict">{t(VERDICT[verdict])}</strong>
       <span>{t('mm.fit.aboutBefore')}<strong>{g(est.totalGib)}</strong>{t('mm.fit.aboutAfter', { budget: g(budget.gib), source: t(BUDGET_SOURCE[budget.kind], { gpu: budget.gpu ?? '' }) })}</span>
-      <small>{[t('mm.fit.model', { gib: g(inputs!.modelGib) }), t('mm.fit.kv', { gib: g(est.kvGib) }), ...(inputs!.pinnedGib ? [t('mm.fit.projector', { gib: g(inputs!.pinnedGib) })] : []), t('mm.fit.reserve', { gib: g(inputs!.reserveGib) })].join(' · ')}{t('mm.fit.margin')}</small>
+      <small>{[t('mm.fit.model', { gib: g(inputs!.modelGib) }), t('mm.fit.kv', { gib: g(est.kvGib) }), ...(inputs!.pinnedGib ? [t('mm.fit.projector', { gib: g(inputs!.pinnedGib) })] : []), t('mm.fit.reserve', { gib: g(inputs!.reserveGib) }), ...(inputs!.cacheRamGib ? [t('mm.fit.cacheRam', { gib: g(inputs!.cacheRamGib) })] : [])].join(' · ')}{t('mm.fit.margin')}</small>
     </div>}
     {inputs && !budget && <p className="mm-note" role="status">{t('mm.fit.noMemory')}</p>}
     {belowKvFloor(kv) && <p className="mm-note mm-warn" role="note">{t('mm.fit.belowFloor', { floor: KV_FLOOR })}</p>}
