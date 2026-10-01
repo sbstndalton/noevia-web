@@ -507,7 +507,7 @@ export const FR_FR: Catalogue = {
   'sharing.public': "HTTPS public",
   'sharing.staysOff': "Le partage reste désactivé.",
   'sharing.reason.notConfigured': "L’opérateur n’a pas configuré de point d’accès pour le partage de fichiers.",
-  'sharing.ineligible': "Nécessite le Journal activé avec un stockage local sur le serveur. Les dossiers distants et locaux au navigateur ne sont pas partagés.",
+  'sharing.ineligible': "Le partage de fichiers ne fonctionne que lorsque votre Journal est activé et stocké sur le serveur noevia. Si votre Journal se trouve dans votre propre espace de stockage, ouvrez plutôt les fichiers sur vos appareils avec l'application de ce stockage.",
   'sharing.access': "Accès",
   'sharing.accessLabel': "Accès au partage du Journal",
   'sharing.network': "Ce réseau (contrôlé par l’opérateur)",

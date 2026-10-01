@@ -518,7 +518,7 @@ export const EN_GB = {
   'sharing.public': "Public HTTPS",
   'sharing.staysOff': "Sharing stays off.",
   'sharing.reason.notConfigured': "The operator has not configured a file-sharing endpoint.",
-  'sharing.ineligible': "Requires enabled Diary with server-held local storage. Remote and browser-local folders are not shared.",
+  'sharing.ineligible': "File sharing only works when your Diary is turned on and stored on the noevia server. If your Diary lives in your own file storage, open the files on your devices with that storage's own app instead.",
   'sharing.access': "Access",
   'sharing.accessLabel': "Diary sharing access",
   'sharing.network': "This network (operator controlled)",

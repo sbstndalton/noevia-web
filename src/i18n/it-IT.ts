@@ -507,7 +507,7 @@ export const IT_IT: Catalogue = {
   'sharing.public': "HTTPS pubblico",
   'sharing.staysOff': "La condivisione resta disattivata.",
   'sharing.reason.notConfigured': "L’operatore non ha configurato un punto di accesso per la condivisione dei file.",
-  'sharing.ineligible': "Richiede il Diario attivo con archiviazione locale sul server. Le cartelle remote e quelle locali del browser non vengono condivise.",
+  'sharing.ineligible': "La condivisione file funziona solo quando il Diario è attivo e archiviato sul server noevia. Se il tuo Diario si trova nel tuo archivio di file, apri invece i file sui tuoi dispositivi con l'app di quell'archivio.",
   'sharing.access': "Accesso",
   'sharing.accessLabel': "Accesso alla condivisione del Diario",
   'sharing.network': "Questa rete (controllata dall’operatore)",

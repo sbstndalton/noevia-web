@@ -12,6 +12,7 @@ export default function AppPasswords({ onOpenSection }: { onOpenSection?: (id: s
   const [secret, setSecret] = useState<{ id: string; password: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [canConnect, setCanConnect] = useState(false);
   const refresh = async () => {
     const r = await apiFetch('/api/profile/app-passwords');
     if (!r.ok) throw Error(t('appPasswords.loadError'));
@@ -19,6 +20,16 @@ export default function AppPasswords({ onOpenSection }: { onOpenSection?: (id: s
     if (!Array.isArray(body?.appPasswords)) throw Error(t('appPasswords.readError'));
     setItems(body.appPasswords as Credential[]);
   };
+  // The hint points at the Connect a device button, which DiarySharing shows only when sharing is available and
+  // eligible. Until that is known (loading or failed) show nothing rather than a link to a dead end.
+  useEffect(() => {
+    let live = true;
+    void apiFetch('/api/profile/sharing').then(async r => {
+      const v = r.ok ? await r.json().catch(() => null) as { available?: unknown; eligible?: unknown } | null : null;
+      if (live) setCanConnect(v?.available === true && v?.eligible === true);
+    }).catch(() => { if (live) setCanConnect(false); });
+    return () => { live = false; };
+  }, []);
   useEffect(() => { void refresh().catch(e => setError(e.message)); }, []);
   const create = async () => {
     setBusy(true); setError('');
@@ -44,7 +55,7 @@ export default function AppPasswords({ onOpenSection }: { onOpenSection?: (id: s
   return <section aria-label={t('appPasswords.title')} style={{ marginTop: 24 }}>
     <div className="rail-label">{t('appPasswords.title')}</div>
     <p className="route-note">{t('appPasswords.intro')}</p>
-    {onOpenSection && <div style={{ marginBottom: 'var(--space-3, 12px)' }}><p className="route-note">{t('appPasswords.connectHint')}</p><button type="button" className="popup-tab" style={{ marginTop: 'var(--space-2, 8px)' }} onClick={() => onOpenSection('diary')}>{t('appPasswords.connectOpen')}</button></div>}
+    {onOpenSection && canConnect && <div style={{ marginBottom: 'var(--space-3, 12px)' }}><p className="route-note">{t('appPasswords.connectHint')}</p><button type="button" className="popup-tab" style={{ marginTop: 'var(--space-2, 8px)' }} onClick={() => onOpenSection('diary')}>{t('appPasswords.connectOpen')}</button></div>}
     <div className="card-list">
       {items.map(item => <div className="model-row" key={item.id}>
         <div className="model-name-group">

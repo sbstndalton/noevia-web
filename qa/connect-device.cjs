@@ -68,6 +68,20 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   await page.getByRole('region',{name:'Connect a device'}).getByRole('button',{name:'Cancel',exact:true}).click();
   assert.equal(await page.evaluate(()=>document.activeElement?.textContent),'Connect a device','focus returns to the opener');
   // Security keeps the revoke list and links to the flow.
+  // #735: the Security hint only shows when sharing is available AND eligible; loading, failing and ineligible show nothing.
+  const hint=()=>page.getByRole('region',{name:'App passwords'}).getByRole('button',{name:'Open Diary & storage',exact:true});
+  const openSecurity=async()=>{await page.getByRole('button',{name:'Diary & storage',exact:true}).click();await page.getByRole('button',{name:'Security and login',exact:true}).click();await page.getByRole('region',{name:'App passwords'}).getByRole('button',{name:'Revoke Synthetic laptop',exact:true}).waitFor();};
+  for(const [label,fulfil] of [['ineligible (remote storage)',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({...r._body,available:true,eligible:false})})],['failing',r=>r.fulfill({status:500,contentType:'application/json',body:'{}'})]]){
+   const real=await api(page,'/api/profile/sharing');
+   await page.route('**/api/profile/sharing',route=>route.request().method()==='GET'?fulfil({fulfill:o=>route.fulfill(o),_body:real.body}):route.continue());
+   await openSecurity();
+   await page.waitForTimeout(300);
+   assert.equal(await hint().count(),0,'no hint when '+label);
+   assert.equal(await page.getByText(/connect a device in Diary/).count(),0,'no hint text when '+label);
+   await page.unroute('**/api/profile/sharing');
+  }
+  await openSecurity();
+  await hint().waitFor();
   await page.getByRole('button',{name:'Security and login',exact:true}).click();
   await page.getByRole('region',{name:'App passwords'}).getByRole('button',{name:'Revoke Synthetic laptop',exact:true}).waitFor();
   await page.getByRole('button',{name:'Open Diary & storage',exact:true}).click();
