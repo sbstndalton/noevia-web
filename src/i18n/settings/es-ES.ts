@@ -38,6 +38,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'features.unavailable.browserChromium': "Requiere un navegador Chromium instalado para Playwright en este servidor.",
   'features.unavailable.notUsed': "Aún no se usa: ninguna tarea ejecuta todavía el paso de plan del Planificador.",
   'features.unavailable.trustProxy': "Requiere TRUST_PROXY activado para que los límites de inicio de sesión distingan a los clientes.",
+  'features.unavailable.codeSandbox': "Necesita el modo Code ejecutándose en el entorno aislado de código (CODE_HARNESS_ENDPOINT).",
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Conecta un servicio de decisión privado con COWORK_DECISION_URL y reinicia Noevia.",
   'features.unavailable.decisionSetup': "Configura el servicio de decisión de abajo antes de activar este experimento.",
@@ -73,6 +74,10 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'features.item.constrainedPlanDecoding.description': "Pide al motor local llama.cpp que restrinja el artefacto del plan a su esquema JSON. Se suma a la validación posterior y vuelve a la generación sin restricciones para los modelos de razonamiento o cuando el motor lo rechaza.",
   'features.item.executorGuard.label': "Guardia del ejecutor (modo Code)",
   'features.item.executorGuard.description': "Comprueba cada llamada a herramienta del agente de programación con su esquema antes de que nada más la vea. Una llamada mal formada se rechaza con el motivo, para que el agente pueda corregirla; tras tres, la tarea se detiene como bloqueada. Solo añade rechazos: toda escritura sigue pasando por la tarjeta de aprobación.",
+  'features.item.codePipeline.label': "Canalización del planificador (modo Code)",
+  'features.item.codePipeline.description': "Ofrece una preparación con el planificador para las tareas de Code: el planificador escribe un plan, el agente de programación lo ejecuta, las pruebas del operador se ejecutan en un verificador aparte, el planificador revisa el cambio (como máximo dos rondas de cambios) y el auditor informa de las pruebas que hay. Toda escritura sigue pasando por la tarjeta de aprobación, y tú aceptas el resultado.",
+  'features.item.codeMerge.label': "Fusionar cambios revisados (modo Code)",
+  'features.item.codeMerge.description': "Al aceptar una tarea de la canalización del planificador, avanza (fast-forward) la rama de la que partió hasta el commit revisado. No se fusiona nada si esa rama se ha movido o si la rama de la tarea cambió después de la revisión. Desactivado, aceptar registra el cambio sin fusionarlo.",
   'features.item.kiwix.label': "Wikipedia sin conexión",
   'features.item.kiwix.description': "Una herramienta de consulta de solo lectura respaldada por un kiwix-serve interno.",
   'features.item.chatgptOAuth.label': "Iniciar sesión con ChatGPT",

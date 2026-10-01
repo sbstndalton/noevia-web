@@ -38,6 +38,7 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'features.unavailable.browserChromium': "Richiede un browser Chromium installato per Playwright su questo server.",
   'features.unavailable.notUsed': "Non ancora utilizzato: nessuna attività esegue ancora il passo di piano del Pianificatore.",
   'features.unavailable.trustProxy': "Richiede TRUST_PROXY attivo così che i limiti di accesso distinguano i client.",
+  'features.unavailable.codeSandbox': "Richiede la modalità Code in esecuzione nella sandbox del codice (CODE_HARNESS_ENDPOINT).",
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Collega un servizio di decisione privato con COWORK_DECISION_URL, poi riavvia Noevia.",
   'features.unavailable.decisionSetup': "Configura il servizio di decisione qui sotto prima di attivare questo esperimento.",
@@ -73,6 +74,10 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'features.item.constrainedPlanDecoding.description': "Chiede al motore llama.cpp locale di vincolare l’artefatto del piano al suo schema JSON. Si aggiunge alla validazione a posteriori e torna alla generazione non vincolata per i modelli di ragionamento o quando il motore la rifiuta.",
   'features.item.executorGuard.label': "Guardia dell’esecutore (modalità Code)",
   'features.item.executorGuard.description': "Verifica ogni chiamata a strumento dell’agente di programmazione rispetto al suo schema prima che altro la veda. Una chiamata malformata viene rifiutata con il motivo, così l’agente può correggerla; dopo tre, l’attività si ferma come bloccata. Aggiunge solo rifiuti: ogni scrittura passa comunque dalla scheda di approvazione.",
+  'features.item.codePipeline.label': "Pipeline del pianificatore (modalità Code)",
+  'features.item.codePipeline.description': "Offre una preparazione con il pianificatore per le attività Code: il pianificatore scrive un piano, l’agente di programmazione lo esegue, i test dell’operatore girano in un verificatore separato, il pianificatore revisiona la modifica (al massimo due giri di modifiche) e l’auditor riporta quali prove ci sono. Ogni scrittura passa comunque dalla scheda di approvazione, e il risultato lo accetti tu.",
+  'features.item.codeMerge.label': "Unisci le modifiche revisionate (modalità Code)",
+  'features.item.codeMerge.description': "Quando accetti un’attività della pipeline del pianificatore, il ramo di partenza avanza in fast-forward fino al commit revisionato. Non viene unito nulla se quel ramo si è spostato o se il ramo dell’attività è cambiato dopo la revisione. Disattivato, accettare registra la modifica senza unirla.",
   'features.item.kiwix.label': "Wikipedia offline",
   'features.item.kiwix.description': "Uno strumento di consultazione di sola lettura basato su un kiwix-serve interno.",
   'features.item.chatgptOAuth.label': "Accedi con ChatGPT",

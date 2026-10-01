@@ -38,6 +38,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'features.unavailable.browserChromium': "Erfordert einen für Playwright installierten Chromium-Browser auf diesem Server.",
   'features.unavailable.notUsed': "Noch nicht in Gebrauch: Keine Aufgabe führt bisher den Planungsschritt des Planers aus.",
   'features.unavailable.trustProxy': "Erfordert eingeschaltetes TRUST_PROXY, damit Anmeldelimits Clients unterscheiden können.",
+  'features.unavailable.codeSandbox': "Erfordert den Code-Modus in der Code-Sandbox (CODE_HARNESS_ENDPOINT).",
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Verbinde einen privaten Entscheidungsdienst über COWORK_DECISION_URL und starte Noevia dann neu.",
   'features.unavailable.decisionSetup': "Richte den Entscheidungsdienst unten ein, bevor du dieses Experiment aktivierst.",
@@ -73,6 +74,10 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'features.item.constrainedPlanDecoding.description': "Weist die lokale llama.cpp-Engine an, das Plan-Artefakt auf sein JSON-Schema zu beschränken. Ergänzt die nachträgliche Validierung und fällt bei Reasoning-Modellen oder wenn die Engine es ablehnt auf uneingeschränkte Erzeugung zurück.",
   'features.item.executorGuard.label': "Executor-Wächter (Code-Modus)",
   'features.item.executorGuard.description': "Prüft jeden Werkzeugaufruf des Coding-Agenten gegen sein Schema, bevor etwas anderes ihn sieht. Ein fehlerhafter Aufruf wird mit Begründung abgelehnt, damit der Agent ihn korrigieren kann; nach drei solchen Aufrufen stoppt die Aufgabe als blockiert. Er fügt nur Ablehnungen hinzu: Jeder Schreibvorgang läuft weiterhin über die Freigabekarte.",
+  'features.item.codePipeline.label': "Planer-Pipeline (Code-Modus)",
+  'features.item.codePipeline.description': "Bietet für Code-Aufgaben eine Planer-Vorbereitung an: Der Planer schreibt einen Plan, der Coding-Agent führt ihn aus, die Tests des Betreibers laufen in einem separaten Prüfer, der Planer begutachtet die Änderung (höchstens zwei Änderungsrunden) und der Auditor berichtet, welche Belege es gibt. Jeder Schreibvorgang läuft weiterhin über die Freigabekarte, und du nimmst das Ergebnis selbst an.",
+  'features.item.codeMerge.label': "Geprüfte Änderungen zusammenführen (Code-Modus)",
+  'features.item.codeMerge.description': "Wenn du eine Aufgabe der Planer-Pipeline annimmst, wird der Ausgangszweig per Fast-Forward auf den begutachteten Commit gesetzt. Nichts wird zusammengeführt, wenn sich dieser Zweig bewegt hat oder der Aufgabenzweig nach der Begutachtung geändert wurde. Ausgeschaltet hält das Annehmen die Änderung fest, ohne sie zusammenzuführen.",
   'features.item.kiwix.label': "Offline-Wikipedia",
   'features.item.kiwix.description': "Ein schreibgeschütztes Nachschlagewerkzeug auf Basis eines internen kiwix-serve.",
   'features.item.chatgptOAuth.label': "Mit ChatGPT anmelden",

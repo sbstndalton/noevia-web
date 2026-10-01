@@ -38,6 +38,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'features.unavailable.browserChromium': "Krever en Chromium-nettleser installert for Playwright på denne serveren.",
   'features.unavailable.notUsed': "Ikke i bruk ennå: ingen oppgave kjører Planleggerens plantrinn ennå.",
   'features.unavailable.trustProxy': "Krever at TRUST_PROXY er slått på, slik at påloggingsgrenser kan skille klienter fra hverandre.",
+  'features.unavailable.codeSandbox': "Krever Code-modus kjørende i kodesandkassen (CODE_HARNESS_ENDPOINT).",
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Koble til en privat beslutningstjeneste med COWORK_DECISION_URL, og start Noevia på nytt.",
   'features.unavailable.decisionSetup': "Sett opp beslutningstjenesten nedenfor før du slår på dette eksperimentet.",
@@ -73,6 +74,10 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'features.item.constrainedPlanDecoding.description': "Ber den lokale llama.cpp-motoren om å begrense plan-artefaktet til JSON-skjemaet sitt. Kommer i tillegg til validering i ettertid og faller tilbake til ubegrenset generering for resonneringsmodeller eller når motoren avviser det.",
   'features.item.executorGuard.label': "Utførervakt (Code-modus)",
   'features.item.executorGuard.description': "Kontrollerer hvert verktøykall fra kodeagenten mot skjemaet før noe annet ser det. Et feilformet kall avvises med begrunnelse, slik at agenten kan rette det; etter tre stopper oppgaven som blokkert. Den legger bare til avvisninger: hver skriving går fortsatt gjennom godkjenningskortet.",
+  'features.item.codePipeline.label': "Planleggerløp (Code-modus)",
+  'features.item.codePipeline.description': "Tilbyr en planleggerforberedelse for Code-oppgaver: Planleggeren skriver en plan, kodeagenten gjennomfører den, operatørens tester kjøres i en egen verifiserer, Planleggeren gjennomgår endringen (høyst to runder med endringer) og Revisoren rapporterer hvilke bevis som finnes. Hver skriving går fortsatt gjennom godkjenningskortet, og du godtar resultatet selv.",
+  'features.item.codeMerge.label': "Slå sammen gjennomgåtte endringer (Code-modus)",
+  'features.item.codeMerge.description': "Når du godtar en oppgave fra planleggerløpet, spoles grenen den startet fra fram til den gjennomgåtte commiten. Ingenting slås sammen hvis den grenen har flyttet seg eller oppgavegrenen ble endret etter gjennomgangen. Avslått registrerer godtakelse endringen uten å slå den sammen.",
   'features.item.kiwix.label': "Wikipedia frakoblet",
   'features.item.kiwix.description': "Et skrivebeskyttet oppslagsverktøy basert på en intern kiwix-serve.",
   'features.item.chatgptOAuth.label': "Logg inn med ChatGPT",

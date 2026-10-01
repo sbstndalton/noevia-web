@@ -38,6 +38,7 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'features.unavailable.browserChromium': "Requer um navegador Chromium instalado para o Playwright neste servidor.",
   'features.unavailable.notUsed': "Ainda não usado: nenhuma tarefa executa ainda a etapa de plano do Planejador.",
   'features.unavailable.trustProxy': "Requer TRUST_PROXY ativado para que os limites de login distingam os clientes.",
+  'features.unavailable.codeSandbox': "Precisa do modo Code rodando no sandbox de código (CODE_HARNESS_ENDPOINT).",
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Conecte um serviço de decisão privado com COWORK_DECISION_URL e reinicie o Noevia.",
   'features.unavailable.decisionSetup': "Configure o serviço de decisão abaixo antes de ativar este experimento.",
@@ -73,6 +74,10 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'features.item.constrainedPlanDecoding.description': "Pede ao mecanismo local llama.cpp que restrinja o artefato do plano ao seu esquema JSON. Soma-se à validação posterior e volta à geração sem restrições para modelos de raciocínio ou quando o mecanismo a rejeita.",
   'features.item.executorGuard.label': "Guarda do executor (modo Code)",
   'features.item.executorGuard.description': "Verifica cada chamada de ferramenta do agente de programação contra o seu esquema antes que qualquer outra coisa a veja. Uma chamada malformada é recusada com o motivo, para que o agente possa corrigi-la; após três, a tarefa para como bloqueada. Só acrescenta recusas: toda escrita continua passando pelo cartão de aprovação.",
+  'features.item.codePipeline.label': "Pipeline do planejador (modo Code)",
+  'features.item.codePipeline.description': "Oferece uma preparação com o planejador para tarefas do Code: o planejador escreve um plano, o agente de programação o executa, os testes do operador rodam em um verificador separado, o planejador revisa a mudança (no máximo duas rodadas de alterações) e o auditor informa quais evidências existem. Toda escrita continua passando pelo cartão de aprovação, e você mesmo aceita o resultado.",
+  'features.item.codeMerge.label': "Mesclar mudanças revisadas (modo Code)",
+  'features.item.codeMerge.description': "Ao aceitar uma tarefa do pipeline do planejador, o branch de origem avança (fast-forward) até o commit revisado. Nada é mesclado se esse branch tiver mudado ou se o branch da tarefa tiver mudado após a revisão. Desligado, aceitar registra a mudança sem mesclá-la.",
   'features.item.kiwix.label': "Wikipédia offline",
   'features.item.kiwix.description': "Uma ferramenta de consulta somente leitura apoiada por um kiwix-serve interno.",
   'features.item.chatgptOAuth.label': "Entrar com o ChatGPT",

@@ -38,6 +38,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'features.unavailable.browserChromium': "Vereist een Chromium-browser die voor Playwright op deze server is geïnstalleerd.",
   'features.unavailable.notUsed': "Nog niet in gebruik: geen taak voert de planstap van de Planner al uit.",
   'features.unavailable.trustProxy': "Vereist dat TRUST_PROXY aan staat, zodat inloglimieten clients kunnen onderscheiden.",
+  'features.unavailable.codeSandbox': "Vereist Code-modus in de code-sandbox (CODE_HARNESS_ENDPOINT).",
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Verbind een privé-beslissingsservice via COWORK_DECISION_URL en start Noevia daarna opnieuw.",
   'features.unavailable.decisionSetup': "Stel de beslissingsservice hieronder in voordat je dit experiment inschakelt.",
@@ -73,6 +74,10 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'features.item.constrainedPlanDecoding.description': "Vraagt de lokale llama.cpp-engine het plan-artefact te beperken tot het JSON-schema. Komt bovenop de validatie achteraf en valt terug op onbeperkte generatie voor redeneermodellen of wanneer de engine het weigert.",
   'features.item.executorGuard.label': "Uitvoerderbewaking (Code-modus)",
   'features.item.executorGuard.description': "Controleert elke toolaanroep van de code-agent tegen het schema voordat iets anders hem ziet. Een misvormde aanroep wordt met de reden geweigerd, zodat de agent hem kan corrigeren; na drie stopt de taak als geblokkeerd. Voegt alleen weigeringen toe: elke schrijfactie gaat nog steeds via de goedkeuringskaart.",
+  'features.item.codePipeline.label': "Plannerpijplijn (Code-modus)",
+  'features.item.codePipeline.description': "Biedt een Planner-voorbereiding voor Code-taken: de Planner schrijft een plan, de code-agent voert het uit, de tests van de beheerder draaien in een aparte verifier, de Planner beoordeelt de wijziging (hoogstens twee rondes wijzigingen) en de Auditor meldt welk bewijs er is. Elke schrijfactie gaat nog steeds via de goedkeuringskaart, en je accepteert het resultaat zelf.",
+  'features.item.codeMerge.label': "Beoordeelde wijzigingen samenvoegen (Code-modus)",
+  'features.item.codeMerge.description': "Als je een taak uit de plannerpijplijn accepteert, wordt de branch waar die van uitging met een fast-forward naar de beoordeelde commit gezet. Er wordt niets samengevoegd als die branch is verschoven of de taakbranch na de beoordeling is gewijzigd. Uit legt accepteren de wijziging vast zonder samen te voegen.",
   'features.item.kiwix.label': "Offline Wikipedia",
   'features.item.kiwix.description': "Een alleen-lezen opzoekhulpmiddel op basis van een interne kiwix-serve.",
   'features.item.chatgptOAuth.label': "Inloggen met ChatGPT",

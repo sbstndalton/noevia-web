@@ -38,6 +38,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'features.unavailable.browserChromium': "Kräver en Chromium-webbläsare installerad för Playwright på den här servern.",
   'features.unavailable.notUsed': "Används inte ännu: ingen uppgift kör Planerarens planeringssteg än.",
   'features.unavailable.trustProxy': "Kräver att TRUST_PROXY är på så att inloggningsgränser kan skilja klienter åt.",
+  'features.unavailable.codeSandbox': "Kräver Code-läge i kodsandlådan (CODE_HARNESS_ENDPOINT).",
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Anslut en privat beslutstjänst med COWORK_DECISION_URL och starta sedan om Noevia.",
   'features.unavailable.decisionSetup': "Ställ in beslutstjänsten nedan innan du aktiverar det här experimentet.",
@@ -73,6 +74,10 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'features.item.constrainedPlanDecoding.description': "Ber den lokala llama.cpp-motorn att begränsa planartefakten till sitt JSON-schema. Kommer utöver validering i efterhand och faller tillbaka på obegränsad generering för resonemangsmodeller eller när motorn avvisar det.",
   'features.item.executorGuard.label': "Utförarvakt (Code-läge)",
   'features.item.executorGuard.description': "Kontrollerar varje verktygsanrop från kodagenten mot dess schema innan något annat ser det. Ett felformat anrop avvisas med orsaken, så att agenten kan rätta det; efter tre stoppas uppgiften som blockerad. Den lägger bara till avvisningar: varje skrivning går fortfarande via godkännandekortet.",
+  'features.item.codePipeline.label': "Planerarflöde (Code-läge)",
+  'features.item.codePipeline.description': "Erbjuder en planerarförberedelse för Code-uppgifter: Planeraren skriver en plan, kodagenten genomför den, operatörens tester körs i en separat verifierare, Planeraren granskar ändringen (högst två omgångar ändringar) och Revisorn rapporterar vilka belägg som finns. Varje skrivning går fortfarande via godkännandekortet, och du godkänner resultatet själv.",
+  'features.item.codeMerge.label': "Slå ihop granskade ändringar (Code-läge)",
+  'features.item.codeMerge.description': "När du godkänner en uppgift från planerarflödet spolas grenen den utgick från fram till den granskade committen. Inget slås ihop om den grenen har flyttats eller uppgiftsgrenen ändrats efter granskningen. Avstängt registrerar ett godkännande ändringen utan att slå ihop den.",
   'features.item.kiwix.label': "Wikipedia offline",
   'features.item.kiwix.description': "Ett skrivskyddat uppslagsverktyg som bygger på en intern kiwix-serve.",
   'features.item.chatgptOAuth.label': "Logga in med ChatGPT",

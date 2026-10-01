@@ -38,6 +38,7 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'features.unavailable.browserChromium': "Nécessite un navigateur Chromium installé pour Playwright sur ce serveur.",
   'features.unavailable.notUsed': "Pas encore utilisé : aucune tâche n’exécute encore l’étape de plan du Planificateur.",
   'features.unavailable.trustProxy': "Nécessite TRUST_PROXY activé pour que les limites de connexion distinguent les clients.",
+  'features.unavailable.codeSandbox': "Nécessite le mode Code dans le bac à sable de code (CODE_HARNESS_ENDPOINT).",
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Connectez un service de décision privé avec COWORK_DECISION_URL, puis redémarrez Noevia.",
   'features.unavailable.decisionSetup': "Configurez le service de décision ci-dessous avant d’activer cette expérience.",
@@ -73,6 +74,10 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'features.item.constrainedPlanDecoding.description': "Demande au moteur llama.cpp local de contraindre l’artefact de plan à son schéma JSON. S’ajoute à la validation a posteriori et revient à une génération sans contrainte pour les modèles de raisonnement ou lorsque le moteur la refuse.",
   'features.item.executorGuard.label': "Garde de l’exécuteur (mode Code)",
   'features.item.executorGuard.description': "Vérifie chaque appel d’outil de l’agent de code par rapport à son schéma avant que quoi que ce soit d’autre ne le voie. Un appel mal formé est refusé avec la raison, pour que l’agent puisse le corriger ; après trois, la tâche s’arrête comme bloquée. Il ne fait qu’ajouter des refus : chaque écriture passe toujours par la carte d’approbation.",
+  'features.item.codePipeline.label': "Pipeline du planificateur (mode Code)",
+  'features.item.codePipeline.description': "Propose une préparation par le planificateur pour les tâches Code : le planificateur rédige un plan, l’agent de code l’exécute, les tests de l’opérateur tournent dans un vérificateur séparé, le planificateur relit la modification (au plus deux tours de corrections) et l’auditeur indique quelles preuves existent. Chaque écriture passe toujours par la carte d’approbation, et vous acceptez vous-même le résultat.",
+  'features.item.codeMerge.label': "Fusionner les modifications relues (mode Code)",
+  'features.item.codeMerge.description': "Quand vous acceptez une tâche du pipeline du planificateur, la branche de départ avance en fast-forward jusqu’au commit relu. Rien n’est fusionné si cette branche a bougé ou si la branche de la tâche a changé après la relecture. Désactivé, accepter enregistre la modification sans la fusionner.",
   'features.item.kiwix.label': "Wikipédia hors ligne",
   'features.item.kiwix.description': "Un outil de consultation en lecture seule reposant sur un kiwix-serve interne.",
   'features.item.chatgptOAuth.label': "Se connecter avec ChatGPT",
