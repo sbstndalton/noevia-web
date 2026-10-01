@@ -1078,5 +1078,7 @@ export const NL_NL: Catalogue = {
   'projects.view.reason.ocrOmittedPages': "Het OCR-antwoord miste pagina’s; vernieuw om het opnieuw te proberen.",
   'projects.view.reason.noOcrText': "OCR vond geen leesbare tekst; probeer een duidelijkere scan of een ontgrendeld origineel.",
   'projects.view.reason.noNativeText': "Geen leesbare ingebouwde tekst. Gescande of afbeeldingsgebaseerde inhoud heeft OCR nodig; OCR is niet geïnstalleerd.",
+  'projects.view.partiallyExtracted': "Gedeeltelijk geëxtraheerd",
+  'projects.view.reason.nativeFallback': "pagina’s {pages}: de lay-outanalyse vond geen tekst, dus is de eigen tekstlaag van de pdf gebruikt; leesvolgorde en tabellen kunnen daar onnauwkeurig zijn",
   'projects.view.reason.noText': "het origineel blijft bewaard, maar er kon geen tekst worden gelezen",
 };

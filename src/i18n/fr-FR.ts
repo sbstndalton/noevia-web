@@ -1078,5 +1078,7 @@ export const FR_FR: Catalogue = {
   'projects.view.reason.ocrOmittedPages': "La réponse de l’OCR a omis des pages ; actualisez pour réessayer.",
   'projects.view.reason.noOcrText': "L’OCR n’a récupéré aucun texte lisible ; essayez un scan plus net ou un original déverrouillé.",
   'projects.view.reason.noNativeText': "Aucun texte natif lisible. Les contenus numérisés ou basés sur des images nécessitent l’OCR ; l’OCR n’est pas installé.",
+  'projects.view.partiallyExtracted': "Partiellement extrait",
+  'projects.view.reason.nativeFallback': "pages {pages} : l’analyse de mise en page n’a trouvé aucun texte, la couche texte propre au PDF a donc été utilisée ; l’ordre de lecture et les tableaux peuvent y être approximatifs",
   'projects.view.reason.noText': "l’original est conservé, mais aucun texte n’a pu être lu",
 };

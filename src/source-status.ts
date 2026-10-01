@@ -50,8 +50,14 @@ export function sourceStatus(file: ProjectFile, t?: Translate): string {
   if (!d) return '';
   const pages = d.pages ? ` · ${d.pages} ${d.pages === 1 ? "page" : "pages"}` : '';
   const incomplete = (d.pageStatus || []).filter(p => !['native', 'blank', 'ocr'].includes(p.status));
-  return `${d.stale ? 'Refresh failed · using previous text' : d.state === 'failed' ? (t ? t('projects.view.notReadable') : 'Not readable') : d.state === 'partial' ? 'Partially readable' : (d.pageStatus || []).some(p => p.status === 'ocr') ? 'Text ready · OCR used; verify numbers' : 'Native text ready'}${pages}` +
+  // #700: a 'degraded' page had no text from layout analysis, so the PDF's own text layer was used.
+  // Its words are searchable, but the document is only partially extracted, never plain ready.
+  const fallback = (d.pageStatus || []).filter(p => p.status === 'degraded');
+  const fallbackPages = fallback.slice(0, 20).map(p => p.number).join(', ') + (fallback.length > 20 ? '…' : '');
+  const partial = t ? t('projects.view.partiallyExtracted') : 'Partially extracted';
+  return `${d.stale ? 'Refresh failed · using previous text' : d.state === 'failed' ? (t ? t('projects.view.notReadable') : 'Not readable') : d.state === 'partial' || fallback.length ? partial : (d.pageStatus || []).some(p => p.status === 'ocr') ? 'Text ready · OCR used; verify numbers' : 'Native text ready'}${pages}` +
     `${incomplete.length ? ' · check pages ' + incomplete.slice(0, 20).map(p => p.number).join(', ') + (incomplete.length > 20 ? '…' : '') : ''}${d.truncated ? ' · extraction/summary limited' : ''}` +
+    `${fallback.length ? ' · ' + (t ? t('projects.view.reason.nativeFallback', { pages: fallbackPages }) : `pages ${fallbackPages}: layout analysis found no text, so the PDF's own text layer was used; reading order and tables there may be rough`) : ''}` +
     `${d.error ? ' · ' + documentError(d, t) : ''}${d.indexing === 'pending' ? ' · indexing' : file.content && ['unavailable', 'failed', 'partial'].includes(d.indexing || '') ? ' · search limited; page reads available for extracted text' : ''}`;
 }
 export type SkippedSource = { folder: string; file?: string; reason: string; retained?: boolean };

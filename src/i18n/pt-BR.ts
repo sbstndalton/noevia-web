@@ -1078,5 +1078,7 @@ export const PT_BR: Catalogue = {
   'projects.view.reason.ocrOmittedPages': "A resposta do OCR omitiu páginas; atualize para tentar novamente.",
   'projects.view.reason.noOcrText': "O OCR não recuperou texto legível; tente uma digitalização mais nítida ou um original desbloqueado.",
   'projects.view.reason.noNativeText': "Nenhum texto nativo legível. Conteúdo digitalizado ou baseado em imagens precisa de OCR; o OCR não está instalado.",
+  'projects.view.partiallyExtracted': "Extraído parcialmente",
+  'projects.view.reason.nativeFallback': "páginas {pages}: a análise de layout não encontrou texto, então foi usada a camada de texto do próprio PDF; a ordem de leitura e as tabelas podem estar imprecisas ali",
   'projects.view.reason.noText': "o original é mantido, mas nenhum texto pôde ser lido",
 };

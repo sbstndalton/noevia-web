@@ -1078,5 +1078,7 @@ export const NB_NO: Catalogue = {
   'projects.view.reason.ocrOmittedPages': "OCR-svaret utelot sider; oppdater for å prøve igjen.",
   'projects.view.reason.noOcrText': "OCR fant ingen lesbar tekst; prøv en tydeligere skanning eller en ulåst original.",
   'projects.view.reason.noNativeText': "Ingen lesbar innebygd tekst. Skannet eller bildebasert innhold krever OCR; OCR er ikke installert.",
+  'projects.view.partiallyExtracted': "Delvis hentet ut",
+  'projects.view.reason.nativeFallback': "sider {pages}: oppsettanalysen fant ingen tekst, så PDF-ens eget tekstlag ble brukt; leserekkefølge og tabeller kan være unøyaktige der",
   'projects.view.reason.noText': "originalen beholdes, men ingen tekst kunne leses",
 };

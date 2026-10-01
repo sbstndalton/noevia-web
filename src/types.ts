@@ -109,7 +109,7 @@ export interface DocumentStatus {
   error?: string;
   errorId?: string;
   indexing?: string;
-  pageStatus?: { number: number; status: string }[];
+  pageStatus?: { number: number; status: string; reason?: string }[];
 }
 
 export interface ProjectFile {
