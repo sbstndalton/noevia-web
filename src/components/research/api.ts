@@ -5,7 +5,8 @@ export interface ResearchJob {
   id: string; status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'interrupted'; stage: string | null;
   plan: { status: 'proposed' | 'edited' | 'skipped'; question: string | null; subQuestions: string[] } | null; error: string | null;
   createdAt: number; updatedAt: number; checkpoint: { step: number; question: string } | null; artifacts: string[];
-  result: { question: string; partial: boolean; sections: number; questions: number; citationValidity: number; citations: number; webCalls: number; markdown: string; sources: number } | null;
+  result: { question: string; partial: boolean; sections: number; questions: number; citationValidity: number; citations: number;
+    claims?: { total: number; supported: number; flagged: number; dropped: number; uncited: number } | null; webCalls: number; markdown: string; sources: number } | null;
   canSavePartial: boolean;
 }
 export interface ResearchState { budget: ResearchBudget; available: boolean; reason: string | null; jobs: ResearchJob[] }
