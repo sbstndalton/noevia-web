@@ -5,7 +5,9 @@ import { cached } from '../../request-cache';
 export type CodeAction = 'read_repository' | 'edit_file' | 'execute_command' | 'install_dependency'
   | 'network' | 'delete' | 'git_push' | 'open_browser' | 'external_account' | 'none'
   /** The final card of a Planner-reviewed task (#519): accept the change. Never an agent's action. */
-  | 'review_change';
+  | 'review_change'
+  /** The optional plan card of a pipeline task (#705): approve the Planner's plan before any code runs. */
+  | 'approve_plan';
 
 /** The Planner's verdict on a finished change (#519), as `server/code-review-verdict.cjs` bounds it. */
 export interface CodeReview {
@@ -22,7 +24,43 @@ export interface CodeApproval {
   reason: string; arguments: unknown; diff: { path: string; oldText: string | null; newText: string | null } | null;
   /** Only on a `review_change` card: the verdict, or why there is none. */
   review?: CodeReview | null;
+  /** Only on a pipeline task's accept card (#705/#706). */
+  verdict?: { verdict?: 'approve' | 'request_changes'; summary?: string; findings?: number } | null;
+  audit?: { overall: 'complete' | 'incomplete'; checks: { name: string; status: PipelineCheckStatus }[]; writeUp: { completeness?: string; summary?: string } | null } | null;
+  evidence?: { revision: number; headSha: string | null; planHash: string | null; tests: PipelineTests | null; completeness: { reportHash: string } | null } | null;
+  /** Null: accept only, nothing is merged. */
+  merge?: { into: string; from: string; to: string } | null;
+  /** Why an enabled merge is not offered on this card (`audit_incomplete`, `checked_out`, `base_moved`, …). */
+  mergeWithheld?: { code: string; reason: string } | null;
+  /** On an `approve_plan` card. */
+  plan?: unknown;
 }
+
+export type PipelineLifecycle = 'planned' | 'implementing' | 'verifying' | 'reviewing' | 'changes_requested' | 'merged' | 'blocked';
+export type PipelineCheckStatus = 'pass' | 'fail' | 'unknown';
+/** The verifier's measured report. `tail` is untrusted command output: render it as text only. */
+export interface PipelineTests {
+  passed: boolean; exitCode: number | null; signal: string | null; timedOut: boolean; headSha: string | null;
+  durationMs: number | null; tail: string; truncated: boolean;
+}
+export interface PipelineEvidence {
+  revision: number; headSha: string | null; baseSha: string | null; planHash: string | null;
+  tests: PipelineTests | null;
+  review: { verdict: 'approve' | 'request_changes'; summary?: string; findings?: { severity: string; file?: string; message: string }[]; headSha?: string | null } | null;
+  completeness: { reportHash: string } | null;
+}
+export interface PipelineAudit {
+  revision: number; headSha: string | null; overall: 'complete' | 'incomplete';
+  checks: { name: string; status: PipelineCheckStatus; detail?: string }[]; evidence?: unknown;
+  writeUp: { completeness?: string; summary?: string; evidence?: { source: string; note: string }[]; gaps?: string[] } | null;
+}
+/** Present only on a pipeline task (`codePipeline`); any other task's view has none of these. */
+export interface PipelineView {
+  maxLoops: number; merge: boolean;
+  plan: { revision: number; planHash: string; plan: { goal?: string; steps?: { n?: number; do?: string; done_when?: string }[]; constraints?: unknown } | null } | null;
+  evidence: PipelineEvidence[]; audit: PipelineAudit | null;
+}
+export interface PipelineStageMove { from: PipelineLifecycle | null; to: PipelineLifecycle; revision: number; reason?: string; reportHash?: string; at: number }
 export interface CodeTask {
   id: string; status: 'queued' | 'running' | 'waiting_approval' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
   stage: string | null; error: string | null; createdAt: number; updatedAt: number;
@@ -42,6 +80,10 @@ export interface CodeTask {
     commands: number; failedCommands: number; messageChunks: number; limitations: string[];
   } | null;
   identityHash: string | null;
+  lifecycle?: PipelineLifecycle | null;
+  revision?: { n: number; headSha: string | null; planHash: string | null; at: number } | null;
+  stages?: PipelineStageMove[];
+  pipeline?: PipelineView;
   /** Present only on a task that was reviewed (features.plannerReview). */
   review?: CodeReview;
   result: { stopReason?: string; branch?: string; tools?: number; approvals?: number; allowed?: number; refused?: number; denied?: number;
