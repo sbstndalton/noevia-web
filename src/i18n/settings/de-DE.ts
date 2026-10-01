@@ -71,6 +71,8 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'features.item.browserExecutor.description': "Administratoren können eine auf Domains beschränkte Chromium-Sitzung als dauerhaften Auftrag ausführen, wobei jede folgenreiche Aktion über die Freigabekarte läuft.",
   'features.item.constrainedPlanDecoding.label': "Eingeschränkte Plan-Dekodierung",
   'features.item.constrainedPlanDecoding.description': "Weist die lokale llama.cpp-Engine an, das Plan-Artefakt auf sein JSON-Schema zu beschränken. Ergänzt die nachträgliche Validierung und fällt bei Reasoning-Modellen oder wenn die Engine es ablehnt auf uneingeschränkte Erzeugung zurück.",
+  'features.item.executorGuard.label': "Executor-Wächter (Code-Modus)",
+  'features.item.executorGuard.description': "Prüft jeden Werkzeugaufruf des Coding-Agenten gegen sein Schema, bevor etwas anderes ihn sieht. Ein fehlerhafter Aufruf wird mit Begründung abgelehnt, damit der Agent ihn korrigieren kann; nach drei solchen Aufrufen stoppt die Aufgabe als blockiert. Er fügt nur Ablehnungen hinzu: Jeder Schreibvorgang läuft weiterhin über die Freigabekarte.",
   'features.item.kiwix.label': "Offline-Wikipedia",
   'features.item.kiwix.description': "Ein schreibgeschütztes Nachschlagewerkzeug auf Basis eines internen kiwix-serve.",
   'features.item.chatgptOAuth.label': "Mit ChatGPT anmelden",

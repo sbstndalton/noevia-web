@@ -71,6 +71,8 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'features.item.browserExecutor.description': "Beheerders kunnen een tot domeinen beperkte Chromium-sessie als duurzame taak uitvoeren, waarbij elke ingrijpende actie via de goedkeuringskaart loopt.",
   'features.item.constrainedPlanDecoding.label': "Beperkte plandecodering",
   'features.item.constrainedPlanDecoding.description': "Vraagt de lokale llama.cpp-engine het plan-artefact te beperken tot het JSON-schema. Komt bovenop de validatie achteraf en valt terug op onbeperkte generatie voor redeneermodellen of wanneer de engine het weigert.",
+  'features.item.executorGuard.label': "Uitvoerderbewaking (Code-modus)",
+  'features.item.executorGuard.description': "Controleert elke toolaanroep van de code-agent tegen het schema voordat iets anders hem ziet. Een misvormde aanroep wordt met de reden geweigerd, zodat de agent hem kan corrigeren; na drie stopt de taak als geblokkeerd. Voegt alleen weigeringen toe: elke schrijfactie gaat nog steeds via de goedkeuringskaart.",
   'features.item.kiwix.label': "Offline Wikipedia",
   'features.item.kiwix.description': "Een alleen-lezen opzoekhulpmiddel op basis van een interne kiwix-serve.",
   'features.item.chatgptOAuth.label': "Inloggen met ChatGPT",

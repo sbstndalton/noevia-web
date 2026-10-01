@@ -71,6 +71,8 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'features.item.browserExecutor.description': "Les administrateurs peuvent lancer une session Chromium limitée à des domaines comme tâche durable, chaque action importante passant par la carte d’approbation.",
   'features.item.constrainedPlanDecoding.label': "Décodage contraint du plan",
   'features.item.constrainedPlanDecoding.description': "Demande au moteur llama.cpp local de contraindre l’artefact de plan à son schéma JSON. S’ajoute à la validation a posteriori et revient à une génération sans contrainte pour les modèles de raisonnement ou lorsque le moteur la refuse.",
+  'features.item.executorGuard.label': "Garde de l’exécuteur (mode Code)",
+  'features.item.executorGuard.description': "Vérifie chaque appel d’outil de l’agent de code par rapport à son schéma avant que quoi que ce soit d’autre ne le voie. Un appel mal formé est refusé avec la raison, pour que l’agent puisse le corriger ; après trois, la tâche s’arrête comme bloquée. Il ne fait qu’ajouter des refus : chaque écriture passe toujours par la carte d’approbation.",
   'features.item.kiwix.label': "Wikipédia hors ligne",
   'features.item.kiwix.description': "Un outil de consultation en lecture seule reposant sur un kiwix-serve interne.",
   'features.item.chatgptOAuth.label': "Se connecter avec ChatGPT",

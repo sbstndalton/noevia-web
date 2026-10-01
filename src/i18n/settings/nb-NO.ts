@@ -71,6 +71,8 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'features.item.browserExecutor.description': "Administratorer kan kjøre en domenebegrenset Chromium-økt som en varig jobb, der hver konsekvensrik handling går gjennom godkjenningskortet.",
   'features.item.constrainedPlanDecoding.label': "Begrenset plandekoding",
   'features.item.constrainedPlanDecoding.description': "Ber den lokale llama.cpp-motoren om å begrense plan-artefaktet til JSON-skjemaet sitt. Kommer i tillegg til validering i ettertid og faller tilbake til ubegrenset generering for resonneringsmodeller eller når motoren avviser det.",
+  'features.item.executorGuard.label': "Utførervakt (Code-modus)",
+  'features.item.executorGuard.description': "Kontrollerer hvert verktøykall fra kodeagenten mot skjemaet før noe annet ser det. Et feilformet kall avvises med begrunnelse, slik at agenten kan rette det; etter tre stopper oppgaven som blokkert. Den legger bare til avvisninger: hver skriving går fortsatt gjennom godkjenningskortet.",
   'features.item.kiwix.label': "Wikipedia frakoblet",
   'features.item.kiwix.description': "Et skrivebeskyttet oppslagsverktøy basert på en intern kiwix-serve.",
   'features.item.chatgptOAuth.label': "Logg inn med ChatGPT",

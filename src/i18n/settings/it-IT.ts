@@ -71,6 +71,8 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'features.item.browserExecutor.description': "Gli amministratori possono eseguire una sessione Chromium limitata a determinati domini come job duraturo, con ogni azione rilevante che passa dalla scheda di approvazione.",
   'features.item.constrainedPlanDecoding.label': "Decodifica vincolata del piano",
   'features.item.constrainedPlanDecoding.description': "Chiede al motore llama.cpp locale di vincolare l’artefatto del piano al suo schema JSON. Si aggiunge alla validazione a posteriori e torna alla generazione non vincolata per i modelli di ragionamento o quando il motore la rifiuta.",
+  'features.item.executorGuard.label': "Guardia dell’esecutore (modalità Code)",
+  'features.item.executorGuard.description': "Verifica ogni chiamata a strumento dell’agente di programmazione rispetto al suo schema prima che altro la veda. Una chiamata malformata viene rifiutata con il motivo, così l’agente può correggerla; dopo tre, l’attività si ferma come bloccata. Aggiunge solo rifiuti: ogni scrittura passa comunque dalla scheda di approvazione.",
   'features.item.kiwix.label': "Wikipedia offline",
   'features.item.kiwix.description': "Uno strumento di consultazione di sola lettura basato su un kiwix-serve interno.",
   'features.item.chatgptOAuth.label': "Accedi con ChatGPT",

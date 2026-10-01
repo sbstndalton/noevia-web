@@ -71,6 +71,8 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'features.item.browserExecutor.description': "Administratörer kan köra en domänbegränsad Chromium-session som ett varaktigt jobb, där varje ingripande åtgärd går via godkännandekortet.",
   'features.item.constrainedPlanDecoding.label': "Begränsad plandekodning",
   'features.item.constrainedPlanDecoding.description': "Ber den lokala llama.cpp-motorn att begränsa planartefakten till sitt JSON-schema. Kommer utöver validering i efterhand och faller tillbaka på obegränsad generering för resonemangsmodeller eller när motorn avvisar det.",
+  'features.item.executorGuard.label': "Utförarvakt (Code-läge)",
+  'features.item.executorGuard.description': "Kontrollerar varje verktygsanrop från kodagenten mot dess schema innan något annat ser det. Ett felformat anrop avvisas med orsaken, så att agenten kan rätta det; efter tre stoppas uppgiften som blockerad. Den lägger bara till avvisningar: varje skrivning går fortfarande via godkännandekortet.",
   'features.item.kiwix.label': "Wikipedia offline",
   'features.item.kiwix.description': "Ett skrivskyddat uppslagsverktyg som bygger på en intern kiwix-serve.",
   'features.item.chatgptOAuth.label': "Logga in med ChatGPT",

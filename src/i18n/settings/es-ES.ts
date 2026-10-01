@@ -71,6 +71,8 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'features.item.browserExecutor.description': "Los administradores pueden ejecutar una sesión de Chromium limitada a dominios como tarea duradera, con cada acción importante pasando por la tarjeta de aprobación.",
   'features.item.constrainedPlanDecoding.label': "Decodificación restringida del plan",
   'features.item.constrainedPlanDecoding.description': "Pide al motor local llama.cpp que restrinja el artefacto del plan a su esquema JSON. Se suma a la validación posterior y vuelve a la generación sin restricciones para los modelos de razonamiento o cuando el motor lo rechaza.",
+  'features.item.executorGuard.label': "Guardia del ejecutor (modo Code)",
+  'features.item.executorGuard.description': "Comprueba cada llamada a herramienta del agente de programación con su esquema antes de que nada más la vea. Una llamada mal formada se rechaza con el motivo, para que el agente pueda corregirla; tras tres, la tarea se detiene como bloqueada. Solo añade rechazos: toda escritura sigue pasando por la tarjeta de aprobación.",
   'features.item.kiwix.label': "Wikipedia sin conexión",
   'features.item.kiwix.description': "Una herramienta de consulta de solo lectura respaldada por un kiwix-serve interno.",
   'features.item.chatgptOAuth.label': "Iniciar sesión con ChatGPT",

@@ -63,6 +63,8 @@ export const EN_GB_SETTINGS = {
   'features.item.browserExecutor.description': "Administrators can run a domain-scoped Chromium session as a durable job, with every consequential action through the approval card.",
   'features.item.constrainedPlanDecoding.label': "Constrained plan decoding",
   'features.item.constrainedPlanDecoding.description': "Ask the local llama.cpp engine to constrain the plan artifact to its JSON schema. Adds to the after-the-fact validation and falls back to unconstrained generation for reasoning models or when the engine rejects it.",
+  'features.item.executorGuard.label': "Executor guard (Code mode)",
+  'features.item.executorGuard.description': "Check every tool call the coding agent makes against its schema before anything else sees it. A malformed call is refused with the reason, so the agent can correct it; after three, the task stops as blocked. It only adds refusals: every write still goes through the approval card.",
   'features.item.kiwix.label': "Offline Wikipedia",
   'features.item.kiwix.description': "A read-only lookup tool backed by an internal kiwix-serve.",
   'features.item.chatgptOAuth.label': "Sign in with ChatGPT",
