@@ -28,7 +28,7 @@ export const EN_GB_SETTINGS = {
   'features.pendingRestart': "Saved. Restart the server to apply this change.",
   'features.unavailable.browserPlaywright': "Needs Playwright installed on this server; it is not in this image.",
   'features.unavailable.browserChromium': "Needs a Chromium browser installed for Playwright on this server.",
-  'features.unavailable.notUsed': "Not used yet: no server-side plan generator.",
+  'features.unavailable.notUsed': "Not used yet: no task runs the Planner’s plan step.",
   'features.unavailable.trustProxy': "Needs TRUST_PROXY on so sign-in limits can tell clients apart.",
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Connect a private decision service with COWORK_DECISION_URL, then restart Noevia.",

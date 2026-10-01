@@ -172,6 +172,8 @@ export interface ProviderCapabilities {
   reasoningEffortParam?: boolean;
   reasoningEffortModels?: string[];
   tokenBudgetField?: 'max_tokens' | 'max_completion_tokens';
+  /** Accepts `response_format` json_schema and constrains decoding to it (#517). */
+  jsonSchemaParam?: boolean;
 }
 
 export interface Provider {

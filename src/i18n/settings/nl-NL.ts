@@ -49,7 +49,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'features.pendingRestart': "Opgeslagen. Herstart de server om deze wijziging toe te passen.",
   'features.unavailable.browserPlaywright': "Vereist Playwright op deze server; het zit niet in deze image.",
   'features.unavailable.browserChromium': "Vereist een Chromium-browser die voor Playwright op deze server is geïnstalleerd.",
-  'features.unavailable.notUsed': "Nog niet in gebruik: geen plangenerator aan de serverkant.",
+  'features.unavailable.notUsed': "Nog niet in gebruik: geen taak voert de planstap van de Planner al uit.",
   'features.unavailable.trustProxy': "Vereist dat TRUST_PROXY aan staat, zodat inloglimieten clients kunnen onderscheiden.",
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Verbind een privé-beslissingsservice via COWORK_DECISION_URL en start Noevia daarna opnieuw.",

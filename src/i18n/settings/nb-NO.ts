@@ -49,7 +49,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'features.pendingRestart': "Lagret. Start serveren på nytt for å ta endringen i bruk.",
   'features.unavailable.browserPlaywright': "Krever Playwright installert på denne serveren; det finnes ikke i dette imaget.",
   'features.unavailable.browserChromium': "Krever en Chromium-nettleser installert for Playwright på denne serveren.",
-  'features.unavailable.notUsed': "Ikke i bruk ennå: ingen plangenerator på serversiden.",
+  'features.unavailable.notUsed': "Ikke i bruk ennå: ingen oppgave kjører Planleggerens plantrinn ennå.",
   'features.unavailable.trustProxy': "Krever at TRUST_PROXY er slått på, slik at påloggingsgrenser kan skille klienter fra hverandre.",
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Koble til en privat beslutningstjeneste med COWORK_DECISION_URL, og start Noevia på nytt.",

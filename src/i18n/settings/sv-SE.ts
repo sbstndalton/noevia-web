@@ -49,7 +49,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'features.pendingRestart': "Sparat. Starta om servern för att tillämpa ändringen.",
   'features.unavailable.browserPlaywright': "Kräver Playwright installerat på den här servern; det finns inte i den här avbilden.",
   'features.unavailable.browserChromium': "Kräver en Chromium-webbläsare installerad för Playwright på den här servern.",
-  'features.unavailable.notUsed': "Används inte ännu: ingen plangenerator på serversidan.",
+  'features.unavailable.notUsed': "Används inte ännu: ingen uppgift kör Planerarens planeringssteg än.",
   'features.unavailable.trustProxy': "Kräver att TRUST_PROXY är på så att inloggningsgränser kan skilja klienter åt.",
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Anslut en privat beslutstjänst med COWORK_DECISION_URL och starta sedan om Noevia.",

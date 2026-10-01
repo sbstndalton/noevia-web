@@ -49,7 +49,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'features.pendingRestart': "Guardado. Reinicia el servidor para aplicar el cambio.",
   'features.unavailable.browserPlaywright': "Requiere Playwright instalado en este servidor; no está en esta imagen.",
   'features.unavailable.browserChromium': "Requiere un navegador Chromium instalado para Playwright en este servidor.",
-  'features.unavailable.notUsed': "Aún no se usa: no hay un generador de planes en el servidor.",
+  'features.unavailable.notUsed': "Aún no se usa: ninguna tarea ejecuta todavía el paso de plan del Planificador.",
   'features.unavailable.trustProxy': "Requiere TRUST_PROXY activado para que los límites de inicio de sesión distingan a los clientes.",
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Conecta un servicio de decisión privado con COWORK_DECISION_URL y reinicia Noevia.",
