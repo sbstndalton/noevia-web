@@ -432,10 +432,11 @@ export function moveChatToProject(chatId: string, projectId: string | null, fram
   return postJson(`/api/chats/${encodeURIComponent(chatId)}/move`, frame === undefined ? { projectId } : { projectId, frame });
 }
 
-export interface FramingPreferences { autoAccept: boolean }
+export interface FramingPreferences { autoAccept: boolean; keepReasoningTraces: boolean }
 export const fetchFramingPreferences = () => getJson<FramingPreferences>('/api/chat-framing/preferences')
-  .then((r) => ({ autoAccept: r?.autoAccept === true }));
-export const saveFramingPreferences = (prefs: FramingPreferences) => putJson<FramingPreferences>('/api/chat-framing/preferences', prefs);
+  .then((r) => ({ autoAccept: r?.autoAccept === true, keepReasoningTraces: r?.keepReasoningTraces === true }));
+/** A partial update: keys not given keep their saved value (#740). */
+export const saveFramingPreferences = (prefs: Partial<FramingPreferences>) => putJson<FramingPreferences>('/api/chat-framing/preferences', prefs);
 
 export type HistorySave = { ok: true; revision: string | null } | { ok: false; conflict: { history: HistoryEntry[]; revision: string } };
 /** Save a transcript. With a base revision, a concurrent save elsewhere returns the current copy to merge. */
