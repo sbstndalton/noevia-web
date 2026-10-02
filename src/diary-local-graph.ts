@@ -4,12 +4,40 @@ import { markdownFileLinks, markdownWikiLinks, resolveMarkdownPath, wikiLinkCand
 // needs an index the Diary deliberately does not keep; one hop around the open file does not —
 // outgoing links come from the file itself and incoming ones from the same bounded backlink scan
 // "Find links to this file" already runs. Pure and deterministic so the drawing is stable.
+//
+// #741: the layout is generic. `radialGraph` takes any centre and neighbours (Diary files, chats,
+// tag hubs) and returns positioned nodes plus one edge per neighbour; `localGraph` is the Diary's
+// adapter onto it and draws exactly what it drew before.
 
-export type GraphRelation = 'self' | 'out' | 'in' | 'both';
+export type GraphRelation = 'self' | 'out' | 'in' | 'both' | 'tag';
 export interface GraphNode { id: string; label: string; relation: GraphRelation; x: number; y: number }
-export interface LocalGraph { nodes: GraphNode[]; hidden: number }
+export interface GraphEdge { from: string; to: string; relation: Exclude<GraphRelation, 'self'> }
+export interface LocalGraph { nodes: GraphNode[]; edges: GraphEdge[]; hidden: number }
+export interface GraphNeighbour { id: string; label: string; relation: Exclude<GraphRelation, 'self'> }
 
 export const GRAPH_LIMIT = 24;
+const RELATION_ORDER: GraphRelation[] = ['both', 'out', 'in', 'tag'];
+
+/**
+ * One hop around `self`: two-way links first, then links out, links in and tag hubs, alphabetical
+ * by id within each; at most `limit` drawn and the rest counted. One ring up to 12, then an outer
+ * ring: readable at phone width without a layout engine.
+ */
+export function radialGraph(self: { id: string; label: string }, neighbours: readonly GraphNeighbour[], limit = GRAPH_LIMIT): LocalGraph {
+  const seen = new Set<string>([self.id]);
+  const unique = neighbours.filter((n) => n.id && !seen.has(n.id) && (seen.add(n.id), true))
+    .sort((a, b) => RELATION_ORDER.indexOf(a.relation) - RELATION_ORDER.indexOf(b.relation) || a.id.localeCompare(b.id));
+  const shown = unique.slice(0, limit);
+  const nodes: GraphNode[] = [{ id: self.id, label: self.label, relation: 'self', x: 0, y: 0 }];
+  shown.forEach((n, i) => {
+    const inner = Math.min(shown.length, 12), ring = i < 12 ? 0 : 1;
+    const count = ring === 0 ? inner : shown.length - 12, index = ring === 0 ? i : i - 12;
+    const angle = -Math.PI / 2 + (2 * Math.PI * index) / count + (ring ? Math.PI / count : 0);
+    const radius = ring === 0 ? 0.62 : 0.92;
+    nodes.push({ id: n.id, label: n.label, relation: n.relation, x: Math.round(Math.cos(angle) * radius * 1000) / 1000, y: Math.round(Math.sin(angle) * radius * 1000) / 1000 });
+  });
+  return { nodes, edges: shown.map((n) => ({ from: self.id, to: n.id, relation: n.relation })), hidden: unique.length - shown.length };
+}
 
 const label = (path: string) => (path.split('/').pop() || path).replace(/\.md$/i, '');
 
@@ -34,18 +62,6 @@ export function localGraph({ path, text, root, backlinks }: { path: string; text
   }
   const incoming = new Set(backlinks.filter((p) => p && p !== path));
   const neighbours = [...new Set([...out, ...incoming])]
-    .map((id) => ({ id, relation: (out.has(id) && incoming.has(id) ? 'both' : out.has(id) ? 'out' : 'in') as GraphRelation }))
-    // Two-way links first, then links out, then in; alphabetical within each for stability.
-    .sort((a, b) => ['both', 'out', 'in'].indexOf(a.relation) - ['both', 'out', 'in'].indexOf(b.relation) || a.id.localeCompare(b.id));
-  const shown = neighbours.slice(0, GRAPH_LIMIT);
-  const nodes: GraphNode[] = [{ id: path, label: label(path), relation: 'self', x: 0, y: 0 }];
-  shown.forEach((n, i) => {
-    // One ring up to 12, then an outer ring: readable at phone width without a layout engine.
-    const inner = Math.min(shown.length, 12), ring = i < 12 ? 0 : 1;
-    const count = ring === 0 ? inner : shown.length - 12, index = ring === 0 ? i : i - 12;
-    const angle = -Math.PI / 2 + (2 * Math.PI * index) / count + (ring ? Math.PI / count : 0);
-    const radius = ring === 0 ? 0.62 : 0.92;
-    nodes.push({ id: n.id, label: label(n.id), relation: n.relation, x: Math.round(Math.cos(angle) * radius * 1000) / 1000, y: Math.round(Math.sin(angle) * radius * 1000) / 1000 });
-  });
-  return { nodes, hidden: neighbours.length - shown.length };
+    .map((id) => ({ id, label: label(id), relation: (out.has(id) && incoming.has(id) ? 'both' : out.has(id) ? 'out' : 'in') as GraphNeighbour['relation'] }));
+  return radialGraph({ id: path, label: label(path) }, neighbours);
 }

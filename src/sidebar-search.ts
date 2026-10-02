@@ -79,3 +79,25 @@ export function matchingDestinations<T extends { label: string }>(destinations: 
 export function searchResultKey(kind: SearchResultKind, id: string): string {
   return `${kind}:${id}`;
 }
+
+/** #741: a sidebar query split into `#tag` filters and the remaining words. "#work/clients plan"
+ *  is the tag "work/clients" and the text "plan". A lone "#" is not a tag and is dropped. */
+export function parseSidebarQuery(query: string): { tags: string[]; text: string } {
+  const tags: string[] = [];
+  const words: string[] = [];
+  for (const word of query.trim().split(/\s+/).filter(Boolean)) {
+    if (word.startsWith('#')) { const tag = word.replace(/^#+/, ''); if (tag) tags.push(tag); }
+    else words.push(word);
+  }
+  return { tags, text: words.join(' ') };
+}
+
+/** Whether a chat shows for a sidebar query: every `#tag` must be on its frame (a parent tag also
+ *  matches its nested tags, see chat-organise hasTag), and the rest must appear in its title. */
+export function chatMatchesQuery<T extends { title?: string }>(chat: T, query: string, hasTag: (chat: T, tag: string) => boolean): boolean {
+  const { tags, text } = parseSidebarQuery(query);
+  // Without a tag the match is exactly what it always was: the whole query inside the title.
+  if (!tags.length) return (chat.title || '').toLowerCase().includes(query.toLowerCase());
+  if (!tags.every((tag) => hasTag(chat, tag))) return false;
+  return (chat.title || '').toLowerCase().includes(text.toLowerCase());
+}

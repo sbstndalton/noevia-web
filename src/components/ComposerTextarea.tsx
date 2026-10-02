@@ -1,5 +1,5 @@
 import { forwardRef, useLayoutEffect, useRef } from 'react';
-import type { TextareaHTMLAttributes } from 'react';
+import type { KeyboardEvent, TextareaHTMLAttributes } from 'react';
 import { composerKeyAction, useAccountPreferences } from '../user-preferences';
 import { sendHintText, useT } from '../i18n';
 import { isApple } from './shortcuts/shortcuts';
@@ -29,7 +29,10 @@ export const ComposerTextarea = forwardRef<HTMLTextAreaElement, Omit<TextareaHTM
   value: string;
   onValue: (value: string) => void;
   onSubmit: () => void;
-}>(function ComposerTextarea({ value, onValue, onSubmit, className = '', ...rest }, forwardedRef) {
+  /** Runs first on every keydown; returning true means the caller handled the key (#741: the
+   *  [[chat]] suggestions take Arrow keys, Enter, Tab and Escape while they are open). */
+  onKeyIntercept?: (e: KeyboardEvent<HTMLTextAreaElement>) => boolean;
+}>(function ComposerTextarea({ value, onValue, onSubmit, onKeyIntercept, className = '', ...rest }, forwardedRef) {
   const { sendKey } = useAccountPreferences();
   const t = useT();
   const hint = sendHintText(t, sendKey, typeof navigator !== 'undefined' && isApple(navigator.platform || navigator.userAgent));
@@ -64,6 +67,7 @@ export const ComposerTextarea = forwardRef<HTMLTextAreaElement, Omit<TextareaHTM
       value={value}
       onChange={(e) => onValue(e.target.value)}
       onKeyDown={(e) => {
+        if (onKeyIntercept?.(e)) return;
         if (composerKeyAction({ key: e.key, shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey, isComposing: e.nativeEvent.isComposing }, sendKey) === 'send') {
           e.preventDefault();
           onSubmit();

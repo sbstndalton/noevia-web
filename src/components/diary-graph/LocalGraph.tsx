@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FileSearchReport, FileSearchFilters } from '../../diary-file-search';
 import { localGraph } from '../../diary-local-graph';
+import type { GraphNode, LocalGraph as Graph } from '../../diary-local-graph';
 import { useT } from '../../i18n';
 
 type Props = {
@@ -54,28 +55,9 @@ export function LocalGraph({ path, text, root, busy, onSearch, onOpen }: Props) 
       {state.status === 'error' && <p role="alert">{state.error} <button type="button" className="popup-tab" onClick={() => setAttempt((n) => n + 1)}>{t('diary.graph.retry')}</button></p>}
       {open && (
         <figure className="diary-local-graph-figure">
-          <svg viewBox={`${-R - 22} ${-R - 22} ${2 * R + 44} ${2 * R + 44}`} role="group" aria-label={t('diary.graph.ariaLabel', { name: graph.nodes[0].label })}>
-            {graph.nodes.slice(1).map((n) => (
-              <line key={`e-${n.id}`} x1={0} y1={0} x2={n.x * R} y2={n.y * R} className={`graph-edge graph-edge-${n.relation}`} />
-            ))}
-            {graph.nodes.map((n) => {
-              const self = n.relation === 'self';
-              const labelBelow = n.y >= -0.05;
-              return (
-                <g key={n.id} className={`graph-node graph-node-${n.relation}`} transform={`translate(${n.x * R} ${n.y * R})`}
-                  role={self ? undefined : 'button'} tabIndex={self || busy ? undefined : 0}
-                  aria-label={self ? undefined : t('diary.graph.openNode', { name: n.id, relation: n.relation === 'both' ? t('diary.graph.linksBothWays') : n.relation === 'out' ? t('diary.graph.linkedFromFile') : t('diary.graph.linksToFile') })}
-                  onClick={self || busy ? undefined : () => onOpen(n.id)}
-                  onKeyDown={self || busy ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(n.id); } }}>
-                  <title>{n.id}</title>
-                  <circle r={self ? 9 : 6} />
-                  {/* The centre label sits on a chip: edges run under it in every direction. */}
-                  {self && <rect className="graph-self-chip" x={-(short(n.label).length * 2.9 + 7)} y={12} width={short(n.label).length * 5.8 + 14} height={14} rx={7} />}
-                  {(self || labelled) && <text y={self ? 22.5 : labelBelow ? 16 : -11} textAnchor="middle">{short(n.label)}</text>}
-                </g>
-              );
-            })}
-          </svg>
+          <GraphFigure graph={graph} busy={busy} labelled={labelled} ariaLabel={t('diary.graph.ariaLabel', { name: graph.nodes[0].label })}
+            nodeLabel={(n) => t('diary.graph.openNode', { name: n.id, relation: n.relation === 'both' ? t('diary.graph.linksBothWays') : n.relation === 'out' ? t('diary.graph.linkedFromFile') : t('diary.graph.linksToFile') })}
+            onOpen={onOpen} />
           <figcaption>
             <span className="graph-key graph-key-out">{t('diary.graph.linksOutCount', { count: (counts.out || 0) + (counts.both || 0) })}</span>
             <span className="graph-key graph-key-in">{t('diary.graph.linksInCount', { count: (counts.in || 0) + (counts.both || 0) })}</span>
@@ -91,5 +73,42 @@ export function LocalGraph({ path, text, root, busy, onSearch, onOpen }: Props) 
         </figure>
       )}
     </details>
+  );
+}
+
+/**
+ * #741: the drawing on its own, for any one-hop graph (a Diary file's, a chat's): nodes placed by
+ * radialGraph, one line per edge. The centre is not a button; every other node opens through
+ * `onOpen` by click, Enter or Space. Static SVG, nothing animates.
+ */
+export function GraphFigure({ graph, busy, labelled, ariaLabel, nodeLabel, nodeTitle = (n) => n.id, onOpen }: {
+  graph: Graph; busy: boolean; labelled: boolean; ariaLabel: string;
+  nodeLabel: (node: GraphNode) => string; nodeTitle?: (node: GraphNode) => string; onOpen: (id: string) => void;
+}) {
+  const at = new Map(graph.nodes.map((n) => [n.id, n]));
+  return (
+          <svg viewBox={`${-R - 22} ${-R - 22} ${2 * R + 44} ${2 * R + 44}`} role="group" aria-label={ariaLabel}>
+            {graph.edges.map((e) => {
+              const from = at.get(e.from), to = at.get(e.to);
+              return from && to ? <line key={`e-${e.to}`} x1={from.x * R} y1={from.y * R} x2={to.x * R} y2={to.y * R} className={`graph-edge graph-edge-${e.relation}`} /> : null;
+            })}
+            {graph.nodes.map((n) => {
+              const self = n.relation === 'self';
+              const labelBelow = n.y >= -0.05;
+              return (
+                <g key={n.id} className={`graph-node graph-node-${n.relation}`} transform={`translate(${n.x * R} ${n.y * R})`}
+                  role={self ? undefined : 'button'} tabIndex={self || busy ? undefined : 0}
+                  aria-label={self ? undefined : nodeLabel(n)}
+                  onClick={self || busy ? undefined : () => onOpen(n.id)}
+                  onKeyDown={self || busy ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(n.id); } }}>
+                  <title>{nodeTitle(n)}</title>
+                  <circle r={self ? 9 : 6} />
+                  {/* The centre label sits on a chip: edges run under it in every direction. */}
+                  {self && <rect className="graph-self-chip" x={-(short(n.label).length * 2.9 + 7)} y={12} width={short(n.label).length * 5.8 + 14} height={14} rx={7} />}
+                  {(self || labelled) && <text y={self ? 22.5 : labelBelow ? 16 : -11} textAnchor="middle">{short(n.label)}</text>}
+                </g>
+              );
+            })}
+          </svg>
   );
 }

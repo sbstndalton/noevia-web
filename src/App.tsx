@@ -41,6 +41,8 @@ import {
 } from './api';
 import { FrameChips } from './components/FrameChips';
 import { acceptPlan, acceptedFrame, frameDraftReducer, startDraft } from './chat-frame';
+import { frameWithLink, keepLinks, MAX_FRAME_LINKS } from './chat-organise';
+import { ChatLinks } from './components/ChatLinks';
 import type { FrameAction, FrameDraft } from './chat-frame';
 import { sessionMode, type ChatMode } from './chat-mode';
 import { STOPPED_SENDER } from './chat-labels';
@@ -793,6 +795,10 @@ export default function App(): JSX.Element {
     }).catch(() => undefined);
   }, [refreshProjects]);
 
+  // #741: a [[chat]] chosen in the composer is saved on the chat's frame through the list-save path.
+  // Before the chat's first save there is no meta yet, so the link waits here for that save.
+  const pendingLinks = useRef(new Map<string, string[]>());
+
   const framingOn = useRef(false);
   framingOn.current = featureFlags.chatFraming === true;
 
@@ -801,7 +807,8 @@ export default function App(): JSX.Element {
   // keeps the row, marked, so ✓ can try again.
   const acceptFrame = useCallback(async (chatId: string, draft: FrameDraft, tagText?: string) => {
     const edited = tagText === undefined ? draft : frameDraftReducer(draft, { type: 'setTags', text: tagText }) ?? draft;
-    const frame = acceptedFrame(edited.frame);
+    // #741: a [[link]] typed before the suggestion was accepted is already in the stored frame; keep it.
+    const frame = keepLinks(acceptedFrame(edited.frame), allChatsRef.current.find((c) => c.id === chatId)?.frame);
     setFrameDrafts((prev) => ({ ...prev, [chatId]: { frame: edited.frame, status: 'saving' } }));
     const home = movedChats.current.has(chatId) ? movedChats.current.get(chatId) ?? null : framingHome.current.get(chatId) ?? null;
     const plan = acceptPlan(frame, home);
@@ -888,7 +895,10 @@ export default function App(): JSX.Element {
         ? { ...existing, title: titleAfterSend(existing.title, priorMessages, base, text), preview: text.slice(0, 200), updatedAt: sentAt }
         : { id: chatId, title: text.slice(0, 80), preview: text.slice(0, 200), updatedAt: sentAt,
             // The chosen mode is the session's even when this turn fell back to Chat (#236).
-            ...(pendingModesRef.current[chatId] === 'cowork' ? { mode: 'cowork' as const } : {}) };
+            ...(pendingModesRef.current[chatId] === 'cowork' ? { mode: 'cowork' as const } : {}),
+            // #741: [[links]] chosen before the chat's first save travel with that save.
+            ...(pendingLinks.current.get(chatId)?.length ? { frame: { projectId, kind: 'question' as const, tags: [], links: pendingLinks.current.get(chatId)!, confirmed: false, source: 'user' as const } } : {}) };
+      pendingLinks.current.delete(chatId);
       queueMetaUpsert(projectId, chatId, make);
       // Chat framing (#738): a new chat's first message asks for a frame alongside the reply. It never
       // blocks or delays the send; a miss or an error simply shows nothing.
@@ -1397,15 +1407,20 @@ export default function App(): JSX.Element {
   // Keep the UI at its confirmed state until the save succeeds; a failed save
   // then needs no rollback or workspace fetch (which can fail at the same time).
   const handlePatchChat = useCallback(
-    (projectId: string | null, chatId: string, patch: Partial<ChatMeta>) => {
+    (projectId: string | null, chatId: string, patchOrUpdate: Partial<ChatMeta> | ((current: ChatMeta) => Partial<ChatMeta> | null)) => {
       const key = projectId === null ? 'free' : `project:${projectId}`;
-      // The chat-list endpoints store at most 120 title characters.
-      const savedPatch = typeof patch.title === 'string' ? { ...patch, title: patch.title.slice(0, 120) } : patch;
       const save = async () => {
         const list = projectId === null
           ? freeChatsRef.current
           : projectsRef.current.find((p) => p.id === projectId)?.chats;
-        if (!list?.some((c) => c.id === chatId)) return;
+        const current = list?.find((c) => c.id === chatId);
+        if (!list || !current) return;
+        // #741: an update function is computed from the meta as it is when this save's turn in the
+        // list queue comes, so a frame edit (a [[link]]) never overwrites a change saved just before it.
+        const patch = typeof patchOrUpdate === 'function' ? patchOrUpdate(current) : patchOrUpdate;
+        if (!patch) return;
+        // The chat-list endpoints store at most 120 title characters.
+        const savedPatch = typeof patch.title === 'string' ? { ...patch, title: patch.title.slice(0, 120) } : patch;
         const next = list.map((c) => (c.id === chatId ? { ...c, ...savedPatch } : c));
         try {
           if (projectId === null) await saveFreeChats(next);
@@ -1435,6 +1450,18 @@ export default function App(): JSX.Element {
     },
     [],
   );
+
+  const linkChat = useCallback((chatId: string, projectId: string | null, targetId: string) => {
+    if (!targetId || targetId === chatId) return;
+    const meta = allChatsRef.current.find((c) => c.id === chatId);
+    if (!meta && !(messagesRef.current[chatId]?.length)) {
+      const pending = pendingLinks.current.get(chatId) ?? [];
+      if (!pending.includes(targetId)) pendingLinks.current.set(chatId, [...pending, targetId].slice(0, MAX_FRAME_LINKS));
+      return;
+    }
+    const home = meta ? meta.projectId ?? null : movedChats.current.has(chatId) ? movedChats.current.get(chatId) ?? null : projectId;
+    handlePatchChat(home, chatId, (current) => { const frame = frameWithLink(current, chatId, targetId, home); return frame ? { frame } : null; });
+  }, [handlePatchChat]);
 
   // #236: before the first message the mode changes in place; after it, the other harness would
   // run on context it never saw, so ChatView asks first and this opens a new session instead.
@@ -1552,6 +1579,7 @@ export default function App(): JSX.Element {
         projects={projects}
         projectsLoaded={workspaceLoaded}
         chats={allChats}
+        organise={featureFlags.chatFraming === true}
         activeView={view.kind}
         activeProjectId={activeProject?.id ?? null}
         activeChatId={view.kind === 'chat' ? view.chatId : null}
@@ -1667,6 +1695,9 @@ export default function App(): JSX.Element {
           recent={view.projectId ? undefined : recentChats(allChats).filter((c) => c.id !== view.chatId).slice(0, 5).map((c) => ({ id: c.id, title: c.title, projectId: c.projectId ?? null, projectName: c.projectId ? projects.find((p) => p.id === c.projectId)?.name ?? null : null, updatedAt: c.updatedAt }))}
           onOpenRecent={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
           sheetStatus={phoneSpace && showStats ? <StatsBar {...statsProps} variant="sheet" /> : null}
+          linkTargets={featureFlags.chatFraming === true ? allChats : null}
+          onLinkChat={(target) => linkChat(view.chatId, view.projectId ?? activeChatMeta?.projectId ?? null, target.id)}
+          headerLinks={featureFlags.chatFraming === true ? <ChatLinks chatId={view.chatId} chats={allChats} onOpenChat={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })} /> : null}
           frameRow={featureFlags.chatFraming === true && frameDrafts[view.chatId] ? (
             <FrameChips draft={frameDrafts[view.chatId]} projects={projects.map((p) => ({ id: p.id, name: p.name }))}
               onAction={(action) => onFrameAction(view.chatId, action)}

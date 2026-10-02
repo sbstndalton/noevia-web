@@ -11,7 +11,9 @@ import { AccountMenu } from './AccountMenu';
 import { ModeSwitch } from './ModeSwitch';
 import { ContextMenu, ConfirmDialog } from './ContextMenu';
 import type { MenuItem } from './ContextMenu';
-import { buildSearchResults, matchingDestinations, searchResultKey } from '../sidebar-search';
+import { buildSearchResults, chatMatchesQuery, matchingDestinations, parseSidebarQuery, searchResultKey } from '../sidebar-search';
+import { hasTag, tagTree } from '../chat-organise';
+import type { TagNode } from '../chat-organise';
 import type { SearchResultKind } from '../sidebar-search';
 import { fetchToolboxes, fetchProfile } from '../api';
 import type { McpStatus } from '../api';
@@ -72,6 +74,8 @@ interface SidebarProps {
   health: HealthState;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
+  /** #741 (features.chatFraming): the Tags section and `#tag` search over chat frames. */
+  organise?: boolean;
 }
 
 // Scheduled, Plugins and Explore all route to PreviewPanel and do nothing.
@@ -114,6 +118,7 @@ export function Sidebar({
   onOpenSettings,
   theme,
   onToggleTheme,
+  organise = false,
 }: SidebarProps): JSX.Element {
   const t = useT();
   const [orderKey,setOrderKey]=useState<string | null>(null);
@@ -211,6 +216,16 @@ export function Sidebar({
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   };
   const [query, setQuery] = useState('');
+  // #741: a tag (sidebar Tags section, a graph's tag hub) filters the lists through the search box,
+  // so the filter shows what it is and Escape clears it the usual way.
+  const [openTags, setOpenTags] = useState<Record<string, boolean>>({});
+  const filterByTag = (path: string) => { setCollapsed(false); setExpanded(true); setSearching(true); setQuery(`#${path}`); };
+  useEffect(() => {
+    if (!organise) return;
+    const onTag = (e: Event) => { const tag = (e as CustomEvent<{ tag?: string }>).detail?.tag; if (typeof tag === 'string' && tag) filterByTag(tag); };
+    window.addEventListener('noevia:filter-tag', onTag);
+    return () => window.removeEventListener('noevia:filter-tag', onTag);
+  }, [organise]);
   const code = mode === 'code';
   // #415: the sidebar's own "CODING PROJECTS"/"TASKS" sections were unconditionally the "not
   // connected yet" stub, even once #368 made the main Code panel real. Access is per admin and the
@@ -390,8 +405,13 @@ export function Sidebar({
 
   const sortedProjects = orderedProjects(projects,order);
   // The chat sidebar lists projects enabled for Chat; the Projects page lists all of them.
-  const visibleProjects = sortedProjects.filter(p=>(!p.modes?.length || p.modes.includes('chat')) && p.name.toLowerCase().includes(query.toLowerCase()));
-  const visibleChats = recentChats(chats).filter(c=>(c.title || '').toLowerCase().includes(query.toLowerCase()));
+  // #741: with organisation on, `#tag` words filter chats by their frame's tags; projects carry no
+  // tags, so a tag query leaves only chats. Without a `#` everything matches exactly as before.
+  const parsedQuery = organise ? parseSidebarQuery(query) : { tags: [], text: query };
+  const tagQuery = parsedQuery.tags.length > 0;
+  const visibleProjects = sortedProjects.filter(p=>(!p.modes?.length || p.modes.includes('chat')) && !tagQuery && p.name.toLowerCase().includes(query.toLowerCase()));
+  const visibleChats = recentChats(chats).filter(c=>organise ? chatMatchesQuery(c, query, hasTag) : (c.title || '').toLowerCase().includes(query.toLowerCase()));
+  const tags = organise ? tagTree(chats) : [];
   const pinnedChats = visibleChats.filter(c=>c.pinned);
   const pinnedProjects = visibleProjects.filter(p=>p.pinned);
   const unpinnedProjects = visibleProjects.filter(p=>!p.pinned);
@@ -403,7 +423,7 @@ export function Sidebar({
     ...(diaryEnabled ? [{ id: 'diary', label: t('sidebar.diary'), icon: 'diary', open: onOpenDiary }] : []),
     ...(onOpenArchived ? [{ id: 'archived', label: t('sidebar.archivedChats'), icon: 'archive', open: onOpenArchived }] : []),
     { id: 'settings', label: t('settings.title'), icon: 'settings', open: () => openSettings(undefined, searchTrigger.current || railSearchButton.current) },
-  ], query);
+  ], tagQuery ? '' : query);
   // While a query narrows the lists, ArrowDown/ArrowUp/Enter move through this exact,
   // flat, DOM-order list (destinations, pinned chats, pinned projects, unpinned projects, recent chats) —
   // the same order the groups below render them in — via real roving focus on each result's
@@ -521,6 +541,19 @@ export function Sidebar({
     <button ref={el=>{if(el)optionsTriggers.current.set(c.id,el);else optionsTriggers.current.delete(c.id);}} className="row-action" aria-label={t('sidebar.optionsFor', { name: c.title || t('sidebar.chatFallback') })} aria-haspopup="menu" aria-expanded={menu?.kind==='chat' && menu.id===c.id} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setMenu({kind:'chat',id:c.id,projectId,source,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more" size={20}/></button>
   </div>;
   const projectNames = new Map(projects.map((p) => [p.id, p.name]));
+  const renderTags = (nodes: TagNode[]): JSX.Element => <ul className="tag-tree">
+    {nodes.map((tag) => <li key={tag.path}>
+      <div className="tag-row">
+        {tag.children.length > 0
+          ? <button className="tag-disclosure" aria-label={t(openTags[tag.path] ? 'sidebar.tags.collapse' : 'sidebar.tags.expand', { tag: tag.path })} aria-expanded={!!openTags[tag.path]} onClick={() => setOpenTags((prev) => ({ ...prev, [tag.path]: !prev[tag.path] }))}><ShellIcon name="right" size={14}/></button>
+          : <span className="tag-disclosure" aria-hidden="true"/>}
+        <button className="nav-item tag-item" aria-label={t('sidebar.tags.filter', { tag: tag.path })} data-tip={`#${tag.path}`} onClick={() => filterByTag(tag.path)}>
+          <span className="tag-hash" aria-hidden="true">#</span><span className="nav-name">{tag.name}</span><span className="tag-count" aria-hidden="true">{tag.count}</span>
+        </button>
+      </div>
+      {tag.children.length > 0 && openTags[tag.path] && renderTags(tag.children)}
+    </li>)}
+  </ul>;
   const renderChat = (c: ChatMeta) => (
               <div
                 key={c.id}
@@ -689,6 +722,11 @@ export function Sidebar({
           {!entries.length && group==='Projects' && !query && <p className="side-hint">{t('sidebar.createProjectHint')}</p>}
         </div>;
       })}
+
+      {organise && !query && tags.length > 0 && <div className="spaces side-scroll side-scroll-tags">
+        <div className="sidebar-section-head"><button className="section-label section-toggle" aria-label={t('sidebar.sectionNamed', { name: t('sidebar.tags') })} aria-expanded={!closedGroups.Tags} onClick={()=>setClosedGroups(g=>({...g,Tags:!g.Tags}))}>{t('sidebar.tags')}</button></div>
+        {!closedGroups.Tags && renderTags(tags)}
+      </div>}
 
       {unpinnedChats.length > 0 && (
         <>

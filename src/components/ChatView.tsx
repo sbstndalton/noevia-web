@@ -3,8 +3,11 @@ import { useChatScroll } from '../useChatScroll';
 import { ReasoningControl, thinkingLevelLabel, useReasoningSettings } from './ReasoningControl';
 import { ProjectIcon } from './ProjectIdentity';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { JSX, ReactNode } from 'react';
-import type { Message, MessageStats, Project, InstalledModel, RoutingDecision } from '../types';
+import type { JSX, KeyboardEvent, ReactNode } from 'react';
+import type { ChatMeta, Message, MessageStats, Project, InstalledModel, RoutingDecision } from '../types';
+import { wikiLinkQueryAt } from '../diary-markdown';
+import { chatLinkCandidates, insertChatLink } from '../chat-organise';
+import { ShellIcon } from './ShellIcon';
 import { ChevronLeft, SendIcon, SlidersIcon } from './Icons';
 import { Icon } from './icons/Icon';
 import { ComposerModel } from './ComposerModel';
@@ -76,6 +79,12 @@ interface ChatViewProps {
   sheetStatus?: ReactNode;
   /** #738: the suggested-frame confirm row, shown under the chat's first message. */
   frameRow?: ReactNode;
+  /** #741 (features.chatFraming): the chats `[[` can link to (the person's own lists), and what
+   *  happens when one is chosen. Null or absent: `[[` is plain text, as before. */
+  linkTargets?: readonly ChatMeta[] | null;
+  onLinkChat?: (target: ChatMeta) => void;
+  /** #741: the header's Links control (backlinks and the chat graph). */
+  headerLinks?: ReactNode;
 }
 
 /** "12s", "1m 05s": how long the thinking took, the way people say it. */
@@ -246,6 +255,9 @@ export function ChatView({
   onOpenRecent,
   sheetStatus = null,
   frameRow = null,
+  linkTargets = null,
+  onLinkChat,
+  headerLinks = null,
 }: ChatViewProps): JSX.Element {
   const [freeModels, setFreeModels] = useState(false);
   const { sendKey } = useAccountPreferences();
@@ -400,9 +412,48 @@ export function ChatView({
   const skillOptions = useSkillPinOptions(project?.id ?? null, `${project?.updatedAt ?? ''}:${streaming}`, mode !== 'cowork');
   useEffect(() => { if (skillPin && !skillOptions.some(option => option.value === skillPin)) setSkillPin(''); }, [skillOptions, skillPin]);
   // A lone "/" opens the catalogue; typing continues to filter there instead of the message.
+  // #741: `[[` opens the chat suggestions; the caret decides which link is being typed.
+  const [linkAt, setLinkAt] = useState<{ start: number; query: string; caret: number } | null>(null);
+  const [linkIndex, setLinkIndex] = useState(0);
+  const readLinkAt = (value: string) => {
+    const el = composerRef.current;
+    if (!linkTargets || !el) { setLinkAt(null); return; }
+    const caret = el.selectionStart ?? value.length;
+    const found = el.selectionEnd === caret ? wikiLinkQueryAt(value, caret) : null;
+    setLinkAt((prev) => { if (!found) return null; if (!prev || prev.start !== found.start) setLinkIndex(0); return { ...found, caret }; });
+  };
+  const linkOptions = linkAt && linkTargets ? chatLinkCandidates(linkAt.query, linkTargets, chatId) : [];
+  const linkMenuOpen = !!linkAt && !streaming && !actionBusy;
+  useEffect(() => { setLinkAt(null); }, [chatId]);
+  const chooseLink = (target: ChatMeta) => {
+    if (!linkAt) return;
+    const next = insertChatLink(draft, linkAt.start, linkAt.caret, target.title || '');
+    setDraft(next.text);
+    writeDraft(chatId, next.text);
+    setLinkAt(null);
+    onLinkChat?.(target);
+    requestAnimationFrame(() => { const el = composerRef.current; if (el) { el.focus(); el.setSelectionRange(next.caret, next.caret); } });
+  };
+  const onLinkKey = (e: KeyboardEvent<HTMLTextAreaElement>): boolean => {
+    if (!linkMenuOpen || e.nativeEvent.isComposing) return false;
+    if (e.key === 'Escape') { e.preventDefault(); setLinkAt(null); return true; }
+    if (!linkOptions.length) return false;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      setLinkIndex((i) => (i + (e.key === 'ArrowDown' ? 1 : linkOptions.length - 1)) % linkOptions.length);
+      return true;
+    }
+    if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
+      e.preventDefault();
+      chooseLink(linkOptions[Math.min(linkIndex, linkOptions.length - 1)]);
+      return true;
+    }
+    return false;
+  };
   const onDraft = (value: string) => {
     if (value === '/' && draft === '') { setCatalogueOpen(true); return; }
     setDraft(value);
+    readLinkAt(value);
     // Written under the chatId captured by *this* call, not read from a later
     // effect — keeps a fast chat switch from ever saving one chat's keystroke
     // under another chat's key (#393).
@@ -466,6 +517,7 @@ export function ChatView({
           </span>
         </div>
         <div className="header-controls">
+          {headerLinks}
           <button className="icon-btn" onClick={headerSettings.open} title={headerSettings.label} aria-label={headerSettings.label}>
             <SlidersIcon size={15} />
           </button>
@@ -663,6 +715,16 @@ export function ChatView({
             {catalogue}{skillPicker}
           </ComposerModeBar>
         )}
+        {linkMenuOpen && <div className="chat-link-anchor">
+          {linkOptions.length
+            ? <ul className="chat-link-menu overlay" role="listbox" id={`chat-link-${chatId}`} aria-label={t('composer.chatLinks')}>
+              {linkOptions.map((c, i) => <li key={c.id} id={`chat-link-${chatId}-${i}`} role="option" aria-selected={i === Math.min(linkIndex, linkOptions.length - 1)}
+                onMouseDown={(e) => { e.preventDefault(); chooseLink(c); }} onMouseEnter={() => setLinkIndex(i)}>
+                <ShellIcon name="chat" size={15}/><span>{c.title}</span>
+              </li>)}
+            </ul>
+            : <p className="chat-link-menu overlay is-empty" role="status">{t('composer.chatLinks.none')}</p>}
+        </div>}
         <div className={`composer-inner chat-composer-inner pane${phone ? ' is-compact' : ''}`}>
           <ComposerTextarea
             ref={composerRef}
@@ -673,6 +735,10 @@ export function ChatView({
             disabled={streaming || actionBusy}
             onValue={onDraft}
             onSubmit={submit}
+            onKeyIntercept={linkTargets ? onLinkKey : undefined}
+            onSelect={linkTargets ? (e) => readLinkAt(e.currentTarget.value) : undefined}
+            onBlur={linkTargets ? () => setLinkAt(null) : undefined}
+            aria-activedescendant={linkMenuOpen && linkOptions.length ? `chat-link-${chatId}-${Math.min(linkIndex, linkOptions.length - 1)}` : undefined}
           />
           <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={setActionStatus}
             browseTools={{ onOpen: () => setCatalogueOpen(true), count: turnBoxes.length }} />
