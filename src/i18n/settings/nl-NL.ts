@@ -74,6 +74,8 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'features.item.constrainedPlanDecoding.description': "Vraagt de lokale llama.cpp-engine het plan-artefact te beperken tot het JSON-schema. Komt bovenop de validatie achteraf en valt terug op onbeperkte generatie voor redeneermodellen of wanneer de engine het weigert.",
   'features.item.executorGuard.label': "Uitvoerderbewaking (Code-modus)",
   'features.item.executorGuard.description': "Controleert elke toolaanroep van de code-agent tegen het schema voordat iets anders hem ziet. Een misvormde aanroep wordt met de reden geweigerd, zodat de agent hem kan corrigeren; na drie stopt de taak als geblokkeerd. Voegt alleen weigeringen toe: elke schrijfactie gaat nog steeds via de goedkeuringskaart.",
+  'features.item.chatFraming.label': "Chatkadering",
+  'features.item.chatFraming.description': "Stelt op basis van het eerste bericht een kader voor een nieuwe chat voor: een van je projecten, een soort (zoeken, actie, idee, vraag of code), een bestaande tag en gerelateerde chats. Suggesties worden niet toegepast en veranderen de antwoorden nog niet. Zonder de beslissingsdienst krijgen chats geen kader.",
   'features.item.codePipeline.label': "Plannerpijplijn (Code-modus)",
   'features.item.codePipeline.description': "Biedt een Planner-voorbereiding voor Code-taken: de Planner schrijft een plan, de code-agent voert het uit, de tests van de beheerder draaien in een aparte verifier, de Planner beoordeelt de wijziging (hoogstens twee rondes wijzigingen) en de Auditor meldt welk bewijs er is. Elke schrijfactie gaat nog steeds via de goedkeuringskaart, en je accepteert het resultaat zelf.",
   'features.item.codeMerge.label': "Beoordeelde wijzigingen samenvoegen (Code-modus)",

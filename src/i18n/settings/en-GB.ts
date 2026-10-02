@@ -66,6 +66,8 @@ export const EN_GB_SETTINGS = {
   'features.item.constrainedPlanDecoding.description': "Ask the local llama.cpp engine to constrain the plan artifact to its JSON schema. Adds to the after-the-fact validation and falls back to unconstrained generation for reasoning models or when the engine rejects it.",
   'features.item.executorGuard.label': "Executor guard (Code mode)",
   'features.item.executorGuard.description': "Check every tool call the coding agent makes against its schema before anything else sees it. A malformed call is refused with the reason, so the agent can correct it; after three, the task stops as blocked. It only adds refusals: every write still goes through the approval card.",
+  'features.item.chatFraming.label': "Chat framing",
+  'features.item.chatFraming.description': "Suggest a frame for a new chat from its first message: one of your projects, a kind (search, action, idea, question or code), an existing tag and related chats. Suggestions are not applied and do not change answers yet. Without the decision service, chats get no frame.",
   'features.item.codePipeline.label': "Planner pipeline (Code mode)",
   'features.item.codePipeline.description': "Offer a Planner preparation for Code tasks: the Planner writes a plan, the coding agent carries it out, the operator’s tests run in a separate verifier, the Planner reviews the change (at most two rounds of changes) and the Auditor reports what evidence there is. Every write still goes through the approval card, and you accept the result yourself.",
   'features.item.codeMerge.label': "Merge reviewed changes (Code mode)",

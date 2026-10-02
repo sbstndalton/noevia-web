@@ -219,6 +219,22 @@ export interface ChatMeta {
   archived?: boolean;
   /** The session's harness (#236). Absent means Chat, as for every chat before modes. */
   mode?: 'chat' | 'cowork';
+  /** When the chat was first saved (ms). Set once; the server keeps the first value (#737). */
+  createdAt?: number;
+  /** Chat framing (#737): suggested or confirmed. Absent means unframed. */
+  frame?: ChatFrame | null;
+}
+
+export type ChatKind = 'search' | 'action' | 'idea' | 'question' | 'code';
+
+export interface ChatFrame {
+  projectId?: string | null;
+  kind: ChatKind;
+  tags: string[];
+  /** Ids of related chats. */
+  links: string[];
+  confirmed: boolean;
+  source: 'suggested' | 'user';
 }
 
 export interface HistoryEntry {

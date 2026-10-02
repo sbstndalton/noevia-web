@@ -74,6 +74,8 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'features.item.constrainedPlanDecoding.description': "Ber den lokala llama.cpp-motorn att begränsa planartefakten till sitt JSON-schema. Kommer utöver validering i efterhand och faller tillbaka på obegränsad generering för resonemangsmodeller eller när motorn avvisar det.",
   'features.item.executorGuard.label': "Utförarvakt (Code-läge)",
   'features.item.executorGuard.description': "Kontrollerar varje verktygsanrop från kodagenten mot dess schema innan något annat ser det. Ett felformat anrop avvisas med orsaken, så att agenten kan rätta det; efter tre stoppas uppgiften som blockerad. Den lägger bara till avvisningar: varje skrivning går fortfarande via godkännandekortet.",
+  'features.item.chatFraming.label': "Chattram",
+  'features.item.chatFraming.description': "Föreslår en ram för en ny chatt utifrån det första meddelandet: ett av dina projekt, en typ (sökning, åtgärd, idé, fråga eller kod), en befintlig etikett och relaterade chattar. Förslagen tillämpas inte och ändrar inte svaren ännu. Utan beslutstjänsten får chattar ingen ram.",
   'features.item.codePipeline.label': "Planerarflöde (Code-läge)",
   'features.item.codePipeline.description': "Erbjuder en planerarförberedelse för Code-uppgifter: Planeraren skriver en plan, kodagenten genomför den, operatörens tester körs i en separat verifierare, Planeraren granskar ändringen (högst två omgångar ändringar) och Revisorn rapporterar vilka belägg som finns. Varje skrivning går fortfarande via godkännandekortet, och du godkänner resultatet själv.",
   'features.item.codeMerge.label': "Slå ihop granskade ändringar (Code-läge)",
