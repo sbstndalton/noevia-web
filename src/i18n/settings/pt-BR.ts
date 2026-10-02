@@ -354,6 +354,12 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'style.framing.tracesDesc': "Quando o raciocinador de enquadramento condensa um resultado de ferramenta, o pacote de tarefa, o tamanho da resposta e os tempos são salvos em um arquivo no seu próprio espaço de trabalho. A saída bruta da ferramenta nunca é salva. O arquivo tem tamanho limitado e é rotacionado.",
   'style.framing.tracesOn': "Os rastros de raciocínio agora são mantidos no seu espaço de trabalho.",
   'style.framing.tracesOff': "Os rastros de raciocínio não são mais mantidos.",
+  // #741: the per-user chat mirror into the Diary.
+  'style.framing.mirror': "Espelhar chats no Diário",
+  'style.framing.mirrorDesc': "Mantém uma cópia de cada chat como nota no seu Diário, em Chats/ com uma pasta por projeto, com etiquetas e [[links]]. A cópia é de mão única: uma nota que você editar lá vai para a Lixeira antes de o noevia atualizá-la, e a nota de um chat excluído vai para a Lixeira.",
+  'style.framing.mirrorOn': "Os chats agora são espelhados no seu Diário.",
+  'style.framing.mirrorOff': "Os chats não são mais espelhados. As notas já escritas continuam no seu Diário.",
+  'style.framing.mirrorLoadError': "A configuração de espelhamento no Diário não carregou.",
   'style.precedence': "Ordem de prioridade: primeiro o que você pede em uma mensagem (incluindo um formato exato como JSON), depois as instruções do projeto e, por fim, estas configurações da conta.",
   'style.reset': "Restaurar estilo padrão",
   'style.loadError': "Não foi possível carregar suas configurações de resposta.",

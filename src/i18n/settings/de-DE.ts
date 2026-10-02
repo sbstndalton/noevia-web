@@ -354,6 +354,12 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'style.framing.tracesDesc': "Wenn der Rahmen-Reasoner ein Werkzeugergebnis zusammenfasst, werden sein Aufgabenpaket, die Antwortlänge und die Zeiten in einer Datei in deinem eigenen Arbeitsbereich gespeichert. Rohe Werkzeugausgaben werden nie gespeichert. Die Datei hat eine Größengrenze und wird rotiert.",
   'style.framing.tracesOn': "Reasoning-Spuren werden jetzt in deinem Arbeitsbereich behalten.",
   'style.framing.tracesOff': "Reasoning-Spuren werden nicht mehr behalten.",
+  // #741: the per-user chat mirror into the Diary.
+  'style.framing.mirror': "Chats ins Tagebuch spiegeln",
+  'style.framing.mirrorDesc': "Behalte jeden Chat als Notiz in deinem Tagebuch, unter Chats/ mit einem Ordner pro Projekt, samt Tags und [[Links]]. Die Kopie geht nur in eine Richtung: Eine Notiz, die du dort bearbeitest, landet im Papierkorb, bevor noevia sie aktualisiert, und die Notiz eines gelöschten Chats kommt in den Papierkorb.",
+  'style.framing.mirrorOn': "Chats werden jetzt in dein Tagebuch gespiegelt.",
+  'style.framing.mirrorOff': "Chats werden nicht mehr gespiegelt. Bereits geschriebene Notizen bleiben in deinem Tagebuch.",
+  'style.framing.mirrorLoadError': "Die Einstellung für das Spiegeln ins Tagebuch wurde nicht geladen.",
   'style.precedence': "Reihenfolge: zuerst, was du in einer Nachricht verlangst (auch ein genaues Format wie JSON), dann die Anweisungen des Projekts, dann diese Kontoeinstellungen.",
   'style.reset': "Stil zurücksetzen",
   'style.loadError': "Deine Antworteinstellungen konnten nicht geladen werden.",

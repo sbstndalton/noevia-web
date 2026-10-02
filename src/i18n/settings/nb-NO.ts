@@ -354,6 +354,12 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'style.framing.tracesDesc': "Når rammeresonnereren kondenserer et verktøyresultat, lagres oppgavepakken, svarlengden og tidene i en fil i ditt eget arbeidsområde. Rå verktøyutdata lagres aldri. Filen har en størrelsesgrense og roteres.",
   'style.framing.tracesOn': "Resonneringsspor lagres nå i arbeidsområdet ditt.",
   'style.framing.tracesOff': "Resonneringsspor lagres ikke lenger.",
+  // #741: the per-user chat mirror into the Diary.
+  'style.framing.mirror': "Speil chatter til dagboken",
+  'style.framing.mirrorDesc': "Behold en kopi av hver chat som et notat i dagboken din, under Chats/ med én mappe per prosjekt, med merkelapper og [[lenker]]. Kopien går én vei: Et notat du redigerer der, legges i papirkurven før noevia oppdaterer det, og notatet til en slettet chat havner i papirkurven.",
+  'style.framing.mirrorOn': "Chatter speiles nå til dagboken din.",
+  'style.framing.mirrorOff': "Chatter speiles ikke lenger. Notater som allerede er skrevet, blir værende i dagboken.",
+  'style.framing.mirrorLoadError': "Innstillingen for speiling til dagboken ble ikke lastet.",
   'style.precedence': "Rekkefølge: Det du ber om i en melding (også et bestemt format som JSON) kommer først, så prosjektets instruksjoner, så disse kontoinnstillingene.",
   'style.reset': "Tilbakestill stil",
   'style.loadError': "Svarinnstillingene dine kunne ikke lastes.",

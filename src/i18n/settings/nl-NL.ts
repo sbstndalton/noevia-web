@@ -354,6 +354,12 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'style.framing.tracesDesc': "Wanneer de kaderredeneerder een toolresultaat samenvat, worden het taakpakket, de antwoordlengte en de tijden opgeslagen in een bestand in je eigen werkruimte. Ruwe tooluitvoer wordt nooit opgeslagen. Het bestand heeft een maximale grootte en roteert.",
   'style.framing.tracesOn': "Redeneersporen worden nu in je werkruimte bewaard.",
   'style.framing.tracesOff': "Redeneersporen worden niet meer bewaard.",
+  // #741: the per-user chat mirror into the Diary.
+  'style.framing.mirror': "Chats naar het dagboek spiegelen",
+  'style.framing.mirrorDesc': "Bewaar een kopie van elke chat als notitie in je dagboek, onder Chats/ met één map per project, met tags en [[links]]. De kopie gaat één kant op: een notitie die je daar bewerkt, gaat naar de prullenbak voordat noevia hem bijwerkt, en de notitie van een verwijderde chat gaat naar de prullenbak.",
+  'style.framing.mirrorOn': "Chats worden nu naar je dagboek gespiegeld.",
+  'style.framing.mirrorOff': "Chats worden niet meer gespiegeld. Notities die al geschreven zijn, blijven in je dagboek.",
+  'style.framing.mirrorLoadError': "De instelling voor spiegelen naar het dagboek is niet geladen.",
   'style.precedence': "Volgorde: eerst wat je in een bericht vraagt (ook een exact formaat zoals JSON), dan de instructies van het project, dan deze accountinstellingen.",
   'style.reset': "Stijl herstellen",
   'style.loadError': "Je antwoordinstellingen konden niet worden geladen.",

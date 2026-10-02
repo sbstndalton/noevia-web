@@ -355,6 +355,12 @@ export const EN_GB_SETTINGS = {
   'style.framing.tracesDesc': "When the framing reasoner condenses a tool result, save its task packet, the answer length and timings to a file in your own workspace. Raw tool output is never saved. The file is size-capped and rotates.",
   'style.framing.tracesOn': "Reasoning traces are now kept in your workspace.",
   'style.framing.tracesOff': "Reasoning traces are no longer kept.",
+  // #741: the per-user chat mirror into the Diary.
+  'style.framing.mirror': "Mirror chats to Diary",
+  'style.framing.mirrorDesc': "Keep a copy of each chat as a note in your Diary, under Chats/ with one folder per project, including its tags and [[links]]. The copy is one-way: a note you edit there is kept in Trash before noevia updates it, and a deleted chat’s note goes to Trash.",
+  'style.framing.mirrorOn': "Chats are now mirrored to your Diary.",
+  'style.framing.mirrorOff': "Chats are no longer mirrored. Notes already written stay in your Diary.",
+  'style.framing.mirrorLoadError': "The Diary mirror setting did not load.",
   'style.precedence': 'Order of precedence: what you ask for in a message (including an exact format such as JSON) first, then the project’s instructions, then these account settings.',
   'style.reset': 'Reset style to default',
   'style.loadError': 'Your response settings could not be loaded.',

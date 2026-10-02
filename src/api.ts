@@ -437,6 +437,12 @@ export const fetchFramingPreferences = () => getJson<FramingPreferences>('/api/c
   .then((r) => ({ autoAccept: r?.autoAccept === true, keepReasoningTraces: r?.keepReasoningTraces === true }));
 /** A partial update: keys not given keep their saved value (#740). */
 export const saveFramingPreferences = (prefs: Partial<FramingPreferences>) => putJson<FramingPreferences>('/api/chat-framing/preferences', prefs);
+/** #741: "Mirror chats to Diary", the person's own switch (off by default). `available` is false
+ *  without the Diary add-on or the chatFraming feature; the choice is kept either way. */
+export type VaultMirrorPreferences = { enabled: boolean; available: boolean };
+export const fetchVaultMirrorPreferences = () => getJson<VaultMirrorPreferences>('/api/chat-vault-mirror/preferences')
+  .then((r) => ({ enabled: r?.enabled === true, available: r?.available === true }));
+export const saveVaultMirrorPreferences = (prefs: { enabled: boolean }) => putJson<VaultMirrorPreferences>('/api/chat-vault-mirror/preferences', prefs);
 
 export type HistorySave = { ok: true; revision: string | null } | { ok: false; conflict: { history: HistoryEntry[]; revision: string } };
 /** Save a transcript. With a base revision, a concurrent save elsewhere returns the current copy to merge. */

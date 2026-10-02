@@ -354,6 +354,12 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'style.framing.tracesDesc': "Quand le raisonneur de cadrage condense un résultat d’outil, son paquet de tâche, la longueur de la réponse et les durées sont enregistrés dans un fichier de votre propre espace de travail. La sortie brute de l’outil n’est jamais enregistrée. Le fichier a une taille limitée et tourne.",
   'style.framing.tracesOn': "Les traces de raisonnement sont désormais conservées dans votre espace de travail.",
   'style.framing.tracesOff': "Les traces de raisonnement ne sont plus conservées.",
+  // #741: the per-user chat mirror into the Diary.
+  'style.framing.mirror': "Refléter les discussions dans le Journal",
+  'style.framing.mirrorDesc': "Conserve une copie de chaque discussion comme note dans votre Journal, sous Chats/ avec un dossier par projet, avec ses étiquettes et ses [[liens]]. La copie est à sens unique : une note modifiée là-bas est gardée dans la Corbeille avant que noevia la mette à jour, et la note d’une discussion supprimée va dans la Corbeille.",
+  'style.framing.mirrorOn': "Les discussions sont maintenant reflétées dans votre Journal.",
+  'style.framing.mirrorOff': "Les discussions ne sont plus reflétées. Les notes déjà écrites restent dans votre Journal.",
+  'style.framing.mirrorLoadError': "Le réglage de reflet dans le Journal n’a pas été chargé.",
   'style.precedence': "Ordre de priorité : d’abord ce que vous demandez dans un message (y compris un format exact comme JSON), puis les instructions du projet, puis ces réglages du compte.",
   'style.reset': "Rétablir le style par défaut",
   'style.loadError': "Impossible de charger vos réglages de réponse.",

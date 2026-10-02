@@ -354,6 +354,12 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'style.framing.tracesDesc': "När ramresoneraren sammanfattar ett verktygsresultat sparas dess uppgiftspaket, svarslängden och tiderna i en fil i din egen arbetsyta. Rå verktygsutdata sparas aldrig. Filen har en storleksgräns och roteras.",
   'style.framing.tracesOn': "Resonemangsspår sparas nu i din arbetsyta.",
   'style.framing.tracesOff': "Resonemangsspår sparas inte längre.",
+  // #741: the per-user chat mirror into the Diary.
+  'style.framing.mirror': "Spegla chattar till dagboken",
+  'style.framing.mirrorDesc': "Behåll en kopia av varje chatt som en anteckning i din dagbok, under Chats/ med en mapp per projekt, med etiketter och [[länkar]]. Kopian går åt ett håll: en anteckning du redigerar där läggs i papperskorgen innan noevia uppdaterar den, och anteckningen för en raderad chatt hamnar i papperskorgen.",
+  'style.framing.mirrorOn': "Chattar speglas nu till din dagbok.",
+  'style.framing.mirrorOff': "Chattar speglas inte längre. Anteckningar som redan skrivits finns kvar i din dagbok.",
+  'style.framing.mirrorLoadError': "Inställningen för spegling till dagboken laddades inte.",
   'style.precedence': "Prioritetsordning: först det du ber om i ett meddelande (även ett exakt format som JSON), sedan projektets instruktioner, sedan de här kontoinställningarna.",
   'style.reset': "Återställ stilen",
   'style.loadError': "Dina svarsinställningar kunde inte läsas in.",

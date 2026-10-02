@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import { apiFetch, fetchFramingPreferences, saveFramingPreferences } from '../../api';
+import { apiFetch, fetchFramingPreferences, fetchVaultMirrorPreferences, saveFramingPreferences, saveVaultMirrorPreferences } from '../../api';
 import type { FramingPreferences as FramingPreferencesValue } from '../../api';
 import { useFeatureFlags } from '../features/useFeatureFlags';
 import { SegmentedControl } from '../SegmentedControl';
@@ -49,10 +49,38 @@ function FramingPreferences(): JSX.Element {
         <div className="set-row-text"><span className="set-row-label" id={row.id}>{t(row.label)}</span><span className="set-row-desc">{t(row.desc)}</span></div>
         <div className="set-row-control"><input type="checkbox" role="switch" className="noevia-switch" aria-labelledby={row.id} checked={prefs?.[row.key] === true} disabled={prefs === null || busy} onChange={(e) => void toggle(row, e.currentTarget.checked)} /></div>
       </div>)}
+      <VaultMirrorRow onStatus={setStatus} onError={setError} />
     </div>
     {status && <p className="route-note" role="status">{status}</p>}
     {error && <p className="modal-err" role="alert">{error}</p>}
   </section>;
+}
+
+/** #741: "Mirror chats to Diary", off by default. Shown only where it can run (the Diary add-on is
+ *  on for this account); a one-way copy, so switching off leaves the notes already written. */
+function VaultMirrorRow({ onStatus, onError }: { onStatus: (text: string) => void; onError: (text: string) => void }): JSX.Element | null {
+  const t = useT();
+  const [prefs, setPrefs] = useState<{ enabled: boolean; available: boolean } | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let live = true;
+    fetchVaultMirrorPreferences().then((p) => { if (live) setPrefs(p); }).catch(() => { if (live) onError(t('style.framing.mirrorLoadError')); });
+    return () => { live = false; };
+  }, []);
+  if (!prefs?.available) return null;
+  const toggle = async (next: boolean) => {
+    setBusy(true); onStatus(''); onError('');
+    try {
+      const saved = await saveVaultMirrorPreferences({ enabled: next });
+      setPrefs({ enabled: saved.enabled === true, available: saved.available !== false });
+      onStatus(saved.enabled ? t('style.framing.mirrorOn') : t('style.framing.mirrorOff'));
+    } catch (e) { onError(e instanceof Error ? e.message : t('common.saveFailed')); }
+    finally { setBusy(false); }
+  };
+  return <div className="set-row">
+    <div className="set-row-text"><span className="set-row-label" id="framing-vault-mirror">{t('style.framing.mirror')}</span><span className="set-row-desc">{t('style.framing.mirrorDesc')}</span></div>
+    <div className="set-row-control"><input type="checkbox" role="switch" className="noevia-switch" aria-labelledby="framing-vault-mirror" checked={prefs.enabled} disabled={busy} onChange={(e) => void toggle(e.currentTarget.checked)} /></div>
+  </div>;
 }
 
 /** Settings → Assistant & style (#229, #231). A quick preset, an optional advanced panel, the

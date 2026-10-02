@@ -354,6 +354,12 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'style.framing.tracesDesc': "Cuando el razonador de encuadre resume un resultado de herramienta, guarda su paquete de tarea, la longitud de la respuesta y los tiempos en un archivo de tu propio espacio de trabajo. Nunca se guarda la salida bruta de la herramienta. El archivo tiene un tamaño máximo y rota.",
   'style.framing.tracesOn': "Las trazas de razonamiento ahora se guardan en tu espacio de trabajo.",
   'style.framing.tracesOff': "Las trazas de razonamiento ya no se guardan.",
+  // #741: the per-user chat mirror into the Diary.
+  'style.framing.mirror': "Reflejar los chats en el Diario",
+  'style.framing.mirrorDesc': "Guarda una copia de cada chat como nota en tu Diario, en Chats/ con una carpeta por proyecto, con sus etiquetas y [[enlaces]]. La copia va en un solo sentido: una nota que edites allí se guarda en la Papelera antes de que noevia la actualice, y la nota de un chat eliminado va a la Papelera.",
+  'style.framing.mirrorOn': "Los chats se reflejan ahora en tu Diario.",
+  'style.framing.mirrorOff': "Los chats ya no se reflejan. Las notas ya escritas se quedan en tu Diario.",
+  'style.framing.mirrorLoadError': "No se cargó el ajuste de reflejo en el Diario.",
   'style.precedence': "Orden de prioridad: primero lo que pides en un mensaje (incluido un formato exacto como JSON), luego las instrucciones del proyecto y después estos ajustes de la cuenta.",
   'style.reset': "Restablecer estilo",
   'style.loadError': "No se han podido cargar tus ajustes de respuesta.",

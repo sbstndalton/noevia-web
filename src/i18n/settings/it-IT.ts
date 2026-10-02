@@ -354,6 +354,12 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'style.framing.tracesDesc': "Quando il ragionatore di inquadramento condensa il risultato di uno strumento, il suo pacchetto di attività, la lunghezza della risposta e i tempi vengono salvati in un file nel tuo spazio di lavoro. L’output grezzo dello strumento non viene mai salvato. Il file ha un limite di dimensione e viene ruotato.",
   'style.framing.tracesOn': "Le tracce di ragionamento ora vengono conservate nel tuo spazio di lavoro.",
   'style.framing.tracesOff': "Le tracce di ragionamento non vengono più conservate.",
+  // #741: the per-user chat mirror into the Diary.
+  'style.framing.mirror': "Rispecchia le chat nel Diario",
+  'style.framing.mirrorDesc': "Conserva una copia di ogni chat come nota nel tuo Diario, in Chats/ con una cartella per progetto, con etichette e [[collegamenti]]. La copia va in una sola direzione: una nota che modifichi lì viene tenuta nel Cestino prima che noevia la aggiorni, e la nota di una chat eliminata va nel Cestino.",
+  'style.framing.mirrorOn': "Ora le chat vengono rispecchiate nel tuo Diario.",
+  'style.framing.mirrorOff': "Le chat non vengono più rispecchiate. Le note già scritte restano nel tuo Diario.",
+  'style.framing.mirrorLoadError': "L’impostazione di rispecchiamento nel Diario non è stata caricata.",
   'style.precedence': "Ordine di priorità: prima ciò che chiedi in un messaggio (compreso un formato preciso come JSON), poi le istruzioni del progetto, poi queste impostazioni dell’account.",
   'style.reset': "Ripristina lo stile",
   'style.loadError': "Impossibile caricare le impostazioni delle risposte.",
