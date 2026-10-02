@@ -35,7 +35,13 @@ import {
   saveProjectChats,
   streamChat,
   startCowork,
+  suggestChatFrame,
+  moveChatToProject,
+  fetchFramingPreferences,
 } from './api';
+import { FrameChips } from './components/FrameChips';
+import { acceptPlan, acceptedFrame, frameDraftReducer, startDraft } from './chat-frame';
+import type { FrameAction, FrameDraft } from './chat-frame';
 import { sessionMode, type ChatMode } from './chat-mode';
 import { STOPPED_SENDER } from './chat-labels';
 import type {
@@ -245,6 +251,15 @@ export default function App(): JSX.Element {
   projectsRef.current = projects;
   freeChatsRef.current = freeChats;
   const chatMetaSaves = useRef(new Map<string, Promise<void>>());
+  // Chat framing (#738): the suggested frame awaiting the person per chat (never saved before ✓),
+  // the chats already asked about, the list each one's meta was first saved to, and where an
+  // accepted frame moved it — so a later meta save for that chat goes to its new list.
+  const [frameDrafts, setFrameDrafts] = useState<Record<string, FrameDraft>>({});
+  const frameDraftsRef = useRef(frameDrafts);
+  frameDraftsRef.current = frameDrafts;
+  const framingAsked = useRef(new Set<string>());
+  const framingHome = useRef(new Map<string, string | null>());
+  const movedChats = useRef(new Map<string, string | null>());
   const [messagesByChat, setMessagesByChat] = useState<Record<string, Message[]>>({});
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [modelsLoaded, setModelsLoaded] = useState(false);
@@ -746,8 +761,10 @@ export default function App(): JSX.Element {
   }, [messagesByChat, persist]);
 
   // Upsert one chat's meta in its list's save queue (shared by the Chat and Cowork send paths).
-  const queueMetaUpsert = useCallback((projectId: string | null, chatId: string, make: (existing: ChatMeta | undefined) => ChatMeta) => {
-    void enqueueKeyed(chatMetaSaves.current, projectId === null ? 'free' : `project:${projectId}`, async () => {
+  const queueMetaUpsert = useCallback((sentTo: string | null, chatId: string, make: (existing: ChatMeta | undefined) => ChatMeta) => {
+    void enqueueKeyed(chatMetaSaves.current, sentTo === null ? 'free' : `project:${sentTo}`, async () => {
+      // An accepted frame may have moved the chat since this save was queued (#738).
+      const projectId = movedChats.current.has(chatId) ? movedChats.current.get(chatId) ?? null : sentTo;
       if (projectId) {
         const project = projectsRef.current.find((p) => p.id === projectId);
         if (!project) return;
@@ -775,6 +792,54 @@ export default function App(): JSX.Element {
       await refreshProjects();
     }).catch(() => undefined);
   }, [refreshProjects]);
+
+  const framingOn = useRef(false);
+  framingOn.current = featureFlags.chatFraming === true;
+
+  // Save an accepted frame (#738) through the one move path: into the framed project when it names
+  // one, otherwise in place. It runs in the chat's list queue, after its first meta save. A failure
+  // keeps the row, marked, so ✓ can try again.
+  const acceptFrame = useCallback(async (chatId: string, draft: FrameDraft, tagText?: string) => {
+    const edited = tagText === undefined ? draft : frameDraftReducer(draft, { type: 'setTags', text: tagText }) ?? draft;
+    const frame = acceptedFrame(edited.frame);
+    setFrameDrafts((prev) => ({ ...prev, [chatId]: { frame: edited.frame, status: 'saving' } }));
+    const home = movedChats.current.has(chatId) ? movedChats.current.get(chatId) ?? null : framingHome.current.get(chatId) ?? null;
+    const plan = acceptPlan(frame, home);
+    try {
+      await enqueueKeyed(chatMetaSaves.current, home === null ? 'free' : `project:${home}`, async () => {
+        await moveChatToProject(chatId, plan.projectId, frame);
+      });
+      if (plan.move) movedChats.current.set(chatId, plan.projectId);
+      workspaceRequest.current += 1;
+      await refreshProjects();
+      setFrameDrafts((prev) => { const next = { ...prev }; delete next[chatId]; return next; });
+      if (plan.move && viewRef.current.kind === 'chat' && viewRef.current.chatId === chatId) setView({ kind: 'chat', chatId, projectId: plan.projectId });
+    } catch {
+      setFrameDrafts((prev) => ({ ...prev, [chatId]: { frame: edited.frame, status: 'error' } }));
+    }
+  }, [refreshProjects]);
+
+  const suggestFrameRef = useRef(async (_chatId: string, _text: string) => {});
+  suggestFrameRef.current = async (chatId: string, text: string) => {
+    const [suggestion, prefs] = await Promise.all([
+      suggestChatFrame(text, chatId),
+      fetchFramingPreferences().catch(() => ({ autoAccept: false })),
+    ]);
+    if (deletedChats.current.has(chatId) || !framingOn.current) return;
+    const draft = startDraft(suggestion, projectsRef.current.map((p) => p.id));
+    if (!draft) return;
+    setFrameDrafts((prev) => ({ ...prev, [chatId]: draft }));
+    if (prefs.autoAccept) void acceptFrame(chatId, draft);
+  };
+
+  const onFrameAction = useCallback((chatId: string, action: FrameAction) => {
+    setFrameDrafts((prev) => {
+      const next = frameDraftReducer(prev[chatId] ?? null, action);
+      const out = { ...prev };
+      if (next) out[chatId] = next; else delete out[chatId];
+      return out;
+    });
+  }, []);
 
   const handleSend = useCallback(
     async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; notice?: string | null; skill?: SkillPin; resend?: ResendOutcome } = {}) => {
@@ -825,6 +890,13 @@ export default function App(): JSX.Element {
             // The chosen mode is the session's even when this turn fell back to Chat (#236).
             ...(pendingModesRef.current[chatId] === 'cowork' ? { mode: 'cowork' as const } : {}) };
       queueMetaUpsert(projectId, chatId, make);
+      // Chat framing (#738): a new chat's first message asks for a frame alongside the reply. It never
+      // blocks or delays the send; a miss or an error simply shows nothing.
+      if (framingOn.current && existing.length === 0 && !framingAsked.current.has(chatId)) {
+        framingAsked.current.add(chatId);
+        framingHome.current.set(chatId, projectId);
+        void suggestFrameRef.current(chatId, text);
+      }
 
       const startedAt = Date.now();
       let failed = false;
@@ -1595,6 +1667,11 @@ export default function App(): JSX.Element {
           recent={view.projectId ? undefined : recentChats(allChats).filter((c) => c.id !== view.chatId).slice(0, 5).map((c) => ({ id: c.id, title: c.title, projectId: c.projectId ?? null, projectName: c.projectId ? projects.find((p) => p.id === c.projectId)?.name ?? null : null, updatedAt: c.updatedAt }))}
           onOpenRecent={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
           sheetStatus={phoneSpace && showStats ? <StatsBar {...statsProps} variant="sheet" /> : null}
+          frameRow={featureFlags.chatFraming === true && frameDrafts[view.chatId] ? (
+            <FrameChips draft={frameDrafts[view.chatId]} projects={projects.map((p) => ({ id: p.id, name: p.name }))}
+              onAction={(action) => onFrameAction(view.chatId, action)}
+              onAccept={(tagText) => { const d = frameDraftsRef.current[view.chatId]; if (d) void acceptFrame(view.chatId, d, tagText); }} />
+          ) : null}
         />
       )}
 

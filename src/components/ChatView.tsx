@@ -2,7 +2,7 @@ import { ChatContext } from './ChatContext';
 import { useChatScroll } from '../useChatScroll';
 import { ReasoningControl, thinkingLevelLabel, useReasoningSettings } from './ReasoningControl';
 import { ProjectIcon } from './ProjectIdentity';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
 import type { Message, MessageStats, Project, InstalledModel, RoutingDecision } from '../types';
 import { ChevronLeft, SendIcon, SlidersIcon } from './Icons';
@@ -74,6 +74,8 @@ interface ChatViewProps {
   /** #527: in phone-sized space the live inference block (model, speed, routing) is not in the
    *  page; App hands it here and it shows in the model sheet. Null when the strip would be hidden. */
   sheetStatus?: ReactNode;
+  /** #738: the suggested-frame confirm row, shown under the chat's first message. */
+  frameRow?: ReactNode;
 }
 
 /** "12s", "1m 05s": how long the thinking took, the way people say it. */
@@ -243,6 +245,7 @@ export function ChatView({
   recent,
   onOpenRecent,
   sheetStatus = null,
+  frameRow = null,
 }: ChatViewProps): JSX.Element {
   const [freeModels, setFreeModels] = useState(false);
   const { sendKey } = useAccountPreferences();
@@ -499,7 +502,8 @@ export function ChatView({
           // The Stopped placeholder is drawn in the language active NOW, never the one it was saved in (#634).
           const body = messageBodyText(t, m);
           return (
-            <div key={m.id} className="msg" data-role={m.role}>
+            <Fragment key={m.id}>
+            <div className="msg" data-role={m.role}>
               {/* The bubble side already says who spoke; only the answering model is worth showing. */}
               {m.role === 'user'
                 ? <span className="msg-sender sr-only">{t('chat.sender.you')}</span>
@@ -626,6 +630,8 @@ export function ChatView({
                 )
               )}
             </div>
+            {i === 0 && m.role === 'user' && frameRow}
+            </Fragment>
           );
         })}
         {!atBottom && messages.length > 0 && (

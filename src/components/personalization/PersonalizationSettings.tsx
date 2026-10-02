@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import { apiFetch } from '../../api';
+import { apiFetch, fetchFramingPreferences, saveFramingPreferences } from '../../api';
+import { useFeatureFlags } from '../features/useFeatureFlags';
 import { SegmentedControl } from '../SegmentedControl';
 import { ADVANCED, ADVANCED_DEFAULT, isDefaultStyle, normaliseStyle, styleLines } from '../../response-style';
 import type { Advanced, AdvancedKey, Preset } from '../../response-style';
@@ -11,6 +12,41 @@ type Saved = { text: string; style: Preset; advanced: Advanced; language: string
 const STYLE_OPTIONS: [Preset, MessageKey, MessageKey][] = [['default', 'style.preset.default', 'style.preset.defaultHint'], ['concise', 'style.preset.concise', 'style.preset.conciseHint'], ['detailed', 'style.preset.detailed', 'style.preset.detailedHint']];
 const LANGUAGE_SUGGESTIONS = ['English', 'British English', 'American English', 'Norwegian', 'Swedish', 'Danish', 'German', 'French', 'Spanish', 'Italian', 'Dutch', 'Portuguese', 'Polish', 'Japanese', 'Chinese'];
 const KEYS = Object.keys(ADVANCED) as AdvancedKey[];
+
+/** Chat framing (#738): the person's own "auto-accept chat frames" choice, off by default. Shown
+ *  only while the chatFraming feature is on; the choice is kept either way. */
+function FramingPreferences(): JSX.Element {
+  const t = useT();
+  const [autoAccept, setAutoAccept] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState('');
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let live = true;
+    fetchFramingPreferences().then((p) => { if (live) setAutoAccept(p.autoAccept); }).catch(() => { if (live) setError(t('style.framing.loadError')); });
+    return () => { live = false; };
+  }, []);
+  const toggle = async (next: boolean) => {
+    setBusy(true); setStatus(''); setError('');
+    try {
+      const saved = await saveFramingPreferences({ autoAccept: next });
+      setAutoAccept(saved.autoAccept === true);
+      setStatus(saved.autoAccept ? t('style.framing.on') : t('style.framing.off'));
+    } catch (e) { setError(e instanceof Error ? e.message : t('common.saveFailed')); }
+    finally { setBusy(false); }
+  };
+  return <section className="settings-section">
+    <h2>{t('style.framing.title')}</h2>
+    <div className="set-rows">
+      <div className="set-row">
+        <div className="set-row-text"><span className="set-row-label" id="framing-auto-accept">{t('style.framing.autoAccept')}</span><span className="set-row-desc">{t('style.framing.autoAcceptDesc')}</span></div>
+        <div className="set-row-control"><input type="checkbox" role="switch" className="noevia-switch" aria-labelledby="framing-auto-accept" checked={autoAccept === true} disabled={autoAccept === null || busy} onChange={(e) => void toggle(e.currentTarget.checked)} /></div>
+      </div>
+    </div>
+    {status && <p className="route-note" role="status">{status}</p>}
+    {error && <p className="modal-err" role="alert">{error}</p>}
+  </section>;
+}
 
 /** Settings → Assistant & style (#229, #231). A quick preset, an optional advanced panel, the
  *  default response language and free-text custom instructions — all one account record, saved
@@ -25,6 +61,7 @@ export function PersonalizationSettings({ onOpen }: { onOpen?: (section: string)
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const t = useT();
+  const framing = useFeatureFlags().chatFraming === true;
   // Option labels are translated for display; the values (and what the model is told) are not.
   const optionLabel = (id: string, fallback: string) => { const text = t(`style.option.${id}` as MessageKey); return text.startsWith('style.') ? fallback : text; };
 
@@ -121,5 +158,6 @@ export function PersonalizationSettings({ onOpen }: { onOpen?: (section: string)
       {status && <p className="route-note" role="status">{status}</p>}
       {error && <p className="modal-err" role="alert">{error}</p>}
     </section>
+    {framing && <FramingPreferences />}
   </>;
 }

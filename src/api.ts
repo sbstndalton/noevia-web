@@ -3,6 +3,7 @@ import { parseUsage, parseUsers, parseProfile, parseProviders } from './settings
 // which holds credentials server-side.
 
 import type {
+  ChatFrame,
   ChatGptDeviceLogin,
   ChatGptPoll,
   ChatGptStatus,
@@ -416,6 +417,25 @@ export function deleteFreeChat(chatId: string): Promise<{ ok: true }> {
     return { ok: true } as const;
   });
 }
+
+// ── Chat framing (#737/#738) ─────────────────────────────────────────────
+
+/** A suggested frame for a new chat, or null (flag off, no decision service, a miss). Never throws. */
+export function suggestChatFrame(message: string, chatId: string): Promise<ChatFrame | null> {
+  return postJson<{ frame?: ChatFrame | null }>('/api/chat-framing/suggest', { message, chatId })
+    .then((r) => (r && r.frame && typeof r.frame === 'object' ? r.frame : null))
+    .catch(() => null);
+}
+
+/** Move a chat between the caller's own lists (free = null), optionally saving its frame with it. */
+export function moveChatToProject(chatId: string, projectId: string | null, frame?: ChatFrame | null): Promise<{ ok: true; from: string | null }> {
+  return postJson(`/api/chats/${encodeURIComponent(chatId)}/move`, frame === undefined ? { projectId } : { projectId, frame });
+}
+
+export interface FramingPreferences { autoAccept: boolean }
+export const fetchFramingPreferences = () => getJson<FramingPreferences>('/api/chat-framing/preferences')
+  .then((r) => ({ autoAccept: r?.autoAccept === true }));
+export const saveFramingPreferences = (prefs: FramingPreferences) => putJson<FramingPreferences>('/api/chat-framing/preferences', prefs);
 
 export type HistorySave = { ok: true; revision: string | null } | { ok: false; conflict: { history: HistoryEntry[]; revision: string } };
 /** Save a transcript. With a base revision, a concurrent save elsewhere returns the current copy to merge. */
