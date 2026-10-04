@@ -39,9 +39,25 @@ export function attachmentReason(a: Reasoned | undefined, t?: Translate): string
   return reasonText(t, id, params, a.reason);
 }
 
+/** #770: the storage server refused the saved login (WebDAV 401/403). The server words it
+ *  "storage returned 401"; this says what to do about it instead. */
+const STORAGE_LOGIN_REJECTED_RE = /^storage returned (401|403)$/;
+export function isStorageLoginRejected(reason: string | undefined): boolean {
+  return STORAGE_LOGIN_REJECTED_RE.test(String(reason || '').trim());
+}
+const STORAGE_LOGIN_REJECTED_EN = 'Storage login rejected. Check your storage credentials in Settings → Diary & storage.';
+function storageLoginText(t?: Translate): string {
+  return t ? t('storage.refreshLoginRejected') : STORAGE_LOGIN_REJECTED_EN;
+}
+/** True when a toast message reports a rejected storage login, so it can link to Settings. */
+export function mentionsStorageLogin(message: string | null | undefined, t?: Translate): boolean {
+  return !!message && message.includes(storageLoginText(t));
+}
+
 /** A document's extraction error, in the interface language when `t` is given. */
 export function documentError(d: { error?: string; errorId?: string } | undefined, t?: Translate): string {
   if (!d?.error && !d?.errorId) return '';
+  if (!d.errorId && isStorageLoginRejected(d.error)) return storageLoginText(t);
   return reasonText(t, d.errorId || (d.error ? LEGACY_REASONS[d.error] : undefined), undefined, d.error);
 }
 
@@ -62,12 +78,19 @@ export function sourceStatus(file: ProjectFile, t?: Translate): string {
 }
 export type SkippedSource = { folder: string; file?: string; reason: string; retained?: boolean };
 
-export function sourceRefreshEntries(skipped: SkippedSource[]): string[] {
-  return skipped.map(s => `${s.file || s.folder}: ${s.reason}${s.retained ? ' Previous readable text retained.' : ''}`);
+export function sourceRefreshEntries(skipped: SkippedSource[], t?: Translate): string[] {
+  return skipped.map(s => `${s.file || s.folder}: ${isStorageLoginRejected(s.reason) ? storageLoginText(t) : s.reason}${s.retained ? ' Previous readable text retained.' : ''}`);
 }
 
-export function sourceRefreshIssues(skipped: SkippedSource[]): string {
-  return sourceRefreshEntries(skipped).join('\n');
+export function sourceRefreshIssues(skipped: SkippedSource[], t?: Translate): string {
+  return sourceRefreshEntries(skipped, t).join('\n');
+}
+
+/** The toast for a refresh that failed outright (#770: a rejected login says so). */
+export function sourceRefreshFailure(error: unknown, t?: Translate): string {
+  const message = (error as { message?: unknown } | null)?.message;
+  const detail = typeof message === 'string' && message ? message : 'storage unavailable';
+  return `Sources could not be refreshed — ${isStorageLoginRejected(detail) ? storageLoginText(t) : detail + '.'}`;
 }
 
 /** A stable, order-independent fingerprint of a skipped-source set, used to
@@ -101,6 +124,7 @@ export function resolveSkippedToast(
   prev: SkippedToastState,
   skipped: SkippedSource[],
   currentError: string | null | undefined,
+  t?: Translate,
 ): { signature: string; message: string; show: string | null | undefined } {
   const signature = skippedSignature(skipped);
   if (!signature) {
@@ -108,7 +132,7 @@ export function resolveSkippedToast(
     return { signature: prev.signature, message: prev.message, show: undefined };
   }
   if (signature === prev.signature) return { signature, message: prev.message, show: undefined };
-  const message = sourceRefreshIssues(skipped);
+  const message = sourceRefreshIssues(skipped, t);
   return { signature, message, show: message };
 }
 

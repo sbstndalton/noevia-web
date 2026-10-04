@@ -69,7 +69,7 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
     setValue(saved);
     setLoadedKind(saved.kind);
     setSecret('');
-    setMessage(t('storage.saved'));
+    setMessage(saved.warningCode === 'storageUnverified' ? t('storage.savedUnverified') : t('storage.saved'));
     onSaved?.(saved);
   };
   const test = async () => {
@@ -186,7 +186,7 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
           </>
         ) : (
           <>
-            <button disabled={!loaded} className="modal-btn primary" onClick={() => void save().catch((e) => setMessage(String(e)))}>
+            <button disabled={!loaded} className="modal-btn primary" onClick={() => void save().catch((e) => setMessage((e as { code?: string })?.code === 'storageLoginRejected' ? t('storage.loginRejected') : String(e)))}>
               {t('common.save')}
             </button>
             <button disabled={!loaded} className="modal-btn secondary" onClick={() => void test().catch((e) => setMessage(String(e)))}>

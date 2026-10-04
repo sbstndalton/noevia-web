@@ -101,7 +101,20 @@ export const deleteUser = (id: string, username: string) => apiFetch(`/api/admin
 });
 export interface StorageConnection { kind: 'local' | 'nextcloud' | 'webdav' | 's3'; baseUrl: string; bucket?: string; region?: string; username: string; corpusRoot: string; secretConfigured?: boolean; secretNeedsReauth?: boolean }
 export const fetchStorage = () => getJson<StorageConnection>('/api/integrations/storage');
-export const saveStorage = (body: StorageConnection & { secret?: string }) => putJson<StorageConnection>('/api/integrations/storage', body);
+/** #770: the server checks a WebDAV/Nextcloud login before saving. A rejected login throws an
+ *  error carrying `code: 'storageLoginRejected'`; an unreachable server saves with `warningCode`. */
+export type StorageSaveResult = StorageConnection & { warning?: string; warningCode?: 'storageUnverified' };
+export async function saveStorage(body: StorageConnection & { secret?: string }): Promise<StorageSaveResult> {
+  const res = await apiFetch('/api/integrations/storage', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) {
+    let payload: { error?: string; code?: string } = {};
+    try { payload = await res.clone().json(); } catch { /* not JSON */ }
+    const err = new Error(payload.error || await describeFailure(res, 'PUT /api/integrations/storage failed')) as Error & { code?: string };
+    if (payload.code) err.code = payload.code;
+    throw err;
+  }
+  return res.json() as Promise<StorageSaveResult>;
+}
 export const testStorage = (body: Partial<StorageConnection> & { secret?: string; useSavedSecret?: boolean }) => postJson<{ ok: true }>('/api/integrations/storage/test', body);
 export const startNextcloud = (baseUrl: string) => postJson<{ flowId: string; loginUrl: string; expiresAt: number }>('/api/integrations/storage/nextcloud/start', { baseUrl });
 export const pollNextcloud = (flowId: string, corpusRoot: string) => postJson<StorageConnection & { pending?: boolean }>('/api/integrations/storage/nextcloud/poll', { flowId, corpusRoot });

@@ -1,7 +1,7 @@
 import { titleAfterSend } from './chat-title';
 import { ShellIcon } from './components/ShellIcon';
 import { sourceRefresher } from './source-refresh';
-import { resolveSkippedToast, type SkippedToastState } from './source-status';
+import { mentionsStorageLogin, resolveSkippedToast, sourceRefreshFailure, type SkippedToastState } from './source-status';
 import { useAppearance } from './useAppearance';
 import { useWorkspaceChanged } from './components/data/workspace-changed';
 import { useGlobalShortcuts, OPEN_SEARCH } from './components/shortcuts/useGlobalShortcuts';
@@ -573,13 +573,13 @@ export default function App(): JSX.Element {
       updated: result => {
         setProjectError(prevError => {
           const prev = lastSkippedSignature.current[sourceProjectId] || { signature: '', message: '' };
-          const { signature, message, show } = resolveSkippedToast(prev, result.skipped || [], prevError);
+          const { signature, message, show } = resolveSkippedToast(prev, result.skipped || [], prevError, tr);
           lastSkippedSignature.current[sourceProjectId] = { signature, message };
           return show === undefined ? prevError : show;
         });
         void refreshProjects();
       },
-      failed: error => setProjectError(`Sources could not be refreshed — ${error instanceof Error ? error.message : 'storage unavailable'}.`),
+      failed: error => setProjectError(sourceRefreshFailure(error, tr)),
     });
     const revisit = () => { void watcher.run(); };
     revisit();
@@ -592,7 +592,7 @@ export default function App(): JSX.Element {
       window.removeEventListener('focus', revisit); window.removeEventListener('online', revisit);
       document.removeEventListener('visibilitychange', revisit);
     };
-  }, [sourceProjectId, sourceFolderKey, sourceBusy, refreshProjects]);
+  }, [sourceProjectId, sourceFolderKey, sourceBusy, refreshProjects, tr]);
 
   const messages: Message[] = view.kind === 'chat' ? messagesByChat[view.chatId] ?? [] : [];
   const routingDecision = currentRoutingDecision(messages, view.kind === 'chat' && appMode === 'chat');
@@ -1509,7 +1509,7 @@ export default function App(): JSX.Element {
           const r = await syncProjectSources(projectId);
           setProjectError(prevError => {
             const prev = lastSkippedSignature.current[projectId] || { signature: '', message: '' };
-            const { signature, message, show } = resolveSkippedToast(prev, r.skipped || [], prevError);
+            const { signature, message, show } = resolveSkippedToast(prev, r.skipped || [], prevError, tr);
             lastSkippedSignature.current[projectId] = { signature, message };
             return show === undefined ? prevError : show;
           });
@@ -1521,7 +1521,7 @@ export default function App(): JSX.Element {
         refreshProjects();
       }
     },
-    [refreshProjects],
+    [refreshProjects, tr],
   );
 
   // Rail edits are debounced per project so typing doesn't hammer projects.json.
@@ -1805,6 +1805,9 @@ export default function App(): JSX.Element {
               </ul>
             ) : (
               <span>{projectError}</span>
+            )}
+            {mentionsStorageLogin(projectError, tr) && (
+              <button type="button" className="save-error-link" onClick={(e) => openSettings('diary', e.currentTarget)}>{tr('storage.openSettings')}</button>
             )}
             <button onClick={() => setProjectError(null)} aria-label="Dismiss"><ShellIcon name="close" size={16}/></button>
           </div>
