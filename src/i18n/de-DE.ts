@@ -1084,6 +1084,8 @@ export const DE_DE: Catalogue = {
   'chat.approval.targetDrive': "Google-Drive-Datei, die geändert wird:",
   'chat.approval.targetDriveNew': "Neue Google-Drive-Datei:",
   'chat.approval.repeat': "Das sieht aus wie die Änderung, die du gerade erlaubt hast.",
+  'chat.approval.provenance': "Enthält Text aus {source} in „{field}“. Prüfe ihn, bevor du erlaubst: Dieser Aufruf wird auch dann einzeln abgefragt, wenn du den Chat freigegeben hast.",
+  'chat.approval.provenanceUnchecked': "Woher die Argumente dieses Aufrufs stammen, konnte nicht geprüft werden. Deshalb wirst du einzeln gefragt.",
   'chat.paused.supervision': "Die Schrittüberwachung hat diese Antwort vor weiteren Schritten angehalten. Es wurde nichts geändert.",
   'chat.paused.supervisionApplied.one': "{count} Änderung wurde gespeichert. Die Schrittüberwachung hat diese Antwort vor weiteren Schritten angehalten.",
   'chat.paused.supervisionApplied.other': "{count} Änderungen wurden gespeichert. Die Schrittüberwachung hat diese Antwort vor weiteren Schritten angehalten.",

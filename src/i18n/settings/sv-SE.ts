@@ -84,6 +84,8 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'features.item.codePipeline.description': "Erbjuder en planerarförberedelse för Code-uppgifter: Planeraren skriver en plan, kodagenten genomför den, operatörens tester körs i en separat verifierare, Planeraren granskar ändringen (högst två omgångar ändringar) och Revisorn rapporterar vilka belägg som finns. Varje skrivning går fortfarande via godkännandekortet, och du godkänner resultatet själv.",
   'features.item.codeMerge.label': "Slå ihop granskade ändringar (Code-läge)",
   'features.item.codeMerge.description': "När du godkänner en uppgift från planerarflödet spolas grenen den utgick från fram till den granskade committen. Inget slås ihop om den grenen har flyttats eller uppgiftsgrenen ändrats efter granskningen. Avstängt registrerar ett godkännande ändringen utan att slå ihop den.",
+  'features.item.provenancePolicy.label': "Ursprungsregel",
+  'features.item.provenancePolicy.description': "Innan en skrivning körs kontrolleras var mottagare, webbadress, värd, sökväg eller kommando kom ifrån. Är något av det text från en webbsida, en koppling, ett dokument, Dagboken eller en annan opålitlig källa i det här svaret får skrivningen alltid ett eget godkännandekort med den källan, även om du har tillåtit skrivningar i den här chatten. Den lägger bara till frågor: inget körs utan godkännande som behövde det förut. Den täcker text från ej betrodda källor i det aktuella svaret; den fångar inte text som modellen upprepar eller omformulerar i en senare tur.",
   'features.item.kiwix.label': "Wikipedia offline",
   'features.item.kiwix.description': "Ett skrivskyddat uppslagsverktyg som bygger på en intern kiwix-serve.",
   'features.item.chatgptOAuth.label': "Logga in med ChatGPT",

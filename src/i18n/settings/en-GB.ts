@@ -76,6 +76,8 @@ export const EN_GB_SETTINGS = {
   'features.item.codePipeline.description': "Offer a Planner preparation for Code tasks: the Planner writes a plan, the coding agent carries it out, the operator’s tests run in a separate verifier, the Planner reviews the change (at most two rounds of changes) and the Auditor reports what evidence there is. Every write still goes through the approval card, and you accept the result yourself.",
   'features.item.codeMerge.label': "Merge reviewed changes (Code mode)",
   'features.item.codeMerge.description': "When you accept a Planner pipeline task, fast-forward the branch it started from to the reviewed commit. Nothing is merged if that branch has moved or the task branch changed after review. Off, accepting records the change without merging it.",
+  'features.item.provenancePolicy.label': "Provenance policy",
+  'features.item.provenancePolicy.description': "Before a write runs, check where its recipient, web address, host, path or command came from. If any of it is text from a web page, a connector, a document, the Diary or another untrusted source in this reply, the write always gets its own approval card naming that source, even when you allowed writes for this chat. It only ever adds a question: nothing runs without approval that did not before. It covers text from untrusted sources in the current reply; it does not catch text the model repeats or paraphrases in a later turn.",
   'features.item.kiwix.label': "Offline Wikipedia",
   'features.item.kiwix.description': "A read-only lookup tool backed by an internal kiwix-serve.",
   'features.item.chatgptOAuth.label': "Sign in with ChatGPT",

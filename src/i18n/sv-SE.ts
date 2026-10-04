@@ -1084,6 +1084,8 @@ export const SV_SE: Catalogue = {
   'chat.approval.targetDrive': "Google Drive-filen som ändras:",
   'chat.approval.targetDriveNew': "Ny fil i Google Drive:",
   'chat.approval.repeat': "Det här ser ut som ändringen du just godkände.",
+  'chat.approval.provenance': "Innehåller text från {source} i ”{field}”. Kontrollera den innan du tillåter: det här anropet frågas om även om du har tillåtit den här chatten.",
+  'chat.approval.provenanceUnchecked': "Det gick inte att kontrollera var anropets argument kom ifrån, så det frågas om separat.",
   'chat.paused.supervision': "Stegövervakningen pausade svaret innan fler steg kördes. Inget ändrades.",
   'chat.paused.supervisionApplied.one': "{count} ändring sparades. Stegövervakningen pausade svaret innan fler steg kördes.",
   'chat.paused.supervisionApplied.other': "{count} ändringar sparades. Stegövervakningen pausade svaret innan fler steg kördes.",

@@ -1084,6 +1084,8 @@ export const ES_ES: Catalogue = {
   'chat.approval.targetDrive': "Archivo de Google Drive que se modificará:",
   'chat.approval.targetDriveNew': "Nuevo archivo de Google Drive:",
   'chat.approval.repeat': "Parece el mismo cambio que acabas de aprobar.",
+  'chat.approval.provenance': "Contiene texto de {source} en «{field}». Revísalo antes de permitirlo: esta llamada se pregunta aunque hayas permitido este chat.",
+  'chat.approval.provenanceUnchecked': "No se pudo comprobar de dónde vienen los argumentos de esta llamada, así que se pregunta por separado.",
   'chat.paused.supervision': "La supervisión por pasos pausó esta respuesta antes de cualquier otro paso. No se cambió nada.",
   'chat.paused.supervisionApplied.one': "Se guardó {count} cambio. La supervisión por pasos pausó esta respuesta antes de cualquier otro paso.",
   'chat.paused.supervisionApplied.other': "Se guardaron {count} cambios. La supervisión por pasos pausó esta respuesta antes de cualquier otro paso.",

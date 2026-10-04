@@ -509,6 +509,8 @@ export async function* streamChat(
   targetKind?: string;
   /** 'tool_pending' (#658): the same change as one already saved in this chat. */
   repeatOf?: boolean;
+  /** 'tool_pending' (#769): sensitive arguments holding untrusted text; asked per call. */
+  provenance?: unknown;
   /** 'tool_result' (#658): a write that ran and succeeded. 'paused': how many changes were saved. */
   applied?: boolean | number;
   /** 'paused' (#658): why the reply ended before a final answer ('supervision' or, #666, 'declined'). */

@@ -1,8 +1,18 @@
-import type { ToolCallView } from './types';
+import type { ToolCallView, ToolProvenance } from './types';
+
+/** #769: the provenance notes of a 'tool_pending' event, kept only in the expected shape. */
+export function provenanceNotes(value: unknown): ToolProvenance[] {
+  if (!Array.isArray(value)) return [];
+  const text = (v: unknown) => (typeof v === 'string' && v ? v.slice(0, 200) : null);
+  return value.slice(0, 5).filter((p) => p && typeof p === 'object').map((p) => ({
+    field: text(p.field), source: text(p.source), ...(p.unchecked === true ? { unchecked: true } : {}),
+  })).filter((p) => p.unchecked || p.source);
+}
 
 /** The approval card's call for a 'tool_pending' stream event, built the same way in chat and in
  *  the Diary, so both carry the resolved file an edit would change (#648). */
-export function pendingToolCall(ev: { name?: string; args?: string; id?: string; target?: string; targetKind?: string; repeatOf?: boolean }): ToolCallView {
+export function pendingToolCall(ev: { name?: string; args?: string; id?: string; target?: string; targetKind?: string; repeatOf?: boolean; provenance?: unknown }): ToolCallView {
+  const provenance = provenanceNotes(ev.provenance);
   return {
     name: ev.name || 'tool',
     args: ev.args || '',
@@ -13,6 +23,8 @@ export function pendingToolCall(ev: { name?: string; args?: string; id?: string;
     ...(ev.targetKind === 'drive' || ev.targetKind === 'drive-new' ? { targetKind: ev.targetKind } : {}),
     // #658: the same change as one already saved in this chat. A flag on the card, nothing more.
     ...(ev.repeatOf === true ? { repeatOf: true } : {}),
+    // #769: where a sensitive argument's text came from. A note on the card; all three actions stay.
+    ...(provenance.length ? { provenance } : {}),
   };
 }
 

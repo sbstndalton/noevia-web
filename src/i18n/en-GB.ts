@@ -1095,6 +1095,8 @@ export const EN_GB = {
   'chat.approval.targetDrive': "Google Drive file this changes:",
   'chat.approval.targetDriveNew': "New Google Drive file:",
   'chat.approval.repeat': "This looks like the change you just approved.",
+  'chat.approval.provenance': "Contains text from {source} in “{field}”. Check it before allowing: this call is asked about even if you allowed this chat.",
+  'chat.approval.provenanceUnchecked': "Where this call’s arguments came from could not be checked, so it is asked about on its own.",
   'chat.paused.supervision': "Step supervision paused this reply before any further steps. Nothing was changed.",
   'chat.paused.supervisionApplied.one': "{count} change was saved. Step supervision paused this reply before any further steps.",
   'chat.paused.supervisionApplied.other': "{count} changes were saved. Step supervision paused this reply before any further steps.",

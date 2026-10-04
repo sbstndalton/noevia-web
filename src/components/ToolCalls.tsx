@@ -65,6 +65,13 @@ function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
       {/* #658: the same tool, file and arguments as a change already saved in this chat. A flag
           only: all three actions stay, and nothing is declined for the person. */}
       {call.repeatOf && <span className="tool-approval-ask tool-approval-repeat" role="note" data-testid="tool-approval-repeat">{t('chat.approval.repeat')}</span>}
+      {/* #769: a sensitive argument (recipient, URL, path, command) holds text from an untrusted
+          source, so this call is asked about even under "Allow for this chat". */}
+      {call.provenance?.map((p, i) => (
+        <span key={i} className="tool-approval-ask tool-approval-provenance" role="note" data-testid="tool-approval-provenance">
+          {p.unchecked ? t('chat.approval.provenanceUnchecked') : t('chat.approval.provenance', { source: showDirectionControls(p.source || ''), field: showDirectionControls(p.field || '') })}
+        </span>
+      ))}
       {pretty && pretty !== '{}' && <pre className="tool-approval-args">{pretty}</pre>}
       <div className="tool-approval-actions">
         <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => void decide('approve')}>

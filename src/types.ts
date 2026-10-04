@@ -93,6 +93,8 @@ export interface ToolCallView {
   targetKind?: 'drive' | 'drive-new';
   /** #658: the same tool, target and arguments as a change already saved in this chat. */
   repeatOf?: boolean;
+  /** #769: sensitive arguments holding untrusted text (or `unchecked`), shown on the card. */
+  provenance?: ToolProvenance[];
   /** #658: a write that ran and succeeded. Later turns tell the model it is done. */
   applied?: boolean;
   /** What the tool returned, bounded for display and history. */
@@ -388,3 +390,6 @@ export interface Toolbox {
    *  (#354). Every reader must count it as enabled and never offer it as a checkbox to toggle. */
   connector?: boolean;
 }
+
+/** #769: one sensitive argument of a write that holds text from an untrusted source. */
+export type ToolProvenance = { field: string | null; source: string | null; unchecked?: boolean };
