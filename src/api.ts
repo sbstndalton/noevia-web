@@ -357,7 +357,10 @@ export function setAutoRoles(roles: AutoRoles): Promise<{ configured: boolean }>
   return putJson('/api/auto-roles', roles);
 }
 
-export function saveProjectChats(projectId: string, chats: ChatMeta[]): Promise<{ ok: true }> {
+/** A whole-list chat save; `skipped` lists ids another list holds, which were not saved (#765). */
+export type ListSaveResult = { ok: true; skipped?: string[] };
+
+export function saveProjectChats(projectId: string, chats: ChatMeta[]): Promise<ListSaveResult> {
   return postJson(`/api/projects/${encodeURIComponent(projectId)}/chats`, { chats });
 }
 
@@ -407,7 +410,7 @@ export function fetchChatHistoryRevision(chatId: string): Promise<{ history: His
 
 // ── Free (non-project) chats — server-side metas so they survive browsers ──
 
-export function saveFreeChats(chats: ChatMeta[]): Promise<{ ok: true }> {
+export function saveFreeChats(chats: ChatMeta[]): Promise<ListSaveResult> {
   return postJson('/api/freechats', { chats });
 }
 

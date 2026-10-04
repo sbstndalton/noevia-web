@@ -76,6 +76,7 @@ import { StatsBar } from './components/StatsBar';
 import { finishedToolCall, pendingToolCall, settleToolCalls } from './tool-call-state';
 import { declinedNames, editBase, modelHistory, persistableMessage, rerunBase, storedPause } from './applied-writes';
 import { mergeTranscripts } from './transcript-merge';
+import { skippedChatIds, withoutSkipped } from './list-save';
 import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, shouldSaveChat, upsertChatMeta } from './chat-save';
 import { readLastPlace, writeLastPlace, clearLastPlace, type LastPlace } from './last-view';
 import { historyMode, matchPath, parsePath, routeForState, toPath, type CustomiseTab, type ProjectTab, type Route, type SyncedPlace } from './routes';
@@ -771,12 +772,12 @@ export default function App(): JSX.Element {
         const project = projectsRef.current.find((p) => p.id === projectId);
         if (!project) return;
         const next = upsertChatMeta(project.chats || [], chatId, make);
-        await saveProjectChats(projectId, next);
-        projectsRef.current = projectsRef.current.map((p) => (p.id === projectId ? { ...p, chats: next } : p));
+        // Ids another list holds were not saved (#765); keep them out of this list's ref too.
+        const saved = withoutSkipped(next, skippedChatIds(await saveProjectChats(projectId, next)));
+        projectsRef.current = projectsRef.current.map((p) => (p.id === projectId ? { ...p, chats: saved } : p));
       } else {
         const next = upsertChatMeta(freeChatsRef.current, chatId, make);
-        await saveFreeChats(next);
-        freeChatsRef.current = next;
+        freeChatsRef.current = withoutSkipped(next, skippedChatIds(await saveFreeChats(next)));
       }
       // A workspace GET that began before this save may carry the old list.
       workspaceRequest.current += 1;
@@ -1423,10 +1424,12 @@ export default function App(): JSX.Element {
         const savedPatch = typeof patch.title === 'string' ? { ...patch, title: patch.title.slice(0, 120) } : patch;
         const next = list.map((c) => (c.id === chatId ? { ...c, ...savedPatch } : c));
         try {
-          if (projectId === null) await saveFreeChats(next);
-          else await saveProjectChats(projectId, next);
+          const result = projectId === null ? await saveFreeChats(next) : await saveProjectChats(projectId, next);
           // A workspace GET that began before this save may carry the old meta.
           workspaceRequest.current += 1;
+          // This tab's list was stale: the server kept chats that live in another list out of it
+          // (#765). Show the server's lists instead of a change that did not land here.
+          if (skippedChatIds(result).length) { await refreshProjects(); return; }
           // A workspace refresh or chat send may have changed other fields while
           // this request was in flight. Apply only this action to the latest list.
           if (projectId === null) {
@@ -1448,7 +1451,7 @@ export default function App(): JSX.Element {
       chatMetaSaves.current.set(key, pending);
       void pending.finally(() => { if (chatMetaSaves.current.get(key) === pending) chatMetaSaves.current.delete(key); });
     },
-    [],
+    [refreshProjects],
   );
 
   const linkChat = useCallback((chatId: string, projectId: string | null, targetId: string) => {

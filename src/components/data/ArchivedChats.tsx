@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { JSX } from 'react';
 import { fetchWorkspace, saveFreeChats, saveProjectChats } from '../../api';
+import { skippedChatIds } from '../../list-save';
 import { collectArchived, filterArchived, rowKey } from '../../archived-chats';
 import type { ArchivedRow } from '../../archived-chats';
 import { appLocale } from '../../user-preferences';
@@ -54,13 +55,16 @@ export function ArchivedChatsView({ onDelete, onOpenData }: { onDelete: (project
     // Chat list saves merge by id on the server, so each list gets only the entries that change.
     const groups = new Map<string | null, ArchivedRow[]>();
     for (const r of list) groups.set(r.projectId, [...(groups.get(r.projectId) || []), r]);
-    let failed = 0;
+    let failed = 0, moved = 0;
     for (const [projectId, group] of groups) {
       const next = group.map((r) => ({ ...r.chat, archived: false }));
-      try { await (projectId ? saveProjectChats(projectId, next) : saveFreeChats(next)); } catch { failed += group.length; }
+      // A chat moved to another list since this page loaded is not restored here (#765); the
+      // workspace refresh below shows where it is now.
+      try { moved += skippedChatIds(await (projectId ? saveProjectChats(projectId, next) : saveFreeChats(next))).length; } catch { failed += group.length; }
     }
-    const done = list.length - failed;
-    if (done) setStatus(`Restored ${done} chat${done === 1 ? '' : 's'} to the sidebar.`);
+    const done = list.length - failed - moved;
+    if (done > 0) setStatus(`Restored ${done} chat${done === 1 ? '' : 's'} to the sidebar.`);
+    if (moved) setError(`${moved} chat${moved === 1 ? ' was' : 's were'} moved to another list in the meantime. The list is refreshed; try again.`);
     if (failed) setError(`${failed} chat${failed === 1 ? '' : 's'} could not be restored. Try again.`);
     setSelected(new Set()); setBusy(false);
     notifyWorkspaceChanged();
