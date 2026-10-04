@@ -69,7 +69,9 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
     setValue(saved);
     setLoadedKind(saved.kind);
     setSecret('');
-    setMessage(saved.warningCode === 'storageUnverified' ? t('storage.savedUnverified') : t('storage.saved'));
+    setMessage(saved.warningCode === 'storageUnverified'
+      ? (saved.status ? t('storage.savedUnchecked', { status: saved.status }) : t('storage.savedUnverified'))
+      : t('storage.saved'));
     onSaved?.(saved);
   };
   const test = async () => {

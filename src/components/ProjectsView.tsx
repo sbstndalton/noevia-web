@@ -16,6 +16,7 @@ import { PROJECT_NAME_MAX_LENGTH } from '../project-limits';
 import { useT } from '../i18n';
 import type { Translate } from '../i18n';
 import '../i18n/projects';
+import { countProjectChats } from '../project-chat-count';
 
 interface ProjectsViewProps {
   projects: Project[];
@@ -51,7 +52,7 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
   const archivedCount = projects.filter((p) => p.archived).length;
   // The headline describes "Your projects"; archived ones are counted on their own tab.
   const activeProjects = projects.filter((p) => !p.archived);
-  const chatCount = activeProjects.reduce((n, p) => n + p.chats.length, 0);
+  const chatCount = activeProjects.reduce((n, p) => n + countProjectChats(p.chats).active, 0);
   const visibleProjects = projects
     .filter((p) => (tab === 'archived' ? p.archived : !p.archived))
     .filter((p) => `${p.name} ${p.goal || ''}`.toLowerCase().includes(query.trim().toLowerCase()))
@@ -128,7 +129,11 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
                 <div className="project-card-meta">
                   {p.pinned && <span className="project-card-pin"><ShellIcon name="pin" size={14}/>{t('projects.pinned')}</span>}
                   {p.archived && <span className="project-chip">{t('projects.archived')}</span>}
-                  <span className="project-chip">{t.plural('projects.count.chats', p.chats.length)}</span>
+                  {(() => {
+                    const counts = countProjectChats(p.chats);
+                    const chats = t.plural('projects.count.chats', counts.active);
+                    return <span className="project-chip" data-project-chat-count="">{counts.archived ? `${chats} · ${t.plural('projects.count.archivedChats', counts.archived)}` : chats}</span>;
+                  })()}
                   {p.files.length > 0 && <span className="project-chip">{t.plural('projects.count.files', p.files.length)}</span>}
                   {p.modes?.length && (p.modes.length > 1 || p.modes[0] !== 'chat') ? <span className="project-chip" aria-label={t('projects.availableIn', { modes: p.modes.join(', ') })}>{p.modes.map((m) => m === 'chat' ? t('projects.modeChat') : m === 'cowork' ? t('projects.modeCowork') : t('projects.modeCode')).join(' · ')}</span> : null}
                   <time className="project-card-time" dateTime={new Date(p.updatedAt).toISOString()} title={t('projects.updatedAt', { date: new Date(p.updatedAt).toLocaleString(appLocale()) })}>{timeAgo(t, p.updatedAt)}</time>

@@ -26,7 +26,13 @@ const SECRET='synthetic-app-password-qa';
   await settings.getByLabel('App password').fill(SECRET);
   await settings.getByRole('button',{name:'Save',exact:true}).click();
   await settings.getByText('Storage saved, but the server could not be reached to check the login.',{exact:true}).waitFor({timeout:5000});
-  assert.equal(puts.length,2);
+  // #773: a server that answered (403) was reached; the message names the status instead.
+  saveReply=()=>({json:{kind:'webdav',baseUrl:'https://dav.example.test/old',username:'nobody',corpusRoot:'Diary',secretConfigured:true,warning:'Saved, but the login could not be checked (the storage server answered 403).',warningCode:'storageUnverified',status:403}});
+  await settings.getByLabel('App password').fill(SECRET);
+  await settings.getByRole('button',{name:'Save',exact:true}).click();
+  await settings.getByText('Storage saved, but the login could not be checked (the server answered 403).',{exact:true}).waitFor({timeout:5000});
+  assert.equal(await settings.getByText(/could not be reached/).count(),0,'a 403 does not say unreachable');
+  assert.equal(puts.length,3);
   assert.ok(!(await page.content()).includes(SECRET)||await settings.getByLabel('App password').inputValue()==='', 'secret not echoed into the page');
   await page.close();
 
@@ -48,6 +54,6 @@ const SECRET='synthetic-app-password-qa';
   await p2.getByRole('region',{name:'Settings',exact:true}).getByRole('heading',{name:'Diary & storage'}).waitFor({timeout:5000});
   await p2.close();
   assert.deepEqual(errors,[]);
-  console.log('PASS storage login check: rejected save explained, unverified save warned, refresh 401 says login rejected and opens Settings → Diary & storage.');
+  console.log('PASS storage login check: rejected save explained, unverified save warned (unreachable vs answered 403), refresh 401 says login rejected and opens Settings → Diary & storage.');
  }finally{await browser.close();await f.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
