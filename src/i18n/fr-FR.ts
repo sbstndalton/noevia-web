@@ -476,6 +476,7 @@ export const FR_FR: Catalogue = {
   'storage.loginRejected': "Le serveur a refusé ce nom d’utilisateur ou ce mot de passe d’application. Rien n’a été modifié.",
   'storage.savedUnverified': "Stockage enregistré, mais le serveur était injoignable pour vérifier la connexion.",
   'storage.savedUnchecked': "Stockage enregistré, mais la connexion n’a pas pu être vérifiée (le serveur a répondu {status}).",
+  'storage.savedRedirected': "Stockage enregistré, mais le serveur a redirigé la vérification de la connexion. Vérifiez l’URL dans les Réglages (https, barre oblique finale).",
   'storage.refreshLoginRejected': "Connexion au stockage refusée. Vérifiez vos identifiants de stockage dans Réglages → Journal et stockage.",
   'storage.openSettings': "Ouvrir les réglages de stockage",
   'storage.loading': "Chargement de votre connexion de stockage enregistrée…",

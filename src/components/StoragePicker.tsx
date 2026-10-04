@@ -70,7 +70,7 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
     setLoadedKind(saved.kind);
     setSecret('');
     setMessage(saved.warningCode === 'storageUnverified'
-      ? (saved.status ? t('storage.savedUnchecked', { status: saved.status }) : t('storage.savedUnverified'))
+      ? (saved.reason === 'redirect' ? t('storage.savedRedirected') : saved.status ? t('storage.savedUnchecked', { status: saved.status }) : t('storage.savedUnverified'))
       : t('storage.saved'));
     onSaved?.(saved);
   };

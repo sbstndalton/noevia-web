@@ -1,4 +1,5 @@
 import { InstructionSkills } from './InstructionSkills';
+import { countProjectChats } from '../project-chat-count';
 import { ReasoningControl } from './ReasoningControl';
 import { ComposerActions } from './ComposerActions';
 import { ComposerModel } from './ComposerModel';
@@ -274,7 +275,7 @@ export function ProjectView({
             <div className="project-head-main">
               <h1 className="project-title"><ProjectIcon project={project} size={30}/>{project.name}</h1>
               {project.goal && <p className="project-goal">{project.goal}</p>}
-              <p className="project-detail-meta">{project.archived ? `${t('projects.archived')} · ` : ''}{t.plural('projects.count.chats', project.chats.length)} · {t('projects.view.updatedLabel')} <time dateTime={new Date(project.updatedAt).toISOString()} title={new Date(project.updatedAt).toLocaleString()}>{timeAgo(t, project.updatedAt)}</time></p>
+              <p className="project-detail-meta">{project.archived ? `${t('projects.archived')} · ` : ''}{(() => { const c = countProjectChats(project.chats); return c.archived ? `${t.plural('projects.count.chats', c.active)} · ${t.plural('projects.count.archivedChats', c.archived)}` : t.plural('projects.count.chats', c.active); })()} · {t('projects.view.updatedLabel')} <time dateTime={new Date(project.updatedAt).toISOString()} title={new Date(project.updatedAt).toLocaleString()}>{timeAgo(t, project.updatedAt)}</time></p>
             </div>
             <div className="project-head-actions">
               {chatEnabled && <button className="btn btn-secondary btn-sm" onClick={() => onNewChat(project.id)}>{t('projects.view.newChat')}</button>}

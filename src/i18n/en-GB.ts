@@ -487,6 +487,7 @@ export const EN_GB = {
   'storage.loginRejected': "The server rejected this username or app password. Nothing was changed.",
   'storage.savedUnverified': "Storage saved, but the server could not be reached to check the login.",
   'storage.savedUnchecked': "Storage saved, but the login could not be checked (the server answered {status}).",
+  'storage.savedRedirected': "Storage saved, but the server redirected the login check. Check the URL (https, trailing slash).",
   'storage.refreshLoginRejected': "Storage login rejected. Check your storage credentials in Settings → Diary & storage.",
   'storage.openSettings': "Open storage settings",
   'storage.loading': "Loading your saved storage connection…",

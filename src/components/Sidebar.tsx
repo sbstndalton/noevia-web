@@ -1,4 +1,5 @@
 import { SidebarLabel } from './SidebarLabel';
+import { countProjectChats } from '../project-chat-count';
 import { useCodeAccess } from './code/useCodeAccess';
 import { useActiveCodeTasks } from './code/useActiveCodeTasks';
 import { CodingProjectList, CodingTaskList } from './CodingSidebarLists';
@@ -757,7 +758,7 @@ export function Sidebar({
           <div className="row-card" role="tooltip" style={{ top: hover.y, left: hover.x }}>
             <strong>{p.name}</strong>
             {p.goal && <em>{p.goal}</em>}
-            <span>{t.plural('sidebar.count.chats', (p.chats || []).length)} · {t.plural('sidebar.count.sources', files.length)}</span>
+            <span>{t.plural('sidebar.count.chats', countProjectChats(p.chats).active)} · {t.plural('sidebar.count.sources', files.length)}</span>
             {files.slice(0, 4).map((f) => <span key={f.name} className="row-card-src">{f.name}</span>)}
             {files.length > 4 && <span className="row-card-src">{t('sidebar.moreSources', { count: files.length - 4 })}</span>}
             {files.length === 0 && <span className="row-card-src">{t('sidebar.noSources')}</span>}

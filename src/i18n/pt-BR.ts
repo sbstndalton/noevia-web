@@ -476,6 +476,7 @@ export const PT_BR: Catalogue = {
   'storage.loginRejected': "O servidor rejeitou este nome de usuário ou senha de app. Nada foi alterado.",
   'storage.savedUnverified': "Armazenamento salvo, mas não foi possível contatar o servidor para verificar o login.",
   'storage.savedUnchecked': "Armazenamento salvo, mas não foi possível verificar o login (o servidor respondeu {status}).",
+  'storage.savedRedirected': "Armazenamento salvo, mas o servidor redirecionou a verificação do login. Confira a URL (https, barra no final).",
   'storage.refreshLoginRejected': "Login do armazenamento rejeitado. Verifique suas credenciais de armazenamento em Configurações → Diário e armazenamento.",
   'storage.openSettings': "Abrir configurações de armazenamento",
   'storage.loading': "Carregando sua conexão de armazenamento salva…",

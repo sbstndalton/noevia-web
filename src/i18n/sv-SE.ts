@@ -476,6 +476,7 @@ export const SV_SE: Catalogue = {
   'storage.loginRejected': "Servern avvisade det här användarnamnet eller applösenordet. Inget ändrades.",
   'storage.savedUnverified': "Lagringen har sparats, men servern kunde inte nås för att kontrollera inloggningen.",
   'storage.savedUnchecked': "Lagringen har sparats, men inloggningen kunde inte kontrolleras (servern svarade {status}).",
+  'storage.savedRedirected': "Lagringen har sparats, men servern omdirigerade inloggningskontrollen. Kontrollera URL:en (https, avslutande snedstreck).",
   'storage.refreshLoginRejected': "Inloggningen till lagringen avvisades. Kontrollera dina lagringsuppgifter i Inställningar → Dagbok och lagring.",
   'storage.openSettings': "Öppna lagringsinställningar",
   'storage.loading': "Läser in din sparade lagringsanslutning…",

@@ -476,6 +476,7 @@ export const DE_DE: Catalogue = {
   'storage.loginRejected': "Der Server hat diesen Benutzernamen oder dieses App-Passwort abgelehnt. Es wurde nichts geändert.",
   'storage.savedUnverified': "Speicher gespeichert, aber der Server war nicht erreichbar, um die Anmeldung zu prüfen.",
   'storage.savedUnchecked': "Speicher gespeichert, aber die Anmeldung konnte nicht geprüft werden (der Server antwortete mit {status}).",
+  'storage.savedRedirected': "Speicher gespeichert, aber der Server hat die Anmeldeprüfung umgeleitet. Prüfe die URL (https, abschließender Schrägstrich).",
   'storage.refreshLoginRejected': "Speicher-Anmeldung abgelehnt. Prüfe deine Speicher-Zugangsdaten unter Einstellungen → Tagebuch & Speicher.",
   'storage.openSettings': "Speichereinstellungen öffnen",
   'storage.loading': "Deine gespeicherte Speicherverbindung wird geladen…",

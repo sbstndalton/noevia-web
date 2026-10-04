@@ -103,7 +103,7 @@ export interface StorageConnection { kind: 'local' | 'nextcloud' | 'webdav' | 's
 export const fetchStorage = () => getJson<StorageConnection>('/api/integrations/storage');
 /** #770: the server checks a WebDAV/Nextcloud login before saving. A rejected login throws an
  *  error carrying `code: 'storageLoginRejected'`; an unreachable server saves with `warningCode`. */
-export type StorageSaveResult = StorageConnection & { warning?: string; warningCode?: 'storageUnverified'; status?: number };
+export type StorageSaveResult = StorageConnection & { warning?: string; warningCode?: 'storageUnverified'; status?: number; reason?: 'redirect' };
 export async function saveStorage(body: StorageConnection & { secret?: string }): Promise<StorageSaveResult> {
   const res = await apiFetch('/api/integrations/storage', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!res.ok) {

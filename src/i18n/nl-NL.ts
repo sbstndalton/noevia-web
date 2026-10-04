@@ -476,6 +476,7 @@ export const NL_NL: Catalogue = {
   'storage.loginRejected': "De server heeft deze gebruikersnaam of dit app-wachtwoord geweigerd. Er is niets gewijzigd.",
   'storage.savedUnverified': "Opslag opgeslagen, maar de server was niet bereikbaar om de aanmelding te controleren.",
   'storage.savedUnchecked': "Opslag opgeslagen, maar de aanmelding kon niet worden gecontroleerd (de server antwoordde {status}).",
+  'storage.savedRedirected': "Opslag opgeslagen, maar de server heeft de aanmeldcontrole omgeleid. Controleer de URL (https, slash aan het eind).",
   'storage.refreshLoginRejected': "Aanmelding bij opslag geweigerd. Controleer je opslaggegevens in Instellingen → Dagboek en opslag.",
   'storage.openSettings': "Opslaginstellingen openen",
   'storage.loading': "Je opgeslagen opslagverbinding laden…",

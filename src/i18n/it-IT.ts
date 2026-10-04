@@ -476,6 +476,7 @@ export const IT_IT: Catalogue = {
   'storage.loginRejected': "Il server ha rifiutato questo nome utente o password per app. Non è stato modificato nulla.",
   'storage.savedUnverified': "Archiviazione salvata, ma il server non era raggiungibile per verificare l’accesso.",
   'storage.savedUnchecked': "Archiviazione salvata, ma non è stato possibile verificare l’accesso (il server ha risposto {status}).",
+  'storage.savedRedirected': "Archiviazione salvata, ma il server ha reindirizzato la verifica dell’accesso. Controlla l’URL (https, barra finale).",
   'storage.refreshLoginRejected': "Accesso all’archiviazione rifiutato. Controlla le tue credenziali di archiviazione in Impostazioni → Diario e archiviazione.",
   'storage.openSettings': "Apri impostazioni di archiviazione",
   'storage.loading': "Caricamento della connessione di archiviazione salvata…",

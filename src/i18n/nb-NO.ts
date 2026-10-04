@@ -476,6 +476,7 @@ export const NB_NO: Catalogue = {
   'storage.loginRejected': "Serveren avviste dette brukernavnet eller app-passordet. Ingenting ble endret.",
   'storage.savedUnverified': "Lagringen er lagret, men serveren kunne ikke nås for å sjekke innloggingen.",
   'storage.savedUnchecked': "Lagringen er lagret, men innloggingen kunne ikke sjekkes (serveren svarte {status}).",
+  'storage.savedRedirected': "Lagringen er lagret, men serveren videresendte innloggingssjekken. Sjekk URL-en (https, avsluttende skråstrek).",
   'storage.refreshLoginRejected': "Innlogging til lagring avvist. Sjekk lagringslegitimasjonen din i Innstillinger → Dagbok og lagring.",
   'storage.openSettings': "Åpne lagringsinnstillinger",
   'storage.loading': "Laster den lagrede lagringstilkoblingen din…",

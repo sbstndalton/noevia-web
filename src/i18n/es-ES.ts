@@ -476,6 +476,7 @@ export const ES_ES: Catalogue = {
   'storage.loginRejected': "El servidor ha rechazado este nombre de usuario o contraseña de aplicación. No se ha cambiado nada.",
   'storage.savedUnverified': "Almacenamiento guardado, pero no se pudo contactar con el servidor para comprobar el inicio de sesión.",
   'storage.savedUnchecked': "Almacenamiento guardado, pero no se pudo comprobar el inicio de sesión (el servidor respondió {status}).",
+  'storage.savedRedirected': "Almacenamiento guardado, pero el servidor redirigió la comprobación del inicio de sesión. Revisa la URL (https, barra final).",
   'storage.refreshLoginRejected': "Inicio de sesión del almacenamiento rechazado. Comprueba tus credenciales de almacenamiento en Ajustes → Diario y almacenamiento.",
   'storage.openSettings': "Abrir ajustes de almacenamiento",
   'storage.loading': "Cargando tu conexión de almacenamiento guardada…",
