@@ -12,10 +12,9 @@ const {EventEmitter}=require('node:events');
 const {createChatHandler}=require('../server/chat.cjs');
 const {createToolExchange}=require('../server/tool-exchange.cjs');
 const {createVisionProbe}=require('../server/vision.cjs');
-const {createChatTurns}=require('../server/chat-turns.cjs');
 async function run(t,ambiguous=false,stepSupervision=null,providerId='default') {
-  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'noevia-chat-durable-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
-  const userId='synthetic-user',projectId='fixture-project',service=createChatTurns({enabled:true});
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'noevia-laya-smoke-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+  const userId='synthetic-user',projectId='fixture-project';
   const events=[],res=new EventEmitter();res.writeHead=()=>{};res.write=line=>{if(line.startsWith('data: '))events.push(JSON.parse(line.slice(6)));};res.end=()=>{res.writableEnded=true;res.emit('finish');};
   let requests=0,executions=0;
   const fetch=async(url,init)=>{requests++;if(requests>2)throw Error('Smoke request cap exceeded');const payload=JSON.parse(init.body);payload.max_tokens=256;payload.chat_template_kwargs={enable_thinking:false};payload.tool_choice=requests===1?'required':'none';return globalThis.fetch(url,{...init,body:JSON.stringify(payload),signal:AbortSignal.any([init.signal,AbortSignal.timeout(90000)])});};
@@ -39,12 +38,11 @@ async function run(t,ambiguous=false,stepSupervision=null,providerId='default') 
     rag: { filesContext: async () => null }, prefill: { recordSample() {} }, reduceToolResult: () => ({ text:'reduced' }), diaryExtras: require('../server/diary-extras.cjs'),
     DIARY_BASE: 'http://fixture.invalid', TOOL_RESULT_CAP: 8000, json: () => {}, saveChats() {}, endpointApproved: () => true, diaryHeaders: () => ({}),
     lastLoadedModel: () => null, classifyFastOrSmart: async () => 'fast', servedCatalogue: async () => [], modelsInstalled: async () => [], missingRoles: () => [], staleRolesError: () => null,
-    allToolboxes: () => [], executeToolCall: async () => { executions++; if (ambiguous) throw Error('connection lost after write'); return 'complete synthetic result'; }, chatWideApproved: () => false, awaitApproval: async ({onDecision}) => {onDecision('approve_all'); return 'approve';}, recordUsage() {}, recordToolUse() {},
-    ...context, durableChat:service, stepSupervision,
+    allToolboxes: () => [], executeToolCall: async () => { executions++; if (ambiguous) throw Error('connection lost after write'); return 'complete synthetic result'; }, chatWideApproved: () => false, awaitApproval: async () => 'approve', recordUsage() {}, recordToolUse() {},
+    ...context, stepSupervision,
   });
   await handleChat({},res,{projectId,chatId:'fixture-chat',message:'Synthetic test only: call synthetic_write exactly once with empty arguments. After its result, reply with the words fixture complete. Do not call any other tools.'});
-  const job=require('../server/jobs.cjs').createJobs({dir}).list({kind:'chat'})[0];
-  return {service,workspace:{dir,userId},id:job.id,executions,requests,events};
+  return {executions,requests,events};
 }
 
 (async()=>{
