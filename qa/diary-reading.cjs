@@ -3,7 +3,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict');const {navClick}=require('./nav.cjs');
 const {createFixture}=require('./diary-fixture.cjs');
 (async()=>{
- const fixture=createFixture(31252);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});
+ const fixture=createFixture(31252);await fixture.listen();const browser=await chromium.launch({headless:true,...(process.env.QA_CHROME_PATH?{executablePath:process.env.QA_CHROME_PATH}:{channel:'chrome'})});
  try {
   const page=await browser.newPage({viewport:{width:1440,height:950},timezoneId:'America/New_York'});
   const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});

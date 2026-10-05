@@ -80,7 +80,8 @@ function createFixture(port = 31239) {
         event({type:'tool',index:0,name:'project_search',args:'{"query":"synthetic"}'});
         event({type:'tool_result',index:0,name:'project_search',text:'Found 2 synthetic matches in notes.md'});
         event({type:'tool',index:1,name:'write_note',args:'{"path":"a.md"}'});
-        event({type:'tool_result',index:1,name:'write_note',text:'ERROR: the user declined this action.'});
+        // The server marks a write the person declined explicitly (#666 review); the client never infers it from the text.
+        event({type:'tool_result',index:1,name:'write_note',text:'ERROR: the user declined this action.',declined:true});
         event({type:'delta',text:'Synthetic answer after tools'});
         event({type:'done'});res.end();return;
       }

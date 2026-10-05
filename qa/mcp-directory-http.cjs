@@ -7,7 +7,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('nod
 const {spawn}=require('node:child_process');
 const {startFakeGoogle}=require('./fake-google.cjs');
 const {withLocale}=require('./qa-locale.cjs');
-const port=31436,llmPort=31437,regPort=31438,mcpPort=31439,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'..'),shots=process.env.QA_SCREENSHOTS||'/tmp';
+const base=Number(process.env.QA_PORT_BASE||31436),port=base,llmPort=base+1,regPort=base+2,mcpPort=base+3,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'..'),shots=process.env.QA_SCREENSHOTS||'/tmp';
 const NAME='io.github.synthetic/forecast';process.env.NOEVIA_QA_ALLOW_LOOPBACK_MCP='1'; // mcpItems runs here too
 let calls=0;const offered=[];
 function startRegistry(){const s=http.createServer((req,res)=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify({servers:[{server:{name:NAME,title:'Synthetic forecast',description:'A synthetic weather server',version:'1.0.0',remotes:[{type:'streamable-http',url:`http://127.0.0.1:${mcpPort}/mcp`}]}},{server:{name:'io.github.synthetic/local-only',description:'Runs locally',packages:[{}]}},{server:{name:'io.github.synthetic/keyed',title:'Synthetic keyed',description:'Needs an API key',remotes:[{type:'streamable-http',url:`http://127.0.0.1:${mcpPort}/keyed/mcp`,headers:[{name:'Authorization',description:'Your synthetic API key',isRequired:true,isSecret:true,value:'Bearer {api_key}'}]}]}},{server:{name:'io.github.synthetic/oauth',title:'Synthetic oauth',description:'Signs in with OAuth',remotes:[{type:'streamable-http',url:`http://127.0.0.1:${mcpPort}/oauth/mcp`}]}},{server:{name:'io.github.synthetic/manual',title:'Synthetic manual',description:'Needs a hand-registered app',remotes:[{type:'streamable-http',url:`http://127.0.0.1:${mcpPort}/manual/mcp`}]}}]}));});return new Promise(r=>s.listen(regPort,'127.0.0.1',()=>r(s)));}
@@ -63,11 +63,14 @@ function startModel(){
 }
 
 (async()=>{
+ // A leftover server (another run, another worktree) on one of these fixed ports would answer the
+ // setup call with its own state - a misleading 401 at /api/setup/complete (#829). Refuse up front.
+ for(const p of [port,llmPort,regPort,mcpPort]){const busy=await new Promise(r=>{const c=require('node:net').connect(p,'127.0.0.1');c.once('connect',()=>{c.destroy();r(true);});c.once('error',()=>r(false));});if(busy)throw Error(`port ${p} is already in use; stop the other process or set QA_PORT_BASE`);}
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'noevia-mcp-directory-'));
  const google=await startFakeGoogle({autoApprove:true});const model=await startModel();const registry=await startRegistry();const remote=await startRemote();
  const server=spawn(process.execPath,['server/index.cjs'],{cwd:web,stdio:'ignore',env:{...process.env,...google.env,UI_DATA_DIR:dir,UI_PORT:String(port),UI_HOST:'127.0.0.1',PUBLIC_ORIGIN:origin,LEGACY_AUTH_COMPAT:'false',NOEVIA_QA_ALLOW_LOOPBACK_MCP:'1',NOEVIA_QA_MCP_REGISTRY:`http://127.0.0.1:${regPort}`,
   INFERENCE_BASE_URL:`http://127.0.0.1:${llmPort}/v1`,MODEL_MANAGER_KIND:'none',DIARY_BASE_URL:'http://127.0.0.1:1',DIARY_AUTH_TOKEN:'synthetic-only',MCP_SERVERS:'',MCP_SERVER_URL:''}});
- const browser=await chromium.launch({headless:true,channel:'chrome'});const errors=[];
+ const browser=await chromium.launch({headless:true,...(process.env.QA_CHROME_PATH?{executablePath:process.env.QA_CHROME_PATH}:{channel:'chrome'})});const errors=[];
  const session=()=>{const cookies=new Map();return async(url,body,method=body===undefined?'GET':'POST')=>{const r=await fetch(origin+url,{method,headers:{'Content-Type':'application/json',Origin:origin,Cookie:[...cookies].map(([k,v])=>`${k}=${v}`).join('; '),'X-CSRF-Token':decodeURIComponent(cookies.get('cowork_csrf')||'')},body:body===undefined?undefined:JSON.stringify(body)});for(const v of r.headers.getSetCookie()){const p=v.split(';')[0],i=p.indexOf('=');cookies.set(p.slice(0,i),p.slice(i+1));}return {status:r.status,body:await r.json().catch(()=>null),cookies};};};
  const until=async(fn)=>{for(let i=0;i<100;i++){if(await fn())return;await new Promise(r=>setTimeout(r,100));}throw Error('timed out');};
  try{
