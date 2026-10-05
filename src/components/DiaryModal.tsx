@@ -150,6 +150,10 @@ function buildList(items: ListLine[], pos: number, indent: number, inline: (line
   return [node, i];
 }
 
+const ESCAPED_HEADING_LINE = /^\\#{1,6}(?:[ \t]|\r?$)/;
+// `<\!--` is how the sidecar escapes an xid opener; inside a bold/italic span it must still read as `<!--`.
+const unescapeOpener = (text: string) => text.replace(/<\\!--/g, '<!--');
+
 export function MarkdownPreview({ text, internalLink, wikiLink, properties = false }: {
   text: string;
   internalLink?: (href: string) => (() => void) | undefined;
@@ -168,9 +172,15 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
   // ")" and truncated the href mid-URL.
   const inline = (line: string) =>
     line.split(wikiLink
-      ? /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[\[[^\[\]\n]*\]\]|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g
-      : /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g).map((part, i) => {
-      if (part.startsWith('**')) return <strong key={i}>{part.slice(2, -2)}</strong>;
+      ? /(\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[\[[^\[\]\n]*\]\]|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g
+      : /(\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g).map((part, i) => {
+      // Escapes the Diary sidecar writes inside saved prose so it cannot become entry structure
+      // (#803): `\*\*` and `<\!--` show as the literal characters. Plain text only, never HTML (#835).
+      // The sidecar also escapes a role label's `**` on the first line, so `\*\*Assistant:**` can follow
+      // the real `**Me:** ` label; the label's closing `**` is literal text too and must not pair.
+      if (part.startsWith('\\*\\*')) return '**' + part.slice(4);
+      if (part === '<\\!--') return '<!--';
+      if (part.startsWith('**')) return <strong key={i}>{unescapeOpener(part.slice(2, -2))}</strong>;
       // Checked before the plain-link branch below: `![alt](src)` contains `[alt](src)` as a
       // substring, so without its own branch the leading "!" leaked as stray text while the rest
       // was treated as a link (#390).
@@ -203,7 +213,7 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
         }
         return <a key={i} href={href} target="_blank" rel="noopener noreferrer nofollow">{label}</a>;
       }
-      if (part.startsWith('*') && part.length > 2) return <em key={i}>{part.slice(1, -1)}</em>;
+      if (part.startsWith('*') && part.length > 2) return <em key={i}>{unescapeOpener(part.slice(1, -1))}</em>;
       return part;
     });
 
@@ -315,6 +325,9 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
       continue;
     }
     if (/^(\s*[-*_]){3,}\s*$/.test(line)) { out.push(<hr key={i} />); continue; }
+    // #835: a heading the Diary sidecar escaped: `\###` is a literal marker, not a heading
+    // (escaped role labels and xid openers are handled inline).
+    if (ESCAPED_HEADING_LINE.test(line)) { out.push(<p key={i}>{inline(line.slice(1))}</p>); continue; }
     out.push(line.trim() ? <p key={i}>{inline(line)}</p> : <div className="md-space" key={i} />);
   }
 
