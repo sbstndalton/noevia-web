@@ -284,14 +284,33 @@ export function ChatView({
     }).catch(err => { if (current) setActionStatus(String(err)); });
     return () => { current = false; };
   }, [chatId, project?.id]);
+  // #789: ChatView stays mounted across chat switches, so an upload (or a compaction) started in
+  // one chat can finish while another is shown. Its busy flag, status line and context refresh
+  // belong to the chat it started in: busy is held per chat, and a status or context from a chat
+  // no longer shown is dropped rather than painted over the current one.
+  const chatIdRef = useRef(chatId);
+  chatIdRef.current = chatId;
   const refreshContext = async () => {
     if (project) { await onProjectChanged(); return; }
-    const response = await apiFetch(`/api/chats/${encodeURIComponent(chatId)}/context`);
+    const forChat = chatId;
+    const response = await apiFetch(`/api/chats/${encodeURIComponent(forChat)}/context`);
     if (!response.ok) throw new Error('Could not refresh chat attachments');
-    setFreeContext((await response.json()).project);
+    const value = (await response.json()).project;
+    if (chatIdRef.current === forChat) setFreeContext(value);
   };
-  const [actionBusy, setActionBusy] = useState(false);
+  // Every chat with work in flight, so overlapping uploads in two chats each keep their own lock.
+  const [busyChats, setBusyChats] = useState<ReadonlySet<string>>(() => new Set());
+  const actionBusy = busyChats.has(chatId);
   const [actionStatus, setActionStatus] = useState('');
+  const busyFor = (forChat: string) => (busy: boolean) => setBusyChats(current => {
+    if (busy === current.has(forChat)) return current;
+    const next = new Set(current);
+    if (busy) next.add(forChat); else next.delete(forChat);
+    return next;
+  });
+  const statusFor = (forChat: string) => (status: string) => { if (chatIdRef.current === forChat) setActionStatus(status); };
+  const setActionBusy = busyFor(chatId);
+  const showActionStatus = statusFor(chatId);
   // #393: seeded from this chat's own saved draft (if any) rather than always
   // starting blank, so a page reload restores it the same way switching back
   // to the chat does — see the `[chatId]` effect below and chat-drafts.ts.
@@ -415,7 +434,11 @@ export function ChatView({
   // #272: one exact reviewed Skill version for the next message, from the portable manifest API.
   // Re-read when the project changes and after each reply, so a disabled or edited skill drops out.
   const [skillPin, setSkillPin] = useState('');
-  useEffect(() => { setTurnBoxes([]); setCatalogueOpen(false); setPermitted([]); setSkillPin(''); }, [chatId, mode, project?.id]);
+  useEffect(() => { setTurnBoxes([]); setCatalogueOpen(false); setSkillPin(''); }, [chatId, mode, project?.id]);
+  // #790: what the catalogue permits follows its own scope (project and mode, see ToolCatalogue),
+  // not the chat. Clearing it per chat while the catalogue kept its loaded boxes (and so never
+  // re-reported them) silently dropped a box ticked "for this message" after a chat switch.
+  useEffect(() => { setPermitted([]); }, [mode, project?.id]);
   const skillOptions = useSkillPinOptions(project?.id ?? null, `${project?.updatedAt ?? ''}:${streaming}`, mode !== 'cowork');
   useEffect(() => { if (skillPin && !skillOptions.some(option => option.value === skillPin)) setSkillPin(''); }, [skillOptions, skillPin]);
   // A lone "/" opens the catalogue; typing continues to filter there instead of the message.
@@ -483,7 +506,7 @@ export function ChatView({
   // size limits, error copy) `ComposerActions`'s own picker uses below.
   const { isDragOver, dropProps } = useAttachmentDrop({
     project: project || freeContext, disabled: streaming || actionBusy, chatOnly: !project,
-    onChanged: refreshContext, onBusy: setActionBusy, onStatus: setActionStatus,
+    onChanged: refreshContext, onBusy: setActionBusy, onStatus: showActionStatus,
   });
 
   const catalogue = <ToolCatalogue open={catalogueOpen} onOpenChange={setCatalogueOpen} projectId={project?.id ?? null} mode={mode}
@@ -751,7 +774,7 @@ export function ChatView({
             onBlur={linkTargets ? () => setLinkAt(null) : undefined}
             aria-activedescendant={linkMenuOpen && linkOptions.length ? `chat-link-${chatId}-${Math.min(linkIndex, linkOptions.length - 1)}` : undefined}
           />
-          <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={setActionStatus}
+          <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={showActionStatus}
             browseTools={{ onOpen: () => setCatalogueOpen(true), count: turnBoxes.length }} />
           {phone && <ModeToggle state={modeSwitch} disabled={streaming || actionBusy} compact />}
           <ComposerModel label={modelLabel} onClick={openModels}

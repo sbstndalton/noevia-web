@@ -27,8 +27,6 @@ export type FrameAction =
   | { type: 'removeLinks' }
   | { type: 'setProject'; projectId: string | null }
   | { type: 'setTags'; text: string }
-  | { type: 'saving' }
-  | { type: 'failed' }
   | { type: 'dismiss' };
 
 /** One tag the way the server stores it: no leading #, inner spaces as hyphens, capped. */
@@ -86,8 +84,7 @@ export function frameChips(frame: ChatFrame, projects: readonly { id: string; na
 export function frameDraftReducer(draft: FrameDraft | null, action: FrameAction): FrameDraft | null {
   if (!draft) return null;
   if (action.type === 'dismiss') return null;
-  if (action.type === 'saving') return { ...draft, status: 'saving' };
-  if (action.type === 'failed') return { ...draft, status: 'error' };
+  // `saving` and `error` are set by App's accept path (acceptFrame), never through this reducer.
   // Edits while a save is in flight would be lost or half-applied; they wait for the outcome.
   if (draft.status === 'saving') return draft;
   const edit = (frame: Partial<ChatFrame>): FrameDraft => ({ frame: { ...draft.frame, ...frame }, status: 'idle' });

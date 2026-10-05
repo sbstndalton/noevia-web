@@ -1108,6 +1108,7 @@ export const FR_FR: Catalogue = {
   'chat.approval.decline': "Refuser",
   'chat.approval.allowChat': "Autoriser pour cette discussion",
   'chat.approval.sendFailed': "Impossible d’envoyer la décision",
+  'chat.approval.sent': "Décision envoyée. En attente du résultat…",
   'chat.effort.line': "Effort : {effort} · {basis}",
   'chat.effort.real': "paramètre du fournisseur",
   'chat.effort.hint': "indication au mieux",

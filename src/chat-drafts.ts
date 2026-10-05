@@ -18,6 +18,10 @@
 // one enormous paste, can't grow the stored blob without limit.
 
 const KEY = 'noevia:chat-drafts';
+// #791: the account the stored drafts were typed under. Drafts are keyed by chat id only, so a
+// second account signing in on the same browser must never be shown (or keep around) the first
+// one's unsent text: they are cleared on sign-out and dropped on a sign-in by anyone else.
+const OWNER_KEY = 'noevia:chat-drafts-owner';
 const MAX_CHATS = 50;
 const MAX_DRAFT_CHARS = 20_000;
 
@@ -76,4 +80,22 @@ export function clearDraft(chatId: string): void {
   if (!(chatId in store)) return;
   delete store[chatId];
   writeStore(store);
+}
+
+/** Sign-out (#791): no unsent text from this account stays on the device. */
+export function clearAllDrafts(): void {
+  try { localStorage.removeItem(KEY); localStorage.removeItem(OWNER_KEY); } catch { /* storage off: nothing kept */ }
+}
+
+/** Called once the signed-in account is known and before any chat renders (#791). Drafts held for
+ *  another account are dropped; drafts saved before owners were recorded are kept only when the
+ *  device's last place (`legacyOwner`, from last-view.ts) says they were this account's. */
+export function claimDrafts(userId: string, legacyOwner: string | null): void {
+  if (!userId) return;
+  try {
+    const owner = localStorage.getItem(OWNER_KEY);
+    if (owner === userId) return;
+    if (owner !== null || legacyOwner !== userId) localStorage.removeItem(KEY);
+    localStorage.setItem(OWNER_KEY, userId);
+  } catch { /* storage off: there are no stored drafts to protect */ }
 }

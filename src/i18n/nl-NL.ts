@@ -1108,6 +1108,7 @@ export const NL_NL: Catalogue = {
   'chat.approval.decline': "Weigeren",
   'chat.approval.allowChat': "Toestaan voor deze chat",
   'chat.approval.sendFailed': "De beslissing kon niet worden verstuurd",
+  'chat.approval.sent': "Beslissing verstuurd. Wachten op het resultaat…",
   'chat.effort.line': "Inspanning: {effort} · {basis}",
   'chat.effort.real': "parameter van de aanbieder",
   'chat.effort.hint': "best-effort-hint",

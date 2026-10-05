@@ -22,6 +22,7 @@ import type {
 } from './types';
 import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser';
 import { cached, invalidateCached, clearRequestCache } from './request-cache';
+import { clearDeviceState } from './account-device-state';
 import { API_MAJOR, hasApiMajorMismatch, hasApiMajorMismatchHeader, type SkillPin } from './api-contract';
 
 function cookie(name: string): string {
@@ -72,7 +73,8 @@ export const probeSession = (): Promise<AuthUser | null> =>
   fetch('/api/auth/session', { credentials: 'same-origin' })
     .then((r) => (r.ok ? r.json().then((j: { user: AuthUser }) => j.user) : null))
     .catch(() => null);
-export const logout = () => postJson<{ ok: true }>('/api/auth/logout', {}).then((v) => { clearRequestCache(); return v; });
+// #791: drafts and the last place are this account's; they do not outlive its session here.
+export const logout = () => postJson<{ ok: true }>('/api/auth/logout', {}).then((v) => { clearRequestCache(); clearDeviceState(); return v; });
 export const passkeyLoginOptions = (username: string) => postJson<{ options: PublicKeyCredentialRequestOptionsJSON; challengeToken: string }>('/api/auth/login/passkey/options', { username });
 export const passkeyLoginVerify = (challengeToken: string, response: unknown) => postJson<{ user: AuthUser }>('/api/auth/login/passkey/verify', { challengeToken, response });
 export const passkeyRegistrationOptions = () => postJson<{ options: PublicKeyCredentialCreationOptionsJSON; challengeToken: string }>('/api/auth/passkeys/register/options', {});

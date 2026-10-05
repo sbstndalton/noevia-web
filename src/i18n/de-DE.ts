@@ -1108,6 +1108,7 @@ export const DE_DE: Catalogue = {
   'chat.approval.decline': "Ablehnen",
   'chat.approval.allowChat': "Für diesen Chat erlauben",
   'chat.approval.sendFailed': "Die Entscheidung konnte nicht gesendet werden",
+  'chat.approval.sent': "Entscheidung gesendet. Warte auf das Ergebnis…",
   'chat.effort.line': "Aufwand: {effort} · {basis}",
   'chat.effort.real': "Anbieterparameter",
   'chat.effort.hint': "Best-Effort-Hinweis",

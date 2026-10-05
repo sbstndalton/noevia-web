@@ -52,7 +52,10 @@ export function readLastPlace(): LastPlace | null {
   }
 }
 
+/** Only written for a known account: a place saved before the profile loaded (`user: null`) would
+ *  read as someone else's on the next sign-in and be cleared (#791), losing this account's own. */
 export function writeLastPlace(place: LastPlace): void {
+  if (!place.user) return;
   try { localStorage.setItem(KEY, JSON.stringify(place)); } catch { /* storage off: this session only */ }
 }
 

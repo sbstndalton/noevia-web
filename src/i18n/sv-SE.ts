@@ -1108,6 +1108,7 @@ export const SV_SE: Catalogue = {
   'chat.approval.decline': "Avvisa",
   'chat.approval.allowChat': "Tillåt för den här chatten",
   'chat.approval.sendFailed': "Beslutet kunde inte skickas",
+  'chat.approval.sent': "Beslutet har skickats. Väntar på resultatet…",
   'chat.effort.line': "Ansträngning: {effort} · {basis}",
   'chat.effort.real': "leverantörsparameter",
   'chat.effort.hint': "best effort-tips",

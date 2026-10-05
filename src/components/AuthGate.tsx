@@ -5,6 +5,7 @@ import { isIpAddressHost } from '../browser-support';
 import { safeReturnPath } from '../routes';
 import type { AuthUser } from '../api';
 import { checkApiCompatibility } from '../api-contract';
+import { claimDeviceState } from '../account-device-state';
 
 // Only first-run and resumed onboarding need the wizard, and only passkey
 // actions need WebAuthn, so neither delays the sign-in screen or the app.
@@ -44,6 +45,7 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
         const user = await session;
         if (!active || blocked) return;
         if (!user) { setScreen('login'); return; }
+        claimDeviceState(user.id);
         setOnboardingUser(user);
         setScreen(user.onboarded === false ? 'wizard-resume' : 'ready');
       } catch {
@@ -69,6 +71,8 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
       if (invite) await acceptInvitation({ token: invite, username, displayName: displayName || username, password, diaryEnabled });
       else await passwordLogin(username, password);
       const session = await fetchSession();
+      // #791: another account's drafts and last chat go before the app renders for this one.
+      claimDeviceState(session.user.id);
       setOnboardingUser(session.user);
       // Back to the address the sign-in was shown at (#359) — a shared link to a chat opens that
       // chat once signed in. safeReturnPath only ever yields a same-origin path this app makes,
@@ -87,6 +91,8 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
       const response = await (await webauthn()).startAuthentication({ optionsJSON: challenge.options });
       await passkeyLoginVerify(challenge.challengeToken, response);
       const session = await fetchSession();
+      // #791: another account's drafts and last chat go before the app renders for this one.
+      claimDeviceState(session.user.id);
       setOnboardingUser(session.user);
       // Back to the address the sign-in was shown at (#359) — a shared link to a chat opens that
       // chat once signed in. safeReturnPath only ever yields a same-origin path this app makes,

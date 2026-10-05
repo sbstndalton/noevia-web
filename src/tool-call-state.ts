@@ -55,3 +55,13 @@ export function settleToolCalls(calls: ToolCallView[] | undefined): ToolCallView
   return calls.map(({ approvalId: _approvalId, ...call }) =>
     call.status === 'done' || call.status === 'denied' ? call : { ...call, status: 'stopped' as const });
 }
+
+/** The same rule for a whole reply (#793): once it has ended, its tool calls are settled and a
+ *  "This looks sensitive" routing question (`routePending`) is dropped. The server's question died
+ *  with the request, so a card left behind after Stop would post to a dead id. The message is
+ *  returned unchanged when there is nothing to settle. */
+export function settleReply<M extends { toolCalls?: ToolCallView[]; routePending?: unknown }>(message: M): M {
+  if (!message.toolCalls && !message.routePending) return message;
+  const { routePending: _routePending, ...rest } = message;
+  return (message.toolCalls ? { ...rest, toolCalls: settleToolCalls(message.toolCalls) } : rest) as M;
+}

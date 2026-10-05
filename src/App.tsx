@@ -77,7 +77,8 @@ import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
 import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
-import { finishedToolCall, pendingToolCall, settleToolCalls } from './tool-call-state';
+import { finishedToolCall, pendingToolCall, settleReply, settleToolCalls } from './tool-call-state';
+import { chatHome } from './chat-home';
 import { declinedNames, editBase, modelHistory, persistableMessage, rerunBase, storedPause } from './applied-writes';
 import { mergeTranscripts } from './transcript-merge';
 import { skippedChatIds, withoutSkipped } from './list-save';
@@ -470,6 +471,8 @@ export default function App(): JSX.Element {
   // back into forever — the return target underneath it is written instead.
   useEffect(() => {
     if (view.kind === 'preview') return;
+    // Not before the account is known: a `user: null` place reads as another account's (#791).
+    if (!accountId) return;
     // The return target is never 'preview' by construction (this same guard runs before every
     // view change reaches navRef); the cast only tells TypeScript what the runtime already
     // guarantees.
@@ -991,7 +994,8 @@ export default function App(): JSX.Element {
             const patch: Partial<ChatMeta> = {};
             if (typeof ev.forceLocal === 'boolean') patch.forceLocal = ev.forceLocal;
             if (typeof ev.allowCloud === 'boolean') patch.allowCloud = ev.allowCloud;
-            patchChatRef.current(projectId, chatId, patch);
+            // The chat's current list: an accepted frame may have moved it mid-reply (#793).
+            patchChatRef.current(chatHome(chatId, allChatsRef.current, movedChats.current, projectId), chatId, patch);
           }
           if (ev.type === 'meta' && ev.route) {
             setMessagesByChat((prev) => ({
@@ -1174,7 +1178,8 @@ export default function App(): JSX.Element {
           persistAfterCommit.current.add(chatId);
           setMessagesByChat((prev) => ({
             ...prev,
-            [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId && m.toolCalls ? { ...m, toolCalls: settleToolCalls(m.toolCalls) } : m)),
+            // Tool approvals and a routing question both die with the request (#793).
+            [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? settleReply(m) : m)),
           }));
         }
       }
@@ -1496,7 +1501,7 @@ export default function App(): JSX.Element {
       if (!pending.includes(targetId)) pendingLinks.current.set(chatId, [...pending, targetId].slice(0, MAX_FRAME_LINKS));
       return;
     }
-    const home = meta ? meta.projectId ?? null : movedChats.current.has(chatId) ? movedChats.current.get(chatId) ?? null : projectId;
+    const home = chatHome(chatId, allChatsRef.current, movedChats.current, projectId);
     handlePatchChat(home, chatId, (current) => { const frame = frameWithLink(current, chatId, targetId, home); return frame ? { frame } : null; });
   }, [handlePatchChat]);
   patchChatRef.current = (projectId, chatId, patch) => handlePatchChat(projectId, chatId, patch);

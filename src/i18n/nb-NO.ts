@@ -1108,6 +1108,7 @@ export const NB_NO: Catalogue = {
   'chat.approval.decline': "Avslå",
   'chat.approval.allowChat': "Tillat for denne samtalen",
   'chat.approval.sendFailed': "Kunne ikke sende avgjørelsen",
+  'chat.approval.sent': "Avgjørelsen er sendt. Venter på resultatet…",
   'chat.effort.line': "Innsats: {effort} · {basis}",
   'chat.effort.real': "leverandørparameter",
   'chat.effort.hint': "best-effort-hint",

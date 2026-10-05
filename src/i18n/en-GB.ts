@@ -1119,6 +1119,7 @@ export const EN_GB = {
   'chat.approval.decline': "Decline",
   'chat.approval.allowChat': "Allow for this chat",
   'chat.approval.sendFailed': "Could not send the decision",
+  'chat.approval.sent': "Decision sent. Waiting for the result…",
   'chat.effort.line': "Effort: {effort} · {basis}",
   'chat.effort.real': "provider parameter",
   'chat.effort.hint': "best-effort hint",
