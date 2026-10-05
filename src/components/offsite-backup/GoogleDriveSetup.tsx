@@ -81,6 +81,9 @@ export function GoogleDriveConnect({ google, onChange }: { google: GoogleState; 
 
   if (google.state === 'not-configured') return <p className="gdrive-note">{t('gdrive.unavailable')}</p>;
 
+  // Another administrator started this sign-in: the server withholds its code (#868).
+  if (google.state === 'pending' && !google.userCode) return <p className="gdrive-note" aria-live="polite">{google.message}</p>;
+
   if (google.state === 'pending') return <div className="gdrive-pending" aria-live="polite">
     {error && <p className="route-note" role="alert">{error}</p>}
     <p>{around(t('gdrive.pendingIntro'), 'link')[0]}<a href={google.verificationUrl} target="_blank" rel="noreferrer">{google.verificationUrl?.replace(/^https?:\/\//, '')}</a>{around(t('gdrive.pendingIntro'), 'link')[1]}</p>
