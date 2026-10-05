@@ -2,6 +2,7 @@ import { appLocale } from '../user-preferences';
 import { formatNumber } from '../number-format';
 import { McpStatus } from './McpStatus';
 import { ShellIcon } from './ShellIcon';
+import { ConfirmDialog } from './ContextMenu';
 import DiarySharing from './DiarySharing';
 import DiaryConnectors from './DiaryConnectors';
 import AppPasswords from './AppPasswords';
@@ -117,6 +118,8 @@ function SecurityCard({ onOpenSection }: { onOpenSection?: (id: string) => void 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
+  // #863: removing a passkey asks first; the account may be left with fewer ways to sign in.
+  const [confirmPasskey, setConfirmPasskey] = useState<PasskeyInfo | null>(null);
   const refresh = async () => {
     const p = await fetchProfile();
     setUser(p.user); setPasskeys(p.passkeys); setSessions(p.sessions ?? []);
@@ -139,7 +142,9 @@ function SecurityCard({ onOpenSection }: { onOpenSection?: (id: string) => void 
     } catch (e) {
       // A browser refusal (cancelled, wrong address, unsupported) is not a connection problem.
       const name = (e as Error)?.name;
-      if (name === 'NotAllowedError' || name === 'AbortError') setError(t('security.cancelled', { action: label }));
+      const reason = (e as { userMessage?: unknown })?.userMessage;
+      if (typeof reason === 'string' && reason) setError(reason);
+      else if (name === 'NotAllowedError' || name === 'AbortError') setError(t('security.cancelled', { action: label }));
       else if (name === 'SecurityError' || name === 'InvalidStateError' || name === 'NotSupportedError') setError(t('security.refused', { action: label, message: (e as Error).message }));
       else setError(t('security.unconfirmed', { action: label }));
     }
@@ -157,7 +162,7 @@ function SecurityCard({ onOpenSection }: { onOpenSection?: (id: string) => void 
       {/* #404: a passkey has no online/offline state to show — it is a registered credential, not
           a live connection — so, per PRODUCT.md's "nothing fake", it gets no status dot at all
           (the same no-dot pattern Users' account rows already use) rather than a decorative one. */}
-      {passkeys.map(k => <div className="model-row" key={k.id}><div className="model-name-group"><span className="model-name">{k.name}</span><span className="model-quant">{k.backedUp ? t('security.syncedPasskey') : k.deviceType}</span></div><button className="recents-del" aria-label={t('security.removePasskeyNamed', { name: k.name })} onClick={() => void act(t('security.removePasskey'), () => removePasskey(k.id), t('security.passkeyRemoved'))}><ShellIcon name="close" size={16}/></button></div>)}
+      {passkeys.map(k => <div className="model-row" key={k.id}><div className="model-name-group"><span className="model-name">{k.name}</span><span className="model-quant">{k.backedUp ? t('security.syncedPasskey') : k.deviceType}</span></div><button className="recents-del" aria-label={t('security.removePasskeyNamed', { name: k.name })} onClick={() => setConfirmPasskey(k)}><ShellIcon name="close" size={16}/></button></div>)}
       <button className="modal-btn secondary" onClick={() => void act(t('security.passkeySetup'), addKey, t('security.passkeyAdded'))}><ShellIcon name="plus" size={16}/>{t('security.addPasskey')}</button>
       {/* #404: the dot was hard-coded green for every row regardless of which session the browser
           is actually using. `s.current` (GET /api/profile marks the calling request's own
@@ -184,6 +189,14 @@ function SecurityCard({ onOpenSection }: { onOpenSection?: (id: string) => void 
     {error && <><p className="modal-err" role="alert">{error}</p><button className="modal-btn secondary" disabled={!!busy || loading} onClick={() => void load()}>{loading ? t('settings.loading') : t('security.reloadProfile')}</button></>}
     {nativeClients && <SignedInDevices />}
     <AppPasswords onOpenSection={onOpenSection} />
+    {confirmPasskey && <ConfirmDialog
+      title={t('security.removePasskeyConfirmTitle', { name: confirmPasskey.name })}
+      body={t('security.removePasskeyConfirmBody')}
+      confirmLabel={t('security.removePasskey')}
+      danger
+      onCancel={() => setConfirmPasskey(null)}
+      onConfirm={() => { const k = confirmPasskey; setConfirmPasskey(null); void act(t('security.removePasskey'), () => removePasskey(k.id), t('security.passkeyRemoved')); }}
+    />}
   </div>;
 }
 

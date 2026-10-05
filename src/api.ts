@@ -91,7 +91,15 @@ export const updateProfile = (displayName: string) => apiFetch('/api/profile', {
 export const updateFeatures = (diaryEnabled: boolean) => putJson<{ diaryEnabled: boolean }>('/api/profile/features', { diaryEnabled }).then(v => { invalidateCached(PROFILE_KEY); return v; });
 /** Marks the setup wizard as finished for this account (resumability gate). */
 export const completeOnboarding = () => postJson<{ onboarded: boolean }>('/api/profile/onboarding', {}).then(v => { invalidateCached(PROFILE_KEY); return v; });
-export const removePasskey = (id: string) => apiFetch(`/api/auth/passkeys/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(r => { if (!r.ok) throw new Error('Passkey could not be removed'); return r.json(); }).then(v => { invalidateCached(PROFILE_KEY); return v; });
+// #863: a 409 is the server refusing to delete the account's last sign-in method. Its reason is
+// written for the user, so it travels on the error as `userMessage` for the caller to show as is.
+export const removePasskey = (id: string) => apiFetch(`/api/auth/passkeys/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(async r => {
+  if (!r.ok) {
+    const reason = r.status === 409 ? (await r.json().catch(() => ({})) as { error?: unknown }).error : undefined;
+    throw Object.assign(new Error('Passkey could not be removed'), typeof reason === 'string' && reason ? { userMessage: reason } : {});
+  }
+  return r.json();
+}).then(v => { invalidateCached(PROFILE_KEY); return v; });
 export const fetchUsers = () => getJson<unknown>('/api/admin/users').then(parseUsers);
 export const createInvitation = (role: 'admin' | 'member' = 'member') => postJson<{ token: string; expiresAt: number }>('/api/admin/invitations', { role });
 export const setUserDisabled = (id: string, disabled: boolean) => putJson<{ ok: true }>(`/api/admin/users/${encodeURIComponent(id)}/disabled`, { disabled });

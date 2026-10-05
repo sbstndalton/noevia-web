@@ -101,6 +101,8 @@ export const PT_BR_CUSTOMISE: CustomiseCatalogue = {
   'customise.saveKey': "Salvar chave",
   'customise.signIn': "Entrar",
   'customise.keyNotAccepted': "A chave não foi aceita.",
+  'customise.couldNotDisconnect': "Não foi possível desconectar. Tente novamente.",
+  'customise.couldNotRemoveKey': "Não foi possível remover a chave. Tente novamente.",
   'customise.view': "Ver",
   'customise.viewAria': "Ver {name}",
   'customise.projectForAria': "Projeto para {name}",

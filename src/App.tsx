@@ -361,7 +361,7 @@ export default function App(): JSX.Element {
   }, [streamAbort]);
 
   const refreshModels = useCallback(() => {
-    fetchInstalledModels()
+    return fetchInstalledModels()
       .then((list) => {
         setModels(list);
         setModelsLoaded(true);
@@ -1770,10 +1770,7 @@ export default function App(): JSX.Element {
           projects={projects}
           activeProject={activeProject}
           onClose={() => setPopupOpen(false)}
-          onProjectsChanged={() => {
-            refreshProjects();
-            refreshModels();
-          }}
+          onProjectsChanged={() => Promise.all([refreshProjects(), refreshModels()])}
           onOpenModelSettings={(model?: string) => { setPopupOpen(false); openModelManager(model); }}
         />
       )}

@@ -107,6 +107,8 @@ export const EN_GB_CUSTOMISE = {
   'customise.saveKey': 'Save key',
   'customise.signIn': 'Sign in',
   'customise.keyNotAccepted': 'The key was not accepted.',
+  'customise.couldNotDisconnect': 'Could not disconnect. Try again.',
+  'customise.couldNotRemoveKey': 'Could not remove the key. Try again.',
   'customise.view': 'View',
   'customise.viewAria': 'View {name}',
   'customise.projectForAria': 'Project for {name}',

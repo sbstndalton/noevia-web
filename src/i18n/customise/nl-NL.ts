@@ -101,6 +101,8 @@ export const NL_NL_CUSTOMISE: CustomiseCatalogue = {
   'customise.saveKey': "Sleutel opslaan",
   'customise.signIn': "Inloggen",
   'customise.keyNotAccepted': "De sleutel is niet geaccepteerd.",
+  'customise.couldNotDisconnect': "Loskoppelen is niet gelukt. Probeer het opnieuw.",
+  'customise.couldNotRemoveKey': "De sleutel kon niet worden verwijderd. Probeer het opnieuw.",
   'customise.view': "Bekijken",
   'customise.viewAria': "{name} bekijken",
   'customise.projectForAria': "Project voor {name}",

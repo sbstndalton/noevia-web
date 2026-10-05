@@ -394,6 +394,8 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'security.removePasskey': "Rimuovi passkey",
   'security.removePasskeyNamed': "Rimuovi la passkey {name}",
   'security.passkeyRemoved': "Passkey rimossa.",
+  'security.removePasskeyConfirmTitle': "Rimuovere la passkey {name}?",
+  'security.removePasskeyConfirmBody': "Non potrai più accedere con questa passkey. Potrai aggiungerla di nuovo in seguito.",
   'security.passkeySetup': "Configurazione della passkey",
   'security.passkeyAdded': "Passkey aggiunta.",
   'security.addPasskey': "Aggiungi passkey",

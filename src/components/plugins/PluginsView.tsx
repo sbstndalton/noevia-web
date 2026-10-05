@@ -337,7 +337,17 @@ function SignInServers(): JSX.Element | null {
     }, 3000);
     return d.signIn;
   }).catch((e) => setNote({ text: (e as Error).message, error: true }));
-  const disconnect = async (id: string) => { await apiFetch(`/api/mcp-oauth/${encodeURIComponent(id)}`, { method: 'DELETE' }); setNote({ text: t('customise.disconnected') }); void load(); };
+  // #861: report success only for a 2xx. apiFetch resolves on 4xx/5xx and rejects on a network
+  // error, so both are turned into the same visible error and the list is left as the server has it.
+  const disconnect = async (id: string) => {
+    setNote(null);
+    try {
+      const r = await apiFetch(`/api/mcp-oauth/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || t('customise.couldNotDisconnect')); }
+      setNote({ text: t('customise.disconnected') });
+    } catch (e) { setNote({ text: e instanceof TypeError ? t('customise.couldNotDisconnect') : (e as Error).message, error: true }); }
+    void load();
+  };
   return <section className="sign-in-servers" aria-label={t('customise.signInServersTitle')}>
     <h2>{t('customise.signInServersTitle')}</h2>
     <p className="plugins-note">{t('customise.signInServersNote')}</p>
@@ -374,7 +384,15 @@ function KeyServers(): JSX.Element | null {
       setOpen(null); setValues({}); setNote({ text: t('customise.keySaved') }); void load();
     } catch (e) { setNote({ text: (e as Error).message, error: true }); } finally { setBusy(false); }
   };
-  const remove = async (id: string) => { await apiFetch(`/api/mcp-keys/${encodeURIComponent(id)}`, { method: 'DELETE' }); setNote({ text: t('customise.keyRemoved') }); void load(); };
+  const remove = async (id: string) => {
+    setNote(null);
+    try {
+      const r = await apiFetch(`/api/mcp-keys/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || t('customise.couldNotRemoveKey')); }
+      setNote({ text: t('customise.keyRemoved') });
+    } catch (e) { setNote({ text: e instanceof TypeError ? t('customise.couldNotRemoveKey') : (e as Error).message, error: true }); }
+    void load();
+  };
   return <section className="sign-in-servers" aria-label={t('customise.keyServersTitle')}>
     <h2>{t('customise.keyServersTitle')}</h2>
     <p className="plugins-note">{t('customise.keyServersNote')}</p>

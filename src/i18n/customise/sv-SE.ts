@@ -101,6 +101,8 @@ export const SV_SE_CUSTOMISE: CustomiseCatalogue = {
   'customise.saveKey': "Spara nyckel",
   'customise.signIn': "Logga in",
   'customise.keyNotAccepted': "Nyckeln godkändes inte.",
+  'customise.couldNotDisconnect': "Det gick inte att koppla från. Försök igen.",
+  'customise.couldNotRemoveKey': "Det gick inte att ta bort nyckeln. Försök igen.",
   'customise.view': "Visa",
   'customise.viewAria': "Visa {name}",
   'customise.projectForAria': "Projekt för {name}",

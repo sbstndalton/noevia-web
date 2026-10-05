@@ -395,6 +395,8 @@ export const EN_GB_SETTINGS = {
   'security.removePasskey': "Remove passkey",
   'security.removePasskeyNamed': "Remove passkey {name}",
   'security.passkeyRemoved': "Passkey removed.",
+  'security.removePasskeyConfirmTitle': "Remove passkey {name}?",
+  'security.removePasskeyConfirmBody': "You will no longer be able to sign in with this passkey. You can add it again later.",
   'security.passkeySetup': "Passkey setup",
   'security.passkeyAdded': "Passkey added.",
   'security.addPasskey': "Add passkey",

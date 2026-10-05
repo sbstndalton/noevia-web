@@ -394,6 +394,8 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'security.removePasskey': "Fjern tilgangsnøkkel",
   'security.removePasskeyNamed': "Fjern tilgangsnøkkelen {name}",
   'security.passkeyRemoved': "Tilgangsnøkkelen er fjernet.",
+  'security.removePasskeyConfirmTitle': "Fjerne tilgangsnøkkelen {name}?",
+  'security.removePasskeyConfirmBody': "Du kan ikke lenger logge inn med denne tilgangsnøkkelen. Du kan legge den til igjen senere.",
   'security.passkeySetup': "Oppsett av tilgangsnøkkel",
   'security.passkeyAdded': "Tilgangsnøkkelen er lagt til.",
   'security.addPasskey': "Legg til tilgangsnøkkel",

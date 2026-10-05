@@ -394,6 +394,8 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'security.removePasskey': "Ta bort nyckel",
   'security.removePasskeyNamed': "Ta bort nyckeln {name}",
   'security.passkeyRemoved': "Nyckeln har tagits bort.",
+  'security.removePasskeyConfirmTitle': "Ta bort nyckeln {name}?",
+  'security.removePasskeyConfirmBody': "Du kan inte längre logga in med den här nyckeln. Du kan lägga till den igen senare.",
   'security.passkeySetup': "Konfigurering av nyckel",
   'security.passkeyAdded': "Nyckeln har lagts till.",
   'security.addPasskey': "Lägg till nyckel",

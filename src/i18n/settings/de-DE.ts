@@ -394,6 +394,8 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'security.removePasskey': "Passkey entfernen",
   'security.removePasskeyNamed': "Passkey {name} entfernen",
   'security.passkeyRemoved': "Passkey entfernt.",
+  'security.removePasskeyConfirmTitle': "Passkey {name} entfernen?",
+  'security.removePasskeyConfirmBody': "Du kannst dich dann nicht mehr mit diesem Passkey anmelden. Du kannst ihn später erneut hinzufügen.",
   'security.passkeySetup': "Passkey-Einrichtung",
   'security.passkeyAdded': "Passkey hinzugefügt.",
   'security.addPasskey': "Passkey hinzufügen",

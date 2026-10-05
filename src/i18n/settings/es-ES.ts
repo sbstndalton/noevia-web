@@ -394,6 +394,8 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'security.removePasskey': "Quitar llave de acceso",
   'security.removePasskeyNamed': "Quitar la llave de acceso {name}",
   'security.passkeyRemoved': "Llave de acceso quitada.",
+  'security.removePasskeyConfirmTitle': "¿Quitar la llave de acceso {name}?",
+  'security.removePasskeyConfirmBody': "Ya no podrás iniciar sesión con esta llave de acceso. Puedes añadirla de nuevo más tarde.",
   'security.passkeySetup': "Configuración de la llave de acceso",
   'security.passkeyAdded': "Llave de acceso añadida.",
   'security.addPasskey': "Añadir llave de acceso",

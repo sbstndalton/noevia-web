@@ -19,7 +19,9 @@ interface ModelPopupProps {
   projects: Project[];
   activeProject: Project | null;
   onClose: () => void;
-  onProjectsChanged: () => void;
+  /** May return a promise: the popup keeps its controls busy until it settles, so the next change
+   *  is built from the refreshed project, not a stale one (#862). */
+  onProjectsChanged: () => void | Promise<unknown>;
   onOpenModelSettings?: (model?: string) => void;
   /** #527, the phone model sheet: the live status block above the model list, and the Thinking
    *  section after it. Left out, the panel is exactly the Model and tools panel it always was. */
@@ -64,7 +66,7 @@ export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged
 }
 
 function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, before, afterModel }: {
-  projects: Project[]; activeProject: Project | null; onChanged: () => void; onOpenSettings: (model?: string) => void;
+  projects: Project[]; activeProject: Project | null; onChanged: () => void | Promise<unknown>; onOpenSettings: (model?: string) => void;
   before?: ReactNode; afterModel?: ReactNode;
 }): JSX.Element {
   const [models, setModels] = useState<InstalledModel[]>([]);
@@ -127,7 +129,14 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
     if (!activeProject) return;
     focusOnIdle.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setBusy(key); setErr(null);
-    try { await saveProjectConfig(activeProject.id, patch); onChanged(); }
+    try {
+      await saveProjectConfig(activeProject.id, patch);
+      // #862: stay busy until the parent has re-read the project. Clearing `busy` first let a
+      // quick second toggle build its whole toolbox list from the stale `activeProject` and put
+      // back what the first one had just switched off. A refresh that fails is not a failed
+      // save; the next change then starts from what the server holds on the following load.
+      try { await onChanged(); } catch { /* the save itself succeeded */ }
+    }
     catch (e) { setErr(e instanceof Error ? e.message : t('modelPopup.saveError')); }
     finally { setBusy(null); }
   };

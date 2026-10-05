@@ -394,6 +394,8 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'security.removePasskey': "Toegangssleutel verwijderen",
   'security.removePasskeyNamed': "Toegangssleutel {name} verwijderen",
   'security.passkeyRemoved': "Toegangssleutel verwijderd.",
+  'security.removePasskeyConfirmTitle': "Toegangssleutel {name} verwijderen?",
+  'security.removePasskeyConfirmBody': "Je kunt dan niet meer inloggen met deze toegangssleutel. Je kunt hem later opnieuw toevoegen.",
   'security.passkeySetup': "Toegangssleutel instellen",
   'security.passkeyAdded': "Toegangssleutel toegevoegd.",
   'security.addPasskey': "Toegangssleutel toevoegen",

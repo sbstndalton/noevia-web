@@ -101,6 +101,8 @@ export const DE_DE_CUSTOMISE: CustomiseCatalogue = {
   'customise.saveKey': "Schlüssel speichern",
   'customise.signIn': "Anmelden",
   'customise.keyNotAccepted': "Der Schlüssel wurde nicht akzeptiert.",
+  'customise.couldNotDisconnect': "Die Verbindung konnte nicht getrennt werden. Versuche es erneut.",
+  'customise.couldNotRemoveKey': "Der Schlüssel konnte nicht entfernt werden. Versuche es erneut.",
   'customise.view': "Ansehen",
   'customise.viewAria': "{name} ansehen",
   'customise.projectForAria': "Projekt für {name}",

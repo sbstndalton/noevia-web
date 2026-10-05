@@ -101,6 +101,8 @@ export const NB_NO_CUSTOMISE: CustomiseCatalogue = {
   'customise.saveKey': "Lagre nøkkel",
   'customise.signIn': "Logg inn",
   'customise.keyNotAccepted': "Nøkkelen ble ikke godtatt.",
+  'customise.couldNotDisconnect': "Kunne ikke koble fra. Prøv igjen.",
+  'customise.couldNotRemoveKey': "Kunne ikke fjerne nøkkelen. Prøv igjen.",
   'customise.view': "Vis",
   'customise.viewAria': "Vis {name}",
   'customise.projectForAria': "Prosjekt for {name}",

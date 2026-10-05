@@ -536,14 +536,14 @@ export function ChatView({
       )}
       <span className="sr-only" role="status" aria-live="polite">{isDragOver ? t('composer.dropHint') : ''}</span>
       {phone && phoneSheet && chatConfig && <ModelPopup projects={[chatConfig]} activeProject={project ?? { ...chatConfig, name: title }}
-        onClose={() => setPhoneSheet(false)} onProjectsChanged={() => void refreshContext()}
+        onClose={() => setPhoneSheet(false)} onProjectsChanged={() => refreshContext()}
         status={<section className="mp-col mp-status" aria-labelledby="mp-status-title">
           <h3 className="mp-col-title" id="mp-status-title">{t('stats.ariaLabel')}</h3>
           {sheetStatus}
           <div ref={setContextSlot} className="mp-context-slot"/>
         </section>}
         thinking={<ReasoningControl variant="list" project={chatConfig} disabled={streaming || actionBusy} onChanged={refreshContext} />} />}
-      {freeModels && freeContext && <ModelPopup projects={[freeContext]} activeProject={{...freeContext, name: title}} onClose={()=>setFreeModels(false)} onProjectsChanged={()=>void refreshContext()} />}
+      {freeModels && freeContext && <ModelPopup projects={[freeContext]} activeProject={{...freeContext, name: title}} onClose={()=>setFreeModels(false)} onProjectsChanged={()=>refreshContext()} />}
       <div className="chat-header">
         <div className="header-titles">
           <span className="header-crumbs">
