@@ -59,6 +59,17 @@ export function startDraft(suggestion: unknown, projectIds: readonly string[]): 
   return { frame: { projectId, kind: s.kind, tags, links, confirmed: false, source: 'suggested' }, status: 'idle' };
 }
 
+/** The projects a suggested frame may name (#810): Chat mode (absent modes means Chat, as on the
+ *  server) and not archived. A chat moved anywhere else would be hidden and refused on every send. */
+export function chatDestinations<P extends { id: string; archived?: boolean; modes?: readonly string[] }>(projects: readonly P[]): P[] {
+  return projects.filter((p) => p.archived !== true && (!Array.isArray(p.modes) || !p.modes.length || p.modes.includes('chat')));
+}
+
+/** The ids of chatDestinations(), for startDraft. */
+export function chatDestinationIds(projects: readonly { id: string; archived?: boolean; modes?: readonly string[] }[]): string[] {
+  return chatDestinations(projects).map((p) => p.id);
+}
+
 /** What the row shows, in reading order: project, kind, each tag, then "N related". */
 export function frameChips(frame: ChatFrame, projects: readonly { id: string; name: string }[]): FrameChip[] {
   const chips: FrameChip[] = [];

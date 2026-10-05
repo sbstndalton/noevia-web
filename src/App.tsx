@@ -44,7 +44,7 @@ import {
 import type { RoutingModeSettings } from './api';
 import { ForceLocalToggle, isRouteTarget } from './components/RouteControls';
 import { FrameChips } from './components/FrameChips';
-import { acceptPlan, acceptedFrame, frameDraftReducer, startDraft } from './chat-frame';
+import { acceptPlan, acceptedFrame, chatDestinationIds, chatDestinations, frameDraftReducer, startDraft } from './chat-frame';
 import { frameWithLink, keepLinks, MAX_FRAME_LINKS } from './chat-organise';
 import { ChatLinks } from './components/ChatLinks';
 import type { FrameAction, FrameDraft } from './chat-frame';
@@ -851,7 +851,7 @@ export default function App(): JSX.Element {
       fetchFramingPreferences().catch(() => ({ autoAccept: false })),
     ]);
     if (deletedChats.current.has(chatId) || !framingOn.current) return;
-    const draft = startDraft(suggestion, projectsRef.current.map((p) => p.id));
+    const draft = startDraft(suggestion, chatDestinationIds(projectsRef.current));
     if (!draft) return;
     setFrameDrafts((prev) => ({ ...prev, [chatId]: draft }));
     if (prefs.autoAccept) void acceptFrame(chatId, draft);
@@ -1751,7 +1751,7 @@ export default function App(): JSX.Element {
           onRouteDecision={(messageId, pendingId, choice, remember) => answerRoute(view.chatId, messageId, pendingId, choice, remember)}
           headerLinks={featureFlags.chatFraming === true ? <ChatLinks chatId={view.chatId} chats={allChats} onOpenChat={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })} /> : null}
           frameRow={featureFlags.chatFraming === true && frameDrafts[view.chatId] ? (
-            <FrameChips draft={frameDrafts[view.chatId]} projects={projects.map((p) => ({ id: p.id, name: p.name }))}
+            <FrameChips draft={frameDrafts[view.chatId]} projects={chatDestinations(projects).map((p) => ({ id: p.id, name: p.name }))}
               onAction={(action) => onFrameAction(view.chatId, action)}
               onAccept={(tagText) => { const d = frameDraftsRef.current[view.chatId]; if (d) void acceptFrame(view.chatId, d, tagText); }} />
           ) : null}
