@@ -281,7 +281,7 @@ export function ChatView({
     apiFetch(`/api/chats/${encodeURIComponent(chatId)}/context`, { method: 'POST' }).then(async response => {
       if (!response.ok) throw new Error('Could not load chat tools');
       const value = await response.json(); if (current) setFreeContext(value.project);
-    }).catch(err => { if (current) setActionStatus(String(err)); });
+    }).catch(err => { if (current) statusOf(chatId, String(err)); });
     return () => { current = false; };
   }, [chatId, project?.id]);
   // #789: ChatView stays mounted across chat switches, so an upload (or a compaction) started in
@@ -301,14 +301,25 @@ export function ChatView({
   // Every chat with work in flight, so overlapping uploads in two chats each keep their own lock.
   const [busyChats, setBusyChats] = useState<ReadonlySet<string>>(() => new Set());
   const actionBusy = busyChats.has(chatId);
-  const [actionStatus, setActionStatus] = useState('');
+  // #849: the status line is held per chat too. An upload that fails after the person has opened another
+  // chat used to be dropped (the line only existed for the chat on screen), so the file vanished with no
+  // word. Its outcome now waits under its own chat and shows on return; the line is cleared when that
+  // chat is left again (unless it still has work running), so an old "Saved" does not linger.
+  const [actionStatuses, setActionStatuses] = useState<Readonly<Record<string, string>>>({});
+  const actionStatus = actionStatuses[chatId] ?? '';
+  const statusOf = (forChat: string, status: string) => setActionStatuses(current => {
+    if ((current[forChat] ?? '') === status) return current;
+    const next = { ...current };
+    if (status) next[forChat] = status; else delete next[forChat];
+    return next;
+  });
   const busyFor = (forChat: string) => (busy: boolean) => setBusyChats(current => {
     if (busy === current.has(forChat)) return current;
     const next = new Set(current);
     if (busy) next.add(forChat); else next.delete(forChat);
     return next;
   });
-  const statusFor = (forChat: string) => (status: string) => { if (chatIdRef.current === forChat) setActionStatus(status); };
+  const statusFor = (forChat: string) => (status: string) => statusOf(forChat, status);
   const setActionBusy = busyFor(chatId);
   const showActionStatus = statusFor(chatId);
   // #393: seeded from this chat's own saved draft (if any) rather than always
@@ -392,8 +403,11 @@ export function ChatView({
   // `key={chatId}`, deliberately — that would also drop scroll position and
   // in-flight streaming state), so `draft` has to be swapped for the newly
   // opened chat's own saved draft here rather than relying on fresh state.
+  const shownChat = useRef(chatId);
   useEffect(() => {
-    setActionStatus('');
+    const left = shownChat.current;
+    shownChat.current = chatId;
+    if (left !== chatId && !busyChats.has(left)) statusOf(left, '');
     setEditingId(null);
     setEditDraft('');
     setDraft(readDraft(chatId));

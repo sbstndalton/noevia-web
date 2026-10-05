@@ -260,7 +260,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
       }
       if (!stale) setOverview({ready:true,failed:false,memory,sources,recentDays:[...new Set(recentDays)].sort().reverse().slice(0,7)});
     };
-    void load().catch(e => { if (!stale) { setError(String(e)); setOverview(prev => ({...prev,ready:false,failed:true})); } });
+    void load().catch(e => { if (!stale) { setError(diaryErrorText(t, e, appLocale())); setOverview(prev => ({...prev,ready:false,failed:true})); } });
     return () => { stale = true; };
   }, [folder, localFiles, month, revision, today, active]);
   useEffect(() => {
@@ -275,7 +275,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
         entries.set(name, { name, path: prefix+name, isDir: rest.includes('/') });
       }
       setFiles([...entries.values()]); setFilesLoading(false);
-    } else void listFiles(filePath).then(r => { if (!stale) setFiles(r.files); }).catch(e => { if (!stale) setFilesError(e instanceof Error ? e.message : String(e)); }).finally(()=>{if(!stale)setFilesLoading(false);});
+    } else void listFiles(filePath).then(r => { if (!stale) setFiles(r.files); }).catch(e => { if (!stale) setFilesError(diaryErrorText(t, e, appLocale())); }).finally(()=>{if(!stale)setFilesLoading(false);});
     return () => { stale = true; };
   }, [folder, localFiles, filePath, revision, fileRevision, active]);
   useEffect(() => {

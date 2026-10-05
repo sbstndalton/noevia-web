@@ -6,7 +6,7 @@ import { ComposerModel } from './ComposerModel';
 import { ComposerTextarea } from './ComposerTextarea';
 import { SkillPinSelect, useSkillPinOptions } from './SkillPinPicker';
 import type { SkillPin } from '../api-contract';
-import { sourceStatus, uploadUnreadableReason, isUnreadableSource, attachmentReason } from '../source-status';
+import { sourceStatus, uploadFailureText, uploadUnreadableReason, isUnreadableSource, attachmentReason } from '../source-status';
 import { ShellIcon } from './ShellIcon';
 import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
@@ -202,7 +202,7 @@ export function ProjectView({
         const result = await uploadProjectFile(project.id, { name: file.name, dataBase64: await fileToBase64(file) }, value => update(i, value));
         update(i, { stage: uploadUnreadableReason(result, t) || result.attachment?.reduction?.note || t('projects.view.saved'), percent: 100, finished: Date.now() });
         onRefresh();
-      } catch (err) { update(i, { stage: err instanceof Error ? err.message : t('projects.view.uploadFailed'), finished: Date.now() }); }
+      } catch (err) { update(i, { stage: uploadFailureText(err, t, t('projects.view.uploadFailed')), finished: Date.now() }); }
     }
     setBusyDocs(false);
   };

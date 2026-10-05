@@ -23,6 +23,16 @@ export function matchesModelUse(labels: string[], use: ModelUse): boolean {
  *  module; callers that display it to a person (StatsBar) translate this exact sentinel. */
 export const LOCAL_MODEL_FALLBACK = 'local model';
 
+/** What the label says for a manual choice on another provider that has no model picked. Same words
+ *  as a model deleted from the local catalogue: either way there is nothing to send to. */
+export const NO_MODEL_SELECTED = 'No model selected';
+
+/** The server's own test (chat.cjs): a chat has the built-in local provider when its provider is
+ *  unset, the legacy 'lemonade' alias, or the configured default's id ('default' unless changed). */
+export function usesLocalProvider(provider: string | undefined, defaultProviderId = 'default'): boolean {
+  return !provider || provider === 'lemonade' || provider === defaultProviderId;
+}
+
 /** Composer/header label for a project or chat's model choice. `installed` is
  *  null while the local catalogue is unknown (not fetched, manager disabled or
  *  failing) — only a successfully fetched list may declare a model missing.
@@ -34,12 +44,17 @@ export function modelChoiceLabel(
   // Defaults true: most callers (a project) never reach the branch this guards, and existing tests
   // exercise the null-choice case explicitly either way.
   autoRolesConfigured = true,
+  defaultProviderId = 'default',
 ): string {
   if (choice?.routing === 'auto') return 'Auto (Fast/Smart)';
   if (choice?.model) {
-    if (!choice.provider && installed && !installed.some(m => m.name === choice.model)) return 'No model selected';
+    if (!choice.provider && installed && !installed.some(m => m.name === choice.model)) return NO_MODEL_SELECTED;
     return choice.model;
   }
+  // #848: the loaded-model fallback exists server-side only for the local provider (chat.cjs). A
+  // manual choice on any other provider with no model picked answers 400 when sent, so the label
+  // must not borrow the local model's name.
+  if (choice && !usesLocalProvider(choice.provider, defaultProviderId)) return NO_MODEL_SELECTED;
   // No choice at all means a free chat (no project): it starts on Auto rather than whatever
   // happens to be loaded (#305) — loading a specific model for every quick chat wastes a load
   // and energy, and it is not a choice the person made for this chat. But only when the server

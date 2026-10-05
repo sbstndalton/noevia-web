@@ -12,6 +12,8 @@ type Translator = (key: MessageKey, params?: Record<string, string | number>) =>
 /** What to show for an error caught around the local Diary folder: the limit sentence in the
  *  interface language, or the error's own message. */
 export function diaryErrorText(t: Translator, error: unknown, locale: string | undefined): string {
+  // #849: a storage login the server refused is worded like the refresh toast and the Settings save.
+  if ((error as { code?: unknown } | null)?.code === 'storageLoginRejected') return t('storage.refreshLoginRejected');
   const limit = (error as { limit?: DiaryLimit } | null)?.limit;
   if (limit && typeof limit.code === 'string' && limit.params) {
     const p = limit.params, bytes = (n: number) => formatBinaryBytes(n, locale);
@@ -23,5 +25,7 @@ export function diaryErrorText(t: Translator, error: unknown, locale: string | u
       case 'recovery': return t('diary.limit.recovery', { limit: bytes(p.limitBytes) });
     }
   }
-  return error instanceof Error ? error.message : String(error);
+  // The message, never String(error): that prints the class name ("DiaryRequestError: ...") in a banner (#849).
+  const message = (error as { message?: unknown } | null)?.message;
+  return typeof message === 'string' && message ? message : String(error);
 }

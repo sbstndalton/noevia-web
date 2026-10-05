@@ -5,7 +5,7 @@ import { fetchToolboxes, saveProjectConfig, uploadProjectFile } from '../api';
 import { fileToBase64, uploadLimit } from '../sources';
 import { appLocale } from '../user-preferences';
 import { ShellIcon } from './ShellIcon';
-import { uploadUnreadableReason } from '../source-status';
+import { uploadFailureText, uploadUnreadableReason } from '../source-status';
 import { formatPercent } from '../number-format';
 import { useT, type Translate } from '../i18n';
 import { toolboxCopy } from '../toolbox-copy';
@@ -36,7 +36,7 @@ export async function uploadAttachments(sink: AttachmentSink, files: File[], t: 
       const unreadable = uploadUnreadableReason(result, t);
       if (unreadable) { failures.push(`${file.name}: ${unreadable}`); continue; }
       if (result.attachment?.reduction?.note) notices.push(`${file.name}: ${result.attachment.reduction.note}`);
-    } catch (err) { failures.push(`${file.name}: ${err instanceof Error ? err.message : t('composer.upload.failed')}`); }
+    } catch (err) { failures.push(`${file.name}: ${uploadFailureText(err, t, t('composer.upload.failed'))}`); }
   }
   try { await onChanged(); }
   finally {

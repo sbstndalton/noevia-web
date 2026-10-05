@@ -3,12 +3,13 @@ import { cached, invalidateCachedPrefix } from './request-cache';
 export interface DiaryFile { path: string; content: string | null; version: string | null }
 export interface FileEntry { path: string; name: string; isDir: boolean }
 export class DiaryRequestError extends Error {
-  constructor(message: string, public status: number) { super(message); this.name='DiaryRequestError'; }
+  /** `code` is the server's stable key for a failure the screen words itself (#849: `storageLoginRejected`). */
+  constructor(message: string, public status: number, public code?: string) { super(message); this.name='DiaryRequestError'; }
 }
 export async function diaryRequest<T>(path: string, body?: unknown, method = 'POST', signal?: AbortSignal): Promise<T> {
   const r = await apiFetch('/api/diary/' + path, body === undefined ? {signal} : { signal, method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const value = await r.json();
-  if (!r.ok) throw new DiaryRequestError(value.error || 'Diary request failed', r.status);
+  if (!r.ok) throw new DiaryRequestError(value.error || 'Diary request failed', r.status, typeof value.code==='string' ? value.code : undefined);
   return value;
 }
 // The overview and file pane share directory reads. Writes/refreshes remove every

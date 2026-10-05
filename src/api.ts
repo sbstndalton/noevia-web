@@ -129,6 +129,14 @@ export const deleteProjectImage = (id: string, assetId: string) =>
 export const projectImageUrl = (id: string, assetId: string) =>
   `/api/projects/${encodeURIComponent(id)}/assets/${encodeURIComponent(assetId)}`;
 
+/** An Error that keeps the server's stable `code` (#849: `storageLoginRejected`), so the screen can word it
+ *  in the interface language instead of showing the server's English sentence. */
+function failureWithCode(message: string, code: unknown): Error & { code?: string } {
+  const err = new Error(message) as Error & { code?: string };
+  if (typeof code === 'string') err.code = code;
+  return err;
+}
+
 /** Upload a source file into the project's own storage folder. */
 export interface UploadProgress { stage: string; percent?: number }
 export async function uploadProjectFile(id: string, body: { name: string; dataBase64: string }, progress: (value: UploadProgress) => void = () => {}) {
@@ -149,16 +157,16 @@ export async function uploadProjectFile(id: string, body: { name: string; dataBa
         return;
       }
       if (xhr.status === 401) { clearRequestCache(); window.dispatchEvent(new Event('cowork:unauthorized')); }
-      try { const value = JSON.parse(xhr.responseText); if (xhr.status >= 400) reject(new Error(value.error || 'Upload failed')); else resolve(value); }
+      try { const value = JSON.parse(xhr.responseText); if (xhr.status >= 400) reject(failureWithCode(value.error || 'Upload failed', value.code)); else resolve(value); }
       catch { reject(new Error('Invalid upload response')); }
     };
     xhr.send(JSON.stringify({ ...body, organized: true }));
   });
   progress({ stage: 'Upload received · waiting for processing' });
   for (;;) {
-    const job = await getJson<{ done: boolean; stage?: string; status?: number; body?: { error?: string; name: string; path: string; bytes: number; attachment?: { reduction?: { note: string }; state?: string; group?: string; reason?: string; reasonId?: string; reasonParams?: Record<string, string | number> }; document?: { state?: string; error?: string; errorId?: string } } }>(response.poll);
+    const job = await getJson<{ done: boolean; stage?: string; status?: number; body?: { error?: string; code?: string; name: string; path: string; bytes: number; attachment?: { reduction?: { note: string }; state?: string; group?: string; reason?: string; reasonId?: string; reasonParams?: Record<string, string | number> }; document?: { state?: string; error?: string; errorId?: string } } }>(response.poll);
     if (job.done) {
-      if ((job.status || 500) >= 400) throw new Error(job.body?.error || 'Source processing failed');
+      if ((job.status || 500) >= 400) throw failureWithCode(job.body?.error || 'Source processing failed', job.body?.code);
       invalidateCached(WORKSPACE_KEY);
       progress({ stage: 'Saved', percent: 100 }); return job.body!;
     }
@@ -217,9 +225,9 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
     // Source processing can outlive a proxy request. Each poll is short and authenticated.
     for (;;) {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      const job = await getJson<{ done: boolean; status?: number; body?: T & { error?: string } }>(poll);
+      const job = await getJson<{ done: boolean; status?: number; body?: T & { error?: string; code?: string } }>(poll);
       if (!job.done) continue;
-      if ((job.status || 500) >= 400) throw new Error(job.body?.error || 'Source processing failed');
+      if ((job.status || 500) >= 400) throw failureWithCode(job.body?.error || 'Source processing failed', job.body?.code);
       invalidateCached(WORKSPACE_KEY);
       return job.body as T;
     }

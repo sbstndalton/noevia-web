@@ -54,6 +54,15 @@ export function mentionsStorageLogin(message: string | null | undefined, t?: Tra
   return !!message && message.includes(storageLoginText(t));
 }
 
+/** #849: what to show for a failed upload. The server tags a refused storage login with
+ *  `code: 'storageLoginRejected'`; that gets the same sentence the refresh toast uses (#770), in the
+ *  interface language. Anything else keeps the server's own message. */
+export function uploadFailureText(err: unknown, t?: Translate, fallback = ''): string {
+  if ((err as { code?: unknown } | null)?.code === 'storageLoginRejected') return storageLoginText(t);
+  const message = (err as { message?: unknown } | null)?.message;
+  return typeof message === 'string' && message ? message : fallback;
+}
+
 /** A document's extraction error, in the interface language when `t` is given. */
 export function documentError(d: { error?: string; errorId?: string } | undefined, t?: Translate): string {
   if (!d?.error && !d?.errorId) return '';
