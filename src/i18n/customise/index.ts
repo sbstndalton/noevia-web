@@ -8,5 +8,3 @@ import { EN_US_CUSTOMISE } from './en-US';
 
 registerSegment('customise', 'en-GB', EN_GB_CUSTOMISE);
 registerSegment('customise', 'en-US', EN_US_CUSTOMISE);
-
-export const CUSTOMISE_SEGMENT = 'customise';

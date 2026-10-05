@@ -10,5 +10,3 @@ import { EN_US_MODELS } from './en-US';
 
 registerSegment('models', 'en-GB', EN_GB_MODELS);
 registerSegment('models', 'en-US', EN_US_MODELS);
-
-export const MODELS_SEGMENT = 'models';

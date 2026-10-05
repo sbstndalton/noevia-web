@@ -37,7 +37,7 @@ const { withLocale } = require('./qa-locale.cjs');
         await page.evaluate(t => { document.documentElement.dataset.theme = t; }, theme);
         await page.waitForTimeout(150);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${width}/${theme}: overflow`);
-        await page.locator('.projects-hero').scrollIntoViewIfNeeded();
+        await page.locator('.projects-title').scrollIntoViewIfNeeded();
         await page.screenshot({ path: `/tmp/noevia-projects-polish-${width}-${theme}.png` });
       }
       await library.getByRole('button', { name: 'Open project HomeLab', exact: true }).focus();

@@ -176,7 +176,6 @@ export function tuneMinutes(modelGib: number | null | undefined): { low: number;
 
 // ── Roles ────────────────────────────────────────────────────────────────────────────────────
 export type Role = 'chat' | 'vision' | 'routing' | 'embedding' | 'rerank';
-export const ROLE_LABEL: Record<Role, string> = { chat: 'Chat', vision: 'Chat + vision', routing: 'Routing (system)', embedding: 'Embeddings', rerank: 'Reranking' };
 export function roleOf(name: string, labels: readonly string[] = []): Role {
   if (isSystemModel(name)) return 'routing';
   const all = [name, ...labels].join(' ');

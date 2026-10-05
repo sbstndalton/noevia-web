@@ -36,7 +36,6 @@ export type Route =
   | { kind: 'code' };
 
 export const PROJECT_TABS: readonly ProjectTab[] = ['chats', 'sources', 'research', 'code', 'browser'];
-export const CUSTOMISE_TABS: readonly CustomiseTab[] = ['skills', 'connectors', 'plugins'];
 
 /** Old Settings section ids that moved: links and saved places resolve to the new home. Lives
  *  here (SettingsShell re-exports it) so a URL is canonical before the Settings chunk loads. */

@@ -14,8 +14,6 @@ const byId = (t: Translate, key: string, fallback: string): string => { const te
 export const shortSha = (sha: string | null | undefined): string => (sha ? sha.slice(0, 7) : '—');
 const shortHash = (hash: string | null | undefined): string => (hash ? hash.slice(0, 12) : '—');
 
-export const isPipelineTask = (task: CodeTask): boolean => !!task.pipeline;
-
 /** Stage and elapsed durations use the app's own helper: at most two units, rolling up to hours and days. */
 export function formatSpan(ms: number): string {
   const seconds = Math.round(ms / 1000);

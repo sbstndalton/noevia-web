@@ -8,7 +8,7 @@ export default defineConfig({
   // build the server would serve right now (src/stale-shell-guard.ts,
   // issue #311). STAMP_VERSION lets deploy tooling override this with a
   // stronger identifier (e.g. the release git SHA); it must match what
-  // scripts/stamp-icons.cjs and scripts/write-version.cjs use.
+  // scripts/stamp-icons.cjs (which writes version.json) uses.
   define: { __NOEVIA_BUILD__: JSON.stringify(process.env.STAMP_VERSION || pkg.version) },
   server: {
     port: 5173,

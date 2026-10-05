@@ -9,5 +9,3 @@ import { EN_US_DIARY } from './en-US';
 
 registerSegment('diary', 'en-GB', EN_GB_DIARY);
 registerSegment('diary', 'en-US', EN_US_DIARY);
-
-export const DIARY_SEGMENT = 'diary';

@@ -41,10 +41,7 @@ const post = (url: string, body?: unknown) => apiFetch(url, { method: 'POST', he
 
 export const fetchBrowser = (projectId: string) => apiFetch(base(projectId)).then(r => read<BrowserState>(r));
 export const startBrowserTask = (projectId: string, domains: string[]) => post(base(projectId), { domains }).then(r => read<{ taskId: string; domains: string[] }>(r));
-export const fetchBrowserTask = (projectId: string, id: string) => apiFetch(`${base(projectId)}/${id}`).then(r => read<BrowserTask>(r));
-export const runBrowserAction = (projectId: string, id: string, action: BrowserAction) => post(`${base(projectId)}/${id}/act`, action).then(r => read<BrowserActionResult>(r));
 /** Answers one named approval. A 409 means that card is gone: refresh and show what is waiting now. */
 export const decideBrowserTask = (projectId: string, id: string, approvalId: string, decision: 'approve' | 'approve_all' | 'deny') =>
   post(`${base(projectId)}/${id}/approve`, { decision, approvalId }).then(r => read<{ ok: true }>(r));
-export const finishBrowserTask = (projectId: string, id: string, result: unknown = null) => post(`${base(projectId)}/${id}/finish`, { result }).then(r => read<{ ok: true }>(r));
 export const cancelBrowserTask = (projectId: string, id: string) => post(`${base(projectId)}/${id}/cancel`).then(r => read<BrowserTask>(r));

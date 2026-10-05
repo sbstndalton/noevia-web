@@ -8,5 +8,3 @@ import { EN_US_SETTINGS } from './en-US';
 
 registerSegment('settings', 'en-GB', EN_GB_SETTINGS);
 registerSegment('settings', 'en-US', EN_US_SETTINGS);
-
-export const SETTINGS_SEGMENT = 'settings';

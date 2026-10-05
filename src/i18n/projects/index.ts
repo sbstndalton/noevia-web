@@ -9,5 +9,3 @@ import { EN_US_PROJECTS } from './en-US';
 
 registerSegment('projects', 'en-GB', EN_GB_PROJECTS);
 registerSegment('projects', 'en-US', EN_US_PROJECTS);
-
-export const PROJECTS_SEGMENT = 'projects';
