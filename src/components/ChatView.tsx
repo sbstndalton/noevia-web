@@ -17,6 +17,7 @@ import { ToolCalls } from './ToolCalls';
 import { SourceChips } from './SourceChips';
 import { ComposerTextarea } from './ComposerTextarea';
 import { modelChoiceLabel } from '../model-guidance';
+import { useDefaultProviderId } from '../use-default-provider-id';
 import { ComposerActions, useAttachmentDrop } from './ComposerActions';
 import { apiFetch } from '../api';
 import { isDisplayableRoutingDecision } from '../current-routing';
@@ -430,7 +431,8 @@ export function ChatView({
   // does — gating this on routing==='auto' || model let a manual choice with no model yet picked
   // silently keep showing the inherited Auto default, disagreeing with the picker reading the same
   // object directly (#352).
-  if (!project && freeContext) modelLabel = modelChoiceLabel(freeContext, installedModels ?? null);
+  const defaultProviderId = useDefaultProviderId(); // the id the server treats as local (#876)
+  if (!project && freeContext) modelLabel = modelChoiceLabel(freeContext, installedModels ?? null, true, defaultProviderId);
   const coworkAccess = useCoworkAccess(project?.id ?? null);
   const [repository, setRepository] = useState<string | null>(null);
   useEffect(() => {

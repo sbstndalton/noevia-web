@@ -17,6 +17,7 @@ import { LibraryTab } from './LibraryTab';
 import { GuidedOptimize } from './GuidedOptimize';
 import { OverviewTab } from './OverviewTab';
 import { notifyModelsChanged, useModelsChanged } from '../../models-changed';
+import { useDefaultProviderId } from '../../use-default-provider-id';
 import { routingViewState } from '../../routing-view-state';
 import { RoutingModeSection } from './RoutingModeSection';
 import { roleSummary } from '../../routing-copy';
@@ -286,6 +287,7 @@ function ProjectRoutingSection({ models, routes, projects, modelsError }: {
 }): JSX.Element {
   const [info, setInfo] = useState<Awaited<ReturnType<typeof fetchAutoRoles>> | null>(null);
   const t = useT();
+  const defaultProviderId = useDefaultProviderId();
   useEffect(() => { let live = true; fetchAutoRoles().then((v) => { if (live) setInfo(v); }).catch(() => undefined); return () => { live = false; }; }, []);
   const loaded = models.filter((m) => m.loaded).map((m) => m.name);
   return <section className="mm-panel">
@@ -296,7 +298,7 @@ function ProjectRoutingSection({ models, routes, projects, modelsError }: {
       <tbody>{projects.map((p) => <tr key={p.id}>
         <td data-label={t('mm.projects.project')}>{p.name}</td>
         <td data-label={t('mm.projects.picks')}>{p.routing === 'auto' ? t('mm.mode.auto') : t('mm.mode.manual')}</td>
-        <td data-label={t('mm.projects.model')}>{p.routing === 'auto' ? (info?.configured ? roleSummary(info.roles, t) : t('mm.projects.autoUnconfigured')) : modelChoiceLabel(p, modelsError ? null : models)}</td>
+        <td data-label={t('mm.projects.model')}>{p.routing === 'auto' ? (info?.configured ? roleSummary(info.roles, t) : t('mm.projects.autoUnconfigured')) : modelChoiceLabel(p, modelsError ? null : models, true, defaultProviderId)}</td>
       </tr>)}</tbody>
       </table>
     </div> : <p className="mm-note">{t('mm.projects.none')}</p>}

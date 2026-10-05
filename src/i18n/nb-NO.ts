@@ -1094,6 +1094,7 @@ export const NB_NO: Catalogue = {
   'chat.approval.repeat': "Dette ser ut som endringen du nettopp godkjente.",
   'chat.approval.provenance': "Inneholder tekst fra {source} i «{field}». Sjekk den før du tillater: dette kallet spørres om selv om du har tillatt denne chatten.",
   'chat.approval.provenanceUnchecked': "Det kunne ikke sjekkes hvor argumentene til dette kallet kom fra, så det spørres om for seg.",
+  'chat.approval.server': "gjennom {server}",
   'chat.paused.supervision': "Stegovervåkingen satte svaret på pause før flere steg. Ingenting ble endret.",
   'chat.paused.sensitive': "Et verktøyresultat ser sensitivt ut og ble ikke sendt til skymodellen. Bytt denne chatten til lokal eller send på nytt.",
   'chat.paused.supervisionApplied.one': "{count} endring ble lagret. Stegovervåkingen satte svaret på pause før flere steg.",

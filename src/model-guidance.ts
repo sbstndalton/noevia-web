@@ -46,7 +46,9 @@ export function modelChoiceLabel(
   autoRolesConfigured = true,
   defaultProviderId = 'default',
 ): string {
-  if (choice?.routing === 'auto') return 'Auto (Fast/Smart)';
+  // chat.cjs only auto-routes on the built-in local provider; on any other provider an `auto` choice
+  // is treated as manual there, so the label follows the manual rules below (#876).
+  if (choice?.routing === 'auto' && usesLocalProvider(choice.provider, defaultProviderId)) return 'Auto (Fast/Smart)';
   if (choice?.model) {
     if (!choice.provider && installed && !installed.some(m => m.name === choice.model)) return NO_MODEL_SELECTED;
     return choice.model;

@@ -382,6 +382,8 @@ export interface McpServerStatus {
    *  #366); everything else is configured for this deployment (the internal server or an
    *  MCP_SERVERS/MCP_SERVER_URL entry) and never appears in that list. */
   directory?: boolean;
+  /** A directory server's display name (#887). Absent for servers configured by the operator. */
+  title?: string;
   error: string | null;
   discovered: number;
 }
@@ -574,6 +576,8 @@ export async function* streamChat(
   repeatOf?: boolean;
   /** 'tool_pending' (#769): sensitive arguments holding untrusted text; asked per call. */
   provenance?: unknown;
+  /** 'tool_pending' (#865/#887): the id of the MCP server the call goes to. */
+  server?: string;
   /** 'tool_result' (#658): a write that ran and succeeded. 'paused': how many changes were saved. */
   applied?: boolean | number;
   /** 'paused' (#658): why the reply ended before a final answer ('supervision' or, #666, 'declined'). */

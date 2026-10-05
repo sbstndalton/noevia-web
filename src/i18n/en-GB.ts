@@ -1105,6 +1105,7 @@ export const EN_GB = {
   'chat.approval.repeat': "This looks like the change you just approved.",
   'chat.approval.provenance': "Contains text from {source} in “{field}”. Check it before allowing: this call is asked about even if you allowed this chat.",
   'chat.approval.provenanceUnchecked': "Where this call’s arguments came from could not be checked, so it is asked about on its own.",
+  'chat.approval.server': "via {server}",
   'chat.paused.supervision': "Step supervision paused this reply before any further steps. Nothing was changed.",
   'chat.paused.sensitive': "A tool result looks sensitive and was not sent to the cloud model. Switch this chat to local or resend.",
   'chat.paused.supervisionApplied.one': "{count} change was saved. Step supervision paused this reply before any further steps.",

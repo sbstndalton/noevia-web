@@ -1094,6 +1094,7 @@ export const IT_IT: Catalogue = {
   'chat.approval.repeat': "Sembra la modifica che hai appena approvato.",
   'chat.approval.provenance': "Contiene testo da {source} in «{field}». Controllalo prima di consentire: questa chiamata viene chiesta anche se hai consentito questa chat.",
   'chat.approval.provenanceUnchecked': "Non è stato possibile verificare la provenienza degli argomenti di questa chiamata, quindi viene chiesta a parte.",
+  'chat.approval.server': "tramite {server}",
   'chat.paused.supervision': "La supervisione dei passaggi ha messo in pausa questa risposta prima di altri passaggi. Non è stato modificato nulla.",
   'chat.paused.sensitive': "Un risultato di uno strumento sembra sensibile e non è stato inviato al modello cloud. Passa questa chat a locale o invia di nuovo.",
   'chat.paused.supervisionApplied.one': "{count} modifica è stata salvata. La supervisione dei passaggi ha messo in pausa questa risposta prima di altri passaggi.",

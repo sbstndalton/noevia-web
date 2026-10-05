@@ -1,10 +1,12 @@
 // Actual rendered approval cards; APIs and writes remain memory-only fixtures.
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+// Run: npm run build -- --outDir /tmp/<name>-dist, then
+//   PLAYWRIGHT_MODULE=<playwright-core> QA_CHROME_PATH=<Brave or Chrome binary> QA_DIST=/tmp/<name>-dist node qa/mobile-approvals.cjs
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright-core');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
 const args=JSON.stringify({path:'Synthetic/'+ 'long-path-'.repeat(35),content:'BEGIN_FULL_ARGUMENTS\n'+('Synthetic proposed content with full disclosure.\n'.repeat(45))+'END_FULL_ARGUMENTS'});
 (async()=>{
- const fixture=createFixture(31333);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});const errors=[];
+ const fixture=createFixture(31333);await fixture.listen();const browser=await chromium.launch({headless:true,...(process.env.QA_CHROME_PATH?{executablePath:process.env.QA_CHROME_PATH}:{channel:'chrome'})});const errors=[];
  try{
  for(const [width,height] of [[320,568],[375,667],[390,360],[667,375],[768,1024],[1440,900]])for(const theme of ['light','dark']){
   const page=await browser.newPage({viewport:{width,height},isMobile:width<768,hasTouch:true});page.on('pageerror',e=>errors.push(e.message));
@@ -16,7 +18,10 @@ const args=JSON.stringify({path:'Synthetic/'+ 'long-path-'.repeat(35),content:'B
   await page.goto('http://localhost:31333');await page.getByPlaceholder('Message noevia…').fill('live synthetic');await page.getByRole('button',{name:'Send',exact:true}).click();
   for(let i=0;fixture.requests.length===previousRequests&&i<100;i++)await page.waitForTimeout(20);
   await page.waitForTimeout(100);
-  const reach=async el=>{await el.scrollIntoViewIfNeeded();assert.ok(await el.evaluate(e=>{const r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2;return x>=0&&x<innerWidth&&y>=0&&y<innerHeight&&e.contains(document.elementFromPoint(x,y));}),`${width} ${theme} control reachable`);};
+  // A person scrolls until the control is clear. The composer is pinned to the bottom and the "Jump to latest"
+  // pill floats over the list, so one scroll position can cover a control while another leaves it free.
+  const hit=el=>el.evaluate(e=>{const r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2;return x>=0&&x<innerWidth&&y>=0&&y<innerHeight&&e.contains(document.elementFromPoint(x,y));});
+  const reach=async el=>{let ok=false;for(const block of ['nearest','center','start','end']){await el.evaluate((e,block)=>e.scrollIntoView({block}),block);if(ok=await hit(el))break;}assert.ok(ok,`${width} ${theme} control reachable`);};
   for(const [index,decision,label] of [[0,'approve','Allow once'],[1,'deny','Decline'],[2,'approve_all','Allow for this chat']]){
    fixture.liveEvent({type:'tool_pending',index:0,id:'synthetic-'+index,name:'synthetic_write',args});
    const card=page.locator('.tool-approval');await card.waitFor();
@@ -33,8 +38,11 @@ const args=JSON.stringify({path:'Synthetic/'+ 'long-path-'.repeat(35),content:'B
    await page.screenshot({path:`/tmp/noevia-approval-${width}-${theme}-${decision}.png`});
    await card.getByRole('button',{name:label,exact:true}).click();
    await page.waitForFunction(()=>[...document.querySelectorAll('.tool-approval button')].every(b=>b.disabled));
-   fixture.liveEvent({type:'tool_result',index:0,name:'synthetic_write',text:decision==='deny'?'Declined by user.':'Synthetic write accepted.',denied:decision==='deny'});
+   fixture.liveEvent({type:'tool_result',index:0,name:'synthetic_write',text:decision==='deny'?'Declined by user.':'Synthetic write accepted.',declined:decision==='deny'});
    await card.waitFor({state:'detached'});
+   // The server marks a declined write with `declined: true` (never `denied`); the settled list must say so.
+   const settled=await page.locator('.tool-calls > summary').last().textContent();
+   assert.equal(/declined/i.test(settled),decision==='deny',`${width} ${theme} ${decision}: settled summary "${settled}"`);
   }
   assert.deepEqual(decisions,['approve','approve','deny','approve_all']);fixture.finishLive();await page.close();
  }

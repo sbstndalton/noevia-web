@@ -1094,6 +1094,7 @@ export const ES_ES: Catalogue = {
   'chat.approval.repeat': "Parece el mismo cambio que acabas de aprobar.",
   'chat.approval.provenance': "Contiene texto de {source} en «{field}». Revísalo antes de permitirlo: esta llamada se pregunta aunque hayas permitido este chat.",
   'chat.approval.provenanceUnchecked': "No se pudo comprobar de dónde vienen los argumentos de esta llamada, así que se pregunta por separado.",
+  'chat.approval.server': "mediante {server}",
   'chat.paused.supervision': "La supervisión por pasos pausó esta respuesta antes de cualquier otro paso. No se cambió nada.",
   'chat.paused.sensitive': "Un resultado de herramienta parece sensible y no se envió al modelo en la nube. Cambia este chat a local o vuelve a enviarlo.",
   'chat.paused.supervisionApplied.one': "Se guardó {count} cambio. La supervisión por pasos pausó esta respuesta antes de cualquier otro paso.",

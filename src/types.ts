@@ -105,6 +105,8 @@ export interface ToolCallView {
   repeatOf?: boolean;
   /** #769: sensitive arguments holding untrusted text (or `unchecked`), shown on the card. */
   provenance?: ToolProvenance[];
+  /** #887: the id of the MCP server the call goes to (the `server` of a 'tool_pending' event). */
+  server?: string;
   /** #658: a write that ran and succeeded. Later turns tell the model it is done. */
   applied?: boolean;
   /** What the tool returned, bounded for display and history. */

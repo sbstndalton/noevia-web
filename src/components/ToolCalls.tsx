@@ -7,6 +7,7 @@ import { useT } from '../i18n';
 import { formatNumber } from '../number-format';
 import { around } from '../text-around';
 import { showDirectionControls } from '../visible-controls';
+import { useServerLabel } from '../mcp-server-label';
 
 /** One drawn symbol per outcome — the list used ✓ and ⃠, which render differently on
  *  every platform and are not part of the icon set. */
@@ -60,6 +61,8 @@ function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
   // they are printed as visible escapes (#648).
   pretty = showDirectionControls(pretty);
   const name = showDirectionControls(call.name);
+  // #887: the MCP server the write goes to, so two servers offering one tool name can be told apart.
+  const serverLabel = useServerLabel(call.server);
   // The name is markup (bold), so the sentence is split around it and the words stay in the catalogue.
   const ask = around(t('chat.approval.ask'), 'name');
   return (
@@ -67,6 +70,7 @@ function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
       <span className="tool-approval-ask">
         {ask[0]}<strong>{name}</strong>{ask[1]}
       </span>
+      {serverLabel && <span className="tool-approval-ask tool-approval-server" data-testid="tool-approval-server">{t('chat.approval.server', { server: showDirectionControls(serverLabel) })}</span>}
       {/* Full, unabbreviated arguments. Seeing exactly what the model proposes
           IS the gate — no clamp, no scroll-to-hide, no "show more". */}
       {/* A project file edit names the exact stored file it would change (#648), resolved by the

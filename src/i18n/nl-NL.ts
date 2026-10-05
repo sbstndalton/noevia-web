@@ -1094,6 +1094,7 @@ export const NL_NL: Catalogue = {
   'chat.approval.repeat': "Dit lijkt op de wijziging die je net hebt goedgekeurd.",
   'chat.approval.provenance': "Bevat tekst uit {source} in ‘{field}’. Controleer die voordat je toestaat: deze aanroep wordt gevraagd, ook als je deze chat hebt toegestaan.",
   'chat.approval.provenanceUnchecked': "Waar de argumenten van deze aanroep vandaan komen kon niet worden gecontroleerd, daarom wordt hij apart gevraagd.",
+  'chat.approval.server': "door middel van {server}",
   'chat.paused.supervision': "Stapsupervisie heeft dit antwoord gepauzeerd voor verdere stappen. Er is niets gewijzigd.",
   'chat.paused.sensitive': "Een toolresultaat lijkt gevoelig en is niet naar het cloudmodel gestuurd. Zet deze chat op lokaal of verstuur opnieuw.",
   'chat.paused.supervisionApplied.one': "{count} wijziging is opgeslagen. Stapsupervisie heeft dit antwoord gepauzeerd voor verdere stappen.",

@@ -12,6 +12,7 @@ import { modelChoiceLabel } from './model-guidance';
 import { applyReplyTelemetry, beginReplyTelemetry, finishReplyTelemetry, lastReplyTelemetry } from './reply-telemetry';
 import { shouldShowStatsBar } from './statsbar-visibility';
 import { useSpaceTier } from './space-tier';
+import { useDefaultProviderId } from './use-default-provider-id';
 import { planRegenerate, resendOutcome, type ResendOutcome } from './regenerate';
 import { TOOL_RESULT_LIMIT } from './components/ToolCalls';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -618,12 +619,13 @@ export default function App(): JSX.Element {
   // #527: in phone-sized space the inference strip leaves the page for the model sheet (ChatView);
   // only its screen-reader announcements stay here. The same gate decides whether it shows at all.
   const phoneSpace = useSpaceTier() === 2;
+  const defaultProviderId = useDefaultProviderId(); // the id the server treats as local (#876)
   const showStats = shouldShowStatsBar(view.kind, messages.length, view.kind === 'chat' && !!replyTelemetryByChat[view.chatId]);
   const statsProps = {
     stats,
     reply: view.kind === 'chat' ? replyTelemetryByChat[view.chatId] || lastReplyTelemetry(messages) : null,
     routingDecision,
-    modelLabel: modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured),
+    modelLabel: modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured, defaultProviderId),
   };
 
   // ── The address bar (#359) ──────────────────────────────────────────────────────────────
@@ -1685,7 +1687,7 @@ export default function App(): JSX.Element {
       {view.kind === 'project' && activeProject && (
         <ProjectView
           key={activeProject.id}
-          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured)}
+          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured, defaultProviderId)}
           codeRequest={view.codeRequest}
           requestedTab={projectTab?.id === activeProject.id ? projectTab.tab : undefined}
           focusSource={sourceFocus?.id === activeProject.id ? sourceFocus : null}
@@ -1727,7 +1729,7 @@ export default function App(): JSX.Element {
           chatId={view.chatId}
           title={activeChatMeta?.title ?? (view.projectId ? tr('sidebar.newTask') : tr('common.newChat'))}
           projectName={activeProject?.name ?? null}
-          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured)}
+          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured, defaultProviderId)}
           installedModels={modelsLoaded && !modelsError ? models : null}
           messages={messages}
           onEditMessage={editAndResend}
