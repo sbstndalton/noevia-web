@@ -856,4 +856,6 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'security.devices.revoked': "{name} loggades ut.",
   'security.devices.loadError': "Inloggade appar kunde inte läsas in. Läs in sidan igen för att försöka på nytt.",
   'security.devices.revokeError': "Appen kunde inte återkallas. Försök igen.",
+  'features.item.routingModes.label': "Routningslägen",
+  'features.item.routingModes.description': "Varje konto väljer vart Auto skickar sina chattar: bara lokala modeller, en molnleverantör det anger, eller hybrid. I hybrid skickas ett meddelande som ser känsligt ut (dagboksinnehåll, lösenord, konto- eller kortnummer, eller som routern bedömer som privat) aldrig till molnet utan att fråga: du väljer Skicka till molnet eller Behåll lokalt, och en chatt kan ställas in på Bara lokalt. En modell du väljer själv används som förut, och dagbokstext och projektbilder går fortfarande aldrig till en molnleverantör.",
 };

@@ -856,4 +856,6 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'security.devices.revoked': "{name} ble logget ut.",
   'security.devices.loadError': "Kunne ikke laste påloggede apper. Last inn siden på nytt for å prøve igjen.",
   'security.devices.revokeError': "Kunne ikke trekke tilbake appen. Prøv igjen.",
+  'features.item.routingModes.label': "Rutingsmoduser",
+  'features.item.routingModes.description': "Hver konto velger hvor Auto sender chattene sine: bare lokale modeller, en skyleverandør den oppgir, eller hybrid. I hybrid sendes en melding som ser sensitiv ut (dagbokinnhold, passord, konto- eller kortnumre, eller ruteren vurderer den som privat) aldri til skyen uten å spørre: du velger Send til sky eller Behold lokalt, og en chat kan settes til Bare lokalt. En modell du velger selv brukes som før, og dagboktekst og prosjektbilder går fortsatt aldri til en skyleverandør.",
 };

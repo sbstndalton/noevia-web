@@ -856,4 +856,6 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'security.devices.revoked': "{name} is afgemeld.",
   'security.devices.loadError': "Aangemelde apps konden niet worden geladen. Laad de pagina opnieuw om het nog eens te proberen.",
   'security.devices.revokeError': "De app kon niet worden ingetrokken. Probeer het opnieuw.",
+  'features.item.routingModes.label': "Routeringsmodi",
+  'features.item.routingModes.description': "Elk account kiest waar Auto zijn chats naartoe stuurt: alleen lokale modellen, een cloudprovider die het opgeeft, of hybride. In hybride gaat een bericht dat gevoelig lijkt (Dagboekinhoud, wachtwoorden, rekening- of kaartnummers, of door de router als privé beoordeeld) nooit zonder te vragen naar de cloud: je kiest Naar de cloud sturen of Lokaal houden, en een chat kan op Alleen lokaal worden gezet. Een model dat je zelf kiest, wordt gebruikt zoals voorheen, en Dagboektekst en projectafbeeldingen gaan nog steeds nooit naar een cloudprovider.",
 };

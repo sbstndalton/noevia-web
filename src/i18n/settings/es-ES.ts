@@ -856,4 +856,6 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'security.devices.revoked': "Se ha cerrado la sesión de {name}.",
   'security.devices.loadError': "No se han podido cargar las apps con sesión iniciada. Recarga la página para volver a intentarlo.",
   'security.devices.revokeError': "No se ha podido revocar la app. Vuelve a intentarlo.",
+  'features.item.routingModes.label': "Modos de enrutamiento",
+  'features.item.routingModes.description': "Cada cuenta elige adónde envía Auto sus chats: solo modelos locales, un proveedor en la nube que indique, o híbrido. En híbrido, un mensaje que parece sensible (contenido del Diario, contraseñas, números de cuenta o de tarjeta, o el enrutador lo considera privado) nunca se envía a la nube sin preguntar: eliges Enviar a la nube o Mantener local, y un chat puede ponerse en Forzar local. Un modelo que eliges a mano se usa como antes, y el texto del Diario y las imágenes de proyecto siguen sin ir nunca a un proveedor en la nube.",
 };

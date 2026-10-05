@@ -18,6 +18,7 @@ import { GuidedOptimize } from './GuidedOptimize';
 import { OverviewTab } from './OverviewTab';
 import { notifyModelsChanged, useModelsChanged } from '../../models-changed';
 import { routingViewState } from '../../routing-view-state';
+import { RoutingModeSection } from './RoutingModeSection';
 import { roleSummary } from '../../routing-copy';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
@@ -186,6 +187,7 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
   const view = routingViewState(info, error);
 
   return <><DefaultModeSection />
+  <RoutingModeSection />
   <section className="mm-panel">
     <div className="mm-panel-head"><h3>{t('mm.tab.routing')}</h3></div>
     <p className="mm-note">{t('mm.route.intro')}</p>

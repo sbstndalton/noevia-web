@@ -856,4 +856,6 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'security.devices.revoked': "{name} wurde abgemeldet.",
   'security.devices.loadError': "Angemeldete Apps konnten nicht geladen werden. Lade die Seite neu, um es erneut zu versuchen.",
   'security.devices.revokeError': "Die App konnte nicht widerrufen werden. Versuche es erneut.",
+  'features.item.routingModes.label': "Routing-Modi",
+  'features.item.routingModes.description': "Jedes Konto wählt, wohin Auto seine Chats schickt: nur lokale Modelle, ein selbst benannter Cloud-Anbieter oder hybrid. Im Hybridmodus geht eine sensibel wirkende Nachricht (Tagebuchinhalt, Passwörter, Konto- oder Kartennummern, oder der Router hält sie für privat) nie ohne Nachfrage in die Cloud: Du wählst An die Cloud senden oder Lokal behalten, und ein Chat kann auf Nur lokal gestellt werden. Ein Modell, das du selbst auswählst, wird wie bisher verwendet, und Tagebuchtext und Projektbilder gehen weiterhin nie an einen Cloud-Anbieter.",
 };

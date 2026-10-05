@@ -861,6 +861,8 @@ export const EN_GB_SETTINGS = {
   'security.devices.revoked': "{name} was signed out.",
   'security.devices.loadError': "Signed-in apps could not be loaded. Reload the page to try again.",
   'security.devices.revokeError': "The app could not be revoked. Try again.",
+  'features.item.routingModes.label': "Routing modes",
+  'features.item.routingModes.description': "Let each account choose where Auto sends its chats: only local models, a cloud provider it names, or hybrid. In hybrid a message that looks sensitive (Diary content, passwords, account or card numbers, or the router role judging it private) is never sent to the cloud without asking: you choose Send to cloud or Keep local, and a chat can be set to Force local. A model you pick by hand is used as before, and Diary text and project images still never go to a cloud provider.",
 } as const;
 
 export type SettingsKey = keyof typeof EN_GB_SETTINGS;

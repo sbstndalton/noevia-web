@@ -22,6 +22,7 @@ import { apiFetch } from '../api';
 import { isDisplayableRoutingDecision } from '../current-routing';
 import { routeDescription } from '../routing-copy';
 import { nextStreamStart } from '../stream-start';
+import { RouteBadge, RoutePendingCard } from './RouteControls';
 import { effortLineText, messageBodyText, pausedNoteText, routeRoleName, senderLabelText, statusLineText, toolScopeText } from '../chat-labels';
 import { useAccountPreferences, appLocale } from '../user-preferences';
 import { sendHintText, useT } from '../i18n';
@@ -85,6 +86,10 @@ interface ChatViewProps {
   onLinkChat?: (target: ChatMeta) => void;
   /** #741: the header's Links control (backlinks and the chat graph). */
   headerLinks?: ReactNode;
+  /** #778 (features.routingModes): the chat's Force local toggle, in the header. */
+  routingControls?: ReactNode;
+  /** #778: the answer to a "This looks sensitive" card. */
+  onRouteDecision?: (messageId: string, pendingId: string, choice: 'cloud' | 'local', remember: boolean) => void;
 }
 
 /** "12s", "1m 05s": how long the thinking took, the way people say it. */
@@ -258,6 +263,8 @@ export function ChatView({
   linkTargets = null,
   onLinkChat,
   headerLinks = null,
+  routingControls = null,
+  onRouteDecision,
 }: ChatViewProps): JSX.Element {
   const [freeModels, setFreeModels] = useState(false);
   const { sendKey } = useAccountPreferences();
@@ -518,6 +525,7 @@ export function ChatView({
         </div>
         <div className="header-controls">
           {headerLinks}
+          {routingControls}
           <button className="icon-btn" onClick={headerSettings.open} title={headerSettings.label} aria-label={headerSettings.label}>
             <SlidersIcon size={15} />
           </button>
@@ -566,6 +574,9 @@ export function ChatView({
                   {m.warning && <p className="msg-warning" role="status">{m.warning}</p>}
                   {(m.toolScope || m.skillScope) && <small className="tool-scope" title={t('chat.scope.title')}>{m.toolScope && t('chat.scope.using', { tools: m.toolScope === 'all tools' ? t('chat.scope.allTools') : m.toolScopeBoxes?.length ? toolScopeText(t, m.toolScopeBoxes) : m.toolScope })}{m.toolScope && m.skillScope && ' · '}{m.skillScope && t('chat.scope.skill', { name: m.skillScope })}</small>}
                   {m.routingDecision && <RoutingDetails decision={m.routingDecision} />}
+                  {m.routeTarget && <RouteBadge target={m.routeTarget} />}
+                  {m.routePending && onRouteDecision && <RoutePendingCard flag={m.routePending.flag} busy={m.routePending.busy}
+                    onDecide={(choice, remember) => onRouteDecision(m.id, m.routePending!.id, choice, remember)} />}
                   {m.reasoning ? <ThinkingBlock text={m.reasoning} ms={m.reasoningMs} live={!!thinkingLive && !m.content} /> : null}
                   {m.toolCalls && m.toolCalls.length > 0 ? <ToolCalls calls={m.toolCalls} /> : null}
                   {/* #658: the reply ended after tool steps (supervision paused it, or it failed after

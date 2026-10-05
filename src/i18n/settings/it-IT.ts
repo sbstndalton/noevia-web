@@ -856,4 +856,6 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'security.devices.revoked': "{name} è stata disconnessa.",
   'security.devices.loadError': "Impossibile caricare le app connesse. Ricarica la pagina per riprovare.",
   'security.devices.revokeError': "Impossibile revocare l’app. Riprova.",
+  'features.item.routingModes.label': "Modalità di instradamento",
+  'features.item.routingModes.description': "Ogni account sceglie dove Auto invia le chat: solo modelli locali, un provider cloud indicato, o ibrida. In ibrida un messaggio che sembra sensibile (contenuto del Diario, password, numeri di conto o di carta, o giudicato privato dal router) non viene mai inviato al cloud senza chiedere: scegli Invia al cloud o Mantieni locale, e una chat può essere impostata su Forza locale. Un modello scelto a mano viene usato come prima, e il testo del Diario e le immagini di progetto continuano a non andare mai a un provider cloud.",
 };

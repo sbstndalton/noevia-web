@@ -75,7 +75,7 @@ export function persistableMessage(m: Message): Message | null {
 /** The `paused` field read back from a saved history entry, if it is well formed. */
 export function storedPause(h: Pick<HistoryEntry, 'paused'>): Message['paused'] {
   const p = h.paused;
-  if (!p || (p.reason !== 'supervision' && p.reason !== 'stopped' && p.reason !== 'declined') || !Number.isInteger(p.applied) || p.applied < 0) return undefined;
+  if (!p || (p.reason !== 'supervision' && p.reason !== 'stopped' && p.reason !== 'declined' && p.reason !== 'sensitive') || !Number.isInteger(p.applied) || p.applied < 0) return undefined;
   // A decline whose names did not survive still reads as a decline, in general words.
   if (p.reason === 'declined') return { reason: 'declined', applied: p.applied, declined: declinedNames(p.declined) };
   return { reason: p.reason, applied: p.applied };

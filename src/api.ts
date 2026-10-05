@@ -321,6 +321,38 @@ export function decideToolApproval(
   return postJson(`/api/tool-approvals/${encodeURIComponent(approvalId)}`, { decision });
 }
 
+/** #778: answer a routing question (Send to cloud / Keep local). Same route and owner check as
+ *  the write approvals; the server refuses a write answer here and a routing answer there. */
+export function decideRoute(id: string, decision: 'cloud' | 'local', remember: boolean): Promise<{ ok: true }> {
+  return postJson(`/api/tool-approvals/${encodeURIComponent(id)}`, { decision, remember });
+}
+
+export interface RoutingModeSettings {
+  enabled: boolean;
+  /** The mode replies actually use (#779 F5): a mode an administrator disallowed reads as 'local'. */
+  mode?: 'local' | 'cloud' | 'hybrid' | null;
+  /** The account's own saved choice, which the settings form edits. */
+  storedMode?: 'local' | 'cloud' | 'hybrid' | null;
+  whenSensitive?: 'ask' | 'local';
+  cloud?: { providerId: string; fast: string; smart: string; code: string };
+  allowed?: ('local' | 'cloud' | 'hybrid')[];
+  admin?: boolean;
+}
+
+export async function fetchRoutingMode(): Promise<RoutingModeSettings> {
+  const r = await apiFetch('/api/routing-mode');
+  if (!r.ok) throw new Error(`routing mode ${r.status}`);
+  return r.json();
+}
+
+export async function saveRoutingMode(body: { mode: RoutingModeSettings['mode']; whenSensitive: 'ask' | 'local'; cloud: NonNullable<RoutingModeSettings['cloud']> }): Promise<RoutingModeSettings> {
+  return putJson('/api/routing-mode', body);
+}
+
+export async function saveAllowedRoutingModes(allowed: ('local' | 'cloud' | 'hybrid')[]): Promise<{ allowed: ('local' | 'cloud' | 'hybrid')[] }> {
+  return putJson('/api/routing-mode/allowed', { allowed });
+}
+
 export interface McpServerStatus {
   checkedAt?: number | null;
   missingCurated?: number;
@@ -554,6 +586,13 @@ export async function* streamChat(
   timeToFirstToken?: number | null;
   drafted?: number | null;
   accepted?: number | null;
+  /** #778 'meta': where the reply went and why. */
+  routing?: { route: string; reason: string };
+  /** #778 'route_pending': why the turn looks sensitive. `id` is the question to answer. */
+  flag?: string;
+  /** #778 'route_remembered': the chat's routing flags the server just saved. */
+  forceLocal?: boolean;
+  allowCloud?: boolean;
 }> {
   const res = await apiFetch(body.files ? '/api/diary/local-exchange' : '/api/chat', {
     method: 'POST',

@@ -856,4 +856,6 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'security.devices.revoked': "{name} a été déconnectée.",
   'security.devices.loadError': "Impossible de charger les apps connectées. Rechargez la page pour réessayer.",
   'security.devices.revokeError': "Impossible de révoquer l’app. Réessayez.",
+  'features.item.routingModes.label': "Modes de routage",
+  'features.item.routingModes.description': "Chaque compte choisit où Auto envoie ses chats : uniquement des modèles locaux, un fournisseur cloud qu’il désigne, ou hybride. En hybride, un message qui semble sensible (contenu du Journal, mots de passe, numéros de compte ou de carte, ou jugé privé par le routeur) n’est jamais envoyé au cloud sans demander : vous choisissez Envoyer au cloud ou Garder en local, et un chat peut être réglé sur Forcer le local. Un modèle choisi à la main est utilisé comme avant, et le texte du Journal et les images de projet ne vont toujours jamais vers un fournisseur cloud.",
 };

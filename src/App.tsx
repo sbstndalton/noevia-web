@@ -38,7 +38,11 @@ import {
   suggestChatFrame,
   moveChatToProject,
   fetchFramingPreferences,
+  decideRoute,
+  fetchRoutingMode,
 } from './api';
+import type { RoutingModeSettings } from './api';
+import { ForceLocalToggle, isRouteTarget } from './components/RouteControls';
 import { FrameChips } from './components/FrameChips';
 import { acceptPlan, acceptedFrame, frameDraftReducer, startDraft } from './chat-frame';
 import { frameWithLink, keepLinks, MAX_FRAME_LINKS } from './chat-organise';
@@ -200,6 +204,17 @@ export default function App(): JSX.Element {
   const [codeShown, setCodeShown] = useState(false);
   useEffect(() => { if (appMode !== 'code') setCodeShown(false); }, [appMode]);
   const featureFlags = useFeatureFlags();
+  // #778 (features.routingModes): this account's routing mode, for the chat's Force local toggle.
+  // Re-read when Settings saves it. Flag off: never fetched, nothing shown.
+  const [routingMode, setRoutingMode] = useState<RoutingModeSettings | null>(null);
+  useEffect(() => {
+    if (featureFlags.routingModes !== true) { setRoutingMode(null); return; }
+    let live = true;
+    const load = () => { fetchRoutingMode().then((v) => { if (live) setRoutingMode(v); }).catch(() => undefined); };
+    load();
+    window.addEventListener('noevia:routing-mode-updated', load);
+    return () => { live = false; window.removeEventListener('noevia:routing-mode-updated', load); };
+  }, [featureFlags.routingModes]);
   const showPreviews = featureFlags.previews === true;
   // Turning previews off while in Code must not leave both workspaces hidden.
   useEffect(() => { if (!showPreviews && appMode === 'code') { markReplace(); setAppMode('chat'); } }, [showPreviews, appMode]);
@@ -515,6 +530,7 @@ export default function App(): JSX.Element {
             content: h.content,
             senderLabel: h.model,
             routingDecision: h.routingDecision,
+            ...(isRouteTarget(h.routeTarget) ? { routeTarget: h.routeTarget } : {}),
             reasoning: h.reasoning,
             reasoningMs: h.reasoningMs,
             toolCalls: settleToolCalls(h.toolCalls),
@@ -711,6 +727,7 @@ export default function App(): JSX.Element {
       content: m.content,
       model: m.senderLabel,
       routingDecision: m.routingDecision,
+      ...(m.routeTarget ? { routeTarget: m.routeTarget } : {}),
       reasoning: m.reasoning || undefined,
       reasoningMs: m.reasoningMs,
       toolCalls: m.toolCalls && m.toolCalls.length ? m.toolCalls : undefined,
@@ -726,7 +743,7 @@ export default function App(): JSX.Element {
       if (sendingChats.current.has(chatId)) { deferredMerges.current[chatId] = merged; return; }
       setMessagesByChat((prev) => ({
         ...prev,
-        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats, coworkTask: h.coworkTask, sources: h.sources, ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}), ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}) })),
+        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, ...(isRouteTarget(h.routeTarget) ? { routeTarget: h.routeTarget } : {}), reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats, coworkTask: h.coworkTask, sources: h.sources, ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}), ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}) })),
       }));
     };
     if (!shouldSaveChat(chatId, deletedChats.current)) return;
@@ -961,6 +978,21 @@ export default function App(): JSX.Element {
               }),
             }));
           }
+          // #778: where this reply went (local/cloud, with the reason), and the sensitivity card.
+          if (ev.type === 'meta' && isRouteTarget(ev.routing)) {
+            const target = { route: ev.routing.route, reason: ev.routing.reason };
+            setMessagesByChat((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, routeTarget: target, routePending: undefined } : m)) }));
+          }
+          if (ev.type === 'route_pending' && typeof ev.id === 'string') {
+            const pending = { id: ev.id, flag: typeof ev.flag === 'string' ? ev.flag : 'unavailable' } as NonNullable<Message['routePending']>;
+            notifyIfAway('Approval needed', 'A message is waiting for you in noevia.', `approval-${chatId}`, 'approvalNeeded');
+            setMessagesByChat((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, routePending: pending } : m)) }));
+          } else if (ev.type === 'route_remembered') {
+            const patch: Partial<ChatMeta> = {};
+            if (typeof ev.forceLocal === 'boolean') patch.forceLocal = ev.forceLocal;
+            if (typeof ev.allowCloud === 'boolean') patch.allowCloud = ev.allowCloud;
+            patchChatRef.current(projectId, chatId, patch);
+          }
           if (ev.type === 'meta' && ev.route) {
             setMessagesByChat((prev) => ({
               ...prev,
@@ -1072,7 +1104,8 @@ export default function App(): JSX.Element {
             // failure: the reply ends normally ('done' follows) with a note of what was saved.
             // #666: or the person declined a write, and the reply ended with no model text.
             const applied = typeof ev.applied === 'number' && Number.isInteger(ev.applied) && ev.applied >= 0 ? ev.applied : 0;
-            const pause: ReplyPause = ev.reason === 'declined' ? { reason: 'declined', applied, declined: declinedNames(ev.declined) } : { reason: 'supervision', applied };
+            const pause: ReplyPause = ev.reason === 'declined' ? { reason: 'declined', applied, declined: declinedNames(ev.declined) }
+              : ev.reason === 'sensitive-tool-result' ? { reason: 'sensitive', applied } : { reason: 'supervision', applied };
             setMessagesByChat((prev) => ({
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, paused: pause } : m)),
@@ -1407,6 +1440,7 @@ export default function App(): JSX.Element {
   // reading the latest list only when that action reaches the head of the queue.
   // Keep the UI at its confirmed state until the save succeeds; a failed save
   // then needs no rollback or workspace fetch (which can fail at the same time).
+  const patchChatRef = useRef<(projectId: string | null, chatId: string, patch: Partial<ChatMeta>) => void>(() => undefined);
   const handlePatchChat = useCallback(
     (projectId: string | null, chatId: string, patchOrUpdate: Partial<ChatMeta> | ((current: ChatMeta) => Partial<ChatMeta> | null)) => {
       const key = projectId === null ? 'free' : `project:${projectId}`;
@@ -1465,6 +1499,16 @@ export default function App(): JSX.Element {
     const home = meta ? meta.projectId ?? null : movedChats.current.has(chatId) ? movedChats.current.get(chatId) ?? null : projectId;
     handlePatchChat(home, chatId, (current) => { const frame = frameWithLink(current, chatId, targetId, home); return frame ? { frame } : null; });
   }, [handlePatchChat]);
+  patchChatRef.current = (projectId, chatId, patch) => handlePatchChat(projectId, chatId, patch);
+  // #778: the answer to a "This looks sensitive" card. The card stays until the reply's meta says
+  // where it went; a failed post leaves it answerable.
+  const answerRoute = useCallback((chatId: string, messageId: string, pendingId: string, choice: 'cloud' | 'local', remember: boolean) => {
+    const setBusy = (busy: boolean) => setMessagesByChat((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? []).map((m) => (m.id === messageId && m.routePending ? { ...m, routePending: { ...m.routePending, busy } } : m)) }));
+    setBusy(true);
+    decideRoute(pendingId, choice, remember)
+      .then(() => setMessagesByChat((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? []).map((m) => (m.id === messageId ? { ...m, routePending: undefined } : m)) })))
+      .catch(() => { setBusy(false); setMessagesByChat((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? []).map((m) => (m.id === messageId ? { ...m, warning: tr('chat.routing.decideError') } : m)) })); });
+  }, [tr]);
 
   // #236: before the first message the mode changes in place; after it, the other harness would
   // run on context it never saw, so ChatView asks first and this opens a new session instead.
@@ -1700,6 +1744,11 @@ export default function App(): JSX.Element {
           sheetStatus={phoneSpace && showStats ? <StatsBar {...statsProps} variant="sheet" /> : null}
           linkTargets={featureFlags.chatFraming === true ? allChats : null}
           onLinkChat={(target) => linkChat(view.chatId, view.projectId ?? activeChatMeta?.projectId ?? null, target.id)}
+          routingControls={featureFlags.routingModes === true && routingMode?.mode && activeChatMeta ? (
+            <ForceLocalToggle forceLocal={activeChatMeta.forceLocal === true} allowCloud={activeChatMeta.allowCloud === true}
+              onChange={(patch) => handlePatchChat(activeChatMeta.projectId ?? null, view.chatId, patch)} />
+          ) : null}
+          onRouteDecision={(messageId, pendingId, choice, remember) => answerRoute(view.chatId, messageId, pendingId, choice, remember)}
           headerLinks={featureFlags.chatFraming === true ? <ChatLinks chatId={view.chatId} chats={allChats} onOpenChat={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })} /> : null}
           frameRow={featureFlags.chatFraming === true && frameDrafts[view.chatId] ? (
             <FrameChips draft={frameDrafts[view.chatId]} projects={projects.map((p) => ({ id: p.id, name: p.name }))}

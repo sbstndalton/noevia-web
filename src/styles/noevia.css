@@ -2442,3 +2442,17 @@ select.glass-reactive[data-glass-active], input.glass-reactive[data-glass-active
 .connect-device-actions { margin-top:0; }
 .connect-device-hints + button { margin-top:var(--space-3,12px); }
 .connect-device-value, .connect-device-row { margin-top:0; }
+
+/* #778 routing modes: the local/cloud badge, the sensitivity card and the Force local toggle. */
+.route-badge { display: inline-block; align-self: flex-start; width: fit-content; margin: 0 0 4px; padding: 0 8px; border: 1px solid var(--border-subtle); border-radius: var(--radius-control); color: var(--text-muted); font-size: var(--text-caption); line-height: 1.6; cursor: help; }
+.route-badge[data-route="cloud"] { color: var(--accent-text); }
+.route-pending { border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg-surface); padding: 10px 12px; margin: 0 0 8px; font-size: var(--text-footnote); }
+.route-pending p { margin: 0 0 8px; color: var(--text-secondary); }
+.route-pending-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.route-remember { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); }
+.route-chat-controls { display: inline-flex; align-items: center; gap: 10px; font-size: var(--text-caption); color: var(--text-muted); }
+.route-force-local { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
+.route-allow-cloud { white-space: nowrap; }
+.route-mode { border: 0; padding: 0; margin: 0 0 12px; display: flex; flex-direction: column; gap: 6px; }
+.route-mode legend { font-weight: 600; margin-bottom: 4px; }
+.route-mode label { display: flex; flex-direction: row; align-items: center; gap: 8px; width: fit-content; }

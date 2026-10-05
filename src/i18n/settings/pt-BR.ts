@@ -856,4 +856,6 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'security.devices.revoked': "{name} foi desconectado.",
   'security.devices.loadError': "Não foi possível carregar os apps conectados. Recarregue a página para tentar novamente.",
   'security.devices.revokeError': "Não foi possível revogar o app. Tente novamente.",
+  'features.item.routingModes.label': "Modos de roteamento",
+  'features.item.routingModes.description': "Cada conta escolhe para onde o Auto envia seus chats: apenas modelos locais, um provedor em nuvem que ela indicar, ou híbrido. No híbrido, uma mensagem que parece sensível (conteúdo do Diário, senhas, números de conta ou de cartão, ou considerada privada pelo roteador) nunca vai para a nuvem sem perguntar: você escolhe Enviar para a nuvem ou Manter local, e um chat pode ser definido como Forçar local. Um modelo que você escolhe manualmente é usado como antes, e o texto do Diário e as imagens de projeto continuam nunca indo para um provedor em nuvem.",
 };
