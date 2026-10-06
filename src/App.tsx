@@ -90,6 +90,7 @@ import { EmptyState } from './components/EmptyState';
 import { currentRoutingDecision } from './current-routing';
 import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, withoutChat, withoutProject, type NavState } from './settings-nav';
 import { useT, t as translateNow } from './i18n';
+import { queueProjectPatch, restoreProjectPatch, takeProjectPatch, viewBelongsToProject, projectSaveErrorText, projectSyncErrorText, type PatchQueue } from './project-patches';
 import type { SkillPin } from './api-contract';
 import { storablePin } from './skill-pin-store';
 
@@ -1378,22 +1379,54 @@ export default function App(): JSX.Element {
     [refreshProjects],
   );
 
+  // The body of a debounced project patch (the 600 ms timer in handlePatchProject).
+  const flushProjectPatch = useCallback(
+    (projectId: string, merged: Partial<Project>) => {
+      saveProjectConfig(projectId, merged)
+        .then(() => refreshProjects())
+        .catch((e: unknown) => {
+          // Swallowing this was how a source could appear to save and then
+          // vanish: the optimistic entry survived until the next refresh,
+          // which is usually the first message sent in a chat. A patch that
+          // did not land has to say so, and the state has to go back to
+          // whatever the server actually holds.
+          setProjectError(projectSaveErrorText(e, tr));
+          refreshProjects();
+        });
+    },
+    [refreshProjects, tr],
+  );
+  const patchQueue = useMemo<PatchQueue<Partial<Project>>>(() => ({ timers: patchTimers.current, pending: pendingPatches.current }), []);
+
   const handleDeleteProject = useCallback(
     (id: string) => {
+      // A pin/archive made just before the delete is still waiting on its debounce; saving it
+      // after the project is gone would report a false save error (#942).
+      const held = takeProjectPatch(patchQueue, id);
       deleteProject(id)
         .then(() => {
+          takeProjectPatch(patchQueue, id);
           refreshProjects();
-          // The deleted project's address is dead: replace it rather than leave it behind Back.
-          if (viewRef.current.kind === 'project' && viewRef.current.id === id) markReplace();
-          setView({ kind: 'projects' });
+          // Only leave the screen when it shows the deleted project or one of its chats: deleting
+          // another project from the sidebar must not pull you out of a free chat or Diary. The
+          // deleted address is dead either way, so replace it rather than leave it behind Back.
+          const chatProjectOf = (chatId: string) => allChatsRef.current.find((c) => c.id === chatId)?.projectId;
+          if (viewBelongsToProject(viewRef.current, id, chatProjectOf)) {
+            markReplace();
+            setView({ kind: 'projects' });
+          }
           // Settings' close must never resolve back into a deleted project (or a chat inside
           // it) — that view is gone even if it was not the one on screen (e.g. reached this
           // project via a chat, then opened Models & routing before deleting it elsewhere).
           navRef.current = withoutProject(navRef.current, id, { kind: 'projects' });
         })
-        .catch(() => undefined);
+        .catch(() => {
+          // The project is still there: say so, and put back the patch held for the delete.
+          setProjectError(tr('projectDelete.failed'));
+          restoreProjectPatch(patchQueue, id, held, flushProjectPatch);
+        });
     },
-    [refreshProjects],
+    [refreshProjects, patchQueue, flushProjectPatch, tr],
   );
 
   // Handles both project chats and free chats (projectId null).
@@ -1551,6 +1584,12 @@ export default function App(): JSX.Element {
       }
       try {
         await saveProjectConfig(projectId, patch);
+      } catch (e) {
+        setProjectError(projectSaveErrorText(e, tr));
+        refreshProjects();
+        throw e;
+      }
+      try {
         // Sync whenever the folder list is touched at all, including when it
         // is emptied. Requiring a non-empty list meant detaching the LAST
         // folder skipped the sync and left its files behind — detaching one of
@@ -1566,7 +1605,8 @@ export default function App(): JSX.Element {
           });
         }
       } catch (e) {
-        setProjectError(`That did not save — ${e instanceof Error ? e.message : 'the server rejected the change'}.`);
+        // The settings did save; only the source sync after it failed (#942).
+        setProjectError(projectSyncErrorText(e, tr));
         throw e;
       } finally {
         refreshProjects();
@@ -1581,31 +1621,9 @@ export default function App(): JSX.Element {
       setProjects((prev) =>
         prev.map((p) => (p.id === projectId ? { ...p, ...patch, updatedAt: Date.now() } : p)),
       );
-      pendingPatches.current[projectId] = { ...pendingPatches.current[projectId], ...patch };
-      if (patchTimers.current[projectId]) clearTimeout(patchTimers.current[projectId]);
-      patchTimers.current[projectId] = setTimeout(() => {
-        const merged = pendingPatches.current[projectId];
-        delete pendingPatches.current[projectId];
-        delete patchTimers.current[projectId];
-        if (!merged) return;
-        saveProjectConfig(projectId, merged)
-          .then(() => refreshProjects())
-          .catch((e: unknown) => {
-            // Swallowing this was how a source could appear to save and then
-            // vanish: the optimistic entry survived until the next refresh,
-            // which is usually the first message sent in a chat. A patch that
-            // did not land has to say so, and the state has to go back to
-            // whatever the server actually holds.
-            setProjectError(
-              e instanceof Error && /exceeds size limit|413/i.test(e.message)
-                ? 'That did not save — the change is too large to send. Attach a smaller file.'
-                : `That did not save — ${e instanceof Error ? e.message : 'the server rejected the change'}.`,
-            );
-            refreshProjects();
-          });
-      }, 600);
+      queueProjectPatch(patchQueue, projectId, patch, 600, flushProjectPatch);
     },
-    [projects, refreshProjects],
+    [patchQueue, flushProjectPatch],
   );
 
   const routes = useMemo(
