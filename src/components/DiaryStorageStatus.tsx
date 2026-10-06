@@ -66,7 +66,7 @@ export function DiaryStorageStatus({ busy, revision, onMode, onImported, onBusyC
     {status?.mode === 'managed' ? <>
       <p>{t('diary.storageStatus.savedInNoevia')}</p>
       <p role="status">{status.backup === 'pending' ? t('diary.storageStatus.backupPending') : status.backup === 'failed' ? t('diary.storageStatus.backupFailed') : status.backup === 'complete' ? t('diary.storageStatus.backupComplete') : t('diary.storageStatus.webdavNotConnected')}</p>
-      {status.lastBackedUp && <p className="diary-context-note">{t('diary.storageStatus.lastBackedUp', { date: new Date(status.lastBackedUp * 1000).toLocaleString() })}</p>}
+      {status.lastBackedUp && <p className="diary-context-note">{t('diary.storageStatus.lastBackedUp', { date: new Date(status.lastBackedUp * 1000).toLocaleString(appLocale()) })}</p>}
       {status.error && <p className="diary-context-note">{status.error}</p>}
       <p className="diary-context-note">{t('diary.storageStatus.webdavVersionedNote')}</p>
     </> : status?.mode === 'legacy' ? <>

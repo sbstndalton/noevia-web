@@ -122,7 +122,7 @@ export function DownloadTab({ onDownloaded, onSetUp, query = '', sort = 'fit' }:
         : t('mm.discover.typeToSearch')}</p>
     {error && <p role="alert" className="modal-err">{error} <button className="popup-tab" onClick={() => void search()}>{t('mm.tryAgain')}</button></p>}
     {message && <p role="status" className="mm-note">{message}</p>}
-    <Queue jobs={jobs} registered={registered} onChange={refreshJobs} onSetUp={onSetUp}/>
+    <Queue jobs={jobs} registered={registered} onChange={refreshJobs} onSetUp={onSetUp} onError={setError}/>
     {repo && <RepoFiles repo={repo} onClose={() => setRepo(null)} onDownload={download}/>}
     {!repo && <SearchFilters filters={filters} meta={meta} onChange={applyFilters}/>}
     {!repo && results && <ul className="mm-results" aria-label={t('mm.discover.resultsLabel')}>
@@ -185,10 +185,10 @@ const isModelFile = (filename: string) => filename.toLowerCase().endsWith('.gguf
 const sectionFor = (filename: string) => filename.split('/').pop()!.replace(/\.gguf$/i, '').replace(/-\d{5}-of-\d{5}$/, '');
 
 
-function Queue({ jobs, registered, onChange, onSetUp }: { jobs: Job[]; registered: Set<string>; onChange: () => Promise<void>; onSetUp: (section: string) => void }) {
+function Queue({ jobs, registered, onChange, onSetUp, onError }: { jobs: Job[]; registered: Set<string>; onChange: () => Promise<void>; onSetUp: (section: string) => void; onError: (message: string) => void }) {
   const t = useT();
   if (!jobs.length) return null;
-  const act = async (path: string) => { try { await mm(path, { body: {} }); } finally { await onChange(); } };
+  const act = async (path: string) => { onError(''); try { await mm(path, { body: {} }); } catch (e) { onError(errorText(e, t('mm.queue.actionFailed'))); } finally { await onChange(); } };
   // A finished download is a FILE, not a model the engine can serve. It becomes
   // one only once a models.ini section points at it and the preset file is
   // reloaded. Nothing said so, so a completed download looked like it had
@@ -212,16 +212,23 @@ function Queue({ jobs, registered, onChange, onSetUp }: { jobs: Job[]; registere
 }
 
 function HfToken() {
-  const [state, setState] = useState<{ hasToken: boolean; tokenHint: string; test?: { ok: boolean; message: string } } | null>(null), [value, setValue] = useState(''), [busy, setBusy] = useState(false);
+  const [state, setState] = useState<{ hasToken: boolean; tokenHint: string; test?: { ok: boolean; message: string } } | null>(null), [value, setValue] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const t = useT();
   useEffect(() => { void mm<{ hasToken: boolean; tokenHint: string }>('settings').then(setState).catch(() => {}); }, []);
-  const save = async (test: boolean) => { setBusy(true); try { setState(await mm('settings', { method: 'PUT', body: { ...(value ? { hfToken: value } : {}), test } })); setValue(''); } finally { setBusy(false); } };
+  const request = async (body: Record<string, unknown>, clearValue: boolean) => {
+    setBusy(true); setError('');
+    try { setState(await mm('settings', { method: 'PUT', body })); if (clearValue) setValue(''); }
+    catch (e) { setError(errorText(e, t('mm.token.failed'))); }
+    finally { setBusy(false); }
+  };
+  const save = (test: boolean) => request({ ...(value ? { hfToken: value } : {}), test }, true);
   return <details className="mm-disclosure"><summary>{state?.hasToken ? t('mm.token.saved', { hint: state.tokenHint }) : t('mm.token.optional')}</summary>
     <div className="mm-form">
       <p className="mm-note">{t('mm.token.note')}</p>
       <label>{t('mm.token.label')}<input type="password" autoComplete="off" value={value} placeholder={state?.hasToken ? t('mm.token.replace') : 'hf_…'} onChange={e => setValue(e.target.value)}/></label>
       <div className="mm-actions"><button className="modal-btn secondary" disabled={busy} onClick={() => void save(false)}>{t('common.save')}</button><button className="modal-btn secondary" disabled={busy} onClick={() => void save(true)}>{t('mm.token.saveTest')}</button>
-        {state?.hasToken && <button className="modal-btn secondary" disabled={busy} onClick={() => void mm('settings', { method: 'PUT', body: { hfToken: '' } }).then(v => setState(v as typeof state))}>{t('mm.token.remove')}</button>}</div>
+        {state?.hasToken && <button className="modal-btn secondary" disabled={busy} onClick={() => void request({ hfToken: '' }, false)}>{t('mm.token.remove')}</button>}</div>
+      {error && <p role="alert" className="modal-err">{error}</p>}
       {state?.test && <p role="status" className={state.test.ok ? 'mm-note' : 'modal-err'}>{state.test.message}</p>}
     </div></details>;
 }
