@@ -38,9 +38,14 @@ export async function uploadAttachments(sink: AttachmentSink, files: File[], t: 
       if (result.attachment?.reduction?.note) notices.push(`${file.name}: ${result.attachment.reduction.note}`);
     } catch (err) { failures.push(`${file.name}: ${uploadFailureText(err, t, t('composer.upload.failed'))}`); }
   }
+  // #905: a refresh that throws after the files were saved is reported in the status line, not
+  // left to escape the `void uploadAttachments(...)` callers as an unhandled rejection.
+  let refreshFailure = '';
   try { await onChanged(); }
+  catch (err) { refreshFailure = `${t('composer.upload.failed')}: ${uploadFailureText(err, t, t('composer.upload.failed'))}`; }
   finally {
-    onStatus(failures.length ? t('composer.upload.partial', { saved: files.length - failures.length, total: files.length, failures: failures.join('; ') }) : `${t.plural('composer.upload.saved', files.length, { target: chatOnly ? t('composer.upload.thisChat') : project.name })} · ${t(diary ? 'composer.upload.extras' : chatOnly ? 'composer.upload.nextMessage' : 'composer.upload.allChats')}${notices.length ? ' · ' + notices.join('; ') : ''}`);
+    const problems = refreshFailure ? [...failures, refreshFailure] : failures;
+    onStatus(problems.length ? t('composer.upload.partial', { saved: files.length - failures.length, total: files.length, failures: problems.join('; ') }) : `${t.plural('composer.upload.saved', files.length, { target: chatOnly ? t('composer.upload.thisChat') : project.name })} · ${t(diary ? 'composer.upload.extras' : chatOnly ? 'composer.upload.nextMessage' : 'composer.upload.allChats')}${notices.length ? ' · ' + notices.join('; ') : ''}`);
     onBusy(false);
   }
 }

@@ -22,11 +22,13 @@ function load(name, requireMap) {
   vm.runInNewContext(code, { exports: exports_, require: (id) => requireMap[id], localStorage: global.localStorage, JSON, Date, Object });
   return exports_;
 }
+// #905: sign-in and sign-out also claim and clear the cached account preferences.
+const preferences = () => load('user-preferences.ts', { react: { useEffect() {}, useSyncExternalStore() {} }, './api': { apiFetch() {} } });
 function fresh() {
   global.localStorage = fakeLocalStorage();
   const drafts = load('chat-drafts.ts', {});
   const lastView = load('last-view.ts', {});
-  const device = load('account-device-state.ts', { './chat-drafts': drafts, './last-view': lastView });
+  const device = load('account-device-state.ts', { './chat-drafts': drafts, './last-view': lastView, './user-preferences': preferences() });
   return { drafts, lastView, device, storage: global.localStorage };
 }
 const place = (user, chatId = 'chat-of-a') => ({ user, view: { kind: 'chat', chatId, projectId: null }, settings: null });
@@ -109,7 +111,7 @@ test('a place is never written before the account is known, so a reload keeps th
 test('storage being unavailable never throws out of sign-in or sign-out', () => {
   global.localStorage = { getItem: () => { throw Error('blocked'); }, setItem: () => { throw Error('blocked'); }, removeItem: () => { throw Error('blocked'); } };
   const drafts = load('chat-drafts.ts', {}), lastView = load('last-view.ts', {});
-  const device = load('account-device-state.ts', { './chat-drafts': drafts, './last-view': lastView });
+  const device = load('account-device-state.ts', { './chat-drafts': drafts, './last-view': lastView, './user-preferences': preferences() });
   assert.doesNotThrow(() => device.claimDeviceState('user-a'));
   assert.doesNotThrow(() => device.clearDeviceState());
 });

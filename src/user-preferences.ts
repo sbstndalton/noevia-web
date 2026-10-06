@@ -15,6 +15,10 @@ export type AccountPreferences = {
 
 export const PREFERENCES_CACHE_KEY = 'noevia:account-preferences';
 export const PREFERENCES_CHANGED = 'noevia:account-preferences-changed';
+// #905: the account the cached copy belongs to. The cache is per account, not per device: a second
+// account signing in on this browser must not get the first one's language, Enter behaviour or
+// notification choices while (or if never) its own record loads.
+export const PREFERENCES_OWNER_KEY = 'noevia:account-preferences-owner';
 
 export const DEFAULT_PREFERENCES: AccountPreferences = { notifications: { replyFinished: true, approvalNeeded: true }, sendKey: 'enter', locale: 'system' };
 
@@ -87,22 +91,55 @@ export function appLocale(): string | undefined { return resolveLocale(current.l
 
 let loading: Promise<AccountPreferences> | null = null;
 let loaded = false;
+// Bumped whenever the account changes, so an answer still in flight for the previous account is dropped.
+let generation = 0;
 export function loadPreferences(): Promise<AccountPreferences> {
+  const asked = generation;
   loading ??= apiFetch('/api/account/preferences').then(async (r) => {
     if (!r.ok) throw Error('Preferences could not be loaded.');
     const next = normalisePreferences(await r.json());
+    if (asked !== generation) return current;
     loaded = true;
     publish(next);
     return next;
-  }).finally(() => { loading = null; });
+  }).finally(() => { if (asked === generation) loading = null; });
   return loading;
 }
 
+/** Back to the defaults in memory and on the device; the next mount asks the account again. */
+function forget(): void {
+  generation += 1;
+  current = { ...DEFAULT_PREFERENCES };
+  loaded = false;
+  loading = null;
+  try { localStorage.removeItem(PREFERENCES_CACHE_KEY); } catch { /* storage unavailable */ }
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(PREFERENCES_CHANGED));
+}
+
+/** Sign-in (#905): keep the cached copy only when it was saved by this same account. A cache with
+ *  no recorded owner predates the owner key and is treated as someone else's. */
+export function claimPreferences(userId: string): void {
+  if (!userId) return;
+  let owner: string | null = null;
+  try { owner = localStorage.getItem(PREFERENCES_OWNER_KEY); } catch { /* storage unavailable */ }
+  if (owner !== userId) forget();
+  try { localStorage.setItem(PREFERENCES_OWNER_KEY, userId); } catch { /* storage unavailable */ }
+}
+
+/** Sign-out (#905): nothing of this account's preferences stays on the device or in memory. */
+export function clearPreferences(): void {
+  forget();
+  try { localStorage.removeItem(PREFERENCES_OWNER_KEY); } catch { /* storage unavailable */ }
+}
+
 export async function savePreferences(patch: { notifications?: Partial<Record<NotificationEvent, boolean>>; sendKey?: SendKey; locale?: string }): Promise<AccountPreferences> {
+  const asked = generation;
   const r = await apiFetch('/api/account/preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) });
   const body = await r.json().catch(() => ({}));
   if (!r.ok) throw Error(body.error || 'Could not save. Try again.');
   const next = normalisePreferences(body);
+  // #905: the account changed while the save was in flight; its answer is not this account's.
+  if (asked !== generation) return next;
   publish(next);
   return next;
 }
