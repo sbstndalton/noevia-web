@@ -144,7 +144,7 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
       <form className="auth-card" onSubmit={(event) => void submit(event)}>
         <div className="auth-mark" aria-hidden="true">n</div>
         <h1>{recovery ? 'Reset your password' : invite ? 'Create your noevia account' : 'Sign in to noevia'}</h1>
-        <p>{recovery ? 'Choose a new password. All existing sessions will be signed out.' : 'Use your password or the recommended passkey option.'}</p>
+        <p>{recovery ? 'Choose a new password. All existing sessions will be signed out, and passkeys, app passwords and Diary connectors must be set up again.' : 'Use your password or the recommended passkey option.'}</p>
         {!recovery && <><label htmlFor="username">Username</label><input id="username" autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} required /></>}
         {invite && <><label htmlFor="display-name">Display name</label><input id="display-name" autoComplete="name" value={displayName} onChange={e => setDisplayName(e.target.value)} /></>}
         <label htmlFor="password">Password</label><input id="password" type="password" minLength={12} maxLength={128} autoComplete={invite ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} required />
