@@ -1,6 +1,6 @@
 // #439: pure helpers for the sidebar search box — matching/highlighting and the flat,
 // DOM-order list of results ArrowDown/ArrowUp/Enter move through. Kept out of Sidebar.tsx so
-// they can be unit-tested without a DOM or React (tests/sidebar-search.test.cjs).
+// they can be unit-tested without a DOM or React (tests/client/sidebar-search.test.cjs).
 
 /** Escapes every regex metacharacter in `s` so it can be dropped into `new RegExp(...)`
  *  literally. A query like "a.b(" must highlight only that literal text, and must never

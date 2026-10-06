@@ -19,7 +19,7 @@ export function matchesModelUse(labels: string[], use: ModelUse): boolean {
 }
 
 /** modelChoiceLabel's fallback when nothing is loaded. This file is loaded in isolation by
- *  tests/model-guidance.test.cjs (no module resolution there), so it stays free of the i18n
+ *  tests/client/model-guidance.test.cjs (no module resolution there), so it stays free of the i18n
  *  module; callers that display it to a person (StatsBar) translate this exact sentinel. */
 export const LOCAL_MODEL_FALLBACK = 'local model';
 

@@ -1,7 +1,7 @@
 // The address bar (#359). Every place the app can show has one canonical path, so Back/Forward
 // step through what you actually looked at, a reload lands on the same place, and a chat or
 // project can be linked. This module is the whole path <-> place mapping and nothing else: pure
-// functions, no React, no browser globals, so it is unit-tested directly (tests/routes.test.cjs).
+// functions, no React, no browser globals, so it is unit-tested directly (tests/server/routes.test.cjs).
 // server/spa-routes.cjs is the server's half — which paths get index.html — and a test keeps the
 // two in step.
 //

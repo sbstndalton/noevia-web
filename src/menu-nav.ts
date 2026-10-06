@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import type { RefObject } from 'react';
 
 /** The pointerdown/keydown logic of `useMenuNav`, pulled out as a plain function so it can be
- *  unit-tested (tests/menu-nav.test.cjs) against fake elements without a real DOM or React —
+ *  unit-tested (tests/client/menu-nav.test.cjs) against fake elements without a real DOM or React —
  *  `useMenuNav` itself is a thin `useEffect` wrapper that wires these to `document`. */
 export function createMenuHandlers(
   menuRef: RefObject<HTMLElement | null>,

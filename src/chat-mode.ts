@@ -1,5 +1,5 @@
 // Chat / Cowork session modes (#236). Pure: no React, no fetch, so the dispatch decision is
-// tested on its own (tests/chat-mode.test.cjs).
+// tested on its own (tests/client/chat-mode.test.cjs).
 //
 // Chat   the conversational turn loop (/api/chat streaming).
 // Cowork a coding task on the existing code harness (ACP), started through /api/chat with

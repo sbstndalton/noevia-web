@@ -15,7 +15,7 @@
 // underside. Element attrs use React names; '@ID' tokens are replaced per
 // rendered instance so gradient/clip ids never collide.
 // Run: node scripts/logo-geometry.cjs [--png]
-// tests/logo-geometry.test.cjs fails if the committed outputs drift from this.
+// tests/client/logo-geometry.test.cjs fails if the committed outputs drift from this.
 const fs = require('node:fs');
 const path = require('node:path');
 

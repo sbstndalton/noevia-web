@@ -5,7 +5,7 @@
 // the role contrast holds across hues. Each ramp drifts in hue from its dark end to its light
 // end (shadows cooler, highlights warmer), which is the Ramps character; chroma peaks mid-ramp
 // and is clipped into sRGB. Run `node scripts/palette.cjs` to print the role blocks that
-// src/styles/tokens.css carries; tests/theme-contrast.test.cjs re-derives nothing, it measures.
+// src/styles/tokens.css carries; tests/client/theme-contrast.test.cjs re-derives nothing, it measures.
 
 // Hue at tone 0 and tone 100, peak chroma. Hues are CIELAB LCh degrees.
 const RAMPS = {

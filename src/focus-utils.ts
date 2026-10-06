@@ -5,7 +5,7 @@
  *  inside a `display:none` ancestor (a collapsed nav drawer, a hidden tab panel) as usable —
  *  it is still "in the document" — but `.focus()` on an element with no layout box is a silent
  *  no-op, so focus falls through to `<body>` anyway. Measured against a real headless Chrome
- *  (see `tests/settings-focus-return.test.cjs`) rather than assumed:
+ *  (see `tests/client/settings-focus-return.test.cjs`) rather than assumed:
  *  - `display:none` (on the element or an ancestor) reports zero `getClientRects()` — caught below.
  *  - `visibility:hidden` (on the element or an inherited from an ancestor) still reports a
  *    non-empty `getClientRects()` and a `tabIndex` of `0`, so neither of those catches it;

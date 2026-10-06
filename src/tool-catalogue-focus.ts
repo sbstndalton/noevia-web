@@ -1,5 +1,5 @@
 /** The tools-catalogue panel's focus-out contract, pulled out as plain functions so
- *  tests/tool-catalogue-focus.test.cjs can exercise them without a real DOM. */
+ *  tests/client/tool-catalogue-focus.test.cjs can exercise them without a real DOM. */
 
 /** Whether the panel should close because focus left it. `root` wraps both the trigger and the
  *  panel, so a relatedTarget it contains (the search input, the trigger) keeps the panel open;

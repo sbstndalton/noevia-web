@@ -1,5 +1,5 @@
 // The response style as the model will see it (#229). Mirrors server/account-instructions.cjs
-// phrase for phrase so Settings can preview exactly what is sent; tests/response-style.test.cjs
+// phrase for phrase so Settings can preview exactly what is sent; tests/server/response-style.test.cjs
 // fails if the two drift apart.
 export type Preset = 'default' | 'concise' | 'detailed';
 export type AdvancedKey = 'length' | 'tone' | 'formatting' | 'emoji';

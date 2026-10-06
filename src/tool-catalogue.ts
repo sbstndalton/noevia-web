@@ -1,5 +1,5 @@
 // The composer's tool catalogue (#237). Pure: filtering, ordering and which boxes a turn adds,
-// tested in tests/tool-catalogue.test.cjs. The server's /api/toolboxes/permitted is the source
+// tested in tests/client/tool-catalogue.test.cjs. The server's /api/toolboxes/permitted is the source
 // of the boxes; nothing here can make an unavailable tool available.
 
 export type ToolPermission = 'allowed' | 'needs-approval' | 'unavailable';

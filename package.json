@@ -7,7 +7,10 @@
     "dev": "node node_modules/vite/bin/vite.js --configLoader runner",
     "build": "node scripts/build.cjs",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
-    "test": "node --require ./tests/hermetic-network.cjs --test server/*.test.cjs server/routes/*.test.cjs server/decision/*.test.cjs tests/*.test.cjs",
+    "check:boundaries": "node scripts/check-boundaries.cjs",
+    "test": "node --require ./tests/hermetic-network.cjs --test server/*.test.cjs server/routes/*.test.cjs server/decision/*.test.cjs tests/server/*.test.cjs tests/client/*.test.cjs",
+    "test:client": "node --require ./tests/hermetic-network.cjs --test tests/client/*.test.cjs",
+    "test:server": "node --require ./tests/hermetic-network.cjs --test server/*.test.cjs server/routes/*.test.cjs server/decision/*.test.cjs tests/server/*.test.cjs",
     "start": "node server/index.cjs",
     "secrets:rotate": "node server/secrets-rotate.cjs",
     "lint:design": "node scripts/lint-design.cjs"

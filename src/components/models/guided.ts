@@ -1,6 +1,6 @@
 // Pure helpers for the guided model manager (#204): the "Will it fit?" estimate, its verdict and
 // recommendation, the auto-tune pre-flight, role grouping and the recovery list. No fetches here,
-// so tests/guided-model-manager.test.cjs covers every rule without a browser.
+// so tests/client/guided-model-manager.test.cjs covers every rule without a browser.
 import { isChatGenerationModel } from '../../model-kind';
 import { isSystemModel } from '../../model-system';
 

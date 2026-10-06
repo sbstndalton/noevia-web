@@ -25,6 +25,6 @@ const {createFixture}=require('./diary-fixture.cjs');
   assert.match(await list.locator(':scope > summary').innerText(),/1 not run/);
   if(process.env.QA_SCREENSHOTS)await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/stopped-approval.png`});
   assert.deepEqual(errors,[]);
-  console.log('PASS stopped approval: stop clears pending approvals before saving and shows the call as not run (loading old histories is covered by tests/tool-call-state.test.cjs).');
+  console.log('PASS stopped approval: stop clears pending approvals before saving and shows the call as not run (loading old histories is covered by tests/client/tool-call-state.test.cjs).');
  }finally{await browser.close();await fixture.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

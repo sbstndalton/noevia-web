@@ -1,6 +1,6 @@
 /* noevia design tokens — UI overhaul release 1 (Foundation), 2026-09-18.
    One palette, light and dark, on Material 3 roles (--md-*). The ramps come from
-   scripts/palette.cjs (CIELAB tones with Ramps-style hue drift); tests/theme-contrast.test.cjs
+   scripts/palette.cjs (CIELAB tones with Ramps-style hue drift); tests/client/theme-contrast.test.cjs
    measures every text/surface pairing. Components use the semantic tokens below the palette,
    never raw hex. Dark is the default before React mounts (public/theme.js). */
 

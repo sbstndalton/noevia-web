@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import icons from '../../server/project-icons.json';
+import icons from '../../contracts/project-icons.json';
 import type { Project } from '../types';
 import { useT } from '../i18n';
 

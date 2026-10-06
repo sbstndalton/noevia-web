@@ -43,7 +43,7 @@ async function api(page,url,body,method=body===undefined?'GET':'POST'){
   await navClick(page,'New chat');
   // #333/#365: the inference-details footer (and the MTP acceptance bar inside it) only renders
   // once the current chat has at least one message or telemetry (#239/#357) — a blank New chat
-  // no longer shows it (statsbar-visibility.ts, tests/statsbar-visibility.test.cjs). Establish
+  // no longer shows it (statsbar-visibility.ts, tests/client/statsbar-visibility.test.cjs). Establish
   // that with one synthetic exchange before checking MTP acceptance.
   const box=page.getByRole('textbox',{name:'Message',exact:true});
   await box.fill('Synthetic MTP telemetry check');await box.press('Enter');

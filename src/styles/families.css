@@ -1,7 +1,7 @@
 /* Distinct theme families (#313). Loads LAST, after system.css. Each family here takes the
    shared surfaces (system.css) and gives them its own design language, using only colour,
    shape, depth and optical tokens from themes.css — never size, spacing or type metrics
-   (tests/family-geometry.test.cjs), so switching family never moves layout.
+   (tests/client/family-geometry.test.cjs), so switching family never moves layout.
 
      Editorial     paper, ink and hairline rules; almost no elevation; serif display.
      Contemporary  Material 3: tonal surface containers instead of shadows, the M3 shape

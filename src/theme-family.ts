@@ -5,7 +5,7 @@
 //
 // Families subsume the retired "materials": a saved `noevia:material` still resolves, so a
 // browser that chose Soft, Material 3 or Liquid glass lands on its successor without a flash.
-// public/theme.js repeats FAMILY_MIGRATION before paint; tests/theme-family.test.cjs checks
+// public/theme.js repeats FAMILY_MIGRATION before paint; tests/client/theme-family.test.cjs checks
 // that both copies agree.
 
 export const FAMILIES = ['editorial', 'contemporary', 'glass'] as const;

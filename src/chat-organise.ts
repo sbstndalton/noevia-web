@@ -6,7 +6,7 @@ import type { GraphNeighbour, LocalGraph } from './diary-local-graph';
 // Tags (nested with "/", like folders), [[chat]] links, backlinks and a one-hop graph. Everything
 // here reads only the chat lists the caller passes in, which are the signed-in person's own lists
 // (the workspace), so nothing can reach another account's chats. Pure and framework-free so it is
-// unit-tested without a DOM (tests/chat-organise.test.cjs).
+// unit-tested without a DOM (tests/client/chat-organise.test.cjs).
 
 type ChatLike = Pick<ChatMeta, 'id' | 'title' | 'updatedAt'> & { archived?: boolean; frame?: ChatFrame | null; projectId?: string | null };
 
