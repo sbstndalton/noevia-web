@@ -158,10 +158,12 @@ function RateModel({ alias, runId, categories, badges, onChange }: { alias: stri
   const [category, setCategory] = useState(categories[0]?.key || ''), [note, setNote] = useState(''), [error, setError] = useState('');
   const t = useT();
   const rate = async (rating: number) => { setError(''); try { await mm('badges', { method: 'PUT', body: { alias, category, rating, note, runId } }); setNote(''); await onChange(); } catch (e) { setError(errorText(e, t('mm.bench.rateFailed'))); } };
+  // A failed DELETE leaves the badge in place, so say so instead of failing silently.
+  const clear = async (cat: string) => { setError(''); try { await mm(`badges?alias=${encodeURIComponent(alias)}&category=${encodeURIComponent(cat)}`, { method: 'DELETE' }); await onChange(); } catch (e) { setError(errorText(e, t('mm.bench.clearFailed'))); } };
   return <div className="mm-rate">
     <strong>{alias}</strong>
     <span className="mm-badges">{badges.length ? badges.map(b => <span key={b.category} className="model-card-tag">{categories.find(c => c.key === b.category)?.label || b.category} {b.rating}/5
-      <button className="mm-link" aria-label={t('mm.bench.clearRating', { category: b.category })} onClick={() => void mm(`badges?alias=${encodeURIComponent(alias)}&category=${b.category}`, { method: 'DELETE' }).then(onChange)}><ShellIcon name="close" size={14}/></button></span>) : <small>{t('mm.bench.notRated')}</small>}</span>
+      <button className="mm-link" aria-label={t('mm.bench.clearRating', { category: b.category })} onClick={() => void clear(b.category)}><ShellIcon name="close" size={14}/></button></span>) : <small>{t('mm.bench.notRated')}</small>}</span>
     <div className="mm-row">
       <label>{t('mm.bench.goodAt')}<select value={category} onChange={e => setCategory(e.target.value)}>{categories.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}</select></label>
       <label className="mm-grow">{t('mm.bench.note')}<input value={note} onChange={e => setNote(e.target.value)} placeholder={t('mm.bench.optional')}/></label>
@@ -172,17 +174,20 @@ function RateModel({ alias, runId, categories, badges, onChange }: { alias: stri
 }
 
 export function PromptsTab() {
-  const [prompts, setPrompts] = useState<Prompt[] | null>(null), [name, setName] = useState(''), [body, setBody] = useState(''), [error, setError] = useState(''), [message, setMessage] = useState('');
+  const [prompts, setPrompts] = useState<Prompt[] | null>(null), [name, setName] = useState(''), [body, setBody] = useState(''), [error, setError] = useState(''), [message, setMessage] = useState(''), [confirmingId, setConfirmingId] = useState<number | null>(null);
   const t = useT();
   useEffect(() => { void mm<{ prompts: Prompt[] }>('prompts').then(v => setPrompts(v.prompts)).catch(e => setError(errorText(e, t('mm.prompts.unavailable')))); }, []);
   const add = async () => { setError(''); try { const v = await mm<{ prompts: Prompt[] }>('prompts', { body: { name, body } }); setPrompts(v.prompts); setName(''); setBody(''); } catch (e) { setError(errorText(e, t('mm.prompts.saveFailed'))); } };
-  const remove = async (id: number) => { try { setPrompts((await mm<{ prompts: Prompt[] }>(`prompts/${id}`, { method: 'DELETE' })).prompts); } catch (e) { setError(errorText(e, t('mm.prompts.deleteFailed'))); } };
+  const remove = async (id: number) => { setError(''); try { setPrompts((await mm<{ prompts: Prompt[] }>(`prompts/${id}`, { method: 'DELETE' })).prompts); setConfirmingId(null); } catch (e) { setError(errorText(e, t('mm.prompts.deleteFailed'))); } };
   return <div className="mm-tab">
     <p className="mm-lede">{t('mm.prompts.lede')}</p>
     {error && <p role="alert" className="modal-err">{error}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
     <ul className="mm-list">{prompts?.map(p => <li key={p.id}><span>{p.name}<small>{p.body.slice(0, 140)}{p.body.length > 140 ? '…' : ''}</small></span>
-      <div className="mm-actions"><button className="modal-btn secondary" onClick={() => void navigator.clipboard?.writeText(p.body).then(() => setMessage(t('mm.prompts.copied', { name: p.name })))}>{t('mm.prompts.copy')}</button><button className="modal-btn secondary" onClick={() => void remove(p.id)}>{t('mm.delete')}</button></div></li>)}</ul>
+      <div className="mm-actions"><button className="modal-btn secondary" onClick={() => void navigator.clipboard?.writeText(p.body).then(() => setMessage(t('mm.prompts.copied', { name: p.name })))}>{t('mm.prompts.copy')}</button>{confirmingId === p.id
+        ? <div className="model-card-confirm" role="group" aria-label={t('mm.delete.label', { model: p.name })}><p>{t('mm.prompts.deleteConfirm', { name: p.name })}</p>
+          <button className="modal-btn primary" onClick={() => void remove(p.id)}>{t('mm.delete')}</button><button className="modal-btn secondary" onClick={() => setConfirmingId(null)}>{t('mm.keep')}</button></div>
+        : <button className="modal-btn secondary" aria-label={t('mm.delete.label', { model: p.name })} onClick={() => setConfirmingId(p.id)}>{t('mm.delete')}</button>}</div></li>)}</ul>
     <section className="mm-panel"><h3>{t('mm.prompts.add')}</h3><div className="mm-form">
       <label>{t('mm.sort.name')}<input value={name} onChange={e => setName(e.target.value)}/></label>
       <label>{t('mm.test.prompt')}<textarea rows={5} value={body} onChange={e => setBody(e.target.value)}/></label>
