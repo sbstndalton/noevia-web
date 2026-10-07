@@ -478,6 +478,8 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'providers.form.saving': "Sparar…",
   'providers.form.saveFailed': "Det gick inte att spara.",
   'providers.chatgpt.title': "Logga in med ChatGPT",
+  'providers.chatgpt.moved': "Logga in med ChatGPT finns nu under Modeller och routning → Routning.",
+  'providers.chatgpt.open': "Öppna Modeller och routning",
   'providers.chatgpt.external': "Extern",
   'providers.chatgpt.notConnected': "Använd ditt eget ChatGPT-konto som privat leverantör. Bara du kan använda den.",
   'providers.chatgpt.connectedAs': "Ansluten som {account}",

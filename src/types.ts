@@ -172,6 +172,11 @@ export interface Project {
   /** Image sources. Stored as bytes on the server, not inline. */
   assets?: ProjectAsset[];
   toolboxes?: string[]; // step 14: named tool sets offered to the model; defaults to ['core']
+  /** #1006: 'auto' sends the default set (narrowed per message by tool routing); 'manual' the
+   *  `toolboxes` list. Absent: manual when `toolboxes` is set, otherwise the default set. */
+  toolsMode?: 'auto' | 'manual';
+  /** #1007: this chat's or project's own routing mode; absent follows the account's. */
+  routingMode?: { mode: 'local' | 'cloud' | 'hybrid'; whenSensitive: 'ask' | 'local' };
   /** App modes this project appears in; the server migrates older projects to ['chat']. */
   modes?: ProjectMode[];
   /** Which modes receive the others' context (shared-context.cjs); both off by default. */

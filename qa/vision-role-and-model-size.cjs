@@ -47,7 +47,7 @@ const MODELS = [
     await composerPage.goto('http://localhost:31900');
     await composerPage.getByRole('button', { name: 'Choose model' }).filter({ hasText: 'chat-fast' }).waitFor();
     await composerPage.getByRole('button', { name: 'Choose model' }).click();
-    const composerDialog = composerPage.getByRole('dialog', { name: 'Model and tools' });
+    const composerDialog = composerPage.getByRole('dialog', { name: 'Model' });
     await composerDialog.waitFor();
     await composerDialog.getByRole('button', { name: /Manual/ }).click();
     const composerRow = composerDialog.locator('.mp-model-item').filter({ hasText: 'gemma-4-E2B_q4_0-it' });

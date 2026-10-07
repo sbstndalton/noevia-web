@@ -478,6 +478,8 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'providers.form.saving': "Enregistrement…",
   'providers.form.saveFailed': "L'enregistrement a échoué.",
   'providers.chatgpt.title': "Se connecter avec ChatGPT",
+  'providers.chatgpt.moved': "Se connecter avec ChatGPT se trouve désormais dans Modèles et routage → Routage.",
+  'providers.chatgpt.open': "Ouvrir Modèles et routage",
   'providers.chatgpt.external': "Externe",
   'providers.chatgpt.notConnected': "Utilisez votre propre compte ChatGPT comme fournisseur privé. Vous seul pouvez l’utiliser.",
   'providers.chatgpt.connectedAs': "Connecté en tant que {account}",

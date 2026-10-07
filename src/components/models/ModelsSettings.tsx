@@ -22,19 +22,18 @@ import { routingViewState } from '../../routing-view-state';
 import { RoutingModeSection } from './RoutingModeSection';
 import { roleSummary } from '../../routing-copy';
 import { useT } from '../../i18n';
+import { useFeatureFlags } from '../features/useFeatureFlags';
+import { ChatGptConnect } from '../ChatGptConnect';
 import type { MessageKey } from '../../i18n';
 export type { RoutingViewState } from '../../routing-view-state';
 
 export type ModelSort = 'name' | 'size' | 'modified';
 export type ModelFilter = 'all' | 'loaded' | 'vision' | 'unconfigured';
-export type Tab = 'overview' | 'yours' | 'discover' | 'routing' | 'projects' | 'hardware' | 'benchmarks' | 'prompts';
-
-// One tab bar for the whole page. Your models and Discover are the two anyone opens while
-// switching a model; the rest are their own pages' worth of content.
-const TABS: [Tab, MessageKey][] = [
-  ['overview', 'mm.tab.overview'], ['yours', 'mm.tab.yours'], ['discover', 'mm.tab.discover'], ['routing', 'mm.tab.routing'], ['projects', 'mm.tab.projects'],
-  ['hardware', 'mm.tab.hardware'], ['benchmarks', 'mm.tab.benchmarks'], ['prompts', 'mm.tab.prompts'],
-];
+import { LEGACY_TABS, MODEL_SECTIONS as TABS, savedSection } from '../../models-sections';
+import type { LegacyTab, Panel, Tab } from '../../models-sections';
+export type { Tab } from '../../models-sections';
+const TAB_KEY = 'noevia-models-tab';
+const LIST_KEY = 'noevia-models-list';
 
 const SORTS: [ModelSort, MessageKey][] = [['name', 'mm.sort.name'], ['size', 'mm.sort.size'], ['modified', 'mm.sort.modified']];
 const FILTERS: [ModelFilter, MessageKey][] = [['all', 'mm.filter.all'], ['loaded', 'mm.filter.loaded'], ['vision', 'mm.filter.vision'], ['unconfigured', 'mm.filter.unconfigured']];
@@ -44,23 +43,24 @@ type RouteRole = 'fast' | 'smart' | 'vision' | 'code';
 const ROUTE_ROLE: Record<RouteRole, MessageKey> = { fast: 'mm.route.role.fast', smart: 'mm.route.role.smart', vision: 'mm.route.role.vision', code: 'mm.route.role.code' };
 const AUTO_EXPLAINED: MessageKey[] = ['mm.route.explain1', 'mm.route.explain2', 'mm.route.explain3', 'mm.route.explain4', 'mm.route.explain5'];
 
-// Settings → Models & routing. One interface rather than seven tabs.
-//
-// The old shape (Library / Download / Configure / Hardware / Benchmarks /
-// Prompts / Routing) made you know which tab a thing lived in before you could
-// look for it, and tabs mounted per selection so each one refetched from
-// scratch. This follows the same shape as the rest of the app's catalogues:
-// search, "Your models" against "Discover", and a detail view for one model.
-//
-// Discover is the download flow, deliberately named for what it is rather than
-// for the mechanism — you are looking for a model you do not have yet.
+/** A panel that opens on demand and mounts its content only while open, so a closed benchmark or
+ *  hardware panel costs no requests. */
+function Fold({ id, title, note, open, onToggle, children }: { id: Panel; title: string; note?: string; open: boolean; onToggle: (id: Panel, open: boolean) => void; children: () => JSX.Element }): JSX.Element {
+  return <details className="mm-panel mm-fold" data-panel={id} open={open} onToggle={(e) => { const now = (e.currentTarget as HTMLDetailsElement).open; if (now !== open) onToggle(id, now); }}>
+    <summary>{title}{note ? <small>{note}</small> : null}</summary>
+    {open && <div className="mm-fold-body">{children()}</div>}
+  </details>;
+}
+
+// Settings → Models & routing. One model's page (detail view) or one of four sections.
 export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsError, initialModel = '' }: { models: InstalledModel[]; modelsLoaded: boolean; routes: RouteRule[]; projects: Project[]; modelsError: string | null; initialModel?: string }): JSX.Element {
-  // Six places rather than one long scroll: routing, hardware, benchmarks and the prompt
-  // library were stacked under the model list, where nothing was findable (user review,
-  // 2026-09-20).
-  const [tab, setTab] = useState<Tab>(() => {
-    try { const saved = sessionStorage.getItem('noevia-models-tab') as Tab | null; return saved && TABS.some(([id]) => id === saved) ? saved : 'yours'; } catch { return 'yours'; }
+  const initial = (() => { try { return savedSection(sessionStorage.getItem(TAB_KEY)); } catch { return savedSection(null); } })();
+  const [tab, setTab] = useState<Tab>(initial.tab);
+  const [list, setList] = useState<'installed' | 'discover'>(() => {
+    if (initial.list) return initial.list;
+    try { return sessionStorage.getItem(LIST_KEY) === 'discover' ? 'discover' : 'installed'; } catch { return 'installed'; }
   });
+  const [panels, setPanels] = useState<Set<Panel>>(() => new Set<Panel>(['status', 'budget', ...(initial.panel ? [initial.panel] : [])]));
   const [open, setOpen] = useState<string>(initialModel);
   // #680: "Go to Auto-tune and apply" (guided panel) asks the editor below to reveal its Auto-tune
   // panel. A counter, so asking twice in a row still acts.
@@ -69,44 +69,51 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
   const [sort, setSort] = useState<ModelSort>('name');
   const [filter, setFilter] = useState<ModelFilter>('all');
   const [hfSort, setHfSort] = useState('fit');
+  const [providersRev, setProvidersRev] = useState(0);
+  const chatgptOn = useFeatureFlags().chatgptOAuth === true;
   const t = useT();
 
-  const go = (next: Tab) => {
+  const go = (next: Tab, panel?: Panel) => {
     setTab(next); setOpen('');
-    try { sessionStorage.setItem('noevia-models-tab', next); } catch { /* optional */ }
+    if (panel) setPanels((p) => new Set(p).add(panel));
+    try { sessionStorage.setItem(TAB_KEY, next); } catch { /* optional */ }
   };
+  /** Old tab ids (the guided panel and the overview still name them) land on their new home. */
+  const goLegacy = (old: LegacyTab) => { const to = LEGACY_TABS[old]; if (to.list) chooseList(to.list); go(to.tab, to.panel); };
+  const chooseList = (next: 'installed' | 'discover') => { setList(next); setQuery(''); try { sessionStorage.setItem(LIST_KEY, next); } catch { /* optional */ } };
+  const togglePanel = (id: Panel, isOpen: boolean) => setPanels((p) => { const n = new Set(p); if (isOpen) n.add(id); else n.delete(id); return n; });
   const changed = () => notifyModelsChanged();
-  const openModel = (name: string) => { setOpen(name); setTab('yours'); };
+  const openModel = (name: string) => { setOpen(name); setTab('models'); };
 
   if (open) return <div className="mm-root">
     <div className="mm-detail-head">
       <button className="modal-btn secondary" onClick={() => setOpen('')}><ShellIcon name="left" size={16}/>{t('mm.allModels')}</button>
       <h1>{open}</h1>
     </div>
-    <GuidedOptimize model={open} installed={models.find((m) => m.name === open)} onOpenTab={go} onGoAutoTune={() => setAutoTuneRequest((n) => n + 1)} />
+    <GuidedOptimize model={open} installed={models.find((m) => m.name === open)} onOpenTab={goLegacy} onGoAutoTune={() => setAutoTuneRequest((n) => n + 1)} />
     <ConfigureTab initial={open} onSaved={changed} onSelect={setOpen} autoTuneRequest={autoTuneRequest} />
   </div>;
 
   return <div className="mm-root">
     <div className="settings-title"><h1>{t('mm.title')}</h1><p>{t('mm.lede')}</p></div>
 
-    {/* One toolbar: which list, a search, and that list's filters (user review, 2026-09-19). */}
+    {/* One toolbar: the section, and on Models which list, a search and that list's filters. */}
     <nav className="mm-tabs mm-toolbar-one" aria-label={t('mm.navLabel')}>
       <div className="mm-tabs-row" role="tablist">
         {TABS.map(([id, label]) =>
           <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-active' : ''} onClick={() => go(id)}>{t(label)}</button>)}
       </div>
-      {(tab === 'yours' || tab === 'discover') && <div className="mm-search mm-search-inline">
+      {tab === 'models' && <div className="mm-search mm-search-inline">
         <ShellIcon name="search" size={16}/>
-        <input aria-label={t('mm.search')} placeholder={tab === 'yours' ? t('mm.searchYours') : t('mm.searchHf')}
+        <input aria-label={t('mm.search')} placeholder={list === 'installed' ? t('mm.searchYours') : t('mm.searchHf')}
           value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>}
-      {tab === 'discover' ? <div className="mm-tabs-controls">
+      {tab === 'models' && list === 'discover' ? <div className="mm-tabs-controls">
         <label className="mm-select"><span className="sr-only">{t('mm.hfSortLabel')}</span>
           <select value={hfSort} onChange={(e) => setHfSort(e.target.value)}>
             {HF_SORTS.map(([id, label]) => <option key={id} value={id}>{t('mm.sortOption', { label: t(label) })}</option>)}
           </select></label>
-      </div> : tab === 'yours' ? <div className="mm-tabs-controls">
+      </div> : tab === 'models' ? <div className="mm-tabs-controls">
         <label className="mm-select"><span className="sr-only">{t('mm.filterLabel')}</span>
           <select value={filter} onChange={(e) => setFilter(e.target.value as ModelFilter)}>
             {FILTERS.map(([id, label]) => <option key={id} value={id}>{t(label)}</option>)}
@@ -118,22 +125,41 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
       </div> : null}
     </nav>
 
-    <div role="tabpanel" aria-label={t(TABS.find(([id]) => id === tab)?.[1] ?? 'mm.tab.yours')}>
-      {tab === 'overview' && <OverviewTab models={models} modelsLoaded={modelsLoaded} modelsError={modelsError} onOpen={openModel} onTab={go} />}
-      {tab === 'yours' && <><InferenceBudgetSection /><LibraryTab query={query} sort={sort} filter={filter} onConfigure={openModel} onChanged={changed} /></>}
-      {tab === 'discover' && <DownloadTab query={query} sort={hfSort} onDownloaded={changed} onSetUp={openModel} />}
-      {tab === 'routing' && <RoutingSection models={models} modelsError={modelsError} />}
-      {tab === 'projects' && <ProjectRoutingSection models={models} routes={routes} projects={projects} modelsError={modelsError} />}
-      {tab === 'hardware' && <section className="mm-panel"><div className="mm-panel-head"><h3>{t('mm.tab.hardware')}</h3></div><p className="mm-note">{t('mm.hardwareNote')}</p><HardwareTab /></section>}
-      {tab === 'benchmarks' && <section className="mm-panel"><div className="mm-panel-head"><h3>{t('mm.tab.benchmarks')}</h3></div><p className="mm-note">{t('mm.benchmarksNote')}</p><BenchmarksTab /></section>}
-      {tab === 'prompts' && <section className="mm-panel"><div className="mm-panel-head"><h3>{t('mm.promptLibrary')}</h3></div><p className="mm-note">{t('mm.promptLibraryNote')}</p><PromptsTab /></section>}
+    <div role="tabpanel" className="mm-section-panels" aria-label={t(TABS.find(([id]) => id === tab)?.[1] ?? 'mm.section.models')}>
+      {tab === 'models' && <>
+        <SegmentedControl label={t('mm.models.which')} value={list} options={[['installed', t('mm.models.installed')], ['discover', t('mm.models.discover')]]} onChange={chooseList} />
+        {list === 'installed'
+          ? <LibraryTab query={query} sort={sort} filter={filter} onConfigure={openModel} onChanged={changed} />
+          : <DownloadTab query={query} sort={hfSort} onDownloaded={changed} onSetUp={openModel} />}
+      </>}
+      {tab === 'routing' && <>
+        {chatgptOn && <section className="mm-panel" data-testid="models-chatgpt"><ChatGptConnect onChanged={() => setProvidersRev((n) => n + 1)} /></section>}
+        <RoutingSection models={models} modelsError={modelsError} providersRev={providersRev} />
+      </>}
+      {tab === 'performance' && <>
+        <p className="mm-note">{t('mm.section.performanceNote')}</p>
+        <Fold id="status" title={t('mm.tab.overview')} open={panels.has('status')} onToggle={togglePanel}>{() => <OverviewTab models={models} modelsLoaded={modelsLoaded} modelsError={modelsError} onOpen={openModel} onTab={goLegacy} />}</Fold>
+        <InferenceBudgetSection />
+        <Fold id="benchmarks" title={t('mm.tab.benchmarks')} note={t('mm.benchmarksNote')} open={panels.has('benchmarks')} onToggle={togglePanel}>{() => <BenchmarksTab />}</Fold>
+        <Fold id="hardware" title={t('mm.tab.hardware')} note={t('mm.hardwareNote')} open={panels.has('hardware')} onToggle={togglePanel}>{() => <HardwareTab />}</Fold>
+      </>}
+      {tab === 'advanced' && <>
+        <p className="mm-note">{t('mm.section.advancedNote')}</p>
+        {/* Issue #194: task-aware sampling presets. */}
+        <section className="mm-panel">
+          <div className="mm-panel-head"><h3>{t('mm.sampling.title')}</h3></div>
+          <SamplingPresetsControl />
+        </section>
+        <Fold id="prompts" title={t('mm.promptLibrary')} note={t('mm.promptLibraryNote')} open={panels.has('prompts')} onToggle={togglePanel}>{() => <PromptsTab />}</Fold>
+        <Fold id="projects" title={t.plural('mm.projects.title', projects.length)} open={panels.has('projects')} onToggle={togglePanel}>{() => <ProjectRoutingSection models={models} routes={routes} projects={projects} modelsError={modelsError} />}</Fold>
+      </>}
     </div>
   </div>;
 }
 
 // What Auto actually routes to. This used to be edited in the chat box, where
 // it competed with switching model — the one action people take mid-chat.
-function RoutingSection({ models, modelsError }: { models: InstalledModel[]; modelsError: string | null }): JSX.Element {
+function RoutingSection({ models, modelsError, providersRev = 0 }: { models: InstalledModel[]; modelsError: string | null; providersRev?: number }): JSX.Element {
   const [info, setInfo] = useState<Awaited<ReturnType<typeof fetchAutoRoles>> | null>(null);
   const [pending, setPending] = useState<{ fast?: string; smart?: string; vision?: string; code?: string }>({});
   const [busy, setBusy] = useState(false);
@@ -188,7 +214,7 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
   const view = routingViewState(info, error);
 
   return <><DefaultModeSection />
-  <RoutingModeSection />
+  <RoutingModeSection key={providersRev} />
   <section className="mm-panel">
     <div className="mm-panel-head"><h3>{t('mm.tab.routing')}</h3></div>
     <p className="mm-note">{t('mm.route.intro')}</p>
@@ -240,12 +266,7 @@ function RoutingSection({ models, modelsError }: { models: InstalledModel[]; mod
     <div className="mm-panel-head"><h3>{t('composer.thinking.label')}</h3></div>
     <ReasoningControl global />
   </section>
-
-  {/* Issue #194: task-aware sampling presets, own panel for the same reason as Thinking above. */}
-  <section className="mm-panel">
-    <div className="mm-panel-head"><h3>{t('mm.sampling.title')}</h3></div>
-    <SamplingPresetsControl />
-  </section></>;
+</>;
 }
 
 // The mode a new project starts in. Switching existing projects is a separate, explicit button:

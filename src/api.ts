@@ -325,6 +325,10 @@ export function saveProjectConfig(
     routing?: 'manual' | 'auto';
     reasoningEffort?: 'default' | 'low' | 'high' | null;
     toolboxes?: string[];
+    /** #1006: tools picked automatically or by hand from `toolboxes`. */
+    toolsMode?: 'auto' | 'manual';
+    /** #1007: this chat's or project's own routing mode; null follows the account's. */
+    routingMode?: ProjectRoutingMode | null;
   },
 ): Promise<{ ok: true }> {
   return postJson(`/api/projects/${encodeURIComponent(projectId)}/config`, patch);
@@ -365,6 +369,19 @@ export async function fetchRoutingMode(): Promise<RoutingModeSettings> {
 
 export async function saveRoutingMode(body: { mode: RoutingModeSettings['mode']; whenSensitive: 'ask' | 'local'; cloud: NonNullable<RoutingModeSettings['cloud']> }): Promise<RoutingModeSettings> {
   return putJson('/api/routing-mode', body);
+}
+
+export type RoutingModeId = 'local' | 'cloud' | 'hybrid';
+/** #1007: a chat's or project's own routing mode (the cloud provider and models stay the account's). */
+export interface ProjectRoutingMode { mode: RoutingModeId; whenSensitive: 'ask' | 'local' }
+
+/** #1009: a stored provider's model ids, fetched and cached by the server with the stored key.
+ *  `refresh` skips the server's cache. The key itself never reaches the browser. */
+export async function fetchProviderModels(providerId: string, refresh = false): Promise<{ models: string[]; cached?: boolean; fetchedAt?: number }> {
+  const r = await apiFetch(`/api/providers/${encodeURIComponent(providerId)}/models${refresh ? '?refresh=1' : ''}`);
+  const body = await r.json().catch(() => ({})) as { models?: unknown; cached?: boolean; fetchedAt?: number; error?: string };
+  if (!r.ok) throw new Error(body.error || `provider models ${r.status}`);
+  return { models: Array.isArray(body.models) ? body.models.filter((m): m is string => typeof m === 'string') : [], cached: body.cached, fetchedAt: body.fetchedAt };
 }
 
 export async function saveAllowedRoutingModes(allowed: ('local' | 'cloud' | 'hybrid')[]): Promise<{ allowed: ('local' | 'cloud' | 'hybrid')[] }> {

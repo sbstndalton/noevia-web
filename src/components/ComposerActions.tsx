@@ -8,6 +8,9 @@ import { ShellIcon } from './ShellIcon';
 import { uploadFailureText, uploadUnreadableReason } from '../source-status';
 import { formatPercent } from '../number-format';
 import { useT, type Translate } from '../i18n';
+import { toolsModeOf } from '../tools-mode';
+import type { ToolsMode } from '../tools-mode';
+import { SegmentedControl } from './SegmentedControl';
 import { toolboxCopy } from '../toolbox-copy';
 
 /** Everything the shared upload path needs, whether the files came from the hidden `<input
@@ -160,6 +163,18 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
   // budget under-report what the next message actually sends (#354).
   const connectorIds = boxes.filter(box => box.connector).map(box => box.id);
   const effectiveSelected = connectorIds.length ? [...new Set([...selected, ...connectorIds])] : selected;
+  // #1006: Tools Automatic shows no checkboxes (tools load on their own); Manual shows the list.
+  // The Diary companion keeps its own hand-picked list, as before.
+  const mode = diary ? 'manual' : toolsModeOf(project);
+  const setMode = async (next: ToolsMode) => {
+    if (!project || saving || disabled || next === mode) return;
+    setSaving(true); onBusy(true); setError('');
+    // Switching to Manual for the first time starts from the list the chat already uses.
+    const patch = next === 'manual' && !Array.isArray(project.toolboxes) ? { toolsMode: next, toolboxes: selected } : { toolsMode: next };
+    try { await saveProjectConfig(project.id, patch); await onChanged(); }
+    catch (err) { setError(err instanceof Error ? err.message : t('composer.toolsSaveError')); }
+    finally { setSaving(false); onBusy(false); }
+  };
   const toggle = async (id: string) => {
     if (!project || saving || disabled) return;
     const next = selected.includes(id) ? selected.filter(value => value !== id) : [...selected, id];
@@ -197,7 +212,11 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
       </button>}
       <div className="composer-menu-divider" role="separator"/>
       <span className="composer-menu-label">{diary ? t('composer.toolsExtras') : chatOnly ? t('composer.toolsChat') : t('composer.toolsProject')}</span>
-      {loading ? <p className="composer-menu-note">{t('composer.loadingTools')}</p> : <>
+      {!diary && project && <div className="composer-tools-mode">
+        <SegmentedControl label={t('tools.mode.aria')} value={mode} options={[['auto', t('tools.mode.auto')], ['manual', t('tools.mode.manual')]]} onChange={(next) => void setMode(next)} />
+        <p className="composer-menu-note">{mode === 'auto' ? t('tools.mode.autoHint') : t('tools.mode.manualHint')}</p>
+      </div>}
+      {mode === 'manual' && (loading ? <p className="composer-menu-note">{t('composer.loadingTools')}</p> : <>
         {(['builtin', 'mcp'] as const).flatMap(source => boxes.filter(box => box.source === source)).map(box => {
           const on = effectiveSelected.includes(box.id);
           // A connector is on because it's connected (Settings → Connectors), not picked here —
@@ -209,7 +228,7 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
         })}
         {!boxes.length && <p className="composer-menu-note">{t('composer.noTools')}</p>}
         {boxes.length > 0 && <p className="composer-menu-note">{effectiveSelected.length ? t('composer.tokensNote', { tokens: tokens.toLocaleString(appLocale()) }) : t('composer.noToolsSelected')}</p>}
-      </>}
+      </>)}
       {error && <p className="composer-menu-note" role="alert">{error}</p>}
       {/* One inventory (#238): the menu links to Customise rather than growing a second manager. */}
       {!diary && <><div className="composer-menu-divider" role="separator"/><button type="button" className="composer-menu-row" onClick={() => { setOpen(false); window.dispatchEvent(new Event('noevia:open-customise')); }}>

@@ -1,4 +1,5 @@
-// #862: two quick toolbox toggles in "Model and tools" undo each other. The first save used to
+// #862: two quick toolbox toggles undo each other. Since #1006 the toolboxes are picked in the
+// composer's + menu (Tools: Manual), so the race is checked there. The first save used to
 // clear `busy` before the parent had re-read the project, so the second toggle sent the whole
 // list built from the stale selection and switched the first box back on. Offline: a real
 // dialog, synthetic routes, the project re-read held open until the test releases it.
@@ -36,28 +37,27 @@ const { withLocale } = require('./qa-locale.cjs');
 
     await page.goto('http://localhost:31472');
     await page.getByRole('button', { name: 'Choose model' }).filter({ hasText: 'Auto (Fast/Smart)' }).waitFor();
-    await page.getByRole('button', { name: 'Choose model' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Model and tools' });
-    await dialog.waitFor();
-    const tool = (name) => dialog.locator('label.mp-tool').filter({ hasText: name }).locator('input');
+    const plus = page.getByRole('button', { name: /^Add files and tools/ });
+    await plus.click();
+    const menu = page.getByRole('region', { name: /files and tools/i });
+    await menu.waitFor();
+    const tool = (name) => menu.getByRole('menuitemcheckbox', { name: new RegExp(name) });
 
     await tool('Web search').click();
+    await page.waitForFunction(() => document.querySelectorAll('[role="menuitemcheckbox"]').length > 0);
     assert.deepEqual(patches[0].toolboxes, ['core'], 'the first toggle switched web search off');
-
-    // The re-read is still in flight. A second toggle here must not be built from the old list:
-    // either the control is still busy, or it is built from the new selection.
     await page.waitForTimeout(300);
     await tool('Notes').click({ timeout: 800 }).catch(() => undefined);
     releaseContext();
-    await page.waitForFunction(() => [...document.querySelectorAll('label.mp-tool input')].every((i) => !i.disabled));
+    await page.waitForFunction(() => [...document.querySelectorAll('[role="menuitemcheckbox"]')].some((i) => !i.disabled));
     if (patches.length < 2) await tool('Notes').click();
     await page.waitForTimeout(300);
 
     const last = patches[patches.length - 1].toolboxes;
     assert.ok(patches.slice(1).every((p) => !p.toolboxes.includes('search')), `a later toggle put web search back on: ${JSON.stringify(patches.map((p) => p.toolboxes))}`);
     assert.deepEqual([...last].sort(), ['core', 'notes'], 'the final selection keeps both changes');
-    assert.equal(await tool('Web search').isChecked(), false, 'web search is still off in the dialog');
-    assert.equal(await tool('Notes').isChecked(), true);
+    assert.equal(await tool('Web search').getAttribute('aria-checked'), 'false', 'web search is still off');
+    assert.equal(await tool('Notes').getAttribute('aria-checked'), 'true');
     console.log('PASS quick second toggle keeps the first change', JSON.stringify(patches.map((p) => p.toolboxes)));
     assert.deepEqual(errors, [], 'no page errors');
   } finally {

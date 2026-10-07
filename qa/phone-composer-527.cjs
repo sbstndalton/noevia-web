@@ -179,7 +179,7 @@ const tier0Snapshot = (page) => page.evaluate(() => {
       // The model sheet: status, model list, thinking, context.
       const model = modelButton(page);
       await model.click();
-      const sheet = page.getByRole('dialog', { name: 'Model and tools' });
+      const sheet = page.getByRole('dialog', { name: 'Model' });
       await sheet.waitFor();
       // Measure once the entrance has settled (two equal frames), not mid-rise.
       let panel = null;
@@ -233,7 +233,7 @@ const tier0Snapshot = (page) => page.evaluate(() => {
       check(db && db.width <= 10 && db.height <= 10, 'the generating dot is tiny', db);
       check(await dot.evaluate(e => getComputedStyle(e).animationName) === 'none', 'reduced motion stops the pulse');
       await modelButton(page).click();
-      const sheet = page.getByRole('dialog', { name: 'Model and tools' });
+      const sheet = page.getByRole('dialog', { name: 'Model' });
       await sheet.waitFor();
       check(/Generating/i.test(await sheet.locator('.mp-status').innerText()), 'the sheet shows the live reply status', await sheet.locator('.mp-status').innerText());
       await shot(page, '390x844-light-generating-sheet');
@@ -272,7 +272,7 @@ const tier0Snapshot = (page) => page.evaluate(() => {
         await page.waitForTimeout(400);
         await shot(page, `390x844-${theme}-messages`);
         await modelButton(page).click();
-        await page.getByRole('dialog', { name: 'Model and tools' }).waitFor();
+        await page.getByRole('dialog', { name: 'Model' }).waitFor();
         await shot(page, `390x844-${theme}-sheet`);
       }
       await page.close();
@@ -292,7 +292,7 @@ const tier0Snapshot = (page) => page.evaluate(() => {
     await step('390x844 thinking keeps focus', async () => {
       const page = await open(browser, { width: W, height: H });
       await modelButton(page).click();
-      const sheet = page.getByRole('dialog', { name: 'Model and tools' });
+      const sheet = page.getByRole('dialog', { name: 'Model' });
       await sheet.waitFor();
       const low = sheet.getByRole('group', { name: 'Thinking' }).getByRole('button', { name: /^Low/ });
       await low.focus();
@@ -318,7 +318,7 @@ const tier0Snapshot = (page) => page.evaluate(() => {
       check((await model.innerText()).replace(/\s+/g, ' ').trim() === 'Auto', 'without effort settings the button shows only the model', await model.innerText());
       check(await model.getAttribute('aria-label') === 'Choose model: Auto (Fast/Smart)', 'and names only the model', await model.getAttribute('aria-label'));
       await model.click();
-      const sheet = page.getByRole('dialog', { name: 'Model and tools' });
+      const sheet = page.getByRole('dialog', { name: 'Model' });
       await sheet.waitFor();
       check(await sheet.getByRole('group', { name: 'Thinking' }).count() === 0, 'and the sheet has no Thinking section');
       await page.close();
@@ -357,7 +357,7 @@ const tier0Snapshot = (page) => page.evaluate(() => {
       const page = await open(browser, { width: W, height: H });
       for (let i = 0; i < 3; i++) { await send(page, `Synthetic question ${i + 1}`); await page.waitForFunction(n => document.querySelectorAll('.chat-workspace .msg').length >= n, (i + 1) * 2); await page.waitForTimeout(250); }
       await modelButton(page).click();
-      const sheet = page.getByRole('dialog', { name: 'Model and tools' });
+      const sheet = page.getByRole('dialog', { name: 'Model' });
       await sheet.waitFor();
       await sheet.locator('.chat-context-meter summary').click();
       await sheet.getByRole('button', { name: 'Compact chat' }).click();
@@ -387,7 +387,7 @@ const tier0Snapshot = (page) => page.evaluate(() => {
       await send(page, 'Synthetic question');
       await page.getByText('Synthetic answer paragraph.').first().waitFor();
       await modelButton(page).click();
-      const sheet = page.getByRole('dialog', { name: 'Model and tools' });
+      const sheet = page.getByRole('dialog', { name: 'Model' });
       await sheet.waitFor();
       await sheet.getByRole('searchbox').waitFor();
       await page.waitForTimeout(400);
@@ -405,7 +405,7 @@ const tier0Snapshot = (page) => page.evaluate(() => {
       await send(page, 'Synthetic question');
       await page.getByText('Synthetic answer paragraph.').first().waitFor();
       await modelButton(page).click();
-      const sheet = page.getByRole('dialog', { name: 'Model and tools' });
+      const sheet = page.getByRole('dialog', { name: 'Model' });
       await sheet.waitFor();
       const panel = await box(sheet.locator('.mp-panel'));
       check(panel && panel.y >= 0 && panel.y + panel.height <= 560 + 0.5, '1280x560: the sheet fits the window', panel);

@@ -47,7 +47,7 @@ const activeElement = (page) => page.evaluate(() => ({
     await page.goto('http://localhost:31471');
     await page.getByRole('button', { name: 'Choose model' }).filter({ hasText: 'Auto (Fast/Smart)' }).waitFor();
     await page.getByRole('button', { name: 'Choose model' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Model and tools' });
+    const dialog = page.getByRole('dialog', { name: 'Model' });
     await dialog.waitFor();
 
     const manual = dialog.getByRole('button', { name: /Manual/ });

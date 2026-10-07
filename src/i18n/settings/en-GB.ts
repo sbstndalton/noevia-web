@@ -479,6 +479,8 @@ export const EN_GB_SETTINGS = {
   'providers.form.saving': "Saving…",
   'providers.form.saveFailed': "Saving failed.",
   'providers.chatgpt.title': "Sign in with ChatGPT",
+  'providers.chatgpt.moved': "Sign in with ChatGPT is now under Models & routing → Routing.",
+  'providers.chatgpt.open': "Open Models & routing",
   'providers.chatgpt.external': "External",
   'providers.chatgpt.notConnected': "Use your own ChatGPT account as a private provider. Only you can use it.",
   'providers.chatgpt.connectedAs': "Connected as {account}",

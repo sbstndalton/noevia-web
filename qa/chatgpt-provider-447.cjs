@@ -155,7 +155,7 @@ async function mockApis(page, { flag, state, models = ['gpt-synthetic-1', 'gpt-s
       await page.route('**/api/projects/*/config', async (r) => { const b = r.request().postDataJSON(); saved.push(b); Object.assign(project, b); await r.fulfill({ json: { project } }); });
       await page.goto(`http://localhost:${PORT}`);
       await page.getByRole('button', { name: 'Choose model' }).click();
-      const dialog = page.getByRole('dialog', { name: 'Model and tools' });
+      const dialog = page.getByRole('dialog', { name: 'Model' });
       await dialog.waitFor();
       if (listed) {
         const pick = dialog.getByRole('button', { name: /gpt-synthetic-mini/ });

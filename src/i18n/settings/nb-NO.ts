@@ -478,6 +478,8 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'providers.form.saving': "Lagrer…",
   'providers.form.saveFailed': "Lagring mislyktes.",
   'providers.chatgpt.title': "Logg inn med ChatGPT",
+  'providers.chatgpt.moved': "Logg inn med ChatGPT ligger nå under Modeller og ruting → Ruting.",
+  'providers.chatgpt.open': "Åpne Modeller og ruting",
   'providers.chatgpt.external': "Ekstern",
   'providers.chatgpt.notConnected': "Bruk din egen ChatGPT-konto som privat leverandør. Bare du kan bruke den.",
   'providers.chatgpt.connectedAs': "Tilkoblet som {account}",
