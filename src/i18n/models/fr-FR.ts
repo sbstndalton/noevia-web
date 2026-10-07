@@ -182,6 +182,8 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.library.nothing': "Aucun résultat. Effacez la recherche ou choisissez Tous les modèles.",
   'mm.library.orphans': "Fichiers sans entrée de modèle",
   'mm.library.orphansNote': "Ces fichiers se trouvent dans le dossier des modèles, mais aucun réglage ne pointe vers eux : le moteur ne peut pas encore les servir.",
+  'mm.library.orphanSaved': "Enregistré ; le moteur le proposera après son prochain rechargement.",
+  'mm.library.orphanApply': "Appliquer maintenant",
   'mm.library.unconfigured': "Fichiers non configurés : {files}",
   'mm.card.failed': "Échec du chargement",
   'mm.card.unloaded': "Déchargé",

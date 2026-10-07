@@ -94,6 +94,19 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     try { const r = await apiFetch(`/api/models/${verb}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); if (!r.ok) throw Error((await r.json()).error || t(verb === 'load' ? 'mm.library.loadFailed' : 'mm.library.unloadFailed')); onChanged(); }
     catch (e) { setError(errorText(e, t('mm.library.opFailed'))); } finally { setBusy(''); }
   };
+  // #1036: same reload call and 409 handling as the settings editor (ConfigureTab.apply).
+  const [pendingLoaded, setPendingLoaded] = useState<string[]>([]);
+  const applyReload = async (unload: boolean) => {
+    setBusy('apply'); setError(''); setMessage('');
+    try {
+      const r = await apiFetch('/api/models/presets/reload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unload }) });
+      const v = await r.json().catch(() => ({})) as { loaded?: string[]; unloaded?: string[]; error?: string };
+      if (r.status === 409 && Array.isArray(v.loaded)) { setPendingLoaded(v.loaded); setMessage(t('mm.editor.savedLoaded', { models: v.loaded.join(', ') })); return; }
+      if (!r.ok) throw Error(v.error || t('mm.editor.noReload'));
+      setPendingLoaded([]); setMessage(unload && v.unloaded?.length ? t('mm.editor.appliedUnloaded', { models: v.unloaded.join(', ') }) : t('mm.editor.applied'));
+      await refresh();
+    } catch (e) { setError(errorText(e, t('mm.editor.savedNoReload'))); } finally { setBusy(''); }
+  };
   const checkUpdates = async () => {
     setBusy('updates'); setMessage('');
     try { const v = await mm<{ checked: number; status: Record<string, Update> }>('models/check-updates', { body: {} }); setUpdates(v.status); setMessage(t.plural('mm.library.checked', v.checked)); }
@@ -162,7 +175,12 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
           orphan's size uses the same convention as every registered model's, rather than the
           external service's own (differently-based) formatted string. */}
       <ul className="mm-list">{orphanFiles.map(f => <li key={f.key}><span>{f.name}<small>{formatModelSizeGB(bytesToModelSizeGB(f.bytes), appLocale()) || human(f.size)}{f.subdir ? ` · ${f.subdir}/` : ''}</small></span>
-        <button className="modal-btn secondary" onClick={() => onConfigure(f.name.replace(/\.gguf$/i, ''))}>{t('mm.createSettings')}</button></li>)}</ul></section>}
+        {f.sections.length > 0
+          // #1036: a section is saved but the engine has not reloaded its presets yet.
+          ? <span className="mm-actions"><small data-testid="orphan-saved">{t('mm.library.orphanSaved')}</small>
+              <button className="modal-btn secondary" disabled={busy !== ''} onClick={() => void applyReload(false)}>{busy === 'apply' ? t('mm.editor.applying') : t('mm.library.orphanApply')}</button></span>
+          : <button className="modal-btn secondary" onClick={() => onConfigure(f.name.replace(/\.gguf$/i, ''))}>{t('mm.createSettings')}</button>}</li>)}</ul>
+      {pendingLoaded.length > 0 && <div className="mm-actions"><button className="modal-btn secondary" disabled={busy !== ''} onClick={() => void applyReload(true)}>{busy === 'apply' ? t('mm.editor.applying') : t('mm.editor.applyNow')}</button></div>}</section>}
     {unregistered.length > 0 && orphanFiles.length === 0 && <p className="mm-note">{t('mm.library.unconfigured', { files: unregistered.join(', ') })}</p>}
   </div>;
 }

@@ -182,6 +182,8 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.library.nothing': "Ingen treff. Tøm søket eller velg Alle modeller.",
   'mm.library.orphans': "Filer uten modelloppføring",
   'mm.library.orphansNote': "Disse filene ligger i modellmappen, men ingen innstillinger peker på dem, så motoren kan ikke tilby dem ennå.",
+  'mm.library.orphanSaved': "Lagret; motoren tilbyr den etter neste omlasting.",
+  'mm.library.orphanApply': "Ta i bruk nå",
   'mm.library.unconfigured': "Filer uten innstillinger: {files}",
   'mm.card.failed': "Lasting mislyktes",
   'mm.card.unloaded': "Avlastet",

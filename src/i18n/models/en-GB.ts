@@ -191,6 +191,8 @@ export const EN_GB_MODELS = {
   'mm.library.nothing': 'Nothing matches. Clear the search or choose All models.',
   'mm.library.orphans': 'Files without a model entry',
   'mm.library.orphansNote': 'These files are in the model folder but no settings point to them, so the engine cannot serve them yet.',
+  'mm.library.orphanSaved': 'Saved; the engine offers it after its next reload.',
+  'mm.library.orphanApply': 'Apply now',
   'mm.library.unconfigured': 'Unconfigured files: {files}',
   'mm.card.failed': 'Failed to load',
   'mm.card.unloaded': 'Unloaded',

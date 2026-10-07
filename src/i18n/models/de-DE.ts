@@ -182,6 +182,8 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.library.nothing': "Nichts passt. Leere die Suche oder wähle Alle Modelle.",
   'mm.library.orphans': "Dateien ohne Modelleintrag",
   'mm.library.orphansNote': "Diese Dateien liegen im Modellordner, aber keine Einstellungen verweisen auf sie, daher kann die Engine sie noch nicht bereitstellen.",
+  'mm.library.orphanSaved': "Gespeichert; die Engine bietet es nach ihrem nächsten Neuladen an.",
+  'mm.library.orphanApply': "Jetzt anwenden",
   'mm.library.unconfigured': "Nicht konfigurierte Dateien: {files}",
   'mm.card.failed': "Laden fehlgeschlagen",
   'mm.card.unloaded': "Nicht geladen",

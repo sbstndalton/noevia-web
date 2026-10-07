@@ -182,6 +182,8 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.library.nothing': "Inga träffar. Rensa sökningen eller välj Alla modeller.",
   'mm.library.orphans': "Filer utan modellpost",
   'mm.library.orphansNote': "De här filerna finns i modellmappen men inga inställningar pekar på dem, så motorn kan inte erbjuda dem ännu.",
+  'mm.library.orphanSaved': "Sparat; motorn erbjuder den efter nästa omladdning.",
+  'mm.library.orphanApply': "Tillämpa nu",
   'mm.library.unconfigured': "Filer utan inställningar: {files}",
   'mm.card.failed': "Inläsningen misslyckades",
   'mm.card.unloaded': "Urladdad",
