@@ -544,7 +544,6 @@ export const ES_ES_MODELS: ModelsCatalogue = {
   'mm.tune.failedError': "La última ejecución: {status} ({error}).",
   'mm.tune.failedKeep': "La configuración guardada antes sigue activa, así que el chat sigue funcionando. Reanúdala o reinténtala abajo, o conserva la configuración actual.",
   'mm.tune.failedKeepLast': "La configuración guardada antes sigue activa (último resultado válido arriba), así que el chat sigue funcionando. Reanúdala o reinténtala abajo, o conserva la configuración actual.",
-  'mm.tune.go': "Ir a Ajuste automático y aplicar",
   'mm.quality.hint': "Solo mide",
   'mm.quality.run': "Ejecuta la batería de prompts con tareas fijas para comparar este modelo con los demás.",
   'mm.quality.open': "Abrir Benchmarks",

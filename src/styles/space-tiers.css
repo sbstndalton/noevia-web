@@ -25,10 +25,16 @@
    controls the families restyle. */
 
 /* Defaults for the parts only tier 2 shows. */
-.app .composer-model .model-pill-short, .app .reasoning-pill .reasoning-pill-icon, .composer-add-badge { display: none; }
+.app .composer-model .model-pill-short, .app .reasoning-pill .reasoning-pill-icon { display: none; }
 .composer-add { position: relative; }
-@media (min-width: 768px) and (min-height: 600px) {
-  .composer-actions-panel .composer-browse-tools { display: none; }
+/* #1025: Tools is in the composer's + menu at every width (its list when Manual, a row that opens
+   the catalogue), so the standalone Tools button beside the composer is never shown; the catalogue
+   still anchors to its spot. The + carries how many toolboxes the next message adds. */
+.composer-mode-row .tool-catalogue-trigger, .composer-mode-bar .tool-catalogue-trigger { display: none; }
+.composer-add-badge {
+  display: grid; place-items: center; position: absolute; top: -2px; right: -2px;
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--radius-pill);
+  background: var(--md-primary); color: var(--md-on-primary); font-size: var(--text-caption2); font-weight: 600; line-height: 1;
 }
 
 /* ── Tier 1: constrained ──────────────────────────────────────────────────── */
@@ -56,13 +62,6 @@
   .composer-mode-harness { min-width: 0; }
   .composer-mode-harness select { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .composer-mode-toggle button { padding: 0 var(--space-3); }
-  /* Tools opens from the composer's + menu; the catalogue still anchors to this spot. */
-  .composer-mode-row .tool-catalogue-trigger { display: none; }
-  .composer-add-badge {
-    display: grid; place-items: center; position: absolute; top: -2px; right: -2px;
-    min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--radius-pill);
-    background: var(--md-primary); color: var(--md-on-primary); font-size: var(--text-caption2); font-weight: 600; line-height: 1;
-  }
 
   /* Composer pills: "Auto" for the Auto router, and Thinking as a symbol. */
   .app .composer-model .model-pill-label.has-short { display: none; }

@@ -47,7 +47,7 @@ test('ConfigureTab (Tune settings) also hides calibration and auto-tune actions 
   assert.match(src, /\{system && <p className="mm-note" role="status">\{t\('model.systemLabel'\)\}/);
   // "Tune for this machine" and "Auto-tune and apply" must not render for the system model either.
   assert.match(src, /\{!system && <button className="modal-btn secondary" disabled=\{tuning \|\| busy\}/);
-  assert.match(src, /\{!system && <details ref=\{autoTuneRef\} className="mm-disclosure mm-easy-autotune"/);
+  assert.match(src, /\{!system && <details className="mm-disclosure mm-easy-autotune"/);
 });
 
 test('rename/remove stays available for an ordinary (non-system) model in ConfigureTab', () => {

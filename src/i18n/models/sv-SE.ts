@@ -544,7 +544,6 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.tune.failedError': "Senaste körningen: {status} ({error}).",
   'mm.tune.failedKeep': "Inställningarna som sparades före den är fortfarande aktiva, så chatten fungerar ändå. Återuppta eller försök igen nedan, eller behåll de nuvarande inställningarna.",
   'mm.tune.failedKeepLast': "Inställningarna som sparades före den är fortfarande aktiva (senaste fungerande resultat ovan), så chatten fungerar ändå. Återuppta eller försök igen nedan, eller behåll de nuvarande inställningarna.",
-  'mm.tune.go': "Gå till Autojustera och tillämpa",
   'mm.quality.hint': "Mäter bara",
   'mm.quality.run': "Kör promptsviten på fasta uppgifter för att jämföra den här modellen med de andra.",
   'mm.quality.open': "Öppna prestandatester",

@@ -23,11 +23,13 @@ const BOXES = [{ id: 'core', label: 'Core', description: 'Clock and project file
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.route('**/api/workspace', (r) => r.fulfill({ json: { projects: [], freeChats: [] } }));
+    // #1006/#1025: the catalogue exists only where the chat picks its tools by hand, and opens from the + menu.
+    await page.route('**/api/chats/*/context', (r) => r.fulfill({ json: { project: { id: 'p-syn', name: 'Synthetic', routing: 'auto', files: [], assets: [], toolboxes: ['core'], toolsMode: 'manual' } } }));
     await page.route('**/api/toolboxes/permitted*', (r) => r.fulfill({ json: { boxes: BOXES } }));
 
     await page.goto('http://localhost:31473');
     await page.getByPlaceholder('Message noevia…').waitFor();
-    await page.getByRole('button', { name: /^Tools/ }).click();
+    await page.getByRole('button', { name: /^Add files and tools/ }).click(); await page.locator('.composer-browse-tools').click();
     await page.locator('.tool-catalogue-search').waitFor();
     // Wait for the panel's own open effect to actually land focus in the search input before
     // testing Escape, or this would be exercising a still-focused trigger, never displaced.
@@ -46,18 +48,18 @@ const BOXES = [{ id: 'core', label: 'Core', description: 'Clock and project file
     });
     assert.equal(info.panelPresent, false, 'the panel must actually have closed');
     assert.equal(info.isBody, false, 'Escape must not leave focus on <body>, even for a moment shorter than one animation frame');
-    assert.equal(info.cls, 'tool-catalogue-trigger btn btn-ghost', 'focus must already be on the trigger button');
+    assert.match(info.cls, /composer-add/, 'focus must already be on the + button (#1025: the Tools button is gone)');
     pass('Escape closes the catalogue and moves focus to the trigger synchronously, with no window where it falls to <body>');
 
     // The ordinary, real-keypress path (CDP-dispatched, with actual paint/rAF ticks in between)
     // must land on, and stay on, the trigger too.
-    await page.getByRole('button', { name: /^Tools/ }).click();
+    await page.getByRole('button', { name: /^Add files and tools/ }).click(); await page.locator('.composer-browse-tools').click();
     await page.waitForFunction(() => document.activeElement?.className === 'tool-catalogue-search');
     await page.keyboard.press('Escape');
     await page.waitForTimeout(300);
     const afterReal = await page.evaluate(() => ({ cls: document.activeElement?.className, isBody: document.activeElement === document.body }));
     assert.equal(afterReal.isBody, false, 'a real Escape keypress must not leave focus on <body> even after settling');
-    assert.equal(afterReal.cls, 'tool-catalogue-trigger btn btn-ghost', 'focus returns to the Tools trigger button');
+    assert.match(afterReal.cls, /composer-add/, 'focus returns to the + button');
     pass('a real Escape keypress returns focus to the Tools trigger button, confirmed after settling');
 
     assert.deepEqual(errors, [], 'no page errors');

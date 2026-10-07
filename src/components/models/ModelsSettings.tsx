@@ -64,9 +64,7 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
   });
   const [panels, setPanels] = useState<Set<Panel>>(() => new Set<Panel>(['status', 'budget', ...(initial.panel ? [initial.panel] : [])]));
   const [open, setOpen] = useState<string>(initialModel);
-  // #680: "Go to Auto-tune and apply" (guided panel) asks the editor below to reveal its Auto-tune
-  // panel. A counter, so asking twice in a row still acts.
-  const [autoTuneRequest, setAutoTuneRequest] = useState(0);
+  // #1025: Auto-tune and apply is one entry, the open panel in the settings editor below.
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<ModelSort>('name');
   const [filter, setFilter] = useState<ModelFilter>('all');
@@ -75,7 +73,11 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
   const chatgptOn = useFeatureFlags().chatgptOAuth === true;
   const t = useT();
 
-  const go = (next: Tab, panel?: Panel) => {
+  // #1024: a section the person picked is a history entry (Back returns to the previous section);
+  // the first address normalisation and a section named by an event replace the current entry.
+  const pushNext = useRef(false);
+  const go = (next: Tab, panel?: Panel, push = false) => {
+    if (push && next !== tab) pushNext.current = true;
     setTab(next); setOpen('');
     if (panel) setPanels((p) => new Set(p).add(panel));
   };
@@ -87,7 +89,12 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
     const id = window.setTimeout(() => {
       if (!/^\/models\/?$/.test(window.location.pathname)) return;
       const want = tab === 'models' ? '' : `?section=${tab}`;
-      if (window.location.search !== want) window.history.replaceState(window.history.state, '', `/models${want}`);
+      if (window.location.search !== want) {
+        const push = pushNext.current;
+        if (push) window.history.pushState(window.history.state, '', `/models${want}`);
+        else window.history.replaceState(window.history.state, '', `/models${want}`);
+      }
+      pushNext.current = false;
     }, 0);
     return () => window.clearTimeout(id);
   }, [tab, open]);
@@ -101,7 +108,7 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
     return () => { window.removeEventListener('noevia:open-model-settings', onOpen); window.removeEventListener('popstate', onPop); };
   }, []);
   /** Old tab ids (the guided panel and the overview still name them) land on their new home. */
-  const goLegacy = (old: LegacyTab) => { const to = LEGACY_TABS[old]; if (to.list) chooseList(to.list); go(to.tab, to.panel); };
+  const goLegacy = (old: LegacyTab) => { const to = LEGACY_TABS[old]; if (to.list) chooseList(to.list); go(to.tab, to.panel, true); };
   const chooseList = (next: 'installed' | 'discover') => { setList(next); setQuery(''); try { sessionStorage.setItem(LIST_KEY, next); } catch { /* optional */ } };
   const togglePanel = (id: Panel, isOpen: boolean) => setPanels((p) => { const n = new Set(p); if (isOpen) n.add(id); else n.delete(id); return n; });
   const changed = () => notifyModelsChanged();
@@ -112,8 +119,8 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
       <button className="modal-btn secondary" onClick={() => setOpen('')}><ShellIcon name="left" size={16}/>{t('mm.allModels')}</button>
       <h1>{open}</h1>
     </div>
-    <GuidedOptimize model={open} installed={models.find((m) => m.name === open)} onOpenTab={goLegacy} onGoAutoTune={() => setAutoTuneRequest((n) => n + 1)} />
-    <ConfigureTab initial={open} onSaved={changed} onSelect={setOpen} autoTuneRequest={autoTuneRequest} />
+    <GuidedOptimize model={open} installed={models.find((m) => m.name === open)} onOpenTab={goLegacy} />
+    <ConfigureTab initial={open} onSaved={changed} onSelect={setOpen} />
   </div>;
 
   return <div className="mm-root">
@@ -123,7 +130,7 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
     <nav className="mm-tabs mm-toolbar-one" aria-label={t('mm.navLabel')}>
       <div className="mm-tabs-row" role="tablist">
         {TABS.map(([id, label]) =>
-          <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-active' : ''} onClick={() => go(id)}>{t(label)}</button>)}
+          <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-active' : ''} onClick={() => go(id, undefined, true)}>{t(label)}</button>)}
       </div>
       {tab === 'models' && <div className="mm-search mm-search-inline">
         <ShellIcon name="search" size={16}/>

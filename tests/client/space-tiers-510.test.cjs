@@ -36,7 +36,7 @@ test('nothing is hidden in tier 0 except the parts only tier 2 shows', () => {
     else if (css[i] === '}' && --depth === 0) { blocks.push(css.slice(start, i + 1).trim()); start = i + 1; }
   }
   const shrinking = /^@media (\(max-width: \d+px\)|\(max-height: \d+px\))/;
-  const tier2Only = /model-pill-short|reasoning-pill-icon|composer-browse-tools|composer-add-badge/;
+  const tier2Only = /model-pill-short|reasoning-pill-icon|composer-browse-tools|composer-add-badge|tool-catalogue-trigger/; // #1025: Tools lives in the + menu at every width
   for (const block of blocks) {
     if (!/display:\s*none/.test(block) || shrinking.test(block)) continue;
     for (const rule of block.matchAll(/([^{}]+)\{[^{}]*display:\s*none[^{}]*\}/g)) {
