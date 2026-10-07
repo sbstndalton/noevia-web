@@ -2446,6 +2446,11 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 .model-list-status { grid-column: 1 / -1; justify-content: space-between; }
 /* #1006: Tools: Automatic / Manual at the top of the composer's tools. */
 .composer-tools-mode { display: flex; flex-direction: column; gap: 4px; padding: 4px 6px 2px; }
+/* The chosen side must read at a glance in every family and theme (review, 2026-10-07): an
+   accent-tinted fill on the button itself, not the floating thumb, which matched the menu surface. */
+.composer-tools-mode .glass-seg { display: grid; grid-template-columns: 1fr 1fr; }
+.composer-tools-mode .glass-seg > .glass-thumb { display: none; }
+:root .composer-tools-mode .glass-seg > button[aria-checked='true'] { background: color-mix(in srgb, var(--accent-text) 18%, transparent); color: var(--accent-text); font-weight: 600; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-text) 45%, transparent); }
 /* #1008: Models & routing, four sections; the panels inside open on demand. */
 .mm-section-panels { display: flex; flex-direction: column; gap: 12px; }
 .mm-fold { padding: 0; }

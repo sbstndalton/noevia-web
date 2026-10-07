@@ -22,6 +22,7 @@ import { routingViewState } from '../../routing-view-state';
 import { RoutingModeSection } from './RoutingModeSection';
 import { roleSummary } from '../../routing-copy';
 import { useT } from '../../i18n';
+import { sectionFromLocation, takePendingModelsSection } from '../../models-open';
 import { useFeatureFlags } from '../features/useFeatureFlags';
 import { ChatGptConnect } from '../ChatGptConnect';
 import type { MessageKey } from '../../i18n';
@@ -32,7 +33,6 @@ export type ModelFilter = 'all' | 'loaded' | 'vision' | 'unconfigured';
 import { LEGACY_TABS, MODEL_SECTIONS as TABS, savedSection } from './sections';
 import type { LegacyTab, Panel, Tab } from './sections';
 export type { Tab } from './sections';
-const TAB_KEY = 'noevia-models-tab';
 const LIST_KEY = 'noevia-models-list';
 
 const SORTS: [ModelSort, MessageKey][] = [['name', 'mm.sort.name'], ['size', 'mm.sort.size'], ['modified', 'mm.sort.modified']];
@@ -54,7 +54,9 @@ function Fold({ id, title, note, open, onToggle, children }: { id: Panel; title:
 
 // Settings → Models & routing. One model's page (detail view) or one of four sections.
 export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsError, initialModel = '' }: { models: InstalledModel[]; modelsLoaded: boolean; routes: RouteRule[]; projects: Project[]; modelsError: string | null; initialModel?: string }): JSX.Element {
-  const initial = (() => { try { return savedSection(sessionStorage.getItem(TAB_KEY)); } catch { return savedSection(null); } })();
+  // #1013: the section comes from the address (/models?section=routing) or from whoever opened the
+  // page (the event detail); a bare /models is Models. Old tab ids still land on their new home.
+  const initial = savedSection(takePendingModelsSection() ?? sectionFromLocation());
   const [tab, setTab] = useState<Tab>(initial.tab);
   const [list, setList] = useState<'installed' | 'discover'>(() => {
     if (initial.list) return initial.list;
@@ -76,8 +78,28 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
   const go = (next: Tab, panel?: Panel) => {
     setTab(next); setOpen('');
     if (panel) setPanels((p) => new Set(p).add(panel));
-    try { sessionStorage.setItem(TAB_KEY, next); } catch { /* optional */ }
   };
+  // Keep the address in step with the section, so a reload or a shared link opens the same one.
+  // Deferred a task: App writes /models into history in the same commit, and this must replace
+  // that entry rather than the page the person came from.
+  useEffect(() => {
+    if (open) return;
+    const id = window.setTimeout(() => {
+      if (!/^\/models\/?$/.test(window.location.pathname)) return;
+      const want = tab === 'models' ? '' : `?section=${tab}`;
+      if (window.location.search !== want) window.history.replaceState(window.history.state, '', `/models${want}`);
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [tab, open]);
+  // Opened again while already mounted (AI providers' "Open Models & routing"), or Back/Forward
+  // between section addresses.
+  useEffect(() => {
+    const onOpen = (e: Event) => { const s = (e as CustomEvent<{ section?: string }>).detail?.section; if (s) { takePendingModelsSection(); const to = savedSection(s); if (to.list) setList(to.list); go(to.tab, to.panel); } };
+    const onPop = () => { if (/^\/models\/?$/.test(window.location.pathname)) { const to = savedSection(sectionFromLocation()); setTab(to.tab); } };
+    window.addEventListener('noevia:open-model-settings', onOpen);
+    window.addEventListener('popstate', onPop);
+    return () => { window.removeEventListener('noevia:open-model-settings', onOpen); window.removeEventListener('popstate', onPop); };
+  }, []);
   /** Old tab ids (the guided panel and the overview still name them) land on their new home. */
   const goLegacy = (old: LegacyTab) => { const to = LEGACY_TABS[old]; if (to.list) chooseList(to.list); go(to.tab, to.panel); };
   const chooseList = (next: 'installed' | 'discover') => { setList(next); setQuery(''); try { sessionStorage.setItem(LIST_KEY, next); } catch { /* optional */ } };
@@ -214,7 +236,7 @@ function RoutingSection({ models, modelsError, providersRev = 0 }: { models: Ins
   const view = routingViewState(info, error);
 
   return <><DefaultModeSection />
-  <RoutingModeSection key={providersRev} />
+  <RoutingModeSection providersRev={providersRev} />
   <section className="mm-panel">
     <div className="mm-panel-head"><h3>{t('mm.tab.routing')}</h3></div>
     <p className="mm-note">{t('mm.route.intro')}</p>

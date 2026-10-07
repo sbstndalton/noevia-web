@@ -1,6 +1,7 @@
 import { appLocale } from '../user-preferences';
 import { formatNumber } from '../number-format';
 import { McpStatus } from './McpStatus';
+import { openModelSettings } from '../models-open';
 import { ShellIcon } from './ShellIcon';
 import { ConfirmDialog } from './ContextMenu';
 import DiarySharing from './DiarySharing';
@@ -418,7 +419,7 @@ function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
       </div>
 
       {/* #1008: Sign in with ChatGPT moved to Models & routing → Routing, beside where Auto sends chats. */}
-      {chatgptOn && <p className="route-note">{t('providers.chatgpt.moved')} <button type="button" className="mp-link" onClick={() => { try { sessionStorage.setItem('noevia-models-tab', 'routing'); } catch { /* optional */ } window.dispatchEvent(new CustomEvent('noevia:open-model-settings', { detail: {} })); }}>{t('providers.chatgpt.open')}</button></p>}
+      {chatgptOn && <p className="route-note">{t('providers.chatgpt.moved')} <button type="button" className="mp-link" onClick={() => openModelSettings({ section: 'routing' })}>{t('providers.chatgpt.open')}</button></p>}
 
       {adding ? (
         <ProviderForm

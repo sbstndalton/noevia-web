@@ -19,9 +19,10 @@ const { withLocale } = require('./qa-locale.cjs');
 const PORT = 31447;
 const shots = process.env.QA_SCREENSHOTS || '/tmp/noevia-qa-447/shots';
 
+// #1008: Sign in with ChatGPT lives in Models & routing → Routing (AI providers keeps a pointer).
 async function openProviders(page) {
-  await page.goto(`http://localhost:${PORT}/settings/providers`);
-  await page.getByRole('heading', { name: 'AI providers', level: 1 }).waitFor();
+  await page.goto(`http://localhost:${PORT}/models?section=routing`);
+  await page.locator('.model-manager-page').getByRole('tab', { name: 'Routing', exact: true, selected: true }).waitFor();
 }
 async function shoot(page, name, { width, theme }) {
   await page.setViewportSize({ width, height: width < 600 ? 900 : 1000 });
@@ -75,7 +76,7 @@ async function mockApis(page, { flag, state, models = ['gpt-synthetic-1', 'gpt-s
       const errors = []; page.on('pageerror', (e) => errors.push(e.message));
       const seen = await mockApis(page, { flag: false, state: { connection: 'connected', polls: 0, pendingPolls: 2 } });
       await openProviders(page);
-      await page.getByText('Local engine').waitFor();
+      await page.getByRole('heading', { name: 'Default model mode' }).waitFor();
       assert.equal(await page.getByText('Sign in with ChatGPT').count(), 0, 'flag off: no sign-in option');
       assert.equal(await page.getByText('ChatGPT', { exact: true }).count(), 0, 'flag off: no ChatGPT row');
       assert.equal(seen.some((s) => s.includes('/api/providers/chatgpt')), false, 'flag off: no ChatGPT request');

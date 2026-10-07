@@ -16,7 +16,8 @@ const { withLocale } = require('./qa-locale.cjs');
     const page = await browser.newPage(withLocale({ viewport: { width: 1440, height: 900 } }));
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
-    const project = { id: 'p1', name: 'Synthetic', model: 'Cold chat', routing: 'auto', files: [], assets: [], toolboxes: ['core', 'search'] };
+    // A Manual project with its own toolbox list: the only mode that shows the checkboxes (#1006).
+    const project = { id: 'p1', name: 'Synthetic', model: 'Cold chat', routing: 'auto', files: [], assets: [], toolboxes: ['core', 'search'], toolsMode: 'manual' };
     const box = (id, label) => ({ id, label, description: `${label} synthetic.`, toolCount: 1, estTokens: 50, source: 'builtin', available: true });
     let holdContext = false, releaseContext;
     const contextGate = new Promise((r) => { releaseContext = r; });
@@ -43,13 +44,13 @@ const { withLocale } = require('./qa-locale.cjs');
     await menu.waitFor();
     const tool = (name) => menu.getByRole('menuitemcheckbox', { name: new RegExp(name) });
 
+    assert.equal(await menu.getByRole('radio', { name: 'Manual' }).getAttribute('aria-checked'), 'true', 'the fixture is a Manual project');
     await tool('Web search').click();
-    await page.waitForFunction(() => document.querySelectorAll('[role="menuitemcheckbox"]').length > 0);
     assert.deepEqual(patches[0].toolboxes, ['core'], 'the first toggle switched web search off');
     await page.waitForTimeout(300);
     await tool('Notes').click({ timeout: 800 }).catch(() => undefined);
     releaseContext();
-    await page.waitForFunction(() => [...document.querySelectorAll('[role="menuitemcheckbox"]')].some((i) => !i.disabled));
+    await page.waitForFunction(() => { const rows = [...document.querySelectorAll('[role="menuitemcheckbox"]')]; return rows.length > 0 && rows.every((i) => !i.disabled); });
     if (patches.length < 2) await tool('Notes').click();
     await page.waitForTimeout(300);
 

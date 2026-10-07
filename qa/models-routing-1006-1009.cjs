@@ -67,8 +67,8 @@ async function preparePage(browser, { width, height, family = 'editorial', theme
   return page;
 }
 
-async function openModels(page, section) {
-  await page.goto(`http://localhost:${PORT}/models`);
+async function openModels(page, section, path = '/models') {
+  await page.goto(`http://localhost:${PORT}${path}`);
   const root = page.locator('.model-manager-page');
   await root.waitFor();
   if (section) await root.getByRole('tab', { name: section, exact: true }).click();
@@ -104,12 +104,64 @@ async function openModelDialog(page) {
       await page.close();
     });
 
-    await check('#1008 an old saved tab (Benchmarks) opens its new home with the panel open', async () => {
-      const page = await preparePage(browser, { width: 1440, height: 950, session: { 'noevia-models-tab': 'benchmarks' } });
+    await check('#1008/#1013 an old tab link (?section=benchmarks) opens its new home with the panel open', async () => {
+      const page = await preparePage(browser, { width: 1440, height: 950 });
       await stub(page, scenario());
-      const root = await openModels(page);
+      const root = await openModels(page, null, '/models?section=benchmarks');
       assert.equal(await root.getByRole('tab', { name: 'Performance', exact: true }).getAttribute('aria-selected'), 'true');
       assert.equal(await root.locator('details[data-panel="benchmarks"]').evaluate((d) => d.open), true);
+      await page.close();
+    });
+
+    await check('#1013 after a fresh load of /models every section click switches, the address follows, and a reload keeps it', async () => {
+      const page = await preparePage(browser, { width: 1440, height: 950 });
+      await stub(page, scenario());
+      const root = await openModels(page);
+      assert.equal(await root.getByRole('tab', { name: 'Models', exact: true }).getAttribute('aria-selected'), 'true', 'a bare /models is Models');
+      for (const [name, id] of [['Routing', 'routing'], ['Performance', 'performance'], ['Advanced', 'advanced'], ['Models', 'models']]) {
+        await root.getByRole('tab', { name, exact: true }).click();
+        assert.equal(await root.getByRole('tab', { name, exact: true }).getAttribute('aria-selected'), 'true', `${name} is selected`);
+        assert.equal(await root.getByRole('tabpanel').getAttribute('aria-label'), name, `${name} panel shows`);
+        await page.waitForFunction((want) => location.pathname === '/models' && location.search === want, id === 'models' ? '' : `?section=${id}`);
+      }
+      await root.getByRole('tab', { name: 'Advanced', exact: true }).click();
+      await page.waitForFunction(() => location.search === '?section=advanced');
+      await page.reload();
+      await page.locator('.model-manager-page').getByRole('tab', { name: 'Advanced', exact: true }).waitFor();
+      assert.equal(await page.locator('.model-manager-page').getByRole('tab', { name: 'Advanced', exact: true }).getAttribute('aria-selected'), 'true', 'the reload keeps the section');
+      await page.close();
+    });
+
+    await check('#1013 /settings/models over the /models page leaves no inert overlay once closed', async () => {
+      const page = await preparePage(browser, { width: 1440, height: 950 });
+      await stub(page, scenario());
+      await openModels(page);
+      await page.goto(`http://localhost:${PORT}/settings/models`);
+      const settings = page.getByRole('dialog', { name: 'Settings' });
+      await settings.waitFor();
+      await page.keyboard.press('Escape');
+      await settings.waitFor({ state: 'hidden' });
+      await page.waitForTimeout(400);
+      const blockers = await page.evaluate(() => [...document.querySelectorAll('[inert], .settings-scrim, dialog[open]')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; }).map((e) => e.className || e.tagName));
+      assert.deepEqual(blockers, [], 'nothing inert or modal left over the page');
+      await page.goto(`http://localhost:${PORT}/models`);
+      const root = page.locator('.model-manager-page');
+      await root.getByRole('tab', { name: 'Routing', exact: true }).click();
+      assert.equal(await root.getByRole('tab', { name: 'Routing', exact: true }).getAttribute('aria-selected'), 'true');
+      await page.close();
+    });
+
+    await check('#1008 AI providers → Open Models & routing lands on Routing even with /models already mounted', async () => {
+      const page = await preparePage(browser, { width: 1440, height: 950 });
+      await stub(page, scenario());
+      const root = await openModels(page, 'Performance');
+      await page.evaluate(() => { history.pushState({}, '', '/settings/providers'); dispatchEvent(new PopStateEvent('popstate')); });
+      const settings = page.getByRole('dialog', { name: 'Settings' });
+      await settings.waitFor();
+      await settings.getByRole('button', { name: 'Open Models & routing' }).click();
+      await settings.waitFor({ state: 'hidden' });
+      await root.getByRole('tab', { name: 'Routing', exact: true }).waitFor();
+      await page.waitForFunction(() => document.querySelector('.model-manager-page [role="tab"][aria-selected="true"]')?.textContent?.trim() === 'Routing');
       await page.close();
     });
 
@@ -163,10 +215,15 @@ async function openModelDialog(page) {
       await toolsMode.waitFor({ timeout: 5000 });
       assert.equal(await toolsMode.getByRole('radio', { name: 'Automatic' }).getAttribute('aria-checked'), 'true');
       assert.equal(await menu.getByRole('menuitemcheckbox').count(), 0, 'Automatic: no tool checkboxes');
+      assert.equal(await page.locator('.tool-catalogue-trigger').count(), 0, 'Automatic: no Tools button beside the composer');
+      assert.equal(await menu.locator('.composer-browse-tools').count(), 0, 'Automatic: no tool catalogue row in the + menu');
       await toolsMode.getByRole('radio', { name: 'Manual' }).click();
       await menu.getByRole('menuitemcheckbox').first().waitFor({ timeout: 5000 });
       assert.equal(await menu.getByRole('menuitemcheckbox').count(), 2, 'Manual: the tool list');
       assert.equal(state.configPatches.at(-1).toolsMode, 'manual', 'saved on the chat');
+      await page.keyboard.press('Escape');
+      await page.locator('.tool-catalogue-trigger').first().waitFor({ timeout: 5000 });
+      assert.ok(await page.locator('.tool-catalogue-trigger').first().isVisible(), 'Manual: the Tools button shows');
       await page.close();
     });
 

@@ -71,3 +71,24 @@ test('#1009: the cloud model fields are the searchable picker fed by the server-
   const api = read('api.ts');
   assert.match(api, /\/api\/providers\/\$\{encodeURIComponent\(providerId\)\}\/models\$\{refresh \? '\?refresh=1' : ''\}/);
 });
+
+test('#1013: the section rides on the open event and is taken once by a Models page that mounts later', () => {
+  const events = [];
+  const window = { dispatchEvent: (e) => events.push(e), location: { search: '?section=advanced' } };
+  class CustomEvent { constructor(type, init) { this.type = type; this.detail = init.detail; } }
+  const exports_ = {};
+  const code = ts.transpileModule(read('models-open.ts'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  vm.runInNewContext(code, { exports: exports_, window, CustomEvent, URLSearchParams });
+  exports_.openModelSettings({ section: 'routing' });
+  assert.equal(events[0].type, 'noevia:open-model-settings');
+  assert.equal(events[0].detail.section, 'routing');
+  assert.equal(exports_.takePendingModelsSection(), 'routing');
+  assert.equal(exports_.takePendingModelsSection(), null, 'taken once');
+  assert.equal(exports_.sectionFromLocation(), 'advanced');
+});
+
+test('#1006 review: no Tools button beside the composer unless the chat picks tools by hand', () => {
+  const chat = read('components/ChatView.tsx');
+  assert.match(chat, /const catalogue = !toolsByHand \? null : <ToolCatalogue/);
+  assert.match(chat, /browseTools=\{toolsByHand \?/);
+});

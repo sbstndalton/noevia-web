@@ -4,7 +4,7 @@
 // modes accounts may pick. Flag off: the server answers { enabled: false } and nothing renders.
 // The mode and sensitive-handling controls are RoutingModeChoice, shared with the chat model
 // picker (#1007); the cloud model fields list the provider's own models (#1009).
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { fetchProviderModels, fetchProviders, fetchRoutingMode, saveAllowedRoutingModes, saveRoutingMode } from '../../api';
 import type { RoutingModeSettings } from '../../api';
@@ -17,7 +17,7 @@ type Mode = 'local' | 'cloud' | 'hybrid';
 const MODES: Mode[] = ROUTING_MODES;
 const EMPTY_CLOUD = { providerId: '', fast: '', smart: '', code: '' };
 
-export function RoutingModeSection(): JSX.Element | null {
+export function RoutingModeSection({ providersRev = 0 }: { providersRev?: number } = {}): JSX.Element | null {
   const t = useT();
   const [info, setInfo] = useState<RoutingModeSettings | null>(null);
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -31,13 +31,25 @@ export function RoutingModeSection(): JSX.Element | null {
   const modeLabel = useRoutingModeLabel();
   // #1009: the chosen provider's model ids, fetched and cached by the server.
   const [listed, setListed] = useState<{ providerId: string; models: string[]; error: string; loading: boolean }>({ providerId: '', models: [], error: '', loading: false });
+  // Only the newest request may write: a slow answer for an earlier provider (or an earlier
+  // refresh) never replaces a newer one.
+  const listRequest = useRef(0);
   const loadModels = (providerId: string, refresh = false) => {
+    const n = ++listRequest.current;
     if (!providerId) { setListed({ providerId: '', models: [], error: '', loading: false }); return; }
     setListed((l) => ({ providerId, models: l.providerId === providerId ? l.models : [], error: '', loading: true }));
     fetchProviderModels(providerId, refresh)
-      .then((r) => setListed((l) => (l.providerId === providerId ? { providerId, models: r.models, error: '', loading: false } : l)))
-      .catch((e) => setListed((l) => (l.providerId === providerId ? { providerId, models: [], error: e instanceof Error ? e.message : String(e), loading: false } : l)));
+      .then((r) => { if (n === listRequest.current) setListed({ providerId, models: r.models, error: '', loading: false }); })
+      .catch((e) => { if (n === listRequest.current) setListed({ providerId, models: [], error: e instanceof Error ? e.message : String(e), loading: false }); });
   };
+  // A provider connected meanwhile (Sign in with ChatGPT above) joins the list without a remount,
+  // so unsaved edits here survive.
+  useEffect(() => {
+    if (!providersRev) return;
+    let live = true;
+    fetchProviders().then((p) => { if (live) setProviders(p.providers.filter((row) => !row.isDefault)); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [providersRev]);
   const needsList = mode === 'cloud' || mode === 'hybrid';
   useEffect(() => { if (needsList) loadModels(cloud.providerId); }, [cloud.providerId, needsList]);
 
