@@ -774,6 +774,7 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.autotune.kvFallback': "Diese Engine unterstützt keinen bf16-KV-Cache, daher wurde stattdessen {kv} verwendet, ebenfalls in voller Genauigkeit.",
   'mm.autotune.reference.bf16': "bf16-KV-Cache ohne Drafting",
   'mm.autotune.allowQ5Failed': "Diese Einstellung konnte nicht gespeichert werden.",
+  'mm.autotune.allowQ5Locked': "Gesperrt, solange für dieses Modell ein Tuning unvollendet ist.",
   'mm.autotune.allowQ5Help': "Aus: Das Auto-Tuning behält einen bf16-Cache in voller Genauigkeit und geht nicht unter q8_0, das es nur nimmt, wenn es etwa den doppelten Kontext fasst. An: Für dieses Modell darf es auch q5 nehmen, ebenfalls nur, wenn sich der Kontext damit etwa verdoppelt. Gilt ab dem nächsten Tuning.",
   'mm.autotune.allowQ5': "q5-KV-Cache für mehr Kontext erlauben",
   'mm.autotune.reference.current': "seinen aktuellen Einstellungen ohne Drafting",

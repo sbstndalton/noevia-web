@@ -774,6 +774,7 @@ export const ES_ES_MODELS: ModelsCatalogue = {
   'mm.autotune.kvFallback': "Este motor no admite una caché KV bf16, así que se usó {kv}, también de precisión completa, en su lugar.",
   'mm.autotune.reference.bf16': "caché KV bf16 sin borrador",
   'mm.autotune.allowQ5Failed': "No se pudo guardar este ajuste.",
+  'mm.autotune.allowQ5Locked': "Bloqueado mientras este modelo tenga un ajuste sin terminar.",
   'mm.autotune.allowQ5Help': "Desactivado: el ajuste automático mantiene una caché bf16 de precisión completa y no baja de q8_0, que solo elige si cabe aproximadamente el doble de contexto. Activado: también puede usar q5 en este modelo, de nuevo solo si eso duplica aproximadamente el contexto. Se aplica desde el próximo ajuste.",
   'mm.autotune.allowQ5': "Permitir caché KV q5 para más contexto",
   'mm.autotune.reference.current': "su configuración actual sin borrador",

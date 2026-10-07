@@ -774,6 +774,7 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.autotune.kvFallback': "Den här motorn stöder inte en bf16-KV-cache, så {kv}, också med full precision, användes i stället.",
   'mm.autotune.reference.bf16': "bf16-KV-cache utan utkast",
   'mm.autotune.allowQ5Failed': "Det gick inte att spara inställningen.",
+  'mm.autotune.allowQ5Locked': "Låst så länge den här modellen har en oavslutad justering.",
   'mm.autotune.allowQ5Help': "Av: autojusteringen behåller en bf16-cache med full precision och går inte under q8_0, som den bara väljer när det rymmer ungefär dubbelt så mycket kontext. På: den får även använda q5 för den här modellen, även då bara när det ungefär fördubblar kontexten. Gäller från nästa justering.",
   'mm.autotune.allowQ5': "Tillåt q5-KV-cache för mer kontext",
   'mm.autotune.reference.current': "dess nuvarande inställningar utan utkast",

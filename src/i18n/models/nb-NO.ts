@@ -774,6 +774,7 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.autotune.kvFallback': "Denne motoren støtter ikke en bf16-KV-buffer, så {kv}, også med full presisjon, ble brukt i stedet.",
   'mm.autotune.reference.bf16': "bf16-KV-buffer uten utkast",
   'mm.autotune.allowQ5Failed': "Kunne ikke lagre denne innstillingen.",
+  'mm.autotune.allowQ5Locked': "Låst så lenge denne modellen har en uferdig justering.",
   'mm.autotune.allowQ5Help': "Av: autojusteringen beholder en bf16-buffer med full presisjon og går ikke under q8_0, som den bare velger når det gir plass til omtrent dobbelt så mye kontekst. På: den kan også bruke q5 for denne modellen, også da bare når det omtrent dobler konteksten. Gjelder fra neste justering.",
   'mm.autotune.allowQ5': "Tillat q5-KV-buffer for mer kontekst",
   'mm.autotune.reference.current': "de gjeldende innstillingene uten utkast",

@@ -774,6 +774,7 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.autotune.kvFallback': "Ce moteur ne prend pas en charge un cache KV bf16 : {kv}, lui aussi en pleine précision, a été utilisé à la place.",
   'mm.autotune.reference.bf16': "cache KV bf16 sans brouillon",
   'mm.autotune.allowQ5Failed': "Impossible d’enregistrer ce réglage.",
+  'mm.autotune.allowQ5Locked': "Verrouillé tant que ce modèle a un réglage inachevé.",
   'mm.autotune.allowQ5Help': "Désactivé : le réglage auto garde un cache bf16 en pleine précision et ne descend pas sous q8_0, qu’il ne prend que s’il tient environ deux fois plus de contexte. Activé : il peut aussi utiliser q5 pour ce modèle, là encore seulement si cela double à peu près le contexte. S’applique au prochain réglage.",
   'mm.autotune.allowQ5': "Autoriser un cache KV q5 pour plus de contexte",
   'mm.autotune.reference.current': "ses réglages actuels sans brouillon",

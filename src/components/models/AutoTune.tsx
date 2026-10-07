@@ -81,13 +81,15 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   const refresh = useCallback(async (notify = false) => {
     if (mutating.current) return;
     const current = ++request.current;
+    // #1061: a poll sent before a save answers from before it; only its settings are dropped.
+    const settingsAt = settingsRequest.current;
     try {
       const r = await apiFetch('/api/models/autotune?model=' + encodeURIComponent(model)), v = await r.json();
       if (current !== request.current) return;
       if (!r.ok) throw Error(v.error || tRef.current('mm.autotune.statusUnavailable'));
       const next = (v.job || null) as Job | null;
       setJob(next); setHistory(Array.isArray(v.history) ? v.history : []); setStatusError('');
-      if (model && !savingRef.current) setTuneSettings(settingsFrom(v.settings));
+      if (model && !savingRef.current && settingsAt === settingsRequest.current) setTuneSettings(settingsFrom(v.settings));
       if (notify && next && next.status !== 'running' && done.current !== next.id) {
         done.current = next.id; changed.current(); void refreshScan();
       }
@@ -127,8 +129,6 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   // Saves the switch and shows what the server saved; a failure leaves the saved state showing.
   const saveSettings = async (allowQ5Kv: boolean) => {
     const current = ++settingsRequest.current;
-    // #1061: a status poll already in flight answers from before the save; drop its reply.
-    ++request.current;
     savingRef.current = true; setSavingSettings(true); setSettingsError('');
     try {
       const r = await apiFetch('/api/models/autotune/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, allowQ5Kv }) });
@@ -146,11 +146,13 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   const progress = appliedSettings(shownModels);
   const resumable = !!mine?.models && ['cancelled', 'interrupted', 'failed'].includes(mine.status)
     && (!installedNames || mine.models.some(item => installedNames.includes(item.model)));
-  const ownRun = running && !!model && (job?.models?.some(item => item.model === model && item.status === 'running') ?? job?.model === model);
+  // #1060: as the server does, locked while this model is in a running or resumable job.
+  const ownRun = !!model && !!job && (running || ['cancelled', 'interrupted', 'failed'].includes(job.status))
+    && (job.models ? job.models.some(item => item.model === model && item.status !== 'passed') : job.model === model);
   const options = !!model && tuneSettings && <div className="mm-autotune-option">
     <div className="mm-autotune-option-text">
       <span className="mm-autotune-option-label">{t('mm.autotune.allowQ5')}</span>
-      <small>{t('mm.autotune.allowQ5Help')}</small>
+      <small>{t('mm.autotune.allowQ5Help')}{ownRun ? ' ' + t('mm.autotune.allowQ5Locked') : ''}</small>
     </div>
     <Switch label={t('mm.autotune.allowQ5')} checked={tuneSettings.allowQ5Kv} disabled={savingSettings || ownRun} onChange={(on) => void saveSettings(on)}/>
     {settingsError && <p role="alert" className="modal-err">{settingsError}</p>}

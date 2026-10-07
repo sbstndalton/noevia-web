@@ -795,6 +795,7 @@ export const EN_GB_MODELS = {
   'mm.autotune.kvFallback': 'This engine does not support a bf16 KV cache, so {kv}, also full precision, was used instead.',
   'mm.autotune.reference.bf16': 'bf16 KV cache with drafting off',
   'mm.autotune.allowQ5Failed': 'Could not save this setting.',
+  'mm.autotune.allowQ5Locked': 'Locked while this model has an unfinished tune.',
   'mm.autotune.allowQ5Help': 'Off: auto-tune keeps a full-precision bf16 cache and goes no lower than q8_0, which it takes only when that fits about twice the context. On: it may also use q5 for this model, again only when that about doubles the context. Applies from the next tune.',
   'mm.autotune.allowQ5': 'Allow q5 KV cache for more context',
   'mm.autotune.reference.current': 'its current settings with drafting off',

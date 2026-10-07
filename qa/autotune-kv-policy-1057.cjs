@@ -3,7 +3,8 @@
 // POST /api/models/autotune/settings and shows the server's answer, a failed save reported and not
 // faked), that the floor note names q8_0 and the types this server tries for the model, that a
 // bf16 quality baseline is named, and that a run where the engine rejected bf16 says f16 stood in.
-// Synthetic fixtures only; no tune is ever started (a start or resume POST fails the run).
+// Last, a start whose reply is slow while the switch is saved: the start must still land (busy
+// clears, the running job shows). Synthetic fixtures only; that start is answered by the mock.
 // QA_DIST serves a build elsewhere; QA_SCREENSHOTS is the screenshot directory.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { openSettings, openModelsTab } = require('./nav.cjs');
@@ -46,19 +47,27 @@ const candidates = allow => ['bf16', 'q8_0', ...(allow ? ['q5_1', 'q5_0'] : [])]
       const page = await browser.newPage({ viewport: { width, height: 900 } });
       await page.emulateMedia({ reducedMotion: 'reduce' });
       const errors = [], posts = [], saves = [];
-      let allow = false, failNextSave = false;
+      let allow = false, failNextSave = false, started = false;
+      const running = { ...job, status: 'running', phase: 'Synthetic tuning phase', finishedAt: undefined,
+        models: [{ ...job.models[0], status: 'pending', result: undefined }] };
       page.on('pageerror', e => errors.push(e.message));
       await page.route('**/api/**', async route => {
         const req = route.request(), p = new URL(req.url()).pathname;
         const json = (body, status = 200) => route.fulfill({ json: body, status });
         if (req.method() !== 'GET') posts.push(req.method() + ' ' + p);
-        const status = () => ({ job, history: [{ at: 1791360900000, ...job.models[0].result }], kvCandidates: candidates(allow), settings: { allowQ5Kv: allow }, planImpl: 'wasm', loadAdvisor: 'off' });
+        const status = () => ({ job: started ? running : job, history: [{ at: 1791360900000, ...job.models[0].result }], kvCandidates: candidates(allow), settings: { allowQ5Kv: allow }, planImpl: 'wasm', loadAdvisor: 'off' });
         if (p === '/api/models/autotune/settings' && req.method() === 'POST') {
           const body = req.postDataJSON();
           saves.push(body);
           if (failNextSave) { failNextSave = false; return json({ error: 'Synthetic save failure.' }, 500); }
           allow = body.allowQ5Kv === true;
           return json(status());
+        }
+        if (p === '/api/models/autotune' && req.method() === 'POST') {
+          // A slow start reply, so a switch save lands in between.
+          await new Promise(r => setTimeout(r, 1500));
+          started = true;
+          return json(running, 202);
         }
         if (p === '/api/profile' || p === '/api/auth/session') return json({ user: { id: 'qa', username: 'admin', displayName: 'Synthetic admin', role: 'admin', diaryEnabled: false, onboarded: true }, passkeys: [] });
         if (p === '/api/models/capabilities') return json({ kind: 'llamacpp', admin: true, autotune: true, presets: true });
@@ -145,7 +154,29 @@ const candidates = allow => ['bf16', 'q8_0', ...(allow ? ['q5_1', 'q5_0'] : [])]
           assert.match(text, /bf16 and q8_0/, 'does not list the tried candidates: ' + text);
           assert.doesNotMatch(text, /Q5 floor/, 'still describes the old Q5 floor: ' + text);
         });
-        await check('no tune starts', async () => { assert.deepEqual(posts.filter(x => /\/api\/models\/autotune(\/resume)?$/.test(x)), []); });
+        await check('no tune started before this point', async () => { assert.deepEqual(posts.filter(x => /\/api\/models\/autotune(\/resume)?$/.test(x)), []); });
+        await check('a switch save during a slow start does not freeze the panel', async () => {
+          const confirm = panel.locator('.mm-autotune-actions input[type="checkbox"]').first();
+          await confirm.evaluate(el => el.scrollIntoView({ block: 'center' }));
+          // The switch's hit area must stay on the switch: nothing else in the panel may be covered.
+          const covered = await confirm.evaluate(el => { const r = el.getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('.glass-switch') != null; });
+          assert.equal(covered, false, 'the switch hit area covers the confirm checkbox');
+          await confirm.check();
+          const apply = panel.getByRole('button', { name: 'Auto-tune and apply' });
+          await apply.evaluate(el => el.scrollIntoView({ block: 'center' }));
+          await apply.click();
+          await panel.getByRole('button', { name: 'Starting…' }).waitFor({ timeout: 3000 }).catch(() => {});
+          await toggle.evaluate(el => el.scrollIntoView({ block: 'center' }));
+          await toggle.click();
+          await page.waitForFunction(() => document.querySelector('.mm-easy-autotune [role="switch"]')?.getAttribute('aria-checked') === 'true', null, { timeout: 3000 });
+          assert.ok(!started, 'the switch was saved after the start had already answered');
+          await panel.getByText('Synthetic tuning phase').waitFor({ timeout: 5000 });
+          const cancel = panel.getByRole('button', { name: 'Cancel auto-tune' });
+          await cancel.waitFor({ timeout: 3000 });
+          assert.ok(await cancel.isEnabled(), 'the panel stayed busy after the start answered');
+          assert.equal(await toggle.isDisabled(), true, 'the switch is locked while this model tunes');
+        });
+        await panel.screenshot({ path: `${OUT}/autotune-kv-policy-1057-running-${width}.png` });
         await check('no page errors', async () => { assert.deepEqual(errors, []); });
         if (problems.length) throw Error(problems.length + ' problem(s):\n  ' + problems.join('\n  '));
         console.log(`PASS ${width}px`);

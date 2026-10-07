@@ -774,6 +774,7 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.autotune.kvFallback': "Deze engine ondersteunt geen bf16-KV-cache, dus is {kv} gebruikt, ook met volledige precisie.",
   'mm.autotune.reference.bf16': "bf16-KV-cache zonder drafting",
   'mm.autotune.allowQ5Failed': "Deze instelling kon niet worden opgeslagen.",
+  'mm.autotune.allowQ5Locked': "Vergrendeld zolang dit model een onafgemaakte afstemming heeft.",
   'mm.autotune.allowQ5Help': "Uit: automatisch afstemmen houdt een bf16-cache met volledige precisie en gaat niet lager dan q8_0, dat het alleen kiest als er dan ongeveer twee keer zoveel context past. Aan: voor dit model mag het ook q5 gebruiken, ook dan alleen als de context daarmee ongeveer verdubbelt. Geldt vanaf de volgende afstemming.",
   'mm.autotune.allowQ5': "q5-KV-cache toestaan voor meer context",
   'mm.autotune.reference.current': "de huidige instellingen zonder drafting",

@@ -774,6 +774,7 @@ export const PT_BR_MODELS: ModelsCatalogue = {
   'mm.autotune.kvFallback': "Este motor não oferece suporte a cache KV bf16, então {kv}, também de precisão total, foi usado no lugar.",
   'mm.autotune.reference.bf16': "cache KV bf16 sem rascunho",
   'mm.autotune.allowQ5Failed': "Não foi possível salvar esta configuração.",
+  'mm.autotune.allowQ5Locked': "Bloqueado enquanto este modelo tiver um ajuste não concluído.",
   'mm.autotune.allowQ5Help': "Desativado: o ajuste automático mantém um cache bf16 de precisão total e não desce abaixo de q8_0, que só escolhe quando cabe cerca do dobro do contexto. Ativado: ele também pode usar q5 neste modelo, de novo só quando isso dobra aproximadamente o contexto. Vale a partir do próximo ajuste.",
   'mm.autotune.allowQ5': "Permitir cache KV q5 para mais contexto",
   'mm.autotune.reference.current': "as configurações atuais sem rascunho",
