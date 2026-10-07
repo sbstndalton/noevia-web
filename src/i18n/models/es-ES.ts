@@ -182,6 +182,8 @@ export const ES_ES_MODELS: ModelsCatalogue = {
   'mm.library.nothing': "No hay coincidencias. Borra la búsqueda o elige Todos los modelos.",
   'mm.library.orphans': "Archivos sin entrada de modelo",
   'mm.library.orphansNote': "Estos archivos están en la carpeta de modelos, pero ninguna configuración apunta a ellos, así que el motor aún no puede servirlos.",
+  'mm.library.orphanSaved': "Guardado; el motor lo ofrecerá tras su próxima recarga.",
+  'mm.library.orphanApply': "Aplicar ahora",
   'mm.library.unconfigured': "Archivos sin configurar: {files}",
   'mm.card.failed': "Error al cargar",
   'mm.card.unloaded': "Descargado de memoria",

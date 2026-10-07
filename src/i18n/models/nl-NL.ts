@@ -182,6 +182,8 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.library.nothing': "Niets gevonden. Wis de zoekopdracht of kies Alle modellen.",
   'mm.library.orphans': "Bestanden zonder modelitem",
   'mm.library.orphansNote': "Deze bestanden staan in de modelmap, maar er verwijzen geen instellingen naar, dus de engine kan ze nog niet aanbieden.",
+  'mm.library.orphanSaved': "Opgeslagen; de engine biedt het aan na de volgende herlaadbeurt.",
+  'mm.library.orphanApply': "Nu toepassen",
   'mm.library.unconfigured': "Niet-ingestelde bestanden: {files}",
   'mm.card.failed': "Laden mislukt",
   'mm.card.unloaded': "Niet geladen",
