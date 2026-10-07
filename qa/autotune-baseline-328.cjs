@@ -1,7 +1,7 @@
 // #328: the Tune panel after a run shaped like the 2026-09-30 E2B auto-tune (job bb20d010,
 // structure only; synthetic model name and values). Checks that an optional step which did not
 // apply reads "not applied" (never "passed" with an empty "Saved:"), that progress counts only
-// applied settings, that the Q5-floor note names the candidates the server actually tries, that
+// applied settings, that the KV floor note names the candidates the server actually tries, that
 // the failure note has no doubled full stop, that the model picker lists each model once, and
 // that a probe the model fails at its reference settings is shown as skipped.
 // Synthetic fixtures only; no tune is ever started (any POST fails the run).
@@ -116,8 +116,9 @@ const schema = [{ tier: 'Common', open: true, fields: [{ key: 'ctx-size', label:
         await check('(b) failure note', async () => {
           assert.doesNotMatch(guided, /\.\./, 'doubled full stop: ' + (guided.match(/[^\n]*\.\.[^\n]*/) || [''])[0]);
         });
-        await check('(d) Q5-floor note', async () => {
-          const floor = (await page.locator('.mm-guided [role="note"]').filter({ hasText: 'Q5 floor' }).innerText()).replace(/\s+/g, ' ');
+        // #1057: the floor is q8_0 now; the note still names exactly the list the server sends.
+        await check('(d) KV floor note', async () => {
+          const floor = (await page.locator('.mm-guided [role="note"]').filter({ hasText: 'never goes below q8_0' }).innerText()).replace(/\s+/g, ' ');
           assert.match(floor, /f16, q8_0, q5_1,? and q5_0/, 'does not list the tried candidates: ' + floor);
           assert.doesNotMatch(floor, /q4_0/, 'claims q4_0: ' + floor);
         });

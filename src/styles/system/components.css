@@ -81,6 +81,9 @@ a { text-underline-offset: .18em; }
 
 /* ── Switch: 36×20 track, knob slides 16px on a 120ms overshoot ────────────── */
 :root .glass-switch {
+  /* The hit area below and the knob are placed against the switch itself, never an ancestor
+     (#1057: on the Tune panel the hit area otherwise covered the panel's own controls). */
+  position: relative;
   width: 36px; height: 20px; min-height: 20px; padding: 2px; border-radius: var(--radius-pill); background: var(--fill-active); box-shadow: none;
   transition: background-color var(--dur-snap) var(--ease-out-quart);
 }

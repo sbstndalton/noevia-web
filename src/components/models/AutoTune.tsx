@@ -8,11 +8,14 @@ import { appLocale } from '../../user-preferences';
 import { num, pct } from './mm';
 import { probeName, specLabel, stuckStatus } from './mm-text';
 import { appliedSettings, phaseState } from './guided';
+import { Switch } from '../Switch';
 
 type Step = { id: string; label: string; status: string; reason?: string; generation?: number; promptPerSecond?: number; ctx?: number };
 type Extension = { id: string; action: string; why: string; from?: number; to?: number };
 type Result = { spec: string; specLabel: string; generation: number; ubatch: number | null; promptPerSecond: number | null;
-  extensions: Extension[]; loaded?: boolean; kv?: string; context?: number; acceptance?: number | null };
+  extensions: Extension[]; loaded?: boolean; kv?: string; context?: number; acceptance?: number | null;
+  /** #1057: the engine rejected bf16, so f16 stood in. */
+  kvFallback?: { from: string; to: string; at?: number } };
 type TunePhase = { id: string; label: string; status: string; steps: Step[]; value?: Record<string, unknown>; reason?: string };
 type Baseline = { reference: string; probes: string[]; skipped: { id: string; reason?: string; answer?: string }[] };
 type TuneModel = { model: string; status: string; phases: TunePhase[]; result?: Result & { baseline?: Baseline }; error?: string; baseline?: Baseline };
@@ -31,7 +34,11 @@ const savedSummary = (t: Translate, value: Record<string, unknown>) => value.app
 
 const PHASE_STATE: Record<string, MessageKey> = { 'not-applied': 'mm.autotune.notApplied', skipped: 'mm.autotune.skippedStep' };
 const phaseText = (t: Translate, state: string) => (PHASE_STATE[state] ? t(PHASE_STATE[state]) : stuckStatus(t, state));
-const REFERENCE: Record<string, MessageKey> = { f16: 'mm.autotune.reference.f16', current: 'mm.autotune.reference.current' };
+const REFERENCE: Record<string, MessageKey> = { f16: 'mm.autotune.reference.f16', bf16: 'mm.autotune.reference.bf16', current: 'mm.autotune.reference.current' };
+/** #1057: the model's own tune settings as the server reports them; null when it has none. */
+type TuneSettings = { allowQ5Kv: boolean };
+const settingsFrom = (raw: unknown): TuneSettings | null =>
+  raw && typeof raw === 'object' && typeof (raw as TuneSettings).allowQ5Kv === 'boolean' ? { allowQ5Kv: (raw as TuneSettings).allowQ5Kv } : null;
 /** #328: which probes this model's own baseline made count, and which it made moot. */
 function BaselineNote({ baseline }: { baseline: Baseline }): JSX.Element {
   const t = useT();
@@ -53,6 +60,10 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   const done = useRef(''), request = useRef(0), scanRequest = useRef(0), mutating = useRef(false);
   const changed = useRef(onChanged); changed.current = onChanged;
   const [statusError, setStatusError] = useState('');
+  // #1057: "Allow q5 KV cache for more context", per model; shown only when the server has it.
+  const [tuneSettings, setTuneSettings] = useState<TuneSettings | null>(null), [savingSettings, setSavingSettings] = useState(false), [settingsError, setSettingsError] = useState('');
+  // A save in flight wins over the status poll; the counter drops replies from an earlier model.
+  const settingsRequest = useRef(0), savingRef = useRef(false);
   // #551: served model names, or null when unknown. A run whose models are all uninstalled is history.
   const [installedNames, setInstalledNames] = useState<string[] | null>(null);
   const refreshScan = useCallback(async () => {
@@ -70,12 +81,15 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   const refresh = useCallback(async (notify = false) => {
     if (mutating.current) return;
     const current = ++request.current;
+    // #1061: a poll sent before a save answers from before it; only its settings are dropped.
+    const settingsAt = settingsRequest.current;
     try {
       const r = await apiFetch('/api/models/autotune?model=' + encodeURIComponent(model)), v = await r.json();
       if (current !== request.current) return;
       if (!r.ok) throw Error(v.error || tRef.current('mm.autotune.statusUnavailable'));
       const next = (v.job || null) as Job | null;
       setJob(next); setHistory(Array.isArray(v.history) ? v.history : []); setStatusError('');
+      if (model && !savingRef.current && settingsAt === settingsRequest.current) setTuneSettings(settingsFrom(v.settings));
       if (notify && next && next.status !== 'running' && done.current !== next.id) {
         done.current = next.id; changed.current(); void refreshScan();
       }
@@ -86,10 +100,11 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   useEffect(() => {
     done.current = ''; mutating.current = false;
     setJob(null); setHistory([]); setScan(null); setConfirmed(false); setBusy(false); setError(''); setStatusError('');
+    setTuneSettings(null); setSavingSettings(false); setSettingsError(''); savingRef.current = false;
     void refresh(); void refreshScan();
     let live = true;
     fetchInstalledModels().then((v) => { if (live) setInstalledNames(v.map((m) => m.name)); }).catch(() => { if (live) setInstalledNames(null); });
-    return () => { live = false; ++request.current; ++scanRequest.current; };
+    return () => { live = false; ++request.current; ++scanRequest.current; ++settingsRequest.current; savingRef.current = false; };
   }, [model, refresh, refreshScan]);
   const system = !!model && isSystemModel(model);
   const running = job?.status === 'running';
@@ -111,6 +126,19 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
     } catch (e) { if (current === request.current) setError(e instanceof Error ? e.message : t('mm.autotune.requestFailed')); }
     finally { if (current === request.current) { mutating.current = false; setBusy(false); } }
   };
+  // Saves the switch and shows what the server saved; a failure leaves the saved state showing.
+  const saveSettings = async (allowQ5Kv: boolean) => {
+    const current = ++settingsRequest.current;
+    savingRef.current = true; setSavingSettings(true); setSettingsError('');
+    try {
+      const r = await apiFetch('/api/models/autotune/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, allowQ5Kv }) });
+      const v = await r.json().catch(() => ({}));
+      if (current !== settingsRequest.current) return;
+      if (!r.ok) throw Error(v.error || t('mm.autotune.allowQ5Failed'));
+      setTuneSettings(settingsFrom(v.settings));
+    } catch (e) { if (current === settingsRequest.current) setSettingsError(e instanceof Error ? e.message : t('mm.autotune.allowQ5Failed')); }
+    finally { if (current === settingsRequest.current) { savingRef.current = false; setSavingSettings(false); } }
+  };
   const mine = job && (!model || (job.models?.some(item => item.model === model) ?? job.model === model)) ? job : null;
   const other = model && job && !(job.models?.some(item => item.model === model) ?? job.model === model) && running;
   const shownModels = (mine?.models || []).filter(item => !model || item.model === model);
@@ -118,6 +146,17 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   const progress = appliedSettings(shownModels);
   const resumable = !!mine?.models && ['cancelled', 'interrupted', 'failed'].includes(mine.status)
     && (!installedNames || mine.models.some(item => installedNames.includes(item.model)));
+  // #1060: as the server does, locked while this model is in a running or resumable job.
+  const ownRun = !!model && !!job && (running || ['cancelled', 'interrupted', 'failed'].includes(job.status))
+    && (job.models ? job.models.some(item => item.model === model && item.status !== 'passed') : job.model === model);
+  const options = !!model && tuneSettings && <div className="mm-autotune-option">
+    <div className="mm-autotune-option-text">
+      <span className="mm-autotune-option-label">{t('mm.autotune.allowQ5')}</span>
+      <small>{t('mm.autotune.allowQ5Help')}{ownRun ? ' ' + t('mm.autotune.allowQ5Locked') : ''}</small>
+    </div>
+    <Switch label={t('mm.autotune.allowQ5')} checked={tuneSettings.allowQ5Kv} disabled={savingSettings || ownRun} onChange={(on) => void saveSettings(on)}/>
+    {settingsError && <p role="alert" className="modal-err">{settingsError}</p>}
+  </div>;
   const actions = !running && <div className="mm-autotune-actions">
     <label className="mm-check"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />{t('mm.autotune.confirm')}</label>
     <div className="mm-actions">
@@ -127,6 +166,7 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   </div>;
   if (system) return <p className="mm-note" role="status">{t('model.systemLabel')}{t('mm.autotune.systemNote')}</p>;
   return <div className="mm-autotune">
+    {options}
     {!model && scan && !running && <p className="mm-note" role="status">{scan.models.length ? t.plural('mm.autotune.needList', scan.models.length, { models: scan.models.join(', ') }) : t('mm.autotune.needNone', { count: 0 })} {t('mm.autotune.skipped', { count: scan.skipped.length })}</p>}
     {last && !running && <p className="mm-note" role="status">{t('mm.autotune.lastBefore', { date: new Date(last.at).toLocaleString(appLocale()) })}<strong>{specLabel(t, last.spec, last.specLabel)}</strong>{', ' + [t('mm.tokensPerSecond', { rate: num(last.generation) }), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv }), t('mm.tune.context', { tokens: last.context != null ? num(last.context, 0) : '' })] : []), ...(last.ubatch ? [t('mm.autotune.ubatch', { size: last.ubatch })] : [])].join(', ')}.</p>}
     {mine && <div>
@@ -169,6 +209,7 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
           <p>{t('mm.autotune.savedBefore')}<strong>{specLabel(t, item.result.spec, item.result.specLabel)}</strong>{t('mm.autotune.savedAt', { rate: num(item.result.generation) })}{item.result.ubatch ? ', ' + t('mm.autotune.ubatch', { size: item.result.ubatch }) + ' (' + t('mm.autotune.promptRate', { rate: item.result.promptPerSecond ?? '' }) + ')' : ''}.</p>
           <p className="mm-note">{t(item.result.baseline?.skipped.length ? 'mm.autotune.resultNoteSkipped' : 'mm.autotune.resultNote', { kv: item.result.kv ?? '', tokens: item.result.context != null ? num(item.result.context, 0) : '', acceptance: item.result.acceptance == null ? t('mm.autotune.notApplicable') : pct(item.result.acceptance),
             probes: (item.result.baseline?.skipped || []).map(s => probeName(t, s.id)).join(', ') })}</p>
+          {item.result.kvFallback?.from === 'bf16' && <p className="mm-note">{t('mm.autotune.kvFallback', { kv: item.result.kvFallback.to })}</p>}
         </div></div>}
       </details>)}</div>
     </div>}
