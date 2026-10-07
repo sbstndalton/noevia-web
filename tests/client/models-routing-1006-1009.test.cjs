@@ -19,7 +19,7 @@ function load(name, requireMap = {}) {
 }
 
 test('#1008: four sections, and every one of the eight old tabs maps into one of them', () => {
-  const m = load('models-sections.ts');
+  const m = load('components/models/sections.ts');
   assert.deepEqual(JSON.parse(JSON.stringify(m.MODEL_SECTIONS.map(([id]) => id))), ['models', 'routing', 'performance', 'advanced']);
   const old = ['overview', 'yours', 'discover', 'routing', 'projects', 'hardware', 'benchmarks', 'prompts'];
   assert.deepEqual(JSON.parse(JSON.stringify(Object.keys(m.LEGACY_TABS).sort())), [...old].sort());

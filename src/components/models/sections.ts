@@ -1,6 +1,6 @@
 // #1008: Settings → Models & routing has four sections instead of eight tabs. Pure, so the old →
 // new map is unit-tested (tests/client/models-sections-1008.test.cjs) without mounting React.
-import type { MessageKey } from './i18n';
+import type { MessageKey } from '../../i18n';
 
 export type Tab = 'models' | 'routing' | 'performance' | 'advanced';
 /** The eight tabs before #1008. */

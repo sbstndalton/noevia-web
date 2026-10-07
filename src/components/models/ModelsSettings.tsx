@@ -29,9 +29,9 @@ export type { RoutingViewState } from '../../routing-view-state';
 
 export type ModelSort = 'name' | 'size' | 'modified';
 export type ModelFilter = 'all' | 'loaded' | 'vision' | 'unconfigured';
-import { LEGACY_TABS, MODEL_SECTIONS as TABS, savedSection } from '../../models-sections';
-import type { LegacyTab, Panel, Tab } from '../../models-sections';
-export type { Tab } from '../../models-sections';
+import { LEGACY_TABS, MODEL_SECTIONS as TABS, savedSection } from './sections';
+import type { LegacyTab, Panel, Tab } from './sections';
+export type { Tab } from './sections';
 const TAB_KEY = 'noevia-models-tab';
 const LIST_KEY = 'noevia-models-list';
 
