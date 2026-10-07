@@ -143,6 +143,10 @@
    sets, same pattern as noevia.css's own :root[data-layout="mobile"] rules for the legacy
    .settings-shell, so the forced preview matches a real narrow viewport. */
 :root[data-layout="mobile"] .settings-stage { grid-template-columns: 1fr; border-radius: 0; }
+/* #961: the forced phone layout gets the phone sheet, not the desktop window that
+   components.css's (min-width: 701px) block makes of the stage: fill the phone frame, no scrim. */
+:root[data-layout="mobile"] .settings-stage { position: absolute; inset: 0; z-index: 40; margin: 0; width: auto; height: auto; background: var(--bg-app); box-shadow: none; }
+:root[data-layout="mobile"] .settings-scrim { display: none; }
 :root[data-layout="mobile"] .settings-stage[data-view='list'] .settings-detail,
 :root[data-layout="mobile"] .settings-stage[data-view='detail'] .settings-navigation { display: none; }
 :root[data-layout="mobile"] .settings-stage .settings-navigation { border-right: 0; padding: calc(env(safe-area-inset-top) + var(--space-1)) var(--space-3) var(--space-4); }
