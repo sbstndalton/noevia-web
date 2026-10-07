@@ -8,6 +8,7 @@
 const os = require('node:os');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || `${os.homedir()}/noevia-local-test/node_modules/playwright-core`);
 const assert = require('node:assert/strict');
+const { openModelsTab } = require('./nav.cjs');
 const { createFixture } = require('./diary-fixture.cjs');
 
 const PORT = Number(process.env.QA_PORT || 31600);
@@ -116,7 +117,7 @@ const PORT = Number(process.env.QA_PORT || 31600);
     await dialog.waitFor();
 
     await check('#603 a stopped engine reads "Gestoppt" where its uptime would be, and a running one keeps its uptime', async () => {
-      await dialog.getByRole('tab', { name: 'Hardware', exact: true }).click();
+      await openModelsTab(dialog, 'Hardware');
       const stopped = dialog.locator('.mm-note', { hasText: 'synthetic-stopped' }).first();
       await stopped.waitFor();
       const stoppedText = (await stopped.innerText()).replace(/\s+/g, ' ');

@@ -7,7 +7,7 @@
 //  - a plain model that really is a download-cache model keeps the cache line.
 // Fails against the pre-fix UI (fromCache always shown, EvidenceList unconditional).
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const { openSettings } = require('./nav.cjs');
+const {openSettings, openModelsTab } = require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
@@ -58,7 +58,7 @@ const { withLocale } = require('./qa-locale.cjs');
     await settings.getByRole('button', { name: 'Open model manager' }).click();
     const manager = page.locator('.model-manager-page');
     await manager.waitFor();
-    await manager.getByRole('tab', { name: 'Your models', exact: true }).click();
+    await openModelsTab(manager, 'Your models');
     const card = (name) => manager.getByRole('article', { name });
 
     const laya = card('laya_multilingual_f16');

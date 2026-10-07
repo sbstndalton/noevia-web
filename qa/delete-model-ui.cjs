@@ -2,7 +2,7 @@
 // reload), fire noevia:models-changed, and — when the server reports a cleared auto-role —
 // show a short status line naming it. Synthetic model-manager and engine APIs only.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const {openSettings}=require('./nav.cjs');
+const {openSettings, openModelsTab } = require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
@@ -73,7 +73,7 @@ require('node:fs').mkdirSync(shots, { recursive: true });
     await settings.getByRole('button', { name: 'Open model manager' }).click();
     const dialog = page.locator('.model-manager-page');
     await dialog.waitFor();
-    await dialog.getByRole('tab', { name: 'Your models', exact: true }).click();
+    await openModelsTab(dialog, 'Your models');
     await dialog.getByRole('article', { name: 'Fast-Model' }).waitFor();
     await dialog.getByRole('article', { name: 'Smart-Model' }).waitFor();
 

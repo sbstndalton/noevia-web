@@ -27,3 +27,21 @@ async function openSettings(page) {
   await page.locator('.account-popover').getByRole('menuitem', { name: 'Settings', exact: true }).click();
 }
 module.exports = { navClick, openSettings };
+
+// #1008: Models & routing has four sections; the eight old tab names map onto them. Opens the
+// section and, for a panel inside one, opens that panel (or switches Installed/Discover).
+const MODELS_TABS = {
+  'Your models': ['Models', null, 'Installed'], Discover: ['Models', null, 'Discover'], Routing: ['Routing'],
+  Overview: ['Performance', 'status'], Hardware: ['Performance', 'hardware'], Benchmarks: ['Performance', 'benchmarks'],
+  Projects: ['Advanced', 'projects'], Prompts: ['Advanced', 'prompts'],
+};
+async function openModelsTab(root, old) {
+  const [section, panel, list] = MODELS_TABS[old] || [old];
+  await root.getByRole('tab', { name: section, exact: true }).click();
+  if (list) await root.getByRole('radio', { name: list, exact: true }).click();
+  if (panel) {
+    const fold = root.locator(`details[data-panel="${panel}"]`);
+    if (!(await fold.evaluate((d) => d.open))) await fold.locator('summary').first().click();
+  }
+}
+module.exports.openModelsTab = openModelsTab;

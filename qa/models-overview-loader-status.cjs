@@ -2,6 +2,7 @@
 // No real model, inference, or settings endpoint is contacted.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/Users/sebastiandalton/noevia-local-test/node_modules/playwright-core');
 const assert = require('node:assert/strict');
+const { openModelsTab } = require('./nav.cjs');
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
 const path = require('node:path');
@@ -35,7 +36,7 @@ async function check(browser, width, theme, result) {
   try {
     await page.goto(`http://localhost:${PORT}/models`);
     await page.evaluate(selected => document.documentElement.setAttribute('data-theme', selected), theme);
-    await page.getByRole('tab', { name: 'Overview' }).click();
+    await openModelsTab(page, 'Overview');
     await requestStarted;
     const state = page.locator('.mm-loader-state');
     await state.waitFor();

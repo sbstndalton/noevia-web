@@ -15,6 +15,7 @@ const os = require('node:os');
 const fs = require('node:fs');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || `${os.homedir()}/noevia-local-test/node_modules/playwright-core`);
 const assert = require('node:assert/strict');
+const { openModelsTab } = require('./nav.cjs');
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
 
@@ -146,7 +147,7 @@ async function openModelDialog(page) {
       assert.deepEqual(blockers, [], 'nothing inert or modal left over the page');
       await page.goto(`http://localhost:${PORT}/models`);
       const root = page.locator('.model-manager-page');
-      await root.getByRole('tab', { name: 'Routing', exact: true }).click();
+      await openModelsTab(root, 'Routing');
       assert.equal(await root.getByRole('tab', { name: 'Routing', exact: true }).getAttribute('aria-selected'), 'true');
       await page.close();
     });

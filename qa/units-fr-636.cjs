@@ -139,6 +139,8 @@ const LOCALES = {
         await check(`#636 the Tune page pre-flight is ${locale} (${tag})`, async () => {
           const fit = manager.locator('.mm-fit');
           await fit.waitFor({ timeout: 20000 });
+          // #1008: the guided steps are a collapsed panel that mounts its steps once opened.
+          await page.locator('details.mm-guided').first().evaluate((d) => { d.open = true; });
           const text = flat(await manager.locator('.mm-guided').first().innerText());
           assert.match(text, sz('14', l.binary), `budget in ${l.binary}: ${text.slice(0, 500)}`);
           assert.match(text, new RegExp(`${t('mm.fit.memory').replace(/[()]/g, '\\$&')}`), 'the memory field label');

@@ -159,15 +159,17 @@ function SectionEditor({ name, row, onChanged, autoTuneRequest }: { autoTuneRequ
     <EasySettings autoTuneRef={autoTuneRef} name={name} draft={draft} busy={busy !== ''} onChange={(patch) => setDraft({ ...draft, ...patch })} onUseTuned={useTuned} onAutoApplied={() => { void read(); void onChanged(); }}/>
     <details className="mm-disclosure mm-all-settings" open={advancedOpen} onToggle={(e) => { const now = (e.currentTarget as HTMLDetailsElement).open; if (now !== advancedOpen) toggleAdvanced(now); }}>
     <summary>{t('mm.editor.allSettings')}</summary>
-    {data.hints.length > 0 && <ul className="mm-hints">{data.hints.map(h => <li key={h}>{h}</li>)}</ul>}
+    {advancedOpen && <>
+    {(data.hints || []).length > 0 && <ul className="mm-hints">{(data.hints || []).map(h => <li key={h}>{h}</li>)}</ul>}
     <AutoconfigPanel name={name} onFill={fill}/>
     <div className="mm-form">
-      {data.schema.map(tier => <details key={tier.tier} className="mm-tier" open={tier.open || tier.fields.some(f => draft[f.key])}>
+      {(data.schema || []).map(tier => <details key={tier.tier} className="mm-tier" open={tier.open || tier.fields.some(f => draft[f.key])}>
         <summary>{tierTitle(tier)}{tier.fields.some(f => draft[f.key]) ? <small>{t.plural('mm.editor.set', tier.fields.filter(f => draft[f.key]).length)}</small> : null}</summary>
         <div className="mm-fields">{tier.fields.map(f => <FieldInput key={f.key} field={f} value={draft[f.key] || ''} onChange={v => setDraft({ ...draft, [f.key]: v })}/>)}</div>
       </details>)}
       <label>{t('mm.editor.otherOptions')}<textarea rows={4} className="mm-mono" value={extras} onChange={e => setExtras(e.target.value)} placeholder={t('mm.editor.otherPlaceholder')}/></label>
     </div>
+    </>}
     </details>
     {conflict && <p role="alert" className="modal-err">{t('mm.editor.conflict')} <button className="modal-btn secondary" onClick={() => void read()}>{t('mm.editor.reloadLatest')}</button> {t('mm.editor.conflictAfter')}</p>}
     {error && !conflict && <p role="alert" className="modal-err">{error}</p>}

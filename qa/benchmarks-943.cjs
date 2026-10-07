@@ -11,7 +11,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || `${os.homedir()}/n
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
-const { openSettings } = require('./nav.cjs');
+const {openSettings, openModelsTab } = require('./nav.cjs');
 
 const PORT = Number(process.env.QA_PORT || 31943);
 (async () => {
@@ -70,7 +70,7 @@ const PORT = Number(process.env.QA_PORT || 31943);
     await dialog.waitFor();
 
     await check('#943 (5) a failed rating clear shows an alert and keeps the badge', async () => {
-      await dialog.getByRole('tab', { name: 'Benchmarks', exact: true }).click();
+      await openModelsTab(dialog, 'Benchmarks');
       await dialog.getByRole('button', { name: 'View', exact: true }).click();
       const clear = dialog.getByRole('button', { name: /^Clear .*chat/i });
       await clear.waitFor();
@@ -82,7 +82,7 @@ const PORT = Number(process.env.QA_PORT || 31943);
     });
 
     await check('#943 (6) deleting a saved prompt needs confirmation', async () => {
-      await dialog.getByRole('tab', { name: 'Prompts', exact: true }).click();
+      await openModelsTab(dialog, 'Prompts');
       const del = dialog.getByRole('button', { name: 'Delete Synthetic summary', exact: true });
       await del.waitFor({ timeout: 3000 });
       await del.click();

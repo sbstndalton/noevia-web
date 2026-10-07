@@ -2,7 +2,7 @@
 // Synthetic model/API fixtures only; no tune is ever started (any POST fails the run).
 // QA_DIST serves a build elsewhere; QA_SCREENSHOTS is the screenshot directory.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const { openSettings } = require('./nav.cjs');
+const {openSettings, openModelsTab } = require('./nav.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { createFixture } = require('./diary-fixture.cjs');
@@ -48,21 +48,26 @@ const schema = [{ tier: 'Common', open: true, fields: [{ key: 'model', label: 'M
       await settings.getByRole('button', { name: 'Models & routing' }).click();
       await settings.getByRole('button', { name: 'Open model manager' }).click();
       const manager = page.locator('.model-manager-page');
-      await manager.getByRole('tab', { name: 'Your models', exact: true }).click();
+      await openModelsTab(manager, 'Your models');
       await manager.getByRole('article', { name: NAME }).getByRole('button', { name: 'Tune' }).click();
-      await manager.getByRole('button', { name: 'Advanced', exact: true }).waitFor();
-      assert.equal(await manager.getByRole('button', { name: 'Advanced', exact: true }).getAttribute('aria-pressed'), 'true', 'starts in Advanced');
-      assert.equal(await page.locator('.mm-easy-autotune').count(), 0, 'no Auto-tune panel in Advanced');
+      // #1008: one path. The saved "advanced" preference opens All engine settings; Auto-tune is
+      // still on the page, and the guided panel's button must reach it from below.
+      const all = manager.locator('details.mm-all-settings');
+      await all.waitFor();
+      assert.equal(await all.evaluate((d) => d.open), true, 'All engine settings starts open for an Advanced user');
+      await page.locator('.mm-easy-autotune').evaluate((d) => { d.open = false; });
+      await page.mouse.wheel(0, 4000);
+      const guided = manager.locator('details.mm-guided');
+      if (!(await guided.evaluate((d) => d.open))) await guided.locator('summary').first().click();
       await manager.getByRole('button', { name: 'Go to Auto-tune and apply' }).click();
       const panel = page.locator('.mm-easy-autotune');
       try {
         await panel.waitFor({ state: 'visible', timeout: 3000 });
-        const summary = panel.locator(':scope > summary');
+        const summary = panel.locator('summary').first();
         await page.waitForFunction(() => document.activeElement?.matches('.mm-easy-autotune > summary'), null, { timeout: 3000 });
         assert.ok(await panel.evaluate(el => el.open), 'panel open');
         const box = await summary.boundingBox();
         assert.ok(box && box.y >= 0 && box.y + box.height <= 800, 'panel heading in view: ' + JSON.stringify(box));
-        assert.equal(await manager.getByRole('button', { name: 'Easy', exact: true }).getAttribute('aria-pressed'), 'true');
         assert.equal(await page.evaluate(() => localStorage.getItem('noevia:model-settings-mode')), 'advanced', 'saved preference untouched');
         assert.deepEqual(posts.filter(x => /autotune|calibration/.test(x)), [], 'no tune started: ' + posts.join(', '));
         assert.deepEqual(errors, []);
