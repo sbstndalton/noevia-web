@@ -544,7 +544,6 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.tune.failedError': "Der letzte Lauf ist {status}: {error}.",
   'mm.tune.failedKeep': "Die vorher gespeicherten Einstellungen bleiben aktiv, der Chat funktioniert also weiter. Setze ihn unten fort, wiederhole ihn oder behalte die aktuellen Einstellungen.",
   'mm.tune.failedKeepLast': "Die vorher gespeicherten Einstellungen bleiben aktiv (letztes funktionierendes Ergebnis oben), der Chat funktioniert also weiter. Setze ihn unten fort, wiederhole ihn oder behalte die aktuellen Einstellungen.",
-  'mm.tune.go': "Zu „Auto-Tuning und anwenden“",
   'mm.quality.hint': "Misst nur",
   'mm.quality.run': "Führe die Prompt-Suite mit festen Aufgaben aus, um dieses Modell mit den anderen zu vergleichen.",
   'mm.quality.open': "Benchmarks öffnen",

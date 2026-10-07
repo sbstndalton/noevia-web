@@ -544,7 +544,6 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.tune.failedError': "Dernière exécution : {status} ({error}).",
   'mm.tune.failedKeep': "Les réglages enregistrés avant restent actifs : le chat fonctionne toujours. Reprenez-la ou relancez-la ci-dessous, ou gardez les réglages actuels.",
   'mm.tune.failedKeepLast': "Les réglages enregistrés avant restent actifs (dernier bon résultat ci-dessus) : le chat fonctionne toujours. Reprenez-la ou relancez-la ci-dessous, ou gardez les réglages actuels.",
-  'mm.tune.go': "Aller à Réglage auto et application",
   'mm.quality.hint': "Mesure seulement",
   'mm.quality.run': "Lancez la suite de prompts sur des tâches fixes pour comparer ce modèle aux autres.",
   'mm.quality.open': "Ouvrir les benchmarks",

@@ -20,7 +20,7 @@ const check = (ok, label, detail) => { checks++; if (!ok) failures.push({ label,
 // run against the old build still lists every check it misses.
 const step = async (label, fn) => { try { await fn(); } catch (e) { checks++; failures.push({ label, detail: `${String(e.message || e).split('\n')[0]} ${(String(e.stack).match(/phone-declutter-510\.cjs:\d+/) || [''])[0]}` }); } };
 
-const FREE_CONTEXT = { id: '__free-synthetic', name: 'Synthetic free chat', routing: 'auto', files: [], assets: [], toolboxes: ['core'] };
+const FREE_CONTEXT = { id: '__free-synthetic', name: 'Synthetic free chat', routing: 'auto', files: [], assets: [], toolboxes: ['core'], toolsMode: 'manual' };
 const project = (id, name, extra = {}) => ({ id, name, updatedAt: 5, files: [], assets: [], chats: [], goal: '', instructions: '', memories: [], toolboxes: ['core'], ...extra });
 const PROJECTS = [project('p1', 'Synthetic project', { pinned: true }), project('p2', 'Other project', { updatedAt: 4 })];
 const FREE_CHATS = [{ id: 'pin', title: 'Synthetic pinned chat', pinned: true, updatedAt: 10 },
@@ -66,13 +66,13 @@ async function openDrawerIfAny(page) {
 }
 // Tier-0 and tier-1 items that must stay (the parts only tier 2 changes).
 async function tier2ItemsStay(page, name) {
-  check(await visible(page, '.tool-catalogue-trigger'), `${name}: Tools button shown`);
+  check(!(await visible(page, '.tool-catalogue-trigger')), `${name}: no standalone Tools button (#1025: Tools is in the + menu at every width)`);
   check((await page.getByRole('button', { name: 'Choose model: Auto (Fast/Smart)', exact: true }).innerText()).replace(/\s+/g, '').includes('(Fast/Smart)'), `${name}: full model label`);
   check((await page.getByRole('button', { name: 'Thinking effort', exact: true }).innerText()).includes('Thinking'), `${name}: Thinking pill keeps its words`);
-  check(!(await visible(page, '.composer-add-badge')), `${name}: no + badge`);
+  check(!(await visible(page, '.composer-add-badge')), `${name}: no + badge while nothing is added for the next message`);
   await page.getByRole('button', { name: 'Add files and tools', exact: true }).click();
   await page.locator('.composer-actions-panel').waitFor();
-  check(!(await visible(page, '.composer-actions-panel .composer-browse-tools')), `${name}: + menu has no Tools row`);
+  check(await visible(page, '.composer-actions-panel .composer-browse-tools'), `${name}: + menu has the Tools row`);
   await page.keyboard.press('Escape');
   check(await page.getByRole('button', { name: 'New chat in Synthetic project', exact: true }).count() === 1, `${name}: project-row pencil kept`);
   // #951: New chat is a quiet ghost row (no outlined pill), still a full-width labelled target.
@@ -180,7 +180,7 @@ async function tier2ItemsStay(page, name) {
       await toolsRow.click();
       const search = page.getByRole('combobox');
       await search.waitFor();
-      await page.getByRole('option', { name: /Synthetic core/ }).waitFor();
+      await page.getByRole('option', { name: /Core|Synthetic core/ }).waitFor();
       const panel = await box(page.locator('.tool-catalogue-panel'));
       check(panel && panel.x >= 0 && panel.x + panel.width <= W + 1 && panel.y >= 0, 'tier2: tool catalogue fits the viewport', panel);
       check(await search.evaluate(e => e === document.activeElement), 'tier2: catalogue search takes focus');
@@ -191,7 +191,7 @@ async function tier2ItemsStay(page, name) {
       // Choosing a toolbox for the next message stays visible without the Tools button.
       await page.getByRole('button', { name: 'Add files and tools', exact: true }).click();
       await page.locator('.composer-actions-panel .composer-browse-tools').click();
-      await page.getByRole('option', { name: /Synthetic core/ }).click();
+      await page.getByRole('option', { name: /Core|Synthetic core/ }).click();
       await page.keyboard.press('Escape');
       const badge = page.locator('.composer-add-badge');
       check(await badge.isVisible() && (await badge.innerText()).trim() === '1', 'tier2: + shows a badge for a toolbox added to the next message');

@@ -544,7 +544,6 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.tune.failedError': "Siste kjøring: {status} ({error}).",
   'mm.tune.failedKeep': "Innstillingene som ble lagret før den, forblir aktive, så chatten virker fortsatt. Gjenoppta eller prøv den igjen nedenfor, eller behold de gjeldende innstillingene.",
   'mm.tune.failedKeepLast': "Innstillingene som ble lagret før den, forblir aktive (siste gode resultat ovenfor), så chatten virker fortsatt. Gjenoppta eller prøv den igjen nedenfor, eller behold de gjeldende innstillingene.",
-  'mm.tune.go': "Gå til Autojuster og ta i bruk",
   'mm.quality.hint': "Måler bare",
   'mm.quality.run': "Kjør promptserien på faste oppgaver for å sammenligne denne modellen med de andre.",
   'mm.quality.open': "Åpne ytelsestester",

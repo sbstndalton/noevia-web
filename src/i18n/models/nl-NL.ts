@@ -544,7 +544,6 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.tune.failedError': "De laatste run is {status}: {error}.",
   'mm.tune.failedKeep': "De eerder opgeslagen instellingen blijven actief, dus de chat werkt nog. Hervat of herhaal hem hieronder, of houd de huidige instellingen.",
   'mm.tune.failedKeepLast': "De eerder opgeslagen instellingen blijven actief (laatste goede resultaat hierboven), dus de chat werkt nog. Hervat of herhaal hem hieronder, of houd de huidige instellingen.",
-  'mm.tune.go': "Naar Automatisch afstemmen en toepassen",
   'mm.quality.hint': "Meet alleen",
   'mm.quality.run': "Voer de promptsuite uit op vaste taken om dit model met de andere te vergelijken.",
   'mm.quality.open': "Benchmarks openen",

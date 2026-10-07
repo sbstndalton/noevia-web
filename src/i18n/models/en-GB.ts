@@ -562,7 +562,6 @@ export const EN_GB_MODELS = {
   'mm.tune.failedError': 'The last run {status}: {error}.',
   'mm.tune.failedKeep': 'The settings saved before it stay active, so chat still works. Resume or retry it below, or keep the current settings.',
   'mm.tune.failedKeepLast': 'The settings saved before it stay active (last known-good result above), so chat still works. Resume or retry it below, or keep the current settings.',
-  'mm.tune.go': 'Go to Auto-tune and apply',
   'mm.quality.hint': 'Measures only',
   'mm.quality.run': 'Run the prompt suite on fixed tasks to compare this model with the others.',
   'mm.quality.open': 'Open Benchmarks',
