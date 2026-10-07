@@ -5,7 +5,7 @@
 //  - #551: Overview > Recover shows no Resume for a failed auto-tune of a model that is no longer installed.
 // Fails against the pre-fix UI (Load/Unload was unconditional; Recover offered Resume).
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const { openSettings } = require('./nav.cjs');
+const {openSettings, openModelsTab } = require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
@@ -57,14 +57,14 @@ const { withLocale } = require('./qa-locale.cjs');
     await manager.waitFor();
 
     // #551 first: Overview is the default tab.
-    await manager.getByRole('tab', { name: 'Overview' }).click();
+    await openModelsTab(manager, 'Overview');
     await manager.getByRole('heading', { name: 'Recover' }).waitFor();
     await manager.getByText('No failed or stuck tuning, calibration or download jobs.').waitFor();
     assert.equal(await manager.getByText('synthetic-20b-Q4_K_M').count(), 0, 'the uninstalled model\'s failed run is not listed');
     assert.equal(await manager.getByRole('button', { name: 'Resume', exact: true }).count(), 0, 'no Resume for an uninstalled model');
     pass('Recover shows no Resume for a failed auto-tune of an uninstalled model (#551)');
 
-    await manager.getByRole('tab', { name: 'Your models', exact: true }).click();
+    await openModelsTab(manager, 'Your models');
     const card = (name) => manager.getByRole('article', { name });
     await card('Synthetic-7B').waitFor();
     assert.equal(await card('Synthetic-7B').getByRole('button', { name: 'Load Synthetic-7B', exact: true }).count(), 1, 'an ordinary model keeps Load');

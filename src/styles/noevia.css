@@ -2426,3 +2426,37 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 .route-mode { border: 0; padding: 0; margin: 0 0 12px; display: flex; flex-direction: column; gap: 6px; }
 .route-mode legend { font-weight: 600; margin-bottom: 4px; }
 .route-mode label { display: flex; flex-direction: row; align-items: center; gap: 8px; width: fit-content; }
+/* #1007: the shared routing-mode control, in Settings and in the chat model picker. */
+.route-mode-choice { display: flex; flex-direction: column; gap: 4px; }
+.mp-routing { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border-subtle); }
+.mp-routing .route-mode { margin-bottom: 4px; }
+.mp-routing .route-mode legend { font-size: var(--text-footnote); }
+.mp-routing .route-mode label { min-height: 32px; }
+@media (pointer: coarse) { .mp-routing .route-mode label { min-height: 44px; } }
+/* #1009: the searchable cloud model field; the list floats over the form like any menu. */
+.model-combobox { position: relative; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.model-combobox > input { width: 100%; min-height: 36px; padding: 7px 10px; border: 1px solid var(--control-border); border-radius: var(--radius-input); background: var(--bg-surface); color: var(--text-primary); font: inherit; }
+.model-combobox > input:focus { outline: none; border-color: var(--accent-2); }
+.model-combobox-list { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0; max-height: 240px; overflow-y: auto; margin: 0; padding: 4px; list-style: none; border-radius: var(--radius-overlay); background: var(--surface-overlay); box-shadow: var(--shadow-popover); }
+.model-combobox-option { padding: 7px 10px; border-radius: var(--radius-row); font-size: var(--text-footnote); color: var(--text-primary); cursor: pointer; overflow-wrap: anywhere; }
+.model-combobox-option:hover, .model-combobox-option.is-active { background: var(--fill-hover); }
+.model-combobox-option[aria-selected="true"] { background: var(--fill-active); }
+.model-combobox-option.is-custom { color: var(--accent-text); }
+@media (pointer: coarse) { .model-combobox > input, .model-combobox-option { min-height: 44px; } .model-combobox > input { font-size: var(--text-body, 16px); } }
+.model-list-status { grid-column: 1 / -1; justify-content: space-between; }
+/* #1006: Tools: Automatic / Manual at the top of the composer's tools. */
+.composer-tools-mode { display: flex; flex-direction: column; gap: 4px; padding: 4px 6px 2px; }
+/* The chosen side must read at a glance in every family and theme (review, 2026-10-07): an
+   accent-tinted fill on the button itself, not the floating thumb, which matched the menu surface. */
+.composer-tools-mode .glass-seg { display: grid; grid-template-columns: 1fr 1fr; }
+.composer-tools-mode .glass-seg > .glass-thumb { display: none; }
+:root .composer-tools-mode .glass-seg > button[aria-checked='true'] { background: color-mix(in srgb, var(--accent-text) 18%, transparent); color: var(--accent-text); font-weight: 600; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-text) 45%, transparent); }
+/* #1008: Models & routing, four sections; the panels inside open on demand. */
+.mm-section-panels { display: flex; flex-direction: column; gap: 12px; }
+.mm-fold { padding: 0; }
+.mm-fold > summary { display: flex; align-items: center; gap: 8px; padding: 14px 16px; cursor: pointer; font-weight: 600; list-style: none; }
+.mm-fold > summary::-webkit-details-marker { display: none; }
+.mm-fold > summary::after { content: ''; margin-left: auto; width: 8px; height: 8px; border-right: 1.5px solid var(--text-secondary); border-bottom: 1.5px solid var(--text-secondary); transform: rotate(45deg); transition: transform var(--dur-basic) var(--ease-out-quart); }
+.mm-fold[open] > summary::after { transform: rotate(225deg); }
+.mm-fold > summary small { font-weight: 400; color: var(--text-secondary); }
+.mm-fold > .mm-fold-body { display: flex; flex-direction: column; gap: 12px; padding: 0 16px 16px; }

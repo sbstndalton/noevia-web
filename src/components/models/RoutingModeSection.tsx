@@ -2,20 +2,22 @@
 // own mode (local / cloud / hybrid, or not chosen = as before), what hybrid does with a
 // sensitive-looking message, and the cloud provider and models. Administrators also choose which
 // modes accounts may pick. Flag off: the server answers { enabled: false } and nothing renders.
-import { useEffect, useState } from 'react';
+// The mode and sensitive-handling controls are RoutingModeChoice, shared with the chat model
+// picker (#1007); the cloud model fields list the provider's own models (#1009).
+import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import { fetchProviders, fetchRoutingMode, saveAllowedRoutingModes, saveRoutingMode } from '../../api';
+import { fetchProviderModels, fetchProviders, fetchRoutingMode, saveAllowedRoutingModes, saveRoutingMode } from '../../api';
 import type { RoutingModeSettings } from '../../api';
 import type { Provider } from '../../types';
+import { RoutingModeChoice, ROUTING_MODES, useRoutingModeLabel } from '../RoutingModeChoice';
+import { ModelCombobox } from './ModelCombobox';
 import { useT } from '../../i18n';
 
 type Mode = 'local' | 'cloud' | 'hybrid';
-const MODES: Mode[] = ['local', 'cloud', 'hybrid'];
-const MODE_KEY = { local: 'mm.rmode.local', cloud: 'mm.rmode.cloud', hybrid: 'mm.rmode.hybrid' } as const;
-const HINT_KEY = { local: 'mm.rmode.localHint', cloud: 'mm.rmode.cloudHint', hybrid: 'mm.rmode.hybridHint' } as const;
+const MODES: Mode[] = ROUTING_MODES;
 const EMPTY_CLOUD = { providerId: '', fast: '', smart: '', code: '' };
 
-export function RoutingModeSection(): JSX.Element | null {
+export function RoutingModeSection({ providersRev = 0 }: { providersRev?: number } = {}): JSX.Element | null {
   const t = useT();
   const [info, setInfo] = useState<RoutingModeSettings | null>(null);
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -26,6 +28,30 @@ export function RoutingModeSection(): JSX.Element | null {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  const modeLabel = useRoutingModeLabel();
+  // #1009: the chosen provider's model ids, fetched and cached by the server.
+  const [listed, setListed] = useState<{ providerId: string; models: string[]; error: string; loading: boolean }>({ providerId: '', models: [], error: '', loading: false });
+  // Only the newest request may write: a slow answer for an earlier provider (or an earlier
+  // refresh) never replaces a newer one.
+  const listRequest = useRef(0);
+  const loadModels = (providerId: string, refresh = false) => {
+    const n = ++listRequest.current;
+    if (!providerId) { setListed({ providerId: '', models: [], error: '', loading: false }); return; }
+    setListed((l) => ({ providerId, models: l.providerId === providerId ? l.models : [], error: '', loading: true }));
+    fetchProviderModels(providerId, refresh)
+      .then((r) => { if (n === listRequest.current) setListed({ providerId, models: r.models, error: '', loading: false }); })
+      .catch((e) => { if (n === listRequest.current) setListed({ providerId, models: [], error: e instanceof Error ? e.message : String(e), loading: false }); });
+  };
+  // A provider connected meanwhile (Sign in with ChatGPT above) joins the list without a remount,
+  // so unsaved edits here survive.
+  useEffect(() => {
+    if (!providersRev) return;
+    let live = true;
+    fetchProviders().then((p) => { if (live) setProviders(p.providers.filter((row) => !row.isDefault)); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [providersRev]);
+  const needsList = mode === 'cloud' || mode === 'hybrid';
+  useEffect(() => { if (needsList) loadModels(cloud.providerId); }, [cloud.providerId, needsList]);
 
   useEffect(() => {
     let live = true;
@@ -64,24 +90,8 @@ export function RoutingModeSection(): JSX.Element | null {
     <section className="mm-panel" data-testid="routing-mode-section">
       <div className="mm-panel-head"><h3>{t('mm.rmode.title')}</h3></div>
       <p className="mm-note">{t('mm.rmode.intro')}</p>
-      <fieldset className="route-mode" disabled={busy}>
-        <legend>{t('mm.rmode.mode')}</legend>
-        <label><input type="radio" name="routing-mode" value="" checked={mode === ''} onChange={() => setMode('')} /> {t('mm.rmode.unset')}</label>
-        {MODES.map((m) => (
-          <label key={m}>
-            <input type="radio" name="routing-mode" value={m} checked={mode === m} disabled={!serverAllowed.includes(m)} onChange={() => setMode(m)} /> {t(MODE_KEY[m])}
-            {!serverAllowed.includes(m) && <small className="mm-note"> · {t('mm.rmode.notAllowed')}</small>}
-          </label>
-        ))}
-        <p className="mm-note">{mode ? t(HINT_KEY[mode]) : t('mm.rmode.unsetHint')}</p>
-      </fieldset>
-      {mode === 'hybrid' && (
-        <fieldset className="route-mode" disabled={busy}>
-          <legend>{t('mm.rmode.whenSensitive')}</legend>
-          <label><input type="radio" name="routing-sensitive" value="ask" checked={whenSensitive === 'ask'} onChange={() => setWhenSensitive('ask')} /> {t('mm.rmode.ask')}</label>
-          <label><input type="radio" name="routing-sensitive" value="local" checked={whenSensitive === 'local'} onChange={() => setWhenSensitive('local')} /> {t('mm.rmode.alwaysLocal')}</label>
-        </fieldset>
-      )}
+      <RoutingModeChoice mode={mode} whenSensitive={whenSensitive} allowed={serverAllowed} disabled={busy}
+        unsetLabel={t('rmode.unset')} unsetHint={t('rmode.unsetHint')} onMode={setMode} onSensitive={setWhenSensitive} />
       {needsCloud && (
         <div className="mm-form route-roles">
           {providers.length === 0 && <p className="mm-note">{t('mm.rmode.noProviders')}</p>}
@@ -91,10 +101,17 @@ export function RoutingModeSection(): JSX.Element | null {
               {providers.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
             </select>
           </label>
+          {cloud.providerId && <div className="mm-actions model-list-status">
+            <span className="mm-note" role="status">{listed.loading ? t('mm.loading')
+              : listed.error ? t('mm.rmode.listError', { error: listed.error })
+              : listed.models.length ? t('mm.rmode.listCount', { count: listed.models.length, provider: providers.find((p) => p.id === cloud.providerId)?.label ?? '' })
+              : t('mm.rmode.listEmpty')}</span>
+            <button type="button" className="modal-btn secondary" disabled={busy || listed.loading} onClick={() => loadModels(cloud.providerId, true)}>{listed.loading ? t('mm.rmode.refreshing') : t('mm.rmode.refresh')}</button>
+          </div>}
           {(['fast', 'smart', 'code'] as const).map((role) => (
-            <label key={role}>{t(role === 'fast' ? 'mm.rmode.modelFast' : role === 'smart' ? 'mm.rmode.modelSmart' : 'mm.rmode.modelCode')}
-              <input type="text" value={cloud[role]} disabled={busy} spellCheck={false} autoComplete="off" onChange={(e) => setCloud((c) => ({ ...c, [role]: e.target.value }))} />
-            </label>
+            <ModelCombobox key={role} label={t(role === 'fast' ? 'mm.rmode.modelFast' : role === 'smart' ? 'mm.rmode.modelSmart' : 'mm.rmode.modelCode')}
+              value={cloud[role]} disabled={busy} options={listed.providerId === cloud.providerId ? listed.models : []}
+              onChange={(v) => setCloud((c) => ({ ...c, [role]: v }))} />
           ))}
         </div>
       )}
@@ -108,7 +125,7 @@ export function RoutingModeSection(): JSX.Element | null {
           <legend>{t('mm.rmode.allowedTitle')}</legend>
           <p className="mm-note">{t('mm.rmode.allowedScope')}</p>
           {MODES.map((m) => (
-            <label key={m}><input type="checkbox" checked={allowed.includes(m)} onChange={(e) => setAllowed((list) => (e.target.checked ? [...list, m] : list.filter((x) => x !== m)))} /> {t(MODE_KEY[m])}</label>
+            <label key={m}><input type="checkbox" checked={allowed.includes(m)} onChange={(e) => setAllowed((list) => (e.target.checked ? [...list, m] : list.filter((x) => x !== m)))} /> {modeLabel(m)}</label>
           ))}
           <div className="mm-actions"><button className="modal-btn secondary" onClick={() => void saveAllowed()}>{t('mm.rmode.allowedSave')}</button></div>
         </fieldset>

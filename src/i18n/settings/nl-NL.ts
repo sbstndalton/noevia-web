@@ -478,6 +478,8 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'providers.form.saving': "Opslaan…",
   'providers.form.saveFailed': "Opslaan mislukt.",
   'providers.chatgpt.title': "Inloggen met ChatGPT",
+  'providers.chatgpt.moved': "Inloggen met ChatGPT staat nu onder Modellen en routering → Routering.",
+  'providers.chatgpt.open': "Modellen en routering openen",
   'providers.chatgpt.external': "Extern",
   'providers.chatgpt.notConnected': "Gebruik je eigen ChatGPT-account als privéprovider. Alleen jij kunt het gebruiken.",
   'providers.chatgpt.connectedAs': "Verbonden als {account}",

@@ -139,37 +139,38 @@ function SectionEditor({ name, row, onChanged, autoTuneRequest }: { autoTuneRequ
     setDraft(next); setExtras(extraText);
     await save(next, extraText);
   };
-  const [mode, setModeState] = useState<'easy' | 'advanced'>(() => { try { return localStorage.getItem('noevia:model-settings-mode') === 'advanced' ? 'advanced' : 'easy'; } catch { return 'easy'; } });
-  const setMode = (next: 'easy' | 'advanced') => { setModeState(next); try { localStorage.setItem('noevia:model-settings-mode', next); } catch { /* optional */ } };
-  // #680: Auto-tune lives in the Easy editor only. A request from the guided panel shows Easy
-  // (without overwriting the saved preference), then opens, scrolls to and focuses that panel.
+  // #1008: one path. The common settings and Auto-tune are always shown; every engine field is
+  // in one collapsed "All engine settings" panel, remembered open for people who use it.
+  const [advancedOpen, setAdvancedOpen] = useState(() => { try { return localStorage.getItem('noevia:model-settings-mode') === 'advanced'; } catch { return false; } });
+  const toggleAdvanced = (next: boolean) => { setAdvancedOpen(next); try { localStorage.setItem('noevia:model-settings-mode', next ? 'advanced' : 'easy'); } catch { /* optional */ } };
+  // #680: a request from the guided panel opens, scrolls to and focuses the Auto-tune panel.
   const autoTuneRef = useRef<HTMLDetailsElement>(null), handledTune = useRef(autoTuneRequest);
-  useEffect(() => { if (autoTuneRequest !== handledTune.current && mode === 'advanced') setModeState('easy'); }, [autoTuneRequest, mode]);
   useEffect(() => {
     const box = autoTuneRef.current;
-    if (autoTuneRequest === handledTune.current || mode !== 'easy' || !data || !box) return;
+    if (autoTuneRequest === handledTune.current || !data || !box) return;
     handledTune.current = autoTuneRequest;
     box.open = true;
     box.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
     box.querySelector<HTMLElement>(':scope > summary')?.focus({ preventScroll: true });
-  }, [autoTuneRequest, mode, data]);
+  }, [autoTuneRequest, data]);
   if (!data) return error ? <p role="alert" className="modal-err">{error}</p> : <p role="status">{t('mm.editor.reading')}</p>;
   return <section className="mm-panel" aria-labelledby="mm-section-title">
     <header className="mm-panel-head"><div><h3 id="mm-section-title" className="sr-only">{name}</h3><p className="mm-note">{data.exists ? (row?.hasFile ? row.file : t('mm.editor.fileMissing')) : t('mm.editor.unsaved')}</p></div></header>
-    <div className="mm-mode" role="group" aria-label={t('mm.editor.detail')}>
-      {(['easy', 'advanced'] as const).map(m => <button key={m} aria-pressed={mode === m} className={mode === m ? 'is-active' : ''} onClick={() => setMode(m)}>{m === 'easy' ? t('mm.editor.easy') : t('mm.editor.advanced')}</button>)}
-    </div>
-    {mode === 'easy' ? <EasySettings autoTuneRef={autoTuneRef} name={name} draft={draft} busy={busy !== ''} onChange={(patch) => setDraft({ ...draft, ...patch })} onUseTuned={useTuned} onAutoApplied={() => { void read(); void onChanged(); }}/> : <>
-    {data.hints.length > 0 && <ul className="mm-hints">{data.hints.map(h => <li key={h}>{h}</li>)}</ul>}
+    <EasySettings autoTuneRef={autoTuneRef} name={name} draft={draft} busy={busy !== ''} onChange={(patch) => setDraft({ ...draft, ...patch })} onUseTuned={useTuned} onAutoApplied={() => { void read(); void onChanged(); }}/>
+    <details className="mm-disclosure mm-all-settings" open={advancedOpen} onToggle={(e) => { const now = (e.currentTarget as HTMLDetailsElement).open; if (now !== advancedOpen) toggleAdvanced(now); }}>
+    <summary>{t('mm.editor.allSettings')}</summary>
+    {advancedOpen && <>
+    {(data.hints || []).length > 0 && <ul className="mm-hints">{(data.hints || []).map(h => <li key={h}>{h}</li>)}</ul>}
     <AutoconfigPanel name={name} onFill={fill}/>
     <div className="mm-form">
-      {data.schema.map(tier => <details key={tier.tier} className="mm-tier" open={tier.open || tier.fields.some(f => draft[f.key])}>
+      {(data.schema || []).map(tier => <details key={tier.tier} className="mm-tier" open={tier.open || tier.fields.some(f => draft[f.key])}>
         <summary>{tierTitle(tier)}{tier.fields.some(f => draft[f.key]) ? <small>{t.plural('mm.editor.set', tier.fields.filter(f => draft[f.key]).length)}</small> : null}</summary>
         <div className="mm-fields">{tier.fields.map(f => <FieldInput key={f.key} field={f} value={draft[f.key] || ''} onChange={v => setDraft({ ...draft, [f.key]: v })}/>)}</div>
       </details>)}
       <label>{t('mm.editor.otherOptions')}<textarea rows={4} className="mm-mono" value={extras} onChange={e => setExtras(e.target.value)} placeholder={t('mm.editor.otherPlaceholder')}/></label>
     </div>
     </>}
+    </details>
     {conflict && <p role="alert" className="modal-err">{t('mm.editor.conflict')} <button className="modal-btn secondary" onClick={() => void read()}>{t('mm.editor.reloadLatest')}</button> {t('mm.editor.conflictAfter')}</p>}
     {error && !conflict && <p role="alert" className="modal-err">{error}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
@@ -247,27 +248,11 @@ function EasySettings({ autoTuneRef, name, draft, busy, onChange, onUseTuned, on
     : t('mm.easy.mtp.none');
   const system = isSystemModel(name);
   return <div className="mm-form mm-easy">
-    <div className="mm-easy-row">
-      <div><strong>{t('mm.easy.context')}</strong><p className="mm-note">{draft['ctx-size'] ? t('mm.tokensCount', { tokens: ctxShort(Number(draft['ctx-size'])) }) : t('mm.easy.engineDefault')}. {verified > 0 ? t('mm.easy.measured', { tokens: ctxShort(verified) }) : t('mm.easy.notMeasured')} {t('mm.easy.tuningNote')}</p></div>
-      {!system && <button className="modal-btn secondary" disabled={tuning || busy} onClick={() => void tune()}>{tuning ? t('mm.easy.estimating') : t('mm.easy.tune')}</button>}
-    </div>
     {system && <p className="mm-note" role="status">{t('model.systemLabel')}{t('mm.easy.systemNote')}</p>}
-    {!system && failure && <p role="alert" className="modal-err">{failure}</p>}
-    {!system && rec && !failure && <div className="mm-easy-result" role="status">
-      <div className="mm-easy-result-text">
-        <p>{t('mm.easy.recommended')}<strong>{t('mm.tokensCount', { tokens: ctxShort(rec.recommended_ctx) })}</strong>{t(rec.fits_full_gpu ? 'mm.easy.onBackendGpu' : 'mm.easy.onBackend', { backend: rec.recommended_backend })}</p>
-        {rec.ctx_cap_reason && rec.estimated_ctx ? <p className="mm-note">{t('mm.easy.capped', { ctx: ctxShort(rec.estimated_ctx), reason: rec.ctx_cap_reason })}</p> : null}
-        {(rec.warnings || []).map((w) => <p key={w} className="mm-note mm-warn" role="note">{w}</p>)}
-      </div>
-      <button className="modal-btn primary" disabled={busy} onClick={() => void onUseTuned({ ...rec.values, ...keepChoices(draft) }, rec.displaced)}>{t('mm.easy.useSave')}</button>
-    </div>}
-{!system && <details ref={autoTuneRef} className="mm-disclosure mm-easy-autotune" open>
+    {/* #1008: Auto-tune is the one recommended path; it measures and applies the settings below. */}
+    {!system && <details ref={autoTuneRef} className="mm-disclosure mm-easy-autotune" open>
       <summary>{t('mm.autotune.apply')} <small>{t('mm.easy.autotuneHint')}</small></summary>
       <AutoTune model={name} onChanged={() => { setAuto(null); onAutoApplied(); }}/>
-    </details>}
-    {!system && <details className="mm-disclosure mm-easy-measure">
-      <summary>{t('mm.calibration.title')} <small>{t('mm.easy.measureHint')}</small></summary>
-          <NativeCalibration model={name} onChanged={() => { setAuto(null); setVerified(0); void apiFetch('/api/models/calibration?model=' + encodeURIComponent(name)).then(r => r.json()).then((v: { history?: { at: number; appliedCtx?: number; verifiedCtx?: number }[] }) => { const last = (v.history || []).slice().sort((a, b) => b.at - a.at)[0]; setVerified(last?.verifiedCtx || last?.appliedCtx || 0); }).catch(() => {}); }}/>
     </details>}
     <label>{t('mm.easy.spec')}<select value={draft['spec-type'] || ''} onChange={e => onChange({ 'spec-type': e.target.value })}>
       {SPEC_CHOICES.map(([v, label]) => <option key={v} value={v} disabled={v === 'draft-mtp' && heads !== null && !heads.available}>{t(label)}{v === 'draft-mtp' && heads?.available ? ` (${t('mm.easy.available')})` : ''}</option>)}
@@ -283,6 +268,24 @@ function EasySettings({ autoTuneRef, name, draft, busy, onChange, onUseTuned, on
       {kv === 'mixed' && <option value="mixed" disabled>{t('mm.easy.kv.mixed')}</option>}
       {kv !== 'mixed' && !KV_CHOICES.some(c => c[0] === kv) && <option value={kv}>{kv}</option>}
     </select><small>{t('mm.easy.kvHelp')}</small></label>
+    {!system && <details className="mm-disclosure mm-easy-other">
+      <summary>{t('mm.easy.otherWays')}</summary>
+      <div className="mm-easy-row">
+        <div><strong>{t('mm.easy.context')}</strong><p className="mm-note">{draft['ctx-size'] ? t('mm.tokensCount', { tokens: ctxShort(Number(draft['ctx-size'])) }) : t('mm.easy.engineDefault')}. {verified > 0 ? t('mm.easy.measured', { tokens: ctxShort(verified) }) : t('mm.easy.notMeasured')} {t('mm.easy.tuningNote')}</p></div>
+        {!system && <button className="modal-btn secondary" disabled={tuning || busy} onClick={() => void tune()}>{tuning ? t('mm.easy.estimating') : t('mm.easy.tune')}</button>}
+      </div>
+      {failure && <p role="alert" className="modal-err">{failure}</p>}
+      {rec && !failure && <div className="mm-easy-result" role="status">
+        <div className="mm-easy-result-text">
+          <p>{t('mm.easy.recommended')}<strong>{t('mm.tokensCount', { tokens: ctxShort(rec.recommended_ctx) })}</strong>{t(rec.fits_full_gpu ? 'mm.easy.onBackendGpu' : 'mm.easy.onBackend', { backend: rec.recommended_backend })}</p>
+          {rec.ctx_cap_reason && rec.estimated_ctx ? <p className="mm-note">{t('mm.easy.capped', { ctx: ctxShort(rec.estimated_ctx), reason: rec.ctx_cap_reason })}</p> : null}
+          {(rec.warnings || []).map((w) => <p key={w} className="mm-note mm-warn" role="note">{w}</p>)}
+        </div>
+        <button className="modal-btn primary" disabled={busy} onClick={() => void onUseTuned({ ...rec.values, ...keepChoices(draft) }, rec.displaced)}>{t('mm.easy.useSave')}</button>
+      </div>}
+      <h4 className="mm-subhead">{t('mm.calibration.title')} <small>{t('mm.easy.measureHint')}</small></h4>
+      {!system && <NativeCalibration model={name} onChanged={() => { setAuto(null); setVerified(0); void apiFetch('/api/models/calibration?model=' + encodeURIComponent(name)).then(r => r.json()).then((v: { history?: { at: number; appliedCtx?: number; verifiedCtx?: number }[] }) => { const last = (v.history || []).slice().sort((a, b) => b.at - a.at)[0]; setVerified(last?.verifiedCtx || last?.appliedCtx || 0); }).catch(() => {}); }}/>}
+    </details>}
   </div>;
 }
 

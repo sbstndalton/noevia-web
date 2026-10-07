@@ -4,7 +4,7 @@
 // worse, a destructive "Delete" acted on. Offline: synthetic model-manager APIs, two installed
 // models, no inference/storage/network.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const {openSettings}=require('./nav.cjs');
+const {openSettings, openModelsTab } = require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
@@ -46,7 +46,7 @@ const { withLocale } = require('./qa-locale.cjs');
     await settings.getByRole('button', { name: 'Open model manager' }).click();
     const dialog = page.locator('.model-manager-page');
     await dialog.waitFor();
-    await dialog.getByRole('tab', { name: 'Your models', exact: true }).click();
+    await openModelsTab(dialog, 'Your models');
     await dialog.getByRole('article', { name: 'Fast-Model' }).waitFor();
     await dialog.getByRole('article', { name: 'Smart-Model' }).waitFor();
 

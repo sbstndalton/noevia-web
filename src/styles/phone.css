@@ -561,7 +561,7 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 /* ── Model and tools panel (user review, 2026-09-19: "clunky", "all vertical") ──
    One column on a phone; on wider screens the model and its tools sit side by side, each
    scrolling on its own, so the panel uses the width instead of growing tall. */
-.mp-panel { width: min(920px, 100%); display: flex; flex-direction: column; max-height: calc(var(--visible-viewport-height, 100dvh) - 48px); }
+.mp-panel { width: min(560px, 100%); display: flex; flex-direction: column; max-height: calc(var(--visible-viewport-height, 100dvh) - 48px); }
 .mp-head { flex: none; padding: 14px 16px; }
 .mp-head h2 { display: flex; flex-direction: column; gap: 1px; font-size: var(--text-headline, 17px); }
 .mp-head h2 small { font-size: var(--text-caption, 12px); font-weight: 500; color: var(--text-secondary); letter-spacing: .01em; }
@@ -576,11 +576,9 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
    Same inset as .mp-col, in every theme family and at every width. */
 .mp-body > .rail-empty { padding: 16px; }
 .mp-col-title { margin: 0; font-size: var(--text-footnote); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); }
-.mp-col-tools { border-top: 1px solid var(--border-subtle); }
+/* #1006: the panel is the model only (tools have their own control), so one column at every width. */
 @media (min-width: 720px) {
-  .mp-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); overflow: hidden; }
   .mp-col { overflow-y: auto; max-height: min(640px, calc(var(--visible-viewport-height, 100dvh) - 140px)); }
-  .mp-col-tools { border-top: 0; border-left: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--bg-sidebar, var(--bg)) 55%, transparent); }
 }
 
 /* Auto | Manual as one segmented switch, the hint under the chosen side. */

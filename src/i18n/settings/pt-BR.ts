@@ -478,6 +478,8 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'providers.form.saving': "Salvando…",
   'providers.form.saveFailed': "Falha ao salvar.",
   'providers.chatgpt.title': "Entrar com o ChatGPT",
+  'providers.chatgpt.moved': "Entrar com o ChatGPT agora fica em Modelos e roteamento → Roteamento.",
+  'providers.chatgpt.open': "Abrir Modelos e roteamento",
   'providers.chatgpt.external': "Externo",
   'providers.chatgpt.notConnected': "Use sua própria conta do ChatGPT como provedor privado. Só você pode usá-lo.",
   'providers.chatgpt.connectedAs': "Conectado como {account}",

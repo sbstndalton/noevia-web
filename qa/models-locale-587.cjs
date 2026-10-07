@@ -6,6 +6,7 @@
 const os = require('node:os');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || `${os.homedir()}/noevia-local-test/node_modules/playwright-core`);
 const assert = require('node:assert/strict');
+const { openModelsTab } = require('./nav.cjs');
 const { createFixture } = require('./diary-fixture.cjs');
 
 (async () => {
@@ -90,7 +91,7 @@ const { createFixture } = require('./diary-fixture.cjs');
     pass('dense, embeddings and reranking tags are shown in German');
 
     // Hardware: axis ticks and tiles share the decimal comma
-    await dialog.getByRole('tab', { name: 'Hardware', exact: true }).click();
+    await openModelsTab(dialog, 'Hardware');
     await dialog.locator('svg text.viz-axis').first().waitFor({ state: 'attached' });
     let axis = [];
     for (let i = 0; i < 40 && !axis.includes('16,5'); i += 1) {

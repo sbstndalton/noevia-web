@@ -1,7 +1,7 @@
 // UI-only fixture for the guided model manager (#204): no real models, inference or storage.
 // Synthetic numbers in realistic ranges (a 9B Q5 hybrid model on a 32 GiB shared-memory GPU).
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const {openSettings}=require('./nav.cjs');
+const {openSettings, openModelsTab } = require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 const OUT = process.env.QA_SCREENSHOTS || '/tmp';
@@ -54,7 +54,7 @@ const rows = [4096, 8192, 16384, 32768, 65536, 131072, 262144].map(ctx => ({ ctx
     await settings.getByRole('button', { name: 'Models & routing' }).click();
     await settings.getByRole('button', { name: 'Open model manager' }).click();
     const manager = page.locator('.model-manager-page');
-    await manager.getByRole('tab', { name: 'Overview' }).click();
+    await openModelsTab(manager, 'Overview');
     await manager.getByText('No KV cache type passed quality and throughput checks.').waitFor();
     await manager.getByText(/Model loader/).waitFor();
     await manager.getByText(/Context verified · 16,384 tokens/).first().waitFor();
@@ -69,7 +69,10 @@ const rows = [4096, 8192, 16384, 32768, 65536, 131072, 262144].map(ctx => ({ ctx
     }
     await page.setViewportSize({ width: 1440, height: 950 });
     await manager.locator('.mm-role-list li', { hasText: 'Synthetic-9B-Q5' }).getByRole('button', { name: 'Optimize' }).click();
-    const guided = manager.getByRole('region', { name: 'Optimize this model' });
+    // #1008: the guided steps are a collapsed panel; open it first.
+    const guided = manager.locator('details.mm-guided');
+    await guided.waitFor();
+    await guided.evaluate((d) => { d.open = true; });
     await guided.getByText(/About .* GiB of 14 GiB/).waitFor();
     await guided.getByText('Recommendation:').waitFor();
     await guided.getByLabel('KV cache').selectOption('q4_0');

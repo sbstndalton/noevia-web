@@ -8,6 +8,7 @@
 const os = require('node:os');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || `${os.homedir()}/noevia-local-test/node_modules/playwright-core`);
 const assert = require('node:assert/strict');
+const { openModelsTab } = require('./nav.cjs');
 const { createFixture } = require('./diary-fixture.cjs');
 
 const PORT = Number(process.env.QA_PORT || 31598);
@@ -91,7 +92,7 @@ const PORT = Number(process.env.QA_PORT || 31598);
     });
 
     await check('#597 Hardware percentages use the locale percent format, and uptime uses German units', async () => {
-      await dialog.getByRole('tab', { name: 'Hardware', exact: true }).click();
+      await openModelsTab(dialog, 'Hardware');
       const tile = dialog.locator('.mm-tile, [class*="tile"]').filter({ hasText: 'Auslastung' }).first();
       await tile.waitFor();
       const tileText = (await tile.innerText()).replace(/\s+/g, ' ');
@@ -109,7 +110,7 @@ const PORT = Number(process.env.QA_PORT || 31598);
     });
 
     await check('#597 benchmark run status is translated', async () => {
-      await dialog.getByRole('tab', { name: 'Benchmarks', exact: true }).click();
+      await openModelsTab(dialog, 'Benchmarks');
       const row = dialog.locator('#mm-runs').locator('..').locator('li').first();
       await row.waitFor();
       const text = (await row.innerText()).replace(/\s+/g, ' ');

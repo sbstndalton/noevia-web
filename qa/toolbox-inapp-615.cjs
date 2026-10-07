@@ -140,19 +140,14 @@ function fakeMcp(port) {
         });
 
         if (width >= 768) {
-          await check(`#615 the model popup lists the in-app toolsets in ${locale} (${tag})`, async () => {
+          // #1006: the model dialog is the model only; the toolsets are in the composer's + menu
+          // (checked above), so the dialog must not list them any more.
+          await check(`#615/#1006 the model popup lists no toolsets in ${locale} (${tag})`, async () => {
             const prefix = t('composer.chooseModel', { name: '@@' }).split('@@')[0];
             await page.locator(`button[aria-label^="${prefix}"]`).first().click();
             const dialog = page.locator('dialog.model-dialog-backdrop[open]');
             await dialog.waitFor({ timeout: 10000 });
-            await dialog.locator('.mp-tool').first().waitFor();
-            const rows = await dialog.locator('.mp-tool').evaluateAll((els) => els.map((e) => e.querySelector('strong').innerText.trim() + '||' + e.querySelector('.mp-tool-desc').innerText.replace(/\s+/g, ' ').trim()));
-            for (const box of picker.toolboxes.filter((b) => IN_APP_IDS.includes(b.id))) {
-              const want = expectRow(box);
-              const row = rows.find((r) => r.startsWith(`${want.label}||`));
-              assert.ok(row, `${box.id}: a row labelled "${want.label}" in ${JSON.stringify(rows)}`);
-              assert.equal(flat(row.split('||')[1]), flat(want.text), `${box.id} text`);
-            }
+            assert.equal(await dialog.locator('.mp-tool').count(), 0, 'no tool rows in the model dialog');
             if (shots) await page.screenshot({ path: `${shots}/model-popup-615-${short}.png`, fullPage: true });
             await page.keyboard.press('Escape');
           });

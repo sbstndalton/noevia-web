@@ -3,8 +3,10 @@ import type { JSX } from 'react';
 import { cancelChatGptLogin, disconnectChatGpt, fetchChatGptModels, fetchChatGptStatus, pollChatGptLogin, startChatGptLogin } from '../api';
 import type { ChatGptDeviceLogin, ChatGptStatus } from '../types';
 import { useT } from '../i18n';
+// Its strings are in the Settings segment; it also renders in Models & routing (#1008).
+import '../i18n/settings';
 
-/** Sign in with ChatGPT (#447), shown in Settings → AI providers only while the server's
+/** Sign in with ChatGPT (#447), shown in Settings → Models & routing → Routing (#1008) only while the server's
  *  `chatgptOAuth` feature is on. Device-code sign-in: the person opens OpenAI's page, enters the
  *  code shown here, and this card polls until the server has stored the tokens. Tokens never
  *  reach the browser; the card only ever sees a state and a masked account. */

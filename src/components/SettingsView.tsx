@@ -1,6 +1,7 @@
 import { appLocale } from '../user-preferences';
 import { formatNumber } from '../number-format';
 import { McpStatus } from './McpStatus';
+import { openModelSettings } from '../models-open';
 import { ShellIcon } from './ShellIcon';
 import { ConfirmDialog } from './ContextMenu';
 import DiarySharing from './DiarySharing';
@@ -15,7 +16,6 @@ import { createInvitation, createRecovery, deleteProvider, deleteUser, fetchProf
 import type { AuthUser, PasskeyInfo, SessionInfo } from '../api';
 import { startRegistration } from '@simplewebauthn/browser';
 import { ProviderForm } from './ProviderForm';
-import { ChatGptConnect } from './ChatGptConnect';
 import { useFeatureFlags } from './features/useFeatureFlags';
 import { afterLayoutSettles, pickFocusable } from '../focus-utils';
 import { StoragePicker } from './StoragePicker';
@@ -418,7 +418,8 @@ function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
         ))}
       </div>
 
-      {chatgptOn && <ChatGptConnect onChanged={() => void refresh()} />}
+      {/* #1008: Sign in with ChatGPT moved to Models & routing → Routing, beside where Auto sends chats. */}
+      {chatgptOn && <p className="route-note">{t('providers.chatgpt.moved')} <button type="button" className="mp-link" onClick={() => openModelSettings({ section: 'routing' })}>{t('providers.chatgpt.open')}</button></p>}
 
       {adding ? (
         <ProviderForm

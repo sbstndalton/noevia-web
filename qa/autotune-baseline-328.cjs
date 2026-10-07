@@ -7,7 +7,7 @@
 // Synthetic fixtures only; no tune is ever started (any POST fails the run).
 // QA_DIST serves a build elsewhere; QA_SCREENSHOTS is the screenshot directory.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const { openSettings } = require('./nav.cjs');
+const {openSettings, openModelsTab } = require('./nav.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { createFixture } = require('./diary-fixture.cjs');
@@ -76,11 +76,13 @@ const schema = [{ tier: 'Common', open: true, fields: [{ key: 'ctx-size', label:
       await settings.getByRole('button', { name: 'Models & routing' }).click();
       await settings.getByRole('button', { name: 'Open model manager' }).click();
       const manager = page.locator('.model-manager-page');
-      await manager.getByRole('tab', { name: 'Your models', exact: true }).click();
+      await openModelsTab(manager, 'Your models');
       await manager.getByRole('article', { name: NAME }).getByRole('button', { name: 'Tune' }).click();
       const panel = page.locator('.mm-easy-autotune');
       try {
         await panel.locator('.mm-autotune-phase').first().waitFor({ state: 'attached', timeout: 5000 });
+        // #1008: the guided steps are a collapsed panel that mounts its steps once opened.
+        await page.locator('details.mm-guided').first().evaluate((d) => { d.open = true; });
         await page.locator('.mm-guided').getByText('The last run').waitFor({ timeout: 5000 });
         const guided = await page.locator('.mm-guided').innerText();
         const tune = await panel.innerText();

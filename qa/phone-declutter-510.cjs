@@ -100,12 +100,12 @@ async function tier2ItemsStay(page, name) {
       check(await page.locator('.chat-header').getByTitle('Settings', { exact: true }).count() === 0, `${name}: header no longer duplicates Settings`);
       await tier2ItemsStay(page, name);
       // Sliders open this chat's model and tools...
-      await page.getByRole('button', { name: 'Model and tools', exact: true }).click();
-      await page.getByRole('dialog', { name: 'Model and tools' }).waitFor();
+      await page.getByRole('button', { name: 'Model', exact: true }).click();
+      await page.getByRole('dialog', { name: 'Model' }).waitFor();
       check(!/\/settings/.test(page.url()) && !(await visible(page, '.settings-stage')), `${name}: sliders did not open Settings`, page.url());
       await shot(page, 'tier0-1440x900-chat-settings');
       await page.keyboard.press('Escape');
-      await page.getByRole('dialog', { name: 'Model and tools' }).waitFor({ state: 'hidden' });
+      await page.getByRole('dialog', { name: 'Model' }).waitFor({ state: 'hidden' });
       // ...and in a project chat, the project's settings.
       await page.locator('.proj-row', { hasText: 'Synthetic project' }).first().hover();
       await page.getByRole('button', { name: 'New chat in Synthetic project', exact: true }).click();
@@ -201,12 +201,12 @@ async function tier2ItemsStay(page, name) {
     });
     await step('tier 2 390x844 sliders and drawer', async () => {
       const page = await open(browser, { width: W, height: H });
-      const chatSettings = page.getByRole('button', { name: 'Model and tools', exact: true });
+      const chatSettings = page.getByRole('button', { name: 'Model', exact: true });
       await chatSettings.click();
-      await page.getByRole('dialog', { name: 'Model and tools' }).waitFor();
+      await page.getByRole('dialog', { name: 'Model' }).waitFor();
       check(!/\/settings/.test(page.url()), 'tier2: sliders did not open global Settings', page.url());
       await page.keyboard.press('Escape');
-      await page.getByRole('dialog', { name: 'Model and tools' }).waitFor({ state: 'hidden' });
+      await page.getByRole('dialog', { name: 'Model' }).waitFor({ state: 'hidden' });
       await openDrawerIfAny(page);
       await shot(page, 'tier2-390x844-drawer');
       const drawerStyles = await page.evaluate(() => {

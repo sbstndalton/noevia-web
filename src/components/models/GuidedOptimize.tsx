@@ -52,18 +52,23 @@ async function getJson<T>(path: string): Promise<T> {
 export function GuidedOptimize({ model, installed, onOpenTab, onGoAutoTune }: { model: string; installed?: InstalledModel; onOpenTab: (tab: 'benchmarks' | 'hardware') => void; onGoAutoTune: () => void }): JSX.Element {
   const role = roleOf(model, installed?.labels || []);
   const t = useT();
+  const [openSteps, setOpenSteps] = useState(false);
   if (isSystemModel(model)) return <section className="mm-panel mm-guided" aria-label={t('mm.guided.title')}>
     <p className="mm-note" role="status">{t('model.systemLabel')}{t('mm.guided.systemNote')}</p>
   </section>;
-  return <section className="mm-panel mm-guided" aria-label={t('mm.guided.title')}>
-    <div className="mm-panel-head"><h3>{t('mm.guided.title')}</h3><span className="mm-pill">{t(ROLE_KEY[role])}</span></div>
+  // #1008: collapsed by default, so the page opens on one path (Auto-tune and the common settings
+  // below); the steps mount only once opened.
+  return <details className="mm-panel mm-fold mm-guided" aria-label={t('mm.guided.title')} open={openSteps} onToggle={(e) => setOpenSteps((e.currentTarget as HTMLDetailsElement).open)}>
+    <summary>{t('mm.guided.title')} <span className="mm-pill">{t(ROLE_KEY[role])}</span></summary>
+    {openSteps && <div className="mm-fold-body">
     <p className="mm-note">{t('mm.guided.intro')}</p>
     <ol className="mm-guided-steps">
       <li><FitStep model={model}/></li>
       <li><TuneStep model={model} sizeGB={installed?.sizeGB ?? null} chat={canPromptSuite(role)} onGoTune={onGoAutoTune}/></li>
       <li><QualityStep model={model} chat={canPromptSuite(role)} onOpenTab={onOpenTab}/></li>
     </ol>
-  </section>;
+    </div>}
+  </details>;
 }
 
 function FitStep({ model }: { model: string }): JSX.Element {

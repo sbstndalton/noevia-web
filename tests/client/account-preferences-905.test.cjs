@@ -135,6 +135,8 @@ test('an upload whose refresh throws reports a failure status instead of rejecti
     '../number-format': { formatPercent: () => '' },
     '../i18n': { useT: () => t },
     '../toolbox-copy': { toolboxCopy() {} },
+    '../tools-mode': { toolsModeOf: () => 'manual' },
+    './SegmentedControl': { SegmentedControl() {} },
   });
   const statuses = [], busy = [];
   const sink = { project: { id: 'p1', name: 'Synthetic' }, disabled: false, chatOnly: true, onChanged: async () => { throw Error('refresh failed (synthetic)'); }, onBusy: (b) => busy.push(b), onStatus: (s) => statuses.push(s) };

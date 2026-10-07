@@ -25,7 +25,7 @@ const NAMES=['Qwen3.5-Coder-32B-Instruct-Abliterated-Uncensored-Q5_K_M','Qwen3.5
    const t=await pill.evaluate(el=>({title:el.title,tail:el.querySelector('.mid-trunc-tail')?.textContent}));
    assert.equal(t.title,NAMES[0]);assert.equal(t.tail,NAMES[0].slice(-10),'composer pill keeps the quantization ending');
    await page.locator('.model-pill').first().click();
-   const dialog=page.getByRole('dialog',{name:'Model and tools'});await dialog.waitFor();await dialog.locator('.mp-model').first().waitFor({timeout:8000});
+   const dialog=page.getByRole('dialog',{name:'Model'});await dialog.waitFor();await dialog.locator('.mp-model').first().waitFor({timeout:8000});
    // Every name keeps its distinguishing ending, and the two near-identical Qwens stay distinct.
    const rows=await dialog.locator('.mp-model .mid-trunc').evaluateAll(els=>els.map(el=>({label:el.getAttribute('aria-label')||el.textContent,tail:el.querySelector('.mid-trunc-tail')?.textContent||el.textContent,title:el.title,right:el.getBoundingClientRect().right,box:el.closest('.mp-model').getBoundingClientRect().right})));
    assert.equal(rows.length,NAMES.length);

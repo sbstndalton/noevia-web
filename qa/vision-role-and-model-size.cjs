@@ -14,7 +14,7 @@
 // reporting "3.1 GB" (the mismatched external string), the exact ~7% gap #443 was filed against.
 // This asserts both surfaces show the identical string for that model.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const {openSettings}=require('./nav.cjs');
+const {openSettings, openModelsTab } = require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 
@@ -47,7 +47,7 @@ const MODELS = [
     await composerPage.goto('http://localhost:31900');
     await composerPage.getByRole('button', { name: 'Choose model' }).filter({ hasText: 'chat-fast' }).waitFor();
     await composerPage.getByRole('button', { name: 'Choose model' }).click();
-    const composerDialog = composerPage.getByRole('dialog', { name: 'Model and tools' });
+    const composerDialog = composerPage.getByRole('dialog', { name: 'Model' });
     await composerDialog.waitFor();
     await composerDialog.getByRole('button', { name: /Manual/ }).click();
     const composerRow = composerDialog.locator('.mp-model-item').filter({ hasText: 'gemma-4-E2B_q4_0-it' });
@@ -101,7 +101,7 @@ const MODELS = [
     await manager.waitFor();
 
     // "Your models": read the size the card shows for the same file the composer just showed.
-    await manager.getByRole('tab', { name: 'Your models', exact: true }).click();
+    await openModelsTab(manager, 'Your models');
     const card = manager.getByRole('article', { name: 'gemma-4-E2B_q4_0-it' });
     await card.waitFor();
     const cardSize = (await card.locator('.model-card-meta span').first().innerText()).trim();
@@ -109,7 +109,7 @@ const MODELS = [
     assert.equal(cardSize, composerSize, `composer ("${composerSize}") and Your-models card ("${cardSize}") disagree on gemma-4-E2B_q4_0-it's size`);
 
     // Routing tab: Vision has no NORMAL Laya option, but does offer the vision-capable chat model.
-    await manager.getByRole('tab', { name: 'Routing', exact: true }).click();
+    await openModelsTab(manager, 'Routing');
     const routingPanel = manager.locator('.route-roles');
     const visionSelect = manager.getByLabel(/^Vision/);
     await visionSelect.waitFor();

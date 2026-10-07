@@ -31,6 +31,7 @@ import type { MessageKey } from '../i18n';
 import { isApple } from './shortcuts/shortcuts';
 import { ComposerModeBar, ModeCaption, ModeConfirm, ModeToggle, useCoworkAccess, useModeSwitch } from './ComposerModeBar';
 import { ToolCatalogue } from './ToolCatalogue';
+import { toolsModeOf } from '../tools-mode';
 import { CoworkTaskCard } from './CoworkTaskCard';
 import { decideDispatch, type ChatMode } from '../chat-mode';
 import { insertMention, turnBoxesFor, type PermittedBox } from '../tool-catalogue';
@@ -445,6 +446,10 @@ export function ChatView({
   const thinkingAvailable = !!useReasoningSettings(chatConfig, phone);
   const [catalogueOpen, setCatalogueOpen] = useState(false);
   const [turnBoxes, setTurnBoxes] = useState<string[]>([]);
+  // #1006 (owner, 2026-10-07): no tool button unless this chat picks its tools by hand. In
+  // Automatic the composer's + menu holds only the Tools: Automatic / Manual switch.
+  const toolsByHand = toolsModeOf(project ?? freeContext) === 'manual';
+  useEffect(() => { if (!toolsByHand) { setTurnBoxes([]); setCatalogueOpen(false); } }, [toolsByHand]);
   const [permitted, setPermitted] = useState<PermittedBox[]>([]);
   // Per-turn choices belong to the next message in this chat only.
   // #272: one exact reviewed Skill version for the next message, from the portable manifest API.
@@ -525,7 +530,7 @@ export function ChatView({
     onChanged: refreshContext, onBusy: setActionBusy, onStatus: showActionStatus,
   });
 
-  const catalogue = <ToolCatalogue open={catalogueOpen} onOpenChange={setCatalogueOpen} projectId={project?.id ?? null} mode={mode}
+  const catalogue = !toolsByHand ? null : <ToolCatalogue open={catalogueOpen} onOpenChange={setCatalogueOpen} projectId={project?.id ?? null} mode={mode}
     toggled={turnBoxes} onToggle={id => setTurnBoxes(prev => prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id])}
     onMention={name => { const next = insertMention(draft, name); setDraft(next); writeDraft(chatId, next); }} onBoxes={setPermitted} disabled={streaming || actionBusy}
     focusFallback={() => composerBox.current?.querySelector<HTMLElement>('.composer-add')?.focus()} />;
@@ -791,7 +796,7 @@ export function ChatView({
             aria-activedescendant={linkMenuOpen && linkOptions.length ? `chat-link-${chatId}-${Math.min(linkIndex, linkOptions.length - 1)}` : undefined}
           />
           <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={showActionStatus}
-            browseTools={{ onOpen: () => setCatalogueOpen(true), count: turnBoxes.length }} />
+            browseTools={toolsByHand ? { onOpen: () => setCatalogueOpen(true), count: turnBoxes.length } : undefined} />
           {phone && <ModeToggle state={modeSwitch} disabled={streaming || actionBusy} compact />}
           <ComposerModel label={modelLabel} onClick={openModels}
             compact={phone ? { thinking: chatConfig && thinkingAvailable ? thinkingLevelLabel(t, chatConfig.reasoningEffort) : null, live: streaming } : undefined} />

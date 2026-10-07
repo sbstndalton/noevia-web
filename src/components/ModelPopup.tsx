@@ -9,11 +9,11 @@ import { roleSummary } from '../routing-copy';
 import { CloseButton } from './CloseButton';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
-import { toolboxCopy } from '../toolbox-copy';
 import type { JSX, ReactNode } from 'react';
-import type { InstalledModel, Project, Provider, Toolbox } from '../types';
-import type { AutoRoles, McpStatus } from '../api';
-import { apiFetch, fetchAutoRoles, fetchChatGptModels, fetchInstalledModels, fetchProviders, fetchToolboxes, saveProjectConfig } from '../api';
+import type { InstalledModel, Project, Provider } from '../types';
+import type { AutoRoles } from '../api';
+import { apiFetch, fetchAutoRoles, fetchChatGptModels, fetchInstalledModels, fetchProviders, saveProjectConfig } from '../api';
+import { ProjectRoutingMode } from './ProjectRoutingMode';
 
 interface ModelPopupProps {
   projects: Project[];
@@ -29,8 +29,9 @@ interface ModelPopupProps {
   thinking?: ReactNode;
 }
 
-// The chat box's model control, and deliberately only that: pick Auto or one
-// model, and choose which tools come with it.
+// The chat box's model control, and deliberately only that: pick Auto or one model. #1006: tools
+// have their own control (Tools: Automatic / Manual in the composer's + menu). #1007: in Auto,
+// this chat's own routing mode, with the same control as Settings → Models & routing → Routing.
 //
 // Everything else — downloads, per-model settings, autoconfig, hardware,
 // benchmarks, the prompt library, and configuring what Auto routes TO — lives
@@ -72,8 +73,6 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [modelsLoading, setModelsLoading] = useState(true);
   const [providers, setProviders] = useState<Provider[]>([]);
-  const [toolboxes, setToolboxes] = useState<Toolbox[]>([]);
-  const [mcpStatus, setMcpStatus] = useState<McpStatus | null>(null);
   const [autoInfo, setAutoInfo] = useState<{ configured: boolean; roles: AutoRoles | null } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -98,7 +97,6 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
     fetchProviders().then((r) => setProviders(r.providers || [])).catch(() => undefined);
     fetchAutoRoles().then(setAutoInfo).catch(() => undefined);
     apiFetch('/api/models/capabilities').then((r) => r.json()).then((c: { modelManagement?: boolean }) => setCanTune(c?.modelManagement === true)).catch(() => setCanTune(false));
-    fetchToolboxes().then((r) => { setToolboxes(r.toolboxes || []); setMcpStatus(r.mcp || null); }).catch(() => undefined);
   }, []);
   useEffect(refresh, [refresh]);
   useModelsChanged(refresh);
@@ -150,25 +148,6 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
     if (el && document.activeElement === document.body && document.contains(el)) el.focus();
   }, [busy]);
 
-  // An unset selection means the server default (core only), so the first
-  // toggle has to materialise that default before changing it — otherwise
-  // deselecting core would read as "unset" and silently re-enable it.
-  // A connected connector is never in the project's own toolboxes list (it isn't picked here,
-  // it's connected in Settings), but the chat loop sends it every turn regardless — count it as
-  // selected too, or the tool list and token budget under-report what actually goes out (#354).
-  const connectorIds = toolboxes.filter((b) => b.connector).map((b) => b.id);
-  const rawSelectedBoxes = activeProject?.toolboxes ?? ['core'];
-  const selectedBoxes = connectorIds.length ? [...new Set([...rawSelectedBoxes, ...connectorIds])] : rawSelectedBoxes;
-  const chosen = toolboxes.filter((b) => selectedBoxes.includes(b.id));
-  const selectedTokens = chosen.reduce((n, b) => n + b.estTokens, 0);
-  const selectedTools = chosen.reduce((n, b) => n + b.toolCount, 0);
-  // Mirrors toolTokenBudgetFor() on the server. Duplicated deliberately: the
-  // point is to warn BEFORE the server silently truncates, and a round trip
-  // per keystroke to learn the budget would be worse than one shared constant
-  // that a test pins on the server side.
-  const sizeMatch = /(\d+(?:\.\d+)?)\s*[bB]\b/.exec(activeProject?.model || '');
-  const budget = sizeMatch && Number(sizeMatch[1]) <= 12 ? 5000 : 8000;
-  const overBudget = selectedTokens > budget;
 
   if (!activeProject) {
     return <p className="rail-empty">{projects.length ? t('modelPopup.openProject') : t('modelPopup.noProjects')}</p>;
@@ -194,7 +173,8 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
           : t('modelPopup.autoUnset')}
         {' '}<button className="mp-link" onClick={() => onOpenSettings()}>{t('modelPopup.change')}</button>
       </p>
-    ) : (
+    ) : null}
+    {auto ? <ProjectRoutingMode project={activeProject} disabled={busy !== null} onChanged={onChanged} /> : (
       <div className="mp-model-area">
         {providers.length > 1 && <label className="mp-field">
           <span>{t('modelPopup.provider')}</span>
@@ -255,40 +235,5 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
 
     </section>
     {afterModel}
-    {toolboxes.length > 0 && <section className="mp-col mp-col-tools" aria-label={t('modelPopup.tools')}>
-      <div className="mp-section-head">
-        <h3 className="mp-col-title">{t('modelPopup.tools')}</h3>
-        <span className="mp-hint">{t('modelPopup.enabled', { tools: selectedTools, tokens: selectedTokens })}</span>
-      </div>
-      {/* How much of the model's tool budget the chosen toolboxes use. */}
-      <div className={`mp-budget${overBudget ? ' is-over' : ''}`} role="meter" aria-label={t('modelPopup.budget')} aria-valuemin={0} aria-valuemax={budget} aria-valuenow={Math.min(selectedTokens, budget)}>
-        <span style={{ width: `${Math.min(100, Math.round((selectedTokens / budget) * 100))}%` }}/>
-      </div>
-      <div className="mp-tool-list">
-      {toolboxes.map((box) => {
-        const on = selectedBoxes.includes(box.id);
-        return <label key={box.id} className="mp-tool">
-          {/* A connector is on because it's connected (Settings → Connectors), not because it's
-              picked here — show it as always-on rather than a checkbox nobody can uncheck. */}
-          <input type="checkbox" checked={on} disabled={busy !== null || box.connector}
-            onChange={() => void save(`box-${box.id}`, { toolboxes: on ? rawSelectedBoxes.filter((b) => b !== box.id) : [...rawSelectedBoxes, box.id] })} />
-          <span>
-            <strong>{toolboxCopy(t, box).label}</strong>
-            {box.source === 'mcp' && <span className="mp-tag">MCP</span>}
-            {box.connector && <span className="mp-tag">{t('tools.onForChat')}</span>}
-            <span className="mp-hint"> · {t.plural('modelPopup.toolCount', box.toolCount)}</span>
-            <span className="mp-tool-desc">{toolboxCopy(t, box).description}</span>
-          </span>
-        </label>;
-      })}
-      </div>
-      <p className={overBudget ? 'mp-warn' : 'mp-hint'}>
-        {overBudget
-          ? t('modelPopup.over', { model: activeProject.model || t('modelPopup.thisModel'), budget })
-          : t('modelPopup.perTurn')}
-        {selectedBoxes.length === 0 && ` ${t('modelPopup.noTools')}`}
-      </p>
-      {mcpStatus?.configured && mcpStatus.error && <p className="mp-warn">{t('modelPopup.mcpDown', { error: mcpStatus.error })}</p>}
-    </section>}
   </div>;
 }

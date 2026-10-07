@@ -2,6 +2,7 @@
 // All responses are synthetic; the fixture performs no model, inference or settings action.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/Users/sebastiandalton/noevia-local-test/node_modules/playwright-core');
 const assert = require('node:assert/strict');
+const { openModelsTab } = require('./nav.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const { createFixture } = require('./diary-fixture.cjs');
@@ -35,7 +36,7 @@ async function check(browser, surface, width, theme, outcome) {
   try {
     await page.goto(`http://localhost:${PORT}${surface === 'overview' ? '/models' : '/settings/models'}`);
     await page.evaluate(selected => document.documentElement.setAttribute('data-theme', selected), theme);
-    if (surface === 'overview') await page.getByRole('tab', { name: 'Overview' }).click();
+    if (surface === 'overview') await openModelsTab(page, 'Overview');
     const panel = surface === 'overview' ? page.locator('section[aria-labelledby="mm-quality"]') : page.locator('.mm-summary');
     await panel.waitFor();
     assert.ok(held.length > 0, `${surface}/${width}/${theme}: installed-model request is held`);
