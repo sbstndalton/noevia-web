@@ -127,6 +127,8 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   // Saves the switch and shows what the server saved; a failure leaves the saved state showing.
   const saveSettings = async (allowQ5Kv: boolean) => {
     const current = ++settingsRequest.current;
+    // #1061: a status poll already in flight answers from before the save; drop its reply.
+    ++request.current;
     savingRef.current = true; setSavingSettings(true); setSettingsError('');
     try {
       const r = await apiFetch('/api/models/autotune/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, allowQ5Kv }) });
