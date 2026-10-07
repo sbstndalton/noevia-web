@@ -196,6 +196,10 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
       // closed Settings to look at, a worse outcome than leaving focus on `<body>` (same tradeoff
       // `ChatView.tsx`'s `isCoarsePointerDevice` guard already makes for #435).
       afterLayoutSettles(() => {
+        // #962: input is live again from close start, so a click during the exit (say, reopening
+        // the account menu) already put focus somewhere; do not pull it back to the opener.
+        const now = document.activeElement;
+        if (now && now !== document.body && now.isConnected) return;
         const fallback = pickFocusable<HTMLElement>(
           document.querySelector<HTMLElement>('.account-trigger'),
           document.querySelector<HTMLElement>('.nav-drawer-toggle'),
@@ -214,6 +218,8 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   const live = useRef(true);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   const closingRef = useRef(false);
+  // The inert release (below): close() calls it early (#962), unmount too; a second call is a no-op.
+  const releaseInert = useRef<() => void>(() => {});
   const onClosing = useRef(props.onClosing);
   onClosing.current = props.onClosing;
   const close = useCallback(() => {
@@ -224,6 +230,11 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
     onClosing.current?.();
     setClosing(true);
     const node = stage.current, scrim = node?.previousElementSibling ?? null;
+    // #962: hand input back at close start, not after the exit spring: the exiting window and
+    // scrim stop catching the pointer now (before React re-renders .is-closing) and the app
+    // behind stops being inert, so a click straight after closing is not lost.
+    for (const el of [node, scrim]) if (el instanceof HTMLElement) el.style.pointerEvents = 'none';
+    releaseInert.current();
     const exited = Promise.all([exitMotion(node, 'dialog'), exitMotion(scrim, 'fade')]);
     const timeout = new Promise<void>((resolve) => window.setTimeout(resolve, 400));
     void Promise.race([exited, timeout]).then(() => { if (live.current) onClose.current(); });
@@ -234,7 +245,9 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   useEffect(() => {
     const behind = [...document.querySelectorAll<HTMLElement>('.app-main, .app .sidebar, .app .nav-drawer-toggle, .stats-bar')].filter((el) => !el.contains(stage.current));
     for (const el of behind) el.setAttribute('inert', '');
-    return () => { for (const el of behind) el.removeAttribute('inert'); };
+    const release = () => { for (const el of behind.splice(0)) el.removeAttribute('inert'); };
+    releaseInert.current = release;
+    return release;
   }, []);
 
   useEffect(() => {

@@ -138,6 +138,15 @@ html[data-family='glass'], [data-family='glass'] body {
 }
 /* The Settings window is a reading surface: an opaque frosted fill, not a see-through pane. */
 [data-family='glass'] .settings-stage { --glass-pane: var(--glass-window); }
+/* #960: menus and popovers take a solid fill. Most of them render inside a
+   frosted pane (the + menu inside the composer, the model picker, row menus inside the sidebar),
+   and a backdrop-filter nested in another one cannot sample the page behind its parent, so a
+   translucent fill let the greeting and composer labels show straight through (as in #493).
+   The fill is solid (alpha 1): the frosted tint is baked into the colour, never transparency,
+   because even a 97% fill left the text behind readable. */
+[data-family='glass'] :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .tool-catalogue-panel, .mp-panel.aero) { --glass-pane: var(--glass-menu); }
+[data-family='glass'][data-theme='light'] { --glass-menu: rgb(249 249 252); }
+[data-family='glass']:not([data-theme='light']) { --glass-menu: rgb(33 34 38); }
 [data-family='glass'] .settings-stage :is(.settings-navigation, .settings-detail) { background: transparent; }
 [data-family='glass'] .settings-stage :is(.set-rows, .group) { --glass-pane: var(--glass-pane-strong); box-shadow: inset 0 1px 0 var(--glass-edge); }
 [data-family='glass'][data-theme='light'] {
@@ -159,7 +168,7 @@ html[data-family='glass'], [data-family='glass'] body {
   --glass-depth: 0 1px 2px rgb(0 0 0 / .3), 0 16px 40px -8px rgb(0 0 0 / .55);
 }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-  [data-family='glass'][data-theme], [data-family='glass'] { --glass-pane: var(--md-surface-container-low); --glass-pane-strong: var(--bg-surface); --glass-window: var(--md-surface-container-low); --glass-blur: 0px; }
+  [data-family='glass'][data-theme], [data-family='glass'] { --glass-pane: var(--md-surface-container-low); --glass-pane-strong: var(--bg-surface); --glass-window: var(--md-surface-container-low); --glass-menu: var(--md-surface-container-low); --glass-blur: 0px; }
   /* No filter at all (a zero blur is still a filter and still creates a containing block). */
   [data-family='glass'] :is(.app .sidebar.pane, .app .app-stack.pane::before, .ctx-menu, .account-popover, .popup, .composer-actions-panel, .tool-catalogue-panel, .settings-stage, :root .app .composer-inner, .mp-panel.aero, .settings-stage :is(.set-rows, .group)) { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
   html[data-family='glass'], [data-family='glass'] body { background: var(--bg-app); }
