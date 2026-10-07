@@ -4,7 +4,7 @@
    the workspace. Settings takes the workspace's place instead of floating over it. */
 
 /* ── Frame ──────────────────────────────────────────────────────────────── */
-.app { gap: var(--space-2); padding: var(--space-2); background: transparent; box-sizing: border-box; }
+.app { gap: var(--tile-gutter); padding: var(--tile-gutter); background: transparent; box-sizing: border-box; }
 .app > .regular-workspace { display: contents; }
 .app .app-stack.pane { position: relative; overflow: hidden; border-radius: var(--radius-xl); isolation: isolate; }
 .app .app-stack.pane > .app-main { border-radius: inherit; background: transparent; }
@@ -179,7 +179,7 @@
   .app .sidebar.pane.is-expanded .shell-icon-button { width: 44px; height: 44px; }
   .nav-drawer-backdrop { background: color-mix(in srgb, var(--md-surface-dim) 35%, transparent); backdrop-filter: blur(2px) saturate(1.1); -webkit-backdrop-filter: blur(2px) saturate(1.1); --enter-from: none; animation: motion-enter var(--motion-quick) var(--ease-quick) both; }
   :root:not([data-theme='light']) .nav-drawer-backdrop { background: rgba(0, 0, 6, .45); }
-  .nav-drawer-toggle { border-radius: var(--radius-md); background: var(--pane-fill); border-color: var(--pane-edge); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  .nav-drawer-toggle { border-radius: var(--radius-md); background: var(--bg-chrome); border-color: var(--border-subtle); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 }
 
 /* Reduced motion: motion.css makes every entrance and exit here instant. */
@@ -194,7 +194,7 @@
 
 /* Composer: a pane of its own with glass controls (sample: project composer). */
 .app .composer-inner.pane { border-radius: var(--radius-xl); padding: var(--space-4) var(--space-4) var(--space-3); outline: 0; }
-.app .composer-inner.pane:focus-within { box-shadow: var(--pane-highlight), var(--shadow-3), 0 0 0 3px color-mix(in srgb, var(--md-primary) 18%, transparent); }
+.app .composer-inner.pane:focus-within { box-shadow: var(--ring-inset), var(--shadow-3), 0 0 0 3px color-mix(in srgb, var(--md-primary) 18%, transparent); }
 .app .composer-inner.pane textarea { background: transparent; }
 .app .send-btn.glass { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--md-on-primary); border-color: transparent; }
 .app .send-btn.glass:disabled { opacity: .45; }
@@ -228,7 +228,6 @@
 .app .noevia-inspector :is(.insp-note, .insp-empty) { color: var(--text-secondary); font-size: var(--text-footnote); line-height: var(--leading-snug); }
 .app .noevia-inspector .insp-action { border-radius: var(--radius-sm); }
 .app .noevia-inspector .insp-action:hover { background: var(--nav-hover); }
-[data-family='editorial'] .app .app-stack.pane .noevia-inspector { border-color: var(--edge-raised); background: var(--surface-overlay); box-shadow: var(--elev-overlay); }
 
 /* Tablet widths are touch widths: sidebar rows keep 44px targets. */
 @media (max-width: 1024px) {

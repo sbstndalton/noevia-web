@@ -183,7 +183,7 @@ const activeElement = (page) => page.evaluate(() => ({
     // using the sidebar's own quick-archive + Undo. ──
     await page.getByRole('button', { name: /Account menu for/ }).click();
     await page.locator('.account-popover').getByRole('menuitem', { name: 'Settings', exact: true }).click();
-    const dialog = page.getByRole('region', { name: 'Settings' });
+    const dialog = page.getByRole('dialog', { name: 'Settings' });
     await dialog.waitFor();
     await dialog.getByRole('button', { name: 'Your data & privacy', exact: true }).click();
     const archivedCount = dialog.locator('.set-row-label', { hasText: /archived chat/ });
@@ -257,7 +257,7 @@ const activeElement = (page) => page.evaluate(() => ({
     // Settings (opened above) covers the whole view below 520px, hiding the drawer toggle
     // entirely — close it first, the same way a real narrow-viewport user would. ──
     await page.keyboard.press('Escape');
-    await page.getByRole('region', { name: 'Settings' }).waitFor({ state: 'detached', timeout: 2000 }).catch(() => undefined);
+    await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'detached', timeout: 2000 }).catch(() => undefined);
     await page.setViewportSize({ width: 500, height: 900 });
     await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
     const rowANarrow = page.locator('.chat-row', { hasText: 'Synthetic a' });

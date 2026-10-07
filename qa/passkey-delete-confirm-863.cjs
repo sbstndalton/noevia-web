@@ -30,7 +30,7 @@ const { withLocale } = require('./qa-locale.cjs');
       return route.continue();
     });
     await page.goto(origin); await openSettings(page);
-    const settings = page.getByRole('region', { name: 'Settings', exact: true });
+    const settings = page.getByRole('dialog', { name: 'Settings', exact: true });
     await settings.getByRole('button', { name: 'Security and login', exact: true }).click();
     const x = settings.getByRole('button', { name: 'Remove passkey Laptop key', exact: true });
     await x.click();

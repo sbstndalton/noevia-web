@@ -84,29 +84,21 @@ test('the family preference writes the new key and the root attribute, never the
   assert.equal(prefs.readPreference('family'), 'glass', 'the attribute theme.js resolved is the truth');
 });
 
-test('fonts.js loads only the active family, then the rest for previews', () => {
-  const code = fs.readFileSync(path.join(__dirname, '../../public/fonts.js'), 'utf8');
-  const links = [], listeners = {};
-  const context = {
-    module: { exports: {} },
-    addEventListener: (type, fn) => { listeners[type] = fn; },
-    MutationObserver: class { observe() {} },
-    document: {
-      documentElement: { getAttribute: () => 'glass' },
-      createElement: () => ({ dataset: {} }),
-      head: { appendChild: (l) => links.push(l) },
-    },
-  };
-  vm.runInNewContext(code, context);
-  assert.equal(links.length, 1);
-  assert.match(links[0].href, /family=Manrope/);
-  assert.match(links[0].href, /family=Sora/);
-  assert.match(links[0].href, /JetBrains\+Mono/);
-  assert.match(links[0].href, /display=swap$/);
-  listeners['noevia:preview-fonts']();
-  assert.deepEqual(links.map((l) => l.dataset.family).sort(), ['contemporary', 'editorial', 'glass']);
+// #951: every family's faces are self-hosted (no font server); each named face has an @font-face.
+test('every family names faces the app self-hosts', () => {
+  const fonts = fs.readFileSync(path.join(__dirname, '../../src/styles/system/fonts.css'), 'utf8');
   for (const [name, spec] of Object.entries(family.FAMILY_SPECS)) {
-    const query = context.module.exports.FAMILY_FONTS[name];
-    for (const face of new Set([spec.display, spec.ui])) assert.match(query, new RegExp(`family=${face}:`), `${name} loads ${face}`);
+    for (const face of new Set([spec.display, spec.ui])) assert.match(fonts, new RegExp(`font-family: '${face} Variable'`), `${name} self-hosts ${face}`);
+  }
+  assert.ok(!fs.existsSync(path.join(__dirname, '../../public/fonts.js')), 'no third-party font loader');
+});
+
+// #951: each family is a small token override on the one design system, keyed on data-family.
+test('families are token overrides in system/themes.css, in light and dark', () => {
+  const themes = fs.readFileSync(path.join(__dirname, '../../src/styles/system/themes.css'), 'utf8');
+  for (const name of ['contemporary', 'glass']) {
+    assert.match(themes, new RegExp(`\\[data-family='${name}'\\] \\{[^}]*--radius-`), `${name} sets its shape`);
+    assert.match(themes, new RegExp(`\\[data-family='${name}'\\]\\[data-theme='light'\\] \\{[^}]*--md-surface:`), `${name} light surfaces`);
+    assert.match(themes, new RegExp(`\\[data-family='${name}'\\]:not\\(\\[data-theme='light'\\]\\) \\{[^}]*--md-surface:`), `${name} dark surfaces`);
   }
 });

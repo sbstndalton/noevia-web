@@ -28,7 +28,7 @@ const port=31293,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'.
    await page.setViewportSize({width,height:width<768?760:900});await page.emulateMedia({colorScheme:theme});
    await page.goto(origin);await page.waitForLoadState('networkidle');
    await page.keyboard.press((await page.evaluate(()=>/mac/i.test(navigator.platform)))?'Meta+Comma':'Control+Comma');
-   const dialog=page.getByRole('region',{name:'Settings'});await dialog.waitFor();
+   const dialog=page.getByRole('dialog',{name:'Settings'});await dialog.waitFor();
    await dialog.getByRole('button',{name:'Assistant & style',exact:true}).click();
    await dialog.getByRole('heading',{name:'Assistant & style',level:1}).waitFor();
    const box=dialog.getByLabel(/Custom instructions/);

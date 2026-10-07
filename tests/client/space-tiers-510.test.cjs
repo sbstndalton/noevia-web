@@ -13,9 +13,11 @@ const TIER1 = '(max-width: 1023px), (max-height: 759px)';
 const TIER2 = '(max-width: 767px), (max-height: 599px)';
 
 test('space-tiers.css is the last stylesheet main.tsx imports', () => {
-  const imports = [...fs.readFileSync(path.join(src, 'main.tsx'), 'utf8').matchAll(/import '\.\/styles\/([\w-]+\.css)';/g)].map(m => m[1]);
+  const imports = [...fs.readFileSync(path.join(src, 'main.tsx'), 'utf8').matchAll(/import '\.\/styles\/([\w/-]+\.css)';/g)].map(m => m[1]);
   assert.equal(imports.at(-1), 'space-tiers.css');
-  assert.ok(imports.indexOf('families.css') < imports.indexOf('space-tiers.css'));
+  // #951: the design system's component layer decides the shared surfaces; the tiers lighten it.
+  assert.ok(imports.includes('system/components.css'), 'system/components.css is imported');
+  assert.ok(imports.indexOf('system/components.css') < imports.indexOf('space-tiers.css'));
 });
 
 test('the CSS tiers and the JS tiers use the same queries', () => {

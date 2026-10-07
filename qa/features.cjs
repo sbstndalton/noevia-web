@@ -26,7 +26,7 @@ const shots=process.env.QA_SCREENSHOTS||'';
    await page.getByPlaceholder('Message noevia…').waitFor();
    assert.equal(await page.locator('.app-mode-switch').count(),0,`Code switch hidden by default ${width}`);
    await openSettings(page);
-   const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
+   const settings=page.getByRole('dialog',{name:'Settings'});await settings.waitFor();
    await settings.getByRole('button',{name:'Features',exact:true}).click();
    const toggle=settings.getByRole('switch',{name:'Preview surfaces'});await toggle.waitFor();
    assert.equal(await toggle.isChecked(),false);

@@ -14,7 +14,7 @@ const SECRET='synthetic-app-password-qa';
    if(req.method()==='PUT'){puts.push(req.postDataJSON());return r.fulfill(saveReply());}
    return r.fulfill({json:{kind:'webdav',baseUrl:'https://dav.example.test/old',username:'old',corpusRoot:'Diary',secretConfigured:true}});});
   await page.goto(origin);await openSettings(page);
-  const settings=page.getByRole('region',{name:'Settings',exact:true});
+  const settings=page.getByRole('dialog',{name:'Settings',exact:true});
   await settings.getByRole('button',{name:'Diary & storage',exact:true}).click();
   await settings.getByLabel('Storage type').selectOption('webdav');
   await settings.getByLabel('Username').fill('nobody');await settings.getByLabel('App password').fill(SECRET);
@@ -51,7 +51,7 @@ const SECRET='synthetic-app-password-qa';
   assert.match(text,/Finance: Storage login rejected\. Check your storage credentials in Settings → Diary & storage\. Previous readable text retained\./);
   assert.ok(!/storage returned 401/.test(text),'bare status replaced');
   await toast.getByRole('button',{name:'Open storage settings',exact:true}).click();
-  await p2.getByRole('region',{name:'Settings',exact:true}).getByRole('heading',{name:'Diary & storage'}).waitFor({timeout:5000});
+  await p2.getByRole('dialog',{name:'Settings',exact:true}).getByRole('heading',{name:'Diary & storage'}).waitFor({timeout:5000});
   await p2.close();
   assert.deepEqual(errors,[]);
   console.log('PASS storage login check: rejected save explained, unverified save warned (unreachable vs answered 403), refresh 401 says login rejected and opens Settings → Diary & storage.');

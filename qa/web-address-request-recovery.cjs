@@ -40,7 +40,7 @@ const admin = { id: 'synthetic-admin', username: 'fixture', displayName: 'Synthe
 
       await page.goto('http://localhost:31457');
       await openSettings(page);
-      const settings = page.getByRole('region', { name: 'Settings', exact: true });
+      const settings = page.getByRole('dialog', { name: 'Settings', exact: true });
       await settings.getByRole('button', { name: 'Web address', exact: true }).click();
       await settings.getByRole('alert').filter({ hasText: 'could not be loaded' }).waitFor();
       assert.equal(await settings.getByText('Loading…').count(), 0, `${tag}: loading released`);
@@ -88,7 +88,7 @@ const admin = { id: 'synthetic-admin', username: 'fixture', displayName: 'Synthe
     });
     await page.goto('http://localhost:31457');
     await openSettings(page);
-    const settings = page.getByRole('region', { name: 'Settings', exact: true });
+    const settings = page.getByRole('dialog', { name: 'Settings', exact: true });
     await settings.getByRole('button', { name: 'Web address', exact: true }).click();
     await requested;
     await settings.getByRole('button', { name: 'Appearance & language', exact: true }).click();

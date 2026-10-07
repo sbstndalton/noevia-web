@@ -52,7 +52,7 @@ const { createFixture } = require('./diary-fixture.cjs');
     await page.goto('http://localhost:31587');
     await page.getByRole('button', { name: /Kontomenü für/ }).filter({ visible: true }).first().click();
     await page.locator('.account-popover').getByRole('menuitem', { name: 'Einstellungen', exact: true }).click();
-    const settings = page.getByRole('region', { name: 'Einstellungen' });
+    const settings = page.getByRole('dialog', { name: 'Einstellungen' });
     await settings.getByRole('button', { name: 'Modelle & Routing' }).click();
     await settings.getByRole('button', { name: 'Modellmanager öffnen' }).click();
     const dialog = page.locator('.model-manager-page');

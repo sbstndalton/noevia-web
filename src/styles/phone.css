@@ -287,7 +287,7 @@
   .coding-sidebar.is-open {
     position: fixed; z-index: 40; inset: calc(8px + env(safe-area-inset-top)) auto calc(8px + env(safe-area-inset-bottom)) 8px;
     width: min(84vw, 320px); padding: var(--space-3); border-radius: var(--radius-2xl); box-shadow: var(--shadow-4);
-    background: var(--pane-fill); backdrop-filter: blur(var(--pane-blur)); -webkit-backdrop-filter: blur(var(--pane-blur));
+    background: var(--bg-chrome); backdrop-filter: none; -webkit-backdrop-filter: none;
     overflow-y: auto; --enter-from: translateX(calc(-100% - 16px)); --enter-opacity: 1; animation: motion-enter var(--motion-considered) var(--ease-considered) both;
   }
   .coding-sidebar.is-open :is(.shell-sidebar-head > strong, .shell-sidebar-head > .preview-badge, .coding-projects, .coding-recents, .account-name) { display: revert; }
@@ -323,14 +323,10 @@
   transition: transform var(--duration-slow) var(--ease-spring), scale var(--duration-fast) var(--ease-spring);
 }
 .app-mode-switch.has-thumb.is-settling > .glass-thumb { transition: none; }
-html[data-lens='svg'] .app-mode-switch.has-thumb.is-moving > .glass-thumb, html[data-lens='svg'] .app-mode-switch.has-thumb:active > .glass-thumb { backdrop-filter: var(--lens, none) saturate(1.8) brightness(1.06); }
 .app-mode-switch.has-thumb:active > .glass-thumb { scale: 1.06 1.12; }
 .app-mode-switch.has-thumb > button { position: relative; z-index: 1; }
 .app-mode-switch.has-thumb > button.is-selected { background: transparent; box-shadow: none; }
-[data-family='editorial'] .app-mode-switch.has-thumb > .glass-thumb { background: var(--bg-surface); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: var(--elev-raised); }
 /* M3 segmented buttons do not slide: the tonal fill stays on the selected segment. */
-[data-family='contemporary'] .app-mode-switch.has-thumb > .glass-thumb { display: none; }
-[data-family='contemporary'] .app-mode-switch.has-thumb > button.is-selected { background: var(--md-secondary-container); }
 @media (prefers-reduced-motion: reduce) { .app-mode-switch.has-thumb > .glass-thumb { transition: none; } }
 html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transition: none; }
 @media (min-width: 520px) { .coding-sidebar.is-collapsed .app-mode-switch .glass-thumb { display: none; } }
@@ -355,8 +351,6 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 }
 .app-mode-switch.is-compact > button.is-selected { color: var(--text-primary); }
 .app-mode-switch.is-compact > .glass-thumb { border-radius: var(--radius-button-inset); }
-[data-family='contemporary'] .app-mode-switch.is-compact { border-radius: var(--radius-pill); background: transparent; box-shadow: inset 0 0 0 1px var(--md-outline); }
-[data-family='contemporary'] .app-mode-switch.is-compact > button { border-radius: var(--radius-button-inset); }
 @media (pointer: coarse) { .app-mode-switch.is-compact { height: 48px; } .app-mode-switch.is-compact > button { width: 44px; height: 44px; min-height: 44px; } }
 /* Collapsed rail: the header stacks, and the switch runs down under the expand button. */
 @media (min-width: 520px) {
@@ -376,7 +370,6 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
     inset: 0 auto 0 0; width: 100vw; height: var(--drawer-height, 100dvh); border-radius: 0; border: 0;
     padding: calc(env(safe-area-inset-top) + var(--space-2)) calc(env(safe-area-inset-right) + var(--space-3)) 0 calc(env(safe-area-inset-left) + var(--space-3));
   }
-  [data-family='contemporary'] .app .sidebar.pane:not(.coding-sidebar).is-expanded { border-radius: 0; }
   .app .sidebar.pane .side-footer-search { display: none; }
   .app .sidebar.pane.is-expanded .shell-search { width: 100%; min-height: 44px; margin: var(--space-2) 0; }
 }

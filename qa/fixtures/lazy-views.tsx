@@ -1,10 +1,14 @@
 import { Suspense, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { lazyView, ViewLoading } from '../../src/lazy-views';
-import '../../src/styles/tokens.css';
+import '../../src/styles/system/fonts.css';
+import '../../src/styles/system/tokens.css';
+import '../../src/styles/system/themes.css';
+import '../../src/styles/system/motion.css';
 import '../../src/styles/app.css';
 import '../../src/styles/noevia.css';
 import '../../src/styles/shell-v2.css';
+import '../../src/styles/system/components.css';
 const params = new URLSearchParams(location.search);
 const name = params.get('name') || 'Diary';
 let finish: () => void = () => {};

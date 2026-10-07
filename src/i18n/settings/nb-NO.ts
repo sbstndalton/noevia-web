@@ -225,7 +225,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'appearance.preview.message': "Oppsummer notatene",
   'appearance.reading': "Lesing og bevegelse",
   'appearance.chatFont': "Chatskrift",
-  'appearance.chatFontDesc': "En leseskrift bare for meldinger. Standard følger temafamilien; resten av grensesnittet beholder familiens skrift.",
+  'appearance.chatFontDesc': "En leseskrift bare for meldinger. Alle temafamilier bruker Inter i grensesnittet; dette endrer bare samtaleteksten.",
   'appearance.font.sans': "Sans (standard)",
   'appearance.font.serif': "Seriff",
   'appearance.font.mono': "Fast bredde",

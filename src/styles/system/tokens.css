@@ -1,0 +1,375 @@
+/* noevia design system — tokens (#951). One token layer, framework-neutral: plain custom
+   properties keyed on [data-theme] (light | dark, resolved before paint by public/theme.js)
+   and [data-palette] (the accent). No theme families, materials or per-palette surfaces: the
+   surfaces are one neutral ladder per mode, taken from the Claude reference
+   (ui mockups/inspiration/reverse-engineered/README.md); the accent palette only recolours
+   the accent roles. See README.md in this folder for the full contract.
+
+   Values are hex so tests/client/theme-contrast.test.cjs can measure every text/surface pair. */
+
+/* ── Surfaces and text: dark (default before paint) ─────────────────────────
+   Page 21 → dialog/raised 26 → composer/card 32, then hover steps. */
+:root, [data-theme='dark'] {
+  --md-surface: #151515;
+  --md-surface-dim: #151515;
+  --md-surface-bright: #30302e;
+  --md-surface-container-lowest: #0f0f0f;
+  --md-surface-container-low: #1a1a19;
+  --md-surface-container: #20201f;
+  --md-surface-container-high: #282826;
+  --md-surface-container-highest: #30302e;
+  --md-on-surface: #f0efec;
+  --md-on-surface-variant: #c3c2b7;
+  --md-outline: #898781;
+  --md-outline-variant: #343432;
+  --md-inverse-surface: #f0efec;
+  --md-inverse-on-surface: #20201f;
+  --md-secondary: #c3c2b7;
+  --md-on-secondary: #20201f;
+  --md-secondary-container: #3a3a38;
+  --md-on-secondary-container: #f0efec;
+  --md-tertiary: #e7bf9e;
+  --md-on-tertiary: #4f240d;
+  --md-tertiary-container: #4a2a15;
+  --md-on-tertiary-container: #f7e5d6;
+  --md-error: #ffb4ab;
+  --md-on-error: #630c18;
+  --md-error-container: #8c1424;
+  --md-on-error-container: #ffe2dd;
+  --md-success: #a6d1b2;
+  --md-success-container: #004829;
+  --md-on-success-container: #dbeddf;
+  --md-warning: #e4c996;
+  --md-warning-container: #5b3c00;
+  --md-on-warning-container: #f4e7cf;
+  --md-info: #9dcee4;
+  --md-info-container: #01485e;
+  --md-on-info-container: #d8ebf5;
+  /* Accent: blue (the default "iris" palette name is a stored compatibility value). */
+  --md-primary: #6ba7ee;
+  --md-on-primary: #0b1a2e;
+  --md-primary-container: #172b44;
+  --md-on-primary-container: #dce9fb;
+  --md-inverse-primary: #1f66bd;
+  /* State fills over any surface (white alpha in dark, black alpha in light). */
+  --fill-hover: rgb(255 255 255 / .075);
+  --fill-active: rgb(255 255 255 / .15);
+  --hairline: rgb(255 255 255 / .08);
+  --hairline-strong: rgb(255 255 255 / .14);
+  --ring-inset: inset 0 0 0 1px rgb(255 255 255 / .1);
+  --shadow-pop: 0 0 0 .5px #ffffff14, 0 4px 12px #0006, 0 16px 40px #00000080;
+  --shadow-popover: 0 0 0 .5px #ffffff14, 0 8px 24px #0000004d, 0 2px 6px #00000033;
+  --focus: #6ba7ee;
+  color-scheme: dark;
+}
+
+/* ── Surfaces and text: light (Claude light: bg-100 page, bg-200 chrome, white cards) ── */
+[data-theme='light'] {
+  --md-surface: #faf9f5;
+  --md-surface-dim: #e8e6dc;
+  --md-surface-bright: #ffffff;
+  --md-surface-container-lowest: #ffffff;
+  --md-surface-container-low: #f5f4ed;
+  --md-surface-container: #f0eee6;
+  --md-surface-container-high: #f0eee6;
+  --md-surface-container-highest: #e8e6dc;
+  --md-on-surface: #141413;
+  --md-on-surface-variant: #3d3d3a;
+  --md-outline: #73726c;
+  --md-outline-variant: #e3e1d7;
+  --md-inverse-surface: #262624;
+  --md-inverse-on-surface: #faf9f5;
+  --md-secondary: #5c5b55;
+  --md-on-secondary: #ffffff;
+  --md-secondary-container: #e8e6dc;
+  --md-on-secondary-container: #141413;
+  --md-tertiary: #8e4d23;
+  --md-on-tertiary: #ffffff;
+  --md-tertiary-container: #f5dfcd;
+  --md-on-tertiary-container: #602d11;
+  --md-error: #b12934;
+  --md-on-error: #ffffff;
+  --md-error-container: #ffdad5;
+  --md-on-error-container: #780e1e;
+  --md-success: #01673c;
+  --md-success-container: #d2e8d7;
+  --md-on-success-container: #003d23;
+  --md-warning: #7e5700;
+  --md-warning-container: #f1e1c3;
+  --md-on-warning-container: #4a2f00;
+  --md-info: #016783;
+  --md-info-container: #cee6f2;
+  --md-on-info-container: #013a4c;
+  --md-primary: #1f66bd;
+  --md-on-primary: #ffffff;
+  --md-primary-container: #e3edf9;
+  --md-on-primary-container: #10345f;
+  --md-inverse-primary: #6ba7ee;
+  --fill-hover: rgb(0 0 0 / .045);
+  --fill-active: rgb(0 0 0 / .08);
+  --hairline: rgb(0 0 0 / .08);
+  --hairline-strong: rgb(0 0 0 / .14);
+  --ring-inset: inset 0 0 0 1px rgb(0 0 0 / .06);
+  --shadow-pop: 0 0 0 .5px #0000001a, 0 4px 12px #0000000f, 0 16px 40px #0000001f;
+  --shadow-popover: 0 0 0 .5px #0000001a, 0 8px 24px #0000001f, 0 2px 6px #00000014;
+  --focus: #1f66bd;
+  color-scheme: light;
+}
+
+/* ── Accent palettes: only the accent roles change, never the surfaces ─────── */
+[data-palette='warm']:not([data-theme='light']) { --md-primary: #e0896a; --md-on-primary: #2a1206; --md-primary-container: #3b2016; --md-on-primary-container: #f8dccf; --md-inverse-primary: #a94a29; }
+[data-palette='warm'][data-theme='light'] { --md-primary: #a94a29; --md-on-primary: #ffffff; --md-primary-container: #f8e6de; --md-on-primary-container: #5a230f; --md-inverse-primary: #e0896a; }
+[data-palette='cool']:not([data-theme='light']) { --md-primary: #9aa3f0; --md-on-primary: #171b4a; --md-primary-container: #222650; --md-on-primary-container: #e0e3fd; --md-inverse-primary: #4b55c4; }
+[data-palette='cool'][data-theme='light'] { --md-primary: #4b55c4; --md-on-primary: #ffffff; --md-primary-container: #e9eafb; --md-on-primary-container: #232a72; --md-inverse-primary: #9aa3f0; }
+[data-palette='neutral']:not([data-theme='light']) { --md-primary: #d4d3cd; --md-on-primary: #1a1a19; --md-primary-container: #2e2e2c; --md-on-primary-container: #f0efec; --md-inverse-primary: #3d3d3a; }
+[data-palette='neutral'][data-theme='light'] { --md-primary: #3d3d3a; --md-on-primary: #ffffff; --md-primary-container: #e8e6dc; --md-on-primary-container: #141413; --md-inverse-primary: #d4d3cd; }
+[data-palette='sage']:not([data-theme='light']) { --md-primary: #8cc39b; --md-on-primary: #0f2716; --md-primary-container: #1a3020; --md-on-primary-container: #d5eedc; --md-inverse-primary: #2c663a; }
+[data-palette='sage'][data-theme='light'] { --md-primary: #2c663a; --md-on-primary: #ffffff; --md-primary-container: #e3f0e6; --md-on-primary-container: #163a1f; --md-inverse-primary: #8cc39b; }
+
+/* ── Semantic layer: what components read ─────────────────────────────────── */
+:root, .theme-scope {
+  --bg-app: var(--md-surface);
+  --bg-canvas: var(--md-surface);
+  --bg-chrome: var(--md-surface-container-low);
+  --bg-raised: var(--md-surface-container-low);
+  --bg-dialog: var(--md-surface-container-low);
+  --bg-surface-hover: var(--md-surface-container-high);
+  --bg-surface-active: var(--md-surface-container-highest);
+  --text-primary: var(--md-on-surface);
+  --text-secondary: var(--md-on-surface-variant);
+  --text-tertiary: var(--md-outline);
+  --text-muted: var(--md-on-surface-variant);
+  --control-border: var(--md-outline);
+  --border-subtle: var(--hairline);
+  --border-strong: var(--hairline-strong);
+
+  /* Accent. The old names stay as aliases so every screen switches at once. */
+  --accent-garnet: var(--md-primary);
+  --accent-text: var(--md-primary);
+  --on-accent: var(--md-on-primary);
+  --focus-ring: var(--md-primary);
+  --tint-garnet: var(--md-primary-container);
+  --on-tint: var(--md-on-primary-container);
+  --selected: var(--md-secondary-container);
+  --on-selected: var(--md-on-secondary-container);
+  /* Brand orange: the logo and the greeting spark only, never a control. */
+  --brand: #d97757;
+
+  --good: var(--md-success);
+  --status-good: var(--md-success);
+  --status-connected: var(--md-success);
+  --status-offline: var(--md-outline);
+  --status-inference: var(--md-tertiary);
+  --status-local: var(--md-secondary);
+  --status-remote: var(--md-info);
+  --status-warning: var(--md-warning);
+  --status-approval: var(--md-warning);
+  --status-danger: var(--md-error);
+  --danger: var(--md-error);
+  --on-danger: var(--md-on-error);
+
+  --nav-hover: var(--fill-hover);
+  --nav-active: var(--fill-active);
+  --selection: color-mix(in srgb, var(--md-primary) 30%, transparent);
+
+  /* Type. Inter Variable for the interface, Source Serif 4 (optical size) for the greeting
+     and display only; both self-hosted (fonts.css). Weights are variable-axis values. */
+  --font-ui: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Source Serif 4 Variable', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-serif: var(--font-display);
+  --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --text-caption2: 11px;
+  --text-caption: 12px;
+  --text-footnote: 13px;
+  --text-callout: 14px;
+  --text-body: 15px;
+  --text-input: 16px;
+  --text-headline: 17px;
+  --text-title3: 20px;
+  --text-title2: 22px;
+  --text-title1: 26px;
+  --text-large: 32px;
+  --text-display: 40px;
+  --text-hero: 52px;
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-body: 1.5;
+  --tracking-title: -0.01em;
+  --tracking-body: 0em;
+  --tracking-caption: 0em;
+  --weight-medium: 500;
+  --weight-title: 580;
+  --display-weight: 400;
+  --display-tracking: -0.015em;
+
+  /* Spacing: 4pt base. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --target-min: 44px;
+  --row-height: 32px;
+  --tile-gutter: 8px;
+  --group-inset-block: var(--space-4);
+  --group-row-min: calc(var(--space-12) + var(--space-4));
+  --group-inset-inline: var(--space-4);
+  --settings-title-gap: var(--space-8);
+  --settings-group-gap: var(--space-10);
+  --settings-content-gap: var(--space-3);
+  --settings-heading-gap: var(--space-1);
+  --diary-gutter: clamp(16px, 4vw, 64px);
+
+  /* Shape: rows and buttons 8, menus 10, dialogs 12, composer 14. */
+  --radius-control: 8px;
+  --radius-button: 8px;
+  --radius-row: 8px;
+  --radius-overlay: 10px;
+  --radius-dialog: 12px;
+  --radius-composer: 12px;
+  --radius-tile: 12px;
+  --radius-surface: 12px;
+  --radius-card: var(--radius-dialog);
+  --radius-bubble: var(--radius-dialog);
+  --radius-panel: var(--radius-surface);
+  --radius-input: var(--radius-control);
+  --radius-button-inset: 6px;
+  --radius-inset: 6px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: var(--radius-control);
+  --radius-lg: var(--radius-overlay);
+  --radius-xl: var(--radius-surface);
+  --radius-2xl: var(--radius-surface);
+  --radius-mark: 2px;
+  --radius-pill: 999px;
+
+  /* Motion (reference values). Short and decelerating; overshoot only on small physical
+     controls (switch knob, chips, press squish, a sent message). */
+  --dur-instant: 60ms;
+  --dur-snap: 120ms;
+  --dur-basic: 150ms;
+  --dur-base: 200ms;
+  --dur-panel: 240ms;
+  --dur-relaxed: 300ms;
+  --dur-spring: 450ms;
+  --dur-pulse: 2s;
+  --delay-skeleton: 500ms;
+  --stagger-base: 50ms;
+  --stagger-step: 30ms;
+  --ease-out-std: cubic-bezier(0, 0, .2, 1);
+  --ease-out-quart: cubic-bezier(.165, .84, .44, 1);
+  --ease-out-quint: cubic-bezier(.23, 1, .32, 1);
+  --ease-out-expo: cubic-bezier(.19, 1, .22, 1);
+  --ease-snap: cubic-bezier(.32, .72, 0, 1);
+  --ease-in-out: cubic-bezier(.4, 0, .2, 1);
+  /* design-lint: allow overshoot-ease — the switch knob and sent message overshoot by design (#951) */
+  --ease-overshoot: cubic-bezier(.34, 1.3, .64, 1);
+  --spring-press: linear(0, .2459, .6526, .9468, 1.0764, 1.0915, 1.0585, 1.0219, .9993, .9914, .9921, .9957, .9988, 1.0004, 1);
+  /* The four-purpose contract the component sheets read, mapped onto the reference. */
+  --motion-immediate: var(--dur-instant);
+  --motion-quick: var(--dur-basic);
+  --motion-considered: var(--dur-base);
+  --motion-async: 1200ms;
+  --ease-immediate: var(--ease-out-quart);
+  --ease-quick: var(--ease-out-std);
+  --ease-considered: var(--ease-out-quart);
+  --ease-async: linear;
+  --delay-hover-intent: 800ms;
+  --ease-standard: var(--ease-immediate);
+  --ease-out: var(--ease-quick);
+  --ease-in: var(--ease-quick);
+  --ease-spring: var(--ease-considered);
+  --duration-instant: var(--motion-immediate);
+  --duration-fast: var(--motion-quick);
+  --duration-base: var(--motion-quick);
+  --duration-slow: var(--motion-considered);
+  --duration-page: var(--motion-considered);
+
+  /* Elevation: layered surfaces first, shadows only on overlays. */
+  --surface-raised: var(--bg-surface);
+  --surface-overlay: var(--md-surface-container-low);
+  --edge-flat: var(--hairline);
+  --edge-raised: var(--hairline-strong);
+  --elev-flat: 0 0 0 0 transparent;
+  --elev-raised: 0 0 0 0 transparent;
+  --elev-overlay: var(--shadow-popover);
+  --shadow-rgb: 0, 0, 0;
+  --shadow-color: rgb(0 0 0 / .12);
+  --focus-halo: color-mix(in srgb, var(--focus-ring) 25%, transparent);
+  --shadow-1: var(--elev-flat);
+  --shadow-2: var(--elev-raised);
+  --shadow-3: var(--elev-overlay);
+  --shadow-4: var(--shadow-pop);
+  --shadow-card: var(--elev-raised);
+  --shadow-soft: var(--elev-raised);
+
+  /* Dialog scrim (#346): every ::backdrop reads these. */
+  --scrim: rgba(0, 0, 0, .5);
+  --scrim-blur: 0px;
+
+  /* Legacy aliases still read by the component sheets. */
+  --bg: var(--bg-app);
+  --bg-sidebar: var(--bg-chrome);
+  --bg-card: var(--bg-surface);
+  --bg-panel: var(--bg-surface);
+  --bg-input: var(--bg-surface);
+  --bg-assistant: var(--bg-surface-hover);
+  --bg-off: var(--bg-canvas);
+  --bg-active: var(--nav-active);
+  --bg-pinned: var(--nav-active);
+  --text: var(--text-primary);
+  --text-faint: var(--text-secondary);
+  --text-off: var(--text-secondary);
+  --border: var(--border-subtle);
+  --accent: var(--accent-garnet);
+  --accent-ink: var(--accent-text);
+  --accent-2: var(--accent-text);
+  --accent-2-soft: var(--tint-garnet);
+  --send-icon: var(--on-accent);
+}
+/* Tiles (#951): the sidebar and the main area are tiles on a backdrop one step darker
+   (dark) or deeper (light); main is the top surface. Cards: one step up from main in dark,
+   white in light. */
+:root:not([data-theme='light']), .theme-scope:not([data-theme='light']) {
+  --bg-surface: var(--md-surface-container);
+  --bg-backdrop: var(--md-surface-container-lowest);
+  --bg-chrome: var(--md-surface);
+  --bg-app: var(--md-surface-container-low);
+  --bg-dialog: var(--md-surface-container-low);
+  --tile-ring: inset 0 0 0 1px rgb(255 255 255 / .07);
+  --tile-shadow: 0 1px 2px rgb(0 0 0 / .3), 0 8px 24px rgb(0 0 0 / .22);
+}
+[data-theme='light'] {
+  --bg-surface: var(--md-surface-container-lowest);
+  --bg-backdrop: var(--md-surface-container);
+  --bg-chrome: var(--md-surface-container-low);
+  --bg-app: var(--md-surface);
+  --bg-dialog: var(--md-surface);
+  --tile-ring: inset 0 0 0 1px rgb(0 0 0 / .06);
+  --tile-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 8px 24px rgb(0 0 0 / .05);
+}
+
+/* Reduced motion (system or Settings → Motion) keeps state changes, drops travel. */
+@media (prefers-reduced-motion: reduce) {
+  html:root { --motion-quick: 1ms; --motion-considered: 1ms; --ease-considered: linear; }
+}
+html:root[data-motion='reduced'] { --motion-quick: 1ms; --motion-considered: 1ms; --ease-considered: linear; }
+/* Compact density steps each vertical role down one notch; inline insets stay. */
+:root[data-density='compact'] {
+  --group-inset-block: var(--space-3);
+  --group-row-min: var(--space-12);
+  --settings-title-gap: var(--space-6);
+  --settings-group-gap: var(--space-8);
+  --settings-content-gap: var(--space-2);
+}
+@media (max-width: 700px) { :root { --group-inset-inline: var(--space-4); } }
+:root[data-layout='mobile'] { --group-inset-inline: var(--space-4); }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  :root { --scrim: rgba(0, 0, 0, .82); --scrim-blur: 0px; }
+}

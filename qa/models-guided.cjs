@@ -50,7 +50,7 @@ const rows = [4096, 8192, 16384, 32768, 65536, 131072, 262144].map(ctx => ({ ctx
     });
     await page.goto('http://localhost:31351');
     await openSettings(page);
-    const settings = page.getByRole('region', { name: 'Settings' });
+    const settings = page.getByRole('dialog', { name: 'Settings' });
     await settings.getByRole('button', { name: 'Models & routing' }).click();
     await settings.getByRole('button', { name: 'Open model manager' }).click();
     const manager = page.locator('.model-manager-page');

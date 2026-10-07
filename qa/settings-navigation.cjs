@@ -15,7 +15,7 @@ const { withLocale } = require('./qa-locale.cjs');
       await page.goto('http://localhost:31420');
       await page.getByRole('textbox', { name: 'Message', exact: true }).waitFor();
       await openSettings(page);
-      const settings = page.getByRole('region', { name: 'Settings', exact: true });
+      const settings = page.getByRole('dialog', { name: 'Settings', exact: true });
       await settings.getByRole('button', { name:'Appearance & language',exact: true }).click();
       await settings.getByRole('heading', { name:'Appearance & language',exact: true }).waitFor();
       for (const theme of ['light', 'dark']) {

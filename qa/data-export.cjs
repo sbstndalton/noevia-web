@@ -30,7 +30,7 @@ function entries(buf){const out={};let at=0;while(buf.readUInt32LE(at)===0x04034
    await page.goto(origin);await page.waitForLoadState('networkidle');
    const nav=page.getByRole('button',{name:'Open navigation',exact:true});if(await nav.isVisible().catch(()=>false))await nav.click();
    await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
-   const dialog=page.getByRole('region',{name:'Settings'});await dialog.waitFor();
+   const dialog=page.getByRole('dialog',{name:'Settings'});await dialog.waitFor();
    await dialog.getByRole('button',{name:'Your data & privacy',exact:true}).click();
    await dialog.getByRole('heading',{name:'Your data & privacy',level:1}).waitFor();
    assert.equal(await dialog.getByText('Export conversations',{exact:true}).count(),1);

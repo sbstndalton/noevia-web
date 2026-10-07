@@ -39,7 +39,7 @@ require('node:fs').mkdirSync(shots,{recursive:true});
   const rootBox=await page.locator('#root').boundingBox();
   assert.ok(rootBox && rootBox.width<=430,`#root should be capped at 430px by the forced mobile preview, got ${rootBox&&rootBox.width}`);
   await openSettings(page);
-  const d=page.getByRole('region',{name:'Settings'});await d.waitFor();
+  const d=page.getByRole('dialog',{name:'Settings'});await d.waitFor();
   // The fix under test: SettingsShell's phone() now honours data-layout, so it opens on the
   // single 'list' pane like a real phone instead of jumping straight to 'detail'.
   assert.equal(await d.getAttribute('data-view'),'list','SettingsShell should open on the list pane once phone() honours the forced mobile layout');
@@ -92,7 +92,7 @@ require('node:fs').mkdirSync(shots,{recursive:true});
   await autoPage.goto('http://localhost:31411');await autoPage.getByPlaceholder('Message noevia…').waitFor();
   assert.notEqual(await autoPage.evaluate(()=>document.documentElement.dataset.layout),'mobile','Automatic mode must never set data-layout="mobile"');
   await openSettings(autoPage);
-  const autoD=autoPage.getByRole('region',{name:'Settings'});await autoD.waitFor();
+  const autoD=autoPage.getByRole('dialog',{name:'Settings'});await autoD.waitFor();
   assert.equal(await autoD.getAttribute('data-view'),'detail','desktop Settings still opens straight on the two-pane detail view outside the forced mobile preview');
   await autoD.getByRole('button',{name:'Appearance & language',exact:true}).click();
   await autoPage.locator('.settings-detail-scroll').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));

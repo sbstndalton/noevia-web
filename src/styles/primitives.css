@@ -21,11 +21,11 @@
 /* Primary: the one filled action in a group. */
 :is(.btn-primary, .modal-btn.primary) {
   border-color: transparent; background: var(--md-primary); color: var(--md-on-primary);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 1px 2px var(--glass-shadow), 0 6px 14px -8px color-mix(in srgb, var(--md-primary) 60%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 1px 2px var(--shadow-color), 0 6px 14px -8px color-mix(in srgb, var(--md-primary) 60%, transparent);
   padding-inline: 16px;
 }
 :is(.btn-primary, .modal-btn.primary):hover:not(:disabled) { background: color-mix(in srgb, var(--md-primary) 88%, var(--md-on-primary)); color: var(--md-on-primary);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 1px 2px var(--glass-shadow), 0 8px 18px -8px color-mix(in srgb, var(--md-primary) 70%, transparent); }
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 1px 2px var(--shadow-color), 0 8px 18px -8px color-mix(in srgb, var(--md-primary) 70%, transparent); }
 :is(.btn-secondary, .modal-btn.secondary, .popup-tab) { background: var(--bg-surface); color: var(--text-primary); }
 .btn-ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--text-secondary); }
 .btn-ghost:hover:not(:disabled) { background: var(--nav-hover); box-shadow: none; }
@@ -248,19 +248,7 @@ button.connector-card:focus-visible { outline: 2px solid var(--focus-ring); outl
 @media (max-width: 400px) { .settings-stage .glass-seg > button { padding-inline: 10px; } }
 
 /* Editorial: controls are flat and outlined; pressing darkens the fill (no inset hollows). */
-[data-family='editorial'] :is(.btn, .modal-btn, .popup-tab):not(.btn-primary):not(.primary):not(.btn-ghost):not(.btn-danger) {
-  border-color: var(--edge-raised); background: var(--bg-surface); box-shadow: var(--elev-flat);
-}
-[data-family='editorial'] :is(.btn, .modal-btn, .popup-tab):not(.btn-primary):not(.primary):not(.btn-ghost):active:not(:disabled) { background: var(--bg-surface-active); box-shadow: var(--elev-flat); }
-[data-family='editorial'] :is(.modal-input, label.select > select, .settings-detail select:not(.mobile-settings-section), .settings-detail input[type='text'], .settings-detail input[type='url'], .settings-detail input[type='email'], .settings-detail input[type='password'], .settings-detail input[type='number'], .settings-detail textarea) {
-  border-color: var(--control-border); background-color: var(--bg-surface); box-shadow: var(--elev-flat);
-}
-[data-family='editorial'] .noevia-switch:not(:checked), [data-family='editorial'] .settings-detail .set-row-control input[type='checkbox']:not(.plain):not(:checked) { background: var(--bg-app); box-shadow: inset 0 0 0 1px var(--control-border); }
-[data-family='editorial'] .chip, [data-family='editorial'] .logo { border-color: var(--edge-raised); background: var(--bg-surface); box-shadow: var(--elev-flat); }
 /* Contemporary (was Material 3): flat tonal controls with outlined secondaries. */
-[data-family='contemporary'] :is(.btn-secondary, .modal-btn.secondary, .popup-tab) { border-color: var(--md-outline-variant); box-shadow: none; background: transparent; color: var(--md-primary); }
-[data-family='contemporary'] :is(.btn, .modal-btn) { border-radius: var(--radius-pill); }
-[data-family='contemporary'] .btn-primary, [data-family='contemporary'] .modal-btn.primary { box-shadow: none; }
 
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   :is(.btn, .modal-btn, .popup-tab, .chip) { box-shadow: none; border-color: var(--control-border); }

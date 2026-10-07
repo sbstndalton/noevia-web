@@ -93,7 +93,7 @@ const MODELS = [
     });
     await settingsPage.goto('http://localhost:31900');
     await openSettings(settingsPage);
-    const settings = settingsPage.getByRole('region', { name: 'Settings' });
+    const settings = settingsPage.getByRole('dialog', { name: 'Settings' });
     await settings.getByRole('button', { name: 'Models & routing' }).click();
     await settings.getByRole('button', { name: 'Open model manager' }).click();
     await settings.waitFor({ state: 'detached' });

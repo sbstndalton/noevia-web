@@ -113,7 +113,7 @@ async function routeProviders(page) {
         await accountTrigger.waitFor();
         await accountTrigger.click();
         await page.getByRole('menuitem', { name: 'Settings', exact: true }).click();
-        const settings = page.getByRole('region', { name: 'Settings' });
+        const settings = page.getByRole('dialog', { name: 'Settings' });
         await settings.waitFor();
 
         if (closeWith === 'Escape') await page.keyboard.press('Escape');

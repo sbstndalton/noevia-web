@@ -75,7 +75,8 @@ async function tier2ItemsStay(page, name) {
   check(!(await visible(page, '.composer-actions-panel .composer-browse-tools')), `${name}: + menu has no Tools row`);
   await page.keyboard.press('Escape');
   check(await page.getByRole('button', { name: 'New chat in Synthetic project', exact: true }).count() === 1, `${name}: project-row pencil kept`);
-  check(await page.locator('.sidebar .new-chat-btn').evaluate(e => getComputedStyle(e).borderTopWidth) !== '0px', `${name}: New chat keeps its outline`);
+  // #951: New chat is a quiet ghost row (no outlined pill), still a full-width labelled target.
+  check(await page.locator('.sidebar .new-chat-btn').evaluate(e => getComputedStyle(e).borderTopWidth === '0px' && e.textContent.trim().length > 0), `${name}: New chat is a quiet labelled row`);
   await page.locator('.proj-row', { hasText: 'Synthetic project' }).first().hover();
   await page.getByRole('button', { name: 'Options for Synthetic project', exact: true }).click();
   await page.getByRole('menu').waitFor();

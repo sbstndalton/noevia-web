@@ -151,7 +151,7 @@ function startModel(){
   const kctx=await browser.newContext(withLocale({viewport:{width:1280,height:900}}));
   const {cookies:kc}=await other('/api/connectors');await kctx.addCookies([...kc].map(([name,value])=>({name,value,url:origin})));
   const kp=await kctx.newPage();kp.on('pageerror',e=>errors.push(e.message));await kp.goto(origin);
-  const kset=kp.getByRole('region',{name:'Settings'});await kset.or(kp.locator('.sidebar').getByText('Member Keys',{exact:true})).first().waitFor();
+  const kset=kp.getByRole('dialog',{name:'Settings'});await kset.or(kp.locator('.sidebar').getByText('Member Keys',{exact:true})).first().waitFor();
   if(await kset.isVisible().catch(()=>false)){await kp.keyboard.press('Escape');await kset.waitFor({state:'detached'});}
   const kask=async(text)=>{await kp.locator('.sidebar').getByText('Member Keys',{exact:true}).first().hover();await kp.getByRole('button',{name:'New chat in Member Keys'}).click({force:true});const b=kp.getByRole('textbox',{name:/Message/}).first();await b.fill(text);await b.press('Enter');};
   const k0=offered.length;await kask('Look up my record');await kp.getByText('No forecast tool was offered.').last().waitFor();
@@ -181,7 +181,7 @@ function startModel(){
   assert.ok((await other('/api/projects',{name:'Member OAuth',model:'synthetic-model',toolboxes:['core',oauthId]})).status<300);
   await other('/api/profile/onboarding',{});
   const mp=await mctx.newPage();mp.on('pageerror',e=>errors.push(e.message));await mp.goto(origin);
-  const mset=mp.getByRole('region',{name:'Settings'});await mset.or(mp.locator('.sidebar').getByText('Member OAuth',{exact:true})).first().waitFor();
+  const mset=mp.getByRole('dialog',{name:'Settings'});await mset.or(mp.locator('.sidebar').getByText('Member OAuth',{exact:true})).first().waitFor();
   if(await mset.isVisible().catch(()=>false)){await mp.keyboard.press('Escape');await mset.waitFor({state:'detached'});}
   await mp.locator('.sidebar').getByText('Member OAuth',{exact:true}).first().waitFor({timeout:10000}).catch(async e=>{await mp.screenshot({path:'/tmp/noevia-shots/member-land.png'});throw e;});
   const mask=async(text)=>{await mp.locator('.sidebar').getByText('Member OAuth',{exact:true}).first().hover();await mp.getByRole('button',{name:'New chat in Member OAuth'}).click({force:true});const b=mp.getByRole('textbox',{name:/Message/}).first();await b.fill(text);await b.press('Enter');};

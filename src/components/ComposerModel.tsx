@@ -25,7 +25,7 @@ export function ComposerModel({ label, onClick, disabled = false, hint, compact 
       {compact.thinking && <span className="composer-model-thinking" aria-hidden="true">· {compact.thinking}</span>}
     </button>;
   }
-  return <button type="button" className="model-pill composer-model glass glass-lens is-press" onClick={onClick} disabled={disabled}
+  return <button type="button" className="model-pill composer-model glass is-press" onClick={onClick} disabled={disabled}
     title={hint || t('composer.chooseModelTitle', { name: label })} aria-label={disabled ? label : t('composer.chooseModel', { name: label })}>
     <MiddleTruncate className={`model-pill-label${short && short !== label ? ' has-short' : ''}`} text={label}/>
     {short && short !== label && <span className="model-pill-label model-pill-short" aria-hidden="true">{short}</span>}

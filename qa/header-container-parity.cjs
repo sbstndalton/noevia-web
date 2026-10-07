@@ -61,7 +61,11 @@ function probeHeaders(phone) {
   for (const [name, el] of [['settings', settings], ['customise', customise], ['projects', projects]]) {
     if (!el) continue;
     const r = rect(el), cs = getComputedStyle(el);
-    found[name] = { top: Math.round(r.top), left: Math.round(r.left), fontSize: cs.fontSize };
+    // #951: Settings is a window over the app on desktop; its title is measured from the
+    // window's own top, the pages' titles from their tile's top.
+    const frame = el.closest('.settings-stage, .app-stack');
+    const top = frame ? r.top - frame.getBoundingClientRect().top : r.top;
+    found[name] = { top: Math.round(top), left: Math.round(r.left), fontSize: cs.fontSize };
   }
   return found;
 }
@@ -150,7 +154,9 @@ async function run(browser, cfg, report) {
   if (!layout.h1 || !layout.firstTab || !layout.firstCard) {
     findings.push({ kind: 'projects-column-missing', tag, layout });
   } else {
-    const lefts = { h1: layout.h1.left, firstTab: layout.firstTab.left, firstCard: layout.firstCard.left };
+    // #951: the tabs sit in a quiet filled track; the track (not the first tab inside its 2px
+    // padding) shares the column.
+    const lefts = { h1: layout.h1.left, firstTab: (layout.seg || layout.firstTab).left, firstCard: layout.firstCard.left };
     if (Math.max(...Object.values(lefts)) - Math.min(...Object.values(lefts)) > COLUMN_TOLERANCE) {
       findings.push({ kind: 'projects-column-mismatch', tag, lefts, tolerance: COLUMN_TOLERANCE });
     }

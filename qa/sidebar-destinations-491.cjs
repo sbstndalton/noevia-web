@@ -59,7 +59,7 @@ const chat = { id: 'synthetic-chat', title: 'Research notes', updatedAt: 1000, p
     assert.equal(await page.locator('.sidebar [aria-live="polite"]').textContent(), '1 result');
     await search.press('ArrowDown');
     await page.keyboard.press('Enter');
-    await page.getByRole('region', { name: 'Settings', exact: true }).waitFor();
+    await page.getByRole('dialog', { name: 'Settings', exact: true }).waitFor();
     console.log('PASS #491: Settings result count and existing settings route');
     await page.getByRole('button', { name: 'Close settings' }).click();
     await page.close();

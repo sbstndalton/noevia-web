@@ -29,7 +29,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    await reachable(dialog.getByTitle('Close',{exact:true}),height);
    await dialog.getByTitle('Close',{exact:true}).click();
    await openSettings(page);
-   const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
+   const settings=page.getByRole('dialog',{name:'Settings'});await settings.waitFor();
    assert.ok(await settings.evaluate(el=>el.scrollWidth<=el.clientWidth),'Settings must not overflow horizontally');
    if(width<700){
      // Phones show the list, then each page with a back arrow and a close button.

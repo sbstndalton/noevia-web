@@ -225,7 +225,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'appearance.preview.message': "Sammanfatta anteckningarna",
   'appearance.reading': "Läsning och rörelse",
   'appearance.chatFont': "Chattypsnitt",
-  'appearance.chatFontDesc': "Ett lästypsnitt bara för meddelanden. Standard följer temafamiljen; resten av gränssnittet behåller familjens typsnitt.",
+  'appearance.chatFontDesc': "Ett lästypsnitt bara för meddelanden. Alla temafamiljer använder Inter i gränssnittet; detta ändrar bara samtalstexten.",
   'appearance.font.sans': "Sans (standard)",
   'appearance.font.serif': "Serif",
   'appearance.font.mono': "Fast bredd",

@@ -45,7 +45,7 @@ function fakeS3(objects){
    await page.setViewportSize({width,height:width<768?812:900});
    await page.evaluate(t=>localStorage.setItem('cowork-theme',t),theme);await page.goto(origin); // not reload: the address bar can still read /settings/backups after the phone close, and reloading it re-opens Settings with no account menu
    await openSettings(page);
-   const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
+   const settings=page.getByRole('dialog',{name:'Settings'});await settings.waitFor();
    await settings.getByRole('button',{name:'Backups',exact:true}).click();
    await settings.getByText('Last restore test').waitFor();
    await settings.getByText(/files verified/).waitFor();

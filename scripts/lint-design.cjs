@@ -10,7 +10,7 @@
 //   gradient-text  background-clip: text.
 //   type-scale     a font-size in px/rem off the type scale (tokens.css --text-*); em, % and
 //                  keywords stay allowed because they are relative to a scale step.
-//   font-weight    a weight other than 400/500/600/700 (HIG: no in-between weights). A weight may
+//   font-weight    a weight other than 400/500/580/600/700 (580: the variable title weight, #951). A weight may
 //                  come from a --*-weight token (theme families pick their display weight, #249);
 //                  the token's own declaration is then held to the same four weights.
 //   transition-all `transition: all` or `transition-property: all`, or a shorthand with no property
@@ -29,7 +29,7 @@
 //                  var(--radius-*) with no literal fallback, a calc()/max()/min()/clamp() built on
 //                  a --radius-* token (a concentric inset), or one of RADIUS_ALLOW: 0 (square),
 //                  50% (circle), 999px (pill; prefer var(--radius-pill)) and inherit.
-//                  tokens.css and themes.css define the tokens and are exempt.
+//                  tokens.css defines the tokens and is exempt.
 // Silence a deliberate case on the line itself or the line above:  /* design-lint: allow <rule> — reason */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -45,7 +45,8 @@ function* files(target) {
 
 // Mirrors the --text-* tokens in src/styles/tokens.css (HIG text styles, sized for the web).
 const TYPE_SCALE = new Set([11, 12, 13, 14, 15, 16, 17, 20, 22, 26, 32, 40, 52]);
-const WEIGHTS = new Set(['400', '500', '600', '700', 'normal', 'bold', 'inherit']);
+// #951: 580 is the variable-font title weight from the reference (page titles, section headings).
+const WEIGHTS = new Set(['400', '500', '580', '600', '700', 'normal', 'bold', 'inherit']);
 // #529: the only literal corners a component may write. Everything else reads a --radius-* role.
 const RADIUS_ALLOW = new Set(['0', '0px', '50%', '999px', 'inherit']);
 const RADIUS_DECL = /(?<![-\w])(border(?:-(?:top|bottom)-(?:left|right)|-(?:start|end)-(?:start|end))?-radius)\s*:\s*([^;}]*)/g;
@@ -108,7 +109,7 @@ function lint(text, file = '') {
     for (const m of line.matchAll(/--[\w-]*weight[\w-]*\s*:\s*([\w]+)/g)) {
       if (!WEIGHTS.has(m[1])) push('font-weight', `weight token ${m[1]}; use 400, 500, 600 or 700`);
     }
-    if (/\.css$/.test(file) && !/(^|\/)(tokens|themes)\.css$/.test(file)) {
+    if (/\.css$/.test(file) && !/(^|\/)tokens\.css$/.test(file)) {
       for (const m of line.matchAll(RADIUS_DECL)) {
         const bad = untokenizedRadii(m[2]);
         if (bad.length) push('radius-token', `${m[1]}: ${m[2].trim().slice(0, 50)} hard-codes ${bad.join(' ')}; use a --radius-* token (0, 50%, 999px and inherit are the only literals)`);

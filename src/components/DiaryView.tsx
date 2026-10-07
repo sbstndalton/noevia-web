@@ -514,7 +514,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
     </>} />
     <ComposerModel label={extrasEnabled && extraProject ? t('diary.compose.extrasLabel', { model: extraProject.routing === 'auto' ? t('diary.compose.auto') : extraProject.model || t('diary.compose.localModel') }) : t('diary.compose.diaryCompanion')} disabled={!extrasEnabled || !extraProject || busy || extraBusy} onClick={()=>setExtraModels(true)} hint={extrasEnabled ? t('diary.compose.extrasHint') : t('diary.compose.extrasHintDisabled')} />
     {extrasEnabled && extraProject && <ReasoningControl project={extraProject} disabled={busy || extraBusy} onChanged={refreshExtraProject} />}
-    <button className="send-btn glass glass-lens is-primary is-press" aria-label={t('diary.compose.sendLabel')} disabled={busy || recovering || extraBusy || !draft.trim()} onClick={submit}><SendIcon /></button></div>
+    <button className="send-btn glass is-primary is-press" aria-label={t('diary.compose.sendLabel')} disabled={busy || recovering || extraBusy || !draft.trim()} onClick={submit}><SendIcon /></button></div>
     {!folder && !day && (turns[today] || []).length > 0 && <button className="popup-tab" onClick={()=>{setMonth(today.slice(0,7));setDay(today);}}>{t('diary.compose.openTodaysConversation')}</button>}
     {recoveryNotice && <p className="composer-action-status" role="status">{recoveryNotice}</p>}
     {extraStatus && <p className="composer-action-status" role="status">{extraStatus}</p>}

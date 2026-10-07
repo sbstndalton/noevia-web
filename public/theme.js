@@ -9,7 +9,7 @@
   document.documentElement.setAttribute('data-theme-preference', preference);
   document.documentElement.setAttribute('data-theme', theme);
   // The accent palette, applied before paint like the theme so there is no flash of
-  // the wrong accent. Iris is noevia's own; the rest re-hue the same tone ladder.
+  // the wrong accent. Iris (blue) is the default; the others recolour the accent only.
   const accents = ['iris', 'warm', 'cool', 'neutral', 'sage'];
   let palette = 'iris';
   try {
@@ -17,7 +17,7 @@
     if (accents.includes(saved)) palette = saved;
   } catch { /* use the default */ }
   document.documentElement.setAttribute('data-palette', palette);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f9f9ff' : '#151519');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#faf9f5' : '#151515');
   for (const [key, attribute, allowed] of [
     ['noevia:chat-font', 'data-chat-font', ['sans', 'serif', 'mono']],
     ['noevia:density', 'data-density', ['comfortable', 'compact']],
@@ -27,7 +27,8 @@
     try { const saved = localStorage.getItem(key); if (allowed.includes(saved)) value = saved; } catch { /* use the default */ }
     document.documentElement.setAttribute(attribute, value);
   }
-  // Theme family (#249). A browser that saved one of the retired materials lands on the
+  // Theme family (#249, rebuilt on one token system in #951: each family is a small set of token
+  // overrides in src/styles/system/themes.css). A browser that saved one of the retired materials lands on the
   // family that replaced it; src/theme-family.ts holds the same table.
   const families = ['editorial', 'contemporary', 'glass'];
   const migration = { soft: 'editorial', material: 'contemporary', liquid: 'glass' };

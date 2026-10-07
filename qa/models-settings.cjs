@@ -93,7 +93,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  });
  await page.goto('http://localhost:31341');
  await openSettings(page);
- const settings=page.getByRole('region',{name:'Settings'});
+ const settings=page.getByRole('dialog',{name:'Settings'});
  await settings.getByRole('button',{name:'Models & routing'}).click();
  // Settings keeps a summary only; managing models happens on its own page.
  await settings.getByText(/loaded: Qwen-9B/).waitFor();
@@ -362,7 +362,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  // Back returns to the Settings summary, not to the chat.
  await page.setViewportSize({width:1440,height:950});
  await dialog.getByRole('button',{name:'Settings',exact:true}).first().click();
- await page.getByRole('region',{name:'Settings'}).getByRole('button',{name:'Open model manager'}).waitFor();
+ await page.getByRole('dialog',{name:'Settings'}).getByRole('button',{name:'Open model manager'}).waitFor();
  if(process.env.QA_SCREENSHOTS)await page.screenshot({path:process.env.QA_SCREENSHOTS+'/models-summary.png'});
  assert.deepEqual(errors,[]);assert.equal(fixture.requests.length,0);
  console.log('PASS models settings: Settings summary opens the full-page manager and back: unified page with Your models/Discover, search judged for this server (fit/trust badges, filters, hub link), library details/delete, per-model detail autoconfig presets/vision/fill, revision conflict and apply-now reload, download search/estimates/queue/set up, hardware unified memory/tiles/charts/tooltip/diagnosis/logs/restart guard, benchmark confirm/run charts/output/rating, prompts, routing section, phone/tablet/desktop light/dark.');

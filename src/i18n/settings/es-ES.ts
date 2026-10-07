@@ -225,7 +225,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'appearance.preview.message': "Resume las notas",
   'appearance.reading': "Lectura y movimiento",
   'appearance.chatFont': "Fuente del chat",
-  'appearance.chatFontDesc': "Una fuente de lectura solo para los mensajes. La predeterminada sigue la familia del tema; el resto de la interfaz mantiene su tipografía.",
+  'appearance.chatFontDesc': "Una fuente de lectura solo para los mensajes. Todas las familias de tema usan Inter en la interfaz; esto cambia solo el texto de la conversación.",
   'appearance.font.sans': "Sans (predeterminada)",
   'appearance.font.serif': "Serif",
   'appearance.font.mono': "Monoespaciada",

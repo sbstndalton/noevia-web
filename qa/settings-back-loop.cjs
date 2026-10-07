@@ -45,7 +45,7 @@ require('node:fs').mkdirSync(shots,{recursive:true});
   // ── #304: Settings -> Models & routing -> back -> Settings -> close -> chat, 3 times, no loop.
   for(let i=0;i<3;i++){
    await openSettings(page);
-   const settings=page.getByRole('region',{name:'Settings',exact:true});
+   const settings=page.getByRole('dialog',{name:'Settings',exact:true});
    await settings.getByRole('button',{name:'Models & routing',exact:true}).click();
    await settings.getByRole('button',{name:'Open model manager'}).click();
    await settings.waitFor({state:'detached'});
@@ -55,14 +55,14 @@ require('node:fs').mkdirSync(shots,{recursive:true});
    // the region locator itself unambiguous.
    await manager.getByRole('button',{name:'Settings',exact:true}).click();
    await page.getByRole('heading',{name:'Models & routing',exact:true}).waitFor();
-   const settingsAgain=page.getByRole('region',{name:'Settings',exact:true});
+   const settingsAgain=page.getByRole('dialog',{name:'Settings',exact:true});
    await settingsAgain.getByRole('heading',{name:'Models & routing',exact:true}).waitFor();
    // Close (X) must land back in chat, not re-show Models & routing.
    await settingsAgain.getByRole('button',{name:'Close settings'}).click();
    await settingsAgain.waitFor({state:'detached'}).catch(()=>{});
    await page.getByRole('textbox',{name:'Message',exact:true}).waitFor();
    assert.equal(await page.locator('.model-manager-page').count(),0,`iteration ${i}: Models & routing must not reappear after close`);
-   assert.equal(await page.getByRole('region',{name:'Settings',exact:true}).count(),0,`iteration ${i}: Settings must not reappear after close`);
+   assert.equal(await page.getByRole('dialog',{name:'Settings',exact:true}).count(),0,`iteration ${i}: Settings must not reappear after close`);
   }
   console.log('PASS settings-back-loop: Models & routing -> back -> Settings -> close -> chat, 3 iterations, no loop (#304).');
 
@@ -73,15 +73,15 @@ require('node:fs').mkdirSync(shots,{recursive:true});
   // detour is still never the return target: Settings' back then close lands in chat, and
   // the saved last place (used for a bare `/`) is still the chat underneath (persistedView).
   await openSettings(page);
-  await page.getByRole('region',{name:'Settings',exact:true}).getByRole('button',{name:'Models & routing',exact:true}).click();
-  await page.getByRole('region',{name:'Settings',exact:true}).getByRole('button',{name:'Open model manager'}).click();
+  await page.getByRole('dialog',{name:'Settings',exact:true}).getByRole('button',{name:'Models & routing',exact:true}).click();
+  await page.getByRole('dialog',{name:'Settings',exact:true}).getByRole('button',{name:'Open model manager'}).click();
   await page.locator('.model-manager-page').waitFor();
   assert.equal(new URL(page.url()).pathname,'/models','Models & routing has its own address (#359)');
   await page.reload();
   await page.locator('.model-manager-page').waitFor();
   await page.locator('.model-manager-page').getByRole('button',{name:'Settings',exact:true}).click();
   await page.getByRole('heading',{name:'Models & routing',exact:true}).waitFor();
-  const settingsAfterReload=page.getByRole('region',{name:'Settings',exact:true});
+  const settingsAfterReload=page.getByRole('dialog',{name:'Settings',exact:true});
   await settingsAfterReload.getByRole('heading',{name:'Models & routing',exact:true}).waitFor();
   await settingsAfterReload.getByRole('button',{name:'Close settings'}).click();
   await settingsAfterReload.waitFor({state:'detached'}).catch(()=>{});
@@ -104,7 +104,7 @@ require('node:fs').mkdirSync(shots,{recursive:true});
    // Wait for the section heading first (admin status resolves async — see the #304 loop test
    // above): only once it is stable is the region locator itself unambiguous.
    await page.getByRole('heading',{name:'Models & routing',exact:true}).waitFor();
-   const settingsFromStale=page.getByRole('region',{name:'Settings',exact:true});
+   const settingsFromStale=page.getByRole('dialog',{name:'Settings',exact:true});
    await settingsFromStale.getByRole('heading',{name:'Models & routing',exact:true}).waitFor();
    await settingsFromStale.getByRole('button',{name:'Close settings'}).click();
    await settingsFromStale.waitFor({state:'detached'}).catch(()=>{});
@@ -114,8 +114,8 @@ require('node:fs').mkdirSync(shots,{recursive:true});
     // Reopen the same way a person would (composer -> model settings), so the second close is a
     // real repeat of the same scenario, not just an already-empty page.
     await openSettings(page);
-    await page.getByRole('region',{name:'Settings',exact:true}).getByRole('button',{name:'Models & routing',exact:true}).click();
-    await page.getByRole('region',{name:'Settings',exact:true}).getByRole('button',{name:'Open model manager'}).click();
+    await page.getByRole('dialog',{name:'Settings',exact:true}).getByRole('button',{name:'Models & routing',exact:true}).click();
+    await page.getByRole('dialog',{name:'Settings',exact:true}).getByRole('button',{name:'Open model manager'}).click();
     await page.locator('.model-manager-page').waitFor();
    }
   }
@@ -134,7 +134,7 @@ require('node:fs').mkdirSync(shots,{recursive:true});
   // "All settings" chevron in the detail header, which already only ever appears there.
   await page.setViewportSize({width:1440,height:950});
   await openSettings(page);
-  let settings=page.getByRole('region',{name:'Settings',exact:true});
+  let settings=page.getByRole('dialog',{name:'Settings',exact:true});
   await settings.waitFor();
   assert.equal(await settings.getByRole('button',{name:'All settings',exact:true}).count(),0,'1440: no back control at the Settings root');
   await page.screenshot({path:`${shots}/settings-back-1440.png`});
@@ -143,7 +143,7 @@ require('node:fs').mkdirSync(shots,{recursive:true});
 
   await page.setViewportSize({width:375,height:812});
   await openSettings(page);
-  settings=page.getByRole('region',{name:'Settings',exact:true});
+  settings=page.getByRole('dialog',{name:'Settings',exact:true});
   await settings.waitFor();
   assert.equal(await settings.getByRole('button',{name:'All settings',exact:true}).count(),0,'375: no back control on the section list either');
   await settings.getByRole('button',{name:'Appearance & language',exact:true}).click();

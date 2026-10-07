@@ -225,7 +225,7 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'appearance.preview.message': "Résume les notes",
   'appearance.reading': "Lecture et animations",
   'appearance.chatFont': "Police des discussions",
-  'appearance.chatFontDesc': "Une police de lecture pour les messages uniquement. Par défaut, elle suit la famille de thème ; le reste de l’interface garde la sienne.",
+  'appearance.chatFontDesc': "Une police de lecture pour les messages uniquement. Chaque famille de thème affiche l’interface en Inter ; ce réglage ne change que le texte de la conversation.",
   'appearance.font.sans': "Sans (par défaut)",
   'appearance.font.serif': "Serif",
   'appearance.font.mono': "Chasse fixe",

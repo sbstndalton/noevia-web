@@ -12,7 +12,7 @@ const out = process.env.SHOTS_DIR || '/tmp/toolgate-shots';
       const page = await browser.newPage(withLocale({ viewport: { width, height: width === 375 ? 812 : 900 } }));
       await page.goto('http://localhost:31240'); await page.getByPlaceholder('Message noevia…').waitFor();
       await openSettings(page);
-      const settings = page.getByRole('region', { name: 'Settings', exact: true }); await settings.waitFor();
+      const settings = page.getByRole('dialog', { name: 'Settings', exact: true }); await settings.waitFor();
       await settings.locator('.settings-navigation').getByRole('button', { name: 'Experimental', exact: true }).click();
       const row = settings.getByText('Tool gate', { exact: true }); await row.waitFor();
       await row.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);

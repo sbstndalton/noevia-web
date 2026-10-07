@@ -1,0 +1,344 @@
+/* noevia design system — components (#951). Framework-neutral: every rule is keyed on a plain
+   class, a data-attribute or an ARIA state ([aria-checked], [aria-current], [aria-pressed],
+   [aria-expanded], [data-open], [data-role]); all motion is CSS (transitions, @starting-style,
+   keyframes from motion.css). Loads after the older component sheets and before
+   space-tiers.css, so it decides how shared surfaces look; the older sheets keep layout.
+   Values come from tokens.css; the contract is listed in README.md. */
+
+/* ── Ground ───────────────────────────────────────────────────────────────── */
+html, body { background: var(--bg-backdrop); }
+body { color: var(--text-primary); font-family: var(--font-ui); font-size: var(--text-callout); line-height: 20px; font-optical-sizing: auto; -webkit-font-smoothing: antialiased; font-feature-settings: 'cv11', 'ss01'; }
+#root { position: relative; z-index: 1; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+::selection { background: var(--selection); color: var(--text-primary); }
+:root { caret-color: var(--md-primary); accent-color: var(--md-primary); scrollbar-color: color-mix(in srgb, var(--text-tertiary) 45%, transparent) transparent; }
+a { text-underline-offset: .18em; }
+.tabular, time, td { font-variant-numeric: tabular-nums; }
+
+/* ── Retired material primitives, kept as plain class hooks ──────────────────
+   .pane, .surface, .glass, .overlay, .aero, .scrim still appear in markup. They now draw the
+   quiet surfaces below; nothing is translucent or blurred. */
+.pane { background: var(--bg-app); border: 0; border-radius: 0; box-shadow: none; }
+.surface { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-dialog); box-shadow: none; }
+.glass {
+  position: relative; background: var(--fill-hover); border: 0; box-shadow: none; color: var(--text-primary);
+  transition: background-color var(--dur-instant) var(--ease-out-quart), color var(--dur-instant) var(--ease-out-quart), scale var(--dur-spring) var(--spring-press);
+}
+.glass:hover:not(:disabled) { background: var(--fill-active); }
+.glass[aria-pressed='true'], .glass[aria-selected='true'], .glass[aria-current='page'] { background: var(--fill-active); color: var(--text-primary); }
+.glass.is-primary { background: var(--md-primary); color: var(--md-on-primary); }
+.glass.is-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--md-on-primary) 10%, var(--md-primary)); }
+.glass:disabled { cursor: not-allowed; }
+.glass.is-primary:disabled { background: var(--fill-active); color: var(--text-tertiary); opacity: 1; }
+/* Press: Motion springs pressable controls to .97 (src/motion); no CSS :active scale. */
+:is(.glass.is-press, .glass-press, .btn, .modal-btn, .send-btn):active:not(:disabled) { scale: none; transform: none; }
+.overlay, .aero, :is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .tool-catalogue-panel, .identity-options, .chat-link-menu) {
+  background: var(--surface-overlay); border: 0; border-radius: var(--radius-overlay);
+  box-shadow: var(--ring-inset), var(--shadow-popover); backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.aero { border-radius: var(--radius-dialog); box-shadow: var(--ring-inset), var(--shadow-pop); }
+.aero-content { background: transparent; }
+.scrim { background: var(--scrim); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.scrim.is-entering { --enter-from: none; animation: motion-fade-in var(--dur-base) var(--ease-out-quart) both; }
+.aero.is-entering { animation: none; }
+.save-error { animation: none; }
+
+/* ── Menus: open instantly, the item under the pointer highlights ──────────── */
+:is(.ctx-menu, .account-popover, .popup, .composer-actions-panel, .tool-catalogue-panel, .chat-link-menu) { animation: none; padding: 4px; }
+:is(.ctx-menu .ctx-item, .account-popover > button, .composer-actions-panel > button, .composer-actions-panel .composer-menu-row, .tool-catalogue-list > li[role='option'], [role='menu'] > [role^='menuitem']) {
+  min-height: var(--row-height); border-radius: var(--radius-sm); font-size: var(--text-callout); color: var(--text-primary);
+  transition: background-color var(--dur-instant) var(--ease-out-quart), color var(--dur-instant) var(--ease-out-quart);
+}
+:is(.ctx-menu .ctx-item, .account-popover > button, .composer-actions-panel > button, .composer-actions-panel .composer-menu-row, .tool-catalogue-list > li[role='option'], [role='menu'] > [role^='menuitem']):is(:hover, :focus-visible, [aria-selected='true'], [data-highlighted]) { background: var(--fill-hover); outline: 0; }
+
+/* ── Buttons: 32px, radius 8, quiet fill or ghost; primary is the one filled accent ── */
+:is(.btn, .modal-btn, .popup-tab) {
+  min-height: 32px; padding: 0 12px; gap: 6px; border: 0; border-radius: var(--radius-button);
+  background: var(--fill-hover); color: var(--text-primary); box-shadow: none;
+  font-size: var(--text-callout); font-weight: 500; line-height: 20px;
+  transition: background-color var(--dur-instant) var(--ease-out-quart), color var(--dur-instant) var(--ease-out-quart), scale var(--dur-spring) var(--spring-press);
+}
+:is(.btn, .modal-btn, .popup-tab):hover:not(:disabled) { background: var(--fill-active); box-shadow: none; }
+:is(.btn-primary, .modal-btn.primary), .settings-detail :is(.modal-btn.primary, .btn-primary) { background: var(--md-primary); color: var(--md-on-primary); box-shadow: none; padding-inline: 14px; }
+:is(.btn-primary, .modal-btn.primary):hover:not(:disabled) { background: color-mix(in srgb, var(--md-on-primary) 10%, var(--md-primary)); color: var(--md-on-primary); box-shadow: none; }
+:is(.btn-secondary, .modal-btn.secondary, .popup-tab), .settings-detail :is(.modal-btn.secondary, .popup-tab, .btn-secondary) { background: var(--fill-hover); box-shadow: none; }
+.btn-ghost { background: transparent; color: var(--text-secondary); }
+.btn-ghost:hover:not(:disabled) { background: var(--fill-hover); color: var(--text-primary); }
+.btn.btn-danger { background: var(--danger); color: var(--on-danger); }
+.btn-sm, .popup-tab { min-height: 28px; padding: 0 10px; font-size: var(--text-footnote); }
+.btn-icon { width: 32px; padding: 0; }
+.popup-tab.is-active, .popup-tab[aria-pressed='true'], .popup-tab[aria-selected='true'] { background: var(--fill-active); color: var(--text-primary); }
+.shell-icon-button { border-radius: var(--radius-button); transition: background-color var(--dur-instant) var(--ease-out-quart), color var(--dur-instant) var(--ease-out-quart); }
+.shell-icon-button:hover:not(:disabled) { background: var(--fill-hover); color: var(--text-primary); }
+
+/* ── Fields and selects ───────────────────────────────────────────────────── */
+:is(.modal-input, .settings-detail input[type='text'], .settings-detail input[type='url'], .settings-detail input[type='email'], .settings-detail input[type='password'],
+  .settings-detail input[type='number'], .settings-detail input[type='search'], .settings-detail textarea, label.select > select, .settings-detail select:not(.mobile-settings-section), .modal select) {
+  min-height: 32px; border: 1px solid var(--border-strong); border-radius: var(--radius-input); background-color: var(--bg-surface); box-shadow: none; font-size: var(--text-callout);
+  transition: border-color var(--dur-base) var(--ease-in-out), box-shadow var(--dur-base) var(--ease-in-out);
+}
+:is(.modal-input, .settings-detail input, .settings-detail textarea):focus { border-color: var(--focus); box-shadow: 0 0 0 3px var(--focus-halo); }
+
+/* ── Switch: 36×20 track, knob slides 16px on a 120ms overshoot ────────────── */
+:root .glass-switch {
+  width: 36px; height: 20px; min-height: 20px; padding: 2px; border-radius: var(--radius-pill); background: var(--fill-active); box-shadow: none;
+  transition: background-color var(--dur-snap) var(--ease-out-quart);
+}
+/* The drawn track is 20px; the hit area stays 44px tall for touch. */
+:root .glass-switch::before { content: ''; position: absolute; inset: -12px -4px; }
+.glass-switch[aria-checked='true'] { background: var(--md-primary); box-shadow: none; }
+.glass-switch > .knob {
+  top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border: 0; box-shadow: 0 1px 2px rgb(0 0 0 / .25); transition: none;
+}
+.glass-switch[aria-checked='true'] > .knob { transform: translateX(16px); }
+.glass-switch:active > .knob, .glass-switch[aria-checked='true']:active > .knob { width: 16px; }
+.glass-switch[aria-checked='true']:active > .knob { transform: translateX(16px); }
+.noevia-switch, .settings-detail .set-row-control input[type='checkbox']:not(.plain) {
+  width: 36px; height: 20px; min-height: 20px !important; background: var(--fill-active); box-shadow: none;
+  transition: background-color var(--dur-snap) var(--ease-out-quart);
+}
+.noevia-switch::after, .settings-detail .set-row-control input[type='checkbox']:not(.plain)::after {
+  top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .25);
+  transition: transform var(--dur-snap) var(--ease-overshoot);
+}
+:is(.noevia-switch, .settings-detail .set-row-control input[type='checkbox']:not(.plain)):checked { background: var(--md-primary); }
+:is(.noevia-switch, .settings-detail .set-row-control input[type='checkbox']:not(.plain)):checked::after { transform: translateX(16px); background: #fff; }
+.noevia-switch:active::after { width: 16px; }
+.noevia-switch:checked:active::after { transform: translateX(16px); }
+
+/* ── Segmented controls: a quiet track, the chosen segment raised one step ─── */
+:is(.glass-seg, .seg, .composer-mode-toggle) { border-radius: var(--radius-button); background: var(--fill-hover); box-shadow: none; padding: 2px; }
+:is(.glass-seg > button, .seg > button, .composer-mode-toggle > button) { border-radius: var(--radius-button-inset); min-height: 28px; padding-inline: 10px; font-size: var(--text-footnote); color: var(--text-secondary); }
+:is(.glass-seg > button, .seg > button)[aria-checked='true'], .seg > button:is(.is-active, [aria-pressed='true']) { color: var(--text-primary); }
+/* The Projects tabs stay underlined tabs on the page (no track), flush with the title. */
+:root .projects-head .seg { background: transparent; padding: 0; }
+:root .glass-seg > button { border: 0; background: transparent; box-shadow: none; outline-offset: -2px; }
+:root .glass-seg > .glass-thumb.glass { background: var(--bg-surface); border: 0; border-radius: var(--radius-button-inset); box-shadow: var(--ring-inset), 0 1px 2px rgb(0 0 0 / .12);
+  transition: transform var(--dur-base) var(--ease-out-quart); }
+.glass-seg[data-wrapped='true'] { border-radius: var(--radius-control); }
+.composer-mode-toggle { border: 0; position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; isolation: isolate; }
+.composer-mode-toggle::before {
+  content: ''; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 3px);
+  border-radius: var(--radius-button-inset); background: var(--bg-surface); box-shadow: var(--ring-inset);
+  transition: transform var(--motion-considered) var(--ease-considered);
+}
+.composer-mode-toggle[data-mode='cowork']::before { transform: translateX(calc(100% + 2px)); }
+.composer-mode-toggle:has(button:disabled)::before { opacity: .6; }
+.composer-mode-toggle button[aria-checked='true'] { background: transparent; color: var(--text-primary); }
+.composer-mode-toggle button { transition: color var(--motion-immediate) var(--ease-immediate); }
+.composer-mode-toggle button:not([aria-checked='true']):hover:not(:disabled) { color: var(--text-primary); }
+.composer-mode-confirm { --enter-from: translateY(4px); animation: motion-enter var(--dur-snap) var(--ease-out-std) both; }
+.cowork-task-status { transition: color var(--motion-immediate) var(--ease-immediate); }
+
+/* ── App shell and sidebar ────────────────────────────────────────────────── */
+.app { background: var(--bg-backdrop); }
+.app .sidebar.pane { background: var(--bg-chrome); border: 0; box-shadow: none; }
+.app .app-stack.pane { background: var(--bg-app); border: 0; box-shadow: none; }
+/* Tiles (desktop and tablet): sidebar and main float on the backdrop with one 8px gutter, a
+   crisp inset ring drawn above the content (so edge-to-edge headers cannot cover it) and a
+   tight soft shadow; content clips to the corners, scrollbars included. Phones are full-bleed. */
+@media (min-width: 520px) {
+  .app .sidebar.pane:not(.coding-sidebar), .app .app-stack.pane {
+    position: relative; overflow: hidden; border-radius: var(--radius-tile); box-shadow: var(--tile-shadow); isolation: isolate;
+  }
+  .app .sidebar.pane:not(.coding-sidebar)::after, .app .app-stack.pane::after {
+    content: ''; position: absolute; inset: 0; z-index: 30; border-radius: inherit; box-shadow: var(--tile-ring); pointer-events: none;
+  }
+  .app .app-stack.pane > .app-main { border-radius: inherit; }
+}
+@media (max-width: 519px) {
+  .app { background: var(--bg-app); }
+  .app .app-stack.pane { border-radius: 0; box-shadow: none; }
+}
+.app .sidebar.pane :is(.nav-item, .proj-row, .chat-row, .account-trigger, .shell-icon-button) { border-radius: var(--radius-row); }
+.app .sidebar.pane .nav-item {
+  min-height: var(--row-height); height: var(--row-height); padding: 0 8px; gap: 8px; font-size: var(--text-callout); line-height: 20px;
+  color: var(--text-secondary); background: transparent; box-shadow: none;
+  transition: background-color var(--dur-instant) var(--ease-out-quart), color var(--dur-instant) var(--ease-out-quart);
+}
+.app .sidebar.pane .nav-item:hover { background: var(--fill-hover); color: var(--text-primary); }
+.app .sidebar.pane .nav-item:is([aria-current='page'], .is-active), .app .sidebar.pane :is(.proj-row.is-active, .chat-row.is-active) { background: var(--fill-active); color: var(--text-primary); }
+.app .sidebar.pane :is(.proj-row, .chat-row) { min-height: var(--row-height); transition: background-color var(--dur-instant) var(--ease-out-quart); }
+.app .sidebar.pane :is(.proj-row, .chat-row) .nav-item { color: var(--text-secondary); }
+.app .sidebar.pane :is(.proj-row, .chat-row):hover { background: var(--fill-hover); }
+.app .sidebar.pane :is(.proj-row, .chat-row):hover .nav-item, .app .sidebar.pane :is(.proj-row.is-active, .chat-row.is-active) .nav-item { color: var(--text-primary); background: transparent; }
+.app .sidebar.pane .side-nav .nav-item { color: var(--text-primary); }
+.app .sidebar.pane .side-nav .nav-item .nav-name { font-weight: 400; }
+.app .sidebar.pane :is(.section-label, .sidebar-history .section-label) { font-size: var(--text-footnote); line-height: 16px; font-weight: 500; color: var(--text-tertiary); letter-spacing: 0; text-transform: none; }
+/* Trailing row actions brighten with the row. */
+.app .sidebar.pane :is(.proj-row, .chat-row) :is(.row-actions, .chat-row-more, .proj-row-more) { opacity: .7; transition: opacity var(--dur-snap) var(--ease-snap); }
+.app .sidebar.pane :is(.proj-row, .chat-row):hover :is(.row-actions, .chat-row-more, .proj-row-more) { opacity: 1; }
+.app .sidebar.pane .new-chat-btn.glass {
+  min-height: var(--row-height); height: var(--row-height); padding: 0 8px; justify-content: flex-start; gap: 8px;
+  background: transparent; border: 0; border-radius: var(--radius-row); box-shadow: none; color: var(--text-primary); font-weight: 500;
+}
+.app .sidebar.pane .new-chat-btn.glass:hover { background: var(--fill-hover); }
+.app .sidebar.pane .side-footer { border-top: 1px solid var(--border-subtle); background: transparent; }
+.app .sidebar.pane .account-trigger:hover { background: var(--fill-hover); }
+/* Collapse: the sidebar content fades and slides 16px (ChatGPT, ~240ms easeOutExpo). */
+.app .sidebar.pane :is(.side-nav, .sidebar-history, .sidebar-projects, .side-new) { transition: opacity var(--dur-panel) var(--ease-out-expo), translate var(--dur-panel) var(--ease-out-expo); }
+.app .sidebar.pane.is-collapsed :is(.sidebar-history, .sidebar-projects) { opacity: 0; translate: -16px 0; }
+@starting-style { .app .sidebar.pane:not(.is-collapsed) :is(.sidebar-history, .sidebar-projects) { opacity: 0; translate: -16px 0; } }
+.nav-drawer-backdrop { background: var(--scrim); backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+/* Page and section swap: what is leaving dims, what arrives fades. */
+.app-main[aria-busy='true'], [data-loading='true'] > .settings-detail-scroll { opacity: .6; transition: opacity var(--dur-basic) var(--ease-in-out); }
+.app-main.mode-enter { animation: motion-fade-in var(--dur-basic) var(--ease-out-std) both; }
+.view-loading, .settings-loading { animation: motion-fade-in var(--dur-basic) var(--ease-out-std) var(--delay-skeleton) both; }
+.skeleton, .coding-skeleton-block { position: relative; overflow: hidden; background: var(--fill-hover); border-radius: var(--radius-sm); }
+.skeleton::after, .coding-skeleton-block::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, var(--fill-hover), transparent); animation: motion-shimmer var(--dur-pulse) linear infinite; }
+
+/* Sidebar header: the logo and name sit right after the collapse toggle (Claude's sidebar);
+   only the Chat/Code switch, when shown, goes to the far end. */
+.app .sidebar.pane .shell-sidebar-head { justify-content: flex-start; gap: 6px; }
+.app .sidebar.pane .shell-sidebar-head .side-logo { margin: 0; }
+.app .sidebar.pane .shell-sidebar-head > .app-mode-switch { margin-left: auto; }
+
+/* ── Home: serif greeting and the composer ────────────────────────────────── */
+.app .chat-workspace .empty-state h1, .chat-workspace.is-empty .empty-state h1 {
+  font-family: var(--font-display); font-weight: var(--display-weight); font-variation-settings: 'opsz' 48; letter-spacing: var(--display-tracking);
+  font-size: var(--text-large); line-height: 40px; color: var(--text-primary);
+}
+:root :is(.settings-title, .projects-head, .projects-title, .plugins-head, .archived-head, .coding-welcome) h1, :root .project-main h1.project-title, :root .settings-stage .connector-page h1 {
+  font-family: var(--font-ui); font-size: var(--text-title2); line-height: 28px; font-weight: var(--weight-title); letter-spacing: var(--tracking-title);
+}
+.auth-card h1 { font-family: var(--font-display); font-weight: var(--display-weight); font-variation-settings: 'opsz' 48; }
+:root .app .composer-inner, :root .app .composer-inner.pane {
+  background: var(--surface-raised); border: 0; border-radius: var(--radius-composer); padding: 8px;
+  box-shadow: var(--ring-inset), 0 4px 20px rgb(0 0 0 / .04); outline: 0; backdrop-filter: none; -webkit-backdrop-filter: none;
+  transition: box-shadow var(--dur-base) var(--ease-in-out);
+}
+:root .app .composer-inner:is(:hover, :focus-within) { box-shadow: var(--ring-inset), 0 0 0 1px var(--border-strong), 0 4px 20px rgb(0 0 0 / .06); }
+.composer-input { font-size: var(--text-body); line-height: 21px; }
+.send-btn { border-radius: var(--radius-button); transition: background-color var(--dur-instant) var(--ease-out-quart), scale var(--dur-spring) var(--spring-press); }
+:is(.model-pill, .reasoning-pill, .tool-catalogue-trigger, .composer-add) { background: transparent; border-radius: var(--radius-button); color: var(--text-secondary); }
+:is(.model-pill, .reasoning-pill, .tool-catalogue-trigger, .composer-add):hover:not(:disabled) { background: var(--fill-hover); color: var(--text-primary); }
+
+/* ── Transcript ───────────────────────────────────────────────────────────── */
+.msg[data-role='user'] .msg-user-row, .msg-user .msg-user-row { background: var(--fill-hover); border: 0; border-radius: var(--radius-dialog); padding: 10px 16px; box-shadow: none; }
+.msg[data-role='assistant'] .markdown-preview { font-size: var(--text-body); line-height: 24px; }
+.tool-call { background: transparent; border: 1px solid var(--border-subtle); border-radius: var(--radius-control); box-shadow: none; }
+.tool-call pre, .md-code, .markdown-preview pre { background: var(--md-surface-container-lowest); border: 1px solid var(--border-subtle); border-radius: var(--radius-control); }
+[data-theme='light'] :is(.tool-call pre, .md-code, .markdown-preview pre) { background: var(--md-surface-container-low); }
+.chip, .project-chip, .tool-chip, .frame-chips > *, .md-image-chip {
+  background: var(--fill-hover); border: 0; border-radius: var(--radius-sm); color: var(--text-secondary); box-shadow: none;
+  transition: background-color var(--dur-instant) var(--ease-out-quart), color var(--dur-instant) var(--ease-out-quart);
+}
+.chip:hover { background: var(--fill-active); color: var(--text-primary); }
+/* Chips arrive staggered by Motion (50ms + 30ms per sibling, src/motion). */
+/* Working / thinking: opacity .6 ↔ 1 over 2s. */
+:is(.thinking, .live-thinking, .typing, .msg-thinking) { --pulse-low: .6; animation: motion-pulse var(--dur-pulse) ease-in-out infinite; }
+
+/* ── Cards: projects, connectors, skills ──────────────────────────────────── */
+:is(.project-card, .month-card, .plugin-card, .connector-card, .skill-card, .usage-stat, .stats-disclosure) {
+  background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-dialog); box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+  transition: background-color var(--dur-instant) var(--ease-out-quart), border-color var(--dur-instant) var(--ease-out-quart);
+}
+:is(.project-card, .month-card, .plugin-card, .connector-card, .skill-card):hover { border-color: var(--border-strong); box-shadow: none; }
+
+/* ── Dialogs: fade + scale .98 → 1, 200ms easeOutQuart, 50% black scrim ────── */
+dialog, .modal, .confirm-dialog, .dialog-sheet, .mp-panel {
+  background: var(--bg-dialog); color: var(--text-primary); border: 0; border-radius: var(--radius-dialog); box-shadow: var(--ring-inset), var(--shadow-pop);
+}
+dialog::backdrop { background: var(--scrim); backdrop-filter: blur(var(--scrim-blur)); }
+:root .app .mp-panel.aero { background: var(--bg-dialog) !important; }
+
+/* ── Toasts ───────────────────────────────────────────────────────────────── */
+.save-error { background: var(--md-inverse-surface); color: var(--md-inverse-on-surface); border: 0; border-radius: var(--radius-overlay); box-shadow: var(--shadow-popover); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.save-error :is(button, a) { color: inherit; }
+
+/* ── Settings: a window over the dimmed app ───────────────────────────────── */
+.settings-scrim { position: fixed; inset: 0; z-index: 60; background: var(--scrim); }
+.settings-scrim.is-closing { pointer-events: none; }
+.app-stack.has-settings > :not(.settings-stage) { visibility: visible; }
+.app-stack.has-settings > .app-main { animation: none; }
+@media (min-width: 701px) {
+  .settings-stage {
+    position: fixed; inset: 0; z-index: 61; margin: auto; width: min(1024px, calc(100vw - 64px)); height: min(800px, calc(100dvh - 64px));
+    grid-template-columns: 192px minmax(0, 1fr); overflow: hidden;
+    background: var(--bg-dialog); border: 0; border-radius: var(--radius-dialog); box-shadow: var(--ring-inset), var(--shadow-pop);
+    animation: none;
+  }
+  /* Motion (src/motion) springs the window in and out; .is-closing only stops input. */
+  .settings-stage.is-closing { animation: none; pointer-events: none; }
+  /* While the Settings chunk loads, the placeholder window stays invisible for the skeleton
+     delay, so a fast load opens the real window once instead of twice. */
+  .settings-stage.view-loading { transition: none; scale: 1; animation: motion-fade-in var(--dur-basic) var(--ease-out-std) var(--delay-skeleton) both; }
+  .settings-stage .settings-navigation { background: var(--bg-chrome); border-right: 0; padding: 16px 8px; gap: 12px; }
+}
+.settings-stage .settings-nav-title { font-family: var(--font-ui); font-size: var(--text-headline); line-height: 24px; font-weight: var(--weight-title); letter-spacing: 0; }
+.settings-stage .settings-navigation nav section h2 { margin: var(--space-4) 8px var(--space-1); font-size: var(--text-footnote); line-height: 16px; font-weight: 500; color: var(--text-tertiary); }
+.settings-stage .settings-navigation nav button {
+  min-height: var(--row-height); height: auto; margin: 0; padding: 6px 8px; gap: 8px; border-radius: var(--radius-row);
+  font-size: var(--text-callout); line-height: 20px; color: var(--text-secondary);
+  transition: background-color var(--dur-instant) var(--ease-out-quart), color var(--dur-instant) var(--ease-out-quart);
+}
+.settings-stage .settings-navigation nav button > svg:first-child { width: 16px; height: 16px; }
+.settings-stage .settings-navigation nav button:hover { background: var(--fill-hover); color: var(--text-primary); }
+.settings-stage .settings-navigation nav button:is(.is-active, [aria-current='page']) { background: var(--fill-active); color: var(--text-primary); font-weight: 500; }
+.settings-stage .settings-search { border: 0; background: var(--fill-hover); border-radius: var(--radius-control); min-height: var(--row-height); padding: 0 8px; }
+.settings-stage .settings-search:focus-within { box-shadow: 0 0 0 2px var(--focus-halo); }
+.settings-stage .settings-detail { background: var(--bg-dialog); }
+.settings-stage .settings-detail-scroll { padding: var(--space-8) var(--space-10) var(--space-12); animation: motion-fade-in var(--dur-basic) var(--ease-out-std) both; }
+:root .settings-stage .settings-detail .settings-title h1, :root .settings-stage .connector-page h1 { font-family: var(--font-ui); letter-spacing: var(--tracking-title); font-size: var(--text-title2); line-height: 28px; font-weight: var(--weight-title); }
+.settings-stage .settings-title p { font-size: var(--text-footnote); line-height: 18px; color: var(--text-secondary); }
+.settings-stage h2:where(:not(.settings-navigation h2)) { font-size: var(--text-body); line-height: 20px; font-weight: var(--weight-title); letter-spacing: 0; }
+.settings-stage .set-rows, .settings-stage .group { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-dialog); box-shadow: none; }
+[data-theme='dark'] .settings-stage :is(.set-rows, .group) { background: var(--md-surface-container); }
+.settings-stage :is(.set-row-label, .row-label) { font-size: var(--text-callout); line-height: 20px; font-weight: 500; }
+.settings-stage :is(.set-row-desc, .row-desc) { font-size: var(--text-footnote); line-height: 18px; color: var(--text-secondary); }
+.settings-stage .theme-choice button .theme-swatch { border-radius: var(--radius-control); outline: 1px solid var(--border-strong); }
+
+/* ── Settings → Appearance: theme family previews ─────────────────────────────
+   Each preview carries data-family, data-theme and data-palette with .theme-scope, so the
+   tokens resolve inside it exactly as they do for the app. */
+.family-choice { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); width: 100%; }
+.family-tile {
+  display: grid; gap: var(--space-1); padding: var(--space-3); min-width: 0; text-align: left; cursor: pointer;
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-dialog); background: transparent; color: var(--text-primary);
+  transition: border-color var(--dur-instant) var(--ease-out-quart), background-color var(--dur-instant) var(--ease-out-quart);
+}
+@media (hover: hover) { .family-tile:hover { background: var(--fill-hover); } }
+.family-tile[aria-checked='true'] { border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
+.family-tile-previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin-bottom: var(--space-2); }
+.family-tile-name { font-size: var(--text-callout); font-weight: 500; }
+.family-tile-desc { font-size: var(--text-footnote); color: var(--text-secondary); line-height: var(--leading-snug); }
+.family-preview {
+  display: grid; gap: 6px; padding: var(--space-3); min-height: 132px; overflow: hidden; pointer-events: none;
+  background: var(--bg-app); color: var(--text-primary); font-family: var(--font-ui);
+  border-radius: var(--radius-control); border: 1px solid var(--border-subtle);
+}
+.family-preview-mark { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: var(--text-caption); }
+.family-preview-mark > svg { width: 14px; height: 14px; flex: none; }
+.family-preview-heading { font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: var(--display-tracking); font-size: var(--text-headline); line-height: var(--leading-tight); }
+.family-preview-message { justify-self: end; max-width: 80%; padding: 4px 8px; border-radius: var(--radius-control); background: var(--fill-hover); font-size: var(--text-caption2); }
+.family-preview-row { display: flex; gap: 6px; align-items: flex-start; }
+.family-preview-composer {
+  flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 30px; padding: 4px 4px 4px 8px;
+  background: var(--surface-raised); box-shadow: var(--ring-inset); border-radius: min(var(--radius-composer), 15px);
+  font-size: var(--text-caption2); color: var(--text-secondary);
+}
+.family-preview-send { width: 20px; height: 20px; border-radius: var(--radius-pill); background: var(--md-primary); flex: none; }
+.family-preview-menu { display: grid; gap: 2px; padding: 4px; min-width: 64px; font-size: var(--text-caption2); background: var(--surface-overlay); border-radius: var(--radius-overlay); box-shadow: var(--ring-inset), var(--shadow-popover); }
+.family-preview-menu > span { padding: 2px 6px; border-radius: var(--radius-sm); }
+.family-preview-menu > span:first-child { background: var(--fill-hover); }
+.family-preview-controls { display: flex; gap: 6px; align-items: center; font-size: var(--text-caption2); }
+.family-preview-button { padding: 2px 8px; border-radius: var(--radius-button); background: var(--fill-hover); }
+.family-preview-button.is-primary { background: var(--md-primary); color: var(--md-on-primary); }
+@media (max-width: 420px) { .family-preview { padding: var(--space-2); min-height: 120px; } .family-preview-menu { display: none; } }
+
+/* ── Diary: the same tokens, no behaviour change ──────────────────────────── */
+.diary-context, .diary-compose { background: transparent; }
+
+/* The narrowest phones: Inter's wider labels ("Neutral") need three accent columns, not five. */
+@media (max-width: 359px) {
+  :root .settings-stage .accent-choice { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+  :root .settings-stage .accent-choice .accent-tile { width: auto; min-width: 0; }
+}
+
+/* ── Phone: settings stays a full-screen sheet ────────────────────────────── */
+@media (max-width: 700px) {
+  .settings-scrim { display: none; }
+  .settings-stage { background: var(--bg-app); }
+  :is(.confirm-dialog.aero, .mp-panel.aero, .dialog-sheet.aero) { border-radius: var(--radius-dialog) var(--radius-dialog) 0 0; }
+}

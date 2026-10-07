@@ -22,7 +22,7 @@ const PORT=31385,OLD=`http://old.localhost:${PORT}`,NEW=`http://new.localhost:${
   const api=(url,body)=>page.evaluate(async({url,body})=>{const csrf=decodeURIComponent(document.cookie.split(';').map(s=>s.trim()).find(s=>s.startsWith('cowork_csrf='))?.slice(12)||'');const r=await fetch(url,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:body===undefined?undefined:JSON.stringify(body)});return {status:r.status,body:await r.json().catch(()=>null)};},{url,body});
   const addPasskeyInSettings=async()=>{
    await openSettings(page);
-   const s=page.getByRole('region',{name:'Settings'});await s.waitFor();
+   const s=page.getByRole('dialog',{name:'Settings'});await s.waitFor();
    await s.getByRole('button',{name:'Security and login',exact:true}).click();
    await s.getByRole('button',{name:'Add passkey',exact:true}).click();
    await s.getByText('Passkey added.').waitFor({timeout:15000});
@@ -53,7 +53,7 @@ const PORT=31385,OLD=`http://old.localhost:${PORT}`,NEW=`http://new.localhost:${
   // App.tsx) and that open/section is then remembered per-device (last-view). Leaving
   // it open here would make step 4's reload resume straight into Settings, hiding the
   // Settings toggle button and making the sign-in check below hang for no real reason.
-  const settings=page.getByRole('region',{name:'Settings'});
+  const settings=page.getByRole('dialog',{name:'Settings'});
   await settings.waitFor();
   await settings.getByRole('button',{name:'Close settings'}).click();
   await settings.waitFor({state:'detached'});

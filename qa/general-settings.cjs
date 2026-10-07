@@ -28,7 +28,7 @@ const {withLocale}=require('./qa-locale.cjs');
  });
  await page.goto('http://localhost:31356');
  await openSettings(page);
- const dialog=page.getByRole('region',{name:'Settings'});
+ const dialog=page.getByRole('dialog',{name:'Settings'});
  // Opening Settings lands on General; Account keeps identity separate.
  await dialog.getByRole('button',{name:'Appearance & language',exact:true}).waitFor();
  await dialog.getByLabel('Search settings').fill('  connectors  ');

@@ -11,7 +11,7 @@ const path = require('node:path');
 // fill's left edge. The browser suite qa/spacing-rhythm.cjs measures the rendered result; this
 // keeps the stylesheet from reintroducing it.
 const root = path.join(__dirname, '../../src/styles');
-const sheets = fs.readdirSync(root).filter((name) => name.endsWith('.css'));
+const sheets = fs.readdirSync(root, { recursive: true }).filter((name) => name.endsWith('.css'));
 const rules = (file) => [...fs.readFileSync(path.join(root, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
   .map(([, selector, body]) => ({ selector: selector.trim(), declarations: body.split(';').map((d) => d.trim()).filter(Boolean).map((d) => [d.slice(0, d.indexOf(':')).trim(), d.slice(d.indexOf(':') + 1).trim()]) }));
 const tokenBlock = (css, selector) => {
@@ -48,7 +48,7 @@ test('no single Settings section strips the shared group surface', () => {
 });
 
 test('the spacing roles exist, and compact density steps the vertical ones down only', () => {
-  const css = fs.readFileSync(path.join(root, 'tokens.css'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'system/tokens.css'), 'utf8');
   const base = tokenBlock(css, ':root, .theme-scope');
   const compact = tokenBlock(css, ":root[data-density='compact']");
   for (const name of ['--group-inset-block', '--group-inset-inline', '--group-row-min', '--settings-title-gap', '--settings-group-gap', '--settings-content-gap', '--settings-heading-gap']) {

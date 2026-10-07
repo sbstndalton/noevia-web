@@ -225,7 +225,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'appearance.preview.message': "Vat de notities samen",
   'appearance.reading': "Lezen en beweging",
   'appearance.chatFont': "Chatlettertype",
-  'appearance.chatFontDesc': "Een leeslettertype alleen voor berichten. Standaard volgt de themafamilie; de rest van de interface houdt het lettertype van de familie.",
+  'appearance.chatFontDesc': "Een leeslettertype alleen voor berichten. Elke themafamilie zet de interface in Inter; dit verandert alleen de gesprekstekst.",
   'appearance.font.sans': "Schreefloos (standaard)",
   'appearance.font.serif': "Schreef",
   'appearance.font.mono': "Vaste breedte",

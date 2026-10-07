@@ -2,8 +2,9 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
-const palette = require('../../scripts/palette.cjs');
-const css = readFileSync(join(__dirname, '../../src/styles/tokens.css'), 'utf8');
+// #951: one hand-authored token layer (no generator); the accents recolour the accent roles only.
+const css = readFileSync(join(__dirname, '../../src/styles/system/tokens.css'), 'utf8');
+const ACCENTS = ['iris', 'warm', 'cool', 'neutral', 'sage'];
 
 function luminance(hex) {
   const rgb = hex.slice(1).match(/../g).map(v => parseInt(v, 16) / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
@@ -37,12 +38,7 @@ function tokens(mode, accent = 'iris') {
   return new Proxy({}, { get: (_, name) => resolve(name) });
 }
 
-test('tokens.css carries exactly the palette the generator prints', () => {
-  const { BEGIN, END } = palette.markers;
-  assert.equal(css.slice(css.indexOf(BEGIN) + BEGIN.length, css.indexOf(END)).trim(), palette.block().trim(), 'run node scripts/palette.cjs --write');
-});
-
-for (const mode of ['dark', 'light']) for (const accent of palette.PALETTE_NAMES) test(`${mode} · ${accent}: text, status, actions and controls meet contrast on every ground`, () => {
+for (const mode of ['dark', 'light']) for (const accent of ACCENTS) test(`${mode} · ${accent}: text, status, actions and controls meet contrast on every ground`, () => {
   const t = tokens(mode, accent);
   for (const ground of ['bg-canvas', 'bg-surface', 'bg-chrome', 'bg-app', 'bg-surface-hover']) {
     assert.match(t[ground], /^#[\da-f]{6}$/i, `${mode} ${ground} resolves to a colour`);
@@ -66,7 +62,21 @@ for (const mode of ['dark', 'light']) for (const accent of palette.PALETTE_NAMES
 });
 
 test('every Material 3 role exists in both modes, for every accent palette', () => {
-  for (const mode of ['dark', 'light']) for (const accent of palette.PALETTE_NAMES) for (const role of Object.keys(palette.ROLES[mode])) {
+  const roles = [...css.slice(0, css.indexOf("[data-theme='light'] {")).matchAll(/--md-([\w-]+):/g)].map((m) => m[1]);
+  assert.ok(roles.length >= 40, `${roles.length} roles`);
+  for (const mode of ['dark', 'light']) for (const accent of ACCENTS) for (const role of roles) {
     assert.match(tokens(mode, accent)[`md-${role}`], /^#[\da-f]{6}$/i, `${mode} ${accent} --md-${role}`);
   }
+});
+
+test('surfaces are one neutral ladder: no accent palette changes a surface or text role', () => {
+  for (const mode of ['dark', 'light']) for (const accent of ACCENTS) for (const role of ['md-surface', 'md-surface-container-low', 'md-surface-container', 'md-on-surface', 'md-on-surface-variant', 'md-outline']) {
+    assert.equal(tokens(mode, accent)[role], tokens(mode, 'iris')[role], `${mode} ${accent} ${role}`);
+  }
+  // The Claude ladder (#951): page 21, raised 26, card 32 in dark; bg-100 page in light.
+  assert.equal(tokens('dark')['md-surface'], '#151515');
+  assert.equal(tokens('dark')['md-surface-container-low'], '#1a1a19');
+  assert.equal(tokens('dark')['md-surface-container'], '#20201f');
+  assert.equal(tokens('dark')['md-on-surface'], '#f0efec');
+  assert.equal(tokens('light')['md-surface'], '#faf9f5');
 });

@@ -1,6 +1,7 @@
 'use strict';
-// Motion contract (#247): four purposes as tokens, curves without overshoot, durations inside
-// the ranges the contract names, reduced motion honoured everywhere, few keyframes.
+// Motion contract (#247, retuned in #951 to the Claude/ChatGPT reference): the reference
+// durations and curves as tokens, the four-purpose contract mapped onto them, overshoot only on
+// small physical controls, reduced motion honoured everywhere, keyframes only in motion.css.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -8,46 +9,37 @@ const path = require('node:path');
 
 const styles = path.join(__dirname, '../../src/styles');
 const read = (f) => fs.readFileSync(path.join(styles, f), 'utf8');
-const tokens = read('tokens.css'), themes = read('themes.css'), motion = read('motion.css');
-const sheets = [...fs.readdirSync(styles).filter((f) => f.endsWith('.css')).map((f) => [f, read(f)]),
-  ...fs.readdirSync(path.join(__dirname, '../../src/components')).filter((f) => f.endsWith('.css')).map((f) => [f, fs.readFileSync(path.join(__dirname, '../../src/components', f), 'utf8')])];
+const tokens = read('system/tokens.css'), motion = read('system/motion.css'), components = read('system/components.css');
+const sheets = [...fs.readdirSync(styles, { recursive: true }).filter((f) => f.endsWith('.css')).map((f) => [path.basename(f), read(f)]),
+  ...fs.readdirSync(path.join(__dirname, '../../src/components'), { recursive: true }).filter((f) => f.endsWith('.css')).map((f) => [path.basename(f), fs.readFileSync(path.join(__dirname, '../../src/components', f), 'utf8')])];
 const root = tokens.slice(tokens.indexOf(':root, .theme-scope {'));
 const value = (css, name) => (css.match(new RegExp(`${name}:\\s*([^;]+);`)) || [])[1]?.trim();
-const ms = (v) => (v.endsWith('ms') ? Number.parseFloat(v) : Number.parseFloat(v) * 1000);
 const PURPOSES = ['immediate', 'quick', 'considered', 'async'];
 
-test('the contract is four purposes, each a duration and an easing', () => {
-  const durations = [...root.matchAll(/--motion-([a-z]+):/g)].map((m) => m[1]);
-  assert.deepEqual([...new Set(durations)], PURPOSES);
-  for (const p of PURPOSES) assert.ok(value(root, `--ease-${p}`), `--ease-${p}`);
+test('the reference timings are tokens with their captured values', () => {
+  const expected = {
+    '--dur-instant': '60ms', '--dur-snap': '120ms', '--dur-basic': '150ms', '--dur-base': '200ms', '--dur-panel': '240ms',
+    '--dur-spring': '450ms', '--dur-pulse': '2s', '--delay-skeleton': '500ms', '--stagger-base': '50ms', '--stagger-step': '30ms',
+    '--ease-out-quart': 'cubic-bezier(.165, .84, .44, 1)', '--ease-out-expo': 'cubic-bezier(.19, 1, .22, 1)',
+    '--ease-overshoot': 'cubic-bezier(.34, 1.3, .64, 1)', '--ease-in-out': 'cubic-bezier(.4, 0, .2, 1)',
+  };
+  for (const [name, v] of Object.entries(expected)) assert.equal(value(root, name), v, name);
+  assert.match(value(root, '--spring-press'), /^linear\(0, \.2459, \.6526/);
 });
 
-test('durations sit in their purpose ranges in every family', () => {
-  const ranges = { immediate: [80, 120], quick: [120, 200], considered: [200, 300], async: [800, 2000] };
-  const blocks = [root, ...['editorial', 'contemporary', 'glass'].map((f) => themes.match(new RegExp(`\\[data-family='${f}'\\] \\{([^}]*)\\}`))[1])];
-  for (const block of blocks) for (const p of PURPOSES) {
-    const v = value(block, `--motion-${p}`);
-    if (!v) continue;
-    const [lo, hi] = ranges[p];
-    assert.ok(ms(v) >= lo && ms(v) <= hi, `--motion-${p}: ${v} outside ${lo}–${hi}ms`);
-  }
+test('the four-purpose contract reads the reference tokens', () => {
+  for (const p of PURPOSES) { assert.ok(value(root, `--motion-${p}`), `--motion-${p}`); assert.ok(value(root, `--ease-${p}`), `--ease-${p}`); }
+  assert.equal(value(root, '--motion-immediate'), 'var(--dur-instant)');
+  assert.equal(value(root, '--motion-considered'), 'var(--dur-base)');
+  assert.equal(value(root, '--ease-considered'), 'var(--ease-out-quart)');
 });
 
-test('easings never overshoot and enter/move curves are not ease-in', () => {
-  for (const p of PURPOSES) {
-    const v = value(root, `--ease-${p}`);
-    const bezier = v.match(/cubic-bezier\(([^)]+)\)/);
-    if (bezier) {
-      const [x1, y1, x2, y2] = bezier[1].split(',').map(Number);
-      for (const n of [x1, y1, x2, y2]) assert.ok(n >= 0 && n <= 1, `${p}: ${v}`);
-      assert.ok(y1 >= x1, `${p} starts fast (ease-out family), not ease-in: ${v}`);
-    } else assert.match(v, /^(ease|linear)$/);
-  }
-});
-
-test('earlier timing names are aliases of the contract, not timings of their own', () => {
-  for (const name of ['--duration-instant', '--duration-fast', '--duration-base', '--duration-slow', '--duration-page', '--ease-standard', '--ease-out', '--ease-in', '--ease-spring']) {
-    assert.match(value(root, name), /^var\(--(motion|ease)-(immediate|quick|considered|async)\)$/, name);
+test('CSS overshoot only on small physical controls: switch knob, sent message', () => {
+  for (const [file, css] of sheets) {
+    const body = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const m of body.matchAll(/([^{}]+)\{[^}]*var\(--ease-overshoot\)[^}]*\}/g)) {
+      assert.match(m[1], /knob|switch|::after|\.msg\[data-role='user'\]/, `${file}: ${m[1].trim()}`);
+    }
   }
 });
 
@@ -62,16 +54,15 @@ test('no stylesheet uses transition: all or a literal duration outside the contr
   }
 });
 
-test('five keyframes in the whole app, all in motion.css, each explained', () => {
-  const all = sheets.flatMap(([file, css]) => [...css.matchAll(/@keyframes\s+([\w-]+)/g)].map((m) => `${file}:${m[1]}`));
-  assert.deepEqual(all.sort(), ['motion.css:motion-enter', 'motion.css:motion-exit', 'motion.css:motion-pulse', 'motion.css:motion-spin', 'motion.css:sidebar-title-scroll']);
-  for (const name of ['motion-enter', 'motion-exit', 'motion-pulse', 'motion-spin', 'sidebar-title-scroll']) {
+test('every keyframe lives in motion.css with a justification, and every animation names one', () => {
+  const names = [...motion.matchAll(/@keyframes\s+([\w-]+)/g)].map((m) => m[1]);
+  for (const [file, css] of sheets) if (file !== 'motion.css') assert.doesNotMatch(css, /@keyframes/, file);
+  for (const name of names) {
     const before = motion.slice(0, motion.indexOf(`@keyframes ${name}`)).trimEnd();
     assert.ok(before.endsWith('*/'), `${name} has a justification comment directly above it`);
   }
-  // Every animation used names one of them.
   for (const [file, css] of sheets) for (const [, name] of css.matchAll(/(?<![-\w])animation\s*:\s*([\w-]+)/g)) {
-    if (name !== 'none') assert.match(name, /^(motion-(enter|exit|pulse|spin)|sidebar-title-scroll)$/, `${file}: ${name}`);
+    if (name !== 'none') assert.ok(names.includes(name), `${file}: ${name}`);
   }
 });
 
@@ -79,25 +70,43 @@ test('reduced motion — OS or app setting — reaches every element, loops incl
   const rule = /\*, \*::before, \*::after \{[^}]*animation-duration: 1ms !important;[^}]*animation-iteration-count: 1 !important;[^}]*transition: none !important;/;
   assert.match(motion.slice(motion.indexOf('@media (prefers-reduced-motion: reduce)')), rule);
   assert.match(motion, /:root\[data-motion='reduced'\] \*, :root\[data-motion='reduced'\] \*::before, :root\[data-motion='reduced'\] \*::after \{[^}]*animation-iteration-count: 1 !important;[^}]*transition: none !important;/);
-  // Never a bare global transition-duration: it would switch on `transition-property: all`.
   assert.doesNotMatch(motion.replace(/\/\*[\s\S]*?\*\//g, ''), /transition-duration/);
-  // The token collapse outranks family blocks ([data-family] is 0,1,0; html:root[data-family] is 0,2,1).
-  assert.match(tokens, /html:root\[data-motion='reduced'\]\[data-family\] \{ --motion-quick: 1ms; --motion-considered: 1ms;/);
-  assert.match(tokens, /@media \(prefers-reduced-motion: reduce\) \{\s*html:root, html:root\[data-family\] \{ --motion-quick: 1ms;/);
+  assert.match(tokens, /html:root\[data-motion='reduced'\] \{ --motion-quick: 1ms; --motion-considered: 1ms;/);
+  assert.match(tokens, /@media \(prefers-reduced-motion: reduce\) \{\s*html:root \{ --motion-quick: 1ms;/);
+});
+
+test('Settings springs in and out through the motion layer, on a 50% scrim', () => {
+  const shell = fs.readFileSync(path.join(__dirname, '../../src/components/SettingsShell.tsx'), 'utf8');
+  assert.match(shell, /enterMotion\(node, 'dialog'\)/);
+  // The exit resolves before Settings unmounts.
+  assert.match(shell, /const exited = Promise\.all\(\[exitMotion\(node, 'dialog'\), exitMotion\(scrim, 'fade'\)\]\);/);
+  // Raced against a timeout (a background tab runs no frames) and ignored once unmounted, so a
+  // Settings reopened mid-exit is never closed by its predecessor; a second close is a no-op.
+  assert.match(shell, /Promise\.race\(\[exited, timeout\]\)\.then\(\(\) => \{ if \(live\.current\) onClose\.current\(\); \}\)/);
+  assert.match(shell, /if \(closingRef\.current\) return;/);
+  assert.match(shell, /role="dialog" aria-modal="true" aria-labelledby=\{titleId\}/);
+  assert.doesNotMatch(components, /@starting-style \{ \.settings-stage/, 'no competing CSS entrance');
+  assert.match(tokens, /--scrim: rgba\(0, 0, 0, \.5\);/);
+});
+
+test('the motion layer uses Motion\'s vanilla API, critically damped by default', () => {
+  const layer = fs.readFileSync(path.join(__dirname, '../../src/motion/index.ts'), 'utf8');
+  assert.match(layer, /import \{ animate \} from 'motion';/);
+  assert.doesNotMatch(layer, /motion\/react|framer-motion/, 'no React-only API');
+  assert.match(layer, /dialog: \{ type: 'spring', bounce: 0, visualDuration: 0\.22 \}/);
+  assert.match(layer, /menu: \{ type: 'spring', bounce: 0, visualDuration: 0\.14 \}/);
+  // Exits name targets only, so they continue from the current value.
+  assert.match(layer, /dialog: \{ opacity: 0, scale: 0\.98 \},/);
+  assert.match(layer, /if \(reducedMotion\(\)\)/);
 });
 
 test('the Chat/Cowork toggle moves a thumb on the considered token and the mode is on the element', () => {
-  const system = read('system.css');
-  assert.match(system, /\.composer-mode-toggle::before \{[^}]*transition: transform var\(--motion-considered\) var\(--ease-considered\);/);
-  assert.match(system, /\.composer-mode-toggle\[data-mode='cowork'\]::before \{ transform: translateX/);
+  assert.match(components, /\.composer-mode-toggle::before \{[^}]*transition: transform var\(--motion-considered\) var\(--ease-considered\);/);
+  assert.match(components, /\.composer-mode-toggle\[data-mode='cowork'\]::before \{ transform: translateX/);
   const bar = fs.readFileSync(path.join(__dirname, '../../src/components/ComposerModeBar.tsx'), 'utf8');
-  // #527: the phone composer's compact chip adds a class; the mode stays on the same element.
   assert.match(bar, /className=\{`composer-mode-toggle\$\{compact \? ' is-compact' : ''\}`\} data-mode=\{mode\} role="radiogroup"/);
 });
 
-// #529: the drawer and the phone sheet slide without fading (--enter-opacity: 1). As inherited
-// custom properties that setting reached every menu and toast drawn inside them, which then
-// entered with no visible motion. The travel parameters are registered as non-inherited.
 test('entrance and exit travel belong to the animating element, not its descendants', () => {
   for (const name of ['--enter-from', '--enter-opacity', '--exit-to']) {
     assert.match(motion, new RegExp(`@property ${name} \\{[^}]*inherits: false;`), name);

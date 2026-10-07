@@ -24,7 +24,7 @@ const {createFixture}=require('./diary-fixture.cjs');
   return route.continue();
  });
  await page.goto(origin);await openSettings(page);
- const settings=page.getByRole('region',{name:'Settings',exact:true});await settings.getByRole('button',{name:'Users',exact:true}).click();
+ const settings=page.getByRole('dialog',{name:'Settings',exact:true});await settings.getByRole('button',{name:'Users',exact:true}).click();
  const row=()=>settings.locator('.model-row').filter({hasText:'@member'});
  const alert=async text=>{const value=settings.locator('[role="alert"]');for(let i=0;i<60;i++){if((await value.allTextContents()).some(item=>item.includes(text)))return value;await page.waitForTimeout(50);}throw new Error(`Expected alert containing ${text}`);};
  await row().getByRole('button',{name:'Disable',exact:true}).click();await alert('Synthetic failure');assert.ok(await row().isVisible());

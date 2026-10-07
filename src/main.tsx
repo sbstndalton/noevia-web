@@ -7,10 +7,11 @@ import { AuthGate } from './components/AuthGate';
 import { startFitToViewport } from './fit-to-viewport';
 import { checkStaleShell } from './stale-shell-guard';
 import { startInterfaceLanguage } from './i18n';
-import { startHoverPull } from './hover-pull';
-import './styles/tokens.css';
-import './styles/themes.css';
-import './styles/motion.css';
+import { startMotion } from './motion';
+import './styles/system/fonts.css';
+import './styles/system/tokens.css';
+import './styles/system/themes.css';
+import './styles/system/motion.css';
 import './styles/app.css';
 import './styles/diary-tab.css';
 import './styles/popup.css';
@@ -20,17 +21,15 @@ import './styles/shell-v2.css';
 import './styles/primitives.css';
 import './styles/overlays.css';
 import './styles/phone.css';
-import './styles/materials.css';
-import './styles/theme-contemporary.css';
-import './styles/system.css';
-import './styles/families.css';
-// #510: space-driven declutter tiers; loads last so it wins over the family overrides it lightens.
+// #951: the design system's component layer; decides how every shared surface looks.
+import './styles/system/components.css';
+// #510: space-driven declutter tiers (layout only); loads last.
 import './styles/space-tiers.css';
 
 startLogoAppearance();
 startFitToViewport();
 startInterfaceLanguage();
-startHoverPull();
+startMotion();
 void checkStaleShell();
 
 // #555: /device is where a signed-in person approves a native app's sign-in. It replaces the app

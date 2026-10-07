@@ -797,11 +797,11 @@ export function ChatView({
             compact={phone ? { thinking: chatConfig && thinkingAvailable ? thinkingLevelLabel(t, chatConfig.reasoningEffort) : null, live: streaming } : undefined} />
           {!phone && <ReasoningControl project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} />}
           {streaming ? (
-            <button className="send-btn glass glass-lens is-primary is-press" onClick={() => { stopRequestedRef.current = true; onStop(); }} title={t('composer.stop')} aria-label={t('composer.stop')}>
+            <button className="send-btn glass is-primary is-press" onClick={() => { stopRequestedRef.current = true; onStop(); }} title={t('composer.stop')} aria-label={t('composer.stop')}>
               <span aria-hidden="true">&#9632;</span>
             </button>
           ) : (
-            <button className="send-btn glass glass-lens is-primary is-press" onClick={submit} disabled={!draft.trim() || actionBusy} title={t('composer.send')} aria-label={t('composer.send')}>
+            <button className="send-btn glass is-primary is-press" onClick={submit} disabled={!draft.trim() || actionBusy} title={t('composer.send')} aria-label={t('composer.send')}>
               <SendIcon />
             </button>
           )}

@@ -90,7 +90,7 @@ export function ReasoningControl({ project, disabled, onChanged, global = false,
       </section>;
     }
     return <span className="reasoning-control is-menu">
-      <button ref={trigger} type="button" className="reasoning-pill glass glass-lens is-press" aria-label={t('composer.thinking.ariaLabel')} aria-haspopup="menu" aria-expanded={!!menuAt} title={hint} disabled={disabled||saving}
+      <button ref={trigger} type="button" className="reasoning-pill glass is-press" aria-label={t('composer.thinking.ariaLabel')} aria-haspopup="menu" aria-expanded={!!menuAt} title={hint} disabled={disabled||saving}
         data-level={value} onClick={()=>{const r=trigger.current!.getBoundingClientRect();setMenuAt(menuAt?null:{x:r.right-280,y:r.top});}}>
         {/* #510: a phone shows the symbol in place of the word, and the level only when it is not Auto. */}
         <span className="reasoning-pill-icon" aria-hidden="true"><ShellIcon name="thinking" size={16}/></span>

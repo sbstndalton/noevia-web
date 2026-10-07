@@ -226,7 +226,7 @@ export const EN_GB_SETTINGS = {
   'appearance.preview.message': 'Summarise the notes',
   'appearance.reading': 'Reading and motion',
   'appearance.chatFont': 'Chat font',
-  'appearance.chatFontDesc': 'A reading font for messages only. Default follows the theme family; the rest of the interface keeps the family’s typeface.',
+  'appearance.chatFontDesc': "A reading font for messages only. Every theme family sets the interface in Inter; this changes the conversation text alone.",
   'appearance.font.sans': 'Sans (default)',
   'appearance.font.serif': 'Serif',
   'appearance.font.mono': 'Monospace',

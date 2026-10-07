@@ -82,7 +82,6 @@
   :root .app .sidebar.pane button.new-chat-btn.glass {
     background: transparent; border-color: transparent; box-shadow: none; border-radius: var(--radius-control);
   }
-  :root[data-family='contemporary'] .app .sidebar.pane button.new-chat-btn.glass { border-radius: var(--radius-button); }
   :root .app .sidebar.pane button.new-chat-btn.glass:is(:hover, :active, :focus-visible) { background: var(--nav-hover); }
   /* One ⋯ per project row; its menu carries "New chat in project" (Sidebar.tsx, tier 2). */
   .app .sidebar.pane .proj-row .row-action-new { display: none; }
@@ -95,9 +94,6 @@
      short fade from transparent keeps text sliding under the composer's edges legible. :root
      outweighs phone.css's .is-empty variants. */
   .app .chat-workspace { position: relative; --chat-fade: var(--md-surface-container-low); }
-  [data-family='editorial'] .app .chat-workspace { --chat-fade: var(--bg-app); }
-  [data-family='contemporary'] .app .chat-workspace { --chat-fade: var(--md-surface); }
-  [data-family='glass'] .app .chat-workspace { --chat-fade: var(--glass-plane); }
   :root .app .chat-workspace > .transcript { padding-bottom: calc(var(--composer-h, 120px) + var(--space-3)); }
   :root .app .chat-workspace > .composer {
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; margin: 0;
@@ -132,7 +128,7 @@
      card keeps the family's surface corner, like the composer at every other size (#529). */
   .app .chat-workspace .composer-inner.chat-composer-inner.is-compact {
     grid-template-columns: auto auto minmax(0, 1fr) auto; column-gap: 2px; row-gap: 0;
-    padding: 2px 6px 4px; align-items: center; border-radius: var(--radius-surface);
+    padding: 2px 6px 4px; align-items: center; border-radius: var(--radius-composer);
   }
   .chat-composer-inner.is-compact > .composer-input {
     grid-column: 1 / -1; grid-row: 1; min-height: 0; max-height: 160px; padding: 10px 10px 4px; line-height: 1.5;

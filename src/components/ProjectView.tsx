@@ -469,7 +469,7 @@ export function ProjectView({
               <ComposerActions key={project.id} project={project} disabled={composerBusy || busyDocs || syncing} onChanged={onRefresh} onModels={onOpenModels} onBusy={setComposerBusy} onStatus={setComposerStatus} />
               <ComposerModel label={modelLabel} onClick={onOpenModels} />
           <ReasoningControl project={project} disabled={composerBusy || busyDocs || syncing} onChanged={onRefresh} />
-              <button className="send-btn glass glass-lens is-primary is-press" onClick={send} disabled={!draft.trim() || composerBusy || busyDocs || syncing} title={t('projects.view.send')} aria-label={t('projects.view.send')}>
+              <button className="send-btn glass is-primary is-press" onClick={send} disabled={!draft.trim() || composerBusy || busyDocs || syncing} title={t('projects.view.send')} aria-label={t('projects.view.send')}>
                 <SendIcon />
               </button>
             </div>

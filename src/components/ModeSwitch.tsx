@@ -54,7 +54,7 @@ export function ModeSwitch({ mode, onChat, onCode, compact = false }: { mode: Mo
   }, [mode]);
   return (
     <div ref={track} className={`app-mode-switch has-thumb${compact ? ' is-compact' : ''}`} role="group" aria-label="Workspace mode">
-      <span className="glass-thumb glass glass-lens" aria-hidden="true" />
+      <span className="glass-thumb glass" aria-hidden="true" />
       <button type="button" data-mode="chat" className={mode === 'chat' ? 'is-selected' : ''} aria-pressed={mode === 'chat'} aria-label="Chat" title="Chat" onClick={mode === 'chat' ? undefined : onChat}><ShellIcon name="chat" size={compact ? 16 : 18}/>{!compact && 'Chat'}</button>
       <button type="button" data-mode="code" className={mode === 'code' ? 'is-selected' : ''} aria-pressed={mode === 'code'} aria-label="Code" title="Code" onClick={mode === 'code' ? undefined : onCode}><ShellIcon name="code" size={compact ? 16 : 18}/>{!compact && 'Code'}</button>
     </div>

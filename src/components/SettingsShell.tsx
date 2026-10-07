@@ -1,6 +1,7 @@
 import { AppearanceSettings, CapabilitiesSettings, ProfileSettings } from './GeneralSettings';
+import { enter as enterMotion, exit as exitMotion } from '../motion';
 import { SettingsPanelBoundary } from './SettingsPanelBoundary';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useId } from 'react';
 import { SettingsView } from './SettingsView';
 import type { SettingsViewProps } from './SettingsView';
 import { fetchProfile } from '../api';
@@ -101,7 +102,6 @@ const PHONE = '(max-width: 820px)';
 // desktop grid renders inside that column with the detail pane squeezed off screen. Honour the
 // forced layout the same way the stylesheet does.
 const phone = () => typeof window !== 'undefined' && (window.matchMedia(PHONE).matches || document.documentElement.dataset.layout === 'mobile');
-const reducedMotion = () => typeof window !== 'undefined' && (document.documentElement.dataset.motion === 'reduced' || window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 export type SettingsSection = 'general' | 'usage' | 'models' | 'connectors' | 'keyboard' | 'data' | 'notifications' | 'memory' | 'status' | 'diary';
 
@@ -207,20 +207,35 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Leaving plays the entrance backwards, then hands control back.
-  const closeTimer = useRef(0);
+  // Leaving plays the exit spring, then hands control back (#951). A reopen mid-exit mounts a new
+  // Settings (App bumps its key), so this one's late finish must not close its successor: `live`
+  // is cleared on unmount. A second close while closing does nothing, and the exit is raced
+  // against a timeout because a background tab never runs animation frames.
+  const live = useRef(true);
+  useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
+  const closingRef = useRef(false);
   const onClosing = useRef(props.onClosing);
   onClosing.current = props.onClosing;
   const close = useCallback(() => {
+    if (closingRef.current) return;
+    closingRef.current = true;
     // Forget Settings as the place to return to at once, not after the exit animation: a reload
-    // in those 240ms reopened it (found by qa/google-drive, 2026-09-19).
+    // during the exit reopened it (found by qa/google-drive, 2026-09-19).
     onClosing.current?.();
-    if (reducedMotion()) { onClose.current(); return; }
     setClosing(true);
-    closeTimer.current = window.setTimeout(() => onClose.current(), 240);
+    const node = stage.current, scrim = node?.previousElementSibling ?? null;
+    const exited = Promise.all([exitMotion(node, 'dialog'), exitMotion(scrim, 'fade')]);
+    const timeout = new Promise<void>((resolve) => window.setTimeout(resolve, 400));
+    void Promise.race([exited, timeout]).then(() => { if (live.current) onClose.current(); });
   }, []);
-  // Replaced by a new Settings mid-exit: this one's exit must not close its successor.
-  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
+
+  // #951: a real modal. While Settings is open everything behind it is inert, so focus and
+  // pointer input stay in the window; the opener gets focus back on unmount (above).
+  useEffect(() => {
+    const behind = [...document.querySelectorAll<HTMLElement>('.app-main, .app .sidebar, .app .nav-drawer-toggle, .stats-bar')].filter((el) => !el.contains(stage.current));
+    for (const el of behind) el.setAttribute('inert', '');
+    return () => { for (const el of behind) el.removeAttribute('inert'); };
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -264,6 +279,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
     if (profileKnown && !groups.some((g) => g.items.some(([id]) => id === section))) { setSection('appearance'); props.onSection?.('appearance', { replace: true }); }
   }, [groups, section, profileKnown]);
 
+  const titleId = useId();
   const title = groups.flatMap(g => g.items).find(([id]) => id === section)?.[1] || t('settings.title');
   const filtered = filterGroups(groups, query);
   const open = (id: string) => { setSection(id); props.onSection?.(id); setView('detail'); };
@@ -284,7 +300,16 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   const report = props.onSection;
   useEffect(() => { report?.(section); }, [report, section]);
 
-  return <section ref={stage} className={`settings-stage${closing ? ' is-closing' : ''}`} data-view={view} role="region" aria-label={t('settings.title')}>
+  // #951: Settings is a window over the dimmed app; the scrim closes it like Escape does.
+  // #951: the window and its scrim spring in on mount (motion/); CSS holds their resting look.
+  useEffect(() => {
+    const node = stage.current;
+    if (!node || !window.matchMedia?.('(min-width: 701px)').matches) return;
+    void enterMotion(node.previousElementSibling, 'fade');
+    void enterMotion(node, 'dialog');
+  }, []);
+  return <><div className={`settings-scrim${closing ? ' is-closing' : ''}`} aria-hidden="true" onClick={close}/>
+  <section ref={stage} className={`settings-stage${closing ? ' is-closing' : ''}`} data-view={view} role="dialog" aria-modal="true" aria-labelledby={titleId}>
     <aside className="settings-navigation">
       <div className="settings-nav-head">
         {/* #305: the old "Back to app" button here duplicated the X (both closed Settings). It
@@ -292,7 +317,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
             header below (.settings-list-back), which already only appears when there is a
             section to step back to; X (here in list view, in the detail header otherwise) is
             the only close. */}
-        <h1 className="settings-nav-title">{t('settings.title')}</h1>
+        <h1 className="settings-nav-title" id={titleId}>{t('settings.title')}</h1>
         {/* The section list (mobile only) hides the detail pane's Close button along with the
             rest of the detail pane, so it needs its own — still the same single close action. */}
         {view === 'list' && <CloseButton onClick={close} label={t('settings.close')}/>}
@@ -352,5 +377,5 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
         </SettingsPanelBoundary>
       </div>
     </section>
-  </section>;
+  </section></>;
 }

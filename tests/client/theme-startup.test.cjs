@@ -23,7 +23,7 @@ for (const [name, read, expected, systemLight] of [
       },
     });
     assert.equal(attributes['data-theme'], expected);
-    assert.equal(attributes.content, expected === 'light' ? '#f9f9ff' : '#151519');
+    assert.equal(attributes.content, expected === 'light' ? '#faf9f5' : '#151515');
   });
 }
 
@@ -41,7 +41,7 @@ for (const [stored, expected] of [['warm', 'warm'], ['sage', 'sage'], ['iris', '
     });
     assert.equal(attributes['data-theme'], 'light');
     assert.equal(attributes['data-palette'], expected);
-    assert.equal(attributes.content, '#f9f9ff');
+    assert.equal(attributes.content, '#faf9f5');
   });
 }
 
@@ -70,10 +70,11 @@ test('unavailable storage still resolves an accent', () => {
   assert.equal(attributes['data-palette'], 'iris');
 });
 
-test('theme-color matches the generated surface role in both modes', () => {
-  const { roles } = require('../../scripts/palette.cjs');
-  assert.match(code, new RegExp(roles('light').surface));
-  assert.match(code, new RegExp(roles('dark').surface));
+test('theme-color matches the page surface token in both modes', () => {
+  const tokens = fs.readFileSync(path.join(__dirname, '../../src/styles/system/tokens.css'), 'utf8');
+  const surface = (selector) => tokens.slice(tokens.indexOf(selector)).match(/--md-surface:\s*(#[\da-f]{6});/i)[1];
+  assert.match(code, new RegExp(surface(":root, [data-theme='dark'] {")));
+  assert.match(code, new RegExp(surface("[data-theme='light'] {")));
 });
 
 // Presentation preferences restore in the same pass as the theme. Applied

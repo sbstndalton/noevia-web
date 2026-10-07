@@ -70,7 +70,7 @@ test('density uses the spacing tokens and never shrinks a target below 44px', ()
 });
 
 test('density matches the Compact density steps in tokens.css', () => {
-  const tokens = read('tokens.css'), start = tokens.indexOf(":root[data-density='compact'] {");
+  const tokens = read('system/tokens.css'), start = tokens.indexOf(":root[data-density='compact'] {");
   const compact = tokens.slice(start, tokens.indexOf('}', start));
   const root = density.match(/:root \{([^}]*)\}/);
   assert.ok(root, 'tier 2 sets the spacing roles on :root');

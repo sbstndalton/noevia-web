@@ -225,7 +225,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'appearance.preview.message': "Fass die Notizen zusammen",
   'appearance.reading': "Lesen und Bewegung",
   'appearance.chatFont': "Chat-Schrift",
-  'appearance.chatFontDesc': "Eine Leseschrift nur für Nachrichten. Standard folgt der Designfamilie; der Rest der Oberfläche behält deren Schrift.",
+  'appearance.chatFontDesc': "Eine Leseschrift nur für Nachrichten. Jede Designfamilie setzt die Oberfläche in Inter; dies ändert nur den Gesprächstext.",
   'appearance.font.sans': "Serifenlos (Standard)",
   'appearance.font.serif': "Serif",
   'appearance.font.mono': "Monospace",

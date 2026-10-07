@@ -181,7 +181,7 @@ async function checkLayout(page, name, root = '.settings-detail-scroll') {
       await openSection(page, settings, { all: 'All settings' }, 'Appearance & language');
       assert.equal(segmentRequests.length, 0, 'no German strings before German is chosen');
       await settings.getByLabel('Interface language, dates and numbers').selectOption('de-DE');
-      settings = page.getByRole('region', { name: 'Einstellungen', exact: true });
+      settings = page.getByRole('dialog', { name: 'Einstellungen', exact: true });
       await openSection(page, settings, { all: 'Alle Einstellungen' }, 'Sicherheit & Anmeldung');
       await settings.getByRole('button', { name: 'Passkey hinzufügen' }).waitFor();
       assert.equal(segmentRequests.length, 1, 'the German Settings segment loads once');

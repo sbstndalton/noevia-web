@@ -18,7 +18,7 @@ const shots=process.env.QA_SCREENSHOTS||'';
    assert.deepEqual(await mode(),['light','system'],'a new browser follows a light device');
    await page.emulateMedia({colorScheme:'dark'});await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
    await openSettings(page);
-   const d=page.getByRole('region',{name:'Settings'});await d.waitFor();
+   const d=page.getByRole('dialog',{name:'Settings'});await d.waitFor();
    await d.getByRole('button',{name:'Appearance & language',exact:true}).click();
    const system=d.getByRole('button',{name:'System'});await system.waitFor();
    assert.equal(await system.getAttribute('aria-pressed'),'true');

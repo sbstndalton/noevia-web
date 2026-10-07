@@ -1,0 +1,166 @@
+/* noevia design system — themes (#951). Each theme family is a small set of token overrides on
+   the one base system (tokens.css), keyed on [data-family] (set before paint by public/theme.js;
+   also carried by the Settings previews with .theme-scope). Light/dark stays on [data-theme] and
+   the accent on [data-palette], so every family works in both modes with every accent.
+
+     editorial     the default: the Claude reference itself (warm neutral ladder, serif
+                   greeting, 8/12/14 corners). No overrides — tokens.css is Editorial.
+     contemporary  the ChatGPT reference: cool true-grey surfaces, sans display, rounder
+                   shapes (pill buttons, 28px composer, 20px dialogs).
+     glass         frosted, translucent panes over a soft field of the accent; the same
+                   tight type, slightly rounder corners. Blur is dropped under Reduce
+                   transparency / Increase contrast.
+
+   Only tokens here, plus the few surface rules Glass needs (translucency cannot be a token). */
+
+/* ── Contemporary ─────────────────────────────────────────────────────────── */
+[data-family='contemporary'] {
+  --font-display: var(--font-ui);
+  --display-weight: 500;
+  --display-tracking: -0.02em;
+  --radius-control: 10px;
+  --radius-button: 999px;
+  --radius-row: 10px;
+  --radius-overlay: 16px;
+  --radius-dialog: 20px;
+  --radius-composer: 24px;
+  --radius-tile: 16px;
+  --radius-surface: 16px;
+  --radius-button-inset: 999px;
+}
+[data-family='contemporary']:not([data-theme='light']) {
+  --md-surface: #212121;
+  --md-surface-dim: #212121;
+  --md-surface-container-lowest: #171717;
+  --md-surface-container-low: #181818;
+  --md-surface-container: #303030;
+  --md-surface-container-high: #383838;
+  --md-surface-container-highest: #424242;
+  --md-on-surface: #ececec;
+  --md-on-surface-variant: #b4b4b4;
+  --md-outline: #8f8f8f;
+  --md-secondary-container: #424242;
+  --md-on-secondary-container: #ececec;
+  --hairline: rgb(255 255 255 / .1);
+  --hairline-strong: rgb(255 255 255 / .16);
+}
+[data-family='contemporary'][data-theme='light'] {
+  --md-surface: #ffffff;
+  --md-surface-dim: #ececec;
+  --md-surface-container-lowest: #ffffff;
+  --md-surface-container-low: #f9f9f9;
+  --md-surface-container: #f4f4f4;
+  --md-surface-container-high: #ececec;
+  --md-surface-container-highest: #e3e3e3;
+  --md-on-surface: #0d0d0d;
+  --md-on-surface-variant: #5d5d5d;
+  --md-outline: #767676;
+  --md-secondary-container: #ececec;
+  --md-on-secondary-container: #0d0d0d;
+}
+/* Contemporary: the composer is a filled container, the dialog the raised grey. */
+[data-family='contemporary'] { --surface-raised: var(--md-surface-container); }
+/* ChatGPT's ladder: main #212121 over a #181818 sidebar on a deeper backdrop. */
+[data-family='contemporary']:not([data-theme='light']) { --bg-app: var(--md-surface); --bg-chrome: var(--md-surface-container-low); --bg-backdrop: #101010;
+  --bg-dialog: var(--md-surface-container); --surface-overlay: var(--md-surface-container); }
+[data-family='contemporary'][data-theme='light'] { --bg-app: var(--md-surface); --bg-chrome: var(--md-surface-container-low); --bg-backdrop: var(--md-surface-container-high); }
+
+/* ── Glass ────────────────────────────────────────────────────────────────── */
+[data-family='glass'] {
+  --radius-control: 10px;
+  --radius-button: 10px;
+  --radius-row: 10px;
+  --radius-overlay: 14px;
+  --radius-dialog: 16px;
+  --radius-composer: 16px;
+  --radius-tile: 20px;
+  --radius-surface: 16px;
+  --glass-blur: 24px;
+}
+[data-family='glass']:not([data-theme='light']) {
+  --md-surface: #131416;
+  --md-surface-dim: #131416;
+  --md-surface-container-lowest: #0e0f11;
+  --md-surface-container-low: #1b1c1f;
+  --md-surface-container: #222327;
+  --md-surface-container-high: #2b2c31;
+  --md-surface-container-highest: #34353a;
+  --md-on-surface: #eeeef0;
+  --md-on-surface-variant: #c2c3c9;
+  --md-outline: #8b8c94;
+  --glass-pane: rgb(30 31 35 / .62);
+  --glass-edge: rgb(255 255 255 / .12);
+}
+[data-family='glass'][data-theme='light'] {
+  --md-surface: #f6f6f8;
+  --md-surface-dim: #e6e6ea;
+  --md-surface-container-lowest: #ffffff;
+  --md-surface-container-low: #f0f0f3;
+  --md-surface-container: #ebebef;
+  --md-surface-container-high: #e4e4e9;
+  --md-surface-container-highest: #dcdce2;
+  --md-on-surface: #121214;
+  --md-on-surface-variant: #45464c;
+  --md-outline: #73747b;
+  --glass-pane: rgb(255 255 255 / .62);
+  --glass-edge: rgb(255 255 255 / .7);
+}
+/* The wash: soft fields of the accent (and a warm counter-hue) on the page itself, so every
+   frosted pane has colour to blur. html carries it; .app and the reading plane stay clear. */
+[data-family='glass'] { --glass-wash-a: 30%; --glass-wash-b: 22%; --scrim: rgba(0, 0, 0, .32); }
+[data-family='glass']:not([data-theme='light']) { --glass-wash-a: 26%; --glass-wash-b: 16%; }
+html[data-family='glass'], [data-family='glass'] body {
+  background:
+    radial-gradient(60% 55% at 8% 4%, color-mix(in srgb, var(--md-primary) var(--glass-wash-a), transparent), transparent 70%),
+    radial-gradient(55% 50% at 96% 92%, color-mix(in srgb, var(--md-tertiary) var(--glass-wash-b), transparent), transparent 70%),
+    radial-gradient(45% 40% at 70% 20%, color-mix(in srgb, var(--md-primary) calc(var(--glass-wash-b) * .7), transparent), transparent 70%),
+    var(--bg-app);
+  background-attachment: fixed;
+}
+[data-family='glass'] :is(.app, .chat-workspace, .app-main) { background: transparent; }
+/* Frosted panes: translucent fill, blur + saturate, a white inner highlight on the top edge
+   and a hairline edge all round, then the pop shadow for depth. The main tile is frosted on a
+   ::before layer, never on the tile itself: a backdrop-filter on .app-stack would make it the
+   containing block of the fixed Settings scrim and window rendered inside it (and clip them). */
+[data-family='glass'] :is(.app .sidebar.pane, .ctx-menu, .account-popover, .popup, .composer-actions-panel, .tool-catalogue-panel, .settings-stage, :root .app .composer-inner, .mp-panel.aero, .settings-stage :is(.set-rows, .group)) {
+  background: var(--glass-pane) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.8) !important; -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.8) !important;
+  border: 1px solid var(--glass-hairline);
+  box-shadow: inset 0 1px 0 var(--glass-edge), inset 0 0 0 1px var(--glass-inner), var(--glass-depth);
+}
+[data-family='glass'] .app .sidebar.pane { border: 0; }
+[data-family='glass'] .app .app-stack.pane { background: transparent !important; border: 0; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; box-shadow: var(--glass-depth); }
+[data-family='glass'] .app .app-stack.pane::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: var(--glass-pane);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.8); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.8);
+  box-shadow: inset 0 1px 0 var(--glass-edge), inset 0 0 0 1px var(--glass-inner);
+}
+/* The Settings window is a reading surface: an opaque frosted fill, not a see-through pane. */
+[data-family='glass'] .settings-stage { --glass-pane: var(--glass-window); }
+[data-family='glass'] .settings-stage :is(.settings-navigation, .settings-detail) { background: transparent; }
+[data-family='glass'] .settings-stage :is(.set-rows, .group) { --glass-pane: var(--glass-pane-strong); box-shadow: inset 0 1px 0 var(--glass-edge); }
+[data-family='glass'][data-theme='light'] {
+  --glass-pane: rgb(255 255 255 / .52);
+  --glass-pane-strong: rgb(255 255 255 / .6);
+  --glass-window: rgb(248 248 251 / .97);
+  --glass-edge: rgb(255 255 255 / .9);
+  --glass-inner: rgb(255 255 255 / .35);
+  --glass-hairline: rgb(0 0 0 / .08);
+  --glass-depth: 0 1px 2px rgb(0 0 0 / .04), 0 12px 32px -8px rgb(30 40 80 / .18);
+}
+[data-family='glass']:not([data-theme='light']) {
+  --glass-pane: rgb(36 37 42 / .5);
+  --glass-pane-strong: rgb(44 45 50 / .55);
+  --glass-window: rgb(30 31 35 / .97);
+  --glass-edge: rgb(255 255 255 / .14);
+  --glass-inner: rgb(255 255 255 / .05);
+  --glass-hairline: rgb(255 255 255 / .1);
+  --glass-depth: 0 1px 2px rgb(0 0 0 / .3), 0 16px 40px -8px rgb(0 0 0 / .55);
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  [data-family='glass'][data-theme], [data-family='glass'] { --glass-pane: var(--md-surface-container-low); --glass-pane-strong: var(--bg-surface); --glass-window: var(--md-surface-container-low); --glass-blur: 0px; }
+  /* No filter at all (a zero blur is still a filter and still creates a containing block). */
+  [data-family='glass'] :is(.app .sidebar.pane, .app .app-stack.pane::before, .ctx-menu, .account-popover, .popup, .composer-actions-panel, .tool-catalogue-panel, .settings-stage, :root .app .composer-inner, .mp-panel.aero, .settings-stage :is(.set-rows, .group)) { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  html[data-family='glass'], [data-family='glass'] body { background: var(--bg-app); }
+}

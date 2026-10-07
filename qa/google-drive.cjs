@@ -27,7 +27,7 @@ const PORT=31383,origin=`http://localhost:${PORT}`,web=path.resolve(__dirname,'.
   assert.equal((await api('/api/admin/offsite-backup/run',{})).status,200);
   const open=async(width)=>{
    await openSettings(page);
-   const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
+   const settings=page.getByRole('dialog',{name:'Settings'});await settings.waitFor();
    await settings.getByRole('button',{name:'Backups',exact:true}).click();
    await settings.getByText('Last restore test').waitFor();
    return settings;

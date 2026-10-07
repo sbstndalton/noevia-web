@@ -40,7 +40,7 @@ const origin='http://localhost:31261',web=path.resolve(__dirname,'..'),shots=pro
   }
   await page.goto(origin);
   // A new account lands in Settings, and a reload now returns there; close it to reach the chat.
-  const openSettings=page.getByRole('region',{name:'Settings'});
+  const openSettings=page.getByRole('dialog',{name:'Settings'});
   // Settings is a lazy chunk: wait for whichever screen arrives first, not just the one already there.
   await openSettings.or(page.getByRole('textbox',{name:'Message',exact:true})).first().waitFor();
   // Escape can land while the lazy Settings chunk is still settling focus, so press the close
@@ -60,7 +60,7 @@ const origin='http://localhost:31261',web=path.resolve(__dirname,'..'),shots=pro
   await page.getByRole('button',{name:'Open navigation',exact:true}).click();
   // The account popover is role="menu" with role="menuitem" rows (#345/#351), not buttons.
   await page.waitForTimeout(400);await page.screenshot({path:`${shots}/noevia-mobile-before-account.png`});await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
-  const settings=page.getByRole('region',{name:'Settings'});await settings.waitFor();
+  const settings=page.getByRole('dialog',{name:'Settings'});await settings.waitFor();
   // Phones open Settings on its list; Profile is one tap in.
   await settings.getByRole('button',{name:'Account',exact:true}).click();
   const name=settings.getByLabel('Display name');await name.focus();await keyboard(360);

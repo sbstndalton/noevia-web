@@ -1,4 +1,5 @@
-// Theme families (#249): a complete visual language — palette treatment for light and dark,
+// Theme families (#249; rebuilt in #951 as token overrides on the one design system,
+// src/styles/system/themes.css): a complete visual language — palette treatment for light and dark,
 // a typeface pairing, and a radius / elevation / motion profile. Accent (data-palette) and
 // light/dark (data-theme) stay independent and still sync through the profile; the family is
 // a per-device presentation preference like chat font and density (preferences.ts).
@@ -34,20 +35,20 @@ export const FAMILY_SPECS: Readonly<Record<Family, FamilySpec>> = {
   editorial: {
     label: 'Editorial',
     description: 'Paper tones, a serif display face and hairline rules instead of shadows.',
-    display: 'Fraunces',
+    display: 'Source Serif 4',
     ui: 'Inter',
   },
   contemporary: {
     label: 'Contemporary',
     description: 'Material 3: tonal surfaces, rounder cards and sheets, and pill buttons.',
-    display: 'Geist',
-    ui: 'Geist',
+    display: 'Inter',
+    ui: 'Inter',
   },
   glass: {
     label: 'Glass',
     description: 'Frosted, translucent panes with a bright edge over a soft colour field.',
-    display: 'Sora',
-    ui: 'Manrope',
+    display: 'Inter',
+    ui: 'Inter',
   },
 };
 

@@ -21,7 +21,7 @@ const tick=p=>p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAni
    else current=drive('disconnected');
    return r.fulfill({json:current});
   });
-  await page.goto(origin);await openSettings(page);const settings=page.getByRole('region',{name:'Settings',exact:true});
+  await page.goto(origin);await openSettings(page);const settings=page.getByRole('dialog',{name:'Settings',exact:true});
   await settings.getByRole('button',{name:'Connectors',exact:true}).click();await settings.getByRole('button',{name:'Google Drive',exact:true}).click();await page.waitForFunction(()=>typeof window.qaPoll==='function');
   await page.evaluate(()=>window.qaPoll());while(!older)await tick(page);
   if(scenario==='policy'){
@@ -49,7 +49,7 @@ const tick=p=>p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAni
   }
   await settings.getByRole('button',{name:'Connectors',exact:true}).last().click();await tick(page);assert.equal(await settings.getByRole('alert').count(),0);assert.equal(await page.evaluate(()=>window.qaPoll),null);await page.close();
  }
- const page=await browser.newPage();let fail=true;await page.route('**/api/connectors',r=>r.fulfill(fail?{status:500,json:{error:'Current load failed'}}:{json:{connectors:[drive('disconnected')]}}));await page.goto(origin);await openSettings(page);const settings=page.getByRole('region',{name:'Settings',exact:true});await settings.getByRole('button',{name:'Connectors',exact:true}).click();await settings.getByRole('alert').waitFor();fail=false;await settings.getByRole('button',{name:'Try again',exact:true}).click();await settings.getByRole('alert').waitFor({state:'hidden'});assert.ok(await settings.getByRole('button',{name:'Google Drive',exact:true}).isEnabled());await page.close();
+ const page=await browser.newPage();let fail=true;await page.route('**/api/connectors',r=>r.fulfill(fail?{status:500,json:{error:'Current load failed'}}:{json:{connectors:[drive('disconnected')]}}));await page.goto(origin);await openSettings(page);const settings=page.getByRole('dialog',{name:'Settings',exact:true});await settings.getByRole('button',{name:'Connectors',exact:true}).click();await settings.getByRole('alert').waitFor();fail=false;await settings.getByRole('button',{name:'Try again',exact:true}).click();await settings.getByRole('alert').waitFor({state:'hidden'});assert.ok(await settings.getByRole('button',{name:'Google Drive',exact:true}).isEnabled());await page.close();
  assert.deepEqual(errors,[]);console.log('PASS connector poll/cancel/connect/policy ordering, stale errors, failure recovery, timer lifecycle and responsive themes/focus.');
  }finally{await browser.close();await f.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

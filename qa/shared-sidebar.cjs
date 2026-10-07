@@ -57,9 +57,9 @@ const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit
   // Settings from Code returns to Code. The account popover is role="menu" with role="menuitem"
   // rows (#345/#351), not buttons.
   await page.locator('.side-footer .account-trigger').click();await page.getByRole('menuitem',{name:'Settings',exact:true}).click();
-  await page.getByRole('region',{name:'Settings'}).waitFor();
+  await page.getByRole('dialog',{name:'Settings'}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Connectors'}).count(),0,'Connectors moved to Plugins');
-  await page.getByRole('button',{name:'Close settings'}).click();await page.getByRole('region',{name:'Settings'}).waitFor({state:'detached'});
+  await page.getByRole('button',{name:'Close settings'}).click();await page.getByRole('dialog',{name:'Settings'}).waitFor({state:'detached'});
   assert.ok(await page.locator('.coding-header',{hasText:'Pull requests'}).isVisible(),'closing Settings returns to Code');
   // Collapsed in Code: the toggle lines up with the icons below it, and the rail names things.
   await page.getByRole('button',{name:'Collapse navigation'}).click();await page.waitForTimeout(350);

@@ -55,9 +55,12 @@ function probe(phone) {
     let min = Infinity, sample = '';
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
       if (!n.textContent.trim() || !visible(n.parentElement)) continue;
+      // #951: the Settings window floats over the app tile; its text is not the tile's content.
+      { const win = n.parentElement.closest('.settings-stage'); if (win && win !== el && !win.contains(el) && el.contains(win)) continue; }
       const range = document.createRange(); range.selectNodeContents(n);
       const rr = range.getBoundingClientRect();
-      if (!rr.width || rr.top < r.top || rr.bottom > r.bottom + 1) continue;
+      // #951: text outside the card's own box (the Settings window floats over the app tile) is not its content.
+      if (!rr.width || rr.top < r.top || rr.bottom > r.bottom + 1 || rr.right <= r.left || rr.left >= r.right) continue;
       if (rr.left - inner < min) { min = rr.left - inner; sample = n.textContent.trim().slice(0, 40); }
     }
     if (min < 8) found.push({ kind: 'flush', el: name(el), inset: Math.round(min * 10) / 10, text: sample, width: Math.round(r.width) });

@@ -120,12 +120,11 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
     primaryContainerColor:(()=>{const p=document.createElement('i');p.style.background='var(--md-primary-container)';document.body.append(p);const c=cs(p).backgroundColor;p.remove();return c;})(),
     radiusControl:root.getPropertyValue('--radius-control').trim(),radiusOverlay:root.getPropertyValue('--radius-overlay').trim(),radiusSurface:root.getPropertyValue('--radius-surface').trim(),radiusButton:root.getPropertyValue('--radius-button').trim()};});
   for(const h of m.heads)assert.equal(h,'rgba(0, 0, 0, 0)',`${theme} M3: headings and footer reveal the continuous drawer surface ${JSON.stringify(m)}`);
-  // #315 restored the FAB for Contemporary's New chat (primary-container, 16px/--radius-overlay
-  // corners) and made every row a pill (--radius-button: 999px), superseding #245's flat/outlined
-  // control and shared control-radius rows for Contemporary specifically; the composer keeps the
-  // family's surface radius, and the UI face is still Geist.
-  assert.equal(m.fab,m.primaryContainerColor,`${theme} Contemporary: New chat is the primary-container FAB`);
-  assert.equal(m.fabRadius,m.radiusOverlay,`${theme} Contemporary: New chat uses the overlay radius`);assert.equal(m.active,m.radiusButton,`${theme} Contemporary: rows are pills (--radius-button)`);assert.equal(m.composerRadius,m.radiusSurface);assert.match(m.font,/^Geist/,'Contemporary sets its UI face');
+  // #951: Contemporary is the ChatGPT reference rebuilt on the one token system: New chat is a
+  // quiet row like every other (no FAB), rows take the family's 10px row radius, the composer
+  // its 28px shape, and the interface face is Inter in every family.
+  assert.equal(m.fab,'rgba(0, 0, 0, 0)',`${theme} Contemporary: New chat is a quiet row`);
+  assert.equal(m.active,'10px',`${theme} Contemporary: rows take the family's row radius`);assert.equal(m.composerRadius,'24px',`${theme} Contemporary: 24px composer`);assert.match(m.font,/Inter/,'Contemporary UI face is Inter');
   await page.close();
  }
 
@@ -140,6 +139,8 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[0,1,2].map(i=>({id:`p${i}`,name:`Synthetic project ${i}`,updatedAt:1000,files:[],chats:[]})),freeChats:[chat('pinned',true),chat('pinned2',true),...Array.from({length:16},(_,i)=>chat(`recent${i}`))]}}));
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
   // Recents are bounded (#239); "View all" expands them in place.
+  // The rows arrive with the workspace, after the composer; wait for them rather than racing.
+  await page.locator('.recent-children .chat-row').first().waitFor();
   assert.equal(await page.locator('.recent-children .chat-row').count(),15,`${material}: recents bounded`);
   await page.getByRole('button',{name:'View all 16 chats'}).click();
   const r=await page.evaluate(async()=>{const side=document.querySelector('.sidebar'),scroll=side.querySelector('.sidebar-scroll');
@@ -259,6 +260,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   const proj={id:'k0',name:'Coloured',icon:'chart',color:'#64b888',updatedAt:1000,files:[],assets:[],memories:[],instructions:'',goal:'',sourceFolders:[],chats:[],toolboxes:['core'],createdAt:1};
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[proj],freeChats:[]}}));
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
+  await page.locator('.side-footer-row [aria-label="Diary"]').first().waitFor({timeout:5000}).catch(()=>{});
   assert.equal(await page.locator('.side-footer-row [aria-label="Diary"]').count(),1,'Diary sits in the bottom bar');
   assert.equal(await page.locator('.side-nav [aria-label="Diary"]').count(),0,'and not in the top destinations');
   const green='rgb(100, 184, 136)';
@@ -319,6 +321,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.addInitScript(m=>localStorage.setItem('noevia:material',m),material);
   await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[{id:'r0',name:'Pinned project',pinned:true,updatedAt:1,files:[],chats:[],createdAt:1},{id:'r1',name:'Finances',updatedAt:1,files:[],chats:[],createdAt:1}],freeChats:[{id:'rc',title:'Testing',updatedAt:2,messages:[]}]}}));
   await page.goto('http://localhost:31377');await page.getByPlaceholder('Message noevia…').waitFor();
+  await page.locator('.sidebar .chat-row').first().waitFor();
   const edges=await page.evaluate(()=>{const S=document.querySelector('.sidebar').getBoundingClientRect().left;return [...document.querySelectorAll('.proj-row, .chat-row')].map(r=>[Math.round(r.querySelector('svg').getBoundingClientRect().left-S),Math.round(r.querySelector('.sidebar-label').getBoundingClientRect().left-S)]);});
   assert.equal(new Set(edges.map(e=>e.join())).size,1,`${material}: project and chat rows share one icon and title edge ${JSON.stringify(edges)}`);
   const head=await page.evaluate(()=>{const h=[...document.querySelectorAll('.sidebar-section-head')].find(x=>x.querySelector('.section-options'));const l=h.querySelector('.section-label').getBoundingClientRect(),o=h.querySelector('.section-options').getBoundingClientRect();return Math.abs((o.top+o.height/2)-(l.top+l.height/2));});

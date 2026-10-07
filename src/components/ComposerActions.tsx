@@ -182,7 +182,7 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
     {/* Like Claude's: a centred SVG plus, and a menu of what can be added — files first, then
         the tools this chat may use, each ticked when on. The model lives in its own control on
         the other side of the composer, so it is not repeated here. */}
-    <button ref={trigger} type="button" className="composer-add glass glass-lens is-press" aria-label={browseTools?.count ? `${t('composer.addFilesAndTools')} · ${t('tools.forMessage', { count: browseTools.count })}` : t('composer.addFilesAndTools')} aria-expanded={open} aria-controls={panelId} disabled={disabled || saving} onClick={() => setOpen(!open)}><ShellIcon name="plus" size={18}/>
+    <button ref={trigger} type="button" className="composer-add glass is-press" aria-label={browseTools?.count ? `${t('composer.addFilesAndTools')} · ${t('tools.forMessage', { count: browseTools.count })}` : t('composer.addFilesAndTools')} aria-expanded={open} aria-controls={panelId} disabled={disabled || saving} onClick={() => setOpen(!open)}><ShellIcon name="plus" size={18}/>
       {/* #510: where the Tools button is hidden, the + carries how many toolboxes the next message adds. */}
       {!!browseTools?.count && <span className="composer-add-badge" aria-hidden="true">{browseTools.count}</span>}</button>
     <input ref={input} hidden type="file" multiple onChange={event => { const files = Array.from(event.target.files || []); event.target.value = ''; void upload(files); }} />

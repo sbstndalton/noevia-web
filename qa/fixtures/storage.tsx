@@ -3,7 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { StoragePicker } from '../../src/components/StoragePicker';
 import { StorageFileBrowser } from '../../src/components/StorageFileBrowser';
 import { FolderPicker } from '../../src/components/FolderPicker';
-import '../../src/styles/tokens.css';
+import '../../src/styles/system/fonts.css';
+import '../../src/styles/system/tokens.css';
+import '../../src/styles/system/themes.css';
+import '../../src/styles/system/motion.css';
 import '../../src/styles/app.css';
 import '../../src/styles/diary-tab.css';
 import '../../src/styles/popup.css';
@@ -13,7 +16,7 @@ import '../../src/styles/shell-v2.css';
 import '../../src/styles/primitives.css';
 import '../../src/styles/overlays.css';
 import '../../src/styles/phone.css';
-import '../../src/styles/materials.css';
+import '../../src/styles/system/components.css';
 
 function WrapperDialog({ onClose }: { onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);

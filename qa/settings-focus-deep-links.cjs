@@ -33,7 +33,7 @@ const PORT = 31461;
     await page.goto(`http://localhost:${PORT}`);
     const composer = page.getByRole('textbox', { name: 'Message', exact: true });
     await composer.waitFor();
-    const settings = () => page.getByRole('region', { name: 'Settings' });
+    const settings = () => page.getByRole('dialog', { name: 'Settings' });
     const mod = await page.evaluate(() => (/mac|iphone|ipad/i.test(navigator.platform) ? 'Meta' : 'Control'));
 
     // ── #401: three ways in, two ways to close, each hands focus back to its own opener ──

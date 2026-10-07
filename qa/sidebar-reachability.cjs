@@ -76,7 +76,7 @@ const {createFixture}=require('./diary-fixture.cjs');
   // The account popover is role="menu" with role="menuitem" rows (#345/#351), not buttons.
   await toggle.click();await drawer.waitFor();
   await drawer.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
-  await drawer.waitFor({state:'hidden'});await page.getByRole('region',{name:'Settings'}).waitFor();await page.keyboard.press('Escape');
+  await drawer.waitFor({state:'hidden'});await page.getByRole('dialog',{name:'Settings'}).waitFor();await page.keyboard.press('Escape');
   await toggle.click();await drawer.waitFor();await page.setViewportSize({width:1440,height:900});
   await page.waitForFunction(()=>!document.querySelector('.nav-drawer-backdrop'));
   assert.ok(await page.locator('.sidebar').isVisible());assert.equal(await toggle.isVisible(),false);

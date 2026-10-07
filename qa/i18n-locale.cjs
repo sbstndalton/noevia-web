@@ -78,7 +78,7 @@ const RUNS = [['de-DE', 375], ['de-DE', 1440], ['fr-FR', 375]];
 
       // Settings → Appearance & language, in the run's language.
       await page.getByTitle(l.settings, { exact: true }).first().click();
-      const settings = page.getByRole('region', { name: l.settings, exact: true });
+      const settings = page.getByRole('dialog', { name: l.settings, exact: true });
       await settings.waitFor();
       const back = settings.getByRole('button', { name: l.all, exact: true });
       if (await back.isVisible()) await back.click();
@@ -99,7 +99,7 @@ const RUNS = [['de-DE', 375], ['de-DE', 1440], ['fr-FR', 375]];
 
       // Switching back to the browser's language re-renders at once, with no reload.
       await settings.getByRole('button', { name: l.reset, exact: true }).click();
-      await page.getByRole('region', { name: 'Settings', exact: true }).waitFor();
+      await page.getByRole('dialog', { name: 'Settings', exact: true }).waitFor();
       assert.equal(await page.evaluate(() => document.documentElement.lang), 'en-US');
       assert.equal(prefs.locale, 'system');
       await page.close();

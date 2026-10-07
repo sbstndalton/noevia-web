@@ -10,7 +10,7 @@ const {withLocale}=require('./qa-locale.cjs');
 async function openSettings(page){
  // Settings is a remembered view: after a reload the panel is already open and
  // its button is not on screen.
- if(await page.getByRole('region',{name:'Settings'}).isVisible())return;
+ if(await page.getByRole('dialog',{name:'Settings'}).isVisible())return;
  const toggle=page.getByRole('button',{name:'Open navigation',exact:true});
  if(await toggle.isVisible()){await toggle.click();await page.getByRole('dialog',{name:'Navigation'}).waitFor();}
  // The account menu carries Settings at every width; the header icon does not.

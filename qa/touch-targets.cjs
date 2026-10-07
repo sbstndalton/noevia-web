@@ -22,7 +22,7 @@ const {createFixture}=require('./diary-fixture.cjs');
    // A reload returns to where you were, so recovering by reloading lands back on the
    // project rather than on a chat; openSettings goes through the account menu.
    await openSettings(page);
-   const dialog=page.getByRole('region',{name:'Settings'});await dialog.waitFor();
+   const dialog=page.getByRole('dialog',{name:'Settings'});await dialog.waitFor();
    found.push(...await measure(page,'.settings-back, .settings-nav-head .shell-icon-button, .settings-detail > header .shell-icon-button'));
    const small=found.filter(f=>f.w<44||f.h<44).map(f=>`${f.sel} "${f.label}" ${f.w}x${f.h}`);
    assert.ok(found.length>=7,`too few controls measured at ${width}: ${found.length}`);

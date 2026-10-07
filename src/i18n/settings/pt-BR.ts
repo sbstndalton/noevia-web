@@ -225,7 +225,7 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'appearance.preview.message': "Resuma as anotações",
   'appearance.reading': "Leitura e movimento",
   'appearance.chatFont': "Fonte do chat",
-  'appearance.chatFontDesc': "Uma fonte de leitura só para as mensagens. A padrão segue a família de tema; o resto da interface mantém a fonte da família.",
+  'appearance.chatFontDesc': "Uma fonte de leitura só para as mensagens. Todas as famílias de tema usam Inter na interface; isto muda apenas o texto da conversa.",
   'appearance.font.sans': "Sans (padrão)",
   'appearance.font.serif': "Serifada",
   'appearance.font.mono': "Monoespaçada",
