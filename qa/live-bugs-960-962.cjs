@@ -4,7 +4,8 @@
 // QA_SHOTS=<dir> writes a screenshot of each bug's state.
 //   #960  Glass: the composer's + menu (and every popover that sits inside a frosted pane) is
 //         opaque enough to read: elementFromPoint at each menu row's centre hits the row, and the
-//         menu's own fill has an alpha of at least 0.9.
+//         menu's composited fill is fully opaque (alpha 1 after ancestors' opacity), and a grid of
+//         elementFromPoint probes inside the menu rect only ever hits the menu or its descendants.
 //   #961  The forced phone layout on a wide window (Settings → Layout → Phone preview): Settings
 //         opens as the phone sheet inside the phone frame, not the ~1021px desktop window.
 //   #962  Closing Settings hands pointer input back at once: a click on the account button
@@ -40,16 +41,31 @@ const alphaOf = (c) => { const m = String(c).match(/[\d.]+/g); if (!m) return 0;
       await page.locator('.composer-add').first().click();
       const panel = page.locator('.composer-actions-panel');
       await panel.waitFor();
-      await page.waitForTimeout(400); // the entrance has settled
+      // Wait for the entrance to finish: every animation on the menu and its ancestors is done.
+      await panel.evaluate(async (p) => { for (let e = p; e; e = e.parentElement) await Promise.all(e.getAnimations().map((a) => a.finished.catch(() => {}))); });
+      // The motion spring starts a frame after the CSS keyframes; give it up to 2s to settle at
+      // opacity 1 (an entrance that never does still fails the composited-alpha assertion below).
+      await page.waitForFunction(() => { let o = 1; for (let e = document.querySelector('.composer-actions-panel'); e; e = e.parentElement) { if (e.getAnimations().some((a) => a.playState === 'running')) return false; o *= Number(getComputedStyle(e).opacity); } return o === 1; }, null, { timeout: 2000 }).catch(() => {});
       const probe = await panel.evaluate((p) => {
+        const alpha = (c) => { const m = String(c).match(/[\d.]+/g); if (!m) return 0; return /^rgba?\(/.test(c) ? (m.length >= 4 ? Number(m[3]) : 1) : 1; };
+        // Effective composited fill: the menu's own background alpha times every ancestor's opacity.
+        let effective = alpha(getComputedStyle(p).backgroundColor);
+        for (let e = p; e; e = e.parentElement) effective *= Number(getComputedStyle(e).opacity);
         const rows = [...p.querySelectorAll('.composer-menu-row, button, [role="menuitem"], [role="menuitemcheckbox"]')].filter((r) => r.getBoundingClientRect().height > 0);
         const hits = rows.map((r) => { const b = r.getBoundingClientRect(); const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return { label: (r.textContent || '').trim().slice(0, 30), ok: !!hit && (r === hit || r.contains(hit)), hit: hit ? `${hit.tagName}.${hit.className}` : null }; });
-        return { bg: getComputedStyle(p).backgroundColor, hits };
+        // A grid inside the menu rect (inset past the rounded corners): every point is the menu or a descendant.
+        const b = p.getBoundingClientRect(), strays = [];
+        for (let x = b.left + 12; x < b.right - 12; x += 16) for (let y = b.top + 12; y < b.bottom - 12; y += 8) {
+          const hit = document.elementFromPoint(x, y);
+          if (!hit || !p.contains(hit)) strays.push(`${Math.round(x)},${Math.round(y)} ${hit ? `${hit.tagName}.${hit.className} "${(hit.textContent || '').trim().slice(0, 24)}"` : 'nothing'}`);
+        }
+        return { bg: getComputedStyle(p).backgroundColor, effective, hits, strays };
       });
       if (shots) await page.screenshot({ path: path.join(shots, `960-glass-${theme}-plus-menu.png`) });
       assert.ok(probe.hits.length > 0, 'the + menu has rows');
       for (const h of probe.hits) assert.ok(h.ok, `row "${h.label}" is not the top element at its centre (hit ${h.hit})`);
-      assert.ok(alphaOf(probe.bg) >= 0.9, `the + menu fill is see-through: ${probe.bg} (alpha ${alphaOf(probe.bg)})`);
+      assert.deepEqual(probe.strays.slice(0, 5), [], `elements outside the menu show inside its rect (${probe.strays.length} points)`);
+      assert.equal(probe.effective, 1, `the + menu is not fully opaque: fill ${probe.bg}, composited alpha ${probe.effective}`);
       // The other popovers that open over frosted panes share the same fill.
       const fills = await page.evaluate(() => {
         const out = {};
@@ -59,7 +75,7 @@ const alphaOf = (c) => { const m = String(c).match(/[\d.]+/g); if (!m) return 0;
         }
         return out;
       });
-      for (const [cls, bg] of Object.entries(fills)) assert.ok(alphaOf(bg) >= 0.9, `glass ${theme} .${cls} fill is see-through: ${bg}`);
+      for (const [cls, bg] of Object.entries(fills)) assert.equal(alphaOf(bg), 1, `glass ${theme} .${cls} fill is see-through: ${bg}`);
       await ctx.close();
     });
 
