@@ -16,6 +16,7 @@
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
+const { openToolCatalogue } = require('./nav.cjs');
 
 const PORT = 31789, ORIGIN = `http://localhost:${PORT}`;
 const USER = 'synthetic-diary-only';
@@ -135,13 +136,12 @@ async function case790(browser, fixture) {
     await p.route('**/api/toolboxes/permitted*', (r) => r.fulfill({ json: PERMITTED }));
   });
   try {
-    const trigger = page.getByRole('button', { name: /^Tools/ }).first();
-    await trigger.click();
+    await openToolCatalogue(page);
     await page.getByRole('listbox', { name: 'Tools' }).waitFor();
     await page.keyboard.press('Escape');
     await openChat(page, 'Synthetic chat B');
     await waitModel(page, 'synthetic-model-b');
-    await trigger.click();
+    await openToolCatalogue(page);
     await page.getByRole('option', { name: /Web search/ }).click();
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: /1 for (the next )?message/i }).first().waitFor().catch(() => {});

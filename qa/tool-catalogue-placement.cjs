@@ -6,6 +6,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {spawn}=require('node:child_process');
 const {withLocale}=require('./qa-locale.cjs');
+const {openToolCatalogue}=require('./nav.cjs');
 const port=31437,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'..'),shots=process.env.QA_SCREENSHOTS||'/tmp';
 
 (async()=>{
@@ -29,8 +30,8 @@ const port=31437,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'.
    // A fresh browser with no stored place opens an unsaved, empty New chat (see new-chat-landing.cjs).
    await page.getByRole('textbox',{name:'Message',exact:true}).waitFor({timeout:15000});
    assert.equal(await page.locator('.chat-workspace.is-empty').count(),1,'must be an empty new chat, not a saved one');
-   await page.getByRole('button',{name:/^Tools/}).click();
-   const panel=page.getByRole('dialog',{name:'Tool catalogue'});await panel.waitFor({timeout:10000});
+   await openToolCatalogue(page);
+   const panel=page.locator('.tool-catalogue-panel');await panel.waitFor({timeout:10000});
    await page.getByRole('combobox').waitFor();
    const box=await panel.boundingBox();
    assert.ok(box,'catalogue panel must have a layout box');
