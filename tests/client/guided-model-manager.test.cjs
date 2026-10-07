@@ -61,9 +61,16 @@ test('recommendation keeps q8_0 at the largest comfortable context and never goe
   assert.match(g.recommend({...nine,sizeable:false,rows:[]},14).text,/Measure context/);
 });
 
+test('#1057 the tune floor is q8_0: q5 and q4 are below it, bf16/f16/q8_0 are not',()=>{
+  assert.equal(g.KV_TUNE_FLOOR,'q8_0');
+  for(const kv of ['q5_1','q5_0','q4_1','q4_0'])assert.equal(g.belowTuneFloor(kv),true,kv);
+  for(const kv of ['bf16','f16','q8_0',null,'mixed'])assert.equal(g.belowTuneFloor(kv),false,String(kv));
+  assert.equal(g.KV_BYTES.bf16,g.KV_BYTES.f16,'bf16 is sized like f16');
+});
+
 test('below-floor detection covers q4 variants only',()=>{
   assert.equal(g.belowKvFloor('q4_0'),true);assert.equal(g.belowKvFloor('q4_1'),true);
-  for(const kv of ['q5_0','q5_1','q8_0','f16',null,'mixed'])assert.equal(g.belowKvFloor(kv),false,String(kv));
+  for(const kv of ['q5_0','q5_1','q8_0','f16','bf16',null,'mixed'])assert.equal(g.belowKvFloor(kv),false,String(kv));
 });
 
 test('tune duration grows with model size and stays a range',()=>{
@@ -192,9 +199,12 @@ test('#328 a server sentence inside a catalogue sentence loses its own full stop
 });
 test('#328 the floor note lists the server\'s own KV candidates, else this build\'s default',()=>{
   assert.deepEqual(g.kvCandidatesFrom(['f16','q8_0','q5_1','q5_0','q4_0']),['f16','q8_0','q5_1','q5_0','q4_0']);
-  assert.deepEqual(g.kvCandidatesFrom(undefined),['f16','q8_0','q5_1','q5_0']);
-  assert.deepEqual(g.kvCandidatesFrom(['f16','<b>']),['f16','q8_0','q5_1','q5_0'],'unknown types are not trusted');
+  // #1057: this build's default is bf16 then q8_0 (the floor); bf16 from a server is trusted.
+  assert.deepEqual(g.kvCandidatesFrom(undefined),['bf16','q8_0']);
+  assert.deepEqual(g.kvCandidatesFrom(['bf16','q8_0']),['bf16','q8_0']);
+  assert.deepEqual(g.kvCandidatesFrom(['f16','<b>']),['bf16','q8_0'],'unknown types are not trusted');
   assert.ok(!g.kvCandidatesFrom(undefined).some(g.belowKvFloor));
+  assert.ok(!g.kvCandidatesFrom(undefined).some(g.belowTuneFloor));
 });
 test('#328 model names are listed once',()=>{
   assert.deepEqual(g.uniqueNames(['a','b','a','c','b']),['a','b','c']);

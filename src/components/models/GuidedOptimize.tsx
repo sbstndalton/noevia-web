@@ -7,7 +7,7 @@ import { roundModelSizeGB } from '../../model-size';
 import { EvidenceList } from './EvidenceList';
 import { ctxShort, gb, gib, num } from './mm';
 import type { EstimateInputs, Hardware, Verdict } from './guided';
-import { belowKvFloor, budgetFor, canPromptSuite, estimateGib, KV_FLOOR, KV_GUIDED, kvCandidatesFrom, parseSamplingPlan, withoutFinalStop, samplingPlanParts, recommend, roleOf, samplingValueList, TUNE_STEPS, tuneMinutes, verdictFor } from './guided';
+import { belowKvFloor, belowTuneFloor, budgetFor, canPromptSuite, estimateGib, KV_FLOOR, KV_GUIDED, KV_TUNE_FLOOR, kvCandidatesFrom, parseSamplingPlan, withoutFinalStop, samplingPlanParts, recommend, roleOf, samplingValueList, TUNE_STEPS, tuneMinutes, verdictFor } from './guided';
 import type { BudgetKind, Recommendation, SamplingPlan } from './guided';
 import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
@@ -80,7 +80,7 @@ function FitStep({ model }: { model: string }): JSX.Element {
     getJson<EstimateInputs>('/api/models/estimate?model=' + encodeURIComponent(model)).then((v) => {
       if (!live) return; setInputs(v);
       setCtx(v.current.ctx || v.rows.find((r) => r.ctx >= 16384)?.ctx || v.rows[0]?.ctx || 0);
-      if (v.current.kv && v.current.kv in { f16: 1, q8_0: 1, q5_1: 1, q5_0: 1, q4_0: 1 }) setKv(v.current.kv);
+      if (v.current.kv && v.current.kv in { bf16: 1, f16: 1, q8_0: 1, q5_1: 1, q5_0: 1, q4_0: 1 }) setKv(v.current.kv);
     }).catch((e) => { if (live) setError(e instanceof Error ? e.message : t('mm.fit.unavailable')); });
     getJson<Hardware | { supported: false }>('/api/models/hardware').then((v) => { if (live) setHw('supported' in v ? null : v); }).catch(() => undefined);
     return () => { live = false; };
@@ -144,7 +144,8 @@ function TuneStep({ model, sizeGB, chat }: { model: string; sizeGB: number | nul
     {plan && <p className="mm-note mm-sampling-plan" role="status">{samplingValueList(plan).length
       ? <><strong>{t('mm.tune.sampling.recommended')}</strong> {samplingValueList(plan).join(', ')}. {samplingSourceText(t, plan)}{samplingNoteText(t, plan)}</>
       : t('mm.tune.sampling.none')}</p>}
-    <p className="mm-note mm-warn" role="note">{t('mm.tune.floor', { floor: KV_FLOOR, candidates: kvList })}{kvTried.some(belowKvFloor) ? ` ${t('mm.tune.floorOverride', { floor: KV_FLOOR })}` : ''}</p>
+    {/* #1057: the server's list for this model; q5 (and q4_0) appear only with the model's opt-in. */}
+    <p className="mm-note mm-warn" role="note">{t('mm.tune.floor', { floor: KV_TUNE_FLOOR, candidates: kvList })}{kvTried.some(belowTuneFloor) ? ` ${t('mm.tune.floorOverride', { floor: KV_TUNE_FLOOR })}` : ''}</p>
     {last && <p className="mm-note">{t('mm.tune.last', { date: new Date(last.at).toLocaleDateString(appLocale()), result: [specLabel(t, last.spec, last.specLabel) || t('mm.tune.saved'), ...(last.generation ? [t('mm.tokensPerSecond', { rate: num(last.generation) })] : []), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv })] : []), ...(last.context ? [t('mm.tune.context', { tokens: num(last.context, 0) })] : [])].join(', ') })}{belowKvFloor(last.kv) ? ` ${t('mm.tune.lastBelowFloor')}` : ''}</p>}
     {failed && <p className="mm-note mm-warn" role="status">{t(mine!.error ? 'mm.tune.failedError' : 'mm.tune.failed', { status: stuckStatus(t, String(mine!.status)), error: withoutFinalStop(mine!.error ?? '') })} {t(last ? 'mm.tune.failedKeepLast' : 'mm.tune.failedKeep')}</p>}
   </div>;

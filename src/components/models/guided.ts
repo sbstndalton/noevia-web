@@ -17,10 +17,15 @@ export type Hardware = { systemGB: number | null; gpus: { name: string; capacity
 export type Verdict = 'fits' | 'tight' | 'no';
 
 // Bytes per cache element, from llama.cpp's block layouts. q8_0 is what the server sized rows at.
-export const KV_BYTES: Record<string, number> = { f16: 2, q8_0: 1.0625, q5_1: 0.75, q5_0: 0.6875, q4_1: 0.625, q4_0: 0.5625 };
+export const KV_BYTES: Record<string, number> = { bf16: 2, f16: 2, q8_0: 1.0625, q5_1: 0.75, q5_0: 0.6875, q4_1: 0.625, q4_0: 0.5625 };
 /** #190: automatic choices never go below Q5. Q4 stays selectable in Advanced for experts. */
 export const KV_FLOOR = 'q5_0';
-export const KV_GUIDED = ['f16', 'q8_0', 'q5_1', 'q5_0'] as const;
+export const KV_GUIDED = ['bf16', 'f16', 'q8_0', 'q5_1', 'q5_0'] as const;
+/** #1057 (owner's policy): auto-tune keeps an unquantized bf16 cache and goes no lower than q8_0
+ *  unless the model allows q5; a more compact type only when it fits about twice the context. */
+export const KV_TUNE_FLOOR = 'q8_0';
+export const KV_TUNE_DEFAULT = ['bf16', 'q8_0'] as const;
+export const belowTuneFloor = (kv: string | null | undefined) => !!kv && kv in KV_BYTES && KV_BYTES[kv] < KV_BYTES[KV_TUNE_FLOOR];
 export const belowKvFloor = (kv: string | null | undefined) => !!kv && kv in KV_BYTES && KV_BYTES[kv] < KV_BYTES[KV_FLOOR];
 /** Headroom under which a fit is only "tight": 10% of the budget, at least 1 GiB. */
 export const tightMargin = (budgetGib: number) => Math.max(1, budgetGib * 0.1);
@@ -130,7 +135,7 @@ export function appliedSettings(models: readonly { phases: readonly PhaseLike[] 
 export const withoutFinalStop = (text: string) => text.replace(/[.。]+\s*$/u, '');
 /** The KV cache types a tune tries: the server's own list when it sends one (#328), else this build's default. */
 export function kvCandidatesFrom(raw: unknown): string[] {
-  return Array.isArray(raw) && raw.length && raw.every((k) => typeof k === 'string' && k in KV_BYTES) ? raw as string[] : [...KV_GUIDED];
+  return Array.isArray(raw) && raw.length && raw.every((k) => typeof k === 'string' && k in KV_BYTES) ? raw as string[] : [...KV_TUNE_DEFAULT];
 }
 /** Each name once, in first-seen order. */
 export const uniqueNames = (names: readonly string[]) => [...new Set(names)];
