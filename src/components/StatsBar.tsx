@@ -8,6 +8,7 @@ import { senderLabelText } from '../chat-labels';
 import { appLocale } from '../user-preferences';
 import { formatCompact, formatNumber, formatPercent, formatSizeUnit } from '../number-format';
 import { LOCAL_MODEL_FALLBACK } from '../model-guidance';
+import { engineEmptyKey } from '../stats-engine-text';
 
 interface StatsBarProps {
   stats: LiveStats | null; // App polls /api/stats and passes it down (single poller)
@@ -140,8 +141,8 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
       <div data-stat="speed"><dt title={t('stats.speedHint')}>{t('stats.speed')}</dt><dd>{active && replyRate == null ? t('stats.measuring') : replyRate == null ? t('stats.notReported') : t('stats.tokensPerSecond', { value: fmt(replyRate) })}</dd></div>
       <div data-stat="first-token"><dt title={t('stats.firstTokenHint')}>{t('stats.firstToken')}</dt><dd>{firstToken == null ? (active ? t('stats.waiting') : t('stats.notReported')) : fmt(firstToken, 2, ' s')}</dd></div>
       <div data-stat="reply"><dt title={t('stats.replyHint')}>{replyLabel}</dt><dd>{replyCounts}</dd></div>
-      <div data-stat="total"><dt title={stats?.telemetryScope || t('stats.engineTotalDefaultHint')}>{t('stats.engineTotal')}</dt><dd>{totalParts.length ? totalParts.join(' · ') : t('stats.unavailable')}</dd></div>
-      <div data-stat="gpu"><dt>{t('stats.gpu')}</dt><dd>{gpuParts.length ? gpuParts.join(' · ') : t('stats.unavailable')}</dd></div>
+      <div data-stat="total"><dt title={stats?.telemetryScope || t('stats.engineTotalDefaultHint')}>{t('stats.engineTotal')}</dt><dd>{totalParts.length ? totalParts.join(' · ') : t(engineEmptyKey(reply))}</dd></div>
+      <div data-stat="gpu"><dt>{t('stats.gpu')}</dt><dd>{gpuParts.length ? gpuParts.join(' · ') : t(engineEmptyKey(reply))}</dd></div>
       {mtp.map(m => <div className="stats-mtp" data-stat="mtp" key={m.model} title={t('stats.mtpTitle', { model: m.model, source: m.source || t('stats.mtpSourceEngineTotal') })}>
         <dt>{t('stats.mtpAcceptance')}{m.source === 'last response' ? (active ? t('stats.mtpCurrentReply') : t('stats.mtpLastReply')) : t('stats.mtpEngineTotal')}</dt>
         <dd>{m.rate == null ? t('stats.mtpAwaiting') : t('stats.mtpPercent', { value: formatNumber(m.rate * 100, appLocale(), 1) })}<progress aria-label={t('stats.mtpAriaLabel', { model: m.model })} max={1} value={m.rate ?? undefined} /></dd>
