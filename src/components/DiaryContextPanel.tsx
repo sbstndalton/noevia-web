@@ -25,7 +25,7 @@ export function DiaryContextPanel({ recovery, storageStatus, managed, filesLoadi
         {filesLoading && <p role="status">{t('diary.context.loadingFiles')}</p>}
         {filesError && <div role="alert"><p>{filesError}</p><button className="popup-tab" disabled={busy} onClick={retryFiles}>{t('diary.context.retryFileList')}</button></div>}
         {!filesLoading && !filesError && files.map(file => <button key={file.path} disabled={busy} title={file.path} onClick={() => file.isDir ? setFilePath(file.path) : openFile(file.path)}>
-          <ShellIcon name={file.isDir ? 'folder' : 'book'} size={16}/>{file.name}
+          <ShellIcon name={file.isDir ? 'folder' : 'book'} size={16}/><bdi>{file.name}</bdi>
         </button>)}
         {!filesLoading && !filesError && !files.length && <p className="diary-intro">{t('diary.context.noMarkdownFiles')}</p>}
       </div>
