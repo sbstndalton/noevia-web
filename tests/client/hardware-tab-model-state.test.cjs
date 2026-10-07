@@ -22,7 +22,7 @@ const BASE_BACKEND = {
 // #603: only a running engine shows an uptime. A stopped one reads its state; an older model
 // manager that still sends the time since it last started must not be shown as a duration.
 test('EngineCard shows uptime for a running engine only, and "Stopped" instead of a duration otherwise', async () => {
-  const { createServer } = await import('vite');
+  const { createServer } = require('./vite-ssr-server.cjs');
   const server = await createServer({
     configFile: false,
     root: path.resolve(__dirname, '../..'),
@@ -62,7 +62,7 @@ test('EngineCard shows uptime for a running engine only, and "Stopped" instead o
 });
 
 test('EngineCard model-state note: serving, unavailable-with-reason, and genuinely no model loaded', async () => {
-  const { createServer } = await import('vite');
+  const { createServer } = require('./vite-ssr-server.cjs');
   const server = await createServer({
     configFile: false,
     root: path.resolve(__dirname, '../..'),

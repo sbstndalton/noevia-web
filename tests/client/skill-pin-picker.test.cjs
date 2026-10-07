@@ -7,7 +7,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 
 async function withSsr(run) {
-  const { createServer } = await import('vite');
+  const { createServer } = require('./vite-ssr-server.cjs');
   const server = await createServer({
     configFile: false, root: path.resolve(__dirname, '../..'), server: { middlewareMode: true }, appType: 'custom',
     plugins: [(await import('@vitejs/plugin-react')).default()],

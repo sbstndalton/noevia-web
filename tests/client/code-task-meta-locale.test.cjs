@@ -10,7 +10,7 @@ const path = require('node:path');
 const META = { harness: 'opencode', harnessVersion: '1.18.31', usage: { total: 46000 }, context: { used: 8012, size: 24576, percent: 33 }, commands: 2, failedCommands: 1, limitations: [] };
 
 async function render(language, metas) {
-  const { createServer } = await import('vite');
+  const { createServer } = require('./vite-ssr-server.cjs');
   const server = await createServer({
     configFile: false,
     root: path.resolve(__dirname, '../..'),
