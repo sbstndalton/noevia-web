@@ -80,7 +80,7 @@ export function FolderPicker({
       <ul className="folder-list">
         {(loadedPath === path && !busy ? entries : []).map((e) => (
           <li key={e.path}>
-            <button className="folder-open" disabled={savingFolder} onClick={() => setPath(e.path)}>📁 {e.name}</button>
+            <button className="folder-open" disabled={savingFolder} onClick={() => setPath(e.path)}>📁 <bdi>{e.name}</bdi></button>
           </li>
         ))}
       </ul>

@@ -125,14 +125,14 @@ export function StorageFileBrowser({
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', textAlign: 'left' }}
                     onClick={() => setPath(e.path)}
                   >
-                    <span className="model-name">📁 {e.name}</span>
+                    <span className="model-name">📁 <bdi>{e.name}</bdi></span>
                   </button>
                 </div>
               ))}
               {files.map((e) => (
                 <div key={e.path} className="model-row" style={{ padding: '8px 12px', marginBottom: 4 }}>
                   <span className="model-name-group">
-                    <span className="model-name" style={{ fontWeight: 400 }}>{e.name}</span>
+                    <span className="model-name" style={{ fontWeight: 400 }}><bdi>{e.name}</bdi></span>
                     <span className="route-note">{humanSize(e.size)}</span>
                   </span>
                   <button
