@@ -122,7 +122,9 @@ const LOCALES = {
         await page.goto(`${env.origin}/models`);
         const manager = page.locator('.model-manager-page');
         await manager.waitFor({ timeout: 30000 });
-        await manager.getByRole('tab', { name: t('mm.tab.yours'), exact: true }).click();
+        // #1008: Models → Installed (was Your models).
+        await manager.getByRole('tab', { name: t('mm.section.models'), exact: true }).click();
+        await manager.getByRole('radio', { name: t('mm.models.installed'), exact: true }).click();
         const card = manager.getByRole('article', { name: 'Synthetic-Chat' });
         await card.waitFor({ timeout: 20000 });
         await check(`#636 Your models: the folder line and the card size are ${locale} (${tag})`, async () => {
@@ -137,10 +139,11 @@ const LOCALES = {
 
         await card.getByRole('button', { name: t('mm.card.tuneNamed', { model: 'Synthetic-Chat' }), exact: true }).click();
         await check(`#636 the Tune page pre-flight is ${locale} (${tag})`, async () => {
-          const fit = manager.locator('.mm-fit');
-          await fit.waitFor({ timeout: 20000 });
+          await manager.locator('details.mm-guided').first().waitFor();
           // #1008: the guided steps are a collapsed panel that mounts its steps once opened.
           await page.locator('details.mm-guided').first().evaluate((d) => { d.open = true; });
+          const fit = manager.locator('.mm-fit');
+          await fit.waitFor({ timeout: 20000 });
           const text = flat(await manager.locator('.mm-guided').first().innerText());
           assert.match(text, sz('14', l.binary), `budget in ${l.binary}: ${text.slice(0, 500)}`);
           assert.match(text, new RegExp(`${t('mm.fit.memory').replace(/[()]/g, '\\$&')}`), 'the memory field label');
@@ -153,11 +156,13 @@ const LOCALES = {
         await check(`#636 Discover free space and Hardware use ${locale} units (${tag})`, async () => {
           await page.goto(`${env.origin}/models`);
           await manager.waitFor({ timeout: 30000 });
-          await manager.getByRole('tab', { name: t('mm.tab.discover'), exact: true }).click();
+          await manager.getByRole('tab', { name: t('mm.section.models'), exact: true }).click();
+          await manager.getByRole('radio', { name: t('mm.models.discover'), exact: true }).click();
           const note = manager.getByTestId('download-target');
           await note.waitFor({ timeout: 10000 });
           assert.match(flat(await note.innerText()), sz('5,3', l.tera));
-          await manager.getByRole('tab', { name: t('mm.tab.hardware'), exact: true }).click();
+          await manager.getByRole('tab', { name: t('mm.section.performance'), exact: true }).click();
+          await manager.locator('details[data-panel="hardware"]').evaluate((d) => { d.open = true; });
           await manager.locator('svg text.viz-axis').first().waitFor({ timeout: 10000 });
           const body = flat(await manager.innerText());
           if (locale === 'fr-FR') assert.doesNotMatch(body, WRONG_FR, body.slice(0, 400));
