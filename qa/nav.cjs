@@ -45,3 +45,14 @@ async function openModelsTab(root, old) {
   }
 }
 module.exports.openModelsTab = openModelsTab;
+
+// #1025/#1030: there is no standalone Tools button. The tool catalogue opens from the "Browse
+// tools" row in the composer's + menu. The row closes the menu itself, so the catalogue is the
+// only thing left open afterwards.
+async function openToolCatalogue(page) {
+  await page.getByRole('button', { name: /^Add files and tools/ }).first().click();
+  const row = page.locator('.composer-actions-panel .composer-browse-tools');
+  await row.waitFor();
+  await row.click();
+}
+module.exports.openToolCatalogue = openToolCatalogue;

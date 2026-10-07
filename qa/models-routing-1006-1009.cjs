@@ -222,9 +222,10 @@ async function openModelDialog(page) {
       await menu.getByRole('menuitemcheckbox').first().waitFor({ timeout: 5000 });
       assert.equal(await menu.getByRole('menuitemcheckbox').count(), 2, 'Manual: the tool list');
       assert.equal(state.configPatches.at(-1).toolsMode, 'manual', 'saved on the chat');
+      // #1025/#1030: no standalone Tools button; the catalogue opens from the + menu row.
+      await menu.locator('.composer-browse-tools').waitFor({ timeout: 5000 });
+      assert.equal(await page.locator('.tool-catalogue-trigger').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().width > 0).length), 0, 'Manual: no standalone Tools button');
       await page.keyboard.press('Escape');
-      await page.locator('.tool-catalogue-trigger').first().waitFor({ timeout: 5000 });
-      assert.ok(await page.locator('.tool-catalogue-trigger').first().isVisible(), 'Manual: the Tools button shows');
       await page.close();
     });
 

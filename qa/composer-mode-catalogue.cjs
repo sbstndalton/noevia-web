@@ -6,6 +6,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {spawn,execFileSync}=require('node:child_process');
 const {withLocale}=require('./qa-locale.cjs');
+const {openToolCatalogue}=require('./nav.cjs');
 const port=31436,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'..'),shots=process.env.QA_SCREENSHOTS||'/tmp';
 
 (async()=>{
@@ -37,7 +38,7 @@ const port=31436,origin=`http://localhost:${port}`,web=path.resolve(__dirname,'.
    await page.getByRole('radio',{name:'Cowork'}).and(page.locator('[aria-checked="true"]')).waitFor({timeout:10000});
    await page.getByText(/Runs a coding task in/).waitFor();
    await page.screenshot({path:`${shots}/composer-toggle-${width}-${scheme}.png`});
-   await page.getByRole('button',{name:/^Tools/}).click();
+   await openToolCatalogue(page);
    const list=page.getByRole('listbox',{name:'Tools'});await list.waitFor();
    await page.getByRole('combobox').fill('co');
    await page.keyboard.press('ArrowDown');
