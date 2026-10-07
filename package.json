@@ -8,9 +8,9 @@
     "build": "node scripts/build.cjs",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
     "check:boundaries": "node scripts/check-boundaries.cjs",
-    "test": "node --require ./tests/hermetic-network.cjs --test server/*.test.cjs server/routes/*.test.cjs server/decision/*.test.cjs tests/server/*.test.cjs tests/client/*.test.cjs",
-    "test:client": "node --require ./tests/hermetic-network.cjs --test tests/client/*.test.cjs",
-    "test:server": "node --require ./tests/hermetic-network.cjs --test server/*.test.cjs server/routes/*.test.cjs server/decision/*.test.cjs tests/server/*.test.cjs",
+    "test": "node --require ./tests/hermetic-network.cjs --test --test-timeout=120000 server/*.test.cjs server/routes/*.test.cjs server/decision/*.test.cjs tests/server/*.test.cjs tests/client/*.test.cjs",
+    "test:client": "node --require ./tests/hermetic-network.cjs --test --test-timeout=120000 tests/client/*.test.cjs",
+    "test:server": "node --require ./tests/hermetic-network.cjs --test --test-timeout=120000 server/*.test.cjs server/routes/*.test.cjs server/decision/*.test.cjs tests/server/*.test.cjs",
     "start": "node server/index.cjs",
     "secrets:rotate": "node server/secrets-rotate.cjs",
     "lint:design": "node scripts/lint-design.cjs"

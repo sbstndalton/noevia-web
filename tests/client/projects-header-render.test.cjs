@@ -9,7 +9,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 
 async function withModule(name, fn) {
-  const { createServer } = await import('vite');
+  const { createServer } = require('./vite-ssr-server.cjs');
   const server = await createServer({ configFile: false, root: path.resolve(__dirname, '../..'), server: { middlewareMode: true }, appType: 'custom', plugins: [(await import('@vitejs/plugin-react')).default()] });
   global.window = { matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }), addEventListener() {}, removeEventListener() {} };
   global.document = { documentElement: { dataset: {}, lang: '' } };

@@ -9,7 +9,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 
 test('the open tools-catalogue panel has no dialog role and its trigger matches the panel it opens', async () => {
-  const { createServer } = await import('vite');
+  const { createServer } = require('./vite-ssr-server.cjs');
   const server = await createServer({ configFile: false, root: path.resolve(__dirname, '../..'), server: { middlewareMode: true }, appType: 'custom', plugins: [(await import('@vitejs/plugin-react')).default()] });
   try {
     global.window = { matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }), addEventListener() {}, removeEventListener() {} };

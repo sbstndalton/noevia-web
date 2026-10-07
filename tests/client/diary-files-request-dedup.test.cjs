@@ -14,7 +14,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 
 async function withDiaryWorkspace(fn) {
-  const { createServer } = await import('vite');
+  const { createServer } = require('./vite-ssr-server.cjs');
   const server = await createServer({ configFile: false, root: path.resolve(__dirname, '../..'), server: { middlewareMode: true }, appType: 'custom' });
   const calls = [];
   const state = { rootFiles: [{ path: 'MEMORY.md', name: 'MEMORY.md', isDir: false }, { path: 'Raw Sources', name: 'Raw Sources', isDir: true }] };

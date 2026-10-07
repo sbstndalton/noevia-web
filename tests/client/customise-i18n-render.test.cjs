@@ -17,7 +17,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 
 test('StatsBar renders the chat-shell footer in German once the base catalogue is registered', async () => {
-  const { createServer } = await import('vite');
+  const { createServer } = require('./vite-ssr-server.cjs');
   const server = await createServer({ configFile: false, root: path.resolve(__dirname, '../..'), server: { middlewareMode: true }, appType: 'custom', plugins: [(await import('@vitejs/plugin-react')).default()] });
   try {
     // Minimal browser globals StatsBar's initial (effect-free) render touches: phone-width

@@ -8,7 +8,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 
 async function render(locale, project) {
-  const { createServer } = await import('vite');
+  const { createServer } = require('./vite-ssr-server.cjs');
   // No HMR socket: nothing is served, and a fixed HMR port collides with any other Vite in the run.
   const server = await createServer({ configFile: false, root: path.resolve(__dirname, '../..'), server: { middlewareMode: true, hmr: false }, appType: 'custom', plugins: [(await import('@vitejs/plugin-react')).default()] });
   const saved = Object.getOwnPropertyDescriptor(globalThis, 'navigator');

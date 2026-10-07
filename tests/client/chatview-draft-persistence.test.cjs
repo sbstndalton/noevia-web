@@ -16,7 +16,7 @@ const path = require('node:path');
 const { readDraft, writeDraft } = require('../../src/chat-drafts.ts');
 
 async function withSsr(run) {
-  const { createServer } = await import('vite');
+  const { createServer } = require('./vite-ssr-server.cjs');
   const server = await createServer({
     configFile: false,
     root: path.resolve(__dirname, '../..'),
