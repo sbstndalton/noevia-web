@@ -151,6 +151,8 @@ export type ProjectMode = 'chat' | 'cowork' | 'code';
 
 export interface Project {
   reasoningEffort?: 'default' | 'low' | 'high' | null;
+  /** #1079: Context: High serves the model's long-context profile; absent means Low. */
+  contextProfile?: 'high' | null;
   icon?: string;
   color?: string;
   id: string;
@@ -328,6 +330,10 @@ export interface InstalledModel {
   labels: string[];
   maxContext: number | null;
   suggested: boolean;
+  /** #1079: this model's long-context profile (`<model>-long`, made by a Long tune), and whether
+   *  that profile is the one loaded now. Chats choose it with Context: High. */
+  longVariant?: string;
+  longLoaded?: boolean;
 }
 
 export interface DiaryCorpus {

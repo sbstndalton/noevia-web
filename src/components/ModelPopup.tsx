@@ -14,6 +14,7 @@ import type { InstalledModel, Project, Provider } from '../types';
 import type { AutoRoles } from '../api';
 import { apiFetch, fetchAutoRoles, fetchChatGptModels, fetchInstalledModels, fetchProviders, saveProjectConfig } from '../api';
 import { ProjectRoutingMode } from './ProjectRoutingMode';
+import { SegmentedControl } from './SegmentedControl';
 
 interface ModelPopupProps {
   projects: Project[];
@@ -153,6 +154,23 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
     return <p className="rail-empty">{projects.length ? t('modelPopup.openProject') : t('modelPopup.noProjects')}</p>;
   }
 
+  // #1079: Context: Low (the model as tuned) or High (its long-context profile from a Long tune),
+  // offered when the chosen model, or a model Auto answers with, has one. Local models only.
+  const byName = new Map(chatModels.map((m) => [m.name, m]));
+  const answering = auto ? [autoInfo?.roles?.fast, autoInfo?.roles?.smart, autoInfo?.roles?.code] : [activeProject.model];
+  const local = !chatgptActive && (!activeProvider || !!activeProvider.managed);
+  const longCapable = local && answering.some((name) => !!name && !!byName.get(name)?.longVariant);
+  const contextValue: 'low' | 'high' = activeProject.contextProfile === 'high' ? 'high' : 'low';
+  const contextControl = longCapable && <div className="mp-context">
+    <div className="mp-context-row">
+      <span className="mp-context-label" id="mp-context-label">{t('modelPopup.context')}</span>
+      <SegmentedControl<'low' | 'high'> label={t('modelPopup.context')} value={contextValue}
+        options={[['low', t('modelPopup.contextLow')], ['high', t('modelPopup.contextHigh')]]}
+        onChange={(next) => { if (busy === null) void save('context', { contextProfile: next }); }}/>
+    </div>
+    <p className="mp-hint">{busy === 'context' ? t('modelPopup.switching') : auto ? t('modelPopup.contextHintAuto') : t('modelPopup.contextHint')}</p>
+  </div>;
+
 
   return <div className="mp-grid">
     {before}
@@ -174,6 +192,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
         {' '}<button className="mp-link" onClick={() => onOpenSettings()}>{t('modelPopup.change')}</button>
       </p>
     ) : null}
+    {auto && contextControl}
     {auto ? <ProjectRoutingMode project={activeProject} disabled={busy !== null} onChanged={onChanged} /> : (
       <div className="mp-model-area">
         {providers.length > 1 && <label className="mp-field">
@@ -229,6 +248,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
               {canTune && <button className="shell-icon-button mp-tune" aria-label={t('modelPopup.tune', { model: m.name })} title={t('modelPopup.tuneTitle')} onClick={() => onOpenSettings(m.name)}><ShellIcon name="personalization" size={17}/></button>}
             </div>)}
           </div>
+          {contextControl}
         </>}
       </div>
     )}

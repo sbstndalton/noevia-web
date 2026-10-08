@@ -9,6 +9,7 @@ import { num, pct } from './mm';
 import { probeName, specLabel, stuckStatus } from './mm-text';
 import { appliedSettings, phaseState } from './guided';
 import { Switch } from '../Switch';
+import { SegmentedControl } from '../SegmentedControl';
 
 type Step = { id: string; label: string; status: string; reason?: string; generation?: number; promptPerSecond?: number; ctx?: number };
 type Extension = { id: string; action: string; why: string; from?: number; to?: number };
@@ -18,11 +19,20 @@ type Result = { spec: string; specLabel: string; generation: number; ubatch: num
   kvFallback?: { from: string; to: string; at?: number } };
 type TunePhase = { id: string; label: string; status: string; steps: Step[]; value?: Record<string, unknown>; reason?: string };
 type Baseline = { reference: string; probes: string[]; skipped: { id: string; reason?: string; answer?: string }[] };
-type TuneModel = { model: string; status: string; phases: TunePhase[]; result?: Result & { baseline?: Baseline }; error?: string; baseline?: Baseline };
+/** #1079: a Long item tunes `base`'s long-context profile (`model` is `<base>-long`). */
+type TuneModel = { model: string; status: string; phases: TunePhase[]; result?: Result & { baseline?: Baseline }; error?: string; baseline?: Baseline; base?: string; mode?: string };
 type Job = { id: string; model: string; status: string; phase: string; models?: TuneModel[]; error?: string; waiting?: boolean;
   startedAt?: number; log?: { at: number; text: string }[]; queueProgress?: { done: number; total: number };
   queue?: { model: string; status: string; error?: string }[]; steps?: Step[]; result?: Result; restored?: boolean };
 type Past = Result & { at: number };
+/** #1079: Fast tunes the model's own settings, Long its `<model>-long` profile; the server's limits. */
+type Mode = 'fast' | 'long';
+type Modes = Record<Mode, { defaultSeconds: number; maxSeconds: number }>;
+const MIN_SECONDS = 15;
+const modesFrom = (raw: unknown): Modes | null => {
+  const ok = (m: unknown) => !!m && typeof m === 'object' && Number.isInteger((m as { defaultSeconds: number }).defaultSeconds) && Number.isInteger((m as { maxSeconds: number }).maxSeconds);
+  return raw && typeof raw === 'object' && ok((raw as Modes).fast) && ok((raw as Modes).long) ? raw as Modes : null;
+};
 
 // The keys stay llama.cpp's own; the drafting label and the numbers follow the interface language.
 const savedSummary = (t: Translate, value: Record<string, unknown>) => value.applied && value.values && typeof value.values === 'object'
@@ -66,6 +76,10 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
   const settingsRequest = useRef(0), savingRef = useRef(false);
   // #551: served model names, or null when unknown. A run whose models are all uninstalled is history.
   const [installedNames, setInstalledNames] = useState<string[] | null>(null);
+  // #1079: Fast or Long, and the prompt time limit for the next tune (shown when the server has modes).
+  const [modes, setModes] = useState<Modes | null>(null), [mode, setMode] = useState<Mode>('fast');
+  const [seconds, setSeconds] = useState<Record<Mode, string>>({ fast: '', long: '' });
+  const [longId, setLongId] = useState(''), [longHistory, setLongHistory] = useState<Past[]>([]);
   const refreshScan = useCallback(async () => {
     if (model) return;
     const current = ++scanRequest.current;
@@ -89,6 +103,9 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
       if (!r.ok) throw Error(v.error || tRef.current('mm.autotune.statusUnavailable'));
       const next = (v.job || null) as Job | null;
       setJob(next); setHistory(Array.isArray(v.history) ? v.history : []); setStatusError('');
+      const m = modesFrom(v.modes);
+      setModes(m); setLongId(typeof v.longId === 'string' ? v.longId : ''); setLongHistory(Array.isArray(v.longHistory) ? v.longHistory : []);
+      if (m) setSeconds(prev => ({ fast: prev.fast || String(m.fast.defaultSeconds), long: prev.long || String(m.long.defaultSeconds) }));
       if (model && !savingRef.current && settingsAt === settingsRequest.current) setTuneSettings(settingsFrom(v.settings));
       if (notify && next && next.status !== 'running' && done.current !== next.id) {
         done.current = next.id; changed.current(); void refreshScan();
@@ -101,6 +118,7 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
     done.current = ''; mutating.current = false;
     setJob(null); setHistory([]); setScan(null); setConfirmed(false); setBusy(false); setError(''); setStatusError('');
     setTuneSettings(null); setSavingSettings(false); setSettingsError(''); savingRef.current = false;
+    setModes(null); setMode('fast'); setSeconds({ fast: '', long: '' }); setLongId(''); setLongHistory([]);
     void refresh(); void refreshScan();
     let live = true;
     fetchInstalledModels().then((v) => { if (live) setInstalledNames(v.map((m) => m.name)); }).catch(() => { if (live) setInstalledNames(null); });
@@ -139,16 +157,18 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
     } catch (e) { if (current === settingsRequest.current) setSettingsError(e instanceof Error ? e.message : t('mm.autotune.allowQ5Failed')); }
     finally { if (current === settingsRequest.current) { savingRef.current = false; setSavingSettings(false); } }
   };
-  const mine = job && (!model || (job.models?.some(item => item.model === model) ?? job.model === model)) ? job : null;
-  const other = model && job && !(job.models?.some(item => item.model === model) ?? job.model === model) && running;
-  const shownModels = (mine?.models || []).filter(item => !model || item.model === model);
+  // #1079: a Long item belongs to its model's page (its id is the model's long-context profile).
+  const ofModel = (item: TuneModel) => item.model === model || item.base === model;
+  const mine = job && (!model || (job.models?.some(ofModel) ?? job.model === model)) ? job : null;
+  const other = model && job && !(job.models?.some(ofModel) ?? job.model === model) && running;
+  const shownModels = (mine?.models || []).filter(item => !model || ofModel(item));
   const last = history[0];
   const progress = appliedSettings(shownModels);
   const resumable = !!mine?.models && ['cancelled', 'interrupted', 'failed'].includes(mine.status)
-    && (!installedNames || mine.models.some(item => installedNames.includes(item.model)));
+    && (!installedNames || mine.models.some(item => installedNames.includes(item.model) || (!!item.base && installedNames.includes(item.base))));
   // #1060: as the server does, locked while this model is in a running or resumable job.
   const ownRun = !!model && !!job && (running || ['cancelled', 'interrupted', 'failed'].includes(job.status))
-    && (job.models ? job.models.some(item => item.model === model && item.status !== 'passed') : job.model === model);
+    && (job.models ? job.models.some(item => ofModel(item) && item.status !== 'passed') : job.model === model);
   const options = !!model && tuneSettings && <div className="mm-autotune-option">
     <div className="mm-autotune-option-text">
       <span className="mm-autotune-option-label">{t('mm.autotune.allowQ5')}</span>
@@ -157,17 +177,42 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
     <Switch label={t('mm.autotune.allowQ5')} checked={tuneSettings.allowQ5Kv} disabled={savingSettings || ownRun} onChange={(on) => void saveSettings(on)}/>
     {settingsError && <p role="alert" className="modal-err">{settingsError}</p>}
   </div>;
+  // #1079: the mode and its time limit, for one model on a server that has modes.
+  const pick = !!model && !!modes;
+  const max = modes ? modes[mode].maxSeconds : 1800;
+  const limit = Number(seconds[mode]);
+  const limitOk = !pick || (/^\d+$/.test(seconds[mode].trim()) && limit >= MIN_SECONDS && limit <= max);
+  const modeChoice = pick && !running && <div className="mm-autotune-mode">
+    <div className="mm-autotune-option-text">
+      <span className="mm-autotune-option-label" id="mm-autotune-mode-label">{t('mm.autotune.mode')}</span>
+      <small>{mode === 'long' ? t('mm.autotune.modeLongHelp', { id: longId || model + '-long' }) : t('mm.autotune.modeFastHelp')}</small>
+    </div>
+    <SegmentedControl<Mode> label={t('mm.autotune.mode')} value={mode} onChange={setMode}
+      options={[['fast', t('mm.autotune.modeFast')], ['long', t('mm.autotune.modeLong')]]}/>
+    <label className="mm-field mm-autotune-limit">
+      <span>{t('mm.autotune.timeLimit')}</span>
+      <input className="modal-input" type="number" inputMode="numeric" min={MIN_SECONDS} max={max} step={1} value={seconds[mode]}
+        aria-invalid={!limitOk || undefined} aria-describedby="mm-autotune-limit-help"
+        onChange={(e) => { const value = e.target.value; setSeconds(prev => ({ ...prev, [mode]: value })); }}/>
+      <small id="mm-autotune-limit-help">{t('mm.autotune.timeLimitHelp', { min: MIN_SECONDS, max })}</small>
+    </label>
+    {!limitOk && <p role="alert" className="modal-err">{t('mm.autotune.timeLimitInvalid', { min: MIN_SECONDS, max })}</p>}
+  </div>;
+  const startBody = () => ({ model, confirmPause: confirmed, untuned: !model, ...(pick ? { mode, promptBudgetSeconds: limit } : {}) });
   const actions = !running && <div className="mm-autotune-actions">
+    {modeChoice}
     <label className="mm-check"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />{t('mm.autotune.confirm')}</label>
     <div className="mm-actions">
       {resumable && <button className="modal-btn primary" disabled={busy || !confirmed} onClick={() => void mutate('/api/models/autotune/resume', { confirmPause: confirmed })}>{busy ? t('mm.autotune.resuming') : t('mm.autotune.resume')}</button>}
-      <button className={'modal-btn ' + (resumable ? 'secondary' : 'primary')} disabled={busy || !confirmed || (!model && !scan?.models.length)} onClick={() => void mutate('/api/models/autotune', { model, confirmPause: confirmed, untuned: !model })}>{busy ? t('mm.starting') : model ? t('mm.autotune.apply') : t('mm.autotune.applyUntuned')}</button>
+      <button className={'modal-btn ' + (resumable ? 'secondary' : 'primary')} disabled={busy || !confirmed || !limitOk || (!model && !scan?.models.length)} onClick={() => void mutate('/api/models/autotune', startBody())}>{busy ? t('mm.starting') : model ? (pick && mode === 'long' ? t('mm.autotune.applyLong') : t('mm.autotune.apply')) : t('mm.autotune.applyUntuned')}</button>
     </div>
   </div>;
+  const lastLong = longHistory[0];
   if (system) return <p className="mm-note" role="status">{t('model.systemLabel')}{t('mm.autotune.systemNote')}</p>;
   return <div className="mm-autotune">
     {options}
     {!model && scan && !running && <p className="mm-note" role="status">{scan.models.length ? t.plural('mm.autotune.needList', scan.models.length, { models: scan.models.join(', ') }) : t('mm.autotune.needNone', { count: 0 })} {t('mm.autotune.skipped', { count: scan.skipped.length })}</p>}
+    {lastLong && !running && <p className="mm-note mm-autotune-long-last" role="status">{t('mm.autotune.longLast', { id: longId, date: new Date(lastLong.at).toLocaleString(appLocale()), tokens: lastLong.context != null ? num(lastLong.context, 0) : '', kv: lastLong.kv ?? '' })}</p>}
     {last && !running && <p className="mm-note" role="status">{t('mm.autotune.lastBefore', { date: new Date(last.at).toLocaleString(appLocale()) })}<strong>{specLabel(t, last.spec, last.specLabel)}</strong>{', ' + [t('mm.tokensPerSecond', { rate: num(last.generation) }), ...(last.kv ? [t('mm.tune.kv', { kv: last.kv }), t('mm.tune.context', { tokens: last.context != null ? num(last.context, 0) : '' })] : []), ...(last.ubatch ? [t('mm.autotune.ubatch', { size: last.ubatch })] : [])].join(', ')}.</p>}
     {mine && <div>
       <div className="mm-autotune-status" aria-live="polite">

@@ -1511,6 +1511,15 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 .mp-field > span { font-weight: 600; color: var(--text-secondary); }
 .mp-row-end { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .mp-hint { margin: 0; font-size: var(--text-caption2); color: var(--text-secondary); line-height: 1.5; }
+/* #1079: Context Low / High under the model list. */
+.mp-context { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.mp-context-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.mp-context-label { font-weight: 600; }
+/* As the composer's Tools: Automatic / Manual (.composer-tools-mode): the checked segment is tinted
+   instead of a sliding thumb, so the choice reads at a glance in a dialog or panel. */
+:is(.mp-context, .mm-autotune-mode) .glass-seg { display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
+:is(.mp-context, .mm-autotune-mode) .glass-seg > .glass-thumb { display: none; }
+:root :is(.mp-context, .mm-autotune-mode) .glass-seg > button[aria-checked='true'] { background: color-mix(in srgb, var(--accent-text) 18%, transparent); color: var(--accent-text); font-weight: 600; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-text) 45%, transparent); }
 .mp-warn { margin: 0; font-size: var(--text-caption2); color: var(--danger); line-height: 1.5; }
 .mp-note { margin: 0; font-size: var(--text-caption); color: var(--text-secondary); line-height: 1.6; }
 .mp-roles { font-variant-numeric: tabular-nums; color: var(--text); }
@@ -1924,6 +1933,12 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 .mm-autotune-option-label { font-weight: 600; overflow-wrap: anywhere; }
 .mm-autotune-option > .glass-switch { flex: none; }
 .mm-autotune-option-text small { color: var(--text-secondary); font-size: var(--text-caption); line-height: 1.4; }
+/* #1079: Fast or Long, and the prompt time limit, above the start button. */
+.mm-autotune-mode { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 10px 12px; margin-bottom: 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-control); background: var(--bg-surface); }
+.mm-autotune-mode > .glass-seg { flex: none; }
+.mm-autotune-limit { flex: 1 1 100%; max-width: 22rem; }
+.mm-autotune-limit input { max-width: 9rem; }
+.mm-autotune-mode > .modal-err { flex: 1 1 100%; margin: 0; }
 .mm-autotune-option > .modal-err { flex-basis: 100%; margin: 0; }
 .mm-autotune .mm-cancel-action { margin-top: 4px; }
 .mm-autotune-models, .mm-autotune-phases { display: flex; flex-direction: column; gap: 6px; }
