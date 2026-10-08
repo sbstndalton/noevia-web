@@ -212,6 +212,7 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.card.hideDetailsNamed': "Skjul detaljer for {model}",
   'mm.card.fromCache': "Denne modellen leveres fra nedlastingsbufferen; fildetaljene ligger ikke i modellmappen.",
   'mm.card.missing': "Fil mangler",
+  'mm.card.servedElsewhere': "Kjører i egen tjeneste",
   'mm.card.sidecarSource': "Denne modellen kjøres av en egen tjeneste (sidecar), ikke av chatmotoren; fildetaljene vises ikke her.",
   'mm.card.arch': "Arkitektur",
   'mm.card.params': "Parametere",

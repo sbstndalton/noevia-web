@@ -212,6 +212,7 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.card.hideDetailsNamed': "Details für {model} ausblenden",
   'mm.card.fromCache': "Dieses Modell wird aus dem Download-Cache bereitgestellt; seine Dateidetails liegen nicht im Modellordner.",
   'mm.card.missing': "Datei fehlt",
+  'mm.card.servedElsewhere': "Läuft in einem eigenen Dienst",
   'mm.card.sidecarSource': "Dieses Modell läuft in einem eigenen Dienst (Sidecar), nicht in der Chat-Engine; seine Dateidetails werden hier nicht angezeigt.",
   'mm.card.arch': "Architektur",
   'mm.card.params': "Parameter",

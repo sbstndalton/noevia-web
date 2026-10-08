@@ -17,7 +17,7 @@ test('"served from the download cache" is only the fallback for a plain model wi
 });
 
 test('a missing file reads "File missing" (not "Failed to load") and hides the "model folder" source tag', () => {
-  assert.match(src, /\{missing \? t\('mm\.card\.missing'\) : m\.failed \? t\('mm\.card\.failed'\)/);
+  assert.match(src, /\{missing \? t\('mm\.card\.missing'\) : m\.servedElsewhere \? t\('mm\.card\.servedElsewhere'\) : m\.failed \? t\('mm\.card\.failed'\)/);
   assert.match(src, /\{m\.source && !missing && <span>/);
 });
 

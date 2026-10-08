@@ -320,6 +320,10 @@ export interface InstalledModel {
   sidecarProtected?: boolean;
   /** #545: a models.ini preset whose GGUF is not in the models folder. Listed as failed, never offered for chat, loading or tuning. */
   missingFile?: boolean;
+  /** #1084: a preset with no file here because its own service (Laya, an embedding/reranking sidecar) runs it. Not a fault. */
+  servedElsewhere?: boolean;
+  /** #1084: the loader's architecture label for the model file, for loaded and unloaded models alike. */
+  shape?: { arch?: string; moe?: boolean; experts?: number; active?: number; label: string } | null;
   source?: string | null;
   mtp?: {supported:boolean;enabled:boolean;reason:string};
   name: string;
