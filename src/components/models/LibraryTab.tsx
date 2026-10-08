@@ -205,6 +205,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
   // engine's Load/Unload would duplicate or break them (the server answers 409 too). #545: a
   // preset whose file is missing can only fail to load; it is also not tunable.
   const missing = m.missingFile === true;
+  const sizeLabel = formatModelSizeGB(m.sizeGB ?? (file ? bytesToModelSizeGB(file.bytes) : null), appLocale());
   const engineControls = !system && !protectedModel && !missing;
   return <article className={`model-card surface${open ? ' is-open' : ''}`} data-state={state} aria-label={m.name}>
     <header className="model-card-head"><h3 className="model-card-name"><MiddleTruncate text={m.name}/></h3><span className="model-card-state">{missing ? t('mm.card.missing') : m.servedElsewhere ? t('mm.card.servedElsewhere') : m.failed ? t('mm.card.failed') : m.loaded ? t('mm.loaded') : t('mm.card.unloaded')}</span></header>
@@ -214,7 +215,10 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
           composer's decimal-GB number), so the same file showed two different sizes depending on
           which page you were on. m.sizeGB, run through the same shared formatter the composer
           uses, is now the only source: same field, same rounding, same label everywhere. */}
-      {formatModelSizeGB(m.sizeGB, appLocale()) && <span>{formatModelSizeGB(m.sizeGB, appLocale())}</span>}
+      {/* #1088: when the server could not read the folder scan for the installed list (slow or
+          unreachable loader) m.sizeGB is null for every model that is not loaded, but this page's own
+          scan already holds the file. Same decimal-GB rounding, so the two never disagree. */}
+      {sizeLabel && <span>{sizeLabel}</span>}
       {m.maxContext != null && <span>{t('mm.card.trainedFor', { tokens: tokens(m.maxContext) })}</span>}
       {(m.shape ?? file?.shape) && <span>{tagLabel(t, (m.shape ?? file?.shape)!.label)}</span>}
       {file?.projector && <span className="model-card-tag">{t('mm.card.vision')}</span>}
