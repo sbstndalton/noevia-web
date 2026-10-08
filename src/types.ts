@@ -11,6 +11,8 @@ export interface RoutingDecision {
   latencyMs: number | null;
   status: 'accepted' | 'fallback';
   fallbackReason: string | null;
+  /** #1070: the text-free cause behind a fallback (http-503, deadline, ...); absent on older records. */
+  fallbackCause?: string | null;
 }
 
 /** #778: where a reply was sent and why (codes only). */
