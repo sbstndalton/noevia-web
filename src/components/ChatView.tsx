@@ -126,6 +126,8 @@ export function ThinkingBlock({ text, live, ms }: { text: string; live: boolean;
 // Where the Settings link sits inside the translated sentence: word order differs per language.
 const SETTINGS_MARK = '\u0000';
 const ROUTE_REASONS = ['disabled', 'no-backend', 'missing-roles', 'deadline', 'no-backend-answered', 'low-confidence', 'rejected'] as const;
+// #1070: "service did not answer" hid that Laya answered 503 after missing its own time limit.
+const ROUTE_CAUSES = ['http-503', 'deadline', 'network', 'benched', 'http-422'] as const;
 
 export function RoutingDetails({ decision }: { decision: RoutingDecision }) {
   const t = useT();
@@ -134,7 +136,9 @@ export function RoutingDetails({ decision }: { decision: RoutingDecision }) {
     : decision.backend === 'llama-logit' ? t('chat.route.srcLocalLogit')
     : decision.backend === 'decision-service' ? t('chat.route.srcDecision') : t('chat.route.srcLegacy');
   const fallbackId = ROUTE_REASONS.find(id => id === decision.fallbackReason) || 'unavailable';
-  const reason = t(`chat.route.why.${fallbackId}` as MessageKey);
+  const causeId = ROUTE_CAUSES.find(id => id === decision.fallbackCause && id !== fallbackId);
+  const why = t(`chat.route.why.${fallbackId}` as MessageKey);
+  const reason = causeId ? `${why} (${t(`chat.route.cause.${causeId}` as MessageKey)})` : why;
   const offered = decision.offered.slice(0, 3).filter(option => option && ['fast', 'smart', 'code'].includes(option.id) && typeof option.label === 'string')
     .map(option => ({ ...option, label: option.label.slice(0, 200) }));
   const scores = decision.scores && typeof decision.scores === 'object' ? decision.scores : {};
