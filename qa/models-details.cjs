@@ -1,5 +1,5 @@
 // #579 browser proof. Synthetic fixtures only: no real models, inference or storage.
-// Laya (system model, preset file missing) and an in-use embedding sidecar model:
+// A preset whose file is missing (#1084: Laya is now served elsewhere, see models-size-shape-1084.cjs) and an in-use embedding sidecar model:
 //  - the card of a missing-file preset reads "File missing" (not "Failed to load") and carries the
 //    missing-file note itself;
 //  - Details never says "served from the download cache" for them, and shows no chat
@@ -23,7 +23,7 @@ const { withLocale } = require('./qa-locale.cjs');
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     const installed = [
-      { name: 'laya_multilingual_f16', labels: [], loaded: false, sizeGB: 0, source: 'preset', canDelete: true, status: 'missing', failed: true, missingFile: true },
+      { name: 'gone-13b', labels: [], loaded: false, sizeGB: 0, source: 'preset', canDelete: true, status: 'missing', failed: true, missingFile: true },
       { name: 'synthetic-embed-v1', labels: ['embedding'], loaded: true, sizeGB: 0.3, source: 'preset', canDelete: true, status: 'loaded', sidecarProtected: true },
       { name: 'Cached-8B', labels: [], loaded: false, sizeGB: 4, source: 'cache', canDelete: true, status: 'unloaded' },
     ];
@@ -61,19 +61,19 @@ const { withLocale } = require('./qa-locale.cjs');
     await openModelsTab(manager, 'Your models');
     const card = (name) => manager.getByRole('article', { name });
 
-    const laya = card('laya_multilingual_f16');
+    const laya = card('gone-13b');
     await laya.waitFor();
     assert.equal(await laya.locator('.model-card-state').innerText(), 'File missing', 'a missing preset does not read "Failed to load"');
     await laya.getByText(/not in the models folder/).waitFor();
-    pass('Laya\'s card reads "File missing" and carries the missing-file note');
+    pass('The missing preset\'s card reads "File missing" and carries the missing-file note');
 
-    await laya.getByRole('button', { name: 'Details for laya_multilingual_f16', exact: true }).click();
+    await laya.getByRole('button', { name: 'Details for gone-13b', exact: true }).click();
     await laya.getByText(/not in the models folder/).waitFor();
     await page.waitForTimeout(300);
-    assert.equal(await laya.getByText(/download cache/).count(), 0, 'Laya is not "served from the download cache"');
-    assert.equal(await laya.getByText('Qualification', { exact: false }).count(), 0, 'no chat qualification for Laya');
-    assert.equal(await laya.getByRole('button', { name: 'Recheck' }).count(), 0, 'no Recheck for Laya');
-    pass('Laya Details: missing note, no download-cache line, no qualification, no Recheck');
+    assert.equal(await laya.getByText(/download cache/).count(), 0, 'a missing preset is not "served from the download cache"');
+    assert.equal(await laya.getByText('Qualification', { exact: false }).count(), 0, 'no chat qualification for a missing preset');
+    assert.equal(await laya.getByRole('button', { name: 'Recheck' }).count(), 0, 'no Recheck for a missing preset');
+    pass('Missing preset Details: missing note, no download-cache line, no qualification, no Recheck');
 
     const embed = card('synthetic-embed-v1');
     await embed.getByRole('button', { name: 'Details for synthetic-embed-v1', exact: true }).click();

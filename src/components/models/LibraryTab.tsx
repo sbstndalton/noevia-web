@@ -207,7 +207,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
   const missing = m.missingFile === true;
   const engineControls = !system && !protectedModel && !missing;
   return <article className={`model-card surface${open ? ' is-open' : ''}`} data-state={state} aria-label={m.name}>
-    <header className="model-card-head"><h3 className="model-card-name"><MiddleTruncate text={m.name}/></h3><span className="model-card-state">{missing ? t('mm.card.missing') : m.failed ? t('mm.card.failed') : m.loaded ? t('mm.loaded') : t('mm.card.unloaded')}</span></header>
+    <header className="model-card-head"><h3 className="model-card-name"><MiddleTruncate text={m.name}/></h3><span className="model-card-state">{missing ? t('mm.card.missing') : m.servedElsewhere ? t('mm.card.servedElsewhere') : m.failed ? t('mm.card.failed') : m.loaded ? t('mm.loaded') : t('mm.card.unloaded')}</span></header>
     <p className="model-card-meta">
       {/* #443: this used to prefer file.size — a string formatted by the external Model Loader
           service, which most likely uses binary GiB while calling it "GB" — over m.sizeGB (the
@@ -216,7 +216,7 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
           uses, is now the only source: same field, same rounding, same label everywhere. */}
       {formatModelSizeGB(m.sizeGB, appLocale()) && <span>{formatModelSizeGB(m.sizeGB, appLocale())}</span>}
       {m.maxContext != null && <span>{t('mm.card.trainedFor', { tokens: tokens(m.maxContext) })}</span>}
-      {file?.shape && <span>{tagLabel(t, file.shape.label)}</span>}
+      {(m.shape ?? file?.shape) && <span>{tagLabel(t, (m.shape ?? file?.shape)!.label)}</span>}
       {file?.projector && <span className="model-card-tag">{t('mm.card.vision')}</span>}
       {system && <span className="model-card-tag" title={t('mm.card.systemTitle')}>{t('model.systemLabel')}</span>}
       {protectedModel && <span className="model-card-tag" title={t('mm.card.protectedTitle')}>{t('mm.card.protectedLabel')}</span>}
