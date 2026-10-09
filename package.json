@@ -17,11 +17,13 @@
   },
   "dependencies": {
     "@simplewebauthn/browser": "^14.0.0",
+    "katex": "0.16.22",
     "motion": "14.0.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@types/katex": "0.16.7",
     "@types/node": "^26.4.1",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",

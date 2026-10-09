@@ -83,3 +83,17 @@ test('#456 a call carrying its own AbortSignal (folder search) bypasses the cach
   await workspace.listFiles('');
   assert.equal(count(calls, 'GET /api/diary/files?path='), 2, 'a signalled call must not populate or read the shared cache');
 }));
+
+// #1185 review nit: a Retry press must never be answered from a cached failure that was fetched
+// without the header, and must itself send X-Cowork-Storage-Retry.
+test('a storageRetry listFiles bypasses the cache and sends the retry header', () => withDiaryWorkspace(async ({ workspace, calls }) => {
+  const headers = [];
+  const base = global.fetch;
+  global.fetch = async (input, init = {}) => { headers.push(init.headers || null); return base(input, init); };
+  await workspace.listFiles('');
+  await workspace.listFiles('', undefined, true);
+  assert.equal(count(calls, 'GET /api/diary/files?path='), 2, 'the Retry must reach the server even with a fresh cache entry');
+  const has = (h) => !!h && new Headers(h).get(workspace.STORAGE_RETRY_HEADER) === '1';
+  assert.equal(has(headers[1]), true, 'the Retry request must carry the header');
+  assert.equal(has(headers[0]), false, 'the automatic read must not carry it');
+}));
