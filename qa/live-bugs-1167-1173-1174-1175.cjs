@@ -112,7 +112,7 @@ const NAME = 'synthetic-12b-it';
       await openModelsTab(manager, 'Overview');
       const field = manager.getByLabel('Budget (GiB)');
       await field.waitFor({ timeout: 5000 });
-      assert.equal(await manager.locator('#mm-budget-problem').count(), 0, 'no complaint about the saved 16');
+      assert.equal((await manager.locator('#mm-budget-problem').textContent()).trim(), '', 'no complaint about the saved 16');
       await field.fill('-1');
       // #1185 nit: the live-typing refusal is a polite live region, not an assertive alert.
       const alert = manager.locator('#mm-budget-problem[aria-live="polite"]').filter({ hasText: /Enter a budget from/ });
@@ -123,7 +123,7 @@ const NAME = 'synthetic-12b-it';
       await save.click({ force: true }); await page.waitForTimeout(200);
       assert.equal(puts.length, 0, 'no PUT was sent');
       await field.fill('20');
-      assert.equal(await manager.locator('#mm-budget-problem').count(), 0, 'a valid value clears the message');
+      assert.equal((await manager.locator('#mm-budget-problem').textContent()).trim(), '', 'a valid value clears the message');
       assert.equal(await manager.getByRole('alert').filter({ hasText: /Enter a budget from/ }).count(), 0, 'not role=alert');
       await save.click(); await manager.getByText('Saved.', { exact: false }).first().waitFor({ timeout: 3000 }).catch(() => {});
       assert.deepEqual(puts, [{ budgetGib: 20 }]);

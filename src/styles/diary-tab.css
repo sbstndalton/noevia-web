@@ -152,4 +152,5 @@
 
 /* #1184: typeset math. Display math is its own scrollable line; the raw fallback keeps the source readable. */
 .md-math-display { display: block; margin: 0.5em 0; overflow-x: auto; overflow-y: hidden; text-align: center; }
-.md-math-raw { font-family: var(--font-mono, ui-monospace, monospace); }
+.md-math[data-math="rendered"]:not(.md-math-display) { display: inline-block; max-width: 100%; overflow-x: auto; overflow-y: hidden; vertical-align: bottom; }
+.md-math-raw { overflow-wrap: anywhere; font-family: var(--font-mono, ui-monospace, monospace); }

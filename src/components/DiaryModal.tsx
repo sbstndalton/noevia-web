@@ -173,8 +173,8 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
   // ")" and truncated the href mid-URL.
   const inline = (line: string) =>
     line.split(wikiLink
-      ? /(\$\$[^$\n]+\$\$|\\\([^\n]+?\\\)|\$(?!\s)(?:\\.|[^$\\\n])+?(?<!\s)\$(?!\d)|\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[\[[^\[\]\n]*\]\]|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g
-      : /(\$\$[^$\n]+\$\$|\\\([^\n]+?\\\)|\$(?!\s)(?:\\.|[^$\\\n])+?(?<!\s)\$(?!\d)|\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g).map((part, i) => {
+      ? /(\$\$[^$\n]+\$\$|\\\([^\n]{1,500}?\\\)|\$(?!\s)(?:\\.|[^$\\\n])+?(?<!\s)\$(?!\d)|\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[\[[^\[\]\n]*\]\]|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g
+      : /(\$\$[^$\n]+\$\$|\\\([^\n]{1,500}?\\\)|\$(?!\s)(?:\\.|[^$\\\n])+?(?<!\s)\$(?!\d)|\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g).map((part, i) => {
       // Escapes the Diary sidecar writes inside saved prose so it cannot become entry structure
       // (#803): `\*\*` and `<\!--` show as the literal characters. Plain text only, never HTML (#835).
       // The sidecar also escapes a role label's `**` on the first line, so `\*\*Assistant:**` can follow
@@ -259,8 +259,10 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
       const closer = mathOpen[1] === '$$' ? '$$' : '\\]';
       let j = i + 1;
       const body: string[] = [];
-      while (j < lines.length && lines[j].trim() !== closer) { body.push(lines[j]); j += 1; }
-      if (j < lines.length) { out.push(<MathSpan key={i} tex={body.join('\n')} display />); i = j; continue; }
+      // A block ends at its closer; a blank line or a fence first means it was never closed, so
+      // the opener stays ordinary text and nothing after it is swallowed.
+      while (j < lines.length && lines[j].trim() !== closer && lines[j].trim() !== '' && !lines[j].startsWith('```')) { body.push(lines[j]); j += 1; }
+      if (j < lines.length && lines[j].trim() === closer) { out.push(<MathSpan key={i} tex={body.join('\n')} display />); i = j; continue; }
     }
 
     // A GFM table: a pipe row followed by a divider row. Anything less is just

@@ -26,6 +26,19 @@ const {createFixture}=require('./diary-fixture.cjs');
   const visible=await page.evaluate(()=>{const c=document.querySelector('.transcript').cloneNode(true);c.querySelectorAll('.katex-mathml').forEach(n=>n.remove());return c.textContent;});
   assert.ok(!visible.includes('\\sqrt'),'raw LaTeX commands must not be visible');
   assert.ok(visible.includes('costs $5 and $10 today'),'dollar amounts must stay literal text');
+  // Review follow-ups: a huge \rule is clamped, and an unclosed $$ block swallows nothing.
+  await box.fill('math size synthetic');
+  await box.press('Enter');
+  await page.waitForFunction(()=>document.querySelector('.transcript')?.textContent.includes('After heading'),null,{timeout:8000});
+  await page.waitForTimeout(800);
+  const size=await page.evaluate(()=>({doc:document.documentElement.scrollWidth,win:window.innerWidth,
+    wide:Math.max(0,...[...document.querySelectorAll('.transcript .katex')].map(n=>n.parentElement.getBoundingClientRect().width)),
+    heading:!![...document.querySelectorAll('.transcript h2, .transcript h3, .transcript h4')].find(h=>h.textContent==='After heading'),
+    list:!![...document.querySelectorAll('.transcript li')].find(l=>l.textContent==='after list')}));
+  console.log(JSON.stringify(size));
+  assert.ok(size.doc<=size.win,'page must not grow a horizontal scrollbar from huge math');
+  assert.ok(size.wide<=size.win,'rendered math is contained to the viewport');
+  assert.ok(size.heading&&size.list,'an unclosed $$ block must not swallow the heading and list after it');
   assert.deepEqual(errors,[]);
   console.log('PASS chat math: KaTeX renders inline and display LaTeX; currency stays text.');
  }finally{await browser.close();await fixture.close();}

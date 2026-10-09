@@ -11,18 +11,23 @@ const loadKatex = (): Promise<Katex> => (katexPromise ??= Promise.all([
   import('katex/dist/katex.min.css'),
 ]).then(([m]) => m.default));
 
+// Bounds on what a model reply can ask the typesetter for (a huge \rule or macro expansion).
+const MAX_TEX_CHARS = 5000;
+
 export function MathSpan({ tex, display = false }: { tex: string; display?: boolean }) {
   const [html, setHtml] = useState<string | null>(null);
+  const tooLong = tex.length > MAX_TEX_CHARS;
   useEffect(() => {
     let live = true;
     setHtml(null);
+    if (tooLong) return () => { live = false; };
     loadKatex().then(k => {
       if (!live) return;
-      try { setHtml(k.renderToString(tex, { displayMode: display, throwOnError: true, trust: false, output: 'htmlAndMathml' })); }
+      try { setHtml(k.renderToString(tex, { displayMode: display, throwOnError: true, trust: false, maxSize: 20, maxExpand: 200, output: 'htmlAndMathml' })); }
       catch { /* keep the source text */ }
     }).catch(() => { /* chunk failed to load: keep the source text */ });
     return () => { live = false; };
-  }, [tex, display]);
+  }, [tex, display, tooLong]);
   const Tag = 'span'; // a <div> would be invalid inside the <p> that holds inline text
   if (html === null) return <Tag className={display ? 'md-math md-math-display md-math-raw' : 'md-math md-math-raw'}>{display ? `$$${tex}$$` : `$${tex}$`}</Tag>;
   return <Tag className={display ? 'md-math md-math-display' : 'md-math'} data-math="rendered" dangerouslySetInnerHTML={{ __html: html }} />;
