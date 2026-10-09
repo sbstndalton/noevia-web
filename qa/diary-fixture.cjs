@@ -1,6 +1,7 @@
 // Isolated UI fixture: every API is synthetic, no inference/storage/network calls.
 const http = require('node:http'), fs = require('node:fs'), path = require('node:path');
-const { isClientRoute } = require('../server/spa-routes.cjs');
+// The shell-route table lives in noevia-core; QA_CORE_SERVER points at its server/ directory (default: a sibling checkout).
+const { isClientRoute } = require(path.join(process.env.QA_CORE_SERVER || path.join(__dirname, '../../noevia-core/server'), 'spa-routes.cjs'));
 const fixtureNcModes={};
 function createFixture(port = 31239) {
   let syntheticUser='synthetic-diary-only';
