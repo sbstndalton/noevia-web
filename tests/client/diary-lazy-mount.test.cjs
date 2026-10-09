@@ -70,7 +70,7 @@ test('DiaryView: every effect that reaches /api/diary/* (or the storage fetch it
     { label: 'server recovery poll (/api/diary/exchanges)', needle: 'api/diary/exchanges' },
     { label: 'storage connection fetch (fetchStorage)', needle: 'fetchStorage()' },
     { label: 'overview/months/source load (fetchDiarySource/fetchDiaryMonth/listFiles)', needle: 'fetchDiarySource()' },
-    { label: 'file browser listing (listFiles(filePath))', needle: 'listFiles(filePath)' },
+    { label: 'file browser listing (listFiles(filePath...))', needle: 'listFiles(filePath' },
   ];
 
   for (const { label, needle } of cases) {

@@ -4,12 +4,19 @@ export interface DiaryFile { path: string; content: string | null; version: stri
 export interface FileEntry { path: string; name: string; isDir: boolean }
 export class DiaryRequestError extends Error {
   /** `code` is the server's stable key for a failure the screen words itself (#849: `storageLoginRejected`). */
-  constructor(message: string, public status: number, public code?: string) { super(message); this.name='DiaryRequestError'; }
+  /** `retryAfter` is the wait in seconds the storage server asked for (#1168: `storageThrottled`). */
+  constructor(message: string, public status: number, public code?: string, public retryAfter?: number) { super(message); this.name='DiaryRequestError'; }
 }
-export async function diaryRequest<T>(path: string, body?: unknown, method = 'POST', signal?: AbortSignal): Promise<T> {
-  const r = await apiFetch('/api/diary/' + path, body === undefined ? {signal} : { signal, method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+/** The header an explicit Retry press adds so the server may reset a rejected-login cool-down (#1168). */
+export const STORAGE_RETRY_HEADER = 'X-Cowork-Storage-Retry';
+export async function diaryRequest<T>(path: string, body?: unknown, method = 'POST', signal?: AbortSignal, storageRetry = false): Promise<T> {
+  const retry: Record<string, string> = storageRetry ? { [STORAGE_RETRY_HEADER]: '1' } : {};
+  const r = await apiFetch('/api/diary/' + path, body === undefined ? { signal, ...(storageRetry ? { headers: retry } : {}) } : { signal, method, headers: { 'Content-Type': 'application/json', ...retry }, body: JSON.stringify(body) });
   const value = await r.json();
-  if (!r.ok) throw new DiaryRequestError(value.error || 'Diary request failed', r.status, typeof value.code==='string' ? value.code : undefined);
+  if (!r.ok) {
+    const wait = Number(value.retryAfter ?? r.headers?.get?.('Retry-After'));
+    throw new DiaryRequestError(value.error || 'Diary request failed', r.status, typeof value.code==='string' ? value.code : undefined, Number.isFinite(wait) && wait > 0 ? Math.ceil(wait) : undefined);
+  }
   return value;
 }
 // The overview and file pane share directory reads. Writes/refreshes remove every
@@ -19,9 +26,11 @@ const FILE_LIST_PREFIX = 'diary:files:';
 // read (424) the first failure used to evict the entry and the second reader fired a duplicate.
 const FILE_LIST_FAILURE_MS = 1500;
 export function invalidateFileListings(): void { invalidateCachedPrefix(FILE_LIST_PREFIX); }
-export async function listFiles(path = '', signal?: AbortSignal): Promise<{files:FileEntry[]}> {
+/** `storageRetry`: this read is the person's own Retry press, so the server may try storage again now.
+ *  Automatic reads never set it. */
+export async function listFiles(path = '', signal?: AbortSignal, storageRetry = false): Promise<{files:FileEntry[]}> {
   const load = async () => {
-    const value = await diaryRequest<{files:FileEntry[]}>('files?path='+encodeURIComponent(path),undefined,'GET',signal);
+    const value = await diaryRequest<{files:FileEntry[]}>('files?path='+encodeURIComponent(path),undefined,'GET',signal,storageRetry);
     if(!value || !Array.isArray(value.files) || value.files.length>500 || value.files.some(f=>!f || typeof f.path!=='string' || typeof f.name!=='string' || typeof f.isDir!=='boolean'))throw Error('File list was invalid. Try refreshing this folder.');
     return value;
   };

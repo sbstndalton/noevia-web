@@ -403,6 +403,10 @@ function InferenceBudgetSection(): JSX.Element | null {
     } catch { setError(t('mm.saveError')); }
     finally { setBusy(false); }
   };
+  // #1174: the range is checked as the person types and the refusal sits beside the field.
+  const draftValue = Number(draft.replace(',', '.'));
+  const draftInvalid = !!info && (draft.trim() === '' || !Number.isFinite(draftValue) || draftValue < info.minGib || draftValue > info.maxGib || Math.round(draftValue * 10) / 10 !== draftValue);
+  const inlineProblem = info && draftInvalid ? t('mm.budget.invalid', { min: gib(info.minGib), max: gib(info.maxGib) }) : '';
   const rows = (info?.models || []).filter((m) => !m.system);
   const verdict = (m: (typeof rows)[number]) => !m.estimate ? t('mm.budget.unknown') : m.estimate.cacheRamUnbounded ? t('mm.budget.unbounded') : m.fits ? t('mm.budget.fits') : t('mm.budget.over');
   return <section className="mm-panel" aria-labelledby="mm-budget-title">
@@ -413,13 +417,15 @@ function InferenceBudgetSection(): JSX.Element | null {
       <div className="mm-form">
         <label>{t('mm.budget.label')}
           <input type="number" inputMode="decimal" min={info.minGib} max={info.maxGib} step={0.1} value={draft} disabled={busy}
+            aria-invalid={inlineProblem ? true : undefined} aria-describedby={inlineProblem ? 'mm-budget-problem' : undefined}
             onChange={(e) => { setDraft(e.target.value); setStatus(''); }} />
         </label>
+        {inlineProblem && <p id="mm-budget-problem" role="alert" className="modal-err">{inlineProblem}</p>}
         <p className="mm-note">{t('mm.budget.range', { min: gib(info.minGib), max: gib(info.maxGib) })} {info.source === 'admin' ? t('mm.budget.sourceAdmin', { gib: gib(info.defaultGib) }) : t('mm.budget.sourceDeployment')}</p>
         {info.limited && <p className="mm-note warn">{t('mm.budget.limited', { gib: gib(info.budgetGib) })}</p>}
       </div>
       <div className="mm-actions">
-        <button className="modal-btn primary" disabled={busy || draft === String(info.budgetGib)} onClick={() => void save()}>{busy ? t('mm.saving') : t('mm.budget.save')}</button>
+        <button className="modal-btn primary" disabled={busy || draftInvalid || draft === String(info.budgetGib)} onClick={() => void save()}>{busy ? t('mm.saving') : t('mm.budget.save')}</button>
         {status && <span role="status" className="mm-note">{status}</span>}
       </div>
       {info.models === null ? <p className="mm-note">{t('mm.budget.estimatesUnavailable')}</p>

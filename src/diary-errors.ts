@@ -9,11 +9,25 @@ import { formatBinaryBytes } from './number-format';
 export type DiaryLimit = { code: 'nesting' | 'items' | 'folder' | 'fileTooLarge' | 'recovery'; params: Record<string, number> };
 type Translator = (key: MessageKey, params?: Record<string, string | number>) => string;
 
+/** "42 seconds" / "3 minutes" in the interface language; whole units, rounded up. */
+export function formatWait(seconds: number, locale: string | undefined): string {
+  const minutes = seconds >= 120;
+  const value = minutes ? Math.ceil(seconds / 60) : Math.ceil(seconds);
+  const unit = minutes ? 'minute' : 'second';
+  try { return new Intl.NumberFormat(locale, { style: 'unit', unit, unitDisplay: 'long' }).format(value); }
+  catch { return `${value} ${unit}${value === 1 ? '' : 's'}`; }
+}
+
 /** What to show for an error caught around the local Diary folder: the limit sentence in the
  *  interface language, or the error's own message. */
 export function diaryErrorText(t: Translator, error: unknown, locale: string | undefined): string {
   // #849: a storage login the server refused is worded like the refresh toast and the Settings save.
   if ((error as { code?: unknown } | null)?.code === 'storageLoginRejected') return t('storage.refreshLoginRejected');
+  // #1168: the storage server is throttling sign-ins; say how long to wait when it said.
+  if ((error as { code?: unknown } | null)?.code === 'storageThrottled') {
+    const wait = (error as { retryAfter?: unknown }).retryAfter;
+    return typeof wait === 'number' && wait > 0 ? t('storage.throttledWait', { wait: formatWait(wait, locale) }) : t('storage.throttled');
+  }
   const limit = (error as { limit?: DiaryLimit } | null)?.limit;
   if (limit && typeof limit.code === 'string' && limit.params) {
     const p = limit.params, bytes = (n: number) => formatBinaryBytes(n, locale);

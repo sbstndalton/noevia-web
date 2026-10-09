@@ -112,6 +112,9 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   // (`diary-workspace.ts`) at the same points, so the refetch those bumps trigger is never served
   // the pre-change cached listing.
   const bumpRevision = () => { invalidateFileListings(); setRevision(n => n + 1); };
+  // #1168: set only by a Retry press; the next file listing consumes it, so automatic reads never carry it.
+  const explicitRetry = useRef(false);
+  const retryFileList = () => { explicitRetry.current = true; bumpFileRevision(); };
   const bumpFileRevision = () => { invalidateFileListings(); setFileRevision(n => n + 1); };
   const session = useRef(randomSessionId());
   const [recoveryOwner,setRecoveryOwner]=useState('');
@@ -267,6 +270,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
     if (!active) return; // paused while hidden; re-runs (and refreshes) on activation
     let stale = false;
     setFiles([]); setFilesError(''); setFilesLoading(true);
+    const storageRetry = explicitRetry.current; explicitRetry.current = false;
     if (folder) {
       const entries = new Map<string, FileEntry>();
       const prefix = filePath ? filePath + '/' : '';
@@ -275,7 +279,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
         entries.set(name, { name, path: prefix+name, isDir: rest.includes('/') });
       }
       setFiles([...entries.values()]); setFilesLoading(false);
-    } else void listFiles(filePath).then(r => { if (!stale) setFiles(r.files); }).catch(e => { if (!stale) setFilesError(diaryErrorText(t, e, appLocale())); }).finally(()=>{if(!stale)setFilesLoading(false);});
+    } else void listFiles(filePath, undefined, storageRetry).then(r => { if (!stale) setFiles(r.files); }).catch(e => { if (!stale) setFilesError(diaryErrorText(t, e, appLocale())); }).finally(()=>{if(!stale)setFilesLoading(false);});
     return () => { stale = true; };
   }, [folder, localFiles, filePath, revision, fileRevision, active]);
   useEffect(() => {
@@ -537,7 +541,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
       <div className="diary-composer-dock">{composer}</div>
       {status && <p className="diary-save-status" role="status">{status}</p>}
 
-    </section><DiaryContextPanel filesLoading={filesLoading} filesError={filesError} retryFiles={()=>bumpFileRevision()} recovery={folder && <section><label className="diary-sync-toggle"><input type="checkbox" checked={localRecoveryEnabled} disabled={busy || !recoveryOwner} onChange={e=>void toggleLocalRecovery(e.target.checked)} />{t('diary.recovery.saveOnBrowser')}</label><p className="diary-context-note">{t('diary.recovery.storesNote')}</p></section>} busy={busy} files={files} filePath={filePath} setFilePath={setFilePath} openFile={openFile}
+    </section><DiaryContextPanel filesLoading={filesLoading} filesError={filesError} retryFiles={retryFileList} recovery={folder && <section><label className="diary-sync-toggle"><input type="checkbox" checked={localRecoveryEnabled} disabled={busy || !recoveryOwner} onChange={e=>void toggleLocalRecovery(e.target.checked)} />{t('diary.recovery.saveOnBrowser')}</label><p className="diary-context-note">{t('diary.recovery.storesNote')}</p></section>} busy={busy} files={files} filePath={filePath} setFilePath={setFilePath} openFile={openFile}
       newFile={newEditor}
       chooseStorage={() => setWizard('choose')} pendingCount={pendingCount} pendingLocal={Object.keys(pendingLocal).length > 0}
       managed={storageMode === 'managed'} storageStatus={<DiaryStorageStatus active={active} onBusyChange={value=>{busyRef.current=value;setBusy(value);}} busy={busy} revision={revision} onMode={setStorageMode} onImported={()=>{bumpRevision();setWizard(null);}} />} folderName={folder?.name} savedLabel={savedLabel} corpusRoot={storage?.corpusRoot} sync={sync} setSync={setSync} disconnect={disconnect} /></div>
@@ -567,7 +571,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
           return {files:[...entries.values()]};
         },read:async(file)=>({path:file,content:snapshot[file] ?? null,version:null})});
       }}
-      onRefresh={()=>bumpFileRevision()} onSave={saveEditor} onCompare={compareStored} onRebase={()=>acceptStored(false)} onReload={()=>acceptStored(true)} onClose={closeEditor} />}
+      onRefresh={()=>bumpFileRevision()} onRetryFiles={retryFileList} onSave={saveEditor} onCompare={compareStored} onRebase={()=>acceptStored(false)} onReload={()=>acceptStored(true)} onClose={closeEditor} />}
 
   </main>;
 }

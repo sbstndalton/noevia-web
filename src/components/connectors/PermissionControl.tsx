@@ -42,5 +42,6 @@ export function PermissionControl({ tool, value, write, busy, onChange }: {
         onClick={() => choose(mode)}><ShellIcon name={icon} size={15}/></button>;
     })}
     <span className="glass-thumb glass" aria-hidden="true"/>
-  </div>{refused && <p className="perm-note" role="status">{t('connectors.writesAlwaysAsk')}</p>}</>;
+  </div>{/* #1175: the live region is mounted up front (empty), so the first message is announced and shown. */}
+  {write && <p className="perm-note" role="status">{refused ? t('connectors.writesAlwaysAsk') : ''}</p>}</>;
 }
