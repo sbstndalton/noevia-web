@@ -21,8 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ----------------------------------------------------------------------------
-KaTeX fonts (dist/fonts/KaTeX_*): the Computer Modern and AMS math faces
-shipped with KaTeX are licensed under the SIL Open Font License, Version 1.1
-(https://openfontlicense.org), converted to web formats by the KaTeX project.
-KaTeX is vendored as the npm package katex@0.16.22 and loaded lazily by
-MathSpan.tsx.
+The KaTeX fonts (dist/fonts/KaTeX_*) are under the SIL Open Font License 1.1: see
+LICENSE-katex-fonts.txt in this directory. KaTeX is vendored as the npm package
+katex@0.16.22 and loaded lazily by MathSpan.tsx.
