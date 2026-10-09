@@ -149,3 +149,7 @@
   .diary-sidebar:not(.is-expanded) .nav-item, .diary-sidebar:not(.is-expanded) .new-chat-btn, .diary-sidebar:not(.is-expanded) .theme-row { justify-content:center; padding:12px 8px; }
   .diary-sidebar:not(.is-expanded) .side-logo, .diary-sidebar:not(.is-expanded) .status-row { justify-content:center; padding:0; }
 }
+
+/* #1184: typeset math. Display math is its own scrollable line; the raw fallback keeps the source readable. */
+.md-math-display { display: block; margin: 0.5em 0; overflow-x: auto; overflow-y: hidden; text-align: center; }
+.md-math-raw { font-family: var(--font-mono, ui-monospace, monospace); }

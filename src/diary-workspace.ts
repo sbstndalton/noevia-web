@@ -34,7 +34,8 @@ export async function listFiles(path = '', signal?: AbortSignal, storageRetry = 
     if(!value || !Array.isArray(value.files) || value.files.length>500 || value.files.some(f=>!f || typeof f.path!=='string' || typeof f.name!=='string' || typeof f.isDir!=='boolean'))throw Error('File list was invalid. Try refreshing this folder.');
     return value;
   };
-  return signal ? load() : cached(FILE_LIST_PREFIX + path, load, undefined, FILE_LIST_FAILURE_MS);
+  // A Retry press always reaches the server with its header; a cached (or in-flight) result sent without it must never answer it.
+  return signal || storageRetry ? load() : cached(FILE_LIST_PREFIX + path, load, undefined, FILE_LIST_FAILURE_MS);
 }
 function checkedFile(value: DiaryFile, path: string): DiaryFile {
   if(!value || value.path!==path || (value.content!==null && typeof value.content!=='string') || (value.version!==null && typeof value.version!=='string'))throw Error('File response was invalid. Your draft has been kept; compare storage before retrying.');

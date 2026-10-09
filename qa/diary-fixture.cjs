@@ -90,6 +90,11 @@ function createFixture(port = 31239) {
         event({type:'usage',promptTokens:12,completionTokens:34,totalTokens:46,tokensPerSecond:77});
         event({type:'done'});res.end();return;
       }
+      if(body.message==='math synthetic') {
+        // #1184: inline `$..$`, `\\(..\\)`, display `$$..$$`, plus dollar amounts that must stay text.
+        event({type:'delta',text:'Inline $\\sqrt{485} \\approx 22.02$ and \\(x^2\\) here.\n\nPrices stay text: costs $5 and $10 today.\n\n$$\n\\frac{a}{b}\n$$\n'});
+        event({type:'done'});res.end();return;
+      }
       if(body.message==='markdown lists synthetic') {
         // #431: a nested bullet list, a nested ordered list, and a task list — the same shape the
         // live tester used to find the bug (flat `<p class="md-bullet">`, no `<ul>/<ol>/<li>`).

@@ -4,6 +4,7 @@ import { CloseButton } from './CloseButton';
 import { readFrontmatter } from '../diary-markdown';
 import { useT } from '../i18n';
 import { Icon } from './icons/Icon';
+import { MathSpan } from './MathSpan';
 import { classifyImageSrc, imageHost } from '../markdown-image';
 export function DiaryModal({ title, onClose, children, className = '' }: { className?: string; title: string; onClose: () => void; children: ReactNode }) {
   const t = useT();
@@ -172,12 +173,15 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
   // ")" and truncated the href mid-URL.
   const inline = (line: string) =>
     line.split(wikiLink
-      ? /(\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[\[[^\[\]\n]*\]\]|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g
-      : /(\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g).map((part, i) => {
+      ? /(\$\$[^$\n]+\$\$|\\\([^\n]+?\\\)|\$(?!\s)(?:\\.|[^$\\\n])+?(?<!\s)\$(?!\d)|\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[\[[^\[\]\n]*\]\]|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g
+      : /(\$\$[^$\n]+\$\$|\\\([^\n]+?\\\)|\$(?!\s)(?:\\.|[^$\\\n])+?(?<!\s)\$(?!\d)|\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g).map((part, i) => {
       // Escapes the Diary sidecar writes inside saved prose so it cannot become entry structure
       // (#803): `\*\*` and `<\!--` show as the literal characters. Plain text only, never HTML (#835).
       // The sidecar also escapes a role label's `**` on the first line, so `\*\*Assistant:**` can follow
       // the real `**Me:** ` label; the label's closing `**` is literal text too and must not pair.
+      if (part.length > 2 && part.startsWith('$$') && part.endsWith('$$')) return <MathSpan key={i} tex={part.slice(2, -2)} display />;
+      if (part.length > 4 && part.startsWith('\\(') && part.endsWith('\\)')) return <MathSpan key={i} tex={part.slice(2, -2)} />;
+      if (part.length > 2 && part.startsWith('$') && part.endsWith('$')) return <MathSpan key={i} tex={part.slice(1, -1)} />;
       if (part.startsWith('\\*\\*')) return '**' + part.slice(4);
       if (part === '<\\!--') return '<!--';
       if (part.startsWith('**')) return <strong key={i}>{unescapeOpener(part.slice(2, -2))}</strong>;
@@ -247,6 +251,16 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
       while (i < lines.length && !lines[i].startsWith('```')) { body.push(lines[i]); i += 1; }
       out.push(<CodeBlock key={i} code={body.join('\n')} lang={lang} />);
       continue;
+    }
+
+    // #1184: display math on its own lines, `$$ ... $$` or `\\[ ... \\]`, collected to the closer.
+    const mathOpen = /^\s*(\$\$|\\\[)\s*$/.exec(line);
+    if (mathOpen) {
+      const closer = mathOpen[1] === '$$' ? '$$' : '\\]';
+      let j = i + 1;
+      const body: string[] = [];
+      while (j < lines.length && lines[j].trim() !== closer) { body.push(lines[j]); j += 1; }
+      if (j < lines.length) { out.push(<MathSpan key={i} tex={body.join('\n')} display />); i = j; continue; }
     }
 
     // A GFM table: a pipe row followed by a divider row. Anything less is just

@@ -420,7 +420,7 @@ function InferenceBudgetSection(): JSX.Element | null {
             aria-invalid={inlineProblem ? true : undefined} aria-describedby={inlineProblem ? 'mm-budget-problem' : undefined}
             onChange={(e) => { setDraft(e.target.value); setStatus(''); }} />
         </label>
-        {inlineProblem && <p id="mm-budget-problem" role="alert" className="modal-err">{inlineProblem}</p>}
+        {inlineProblem && <p id="mm-budget-problem" aria-live="polite" className="modal-err">{inlineProblem}</p>}
         <p className="mm-note">{t('mm.budget.range', { min: gib(info.minGib), max: gib(info.maxGib) })} {info.source === 'admin' ? t('mm.budget.sourceAdmin', { gib: gib(info.defaultGib) }) : t('mm.budget.sourceDeployment')}</p>
         {info.limited && <p className="mm-note warn">{t('mm.budget.limited', { gib: gib(info.budgetGib) })}</p>}
       </div>
