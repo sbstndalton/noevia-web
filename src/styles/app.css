@@ -1221,7 +1221,7 @@ button:disabled { cursor: not-allowed; }
 
 /* The row hover card: what a project is working from, without opening it. */
 .row-card {
-  z-index: 120; min-width: 210px; max-width: 280px; padding: 10px 12px;
+  z-index: 120; min-width: min(210px, calc(100vw - 16px)); max-width: min(280px, calc(100vw - 16px)); padding: 10px 12px;
   background: var(--bg-surface); border: 1px solid var(--border);
   border-radius: var(--radius-card); box-shadow: var(--shadow-pop);
   flex-direction: column; gap: 4px;

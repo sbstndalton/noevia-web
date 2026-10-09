@@ -1045,6 +1045,7 @@ export const ES_ES: Catalogue = {
   'code.review.outcome': "Revisión del Planificador",
   'code.review.youAccepted': "Aceptaste este cambio.",
   'code.review.timedOut': "Nadie respondió a tiempo, así que el cambio no se aceptó.",
+  'code.review.nothingToAccept': "No había ningún cambio que aceptar.",
   'code.review.notAccepted': "El cambio no se aceptó.",
   'code.review.branchStays': "Su rama permanece en el repositorio en ambos casos.",
   'code.pipeline.strip': "Etapas del flujo",

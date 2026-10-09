@@ -461,7 +461,9 @@ function ReviewOutcome({ review, decision }: { review: CodeReview; decision?: No
   const t = useT();
   return <section className="code-review-outcome" aria-label={t('code.review.outcome')}>
     <ReviewVerdict review={review}/>
-    {decision && <p className="code-meta">{decision.accepted ? t('code.review.youAccepted') : decision.decision === 'timeout'
+    {decision && <p className="code-meta">{decision.accepted ? t('code.review.youAccepted') : review.code === 'no_change'
+      // #1173: with no commits there was nothing to accept, so an unanswered card is not "nobody answered in time".
+      ? t('code.review.nothingToAccept') : decision.decision === 'timeout'
       ? t('code.review.timedOut') : t('code.review.notAccepted')} {t('code.review.branchStays')}</p>}
   </section>;
 }

@@ -1045,6 +1045,7 @@ export const NB_NO: Catalogue = {
   'code.review.outcome': "Vurdering fra Planleggeren",
   'code.review.youAccepted': "Du godtok denne endringen.",
   'code.review.timedOut': "Ingen svarte i tide, så endringen ble ikke godtatt.",
+  'code.review.nothingToAccept': "Det var ingen endring å godta.",
   'code.review.notAccepted': "Endringen ble ikke godtatt.",
   'code.review.branchStays': "Grenen blir liggende i repositoriet uansett.",
   'code.pipeline.strip': "Pipeline-trinn",

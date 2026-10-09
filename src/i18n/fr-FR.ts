@@ -1045,6 +1045,7 @@ export const FR_FR: Catalogue = {
   'code.review.outcome': "Revue du Planificateur",
   'code.review.youAccepted': "Vous avez accepté cette modification.",
   'code.review.timedOut': "Personne n’a répondu à temps : la modification n’a donc pas été acceptée.",
+  'code.review.nothingToAccept': "Il n’y avait aucune modification à accepter.",
   'code.review.notAccepted': "La modification n’a pas été acceptée.",
   'code.review.branchStays': "Sa branche reste dans le dépôt dans les deux cas.",
   'code.pipeline.strip': "Étapes du pipeline",

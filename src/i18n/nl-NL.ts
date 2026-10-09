@@ -1045,6 +1045,7 @@ export const NL_NL: Catalogue = {
   'code.review.outcome': "Beoordeling door de Planner",
   'code.review.youAccepted': "Je hebt deze wijziging geaccepteerd.",
   'code.review.timedOut': "Niemand antwoordde op tijd, dus de wijziging is niet geaccepteerd.",
+  'code.review.nothingToAccept': "Er was geen wijziging om te accepteren.",
   'code.review.notAccepted': "De wijziging is niet geaccepteerd.",
   'code.review.branchStays': "De branch blijft in beide gevallen in de repository staan.",
   'code.pipeline.strip': "Pijplijnfasen",

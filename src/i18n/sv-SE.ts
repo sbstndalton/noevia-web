@@ -1045,6 +1045,7 @@ export const SV_SE: Catalogue = {
   'code.review.outcome': "Planerarens granskning",
   'code.review.youAccepted': "Du godtog den här ändringen.",
   'code.review.timedOut': "Ingen svarade i tid, så ändringen godtogs inte.",
+  'code.review.nothingToAccept': "Det fanns ingen ändring att godta.",
   'code.review.notAccepted': "Ändringen godtogs inte.",
   'code.review.branchStays': "Dess gren ligger kvar i repot i båda fallen.",
   'code.pipeline.strip': "Pipeline-steg",

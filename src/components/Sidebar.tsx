@@ -363,7 +363,7 @@ export function Sidebar({
   // positioned card is clipped by it, which made the card useless. Render it
   // fixed at a measured point instead, after a delay so it does not flash
   // while the pointer is only passing over the row.
-  const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [hover, setHover] = useState<{ id: string; x: number; y: number; left: number } | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const openHover = (id: string, el: HTMLElement) => {
@@ -371,7 +371,7 @@ export function Sidebar({
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     hoverTimer.current = setTimeout(() => {
       const r = el.getBoundingClientRect();
-      setHover({ id, x: r.right + 10, y: r.top });
+      setHover({ id, x: r.right + 10, y: r.top, left: r.left });
     }, 450);
   };
   const closeHover = () => {
@@ -755,7 +755,15 @@ export function Sidebar({
         if (!p) return null;
         const files = p.files || [];
         return (
-          <div className="row-card" role="tooltip" style={{ top: hover.y, left: hover.x }}>
+          <div className="row-card" role="tooltip" style={{ top: hover.y, left: hover.x }} ref={(card) => {
+            // #1167: keep the card inside the viewport. Beside the row when it fits, else on its
+            // left, else pinned to the right edge (over the row: the card never takes the pointer).
+            if (!card) return;
+            const w = card.getBoundingClientRect().width, edge = 8, room = window.innerWidth - edge;
+            let x = hover.x;
+            if (x + w > room) x = hover.left - 10 - w >= edge ? hover.left - 10 - w : Math.max(edge, room - w);
+            card.style.left = `${x}px`;
+          }}>
             <strong>{p.name}</strong>
             {p.goal && <em>{p.goal}</em>}
             <span>{t.plural('sidebar.count.chats', countProjectChats(p.chats).active)} · {t.plural('sidebar.count.sources', files.length)}</span>

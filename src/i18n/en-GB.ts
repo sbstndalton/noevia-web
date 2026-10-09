@@ -1056,6 +1056,7 @@ export const EN_GB = {
   'code.review.outcome': "Planner review",
   'code.review.youAccepted': "You accepted this change.",
   'code.review.timedOut': "Nobody answered in time, so the change was not accepted.",
+  'code.review.nothingToAccept': "There was no change to accept.",
   'code.review.notAccepted': "The change was not accepted.",
   'code.review.branchStays': "Its branch stays in the repository either way.",
   'code.pipeline.strip': "Pipeline stages",

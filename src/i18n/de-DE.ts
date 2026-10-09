@@ -1045,6 +1045,7 @@ export const DE_DE: Catalogue = {
   'code.review.outcome': "Prüfung durch den Planer",
   'code.review.youAccepted': "Du hast diese Änderung angenommen.",
   'code.review.timedOut': "Niemand hat rechtzeitig geantwortet, deshalb wurde die Änderung nicht angenommen.",
+  'code.review.nothingToAccept': "Es gab keine Änderung zum Annehmen.",
   'code.review.notAccepted': "Die Änderung wurde nicht angenommen.",
   'code.review.branchStays': "Ihr Branch bleibt in beiden Fällen im Repository.",
   'code.pipeline.strip': "Pipeline-Phasen",
