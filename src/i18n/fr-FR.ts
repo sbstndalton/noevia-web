@@ -513,6 +513,8 @@ export const FR_FR: Catalogue = {
   'storage.savedUnchecked': "Stockage enregistré, mais la connexion n’a pas pu être vérifiée (le serveur a répondu {status}).",
   'storage.savedRedirected': "Stockage enregistré, mais le serveur a redirigé la vérification de la connexion. Vérifiez l’URL dans les Réglages (https, barre oblique finale).",
   'storage.refreshLoginRejected': "Connexion au stockage refusée. Vérifiez vos identifiants de stockage dans Réglages → Journal et stockage.",
+  'storage.throttledWait': "Votre serveur de stockage limite les tentatives de connexion. Réessayez dans {wait}.",
+  'storage.throttled': "Votre serveur de stockage limite les tentatives de connexion. Patientez un peu, puis réessayez.",
   'storage.openSettings': "Ouvrir les réglages de stockage",
   'storage.loading': "Chargement de votre connexion de stockage enregistrée…",
   'storage.loadFailed': "Votre connexion de stockage enregistrée n’a pas pu être chargée : ces champs sont verrouillés pour éviter de l’écraser. Le serveur est peut-être occupé ou injoignable.",

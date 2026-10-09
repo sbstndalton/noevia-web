@@ -513,6 +513,8 @@ export const NL_NL: Catalogue = {
   'storage.savedUnchecked': "Opslag opgeslagen, maar de aanmelding kon niet worden gecontroleerd (de server antwoordde {status}).",
   'storage.savedRedirected': "Opslag opgeslagen, maar de server heeft de aanmeldcontrole omgeleid. Controleer de URL (https, slash aan het eind).",
   'storage.refreshLoginRejected': "Aanmelding bij opslag geweigerd. Controleer je opslaggegevens in Instellingen → Dagboek en opslag.",
+  'storage.throttledWait': "Uw opslagserver beperkt inlogpogingen. Probeer het over {wait} opnieuw.",
+  'storage.throttled': "Uw opslagserver beperkt inlogpogingen. Wacht even en probeer het dan opnieuw.",
   'storage.openSettings': "Opslaginstellingen openen",
   'storage.loading': "Je opgeslagen opslagverbinding laden…",
   'storage.loadFailed': "Je opgeslagen opslagverbinding kon niet worden geladen, dus deze velden zijn vergrendeld om haar niet te overschrijven. De server is mogelijk bezet of onbereikbaar.",

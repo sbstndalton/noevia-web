@@ -19,7 +19,7 @@ type Props = {
   onSearch: (path: string, query: string, signal: AbortSignal, kind?: 'text'|'backlinks', filters?: FileSearchFilters) => Promise<FileSearchReport>;
   /** Markdown files in the Diary's Templates folder, the convention Obsidian uses. */
   listTemplates?: () => Promise<{ path: string; content: string }[]>;
-  onRefresh: () => void; onSave: () => void; onCompare: () => void;
+  onRefresh: () => void; /** The file list's own Retry button (#1168): may reset a storage login cool-down. */ onRetryFiles?: () => void; onSave: () => void; onCompare: () => void;
   onRebase: () => void; onReload: () => void; onClose: () => void;
 };
 
@@ -211,7 +211,7 @@ export function DiaryMarkdownWorkspace(input: Props) {
           <div className="diary-file-breadcrumb"><button className="popup-tab" disabled={p.busy} onClick={()=>p.onFolder('')}>{t('diary.context.diaryFolder')}</button>{p.folderPath && <><span>/ {p.folderPath}</span><button className="popup-tab" disabled={p.busy} onClick={()=>p.onFolder(p.folderPath.split('/').slice(0,-1).join('/'))}>{t('diary.context.up')}</button></>}</div>
           <label className="diary-workspace-filter">{t('diary.workspace.filterFolder')}<input value={filter} onChange={e=>setFilter(e.target.value)} type="search" /></label>
           <div className="diary-workspace-file-actions"><button className="popup-tab" disabled={p.busy} onClick={p.onNew}>{t('diary.workspace.newFile')}</button><button className="popup-tab" disabled={p.busy || p.filesLoading} onClick={p.onRefresh}>{t('diary.workspace.refreshFiles')}</button></div>
-          {p.filesLoading ? <p role="status">{t('diary.context.loadingFiles')}</p> : p.filesError ? <div role="alert"><p>{p.filesError}</p><button className="popup-tab" onClick={p.onRefresh}>{t('diary.context.retryFileList')}</button></div> : <nav className="diary-file-list" aria-label={t('diary.workspace.markdownFiles')}>{rows.map(file=><button key={file.path} title={file.path} disabled={p.busy} aria-current={!file.isDir && file.path===p.file.path?'page':undefined} onClick={()=>file.isDir?p.onFolder(file.path):p.onOpen(file.path)}><ShellIcon name={file.isDir?'folder':'book'} size={16}/><bdi>{file.name}</bdi></button>)}{!rows.length && <p>{filter ? t('diary.workspace.noMatchingFiles') : t('diary.workspace.noMarkdownFiles')}</p>}</nav>}
+          {p.filesLoading ? <p role="status">{t('diary.context.loadingFiles')}</p> : p.filesError ? <div role="alert"><p>{p.filesError}</p><button className="popup-tab" onClick={p.onRetryFiles ?? p.onRefresh}>{t('diary.context.retryFileList')}</button></div> : <nav className="diary-file-list" aria-label={t('diary.workspace.markdownFiles')}>{rows.map(file=><button key={file.path} title={file.path} disabled={p.busy} aria-current={!file.isDir && file.path===p.file.path?'page':undefined} onClick={()=>file.isDir?p.onFolder(file.path):p.onOpen(file.path)}><ShellIcon name={file.isDir?'folder':'book'} size={16}/><bdi>{file.name}</bdi></button>)}{!rows.length && <p>{filter ? t('diary.workspace.noMatchingFiles') : t('diary.workspace.noMarkdownFiles')}</p>}</nav>}
         </details>
         <details className="diary-workspace-export"><summary>{t('diary.workspace.exportWorkspace')}</summary>
           <p>{p.local ? t('diary.workspace.exportLocalNote') : t('diary.workspace.exportOnlineNote')}</p>

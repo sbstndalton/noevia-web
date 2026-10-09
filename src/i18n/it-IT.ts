@@ -513,6 +513,8 @@ export const IT_IT: Catalogue = {
   'storage.savedUnchecked': "Archiviazione salvata, ma non è stato possibile verificare l’accesso (il server ha risposto {status}).",
   'storage.savedRedirected': "Archiviazione salvata, ma il server ha reindirizzato la verifica dell’accesso. Controlla l’URL (https, barra finale).",
   'storage.refreshLoginRejected': "Accesso all’archiviazione rifiutato. Controlla le tue credenziali di archiviazione in Impostazioni → Diario e archiviazione.",
+  'storage.throttledWait': "Il tuo server di archiviazione sta limitando i tentativi di accesso. Riprova tra {wait}.",
+  'storage.throttled': "Il tuo server di archiviazione sta limitando i tentativi di accesso. Attendi un momento e riprova.",
   'storage.openSettings': "Apri impostazioni di archiviazione",
   'storage.loading': "Caricamento della connessione di archiviazione salvata…",
   'storage.loadFailed': "Non è stato possibile caricare la connessione di archiviazione salvata, quindi questi campi sono bloccati per non sovrascriverla. Il server potrebbe essere occupato o irraggiungibile.",

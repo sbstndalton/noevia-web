@@ -513,6 +513,8 @@ export const DE_DE: Catalogue = {
   'storage.savedUnchecked': "Speicher gespeichert, aber die Anmeldung konnte nicht geprüft werden (der Server antwortete mit {status}).",
   'storage.savedRedirected': "Speicher gespeichert, aber der Server hat die Anmeldeprüfung umgeleitet. Prüfe die URL (https, abschließender Schrägstrich).",
   'storage.refreshLoginRejected': "Speicher-Anmeldung abgelehnt. Prüfe deine Speicher-Zugangsdaten unter Einstellungen → Tagebuch & Speicher.",
+  'storage.throttledWait': "Ihr Speicherserver begrenzt Anmeldeversuche. Versuchen Sie es in {wait} erneut.",
+  'storage.throttled': "Ihr Speicherserver begrenzt Anmeldeversuche. Warten Sie einen Moment und versuchen Sie es dann erneut.",
   'storage.openSettings': "Speichereinstellungen öffnen",
   'storage.loading': "Deine gespeicherte Speicherverbindung wird geladen…",
   'storage.loadFailed': "Deine gespeicherte Speicherverbindung konnte nicht geladen werden, daher sind diese Felder gesperrt, damit nichts überschrieben wird. Der Server ist eventuell ausgelastet oder nicht erreichbar.",

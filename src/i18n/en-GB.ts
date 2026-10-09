@@ -524,6 +524,8 @@ export const EN_GB = {
   'storage.savedUnchecked': "Storage saved, but the login could not be checked (the server answered {status}).",
   'storage.savedRedirected': "Storage saved, but the server redirected the login check. Check the URL (https, trailing slash).",
   'storage.refreshLoginRejected': "Storage login rejected. Check your storage credentials in Settings → Diary & storage.",
+  'storage.throttledWait': "Your storage server is limiting sign-in attempts. Try again in {wait}.",
+  'storage.throttled': "Your storage server is limiting sign-in attempts. Wait a little, then try again.",
   'storage.openSettings': "Open storage settings",
   'storage.loading': "Loading your saved storage connection…",
   'storage.loadFailed': "Your saved storage connection couldn’t be loaded, so these fields are locked to avoid overwriting it. The server may be busy or unreachable.",

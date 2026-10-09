@@ -513,6 +513,8 @@ export const PT_BR: Catalogue = {
   'storage.savedUnchecked': "Armazenamento salvo, mas não foi possível verificar o login (o servidor respondeu {status}).",
   'storage.savedRedirected': "Armazenamento salvo, mas o servidor redirecionou a verificação do login. Confira a URL (https, barra no final).",
   'storage.refreshLoginRejected': "Login do armazenamento rejeitado. Verifique suas credenciais de armazenamento em Configurações → Diário e armazenamento.",
+  'storage.throttledWait': "Seu servidor de armazenamento está limitando as tentativas de login. Tente novamente em {wait}.",
+  'storage.throttled': "Seu servidor de armazenamento está limitando as tentativas de login. Aguarde um pouco e tente novamente.",
   'storage.openSettings': "Abrir configurações de armazenamento",
   'storage.loading': "Carregando sua conexão de armazenamento salva…",
   'storage.loadFailed': "Não foi possível carregar sua conexão de armazenamento salva, então estes campos estão bloqueados para não sobrescrevê-la. O servidor pode estar ocupado ou inacessível.",

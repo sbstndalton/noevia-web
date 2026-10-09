@@ -513,6 +513,8 @@ export const SV_SE: Catalogue = {
   'storage.savedUnchecked': "Lagringen har sparats, men inloggningen kunde inte kontrolleras (servern svarade {status}).",
   'storage.savedRedirected': "Lagringen har sparats, men servern omdirigerade inloggningskontrollen. Kontrollera URL:en (https, avslutande snedstreck).",
   'storage.refreshLoginRejected': "Inloggningen till lagringen avvisades. Kontrollera dina lagringsuppgifter i Inställningar → Dagbok och lagring.",
+  'storage.throttledWait': "Din lagringsserver begränsar inloggningsförsök. Försök igen om {wait}.",
+  'storage.throttled': "Din lagringsserver begränsar inloggningsförsök. Vänta en stund och försök igen.",
   'storage.openSettings': "Öppna lagringsinställningar",
   'storage.loading': "Läser in din sparade lagringsanslutning…",
   'storage.loadFailed': "Din sparade lagringsanslutning kunde inte läsas in, så fälten är låsta för att den inte ska skrivas över. Servern kan vara upptagen eller onåbar.",

@@ -513,6 +513,8 @@ export const NB_NO: Catalogue = {
   'storage.savedUnchecked': "Lagringen er lagret, men innloggingen kunne ikke sjekkes (serveren svarte {status}).",
   'storage.savedRedirected': "Lagringen er lagret, men serveren videresendte innloggingssjekken. Sjekk URL-en (https, avsluttende skråstrek).",
   'storage.refreshLoginRejected': "Innlogging til lagring avvist. Sjekk lagringslegitimasjonen din i Innstillinger → Dagbok og lagring.",
+  'storage.throttledWait': "Lagringsserveren din begrenser påloggingsforsøk. Prøv igjen om {wait}.",
+  'storage.throttled': "Lagringsserveren din begrenser påloggingsforsøk. Vent litt og prøv igjen.",
   'storage.openSettings': "Åpne lagringsinnstillinger",
   'storage.loading': "Laster den lagrede lagringstilkoblingen din…",
   'storage.loadFailed': "Den lagrede lagringstilkoblingen din kunne ikke lastes, så disse feltene er låst for å unngå å overskrive den. Serveren kan være opptatt eller utilgjengelig.",

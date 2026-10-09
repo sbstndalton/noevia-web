@@ -513,6 +513,8 @@ export const ES_ES: Catalogue = {
   'storage.savedUnchecked': "Almacenamiento guardado, pero no se pudo comprobar el inicio de sesión (el servidor respondió {status}).",
   'storage.savedRedirected': "Almacenamiento guardado, pero el servidor redirigió la comprobación del inicio de sesión. Revisa la URL (https, barra final).",
   'storage.refreshLoginRejected': "Inicio de sesión del almacenamiento rechazado. Comprueba tus credenciales de almacenamiento en Ajustes → Diario y almacenamiento.",
+  'storage.throttledWait': "Su servidor de almacenamiento está limitando los intentos de inicio de sesión. Vuelva a intentarlo en {wait}.",
+  'storage.throttled': "Su servidor de almacenamiento está limitando los intentos de inicio de sesión. Espere un poco y vuelva a intentarlo.",
   'storage.openSettings': "Abrir ajustes de almacenamiento",
   'storage.loading': "Cargando tu conexión de almacenamiento guardada…",
   'storage.loadFailed': "No se pudo cargar tu conexión de almacenamiento guardada, así que estos campos están bloqueados para no sobrescribirla. Puede que el servidor esté ocupado o inaccesible.",
