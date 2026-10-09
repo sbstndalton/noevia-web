@@ -31,7 +31,7 @@ const origin = `http://localhost:${PORT}`;
     if (onLoad !== 1) failures.push(`expected 1 root listing on a failing load, saw ${onLoad}`);
     // Retry must still refetch once storage recovers: the failure is not cached past an explicit retry.
     fail = false;
-    const retry = page.getByRole('button', { name: /retry|try again|refresh/i }).first();
+    const retry = page.getByRole('alert').getByRole('button', { name: 'Retry file list' });
     const hadRetry = await retry.count() > 0;
     if (hadRetry) { await retry.click(); await page.waitForTimeout(500); }
     console.log('diary-files-424-1154:', JSON.stringify({ onLoad, afterRetry: seen.length }));

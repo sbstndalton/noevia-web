@@ -88,6 +88,8 @@ export interface CodeTask {
   review?: CodeReview;
   result: { stopReason?: string; branch?: string; tools?: number; approvals?: number; allowed?: number; refused?: number; denied?: number;
     network?: NetworkActivity;
+    /** A pipeline task's own outcome (code-pipeline.cjs): `accepted` is the person's answer on its Accept card. */
+    pipeline?: boolean; accepted?: boolean; decision?: string;
     review?: { reviewed: boolean; verdict: 'approve' | 'request_changes' | null; accepted: boolean; decision: string; headSha: string | null } } | null;
 }
 export interface Harness { id: string; label: string; version: string | null }

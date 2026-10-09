@@ -274,7 +274,9 @@ function TaskCard({ task, busy, onDecide, onCancel }: {
   // not read as plainly "Finished". Both come from fields the server already sends.
   const blocked = task.status === 'failed' && task.lifecycle === 'blocked';
   const startedAgent = (task.stages || []).some(move => move.to === 'implementing');
-  const notAccepted = task.status === 'completed' && !!task.result?.review && !task.result.review.accepted;
+  const notAccepted = task.status === 'completed' && (task.result?.review
+    ? !task.result.review.accepted
+    : task.result?.pipeline === true && task.result.accepted === false);
   const badge = blocked ? t('code.status.blocked') : notAccepted ? t('code.status.notAccepted') : statusLabel(t, task.status);
   const outcome = task.status === 'waiting_approval' ? (task.approval ? t('code.task.waitingDecisionFor', { action: actionLabel(t, task.approval.action) }) : t('code.task.waitingDecision'))
     : notAccepted ? t('code.task.notAcceptedOutcome')

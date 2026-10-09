@@ -26,6 +26,8 @@ const BASE='a'.repeat(40);
    task({id:'b',task:'Accepted one',result:{tools:3,allowed:3,refused:0,denied:0,review:{reviewed:true,verdict:'approve',accepted:true,decision:'approve',headSha:BASE}}}),
    task({id:'c',task:'Blocked early',status:'failed',error:'No model was pinned for this task: nothing loaded',lifecycle:'blocked',stages:moves('planned','blocked'),pipeline:{maxLoops:2,merge:false,plan:null,evidence:[],audit:null}}),
    task({id:'d',task:'Blocked later',status:'failed',error:'The coding agent made no change.',lifecycle:'blocked',stages:moves('planned','implementing','blocked'),pipeline:{maxLoops:2,merge:false,plan:null,evidence:[],audit:null}}),
+   task({id:'f',task:'Pipeline declined',result:{pipeline:true,revision:1,branch:'noevia/task-1',headSha:BASE,verdict:'approve',audit:'complete',accepted:false,decision:'deny',merged:false,mergedInto:null,loops:0},lifecycle:'reviewing',stages:moves('planned','implementing','reviewing')}),
+   task({id:'g',task:'Pipeline accepted',result:{pipeline:true,revision:1,branch:'noevia/task-1',headSha:BASE,verdict:'approve',audit:'complete',accepted:true,decision:'approve',merged:false,mergedInto:null,loops:0}}),
    task({id:'e',task:'Plain failure',status:'failed',error:'boom'}),
   ];
   await page.route('**/api/projects/p1/code**',r=>r.fulfill({json:{repositories:[{id:'scratch'}],capabilities:['read_repository'],defaultCapabilities:['read_repository'],
@@ -43,6 +45,8 @@ const BASE='a'.repeat(40);
   check(/before the coding agent started/i.test(await card('Blocked early').locator('.code-stage').innerText()),'blocked-before-start outcome line');
   check(await badge('Blocked later')==='Blocked','blocked later header');
   check(!/before the coding agent started/i.test(await card('Blocked later').locator('.code-stage').innerText()),'a later block does not claim it never started');
+  check(await badge('Pipeline declined')==='Not accepted',`pipeline declined badge: ${await badge('Pipeline declined')}`);
+  check(await badge('Pipeline accepted')==='Finished','a pipeline task whose change was accepted says Finished');
   check(await badge('Plain failure')==='Failed','a plain failure stays Failed');
  }finally{await browser.close();await fixture.close?.();}
  if(failures.length)process.exitCode=1;else console.log('PASS code-task-badges-1156-1157');
