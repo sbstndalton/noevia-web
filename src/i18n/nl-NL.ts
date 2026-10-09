@@ -749,6 +749,7 @@ export const NL_NL: Catalogue = {
   'tools.reason.codeOff': "De codeomgeving staat uit op deze server.",
   'tools.reason.codeNeedsProject': "Open een projectchat om een Cowork-taak uit te voeren.",
   'tools.reason.codeNoRepository': "Er is geen repository geregistreerd op deze server.",
+  'tools.reason.unchecked': "De toestemming voor dit hulpmiddel kon niet worden gecontroleerd, dus het is voorlopig niet beschikbaar.",
   'toolbox.desc.core': "Altijd veilige ingebouwde functies: de serverklok en het volledig lezen van de kennisbestanden van dit project.",
   'toolbox.desc.diary': "Lees je dagboek: vandaag, een hele maand of welke maanden er zijn.",
   'toolbox.desc.project-docs': "De bij dit project bijgevoegde bestanden weergeven, lezen, doorzoeken en bewerken.",

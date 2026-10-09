@@ -760,6 +760,7 @@ export const EN_GB = {
   'tools.reason.codeOff': 'The coding harness is off on this server.',
   'tools.reason.codeNeedsProject': 'Open a project chat to run a Cowork task.',
   'tools.reason.codeNoRepository': 'No repository is registered on this server.',
+  'tools.reason.unchecked': "This tool's permission couldn't be checked, so it's unavailable for now.",
   'toolbox.desc.core': 'Always-safe built-ins: the server clock, and full reads of this project\'s knowledge files.',
   'toolbox.desc.diary': 'Read your diary: today, a whole month, or which months exist.',
   'toolbox.desc.project-docs': 'List, read, search and edit the files attached to this project.',

@@ -749,6 +749,7 @@ export const DE_DE: Catalogue = {
   'tools.reason.codeOff': "Die Coding-Umgebung ist auf diesem Server ausgeschaltet.",
   'tools.reason.codeNeedsProject': "Öffne einen Projekt-Chat, um eine Cowork-Aufgabe auszuführen.",
   'tools.reason.codeNoRepository': "Auf diesem Server ist kein Repository registriert.",
+  'tools.reason.unchecked': "Die Berechtigung für dieses Werkzeug konnte nicht geprüft werden, daher ist es vorerst nicht verfügbar.",
   'toolbox.desc.core': "Immer sichere Bordmittel: die Serveruhr und das vollständige Lesen der Wissensdateien dieses Projekts.",
   'toolbox.desc.diary': "Lies dein Tagebuch: heute, einen ganzen Monat oder welche Monate es gibt.",
   'toolbox.desc.project-docs': "Die an dieses Projekt angehängten Dateien auflisten, lesen, durchsuchen und bearbeiten.",

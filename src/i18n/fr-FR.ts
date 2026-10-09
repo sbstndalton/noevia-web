@@ -749,6 +749,7 @@ export const FR_FR: Catalogue = {
   'tools.reason.codeOff': "L’environnement de code est désactivé sur ce serveur.",
   'tools.reason.codeNeedsProject': "Ouvrez une discussion de projet pour lancer une tâche Cowork.",
   'tools.reason.codeNoRepository': "Aucun dépôt n’est enregistré sur ce serveur.",
+  'tools.reason.unchecked': "L’autorisation de cet outil n’a pas pu être vérifiée ; il est donc indisponible pour le moment.",
   'toolbox.desc.core': "Outils intégrés toujours sûrs : l’horloge du serveur et la lecture complète des fichiers de connaissances de ce projet.",
   'toolbox.desc.diary': "Lire votre journal : aujourd’hui, un mois entier ou les mois existants.",
   'toolbox.desc.project-docs': "Lister, lire, rechercher et modifier les fichiers joints à ce projet.",
