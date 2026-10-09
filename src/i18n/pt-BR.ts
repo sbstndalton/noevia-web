@@ -749,6 +749,7 @@ export const PT_BR: Catalogue = {
   'tools.reason.codeOff': "O ambiente de código está desativado neste servidor.",
   'tools.reason.codeNeedsProject': "Abra um chat de projeto para executar uma tarefa do Cowork.",
   'tools.reason.codeNoRepository': "Nenhum repositório está registrado neste servidor.",
+  'tools.reason.unchecked': "Não foi possível verificar a permissão desta ferramenta, então ela está indisponível por enquanto.",
   'toolbox.desc.core': "Ferramentas integradas sempre seguras: o relógio do servidor e a leitura completa dos arquivos de conhecimento deste projeto.",
   'toolbox.desc.diary': "Leia seu diário: hoje, um mês inteiro ou quais meses existem.",
   'toolbox.desc.project-docs': "Listar, ler, pesquisar e editar os arquivos anexados a este projeto.",

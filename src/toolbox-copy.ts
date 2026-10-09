@@ -41,7 +41,7 @@ export function toolboxCopy(t: Translator, box: BoxCopy): { label: string; descr
  *  (server/toolboxes-permitted.cjs REASONS). A code this build has no wording for keeps the text. */
 export const TOOL_REASON_CODES = [
   'connect', 'signIn', 'diaryOff', 'blocked', 'notConnected',
-  'codeNeedsCowork', 'codeAdminOnly', 'codeOff', 'codeNeedsProject', 'codeNoRepository',
+  'codeNeedsCowork', 'codeAdminOnly', 'codeOff', 'codeNeedsProject', 'codeNoRepository', 'unchecked',
 ] as const;
 /** The coding harness's own tools, worded by name. */
 export const CODE_TOOL_NAMES = ['read_repository', 'edit_file', 'execute_command'] as const;

@@ -749,6 +749,7 @@ export const NB_NO: Catalogue = {
   'tools.reason.codeOff': "Kodemiljøet er slått av på denne serveren.",
   'tools.reason.codeNeedsProject': "Åpne en prosjektsamtale for å kjøre en Cowork-oppgave.",
   'tools.reason.codeNoRepository': "Ingen repositorier er registrert på denne serveren.",
+  'tools.reason.unchecked': "Tillatelsen til dette verktøyet kunne ikke kontrolleres, så det er utilgjengelig for øyeblikket.",
   'toolbox.desc.core': "Alltid trygge innebygde verktøy: serverklokken og full lesing av prosjektets kunnskapsfiler.",
   'toolbox.desc.diary': "Les dagboken din: i dag, en hel måned eller hvilke måneder som finnes.",
   'toolbox.desc.project-docs': "List opp, les, søk i og rediger filene som er lagt ved dette prosjektet.",

@@ -749,6 +749,7 @@ export const SV_SE: Catalogue = {
   'tools.reason.codeOff': "Kodmiljön är avstängd på den här servern.",
   'tools.reason.codeNeedsProject': "Öppna en projektchatt för att köra en Cowork-uppgift.",
   'tools.reason.codeNoRepository': "Inget repository är registrerat på den här servern.",
+  'tools.reason.unchecked': "Behörigheten för det här verktyget kunde inte kontrolleras, så det är otillgängligt just nu.",
   'toolbox.desc.core': "Alltid säkra inbyggda verktyg: serverklockan och fullständig läsning av projektets kunskapsfiler.",
   'toolbox.desc.diary': "Läs din dagbok: i dag, en hel månad eller vilka månader som finns.",
   'toolbox.desc.project-docs': "Visa, läsa, söka i och redigera filerna som är bifogade till projektet.",
