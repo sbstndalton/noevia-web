@@ -16,7 +16,7 @@ const QUANT_CHOICES = ['Q4_K_M', 'Q4_K_S', 'UD-Q4_K_XL', 'Q5_K_M', 'Q6_K', 'Q8_0
 const paramLabel = (t: Translate, r: Result) => (r.params ? `${r.params}B${r.activeParams ? ` (${t('mm.discover.active', { params: `${r.activeParams}B` })})` : ''}` : null);
 type Estimate = { key: string; label: string; ctx: number; gpu_layers: number; total_layers: number; speed_pct: number; offload: boolean };
 type Group = { shardBase: string; shards: number | null; bytes: number; size: string; quant: string | null; projector: boolean;
-  fit: { name: string; verdict: string; ratio_pct: number; needs_gb?: number; ceiling_gb?: number }[]; files: { path: string; bytes: number; size: string }[]; estimates?: Estimate[]; nativeCtx?: number };
+  fit: { name: string; verdict: string; ratio_pct: number; needs_gb?: number; ceiling_gb?: number }[]; files: { path: string; bytes: number; size: string }[]; estimates?: Estimate[]; estimatesReason?: string; nativeCtx?: number };
 type Job = { id: string; repo: string; filename: string; status: string; error: string | null; bytes: number; downloaded: number; pct: number; speedH: string; speed?: number; etaH: string; parallel: boolean; chunks: { index: number; pct: number; status: string }[] };
 const VERDICT: Record<string, MessageKey> = { fits: 'mm.verdict.fits', tight: 'mm.verdict.tight', oom: 'mm.verdict.oom', impossible: 'mm.verdict.impossible' };
 
@@ -173,7 +173,7 @@ function RepoFiles({ repo, onClose, onDownload }: { repo: { repo: string; groups
         <td><strong>{g.quant || '—'}</strong><small className="mm-mono">{g.files[0].path}{g.shards ? ` (${t('mm.repo.moreParts', { parts: g.shards - 1 })})` : ''}</small></td>
         <td>{g.size}</td>
         <td>{g.fit.map(f => <span key={f.name} className={`mm-pill ${f.verdict === 'fits' ? 'is-good' : f.verdict === 'tight' ? 'is-warn' : 'is-bad'}`}>{t('mm.repo.fitOn', { backend: f.name, verdict: VERDICT[f.verdict] ? t(VERDICT[f.verdict]) : f.verdict })}</span>)}</td>
-        <td>{g.estimates?.length ? g.estimates.map(e => <span key={e.key} className="mm-est">{e.label}: {ctxShort(e.ctx)}{e.offload ? ` · ${t('mm.layersOnGpu', { gpu: e.gpu_layers, total: e.total_layers })} · ${t('mm.speedPct', { pct: e.speed_pct })}` : ''}</span>) : <small>{t('mm.repo.noEstimate')}</small>}{g.nativeCtx ? <small>{t('mm.repo.trainedFor', { tokens: tokens(g.nativeCtx) })}</small> : null}</td>
+        <td>{g.estimates?.length ? g.estimates.map(e => <span key={e.key} className="mm-est">{e.label}: {ctxShort(e.ctx)}{e.offload ? ` · ${t('mm.layersOnGpu', { gpu: e.gpu_layers, total: e.total_layers })} · ${t('mm.speedPct', { pct: e.speed_pct })}` : ''}</span>) : <small>{(typeof g.estimatesReason === 'string' && g.estimatesReason.trim()) || t('mm.repo.noEstimate')}</small>}{g.nativeCtx ? <small>{t('mm.repo.trainedFor', { tokens: tokens(g.nativeCtx) })}</small> : null}</td>
         <td><button className="popup-tab" onClick={() => onDownload(g.shards ? { repo: repo.repo, shardBase: g.shardBase } : { repo: repo.repo, path: g.files[0].path }, g.files[0].path)}>{t('mm.repo.download')}</button></td>
       </tr>)}</tbody>
     </table></div>
