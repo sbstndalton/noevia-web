@@ -703,6 +703,7 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'connectors.mode.ask': "Approbation requise",
   'connectors.mode.block': "Bloqué",
   'connectors.mode.allowLocked': "Toujours autoriser (les écritures demandent toujours d’abord)",
+  'connectors.writesAlwaysAsk': "Les écritures demandent toujours d’abord votre accord, cet outil ne peut donc pas être réglé sur « Toujours autoriser ».",
   'connectors.permissionFor': "Autorisation de {tool}",
   'connectors.never': "jamais",
   'connectors.drive.suggestList': "Liste les fichiers que tu as enregistrés dans mon Google Drive",

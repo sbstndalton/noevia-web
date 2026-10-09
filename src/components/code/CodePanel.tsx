@@ -269,16 +269,27 @@ function TaskCard({ task, busy, onDecide, onCancel }: {
   const t = useT();
   const active = ACTIVE.has(task.status);
   const updated = new Date(task.updatedAt).toLocaleString(appLocale() ?? [], { dateStyle: 'medium', timeStyle: 'short' });
+  // #1157: a pipeline task stopped by one of its own checks is "Blocked" in its timeline; the header
+  // used to say "Failed" for the same thing. #1156: a finished task whose change nobody accepted must
+  // not read as plainly "Finished". Both come from fields the server already sends.
+  const blocked = task.status === 'failed' && task.lifecycle === 'blocked';
+  const startedAgent = (task.stages || []).some(move => move.to === 'implementing');
+  const notAccepted = task.status === 'completed' && (task.result?.review
+    ? !task.result.review.accepted
+    : task.result?.pipeline === true && task.result.accepted === false);
+  const badge = blocked ? t('code.status.blocked') : notAccepted ? t('code.status.notAccepted') : statusLabel(t, task.status);
   const outcome = task.status === 'waiting_approval' ? (task.approval ? t('code.task.waitingDecisionFor', { action: actionLabel(t, task.approval.action) }) : t('code.task.waitingDecision'))
+    : notAccepted ? t('code.task.notAcceptedOutcome')
     : task.status === 'completed' ? (task.result?.tools ? t.plural('code.task.finishedAfter', task.result.tools) : statusLabel(t, 'completed'))
+    : blocked ? t(startedAgent ? 'code.task.blockedOutcome' : 'code.task.blockedBeforeStart')
     : task.status === 'failed' ? t('code.task.failedOutcome')
     : task.status === 'cancelled' ? statusLabel(t, 'cancelled')
     : task.status === 'interrupted' ? t('code.task.interruptedOutcome')
     : task.stage || statusLabel(t, task.status);
-  return <article className={`code-task is-${task.status}`} aria-busy={active && !task.approval}>
+  return <article className={`code-task is-${task.status}${blocked ? ' is-blocked' : ''}${notAccepted ? ' is-not-accepted' : ''}`} aria-busy={active && !task.approval}>
     <header>
       <h3>{task.task || task.branch || t('code.task.untitled')}</h3>
-      <span className="code-status">{statusLabel(t, task.status)}</span>
+      <span className="code-status">{badge}</span>
     </header>
     <p className="code-meta">{[task.branch, task.capabilities.map(a => actionLabel(t, a)).join(' · ')].filter(Boolean).join(' · ') || t('code.task.readOnly')}</p>
     <p className="code-stage"><span role={task.status === 'waiting_approval' ? 'status' : undefined}>{outcome}</span> · {t('code.task.elapsed', { time: elapsed(task) })} · {t('code.task.updated')} <time dateTime={new Date(task.updatedAt).toISOString()}>{updated}</time></p>

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { JSX, KeyboardEvent } from 'react';
 import { useSegmentThumb } from '../SegmentedControl';
 import { ShellIcon } from '../ShellIcon';
@@ -20,7 +21,10 @@ export function PermissionControl({ tool, value, write, busy, onChange }: {
   const t = useT();
   const { track, moving } = useSegmentThumb([value]);
   const usable = MODES.filter(([m]) => !(write && m === 'allow')).map(([m]) => m);
-  const choose = (next: ToolMode) => { if (next === value || busy || !usable.includes(next)) return; moving(); onChange(next); };
+  // #1155: choosing the locked "Always allow" on a write used to do nothing, silently. Say why.
+  const [refused, setRefused] = useState(false);
+  useEffect(() => { if (!refused) return; const id = window.setTimeout(() => setRefused(false), 6000); return () => window.clearTimeout(id); }, [refused]);
+  const choose = (next: ToolMode) => { if (write && next === 'allow') { setRefused(true); return; } if (next === value || busy || !usable.includes(next)) return; moving(); onChange(next); };
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
     if (!step) return;
@@ -29,7 +33,7 @@ export function PermissionControl({ tool, value, write, busy, onChange }: {
     choose(next);
     requestAnimationFrame(() => track.current?.querySelector<HTMLElement>(`[data-mode="${next}"]`)?.focus());
   };
-  return <div ref={track} className="glass-seg permission-control" role="radiogroup" aria-label={t('connectors.permissionFor', { tool })} aria-busy={busy || undefined} onKeyDown={onKey}>
+  return <><div ref={track} className="glass-seg permission-control" role="radiogroup" aria-label={t('connectors.permissionFor', { tool })} aria-busy={busy || undefined} onKeyDown={onKey}>
     {MODES.map(([mode, icon]) => {
       const locked = write && mode === 'allow';
       const label = locked ? t('connectors.mode.allowLocked') : t(MODE_LABEL[mode]);
@@ -38,5 +42,5 @@ export function PermissionControl({ tool, value, write, busy, onChange }: {
         onClick={() => choose(mode)}><ShellIcon name={icon} size={15}/></button>;
     })}
     <span className="glass-thumb glass" aria-hidden="true"/>
-  </div>;
+  </div>{refused && <p className="perm-note" role="status">{t('connectors.writesAlwaysAsk')}</p>}</>;
 }

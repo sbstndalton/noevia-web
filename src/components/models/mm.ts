@@ -13,7 +13,7 @@ export async function mm<T>(path: string, init: { method?: string; body?: unknow
     body: hasBody ? JSON.stringify(init.body) : undefined,
   });
   const v = await r.json().catch(() => ({}));
-  if (!r.ok) throw Object.assign(Error((v as { error?: string }).error || `Request failed (${r.status})`), { status: r.status });
+  if (!r.ok) throw Object.assign(Error((v as { error?: string }).error || `Request failed (${r.status})`), { status: r.status, code: typeof (v as { code?: unknown }).code === 'string' ? (v as { code: string }).code : undefined });
   return v as T;
 }
 

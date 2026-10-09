@@ -15,6 +15,9 @@ export async function diaryRequest<T>(path: string, body?: unknown, method = 'PO
 // The overview and file pane share directory reads. Writes/refreshes remove every
 // listing; signalled searches stay independent so one caller cannot cancel another.
 const FILE_LIST_PREFIX = 'diary:files:';
+// #1154: the overview and the file pane both list the root on mount; when storage rejects the
+// read (424) the first failure used to evict the entry and the second reader fired a duplicate.
+const FILE_LIST_FAILURE_MS = 1500;
 export function invalidateFileListings(): void { invalidateCachedPrefix(FILE_LIST_PREFIX); }
 export async function listFiles(path = '', signal?: AbortSignal): Promise<{files:FileEntry[]}> {
   const load = async () => {
@@ -22,7 +25,7 @@ export async function listFiles(path = '', signal?: AbortSignal): Promise<{files
     if(!value || !Array.isArray(value.files) || value.files.length>500 || value.files.some(f=>!f || typeof f.path!=='string' || typeof f.name!=='string' || typeof f.isDir!=='boolean'))throw Error('File list was invalid. Try refreshing this folder.');
     return value;
   };
-  return signal ? load() : cached(FILE_LIST_PREFIX + path, load);
+  return signal ? load() : cached(FILE_LIST_PREFIX + path, load, undefined, FILE_LIST_FAILURE_MS);
 }
 function checkedFile(value: DiaryFile, path: string): DiaryFile {
   if(!value || value.path!==path || (value.content!==null && typeof value.content!=='string') || (value.version!==null && typeof value.version!=='string'))throw Error('File response was invalid. Your draft has been kept; compare storage before retrying.');

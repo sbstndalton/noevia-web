@@ -704,6 +704,7 @@ export const EN_GB_SETTINGS = {
   'connectors.mode.ask': "Needs approval",
   'connectors.mode.block': "Blocked",
   'connectors.mode.allowLocked': "Always allow (writes always ask first)",
+  'connectors.writesAlwaysAsk': "Writes always need your approval first, so this tool can’t be set to Always allow.",
   'connectors.permissionFor': "{tool} permission",
   'connectors.never': "never",
   'connectors.drive.suggestList': "List the files you have saved to my Google Drive",
