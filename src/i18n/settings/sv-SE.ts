@@ -703,6 +703,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'connectors.mode.ask': "Kräver godkännande",
   'connectors.mode.block': "Blockerad",
   'connectors.mode.allowLocked': "Tillåt alltid (skrivningar frågar alltid först)",
+  'connectors.writesAlwaysAsk': "Skrivningar behöver alltid ditt godkännande först, så det här verktyget kan inte ställas in på ”Tillåt alltid”.",
   'connectors.permissionFor': "Behörighet för {tool}",
   'connectors.never': "aldrig",
   'connectors.drive.suggestList': "Lista filerna du har sparat i min Google Drive",

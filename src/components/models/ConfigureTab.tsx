@@ -76,6 +76,22 @@ const TIER_ID_BY_LABEL: Record<string, string> = {
   'Speculative decoding': 'speculative', 'LoRA / control vectors': 'lora', 'CPU threading': 'cpu', 'Reasoning / thinking': 'reasoning', 'Embeddings & misc': 'misc',
 };
 
+// A 409 from the model manager is a stale revision. A refusal that carries its own code (a size the
+// engine cannot use, a memory budget) is also sent as 409 by older servers: that is not a conflict (#1158).
+const isRevisionConflict = (e: unknown): boolean => (e as { status?: number }).status === 409 && !(e as { code?: string }).code;
+
+// Mirrors the server's check (llamacpp-manager sizeKnobProblem, #1132): whole numbers only, positive,
+// except that the context size may be 0 (load it from the model).
+const SIZE_FIELDS: Record<string, { allowZero: boolean }> = { 'ctx-size': { allowZero: true }, 'ubatch-size': { allowZero: false }, 'batch-size': { allowZero: false } };
+export function sizeProblem(key: string, raw: string): MessageKey | null {
+  const rule = SIZE_FIELDS[key];
+  const text = raw.trim();
+  if (!rule || text === '') return null;
+  const n = Number(text);
+  if (!/^\+?\d+$/.test(text) || !Number.isSafeInteger(n) || (n === 0 && !rule.allowZero)) return rule.allowZero ? 'mm.field.sizeWhole0' : 'mm.field.sizePositive';
+  return null;
+}
+
 function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRow; onChanged: (renamed?: string) => Promise<void> }) {
   const [data, setData] = useState<SectionResponse | null>(null), [draft, setDraft] = useState<Record<string, string>>({}), [extras, setExtras] = useState('');
   const [busy, setBusy] = useState(''), [error, setError] = useState(''), [message, setMessage] = useState(''), [conflict, setConflict] = useState(false);
@@ -88,10 +104,11 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
     catch (e) { setError(errorText(e, t('mm.editor.readFailed'))); }
   };
   useEffect(() => { void read(); }, [name]);
+  const sizeProblems = Object.keys(SIZE_FIELDS).filter(key => sizeProblem(key, draft[key] || ''));
   const save = async (values = draft, extraText = extras) => {
-    if (!data) return; setBusy('save'); setError(''); setMessage('');
+    if (!data || Object.keys(SIZE_FIELDS).some(key => sizeProblem(key, values[key] || ''))) return; setBusy('save'); setError(''); setMessage('');
     try { const v = await mm<{ revision: string }>(`sections/${encodeURIComponent(name)}`, { method: 'PUT', body: { baseRevision: data.revision, values, extras: extraText } }); setData({ ...data, revision: v.revision, exists: true }); await onChanged(); await apply(false); }
-    catch (e) { if ((e as { status?: number }).status === 409) setConflict(true); setError(errorText(e, t('mm.editor.saveFailed'))); } finally { setBusy(''); }
+    catch (e) { if (isRevisionConflict(e)) setConflict(true); setError(errorText(e, t('mm.editor.saveFailed'))); } finally { setBusy(''); }
   };
   const [pending, setPending] = useState<string[]>([]);
   // The engine reads its settings file only on reload; apply now, or say what is waiting.
@@ -119,7 +136,7 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
     // See doRename above: onChanged is awaited before apply() so its own finally cannot clear
     // `busy` while onChanged is still pending.
     try { await mm(`sections/${encodeURIComponent(name)}?baseRevision=${data.revision}`, { method: 'DELETE' }); dismissFolderModel(name); await onChanged(''); await apply(false); }
-    catch (e) { if ((e as { status?: number }).status === 409) setConflict(true); setError(errorText(e, t('mm.deleteFailed'))); } finally { setBusy(''); }
+    catch (e) { if (isRevisionConflict(e)) setConflict(true); setError(errorText(e, t('mm.deleteFailed'))); } finally { setBusy(''); }
   };
   const merge = (values: Record<string, string>, displaced: string[]) => {
     const schemaKeys = new Set(data?.schema.flatMap(t => t.fields.map(f => f.key)) || []);
@@ -166,7 +183,7 @@ function SectionEditor({ name, row, onChanged }: { name: string; row?: SectionRo
     {message && <p role="status" className="mm-note">{message}</p>}
     {pending.length > 0 && <div className="mm-actions"><button className="modal-btn secondary" disabled={busy !== ''} onClick={() => void apply(true)}>{busy === 'apply' ? t('mm.editor.applying') : t('mm.editor.applyNow')}</button></div>}
     <div className="mm-actions">
-      <button className="modal-btn primary" disabled={busy !== ''} onClick={() => void save()}>{busy === 'save' ? t('mm.saving') : data.exists ? t('mm.editor.save') : t('mm.createSettings')}</button>
+      <button className="modal-btn primary" disabled={busy !== '' || sizeProblems.length > 0} onClick={() => void save()}>{busy === 'save' ? t('mm.saving') : data.exists ? t('mm.editor.save') : t('mm.createSettings')}</button>
       <button className="modal-btn secondary" disabled={busy !== ''} onClick={() => void read(true)}>{t('mm.editor.reset')}</button>
       {row?.cli && <button className="modal-btn secondary" onClick={() => void navigator.clipboard?.writeText(row.cli).then(() => setMessage(t('mm.editor.cliCopied')))}>{t('mm.editor.copyCli')}</button>}
     </div>
@@ -294,12 +311,14 @@ function FieldInput({ field: f, value, onChange }: { field: Field; value: string
   const id = `mm-field-${f.key}`;
   const t = useT();
   const label = fieldText(t, f, 'label'), help = fieldText(t, f, 'help');
+  const problem = f.kind === 'int' || f.kind === 'text' ? sizeProblem(f.key, value) : null;
   return <div className="mm-field">
     {f.kind === 'bool'
       ? <label className="mm-check"><input id={id} type="checkbox" checked={['true', 'on', '1'].includes(value)} onChange={e => onChange(e.target.checked ? 'true' : '')}/>{label}</label>
       : <label htmlFor={id}>{label}</label>}
     {f.kind === 'select' && <select id={id} value={value} onChange={e => onChange(e.target.value)}>{f.choices.map(c => <option key={c} value={c}>{c || t('mm.field.default')}</option>)}</select>}
-    {(f.kind === 'int' || f.kind === 'text') && <input id={id} inputMode={f.kind === 'int' ? 'numeric' : undefined} value={value} placeholder={f.placeholder} onChange={e => onChange(e.target.value)}/>}
+    {(f.kind === 'int' || f.kind === 'text') && <input id={id} inputMode={f.kind === 'int' ? 'numeric' : undefined} value={value} placeholder={f.placeholder} aria-invalid={problem ? true : undefined} aria-describedby={problem ? `${id}-problem` : undefined} onChange={e => onChange(e.target.value)}/>}
+    {problem && <small id={`${id}-problem`} role="alert" className="modal-err">{t(problem)}</small>}
     {help && <small>{help}</small>}
   </div>;
 }

@@ -31,7 +31,7 @@ const DEFAULT_TTL_MS = 4000;
 const MAX_ENTRIES = 128;
 const store = new Map<string, Entry<unknown>>();
 
-export function cached<T>(key: string, load: () => Promise<T>, ttlMs: number = DEFAULT_TTL_MS): Promise<T> {
+export function cached<T>(key: string, load: () => Promise<T>, ttlMs: number = DEFAULT_TTL_MS, failureTtlMs = 0): Promise<T> {
   const now = Date.now();
   const hit = store.get(key) as Entry<T> | undefined;
   if (hit && (hit.pending || hit.expiresAt > now)) return hit.promise;
@@ -51,9 +51,16 @@ export function cached<T>(key: string, load: () => Promise<T>, ttlMs: number = D
   store.set(key, entry);
   // A rejected request must not keep poisoning every reader for the rest of the TTL window —
   // drop it immediately so the next call retries instead of replaying the same failure.
+  // `failureTtlMs` (#1154) opts a caller into a short failure window: two readers that mount
+  // together while the backend is rejecting (Diary 424) must share the one failed read rather
+  // than the second one retrying the moment the first failed. Callers that want a real retry
+  // invalidate the key (the Diary refresh/retry paths do).
   void promise.then(
     () => { entry.pending = false; entry.expiresAt = Date.now() + ttlMs; },
-    () => { if (store.get(key) === entry) store.delete(key); },
+    () => {
+      if (failureTtlMs > 0 && store.get(key) === entry) { entry.pending = false; entry.expiresAt = Date.now() + failureTtlMs; }
+      else if (store.get(key) === entry) store.delete(key);
+    },
   );
   return promise;
 }

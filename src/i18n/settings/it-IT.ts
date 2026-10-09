@@ -703,6 +703,7 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'connectors.mode.ask': "Richiede approvazione",
   'connectors.mode.block': "Bloccato",
   'connectors.mode.allowLocked': "Consenti sempre (le scritture chiedono sempre prima)",
+  'connectors.writesAlwaysAsk': "Le scritture richiedono sempre prima la tua approvazione, quindi questo strumento non può essere impostato su «Consenti sempre».",
   'connectors.permissionFor': "Autorizzazione di {tool}",
   'connectors.never': "mai",
   'connectors.drive.suggestList': "Elenca i file che hai salvato nel mio Google Drive",

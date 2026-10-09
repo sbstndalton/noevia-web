@@ -703,6 +703,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'connectors.mode.ask': "Goedkeuring nodig",
   'connectors.mode.block': "Geblokkeerd",
   'connectors.mode.allowLocked': "Altijd toestaan (schrijfacties vragen altijd eerst)",
+  'connectors.writesAlwaysAsk': "Schrijfacties hebben altijd eerst jouw goedkeuring nodig, dus deze tool kan niet op ‘Altijd toestaan’ staan.",
   'connectors.permissionFor': "Machtiging voor {tool}",
   'connectors.never': "nooit",
   'connectors.drive.suggestList': "Geef een lijst van de bestanden die je in mijn Google Drive hebt opgeslagen",

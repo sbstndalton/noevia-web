@@ -703,6 +703,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'connectors.mode.ask': "Krever godkjenning",
   'connectors.mode.block': "Blokkert",
   'connectors.mode.allowLocked': "Tillat alltid (skriving spør alltid først)",
+  'connectors.writesAlwaysAsk': "Skriving trenger alltid din godkjenning først, så dette verktøyet kan ikke settes til «Tillat alltid».",
   'connectors.permissionFor': "Tillatelse for {tool}",
   'connectors.never': "aldri",
   'connectors.drive.suggestList': "List opp filene du har lagret i min Google Drive",

@@ -703,6 +703,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'connectors.mode.ask': "Erfordert Freigabe",
   'connectors.mode.block': "Blockiert",
   'connectors.mode.allowLocked': "Immer erlauben (Schreibvorgänge fragen immer zuerst)",
+  'connectors.writesAlwaysAsk': "Schreibvorgänge brauchen immer zuerst deine Zustimmung, daher kann dieses Werkzeug nicht auf „Immer erlauben“ gestellt werden.",
   'connectors.permissionFor': "Berechtigung für {tool}",
   'connectors.never': "nie",
   'connectors.drive.suggestList': "Liste die Dateien auf, die du in meinem Google Drive gespeichert hast",

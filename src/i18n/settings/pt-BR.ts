@@ -703,6 +703,7 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'connectors.mode.ask': "Precisa de aprovação",
   'connectors.mode.block': "Bloqueado",
   'connectors.mode.allowLocked': "Sempre permitir (gravações sempre perguntam antes)",
+  'connectors.writesAlwaysAsk': "Gravações sempre precisam da sua aprovação antes, então esta ferramenta não pode ser definida como “Sempre permitir”.",
   'connectors.permissionFor': "Permissão de {tool}",
   'connectors.never': "nunca",
   'connectors.drive.suggestList': "Liste os arquivos que você salvou no meu Google Drive",

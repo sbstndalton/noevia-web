@@ -172,8 +172,8 @@ function RepoFiles({ repo, onClose, onDownload }: { repo: { repo: string; groups
       <tbody>{models.map(g => <tr key={g.shardBase}>
         <td><strong>{g.quant || '—'}</strong><small className="mm-mono">{g.files[0].path}{g.shards ? ` (${t('mm.repo.moreParts', { parts: g.shards - 1 })})` : ''}</small></td>
         <td>{g.size}</td>
-        <td>{g.fit.map(f => <span key={f.name} className={`mm-pill ${f.verdict === 'fits' ? 'is-good' : f.verdict === 'tight' ? 'is-warn' : 'is-bad'}`}>{VERDICT[f.verdict] ? t(VERDICT[f.verdict]) : f.verdict}</span>)}</td>
-        <td>{g.estimates?.length ? g.estimates.map(e => <span key={e.key} className="mm-est">{e.label}: {ctxShort(e.ctx)}{e.offload ? ` · ${t('mm.layersOnGpu', { gpu: e.gpu_layers, total: e.total_layers })} · ${t('mm.speedPct', { pct: e.speed_pct })}` : ''}</span>) : <small>—</small>}{g.nativeCtx ? <small>{t('mm.repo.trainedFor', { tokens: tokens(g.nativeCtx) })}</small> : null}</td>
+        <td>{g.fit.map(f => <span key={f.name} className={`mm-pill ${f.verdict === 'fits' ? 'is-good' : f.verdict === 'tight' ? 'is-warn' : 'is-bad'}`}>{t('mm.repo.fitOn', { backend: f.name, verdict: VERDICT[f.verdict] ? t(VERDICT[f.verdict]) : f.verdict })}</span>)}</td>
+        <td>{g.estimates?.length ? g.estimates.map(e => <span key={e.key} className="mm-est">{e.label}: {ctxShort(e.ctx)}{e.offload ? ` · ${t('mm.layersOnGpu', { gpu: e.gpu_layers, total: e.total_layers })} · ${t('mm.speedPct', { pct: e.speed_pct })}` : ''}</span>) : <small>{t('mm.repo.noEstimate')}</small>}{g.nativeCtx ? <small>{t('mm.repo.trainedFor', { tokens: tokens(g.nativeCtx) })}</small> : null}</td>
         <td><button className="popup-tab" onClick={() => onDownload(g.shards ? { repo: repo.repo, shardBase: g.shardBase } : { repo: repo.repo, path: g.files[0].path }, g.files[0].path)}>{t('mm.repo.download')}</button></td>
       </tr>)}</tbody>
     </table></div>
