@@ -175,3 +175,12 @@ test('tag matching reads the tags property as well as prose, and never reads cod
  // A heading is not a tag, and neither is anything inside a fence or backticks.
  assert.deepEqual(Array.from(markdownTags('# A heading\n`#inline`\n```\n#hidden\n```\n')),[]);
 });
+
+test('local rescan cancellation refuses before traversal and after a suspended file read',async()=>{
+  const api=load('diary-workspace.ts'),controller=new AbortController();let visited=0;
+  const root={async *values(){visited++;yield {kind:'file',name:'one.md',async getFile(){return {size:3,async text(){controller.abort();return 'one';}}}};yield {kind:'file',name:'two.md',async getFile(){throw Error('cancelled scan must not reach second file');}};}};
+  await assert.rejects(api.scanLocal(root,controller.signal),e=>e.name==='AbortError');
+  assert.equal(visited,1);
+  await assert.rejects(api.scanLocal(root,controller.signal),e=>e.name==='AbortError');
+  assert.equal(visited,1,'already cancelled scan must not enumerate');
+});

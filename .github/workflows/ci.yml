@@ -70,6 +70,8 @@ jobs:
       - run: npm ci --no-fund --no-audit
       - run: npm ci --no-fund --no-audit
         working-directory: ws/apps/web/server
+      # Host-only assembly regression: Docker test stages have neither integration sources nor git.
+      - run: node --test tests/workflow/*.test.cjs
       - run: npm run typecheck
       # #897 boundary guard: src/ and server/ must not import each other.
       - run: npm run check:boundaries
@@ -136,7 +138,9 @@ jobs:
           CORE: sib/noevia-core
         run: |
           set -euo pipefail
-          t="$RUNNER_TEMP/tree"; mkdir -p "$t/web" "$t/core"
+          t="$RUNNER_TEMP/tree"; mkdir -p "$t/web" "$t/core" "$t/noevia/build" "$t/rs"
+          # #1312: Node-only web acceptance context; native production assembly is tested separately.
+          cp ws/build/web-supervisor.sh "$t/noevia/build/web-supervisor.sh"
           git -C "$WEB" archive HEAD | tar -x -C "$t/web"
           git -C "$CORE" archive HEAD | tar -x -C "$t/core"
           printf 'NOEVIA_SHA=%s\nNOEVIA_WEB_SHA=%s\nNOEVIA_CORE_SHA=%s\nNOEVIA_SERVICES_SHA=%s\n' "$(git -C ws rev-parse HEAD)" \

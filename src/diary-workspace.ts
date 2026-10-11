@@ -51,6 +51,7 @@ interface LocalFileHandle {
 export interface DirectoryHandle {
   kind: 'directory'; name: string;
   isSameEntry?(other: DirectoryHandle): Promise<boolean>;
+  queryPermission?(options: { mode: 'read' }): Promise<PermissionState>;
   values(): AsyncIterable<DirectoryHandle | LocalFileHandle>;
   getDirectoryHandle(name: string, options?: { create: boolean }): Promise<DirectoryHandle>;
   getFileHandle(name: string, options?: { create: boolean }): Promise<LocalFileHandle>;
@@ -87,12 +88,14 @@ export function randomSessionId(): string {
 }
 /** An Error carrying the limit's code and numbers so the screen can word it per locale (diary-errors.ts, #640). */
 const limitError = (message: string, code: string, params: Record<string, number>): Error => Object.assign(new Error(message), { limit: { code, params } });
-export async function scanLocal(root: DirectoryHandle): Promise<Record<string, string>> {
+export async function scanLocal(root: DirectoryHandle, signal?: AbortSignal): Promise<Record<string, string>> {
   const files: Record<string, string> = {};
   let total = 0, visited = 0;
   async function scan(dir: DirectoryHandle, prefix = '', depth = 0) {
+    signal?.throwIfAborted();
     if (depth > 10) throw limitError('Folder nesting exceeds 10 levels. Choose a diary subfolder.', 'nesting', { levels: 10 });
     for await (const handle of dir.values()) {
+      signal?.throwIfAborted();
       if (++visited > 2000) throw limitError('Too many items. Choose a diary subfolder.', 'items', {});
       if (handle.name.startsWith('.')) continue;
       const path = prefix + handle.name;
@@ -102,6 +105,7 @@ export async function scanLocal(root: DirectoryHandle): Promise<Record<string, s
         total += file.size;
         if (file.size > 512*1024 || total > 12*1024*1024 || Object.keys(files).length >= 500) throw limitError('Choose a diary folder with at most 500 Markdown files, 512 KiB per file, and 12 MiB total.', 'folder', { files: 500, fileBytes: 512*1024, totalBytes: 12*1024*1024 });
         files[path] = await file.text();
+        signal?.throwIfAborted();
       }
     }
   }

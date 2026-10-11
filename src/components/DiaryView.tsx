@@ -63,6 +63,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   const toggleExtras = async () => {
     if (busyRef.current || extraBusy) return;
     if (extrasEnabled) { setExtrasEnabled(false); setExtraStatus(t('diary.extras.off')); return; }
+    invalidateLocalRefresh();
     setExtraBusy(true);
     try {
       const response = await apiFetch('/api/diary/context', { method: 'POST' });
@@ -106,6 +107,75 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   const [editorStatus, setEditorStatus] = useState('');
   const [storedVersion, setStoredVersion] = useState<DiaryFile | null>(null);
   const [revision, setRevision] = useState(0);
+  // A rescan may update the disk snapshot, never working copies or unsynced save bases.
+  const localRefreshEpoch = useRef(0);
+  const localRefreshFlight = useRef<{handle:DirectoryHandle;epoch:number;controller:AbortController;promise:Promise<void>} | null>(null);
+  const localRefreshState = useRef({folder,active,extraBusy,draft,editor,editText,storedVersion,pendingLocal,pendingSync});
+  localRefreshState.current = {folder,active,extraBusy,draft,editor,editText,storedVersion,pendingLocal,pendingSync};
+  const invalidateLocalRefresh = () => { localRefreshEpoch.current += 1; localRefreshFlight.current?.controller.abort(); };
+  const localRefreshBlocked = () => {
+    const state = localRefreshState.current;
+    return busyRef.current || state.extraBusy || !!state.draft.trim() || !!state.storedVersion ||
+      !!(state.editor && state.editText !== (state.editor.content ?? '')) ||
+      Object.keys(state.pendingLocal).length > 0 || Object.keys(pendingSyncRef.current).length > 0;
+  };
+  const refreshLocalFolder = (): Promise<void> => {
+    const state = localRefreshState.current, handle = state.folder;
+    if (!handle || !state.active || document.visibilityState === 'hidden') return Promise.resolve();
+    if (localRefreshBlocked()) {
+      setFilesError(`${t(busyRef.current || state.extraBusy ? 'diary.workspace.working' : 'diary.workspace.unsavedChanges')} · ${t('diary.workspace.refreshFiles')}`);
+      return Promise.resolve();
+    }
+    const running = localRefreshFlight.current;
+    if (running?.handle === handle && running.epoch === localRefreshEpoch.current) return running.promise;
+    running?.controller.abort();
+    const epoch = ++localRefreshEpoch.current, controller = new AbortController();
+    const current = () => epoch === localRefreshEpoch.current && localRefreshState.current.folder === handle &&
+      localRefreshState.current.active && document.visibilityState !== 'hidden';
+    setFilesError(''); setFilesLoading(true);
+    const promise = Promise.resolve().then(async () => {
+      try {
+        if (handle.queryPermission && await handle.queryPermission({mode:'read'}) !== 'granted') {
+          if (current()) setFilesError(`${t('diary.errors.needFolderAccess')} ${t('diary.wizard.chooseFolder')}`);
+          return;
+        }
+        if (!current() || localRefreshBlocked()) return;
+        const snapshot = await scanLocal(handle, controller.signal);
+        if (current() && !localRefreshBlocked()) setLocalFiles(snapshot);
+      } catch (e) {
+        if (current() && !controller.signal.aborted) setFilesError(diaryErrorText(t,e,appLocale()));
+      } finally {
+        if (localRefreshFlight.current?.controller === controller) {
+          localRefreshFlight.current = null;
+          if (localRefreshState.current.folder === handle && localRefreshState.current.active && localRefreshBlocked())
+            setFilesError(`${t('diary.workspace.unsavedChanges')} · ${t('diary.workspace.refreshFiles')}`);
+          setFilesLoading(false);
+        }
+      }
+    });
+    localRefreshFlight.current = {handle,epoch,controller,promise};
+    return promise;
+  };
+  const previousLocalActivation = useRef({folder,active});
+  useEffect(() => {
+    const previous = previousLocalActivation.current;
+    previousLocalActivation.current = {folder,active};
+    if (folder && active && previous.folder === folder && !previous.active) void refreshLocalFolder();
+    const resume = () => {
+      if (document.visibilityState === 'hidden') invalidateLocalRefresh();
+      else void refreshLocalFolder();
+    };
+    if (folder && active) {
+      document.addEventListener('visibilitychange',resume);
+      window.addEventListener('focus',resume);
+    }
+    return () => {
+      invalidateLocalRefresh();
+      document.removeEventListener('visibilitychange',resume);
+      window.removeEventListener('focus',resume);
+    };
+  }, [folder,active]);
+
   // #456: every place that bumps `revision`/`fileRevision` to make the effects below refetch
   // represents a moment the Diary's server-side file listing may have changed (a capture landed
   // on disk, a storage reconnect, a manual refresh) — invalidate the shared `listFiles` cache
@@ -114,7 +184,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   const bumpRevision = () => { invalidateFileListings(); setRevision(n => n + 1); };
   // #1168: set only by a Retry press; the next file listing consumes it, so automatic reads never carry it.
   const explicitRetry = useRef(false);
-  const retryFileList = () => { explicitRetry.current = true; bumpFileRevision(); };
+  const retryFileList = () => { if (folder) void refreshLocalFolder(); else { explicitRetry.current = true; bumpFileRevision(); } };
   const bumpFileRevision = () => { invalidateFileListings(); setFileRevision(n => n + 1); };
   const session = useRef(randomSessionId());
   const [recoveryOwner,setRecoveryOwner]=useState('');
@@ -269,7 +339,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   useEffect(() => {
     if (!active) return; // paused while hidden; re-runs (and refreshes) on activation
     let stale = false;
-    setFiles([]); setFilesError(''); setFilesLoading(true);
+    setFiles([]); if (!folder) setFilesError(''); setFilesLoading(true);
     const storageRetry = explicitRetry.current; explicitRetry.current = false;
     if (folder) {
       const entries = new Map<string, FileEntry>();
@@ -278,7 +348,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
         const rest = path.slice(prefix.length), name = rest.split('/')[0];
         entries.set(name, { name, path: prefix+name, isDir: rest.includes('/') });
       }
-      setFiles([...entries.values()]); setFilesLoading(false);
+      setFiles([...entries.values()]); setFilesLoading(!!localRefreshFlight.current);
     } else void listFiles(filePath, undefined, storageRetry).then(r => { if (!stale) setFiles(r.files); }).catch(e => { if (!stale) setFilesError(diaryErrorText(t, e, appLocale())); }).finally(()=>{if(!stale)setFilesLoading(false);});
     return () => { stale = true; };
   }, [folder, localFiles, filePath, revision, fileRevision, active]);
@@ -290,6 +360,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
 
   const run = async (fn: () => Promise<void>) => {
     if (busyRef.current) return;
+    invalidateLocalRefresh();
     busyRef.current = true; setBusy(true); setError('');
     try { await fn(); } catch (e) { setError(diaryErrorText(t, e, appLocale())); }
     finally { busyRef.current = false; setBusy(false); }
@@ -429,6 +500,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   const editorOperation = async (label: string, action: () => Promise<void>, restoreFocus = false) => {
     if (busyRef.current) return;
     const previousFocus=document.activeElement as HTMLElement|null;
+    invalidateLocalRefresh();
     busyRef.current=true;setBusy(true);setEditorError('');setEditorStatus(label);
     try { await action(); }
     catch(e) { setEditorError(diaryErrorText(t,e,appLocale()));setEditorStatus(t('diary.editor.operationFailed')); }
@@ -446,11 +518,13 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   };
   const newEditor = () => {
     if (busyRef.current || !canLeaveEditor()) return;
+    invalidateLocalRefresh();
     setEditorNavigation(n=>n+1);setEditor({path:(filePath?filePath+'/':'')+'notes.md',content:null,version:null});
     setEditText('');setEditorError('');setEditorStatus(t('diary.editor.newFile'));setStoredVersion(null);
   };
   const closeEditor = () => {
     if (busyRef.current || !canLeaveEditor()) return;
+    invalidateLocalRefresh();
     setEditor(null);setEditorError('');setStoredVersion(null);
     requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('.diary-home-link')?.focus());
   };
@@ -499,19 +573,20 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
     void run(async () => {
       const handle = await selection;
       const snapshot = await scanLocal(handle);
-      setFolder(handle); setLocalFiles(snapshot); setWizard(null); setFilePath(''); setMonth(null); setDay(null); setTurns({}); setStatus(t('diary.status.localFolderConnected'));
+      setFilesError(''); setFolder(handle); setLocalFiles(snapshot); setWizard(null); setFilePath(''); setMonth(null); setDay(null); setTurns({}); setStatus(t('diary.status.localFolderConnected'));
     });
   };
   const disconnect = () => {
     if (busy || Object.keys(pendingLocal).length) return;
     if (pendingCount && !window.confirm(t('diary.confirm.someFilesNotSynced'))) return;
+    invalidateLocalRefresh();
     setFolder(null); setPendingSync({}); pendingSyncRef.current = {}; setLocalFiles({}); setTurns({}); setMonth(null); setDay(null); setFilePath(''); bumpRevision();
   };
 
   const blockedReason = wizard === 'local' ? directoryPickerBlockedReason() : null;
   const composer = <div className="diary-compose">
     <label htmlFor="diary-draft">{day ? t('diary.compose.addToDay', { day: dayLabel(day) }) : t('diary.compose.whatsOnYourMind')}</label>
-    <div className="composer-inner chat-composer-inner pane"><ComposerTextarea id="diary-draft" rows={3} placeholder={day ? t('diary.compose.continueDay') : emptyDiary ? t('diary.compose.writeFirstEntry') : t('diary.compose.writeOrAsk')} value={draft} disabled={busy} onValue={setDraft} onSubmit={submit} /><ComposerActions diary project={extrasEnabled ? extraProject : null} disabled={busy || extraBusy} onChanged={refreshExtraProject} onModels={()=>setExtraModels(true)} onBusy={setExtraBusy} onStatus={setExtraStatus} header={<>
+    <div className="composer-inner chat-composer-inner pane"><ComposerTextarea id="diary-draft" rows={3} placeholder={day ? t('diary.compose.continueDay') : emptyDiary ? t('diary.compose.writeFirstEntry') : t('diary.compose.writeOrAsk')} value={draft} disabled={busy} onValue={value=>{invalidateLocalRefresh();setDraft(value);}} onSubmit={submit} /><ComposerActions diary project={extrasEnabled ? extraProject : null} disabled={busy || extraBusy} onChanged={refreshExtraProject} onModels={()=>setExtraModels(true)} onBusy={value=>{invalidateLocalRefresh();setExtraBusy(value);}} onStatus={setExtraStatus} header={<>
       <p><strong>{t('diary.compose.retrievalCaptureTitle')}</strong> · {t('diary.compose.alwaysOn')}</p>
       <label className="composer-tool-option"><input type="checkbox" checked={extrasEnabled} disabled={busy || extraBusy} onChange={()=>void toggleExtras()} /><span>{t('diary.compose.extraAttachments')}<small>{t('diary.compose.offByDefault')}</small></span></label>
       {extrasEnabled && <button type="button" onClick={()=>setExtraFiles(true)}>{t('diary.compose.manageAttachments', { count: extraProject?.files.length || 0 })}</button>}
@@ -544,14 +619,14 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
     </section><DiaryContextPanel filesLoading={filesLoading} filesError={filesError} retryFiles={retryFileList} recovery={folder && <section><label className="diary-sync-toggle"><input type="checkbox" checked={localRecoveryEnabled} disabled={busy || !recoveryOwner} onChange={e=>void toggleLocalRecovery(e.target.checked)} />{t('diary.recovery.saveOnBrowser')}</label><p className="diary-context-note">{t('diary.recovery.storesNote')}</p></section>} busy={busy} files={files} filePath={filePath} setFilePath={setFilePath} openFile={openFile}
       newFile={newEditor}
       chooseStorage={() => setWizard('choose')} pendingCount={pendingCount} pendingLocal={Object.keys(pendingLocal).length > 0}
-      managed={storageMode === 'managed'} storageStatus={<DiaryStorageStatus active={active} onBusyChange={value=>{busyRef.current=value;setBusy(value);}} busy={busy} revision={revision} onMode={setStorageMode} onImported={()=>{bumpRevision();setWizard(null);}} />} folderName={folder?.name} savedLabel={savedLabel} corpusRoot={storage?.corpusRoot} sync={sync} setSync={setSync} disconnect={disconnect} /></div>
+      managed={storageMode === 'managed'} storageStatus={<DiaryStorageStatus active={active} onBusyChange={value=>{invalidateLocalRefresh();busyRef.current=value;setBusy(value);}} busy={busy} revision={revision} onMode={setStorageMode} onImported={()=>{bumpRevision();setWizard(null);}} />} folderName={folder?.name} savedLabel={savedLabel} corpusRoot={storage?.corpusRoot} sync={sync} setSync={setSync} disconnect={disconnect} /></div>
     {extraModels && extraProject && <ModelPopup projects={[extraProject]} activeProject={extraProject} onClose={()=>setExtraModels(false)} onProjectsChanged={refreshExtraProject} />}
     {extraFiles && <DiaryModal title={t('diary.attachments.title')} onClose={()=>setExtraFiles(false)}><p>{t('diary.attachments.storedSeparately')}</p>{(extraProject?.files || []).map(file=><div className="model-row" key={file.name}><span><bdi>{file.name}</bdi><small> · {file.attachment?.state || file.document?.state || t('diary.attachments.ready')}</small></span><button className="popup-tab" disabled={busy || extraBusy} onClick={()=>void (async()=>{if(!extraProject || !window.confirm(t('diary.confirm.deleteAttachment', { name: file.name })))return;setExtraBusy(true);try{await deleteProjectFile(extraProject.id,file.name);await refreshExtraProject();}catch(err){setExtraStatus(String(err));}finally{setExtraBusy(false);}})()}>{t('diary.attachments.delete')}</button></div>)}</DiaryModal>}
 
     {wizard && <DiaryModal title={t('diary.wizard.title')} onClose={()=>{if(!busy)setWizard(null);}}>{error&&<p className="conn-banner" role="alert">{error}</p>}{wizard==='choose'?<div className="diary-storage-options"><button className="month-card surface" disabled={busy} onClick={()=>setWizard('local')}><strong>{t('diary.wizard.browserFolder')}</strong><span>{t('diary.wizard.browserFolderHint')}</span></button><button className="month-card surface" disabled={busy || !!folder} onClick={()=>setWizard('online')}><strong>{storageMode === 'managed' ? t('diary.wizard.backupConnection') : t('diary.wizard.existingConnection')}</strong><span>{storageMode === 'managed' ? t('diary.wizard.backupConnectionHint') : t('diary.wizard.existingConnectionHint')}</span></button>{folder&&<p>{t('diary.wizard.returnToSavedStorage')}</p>}</div>:wizard==='local'?<div className="diary-wizard-step"><p>{t('diary.wizard.selectFolder')}</p><p>{t('diary.wizard.smbHint')}</p><label className="diary-sync-toggle"><input type="checkbox" checked={sync} onChange={e=>setSync(e.target.checked)} />{t('diary.wizard.alsoSyncTo', { label: savedLabel })}</label><p className="diary-context-note">{t('diary.wizard.diaryTextSentNote')}</p>{blockedReason==='insecure-context'&&<p role="alert">{t('diary.wizard.insecureContext')}</p>}{blockedReason==='unsupported'&&<p role="alert">{t('diary.wizard.unsupportedBrowser')}</p>}<button className="modal-btn primary" disabled={busy || !directoryPicker()} onClick={connectLocal}>{t('diary.wizard.chooseFolder')}</button><button className="modal-btn secondary" disabled={busy} onClick={()=>setWizard('choose')}>{t('diary.wizard.back')}</button></div>:<StoragePicker onlineOnly backupOnly={storageMode === 'managed'} onSaved={value=>{storageRequest.current+=1;setStorageError('');setStorage(value);setWizard(null);setFilePath('');bumpRevision();setTurns({});}} />}</DiaryModal>}
     {editor && <DiaryMarkdownWorkspace navigationKey={editorNavigation} file={editor} text={editText} busy={busy} error={editorError} status={editorStatus} stored={storedVersion} managed={storageMode === 'managed'} local={!!folder} syncPending={!!pendingSync[editor.path]}
       files={files} folderPath={filePath} filesLoading={filesLoading} filesError={filesError}
-      onText={setEditText} onPath={path=>setEditor({...editor,path})} onFolder={setFilePath} onOpen={openFile} onNew={newEditor}
+      onText={value=>{invalidateLocalRefresh();setEditText(value);}} onPath={path=>{invalidateLocalRefresh();setEditor({...editor,path});}} onFolder={setFilePath} onOpen={openFile} onNew={newEditor}
       listTemplates={async()=>{
         // The Templates folder at the Diary's root, Obsidian's convention. Its absence is the
         // normal case and means no templates, not an error.
@@ -571,7 +646,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
           return {files:[...entries.values()]};
         },read:async(file)=>({path:file,content:snapshot[file] ?? null,version:null})});
       }}
-      onRefresh={()=>bumpFileRevision()} onRetryFiles={retryFileList} onSave={saveEditor} onCompare={compareStored} onRebase={()=>acceptStored(false)} onReload={()=>acceptStored(true)} onClose={closeEditor} />}
+      onRefresh={()=>folder?void refreshLocalFolder():bumpFileRevision()} onRetryFiles={retryFileList} onSave={saveEditor} onCompare={compareStored} onRebase={()=>acceptStored(false)} onReload={()=>acceptStored(true)} onClose={closeEditor} />}
 
   </main>;
 }
