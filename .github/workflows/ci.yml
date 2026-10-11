@@ -70,6 +70,8 @@ jobs:
       - run: npm ci --no-fund --no-audit
       - run: npm ci --no-fund --no-audit
         working-directory: ws/apps/web/server
+      # Host-only assembly regression: Docker test stages have neither integration sources nor git.
+      - run: node --test tests/workflow/*.test.cjs
       - run: npm run typecheck
       # #897 boundary guard: src/ and server/ must not import each other.
       - run: npm run check:boundaries

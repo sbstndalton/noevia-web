@@ -13,7 +13,8 @@ const integration = process.env.NOEVIA_CHECKOUT || path.resolve(web, '../..');
 
 test('web image assembly supplies the actual Dockerfile COPY inputs', () => {
   const workflow = fs.readFileSync(path.join(self, '.github/workflows/ci.yml'), 'utf8');
-  const image = workflow.split(/^  web-image:\s*$/m)[1];
+  const [client, image] = workflow.split(/^  web-image:\s*$/m);
+  assert.match(client, /^      - run: node --test tests\/workflow\/\*\.test\.cjs$/m, 'host CI must invoke workflow regression');
   assert.ok(image, 'web-image job must exist');
   // Parse the existing literal shell step, preserving its bytes and environment values.
   const steps = image.split(/^      - /m);
@@ -29,6 +30,8 @@ test('web image assembly supplies the actual Dockerfile COPY inputs', () => {
   const docker = fs.readFileSync(path.join(integration, 'build/web.Dockerfile'), 'utf8');
   assert.match(docker, /^COPY rs\/ \/src\/$/m);
   assert.match(docker, /^COPY noevia\/build\/web-supervisor\.sh \/app\/web-supervisor\.sh$/m);
+  assert.match(docker, /node --test --test-timeout=120000 tests\/client\/\*\.test\.cjs tests\/server\/\*\.test\.cjs/);
+  assert.doesNotMatch(docker, /node --test[^\n]*(?:tests\/workflow|tests\/\*\*)/, 'Docker test glob must exclude host-only workflow tests');
   const supervisor = fs.readFileSync(path.join(integration, 'build/web-supervisor.sh'));
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'noevia-web-context-'));
   try {
