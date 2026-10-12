@@ -176,6 +176,8 @@ export function ProjectView({
   const [skillFiles, setSkillFiles] = useState<string[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [browsing, setBrowsing] = useState(false);
+  // #1297: the hidden file input the visible Upload files button opens.
+  const uploadInput = useRef<HTMLInputElement>(null);
   const [addError, setAddError] = useState('');
   const [busyDocs, setBusyDocs] = useState(false);
   const [uploadRows, setUploadRows] = useState<{ name: string; stage: string; percent?: number; started: number; finished?: number }[]>([]);
@@ -390,10 +392,11 @@ export function ProjectView({
               {/* #1570: the three source actions are one row. */}
               <div className="source-actions">
                 <button className="btn btn-secondary btn-sm" disabled={syncing || busyDocs} onClick={()=>void updateFolders(project.sourceFolders || [])}>{syncing ? t('projects.view.refreshing') : t('projects.view.refreshFromStorage')}</button>
-                <label className={`btn btn-secondary btn-sm${busyDocs ? ' is-busy' : ''}`}>
+                {/* #1297: a native button opens the picker, so Tab reaches it and Enter/Space activate it. */}
+                <button type="button" className={`btn btn-secondary btn-sm${busyDocs ? ' is-busy' : ''}`} disabled={busyDocs} aria-busy={busyDocs || undefined} onClick={() => uploadInput.current?.click()}>
                   {busyDocs ? t('projects.view.uploadingFiles') : t('projects.view.uploadFiles')}
-                  <input type="file" multiple disabled={busyDocs} style={{ display: 'none' }} onChange={e => { void addFiles(e.target.files); e.target.value = ''; }} />
-                </label>
+                </button>
+                <input ref={uploadInput} type="file" multiple disabled={busyDocs} style={{ display: 'none' }} onChange={e => { void addFiles(e.target.files); e.target.value = ''; }} />
                 <button className="btn btn-secondary btn-sm" onClick={() => setBrowsing(true)}>{t('projects.view.importFromStorage')}</button>
               </div>
               <p className="rail-empty">{t('projects.view.uploadLimitsNote')}</p>
