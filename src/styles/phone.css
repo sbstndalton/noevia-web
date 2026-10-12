@@ -24,37 +24,85 @@
 
 /* ── The inference strip under the composer ────────────────────────────────
    A phone gets one line — status, model, speed — and taps to see the rest. A
-   desktop has the width, so the whole thing is always open and reads across
-   the row instead of stacking into a panel. */
+   desktop has the width, so the strip is one row that reads across the composer.
+   #1527/#1548: the row never wraps and never grows. It reserves one line whatever the
+   metrics say, so the composer above it holds still while a reply streams. The model
+   name and the pairs truncate with an ellipsis, and the routing pill keeps its size.
+   Where the row cannot fit every pair (measured on the strip's own width, not the
+   window's), the low-priority pairs sit behind a compact toggle and open as a popover
+   above the strip; the popover is out of flow, so it never pushes the chat up. */
 .stats-disclosure.is-wide {
-  flex-direction: row; align-items: center; flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
+  container-type: inline-size;
+  position: relative;
+  display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center;
+  gap: var(--space-1) var(--space-4);
+  box-sizing: border-box; min-width: 0; min-height: 36px;
   margin: 0 clamp(12px, 2vw, 24px) max(8px, env(safe-area-inset-bottom));
-  padding: 0;
+  padding: var(--space-1) var(--space-3);
 }
 .stats-disclosure.is-wide .stats-bar-static {
   margin: 0; min-height: 0; padding: 0; border: 0; background: none; cursor: default;
-  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  display: inline-flex; align-items: center; gap: 6px; flex: 0 1 auto; min-width: 4em; max-width: 40%;
+  overflow: hidden; white-space: nowrap;
 }
+.stats-disclosure.is-wide .stats-bar-static .stats-live-dot { flex: none; }
+.stats-disclosure.is-wide .stats-bar-static .stats-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stats-disclosure.is-wide .stats-bar-static .stats-value { flex: none; white-space: nowrap; }
 .stats-disclosure.is-wide .stats-details {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-4);
-  width: auto; flex: 1; min-width: 0;
+  display: flex; flex: 1 0 auto; flex-wrap: nowrap; align-items: baseline; gap: var(--space-1) var(--space-4);
+  width: auto; min-width: 0; overflow: hidden;
   margin: 0; padding: 0; border: 0; background: none; border-radius: 0;
 }
-.stats-disclosure.is-wide .stats-details > div { display: inline-flex; align-items: baseline; gap: 6px; }
-.stats-disclosure.is-wide .stats-details dt { margin: 0; }
+.stats-disclosure.is-wide .stats-details > div {
+  display: inline-flex; flex: 0 1 auto; align-items: baseline; gap: 6px; min-width: 0; position: relative; white-space: nowrap;
+}
+.stats-disclosure.is-wide .stats-details dt { margin: 0; flex: none; }
+.stats-disclosure.is-wide .stats-details > div[data-priority='high'] { flex: none; }
 .stats-disclosure.is-wide .stats-details dt::after { content: ''; }
-.stats-disclosure.is-wide .stats-details .stats-mtp { flex-basis: 100%; }
-.stats-disclosure.is-wide .stats-details .stats-mtp progress { display: inline-block; width: 120px; margin: 0 0 0 6px; }
+.stats-disclosure.is-wide .stats-details dd { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stats-disclosure.is-wide .stats-details .stats-mtp { display: inline-flex; flex-direction: row; align-items: baseline; gap: 6px; max-width: none; }
+.stats-disclosure.is-wide .stats-details .stats-mtp dd { overflow: visible; }
+.stats-disclosure.is-wide .stats-details .stats-mtp progress { display: inline-block; width: 60px; height: 5px; margin: 0 0 0 6px; }
 /* A separator between the pairs costs no height and stops the row reading as one sentence.
-   It sits in the gap to each pair's left; clipping the list's left edge hides the one on
-   whichever pair starts a wrapped line, so no line ever begins with a stray dot. */
+   It sits in the gap to each pair's left; the list's own edge clips the one on the first pair. */
 .stats-disclosure.is-wide > * + * { position: relative; }
-.stats-disclosure.is-wide .stats-details { clip-path: inset(-8px -8px -8px 0); }
-.stats-disclosure.is-wide .stats-details > div { position: relative; }
 .stats-disclosure.is-wide .stats-details > div::before {
   content: '·'; position: absolute; left: calc(var(--space-4) / -2); transform: translateX(-50%);
   color: var(--md-outline);
+}
+.stats-disclosure.is-wide > .routing-details:not([open]) { flex: none; max-width: 240px; }
+.stats-disclosure.is-wide > .routing-details summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (pointer: fine) {
+  .stats-disclosure.is-wide > .routing-details summary { min-height: 0; padding-block: 2px; }
+}
+/* The toggle exists only where the row is too narrow for every pair. */
+.stats-disclosure.is-wide .stats-more { display: none; }
+@container (max-width: 1479px) {
+  .stats-disclosure.is-wide .stats-more {
+    display: inline-flex; flex: none; align-items: center; justify-content: center; box-sizing: border-box;
+    width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--radius-control);
+    background: transparent; color: var(--text-secondary); cursor: pointer;
+  }
+  .stats-disclosure.is-wide .stats-more > svg { transition: transform var(--motion-quick) var(--ease-considered); }
+  .stats-disclosure.is-wide .stats-more[aria-expanded='true'] > svg { transform: rotate(-90deg); }
+  .stats-disclosure.is-wide .stats-more:hover { color: var(--text-primary); background: var(--nav-hover); }
+  .stats-disclosure.is-wide .stats-more:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+  .stats-disclosure.is-wide .stats-details > div[data-priority='low'] { display: none; }
+  .stats-disclosure.is-wide.is-more-open .stats-details {
+    position: absolute; right: var(--space-3); bottom: calc(100% + var(--space-2)); z-index: 15;
+    display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-2) var(--space-4);
+    width: min(360px, calc(100% - var(--space-6))); box-sizing: border-box; overflow: visible;
+    padding: var(--space-3) var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--radius-card);
+    background: var(--bg-surface); box-shadow: var(--shadow-pop);
+  }
+  .stats-disclosure.is-wide.is-more-open .stats-details > div[data-stat] { display: contents; }
+  .stats-disclosure.is-wide.is-more-open .stats-details > div[data-stat]::before { content: none; }
+  .stats-disclosure.is-wide.is-more-open .stats-details dd { overflow: visible; white-space: normal; overflow-wrap: anywhere; }
+  .stats-disclosure.is-wide.is-more-open .stats-details .stats-mtp { display: contents; }
+  .stats-disclosure.is-wide.is-more-open .stats-details .stats-mtp progress { display: block; width: 100%; margin: 4px 0 0; }
+}
+@media (pointer: coarse) {
+  .stats-disclosure.is-wide .stats-more { width: 44px; height: 44px; }
 }
 
 @media (max-width: 700px) {

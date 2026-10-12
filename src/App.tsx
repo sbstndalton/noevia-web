@@ -44,6 +44,7 @@ import {
 } from './api';
 import type { RoutingModeSettings } from './api';
 import { ForceLocalToggle, isRouteTarget } from './components/RouteControls';
+import { NEW_PROJECT_TOOLS_MODE } from './tools-mode';
 import { FrameChips } from './components/FrameChips';
 import { acceptPlan, acceptedFrame, chatDestinationIds, chatDestinations, frameDraftReducer, startDraft } from './chat-frame';
 import { frameWithLink, keepLinks, MAX_FRAME_LINKS } from './chat-organise';
@@ -1372,7 +1373,8 @@ export default function App(): JSX.Element {
   const handleCreateProject = useCallback(
     async (body: { icon?: string; color?: string; name: string; goal: string; instructions: string; files: ProjectFile[] }) => {
       // No routing sent: the server applies the default from Models → Routing.
-      const project = await createProject(body);
+      // #1522: a new project starts Automatic (tools chosen by routing), not on the old Manual default.
+      const project = await createProject({ ...body, toolsMode: NEW_PROJECT_TOOLS_MODE });
       refreshProjects();
       setView({ kind: 'project', id: project.id });
     },
