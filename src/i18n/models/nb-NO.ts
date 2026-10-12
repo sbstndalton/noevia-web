@@ -136,6 +136,7 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.recover.healthUnavailableHelp': "Kunne ikke sjekke modellasteren. Prøv igjen eller åpne loggene.",
   'mm.recover.noEngine': "Fant ingen motor",
   'mm.recover.running': "{engine} kjører",
+  'mm.recover.engineIndex': "Motor {index}",
   'mm.recover.runningWith': "{engine} kjører · {model} lastet",
   'mm.recover.openLogs': "Åpne logger",
   'mm.recover.checking': "Sjekker jobber…",

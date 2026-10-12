@@ -136,6 +136,7 @@ export const PT_BR_MODELS: ModelsCatalogue = {
   'mm.recover.healthUnavailableHelp': "Não foi possível verificar o carregador de modelos. Verifique novamente ou abra os registros.",
   'mm.recover.noEngine': "Nenhum motor encontrado",
   'mm.recover.running': "{engine} em execução",
+  'mm.recover.engineIndex': "Motor {index}",
   'mm.recover.runningWith': "{engine} em execução · {model} carregado",
   'mm.recover.openLogs': "Abrir logs",
   'mm.recover.checking': "Verificando tarefas…",

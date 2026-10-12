@@ -136,6 +136,7 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.recover.healthUnavailableHelp': "Det gick inte att kontrollera modellinläsaren. Försök igen eller öppna loggarna.",
   'mm.recover.noEngine': "Ingen motor hittades",
   'mm.recover.running': "{engine} körs",
+  'mm.recover.engineIndex': "Motor {index}",
   'mm.recover.runningWith': "{engine} körs · {model} inläst",
   'mm.recover.openLogs': "Öppna loggar",
   'mm.recover.checking': "Kontrollerar jobb…",
