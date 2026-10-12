@@ -1,7 +1,8 @@
 'use strict';
-// #1527: the inference strip under the composer is one row (wide variant), and the lower-priority
-// pairs open from a compact toggle. The browser proof is qa/strip-layout-1527.cjs; this file pins
-// the contract that proof depends on, so a refactor that drops a hook fails here before the browser.
+// #1527 + #1548: the inference strip under the composer is one row (wide variant), the lower-priority
+// pairs open from a compact toggle, and the row reserves its height. The browser proof is
+// qa/strip-layout-1527.cjs; this file pins the contract that proof depends on, so a refactor that
+// drops a hook fails here before it reaches the browser.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path');
@@ -60,4 +61,10 @@ test('#1527: StatsBar tags each pair with a priority and wires the toggle to the
 test('#1527: the toggle reuses the existing show/hide copy, so no new translation key is needed', () => {
   assert.match(statsBar, /aria-label=\{moreOpen \? t\('stats\.hide'\) : t\('stats\.show'\)\}/);
   assert.ok(read('i18n/en-GB.ts').includes("'stats.show': 'Show inference details'"));
+});
+
+test('#1548: the wide row reserves its height, so the composer above it does not move', () => {
+  const block = wideBlock();
+  assert.match(block, /\.stats-disclosure\.is-wide \{[^}]*min-height: 36px;/);
+  assert.match(block, /\.stats-disclosure\.is-wide \.stats-bar-static \{[^}]*min-height: 0;/, 'the static line does not add its own height');
 });

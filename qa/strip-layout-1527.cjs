@@ -1,5 +1,6 @@
-// #1527 (owner, 2026-10-12): the inference strip under the composer must be one row that never
-// wraps or clips, and must keep its values whole at the owner's desktop size. Where the row cannot hold every pair, the low-priority
+// #1527 + #1548 (owner, 2026-10-12): the inference strip under the composer must be one row that
+// never wraps, clips or grows, must not move the composer when a reply starts, and must keep its
+// values whole at the owner's desktop size. Where the row cannot hold every pair, the low-priority
 // pairs sit behind a compact toggle that opens an aligned popover. Offline: the app is built from
 // this checkout and every API is a synthetic stub; nothing reaches a real server.
 //
@@ -113,6 +114,17 @@ const measure = (page) => page.evaluate(() => {
       assert.deepEqual(m.truncated, [], 'the values are whole');
       assert.deepEqual(m.clipped, [], 'no pair is cut by the edge of the list');
       await page.close();
+    });
+
+    await check('#1548 the composer holds its place when a routing decision arrives (reply starts)', async () => {
+      const before = await openChat(browser, { width: 849, height: 959, withRoute: false });
+      const a = await measure(before);
+      await before.close();
+      const after = await openChat(browser, { width: 849, height: 959, withRoute: true });
+      const b = await measure(after);
+      await after.close();
+      assert.ok(Math.abs(a.composerTop - b.composerTop) <= 1, `composer top ${a.composerTop} -> ${b.composerTop}`);
+      assert.equal(a.height, b.height, 'the strip height does not depend on the metrics shown');
     });
 
     await check('#1527 at a narrower desktop (790px) the lower-priority pairs sit behind the toggle, and the toggle is shown', async () => {
