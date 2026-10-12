@@ -123,7 +123,7 @@ export const FR_FR_DIARY: DiaryCatalogue = {
   'diary.conversation.diaryActivity': "Activité du journal",
   'diary.conversation.workingOnDiary': "Traitement de votre journal…",
   'diary.attachments.title': "Pièces jointes optionnelles du journal",
-  'diary.attachments.storedSeparately': "Stocké séparément de votre corpus de journal. Utilisé uniquement lorsque les extras sont activés.",
+  'diary.attachments.storedSeparately': "Stocké séparément de vos entrées de journal. Utilisé uniquement lorsque les extras sont activés.",
   'diary.attachments.ready': "prêt",
   'diary.confirm.deleteAttachment': "Supprimer la pièce jointe {name} du stockage ?",
   'diary.attachments.delete': "Supprimer la pièce jointe",

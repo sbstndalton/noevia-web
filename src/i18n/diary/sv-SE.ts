@@ -123,7 +123,7 @@ export const SV_SE_DIARY: DiaryCatalogue = {
   'diary.conversation.diaryActivity': "Dagboksaktivitet",
   'diary.conversation.workingOnDiary': "Arbetar med din dagbok …",
   'diary.attachments.title': "Valfria dagboksbilagor",
-  'diary.attachments.storedSeparately': "Lagras separat från ditt dagbokskorpus. Används endast när extra är på.",
+  'diary.attachments.storedSeparately': "Lagras separat från dina dagboksinlägg. Används endast när extra är på.",
   'diary.attachments.ready': "klar",
   'diary.confirm.deleteAttachment': "Ta bort bilagan {name} från lagringen?",
   'diary.attachments.delete': "Ta bort bilaga",

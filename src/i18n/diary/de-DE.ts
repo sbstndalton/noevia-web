@@ -123,7 +123,7 @@ export const DE_DE_DIARY: DiaryCatalogue = {
   'diary.conversation.diaryActivity': "Tagebuchaktivität",
   'diary.conversation.workingOnDiary': "Dein Tagebuch wird bearbeitet …",
   'diary.attachments.title': "Optionale Tagebuch-Anhänge",
-  'diary.attachments.storedSeparately': "Getrennt von deinem Tagebuchkorpus gespeichert. Nur verwendet, wenn Extras aktiviert sind.",
+  'diary.attachments.storedSeparately': "Getrennt von deinen Tagebucheinträgen gespeichert. Nur verwendet, wenn Extras aktiviert sind.",
   'diary.attachments.ready': "bereit",
   'diary.confirm.deleteAttachment': "Anhang {name} aus dem Speicher löschen?",
   'diary.attachments.delete': "Anhang löschen",
