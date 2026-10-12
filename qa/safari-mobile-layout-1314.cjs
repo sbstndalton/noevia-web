@@ -17,7 +17,7 @@ async function keyboardScroll(locator) {
   await locator.press('End');
   await locator.page().waitForFunction(() => {
     const el = document.activeElement;
-    return el && el.scrollTop > 0;
+    return el && el.scrollTop > 0 && el.scrollTop + el.clientHeight >= el.scrollHeight - 2;
   });
   assert.ok(await locator.evaluate(el => el.scrollTop + el.clientHeight >= el.scrollHeight - 2), 'Keyboard reaches the complete error tail');
 }
