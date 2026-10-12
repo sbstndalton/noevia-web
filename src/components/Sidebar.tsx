@@ -28,7 +28,9 @@ import { useT } from '../i18n';
 import type { MessageKey } from '../i18n';
 
 // Code-mode destinations: the English name is the page's identity (onCodePage), the key its label.
-const CODE_PAGES: [page: string, icon: string, key: MessageKey][] = [['Pull requests', 'git', 'sidebar.code.pullRequests'], ['Scheduled', 'clock', 'sidebar.code.scheduled'], ['Plugins', 'plugins', 'sidebar.code.plugins'], ['Explore', 'explore', 'sidebar.code.explore']];
+// #1562: only destinations that work are listed. Pull requests, Scheduled and Explore were previews
+// with disabled controls, so they are removed until they are real (their catalogue keys stay).
+const CODE_PAGES: [page: string, icon: string, key: MessageKey][] = [['Plugins', 'plugins', 'sidebar.code.plugins']];
 
 interface SidebarProps {
   projects: Project[];

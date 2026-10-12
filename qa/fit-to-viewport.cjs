@@ -19,7 +19,7 @@ const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit
    const state=sel=>page.evaluate(s=>{const a=document.querySelector(s);const z=[...a.children].map(c=>c.style.zoom).find(Boolean)||'1';return {over:a.scrollHeight-a.clientHeight,zoom:+z};},sel);
    const open=()=>page.getByRole('button',{name:'Open navigation',exact:true}).tap();
    await open();await page.getByRole('dialog',{name:'Navigation'}).getByRole('button',{name:'Code',exact:true}).tap();
-   for(const p of ['New task','Pull requests','Scheduled','Explore']){
+   for(const p of ['New task','Plugins']){
     if(p!=='New task'){await open();await page.getByRole('dialog',{name:'Navigation'}).getByRole('button',{name:p}).tap();}
     await page.locator('.coding-header',{hasText:p}).waitFor();await page.waitForTimeout(120);
     const s=await state('.coding-content');report.push(`${w}x${h} ${p}: overflow ${s.over}px zoom ${s.zoom}`);
