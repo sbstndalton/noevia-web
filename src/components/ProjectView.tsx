@@ -243,7 +243,8 @@ export function ProjectView({
         const undeletableSynced = !!f.source && !deletable;
         return <li key={f.name} data-source-name={f.name} tabIndex={-1} className={citedSource === f.name ? 'is-cited' : undefined}>
           {f.attachment?.assetId && <img className="source-thumbnail" src={projectImageUrl(project.id, f.attachment.assetId)} alt="" />}
-          <span className="source-name" title={f.name}><ShellIcon name="file"/><span>{f.name.split('/').pop()}
+          {/* #1543: an image row's thumbnail is its icon; a document row keeps the file glyph. */}
+          <span className="source-name" title={f.name}>{f.attachment?.assetId ? null : <ShellIcon name="file"/>}<span>{f.name.split('/').pop()}
             <small className="source-status">{skillFiles.includes(f.name) ? t('projects.view.instructionSkill') : f.document ? sourceStatus(f, t) : f.attachment?.state === 'stored' ? (attachmentReason(f.attachment, t) || t('projects.view.originalStored')) : f.attachment?.state === 'vision' ? t('projects.view.uploadedImage') : f.attachment?.state === 'partial' ? (attachmentReason(f.attachment, t) || t('projects.view.textPreviewLimited')) : t('projects.view.textReady')}</small>
             <small className="source-status">{f.source ? f.name : t('projects.view.storedInNoevia')}{f.attachment ? ` · ${formatBytes(f.attachment.bytes, appLocale())}` : ''}</small>
             {undeletableSynced && <small className="source-status">{t('projects.view.syncedFrom', { source: f.source || '' })}</small>}
