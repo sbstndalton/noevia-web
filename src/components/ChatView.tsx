@@ -186,6 +186,38 @@ function MessageMeta({ stats }: { stats?: MessageStats }): JSX.Element | null {
   return <div className="msg-meta">{parts.join(' · ')}</div>;
 }
 
+/** A reply that failed (#1547, #1549). Text that had streamed in stays, marked incomplete, and the failure
+ *  sits under it as an inline card: its own icon and border, in the interface font, not the reply's body
+ *  type and not green. Retry is offered on the last reply only. */
+export function FailedReply({ partial, failure, canRetry, disabled, onRetry }: {
+  partial: string;
+  failure: string;
+  canRetry: boolean;
+  disabled: boolean;
+  onRetry: () => void;
+}): JSX.Element {
+  const t = useT();
+  return (
+    <>
+      {partial && (
+        <div className="bubble msg-partial" data-testid="reply-partial">
+          <small className="msg-partial-label">{t('chat.failure.incomplete')}</small>
+          <MarkdownPreview text={partial} />
+        </div>
+      )}
+      <div className="msg-failure" role="alert" data-testid="reply-failure">
+        <span className="msg-failure-icon" aria-hidden="true">!</span>
+        <p className="msg-failure-text">{failure}</p>
+        {canRetry && (
+          <button className="msg-retry" onClick={onRetry} disabled={disabled}>
+            ↻ Retry
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
 // #356: Copy (every finished reply) and Regenerate (the last one only) — hover/focus actions
 // matching the existing "Edit and re-run" and code-block Copy affordances rather than a new
 // visual language. Copy takes the reply's own Markdown source (`content`), never the rendered
@@ -635,28 +667,18 @@ export function ChatView({
                   {m.paused && <p className="msg-warning msg-paused" role="status" data-testid="reply-paused">{pausedNoteText(t, m.paused, (n) => formatNumber(n, t.locale, 0))}</p>}
                   {m.coworkTask ? <CoworkTaskCard task={m.coworkTask} disabled={streaming || actionBusy}
                     onRetry={() => { const prompt = messages[i - 1]?.role === 'user' ? messages[i - 1].content : ''; if (prompt) onSend(prompt, { cowork: { repository: m.coworkTask!.repository } }); }} /> : null}
-                  {body ? (
+                  {m.error ? (
+                    // Errors are our own strings, not model output, so they never render as Markdown.
+                    // Text that streamed in before the failure is shown above the failure, marked incomplete (#1547).
+                    <FailedReply partial={body} failure={m.failure ?? body} canRetry={isLast} disabled={streaming || actionBusy}
+                      onRetry={() => onRetry(chatId, m.id)} />
+                  ) : body ? (
                     <div className="bubble">
                       {/* Model replies are Markdown. A bare <p> showed the raw
                           source (**bold**, list dashes) and collapsed every
                           newline, so multi-section answers arrived as one wall
-                          of text. Errors stay plain — they are our own strings,
-                          not model output. */}
-                      {m.error ? (
-                        <p style={{ color: 'var(--accent-text)' }}>{body}</p>
-                      ) : (
-                        <MarkdownPreview text={body} />
-                      )}
-                      {m.error && isLast && (
-                        <button
-                          className="msg-retry"
-                          onClick={() => onRetry(chatId, m.id)}
-                          disabled={streaming || actionBusy}
-                          title="Re-send your last message"
-                        >
-                          ↻ Retry
-                        </button>
-                      )}
+                          of text. */}
+                      <MarkdownPreview text={body} />
                     </div>
                   ) : (
                     streaming && isLast && !m.reasoning && (

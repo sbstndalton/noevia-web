@@ -21,7 +21,7 @@ function load(file) {
   return exports_;
 }
 
-const { failureCopy, isNetworkFailure } = load('failure-copy');
+const { failureCopy, isNetworkFailure, failedReply } = load('failure-copy');
 const en = load('i18n/en-GB').EN_GB;
 const say = (key) => en[key];
 
@@ -41,4 +41,25 @@ test('#1472 other exceptions keep their own message, and an empty one gets a pla
   assert.equal(failureCopy(new Error('Could not refresh chat attachments'), say), 'Could not refresh chat attachments');
   assert.equal(failureCopy(new Error('   '), say), 'The reply could not be finished. Try again.');
   assert.equal(failureCopy('not an error', say), 'The reply could not be finished. Try again.');
+});
+
+test('#1547 a server failure that claims partial output was kept is worded by the app instead', () => {
+  const err = new Error('The model stream failed. Partial output was preserved; check the backend before retrying.');
+  assert.equal(failureCopy(err, say), 'The model stopped before it finished. Check the backend, then try again.');
+  assert.doesNotMatch(failureCopy(err, say), /preserved/);
+});
+
+test('#1547 a failed reply keeps the text that streamed in, and marks the failure beside it', () => {
+  const streamed = { id: 'a1', role: 'assistant', content: 'Here is the **start** of the', reasoningMs: 900 };
+  const failed = failedReply(streamed, 'Cannot reach noevia.');
+  assert.equal(failed.content, 'Here is the **start** of the', 'the partial answer is not replaced');
+  assert.equal(failed.error, true);
+  assert.equal(failed.failure, 'Cannot reach noevia.');
+  assert.equal(failed.reasoningMs, 900, 'other fields survive');
+});
+
+test('#1547 a failure with nothing streamed has no partial text, only the failure', () => {
+  const failed = failedReply({ id: 'a2', role: 'assistant', content: '   \n' }, 'Cannot reach noevia.');
+  assert.equal(failed.content, '');
+  assert.equal(failed.failure, 'Cannot reach noevia.');
 });
