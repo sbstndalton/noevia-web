@@ -28,3 +28,23 @@ export function mergeTranscripts(theirs: HistoryEntry[], ours: HistoryEntry[]): 
   }
   return [...theirs, ...mine];
 }
+
+/** A merge that was held back while a reply streamed (#1515). `ours` is the transcript that merge was
+ *  built from; `merged` already contains those turns. */
+export interface DeferredMerge { merged: HistoryEntry[]; ours: HistoryEntry[] }
+
+/** Fold a held-back merge into the transcript as it is now. The turns added since `ours` sit after it, so
+ *  they are appended to `merged` as they are. Merging `merged` with `current` again would write the turns
+ *  of `ours` a second time, because `merged` already holds them. Falls back to a plain merge when the
+ *  transcript no longer starts with `ours` (an edit or a regenerate changed an earlier turn). */
+export function foldDeferredMerge(deferred: DeferredMerge, current: HistoryEntry[]): HistoryEntry[] {
+  const { merged, ours } = deferred;
+  if (ours.length <= current.length && ours.every((entry, i) => same(entry, current[i]))) return [...merged, ...current.slice(ours.length)];
+  return mergeTranscripts(merged, current);
+}
+
+/** #1516: true when the saved copy is the transcript on screen plus newer turns (another tab added them).
+ *  A copy that diverges, or that is no longer than what is shown, is not adopted. */
+export function savedCopyExtends(shown: HistoryEntry[], saved: HistoryEntry[]): boolean {
+  return saved.length > shown.length && shown.every((entry, i) => same(entry, saved[i]));
+}

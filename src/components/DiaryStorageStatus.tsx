@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
-import { shouldPoll } from '../diary-storage-poll';
+import { storagePollDelayMs } from '../diary-storage-poll';
 import { useT } from '../i18n';
 import { formatNumber } from '../number-format';
 import { appLocale } from '../user-preferences';
@@ -16,8 +16,10 @@ export function DiaryStorageStatus({ busy, revision, onMode, onImported, onBusyC
   const [working, setWorking] = useState(false);
   useEffect(() => {
     if (!active) return; // paused while the Diary view is hidden; re-runs (and refreshes) on activation
-    let stopped = false, running = false, timer: ReturnType<typeof setInterval> | null = null;
+    let stopped = false, running = false, timer: ReturnType<typeof setTimeout> | null = null;
     let current: Status | null = null;
+    // #1508: consecutive failed reads; each one lengthens the wait (storagePollDelayMs) instead of retrying every 3 s.
+    let failures = 0;
     async function poll() {
       if (running) return;
       running = true;
@@ -26,15 +28,15 @@ export function DiaryStorageStatus({ busy, revision, onMode, onImported, onBusyC
         if (!r.ok) throw Error(t('diary.storageStatus.unavailableCheck'));
         const value: Status = await r.json();
         if (value.mode !== 'managed' && value.mode !== 'legacy') throw Error(t('diary.storageStatus.unavailable'));
+        failures = 0;
         if (!stopped) { current = value; setStatus(value); onMode(value.mode); if(value.mode === 'managed')setPreview(null); setStatusError(''); }
-      } catch (e) { if (!stopped) { current = null; setStatus(null); setStatusError(String(e instanceof Error ? e.message : e)); } }
+      } catch (e) { failures += 1; if (!stopped) { current = null; setStatus(null); setStatusError(String(e instanceof Error ? e.message : e)); } }
       finally { running = false; if (!stopped) reschedule(); }
     }
     function reschedule() {
-      if (timer) { clearInterval(timer); timer = null; }
-      if (shouldPoll(current, document.visibilityState === 'visible')) {
-        timer = setInterval(() => void poll(), 3000);
-      }
+      if (timer) { clearTimeout(timer); timer = null; }
+      const delay = storagePollDelayMs(current, document.visibilityState === 'visible', failures);
+      if (delay !== null) timer = setTimeout(() => void poll(), delay);
     }
     function onFocusOrVisibility() {
       if (stopped) return;
@@ -46,7 +48,7 @@ export function DiaryStorageStatus({ busy, revision, onMode, onImported, onBusyC
     document.addEventListener('visibilitychange', onFocusOrVisibility);
     return () => {
       stopped = true;
-      if (timer) clearInterval(timer);
+      if (timer) clearTimeout(timer);
       window.removeEventListener('focus', onFocusOrVisibility);
       document.removeEventListener('visibilitychange', onFocusOrVisibility);
     };

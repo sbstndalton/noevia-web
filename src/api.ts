@@ -22,6 +22,7 @@ import type {
 } from './types';
 import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser';
 import { cached, invalidateCached, clearRequestCache } from './request-cache';
+import { AUTO_ROLES_KEY, INSTALLED_MODELS_KEY, MODEL_READ_TTL_MS, REASONING_KEY_PREFIX, REASONING_TTL_MS, invalidateModelReads, invalidateReasoningSettings, isModelWritePath, isReasoningWritePath } from './model-reads';
 import { clearDeviceState } from './account-device-state';
 import { API_MAJOR, hasApiMajorMismatch, hasApiMajorMismatchHeader, type SkillPin } from './api-contract';
 
@@ -58,6 +59,13 @@ export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {})
   // deletion and configuration are examples). Successful writes invalidate before callers
   // can refresh. Conservatively include other writes, which may also change workspace data.
   if (response.ok && !['GET', 'HEAD', 'OPTIONS'].includes(method)) invalidateCached(WORKSPACE_KEY);
+  // #1509: a successful write under the model or effort paths drops the shared reads for them.
+  if (response.ok && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    const raw = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    const pathname = new URL(raw, 'http://noevia.invalid').pathname;
+    if (isModelWritePath(pathname)) invalidateModelReads();
+    if (isReasoningWritePath(pathname)) invalidateReasoningSettings();
+  }
   return response;
 }
 
@@ -451,7 +459,8 @@ export function fetchToolboxes(): Promise<{ toolboxes: Toolbox[]; mcp: McpStatus
 export interface AutoRoles { fast: string; smart: string; vision?: string; code?: string }
 
 export function fetchAutoRoles(): Promise<{ configured: boolean; roles: AutoRoles | null; missing?: { role: 'fast' | 'smart' | 'vision' | 'code'; model: string }[] }> {
-  return getJson('/api/auto-roles');
+  // #1509: shared in flight and for MODEL_READ_TTL_MS; setAutoRoles and model writes drop it.
+  return cached(AUTO_ROLES_KEY, () => getJson('/api/auto-roles'), MODEL_READ_TTL_MS);
 }
 
 export const fetchRoutingDefault = () => getJson<{ routing: 'auto' | 'manual' }>('/api/routing-default');
@@ -459,7 +468,7 @@ export const putRoutingDefault = (routing: 'auto' | 'manual', applyToExisting = 
   putJson<{ routing: 'auto' | 'manual'; updated: number }>('/api/routing-default', { routing, applyToExisting });
 
 export function setAutoRoles(roles: AutoRoles): Promise<{ configured: boolean }> {
-  return putJson('/api/auto-roles', roles);
+  return putJson<{ configured: boolean }>('/api/auto-roles', roles).then(v => { invalidateModelReads(); return v; });
 }
 
 /** A whole-list chat save; `skipped` lists ids another list holds, which were not saved (#765). */
@@ -491,10 +500,17 @@ export function fetchHealth(): Promise<HealthState> {
 }
 
 export function fetchInstalledModels(): Promise<InstalledModel[]> {
-  return getJson<InstalledModel[]>('/api/models/installed').then(rows => {
+  // #1509/#1461: the list is shared in flight and for MODEL_READ_TTL_MS, so the chat, Settings and Diary
+  // do not each wait on their own copy of the same slow model-manager read.
+  return cached(INSTALLED_MODELS_KEY, () => getJson<InstalledModel[]>('/api/models/installed').then(rows => {
     if(!Array.isArray(rows) || rows.some(row=>!row || typeof row.name!=='string' || !Array.isArray(row.labels) || row.labels.some(label=>typeof label!=='string')))throw new Error('Model list was invalid. Try loading it again.');
     return rows;
-  });
+  }), MODEL_READ_TTL_MS);
+}
+
+/** #1509: the effort settings for the deployment (no project) or one project, shared in flight. */
+export function fetchReasoningSettings(projectId?: string | null): Promise<{ default: string; effort: string; mode: string; admin: boolean }> {
+  return cached(REASONING_KEY_PREFIX + (projectId || ''), () => getJson('/api/reasoning-settings' + (projectId ? '?projectId=' + encodeURIComponent(projectId) : '')), REASONING_TTL_MS);
 }
 
 export function fetchDiarySource(): Promise<{ source: string; months: { id: string; label: string }[] }> {
@@ -506,6 +522,14 @@ export function fetchDiaryMonth(monthId: string): Promise<DiaryCorpus> {
 }
 
 export const fetchUsage = (aggregate=false) => getJson<unknown>(aggregate?'/api/usage/aggregate':'/api/usage').then(parseUsage);
+
+/** #1450: the chat ids whose message text holds `text` (titles are matched in the sidebar itself). */
+export function searchChatText(text: string): Promise<{ chats: string[]; truncated: boolean }> {
+  return getJson<{ chats: string[]; truncated: boolean }>(`/api/chats/search?q=${encodeURIComponent(text)}`).then((r) => ({
+    chats: Array.isArray(r.chats) ? r.chats.filter((id): id is string => typeof id === 'string') : [],
+    truncated: r.truncated === true,
+  }));
+}
 
 export function fetchChatHistoryRevision(chatId: string): Promise<{ history: HistoryEntry[]; revision: string | null }> {
   return getJson<{ history: HistoryEntry[]; revision?: string }>(

@@ -33,7 +33,8 @@ test('a drag not carrying files (a dragged link or text selection) is left alone
 });
 
 test('the drop hook never uploads while disabled or without a project, matching the picker\'s own button state', () => {
-  assert.match(actionsSrc, /const canDrop = !sink\.disabled && !!sink\.project;/);
+  // #1484: a free chat with no attachments project yet can still take a drop: the drop creates it first.
+  assert.match(actionsSrc, /const canDrop = !sink\.disabled && \(!!sink\.project \|\| !!sink\.ensureProject\);/);
   const dropFn = actionsSrc.slice(actionsSrc.indexOf('const onDrop = (event: DragEvent) => {'), actionsSrc.indexOf('return { isDragOver, dropProps'));
   assert.match(dropFn, /if \(!canDrop\) return;/);
 });
@@ -41,7 +42,8 @@ test('the drop hook never uploads while disabled or without a project, matching 
 test('multiple dropped files all go through the same per-file loop as the picker (no special-casing a single file)', () => {
   const dropFn = actionsSrc.slice(actionsSrc.indexOf('const onDrop = (event: DragEvent) => {'), actionsSrc.indexOf('return { isDragOver, dropProps'));
   assert.match(dropFn, /const files = Array\.from\(event\.dataTransfer\?\.files \?\? \[\]\);/);
-  assert.match(dropFn, /if \(files\.length\) void uploadAttachments\(sink, files, t\);/);
+  assert.match(dropFn, /if \(sink\.project\) \{ void uploadAttachments\(sink, files, t\); return; \}/);
+  assert.match(dropFn, /void sink\.ensureProject\?\.\(\)\.then\(project => \{ if \(project\) return uploadAttachments\(\{ \.\.\.sink, project \}, files, t\); return undefined; \}\);/);
 });
 
 test('ChatView wires the drop handlers onto the whole chat pane, not just the composer bar, with a visible drag-over state and an accessible announcement', () => {

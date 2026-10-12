@@ -18,7 +18,8 @@ import { buildSearchResults, chatMatchesQuery, matchingDestinations, parseSideba
 import { hasTag, tagTree } from '../chat-organise';
 import type { TagNode } from '../chat-organise';
 import type { SearchResultKind } from '../sidebar-search';
-import { fetchToolboxes, fetchProfile } from '../api';
+import { fetchToolboxes, fetchProfile, searchChatText } from '../api';
+import { downloadChatExport } from '../chat-export';
 import type { McpStatus } from '../api';
 import { useSpaceTier } from '../space-tier';
 import { notifyWorkspaceChanged } from './data/workspace-changed';
@@ -234,6 +235,19 @@ export function Sidebar({
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   };
   const [query, setQuery] = useState('');
+  // #1450: chats whose message text matches the query. Sent after a short pause, and kept only for the query it answered.
+  const [textHits, setTextHits] = useState<{ query: string; ids: ReadonlySet<string> } | null>(null);
+  const textQuery = query.trim();
+  useEffect(() => {
+    if (textQuery.length < 2) { setTextHits(null); return; }
+    let live = true;
+    const timer = window.setTimeout(() => {
+      searchChatText(textQuery)
+        .then((r) => { if (live) setTextHits({ query: textQuery, ids: new Set(r.chats) }); })
+        .catch(() => { if (live) setTextHits(null); });
+    }, 300);
+    return () => { live = false; window.clearTimeout(timer); };
+  }, [textQuery]);
   // #741: a tag (sidebar Tags section, a graph's tag hub) filters the lists through the search box,
   // so the filter shows what it is and Escape clears it the usual way.
   const [openTags, setOpenTags] = useState<Record<string, boolean>>({});
@@ -428,7 +442,8 @@ export function Sidebar({
   const parsedQuery = organise ? parseSidebarQuery(query) : { tags: [], text: query };
   const tagQuery = parsedQuery.tags.length > 0;
   const visibleProjects = sortedProjects.filter(p=>(!p.modes?.length || p.modes.includes('chat')) && !tagQuery && p.name.toLowerCase().includes(query.toLowerCase()));
-  const visibleChats = recentChats(chats).filter(c=>organise ? chatMatchesQuery(c, query, hasTag) : (c.title || '').toLowerCase().includes(query.toLowerCase()));
+  const messageHits = !tagQuery && textHits && textHits.query === textQuery ? textHits.ids : null;
+  const visibleChats = recentChats(chats).filter(c=>(organise ? chatMatchesQuery(c, query, hasTag) : (c.title || '').toLowerCase().includes(query.toLowerCase())) || !!messageHits?.has(c.id));
   const tags = organise ? tagTree(chats) : [];
   const pinnedChats = visibleChats.filter(c=>c.pinned);
   const pinnedProjects = visibleProjects.filter(p=>p.pinned);
@@ -540,6 +555,10 @@ export function Sidebar({
   const chatMenu = (c: ChatMeta): MenuItem[] => [
     { label: c.pinned ? t('sidebar.unpin') : t('sidebar.pin'), icon:<ShellIcon name="pin"/>, onSelect: () => onPatchChat(c.projectId ?? null, c.id, { pinned: !c.pinned }) },
     { label: t('sidebar.rename'), icon:<ShellIcon name="edit"/>, onSelect: () => startRename(c.id, c.title || '', menu?.source) },
+    // #1471: one chat out as Markdown, without exporting every chat (Settings > Data does that).
+    { label: t('sidebar.exportChat'), icon:<ShellIcon name="file"/>, onSelect: () => void downloadChatExport(c.id).catch((e: unknown) => setConfirm({
+      title: t('sidebar.exportChatFailedTitle'), body: e instanceof Error ? e.message : String(e), confirmLabel: t('sidebar.exportChatFailedOk'), run: () => undefined,
+    })) },
     {
       label: t('sidebar.archive'),
       icon:<ShellIcon name="archive"/>,

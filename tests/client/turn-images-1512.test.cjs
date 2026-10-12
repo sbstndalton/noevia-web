@@ -81,7 +81,7 @@ test('the upload path reports an image\'s asset id only after a successful, read
 test('the picker and the drop handler both carry the callback through the one shared sink', () => {
   const actions = src('components/ComposerActions.tsx');
   assert.match(actions, /await uploadAttachments\(\{ project, disabled, diary, chatOnly, onChanged, onBusy, onStatus, onImageAttached, onSaved \}, files, t\);/);
-  assert.match(actions, /export function ComposerActions\(\{ project, disabled, onChanged, onBusy, onStatus, header, diary = false, chatOnly = false, browseTools, onImageAttached, onSaved \}/);
+  assert.match(actions, /export function ComposerActions\(\{ project, disabled, onChanged, onBusy, onStatus, header, diary = false, chatOnly = false, browseTools, onImageAttached, onSaved, onEnsureProject \}/);
 });
 
 test('the upload response type carries the image asset id the server returns', () => {

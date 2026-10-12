@@ -185,6 +185,17 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   // (`diary-workspace.ts`) at the same points, so the refetch those bumps trigger is never served
   // the pre-change cached listing.
   const bumpRevision = () => { invalidateFileListings(); setRevision(n => n + 1); };
+  // #1510: the month list comes from one source read per revision. A month change re-runs the overview,
+  // but it no longer repeats the whole source request; any save (revision bump) reads it again.
+  const sourceRead = useRef<{ revision: number; promise: ReturnType<typeof fetchDiarySource> } | null>(null);
+  const diarySourceFor = (rev: number) => {
+    const hit = sourceRead.current;
+    if (hit && hit.revision === rev) return hit.promise;
+    const promise = fetchDiarySource();
+    sourceRead.current = { revision: rev, promise };
+    promise.catch(() => { if (sourceRead.current?.promise === promise) sourceRead.current = null; });
+    return promise;
+  };
   // #1168: set only by a Retry press; the next file listing consumes it, so automatic reads never carry it.
   const explicitRetry = useRef(false);
   const retryFileList = () => { if (folder) void refreshLocalFolder(); else { explicitRetry.current = true; bumpFileRevision(); } };
@@ -345,22 +356,27 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
         sources = rows.filter(f => f.path.startsWith('Raw Sources/') && !f.path.slice(12).includes('/'));
         setMonths([...new Set(Object.keys(parsed).map(d => d.slice(0,7)))].sort().reverse());
       } else {
-        const source = await fetchDiarySource();
+        // #1510: the source list and the root listing do not depend on each other, so they start together;
+        // so do the memory/source folders and the month logs. Each distinct month is requested once, even
+        // when the two recent months include the one being shown.
+        const [source, root] = await Promise.all([diarySourceFor(revision), listFiles('')]);
         if (stale) return;
         setMonths([...new Set(source.months.map(m => m.id))].sort().reverse());
-        const root = await listFiles('');
         const folders = root.files.filter(f => f.isDir && [...memoryFolders,'Raw Sources'].includes(f.name));
-        const listings = await Promise.all(folders.map(f => listFiles(f.path)));
+        const recentIds = source.months.map(m=>m.id).sort().reverse().slice(0,2);
+        const selectedId = month || today.slice(0,7);
+        const monthIds = [...new Set([...recentIds, selectedId])];
+        const [listings, logs] = await Promise.all([
+          Promise.all(folders.map(f => listFiles(f.path))),
+          Promise.all(monthIds.map(id => fetchDiaryMonth(id))),
+        ]);
+        if (stale) return;
+        const logById = new Map(monthIds.map((id, i) => [id, logs[i]]));
         const all = [...root.files,...listings.flatMap(row => row.files)].filter(f => !f.isDir);
         memory = all.filter(f => isMemory(f.path));
         sources = all.filter(f => f.path.startsWith('Raw Sources/'));
-        const recent = await Promise.all(source.months.map(m=>m.id).sort().reverse().slice(0,2).map(fetchDiaryMonth));
-        recentDays = recent.flatMap(r => Object.keys(splitDays(r.todayLog)));
-        if (stale) return;
-        {
-          const result = await fetchDiaryMonth(month || today.slice(0,7));
-          if (!stale) setDays(splitDays(result.todayLog));
-        }
+        recentDays = recentIds.flatMap(id => Object.keys(splitDays(logById.get(id)?.todayLog ?? '')));
+        setDays(splitDays(logById.get(selectedId)?.todayLog ?? ''));
       }
       if (!stale) setOverview({ready:true,failed:false,memory,sources,recentDays:[...new Set(recentDays)].sort().reverse().slice(0,7)});
     };
