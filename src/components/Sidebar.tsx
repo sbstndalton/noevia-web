@@ -145,7 +145,8 @@ export function Sidebar({
   // Recents stay bounded so a long history never pushes everything else away (#239).
   const [allRecents, setAllRecents] = useState(false);
   // ⌘K / Ctrl+K from anywhere (components/shortcuts): open the rail and its search field.
-  useEffect(() => { const open = () => { setCollapsed(false); setExpanded(true); setSearching(true); }; window.addEventListener('noevia:open-search', open); return () => window.removeEventListener('noevia:open-search', open); }, []);
+  // #1470: the field takes focus even when the drawer was already open (its autoFocus only runs on mount).
+  useEffect(() => { const open = () => { setCollapsed(false); setExpanded(true); setSearching(true); window.requestAnimationFrame(() => searchInputRef.current?.focus()); }; window.addEventListener('noevia:open-search', open); return () => window.removeEventListener('noevia:open-search', open); }, []);
   // Below 600px the sidebar is gone entirely and opens as a drawer from one
   // toggle; `expanded` is that drawer. Focus is trapped while it is open and
   // handed back to the toggle when it closes.
@@ -171,7 +172,9 @@ export function Sidebar({
     if (!mobile) { wasOpen.current = false; return; }
     if (expanded) {
       wasOpen.current = true;
-      drawer.current?.querySelector<HTMLElement>('.side-expand')?.focus();
+      // #1470: a search-led open (⌘K, the search button) lands in the field, not on the close button.
+      if (searching && searchInputRef.current) searchInputRef.current.focus();
+      else drawer.current?.querySelector<HTMLElement>('.side-expand')?.focus();
     } else if (wasOpen.current) {
       wasOpen.current = false;
       toggle.current?.focus();
