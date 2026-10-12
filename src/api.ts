@@ -245,10 +245,13 @@ export const deleteProjectFile = (id: string, path: string) =>
     body: JSON.stringify({ path }),
   }).then(async (r) => { if (!r.ok) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error || 'could not delete'); });
 
-/** Re-read every attached folder and refresh the project's sources from it. */
-export const syncProjectSources = (id: string) =>
-  postJson<{ files: { name: string; source: string | null; bytes: number }[]; skipped: { folder: string; file?: string; reason: string; retained?: boolean }[] }>(
-    `/api/projects/${encodeURIComponent(id)}/sources/sync?background=1`, {});
+/** Re-read every attached folder and refresh the project's sources from it. `storageRetry` is set only
+ *  by the person's own "Refresh from storage" press (#1428/#1429, the Diary's X-Cowork-Storage-Retry
+ *  contract): the server may then try storage again at once. Automatic refreshes never send it. */
+export const syncProjectSources = (id: string, options: { storageRetry?: boolean } = {}) =>
+  postJson<{ files: { name: string; source: string | null; bytes: number }[]; skipped: { folder: string; file?: string; reason: string; code?: string; retained?: boolean }[] }>(
+    `/api/projects/${encodeURIComponent(id)}/sources/sync?background=1`, {},
+    options.storageRetry ? { [STORAGE_RETRY_HEADER]: '1' } : {});
 /** Create one directory in connected storage. */
 export const createStorageFolder = (path: string) =>
   postJson<{ path: string; existed: boolean }>('/api/integrations/storage/folder', { path });
@@ -258,6 +261,12 @@ export const completeRecovery = (token: string, password: string) => postJson<{ 
 /** Prefer the server's own {error} message over a bare status code — the
  *  server already explains *why* (e.g. "origin not allowed", "invalid CSRF
  *  token"), and swallowing that forced users to guess from a status code alone. */
+/** The error for a failed request: the server's message, and its stable `code` when it sent one (#1428). */
+async function failureFromResponse(res: Response, fallback: string): Promise<Error & { code?: string }> {
+  const payload = await res.clone().json().catch(() => null) as { error?: unknown; code?: unknown } | null;
+  return failureWithCode(typeof payload?.error === 'string' && payload.error ? payload.error : `${fallback}: ${res.status}`, payload?.code);
+}
+
 async function describeFailure(res: Response, fallback: string): Promise<string> {
   try {
     const body = await res.clone().json();
@@ -274,13 +283,15 @@ async function getJson<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-async function postJson<T>(url: string, body: unknown): Promise<T> {
+/** The explicit-retry header (#1168, #1428): the same name diary-workspace.ts sends. */
+const STORAGE_RETRY_HEADER = 'X-Cowork-Storage-Retry';
+async function postJson<T>(url: string, body: unknown, headers: Record<string, string> = {}): Promise<T> {
   const res = await apiFetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(await describeFailure(res, `POST ${url} failed`));
+  if (!res.ok) throw await failureFromResponse(res, `POST ${url} failed`);
   if (res.status === 202) {
     const { poll } = await res.json() as { poll: string };
     // Source processing can outlive a proxy request. Each poll is short and authenticated.
@@ -665,6 +676,8 @@ export async function* streamChat(
   args?: string;
   index?: number; // 'tool' events: which call this is, for upsert-by-index
   id?: string; // 'tool_pending': the approval id to post a decision against
+  /** 'status' (#1449): for a 'loadingModel' status, the model being loaded, its routed role and the expected wait. */
+  detail?: unknown;
   /** 'tool_pending' (#648): the full stored path of the project file an edit would change; for a
    *  Google Drive write (#659) the Drive file's name and id. 'tool_result': the same, once it ran. */
   target?: string;

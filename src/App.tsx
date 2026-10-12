@@ -51,7 +51,7 @@ import { frameWithLink, keepLinks, MAX_FRAME_LINKS } from './chat-organise';
 import { ChatLinks } from './components/ChatLinks';
 import type { FrameAction, FrameDraft } from './chat-frame';
 import { sessionMode, type ChatMode } from './chat-mode';
-import { STOPPED_SENDER } from './chat-labels';
+import { STOPPED_SENDER, statusDetail } from './chat-labels';
 import type {
   ChatMeta,
   HealthState,
@@ -1065,7 +1065,7 @@ export default function App(): JSX.Element {
           } else if (ev.type === 'tools_scope') {
             setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, toolScope: ev.text || undefined, toolScopeBoxes: ev.boxes } : m) }));
           } else if (ev.type === 'status' && ev.text) {
-            setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, processingStatus: ev.text, processingStatusId: typeof ev.id === 'string' ? ev.id : undefined } : m) }));
+            setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, processingStatus: ev.text, processingStatusId: typeof ev.id === 'string' ? ev.id : undefined, processingStatusDetail: statusDetail(ev.detail) } : m) }));
           } else if (ev.type === 'warning' && ev.text) {
             setMessagesByChat((prev) => ({
               ...prev,
@@ -1670,7 +1670,7 @@ export default function App(): JSX.Element {
   // that is attached but not read is indistinguishable from one that does not
   // work: the project lists it and the model sees nothing.
   const saveProjectAndSync = useCallback(
-    async (projectId: string, patch: Partial<Project>) => {
+    async (projectId: string, patch: Partial<Project>, options: { storageRetry?: boolean } = {}) => {
       patch = { ...pendingPatches.current[projectId], ...patch };
       delete pendingPatches.current[projectId];
       setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, ...patch, updatedAt: Date.now() } : p)));
@@ -1694,7 +1694,8 @@ export default function App(): JSX.Element {
         // several worked, because the sync rebuilds from what remains, which
         // is why the behaviour looked arbitrary.
         if (Array.isArray(patch.sourceFolders)) {
-          const r = await syncProjectSources(projectId);
+          // #1428/#1429: only the person's own "Refresh from storage" press asks storage to be tried again now.
+          const r = await syncProjectSources(projectId, { storageRetry: options.storageRetry === true });
           setProjectError(prevError => {
             const prev = lastSkippedSignature.current[projectId] || { signature: '', message: '' };
             const { signature, message, show } = resolveSkippedToast(prev, r.skipped || [], prevError, tr);
