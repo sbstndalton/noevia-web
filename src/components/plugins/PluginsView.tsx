@@ -268,7 +268,7 @@ function AddServer({ item, added, onChange }: { item: Item; added?: Added; onCha
       const d = await apiFetch('/api/admin/mcp-directory').then((r) => r.json()).catch(() => null);
       const me = d?.servers?.find((x: Added) => x.registryName === item.id);
       if (d?.servers) onChange(d.servers);
-      if ((me && me.toolCount) || n > 60) { window.clearInterval(timer); if (me?.toolCount) setNote({ text: t('customise.oauthCompleteNote', { tools: tools(t, me.toolCount), plugins: t('customise.tab.plugins'), connected: t('customise.connectedTitle') }) }); }
+      if ((me && me.toolCount) || n > 60) { window.clearInterval(timer); if (me?.toolCount) setNote({ text: t('customise.oauthCompleteNote', { tools: tools(t, me.toolCount), section: t('sidebar.customise'), tab: t('connectors.title') }) }); }
     }, 3000);
   };
   const msg = note && <small role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</small>;
@@ -281,7 +281,7 @@ function AddServer({ item, added, onChange }: { item: Item; added?: Added; onCha
         onChange={(e) => setValues((v) => ({ ...v, [h.name]: e.target.value }))}/>
     </label>)}
     {method === 'POST' && <fieldset className="plugin-key-mode"><legend>{t('customise.whoUsesKey')}</legend>
-      <label><input type="radio" name={`mode-${item.id}`} checked={keyMode === 'personal'} onChange={() => setKeyMode('personal')}/> {t('customise.eachPersonOwnKey')} <small>{t('customise.eachPersonOwnKeyHint', { plugins: t('customise.tab.plugins'), connected: t('customise.connectedTitle') })}</small></label>
+      <label><input type="radio" name={`mode-${item.id}`} checked={keyMode === 'personal'} onChange={() => setKeyMode('personal')}/> {t('customise.eachPersonOwnKey')} <small>{t('customise.eachPersonOwnKeyHint', { section: t('sidebar.customise'), tab: t('customise.tab.plugins') })}</small></label>
       <label><input type="radio" name={`mode-${item.id}`} checked={keyMode === 'shared'} onChange={() => setKeyMode('shared')}/> {t('customise.everyoneUsesKey')}</label>
     </fieldset>}
     <small className="plugin-key-note">{t('customise.keyStoredNote')} {method === 'POST' ? (keyMode === 'shared' ? t('customise.keyUsedByEveryone') : t('customise.keyUsedByYouOnly')) : added?.personal ? t('customise.keyIsYourOwn') : t('customise.keyUsedByEveryone')}</small>
