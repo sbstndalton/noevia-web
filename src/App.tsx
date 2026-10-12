@@ -67,6 +67,7 @@ import type {
 } from './types';
 import { ChatView } from './components/ChatView';
 import { ModelPopup } from './components/ModelPopup';
+import { rememberCreatedProject, withCreatedProjects } from './created-projects';
 import { ProjectView } from './components/ProjectView';
 import { ActiveCodeTasks } from './components/code/ActiveCodeTasks';
 import { Coding, Customise, Diary, ModelManager, Projects, Settings, ViewLoading, prefetchViewsWhenIdle } from './lazy-views';
@@ -392,12 +393,15 @@ export default function App(): JSX.Element {
 
   const workspaceRequest = useRef(0);
   useEffect(() => () => { workspaceRequest.current += 1; }, []);
+  // #1417: projects created in this session, kept in the list until a workspace read includes them.
+  const createdProjects = useRef(new Map<string, { project: Project; at: number }>());
   const refreshProjects = useCallback(() => {
     const request = ++workspaceRequest.current;
     return fetchWorkspace()
       .then((w) => {
         if (request !== workspaceRequest.current) return;
-        const nextProjects = (w.projects || []).map((p) => ({ ...p, ...pendingPatches.current[p.id] }));
+        const listed = (w.projects || []).map((p) => ({ ...p, ...pendingPatches.current[p.id] }));
+        const nextProjects = withCreatedProjects(listed, createdProjects.current, Date.now());
         const nextFreeChats = Array.isArray(w.freeChats) ? w.freeChats : [];
         projectsRef.current = nextProjects;
         freeChatsRef.current = nextFreeChats;
@@ -1387,6 +1391,12 @@ export default function App(): JSX.Element {
       // No routing sent: the server applies the default from Models → Routing.
       // #1522: a new project starts Automatic (tools chosen by routing), not on the old Manual default.
       const project = await createProject({ ...body, toolsMode: NEW_PROJECT_TOOLS_MODE });
+      // #1417: the new project is in the list before the page for it opens, and stays there until a
+      // workspace read includes it (that read can still be behind the create).
+      rememberCreatedProject(createdProjects.current, project, Date.now());
+      const next = [...projectsRef.current.filter((p) => p.id !== project.id), project];
+      projectsRef.current = next;
+      setProjects(next);
       refreshProjects();
       setView({ kind: 'project', id: project.id });
     },
@@ -1414,6 +1424,8 @@ export default function App(): JSX.Element {
 
   const handleDeleteProject = useCallback(
     (id: string) => {
+      // A project created here and deleted before the server listed it must not reappear (#1417).
+      createdProjects.current.delete(id);
       // A pin/archive made just before the delete is still waiting on its debounce; saving it
       // after the project is gone would report a false save error (#942).
       const held = takeProjectPatch(patchQueue, id);

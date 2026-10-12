@@ -107,7 +107,11 @@
     pointer-events: none;
   }
   :root .app .chat-workspace > .composer > * { pointer-events: auto; }
-  :root .app .chat-workspace .jump-to-latest { bottom: calc(var(--composer-h, 120px) + 8px); }
+  /* #1534: the floating composer keeps its own band. The transcript stops above a strip the height of
+     the pill, and the pill's band sits on top of the composer's edge, so nothing draws over the text. */
+  :root .app .chat-workspace > .transcript:has(+ .jump-band) { margin-bottom: calc(var(--composer-h, 120px) + 48px); }
+  :root .app .chat-workspace > .jump-band { position: absolute; left: 0; right: 0; bottom: var(--composer-h, 120px); height: 48px; z-index: 4; pointer-events: none; }
+  :root .app .chat-workspace > .jump-band > .jump-to-latest { pointer-events: auto; }
 
   /* No mode row: the caption line appears only when it carries information. */
   .composer-mode-bar.is-slim { margin: 0 auto; gap: 4px; }
