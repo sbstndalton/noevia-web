@@ -34,12 +34,15 @@ test('#1527: nothing in the wide strip is a fixed width that assumes one window 
   assert.doesNotMatch(block, /\.stats-bar-static \{[^}]*width: \d+px/);
 });
 
-test('#1527: the model name and the pairs truncate, and the route pill keeps its size', () => {
+test('#1527: the model name keeps its width and the route pill gives way first, with its own ellipsis', () => {
+  // 2026-10-12 local QA: at 790px the static label shrank to 'Synthetic-Ch…' while the routing pill kept its width.
+  // The label now holds its natural width, the speed pair is whole, and the pill is the element that yields.
   const block = wideBlock();
+  assert.match(block, /\.stats-bar-static \{[^}]*flex: 0 0 auto;/);
   assert.match(block, /\.stats-bar-static \.stats-label \{[^}]*text-overflow: ellipsis;/);
   assert.match(block, /\.stats-details dd \{[^}]*text-overflow: ellipsis;/);
   assert.match(block, /\.stats-details > div\[data-priority='high'\] \{ flex: none; \}/);
-  assert.match(block, /\.stats-disclosure\.is-wide > \.routing-details:not\(\[open\]\) \{ flex: none;/);
+  assert.match(block, /\.stats-disclosure\.is-wide > \.routing-details:not\(\[open\]\) \{ flex: 0 1 auto; min-width: 0;/);
 });
 
 test('#1527: the compact toggle is hidden where every pair fits, and it opens an aligned popover', () => {
