@@ -29,7 +29,7 @@ import type { MessageKey, Translate } from '../i18n';
 type Item = [id: string, label: string, keywords?: string];
 type Group = { name: string; items: Item[]; admin?: boolean };
 
-const GROUP_KEYS: Record<string, MessageKey> = { 'Personal': 'settings.group.personal', 'Account & connections': 'settings.group.account', 'Server administration': 'settings.group.admin' };
+const GROUP_KEYS: Record<string, MessageKey> = { 'Personal': 'settings.group.personal', 'Account and connections': 'settings.group.account', 'Server administration': 'settings.group.admin' };
 
 /** The groups in the interface language (#231). Search keeps the English name and keywords too,
  *  so a task word typed in either language still finds its page. */
@@ -47,18 +47,18 @@ function localiseGroups(groups: Group[], t: Translate): Group[] {
 // page by the task ("export", "backups", "connected apps") rather than only by its title.
 const PERSONAL: Group[] = [
   { name: 'Personal', items: [
-    ['appearance', 'Appearance & language', 'theme dark light accent font density motion layout locale date number format language'],
-    ['keyboard', 'Keyboard & input', 'shortcuts keys enter send newline hotkeys'],
-    ['personalization', 'Assistant & style', 'personalization response style tone length emoji headings custom instructions language'],
+    ['appearance', 'Appearance and language', 'theme dark light accent font density motion layout locale date number format language'],
+    ['keyboard', 'Keyboard and input', 'shortcuts keys enter send newline hotkeys'],
+    ['personalization', 'Assistant and style', 'personalization response style tone length emoji headings custom instructions language'],
     ['memory', 'Memory', 'remember facts forget clear project memory diary'],
     ['notifications', 'Notifications', 'alerts browser approval reply finished'],
-    ['data', 'Your data & privacy', 'data controls export import delete retention archived chats'],
+    ['data', 'Your data and privacy', 'data controls export import delete retention archived chats'],
     ['usage', 'Usage', 'activity tokens replies statistics'],
   ] },
-  { name: 'Account & connections', items: [
+  { name: 'Account and connections', items: [
     ['profile', 'Account', 'profile name email'],
     ['security', 'Security and login', 'passkeys sessions sign out app passwords'],
-    ['diary', 'Diary & storage', 'diary journal storage nextcloud webdav'],
+    ['diary', 'Diary and storage', 'diary journal storage nextcloud webdav'],
     ['connectors', 'Connected apps', 'connectors google drive customise plugins skills permissions'],
     ['providers', 'AI providers', 'openai endpoint api key provider'],
   ] },
@@ -70,7 +70,7 @@ const PERSONAL: Group[] = [
 // is a courtesy, never the access control.
 const ADMIN: Group = { name: 'Server administration', admin: true, items: [
   ['users', 'Users', 'members invite accounts'],
-  ['models', 'Models & routing', 'model tuning auto routing download gguf'],
+  ['models', 'Models and routing', 'model tuning auto routing download gguf'],
   ['address', 'Web address', 'deployment domain url https'],
   ['features', 'Features', 'deployment feature flags operator'],
   ['experimental', 'Experimental', 'deployment preview'],
