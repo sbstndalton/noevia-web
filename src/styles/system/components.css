@@ -345,3 +345,91 @@ dialog::backdrop { background: var(--scrim); backdrop-filter: blur(var(--scrim-b
   .settings-stage { background: var(--bg-app); }
   :is(.confirm-dialog.aero, .mp-panel.aero, .dialog-sheet.aero) { border-radius: var(--radius-dialog) var(--radius-dialog) 0 0; }
 }
+
+/* #1314: preserve the inverse alert, but let its message use the available width.
+   The action and dismissal stay outside the scrolling message on narrow screens. */
+@media (max-width: 700px) {
+  .save-error-storage {
+    position: absolute;
+    display: grid; grid-template-columns: minmax(0, 1fr) 44px;
+    width: calc(100% - 32px); box-sizing: border-box;
+    max-height: calc(var(--visible-viewport-height, 100dvh) - 32px);
+  }
+  .save-error-storage :is(.save-error-list, .save-error-message) {
+    grid-column: 1; grid-row: 1; min-width: 0; overflow-wrap: anywhere;
+    max-height: max(44px, calc(var(--visible-viewport-height, 100dvh) - 160px));
+    overflow-y: auto; overscroll-behavior-y: contain;
+  }
+  .save-error-storage .save-error-link {
+    grid-column: 1; grid-row: 2; justify-self: start;
+    min-height: 44px; white-space: normal; text-align: left; overflow-wrap: anywhere;
+  }
+  .save-error-storage .save-error-dismiss {
+    grid-column: 2; grid-row: 1; width: 44px; min-height: 44px; align-self: start;
+  }
+}
+:root[data-layout="mobile"] .save-error-storage {
+  position: absolute; display: grid; grid-template-columns: minmax(0, 1fr) 44px;
+  width: calc(100% - 32px); box-sizing: border-box;
+  max-height: calc(var(--visible-viewport-height, 100dvh) - 32px);
+}
+:root[data-layout="mobile"] .save-error-storage :is(.save-error-list, .save-error-message) {
+  grid-column: 1; grid-row: 1; min-width: 0; overflow-wrap: anywhere;
+  max-height: max(44px, calc(var(--visible-viewport-height, 100dvh) - 160px));
+  overflow-y: auto; overscroll-behavior-y: contain;
+}
+:root[data-layout="mobile"] .save-error-storage .save-error-link {
+  grid-column: 1; grid-row: 2; justify-self: start;
+  min-height: 44px; white-space: normal; text-align: left; overflow-wrap: anywhere;
+}
+:root[data-layout="mobile"] .save-error-storage .save-error-dismiss {
+  grid-column: 2; grid-row: 1; width: 44px; min-height: 44px; align-self: start;
+}
+.save-error-storage :is(.save-error-list, .save-error-message):focus-visible {
+  outline: 2px solid var(--focus-ring); outline-offset: -2px;
+}
+
+/* The actual Settings surface is settings-stage. Bind the sheet to the visible
+   viewport, including the keyboard; one inner scroll area keeps the header reachable. */
+@media (max-width: 700px) {
+  :root .app .settings-stage { position: absolute; inset: 0; height: 100%; min-height: 0; overflow: hidden; }
+  :root .app .settings-stage .settings-detail { min-height: 0; overflow: hidden; }
+  :root .app .settings-stage .settings-detail > header { flex-shrink: 0; }
+  :root .app .settings-stage .settings-detail-scroll {
+    min-height: 0; overflow-y: auto; overscroll-behavior-y: contain;
+    padding: var(--space-4) var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom));
+  }
+}
+/* A desktop's forced Phone preview lives inside its existing 430px frame. */
+:root[data-layout="mobile"] .app .settings-stage { position: absolute; inset: 0; height: 100%; min-height: 0; overflow: hidden; }
+:root[data-layout="mobile"] .app .settings-stage .settings-detail { min-height: 0; overflow: hidden; }
+:root[data-layout="mobile"] .app .settings-stage .settings-detail > header { flex-shrink: 0; }
+:root[data-layout="mobile"] .app .settings-stage .settings-detail-scroll {
+  min-height: 0; overflow-y: auto; overscroll-behavior-y: contain;
+  padding: var(--space-4) var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom));
+}
+
+/* Context remains available without making the chat and composer scroll as a
+   second page. Wide screens retain the persistent context rail. */
+.insp-toggle { display: none; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+@media (max-width: 1100px) {
+  :root .app .app-stack.pane:has(> .noevia-inspector) { display: flex; overflow: hidden; }
+  :root .app .app-stack.pane:has(> .noevia-inspector) > .app-main { flex: 1 1 0; min-height: 0; }
+  :root .app .app-stack.pane > .noevia-inspector {
+    flex: 0 1 auto; min-height: 0; max-height: 45%; overflow: hidden;
+    width: auto; margin: 0; padding: 0;
+  }
+  .app .noevia-inspector .insp-bar { display: flex; align-items: center; gap: var(--space-2); flex: none; padding-block: 0; }
+  .app .noevia-inspector .insp-bar h2 { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .insp-toggle { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; flex: none; }
+  .insp-content { min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; }
+  .noevia-inspector[data-expanded="false"] .insp-content { display: none; }
+}
+:root[data-layout="mobile"] .app .app-stack.pane:has(> .noevia-inspector) { display: flex; overflow: hidden; }
+:root[data-layout="mobile"] .app .app-stack.pane:has(> .noevia-inspector) > .app-main { flex: 1 1 0; min-height: 0; }
+:root[data-layout="mobile"] .app .app-stack.pane > .noevia-inspector { flex: 0 1 auto; min-height: 0; max-height: 45%; overflow: hidden; width: auto; margin: 0; padding: 0; }
+:root[data-layout="mobile"] .app .noevia-inspector .insp-bar { display: flex; align-items: center; gap: var(--space-2); flex: none; padding-block: 0; }
+:root[data-layout="mobile"] .app .noevia-inspector .insp-bar h2 { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root[data-layout="mobile"] .insp-toggle { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; flex: none; }
+:root[data-layout="mobile"] .insp-content { min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; }
+:root[data-layout="mobile"] .noevia-inspector[data-expanded="false"] .insp-content { display: none; }
