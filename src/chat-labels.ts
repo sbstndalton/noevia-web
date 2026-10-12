@@ -39,11 +39,12 @@ function byKey(t: Translator, key: string, fallback: string): string {
   return text === key ? fallback : text;
 }
 
-/** The "Effort: high · provider parameter" line of a reply, in the interface language (#624). */
+/** The "Effort: high · provider parameter" line of a reply, in the interface language (#624). #1476: a
+ *  Standard reply (mode "off") is named too, as "Effort: standard · model default", not left unlabelled. */
 export function effortLineText(t: Translator, effort: string | undefined, mode: string): string {
   return t('chat.effort.line', {
     effort: byKey(t, `chat.effort.value.${effort ?? ''}`, effort ?? ''),
-    basis: mode === 'real' ? t('chat.effort.real') : t('chat.effort.hint'),
+    basis: mode === 'real' ? t('chat.effort.real') : mode === 'off' ? t('chat.effort.off') : t('chat.effort.hint'),
   });
 }
 
@@ -73,9 +74,10 @@ export const LEGACY_STOPPED_BODIES: readonly string[] = [
 
 type BodyMessage = { role?: string; senderLabel?: string; content: string; error?: boolean; reasoning?: string };
 
-/** True for an assistant reply that is only the Stopped placeholder (the new empty form, or a stored sentence). */
+/** True for an assistant reply that is only the Stopped placeholder (the new empty form, or a stored sentence).
+ *  #1447: a reply stopped during its thinking has reasoning and no answer, and is a placeholder too. */
 export function isStoppedPlaceholder(m: BodyMessage): boolean {
-  if (m.role !== 'assistant' || m.error || m.reasoning || m.senderLabel?.replace(/^Assistant · /, '') !== STOPPED_SENDER) return false;
+  if (m.role !== 'assistant' || m.error || m.senderLabel?.replace(/^Assistant · /, '') !== STOPPED_SENDER) return false;
   return !m.content || LEGACY_STOPPED_BODIES.includes(m.content.trim());
 }
 

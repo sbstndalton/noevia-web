@@ -710,7 +710,7 @@ export function ChatView({
                 : <span className="msg-sender is-assistant"><span className="sr-only">{t('chat.sender.assistant')} · </span>{senderLabelText(t, m.senderLabel ?? modelLabel)}</span>}
               {m.role === 'assistant' ? (
                 <div className="assistant-card">
-                  {m.reasoningMode && m.reasoningMode !== 'off' && <small className="reasoning-result">{effortLineText(t, m.reasoningEffort, m.reasoningMode)}</small>}
+                  {m.reasoningMode && <small className="reasoning-result">{effortLineText(t, m.reasoningEffort, m.reasoningMode)}</small>}
                   {m.warning && <p className="msg-warning" role="status">{m.warning}</p>}
                   {(m.toolScope || m.skillScope) && <small className="tool-scope" title={t('chat.scope.title')}>{m.toolScope && t('chat.scope.using', { tools: m.toolScope === 'all tools' ? t('chat.scope.allTools') : m.toolScopeBoxes?.length ? toolScopeText(t, m.toolScopeBoxes) : m.toolScope })}{m.toolScope && m.skillScope && ' · '}{m.skillScope && t('chat.scope.skill', { name: m.skillScope })}</small>}
                   {m.routingDecision && <RoutingDetails decision={m.routingDecision} />}

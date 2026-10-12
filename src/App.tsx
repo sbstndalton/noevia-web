@@ -1226,11 +1226,12 @@ export default function App(): JSX.Element {
       } catch (err) {
         if (controller.signal.aborted) {
           // User pressed Stop (or navigated away): keep what streamed in,
-          // mark nothing as an error.
+          // mark nothing as an error. #1447: a reply stopped while still thinking has no
+          // answer either, so it is labelled Stopped too (its thinking stays visible).
           setMessagesByChat((prev) => ({
             ...prev,
             [chatId]: (prev[chatId] ?? []).map((m) =>
-              m.id === replyId && !m.content && !m.reasoning
+              m.id === replyId && !m.content
                 ? { ...m, senderLabel: STOPPED_SENDER }
                 : m,
             ),
