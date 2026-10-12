@@ -226,7 +226,8 @@ function DrivePage({ drive, isAdmin, onBack, onChange, onActionStart, reload, on
           ? <>{t('connectors.backup.on', { folder: 'noevia-offsite' })} {drive.backup.copy?.state === 'ok' ? (drive.backup.lastBackup ? t('connectors.backup.lastCopySize', { date: when(t, drive.backup.copy.at), size: formatNumber(drive.backup.lastBackup.uploadedBytes / 1024 / 1024, appLocale(), 1) }) : t('connectors.backup.lastCopy', { date: when(t, drive.backup.copy.at) })) : drive.backup.copy?.message || t('connectors.backup.first')}</>
           : <>{t('connectors.backup.off')}</>}
       </span></div>
-      <Switch label={t('connectors.backup.switch')} checked={drive.backup.copyEnabled} disabled={!!busy} onChange={(on) => void act('backup', () => call<Drive>('/api/connectors/gdrive/backup-copy', 'PUT', { enabled: on }))}/>
+      {/* #1561: the switch is named by the label it visibly carries, so a screen reader says what the sighted user sees. */}
+      <Switch label={t('connectors.backup.title')} checked={drive.backup.copyEnabled} disabled={!!busy} onChange={(on) => void act('backup', () => call<Drive>('/api/connectors/gdrive/backup-copy', 'PUT', { enabled: on }))}/>
     </div></div>}
 
     {connected && onStartChat && <>

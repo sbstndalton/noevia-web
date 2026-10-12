@@ -770,7 +770,6 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'connectors.backup.lastCopySize': "Siste kopi {date}, {size} MB.",
   'connectors.backup.first': "Den første kopien kommer etter neste sikkerhetskopi.",
   'connectors.backup.off': "Av: Sikkerhetskopiene blir bare på denne serveren.",
-  'connectors.backup.switch': "Kopier sikkerhetskopier til Google Drive",
   'connectors.nextcloud.summary': "Notater, filer, kalender, oppgaver og mer fra Nextcloud.",
   'connectors.mcp.title': "MCP-servere",
   'connectors.mcp.summary': "Administratorer legger til servere fra MCP-katalogen eller via URL, under {section} → {mcp}. De som krever din egen pålogging eller nøkkel, er oppført nedenfor.",

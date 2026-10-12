@@ -770,7 +770,6 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'connectors.backup.lastCopySize': "Ultima copia: {date}, {size} MB.",
   'connectors.backup.first': "La prima copia seguirà il prossimo backup.",
   'connectors.backup.off': "Disattivato: i backup restano solo su questo server.",
-  'connectors.backup.switch': "Copia i backup su Google Drive",
   'connectors.nextcloud.summary': "Note, file, calendario, attività e altro dal tuo Nextcloud.",
   'connectors.mcp.title': "Server MCP",
   'connectors.mcp.summary': "Gli amministratori aggiungono server dalla directory MCP o tramite URL, in {section} → {mcp}. Quelli che richiedono il tuo accesso o la tua chiave sono elencati qui sotto.",

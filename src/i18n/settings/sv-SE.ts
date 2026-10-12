@@ -770,7 +770,6 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'connectors.backup.lastCopySize': "Senaste kopia {date}, {size} MB.",
   'connectors.backup.first': "Den första kopian görs efter nästa säkerhetskopiering.",
   'connectors.backup.off': "Av: säkerhetskopiorna stannar på den här servern.",
-  'connectors.backup.switch': "Kopiera säkerhetskopior till Google Drive",
   'connectors.nextcloud.summary': "Anteckningar, filer, kalender, uppgifter och mer från din Nextcloud.",
   'connectors.mcp.title': "MCP-servrar",
   'connectors.mcp.summary': "Administratörer lägger till servrar från MCP-katalogen eller via URL, under {section} → {mcp}. De som kräver din egen inloggning eller nyckel listas nedan.",

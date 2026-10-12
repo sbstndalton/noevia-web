@@ -770,7 +770,6 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'connectors.backup.lastCopySize': "Laatste kopie {date}, {size} MB.",
   'connectors.backup.first': "De eerste kopie volgt na de volgende back-up.",
   'connectors.backup.off': "Uit: back-ups blijven alleen op deze server.",
-  'connectors.backup.switch': "Back-ups naar Google Drive kopiëren",
   'connectors.nextcloud.summary': "Notities, bestanden, agenda, taken en meer uit je Nextcloud.",
   'connectors.mcp.title': "MCP-servers",
   'connectors.mcp.summary': "Beheerders voegen servers toe uit de MCP-directory of via een URL, onder {section} → {mcp}. Servers die je eigen aanmelding of sleutel nodig hebben, staan hieronder.",

@@ -771,7 +771,6 @@ export const EN_GB_SETTINGS = {
   'connectors.backup.lastCopySize': "Last copy {date}, {size} MB.",
   'connectors.backup.first': "The first copy follows the next backup.",
   'connectors.backup.off': "Off: backups stay on this server only.",
-  'connectors.backup.switch': "Copy backups to Google Drive",
   'connectors.nextcloud.summary': "Notes, files, calendar, tasks and more from your Nextcloud.",
   'connectors.mcp.title': "MCP servers",
   'connectors.mcp.summary': "Administrators add servers from the MCP directory or by URL, in {section} → {mcp}. Ones that need your own sign-in or key are listed below.",
