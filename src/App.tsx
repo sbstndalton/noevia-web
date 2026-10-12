@@ -94,6 +94,7 @@ import { queueProjectPatch, restoreProjectPatch, takeProjectPatch, viewBelongsTo
 import type { SkillPin } from './api-contract';
 import { storablePin } from './skill-pin-store';
 import { turnImageIdsToSend } from './turn-images';
+import { contextMeterFromEvent, utf8Bytes } from './context-meter';
 
 type View =
   | { kind: 'diary' }
@@ -988,6 +989,12 @@ export default function App(): JSX.Element {
                 timeToFirstToken: ev.timeToFirstToken,
               }),
             }));
+          }
+          // #1551: the server's context meter at prep and after each tool round. It counts tool output the client
+          // cannot see, so it is kept on this reply (with the prose it already covers) and ChatContext reads it there.
+          if (ev.type === 'context') {
+            const meter = contextMeterFromEvent(ev);
+            if (meter) setMessagesByChat((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, contextMeter: { meter, replyBytes: utf8Bytes(m.content) } } : m)) }));
           }
           // #778: where this reply went (local/cloud, with the reason), and the sensitivity card.
           if (ev.type === 'meta' && isRouteTarget(ev.routing)) {

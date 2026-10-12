@@ -2,12 +2,13 @@ import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ShellIcon } from './ShellIcon';
 import { apiFetch, streamChat } from '../api';
-import type { Message } from '../types';
+import type { ContextMeter, Message } from '../types';
+import { latestMeasurement, newerMeter, unmeasuredTokens } from '../context-meter';
 import { formatCompact, formatNumber, formatPercent } from '../number-format';
 import { appLocale } from '../user-preferences';
 import { useT } from '../i18n';
 import type { MessageKey } from '../i18n';
-type Meter = { historyCount:number; model:string; limit:number; limitSource:string; used:number; reserve:number; safety:number; threshold:number; parts:{name:string;tokens:number}[]; compactedAt:number|null; covered:number };
+type Meter = ContextMeter;
 const CTX_LABELS:Record<string,MessageKey>={
  'Messages & summary':'chat.ctx.partMessages','Instructions, memory & sources':'chat.ctx.partInstructions','Tools':'chat.ctx.partTools',
  'Thinking & answer reserve':'chat.ctx.partReserve','Estimation safety buffer':'chat.ctx.partSafety','Free space':'chat.ctx.partFree',
@@ -25,7 +26,9 @@ export function ChatContext({chatId,projectId,messages,streaming,onBusy,portalTo
  const label=(name:string)=>CTX_LABELS[name]?t(CTX_LABELS[name]):name;
  const controller=useRef<AbortController|null>(null);
  useEffect(()=>()=>controller.current?.abort(),[]);
- const [meter,setMeter]=useState<Meter|null>(null),[busy,setBusy]=useState(false),[status,setStatus]=useState(''),[failed,setFailed]=useState(false);
+ const [fetched,setMeter]=useState<Meter|null>(null),[busy,setBusy]=useState(false),[status,setStatus]=useState(''),[failed,setFailed]=useState(false);
+ // #1551: while a reply streams, the meter the server measured for it (its tool output included) is the live one.
+ const meter=newerMeter(latestMeasurement(messages)?.meter??null,fetched,streaming);
  // The server's figure only changes when a request is prepared, so it is read when the chat
  // opens and again when a reply finishes -- not every three seconds for every open chat, which
  // is what this used to do.
@@ -50,7 +53,7 @@ export function ChatContext({chatId,projectId,messages,streaming,onBusy,portalTo
   for await(const event of streamChat({spaceId:projectId?'project':'free',chatId,projectId,message:'',compactOnly:true,history:messages.filter(m=>!m.error&&m.content).map(m=>({role:m.role,content:m.content}))},controller.current.signal)){if(event.type==='error')throw Error(event.text);if(event.type==='status')setStatus(event.text||t('chat.ctx.compacting'));}
   const r=await apiFetch(`/api/chats/${encodeURIComponent(chatId)}/context-window`);if(r.ok)setMeter((await r.json()).meter);setStatus(t('chat.ctx.statusDone'));
  }catch(e){setFailed(true);setStatus(e instanceof Error?e.message:t('chat.ctx.statusFailed'));}finally{setBusy(false);onBusy(false);}};
- const last=messages.at(-1),live=streaming&&last?.role==='assistant'?Math.ceil((last.reasoning?.length||0)/3):0,extra=messages.filter(m=>!m.error&&m.content).slice(meter?.historyCount??messages.length).reduce((n,m)=>n+Math.ceil(new TextEncoder().encode(m.content).length/3)+12,0),used=(meter?.used||0)+live+extra,percent=meter?Math.min(100,Math.round(100*used/meter.limit)):0;
+ const last=messages.at(-1),live=streaming&&last?.role==='assistant'?Math.ceil((last.reasoning?.length||0)/3):0,extra=unmeasuredTokens(messages,meter?.historyCount),used=(meter?.used||0)+live+extra,percent=meter?Math.min(100,Math.round(100*used/meter.limit)):0;
  // Shown when there is a measurement, or when the chat is long enough that compacting it is a
  // real option. A short, unmeasured chat shows nothing: "Calculated when you send" used to take
  // a whole row above the composer to say that, which on a phone is a tenth of the screen.

@@ -22,6 +22,12 @@ export type RouteFlag = 'diary' | 'secret' | 'iban' | 'card' | 'router' | 'unava
 /** `detail` (#1421): why the sensitivity check could not answer, a short code, only with 'check-unavailable'. */
 export interface RouteTarget { route: RouteName; reason: RouteReason; detail?: string }
 
+/** The context meter (#608, #1551): what the server counts in the next request, and its limit. */
+export interface ContextMeter {
+  historyCount: number; model: string; limit: number; limitSource: string; used: number; reserve: number; safety: number; threshold: number;
+  parts: { name: string; tokens: number }[]; compactedAt: number | null; covered: number; updatedAt?: number;
+}
+
 export interface Message {
   id: string;
   role: Role;
@@ -31,6 +37,9 @@ export interface Message {
   routeTarget?: RouteTarget;
   /** #778: a sensitive-looking turn waiting for Send to cloud / Keep local. Never persisted. */
   routePending?: { id: string; flag: RouteFlag; busy?: boolean };
+  /** #1551: on the reply of the current turn: the context meter the server measured for it, and how many
+   *  characters of its prose that measurement already counted. Kept in this session; never saved. */
+  contextMeter?: { meter: ContextMeter; replyBytes: number };
   content: string;
   reasoningMode?: string;
   reasoningEffort?: string;
