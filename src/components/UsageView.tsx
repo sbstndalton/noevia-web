@@ -124,7 +124,8 @@ export function UsageView(): JSX.Element {
           ))}
         </div>
       </div>
-      <div className="usage-stat-grid">
+      {/* #1539: four tiles fill one row (two rows of two on a narrow screen), never three and one. */}
+      <div className="usage-stat-grid usage-stat-grid--four">
         <Stat label={t('usage.total')} value={compact(totals.input + totals.output)} hint={t('usage.totalHint', { window: label })} />
         <Stat label={t('usage.input')} value={compact(totals.input)} hint={t('usage.inputHint')} />
         <Stat label={t('usage.output')} value={compact(totals.output)} hint={t('usage.outputHint')} />
