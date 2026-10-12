@@ -104,6 +104,9 @@ type View =
   | { kind: 'project'; id: string; codeRequest?: string }
   | { kind: 'chat'; chatId: string; projectId?: string | null };
 
+/** #1508: how often the engine-wide stats snapshot is refreshed while the tab is visible. */
+const STATS_POLL_MS = 15_000;
+
 function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -497,6 +500,8 @@ export default function App(): JSX.Element {
 
   // Engine-wide totals and hardware are a background snapshot. Request-local
   // values arrive over the chat SSE stream and never wait on this poll.
+  // #1508: every poll costs the model manager several calls, so it runs every
+  // STATS_POLL_MS (not every 2.5 s) while visible; a reply's end still refreshes it at once.
   useEffect(() => {
     let alive = true, pending = false;
     const tick = () => {
@@ -509,7 +514,7 @@ export default function App(): JSX.Element {
         .finally(() => { pending = false; });
     };
     tick();
-    const t = setInterval(tick, 2500);
+    const t = setInterval(tick, STATS_POLL_MS);
     document.addEventListener('visibilitychange', tick);
     return () => {
       alive = false;
