@@ -333,6 +333,11 @@
   --accent-2-soft: var(--tint-garnet);
   --send-icon: var(--on-accent);
 }
+/* #1525: --text-tertiary carries the small grey labels (sidebar section headings, Settings group
+   headings). In light it was --md-outline (3.8-4.4:1 on the light grounds of all three families),
+   below AA for 13px text. This darker grey clears 4.5:1 on every light ground the families paint.
+   --md-outline itself stays for borders and icons, which only need 3:1. Dark is unchanged. */
+[data-theme='light'] { --text-tertiary: #63625c; }
 /* Tiles (#951): the sidebar and the main area are tiles on a backdrop one step darker
    (dark) or deeper (light); main is the top surface. Cards: one step up from main in dark,
    white in light. */
