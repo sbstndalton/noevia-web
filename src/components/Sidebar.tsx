@@ -17,6 +17,7 @@ import { hasTag, tagTree } from '../chat-organise';
 import type { TagNode } from '../chat-organise';
 import type { SearchResultKind } from '../sidebar-search';
 import { fetchToolboxes, fetchProfile } from '../api';
+import { downloadChatExport } from '../chat-export';
 import type { McpStatus } from '../api';
 import { useSpaceTier } from '../space-tier';
 import { notifyWorkspaceChanged } from './data/workspace-changed';
@@ -510,6 +511,10 @@ export function Sidebar({
   const chatMenu = (c: ChatMeta): MenuItem[] => [
     { label: c.pinned ? t('sidebar.unpin') : t('sidebar.pin'), icon:<ShellIcon name="pin"/>, onSelect: () => onPatchChat(c.projectId ?? null, c.id, { pinned: !c.pinned }) },
     { label: t('sidebar.rename'), icon:<ShellIcon name="edit"/>, onSelect: () => startRename(c.id, c.title || '', menu?.source) },
+    // #1471: one chat out as Markdown, without exporting every chat (Settings > Data does that).
+    { label: t('sidebar.exportChat'), icon:<ShellIcon name="file"/>, onSelect: () => void downloadChatExport(c.id).catch((e: unknown) => setConfirm({
+      title: t('sidebar.exportChatFailedTitle'), body: e instanceof Error ? e.message : String(e), confirmLabel: t('sidebar.exportChatFailedOk'), run: () => undefined,
+    })) },
     {
       label: t('sidebar.archive'),
       icon:<ShellIcon name="archive"/>,
