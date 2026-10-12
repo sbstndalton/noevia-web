@@ -83,6 +83,9 @@ input:not([type=checkbox]):not([type=radio]), textarea, select { border-color:va
 /* #1514: attached files as named chips, in the composer and on the message they were sent with. */
 .composer-file-chips, .msg-file-chips { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .msg-file-chips { justify-content: flex-end; margin: 4px 0 0; }
+/* The composer's chips sit on the same 744px column as the composer box and its status line (#1514 QA:
+   at 1440 they hung 176px left of the box, from the composer's own padding). */
+.composer-file-chips { width: 100%; max-width: 744px; margin: 0 auto 8px; }
 .file-chip { max-width: 100%; gap: 4px; font-size: var(--text-caption); color: var(--text-secondary); }
 .file-chip > span { min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 519px) {
