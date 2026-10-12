@@ -255,6 +255,7 @@ export const EN_GB = {
   'projects.view.refreshing': 'Refreshing…',
   'projects.view.refreshFromStorage': 'Refresh from storage',
   'projects.view.uploadingFiles': 'Uploading files…',
+  'projects.view.folderKeepsOldName': 'Renaming a project does not move its storage folder. The folder keeps the name it was created with.',
   'projects.view.uploadFiles': 'Upload files',
   'projects.view.importFromStorage': 'Import text from storage',
   'projects.view.uploadLimitsNote': 'Up to 25 MB per file. PDFs up to 60 MB are compressed automatically, with a text-only fallback if needed. Documents such as DOCX are accepted; archive bundles are not. Files without a reader stay available as originals.',

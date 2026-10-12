@@ -17,7 +17,7 @@ import { SendIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
 import { ConfirmDialog } from './ContextMenu';
 import { fileToBase64, uploadLimit } from '../sources';
-import { filesAfterRemoval, uniqueName } from '../project-files';
+import { filesAfterRemoval, storageFolderKeepsOldName, uniqueName } from '../project-files';
 import { deleteProjectImage, projectImageUrl, uploadProjectFile, deleteProjectFile } from '../api';
 import { ResearchPanel } from './research/ResearchPanel';
 import { useResearchAccess } from './research/useResearchAccess';
@@ -374,6 +374,7 @@ export function ProjectView({
               <section className="project-storage-summary">
                 <h3>{t('projects.view.uploadFolder')}</h3>
                 <p className="rail-empty">{t('projects.view.uploadFolderBody')}</p>
+                {project.projectFolder && storageFolderKeepsOldName(project.projectFolder, project.name, project.id) && <p className="rail-empty">{t('projects.view.folderKeepsOldName')}</p>}
                 {project.projectFolder ? <p className="storage-path"><ShellIcon name="folder"/><span>{project.projectFolder}</span></p>
                   : <p className="rail-empty">{t('projects.edit.folderOnFirstUpload')}</p>}
               </section>

@@ -29,3 +29,24 @@ export function uniqueName(name: string, existing: { name: string }[]): string {
     if (!existing.some((f) => f.name === candidate)) return candidate;
   }
 }
+
+/**
+ * The storage folder name a project gets from its name: a mirror of the server's projectFolderName
+ * (noevia-core server/project-folders.cjs), so the web can tell whether a stored folder still matches.
+ */
+export function storageFolderName(name: string): string {
+  return String(name || '').replace(/[\x00-\x1f\x7f/\\:*?"<>|]/g, '-')
+    .replace(/\s+/g, ' ').trim().replace(/^\.+|[.\s]+$/g, '').slice(0, 80).replace(/[.\s]+$/g, '') || 'Untitled project';
+}
+
+/**
+ * True when a project's stored storage folder no longer carries its current name (#1458). Renaming a
+ * project does not move the folder, which keeps the name it was created with: it is fixed at the first
+ * upload. Accepts the WebDAV forms ("Name", "Name (2)") and the S3 form ("Name--<id>").
+ */
+export function storageFolderKeepsOldName(folder: string, name: string, id: string): boolean {
+  const base = folder.split('/').filter(Boolean).pop() ?? '';
+  const expected = storageFolderName(name);
+  const current = base === expected || base.startsWith(`${expected} (`) || base === `${expected}--${id}`;
+  return !current;
+}
