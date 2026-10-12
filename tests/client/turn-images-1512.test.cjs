@@ -111,8 +111,8 @@ test('App sends turnImageIds on every chat request, as an array (never absent, s
   const handle = app.slice(app.indexOf('const handleSend = useCallback('), app.indexOf('const activeMode: ChatMode'));
   assert.match(handle, /turnImageIds: sentImages,/);
   assert.match(handle, /const sentImages = turnImageIdsToSend\(turn\.turnImageIds\);/);
-  // #1514 adds a `files` spread after the image ids; the image ids must still be on the user turn.
-  assert.match(handle, /const userMsg: Message = \{ id: uid\(\), role: 'user', content: text, \.\.\.\(sentPin \? \{ skill: sentPin \} : \{\}\), \.\.\.\(sentImages\.length \? \{ turnImageIds: sentImages \} : \{\}\), \.\.\.\(sentFiles \? \{ files: sentFiles \} : \{\}\) \};/);
+  // #1514 adds a `files` spread and #1517 the variant fields after the image ids; the image ids must still be on the user turn.
+  assert.match(handle, /const userMsg: Message = \{ id: uid\(\), role: 'user', content: text, \.\.\.\(sentPin \? \{ skill: sentPin \} : \{\}\), \.\.\.\(sentImages\.length \? \{ turnImageIds: sentImages \} : \{\}\), \.\.\.\(sentFiles \? \{ files: sentFiles \} : \{\}\), \.\.\.variantFields \};/);
 });
 
 test('Retry and Regenerate resend the image ids the original message was sent with', () => {
@@ -124,5 +124,7 @@ test('Retry and Regenerate resend the image ids the original message was sent wi
 
 test('Edit re-runs send no images, as edits already send no Skill pin', () => {
   const app = src('App.tsx');
-  assert.match(app, /void handleSend\(chatId, projectId, text, editBase\(msgs, index\)\);/);
+  // #1517 adds the variant to the call; it still carries no image ids.
+  assert.match(app, /void handleSend\(chatId, projectId, text, editBase\(msgs, index\), \{ variantOf: \{ kind: 'branch', user: msgs\[index\], tail: msgs\.slice\(index \+ 1\) \} \}\);/);
+  assert.doesNotMatch(app.slice(app.indexOf('void handleSend(chatId, projectId, text, editBase(msgs, index)'), app.indexOf('void handleSend(chatId, projectId, text, editBase(msgs, index)') + 200), /turnImageIds/);
 });

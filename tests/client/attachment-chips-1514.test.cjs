@@ -84,7 +84,8 @@ test('#1514 the send carries the attached files, and the sent message keeps them
   assert.match(chat, /\.\.\.\(attached\.length \? \{ files: attached \} : \{\}\)/, 'submit sends the files');
   assert.match(chat, /if \(attached\.length\) setAttachedByChat\(current => \{ const next = \{ \.\.\.current \}; delete next\[chatId\]/, 'composer list cleared after the send');
   const app = read('src/App.tsx');
-  assert.match(app, /const userMsg: Message = \{ id: uid\(\), role: 'user', content: text, \.\.\.\(sentPin \? \{ skill: sentPin \} : \{\}\), \.\.\.\(sentFiles \? \{ files: sentFiles \} : \{\}\) \};/);
+  // #1512 (turnImageIds) and #1517 (variantFields) sit on the same user turn as the files.
+  assert.match(app, /const userMsg: Message = \{ id: uid\(\), role: 'user', content: text, \.\.\.\(sentPin \? \{ skill: sentPin \} : \{\}\), \.\.\.\(sentImages\.length \? \{ turnImageIds: sentImages \} : \{\}\), \.\.\.\(sentFiles \? \{ files: sentFiles \} : \{\}\), \.\.\.variantFields \};/);
   assert.match(chat, /<FileChips names=\{m\.files \?\? \[\]\} label=\{t\('chat\.files\.label'\)\} className="msg-file-chips" \/>/);
 });
 
