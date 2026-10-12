@@ -1143,6 +1143,9 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 .diary-calendar-heading h1 { margin:8px 0; }
 .diary-calendar-heading button { min-width:44px; min-height:44px; }
 .diary-calendar { margin-top:16px; }
+/* #1566: the loading line holds one line of height, so clearing it moves nothing. */
+.diary-calendar-status { min-height:1lh; display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.diary-calendar-status .popup-tab { min-height:0; padding:2px 10px; }
 .calendar-day { aspect-ratio:auto; min-height:44px; height:clamp(44px,7vh,76px); }
 .diary-composer-dock { background:transparent; padding-bottom:18px; }
 .diary-composer-dock .diary-compose { max-width:820px; }

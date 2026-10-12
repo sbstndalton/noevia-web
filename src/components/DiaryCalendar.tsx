@@ -31,7 +31,8 @@ export function DiaryCalendar({ month, today, days, busy, ready = true, failed =
       <button className="popup-tab" disabled={busy || month >= today.slice(0,7)} aria-label={t('diary.calendar.nextMonth')} onClick={() => moveMonth(1)}><ShellIcon name="right" size={18}/></button>
     </div>
     <p>{view==='calendar' ? t('diary.calendar.chooseDay') : t('diary.calendar.entriesThisMonth')}</p>
-    {!ready && <p role="status">{failed ? t('diary.calendar.loadFailed') : t('diary.calendar.loading')}</p>}
+    {/* #1566: this line is always rendered at one line high, so the grid does not move when loading clears. */}
+    <p className="diary-calendar-status" role="status">{!ready && (failed ? t('diary.calendar.loadFailed') : t('diary.calendar.loading'))}</p>
     {view==='list' ? <div className="diary-entry-list" aria-label={t('diary.calendar.entriesLabel')}>{ready && (entries.length ? entries.map(date=><button className="diary-entry-row" key={date} disabled={busy} onClick={()=>navigate(month,date)}><time dateTime={date}>{date}</time><span>{t('diary.calendar.readEntry')}</span></button>) : <p>{t('diary.calendar.noEntriesThisMonth')}</p>)}</div> :
     <div className="diary-calendar" aria-label={monthLabel(month, locale)}>
       {weekdays.map(day => <span className="calendar-weekday" key={day}>{t(`diary.calendar.weekday.${day}` as MessageKey)}</span>)}
