@@ -75,7 +75,7 @@ test('#1514 each attached file is a named chip with its own label; nothing rende
 test('#1514 an upload reports the names it saved before its refresh, so a failed refresh still shows them', () => {
   const src = read('src/components/ComposerActions.tsx');
   const body = src.slice(src.indexOf('export async function uploadAttachments'), src.indexOf('/** True only for a drag carrying files'));
-  assert.match(body, /saved\.push\(file\.name\);/, 'only uploads that saved are named');
+  assert.match(body, /saved\.push\(name\);/, 'only uploads that saved are named');
   assert.match(body, /if \(saved\.length\) onSaved\?\.\(saved\);\s*\n\s*\/\/ #905[\s\S]*?await onChanged\(\)/, 'reported before onChanged');
 });
 
