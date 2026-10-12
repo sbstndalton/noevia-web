@@ -593,7 +593,7 @@ export function Sidebar({
                     <ShellIcon name={c.pinned ? 'pin' : 'chat'} size={17}/>
                     <SidebarLabel text={c.title || t('common.newChat')} highlight={query}/>
                     {/* Project context tells identically titled chats apart (#239). */}
-                    {c.projectId && projectNames.get(c.projectId) && <span className="chat-row-context">{projectNames.get(c.projectId)}</span>}
+                    {c.projectId && projectNames.get(c.projectId) && <span className="chat-row-context" title={projectNames.get(c.projectId)}>{projectNames.get(c.projectId)}</span>}
                     {streamingChats[c.id] && (
                       <span className="chat-working" aria-label={t('sidebar.stillGenerating')}><i /><i /><i /></span>
                     )}
