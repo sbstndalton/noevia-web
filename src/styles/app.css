@@ -1179,6 +1179,8 @@ button:disabled { cursor: not-allowed; }
   background: var(--bg-surface-active); color: var(--text-secondary);
 }
 .project-card-time { margin-left: auto; font-size: var(--text-caption2); color: var(--text-faint); }
+/* #1572: the archived card's footer row (Restore), always at the end of the card. */
+.project-card-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
 
 @media (max-width: 640px) {
   .projects-head, .projects-grid { padding-left: 18px; padding-right: 18px; }
@@ -1275,7 +1277,7 @@ button:disabled { cursor: not-allowed; }
 }
 .source-name { flex: 1; min-width: 0; font-size: var(--text-caption); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .source-size { font-size: var(--text-caption2); color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.source-actions { display: flex; gap: 8px; margin-top: 8px; }
+.source-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .source-actions .btn { cursor: pointer; }
 
 /* Segmented control, matching .app-mode-switch: the selected pill is a raised

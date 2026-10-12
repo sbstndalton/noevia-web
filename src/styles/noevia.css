@@ -513,7 +513,8 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
   .source-list .source-name { flex-basis: 100%; }
 }
 
-.source-thumbnail { width: 48px; height: 48px; object-fit: contain; border-radius: var(--radius-inset); flex: 0 0 auto; }
+/* #1543: fills its square (cover, not contain) so an image source's preview is readable, not a letterboxed sliver. */
+.source-thumbnail { width: 48px; height: 48px; object-fit: cover; border-radius: var(--radius-inset); flex: 0 0 auto; }
 .upload-progress li { align-items: flex-start; font-size: var(--text-caption); }
 .upload-progress .upload-name { font-size: var(--text-caption); font-weight: 600; overflow-wrap: anywhere; }
 

@@ -118,6 +118,12 @@ a { text-underline-offset: .18em; }
 :root .glass-seg > button { border: 0; background: transparent; box-shadow: none; outline-offset: -2px; }
 :root .glass-seg > .glass-thumb.glass { background: var(--bg-surface); border: 0; border-radius: var(--radius-button-inset); box-shadow: var(--ring-inset), 0 1px 2px rgb(0 0 0 / .12);
   transition: transform var(--dur-base) var(--ease-out-quart); }
+/* #1089: useSegmentThumb measures the chosen option and writes --thumb-x/-y/-w/-h on the track. The
+   track is the containing block for the thumb, which slides behind the options (they sit above it). */
+:root .glass-seg { position: relative; isolation: isolate; }
+:root .glass-seg > .glass-thumb { position: absolute; z-index: 0; left: 0; top: 0; width: var(--thumb-w, 0); height: var(--thumb-h, 0);
+  transform: translate(var(--thumb-x, 0), var(--thumb-y, 0)); pointer-events: none; }
+:root .glass-seg > button { position: relative; z-index: 1; }
 .glass-seg[data-wrapped='true'] { border-radius: var(--radius-control); }
 .composer-mode-toggle { border: 0; position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; isolation: isolate; }
 .composer-mode-toggle::before {

@@ -3,6 +3,7 @@ import type { CSSProperties, DragEvent, ReactNode } from 'react';
 import type { Project, Toolbox } from '../types';
 import { fetchToolboxes, saveProjectConfig, uploadProjectFile } from '../api';
 import { fileToBase64, uploadLimit } from '../sources';
+import { uniqueName } from '../project-files';
 import { appLocale } from '../user-preferences';
 import { ShellIcon } from './ShellIcon';
 import { uploadFailureText, uploadUnreadableReason } from '../source-status';
@@ -34,15 +35,21 @@ export async function uploadAttachments(sink: AttachmentSink, files: File[], t: 
   onBusy(true);
   const failures: string[] = [], notices: string[] = [], saved: string[] = [];
   const started = Date.now();
+  // #1454: a name the project already has is saved as a numbered copy, never written over the source;
+  // the status line says so. `taken` also holds the names this batch has been given.
+  const taken: { name: string }[] = (project.files || []).map((f) => ({ name: f.name }));
   for (const [index, file] of files.entries()) {
     const status = (stage: string) => onStatus(`${index + 1}/${files.length} · ${file.name} · ${stage} · ${Math.round((Date.now() - started) / 1000)}s`);
     try {
       if (file.size > uploadLimit(file.name)) throw new Error(t('composer.upload.tooLarge'));
+      const name = uniqueName(file.name, taken);
+      taken.push({ name });
       status(t('composer.upload.reading'));
-      const result = await uploadProjectFile(project.id, { name: file.name, dataBase64: await fileToBase64(file) }, value => status(`${value.stage}${value.percent == null ? '' : ` ${formatPercent(value.percent, appLocale(), 0)}`}`));
+      const result = await uploadProjectFile(project.id, { name, dataBase64: await fileToBase64(file) }, value => status(`${value.stage}${value.percent == null ? '' : ` ${formatPercent(value.percent, appLocale(), 0)}`}`));
       const unreadable = uploadUnreadableReason(result, t);
       if (unreadable) { failures.push(`${file.name}: ${unreadable}`); continue; }
-      saved.push(file.name);
+      saved.push(name);
+      if (name !== file.name) notices.push(t('composer.upload.renamedCopy', { file: file.name, name }));
       if (result.attachment?.reduction?.note) notices.push(`${file.name}: ${result.attachment.reduction.note}`);
       if (result.attachment?.assetId) onImageAttached?.(result.attachment.assetId);
     } catch (err) { failures.push(`${file.name}: ${uploadFailureText(err, t, t('composer.upload.failed'))}`); }
@@ -56,7 +63,9 @@ export async function uploadAttachments(sink: AttachmentSink, files: File[], t: 
   catch (err) { refreshFailure = `${t('composer.upload.failed')}: ${uploadFailureText(err, t, t('composer.upload.failed'))}`; }
   finally {
     const problems = refreshFailure ? [...failures, refreshFailure] : failures;
-    onStatus(problems.length ? t('composer.upload.partial', { saved: files.length - failures.length, total: files.length, failures: problems.join('; ') }) : `${t.plural('composer.upload.saved', files.length, { target: chatOnly ? t('composer.upload.thisChat') : project.name })} · ${t(diary ? 'composer.upload.extras' : chatOnly ? 'composer.upload.nextMessage' : 'composer.upload.allChats')}${notices.length ? ' · ' + notices.join('; ') : ''}`);
+    // #1250: a batch with nothing kept does not lead with "Saved" (that read as success with an error in it).
+    const kept = files.length - failures.length;
+    onStatus(problems.length ? t(kept > 0 ? 'composer.upload.partial' : 'composer.upload.notSaved', { saved: kept, total: files.length, failures: problems.join('; ') }) :`${t.plural('composer.upload.saved', files.length, { target: chatOnly ? t('composer.upload.thisChat') : project.name })} · ${t(diary ? 'composer.upload.extras' : chatOnly ? 'composer.upload.nextMessage' : 'composer.upload.allChats')}${notices.length ? ' · ' + notices.join('; ') : ''}`);
     onBusy(false);
   }
 }
