@@ -9,10 +9,12 @@ import { ConfirmDialog } from '../ContextMenu';
 import { ShellIcon } from '../ShellIcon';
 import { notifyWorkspaceChanged, useWorkspaceChanged } from './workspace-changed';
 import { restorePatch } from '../../chat-archive';
+import { useT } from '../../i18n';
+import { activeSegments } from '../../i18n/core';
 
 const PAGE = 50;
 
-/** How many chats are archived, for the summary in Your data & privacy. Null while loading or on error. */
+/** How many chats are archived, for the summary in Your data and privacy. Null while loading or on error. */
 export function useArchivedCount(): number | null {
   const [count, setCount] = useState<number | null>(null);
   const load = useCallback(() => { fetchWorkspace().then((w) => setCount(collectArchived(w).length)).catch(() => setCount(null)); }, []);
@@ -22,7 +24,7 @@ export function useArchivedCount(): number | null {
 }
 
 /** Archived chats (#232): a focused view outside Settings, reached from the sidebar and from
- *  Your data & privacy. Search by title or project, restore or delete one or many. Deleting asks
+ *  Your data and privacy. Search by title or project, restore or delete one or many. Deleting asks
  *  first and goes through App's delete so an open copy of the chat is forgotten too. */
 export function ArchivedChatsView({ onDelete, onOpenData }: { onDelete: (projectId: string | null, chatId: string) => Promise<boolean>; onOpenData?: () => void }): JSX.Element {
   const [rows, setRows] = useState<ArchivedRow[] | null>(null);
@@ -33,6 +35,17 @@ export function ArchivedChatsView({ onDelete, onOpenData }: { onDelete: (project
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [confirm, setConfirm] = useState<ArchivedRow[] | null>(null);
+  const t = useT();
+  // The section's name comes from the Settings catalogue, which is a lazy chunk (#286) so it stays out of
+  // the first-load bundle. This view loads it only to name the section it links to, and shows the link once
+  // the name is registered; a German or French interface then swaps the name in through useT as usual.
+  const [sectionNamed, setSectionNamed] = useState(() => activeSegments().includes('settings'));
+  useEffect(() => {
+    let live = true;
+    if (!sectionNamed) void import('../../i18n/settings').then(() => { if (live) setSectionNamed(true); });
+    return () => { live = false; };
+  }, [sectionNamed]);
+  const sectionName = sectionNamed ? t('settings.section.data') : null;
 
   const load = useCallback(() => {
     fetchWorkspace().then((w) => {
@@ -86,7 +99,7 @@ export function ArchivedChatsView({ onDelete, onOpenData }: { onDelete: (project
     <div className="archived-page">
       <header className="archived-head">
         <h1>Archived chats</h1>
-        <p>Archived chats are hidden from the sidebar but kept until you delete them. {onOpenData && <>Want a copy first? <button className="link-button" onClick={onOpenData}>Export from Your data &amp; privacy</button>.</>}</p>
+        <p>Archived chats are hidden from the sidebar but kept until you delete them. {onOpenData && sectionName && <>Want a copy first? <button className="link-button" onClick={onOpenData}>{`Export from ${sectionName}`}</button>.</>}</p>
         <div className="settings-search archived-search"><ShellIcon name="search" size={16}/><input aria-label="Search archived chats" placeholder="Search by title or project" value={query} onChange={(e) => { setQuery(e.target.value); setShown(PAGE); }} /></div>
       </header>
       {error && <p className="modal-err" role="alert">{error} <button className="btn btn-secondary btn-sm" onClick={load}>Try again</button></p>}
