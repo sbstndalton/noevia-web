@@ -31,6 +31,7 @@ export const EN_GB = {
   'sidebar.projects': 'Projects',
   'sidebar.customise': 'Customise',
   'sidebar.search': 'Search noevia',
+  'sidebar.workspaceMode': "Workspace mode",
   'sidebar.searchPlaceholder': 'Search chats, projects and pages…',
   'sidebar.destinations': 'Destinations',
   'sidebar.noSearchResults': 'No matching chats, projects or pages.',

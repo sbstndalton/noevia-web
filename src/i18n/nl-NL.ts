@@ -28,6 +28,7 @@ export const NL_NL: Catalogue = {
   'sidebar.projects': "Projecten",
   'sidebar.customise': "Aanpassen",
   'sidebar.search': 'Zoeken in noevia',
+  'sidebar.workspaceMode': "Werkruimtemodus",
   'sidebar.searchPlaceholder': 'Zoek chats, projecten en pagina’s…',
   'sidebar.destinations': 'Bestemmingen',
   'sidebar.noSearchResults': 'Geen overeenkomende chats, projecten of pagina’s.',

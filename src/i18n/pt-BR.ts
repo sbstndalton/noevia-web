@@ -28,6 +28,7 @@ export const PT_BR: Catalogue = {
   'sidebar.projects': "Projetos",
   'sidebar.customise': "Personalizar",
   'sidebar.search': 'Buscar no noevia',
+  'sidebar.workspaceMode': "Modo do espaço de trabalho",
   'sidebar.searchPlaceholder': 'Buscar chats, projetos e páginas…',
   'sidebar.destinations': 'Destinos',
   'sidebar.noSearchResults': 'Nenhum chat, projeto ou página correspondente.',

@@ -28,6 +28,7 @@ export const NB_NO: Catalogue = {
   'sidebar.projects': "Prosjekter",
   'sidebar.customise': "Tilpass",
   'sidebar.search': 'Søk i noevia',
+  'sidebar.workspaceMode': "Arbeidsmodus",
   'sidebar.searchPlaceholder': 'Søk i chatter, prosjekter og sider…',
   'sidebar.destinations': 'Mål',
   'sidebar.noSearchResults': 'Ingen treff på chatter, prosjekter eller sider.',

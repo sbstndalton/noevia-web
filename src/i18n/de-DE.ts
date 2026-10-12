@@ -28,6 +28,7 @@ export const DE_DE: Catalogue = {
   'sidebar.projects': "Projekte",
   'sidebar.customise': "Anpassen",
   'sidebar.search': 'Noevia durchsuchen',
+  'sidebar.workspaceMode': "Arbeitsmodus",
   'sidebar.searchPlaceholder': 'Chats, Projekte und Seiten suchen…',
   'sidebar.destinations': 'Ziele',
   'sidebar.noSearchResults': 'Keine passenden Chats, Projekte oder Seiten.',

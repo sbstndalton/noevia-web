@@ -28,6 +28,7 @@ export const SV_SE: Catalogue = {
   'sidebar.projects': "Projekt",
   'sidebar.customise': "Anpassa",
   'sidebar.search': 'Sök i noevia',
+  'sidebar.workspaceMode': "Arbetsläge",
   'sidebar.searchPlaceholder': 'Sök bland chattar, projekt och sidor…',
   'sidebar.destinations': 'Mål',
   'sidebar.noSearchResults': 'Inga matchande chattar, projekt eller sidor.',
