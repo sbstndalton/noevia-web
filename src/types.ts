@@ -388,7 +388,7 @@ export interface InstalledModel {
   shape?: { arch?: string; moe?: boolean; experts?: number; active?: number; label: string } | null;
   source?: string | null;
   mtp?: {supported:boolean;enabled:boolean;reason:string};
-  /** #1179: true when the model is the system routing model (Laya, `role = laya`); absent on older servers. */
+  /** #1179: true when the model is the system routing model (Laya, marked in models.roles.json); absent on older servers. */
   system?: boolean;
   name: string;
   sizeGB: number | null;

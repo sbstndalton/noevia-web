@@ -2,7 +2,8 @@
 // chat model a person tunes or configures by hand. Kept in one place so the library grid and the
 // auto-tune panel agree on what counts as "system".
 //
-// #1179: the marker is an explicit `role = laya` key in models.ini. Core sends `system` on each
+// #1179/#1596: the marker is an explicit role in models.roles.json beside models.ini (not a key in
+// models.ini, which llama-server also reads and rejects unknown keys of). Core sends `system` on each
 // installed row, and fetchInstalledModels records those answers here (rememberSystemModels). The
 // name rule is only a deprecated fallback for a name the list has not reported, and it is logged once.
 const LAYA_PREFIX = /^laya(?:[_.-]|$)/i;
@@ -24,7 +25,7 @@ export function isSystemModel(id: string): boolean {
   if (!LAYA_PREFIX.test(name)) return false;
   if (!nameRuleLogged.has(name)) {
     nameRuleLogged.add(name);
-    console.warn(`[model-system] ${name} is treated as Laya by the deprecated name rule; the models list did not mark it with system (#1179)`);
+    console.warn(`[model-system] ${name} is treated as Laya by the deprecated name rule; the models list did not mark it with system; mark it in models.roles.json beside models.ini ({"${name}": "laya"}), not in models.ini (#1179, #1596)`);
   }
   return true;
 }

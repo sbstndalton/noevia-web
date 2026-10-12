@@ -33,7 +33,7 @@ test('Laya is recognised by the explicit system kind from the models list, not b
   const warnings=[];const realWarn=console.warn;console.warn=(text)=>warnings.push(String(text));
   try{
     systemMod.rememberSystemModels([{name:'routing-box',system:true},{name:'laya-named-chat',system:false},{name:'plain-chat'}]);
-    assert.equal(systemMod.isSystemModel('routing-box'),true,'role = laya marks Laya whatever its name');
+    assert.equal(systemMod.isSystemModel('routing-box'),true,'an explicit system kind (role laya in models.roles.json) marks Laya whatever its name');
     assert.equal(systemMod.isSystemModel('laya-named-chat'),false,'an explicit non-Laya kind beats the name');
     assert.equal(isChatGenerationModel('routing-box',[]),false);
     assert.equal(isChatGenerationModel('laya-named-chat',[]),true);
@@ -41,6 +41,8 @@ test('Laya is recognised by the explicit system kind from the models list, not b
     assert.equal(systemMod.isSystemModel('laya_legacy'),true,'a name the list did not report falls back to the name rule');
     assert.equal(systemMod.isSystemModel('laya_legacy'),true);
     assert.equal(warnings.filter(w=>w.includes('laya_legacy')).length,1,'the fallback is logged once');
+    assert.match(warnings.find(w=>w.includes('laya_legacy')),/models\.roles\.json/,'the log names the roles file');
+    assert.ok(!warnings.some(w=>w.includes('role = laya')),'and never tells operators to add a key to models.ini');
     assert.equal(isChatGenerationModel('plain-chat',[]),true);
   }finally{console.warn=realWarn;systemMod.rememberSystemModels([]);}
 });
