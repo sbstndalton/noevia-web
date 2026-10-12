@@ -74,7 +74,7 @@ async function layout(page, label) {
             return route.continue();
           });
           await external.click();await page.getByText('Your saved storage connection couldn’t be loaded',{exact:false}).waitFor();
-          assert.equal(await page.getByRole('button',{name:'Grant Nextcloud access',exact:true}).isDisabled(),true);
+          assert.equal(await page.getByRole('button',{name:'Sign in with Nextcloud',exact:true}).isDisabled(),true);
           await page.unroute('**/api/integrations/storage');await host.click();await external.click();
           await page.waitForFunction(() => {
             const options = Array.from(document.querySelectorAll('label')).filter(l => l.textContent === 'Storage type');

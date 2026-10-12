@@ -113,7 +113,7 @@ export interface StorageConnection { kind: 'local' | 'nextcloud' | 'webdav' | 's
 export const fetchStorage = () => getJson<StorageConnection>('/api/integrations/storage');
 /** #770: the server checks a WebDAV/Nextcloud login before saving. A rejected login throws an
  *  error carrying `code: 'storageLoginRejected'`; an unreachable server saves with `warningCode`. */
-export type StorageSaveResult = StorageConnection & { warning?: string; warningCode?: 'storageUnverified'; status?: number; reason?: 'redirect' };
+export type StorageSaveResult = StorageConnection & { warning?: string; warningCode?: 'storageUnverified' | 'storageThrottled'; status?: number; reason?: 'redirect' | 'timeout' | 'network'; retryAfter?: number };
 export async function saveStorage(body: StorageConnection & { secret?: string }): Promise<StorageSaveResult> {
   const res = await apiFetch('/api/integrations/storage', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!res.ok) {
@@ -126,8 +126,27 @@ export async function saveStorage(body: StorageConnection & { secret?: string })
   return res.json() as Promise<StorageSaveResult>;
 }
 export const testStorage = (body: Partial<StorageConnection> & { secret?: string; useSavedSecret?: boolean }) => postJson<{ ok: true }>('/api/integrations/storage/test', body);
-export const startNextcloud = (baseUrl: string) => postJson<{ flowId: string; loginUrl: string; expiresAt: number }>('/api/integrations/storage/nextcloud/start', { baseUrl });
-export const pollNextcloud = (flowId: string, corpusRoot: string) => postJson<StorageConnection & { pending?: boolean }>('/api/integrations/storage/nextcloud/poll', { flowId, corpusRoot });
+/** #1427: a Nextcloud sign-in failure keeps the server's `code` (nextcloudUnreachable, nextcloudNotFound,
+ *  nextcloudThrottled, nextcloudHttpsRequired, nextcloudFlowExpired, storageLoginRejected) plus
+ *  `reason` and `retryAfter`, so the screen can say what actually happened. */
+export type NextcloudError = Error & { code?: string; reason?: string; retryAfter?: number };
+async function nextcloudCall<T>(url: string, body: unknown): Promise<T> {
+  const res = await apiFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  // Not postJson: its 202 means "a source job to poll", while here 202 means "not approved yet".
+  if (res.status === 202) return { pending: true } as T;
+  if (!res.ok) {
+    let payload: { error?: string; code?: string; reason?: string; retryAfter?: number } = {};
+    try { payload = await res.clone().json(); } catch { /* not JSON */ }
+    const err = failureWithCode(payload.error || await describeFailure(res, `POST ${url} failed`), payload.code) as NextcloudError;
+    if (typeof payload.reason === 'string') err.reason = payload.reason;
+    if (typeof payload.retryAfter === 'number') err.retryAfter = payload.retryAfter;
+    throw err;
+  }
+  return res.json() as Promise<T>;
+}
+export const startNextcloud = (baseUrl: string) => nextcloudCall<{ flowId: string; loginUrl: string; expiresAt: number }>('/api/integrations/storage/nextcloud/start', { baseUrl });
+/** An empty corpusRoot keeps the folder already saved (the server falls back to it, then to Cowork/Diary). */
+export const pollNextcloud = (flowId: string, corpusRoot: string) => nextcloudCall<StorageSaveResult & { pending?: boolean }>('/api/integrations/storage/nextcloud/poll', { flowId, corpusRoot });
 export interface StorageEntry { name: string; path: string; isDir: boolean; size: number | null; ext: string }
 export const browseStorage = (path: string) => getJson<{ entries: StorageEntry[] }>(`/api/integrations/storage/files${path ? `/${path.split('/').map(encodeURIComponent).join('/')}` : ''}`);
 export const deleteProjectImage = (id: string, assetId: string) =>

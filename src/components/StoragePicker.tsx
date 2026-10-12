@@ -1,7 +1,7 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { fetchStorage, pollNextcloud, saveStorage, startNextcloud, testStorage } from '../api';
-import type { StorageConnection } from '../api';
+import type { NextcloudError, StorageConnection, StorageSaveResult } from '../api';
 import { useT } from '../i18n';
 
 export interface StoragePickerProps {
@@ -13,8 +13,38 @@ export interface StoragePickerProps {
   backupOnly?: boolean;
 }
 
+const FLOW_KEY = 'cowork-nextcloud-flow';
+const POLL_MS = 2000;
+
+/** #1427: the address a person opens Nextcloud with, from a saved WebDAV URL or a Files-app URL.
+ *  Only https is offered for sign-in; anything else gives '' so the field starts empty. */
+export function nextcloudSignInAddress(raw: string): string {
+  let url: URL;
+  try { url = new URL(String(raw || '').trim()); } catch { return ''; }
+  if (url.protocol !== 'https:' || url.username || url.password) return '';
+  const path = url.pathname.replace(/\/(?:remote\.php|index\.php|apps|ocs|login|status\.php)(?:\/.*)?$/i, '').replace(/\/+$/, '');
+  return `${url.protocol}//${url.host}${path}`;
+}
+
+/** #1427: a WebDAV URL that is really a Nextcloud server, so the sign-in can be offered instead. */
+export const looksLikeNextcloud = (raw: string) => /\/remote\.php\/(?:dav|webdav)(?:\/|$)/i.test(String(raw || ''));
+
+interface PendingFlow { flowId: string; loginUrl: string; expiresAt: number }
+function storedFlow(): PendingFlow | null {
+  try {
+    const raw = sessionStorage.getItem(FLOW_KEY);
+    if (!raw) return null;
+    const flow = JSON.parse(raw) as PendingFlow;
+    return flow && typeof flow.flowId === 'string' && typeof flow.loginUrl === 'string' && flow.expiresAt > Date.now() ? flow : null;
+  } catch { return null; }
+}
+function rememberFlow(flow: PendingFlow | null) {
+  try { if (flow) sessionStorage.setItem(FLOW_KEY, JSON.stringify(flow)); else sessionStorage.removeItem(FLOW_KEY); } catch { /* private mode: the flow still runs */ }
+}
+
 /** Diary storage backend picker (local / Nextcloud / generic WebDAV), shared by
- *  the setup wizard (step 3) and Settings → Diary storage. */
+ *  the setup wizard (step 3) and Settings → Diary storage. The same connection serves
+ *  project sources, so signing in here fixes both. */
 export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly = false }: StoragePickerProps): JSX.Element {
   const id = useId();
   const t = useT();
@@ -23,8 +53,19 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
   const [loadedKind, setLoadedKind] = useState<StorageConnection['kind'] | null>(null);
   const [secret, setSecret] = useState('');
   const [message, setMessage] = useState('');
+  const [problem, setProblem] = useState('');
   const [loadFailed, setLoadFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // #1427: the Nextcloud sign-in address is its own field. The saved WebDAV URL (often an internal
+  // http:// address) is never what the browser signs in at, and is left untouched until sign-in succeeds.
+  const [server, setServer] = useState('');
+  const [flow, setFlow] = useState<PendingFlow | null>(null);
+  const [starting, setStarting] = useState(false);
+  const [popupBlocked, setPopupBlocked] = useState(false);
+  const onSavedRef = useRef(onSaved);
+  onSavedRef.current = onSaved;
+  const corpusRef = useRef('');
+  corpusRef.current = value.corpusRoot || '';
   // The fields stay locked until the saved connection is known, so an edit can't overwrite
   // settings that simply hadn't loaded yet. Say so, and don't wait forever.
   useEffect(() => {
@@ -39,45 +80,107 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
           : v;
         setValue(next);
         setLoadedKind(next.kind);
+        setServer(nextcloudSignInAddress(next.baseUrl));
         setLoaded(true);
+        // A sign-in started before a reload carries on.
+        const pending = storedFlow();
+        if (pending) { setValue(cur => ({ ...cur, kind: 'nextcloud' })); setFlow(pending); }
       })
       .catch(() => { if (live) setLoadFailed(true); });
     return () => { live = false; };
   }, [attempt]);
   const patch = (next: Partial<StorageConnection>) => setValue((v) => ({ ...v, ...next }));
-
-  const connectNextcloud = async () => {
-    const flow = await startNextcloud(value.baseUrl);
-    window.open(flow.loginUrl, '_blank', 'noopener,noreferrer');
-    setMessage(t('storage.grantHint'));
-    sessionStorage.setItem('cowork-nextcloud-flow', flow.flowId);
+  const switchKind = (kind: StorageConnection['kind']) => {
+    if (kind === 'nextcloud' && !server) setServer(nextcloudSignInAddress(value.baseUrl));
+    setProblem(''); setMessage('');
+    patch({ kind });
   };
-  const finishNextcloud = async () => {
-    const id = sessionStorage.getItem('cowork-nextcloud-flow') || '';
-    const result = await pollNextcloud(id, value.corpusRoot || 'Cowork/Diary');
-    if (result.pending) setMessage(t('storage.waiting'));
-    else {
-      setValue(result);
-      setMessage(t('storage.connected'));
-      sessionStorage.removeItem('cowork-nextcloud-flow');
-      onSaved?.(result);
+
+  const minutes = (seconds?: number) => Math.max(1, Math.ceil((seconds || 300) / 60));
+  const nextcloudProblem = (e: unknown): string => {
+    const err = e as NextcloudError;
+    switch (err?.code) {
+      case 'nextcloudHttpsRequired': return t('storage.nc.httpsRequired');
+      case 'nextcloudUnreachable': return err.reason === 'timeout' ? t('storage.nc.timeout') : err.reason === 'redirect' ? t('storage.nc.redirect') : t('storage.nc.unreachable');
+      case 'nextcloudNotFound': return t('storage.nc.notFound');
+      case 'nextcloudThrottled': return t('storage.nc.throttled', { minutes: minutes(err.retryAfter) });
+      case 'nextcloudFlowExpired': return t('storage.nc.expired');
+      case 'storageLoginRejected': return t('storage.nc.rejected');
+      default: return String(err?.message || e);
     }
   };
+  const savedMessage = (saved: StorageSaveResult, ok: string) => saved.warningCode === 'storageThrottled'
+    ? t('storage.savedThrottled', { minutes: minutes(saved.retryAfter) })
+    : saved.warningCode === 'storageUnverified'
+      ? (saved.reason === 'redirect' ? t('storage.savedRedirected') : saved.reason === 'timeout' ? t('storage.savedTimedOut') : saved.status ? t('storage.savedUnchecked', { status: saved.status }) : t('storage.savedUnverified'))
+      : ok;
+
+  // #1427: the sign-in window is opened inside the click, before any await; opened after the
+  // server answers, Safari and Brave treat it as an unrequested popup and block it.
+  const signIn = async () => {
+    setProblem(''); setMessage(''); setPopupBlocked(false);
+    const popup = window.open('', '_blank');
+    setStarting(true);
+    try {
+      const started = await startNextcloud(server.trim());
+      const pending = { flowId: started.flowId, loginUrl: started.loginUrl, expiresAt: started.expiresAt };
+      if (popup && !popup.closed) { popup.opener = null; popup.location.href = started.loginUrl; }
+      else setPopupBlocked(true);
+      rememberFlow(pending);
+      setFlow(pending);
+    } catch (e) {
+      popup?.close();
+      setProblem(nextcloudProblem(e));
+    } finally { setStarting(false); }
+  };
+  const cancel = () => { rememberFlow(null); setFlow(null); setPopupBlocked(false); setMessage(''); };
+
+  // While a sign-in is open, ask the server every 2 s whether Nextcloud has handed over the app
+  // password. One request at a time; it stops on success, a real error or expiry.
+  useEffect(() => {
+    if (!flow) return;
+    let live = true;
+    let timer = 0;
+    const tick = async () => {
+      if (!live) return;
+      if (flow.expiresAt <= Date.now()) { rememberFlow(null); setFlow(null); setProblem(t('storage.nc.expired')); return; }
+      try {
+        const result = await pollNextcloud(flow.flowId, corpusRef.current);
+        if (!live) return;
+        if (result.pending) { timer = window.setTimeout(() => void tick(), POLL_MS); return; }
+        rememberFlow(null); setFlow(null); setPopupBlocked(false);
+        const { pending: _pending, warning: _warning, warningCode: _code, status: _status, reason: _reason, retryAfter: _retry, ...saved } = result;
+        setValue(saved); setLoadedKind(saved.kind); setServer(nextcloudSignInAddress(saved.baseUrl)); setSecret('');
+        setMessage(savedMessage(result, t('storage.nc.connected', { user: saved.username })));
+        onSavedRef.current?.(saved);
+      } catch (e) {
+        if (!live) return;
+        rememberFlow(null); setFlow(null); setPopupBlocked(false);
+        setProblem(nextcloudProblem(e));
+      }
+    };
+    timer = window.setTimeout(() => void tick(), POLL_MS);
+    return () => { live = false; window.clearTimeout(timer); };
+  }, [flow]);
 
   const save = async () => {
+    setProblem(''); setMessage('');
     const saved = await saveStorage({ ...value, secret });
     setValue(saved);
     setLoadedKind(saved.kind);
     setSecret('');
-    setMessage(saved.warningCode === 'storageUnverified'
-      ? (saved.reason === 'redirect' ? t('storage.savedRedirected') : saved.status ? t('storage.savedUnchecked', { status: saved.status }) : t('storage.savedUnverified'))
-      : t('storage.saved'));
+    setMessage(savedMessage(saved, t('storage.saved')));
     onSaved?.(saved);
   };
   const test = async () => {
+    setProblem(''); setMessage('');
     await testStorage({ ...value, secret, useSavedSecret: value.kind === loadedKind && !!value.secretConfigured && !secret });
     setMessage(t('storage.tested'));
   };
+  const plainError = (e: unknown) => String((e as Error)?.message || e);
+
+  const nextcloudConnected = value.kind === 'nextcloud' && loadedKind === 'nextcloud' && !!value.secretConfigured && !value.secretNeedsReauth;
+  const waiting = !!flow;
 
   return (
     <div className="card-list" style={{ padding: 12, gap: 8 }}>
@@ -89,26 +192,86 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
       <select
         id={`${id}-kind`}
         className="modal-input"
-        disabled={!loaded}
+        disabled={!loaded || waiting}
         value={value.kind}
-        onChange={(e) => patch({ kind: e.target.value as StorageConnection['kind'] })}
+        onChange={(e) => switchKind(e.target.value as StorageConnection['kind'])}
       >
         {!onlineOnly && <option value="local">{t('storage.kind.local')}</option>}
         <option value="nextcloud">Nextcloud</option>
         <option value="webdav">{t('storage.kind.webdav')}</option>
         {!backupOnly && <option value="s3">{t('storage.kind.s3')}</option>}
       </select>
-      {value.kind !== 'local' && (
+      {value.kind === 'nextcloud' && (
         <>
-          <label className="modal-label" htmlFor={`${id}-baseUrl`}>{value.kind === 'nextcloud' ? t('storage.nextcloudUrl') : value.kind === 's3' ? t('storage.endpointUrl') : t('storage.webdavUrl')}</label>
+          {nextcloudConnected && !waiting && <p className="route-note">{t('storage.nc.connectedAs', { user: value.username })}</p>}
+          <label className="modal-label" htmlFor={`${id}-server`}>{t('storage.nc.address')}</label>
+          <input
+            id={`${id}-server`}
+            disabled={!loaded || waiting}
+            className="modal-input"
+            type="url"
+            inputMode="url"
+            autoComplete="url"
+            placeholder="https://cloud.example.com"
+            aria-describedby={`${id}-server-help`}
+            value={server}
+            onChange={(e) => setServer(e.target.value)}
+          />
+          <p id={`${id}-server-help`} className="route-note">{t('storage.nc.addressHelp')}</p>
+          <label className="modal-label" htmlFor={`${id}-corpusRoot`}>{t('storage.corpusFolder')}</label>
+          <input
+            id={`${id}-corpusRoot`}
+            disabled={!loaded || waiting}
+            className="modal-input"
+            placeholder="Cowork/Diary"
+            value={value.corpusRoot}
+            onChange={(e) => patch({ corpusRoot: e.target.value })}
+          />
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {!waiting && (
+              <button type="button" className="modal-btn primary" disabled={!loaded || starting || !server.trim()} onClick={() => void signIn()}>
+                {starting ? t('storage.nc.opening') : nextcloudConnected ? t('storage.nc.signInAgain') : t('storage.nc.signIn')}
+              </button>
+            )}
+            {waiting && <button type="button" className="modal-btn secondary" onClick={cancel}>{t('storage.nc.cancel')}</button>}
+            {onSkip && (
+              <button type="button" className="modal-btn secondary" onClick={() => { cancel(); onSkip(); }}>
+                {t('storage.skip')}
+              </button>
+            )}
+          </div>
+          {waiting && (
+            <p className="route-note" role="status">
+              {popupBlocked ? t('storage.nc.popupBlocked') : t('storage.nc.waiting')}{' '}
+              <a href={flow.loginUrl} target="_blank" rel="noopener noreferrer">{t('storage.nc.openPage')}</a>
+            </p>
+          )}
+          {!waiting && (
+            <details>
+              <summary className="route-note">{t('storage.nc.advanced')}</summary>
+              <p className="route-note">{t('storage.nc.advancedHelp')}</p>
+              <button type="button" className="modal-btn secondary" disabled={!loaded} onClick={() => switchKind('webdav')}>{t('storage.nc.useWebdav')}</button>
+            </details>
+          )}
+        </>
+      )}
+      {value.kind !== 'local' && value.kind !== 'nextcloud' && (
+        <>
+          <label className="modal-label" htmlFor={`${id}-baseUrl`}>{value.kind === 's3' ? t('storage.endpointUrl') : t('storage.webdavUrl')}</label>
           <input
             id={`${id}-baseUrl`}
             disabled={!loaded}
             className="modal-input"
-            placeholder={value.kind === 'nextcloud' ? 'https://cloud.example.com' : value.kind === 's3' ? t('storage.endpointPlaceholder') : t('storage.webdavUrl')}
+            placeholder={value.kind === 's3' ? t('storage.endpointPlaceholder') : t('storage.webdavUrl')}
             value={value.baseUrl}
             onChange={(e) => patch({ baseUrl: e.target.value })}
           />
+          {value.kind === 'webdav' && looksLikeNextcloud(value.baseUrl) && (
+            <div>
+              <p className="route-note">{t('storage.nc.detected')}</p>
+              <button type="button" className="modal-btn secondary" disabled={!loaded} onClick={() => switchKind('nextcloud')}>{t('storage.nc.switch')}</button>
+            </div>
+          )}
           {value.kind === 's3' && (
             <>
               <label className="modal-label" htmlFor={`${id}-bucket`}>{t('storage.bucket')}</label>
@@ -140,10 +303,6 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
             value={value.corpusRoot}
             onChange={(e) => patch({ corpusRoot: e.target.value })}
           />
-        </>
-      )}
-      {(value.kind === 'webdav' || value.kind === 's3') && (
-        <>
           <label className="modal-label" htmlFor={`${id}-username`}>{value.kind === 's3' ? t('storage.accessKey') : t('storage.username')}</label>
           <input
             id={`${id}-username`}
@@ -168,47 +327,23 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
           {value.kind === loadedKind && value.secretConfigured && <p id={`${id}-secret-help`} className="route-note">{t('storage.secretSaved')}</p>}
         </>
       )}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {value.kind === 'nextcloud' ? (
-          <>
-            <button
-              className="modal-btn primary"
-              disabled={!loaded}
-              onClick={() => void connectNextcloud().catch((e) => setMessage(String(e)))}
-            >
-              {t('storage.grant')}
-            </button>
-            <button
-              className="modal-btn secondary"
-              disabled={!loaded}
-              onClick={() => void finishNextcloud().catch((e) => setMessage(String(e)))}
-            >
-              {t('storage.finish')}
-            </button>
-          </>
-        ) : (
-          <>
-            <button disabled={!loaded} className="modal-btn primary" onClick={() => void save().catch((e) => setMessage((e as { code?: string })?.code === 'storageLoginRejected' ? t('storage.loginRejected') : String(e)))}>
-              {t('common.save')}
-            </button>
-            <button disabled={!loaded} className="modal-btn secondary" onClick={() => void test().catch((e) => setMessage(String(e)))}>
-              {t('storage.test')}
-            </button>
-          </>
-        )}
-        {onSkip && (
-          <button
-            className="modal-btn secondary"
-            onClick={() => {
-              sessionStorage.removeItem('cowork-nextcloud-flow');
-              onSkip();
-            }}
-          >
-            {t('storage.skip')}
+      {value.kind !== 'nextcloud' && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" disabled={!loaded} className="modal-btn primary" onClick={() => void save().catch((e) => setProblem((e as { code?: string })?.code === 'storageLoginRejected' ? t('storage.loginRejected') : plainError(e)))}>
+            {t('common.save')}
           </button>
-        )}
-      </div>
-      {message && <p className="route-note">{message}</p>}
+          <button type="button" disabled={!loaded} className="modal-btn secondary" onClick={() => void test().catch((e) => setProblem(plainError(e)))}>
+            {t('storage.test')}
+          </button>
+          {onSkip && (
+            <button type="button" className="modal-btn secondary" onClick={() => { cancel(); onSkip(); }}>
+              {t('storage.skip')}
+            </button>
+          )}
+        </div>
+      )}
+      {problem && <p className="route-note" role="alert">{problem}</p>}
+      {message && <p className="route-note" role="status">{message}</p>}
     </div>
   );
 }
