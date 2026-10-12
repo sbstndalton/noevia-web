@@ -90,6 +90,7 @@ import { EmptyState } from './components/EmptyState';
 import { currentRoutingDecision } from './current-routing';
 import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, withoutChat, withoutProject, type NavState } from './settings-nav';
 import { useT, t as translateNow } from './i18n';
+import { failureCopy } from './failure-copy';
 import { queueProjectPatch, restoreProjectPatch, takeProjectPatch, viewBelongsToProject, projectSaveErrorText, projectSyncErrorText, type PatchQueue } from './project-patches';
 import type { SkillPin } from './api-contract';
 import { storablePin } from './skill-pin-store';
@@ -1149,11 +1150,13 @@ export default function App(): JSX.Element {
           }));
         } else {
           failed = true;
-          const detail = err instanceof Error ? err.message : 'unknown error';
+          // The raw exception stays in the console; the reply says it in plain words (#1472).
+          console.error('Reply failed', err);
+          const failure = failureCopy(err, translateNow);
           setMessagesByChat((prev) => ({
             ...prev,
             [chatId]: (prev[chatId] ?? []).map((m) =>
-              m.id === replyId ? { ...m, content: `Request failed — ${detail}`, error: true } : m,
+              m.id === replyId ? { ...m, content: failure, error: true } : m,
             ),
           }));
         }

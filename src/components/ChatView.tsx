@@ -7,6 +7,7 @@ import type { JSX, KeyboardEvent, ReactNode } from 'react';
 import type { ChatMeta, Message, MessageStats, Project, InstalledModel, RoutingDecision } from '../types';
 import { wikiLinkQueryAt } from '../diary-markdown';
 import { chatLinkCandidates, insertChatLink } from '../chat-organise';
+import { failureCopy } from '../failure-copy';
 import { ShellIcon } from './ShellIcon';
 import { ChevronLeft, SendIcon, SlidersIcon } from './Icons';
 import { Icon } from './icons/Icon';
@@ -289,7 +290,7 @@ export function ChatView({
     apiFetch(`/api/chats/${encodeURIComponent(chatId)}/context`, { method: 'POST' }).then(async response => {
       if (!response.ok) throw new Error('Could not load chat tools');
       const value = await response.json(); if (current) setFreeContext(value.project);
-    }).catch(err => { if (current) statusOf(chatId, String(err)); });
+    }).catch(err => { console.error('Chat tools did not load', err); if (current) statusOf(chatId, failureCopy(err, t)); });
     return () => { current = false; };
   }, [chatId, project?.id]);
   // #789: ChatView stays mounted across chat switches, so an upload (or a compaction) started in
