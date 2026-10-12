@@ -141,6 +141,20 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
     return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
   }, [open]);
 
+  // #1554: Escape closes the menu wherever focus is (the + button, a row inside it, or the message box),
+  // not only when the key lands inside this element, and returns focus to the + button.
+  useEffect(() => {
+    if (!open) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      event.preventDefault();
+      setOpen(false);
+      trigger.current?.focus();
+    };
+    document.addEventListener('keydown', onEscape);
+    return () => document.removeEventListener('keydown', onEscape);
+  }, [open]);
+
   useEffect(() => { setSelected(project?.toolboxes ?? (diary ? [] : ['core'])); }, [project, diary]);
   useEffect(() => { if (!diary) setOpen(false); setError(''); }, [project?.id, diary]);
   useEffect(() => {
