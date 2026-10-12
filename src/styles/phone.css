@@ -553,6 +553,14 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .plugin-copy { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .plugin-copy code { flex: 1; min-width: 0; overflow-wrap: anywhere; padding: 6px 8px; border-radius: var(--radius-sm); background: var(--nav-hover); font-size: var(--text-footnote); }
 .plugin-card-actions .plugin-add small[role] { text-align: left; }
+/* #1557: a Discover card's actions sit on the title's own left edge, in one row under the text, instead of
+   stacking on three different left edges (the title, the View chip and Add to project). The icon column is
+   the 36px of .plugin-card-icon. A card with a key form keeps its full-width form (the rules above). */
+.plugin-card:has(> .plugin-card-actions):not(:has(.plugin-key-form)) { display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: var(--space-3); row-gap: var(--space-2); align-items: start; }
+.plugin-card:has(> .plugin-card-actions):not(:has(.plugin-key-form)) > .plugin-card-icon { grid-column: 1; grid-row: 1; }
+.plugin-card:has(> .plugin-card-actions):not(:has(.plugin-key-form)) > .plugin-card-text { grid-column: 2; grid-row: 1; }
+.plugin-card:has(> .plugin-card-actions):not(:has(.plugin-key-form)) > .plugin-card-actions { grid-column: 2; grid-row: 2; flex: none; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; align-self: start; max-width: none; }
+.plugin-card:has(> .plugin-card-actions):not(:has(.plugin-key-form)) .plugin-add { max-width: none; justify-content: flex-start; }
 .plugin-key-mode { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .plugin-key-mode legend { font-weight: 600; font-size: var(--text-footnote); margin-bottom: 2px; }
 .plugin-key-mode label { flex-direction: row !important; align-items: baseline; gap: 6px !important; font-size: var(--text-footnote); }
