@@ -17,6 +17,8 @@ export const SV_SE: Catalogue = {
   'nav.notFound.chatBody': "Den kan ha tagits bort, eller så tillhör länken ett annat konto.",
   'nav.notFound.projectTitle': "Det här projektet är inte tillgängligt",
   'nav.notFound.projectBody': "Det kan ha tagits bort, eller så tillhör länken ett annat konto.",
+  'nav.notFound.pageTitle': 'Den här sidan finns inte',
+  'nav.notFound.pageBody': 'Adressen matchar ingen sida i noevia. Kontrollera länken eller starta en ny chatt.',
 
   'sidebar.newTask': "Ny uppgift",
   'sidebar.code.pullRequests': "Pull requests",

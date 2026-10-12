@@ -20,6 +20,8 @@ export const EN_GB = {
   'nav.notFound.chatBody': 'It may have been deleted, or the link belongs to a different account.',
   'nav.notFound.projectTitle': 'This project isn\'t available',
   'nav.notFound.projectBody': 'It may have been deleted, or the link belongs to a different account.',
+  'nav.notFound.pageTitle': "This page isn't here",
+  'nav.notFound.pageBody': "The address doesn't match a page in noevia. Check the link, or start a new chat.",
 
   'sidebar.newTask': 'New task',
   'sidebar.code.pullRequests': 'Pull requests',

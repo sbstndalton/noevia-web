@@ -17,6 +17,8 @@ export const PT_BR: Catalogue = {
   'nav.notFound.chatBody': "Ele pode ter sido excluído, ou o link pertence a outra conta.",
   'nav.notFound.projectTitle': "Este projeto não está disponível",
   'nav.notFound.projectBody': "Ele pode ter sido excluído, ou o link pertence a outra conta.",
+  'nav.notFound.pageTitle': 'Esta página não existe',
+  'nav.notFound.pageBody': 'O endereço não corresponde a nenhuma página do noevia. Verifique o link ou comece um novo chat.',
 
   'sidebar.newTask': "Nova tarefa",
   'sidebar.code.pullRequests': "Pull requests",

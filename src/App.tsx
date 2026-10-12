@@ -90,7 +90,7 @@ import { readLastPlace, writeLastPlace, clearLastPlace, type LastPlace } from '.
 import { historyMode, matchPath, parsePath, routeForState, toPath, type CustomiseTab, type ProjectTab, type Route, type SyncedPlace } from './routes';
 import { EmptyState } from './components/EmptyState';
 import { currentRoutingDecision } from './current-routing';
-import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, withoutChat, withoutProject, type NavState } from './settings-nav';
+import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, settingsOpenAtLoad, withoutChat, withoutProject, type NavState } from './settings-nav';
 import { useT, t as translateNow } from './i18n';
 import { failedReply, failureCopy } from './failure-copy';
 import { createThinkingClock } from './thinking-time';
@@ -123,13 +123,15 @@ type InitialNav = {
   /** The saved place the view underneath comes from: always for `/`, and for the two overlays
    *  (Settings, Code) that have no view of their own. */
   stored: LastPlace | null;
+  /** The address names no page at all (#1469): the app says so, and keeps the address as it is. */
+  unknown: boolean;
 };
 function readInitialNav(): InitialNav {
   const matched = matchPath(window.location.pathname);
   const stored = readLastPlace();
-  if (!matched) return { route: { kind: 'new' }, stored: null };
-  if (matched.kind === 'new' && !matched.projectId) return { route: null, stored };
-  return { route: matched, stored: matched.kind === 'settings' || matched.kind === 'code' ? stored : null };
+  if (!matched) return { route: { kind: 'new' }, stored: null, unknown: true };
+  if (matched.kind === 'new' && !matched.projectId) return { route: null, stored, unknown: false };
+  return { route: matched, stored: matched.kind === 'settings' || matched.kind === 'code' ? stored : null, unknown: false };
 }
 
 export default function App(): JSX.Element {
@@ -164,9 +166,12 @@ export default function App(): JSX.Element {
   useEffect(() => { const open = () => openSettings('status'); window.addEventListener('noevia:open-service-status', open); return () => window.removeEventListener('noevia:open-service-status', open); }, []);
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account');
     // A new account starts in Settings — unless it signed in at a link to somewhere else (#359).
-    if (initialRoute) return initialRoute.kind === 'settings';
-    return fresh || !!initialNav.stored?.settings; });
+    // A bare `/` never reopens a saved Settings overlay (#1444); only the place underneath returns.
+    return settingsOpenAtLoad(initialRoute, fresh); });
   const [appMode, setAppMode] = useState<'chat'|'code'>(initialRoute?.kind === 'code' ? 'code' : 'chat');
+  // An address that names no page (#1469): shown as a not-found page with a way back into the app,
+  // and left in the address bar until the person goes somewhere else.
+  const [pageMissing, setPageMissing] = useState(initialNav.unknown);
   // The tab a project and Customise are on, so the address bar can carry it (#359). A project's
   // tab is kept with its id: another project opens on its own first tab, not on this one.
   // #552: a file a reply's source chip asked the project's Sources tab to reveal.
@@ -653,11 +658,15 @@ export default function App(): JSX.Element {
   });
   const routePath = route ? toPath(route) : null;
   const syncedPlace = useRef<SyncedPlace | null>(null);
+  // Any move off the page the address did not name (a sidebar link, a Back step) leaves it (#1469).
+  const viewAtLoad = useRef(view);
+  useEffect(() => { if (view !== viewAtLoad.current) setPageMissing(false); }, [view]);
   // Every commit, not on deps: the replace flag must be consumed by the first commit after it
   // was raised even when that commit leaves the path alone.
   useEffect(() => {
     const flagged = replaceAfter.current !== null && thisRender > replaceAfter.current;
     if (flagged) replaceAfter.current = null;
+    if (pageMissing) return;
     if (!route || !routePath) return;
     const next: SyncedPlace = { path: routePath, kind: route.kind, chatId: view.kind === 'chat' ? view.chatId : null };
     const mode = historyMode(syncedPlace.current, next, { current: window.location.pathname, forceReplace: flagged });
@@ -1776,7 +1785,15 @@ export default function App(): JSX.Element {
           </EmptyState>
         </main>
       )}
-      {view.kind === 'chat' && !chatMissing && !projectMissing && (
+      {pageMissing && (
+        <main className="main">
+          <EmptyState icon="chat" title={tr('nav.notFound.pageTitle')}
+            action={<button className="btn btn-primary" onClick={() => { setPageMissing(false); startFreeChat(); }}>{tr('common.newChat')}</button>}>
+            {tr('nav.notFound.pageBody')}
+          </EmptyState>
+        </main>
+      )}
+      {view.kind === 'chat' && !chatMissing && !projectMissing && !pageMissing && (
         <ChatView
           project={activeProject ?? null}
           onProjectChanged={refreshProjects}

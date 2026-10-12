@@ -150,7 +150,8 @@ export function Sidebar({
   // Recents stay bounded so a long history never pushes everything else away (#239).
   const [allRecents, setAllRecents] = useState(false);
   // ⌘K / Ctrl+K from anywhere (components/shortcuts): open the rail and its search field.
-  useEffect(() => { const open = () => { setCollapsed(false); setExpanded(true); setSearching(true); }; window.addEventListener('noevia:open-search', open); return () => window.removeEventListener('noevia:open-search', open); }, []);
+  // #1470: the field takes focus even when the drawer was already open (its autoFocus only runs on mount).
+  useEffect(() => { const open = () => { setCollapsed(false); setExpanded(true); setSearching(true); window.requestAnimationFrame(() => searchInputRef.current?.focus()); }; window.addEventListener('noevia:open-search', open); return () => window.removeEventListener('noevia:open-search', open); }, []);
   // Below 600px the sidebar is gone entirely and opens as a drawer from one
   // toggle; `expanded` is that drawer. Focus is trapped while it is open and
   // handed back to the toggle when it closes.
@@ -176,11 +177,22 @@ export function Sidebar({
     if (!mobile) { wasOpen.current = false; return; }
     if (expanded) {
       wasOpen.current = true;
-      drawer.current?.querySelector<HTMLElement>('.side-expand')?.focus();
+      // #1470: a search-led open (⌘K, the search button) lands in the field, not on the close button.
+      if (searching && searchInputRef.current) searchInputRef.current.focus();
+      else drawer.current?.querySelector<HTMLElement>('.side-expand')?.focus();
     } else if (wasOpen.current) {
       wasOpen.current = false;
       toggle.current?.focus();
     }
+  }, [expanded, mobile]);
+  // #1465: at phone width the open drawer is a modal (aria-modal). The page behind it, and the toggle
+  // that opened it, are inert until it closes, so focus and the accessibility tree stay in the drawer.
+  // Released in the cleanup, which runs before the focus effect above hands focus back to the toggle.
+  useEffect(() => {
+    if (!mobile || !expanded) return;
+    const behind = [...document.querySelectorAll<HTMLElement>('.app-stack, .app .nav-drawer-toggle')];
+    for (const el of behind) el.setAttribute('inert', '');
+    return () => { for (const el of behind) el.removeAttribute('inert'); };
   }, [expanded, mobile]);
   // A software keyboard shrinks only the visual viewport; size the drawer to it so
   // nothing in it ends up behind the keyboard.
@@ -460,6 +472,19 @@ export function Sidebar({
     else if (e.key === 'ArrowUp') { e.preventDefault(); if (index <= 0) searchInputRef.current?.focus(); else focusSearchResultAt(index - 1); }
     else if (e.key === 'Escape') { e.preventDefault(); searchInputRef.current?.focus(); }
   };
+  // #1528: ArrowDown/ArrowUp move focus between the chat rows of the chat list, in DOM order. A query
+  // already handles arrows for its flat result list (onSearchResultKeyDown), so that case is skipped.
+  const onChatListKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.defaultPrevented || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) return;
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const current = e.target as HTMLElement;
+    if (!current.matches('.chat-row > .nav-item')) return;
+    const rows = [...e.currentTarget.querySelectorAll<HTMLElement>('.chat-row > .nav-item')].filter((el) => el.getClientRects().length);
+    const index = rows.indexOf(current);
+    if (index < 0) return;
+    e.preventDefault();
+    rows[index + (e.key === 'ArrowDown' ? 1 : -1)]?.focus();
+  };
   const destinationResults = query && destinations.length > 0 && <div className="spaces side-scroll side-scroll-destinations">
     <div className="sidebar-section-head"><span className="section-label">{t('sidebar.destinations')}</span></div>
     {destinations.map(destination => <button
@@ -630,7 +655,7 @@ export function Sidebar({
       }}
     >
       <div className="sidebar-scroll">
-      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? t('sidebar.closeNavigation') : collapsed ? t('sidebar.expandNavigation') : t('sidebar.collapseNavigation')} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div>{/* A small icon-only Chat/Code switch at the end of the header row. Switching
+      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? t('sidebar.closeNavigation') : collapsed ? t('sidebar.expandNavigation') : t('sidebar.collapseNavigation')} aria-expanded={mobile ? undefined : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div>{/* A small icon-only Chat/Code switch at the end of the header row. Switching
           closes the phone drawer, so the new mode is what you see. */}{showPreviews && <ModeSwitch compact mode={mode} onCode={() => { setExpanded(false); onEnterCode(); }} onChat={() => { setExpanded(false); onEnterChat?.(); }}/>}</div>
       {/* On a phone the drawer always shows the search field under its header. */}{(searching || (mobile && expanded))&&<>
       {/* #439: ArrowDown enters the results (focusSearchResultAt); a first Escape from a result
@@ -699,7 +724,7 @@ export function Sidebar({
             : <p className="side-hint">{t('sidebar.tasksEmpty')}</p>}
         </div>
         </>}
-      </div> : <div className="sidebar-history">
+      </div> : <div className="sidebar-history" onKeyDown={onChatListKeyDown}>
       {destinationResults}
       {query && searchResults.length === 0 && <p className="side-hint" role="status">{t('sidebar.noSearchResults')}</p>}
       {['Pinned','Projects'].map(group => {

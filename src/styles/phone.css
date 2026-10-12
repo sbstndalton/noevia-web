@@ -861,3 +861,14 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
   button.recents-del::after { left: 50%; right: auto; width: max(100%, var(--target-min)); transform: translate(-50%, -50%); }
   .recents-del { margin-inline-end: calc((var(--target-min) - 28px) / 2); }
 }
+
+/* #1466: phone tap targets. At phone width the touch controls reach the 44px platform minimum
+   (--target-min; WCAG 2.5.5 AAA, well above the 2.5.8 AA floor of 24px). Applied whatever the
+   pointer: the measured controls were the phone's own, and a narrow desktop window is the same layout. */
+@media (max-width: 519px) {
+  .composer-add.glass { min-width: var(--target-min); min-height: var(--target-min); }
+  .app .sidebar.pane .proj-row > .project-expand { min-width: var(--target-min); }
+  .app .sidebar.pane .app-mode-switch.is-compact button { min-height: var(--target-min); }
+  .diary-view-toggle .popup-tab { min-width: var(--target-min); min-height: var(--target-min); }
+  .diary-file-list button { min-height: var(--target-min); }
+}

@@ -79,3 +79,12 @@ export function nextNavState<V>(
 export function resolveSettingsClose<V>(state: NavState<V>): { view: V; next: NavState<V> } {
   return { view: state.returnView, next: { returnView: state.returnView, cameFromSettings: null } };
 }
+
+/** Whether Settings is open when the page loads (#1444). An address that names a Settings page opens
+ *  it, and so does a brand-new account. Anything else does not: a bare `/` restores the place
+ *  underneath (the saved view) but never the Settings overlay, so the root URL cannot reopen a
+ *  Settings modal the user last left open. */
+export function settingsOpenAtLoad(route: { kind: string } | null, freshAccount: boolean): boolean {
+  if (route) return route.kind === 'settings';
+  return freshAccount;
+}

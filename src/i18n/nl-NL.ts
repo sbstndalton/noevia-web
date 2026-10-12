@@ -17,6 +17,8 @@ export const NL_NL: Catalogue = {
   'nav.notFound.chatBody': "Hij is mogelijk verwijderd, of de link hoort bij een ander account.",
   'nav.notFound.projectTitle': "Dit project is niet beschikbaar",
   'nav.notFound.projectBody': "Het is mogelijk verwijderd, of de link hoort bij een ander account.",
+  'nav.notFound.pageTitle': 'Deze pagina bestaat niet',
+  'nav.notFound.pageBody': 'Het adres hoort bij geen pagina van noevia. Controleer de link of start een nieuwe chat.',
 
   'sidebar.newTask': "Nieuwe taak",
   'sidebar.code.pullRequests': "Pull requests",

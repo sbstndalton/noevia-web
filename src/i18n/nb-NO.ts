@@ -17,6 +17,8 @@ export const NB_NO: Catalogue = {
   'nav.notFound.chatBody': "Den kan ha blitt slettet, eller lenken tilhører en annen konto.",
   'nav.notFound.projectTitle': "Dette prosjektet er ikke tilgjengelig",
   'nav.notFound.projectBody': "Det kan ha blitt slettet, eller lenken tilhører en annen konto.",
+  'nav.notFound.pageTitle': 'Denne siden finnes ikke',
+  'nav.notFound.pageBody': 'Adressen passer ikke med noen side i noevia. Sjekk lenken, eller start en ny chat.',
 
   'sidebar.newTask': "Ny oppgave",
   'sidebar.code.pullRequests': "Pull-forespørsler",
