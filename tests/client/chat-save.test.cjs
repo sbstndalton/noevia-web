@@ -1,5 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript');
-const load=(f)=>{const m={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../../src',f),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:m});return m;};
+const load=(f)=>{const m={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../../src',f),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:m,require:(id)=>{if(!/^\.\//.test(id))throw Error('unexpected import '+id);return load(id.slice(2)+'.ts');}});return m;};
 const s=load('chat-save.ts'),tm=load('transcript-merge.ts');
 const J=(v)=>JSON.parse(JSON.stringify(v));
 

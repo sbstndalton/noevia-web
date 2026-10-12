@@ -2,6 +2,33 @@ import type { HistoryEntry } from './types';
 
 const same = (a: HistoryEntry, b: HistoryEntry) => a.role === b.role && a.content === b.content;
 
+/** #1517: two copies of one turn each hold the answers or versions that tab made (Regenerate, Edit & re-run).
+ *  The union keeps `first`'s order, so its `answer`/`branch` pointer still points at the same one, then adds
+ *  what only `second` has. Answers are told apart by their text, versions by the text of the turn. */
+export function unionVariants<T extends { content: string }>(first: readonly T[] | undefined, second: readonly T[] | undefined): T[] | undefined {
+  if (first === undefined && second === undefined) return undefined;
+  const out = [...(first ?? [])];
+  const seen = new Set(out.map((v) => v.content));
+  for (const v of second ?? []) if (!seen.has(v.content)) { seen.add(v.content); out.push(v); }
+  return out;
+}
+
+/** A user turn with the answers and versions of both copies. The entry itself when the other adds nothing. */
+function withVariantsOf(entry: HistoryEntry, other: HistoryEntry): HistoryEntry {
+  if (entry.role !== 'user' || (entry.answers === undefined && entry.branches === undefined && other.answers === undefined && other.branches === undefined)) return entry;
+  const answers = unionVariants(entry.answers, other.answers);
+  const branches = unionVariants(entry.branches, other.branches);
+  const grew = (answers?.length ?? 0) !== (entry.answers?.length ?? 0) || (branches?.length ?? 0) !== (entry.branches?.length ?? 0);
+  if (!grew) return entry;
+  return { ...entry, ...(answers !== undefined ? { answers, answer: entry.answer ?? other.answer } : {}), ...(branches !== undefined ? { branches, branch: entry.branch ?? other.branch } : {}) };
+}
+
+/** `winner`'s shared start with the answers and versions `other` holds for the same turns. */
+function shareVariants(winner: HistoryEntry[], other: HistoryEntry[], shared: number): HistoryEntry[] {
+  const out = winner.map((entry, i) => (i < shared ? withVariantsOf(entry, other[i]) : entry));
+  return out.every((entry, i) => entry === winner[i]) ? winner : out;
+}
+
 /** Merge the server's copy of a transcript with ours after a concurrent save. The shared start is
  *  kept once; if one copy extends the other it wins; otherwise the other device's later turns come
  *  first, then ours, so no user turn either device wrote is lost.
@@ -15,18 +42,19 @@ const same = (a: HistoryEntry, b: HistoryEntry) => a.role === b.role && a.conten
 export function mergeTranscripts(theirs: HistoryEntry[], ours: HistoryEntry[]): HistoryEntry[] {
   let shared = 0;
   while (shared < theirs.length && shared < ours.length && same(theirs[shared], ours[shared])) shared++;
-  if (shared === theirs.length) return ours;
-  if (shared === ours.length) return theirs;
+  if (shared === theirs.length) return shareVariants(ours, theirs, shared);
+  if (shared === ours.length) return shareVariants(theirs, ours, shared);
   const tail = theirs.slice(shared);
   const mine = ours.slice(shared);
+  const start = shareVariants(theirs.slice(0, shared), ours, shared);
   if (tail[tail.length - 1].role === 'assistant' && mine[0].role === 'assistant') {
     if (tail.length === 1) {
       const keep = tail[0].content.length > mine[0].content.length ? tail[0] : mine[0];
-      return [...theirs.slice(0, shared), keep, ...mine.slice(1)];
+      return [...start, keep, ...mine.slice(1)];
     }
-    return [...theirs, ...mine.slice(1)];
+    return [...start, ...tail, ...mine.slice(1)];
   }
-  return [...theirs, ...mine];
+  return [...start, ...tail, ...mine];
 }
 
 /** A merge that was held back while a reply streamed (#1515). `ours` is the transcript that merge was
