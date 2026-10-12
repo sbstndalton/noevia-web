@@ -31,6 +31,7 @@ import { senderLabelText } from '../chat-labels';
 import type { Translate } from '../i18n';
 import { formatBytes, formatPercent } from '../number-format';
 import { appLocale } from '../user-preferences';
+import { keepIdentifiersWhole } from '../no-break-identifiers';
 
 /** First free "name", "name (2)", "name (3)", … avoiding collisions. */
 function uniqueName(name: string, existing: { name: string }[]): string {
@@ -243,7 +244,7 @@ export function ProjectView({
           {f.attachment?.assetId && <img className="source-thumbnail" src={projectImageUrl(project.id, f.attachment.assetId)} alt="" />}
           <span className="source-name" title={f.name}><ShellIcon name="file"/><span>{f.name.split('/').pop()}
             <small className="source-status">{skillFiles.includes(f.name) ? t('projects.view.instructionSkill') : f.document ? sourceStatus(f, t) : f.attachment?.state === 'stored' ? (attachmentReason(f.attachment, t) || t('projects.view.originalStored')) : f.attachment?.state === 'vision' ? t('projects.view.uploadedImage') : f.attachment?.state === 'partial' ? (attachmentReason(f.attachment, t) || t('projects.view.textPreviewLimited')) : t('projects.view.textReady')}</small>
-            <small className="source-status">{f.source ? f.name : t('projects.view.storedInNoevia')}{f.attachment ? ` · ${formatBytes(f.attachment.bytes, appLocale())}` : ''}</small>
+            <small className="source-status">{f.source ? keepIdentifiersWhole(f.name) : t('projects.view.storedInNoevia')}{f.attachment ? ` · ${formatBytes(f.attachment.bytes, appLocale())}` : ''}</small>
             {undeletableSynced && <small className="source-status">{t('projects.view.syncedFrom', { source: f.source || '' })}</small>}
           </span></span>
           {(f.attachment || f.document?.byteHash) && <a className="btn btn-ghost btn-sm" href={`/api/projects/${encodeURIComponent(project.id)}/${f.attachment ? 'uploads' : 'documents'}/original?name=${encodeURIComponent(f.name)}`} download>{t('projects.view.original')}</a>}
@@ -273,7 +274,7 @@ export function ProjectView({
         <div className="project-main">
           <header className="project-head">
             <div className="project-head-main">
-              <h1 className="project-title"><ProjectIcon project={project} size={30}/>{project.name}</h1>
+              <h1 className="project-title"><ProjectIcon project={project} size={30}/>{keepIdentifiersWhole(project.name)}</h1>
               {project.goal && <p className="project-goal">{project.goal}</p>}
               <p className="project-detail-meta">{project.archived ? `${t('projects.archived')} · ` : ''}{(() => { const c = countProjectChats(project.chats); return c.archived ? `${t.plural('projects.count.chats', c.active)} · ${t.plural('projects.count.archivedChats', c.archived)}` : t.plural('projects.count.chats', c.active); })()} · {t('projects.view.updatedLabel')} <time dateTime={new Date(project.updatedAt).toISOString()} title={new Date(project.updatedAt).toLocaleString()}>{timeAgo(t, project.updatedAt)}</time></p>
             </div>
@@ -375,7 +376,7 @@ export function ProjectView({
               <section className="project-storage-summary">
                 <h3>{t('projects.view.uploadFolder')}</h3>
                 <p className="rail-empty">{t('projects.view.uploadFolderBody')}</p>
-                {project.projectFolder ? <p className="storage-path"><ShellIcon name="folder"/><span>{project.projectFolder}</span></p>
+                {project.projectFolder ? <p className="storage-path"><ShellIcon name="folder"/><span>{keepIdentifiersWhole(project.projectFolder)}</span></p>
                   : <p className="rail-empty">{t('projects.edit.folderOnFirstUpload')}</p>}
               </section>
               <details className="project-linked-folders">
