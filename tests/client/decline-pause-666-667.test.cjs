@@ -36,7 +36,7 @@ test('declined note: fixed wording, the tool name, and any saved change, in ever
     assert.equal(pausedNoteText(en, { reason: 'declined', applied: 0, declined: [] }), 'No change was made.');
     assert.equal(pausedNoteText(en, { reason: 'declined', applied: 1 }), '1 change was saved before this reply ended.');
     // The #658 notes are unchanged.
-    assert.equal(pausedNoteText(en, { reason: 'supervision', applied: 0 }), 'Step supervision paused this reply before any further steps. Nothing was changed.');
+    assert.equal(pausedNoteText(en, { reason: 'supervision', applied: 0 }), 'Step checks paused this reply before any further steps. Nothing was changed.');
     for (const locale of LOCALES) {
       if (locale !== 'en-GB') core.registerCatalogue(locale, (await server.ssrLoadModule(`/src/i18n/${locale}.ts`))[locale.replace('-', '_').toUpperCase()]);
       const t = tFor(locale);

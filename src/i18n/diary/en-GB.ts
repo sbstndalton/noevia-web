@@ -125,7 +125,7 @@ export const EN_GB_DIARY = {
   'diary.conversation.diaryActivity': 'Diary activity',
   'diary.conversation.workingOnDiary': 'Working on your diary…',
   'diary.attachments.title': 'Optional diary attachments',
-  'diary.attachments.storedSeparately': 'Stored separately from your diary corpus. Used only while extras are on.',
+  'diary.attachments.storedSeparately': 'Stored separately from your diary entries. Used only while extras are on.',
   'diary.attachments.ready': 'ready',
   'diary.confirm.deleteAttachment': 'Delete attachment {name} from storage?',
   'diary.attachments.delete': 'Delete attachment',

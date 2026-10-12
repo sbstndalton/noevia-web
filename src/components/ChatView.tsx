@@ -141,7 +141,7 @@ const ROUTE_CAUSES = ['http-503', 'deadline', 'network', 'benched', 'http-422'] 
 export function RoutingDetails({ decision }: { decision: RoutingDecision }) {
   const t = useT();
   if (!isDisplayableRoutingDecision(decision)) return null;
-  const source = decision.model === 'convaiinnovations/laya' ? 'Laya'
+  const source = decision.model === 'convaiinnovations/laya' ? t('chat.route.srcDecision')
     : decision.backend === 'llama-logit' ? t('chat.route.srcLocalLogit')
     : decision.backend === 'decision-service' ? t('chat.route.srcDecision') : t('chat.route.srcLegacy');
   const fallbackId = ROUTE_REASONS.find(id => id === decision.fallbackReason) || 'unavailable';

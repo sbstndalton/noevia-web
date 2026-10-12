@@ -123,7 +123,7 @@ export const NB_NO_DIARY: DiaryCatalogue = {
   'diary.conversation.diaryActivity': "Dagbokaktivitet",
   'diary.conversation.workingOnDiary': "Arbeider med dagboken din …",
   'diary.attachments.title': "Valgfrie dagbokvedlegg",
-  'diary.attachments.storedSeparately': "Lagres separat fra dagbokkorpuset ditt. Brukes bare når ekstra er på.",
+  'diary.attachments.storedSeparately': "Lagres separat fra dagboknotatene dine. Brukes bare når ekstra er på.",
   'diary.attachments.ready': "klar",
   'diary.confirm.deleteAttachment': "Slette vedlegget {name} fra lagring?",
   'diary.attachments.delete': "Slett vedlegg",

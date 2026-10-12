@@ -123,7 +123,7 @@ export const NL_NL_DIARY: DiaryCatalogue = {
   'diary.conversation.diaryActivity': "Dagboekactiviteit",
   'diary.conversation.workingOnDiary': "Bezig met je dagboek…",
   'diary.attachments.title': "Optionele dagboekbijlagen",
-  'diary.attachments.storedSeparately': "Apart van je dagboekcorpus opgeslagen. Alleen gebruikt terwijl extra’s aan staan.",
+  'diary.attachments.storedSeparately': "Apart van je dagboekitems opgeslagen. Alleen gebruikt terwijl extra’s aan staan.",
   'diary.attachments.ready': "gereed",
   'diary.confirm.deleteAttachment': "Bijlage {name} uit opslag verwijderen?",
   'diary.attachments.delete': "Bijlage verwijderen",

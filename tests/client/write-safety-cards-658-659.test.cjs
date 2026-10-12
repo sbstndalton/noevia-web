@@ -77,9 +77,9 @@ test('rendered cards: the repeat flag and the Drive file line, with every argume
     const core = await server.ssrLoadModule('/src/i18n/core.ts');
     const { pausedNoteText } = await server.ssrLoadModule('/src/chat-labels.ts');
     const t = Object.assign((k, p) => core.translate('en-GB', k, p), { plural: (k, c, p) => core.translatePlural('en-GB', k, c, p) });
-    assert.equal(pausedNoteText(t, { reason: 'supervision', applied: 1 }), '1 change was saved. Step supervision paused this reply before any further steps.');
-    assert.equal(pausedNoteText(t, { reason: 'supervision', applied: 2 }), '2 changes were saved. Step supervision paused this reply before any further steps.');
-    assert.equal(pausedNoteText(t, { reason: 'supervision', applied: 0 }), 'Step supervision paused this reply before any further steps. Nothing was changed.');
+    assert.equal(pausedNoteText(t, { reason: 'supervision', applied: 1 }), '1 change was saved. Step checks paused this reply before any further steps.');
+    assert.equal(pausedNoteText(t, { reason: 'supervision', applied: 2 }), '2 changes were saved. Step checks paused this reply before any further steps.');
+    assert.equal(pausedNoteText(t, { reason: 'supervision', applied: 0 }), 'Step checks paused this reply before any further steps. Nothing was changed.');
     assert.equal(pausedNoteText(t, { reason: 'stopped', applied: 1 }), '1 change was saved before this reply ended.');
   });
   const view = fs.readFileSync(path.join(__dirname, '../../src/components/ChatView.tsx'), 'utf8');

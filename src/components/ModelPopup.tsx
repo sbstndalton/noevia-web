@@ -11,6 +11,7 @@ import type { AutoRoleInfo } from '../auto-role-availability';
 import { CloseButton } from './CloseButton';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
+import { providerDisplayName } from '../display-names';
 import type { JSX, ReactNode } from 'react';
 import type { InstalledModel, Project, Provider } from '../types';
 import { apiFetch, fetchAutoRoles, fetchChatGptModels, fetchInstalledModels, fetchProviders, saveProjectConfig } from '../api';
@@ -205,7 +206,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
           <span>{t('modelPopup.provider')}</span>
           <select className="modal-input" value={activeProviderId} disabled={busy !== null}
             onChange={(e) => void save('provider', { provider: e.target.value })}>
-            {providers.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+            {providers.map((p) => <option key={p.id} value={p.id}>{providerDisplayName(p, t)}</option>)}
           </select>
         </label>}
 

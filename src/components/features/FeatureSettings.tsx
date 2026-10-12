@@ -42,7 +42,7 @@ export function FeatureSettings({ experimental = false }: { experimental?: boole
       return <div className="set-row set-row-inline" key={f.name}>
       <div className="set-row-text">
         <span className="set-row-label" id={`feature-${f.name}`}>{byId(t, `features.item.${id}.label`, f.label)}</span>
-        <span className="set-row-desc">{byId(t, `features.item.${id}.description`, f.description)}{f.locked ? ` ${t('features.lockedBy', { env: f.env })}` : ''}</span>
+        <span className="set-row-desc">{byId(t, `features.item.${id}.description`, f.description)}{f.locked ? ` ${t('features.lockedBy')}` : ''}</span>
         <span className="set-row-desc" role="status">{busy === f.name ? t('common.saving') : unavailable || (f.experimental ? (f.enabled ? t('features.experimentalOn') : t('features.experimentalOff')) : '')}</span>
         {f.pendingRestart && <span className="set-row-desc set-row-pending" role="status">{t('features.pendingRestart')}</span>}
       </div>

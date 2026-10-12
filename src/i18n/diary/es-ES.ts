@@ -123,7 +123,7 @@ export const ES_ES_DIARY: DiaryCatalogue = {
   'diary.conversation.diaryActivity': "Actividad del diario",
   'diary.conversation.workingOnDiary': "Trabajando en tu diario…",
   'diary.attachments.title': "Adjuntos opcionales del diario",
-  'diary.attachments.storedSeparately': "Se almacena por separado de tu corpus de diario. Solo se usa mientras los extras están activados.",
+  'diary.attachments.storedSeparately': "Se almacena por separado de tus entradas del diario. Solo se usa mientras los extras están activados.",
   'diary.attachments.ready': "listo",
   'diary.confirm.deleteAttachment': "¿Eliminar el adjunto {name} del almacenamiento?",
   'diary.attachments.delete': "Eliminar adjunto",

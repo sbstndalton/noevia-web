@@ -9,7 +9,7 @@ import { EN_GB_FIELDS } from './fields-en-GB';
 export const EN_GB_MODELS = {
   ...EN_GB_FIELDS,
   // Page, tabs and toolbar (ModelsSettings.tsx)
-  'mm.title': 'Models & routing',
+  'mm.title': 'Models and routing',
   'mm.lede': 'Download, configure, measure and route the models this server runs.',
   'mm.allModels': 'All models',
   'mm.navLabel': 'Model management',
