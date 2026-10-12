@@ -27,10 +27,12 @@
    desktop has the width, so the strip is one row that reads across the composer.
    #1527/#1548: the row never wraps and never grows. It reserves one line whatever the
    metrics say, so the composer above it holds still while a reply streams. The model
-   name and the pairs truncate with an ellipsis, and the routing pill keeps its size.
-   Where the row cannot fit every pair (measured on the strip's own width, not the
-   window's), the low-priority pairs sit behind a compact toggle and open as a popover
-   above the strip; the popover is out of flow, so it never pushes the chat up. */
+   name and the speed pair keep their values whole (#1527 QA: a 790px strip cut the model
+   name to "Synthetic-Ch…"); the routing pill is the element that gives way, with its own
+   ellipsis, when the row is short of width. Where the row cannot fit every pair (measured
+   on the strip's own width, not the window's), the low-priority pairs sit behind a compact
+   toggle and open as a popover above the strip; the popover is out of flow, so it never
+   pushes the chat up. */
 .stats-disclosure.is-wide {
   container-type: inline-size;
   position: relative;
@@ -42,7 +44,7 @@
 }
 .stats-disclosure.is-wide .stats-bar-static {
   margin: 0; min-height: 0; padding: 0; border: 0; background: none; cursor: default;
-  display: inline-flex; align-items: center; gap: 6px; flex: 0 1 auto; min-width: 4em; max-width: 40%;
+  display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; min-width: 4em; max-width: 40%;
   overflow: hidden; white-space: nowrap;
 }
 .stats-disclosure.is-wide .stats-bar-static .stats-live-dot { flex: none; }
@@ -70,7 +72,7 @@
   content: '·'; position: absolute; left: calc(var(--space-4) / -2); transform: translateX(-50%);
   color: var(--md-outline);
 }
-.stats-disclosure.is-wide > .routing-details:not([open]) { flex: none; max-width: 240px; }
+.stats-disclosure.is-wide > .routing-details:not([open]) { flex: 0 1 auto; min-width: 0; max-width: 240px; }
 .stats-disclosure.is-wide > .routing-details summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (pointer: fine) {
   .stats-disclosure.is-wide > .routing-details summary { min-height: 0; padding-block: 2px; }
