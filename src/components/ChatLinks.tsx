@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import type { ChatMeta } from '../types';
 import { backlinks, chatGraph, outgoingLinks, TAG_NODE_PREFIX } from '../chat-organise';
 import { GraphFigure } from './diary-graph/LocalGraph';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
+import { linksPanelLeft } from '../links-panel-place';
 
 /**
  * #741: the chat header's "Links" control. The count is how many chats link here; opening it shows
@@ -21,12 +22,28 @@ export function ChatLinks({ chatId, chats, onOpenChat }: {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLElement>(null);
+  // #1468: the panel's left edge relative to this box, once it is kept inside the viewport.
+  const [panelOffset, setPanelOffset] = useState<number | null>(null);
   const chat = chats.find((c) => c.id === chatId);
   const linkedFrom = useMemo(() => backlinks(chatId, chats), [chatId, chats]);
   const linksTo = useMemo(() => outgoingLinks(chat, chats), [chat, chats]);
   const untitled = t('common.newChat');
   const graph = useMemo(() => (chat ? chatGraph(chat, chats, untitled) : null), [chat, chats, untitled]);
   useEffect(() => { setOpen(false); }, [chatId]);
+  // #1468: placed before paint, and again on resize, so the panel never shows off-screen.
+  useLayoutEffect(() => {
+    if (!open) { setPanelOffset(null); return; }
+    const place = () => {
+      const frame = box.current, anchor = trigger.current, popover = panel.current;
+      if (!frame || !anchor || !popover) return;
+      const left = linksPanelLeft({ anchorRight: anchor.getBoundingClientRect().right, panelWidth: popover.getBoundingClientRect().width, viewportWidth: window.innerWidth });
+      setPanelOffset(left - frame.getBoundingClientRect().left);
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     const away = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
@@ -50,7 +67,7 @@ export function ChatLinks({ chatId, chats, onOpenChat }: {
         aria-label={t('chat.links.open')} title={t('chat.links.open')} onClick={() => setOpen((v) => !v)}>
         <span aria-hidden="true">[[ ]]</span>{linkedFrom.length > 0 && <span className="chat-links-count">{linkedFrom.length}</span>}
       </button>
-      {open && <section id={`chat-links-${chatId}`} className="chat-links-panel overlay" aria-label={t('chat.links.title')}>
+      {open && <section ref={panel} id={`chat-links-${chatId}`} className="chat-links-panel overlay" aria-label={t('chat.links.title')} style={panelOffset === null ? undefined : { left: panelOffset, right: 'auto' }}>
         <h3>{t('chat.links.linkedFrom')}</h3>
         {linkedFrom.length ? list(linkedFrom) : <p className="chat-links-empty">{t('chat.links.none')}</p>}
         {linksTo.length > 0 && <><h3>{t('chat.links.linksTo')}</h3>{list(linksTo)}</>}
