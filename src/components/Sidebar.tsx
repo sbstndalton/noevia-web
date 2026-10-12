@@ -467,6 +467,19 @@ export function Sidebar({
     else if (e.key === 'ArrowUp') { e.preventDefault(); if (index <= 0) searchInputRef.current?.focus(); else focusSearchResultAt(index - 1); }
     else if (e.key === 'Escape') { e.preventDefault(); searchInputRef.current?.focus(); }
   };
+  // #1528: ArrowDown/ArrowUp move focus between the chat rows of the chat list, in DOM order. A query
+  // already handles arrows for its flat result list (onSearchResultKeyDown), so that case is skipped.
+  const onChatListKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.defaultPrevented || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) return;
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const current = e.target as HTMLElement;
+    if (!current.matches('.chat-row > .nav-item')) return;
+    const rows = [...e.currentTarget.querySelectorAll<HTMLElement>('.chat-row > .nav-item')].filter((el) => el.getClientRects().length);
+    const index = rows.indexOf(current);
+    if (index < 0) return;
+    e.preventDefault();
+    rows[index + (e.key === 'ArrowDown' ? 1 : -1)]?.focus();
+  };
   const destinationResults = query && destinations.length > 0 && <div className="spaces side-scroll side-scroll-destinations">
     <div className="sidebar-section-head"><span className="section-label">{t('sidebar.destinations')}</span></div>
     {destinations.map(destination => <button
@@ -706,7 +719,7 @@ export function Sidebar({
             : <p className="side-hint">{t('sidebar.tasksEmpty')}</p>}
         </div>
         </>}
-      </div> : <div className="sidebar-history">
+      </div> : <div className="sidebar-history" onKeyDown={onChatListKeyDown}>
       {destinationResults}
       {query && searchResults.length === 0 && <p className="side-hint" role="status">{t('sidebar.noSearchResults')}</p>}
       {['Pinned','Projects'].map(group => {
