@@ -31,7 +31,10 @@
 .diary-context > section + section { margin-top:28px; padding-top:24px; border-top:1px solid var(--border); }
 .diary-panel-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .diary-panel-heading h2 { font-size:var(--text-callout); margin:0; }
-.diary-file-breadcrumb { display:flex; align-items:center; flex-wrap:wrap; font-size:var(--text-caption); overflow-wrap:anywhere; margin:12px 0; }
+/* #1569: the folder crumbs (also in the Markdown workspace rail) keep 8px between the current folder and Up, and
+   the current folder reads as the crumb's text, like the last crumb of the header breadcrumb. */
+.diary-file-breadcrumb { display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:var(--text-caption); overflow-wrap:anywhere; margin:12px 0; }
+.diary-file-breadcrumb > span { color:var(--text-primary); padding:0 2px; }
 .diary-file-list { display:flex; flex-direction:column; max-height:340px; overflow:auto; gap:4px; }
 .diary-file-list button { display:flex; align-items:center; gap:10px; text-align:left; padding:10px 6px; background:none; border:0; border-radius: var(--radius-button); color:var(--text); font:inherit; font-size:var(--text-footnote); overflow-wrap:anywhere; cursor:pointer; }
 .diary-file-list button:hover { background:var(--nav-hover); }
