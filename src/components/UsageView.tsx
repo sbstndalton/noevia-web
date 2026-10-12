@@ -120,7 +120,7 @@ export function UsageView(): JSX.Element {
         </div>
       </div>
       <div className="usage-stat-grid">
-        <Stat label={t('usage.total')} value={compact(totals.input + totals.output)} hint={t('usage.totalHint')} />
+        <Stat label={t('usage.total')} value={compact(totals.input + totals.output)} hint={t('usage.totalHint', { window: label })} />
         <Stat label={t('usage.input')} value={compact(totals.input)} hint={t('usage.inputHint')} />
         <Stat label={t('usage.output')} value={compact(totals.output)} hint={t('usage.outputHint')} />
         <Stat label={t('usage.modelResponses')} value={totals.replies.toLocaleString(appLocale())} hint={t('usage.modelResponsesHint', { window: label })} />
