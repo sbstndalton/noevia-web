@@ -70,7 +70,7 @@ function FamilyPreview({ family, mode, palette }: { family: Family; mode: 'light
     <span className="family-preview-heading">{t('appearance.preview.greeting')}</span>
     <span className="family-preview-message">{t('appearance.preview.message')}</span>
     <span className="family-preview-row">
-      <span className="family-preview-composer">{t('composer.placeholder')}<i className="family-preview-send" /></span>
+      <span className="family-preview-composer"><span className="family-preview-composer-text">{t('composer.placeholder')}</span><i className="family-preview-send" /></span>
       <span className="family-preview-menu"><span>Chat</span><span>Cowork</span></span>
     </span>
     <span className="family-preview-controls"><span className="family-preview-button is-primary">{t('common.save')}</span><span className="family-preview-button">{t('common.cancel')}</span></span>
