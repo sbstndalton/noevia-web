@@ -23,6 +23,7 @@ import type {
 import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser';
 import { cached, invalidateCached, clearRequestCache } from './request-cache';
 import { clearDeviceState } from './account-device-state';
+import { rememberSystemModels } from './model-system';
 import { API_MAJOR, hasApiMajorMismatch, hasApiMajorMismatchHeader, type SkillPin } from './api-contract';
 
 function cookie(name: string): string {
@@ -491,6 +492,8 @@ export function fetchHealth(): Promise<HealthState> {
 export function fetchInstalledModels(): Promise<InstalledModel[]> {
   return getJson<InstalledModel[]>('/api/models/installed').then(rows => {
     if(!Array.isArray(rows) || rows.some(row=>!row || typeof row.name!=='string' || !Array.isArray(row.labels) || row.labels.some(label=>typeof label!=='string')))throw new Error('Model list was invalid. Try loading it again.');
+    // #1179: the explicit system kind (Laya's `role = laya`) for isSystemModel.
+    rememberSystemModels(rows);
     return rows;
   });
 }
