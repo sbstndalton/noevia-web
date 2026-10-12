@@ -72,9 +72,9 @@ export const EN_GB = {
   'sidebar.diary': 'Diary',
   // #366: the footer's server count and Plugins → Added count different things — say so rather
   // than let them look contradictory. Always shown with more than one server, so no singular form.
-  'sidebar.mcpServersBuiltIn': '{count} servers (built-in)',
+  'sidebar.mcpServersBuiltIn': "{count} servers, built in",
   'sidebar.mcpServersPartlyAdded': '{count} servers ({added} added)',
-  'sidebar.mcpBuiltInTooltip': 'Configured for this deployment. Plugins → Added lists only servers an administrator added there.',
+  'sidebar.mcpBuiltInTooltip': "Built in, set up by the system rather than added by an administrator. Customise → MCP servers → Added lists only servers an administrator added.",
   'sidebar.lastUsed': 'Last used',
   'sidebar.manualOrder': 'Manual order',
   'sidebar.moveUp': 'Move up',
@@ -747,7 +747,7 @@ export const EN_GB = {
   'sidebar.mcpTools.one': "{count} tool",
   'sidebar.mcpTools.other': "{count} tools",
   'sidebar.mcpServersAllAdded': "{count} servers",
-  'sidebar.mcpUnavailable': "unavailable",
+  'sidebar.mcpUnavailable': "Tools unavailable",
   'sidebar.mcpDown': "{ids} down",
   'code.prep.local.label': "Local architect",
   'code.prep.local.reason': "Not offered yet: as an architect the 4B returned 0 of 18 usable execution prompts (list fields came back as strings). Direct stays the default until that changes.",

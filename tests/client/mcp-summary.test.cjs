@@ -54,34 +54,34 @@ test('the reported bug: 3 configured servers, none added — every locale explai
 test('English wording matches the issue’s own example', () => {
   const mcp = { configured: true, discovered: 175, servers: [server('a'), server('b'), server('c')] };
   const summary = mcpFooterSummary(mcp, t('en-GB'));
-  assert.equal(summary.label, 'MCP · 175 tools · 3 servers (built-in)');
-  assert.match(summary.title, /Plugins → Added/);
+  assert.equal(summary.label, '175 tools · 3 servers, built in');
+  assert.match(summary.title, /Customise → MCP servers → Added/);
 });
 
 test('a server added through the MCP directory is not called built-in, and a full match needs no qualifier', () => {
   const mixed = mcpFooterSummary({ configured: true, discovered: 10, servers: [server('a'), server('b'), server('added', { directory: true })] }, t('en-GB'));
-  assert.equal(mixed.label, 'MCP · 10 tools · 3 servers (1 added)');
-  assert.match(mixed.title, /Plugins → Added/);
+  assert.equal(mixed.label, '10 tools · 3 servers (1 added)');
+  assert.match(mixed.title, /Customise → MCP servers → Added/);
 
   const allAdded = mcpFooterSummary({ configured: true, discovered: 10, servers: [server('a', { directory: true }), server('b', { directory: true })] }, t('en-GB'));
-  assert.equal(allAdded.label, 'MCP · 10 tools · 2 servers');
+  assert.equal(allAdded.label, '10 tools · 2 servers');
   assert.equal(allAdded.title, undefined, 'Added already accounts for all of them; no explanation needed');
 });
 
 test('a single server never gets a count (unchanged from before #366), and errors still win over the built-in note', () => {
   const one = mcpFooterSummary({ configured: true, discovered: 4, servers: [server('solo')] }, t('en-GB'));
-  assert.equal(one.label, 'MCP · 4 tools');
+  assert.equal(one.label, '4 tools');
   assert.equal(one.title, undefined);
 
   const down = mcpFooterSummary({ configured: true, discovered: 4, servers: [server('a'), server('b', { error: 'timed out' })] }, t('en-GB'));
-  assert.equal(down.label, 'MCP · 4 tools · b down');
+  assert.equal(down.label, '4 tools · b down');
   assert.equal(down.title, 'b: timed out', 'a per-server error still wins the tooltip over the built-in explanation');
   assert.equal(down.degraded, true);
 });
 
 test('every server down still reports unavailable, unaffected by the #366 refactor', () => {
   const summary = mcpFooterSummary({ configured: true, discovered: 0, servers: [server('a', { error: 'x' }), server('b', { error: 'y' })] }, t('en-GB'));
-  assert.equal(summary.label, 'MCP · unavailable');
+  assert.equal(summary.label, 'Tools unavailable');
   assert.equal(summary.danger, true);
 });
 
@@ -99,24 +99,24 @@ test('the base catalogue and every locale keep {count}/{added} in the new keys',
 
 test('#627 the footer counts and words come from the catalogue, in each locale’s plural forms and number format', () => {
   const two = { configured: true, discovered: 1234, servers: [server('a', { directory: true }), server('b', { directory: true })] };
-  assert.equal(mcpFooterSummary(two, t('de-DE')).label, 'MCP · 1.234 Werkzeuge · 2 Server');
-  assert.equal(mcpFooterSummary(two, t('fr-FR')).label.replace(/[\u202f\u00a0]/g, ' '), 'MCP · 1 234 outils · 2 serveurs');
-  assert.equal(mcpFooterSummary(two, t('en-GB')).label, 'MCP · 1,234 tools · 2 servers');
+  assert.equal(mcpFooterSummary(two, t('de-DE')).label, '1.234 Werkzeuge · 2 Server');
+  assert.equal(mcpFooterSummary(two, t('fr-FR')).label.replace(/[\u202f\u00a0]/g, ' '), '1 234 outils · 2 serveurs');
+  assert.equal(mcpFooterSummary(two, t('en-GB')).label, '1,234 tools · 2 servers');
   const builtIn = { configured: true, discovered: 175, servers: [server('a'), server('b'), server('c')] };
-  assert.equal(mcpFooterSummary(builtIn, t('de-DE')).label, 'MCP · 175 Werkzeuge · 3 Server (integriert)');
-  assert.equal(mcpFooterSummary(builtIn, t('fr-FR')).label, 'MCP · 175 outils · 3 serveurs (intégrés)');
+  assert.equal(mcpFooterSummary(builtIn, t('de-DE')).label, '175 Werkzeuge · 3 Server, integriert');
+  assert.equal(mcpFooterSummary(builtIn, t('fr-FR')).label, '175 outils · 3 serveurs, intégrés');
   // One tool is singular; zero is plural in English and German, singular in French.
   const one = { configured: true, discovered: 1, servers: [server('solo')] };
-  assert.equal(mcpFooterSummary(one, t('en-GB')).label, 'MCP · 1 tool');
-  assert.equal(mcpFooterSummary(one, t('de-DE')).label, 'MCP · 1 Werkzeug');
-  assert.equal(mcpFooterSummary({ ...one, discovered: 0 }, t('en-GB')).label, 'MCP · 0 tools');
-  assert.equal(mcpFooterSummary({ ...one, discovered: 0 }, t('fr-FR')).label, 'MCP · 0 outil');
+  assert.equal(mcpFooterSummary(one, t('en-GB')).label, '1 tool');
+  assert.equal(mcpFooterSummary(one, t('de-DE')).label, '1 Werkzeug');
+  assert.equal(mcpFooterSummary({ ...one, discovered: 0 }, t('en-GB')).label, '0 tools');
+  assert.equal(mcpFooterSummary({ ...one, discovered: 0 }, t('fr-FR')).label, '0 outil');
   const down = { configured: true, discovered: 4, servers: [server('a'), server('b', { error: 'timed out' })] };
-  assert.equal(mcpFooterSummary(down, t('de-DE')).label, 'MCP · 4 Werkzeuge · b ausgefallen');
-  assert.equal(mcpFooterSummary(down, t('fr-FR')).label, 'MCP · 4 outils · b : indisponible');
+  assert.equal(mcpFooterSummary(down, t('de-DE')).label, '4 Werkzeuge · b ausgefallen');
+  assert.equal(mcpFooterSummary(down, t('fr-FR')).label, '4 outils · b : indisponible');
   const dead = { configured: true, discovered: 0, servers: [server('a', { error: 'x' }), server('b', { error: 'y' })] };
-  assert.equal(mcpFooterSummary(dead, t('de-DE')).label, 'MCP · nicht verfügbar');
-  assert.equal(mcpFooterSummary(dead, t('fr-FR')).label, 'MCP · indisponible');
+  assert.equal(mcpFooterSummary(dead, t('de-DE')).label, 'Werkzeuge nicht verfügbar');
+  assert.equal(mcpFooterSummary(dead, t('fr-FR')).label, 'Outils indisponibles');
   for (const locale of ['en-GB', ...Object.keys(LOCALES)]) for (const key of ['sidebar.mcpTools.one', 'sidebar.mcpTools.other', 'sidebar.mcpServersAllAdded', 'sidebar.mcpUnavailable', 'sidebar.mcpDown'])
     assert.ok(core.translate(locale, key), `${locale} ${key}`);
 });
