@@ -73,9 +73,10 @@ export const LEGACY_STOPPED_BODIES: readonly string[] = [
 
 type BodyMessage = { role?: string; senderLabel?: string; content: string; error?: boolean; reasoning?: string };
 
-/** True for an assistant reply that is only the Stopped placeholder (the new empty form, or a stored sentence). */
+/** True for an assistant reply that is only the Stopped placeholder (the new empty form, or a stored sentence).
+ *  #1447: a reply stopped during its thinking has reasoning and no answer, and is a placeholder too. */
 export function isStoppedPlaceholder(m: BodyMessage): boolean {
-  if (m.role !== 'assistant' || m.error || m.reasoning || m.senderLabel?.replace(/^Assistant · /, '') !== STOPPED_SENDER) return false;
+  if (m.role !== 'assistant' || m.error || m.senderLabel?.replace(/^Assistant · /, '') !== STOPPED_SENDER) return false;
   return !m.content || LEGACY_STOPPED_BODIES.includes(m.content.trim());
 }
 
