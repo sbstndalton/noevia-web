@@ -81,6 +81,7 @@ export function ModeToggle({ state, disabled, compact = false }: { state: ModeSw
   return <div ref={group} className={`composer-mode-toggle${compact ? ' is-compact' : ''}`} data-mode={mode} role="radiogroup" aria-label={t('mode.session')} onKeyDown={onKey}>
     {ORDER.map(option => <button key={option} type="button" role="radio" data-mode={option}
       aria-checked={option === mode} aria-describedby={`${id}-${option}`} tabIndex={option === mode ? 0 : -1}
+      title={option === 'cowork' && coworkNeedsProject ? t('mode.runsInProject') : undefined}
       disabled={disabled || (option === 'cowork' && coworkNeedsProject)} onClick={() => choose(option)}>
       {compact && <ShellIcon name={option === 'chat' ? 'chat' : 'code'} size={15}/>}
       {compact ? <span className="composer-mode-name">{t(MODE_NAME_KEYS[option])}</span> : t(MODE_NAME_KEYS[option])}
@@ -92,17 +93,19 @@ export function ModeToggle({ state, disabled, compact = false }: { state: ModeSw
 export function ModeCaption({ state, disabled, onRepository }: { state: ModeSwitch; disabled: boolean; onRepository: (id: string) => void }): JSX.Element {
   const t = useT();
   const { decision, caption, access, repository, mode, coworkNeedsProject, onOpenProjects } = state;
-  return <span className="composer-mode-harness" aria-live="polite" data-caption={caption}>
-    {decision.harness === 'cowork'
-      ? <>{t('mode.runsCoding')}{' '}
+  const line = decision.harness === 'cowork'
+    ? <>{t('mode.runsCoding')}{' '}
         {access.repositories.length > 1
           ? <select aria-label={t('mode.repository')} value={repository ?? ''} disabled={disabled} onChange={e => onRepository(e.target.value)}>
               {access.repositories.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           : <strong>{repository}</strong>}</>
-      : mode === 'cowork' && decision.reason ? t('mode.willSendAsChat', { reason: t(`mode.reason.${decision.reason}`) }) : t('mode.runsChat')}
-    {/* #1564: Task is disabled in a free chat; say where it runs and offer the Projects page. */}
-    {coworkNeedsProject && <span className="composer-mode-free">
+    : mode === 'cowork' && decision.reason ? t('mode.willSendAsChat', { reason: t(`mode.reason.${decision.reason}`) }) : t('mode.runsChat');
+  return <span className="composer-mode-harness" aria-live="polite" data-caption={caption}>
+    <span className="composer-mode-line">{line}</span>
+    {/* #1564, #1595: Task is disabled in a free chat. The hint names its subject (Task) and sits on its own
+        line, apart from what Chat runs, so it cannot read as part of the Chat caption. */}
+    {coworkNeedsProject && <span className="composer-mode-free" data-testid="free-chat-task-hint">
       <span className="composer-mode-hint">{t('mode.runsInProject')}</span>
       {onOpenProjects && <button type="button" className="composer-mode-open" onClick={onOpenProjects}>{t('mode.openProjects')}</button>}
     </span>}

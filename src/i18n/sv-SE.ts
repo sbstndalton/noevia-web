@@ -445,7 +445,7 @@ export const SV_SE: Catalogue = {
   'mode.reason.freeChat': "Uppgift körs i ett projekt, och det här är en fri chatt",
   'mode.reason.adminOnly': "kodmiljön är bara för administratörer",
   'mode.reason.noRepository': "inget repo är valt",
-  'mode.runsInProject': "Körs i ett projekt",
+  'mode.runsInProject': "En uppgift körs i ett projekt.",
   'mode.openProjects': "Öppna projekt",
   'keys.ctrl': "Ctrl",
   'keys.shift': "Skift",

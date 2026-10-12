@@ -445,7 +445,7 @@ export const IT_IT: Catalogue = {
   'mode.reason.freeChat': "Attività funziona dentro un progetto, e questa è una chat libera",
   'mode.reason.adminOnly': "l’ambiente di codice è riservato agli amministratori",
   'mode.reason.noRepository': "nessun repository selezionato",
-  'mode.runsInProject': "Viene eseguito in un progetto",
+  'mode.runsInProject': "Un’attività viene eseguita in un progetto.",
   'mode.openProjects': "Apri progetti",
   'keys.ctrl': "Ctrl",
   'keys.shift': "Maiusc",

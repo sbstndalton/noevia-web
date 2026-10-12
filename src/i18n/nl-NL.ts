@@ -445,7 +445,7 @@ export const NL_NL: Catalogue = {
   'mode.reason.freeChat': "Taak werkt binnen een project en dit is een losse chat",
   'mode.reason.adminOnly': "de codeomgeving is alleen voor beheerders",
   'mode.reason.noRepository': "er is geen repository gekozen",
-  'mode.runsInProject': "Draait binnen een project",
+  'mode.runsInProject': "Een taak draait binnen een project.",
   'mode.openProjects': "Projecten openen",
   'keys.ctrl': "Ctrl",
   'keys.shift': "Shift",

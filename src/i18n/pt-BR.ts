@@ -445,7 +445,7 @@ export const PT_BR: Catalogue = {
   'mode.reason.freeChat': "a Tarefa roda dentro de um projeto, e este é um chat livre",
   'mode.reason.adminOnly': "o ambiente de código é restrito a administradores",
   'mode.reason.noRepository': "nenhum repositório selecionado",
-  'mode.runsInProject': "Roda dentro de um projeto",
+  'mode.runsInProject': "A tarefa roda dentro de um projeto.",
   'mode.openProjects': "Abrir projetos",
   'keys.ctrl': "Ctrl",
   'keys.shift': "Shift",
