@@ -71,3 +71,39 @@ test('every core catalogue carries the four interrupted-reply strings', () => {
     }
   }
 });
+
+// Core's shape (draft b21, server/chat-partial.cjs): GET /api/chats/:id/history returns the partial beside
+// `history` as `partial`, flagged interrupted. The client adds it as the chat's last turn.
+test('core\'s partial becomes the last turn, flagged interrupted; nothing else changes', async () => {
+  const { withPartialTurn } = await loadFlags();
+  const history = [{ role: 'user', content: 'q' }, { role: 'assistant', content: 'done' }];
+  const partial = { role: 'assistant', content: 'half', reasoning: 'thinking' };
+  const out = withPartialTurn(history, partial);
+  assert.deepEqual(out.slice(0, 2), history);
+  assert.deepEqual(out[2], { role: 'assistant', content: 'half', reasoning: 'thinking', interrupted: true });
+  assert.equal(history.length, 2, 'the input is not changed');
+});
+
+test('no partial, or a partial that is not an assistant reply, leaves the history as it is', async () => {
+  const { withPartialTurn } = await loadFlags();
+  const history = [{ role: 'user', content: 'q' }];
+  assert.equal(withPartialTurn(history, null), history);
+  assert.equal(withPartialTurn(history, undefined), history);
+  assert.equal(withPartialTurn(history, { role: 'user', content: 'x' }), history);
+});
+
+test('a stale partial that repeats the last saved reply is not shown twice', async () => {
+  const { withPartialTurn } = await loadFlags();
+  const history = [{ role: 'user', content: 'q' }, { role: 'assistant', content: 'half', reasoning: 'thinking' }];
+  assert.equal(withPartialTurn(history, { role: 'assistant', content: 'half', reasoning: 'thinking' }), history);
+  // A different answer to the same question is a real partial, not a repeat.
+  assert.equal(withPartialTurn(history, { role: 'assistant', content: 'half more' }).length, 3);
+});
+
+test('the history fetch reads core\'s partial beside the history and adds it through withPartialTurn', () => {
+  const api = read('api.ts');
+  const fn = api.slice(api.indexOf('export function fetchChatHistoryRevision'), api.indexOf('// ── Free (non-project) chats'));
+  assert.match(fn, /partial\?: HistoryEntry/, 'the response type names core\'s partial');
+  assert.match(fn, /withPartialTurn\(Array\.isArray\(r\.history\) \? r\.history : \[\], r\.partial\)/);
+  assert.match(api, /import \{ withPartialTurn \} from '\.\/interrupted-reply';/);
+});

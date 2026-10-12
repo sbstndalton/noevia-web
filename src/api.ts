@@ -26,6 +26,7 @@ import { AUTO_ROLES_KEY, INSTALLED_MODELS_KEY, MODEL_READ_TTL_MS, REASONING_KEY_
 import { clearDeviceState } from './account-device-state';
 import { rememberSystemModels } from './model-system';
 import { API_MAJOR, hasApiMajorMismatch, hasApiMajorMismatchHeader, type SkillPin } from './api-contract';
+import { withPartialTurn } from './interrupted-reply';
 
 function cookie(name: string): string {
   const item = document.cookie.split(';').map((x) => x.trim()).find((x) => x.startsWith(`${name}=`));
@@ -557,9 +558,14 @@ export function searchChatText(text: string): Promise<{ chats: string[]; truncat
 }
 
 export function fetchChatHistoryRevision(chatId: string): Promise<{ history: HistoryEntry[]; revision: string | null }> {
-  return getJson<{ history: HistoryEntry[]; revision?: string }>(
+  // #1507: core sends a reply it kept partway as `partial` beside `history` (already marked interrupted);
+  // it is added here as the chat's last turn, so the rest of the client reads one transcript.
+  return getJson<{ history: HistoryEntry[]; revision?: string; partial?: HistoryEntry }>(
     `/api/chats/${encodeURIComponent(chatId)}/history`,
-  ).then((r) => ({ history: Array.isArray(r.history) ? r.history : [], revision: typeof r.revision === 'string' ? r.revision : null }));
+  ).then((r) => ({
+    history: withPartialTurn(Array.isArray(r.history) ? r.history : [], r.partial),
+    revision: typeof r.revision === 'string' ? r.revision : null,
+  }));
 }
 
 // ── Free (non-project) chats — server-side metas so they survive browsers ──
