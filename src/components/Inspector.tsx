@@ -1,4 +1,4 @@
-import type { JSX, ReactNode } from 'react';
+import { useState, type JSX, type ReactNode } from 'react';
 import type { InstalledModel, Project } from '../types';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
@@ -29,7 +29,7 @@ function Section({
   );
 }
 
-/** Persistent context for project chats; stacks below on narrow screens. */
+/** Persistent desktop context; a compact disclosure beside the chat on narrow screens. */
 export function Inspector({
   project,
   models,
@@ -44,17 +44,22 @@ export function Inspector({
   onOpenSource?: (projectId: string, file: string) => void;
 }): JSX.Element {
   const t = useT();
+  const [expanded, setExpanded] = useState(false);
   // #586: an original whose text could not be read is not a source (the Sources tab lists it apart
   // and never counts it), so this rail leaves it out too.
   const sources = (project?.files || []).filter((f) => !isUnreadableSource(f));
   const model = project?.model || models.find((m) => m.loaded)?.name || t('inspector.notSelected');
 
   return (
-    <aside id="noevia-inspector" className="noevia-inspector" aria-label={t('inspector.contextAria')}>
+    <aside id="noevia-inspector" className="noevia-inspector" data-expanded={expanded} aria-label={t('inspector.contextAria')}>
       <header className="insp-bar">
         <h2>{project ? project.name : t('inspector.contextTitle')}</h2>
+        <button type="button" className="insp-toggle" aria-expanded={expanded} aria-controls="noevia-inspector-content" onClick={() => setExpanded((value) => !value)}>
+          <span>{t('inspector.contextAria')}</span>
+          <ShellIcon name={expanded ? 'chevron-down' : 'chevron-right'} size={16} />
+        </button>
       </header>
-
+      <div id="noevia-inspector-content" className="insp-content">
       <Section
         title={t('inspector.model')}
         action={{ icon: 'settings', onClick: onConfigureModels, aria: t('inspector.configureAria') }}
@@ -114,6 +119,7 @@ export function Inspector({
           <p className="insp-empty">{t('inspector.openProjectHint')}</p>
         </Section>
       )}
+      </div>
     </aside>
   );
 }

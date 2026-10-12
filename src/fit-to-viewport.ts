@@ -30,6 +30,10 @@ function clear(area: HTMLElement): void {
 
 function fit(area: HTMLElement): void {
   clear(area);
+  // These nested reading panes have their own mobile scroll geometry. Zooming their
+  // children compounds project-main/project-scroll and enlarges Settings previews.
+  const narrow = document.documentElement.dataset.layout === 'mobile' || window.matchMedia('(max-width: 1100px)').matches;
+  if (narrow && area.matches('.settings-detail-scroll, .settings-stage .settings-navigation nav, .projects-workspace, .project-main, .project-scroll, .noevia-inspector')) return;
   if (!area.isConnected || !area.clientHeight) return;
   const overflow = () => area.scrollHeight - area.clientHeight;
   const s = getComputedStyle(area);
