@@ -58,7 +58,7 @@ interface ProjectViewProps {
   onTabChange?: (tab: ProjectTab, opts: { replace: boolean }) => void;
   onNewChat: (projectId: string) => void;
   onSendFirst: (projectId: string, text: string, skill?: SkillPin) => void;
-  onSave: (projectId: string, patch: Partial<Project>) => Promise<void>;
+  onSave: (projectId: string, patch: Partial<Project>, options?: { storageRetry?: boolean }) => Promise<void>;
   onOpenChat: (projectId: string, chatId: string) => void;
   onPatch: (projectId: string, patch: Partial<Project>) => void;
   onDeleteChat: (projectId: string, chatId: string) => void;
@@ -210,7 +210,8 @@ export function ProjectView({
   const updateFolders = async (folders: string[]) => {
     setSyncing(true);
     setAddError('');
-    try { await onSave(project.id, {sourceFolders: folders}); }
+    // #1428/#1429: this is the "Refresh from storage" press, the one explicit retry of a source refresh.
+    try { await onSave(project.id, {sourceFolders: folders}, { storageRetry: true }); }
     catch (e) { setAddError(e instanceof Error ? e.message : t('projects.view.folderUpdateError')); }
     finally { setSyncing(false); }
   };

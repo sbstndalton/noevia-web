@@ -49,6 +49,21 @@ const STORAGE_LOGIN_REJECTED_EN = 'Storage login rejected. Check your storage cr
 function storageLoginText(t?: Translate): string {
   return t ? t('storage.refreshLoginRejected') : STORAGE_LOGIN_REJECTED_EN;
 }
+/** #1428: the storage failures the server names by a stable code (the source refresh, the upload),
+ *  worded here in the interface language. The English is the fallback when no translator is given. */
+const STORAGE_CODE_TEXT: Record<string, { key: MessageKey; en: string }> = {
+  storageLoginRejected: { key: 'storage.refreshLoginRejected', en: STORAGE_LOGIN_REJECTED_EN },
+  storageForbidden: { key: 'storage.refresh.forbidden', en: 'Storage refused access to this folder. Check its sharing and permissions in your storage app, then retry.' },
+  storageThrottled: { key: 'storage.throttled', en: 'Your storage server is limiting sign-in attempts. Wait a little, then try again.' },
+  storageTimeout: { key: 'storage.refresh.timeout', en: 'Storage did not answer in time. Try again shortly.' },
+  storageUnreachable: { key: 'storage.refresh.unreachable', en: 'Storage could not be reached. Check the server address and that it is online, then retry.' },
+};
+/** The words for a storage error code, or '' when the code is not one of those above. */
+export function storageCodeText(code: unknown, t?: Translate): string {
+  const entry = typeof code === 'string' ? STORAGE_CODE_TEXT[code] : undefined;
+  if (!entry) return '';
+  return t ? t(entry.key) : entry.en;
+}
 /** True when a toast message reports a rejected storage login, so it can link to Settings. */
 export function mentionsStorageLogin(message: string | null | undefined, t?: Translate): boolean {
   return !!message && message.includes(storageLoginText(t));
@@ -58,7 +73,8 @@ export function mentionsStorageLogin(message: string | null | undefined, t?: Tra
  *  `code: 'storageLoginRejected'`; that gets the same sentence the refresh toast uses (#770), in the
  *  interface language. Anything else keeps the server's own message. */
 export function uploadFailureText(err: unknown, t?: Translate, fallback = ''): string {
-  if ((err as { code?: unknown } | null)?.code === 'storageLoginRejected') return storageLoginText(t);
+  const coded = storageCodeText((err as { code?: unknown } | null)?.code, t);
+  if (coded) return coded;
   const message = (err as { message?: unknown } | null)?.message;
   return typeof message === 'string' && message ? message : fallback;
 }
@@ -85,10 +101,15 @@ export function sourceStatus(file: ProjectFile, t?: Translate): string {
     `${fallback.length ? ' · ' + (t ? t('projects.view.reason.nativeFallback', { pages: fallbackPages }) : `pages ${fallbackPages}: layout analysis found no text, so the PDF's own text layer was used; reading order and tables there may be rough`) : ''}` +
     `${d.error ? ' · ' + documentError(d, t) : ''}${d.indexing === 'pending' ? ' · indexing' : file.content && ['unavailable', 'failed', 'partial'].includes(d.indexing || '') ? ' · search limited; page reads available for extracted text' : ''}`;
 }
-export type SkippedSource = { folder: string; file?: string; reason: string; retained?: boolean };
+export type SkippedSource = { folder: string; file?: string; reason: string; code?: string; retained?: boolean };
+
+/** What a skipped source says: its storage code's words (#1428), else the login sentence (#770), else the reason. */
+function skippedReasonText(s: SkippedSource, t?: Translate): string {
+  return storageCodeText(s.code, t) || (isStorageLoginRejected(s.reason) ? storageLoginText(t) : s.reason);
+}
 
 export function sourceRefreshEntries(skipped: SkippedSource[], t?: Translate): string[] {
-  return skipped.map(s => `${s.file || s.folder}: ${isStorageLoginRejected(s.reason) ? storageLoginText(t) : s.reason}${s.retained ? ' Previous readable text retained.' : ''}`);
+  return skipped.map(s => `${s.file || s.folder}: ${skippedReasonText(s, t)}${s.retained ? ' Previous readable text retained.' : ''}`);
 }
 
 export function sourceRefreshIssues(skipped: SkippedSource[], t?: Translate): string {
@@ -97,6 +118,8 @@ export function sourceRefreshIssues(skipped: SkippedSource[], t?: Translate): st
 
 /** The toast for a refresh that failed outright (#770: a rejected login says so). */
 export function sourceRefreshFailure(error: unknown, t?: Translate): string {
+  const coded = storageCodeText((error as { code?: unknown } | null)?.code, t);
+  if (coded) return `Sources could not be refreshed — ${coded}`;
   const message = (error as { message?: unknown } | null)?.message;
   const detail = typeof message === 'string' && message ? message : 'storage unavailable';
   return `Sources could not be refreshed — ${isStorageLoginRejected(detail) ? storageLoginText(t) : detail + '.'}`;

@@ -1572,7 +1572,7 @@ export default function App(): JSX.Element {
   // that is attached but not read is indistinguishable from one that does not
   // work: the project lists it and the model sees nothing.
   const saveProjectAndSync = useCallback(
-    async (projectId: string, patch: Partial<Project>) => {
+    async (projectId: string, patch: Partial<Project>, options: { storageRetry?: boolean } = {}) => {
       patch = { ...pendingPatches.current[projectId], ...patch };
       delete pendingPatches.current[projectId];
       setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, ...patch, updatedAt: Date.now() } : p)));
@@ -1596,7 +1596,8 @@ export default function App(): JSX.Element {
         // several worked, because the sync rebuilds from what remains, which
         // is why the behaviour looked arbitrary.
         if (Array.isArray(patch.sourceFolders)) {
-          const r = await syncProjectSources(projectId);
+          // #1428/#1429: only the person's own "Refresh from storage" press asks storage to be tried again now.
+          const r = await syncProjectSources(projectId, { storageRetry: options.storageRetry === true });
           setProjectError(prevError => {
             const prev = lastSkippedSignature.current[projectId] || { signature: '', message: '' };
             const { signature, message, show } = resolveSkippedToast(prev, r.skipped || [], prevError, tr);
