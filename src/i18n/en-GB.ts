@@ -383,6 +383,7 @@ export const EN_GB = {
   'composer.upload.failed': 'Upload failed',
   'composer.upload.renamedCopy': '{file} was saved as {name}: a file with that name already exists and was kept',
   'composer.upload.partial': 'Saved {saved}/{total}. {failures}',
+  'composer.upload.notSaved': 'Not saved. {failures}',
   'composer.upload.saved.one': 'Saved {count} file to {target}',
   'composer.upload.saved.other': 'Saved {count} files to {target}',
   'composer.upload.thisChat': 'this chat',

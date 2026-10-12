@@ -55,7 +55,9 @@ export async function uploadAttachments(sink: AttachmentSink, files: File[], t: 
   catch (err) { refreshFailure = `${t('composer.upload.failed')}: ${uploadFailureText(err, t, t('composer.upload.failed'))}`; }
   finally {
     const problems = refreshFailure ? [...failures, refreshFailure] : failures;
-    onStatus(problems.length ? t('composer.upload.partial', { saved: files.length - failures.length, total: files.length, failures: problems.join('; ') }) : `${t.plural('composer.upload.saved', files.length, { target: chatOnly ? t('composer.upload.thisChat') : project.name })} · ${t(diary ? 'composer.upload.extras' : chatOnly ? 'composer.upload.nextMessage' : 'composer.upload.allChats')}${notices.length ? ' · ' + notices.join('; ') : ''}`);
+    // #1250: a batch with nothing kept does not lead with "Saved" (that read as success with an error in it).
+    const kept = files.length - failures.length;
+    onStatus(problems.length ? t(kept > 0 ? 'composer.upload.partial' : 'composer.upload.notSaved', { saved: kept, total: files.length, failures: problems.join('; ') }) :`${t.plural('composer.upload.saved', files.length, { target: chatOnly ? t('composer.upload.thisChat') : project.name })} · ${t(diary ? 'composer.upload.extras' : chatOnly ? 'composer.upload.nextMessage' : 'composer.upload.allChats')}${notices.length ? ' · ' + notices.join('; ') : ''}`);
     onBusy(false);
   }
 }
