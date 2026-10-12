@@ -29,7 +29,9 @@ const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit
    }
    // A long chat list keeps its size and scrolls.
    await open();await page.getByRole('dialog',{name:'Navigation'}).getByRole('button',{name:'Chat',exact:true}).tap();await open();
-   const side=await state('.sidebar.pane');assert.ok(side.over>100&&side.zoom===1,`long list scrolls at full size ${JSON.stringify(side)}`);
+   // The sidebar's scroller is .sidebar-scroll on a tall phone and the .sidebar.pane root itself on a short one (max-height 600px, phone.css).
+   const side=await page.evaluate(()=>{const cands=[...document.querySelectorAll('.sidebar.pane, .sidebar.pane .sidebar-scroll')];const over=Math.max(...cands.map(a=>a.scrollHeight-a.clientHeight));const z=[...document.querySelectorAll('.sidebar.pane')].flatMap(a=>[...a.children].map(c=>c.style.zoom)).find(Boolean)||'1';return {over,zoom:+z};});
+   assert.ok(side.over>100&&side.zoom===1,`long list scrolls at full size ${JSON.stringify(side)}`);
    await page.close();
   }
   assert.deepEqual(errors,[]);
