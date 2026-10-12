@@ -605,6 +605,8 @@ export async function* streamChat(
   args?: string;
   index?: number; // 'tool' events: which call this is, for upsert-by-index
   id?: string; // 'tool_pending': the approval id to post a decision against
+  /** 'status' (#1449): for a 'loadingModel' status, the model being loaded, its routed role and the expected wait. */
+  detail?: unknown;
   /** 'tool_pending' (#648): the full stored path of the project file an edit would change; for a
    *  Google Drive write (#659) the Drive file's name and id. 'tool_result': the same, once it ran. */
   target?: string;

@@ -50,7 +50,7 @@ import { frameWithLink, keepLinks, MAX_FRAME_LINKS } from './chat-organise';
 import { ChatLinks } from './components/ChatLinks';
 import type { FrameAction, FrameDraft } from './chat-frame';
 import { sessionMode, type ChatMode } from './chat-mode';
-import { STOPPED_SENDER } from './chat-labels';
+import { STOPPED_SENDER, statusDetail } from './chat-labels';
 import type {
   ChatMeta,
   HealthState,
@@ -1012,7 +1012,7 @@ export default function App(): JSX.Element {
           } else if (ev.type === 'tools_scope') {
             setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, toolScope: ev.text || undefined, toolScopeBoxes: ev.boxes } : m) }));
           } else if (ev.type === 'status' && ev.text) {
-            setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, processingStatus: ev.text, processingStatusId: typeof ev.id === 'string' ? ev.id : undefined } : m) }));
+            setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, processingStatus: ev.text, processingStatusId: typeof ev.id === 'string' ? ev.id : undefined, processingStatusDetail: statusDetail(ev.detail) } : m) }));
           } else if (ev.type === 'warning' && ev.text) {
             setMessagesByChat((prev) => ({
               ...prev,
