@@ -1974,7 +1974,8 @@ export default function App(): JSX.Element {
             project={p}
             models={models}
             onClose={() => setEditingProjectId(null)}
-            onSave={(patch) => saveProjectAndSync(p.id, patch)}
+            // #1589: saving the project settings is the person's own action, so a changed folder list may try storage again now.
+            onSave={(patch) => saveProjectAndSync(p.id, patch, { storageRetry: true })}
           />
         ) : null;
       })()}

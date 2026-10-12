@@ -81,6 +81,9 @@ test('#1429 only the explicit Refresh from storage press sends X-Cowork-Storage-
   const view = fs.readFileSync(path.join(SRC, 'components/ProjectView.tsx'), 'utf8');
   assert.match(view, /onSave\(project\.id, \{sourceFolders: folders\}, \{ storageRetry: true \}\)/);
   assert.equal((view.match(/storageRetry: true/g) || []).length, 1, 'one explicit press, not more');
+  // #1589: saving the project settings dialog is the person's own action too; the automatic refresher still sends none.
+  assert.match(app, /onSave=\{\(patch\) => saveProjectAndSync\(p\.id, patch, \{ storageRetry: true \}\)\}/);
+  assert.equal((app.match(/storageRetry: true/g) || []).length, 1, 'only the settings dialog save, besides ProjectView');
 });
 
 test('#1428 the API keeps the server code on a failed request', () => {
