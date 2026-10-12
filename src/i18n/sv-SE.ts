@@ -1300,7 +1300,7 @@ export const SV_SE: Catalogue = {
   'chat.routing.reason.forceLocal': "Bara lokalt är på för den här chatten",
   'chat.routing.reason.sensitiveRule': "det såg känsligt ut",
   'chat.routing.reason.failClosed': "känslighetskontrollen kunde inte svara, eller frågan besvarades inte",
-  'chat.routing.reason.checkUnavailable': "känslighetskontrollen är inte tillgänglig{detail}, så det stannade lokalt",
+  'chat.routing.reason.checkUnavailable': "Stannade på den här enheten. Integritetskontrollen var inte tillgänglig.",
   'chat.routing.reason.remembered': "du tillät moln för den här chatten",
   'chat.routing.flag.diary': "dagboksinnehåll",
   'chat.routing.flag.secret': "ett lösenord eller en nyckel",

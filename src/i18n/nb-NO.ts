@@ -1300,7 +1300,7 @@ export const NB_NO: Catalogue = {
   'chat.routing.reason.forceLocal': "Bare lokalt er på for denne chatten",
   'chat.routing.reason.sensitiveRule': "det så sensitivt ut",
   'chat.routing.reason.failClosed': "sensitivitetssjekken kunne ikke svare, eller spørsmålet ble ikke besvart",
-  'chat.routing.reason.checkUnavailable': "sensitivitetssjekken er ikke tilgjengelig{detail}, så dette ble værende lokalt",
+  'chat.routing.reason.checkUnavailable': "Holdt på denne enheten. Personvernsjekken var ikke tilgjengelig.",
   'chat.routing.reason.remembered': "du tillot sky for denne chatten",
   'chat.routing.flag.diary': "dagbokinnhold",
   'chat.routing.flag.secret': "et passord eller en nøkkel",

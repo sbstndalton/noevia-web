@@ -1300,7 +1300,7 @@ export const FR_FR: Catalogue = {
   'chat.routing.reason.forceLocal': "Forcer le local est activé pour ce chat",
   'chat.routing.reason.sensitiveRule': "cela semblait sensible",
   'chat.routing.reason.failClosed': "la vérification de sensibilité n’a pas pu répondre, ou la question est restée sans réponse",
-  'chat.routing.reason.checkUnavailable': "la vérification de sensibilité n’est pas disponible{detail}, donc cela est resté en local",
+  'chat.routing.reason.checkUnavailable': "Conservé sur cet appareil. La vérification de confidentialité n’était pas disponible.",
   'chat.routing.reason.remembered': "vous avez autorisé le cloud pour ce chat",
   'chat.routing.flag.diary': "contenu du Journal",
   'chat.routing.flag.secret': "un mot de passe ou une clé",

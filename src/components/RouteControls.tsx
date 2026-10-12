@@ -33,10 +33,15 @@ export function isRouteTarget(v: unknown): v is RouteTarget {
 export function RouteBadge({ target }: { target: RouteTarget }): JSX.Element {
   const t = useT();
   const route = target.route === 'cloud' ? t('chat.routing.cloud') : t('chat.routing.local');
-  // #1421: a check that could not answer is a quiet notice on the badge, with the reason code.
-  const detail = target.reason === 'check-unavailable' && target.detail && /^[a-z][a-z0-9-]{0,39}$/.test(target.detail) ? ` (${target.detail})` : '';
-  const label = t('chat.routing.badgeLabel', { route, reason: t(REASON_KEY[target.reason], { detail }) });
-  return <small className="route-badge" data-route={target.route} data-reason={target.reason} data-testid="route-badge" title={label} aria-label={label}>{route}</small>;
+  // #1421: a check that could not answer is a quiet notice on the badge. The reason code is kept for
+  // support in a data attribute; the words the person reads never show it (#1537).
+  const detail = target.reason === 'check-unavailable' && target.detail && /^[a-z][a-z0-9-]{0,39}$/.test(target.detail) ? target.detail : undefined;
+  // A check that could not answer is said in one plain sentence; other reasons read "Sent to …: …".
+  const label = target.reason === 'check-unavailable'
+    ? t(REASON_KEY[target.reason])
+    : t('chat.routing.badgeLabel', { route, reason: t(REASON_KEY[target.reason]) });
+  // The styled tooltip (CSS, from data-tip) replaces the browser's plain title tooltip (#1537).
+  return <small className="route-badge" data-route={target.route} data-reason={target.reason} data-detail={detail} data-testid="route-badge" data-tip={label} aria-label={label}>{route}</small>;
 }
 
 export function RoutePendingCard({ flag, busy, onDecide }: { flag: RouteFlag; busy?: boolean; onDecide: (choice: 'cloud' | 'local', remember: boolean) => void }): JSX.Element {

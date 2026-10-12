@@ -2444,6 +2444,14 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 /* #778 routing modes: the local/cloud badge, the sensitivity card and the Force local toggle. */
 .route-badge { display: inline-block; align-self: flex-start; width: fit-content; margin: 0 0 4px; padding: 0 8px; border: 1px solid var(--border-subtle); border-radius: var(--radius-control); color: var(--text-muted); font-size: var(--text-caption); line-height: 1.6; cursor: help; }
 .route-badge[data-route="cloud"] { color: var(--accent-text); }
+/* #1537: the badge's reason in the app's own tooltip (the inverted surface of .rail-tip), not the browser's. */
+.route-badge[data-tip] { position: relative; }
+.route-badge[data-tip]:hover::after {
+  content: attr(data-tip); position: absolute; z-index: 20; left: 0; bottom: calc(100% + 6px);
+  width: max-content; max-width: min(300px, 80vw); padding: 5px 9px; border-radius: var(--radius-sm);
+  background: var(--text-primary); color: var(--bg-app); font-size: var(--text-footnote); font-weight: 500; line-height: 1.35;
+  white-space: normal; box-shadow: var(--shadow-pop); pointer-events: none;
+}
 .route-pending { border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg-surface); padding: 10px 12px; margin: 0 0 8px; font-size: var(--text-footnote); }
 .route-pending p { margin: 0 0 8px; color: var(--text-secondary); }
 .route-pending-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
