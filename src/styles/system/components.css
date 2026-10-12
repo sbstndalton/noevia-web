@@ -212,6 +212,9 @@ a { text-underline-offset: .18em; }
   transition: box-shadow var(--dur-base) var(--ease-in-out);
 }
 :root .app .composer-inner:is(:hover, :focus-within) { box-shadow: var(--ring-inset), 0 0 0 1px var(--border-strong), 0 4px 20px rgb(0 0 0 / .06); }
+/* #1464: the message box shows keyboard focus (WCAG 2.4.7). shell-v2 zeroes the outline on .composer-inner.pane,
+   so the only focus cue was a 1px border that looks like hover. A 2px focus-ring outline restores it while focus is inside. */
+:root .app .composer-inner.pane:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .composer-input { font-size: var(--text-body); line-height: 21px; }
 .send-btn { border-radius: var(--radius-button); transition: background-color var(--dur-instant) var(--ease-out-quart), scale var(--dur-spring) var(--spring-press); }
 :is(.model-pill, .reasoning-pill, .tool-catalogue-trigger, .composer-add) { background: transparent; border-radius: var(--radius-button); color: var(--text-secondary); }
