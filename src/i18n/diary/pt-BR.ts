@@ -168,6 +168,7 @@ export const PT_BR_DIARY: DiaryCatalogue = {
   'diary.calendar.entriesThisMonth': "Entradas deste mês · mais recentes primeiro.",
   'diary.calendar.loadFailed': "As entradas não puderam ser carregadas.",
   'diary.calendar.loading': "Carregando entradas…",
+  'diary.calendar.retryLoad': "Tentar novamente",
   'diary.calendar.entriesLabel': "Entradas do diário",
   'diary.calendar.readEntry': "Ler entrada →",
   'diary.calendar.noEntriesThisMonth': "Nenhuma entrada este mês. Escreva abaixo para registrar hoje, ou escolha um dia no Calendário.",

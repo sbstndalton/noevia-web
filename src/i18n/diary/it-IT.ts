@@ -168,6 +168,7 @@ export const IT_IT_DIARY: DiaryCatalogue = {
   'diary.calendar.entriesThisMonth': "Voci di questo mese · più recenti prima.",
   'diary.calendar.loadFailed': "Non è stato possibile caricare le voci.",
   'diary.calendar.loading': "Caricamento delle voci…",
+  'diary.calendar.retryLoad': "Riprova",
   'diary.calendar.entriesLabel': "Voci del diario",
   'diary.calendar.readEntry': "Leggi voce →",
   'diary.calendar.noEntriesThisMonth': "Nessuna voce questo mese. Scrivi qui sotto per registrare oggi, oppure scegli un giorno nel Calendario.",

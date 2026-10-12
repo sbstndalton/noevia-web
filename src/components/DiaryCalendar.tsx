@@ -7,9 +7,9 @@ import type { MessageKey } from '../i18n';
 import { appLocale } from '../user-preferences';
 type Props = { month: string; today: string; days: Record<string,string>; busy: boolean; ready?: boolean; failed?: boolean; navigate: (month: string, day?: string) => void;
   /** #1518: the day that last had focus (the one opened, when coming back from it). Owned by DiaryView so it survives the grid unmounting. */
-  focusDay?: string | null; onFocusDay?: (day: string) => void };
+  focusDay?: string | null; onFocusDay?: (day: string) => void; onRetry?: () => void };
 const weekdayKeys = ['sun','mon','tue','wed','thu','fri','sat'];
-export function DiaryCalendar({ month, today, days, busy, ready = true, failed = false, navigate, focusDay = null, onFocusDay }: Props) {
+export function DiaryCalendar({ month, today, days, busy, ready = true, failed = false, navigate, focusDay = null, onFocusDay, onRetry }: Props) {
   const t = useT();
   // #619: month and day names in the interface's Intl locale, and the week starts where that locale's does
   // (Monday for fr/de/es/it/nl/nb/sv, Sunday for en-US). The weekday header rotates with it.
@@ -50,7 +50,8 @@ export function DiaryCalendar({ month, today, days, busy, ready = true, failed =
     </div>
     <p>{view==='calendar' ? t('diary.calendar.chooseDay') : t('diary.calendar.entriesThisMonth')}</p>
     {/* #1566: this line is always rendered at one line high, so the grid does not move when loading clears. */}
-    <p className="diary-calendar-status" role="status">{!ready && (failed ? t('diary.calendar.loadFailed') : t('diary.calendar.loading'))}</p>
+    <p className="diary-calendar-status" role="status">{!ready && (failed ? t('diary.calendar.loadFailed') : t('diary.calendar.loading'))}
+      {!ready && failed && onRetry && <> <button className="popup-tab" disabled={busy} onClick={onRetry}>{t('diary.calendar.retryLoad')}</button></>}</p>
     {view==='list' ? <div className="diary-entry-list" aria-label={t('diary.calendar.entriesLabel')}>{ready && (entries.length ? entries.map(date=><button className="diary-entry-row" key={date} disabled={busy} onClick={()=>navigate(month,date)}><time dateTime={date}>{date}</time><span>{t('diary.calendar.readEntry')}</span></button>) : <p>{t('diary.calendar.noEntriesThisMonth')}</p>)}</div> :
     <div className="diary-calendar" aria-label={monthLabel(month, locale)} onKeyDown={moveFocus}>
       {weekdays.map(day => <span className="calendar-weekday" key={day}>{t(`diary.calendar.weekday.${day}` as MessageKey)}</span>)}

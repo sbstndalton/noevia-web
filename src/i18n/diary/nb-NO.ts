@@ -168,6 +168,7 @@ export const NB_NO_DIARY: DiaryCatalogue = {
   'diary.calendar.entriesThisMonth': "Oppføringer for denne måneden · nyeste først.",
   'diary.calendar.loadFailed': "Oppføringer kunne ikke lastes.",
   'diary.calendar.loading': "Laster oppføringer …",
+  'diary.calendar.retryLoad': "Prøv igjen",
   'diary.calendar.entriesLabel': "Dagbokoppføringer",
   'diary.calendar.readEntry': "Les oppføring →",
   'diary.calendar.noEntriesThisMonth': "Ingen oppføringer denne måneden. Skriv nedenfor for å fange opp dagen i dag, eller velg en dag i Kalender.",

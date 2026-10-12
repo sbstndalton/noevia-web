@@ -168,6 +168,7 @@ export const SV_SE_DIARY: DiaryCatalogue = {
   'diary.calendar.entriesThisMonth': "Poster för den här månaden · nyaste först.",
   'diary.calendar.loadFailed': "Posterna kunde inte läsas in.",
   'diary.calendar.loading': "Läser in poster …",
+  'diary.calendar.retryLoad': "Försök igen",
   'diary.calendar.entriesLabel': "Dagboksposter",
   'diary.calendar.readEntry': "Läs post →",
   'diary.calendar.noEntriesThisMonth': "Inga poster den här månaden. Skriv nedan för att fånga dagen, eller välj en dag i Kalender.",

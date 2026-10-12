@@ -170,6 +170,7 @@ export const EN_GB_DIARY = {
   'diary.calendar.entriesThisMonth': 'Entries for this month · newest first.',
   'diary.calendar.loadFailed': 'Entries could not be loaded.',
   'diary.calendar.loading': 'Loading entries…',
+  'diary.calendar.retryLoad': 'Try again',
   'diary.calendar.entriesLabel': 'Diary entries',
   'diary.calendar.readEntry': 'Read entry →',
   'diary.calendar.noEntriesThisMonth': 'No entries this month. Write below to capture today, or choose a day in Calendar.',

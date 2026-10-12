@@ -168,6 +168,7 @@ export const ES_ES_DIARY: DiaryCatalogue = {
   'diary.calendar.entriesThisMonth': "Entradas de este mes · más recientes primero.",
   'diary.calendar.loadFailed': "No se pudieron cargar las entradas.",
   'diary.calendar.loading': "Cargando entradas…",
+  'diary.calendar.retryLoad': "Intentar de nuevo",
   'diary.calendar.entriesLabel': "Entradas del diario",
   'diary.calendar.readEntry': "Leer entrada →",
   'diary.calendar.noEntriesThisMonth': "No hay entradas este mes. Escribe abajo para capturar hoy, o elige un día en el calendario.",

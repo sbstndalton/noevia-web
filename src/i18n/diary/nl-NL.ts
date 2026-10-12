@@ -168,6 +168,7 @@ export const NL_NL_DIARY: DiaryCatalogue = {
   'diary.calendar.entriesThisMonth': "Items voor deze maand · nieuwste eerst.",
   'diary.calendar.loadFailed': "Items konden niet worden geladen.",
   'diary.calendar.loading': "Items worden geladen…",
+  'diary.calendar.retryLoad': "Probeer opnieuw",
   'diary.calendar.entriesLabel': "Dagboekitems",
   'diary.calendar.readEntry': "Item lezen →",
   'diary.calendar.noEntriesThisMonth': "Geen items deze maand. Schrijf hieronder om vandaag vast te leggen, of kies een dag in Kalender.",
