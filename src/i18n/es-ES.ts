@@ -731,6 +731,8 @@ export const ES_ES: Catalogue = {
   'chat.failure.stopped': "El modelo se detuvo antes de terminar. Revisa el backend y vuelve a intentarlo.",
   'chat.failure.incomplete': "Respuesta incompleta",
   'chat.failure.unknown': "No se pudo terminar la respuesta. Inténtalo de nuevo.",
+  'chat.files.label': "Archivos adjuntos",
+  'composer.attached.label': "Adjuntado a este mensaje",
   'chat.stopped.sender': "Detenido",
   'chat.cowork.starting': "iniciando una tarea…",
   'chat.cowork.failed': "La tarea de Cowork no se inició — {reason}",

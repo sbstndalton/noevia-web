@@ -875,7 +875,7 @@ export default function App(): JSX.Element {
   }, []);
 
   const handleSend = useCallback(
-    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; notice?: string | null; skill?: SkillPin; resend?: ResendOutcome } = {}) => {
+    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; notice?: string | null; skill?: SkillPin; resend?: ResendOutcome; files?: string[] } = {}) => {
       // `streamingChats` is render state, so two sends in one tick both see it false. The ref
       // is updated synchronously and is the real guard against a duplicate generation.
       if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
@@ -883,7 +883,9 @@ export default function App(): JSX.Element {
       // #562/#571: the pin travels with the turn (and is saved with the transcript), so Retry and
       // Regenerate resend the same pin, also after a reload.
       const sentPin = storablePin(turn.skill);
-      const userMsg: Message = { id: uid(), role: 'user', content: text, ...(sentPin ? { skill: sentPin } : {}) };
+      // #1514: the files attached with this message are shown on it, in this session.
+      const sentFiles = turn.files?.length ? turn.files : undefined;
+      const userMsg: Message = { id: uid(), role: 'user', content: text, ...(sentPin ? { skill: sentPin } : {}), ...(sentFiles ? { files: sentFiles } : {}) };
       // History still loading: wait for it so the model sees the earlier turns and the load does
       // not land on top of this turn.
       const pendingLoad = base ? undefined : historyLoads.current[chatId];
@@ -1234,7 +1236,7 @@ export default function App(): JSX.Element {
   const activeMode: ChatMode = view.kind === 'chat' ? sessionMode(activeChatMeta?.mode, pendingModes[view.chatId]) : 'chat';
 
   const sendToCurrent = useCallback(
-    (text: string, turn: { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin } = {}) => {
+    (text: string, turn: { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin; files?: string[] } = {}) => {
       if (view.kind !== 'chat') return;
       const chatId = view.chatId;
       const projectId = view.projectId ?? activeChatMeta?.projectId ?? null;

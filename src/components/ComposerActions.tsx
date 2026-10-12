@@ -19,16 +19,18 @@ import { toolboxCopy } from '../toolbox-copy';
 export interface AttachmentSink {
   project: Project | null; disabled: boolean; diary?: boolean; chatOnly?: boolean;
   onChanged: () => void | Promise<void>; onBusy: (busy: boolean) => void; onStatus: (status: string) => void;
+  /** #1514: the names of the files this upload saved, so the chat can show them as chips. */
+  onSaved?: (names: string[]) => void;
 }
 
 /** The one attachment pipeline: size check, base64 read, `uploadProjectFile`, per-file status and
  *  failure copy, then a single summary line. Extracted so drag-and-drop (#437) is a second way to
  *  call this, never a second implementation of it. */
 export async function uploadAttachments(sink: AttachmentSink, files: File[], t: Translate): Promise<void> {
-  const { project, disabled, diary = false, chatOnly = false, onChanged, onBusy, onStatus } = sink;
+  const { project, disabled, diary = false, chatOnly = false, onChanged, onBusy, onStatus, onSaved } = sink;
   if (!project || !files.length || disabled) return;
   onBusy(true);
-  const failures: string[] = [], notices: string[] = [];
+  const failures: string[] = [], notices: string[] = [], saved: string[] = [];
   const started = Date.now();
   for (const [index, file] of files.entries()) {
     const status = (stage: string) => onStatus(`${index + 1}/${files.length} · ${file.name} · ${stage} · ${Math.round((Date.now() - started) / 1000)}s`);
@@ -38,9 +40,12 @@ export async function uploadAttachments(sink: AttachmentSink, files: File[], t: 
       const result = await uploadProjectFile(project.id, { name: file.name, dataBase64: await fileToBase64(file) }, value => status(`${value.stage}${value.percent == null ? '' : ` ${formatPercent(value.percent, appLocale(), 0)}`}`));
       const unreadable = uploadUnreadableReason(result, t);
       if (unreadable) { failures.push(`${file.name}: ${unreadable}`); continue; }
+      saved.push(file.name);
       if (result.attachment?.reduction?.note) notices.push(`${file.name}: ${result.attachment.reduction.note}`);
     } catch (err) { failures.push(`${file.name}: ${uploadFailureText(err, t, t('composer.upload.failed'))}`); }
   }
+  // #1514: the files that did save are named where the chat shows them, before the refresh that may fail.
+  if (saved.length) onSaved?.(saved);
   // #905: a refresh that throws after the files were saved is reported in the status line, not
   // left to escape the `void uploadAttachments(...)` callers as an unhandled rejection.
   let refreshFailure = '';
@@ -107,14 +112,14 @@ export function useAttachmentDrop(sink: AttachmentSink): { isDragOver: boolean; 
 }
 
 /** Composer shortcuts use the existing project APIs; enabling tools never approves a write. */
-export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus, header, diary = false, chatOnly = false, browseTools }: {
+export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus, header, diary = false, chatOnly = false, browseTools, onSaved }: {
   header?: ReactNode; diary?: boolean; chatOnly?: boolean;
   /** #510: on a phone the standalone Tools button above the composer is hidden, and this row in
    *  the + menu opens the same catalogue. Wider screens hide the row and keep the button. */
   browseTools?: { onOpen: () => void; count: number };
   project: Project | null; disabled: boolean; onChanged: () => void | Promise<void>;
   /** Unused: the model is chosen from the composer's model control, not duplicated here. */
-  onModels?: () => void; onBusy: (busy: boolean) => void; onStatus: (status: string) => void;
+  onModels?: () => void; onBusy: (busy: boolean) => void; onStatus: (status: string) => void; onSaved?: (names: string[]) => void;
 }) {
   const panelId = useId();
   const t = useT();
@@ -188,7 +193,7 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
   const upload = async (files: File[]) => {
     if (!files.length) return;
     setOpen(false);
-    await uploadAttachments({ project, disabled, diary, chatOnly, onChanged, onBusy, onStatus }, files, t);
+    await uploadAttachments({ project, disabled, diary, chatOnly, onChanged, onBusy, onStatus, onSaved }, files, t);
   };
   const tokens = boxes.filter(box => effectiveSelected.includes(box.id)).reduce((sum, box) => sum + box.estTokens, 0);
   return <div className="composer-actions" ref={root} onKeyDown={event => {

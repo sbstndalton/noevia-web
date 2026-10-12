@@ -8,6 +8,7 @@ import type { ChatMeta, Message, MessageStats, Project, InstalledModel, RoutingD
 import { wikiLinkQueryAt } from '../diary-markdown';
 import { chatLinkCandidates, insertChatLink } from '../chat-organise';
 import { failureCopy } from '../failure-copy';
+import { addAttachedNames } from '../attached-files';
 import { ShellIcon } from './ShellIcon';
 import { ChevronLeft, SendIcon, SlidersIcon } from './Icons';
 import { Icon } from './icons/Icon';
@@ -46,7 +47,7 @@ import { formatDuration, formatNumber } from '../number-format';
 
 /** What one send carries besides its text: per-turn boxes, a fallback notice, or a Cowork task. */
 /** `skill` (#272) pins one exact reviewed Skill version for this message only. */
-export interface SendTurn { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin }
+export interface SendTurn { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin; files?: string[] }
 
 interface ChatViewProps {
   project: Project | null;
@@ -184,6 +185,16 @@ function MessageMeta({ stats }: { stats?: MessageStats }): JSX.Element | null {
   if (stats?.tokensPerSecond) parts.push(`${formatNumber(stats.tokensPerSecond, appLocale(), 1)} ${t('stats.tokPerSecUnit')}`);
   if (!parts.length) return null;
   return <div className="msg-meta">{parts.join(' · ')}</div>;
+}
+
+/** The names of files attached to a message or the composer (#1514): named chips, never a file preview. */
+export function FileChips({ names, label, className }: { names: readonly string[]; label: string; className: string }): JSX.Element | null {
+  if (!names.length) return null;
+  return (
+    <ul className={className} aria-label={label}>
+      {names.map((name) => <li key={name} className="chip file-chip"><ShellIcon name="file" size={13} /><span>{name}</span></li>)}
+    </ul>
+  );
 }
 
 /** A reply that failed (#1547, #1549). Text that had streamed in stays, marked incomplete, and the failure
@@ -348,6 +359,15 @@ export function ChatView({
   // chat is left again (unless it still has work running), so an old "Saved" does not linger.
   const [actionStatuses, setActionStatuses] = useState<Readonly<Record<string, string>>>({});
   const actionStatus = actionStatuses[chatId] ?? '';
+  // #1514: the files saved by uploads in this chat since its last message, shown as chips in the composer and
+  // sent with the next message. Held per chat, like the status line: ChatView stays mounted across chat switches.
+  const [attachedByChat, setAttachedByChat] = useState<Readonly<Record<string, string[]>>>({});
+  const attached = attachedByChat[chatId] ?? [];
+  const noteSaved = (forChat: string) => (names: string[]) => setAttachedByChat(current => {
+    const known = current[forChat] ?? [];
+    const next = addAttachedNames(known, names);
+    return next.length === known.length ? current : { ...current, [forChat]: next };
+  });
   const statusOf = (forChat: string, status: string) => setActionStatuses(current => {
     if ((current[forChat] ?? '') === status) return current;
     const next = { ...current };
@@ -558,7 +578,11 @@ export function ChatView({
     follow();
     const decision = decideDispatch({ mode, harnessEnabled: coworkAccess.harnessEnabled, canUseCode: coworkAccess.canUseCode, projectId: project?.id ?? null, repository });
     if (decision.harness === 'cowork' && repository) onSend(text, { cowork: { repository } });
-    else onSend(text, { turnToolboxes: turnBoxesFor(text, permitted, turnBoxes), notice: decision.notice, ...(skillPin ? { skill: skillPin as SkillPin } : {}) });
+    else {
+      onSend(text, { turnToolboxes: turnBoxesFor(text, permitted, turnBoxes), notice: decision.notice, ...(skillPin ? { skill: skillPin as SkillPin } : {}), ...(attached.length ? { files: attached } : {}) });
+      // The files now travel with this message (and show on it), so the composer stops listing them.
+      if (attached.length) setAttachedByChat(current => { const next = { ...current }; delete next[chatId]; return next; });
+    }
     setDraft('');
     clearDraft(chatId);
     setTurnBoxes([]);
@@ -569,7 +593,7 @@ export function ChatView({
   // size limits, error copy) `ComposerActions`'s own picker uses below.
   const { isDragOver, dropProps } = useAttachmentDrop({
     project: project || freeContext, disabled: streaming || actionBusy, chatOnly: !project,
-    onChanged: refreshContext, onBusy: setActionBusy, onStatus: showActionStatus,
+    onChanged: refreshContext, onBusy: setActionBusy, onStatus: showActionStatus, onSaved: noteSaved(chatId),
   });
 
   const catalogue = !toolsByHand ? null : <ToolCatalogue open={catalogueOpen} onOpenChange={setCatalogueOpen} projectId={project?.id ?? null} mode={mode}
@@ -753,6 +777,7 @@ export function ChatView({
                     </div>
                   </div>
                 ) : (
+                  <>
                   <div className="msg-user-row">
                     <p style={{ whiteSpace: 'pre-wrap' }}>{m.content}</p>
                     <button
@@ -766,6 +791,8 @@ export function ChatView({
                       ✎ {t('chat.edit.button')}
                     </button>
                   </div>
+                  <FileChips names={m.files ?? []} label={t('chat.files.label')} className="msg-file-chips" />
+                  </>
                 )
               )}
             </div>
@@ -827,7 +854,7 @@ export function ChatView({
             onBlur={linkTargets ? () => setLinkAt(null) : undefined}
             aria-activedescendant={linkMenuOpen && linkOptions.length ? `chat-link-${chatId}-${Math.min(linkIndex, linkOptions.length - 1)}` : undefined}
           />
-          <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={showActionStatus}
+          <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={showActionStatus} onSaved={noteSaved(chatId)}
             browseTools={toolsByHand ? { onOpen: () => setCatalogueOpen(true), count: turnBoxes.length } : undefined} />
           {phone && <ModeToggle state={modeSwitch} disabled={streaming || actionBusy} compact />}
           <ComposerModel label={modelLabel} onClick={openModels}
@@ -843,6 +870,7 @@ export function ChatView({
             </button>
           )}
         </div>
+        <FileChips names={attached} label={t('composer.attached.label')} className="composer-file-chips" />
         {actionStatus && <div className="composer-action-status" role="status">{actionStatus}</div>}
         <div className={`composer-hint${projectName ? '' : ' is-keyboard'}`}>
           {projectName ? t('composer.projectContext', { name: projectName }) : keyHint}

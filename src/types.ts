@@ -62,6 +62,9 @@ export interface Message {
   coworkRepository?: string;
   /** The project passages placed in this reply's prompt (#552), in prompt order. */
   sources?: SourceRef[];
+  /** On a user turn: the files attached with this message, by name (#1514). Shown as chips; this client's
+   *  session only, since the server's transcript does not carry them. */
+  files?: string[];
   /** On a user turn: the Skill pin it was sent with, `skill_<id>@<sha256>` (#571), so Retry survives a reload. */
   skill?: string;
   /** #658: the reply ended early after tool steps had run: step supervision paused it, or it

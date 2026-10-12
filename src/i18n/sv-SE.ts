@@ -731,6 +731,8 @@ export const SV_SE: Catalogue = {
   'chat.failure.stopped': "Modellen stannade innan den var klar. Kontrollera backend och försök igen.",
   'chat.failure.incomplete': "Ofullständigt svar",
   'chat.failure.unknown': "Svaret kunde inte slutföras. Försök igen.",
+  'chat.files.label': "Bifogade filer",
+  'composer.attached.label': "Bifogat till det här meddelandet",
   'chat.stopped.sender': "Stoppad",
   'chat.cowork.starting': "startar en uppgift…",
   'chat.cowork.failed': "Cowork-uppgiften startade inte — {reason}",

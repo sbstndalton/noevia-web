@@ -742,6 +742,8 @@ export const EN_GB = {
   'chat.failure.stopped': "The model stopped before it finished. Check the backend, then try again.",
   'chat.failure.incomplete': "Incomplete reply",
   'chat.failure.unknown': "The reply could not be finished. Try again.",
+  'chat.files.label': "Attached files",
+  'composer.attached.label': "Attached to this message",
   'chat.stopped.sender': "Stopped",
   'chat.cowork.starting': "starting a task…",
   'chat.cowork.failed': "Cowork task did not start — {reason}",

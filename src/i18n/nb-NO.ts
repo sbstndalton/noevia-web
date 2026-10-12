@@ -731,6 +731,8 @@ export const NB_NO: Catalogue = {
   'chat.failure.stopped': "Modellen stoppet før den var ferdig. Sjekk backend og prøv igjen.",
   'chat.failure.incomplete': "Ufullstendig svar",
   'chat.failure.unknown': "Svaret kunne ikke fullføres. Prøv igjen.",
+  'chat.files.label': "Vedlagte filer",
+  'composer.attached.label': "Vedlagt denne meldingen",
   'chat.stopped.sender': "Stoppet",
   'chat.cowork.starting': "starter en oppgave…",
   'chat.cowork.failed': "Cowork-oppgaven startet ikke — {reason}",
