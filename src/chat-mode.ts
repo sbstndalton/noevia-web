@@ -11,7 +11,8 @@ export type ChatMode = 'chat' | 'cowork';
 
 export const MODE_LABELS: Record<ChatMode, { label: string; description: string }> = {
   chat: { label: 'Chat', description: 'A conversational reply. Tools you allow may be called; writes ask first.' },
-  cowork: { label: 'Cowork', description: 'A task on the coding harness in a project repository, with progress, approvals and cancel.' },
+  // #1502: the user-facing name is Task (translated per locale, see ComposerModeBar's MODE_NAME_KEYS); 'cowork' stays the internal id.
+  cowork: { label: 'Task', description: 'A task on the coding harness in a project repository, with progress, approvals and cancel.' },
 };
 
 /** A stored value becomes a mode; anything unknown (older chats included) is Chat. */
@@ -52,7 +53,7 @@ export interface DispatchDecision {
 export type FallbackReason = 'harnessOff' | 'freeChat' | 'adminOnly' | 'noRepository';
 const REASON_TEXT: Record<FallbackReason, string> = {
   harnessOff: 'the coding harness is off on this server',
-  freeChat: 'Cowork runs inside a project, and this is a free chat',
+  freeChat: 'Task runs inside a project, and this is a free chat',
   adminOnly: 'the coding harness is limited to administrators',
   noRepository: 'no repository is selected',
 };

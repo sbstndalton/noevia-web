@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { JSX, KeyboardEvent, ReactNode } from 'react';
-import { decideDispatch, MODE_LABELS, switchNeedsNewSession, type ChatMode } from '../chat-mode';
+import { decideDispatch, switchNeedsNewSession, type ChatMode } from '../chat-mode';
 import { useFeatureFlags } from './features/useFeatureFlags';
 import { fetchCode } from './code/api';
 import './composer-mode.css';
@@ -9,6 +9,8 @@ import type { MessageKey } from '../i18n';
 import { ShellIcon } from './ShellIcon';
 
 const MODE_DESCRIPTIONS: Record<ChatMode, MessageKey> = { chat: 'mode.chatDesc', cowork: 'mode.coworkDesc' };
+/** The user-facing mode names (#1502), translated like the Projects cards that also name them. The internal id stays 'cowork'. */
+const MODE_NAME_KEYS: Record<ChatMode, MessageKey> = { chat: 'projects.modeChat', cowork: 'projects.modeCowork' };
 
 export interface CoworkAccess { harnessEnabled: boolean; canUseCode: boolean; repositories: string[] }
 
@@ -73,7 +75,7 @@ export function ModeToggle({ state, disabled, compact = false }: { state: ModeSw
       aria-checked={option === mode} aria-describedby={`${id}-${option}`} tabIndex={option === mode ? 0 : -1}
       disabled={disabled} onClick={() => choose(option)}>
       {compact && <ShellIcon name={option === 'chat' ? 'chat' : 'code'} size={15}/>}
-      {compact ? <span className="composer-mode-name">{MODE_LABELS[option].label}</span> : MODE_LABELS[option].label}
+      {compact ? <span className="composer-mode-name">{t(MODE_NAME_KEYS[option])}</span> : t(MODE_NAME_KEYS[option])}
     </button>)}
   </div>;
 }
@@ -101,9 +103,9 @@ export function ModeConfirm({ state }: { state: ModeSwitch }): JSX.Element {
   return <>
     {ORDER.map(option => <span key={option} id={`${id}-${option}`} hidden>{t(MODE_DESCRIPTIONS[option])}</span>)}
     {confirm && <div className="composer-mode-confirm" role="alertdialog" aria-label={t('mode.newSession')}>
-      <span>{t('mode.confirm', { mode: MODE_LABELS[confirm].label })}</span>
+      <span>{t('mode.confirm', { mode: t(MODE_NAME_KEYS[confirm]) })}</span>
       <button type="button" className="btn btn-primary" onClick={() => { setConfirm(null); onModeChange(confirm, true); }}>{t('mode.startNew')}</button>
-      <button type="button" className="btn btn-secondary" onClick={() => setConfirm(null)}>{t('mode.keep', { mode: MODE_LABELS[mode].label })}</button>
+      <button type="button" className="btn btn-secondary" onClick={() => setConfirm(null)}>{t('mode.keep', { mode: t(MODE_NAME_KEYS[mode]) })}</button>
     </div>}
   </>;
 }
