@@ -935,9 +935,17 @@ button:disabled { cursor: not-allowed; }
    Numbers first, chrome second: the stat cards carry the answer and the
    heat map gives it shape over time. */
 .usage-section { margin-bottom: 32px; }
-.usage-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+.usage-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; flex-wrap: nowrap; }
 .usage-section-head h2 { margin: 0 0 2px; font-size: var(--text-body); }
 .usage-section-head p { margin: 0; font-size: var(--text-caption); color: var(--text-secondary); }
+/* #1539: the period buttons sit on the section's own title row. The title text gives way (wraps)
+   before the buttons leave the row; only a narrow screen stacks them under the title. */
+.usage-section-head > div:first-child { flex: 1 1 0; min-width: 0; }
+.usage-section-head > .usage-window { flex: none; margin-bottom: 0; }
+@media (max-width: 519px) {
+  .usage-section-head { flex-wrap: wrap; }
+  .usage-section-head > div:first-child { flex-basis: 100%; }
+}
 
 .usage-window { display: flex; gap: 4px; }
 .usage-window button {
@@ -947,6 +955,12 @@ button:disabled { cursor: not-allowed; }
 .usage-window button.is-active { border-color: var(--accent); color: var(--text-primary); background: var(--bg-surface-active); }
 
 .usage-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--border-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-control); overflow: hidden; }
+/* #1539: four tiles always fill their rows evenly: one row of four, or two rows of two in a narrow
+   section (measured on the section, not the viewport, since the Settings sidebar takes its share).
+   auto-fit alone left three tiles and a lonely fourth whenever the column fit only three. */
+.usage-section { container-type: inline-size; }
+.usage-stat-grid--four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@container (max-width: 560px) { .usage-stat-grid--four { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .usage-stat { background: var(--bg-surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
 .usage-stat-label { font-size: var(--text-caption2); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); }
 .usage-stat-value { font-size: var(--text-title1); font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }

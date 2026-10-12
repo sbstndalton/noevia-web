@@ -144,6 +144,7 @@ export const EN_GB_MODELS = {
   'mm.recover.healthUnavailableHelp': 'Could not check the model loader. Check again or open logs.',
   'mm.recover.noEngine': 'No engine found',
   'mm.recover.running': '{engine} running',
+  'mm.recover.engineIndex': "Engine {index}",
   'mm.recover.runningWith': '{engine} running · {model} loaded',
   'mm.recover.openLogs': 'Open logs',
   'mm.recover.checking': 'Checking jobs…',

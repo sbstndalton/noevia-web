@@ -20,6 +20,7 @@ import { useFeatureFlags } from './features/useFeatureFlags';
 import { afterLayoutSettles, pickFocusable } from '../focus-utils';
 import { StoragePicker } from './StoragePicker';
 import { useT } from '../i18n';
+import { liveEngineNote } from '../live-engine-note';
 import type { Translate } from '../i18n';
 
 export interface SettingsViewProps {
@@ -41,6 +42,8 @@ export interface SettingsViewProps {
 
 export function SettingsView({ models, modelsLoaded, modelsError, health, stats, diaryEnabled, onDiaryEnabledChange, onOpenModelManager, onOpenSection, section = 'profile' }: SettingsViewProps): JSX.Element {
   const t = useT();
+  // Why the Live engine figures below have no value (#1485), said in words rather than as bare dashes.
+  const liveNote = liveEngineNote(t, stats);
   return <div className="settings-live-content">
     {section === 'security' && <SecurityCard onOpenSection={onOpenSection} />}
     {section === 'users' && <UsersCard />}
@@ -62,7 +65,7 @@ export function SettingsView({ models, modelsLoaded, modelsError, health, stats,
           {retrieval === 'degraded' && <p className="route-note">{t('serviceStatus.retrieval.degradedNote')}</p>}
         </>;
       })()}
-      </div><h2>{t('serviceStatus.liveEngine')}</h2><div className="settings-stat-row"><div><span title={t('serviceStatus.rateTitle')}>{t('serviceStatus.rate')}</span><strong>{stats?.tokensPerSecond != null ? formatNumber(stats.tokensPerSecond, appLocale(), 1) : '—'}</strong></div><div><span>{t('serviceStatus.requests')}</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${formatNumber(stats.vramGb, appLocale(), 1)} GB`:'—'}</strong></div></div></>}
+      </div><h2>{t('serviceStatus.liveEngine')}</h2>{liveNote && <p className="route-note" role="status">{liveNote}</p>}<div className="settings-stat-row"><div><span title={t('serviceStatus.rateTitle')}>{t('serviceStatus.rate')}</span><strong>{stats?.tokensPerSecond != null ? formatNumber(stats.tokensPerSecond, appLocale(), 1) : '—'}</strong></div><div><span>{t('serviceStatus.requests')}</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${formatNumber(stats.vramGb, appLocale(), 1)} GB`:'—'}</strong></div></div></>}
   </div>;
 }
 
@@ -175,7 +178,7 @@ function SecurityCard({ onOpenSection }: { onOpenSection?: (id: string) => void 
           <div className="model-name-group">
             <span className="model-name">{sessionLabel(t, s.userAgent)}</span>
             <span className="model-quant">
-              {s.ip || t('security.unknownIp')} · {t('security.lastSeen', { date: new Date(s.lastSeenAt).toLocaleString(appLocale()) })}{s.current ? ` · ${t('security.thisDevice')}` : ''}
+              {s.ip || t('security.unknownIp')} · {t('security.lastSeen', { date: new Date(s.lastSeenAt).toLocaleString(appLocale()) })} · {t('security.expires', { date: new Date(s.expiresAt).toLocaleString(appLocale()) })}{s.current ? ` · ${t('security.thisDevice')}` : ''}
             </span>
           </div>
           <button className="recents-del" title={t('security.revokeSession')} aria-label={t('security.revokeSessionNamed', { device: sessionLabel(t, s.userAgent) })} onClick={() => void act(t('security.revokeSession'), () => revokeSession(s.id), t('security.sessionRevoked'))}><ShellIcon name="close" size={16}/></button>
