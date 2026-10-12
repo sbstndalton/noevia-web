@@ -66,13 +66,31 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
   const t = useT();
   const phone = usePhone() || variant === 'sheet';
   const [userOpen, setUserOpen] = useState(readOpen);
+  // #1527: where the one row cannot hold every pair, the lower-priority pairs open from a compact
+  // toggle as a popover above the strip, so the composer never moves.
+  const [moreOpen, setMoreOpen] = useState(false);
   const rootRef = useRef<HTMLElement>(null);
+  const moreRef = useRef<HTMLButtonElement>(null);
   // The routing panel is an anchored popover (it must not grow the strip or squeeze the
   // chat), so give it the Escape-to-close a popover is expected to have even though the
   // underlying <details> element has no built-in keyboard dismissal.
   useEffect(() => {
+    if (!moreOpen) return;
+    const onPointer = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setMoreOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointer);
+    return () => document.removeEventListener('pointerdown', onPointer);
+  }, [moreOpen]);
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
+      if (moreOpen) {
+        setMoreOpen(false);
+        moreRef.current?.focus();
+        event.preventDefault();
+        return;
+      }
       const panel = rootRef.current?.querySelector<HTMLDetailsElement>('.routing-details[open]');
       if (!panel) return;
       panel.open = false;
@@ -82,7 +100,7 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [variant]);
+  }, [variant, moreOpen]);
   const active = reply?.phase === 'waiting' || reply?.phase === 'streaming';
   // A completed external-provider reply is valid even when the separately
   // polled native engine is down. Do not relabel that reply as offline.
@@ -138,12 +156,12 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
     : reply?.phase === 'complete' ? t('stats.replyTelemetryUpdated') : reply?.phase === 'stopped' ? t('stats.replyStoppedAnnouncement') : reply?.phase === 'error' ? t('stats.replyFailedAnnouncement') : '';
   const details = (
     <dl className="stats-details" id="stats-details">
-      <div data-stat="speed"><dt title={t('stats.speedHint')}>{t('stats.speed')}</dt><dd>{active && replyRate == null ? t('stats.measuring') : replyRate == null ? t('stats.notReported') : t('stats.tokensPerSecond', { value: fmt(replyRate) })}</dd></div>
-      <div data-stat="first-token"><dt title={t('stats.firstTokenHint')}>{t('stats.firstToken')}</dt><dd>{firstToken == null ? (active ? t('stats.waiting') : t('stats.notReported')) : fmt(firstToken, 2, ' s')}</dd></div>
-      <div data-stat="reply"><dt title={t('stats.replyHint')}>{replyLabel}</dt><dd>{replyCounts}</dd></div>
-      <div data-stat="total"><dt title={stats?.telemetryScope || t('stats.engineTotalDefaultHint')}>{t('stats.engineTotal')}</dt><dd>{totalParts.length ? totalParts.join(' · ') : t(engineEmptyKey(reply))}</dd></div>
-      <div data-stat="gpu"><dt>{t('stats.gpu')}</dt><dd>{gpuParts.length ? gpuParts.join(' · ') : t(engineEmptyKey(reply))}</dd></div>
-      {mtp.map(m => <div className="stats-mtp" data-stat="mtp" key={m.model} title={t('stats.mtpTitle', { model: m.model, source: m.source || t('stats.mtpSourceEngineTotal') })}>
+      <div data-stat="speed" data-priority="high"><dt title={t('stats.speedHint')}>{t('stats.speed')}</dt><dd>{active && replyRate == null ? t('stats.measuring') : replyRate == null ? t('stats.notReported') : t('stats.tokensPerSecond', { value: fmt(replyRate) })}</dd></div>
+      <div data-stat="first-token" data-priority="low"><dt title={t('stats.firstTokenHint')}>{t('stats.firstToken')}</dt><dd>{firstToken == null ? (active ? t('stats.waiting') : t('stats.notReported')) : fmt(firstToken, 2, ' s')}</dd></div>
+      <div data-stat="reply" data-priority="low"><dt title={t('stats.replyHint')}>{replyLabel}</dt><dd>{replyCounts}</dd></div>
+      <div data-stat="total" data-priority="low"><dt title={stats?.telemetryScope || t('stats.engineTotalDefaultHint')}>{t('stats.engineTotal')}</dt><dd>{totalParts.length ? totalParts.join(' · ') : t(engineEmptyKey(reply))}</dd></div>
+      <div data-stat="gpu" data-priority="low"><dt>{t('stats.gpu')}</dt><dd>{gpuParts.length ? gpuParts.join(' · ') : t(engineEmptyKey(reply))}</dd></div>
+      {mtp.map(m => <div className="stats-mtp" data-stat="mtp" data-priority="low" key={m.model} title={t('stats.mtpTitle', { model: m.model, source: m.source || t('stats.mtpSourceEngineTotal') })}>
         <dt>{t('stats.mtpAcceptance')}{m.source === 'last response' ? (active ? t('stats.mtpCurrentReply') : t('stats.mtpLastReply')) : t('stats.mtpEngineTotal')}</dt>
         <dd>{m.rate == null ? t('stats.mtpAwaiting') : t('stats.mtpPercent', { value: formatNumber(m.rate * 100, appLocale(), 1) })}<progress aria-label={t('stats.mtpAriaLabel', { model: m.model })} max={1} value={m.rate ?? undefined} /></dd>
       </div>)}
@@ -152,13 +170,17 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
 
   const announcer = <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveAnnouncement}</span>;
   if (variant === 'announce') return <div className="stats-announcer">{announcer}</div>;
-  // Wide: one row, no control — there is nothing to reveal.
+  // Wide: one row. Where the row is too narrow for every pair, the low-priority pairs sit behind
+  // the compact toggle (CSS picks the width; the toggle is hidden where the row fits).
   if (!phone) {
     return (
-      <section ref={rootRef} className="stats-disclosure is-open is-wide" aria-label={t('stats.ariaLabel')}>
+      <section ref={rootRef} className={`stats-disclosure is-open is-wide${moreOpen ? ' is-more-open' : ''}`} aria-label={t('stats.ariaLabel')}>
         <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveAnnouncement}</span>
         <p className="stats-bar stats-bar-static">{status(false)}</p>
         {details}
+        <button ref={moreRef} type="button" className="stats-more" aria-expanded={moreOpen} aria-controls="stats-details"
+          aria-label={moreOpen ? t('stats.hide') : t('stats.show')} title={moreOpen ? t('stats.hide') : t('stats.show')}
+          onClick={() => setMoreOpen(value => !value)}><Icon name="chevron-right" size={14} /></button>
         {routingDecision && <RoutingDetails decision={routingDecision} />}
       </section>
     );
