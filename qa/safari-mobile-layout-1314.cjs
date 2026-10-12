@@ -44,6 +44,7 @@ async function keyboardScroll(locator) {
         return route.continue();
       });
       await page.goto(origin);
+      await page.locator('.sidebar').waitFor({ state: 'attached' });
       await navClick(page, 'Projects');
       await page.getByText(project.name, { exact: true }).last().click();
       const toast = page.locator('.save-error-storage');
