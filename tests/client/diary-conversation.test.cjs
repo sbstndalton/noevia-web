@@ -39,11 +39,12 @@ test('landing and day view reuse only the target day history without modifying s
 });
 
 test('provider reasoning stays in the display transcript and out of subsequent history', () => {
-  const turns = {'2026-09-10': [{role:'assistant',content:'Answer',reasoning:'Provider reasoning'}]};
+  // #1505: only a completed exchange is history, so the reasoning sits behind a question and its answer.
+  const turns = {'2026-09-10': [{role:'user',content:'Question'},{role:'assistant',content:'Answer',reasoning:'Provider reasoning'}]};
   const {history} = diaryExchangeTarget('2026-09-10', turns);
-  assert.equal(history[0].content, 'Answer');
-  assert.equal(history[0].reasoning, undefined);
-  assert.equal(turns['2026-09-10'][0].reasoning, 'Provider reasoning');
+  assert.equal(history[1].content, 'Answer');
+  assert.equal(history[1].reasoning, undefined);
+  assert.equal(turns['2026-09-10'][1].reasoning, 'Provider reasoning');
 });
 test('#664 Diary history carries applied writes after their assistant turn, and only applied ones', () => {
   const turns = { '2026-09-10': [
@@ -54,6 +55,7 @@ test('#664 Diary history carries applied writes after their assistant turn, and 
       { name: 'extras_read', result: 'ok' },
     ] },
     { role: 'user', content: 'again' },
+    { role: 'assistant', content: 'again, answered' },
   ] };
   const { history } = diaryExchangeTarget('2026-09-10', turns, new Date('2026-09-10T15:00:00Z'));
   assert.deepEqual(JSON.parse(JSON.stringify(history)), [
@@ -61,5 +63,6 @@ test('#664 Diary history carries applied writes after their assistant turn, and 
     { role: 'assistant', content: 'done' },
     { role: 'tool', name: 'extras_write', content: 'saved', applied: true, target: 'notes/a.md', args: '{"x":1}' },
     { role: 'user', content: 'again' },
+    { role: 'assistant', content: 'again, answered' },
   ]);
 });
