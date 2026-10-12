@@ -14,6 +14,7 @@ import { persistableMessage, storedPause } from './applied-writes';
 import { interruptedFlag, storedInterrupted } from './interrupted-reply';
 import { settleToolCalls } from './tool-call-state';
 import { isRouteTarget } from './components/RouteControls';
+import { capVariants } from './variant-cap';
 
 /** One saved history entry as a message. Used when the transcript loads, when another device's copy
  *  is merged in, and when a stored version of a turn is shown again. */
@@ -120,7 +121,9 @@ export function syncedAnswers(user: Message, reply: Message | undefined): ReplyV
 
 /** Regenerate: the answers a turn keeps before its reply is replaced, and the slot for the new one. */
 export function answersBeforeRegenerate(user: Message, reply: Message | undefined): Pick<Message, 'answers' | 'answer'> {
-  const answers = syncedAnswers(user, reply);
+  // #1517: the new reply takes the next slot, so only the newest nine stored answers stay with it.
+  const all = syncedAnswers(user, reply);
+  const answers = capVariants(all, all.length).list;
   return { answers, answer: answers.length };
 }
 
@@ -140,7 +143,9 @@ export function syncedBranches(user: Message, tail: Message[]): TurnBranch[] {
 /** Edit & re-run: the versions a turn keeps before it is replaced by the edited one, and the slot for the new one.
  *  `tail` is everything that followed the turn, which the edit drops from the live chat. */
 export function branchesBeforeEdit(user: Message, tail: Message[]): Pick<Message, 'branches' | 'branch'> {
-  const branches = syncedBranches(user, tail);
+  // #1517: the edited version takes the next slot, so only the newest nine stored versions stay with it.
+  const all = syncedBranches(user, tail);
+  const branches = capVariants(all, all.length).list;
   return { branches, branch: branches.length };
 }
 

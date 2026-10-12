@@ -1,5 +1,6 @@
 import type { ChatMeta, HistoryEntry, Message } from './types';
 import { unionVariants } from './transcript-merge';
+import { capVariants } from './variant-cap';
 
 /** Move one chat's meta to the top of a chat list. `make` receives the entry already in the list,
  *  if any. Every other chat in `list` is kept, so callers must pass the latest list, not a copy
@@ -58,10 +59,13 @@ function withMergedVariants(local: Message, entry: HistoryEntry, next: HistoryEn
   if (alike(answers, local.answers) && alike(branches, local.branches)) return local;
   const shown = next?.role === 'assistant' && answers ? answers.findIndex((a) => a.content === next.content) : -1;
   const version = branches ? branches.findIndex((b) => b.content === local.content) : -1;
+  // The union can pass the limit of 10 (#1517); the oldest others drop, the one shown stays.
+  const keptAnswers = answers ? capVariants(answers, shown >= 0 ? shown : entry.answer ?? local.answer) : undefined;
+  const keptBranches = branches ? capVariants(branches, version >= 0 ? version : entry.branch ?? local.branch) : undefined;
   return {
     ...local,
-    ...(answers !== undefined ? { answers, answer: shown >= 0 ? shown : entry.answer ?? local.answer } : {}),
-    ...(branches !== undefined ? { branches, branch: version >= 0 ? version : entry.branch ?? local.branch } : {}),
+    ...(keptAnswers ? { answers: keptAnswers.list, answer: keptAnswers.chosen } : {}),
+    ...(keptBranches ? { branches: keptBranches.list, branch: keptBranches.chosen } : {}),
   };
 }
 
