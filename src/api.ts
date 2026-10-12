@@ -168,16 +168,21 @@ export const projectImageUrl = (id: string, assetId: string) =>
 
 /** An Error that keeps the server's stable `code` (#849: `storageLoginRejected`), so the screen can word it
  *  in the interface language instead of showing the server's English sentence. */
-function failureWithCode(message: string, code: unknown): Error & { code?: string } {
-  const err = new Error(message) as Error & { code?: string };
+function failureWithCode(message: string, code: unknown, status?: number): Error & { code?: string; status?: number } {
+  const err = new Error(message) as Error & { code?: string; status?: number };
   if (typeof code === 'string') err.code = code;
+  if (typeof status === 'number') err.status = status;
   return err;
 }
 
 /** Upload a source file into the project's own storage folder. */
 export interface UploadProgress { stage: string; percent?: number }
-export async function uploadProjectFile(id: string, body: { name: string; dataBase64: string }, progress: (value: UploadProgress) => void = () => {}) {
-  const response = await new Promise<{ poll: string }>((resolve, reject) => {
+/** #1451: the server runs at most two source jobs per account at once and answers 429 to a third. That
+ *  answer comes before any job exists, so sending the same file again is safe. Waits between tries. */
+const BUSY_RETRY_DELAYS_MS = [1000, 2000, 4000, 8000];
+/** One upload POST (the file is accepted and a job is started, or the server refuses it outright). */
+function postSourceUpload(id: string, body: { name: string; dataBase64: string }, progress: (value: UploadProgress) => void): Promise<{ poll: string }> {
+  return new Promise<{ poll: string }>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `/api/projects/${encodeURIComponent(id)}/upload?background=1`);
     xhr.setRequestHeader('Content-Type', 'application/json');
@@ -194,11 +199,28 @@ export async function uploadProjectFile(id: string, body: { name: string; dataBa
         return;
       }
       if (xhr.status === 401) { clearRequestCache(); window.dispatchEvent(new Event('cowork:unauthorized')); }
-      try { const value = JSON.parse(xhr.responseText); if (xhr.status >= 400) reject(failureWithCode(value.error || 'Upload failed', value.code)); else resolve(value); }
+      try { const value = JSON.parse(xhr.responseText); if (xhr.status >= 400) reject(failureWithCode(value.error || 'Upload failed', value.code, xhr.status)); else resolve(value); }
       catch { reject(new Error('Invalid upload response')); }
     };
     xhr.send(JSON.stringify({ ...body, organized: true }));
   });
+}
+
+/** #1451: a busy answer (429) is retried a bounded number of times, with a stage line saying so. Any
+ *  other failure, or a busy answer after the last retry, is thrown as it was. */
+async function postSourceUploadWithBusyRetry(id: string, body: { name: string; dataBase64: string }, progress: (value: UploadProgress) => void): Promise<{ poll: string }> {
+  for (let attempt = 0; ; attempt++) {
+    try { return await postSourceUpload(id, body, progress); }
+    catch (err) {
+      if ((err as { status?: number }).status !== 429 || attempt >= BUSY_RETRY_DELAYS_MS.length) throw err;
+      progress({ stage: 'Waiting for another file to finish processing' });
+      await new Promise<void>(resolve => setTimeout(resolve, BUSY_RETRY_DELAYS_MS[attempt]));
+    }
+  }
+}
+
+export async function uploadProjectFile(id: string, body: { name: string; dataBase64: string }, progress: (value: UploadProgress) => void = () => {}) {
+  const response = await postSourceUploadWithBusyRetry(id, body, progress);
   progress({ stage: 'Upload received · waiting for processing' });
   for (;;) {
     const job = await getJson<{ done: boolean; stage?: string; status?: number; body?: { error?: string; code?: string; name: string; path: string; bytes: number; attachment?: { reduction?: { note: string }; assetId?: string; state?: string; group?: string; reason?: string; reasonId?: string; reasonParams?: Record<string, string | number> }; document?: { state?: string; error?: string; errorId?: string } } }>(response.poll);
