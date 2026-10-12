@@ -17,9 +17,10 @@ export interface RoutingDecision {
 
 /** #778: where a reply was sent and why (codes only). */
 export type RouteName = 'local' | 'cloud';
-export type RouteReason = 'mode' | 'user-choice' | 'force-local' | 'sensitive-rule' | 'fail-closed' | 'remembered';
+export type RouteReason = 'mode' | 'user-choice' | 'force-local' | 'sensitive-rule' | 'fail-closed' | 'check-unavailable' | 'remembered';
 export type RouteFlag = 'diary' | 'secret' | 'iban' | 'card' | 'router' | 'unavailable';
-export interface RouteTarget { route: RouteName; reason: RouteReason }
+/** `detail` (#1421): why the sensitivity check could not answer, a short code, only with 'check-unavailable'. */
+export interface RouteTarget { route: RouteName; reason: RouteReason; detail?: string }
 
 export interface Message {
   id: string;

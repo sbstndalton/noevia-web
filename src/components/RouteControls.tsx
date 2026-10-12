@@ -6,12 +6,13 @@ import type { JSX } from 'react';
 import { useT } from '../i18n';
 import type { RouteFlag, RouteReason, RouteTarget } from '../types';
 
-const REASON_KEY: Record<RouteReason, 'chat.routing.reason.mode' | 'chat.routing.reason.userChoice' | 'chat.routing.reason.forceLocal' | 'chat.routing.reason.sensitiveRule' | 'chat.routing.reason.failClosed' | 'chat.routing.reason.remembered'> = {
+const REASON_KEY: Record<RouteReason, 'chat.routing.reason.mode' | 'chat.routing.reason.userChoice' | 'chat.routing.reason.forceLocal' | 'chat.routing.reason.sensitiveRule' | 'chat.routing.reason.failClosed' | 'chat.routing.reason.checkUnavailable' | 'chat.routing.reason.remembered'> = {
   mode: 'chat.routing.reason.mode',
   'user-choice': 'chat.routing.reason.userChoice',
   'force-local': 'chat.routing.reason.forceLocal',
   'sensitive-rule': 'chat.routing.reason.sensitiveRule',
   'fail-closed': 'chat.routing.reason.failClosed',
+  'check-unavailable': 'chat.routing.reason.checkUnavailable',
   remembered: 'chat.routing.reason.remembered',
 };
 
@@ -32,7 +33,9 @@ export function isRouteTarget(v: unknown): v is RouteTarget {
 export function RouteBadge({ target }: { target: RouteTarget }): JSX.Element {
   const t = useT();
   const route = target.route === 'cloud' ? t('chat.routing.cloud') : t('chat.routing.local');
-  const label = t('chat.routing.badgeLabel', { route, reason: t(REASON_KEY[target.reason]) });
+  // #1421: a check that could not answer is a quiet notice on the badge, with the reason code.
+  const detail = target.reason === 'check-unavailable' && target.detail && /^[a-z][a-z0-9-]{0,39}$/.test(target.detail) ? ` (${target.detail})` : '';
+  const label = t('chat.routing.badgeLabel', { route, reason: t(REASON_KEY[target.reason], { detail }) });
   return <small className="route-badge" data-route={target.route} data-reason={target.reason} data-testid="route-badge" title={label} aria-label={label}>{route}</small>;
 }
 

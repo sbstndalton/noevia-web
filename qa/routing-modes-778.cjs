@@ -24,7 +24,8 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
 const { withLocale } = require('./qa-locale.cjs');
 const { createFixture } = require('./diary-fixture.cjs');
 
-const server = (m) => require(path.join(__dirname, '../server', m));
+// The server modules live in noevia-core since the split: QA_CORE_SERVER=<noevia-core>/server (default ../server).
+const server = (m) => require(path.join(process.env.QA_CORE_SERVER || path.join(__dirname, '../server'), m));
 const shots = process.env.QA_SCREENSHOTS || path.join(os.tmpdir(), 'noevia-qa-778');
 const USER = 'synthetic-diary-only'; // the fixture's signed-in user
 const LOCAL = 'http://local.invalid', CLOUD = 'http://cloud.invalid';
@@ -181,11 +182,27 @@ function createApp(fixturePort) {
     await page.waitForFunction(() => document.querySelectorAll('[data-testid="route-badge"]').length >= 2, null, { timeout: 15000 });
     assert.deepEqual(await page.locator('[data-testid="route-badge"]').allInnerTexts(), ['Local', 'Local']);
     await page.screenshot({ path: path.join(shots, '778-after-reload.png') });
+    // ── #1421: a sensitivity check that cannot answer asks nothing and stays local ──
+    // (The decision service here always throws, like a missing or timed-out Laya.)
+    // A new chat: the earlier chat's synthetic IBAN would trip the deterministic pre-rule from its history.
+    await page.getByTitle('New chat', { exact: true }).first().click({ timeout: 10000 });
+    await page.waitForTimeout(500);
+    const before = { local: engine.local.length, cloud: engine.cloud.length };
+    await box.fill('Reply with the word ok.');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid="route-badge"]').length >= 1, null, { timeout: 20000 });
+    assert.equal(await page.locator('[data-testid="route-pending"]').count(), 0, 'no "This looks sensitive" card when the check could not answer');
+    const noticeBadge = page.locator('[data-testid="route-badge"]').last();
+    assert.equal(await noticeBadge.getAttribute('data-reason'), 'check-unavailable');
+    assert.match(await noticeBadge.getAttribute('title'), /^Sent to Local: the sensitivity check is unavailable \(no-service\), so this stayed local$/);
+    assert.equal(engine.local.length, before.local + 1, 'answered by the local model'); assert.equal(engine.cloud.length, before.cloud, 'nothing reached the cloud');
+    await page.screenshot({ path: path.join(shots, '1421-check-unavailable.png') });
+    console.log('PASS #1421: "Reply with the word ok." with an unavailable check → local reply, no card, badge says why');
     assert.deepEqual(errors, []);
     console.log('PASS reload: Force local still on; both badges still read Local');
   } catch (e) {
     failed = true;
-    console.log('FAIL #778 ' + String(e.message).split('\n').slice(0, 8).join('\n     '));
+    console.log('FAIL #778 ' + String(e.stack).split("\n").slice(0, 8).join('\n     '));
   } finally {
     await browser.close(); await new Promise((r) => app.close(r)); await fixture.close();
     fs.rmSync(dir, { recursive: true, force: true });
