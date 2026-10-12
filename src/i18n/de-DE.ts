@@ -17,6 +17,8 @@ export const DE_DE: Catalogue = {
   'nav.notFound.chatBody': "Er wurde möglicherweise gelöscht, oder der Link gehört zu einem anderen Konto.",
   'nav.notFound.projectTitle': "Dieses Projekt ist nicht verfügbar",
   'nav.notFound.projectBody': "Es wurde möglicherweise gelöscht, oder der Link gehört zu einem anderen Konto.",
+  'nav.notFound.pageTitle': 'Diese Seite gibt es nicht',
+  'nav.notFound.pageBody': 'Die Adresse passt zu keiner Seite in noevia. Prüfe den Link oder starte einen neuen Chat.',
 
   'sidebar.newTask': "Neue Aufgabe",
   'sidebar.code.pullRequests': "Pull Requests",
