@@ -1866,21 +1866,21 @@ export default function App(): JSX.Element {
           />
         ) : null;
       })()}
-      {projectError && (() => {
+      {projectError && !settingsOpen && (() => {
         const lines = projectError.split('\n').filter(Boolean);
         return (
           <div className="save-error save-error-storage" role="alert">
             {lines.length > 1 ? (
-              <ul className="save-error-list">
+              <ul className="save-error-list" tabIndex={0}>
                 {lines.map((line, i) => <li key={i}>{line}</li>)}
               </ul>
             ) : (
-              <span className="save-error-message">{projectError}</span>
+              <span className="save-error-message" tabIndex={0}>{projectError}</span>
             )}
             {mentionsStorageLogin(projectError, tr) && (
               <button type="button" className="save-error-link" onClick={(e) => openSettings('diary', e.currentTarget)}>{tr('storage.openSettings')}</button>
             )}
-            <button className="save-error-dismiss" onClick={() => setProjectError(null)} aria-label="Dismiss"><ShellIcon name="close" size={16}/></button>
+            <button className="save-error-dismiss" onClick={() => setProjectError(null)} aria-label={tr('common.dismiss')}><ShellIcon name="close" size={16}/></button>
           </div>
         );
       })()}

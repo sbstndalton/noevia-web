@@ -365,8 +365,28 @@ dialog::backdrop { background: var(--scrim); backdrop-filter: blur(var(--scrim-b
     min-height: 44px; white-space: normal; text-align: left; overflow-wrap: anywhere;
   }
   .save-error-storage .save-error-dismiss {
-    grid-column: 2; grid-row: 1; width: 44px; min-height: 44px;
+    grid-column: 2; grid-row: 1; width: 44px; min-height: 44px; align-self: start;
   }
+}
+:root[data-layout="mobile"] .save-error-storage {
+  position: absolute; display: grid; grid-template-columns: minmax(0, 1fr) 44px;
+  width: calc(100% - 32px); box-sizing: border-box;
+  max-height: calc(var(--visible-viewport-height, 100dvh) - 32px);
+}
+:root[data-layout="mobile"] .save-error-storage :is(.save-error-list, .save-error-message) {
+  grid-column: 1; grid-row: 1; min-width: 0; overflow-wrap: anywhere;
+  max-height: max(44px, calc(var(--visible-viewport-height, 100dvh) - 160px));
+  overflow-y: auto; overscroll-behavior-y: contain;
+}
+:root[data-layout="mobile"] .save-error-storage .save-error-link {
+  grid-column: 1; grid-row: 2; justify-self: start;
+  min-height: 44px; white-space: normal; text-align: left; overflow-wrap: anywhere;
+}
+:root[data-layout="mobile"] .save-error-storage .save-error-dismiss {
+  grid-column: 2; grid-row: 1; width: 44px; min-height: 44px; align-self: start;
+}
+.save-error-storage :is(.save-error-list, .save-error-message):focus-visible {
+  outline: 2px solid var(--focus-ring); outline-offset: -2px;
 }
 
 /* The actual Settings surface is settings-stage. Bind the sheet to the visible

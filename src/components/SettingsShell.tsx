@@ -243,7 +243,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   // #951: a real modal. While Settings is open everything behind it is inert, so focus and
   // pointer input stay in the window; the opener gets focus back on unmount (above).
   useEffect(() => {
-    const behind = [...document.querySelectorAll<HTMLElement>('.app-main, .app .sidebar, .app .nav-drawer-toggle, .stats-bar')].filter((el) => !el.contains(stage.current));
+    const behind = [...document.querySelectorAll<HTMLElement>('.app-main, .app .sidebar, .app .nav-drawer-toggle, .stats-bar, .noevia-inspector')].filter((el) => !el.contains(stage.current));
     for (const el of behind) el.setAttribute('inert', '');
     const release = () => { for (const el of behind.splice(0)) el.removeAttribute('inert'); };
     releaseInert.current = release;
