@@ -46,12 +46,12 @@ async function keyboardScroll(locator) {
       await page.goto(origin);
       await page.locator('.sidebar').waitFor({ state: 'attached' });
       await navClick(page, 'Projects');
-      await page.getByText(project.name, { exact: true }).last().click();
+      await page.locator('.projects-grid').getByRole('button', { name: `Open project ${project.name}`, exact: true }).click();
       const toast = page.locator('.save-error-storage');
       await toast.waitFor();
       if (width > 1100 && !forcedPhone) {
         await toast.getByRole('button', { name: 'Dismiss', exact: true }).click();
-        await page.getByText('Synthetic discussion', { exact: true }).last().click();
+        await page.locator('.chat-index-row').getByText('Synthetic discussion', { exact: true }).click();
         const rail = page.locator('#noevia-inspector');
         await rail.waitFor();
         assert.equal(await rail.locator('.insp-toggle').isVisible(), false);
@@ -90,7 +90,7 @@ async function keyboardScroll(locator) {
       assert.ok((await message.textContent()).includes('Synthetic long folder '.repeat(100)), 'Single error is retained completely');
       await toast.getByRole('button', { name: 'Dismiss', exact: true }).click();
       await page.getByRole('tab', { name: /^Chats(?: \(\d+\))?$/ }).click();
-      await page.getByText('Synthetic discussion', { exact: true }).last().click();
+      await page.locator('.chat-index-row').getByText('Synthetic discussion', { exact: true }).click();
       const inspector = page.locator('#noevia-inspector');
       await inspector.waitFor();
       const toggle = inspector.getByRole('button', { name: 'Project context', exact: true });
