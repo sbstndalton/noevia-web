@@ -37,6 +37,8 @@ interface SidebarProps {
    *  "no projects yet, still loading" (stay blank) apart from "confirmed zero projects" (show the
    *  honest hint), instead of treating an empty list as decided from the very first render. */
   projectsLoaded?: boolean;
+  /** #1567: the project list failed to load; the hint shows as before rather than a skeleton that never ends. */
+  projectsFailed?: boolean;
   chats: ChatMeta[];
   activeView: 'diary' | 'settings' | 'projects' | 'project' | 'chat' | 'preview' | 'models' | 'plugins' | 'archived';
   /** Archived chats (#232): the management view outside Settings. */
@@ -90,6 +92,7 @@ const RECENT_LIMIT = 15;
 export function Sidebar({
   projects,
   projectsLoaded = true,
+  projectsFailed = false,
   chats,
   activeView,
   activeProjectId,
@@ -720,7 +723,9 @@ export function Sidebar({
               {!p.chats?.some(c=>!c.archived && !c.pinned) && <p>{p.chats?.some(c=>!c.archived && c.pinned)?t('sidebar.chatsPinnedAbove'):t('sidebar.noChatsYet')}</p>}
             </div>}
           </div>)}
-          {!entries.length && group==='Projects' && !query && <p className="side-hint">{t('sidebar.createProjectHint')}</p>}
+          {/* #1567: until the list has loaded, a placeholder stands where the list will be; the empty-state copy is only for a confirmed zero. */}
+          {!entries.length && group==='Projects' && !query && !projectsLoaded && !projectsFailed && <div className="sidebar-skeleton" aria-hidden="true"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}
+          {!entries.length && group==='Projects' && !query && (projectsLoaded || projectsFailed) && <p className="side-hint">{t('sidebar.createProjectHint')}</p>}
         </div>;
       })}
 
