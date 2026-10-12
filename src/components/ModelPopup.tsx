@@ -76,7 +76,6 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
   const [modelsLoading, setModelsLoading] = useState(true);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [autoInfo, setAutoInfo] = useState<AutoRoleInfo | null>(null);
-  const [availabilityCopyReady, setAvailabilityCopyReady] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   // Every busy-gated control here (the Auto/Manual toggle, a model row, the provider
@@ -116,17 +115,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
   const activeProvider = providers.find((p) => p.id === activeProviderId);
   const auto = activeProject?.routing === 'auto';
   const missing = missingAutoRoles(autoInfo);
-  const needsAvailabilityCopy = auto && missing.length > 0;
-  // Reuse Settings' existing copy without pulling its catalogue into the first bundle.
-  // The state update lets useT discover the newly registered segment and load this locale.
-  useEffect(() => {
-    if (!needsAvailabilityCopy || availabilityCopyReady) return;
-    let live = true;
-    void import('../i18n/models').then(() => {
-      if (live) setAvailabilityCopyReady(true);
-    }).catch(() => undefined);
-    return () => { live = false; };
-  }, [needsAvailabilityCopy, availabilityCopyReady]);
+  const showMissing = auto && missing.length > 0;
   // #447: a ChatGPT connection lists the account's own models; free text only if that list fails.
   const chatgptActive = activeProvider?.kind === 'chatgpt-oauth';
   const [accountModels, setAccountModels] = useState<string[] | null>(null);
@@ -206,7 +195,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
         {' '}<button className="mp-link" onClick={() => onOpenSettings()}>{t('modelPopup.change')}</button>
       </p>
     ) : null}
-    {needsAvailabilityCopy && availabilityCopyReady && <p className="mp-note mm-warn" role="alert" style={{ overflowWrap: 'anywhere' }}>
+    {showMissing && <p className="mp-note mm-warn" role="alert" style={{ overflowWrap: 'anywhere' }}>
       {missingAutoRolesText(missing, t)}
     </p>}
     {auto && contextControl}

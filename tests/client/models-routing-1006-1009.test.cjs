@@ -103,7 +103,7 @@ test('#1397: Auto availability preserves healthy/unconfigured states and bounds 
   assert.deepEqual(plain(missingAutoRoles({ configured: true, roles: { fast: 'present' } })), []);
   assert.deepEqual(plain(missingAutoRoles({ configured: true, roles: {}, missing: [] })), []);
   const one = missingAutoRoles({ configured: true, roles: {}, missing: [{ role: 'smart', model: 'synthetic-smart' }] });
-  assert.equal(missingAutoRolesText(one, t), 'mm.route.missingOne: mm.route.role.smart (synthetic-smart)');
+  assert.equal(missingAutoRolesText(one, t), 'modelPopup.autoMissingOne: modelPopup.autoRole.smart (synthetic-smart)');
   const several = missingAutoRoles({ configured: true, roles: {}, missing: [
     { role: 'vision', model: '<synthetic-image>' }, { role: 'fast', model: 'synthetic-fast' },
     { role: 'fast', model: 'duplicate' }, { role: 'unknown', model: 'ignored' },
@@ -111,16 +111,16 @@ test('#1397: Auto availability preserves healthy/unconfigured states and bounds 
   ] });
   assert.deepEqual(plain(several.map((m) => m.role)), ['fast', 'vision', 'code']);
   assert.equal(several[2].model.length, 256);
-  assert.match(missingAutoRolesText(several, t), /^mm\.route\.missingSeveral:/);
-  assert.ok(missingAutoRolesText(several, t).includes('mm.route.role.vision (<synthetic-image>)'));
+  assert.match(missingAutoRolesText(several, t), /^modelPopup\.autoMissingSeveral:/);
+  assert.ok(missingAutoRolesText(several, t).includes('modelPopup.autoRole.vision (<synthetic-image>)'));
 });
 
-test('#1397: popup warning uses lazy existing translations, escaped text and its settings link', () => {
+test('#1397: popup warning uses its own base-catalogue copy, escaped text and its settings link', () => {
   const popup = read('components/ModelPopup.tsx');
   assert.match(popup, /useState<AutoRoleInfo \| null>/);
-  assert.match(popup, /const needsAvailabilityCopy = auto && missing\.length > 0/);
-  assert.match(popup, /import\('\.\.\/i18n\/models'\)/);
-  assert.match(popup, /needsAvailabilityCopy && availabilityCopyReady && <p className="mp-note mm-warn" role="alert"/);
+  assert.match(popup, /const showMissing = auto && missing\.length > 0/);
+  assert.ok(!popup.includes("import('../i18n/models')"));
+  assert.match(popup, /showMissing && <p className="mp-note mm-warn" role="alert"/);
   assert.match(popup, /overflowWrap: 'anywhere'/);
   assert.match(popup, /\{missingAutoRolesText\(missing, t\)\}/);
   assert.match(popup, /roleSummary\(autoInfo\.roles, t\)/);

@@ -4,8 +4,8 @@ import type { MessageKey, Params } from './i18n/core';
 export type AutoRoleInfo = Awaited<ReturnType<typeof fetchAutoRoles>>;
 type T = (key: MessageKey, params?: Params) => string;
 const ROLE_KEYS = {
-  fast: 'mm.route.role.fast', smart: 'mm.route.role.smart',
-  vision: 'mm.route.role.vision', code: 'mm.route.role.code',
+  fast: 'modelPopup.autoRole.fast', smart: 'modelPopup.autoRole.smart',
+  vision: 'modelPopup.autoRole.vision', code: 'modelPopup.autoRole.code',
 } as const;
 
 /** Display only the four server roles, once each; this never changes routing policy. */
@@ -18,7 +18,7 @@ export function missingAutoRoles(info: AutoRoleInfo | null): NonNullable<AutoRol
 }
 
 export function missingAutoRolesText(missing: NonNullable<AutoRoleInfo['missing']>, t: T): string {
-  return t(missing.length === 1 ? 'mm.route.missingOne' : 'mm.route.missingSeveral', {
+  return t(missing.length === 1 ? 'modelPopup.autoMissingOne' : 'modelPopup.autoMissingSeveral', {
     models: missing.map((m) => `${t(ROLE_KEYS[m.role])} (${m.model})`).join(', '),
   });
 }
