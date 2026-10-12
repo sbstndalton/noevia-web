@@ -530,6 +530,11 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 .chat-composer-inner:has(> .reasoning-control) { grid-template-columns: 32px minmax(0,1fr) auto 32px; }
 .chat-composer-inner > .reasoning-control { grid-column: 3; grid-row: 2; align-self: center; }
 .chat-composer-inner:has(> .reasoning-control) > .send-btn { grid-column: 4; }
+
+/* #1534: "Jump to latest" sits in a band of its own between the transcript and the composer, so the
+   transcript never runs under it. The band exists only while the pill is shown (ChatView). */
+.jump-band { flex: none; display: flex; justify-content: center; align-items: center; height: 44px; }
+.jump-band > .jump-to-latest { position: static; bottom: auto; }
 /* #1533: when the row is tight, the Thinking pill gives up its word ("Thinking"), keeps its icon and
    level, and names the setting in its tooltip. The model label keeps its own width (phone.css). */
 .chat-composer-inner > .reasoning-control { min-width: 0; }

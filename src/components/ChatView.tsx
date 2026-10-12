@@ -745,13 +745,19 @@ export function ChatView({
             </Fragment>
           );
         })}
-        {!atBottom && messages.length > 0 && (
+      </div>
+
+      {/* #1534: the pill is not part of the scrolling transcript, which would draw it over answer and
+          bubble text as the content passes under it. It sits in a band of its own between the transcript
+          and the composer, present only while the pill is shown. */}
+      {!atBottom && messages.length > 0 && (
+        <div className="jump-band">
           <button type="button" className="jump-to-latest" onClick={follow} aria-label={t('chat.jumpToLatest')}>
             <Icon name="arrow-down" size={13} strokeWidth={2.25} />
             {t('chat.jumpToLatest')}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="composer" ref={composerBox}>
         <ChatContext key={chatId} chatId={chatId} projectId={project?.id || null} messages={messages} streaming={streaming} onBusy={setActionBusy}
