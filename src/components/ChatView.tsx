@@ -30,6 +30,7 @@ import { sendHintText, useT } from '../i18n';
 import type { MessageKey } from '../i18n';
 import { isApple } from './shortcuts/shortcuts';
 import { ComposerModeBar, ModeCaption, ModeConfirm, ModeToggle, useCoworkAccess, useModeSwitch } from './ComposerModeBar';
+import { answerCount, branchCount } from '../transcript-variants';
 import { ToolCatalogue } from './ToolCatalogue';
 import { toolsModeOf } from '../tools-mode';
 import { CoworkTaskCard } from './CoworkTaskCard';
@@ -92,6 +93,9 @@ interface ChatViewProps {
   routingControls?: ReactNode;
   /** #778: the answer to a "This looks sensitive" card. */
   onRouteDecision?: (messageId: string, pendingId: string, choice: 'cloud' | 'local', remember: boolean) => void;
+  /** #1517: the 1/2 switcher on a reply (`onChooseAnswer`) and on an edited turn (`onChooseVersion`). */
+  onChooseAnswer?: (chatId: string, userId: string, next: number) => void;
+  onChooseVersion?: (chatId: string, userId: string, next: number) => void;
   /** #1564: opens the Projects page from a free chat's "Runs inside a project" hint. */
   onOpenProjects?: () => void;
 }
@@ -241,6 +245,17 @@ export function LiveTimer({ startedAt }: { startedAt: number }): JSX.Element {
 }
 
 
+/** #1517: the 1/2 ‹ › switcher for a reply's answers or a turn's versions. */
+function VariantSwitch({ index, count, disabled, label, previousLabel, nextLabel, onPrevious, onNext }: {
+  index: number; count: number; disabled: boolean; label: string; previousLabel: string; nextLabel: string; onPrevious: () => void; onNext: () => void;
+}) {
+  return <span className="variant-switch" role="group" aria-label={label}>
+    <button type="button" onClick={onPrevious} disabled={disabled || index <= 1} aria-label={previousLabel}>‹</button>
+    <span aria-live="polite">{index}/{count}</span>
+    <button type="button" onClick={onNext} disabled={disabled || index >= count} aria-label={nextLabel}>›</button>
+  </span>;
+}
+
 export function ChatView({
   title,
   project,
@@ -273,6 +288,8 @@ export function ChatView({
   headerLinks = null,
   routingControls = null,
   onRouteDecision,
+  onChooseAnswer,
+  onChooseVersion,
   onOpenProjects,
 }: ChatViewProps): JSX.Element {
   const [freeModels, setFreeModels] = useState(false);
@@ -609,6 +626,10 @@ export function ChatView({
         )}
         {messages.map((m, i) => {
           const isLast = i === messages.length - 1;
+          // #1517: a reply's answer switcher is on the user turn before it; a turn's version switcher is on the turn.
+          const answerUser = m.role === 'assistant' && messages[i - 1]?.role === 'user' ? messages[i - 1] : undefined;
+          const answers = answerCount(answerUser);
+          const versions = branchCount(m);
           const thinkingLive = streaming && isLast && m.role === 'assistant' && !m.content;
           // The Stopped placeholder is drawn in the language active NOW, never the one it was saved in (#634).
           const body = messageBodyText(t, m);
@@ -698,6 +719,9 @@ export function ChatView({
                       regenerateDisabled={streaming || actionBusy}
                     />
                   )}
+                  {answerUser && answers > 1 && <VariantSwitch index={(answerUser.answer ?? 0) + 1} count={answers} disabled={streaming || actionBusy} label={t('chat.variant.answers')}
+                    previousLabel={t('chat.variant.previousAnswer')} nextLabel={t('chat.variant.nextAnswer')}
+                    onPrevious={() => onChooseAnswer?.(chatId, answerUser.id, (answerUser.answer ?? 0) - 1)} onNext={() => onChooseAnswer?.(chatId, answerUser.id, (answerUser.answer ?? 0) + 1)} />}
                 </div>
               ) : (
                 editingId === m.id ? (
@@ -749,6 +773,9 @@ export function ChatView({
                     >
                       ✎ {t('chat.edit.button')}
                     </button>
+                    {versions > 1 && <VariantSwitch index={(m.branch ?? 0) + 1} count={versions} disabled={streaming || actionBusy} label={t('chat.variant.versions')}
+                      previousLabel={t('chat.variant.previousVersion')} nextLabel={t('chat.variant.nextVersion')}
+                      onPrevious={() => onChooseVersion?.(chatId, m.id, (m.branch ?? 0) - 1)} onNext={() => onChooseVersion?.(chatId, m.id, (m.branch ?? 0) + 1)} />}
                   </div>
                 )
               )}

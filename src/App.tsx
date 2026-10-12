@@ -78,10 +78,11 @@ import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
 import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
-import { finishedToolCall, pendingToolCall, settleReply, settleToolCalls } from './tool-call-state';
+import { finishedToolCall, pendingToolCall, settleReply } from './tool-call-state';
 import { chatHome } from './chat-home';
-import { declinedNames, editBase, modelHistory, persistableMessage, rerunBase, storedPause } from './applied-writes';
-import { interruptedFlag, storedInterrupted } from './interrupted-reply';
+import { declinedNames, editBase, modelHistory, rerunBase } from './applied-writes';
+import { entriesFor, messageFromEntry, withStoredAnswers } from './transcript-variants';
+import { answersBeforeRegenerate, branchesBeforeEdit, selectAnswer, selectBranch, type VariantSource } from './transcript-variants';
 import { mergeTranscripts } from './transcript-merge';
 import { skippedChatIds, withoutSkipped } from './list-save';
 import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, shouldSaveChat, upsertChatMeta } from './chat-save';
@@ -530,23 +531,7 @@ export default function App(): JSX.Element {
     const load = fetchChatHistoryRevision(id)
       .then(({ history, revision }) => {
         historyRevisions.current[id] = revision;
-        const loaded: Message[] = history.map((h) => ({
-            id: uid(),
-            role: h.role,
-            content: h.content,
-            senderLabel: h.model,
-            routingDecision: h.routingDecision,
-            ...(isRouteTarget(h.routeTarget) ? { routeTarget: h.routeTarget } : {}),
-            reasoning: h.reasoning,
-            reasoningMs: h.reasoningMs,
-            toolCalls: settleToolCalls(h.toolCalls),
-            stats: h.stats,
-            coworkTask: h.coworkTask,
-            sources: h.sources,
-            ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}),
-            ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}),
-            ...(storedInterrupted(h) ? { interrupted: true } : {}),
-          }));
+        const loaded: Message[] = withStoredAnswers(history.map((h) => messageFromEntry(h, uid())), uid);
         setMessagesByChat((prev) => ({ ...prev, [id]: resolveLoadedHistory(prev[id] ?? [], loaded) }));
         setHistoryChecked((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
         return loaded;
@@ -730,29 +715,14 @@ export default function App(): JSX.Element {
     // instead of a bare answer. The server strips these before replaying
     // history to a model, so they cost nothing in prompt tokens.
     // A failed reply is not saved, except as the record of changes it saved (#658).
-    const entries: HistoryEntry[] = msgs.map(persistableMessage).filter((m): m is Message => m !== null).map((m) => ({
-      role: m.role,
-      content: m.content,
-      model: m.senderLabel,
-      routingDecision: m.routingDecision,
-      ...(m.routeTarget ? { routeTarget: m.routeTarget } : {}),
-      reasoning: m.reasoning || undefined,
-      reasoningMs: m.reasoningMs,
-      toolCalls: m.toolCalls && m.toolCalls.length ? m.toolCalls : undefined,
-      stats: m.stats,
-      coworkTask: m.coworkTask,
-      sources: m.sources && m.sources.length ? m.sources : undefined,
-      skill: m.role === 'user' ? m.skill : undefined,
-      paused: m.role === 'assistant' ? m.paused : undefined,
-      interrupted: interruptedFlag(m),
-    }));
+    const entries: HistoryEntry[] = entriesFor(msgs);
     // Saves for one chat run in order. If another device saved first, merge its copy with ours
     // (nothing either side wrote is dropped), show the merged transcript, and save that.
     const show = (merged: HistoryEntry[]) => {
       if (sendingChats.current.has(chatId)) { deferredMerges.current[chatId] = merged; return; }
       setMessagesByChat((prev) => ({
         ...prev,
-        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, ...(isRouteTarget(h.routeTarget) ? { routeTarget: h.routeTarget } : {}), reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats, coworkTask: h.coworkTask, sources: h.sources, ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}), ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}), ...(storedInterrupted(h) ? { interrupted: true } : {}) })),
+        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => messageFromEntry(h, id)),
       }));
     };
     if (!shouldSaveChat(chatId, deletedChats.current)) return;
@@ -876,7 +846,7 @@ export default function App(): JSX.Element {
   }, []);
 
   const handleSend = useCallback(
-    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; notice?: string | null; skill?: SkillPin; resend?: ResendOutcome } = {}) => {
+    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; notice?: string | null; skill?: SkillPin; resend?: ResendOutcome; variantOf?: VariantSource } = {}) => {
       // `streamingChats` is render state, so two sends in one tick both see it false. The ref
       // is updated synchronously and is the real guard against a duplicate generation.
       if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
@@ -884,7 +854,10 @@ export default function App(): JSX.Element {
       // #562/#571: the pin travels with the turn (and is saved with the transcript), so Retry and
       // Regenerate resend the same pin, also after a reload.
       const sentPin = storablePin(turn.skill);
-      const userMsg: Message = { id: uid(), role: 'user', content: text, ...(sentPin ? { skill: sentPin } : {}) };
+      // #1517: the turn this one replaces keeps its answers (Regenerate) or its version (Edit & re-run).
+      const variantFields = turn.variantOf?.kind === 'answer' ? answersBeforeRegenerate(turn.variantOf.user, turn.variantOf.reply)
+        : turn.variantOf?.kind === 'branch' ? branchesBeforeEdit(turn.variantOf.user, turn.variantOf.tail) : {};
+      const userMsg: Message = { id: uid(), role: 'user', content: text, ...(sentPin ? { skill: sentPin } : {}), ...variantFields };
       // History still loading: wait for it so the model sees the earlier turns and the load does
       // not land on top of this turn.
       const pendingLoad = base ? undefined : historyLoads.current[chatId];
@@ -1287,7 +1260,7 @@ export default function App(): JSX.Element {
       const projectId =
         view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
       // #658: the records of changes saved by the dropped replies stay (editBase).
-      void handleSend(chatId, projectId, text, editBase(msgs, index));
+      void handleSend(chatId, projectId, text, editBase(msgs, index), { variantOf: { kind: 'branch', user: msgs[index], tail: msgs.slice(index + 1) } });
     },
     [activeChatMeta, handleSend, streamingChats, view],
   );
@@ -1303,8 +1276,21 @@ export default function App(): JSX.Element {
     const plan = planRegenerate(msgs, messageId);
     if (!plan) return;
     const projectId = view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
-    void handleSend(chatId, projectId, plan.userText, plan.base, { ...(plan.skill ? { skill: plan.skill } : {}), resend: resendOutcome('regenerate', msgs[msgs.length - 1]) });
+    void handleSend(chatId, projectId, plan.userText, plan.base, { ...(plan.skill ? { skill: plan.skill } : {}), resend: resendOutcome('regenerate', msgs[msgs.length - 1]), variantOf: { kind: 'answer', user: msgs[msgs.length - 2], reply: msgs[msgs.length - 1] } });
   }, [activeChatMeta, handleSend, streamingChats, view]);
+
+  // #1517: the 1/2 switcher. Shows another stored answer or version of a turn and saves the chat with it.
+  const showVariant = useCallback((chatId: string, pick: (msgs: Message[]) => Message[] | null) => {
+    if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
+    const msgs = messagesRef.current[chatId] ?? [];
+    const updated = pick(msgs);
+    if (!updated) return;
+    messagesRef.current = { ...messagesRef.current, [chatId]: updated };
+    setMessagesByChat((prev) => ({ ...prev, [chatId]: updated }));
+    if (!deletedChats.current.has(chatId)) persist(chatId, updated);
+  }, [persist, streamingChats]);
+  const chooseAnswer = useCallback((chatId: string, userId: string, next: number) => showVariant(chatId, (msgs) => { const i = msgs.findIndex((m) => m.id === userId); return i < 0 ? null : selectAnswer(msgs, i, next); }), [showVariant]);
+  const chooseVersion = useCallback((chatId: string, userId: string, next: number) => showVariant(chatId, (msgs) => { const i = msgs.findIndex((m) => m.id === userId); return i < 0 ? null : selectBranch(msgs, i, next, uid); }), [showVariant]);
 
   const startFreeChat = useCallback(() => {
     const chatId = freshChatId();
@@ -1778,6 +1764,8 @@ export default function App(): JSX.Element {
           streaming={view.kind === 'chat' ? !!streamingChats[view.chatId] : false}
           inferenceUp={health.inferenceUp}
           onSend={sendToCurrent}
+          onChooseAnswer={chooseAnswer}
+          onChooseVersion={chooseVersion}
           onOpenProjects={() => { setAppMode('chat'); setView({ kind: 'projects' }); }}
           mode={activeMode}
           onModeChange={changeMode}

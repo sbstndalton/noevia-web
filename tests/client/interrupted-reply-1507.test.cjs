@@ -37,10 +37,15 @@ test('the flag is written back only for an interrupted assistant turn, so finish
 });
 
 test('the load, save and merged-transcript mappings all carry the flag', () => {
+  // The mappings live in transcript-variants.ts (shared by the load, the save and the merged copy).
+  const tv = read('transcript-variants.ts');
+  assert.match(tv, /import \{ interruptedFlag, storedInterrupted \} from '\.\/interrupted-reply';/);
+  assert.match(tv, /\.\.\.\(storedInterrupted\(h\) \? \{ interrupted: true \} : \{\}\)/, 'the load reads it');
+  assert.match(tv, /interrupted: interruptedFlag\(m\),/, 'the save writes it back');
   const app = read('App.tsx');
-  assert.match(app, /import \{ interruptedFlag, storedInterrupted \} from '\.\/interrupted-reply';/);
-  assert.equal((app.match(/\.\.\.\(storedInterrupted\(h\) \? \{ interrupted: true \} : \{\}\)/g) || []).length, 2, 'loaded history and merged transcripts');
-  assert.match(app, /      interrupted: interruptedFlag\(m\),\n    \}\)\);/, 'the save mapping writes it back');
+  assert.match(app, /messageFromEntry\(h, uid\(\)\)/, 'loaded history uses the shared mapping');
+  assert.match(app, /messageFromEntry\(h, id\)/, 'the merged copy uses the shared mapping');
+  assert.match(app, /entriesFor\(msgs\)/, 'the save uses the shared mapping');
 });
 
 test('Retry on an interrupted reply uses the same path as a failed one', () => {

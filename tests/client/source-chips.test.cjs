@@ -24,9 +24,11 @@ test('one chip per file in prompt order; a file that left the project is marked 
 
 test('the sources event is stored on the reply, saved with the turn and restored on reload', () => {
   const app = read('src/App.tsx');
+  // #1517: the load, the merged copy and the saved form share one mapping in transcript-variants.ts.
+  const mapping = read('src/transcript-variants.ts');
   assert.match(app, /ev\.type === 'sources' && Array\.isArray\(ev\.sources\)/);
-  assert.equal((app.match(/sources: h\.sources/g) || []).length, 2, 'both history loaders restore sources');
-  assert.match(app, /sources: m\.sources && m\.sources\.length \? m\.sources : undefined/);
+  assert.equal((mapping.match(/sources: h\.sources/g) || []).length, 1, 'the shared loader restores sources for the load and the merge');
+  assert.match(mapping, /sources: m\.sources && m\.sources\.length \? m\.sources : undefined/);
 });
 
 test('the chips are keyboard-reachable buttons that open the project Sources tab', () => {

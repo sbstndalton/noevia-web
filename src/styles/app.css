@@ -255,6 +255,12 @@ body { margin: 0; background: var(--bg); }
 .msg-continue { font: inherit; padding: var(--space-1) var(--space-3); border: 1px solid var(--control-border); border-radius: var(--radius-input); background: var(--bg-surface); color: var(--text-primary); cursor: pointer; }
 .msg-continue:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .msg-continue:disabled { opacity: 0.5; cursor: default; }
+/* #1517: the 1/2 switcher for a reply's answers and an edited turn's versions. */
+.variant-switch { display: inline-flex; align-items: center; gap: var(--space-1); margin-top: var(--space-1); color: var(--text-secondary); font-size: var(--text-caption); }
+.variant-switch button { min-inline-size: 32px; min-block-size: 32px; padding: 0 var(--space-2); border: 1px solid var(--control-border); border-radius: var(--radius-input); background: var(--bg-surface); color: var(--text-primary); font: inherit; cursor: pointer; }
+.variant-switch button:disabled { opacity: 0.5; cursor: default; }
+.variant-switch button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+@media (pointer: coarse) { .variant-switch button { min-inline-size: 44px; min-block-size: 44px; } }
 
 /* Inline connection-health banner under the chat/diary header. */
 .conn-banner {
