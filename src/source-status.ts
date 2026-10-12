@@ -1,5 +1,6 @@
 import type { ProjectFile } from './types';
 import type { MessageKey, Translate } from './i18n';
+import type { UploadProgress } from './api';
 
 /** Reasons the server writes itself carry a stable id (#607), so the browser can show them in the
  *  interface language. Files stored before the ids existed only have the English sentence; these
@@ -184,4 +185,11 @@ export function isUnreadableSource(file: ProjectFile): boolean {
   const a = file.attachment, d = file.document;
   if (a && a.state === 'stored' && (a.group === 'Text' || a.group === 'Documents')) return true;
   return !!(d && d.state === 'failed' && !String(file.content || '').trim());
+}
+
+/** The stage line of an upload (#1451), in the interface language for the stages this client words itself.
+ *  A stage the server worded (its own job stage) is shown as it sent it. */
+export function uploadStageText(t: Translate, value: UploadProgress): string {
+  if (!value.stageKey) return value.stage;
+  return value.stageKey === 'saved' ? t('projects.view.saved') : t(`composer.upload.stage.${value.stageKey}` as MessageKey);
 }

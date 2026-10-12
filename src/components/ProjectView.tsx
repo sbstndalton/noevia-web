@@ -6,7 +6,7 @@ import { ComposerModel } from './ComposerModel';
 import { ComposerTextarea } from './ComposerTextarea';
 import { SkillPinSelect, useSkillPinOptions } from './SkillPinPicker';
 import type { SkillPin } from '../api-contract';
-import { sourceStatus, uploadFailureText, uploadUnreadableReason, isUnreadableSource, attachmentReason } from '../source-status';
+import { sourceStatus, uploadFailureText, uploadStageText, uploadUnreadableReason, isUnreadableSource, attachmentReason } from '../source-status';
 import { ShellIcon } from './ShellIcon';
 import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
@@ -195,7 +195,7 @@ export function ProjectView({
         const name = uniqueName(file.name, taken);
         taken.push({ name });
         update(i, { stage: t('projects.view.readingFile') });
-        const result = await uploadProjectFile(project.id, { name, dataBase64: await fileToBase64(file) }, value => update(i, value));
+        const result = await uploadProjectFile(project.id, { name, dataBase64: await fileToBase64(file) }, value => update(i, { stage: uploadStageText(t, value), percent: value.percent }));
         const unreadable = uploadUnreadableReason(result, t);
         const copy = name !== file.name ? t('projects.view.savedAsCopy', { name, original: file.name }) : '';
         const note = result.attachment?.reduction?.note;

@@ -64,3 +64,13 @@ test('#1451: any other refusal is not retried, and keeps its own message and cod
   assert.equal(h.attempts.length, 1);
   assert.deepEqual(h.delays, []);
 });
+
+test('#1451: the busy wait is reported with a stage key, so the screen words it in the interface language', async () => {
+  const h = harness([busy, accepted]);
+  const progress = [];
+  await h.ctx.uploadProjectFile('p', { name: 'notes.md', dataBase64: 'YWJj' }, (v) => progress.push(v));
+  const wait = progress.find((v) => v.stageKey === 'busy');
+  assert.ok(wait, 'the busy stage carries its key');
+  assert.equal(wait.stage, 'Waiting for another file to finish processing', 'English stays as the fallback text');
+  assert.ok(progress.some((v) => v.stageKey === 'received') && progress.some((v) => v.stageKey === 'saved'));
+});

@@ -6,7 +6,7 @@ import { fileToBase64, uploadLimit } from '../sources';
 import { uniqueName } from '../project-files';
 import { appLocale } from '../user-preferences';
 import { ShellIcon } from './ShellIcon';
-import { uploadFailureText, uploadUnreadableReason } from '../source-status';
+import { uploadFailureText, uploadStageText, uploadUnreadableReason } from '../source-status';
 import { formatPercent } from '../number-format';
 import { useT, type Translate } from '../i18n';
 import { toolsModeOf } from '../tools-mode';
@@ -47,7 +47,7 @@ export async function uploadAttachments(sink: AttachmentSink, files: File[], t: 
       const name = uniqueName(file.name, taken);
       taken.push({ name });
       status(t('composer.upload.reading'));
-      const result = await uploadProjectFile(project.id, { name, dataBase64: await fileToBase64(file) }, value => status(`${value.stage}${value.percent == null ? '' : ` ${formatPercent(value.percent, appLocale(), 0)}`}`));
+      const result = await uploadProjectFile(project.id, { name, dataBase64: await fileToBase64(file) }, value => status(`${uploadStageText(t, value)}${value.percent == null ? '' : ` ${formatPercent(value.percent, appLocale(), 0)}`}`));
       const unreadable = uploadUnreadableReason(result, t);
       if (unreadable) { failures.push(`${file.name}: ${unreadable}`); continue; }
       // The chip names the file as it was stored, which is what the model is given: a name the project

@@ -178,7 +178,10 @@ function failureWithCode(message: string, code: unknown, status?: number): Error
 }
 
 /** Upload a source file into the project's own storage folder. */
-export interface UploadProgress { stage: string; percent?: number }
+/** `stageKey` names a stage this client words itself, so the screen shows it in the interface language
+ *  (uploadStageText); `stage` stays the English fallback, and the only text for a stage the server words. */
+export type UploadStageKey = 'busy' | 'sending' | 'received' | 'queued' | 'saved';
+export interface UploadProgress { stage: string; stageKey?: UploadStageKey; percent?: number }
 /** #1451: the server runs at most two source jobs per account at once and answers 429 to a third. That
  *  answer comes before any job exists, so sending the same file again is safe. Waits between tries. */
 const BUSY_RETRY_DELAYS_MS = [1000, 2000, 4000, 8000];
@@ -191,7 +194,7 @@ function postSourceUpload(id: string, body: { name: string; dataBase64: string }
     const csrf = cookie('cowork_csrf');
     if (csrf) xhr.setRequestHeader('X-CSRF-Token', csrf);
     xhr.timeout = 120000;
-    xhr.upload.onprogress = e => progress({ stage: 'Sending file', percent: e.lengthComputable ? Math.round(100 * e.loaded / e.total) : undefined });
+    xhr.upload.onprogress = e => progress({ stage: 'Sending file', stageKey: 'sending', percent: e.lengthComputable ? Math.round(100 * e.loaded / e.total) : undefined });
     xhr.onerror = () => reject(new Error('Upload connection failed; retry.'));
     xhr.ontimeout = () => reject(new Error('Upload timed out; retry.'));
     xhr.onload = () => {
@@ -215,7 +218,7 @@ async function postSourceUploadWithBusyRetry(id: string, body: { name: string; d
     try { return await postSourceUpload(id, body, progress); }
     catch (err) {
       if ((err as { status?: number }).status !== 429 || attempt >= BUSY_RETRY_DELAYS_MS.length) throw err;
-      progress({ stage: 'Waiting for another file to finish processing' });
+      progress({ stage: 'Waiting for another file to finish processing', stageKey: 'busy' });
       await new Promise<void>(resolve => setTimeout(resolve, BUSY_RETRY_DELAYS_MS[attempt]));
     }
   }
@@ -223,15 +226,15 @@ async function postSourceUploadWithBusyRetry(id: string, body: { name: string; d
 
 export async function uploadProjectFile(id: string, body: { name: string; dataBase64: string }, progress: (value: UploadProgress) => void = () => {}) {
   const response = await postSourceUploadWithBusyRetry(id, body, progress);
-  progress({ stage: 'Upload received · waiting for processing' });
+  progress({ stage: 'Upload received · waiting for processing', stageKey: 'received' });
   for (;;) {
     const job = await getJson<{ done: boolean; stage?: string; status?: number; body?: { error?: string; code?: string; name: string; path: string; bytes: number; attachment?: { reduction?: { note: string }; assetId?: string; state?: string; group?: string; reason?: string; reasonId?: string; reasonParams?: Record<string, string | number> }; document?: { state?: string; error?: string; errorId?: string } } }>(response.poll);
     if (job.done) {
       if ((job.status || 500) >= 400) throw failureWithCode(job.body?.error || 'Source processing failed', job.body?.code);
       invalidateCached(WORKSPACE_KEY);
-      progress({ stage: 'Saved', percent: 100 }); return job.body!;
+      progress({ stage: 'Saved', stageKey: 'saved', percent: 100 }); return job.body!;
     }
-    progress({ stage: job.stage || 'Queued for processing' });
+    progress(job.stage ? { stage: job.stage } : { stage: 'Queued for processing', stageKey: 'queued' });
     await new Promise(resolve => setTimeout(resolve, 750));
   }
 }
