@@ -52,7 +52,7 @@ export function PluginsView({ onStartChat, embedded = false, projects = [], onPr
       <SegmentedControl label={t('customise.title')} value={tab} onChange={setTab} options={[['skills', t('customise.tab.skills')], ['connectors', t('connectors.title')], ['plugins', t('customise.tab.plugins')]]}/>
     </header>
     {tab === 'connectors'
-      ? <div className="plugins-connected"><h2 className="plugins-subhead">{t('customise.connectedTitle')}</h2><ConnectorsSettings hideTitle isAdmin={isAdmin} onStartChat={onStartChat}/></div>
+      ? <div className="plugins-connected"><ConnectorsSettings hideTitle listHeading={t('customise.connectedTitle')} isAdmin={isAdmin} onStartChat={onStartChat}/></div>
       : tab === 'plugins'
         ? <div className="plugins-connected"><h2 className="plugins-subhead">{t('customise.installedTitle')}</h2><SignInServers/><KeyServers/><p className="plugins-note">{t('customise.mcpNote')}{!isAdmin && <> {t('customise.mcpAdminNote')}</>}</p><h2 className="plugins-subhead">{t('customise.library')}</h2><Directory key="mcp" kind="mcp" projects={projects} onProjectsChanged={onProjectsChanged} isAdmin={isAdmin}/></div>
         : <><p className="plugins-note">{t('customise.skillsNote')}</p><h2 className="plugins-subhead">{t('customise.library')}</h2><Directory key="skills" kind="skills" projects={projects} onProjectsChanged={onProjectsChanged} isAdmin={isAdmin}/></>}

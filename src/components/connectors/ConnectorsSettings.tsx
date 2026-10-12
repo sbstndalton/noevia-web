@@ -99,7 +99,8 @@ const ncBadge = (t: Translate, nc: Nextcloud) => nc.state === 'connected'
   : <span className="badge count">{t('connectors.notConnected')}</span>;
 
 /** Settings → Connectors: what noevia can reach on your behalf, and what each tool may do. */
-export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false }: { isAdmin: boolean; onStartChat?: (prompt: string) => void; hideTitle?: boolean }): JSX.Element {
+/** `listHeading` (#1559) heads the list of connectors only; a connector's own page never shows it, so the list heading does not sit above a back link. */
+export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false, listHeading }: { isAdmin: boolean; onStartChat?: (prompt: string) => void; hideTitle?: boolean; listHeading?: string }): JSX.Element {
   const t = useT();
   const [drive, setDrive] = useState<Drive | null>(null);
   const [nc, setNc] = useState<Nextcloud | null>(null);
@@ -131,6 +132,7 @@ export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false }: 
 
   return <>
     {!hideTitle && <div className="settings-title"><h1>{t('connectors.title')}</h1><p>{t('connectors.intro')}</p></div>}
+    {listHeading && <h2 className="plugins-subhead">{listHeading}</h2>}
     {error && <p className="route-note" role="alert">{error} <button className="btn btn-secondary btn-sm" onClick={() => void load()}>{t('connectors.tryAgain')}</button></p>}
     <div className="connector-list">
       <button className="connector-card surface" onClick={() => setPage('gdrive')} disabled={!drive} aria-label="Google Drive">
