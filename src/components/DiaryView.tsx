@@ -519,6 +519,11 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
         setDraft(message);
         setTurns(previous => { const current = previous[entryDay] || []; return { ...previous, [entryDay]: current.map((turn, i) => i >= current.length - 2 ? { ...turn, failed: true } : turn) }; });
       } else if (!answered && !diaryStarted) { setDraft(message); setTurns(previous => ({ ...previous, [entryDay]: displayHistory })); }
+      else if (diaryStarted) {
+        // #1505: the save outcome is not confirmed (the stream ended, or the server could not vouch for the write).
+        // The pair stays in view but is not replayed as history; the recovery poll confirms it from the server.
+        setTurns(previous => { const current = previous[entryDay] || []; return { ...previous, [entryDay]: current.map((turn, i) => i >= current.length - 2 ? { ...turn, uncertain: true } : turn) }; });
+      }
       if(diaryStarted && !folder)bumpRevision();
       if (cancelled) throw new Error(t('diary.status.contextCancelledNoSend'));
       throw e;

@@ -1306,6 +1306,7 @@ export const PT_BR: Catalogue = {
   'chat.routing.flag.secret': "uma senha ou chave",
   'chat.routing.flag.iban': "um número de conta bancária",
   'chat.routing.flag.card': "um número de cartão",
+  'chat.routing.flag.health': "informações de saúde",
   'chat.routing.flag.router': "o roteador considerou privado",
   'chat.routing.flag.unavailable': "a verificação de sensibilidade não pôde responder",
   'chat.routing.pending': "Isto parece sensível ({reason}).",

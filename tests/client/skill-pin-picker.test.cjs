@@ -95,9 +95,9 @@ test('the composer sends the chosen pin with that one message only, and App forw
 test('Retry resends the pin its message was sent with, and the project home composer can pin (#562, #564)', () => {
   const app = fs.readFileSync(path.join(__dirname, '../../src/App.tsx'), 'utf8');
   const view = fs.readFileSync(path.join(__dirname, '../../src/components/ProjectView.tsx'), 'utf8');
-  assert.match(app, /const sentPin = storablePin\(turn\.skill\);\n\s+const userMsg: Message = \{ id: uid\(\), role: 'user', content: text, \.\.\.\(sentPin \? \{ skill: sentPin \} : \{\}\) \};/, 'the pin is kept on the user turn (#571)');
+  assert.match(app, /const sentPin = storablePin\(turn\.skill\);[\s\S]{0,400}?const userMsg: Message = \{ id: uid\(\), role: 'user', content: text, \.\.\.\(sentPin \? \{ skill: sentPin \} : \{\}\), \.\.\.\(sentImages\.length \? \{ turnImageIds: sentImages \} : \{\}\) \};/, 'the pin is kept on the user turn (#571)');
   // #682 adds a text-free resend marker next to the pin.
-  assert.match(app, /const pin = storablePin\(msgs\[index - 1\]\.skill\);\n\s+void handleSend\(chatId, projectId, msgs\[index - 1\]\.content, rerunBase\(msgs, index\), \{ \.\.\.\(pin \? \{ skill: pin \} : \{\}\), resend: resendOutcome\('retry', failed\) \}\)/);
+  assert.match(app, /const pin = storablePin\(msgs\[index - 1\]\.skill\);[\s\S]{0,400}?void handleSend\(chatId, projectId, msgs\[index - 1\]\.content, rerunBase\(msgs, index\), \{ \.\.\.\(pin \? \{ skill: pin \} : \{\}\), turnImageIds: msgs\[index - 1\]\.turnImageIds, resend: resendOutcome\('retry', failed\) \}\)/);
   assert.doesNotMatch(app, /sentSkillPins/, 'no in-memory-only pin map: a reload would lose it');
   assert.match(app, /skill: m\.role === 'user' \? m\.skill : undefined/, 'saved with the transcript');
   assert.match(app, /pendingFirstSend\.current = \{ chatId, projectId, text, \.\.\.\(skill \? \{ skill \} : \{\}\) \}/);

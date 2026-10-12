@@ -10,6 +10,8 @@ export interface RegeneratePlan {
   base: Message[];
   /** The Skill pin the original message was sent with (#571), when it had one. */
   skill?: SkillPin;
+  /** #1512: the project image sources the original message attached, when it had any. */
+  turnImageIds?: string[];
 }
 
 /** #356: Regenerate only ever targets the last completed assistant reply, produced by the user
@@ -33,7 +35,7 @@ export function planRegenerate(messages: Message[], messageId: string): Regenera
   // #658: a reply that saved changes (approved writes that ran) is replaced, but the user turn and
   // the record of those changes stay (its tool list and a note; none of its text, routing,
   // thinking or stats), so the re-run is told they are done instead of making them again.
-  return { userText: prompt.content, base: rerunBase(messages, index), ...(prompt.skill ? { skill: prompt.skill as SkillPin } : {}) };
+  return { userText: prompt.content, base: rerunBase(messages, index), ...(prompt.skill ? { skill: prompt.skill as SkillPin } : {}), ...(prompt.turnImageIds?.length ? { turnImageIds: prompt.turnImageIds } : {}) };
 }
 
 /** #682: what a Regenerate or Retry tells the server about the reply it replaces, for the

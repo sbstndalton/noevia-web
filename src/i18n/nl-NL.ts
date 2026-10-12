@@ -1306,6 +1306,7 @@ export const NL_NL: Catalogue = {
   'chat.routing.flag.secret': "een wachtwoord of sleutel",
   'chat.routing.flag.iban': "een bankrekeningnummer",
   'chat.routing.flag.card': "een kaartnummer",
+  'chat.routing.flag.health': "gezondheidsgegevens",
   'chat.routing.flag.router': "de router vond het privé",
   'chat.routing.flag.unavailable': "de gevoeligheidscontrole kon niet antwoorden",
   'chat.routing.pending': "Dit lijkt gevoelig ({reason}).",

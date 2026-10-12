@@ -193,7 +193,7 @@ export async function uploadProjectFile(id: string, body: { name: string; dataBa
   });
   progress({ stage: 'Upload received · waiting for processing' });
   for (;;) {
-    const job = await getJson<{ done: boolean; stage?: string; status?: number; body?: { error?: string; code?: string; name: string; path: string; bytes: number; attachment?: { reduction?: { note: string }; state?: string; group?: string; reason?: string; reasonId?: string; reasonParams?: Record<string, string | number> }; document?: { state?: string; error?: string; errorId?: string } } }>(response.poll);
+    const job = await getJson<{ done: boolean; stage?: string; status?: number; body?: { error?: string; code?: string; name: string; path: string; bytes: number; attachment?: { reduction?: { note: string }; assetId?: string; state?: string; group?: string; reason?: string; reasonId?: string; reasonParams?: Record<string, string | number> }; document?: { state?: string; error?: string; errorId?: string } } }>(response.poll);
     if (job.done) {
       if ((job.status || 500) >= 400) throw failureWithCode(job.body?.error || 'Source processing failed', job.body?.code);
       invalidateCached(WORKSPACE_KEY);
@@ -591,6 +591,9 @@ export async function* streamChat(
     exchangeId?: string; recoveryId?: string; preparationId?: string; files?: Record<string,string>; entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: ModelHistoryEntry[]; projectId?: string | null; chatId?: string | null;
     /** #236/#237: the session's harness, and boxes added for this turn only. */
     mode?: 'chat'; turnToolboxes?: string[];
+    /** #1512: the project image sources this message attaches. Always sent (`[]` when none), so the
+     *  server describes only these and a text-only turn does no vision work. */
+    turnImageIds?: string[];
     /** #272: one exact reviewed Skill version for this message, as `skill_<id>@<sha256>`. */
     skill?: SkillPin;
     /** #682: this turn re-runs the last one (text-free outcome record). */

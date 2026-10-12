@@ -1306,6 +1306,7 @@ export const NB_NO: Catalogue = {
   'chat.routing.flag.secret': "et passord eller en nøkkel",
   'chat.routing.flag.iban': "et kontonummer",
   'chat.routing.flag.card': "et kortnummer",
+  'chat.routing.flag.health': "helseopplysninger",
   'chat.routing.flag.router': "ruteren vurderte det som privat",
   'chat.routing.flag.unavailable': "sensitivitetssjekken kunne ikke svare",
   'chat.routing.pending': "Dette ser sensitivt ut ({reason}).",

@@ -18,9 +18,15 @@ export interface RoutingDecision {
 /** #778: where a reply was sent and why (codes only). */
 export type RouteName = 'local' | 'cloud';
 export type RouteReason = 'mode' | 'user-choice' | 'force-local' | 'sensitive-rule' | 'fail-closed' | 'check-unavailable' | 'remembered';
-export type RouteFlag = 'diary' | 'secret' | 'iban' | 'card' | 'router' | 'unavailable';
+export type RouteFlag = 'diary' | 'secret' | 'iban' | 'card' | 'health' | 'router' | 'unavailable';
 /** `detail` (#1421): why the sensitivity check could not answer, a short code, only with 'check-unavailable'. */
 export interface RouteTarget { route: RouteName; reason: RouteReason; detail?: string }
+
+/** The context meter (#608, #1551): what the server counts in the next request, and its limit. */
+export interface ContextMeter {
+  historyCount: number; model: string; limit: number; limitSource: string; used: number; reserve: number; safety: number; threshold: number;
+  parts: { name: string; tokens: number }[]; compactedAt: number | null; covered: number; updatedAt?: number;
+}
 
 export interface Message {
   id: string;
@@ -31,6 +37,9 @@ export interface Message {
   routeTarget?: RouteTarget;
   /** #778: a sensitive-looking turn waiting for Send to cloud / Keep local. Never persisted. */
   routePending?: { id: string; flag: RouteFlag; busy?: boolean };
+  /** #1551: on the reply of the current turn: the context meter the server measured for it, and how many
+   *  characters of its prose that measurement already counted. Kept in this session; never saved. */
+  contextMeter?: { meter: ContextMeter; replyBytes: number };
   content: string;
   reasoningMode?: string;
   reasoningEffort?: string;
@@ -60,6 +69,9 @@ export interface Message {
   sources?: SourceRef[];
   /** On a user turn: the Skill pin it was sent with, `skill_<id>@<sha256>` (#571), so Retry survives a reload. */
   skill?: string;
+  /** #1512: On a user turn: the project image sources it attached. Kept in this session for Retry and
+   *  Regenerate; not saved with the transcript. */
+  turnImageIds?: string[];
   /** #658: the reply ended early after tool steps had run: step supervision paused it, or it
    *  failed after changes were saved. `applied` is how many changes were saved. Not an error. */
   paused?: ReplyPause;

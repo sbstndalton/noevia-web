@@ -19,6 +19,9 @@ export function recoverDiaryTurns(records: DiaryRecord[]): DiaryTurn[] {
     const preparationOnly = record.kind === 'preparation';
     // #1422: `failed` is a failure the server knows left nothing saved; `uncertain` is one it cannot vouch for.
     const failed = !preparationOnly && record.state === 'failed';
+    // #1505: an uncertain exchange (dismissed or not) and a running one are not completed answers, so both turns
+    // are marked and diaryHistory leaves them out.
+    const held = { ...(!preparationOnly && record.state === 'uncertain' ? { uncertain: true } : {}), ...(!preparationOnly && record.state === 'running' ? { running: true } : {}) };
     const notice = preparationOnly
       ? record.state === 'running' ? 'Optional preparation is still active. No diary entry has been sent.'
         : 'Optional preparation history only. No diary entry was sent; tools are not replayed.'
@@ -27,8 +30,8 @@ export function recoverDiaryTurns(records: DiaryRecord[]): DiaryTurn[] {
         : record.state === 'uncertain' ? record.acknowledgedAt ? 'Marked as reviewed. The save outcome was never confirmed.' : 'Save outcome is uncertain. Check the saved diary before sending again.'
           : record.decision === 'logged' || record.decision === 'ok' ? 'Diary entry saved.' : 'Conversation complete · no entry saved.';
     return [
-      {role:'user',content:record.message,exchangeId:record.id,...(failed?{failed:true}:{})},
-      {role:'assistant',content:preparationOnly?'':record.content,...(failed?{failed:true}:{}),
+      {role:'user',content:record.message,exchangeId:record.id,...(failed?{failed:true}:{}),...held},
+      {role:'assistant',content:preparationOnly?'':record.content,...(failed?{failed:true}:{}),...held,
        reasoning:[prep?.reasoning,preparationOnly?'':record.reasoning].filter(Boolean).join('\n\n'),
        startedAt:prep?.startedAt || record.startedAt,tools,
        activity:[...(prep && !preparationOnly ? prep.activity : []),...record.activity,...(prep?.state==='uncertain' ? ['Interrupted external tool outcomes may be unknown. Check before repeating a write.'] : []),...(prep?.content ? ['Optional reference material (not a companion answer): '+prep.content.slice(0,12000)] : []),notice,...(prep?.truncated||record.truncated?['Recovered transcript was truncated.']:[])]},

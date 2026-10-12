@@ -36,6 +36,7 @@ import { CoworkTaskCard } from './CoworkTaskCard';
 import { decideDispatch, type ChatMode } from '../chat-mode';
 import { insertMention, turnBoxesFor, type PermittedBox } from '../tool-catalogue';
 import { readDraft, writeDraft, clearDraft } from '../chat-drafts';
+import { addTurnImage, turnImageIdsToSend } from '../turn-images';
 import { onCancelEdit, focusAfterRender, type EditFocusState } from '../edit-focus';
 import { isCoarsePointerDevice } from '../composer-focus';
 import { useSpaceTier } from '../space-tier';
@@ -45,7 +46,7 @@ import { formatDuration, formatNumber } from '../number-format';
 
 /** What one send carries besides its text: per-turn boxes, a fallback notice, or a Cowork task. */
 /** `skill` (#272) pins one exact reviewed Skill version for this message only. */
-export interface SendTurn { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin }
+export interface SendTurn { turnToolboxes?: string[]; /** #1512: the project image sources this message attaches (`[]` when none). */ turnImageIds?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin }
 
 interface ChatViewProps {
   project: Project | null;
@@ -460,6 +461,11 @@ export function ChatView({
   // Re-read when the project changes and after each reply, so a disabled or edited skill drops out.
   const [skillPin, setSkillPin] = useState('');
   useEffect(() => { setTurnBoxes([]); setCatalogueOpen(false); setSkillPin(''); }, [chatId, mode, project?.id]);
+  // #1512: project image sources attached (from the picker or a drop) for the next message, per chat.
+  // They are sent as turnImageIds, so only these images are described; the rest of the project's
+  // images are named to the model, not loaded. Cleared when the message is sent.
+  const [pendingImages, setPendingImages] = useState<Record<string, string[]>>({});
+  const onImageAttached = (assetId: string) => setPendingImages(prev => ({ ...prev, [chatId]: addTurnImage(prev[chatId] ?? [], assetId) }));
   // #790: what the catalogue permits follows its own scope (project and mode, see ToolCatalogue),
   // not the chat. Clearing it per chat while the catalogue kept its loaded boxes (and so never
   // re-reported them) silently dropped a box ticked "for this message" after a chat switch.
@@ -520,18 +526,19 @@ export function ChatView({
     follow();
     const decision = decideDispatch({ mode, harnessEnabled: coworkAccess.harnessEnabled, canUseCode: coworkAccess.canUseCode, projectId: project?.id ?? null, repository });
     if (decision.harness === 'cowork' && repository) onSend(text, { cowork: { repository } });
-    else onSend(text, { turnToolboxes: turnBoxesFor(text, permitted, turnBoxes), notice: decision.notice, ...(skillPin ? { skill: skillPin as SkillPin } : {}) });
+    else onSend(text, { turnToolboxes: turnBoxesFor(text, permitted, turnBoxes), turnImageIds: turnImageIdsToSend(pendingImages[chatId]), notice: decision.notice, ...(skillPin ? { skill: skillPin as SkillPin } : {}) });
     setDraft('');
     clearDraft(chatId);
     setTurnBoxes([]);
     setSkillPin('');
+    setPendingImages(prev => { const { [chatId]: _sent, ...rest } = prev; return rest; });
   };
   // #437: the whole chat pane is the drop target, not just the composer bar, so a file dropped
   // anywhere over the transcript still attaches — through the exact same pipeline (validation,
   // size limits, error copy) `ComposerActions`'s own picker uses below.
   const { isDragOver, dropProps } = useAttachmentDrop({
     project: project || freeContext, disabled: streaming || actionBusy, chatOnly: !project,
-    onChanged: refreshContext, onBusy: setActionBusy, onStatus: showActionStatus,
+    onChanged: refreshContext, onBusy: setActionBusy, onStatus: showActionStatus, onImageAttached,
   });
 
   const catalogue = !toolsByHand ? null : <ToolCatalogue open={catalogueOpen} onOpenChange={setCatalogueOpen} projectId={project?.id ?? null} mode={mode}
@@ -799,7 +806,7 @@ export function ChatView({
             onBlur={linkTargets ? () => setLinkAt(null) : undefined}
             aria-activedescendant={linkMenuOpen && linkOptions.length ? `chat-link-${chatId}-${Math.min(linkIndex, linkOptions.length - 1)}` : undefined}
           />
-          <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={showActionStatus}
+          <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={showActionStatus} onImageAttached={onImageAttached}
             browseTools={toolsByHand ? { onOpen: () => setCatalogueOpen(true), count: turnBoxes.length } : undefined} />
           {phone && <ModeToggle state={modeSwitch} disabled={streaming || actionBusy} compact />}
           <ComposerModel label={modelLabel} onClick={openModels}
