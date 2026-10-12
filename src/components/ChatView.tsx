@@ -202,7 +202,7 @@ export function FailedReply({ partial, failure, canRetry, disabled, onRetry }: {
       {partial && (
         <div className="bubble msg-partial" data-testid="reply-partial">
           <small className="msg-partial-label">{t('chat.failure.incomplete')}</small>
-          <MarkdownPreview text={partial} />
+          <MarkdownPreview text={partial} autolink />
         </div>
       )}
       <div className="msg-failure" role="alert" data-testid="reply-failure">
@@ -681,7 +681,7 @@ export function ChatView({
                           source (**bold**, list dashes) and collapsed every
                           newline, so multi-section answers arrived as one wall
                           of text. */}
-                      <MarkdownPreview text={body} />
+                      <MarkdownPreview text={body} autolink />
                     </div>
                   ) : (
                     streaming && isLast && !m.reasoning && (
