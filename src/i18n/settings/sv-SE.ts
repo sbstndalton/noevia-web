@@ -179,7 +179,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'settings.section.experimental': "Experimentellt",
   'settings.section.backups': "Säkerhetskopior",
   'settings.section.status': "Tjänststatus",
-  'settings.section.capabilities': "Funktioner (status)",
+  'settings.section.capabilities': "Förmågor (status)",
   'settings.keywords.appearance': "tema mörkt ljust accent typsnitt täthet rörelse layout språk datum tal format",
   'settings.keywords.keyboard': "kortkommandon tangenter enter skicka ny rad",
   'settings.keywords.personalization': "anpassning svarsstil ton längd emoji rubriker instruktioner språk",

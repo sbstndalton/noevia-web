@@ -179,7 +179,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'settings.section.experimental': "Eksperimentelt",
   'settings.section.backups': "Sikkerhetskopier",
   'settings.section.status': "Tjenestestatus",
-  'settings.section.capabilities': "Funksjoner (status)",
+  'settings.section.capabilities': "Evner (status)",
   'settings.keywords.appearance': "tema mørk lys aksent skrift tetthet bevegelse oppsett språk dato tall format",
   'settings.keywords.keyboard': "snarveier taster enter send linjeskift hurtigtaster",
   'settings.keywords.personalization': "personlig tilpasning svarstil tone lengde emoji overskrifter instruksjoner språk",

@@ -179,7 +179,7 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'settings.section.experimental': "Sperimentale",
   'settings.section.backups': "Backup",
   'settings.section.status': "Stato dei servizi",
-  'settings.section.capabilities': "Funzionalità (stato)",
+  'settings.section.capabilities': "Capacità (stato)",
   'settings.keywords.appearance': "tema scuro chiaro accento carattere densità movimento layout lingua data numero formato",
   'settings.keywords.keyboard': "scorciatoie tasti invio inviare nuova riga",
   'settings.keywords.personalization': "personalizzazione stile risposta tono lunghezza emoji titoli istruzioni lingua",
