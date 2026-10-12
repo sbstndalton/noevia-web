@@ -521,6 +521,14 @@ export function fetchDiaryMonth(monthId: string): Promise<DiaryCorpus> {
 
 export const fetchUsage = (aggregate=false) => getJson<unknown>(aggregate?'/api/usage/aggregate':'/api/usage').then(parseUsage);
 
+/** #1450: the chat ids whose message text holds `text` (titles are matched in the sidebar itself). */
+export function searchChatText(text: string): Promise<{ chats: string[]; truncated: boolean }> {
+  return getJson<{ chats: string[]; truncated: boolean }>(`/api/chats/search?q=${encodeURIComponent(text)}`).then((r) => ({
+    chats: Array.isArray(r.chats) ? r.chats.filter((id): id is string => typeof id === 'string') : [],
+    truncated: r.truncated === true,
+  }));
+}
+
 export function fetchChatHistoryRevision(chatId: string): Promise<{ history: HistoryEntry[]; revision: string | null }> {
   return getJson<{ history: HistoryEntry[]; revision?: string }>(
     `/api/chats/${encodeURIComponent(chatId)}/history`,
