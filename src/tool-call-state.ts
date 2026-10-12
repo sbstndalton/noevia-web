@@ -67,3 +67,15 @@ export function settleReply<M extends { toolCalls?: ToolCallView[]; routePending
   const { routePending: _routePending, ...rest } = message;
   return (message.toolCalls ? { ...rest, toolCalls: settleToolCalls(message.toolCalls) } : rest) as M;
 }
+
+/** Which call a tool result belongs to, as an index into the reply's calls (#1575). The server's index names
+ *  the call when that slot was announced. A result whose index was never announced is matched to the open
+ *  (running or pending) call with the same name, so the call is not counted twice; with no index the first
+ *  call of that name is used, as before. -1 when nothing matches: the result is a call of its own. */
+export function resultSlot(calls: readonly (ToolCallView | undefined)[], index: number | undefined, name: string): number {
+  if (typeof index === 'number') {
+    if (calls[index]) return index;
+    return calls.findIndex((c) => !!c && c.name === name && (c.status === undefined || c.status === 'running' || c.status === 'pending'));
+  }
+  return calls.findIndex((c) => !!c && c.name === name);
+}

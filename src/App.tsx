@@ -78,7 +78,7 @@ import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
 import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
-import { finishedToolCall, pendingToolCall, settleReply, settleToolCalls } from './tool-call-state';
+import { finishedToolCall, pendingToolCall, resultSlot, settleReply, settleToolCalls } from './tool-call-state';
 import { chatHome } from './chat-home';
 import { declinedNames, editBase, modelHistory, persistableMessage, rerunBase, storedPause } from './applied-writes';
 import { mergeTranscripts } from './transcript-merge';
@@ -91,6 +91,7 @@ import { currentRoutingDecision } from './current-routing';
 import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, withoutChat, withoutProject, type NavState } from './settings-nav';
 import { useT, t as translateNow } from './i18n';
 import { failedReply, failureCopy } from './failure-copy';
+import { createThinkingClock } from './thinking-time';
 import { queueProjectPatch, restoreProjectPatch, takeProjectPatch, viewBelongsToProject, projectSaveErrorText, projectSyncErrorText, type PatchQueue } from './project-patches';
 import type { SkillPin } from './api-contract';
 import { storablePin } from './skill-pin-store';
@@ -939,13 +940,13 @@ export default function App(): JSX.Element {
       try {
         let acc = '';
         let reasoning = '';
-        // Thinking time: from the first thought to the first word of the answer. Measured here
-        // because it is what the person waited through; the engine's own timings cover tokens.
-        let thinkStart = 0, thought = false;
+        // Thinking time: the sum of every stretch of thought in this reply, each ended by the answer or a tool
+        // call (#1575). Measured here because it is what the person waited through; the engine's own timings
+        // cover tokens. Only a stretch that closed writes state, so this costs nothing per token.
+        const thinking = createThinkingClock();
         const endThinking = () => {
-          if (!thinkStart || thought) return;
-          thought = true;
-          const ms = Math.round(performance.now() - thinkStart);
+          const ms = thinking.stop();
+          if (ms === undefined) return;
           setMessagesByChat((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, reasoningMs: ms } : m)) }));
         };
         const tools: ToolCallView[] = [];
@@ -1020,7 +1021,7 @@ export default function App(): JSX.Element {
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, warning: ev.text } : m)),
             }));
           } else if (ev.type === 'reasoning' && ev.text) {
-            if (!thinkStart) thinkStart = performance.now();
+            thinking.start();
             reasoning += ev.text;
             setMessagesByChat((prev) => ({
               ...prev,
@@ -1125,7 +1126,8 @@ export default function App(): JSX.Element {
             // second chip for the same call. This also clears any 'pending'
             // state, so an approved or refused call stops offering buttons
             // that would now 404.
-            const done = typeof ev.index === 'number' ? ev.index : tools.findIndex((t) => t && t.name === ev.name);
+            // #1575: a result whose index was never announced joins its open call of the same name, not a new chip.
+            const done = resultSlot(tools, typeof ev.index === 'number' ? ev.index : undefined, ev.name);
             const chip = finishedToolCall(done >= 0 ? tools[done] : undefined, { name: ev.name, text: ev.text, applied: ev.applied === true, target: ev.target, declined: ev.declined === true, notRun: ev.notRun === true }, TOOL_RESULT_LIMIT);
             if (done >= 0) tools[done] = chip; else tools.push(chip);
             setMessagesByChat((prev) => ({
