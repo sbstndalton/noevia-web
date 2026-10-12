@@ -177,6 +177,15 @@ export function Sidebar({
       toggle.current?.focus();
     }
   }, [expanded, mobile]);
+  // #1465: at phone width the open drawer is a modal (aria-modal). The page behind it, and the toggle
+  // that opened it, are inert until it closes, so focus and the accessibility tree stay in the drawer.
+  // Released in the cleanup, which runs before the focus effect above hands focus back to the toggle.
+  useEffect(() => {
+    if (!mobile || !expanded) return;
+    const behind = [...document.querySelectorAll<HTMLElement>('.app-stack, .app .nav-drawer-toggle')];
+    for (const el of behind) el.setAttribute('inert', '');
+    return () => { for (const el of behind) el.removeAttribute('inert'); };
+  }, [expanded, mobile]);
   // A software keyboard shrinks only the visual viewport; size the drawer to it so
   // nothing in it ends up behind the keyboard.
   useEffect(() => {
@@ -625,7 +634,7 @@ export function Sidebar({
       }}
     >
       <div className="sidebar-scroll">
-      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? t('sidebar.closeNavigation') : collapsed ? t('sidebar.expandNavigation') : t('sidebar.collapseNavigation')} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div>{/* A small icon-only Chat/Code switch at the end of the header row. Switching
+      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? t('sidebar.closeNavigation') : collapsed ? t('sidebar.expandNavigation') : t('sidebar.collapseNavigation')} aria-expanded={mobile ? undefined : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div>{/* A small icon-only Chat/Code switch at the end of the header row. Switching
           closes the phone drawer, so the new mode is what you see. */}{showPreviews && <ModeSwitch compact mode={mode} onCode={() => { setExpanded(false); onEnterCode(); }} onChat={() => { setExpanded(false); onEnterChat?.(); }}/>}</div>
       {/* On a phone the drawer always shows the search field under its header. */}{(searching || (mobile && expanded))&&<>
       {/* #439: ArrowDown enters the results (focusSearchResultAt); a first Escape from a result
