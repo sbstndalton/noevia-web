@@ -13,3 +13,19 @@ import type { Project } from './types';
 export function filesAfterRemoval(files: Project['files'], name: string): Project['files'] {
   return files.filter((f) => f.name !== name);
 }
+
+/**
+ * The name a new file is saved under when `name` is already taken: the name itself if it is free,
+ * otherwise the first "stem (2).ext", "stem (3).ext", … that is free (#1454). An upload that
+ * reuses a source's name is kept as a copy under this name; it never replaces the source silently.
+ */
+export function uniqueName(name: string, existing: { name: string }[]): string {
+  if (!existing.some((f) => f.name === name)) return name;
+  const dot = name.lastIndexOf('.');
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot) : '';
+  for (let n = 2; ; n++) {
+    const candidate = `${stem} (${n})${ext}`;
+    if (!existing.some((f) => f.name === candidate)) return candidate;
+  }
+}

@@ -129,6 +129,7 @@ test('an upload whose refresh throws reports a failure status instead of rejecti
     'react/jsx-runtime': { jsx() {}, jsxs() {}, Fragment: {} },
     '../api': { fetchToolboxes() {}, saveProjectConfig() {}, uploadProjectFile: async () => ({}) },
     '../sources': { fileToBase64: async () => 'AA==', uploadLimit: () => 1e9 },
+    '../project-files': load('project-files.ts', {}), // #1454: the real name helper (pure, no imports at runtime)
     '../user-preferences': { appLocale: () => undefined },
     './ShellIcon': { ShellIcon() {} },
     '../source-status': { uploadFailureText: (err, _t, fallback) => err?.message || fallback, uploadUnreadableReason: () => '' },
