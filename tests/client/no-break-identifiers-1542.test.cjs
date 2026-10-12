@@ -14,8 +14,17 @@ test('a hyphen inside a numeric identifier cannot end a line', () => {
   assert.equal(visible(out), 'QA Haiku 20261012-0610 renamed', 'the text reads the same once the joiner is ignored');
 });
 
-test('a hyphen between letters is also kept with its next character', () => {
-  assert.equal(keepIdentifiersWhole('well-known'), `well-${WJ}known`);
+test('a hyphen next to a digit is kept with its next character, wherever the digit sits', () => {
+  assert.equal(keepIdentifiersWhole('v2-release'), `v2-${WJ}release`, 'digit before the hyphen');
+  assert.equal(keepIdentifiersWhole('release-2'), `release-${WJ}2`, 'digit after the hyphen');
+  assert.equal(keepIdentifiersWhole('proj-2026-identifier'), `proj-${WJ}2026-${WJ}identifier`, 'both hyphens touch the number, so both stay with it');
+});
+
+test('plain hyphenated words keep their hyphen breaks, so a long name wraps between words and not inside one', () => {
+  // #1542 QA: joining every letter-to-letter hyphen made the whole name one unbreakable word, which then
+  // broke mid-word ("identifi/er", "na/me") at 849 px and 390 px.
+  assert.equal(keepIdentifiersWhole('well-known'), 'well-known');
+  assert.equal(keepIdentifiersWhole('proj-synthetic-identifier-long-hyphenated-name'), 'proj-synthetic-identifier-long-hyphenated-name');
 });
 
 test('hyphens not between two word characters are left alone, so names still wrap at spaces and dashes', () => {

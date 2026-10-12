@@ -23,6 +23,26 @@ const project = {
   projectFolder: FOLDER, sourceFolders: [FOLDER], chats: [],
   files: [{ name: `${FOLDER}/Documents/qa_two_page.pdf`, source: FOLDER, bytes: 10 }],
 };
+// #1542 (2026-10-12 local QA): a long name with no digits must wrap between its words, not inside them.
+const LONG_NAME = 'Synthetic project proj-synthetic-identifier-long-hyphenated-name';
+const longProject = { ...project, id: 'p-long', name: LONG_NAME, projectFolder: undefined, sourceFolders: [], files: [] };
+
+// A word such as "identifier" as rendered: a range over its characters must be one line box.
+const wordOnOneLine = (page, selector, word) => page.evaluate(([sel, w]) => {
+  for (const el of document.querySelectorAll(sel)) {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      const i = node.textContent.indexOf(w);
+      if (i < 0) continue;
+      const range = document.createRange();
+      range.setStart(node, i);
+      range.setEnd(node, i + w.length);
+      return range.getClientRects().length;
+    }
+  }
+  return -1;
+}, [selector, word]);
 
 // The identifier "20261012-0610" as rendered: a range over its characters must be one line box.
 const identifierLines = (page, selector) => page.evaluate(([sel]) => {
@@ -43,12 +63,15 @@ const identifierLines = (page, selector) => page.evaluate(([sel]) => {
   return out;
 }, [selector]);
 
-async function openProject(browser, width) {
-  const page = await browser.newPage(withLocale({ viewport: { width, height: 900 } }));
+const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+
+async function openProject(browser, width, proj = project) {
+  const phone = width < 500; // the phone layout is only applied to a phone user agent, as a real phone sends
+  const page = await browser.newPage(withLocale({ viewport: { width, height: 900 }, ...(phone ? { hasTouch: true, isMobile: true, userAgent: IPHONE } : {}) }));
   await page.addInitScript(() => { localStorage.setItem('cowork-theme', 'light'); });
-  await page.route('**/api/workspace', (r) => r.fulfill({ json: { projects: [project], freeChats: [] } }));
+  await page.route('**/api/workspace', (r) => r.fulfill({ json: { projects: [proj], freeChats: [] } }));
   await page.route('**/api/chats/*/history', (r) => r.fulfill({ json: { history: [], revision: 'r1' } }));
-  await page.goto('http://localhost:' + PORT + '/p/p-qa');
+  await page.goto('http://localhost:' + PORT + '/p/' + proj.id);
   await page.locator('h1.project-title').waitFor({ timeout: 20000 });
   return page;
 }
@@ -71,6 +94,19 @@ async function openProject(browser, width) {
         assert.equal(title.length, 1, 'the title is found');
         assert.equal(title[0].text, NAME, 'the text is still the project name');
         assert.equal(title[0].lines, 1, `the identifier is on one line (line boxes: ${title[0].lines})`);
+        await page.close();
+      });
+    }
+
+    for (const width of [849, 390]) {
+      await check(`#1542 at ${width}px a long hyphenated name wraps at its hyphens; the word "identifier" is not split`, async () => {
+        const page = await openProject(browser, width, longProject);
+        await page.locator('h1.project-title').waitFor({ timeout: 20000 });
+        await page.getByRole('tab', { name: /Sources/ }).click();
+        await page.locator('.project-sources').first().waitFor({ timeout: 5000 });
+        const rects = await wordOnOneLine(page, 'h1.project-title', 'identifier');
+        if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `project-title-long-1542-${width}.png`) });
+        assert.equal(rects, 1, `"identifier" is on one line (line boxes: ${rects})`);
         await page.close();
       });
     }
