@@ -401,6 +401,7 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'security.addPasskey': "Ajouter une clé d’accès",
   'security.unknownIp': "IP inconnue",
   'security.lastSeen': "dernière activité {date}",
+  'security.expires': "expire le {date}",
   'security.revokeSession': "Révoquer la session",
   'security.revokeSessionNamed': "Révoquer la session {device}",
   'security.sessionRevoked': "Session révoquée.",

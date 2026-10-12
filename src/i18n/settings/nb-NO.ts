@@ -401,6 +401,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'security.addPasskey': "Legg til tilgangsnøkkel",
   'security.unknownIp': "ukjent IP",
   'security.lastSeen': "sist aktiv {date}",
+  'security.expires': "utløper {date}",
   'security.revokeSession': "Avslutt økt",
   'security.revokeSessionNamed': "Avslutt økten {device}",
   'security.sessionRevoked': "Økten er avsluttet.",

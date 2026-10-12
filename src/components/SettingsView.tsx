@@ -178,7 +178,7 @@ function SecurityCard({ onOpenSection }: { onOpenSection?: (id: string) => void 
           <div className="model-name-group">
             <span className="model-name">{sessionLabel(t, s.userAgent)}</span>
             <span className="model-quant">
-              {s.ip || t('security.unknownIp')} · {t('security.lastSeen', { date: new Date(s.lastSeenAt).toLocaleString(appLocale()) })}{s.current ? ` · ${t('security.thisDevice')}` : ''}
+              {s.ip || t('security.unknownIp')} · {t('security.lastSeen', { date: new Date(s.lastSeenAt).toLocaleString(appLocale()) })} · {t('security.expires', { date: new Date(s.expiresAt).toLocaleString(appLocale()) })}{s.current ? ` · ${t('security.thisDevice')}` : ''}
             </span>
           </div>
           <button className="recents-del" title={t('security.revokeSession')} aria-label={t('security.revokeSessionNamed', { device: sessionLabel(t, s.userAgent) })} onClick={() => void act(t('security.revokeSession'), () => revokeSession(s.id), t('security.sessionRevoked'))}><ShellIcon name="close" size={16}/></button>

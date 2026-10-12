@@ -401,6 +401,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'security.addPasskey': "Passkey hinzufügen",
   'security.unknownIp': "unbekannte IP",
   'security.lastSeen': "zuletzt aktiv {date}",
+  'security.expires': "läuft ab {date}",
   'security.revokeSession': "Sitzung beenden",
   'security.revokeSessionNamed': "Sitzung {device} beenden",
   'security.sessionRevoked': "Sitzung beendet.",

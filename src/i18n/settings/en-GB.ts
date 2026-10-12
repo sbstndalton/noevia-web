@@ -402,6 +402,7 @@ export const EN_GB_SETTINGS = {
   'security.addPasskey': "Add passkey",
   'security.unknownIp': "unknown IP",
   'security.lastSeen': "last seen {date}",
+  'security.expires': "expires {date}",
   'security.revokeSession': "Revoke session",
   'security.revokeSessionNamed': "Revoke session {device}",
   'security.sessionRevoked': "Session revoked.",

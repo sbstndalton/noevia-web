@@ -401,6 +401,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'security.addPasskey': "Lägg till nyckel",
   'security.unknownIp': "okänd IP",
   'security.lastSeen': "senast aktiv {date}",
+  'security.expires': "går ut {date}",
   'security.revokeSession': "Avsluta session",
   'security.revokeSessionNamed': "Avsluta sessionen {device}",
   'security.sessionRevoked': "Sessionen har avslutats.",

@@ -401,6 +401,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'security.addPasskey': "Toegangssleutel toevoegen",
   'security.unknownIp': "onbekend IP-adres",
   'security.lastSeen': "laatst actief {date}",
+  'security.expires': "verloopt {date}",
   'security.revokeSession': "Sessie intrekken",
   'security.revokeSessionNamed': "Sessie {device} intrekken",
   'security.sessionRevoked': "Sessie ingetrokken.",
