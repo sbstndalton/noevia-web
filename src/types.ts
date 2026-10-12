@@ -48,6 +48,10 @@ export interface Message {
   reasoningMs?: number;
   toolCalls?: ToolCallView[];
   error?: boolean;
+  /** #1547: the failure sentence for a reply that failed. Set beside `content`, which then holds only the
+   *  text that had streamed in before the failure (shown as incomplete); absent on older error replies,
+   *  where `content` is the sentence itself. */
+  failure?: string;
   warning?: string;
   /** Toolboxes the router picked for this reply, shown as "Using: …". */
   toolScope?: string;
@@ -67,6 +71,9 @@ export interface Message {
   coworkRepository?: string;
   /** The project passages placed in this reply's prompt (#552), in prompt order. */
   sources?: SourceRef[];
+  /** On a user turn: the files attached with this message, by name (#1514). Shown as chips; this client's
+   *  session only, since the server's transcript does not carry them. */
+  files?: string[];
   /** On a user turn: the Skill pin it was sent with, `skill_<id>@<sha256>` (#571), so Retry survives a reload. */
   skill?: string;
   /** #1512: On a user turn: the project image sources it attached. Kept in this session for Retry and

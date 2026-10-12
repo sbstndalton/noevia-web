@@ -30,7 +30,8 @@ test('focus restoration is keyed on the falling edge of `streaming` (it just end
 test('Stop always reclaims focus — a stopRequestedRef set by the Stop button itself, not just an activeElement check, since the Stop/Send button is the same DOM node across the transition and a click leaves focus sitting on it, not on <body>', () => {
   assert.match(region, /const stopRequestedRef = useRef\(false\);/);
   assert.match(region, /const stopped = stopRequestedRef\.current;/);
-  assert.match(region, /if \(stopped \|\| document\.activeElement === document\.body\) composerRef\.current\?\.focus\(\);/);
+  // #1478: the reclaim passes preventScroll, so focusing the composer cannot scroll the app pane.
+  assert.match(region, /if \(stopped \|\| document\.activeElement === document\.body\) composerRef\.current\?\.focus\(\{ preventScroll: true \}\);/);
   assert.match(src, /onClick=\{\(\) => \{ stopRequestedRef\.current = true; onStop\(\); \}\}/);
 });
 

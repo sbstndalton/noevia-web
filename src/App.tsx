@@ -80,7 +80,7 @@ import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
 import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
-import { finishedToolCall, pendingToolCall, settleReply, settleToolCalls } from './tool-call-state';
+import { finishedToolCall, pendingToolCall, resultSlot, settleReply, settleToolCalls } from './tool-call-state';
 import { chatHome } from './chat-home';
 import { declinedNames, editBase, modelHistory, persistableMessage, rerunBase, storedPause } from './applied-writes';
 import { mergeTranscripts } from './transcript-merge';
@@ -92,6 +92,8 @@ import { EmptyState } from './components/EmptyState';
 import { currentRoutingDecision } from './current-routing';
 import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, withoutChat, withoutProject, type NavState } from './settings-nav';
 import { useT, t as translateNow } from './i18n';
+import { failedReply, failureCopy } from './failure-copy';
+import { createThinkingClock } from './thinking-time';
 import { queueProjectPatch, restoreProjectPatch, takeProjectPatch, viewBelongsToProject, projectSaveErrorText, projectSyncErrorText, type PatchQueue } from './project-patches';
 import type { SkillPin } from './api-contract';
 import { storablePin } from './skill-pin-store';
@@ -880,7 +882,7 @@ export default function App(): JSX.Element {
   }, []);
 
   const handleSend = useCallback(
-    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; turnImageIds?: string[]; notice?: string | null; skill?: SkillPin; resend?: ResendOutcome } = {}) => {
+    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; turnImageIds?: string[]; notice?: string | null; skill?: SkillPin; resend?: ResendOutcome; files?: string[] } = {}) => {
       // `streamingChats` is render state, so two sends in one tick both see it false. The ref
       // is updated synchronously and is the real guard against a duplicate generation.
       if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
@@ -891,7 +893,9 @@ export default function App(): JSX.Element {
       // #1512: the image sources this message attaches. Always an array on the request; kept on the
       // user turn (in this session only) so Retry and Regenerate send the same images again.
       const sentImages = turnImageIdsToSend(turn.turnImageIds);
-      const userMsg: Message = { id: uid(), role: 'user', content: text, ...(sentPin ? { skill: sentPin } : {}), ...(sentImages.length ? { turnImageIds: sentImages } : {}) };
+      // #1514: the files attached with this message are shown on it, in this session.
+      const sentFiles = turn.files?.length ? turn.files : undefined;
+      const userMsg: Message = { id: uid(), role: 'user', content: text, ...(sentPin ? { skill: sentPin } : {}), ...(sentImages.length ? { turnImageIds: sentImages } : {}), ...(sentFiles ? { files: sentFiles } : {}) };
       // History still loading: wait for it so the model sees the earlier turns and the load does
       // not land on top of this turn.
       const pendingLoad = base ? undefined : historyLoads.current[chatId];
@@ -948,13 +952,13 @@ export default function App(): JSX.Element {
       try {
         let acc = '';
         let reasoning = '';
-        // Thinking time: from the first thought to the first word of the answer. Measured here
-        // because it is what the person waited through; the engine's own timings cover tokens.
-        let thinkStart = 0, thought = false;
+        // Thinking time: the sum of every stretch of thought in this reply, each ended by the answer or a tool
+        // call (#1575). Measured here because it is what the person waited through; the engine's own timings
+        // cover tokens. Only a stretch that closed writes state, so this costs nothing per token.
+        const thinking = createThinkingClock();
         const endThinking = () => {
-          if (!thinkStart || thought) return;
-          thought = true;
-          const ms = Math.round(performance.now() - thinkStart);
+          const ms = thinking.stop();
+          if (ms === undefined) return;
           setMessagesByChat((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, reasoningMs: ms } : m)) }));
         };
         const tools: ToolCallView[] = [];
@@ -1036,7 +1040,7 @@ export default function App(): JSX.Element {
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, warning: ev.text } : m)),
             }));
           } else if (ev.type === 'reasoning' && ev.text) {
-            if (!thinkStart) thinkStart = performance.now();
+            thinking.start();
             reasoning += ev.text;
             setMessagesByChat((prev) => ({
               ...prev,
@@ -1141,7 +1145,8 @@ export default function App(): JSX.Element {
             // second chip for the same call. This also clears any 'pending'
             // state, so an approved or refused call stops offering buttons
             // that would now 404.
-            const done = typeof ev.index === 'number' ? ev.index : tools.findIndex((t) => t && t.name === ev.name);
+            // #1575: a result whose index was never announced joins its open call of the same name, not a new chip.
+            const done = resultSlot(tools, typeof ev.index === 'number' ? ev.index : undefined, ev.name);
             const chip = finishedToolCall(done >= 0 ? tools[done] : undefined, { name: ev.name, text: ev.text, applied: ev.applied === true, target: ev.target, declined: ev.declined === true, notRun: ev.notRun === true }, TOOL_RESULT_LIMIT);
             if (done >= 0) tools[done] = chip; else tools.push(chip);
             setMessagesByChat((prev) => ({
@@ -1166,12 +1171,13 @@ export default function App(): JSX.Element {
           }));
         } else {
           failed = true;
-          const detail = err instanceof Error ? err.message : 'unknown error';
+          // The raw exception stays in the console; the reply says it in plain words (#1472), and keeps
+          // whatever text had streamed in, marked incomplete, instead of replacing it (#1547).
+          console.error('Reply failed', err);
+          const failure = failureCopy(err, translateNow);
           setMessagesByChat((prev) => ({
             ...prev,
-            [chatId]: (prev[chatId] ?? []).map((m) =>
-              m.id === replyId ? { ...m, content: `Request failed — ${detail}`, error: true } : m,
-            ),
+            [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? failedReply(m, failure) : m)),
           }));
         }
       } finally {
@@ -1247,7 +1253,7 @@ export default function App(): JSX.Element {
   const activeMode: ChatMode = view.kind === 'chat' ? sessionMode(activeChatMeta?.mode, pendingModes[view.chatId]) : 'chat';
 
   const sendToCurrent = useCallback(
-    (text: string, turn: { turnToolboxes?: string[]; turnImageIds?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin } = {}) => {
+    (text: string, turn: { turnToolboxes?: string[]; turnImageIds?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin; files?: string[] } = {}) => {
       if (view.kind !== 'chat') return;
       const chatId = view.chatId;
       const projectId = view.projectId ?? activeChatMeta?.projectId ?? null;

@@ -105,7 +105,9 @@ export function growIn(el: HTMLElement): Promise<void> {
 const MENUS = '.ctx-menu, .account-popover, .popup, .composer-actions-panel, .tool-catalogue-panel, .chat-link-menu, [role="menu"]';
 const DIALOGS = 'dialog[open], .aero, [data-motion="dialog"]';
 const TOASTS = '.save-error, [data-motion="toast"]';
-const CHIPS = '.reply-source-chip, .composer-context-chips > *, .frame-chips > *';
+// The project's context chips (.composer-context-chips) are not here: they show standing state that is
+// already there when the page opens, and an animated chip could be left part-faded (#1571).
+const CHIPS = '.reply-source-chip, .frame-chips > *';
 const ROWS = '.app .sidebar .chat-row, .app .sidebar .proj-row';
 const PRESS = '.btn, .modal-btn, .popup-tab, .send-btn, .glass.is-press, .new-chat-btn, [data-motion="press"]';
 const SIDEBAR = '.app .sidebar.pane:not(.coding-sidebar)';

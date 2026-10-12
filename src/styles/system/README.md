@@ -100,7 +100,7 @@ tile's width (see `src/motion`).
 | `.view-loading` | skeleton/placeholder fades in only after `--delay-skeleton` |
 | `.app-main[aria-busy="true"]` | content dims to .6 over 150ms |
 | a newly sent `.msg[data-role="user"]` | springs from scale .92 / y 6px, origin bottom right (src/motion) |
-| `.reply-source-chip`, `.composer-context-chips > *` | springs in, staggered 50ms + 30ms per sibling, max 8 (src/motion) |
+| `.reply-source-chip`, `.frame-chips > *` | springs in, staggered 50ms + 30ms per sibling, max 8 (src/motion) |
 | `.thinking`, `.live-thinking`, `.typing` | opacity .6 ↔ 1 over 2s |
 | `.save-error` | inverse-surface toast |
 

@@ -701,7 +701,7 @@ export async function* streamChat(
       }
     }
   }
-  if (!completed && body.spaceId !== 'diary') throw new Error('The model connection ended before the answer completed. Partial output was preserved; compact this chat or check the backend before retrying.');
+  if (!completed && body.spaceId !== 'diary') throw new Error('The model connection ended before the answer completed. Compact this chat or check the backend before retrying.');
   if (!completed && body.spaceId === 'diary') throw new Error('The diary connection ended before saving was confirmed. Check the saved diary before sending again.');
   } catch (error) {
     if (body.spaceId === 'diary' && !completed) throw new Error('The diary connection ended before saving was confirmed. Check the saved diary before sending again.');

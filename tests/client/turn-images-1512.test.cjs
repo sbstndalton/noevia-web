@@ -74,14 +74,14 @@ test('the upload path reports an image\'s asset id only after a successful, read
   const unreadableAt = body.indexOf('if (unreadable) { failures.push');
   const reportAt = body.indexOf('onImageAttached?.(');
   assert.ok(unreadableAt > 0 && reportAt > unreadableAt, 'the asset id is reported after the unreadable check, so a refused file is never attached');
-  assert.match(body, /const \{ project, disabled, diary = false, chatOnly = false, onChanged, onBusy, onStatus, onImageAttached \} = sink;/);
+  assert.match(body, /const \{ project, disabled, diary = false, chatOnly = false, onChanged, onBusy, onStatus, onImageAttached, onSaved \} = sink;/);
   assert.match(body, /if \(result\.attachment\?\.assetId\) onImageAttached\?\.\(result\.attachment\.assetId\);/);
 });
 
 test('the picker and the drop handler both carry the callback through the one shared sink', () => {
   const actions = src('components/ComposerActions.tsx');
-  assert.match(actions, /await uploadAttachments\(\{ project, disabled, diary, chatOnly, onChanged, onBusy, onStatus, onImageAttached \}, files, t\);/);
-  assert.match(actions, /export function ComposerActions\(\{ project, disabled, onChanged, onBusy, onStatus, header, diary = false, chatOnly = false, browseTools, onImageAttached \}/);
+  assert.match(actions, /await uploadAttachments\(\{ project, disabled, diary, chatOnly, onChanged, onBusy, onStatus, onImageAttached, onSaved \}, files, t\);/);
+  assert.match(actions, /export function ComposerActions\(\{ project, disabled, onChanged, onBusy, onStatus, header, diary = false, chatOnly = false, browseTools, onImageAttached, onSaved \}/);
 });
 
 test('the upload response type carries the image asset id the server returns', () => {
@@ -111,7 +111,8 @@ test('App sends turnImageIds on every chat request, as an array (never absent, s
   const handle = app.slice(app.indexOf('const handleSend = useCallback('), app.indexOf('const activeMode: ChatMode'));
   assert.match(handle, /turnImageIds: sentImages,/);
   assert.match(handle, /const sentImages = turnImageIdsToSend\(turn\.turnImageIds\);/);
-  assert.match(handle, /const userMsg: Message = \{ id: uid\(\), role: 'user', content: text, \.\.\.\(sentPin \? \{ skill: sentPin \} : \{\}\), \.\.\.\(sentImages\.length \? \{ turnImageIds: sentImages \} : \{\}\) \};/);
+  // #1514 adds a `files` spread after the image ids; the image ids must still be on the user turn.
+  assert.match(handle, /const userMsg: Message = \{ id: uid\(\), role: 'user', content: text, \.\.\.\(sentPin \? \{ skill: sentPin \} : \{\}\), \.\.\.\(sentImages\.length \? \{ turnImageIds: sentImages \} : \{\}\), \.\.\.\(sentFiles \? \{ files: sentFiles \} : \{\}\) \};/);
 });
 
 test('Retry and Regenerate resend the image ids the original message was sent with', () => {

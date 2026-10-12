@@ -71,6 +71,20 @@ input:not([type=checkbox]):not([type=radio]), textarea, select { border-color:va
 .native-modal::backdrop { background: transparent; }
 
 .msg-warning { color: var(--text-secondary); border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg-surface); padding: 8px 12px; font-size: var(--text-footnote); line-height: 1.5; }
+/* #1547/#1549: a failed reply. Partial text is labelled incomplete; the failure is an inline error card
+   with its own mark, in the interface font, never the reply's body style or the accent green. */
+.msg-partial-label { display: block; margin-bottom: 4px; color: var(--text-secondary); font-family: var(--font-ui); font-size: var(--text-caption); }
+.msg-failure { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin-top: 4px; padding: 10px 12px;
+  border: 1px solid var(--danger); border-radius: var(--radius-control);
+  background: var(--bg-surface); color: var(--text-primary); font-family: var(--font-ui); font-size: var(--text-footnote); line-height: 1.5; }
+.msg-failure-icon { flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--danger); color: var(--on-danger); font-size: 12px; font-weight: 700; line-height: 1; }
+.msg-failure-text { flex: 1 1 220px; min-width: 0; margin: 0; overflow-wrap: anywhere; }
+/* #1514: attached files as named chips, in the composer and on the message they were sent with. */
+.composer-file-chips, .msg-file-chips { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.msg-file-chips { justify-content: flex-end; margin: 4px 0 0; }
+.file-chip { max-width: 100%; gap: 4px; font-size: var(--text-caption); color: var(--text-secondary); }
+.file-chip > span { min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 519px) {
   .settings-detail .model-name-group { flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; }
   .settings-detail .model-name { max-width: 100%; }
@@ -83,7 +97,9 @@ input:not([type=checkbox]):not([type=radio]), textarea, select { border-color:va
    control scale. Keep these shared rules here, after component styles. */
 body { -webkit-font-smoothing: antialiased; }
 .app { position: relative; height: 100dvh; }
-.app-main { position: relative; overflow: hidden; margin: 0; border: 0; border-radius: 0; }
+/* #1478: overflow: clip (where supported) keeps the pane clipped without making it a scroll container, so a
+   programmatic focus or scrollIntoView cannot scroll the chat column out of place. hidden is the fallback. */
+.app-main { position: relative; overflow: hidden; overflow: clip; margin: 0; border: 0; border-radius: 0; }
 .app-stack { min-width: 0; }
 .sidebar { width: 248px; padding: 16px 12px 12px; gap: 8px; border-right: 0; }
 .side-logo span { font-size: var(--text-title3); font-weight: 600; letter-spacing: -.7px; }
@@ -1613,7 +1629,10 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 :root { --font-chat: var(--font-ui); --density-scale: 1; }
 :root[data-chat-font="serif"] { --font-chat: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif; }
 :root[data-chat-font="mono"] { --font-chat: var(--font-mono); }
-.msg .bubble, .msg .assistant-card, .markdown-preview { font-family: var(--font-chat); }
+/* The reply body follows the chat font setting. The card around it holds interface labels (routing,
+   thinking, tool count, Local, Sources), which stay in the interface face whatever that setting is (#1536). */
+.msg .bubble, .markdown-preview { font-family: var(--font-chat); }
+.msg .assistant-card { font-family: var(--font-ui); }
 
 /* Density trims the generous vertical rhythm without touching hit targets:
    a 44px button stays 44px, the space around it shrinks. */
@@ -1873,8 +1892,11 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 .routing-details-body p { margin: 0 0 6px; }
 .routing-details-body ul { list-style: none; padding: 0; margin: 8px 0; }
 .routing-details-body li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 5px 0; border-top: 1px solid var(--border-subtle); }
-.routing-details-body li span:first-child { min-width: 0; overflow-wrap: anywhere; }
-.routing-details-body li span:last-child { font-family: var(--font-mono); white-space: nowrap; }
+.routing-details-body li > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+/* #1535: label column, then the description column that wrapped lines stay in. */
+.routing-details-body .route-option { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 6px; align-items: baseline; }
+.routing-details-body .route-option-desc { min-width: 0; }
+.routing-details-body li > span:last-child { font-family: var(--font-mono); white-space: nowrap; }
 .routing-details-body small { display: block; color: var(--text-faint); }
 /* Anchored popover: the routing disclosure must never grow the stats strip itself (it
    would push the chat/composer around it) so it comes out of flow and opens upward from
@@ -2462,6 +2484,14 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 /* #778 routing modes: the local/cloud badge, the sensitivity card and the Force local toggle. */
 .route-badge { display: inline-block; align-self: flex-start; width: fit-content; margin: 0 0 4px; padding: 0 8px; border: 1px solid var(--border-subtle); border-radius: var(--radius-control); color: var(--text-muted); font-size: var(--text-caption); line-height: 1.6; cursor: help; }
 .route-badge[data-route="cloud"] { color: var(--accent-text); }
+/* #1537: the badge's reason in the app's own tooltip (the inverted surface of .rail-tip), not the browser's. */
+.route-badge[data-tip] { position: relative; }
+.route-badge[data-tip]:hover::after {
+  content: attr(data-tip); position: absolute; z-index: 20; left: 0; bottom: calc(100% + 6px);
+  width: max-content; max-width: min(300px, 80vw); padding: 5px 9px; border-radius: var(--radius-sm);
+  background: var(--text-primary); color: var(--bg-app); font-size: var(--text-footnote); font-weight: 500; line-height: 1.35;
+  white-space: normal; box-shadow: var(--shadow-pop); pointer-events: none;
+}
 .route-pending { border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg-surface); padding: 10px 12px; margin: 0 0 8px; font-size: var(--text-footnote); }
 .route-pending p { margin: 0 0 8px; color: var(--text-secondary); }
 .route-pending-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
