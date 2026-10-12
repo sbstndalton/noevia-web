@@ -21,7 +21,7 @@ test('there is exactly one attachment upload implementation, exported so a drop 
 
 test('the file-input picker\'s own upload() delegates to uploadAttachments rather than reimplementing it', () => {
   const upload = actionsSrc.slice(actionsSrc.indexOf('const upload = async (files: File[])'), actionsSrc.indexOf('return <div className="composer-actions"'));
-  assert.match(upload, /await uploadAttachments\(\{ project, disabled, diary, chatOnly, onChanged, onBusy, onStatus \}, files, t\);/);
+  assert.match(upload, /await uploadAttachments\(\{ project, disabled, diary, chatOnly, onChanged, onBusy, onStatus, onImageAttached \}, files, t\);/);
 });
 
 test('a drag not carrying files (a dragged link or text selection) is left alone, not treated as an empty drop', () => {

@@ -19,13 +19,15 @@ import { toolboxCopy } from '../toolbox-copy';
 export interface AttachmentSink {
   project: Project | null; disabled: boolean; diary?: boolean; chatOnly?: boolean;
   onChanged: () => void | Promise<void>; onBusy: (busy: boolean) => void; onStatus: (status: string) => void;
+  /** #1512: an image that was saved is attached to the next message (its project asset id). */
+  onImageAttached?: (assetId: string) => void;
 }
 
 /** The one attachment pipeline: size check, base64 read, `uploadProjectFile`, per-file status and
  *  failure copy, then a single summary line. Extracted so drag-and-drop (#437) is a second way to
  *  call this, never a second implementation of it. */
 export async function uploadAttachments(sink: AttachmentSink, files: File[], t: Translate): Promise<void> {
-  const { project, disabled, diary = false, chatOnly = false, onChanged, onBusy, onStatus } = sink;
+  const { project, disabled, diary = false, chatOnly = false, onChanged, onBusy, onStatus, onImageAttached } = sink;
   if (!project || !files.length || disabled) return;
   onBusy(true);
   const failures: string[] = [], notices: string[] = [];
@@ -39,6 +41,7 @@ export async function uploadAttachments(sink: AttachmentSink, files: File[], t: 
       const unreadable = uploadUnreadableReason(result, t);
       if (unreadable) { failures.push(`${file.name}: ${unreadable}`); continue; }
       if (result.attachment?.reduction?.note) notices.push(`${file.name}: ${result.attachment.reduction.note}`);
+      if (result.attachment?.assetId) onImageAttached?.(result.attachment.assetId);
     } catch (err) { failures.push(`${file.name}: ${uploadFailureText(err, t, t('composer.upload.failed'))}`); }
   }
   // #905: a refresh that throws after the files were saved is reported in the status line, not
@@ -107,11 +110,13 @@ export function useAttachmentDrop(sink: AttachmentSink): { isDragOver: boolean; 
 }
 
 /** Composer shortcuts use the existing project APIs; enabling tools never approves a write. */
-export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus, header, diary = false, chatOnly = false, browseTools }: {
+export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus, header, diary = false, chatOnly = false, browseTools, onImageAttached }: {
   header?: ReactNode; diary?: boolean; chatOnly?: boolean;
   /** #510: on a phone the standalone Tools button above the composer is hidden, and this row in
    *  the + menu opens the same catalogue. Wider screens hide the row and keep the button. */
   browseTools?: { onOpen: () => void; count: number };
+  /** #1512: the picker's and the drop handler's saved images, attached to the next message. */
+  onImageAttached?: (assetId: string) => void;
   project: Project | null; disabled: boolean; onChanged: () => void | Promise<void>;
   /** Unused: the model is chosen from the composer's model control, not duplicated here. */
   onModels?: () => void; onBusy: (busy: boolean) => void; onStatus: (status: string) => void;
@@ -188,7 +193,7 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
   const upload = async (files: File[]) => {
     if (!files.length) return;
     setOpen(false);
-    await uploadAttachments({ project, disabled, diary, chatOnly, onChanged, onBusy, onStatus }, files, t);
+    await uploadAttachments({ project, disabled, diary, chatOnly, onChanged, onBusy, onStatus, onImageAttached }, files, t);
   };
   const tokens = boxes.filter(box => effectiveSelected.includes(box.id)).reduce((sum, box) => sum + box.estTokens, 0);
   return <div className="composer-actions" ref={root} onKeyDown={event => {

@@ -93,6 +93,7 @@ import { useT, t as translateNow } from './i18n';
 import { queueProjectPatch, restoreProjectPatch, takeProjectPatch, viewBelongsToProject, projectSaveErrorText, projectSyncErrorText, type PatchQueue } from './project-patches';
 import type { SkillPin } from './api-contract';
 import { storablePin } from './skill-pin-store';
+import { turnImageIdsToSend } from './turn-images';
 
 type View =
   | { kind: 'diary' }
@@ -873,7 +874,7 @@ export default function App(): JSX.Element {
   }, []);
 
   const handleSend = useCallback(
-    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; notice?: string | null; skill?: SkillPin; resend?: ResendOutcome } = {}) => {
+    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; turnImageIds?: string[]; notice?: string | null; skill?: SkillPin; resend?: ResendOutcome } = {}) => {
       // `streamingChats` is render state, so two sends in one tick both see it false. The ref
       // is updated synchronously and is the real guard against a duplicate generation.
       if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
@@ -881,7 +882,10 @@ export default function App(): JSX.Element {
       // #562/#571: the pin travels with the turn (and is saved with the transcript), so Retry and
       // Regenerate resend the same pin, also after a reload.
       const sentPin = storablePin(turn.skill);
-      const userMsg: Message = { id: uid(), role: 'user', content: text, ...(sentPin ? { skill: sentPin } : {}) };
+      // #1512: the image sources this message attaches. Always an array on the request; kept on the
+      // user turn (in this session only) so Retry and Regenerate send the same images again.
+      const sentImages = turnImageIdsToSend(turn.turnImageIds);
+      const userMsg: Message = { id: uid(), role: 'user', content: text, ...(sentPin ? { skill: sentPin } : {}), ...(sentImages.length ? { turnImageIds: sentImages } : {}) };
       // History still loading: wait for it so the model sees the earlier turns and the load does
       // not land on top of this turn.
       const pendingLoad = base ? undefined : historyLoads.current[chatId];
@@ -957,6 +961,7 @@ export default function App(): JSX.Element {
             chatId,
             mode: 'chat',
             ...(turn.turnToolboxes && turn.turnToolboxes.length ? { turnToolboxes: turn.turnToolboxes } : {}),
+            turnImageIds: sentImages,
             // #272: an exact reviewed Skill version for this message. Retry resends the same pin (#562);
             // edits send none.
             ...(turn.skill ? { skill: turn.skill } : {}),
@@ -1230,7 +1235,7 @@ export default function App(): JSX.Element {
   const activeMode: ChatMode = view.kind === 'chat' ? sessionMode(activeChatMeta?.mode, pendingModes[view.chatId]) : 'chat';
 
   const sendToCurrent = useCallback(
-    (text: string, turn: { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin } = {}) => {
+    (text: string, turn: { turnToolboxes?: string[]; turnImageIds?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin } = {}) => {
       if (view.kind !== 'chat') return;
       const chatId = view.chatId;
       const projectId = view.projectId ?? activeChatMeta?.projectId ?? null;
@@ -1264,7 +1269,7 @@ export default function App(): JSX.Element {
     // #658: a failed reply that had already saved changes stays as their record, so the resend
     // tells the model they are done instead of replaying them (rerunBase).
     const pin = storablePin(msgs[index - 1].skill);
-    void handleSend(chatId, projectId, msgs[index - 1].content, rerunBase(msgs, index), { ...(pin ? { skill: pin } : {}), resend: resendOutcome('retry', failed) });
+    void handleSend(chatId, projectId, msgs[index - 1].content, rerunBase(msgs, index), { ...(pin ? { skill: pin } : {}), turnImageIds: msgs[index - 1].turnImageIds, resend: resendOutcome('retry', failed) });
   }, [activeChatMeta, handleSend, handleCoworkSend, streamingChats, view]);
 
   // Edit an earlier message and re-run the conversation from that point.
@@ -1300,7 +1305,7 @@ export default function App(): JSX.Element {
     const plan = planRegenerate(msgs, messageId);
     if (!plan) return;
     const projectId = view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
-    void handleSend(chatId, projectId, plan.userText, plan.base, { ...(plan.skill ? { skill: plan.skill } : {}), resend: resendOutcome('regenerate', msgs[msgs.length - 1]) });
+    void handleSend(chatId, projectId, plan.userText, plan.base, { ...(plan.skill ? { skill: plan.skill } : {}), turnImageIds: plan.turnImageIds, resend: resendOutcome('regenerate', msgs[msgs.length - 1]) });
   }, [activeChatMeta, handleSend, streamingChats, view]);
 
   const startFreeChat = useCallback(() => {

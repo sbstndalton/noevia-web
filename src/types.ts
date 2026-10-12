@@ -60,6 +60,9 @@ export interface Message {
   sources?: SourceRef[];
   /** On a user turn: the Skill pin it was sent with, `skill_<id>@<sha256>` (#571), so Retry survives a reload. */
   skill?: string;
+  /** #1512: On a user turn: the project image sources it attached. Kept in this session for Retry and
+   *  Regenerate; not saved with the transcript. */
+  turnImageIds?: string[];
   /** #658: the reply ended early after tool steps had run: step supervision paused it, or it
    *  failed after changes were saved. `applied` is how many changes were saved. Not an error. */
   paused?: ReplyPause;
