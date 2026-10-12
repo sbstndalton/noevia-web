@@ -112,7 +112,9 @@ export function answerFields(v: ReplyVariant): Partial<Message> {
 /** The stored answers of a user turn, with the answer shown (`reply`, the message after it) brought up to date. */
 export function syncedAnswers(user: Message, reply: Message | undefined): ReplyVariant[] {
   const list = [...(user.answers ?? [])];
-  if (reply?.role === 'assistant' && !reply.error) list[user.answer ?? 0] = answerOf(reply);
+  const slot = user.answer ?? 0;
+  // #658: a record of saved changes has no text. It never replaces a stored answer that has some.
+  if (reply?.role === 'assistant' && !reply.error && (reply.content.trim() || !list[slot]?.content.trim())) list[slot] = answerOf(reply);
   return list;
 }
 

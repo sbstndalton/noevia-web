@@ -5,16 +5,43 @@ export function appliedCalls(m: Pick<Message, 'toolCalls'>): ToolCallView[] {
   return (m.toolCalls || []).filter((c) => c && c.applied === true);
 }
 
+/** A reply with no text that only says what it saved: the record kept for a replaced reply (appliedRecord),
+ *  or a reply that ended after its writes. */
+function isWriteRecord(m: Message): boolean {
+  return !m.content.trim() && m.paused !== undefined;
+}
+
+/** What identifies a saved change across a record and a reply that shows the same one. */
+function writeSignature(c: ToolCallView): string {
+  return [c.name, c.target || '', c.args || '', c.result || ''].join('\u0000');
+}
+
 /** The history sent with a turn. Each turn as before (a failed reply's own text is left out),
  *  plus one entry per change an earlier reply already saved, INCLUDING a reply that then failed
  *  or was paused (#658). The server words those for the model as done, so it does not propose
  *  the same change again on the next turn or on a Retry. */
 export function modelHistory(messages: Message[]): ModelHistoryEntry[] {
   const out: ModelHistoryEntry[] = [];
-  for (const m of messages) {
+  // #1517: a switcher can show a stored answer or version again while the record of its writes (kept when it was
+  // replaced) is still in the transcript. The record then says nothing the shown reply does not: its entries are
+  // dropped when the same write is told by a later reply, so the model hears each change once.
+  const laterWrites = new Set<string>();
+  // Keyed by message and call position: a record and the answer it came from share the same call objects.
+  const skip = new Set<string>();
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.role !== 'assistant') continue;
+    const record = isWriteRecord(m);
+    appliedCalls(m).forEach((c, n) => {
+      if (record && laterWrites.has(writeSignature(c))) skip.add(`${i}:${n}`);
+      else if (!record) laterWrites.add(writeSignature(c));
+    });
+  }
+  for (const [i, m] of messages.entries()) {
     if (!m.error) out.push({ role: m.role, content: m.content });
     if (m.role !== 'assistant') continue;
-    for (const c of appliedCalls(m)) {
+    for (const [n, c] of appliedCalls(m).entries()) {
+      if (skip.has(`${i}:${n}`)) continue;
       out.push({ role: 'tool', name: c.name, content: c.result || '', applied: true,
         ...(c.target ? { target: c.target } : {}), ...(c.args ? { args: c.args } : {}) });
     }
