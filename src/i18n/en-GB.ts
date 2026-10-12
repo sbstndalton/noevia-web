@@ -1317,6 +1317,7 @@ export const EN_GB = {
   'chat.routing.flag.secret': "a password or key",
   'chat.routing.flag.iban': "a bank account number",
   'chat.routing.flag.card': "a card number",
+  'chat.routing.flag.health': "health information",
   'chat.routing.flag.router': "the router judged it private",
   'chat.routing.flag.unavailable': "the sensitivity check could not answer",
   'chat.routing.pending': "This looks sensitive ({reason}).",

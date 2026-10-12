@@ -1306,6 +1306,7 @@ export const SV_SE: Catalogue = {
   'chat.routing.flag.secret': "ett lösenord eller en nyckel",
   'chat.routing.flag.iban': "ett kontonummer",
   'chat.routing.flag.card': "ett kortnummer",
+  'chat.routing.flag.health': "hälsouppgifter",
   'chat.routing.flag.router': "routern bedömde det som privat",
   'chat.routing.flag.unavailable': "känslighetskontrollen kunde inte svara",
   'chat.routing.pending': "Det här ser känsligt ut ({reason}).",

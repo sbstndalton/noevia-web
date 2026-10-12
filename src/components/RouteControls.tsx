@@ -16,11 +16,12 @@ const REASON_KEY: Record<RouteReason, 'chat.routing.reason.mode' | 'chat.routing
   remembered: 'chat.routing.reason.remembered',
 };
 
-const FLAG_KEY: Record<RouteFlag, 'chat.routing.flag.diary' | 'chat.routing.flag.secret' | 'chat.routing.flag.iban' | 'chat.routing.flag.card' | 'chat.routing.flag.router' | 'chat.routing.flag.unavailable'> = {
+const FLAG_KEY: Record<RouteFlag, 'chat.routing.flag.diary' | 'chat.routing.flag.secret' | 'chat.routing.flag.iban' | 'chat.routing.flag.card' | 'chat.routing.flag.health' | 'chat.routing.flag.router' | 'chat.routing.flag.unavailable'> = {
   diary: 'chat.routing.flag.diary',
   secret: 'chat.routing.flag.secret',
   iban: 'chat.routing.flag.iban',
   card: 'chat.routing.flag.card',
+  health: 'chat.routing.flag.health',
   router: 'chat.routing.flag.router',
   unavailable: 'chat.routing.flag.unavailable',
 };
