@@ -29,6 +29,7 @@ export const FR_FR: Catalogue = {
   'sidebar.customise': "Personnaliser",
   'sidebar.search': 'Rechercher dans noevia',
   'sidebar.workspaceMode': "Mode de l’espace de travail",
+  'providers.localInference': "Inférence locale",
   'sidebar.searchPlaceholder': 'Rechercher des discussions, projets et pages…',
   'sidebar.destinations': 'Destinations',
   'sidebar.noSearchResults': 'Aucune discussion, aucun projet ni aucune page ne correspond.',

@@ -1,4 +1,5 @@
 import { appLocale } from '../user-preferences';
+import { passkeyDisplayName, providerDisplayName } from '../display-names';
 import { formatNumber } from '../number-format';
 import { McpStatus } from './McpStatus';
 import { openModelSettings } from '../models-open';
@@ -162,7 +163,7 @@ function SecurityCard({ onOpenSection }: { onOpenSection?: (id: string) => void 
       {/* #404: a passkey has no online/offline state to show — it is a registered credential, not
           a live connection — so, per PRODUCT.md's "nothing fake", it gets no status dot at all
           (the same no-dot pattern Users' account rows already use) rather than a decorative one. */}
-      {passkeys.map(k => <div className="model-row" key={k.id}><div className="model-name-group"><span className="model-name">{k.name}</span><span className="model-quant">{k.backedUp ? t('security.syncedPasskey') : k.deviceType}</span></div><button className="recents-del" aria-label={t('security.removePasskeyNamed', { name: k.name })} onClick={() => setConfirmPasskey(k)}><ShellIcon name="close" size={16}/></button></div>)}
+      {passkeys.map(k => <div className="model-row" key={k.id}><div className="model-name-group"><span className="model-name">{passkeyDisplayName(k.name, t)}</span><span className="model-quant">{k.backedUp ? t('security.syncedPasskey') : k.deviceType}</span></div><button className="recents-del" aria-label={t('security.removePasskeyNamed', { name: k.name })} onClick={() => setConfirmPasskey(k)}><ShellIcon name="close" size={16}/></button></div>)}
       <button className="modal-btn secondary" onClick={() => void act(t('security.passkeySetup'), addKey, t('security.passkeyAdded'))}><ShellIcon name="plus" size={16}/>{t('security.addPasskey')}</button>
       {/* #404: the dot was hard-coded green for every row regardless of which session the browser
           is actually using. `s.current` (GET /api/profile marks the calling request's own
@@ -377,7 +378,7 @@ function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
                 it gets no dot rather than a fabricated one. */}
             {p.isDefault && <span className={`model-dot${health.inferenceUp ? '' : ' down'}`} />}
             <div className="model-name-group">
-              <span className="model-name">{p.label}</span>
+              <span className="model-name">{providerDisplayName(p, t)}</span>
               <span className="model-quant">{p.baseUrl}</span>
             </div>
             {p.isDefault ? (
@@ -388,7 +389,7 @@ function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
                 {p.contextTokens && <span className="model-quant">{t('providers.contextHint', { tokens: p.contextTokens.toLocaleString(appLocale()) })}</span>}
                 <span className="provider-row-actions">
                   {canEdit(p) && (
-                    <button ref={(el) => { if (el) editRefs.current.set(p.id, el); else editRefs.current.delete(p.id); }} className="recents-del" title={t('providers.edit')} aria-label={t('providers.editNamed', { name: p.label })} aria-expanded={editing === p.id} disabled={loading || !!removing} onClick={() => setEditing(editing === p.id ? null : p.id)}>
+                    <button ref={(el) => { if (el) editRefs.current.set(p.id, el); else editRefs.current.delete(p.id); }} className="recents-del" title={t('providers.edit')} aria-label={t('providers.editNamed', { name: providerDisplayName(p, t) })} aria-expanded={editing === p.id} disabled={loading || !!removing} onClick={() => setEditing(editing === p.id ? null : p.id)}>
                       <ShellIcon name="pencil" size={16}/>
                     </button>
                   )}
@@ -400,7 +401,7 @@ function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
             )}
           </div>
           {editing === p.id && canEdit(p) && (
-            <div className="provider-edit" role="group" aria-label={t('providers.editNamed', { name: p.label })}>
+            <div className="provider-edit" role="group" aria-label={t('providers.editNamed', { name: providerDisplayName(p, t) })}>
               <ProviderForm
                 key={p.id}
                 autoFocus

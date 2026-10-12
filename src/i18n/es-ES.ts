@@ -29,6 +29,7 @@ export const ES_ES: Catalogue = {
   'sidebar.customise': "Personalizar",
   'sidebar.search': 'Buscar en noevia',
   'sidebar.workspaceMode': "Modo de espacio de trabajo",
+  'providers.localInference': "Inferencia local",
   'sidebar.searchPlaceholder': 'Buscar chats, proyectos y páginas…',
   'sidebar.destinations': 'Destinos',
   'sidebar.noSearchResults': 'No hay chats, proyectos ni páginas coincidentes.',
