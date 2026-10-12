@@ -17,6 +17,8 @@ import type { Project, ToolCallView } from '../types';
 import { SendIcon } from './Icons';
 import { ComposerTextarea } from './ComposerTextarea';
 import { DiaryCalendar } from './DiaryCalendar';
+import { DiaryLoadedSearch } from './DiaryLoadedSearch';
+import { mergeLoadedDays, type LoadedDays } from '../diary-loaded-search';
 import { DiaryContextPanel } from './DiaryContextPanel';
 import { useEffect, useRef, useState } from 'react';
 import { isFocusable } from '../focus-utils';
@@ -77,6 +79,9 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   const [overview, setOverview] = useState<{ready: boolean; failed: boolean; memory: FileEntry[]; sources: FileEntry[]; recentDays: string[]}>({ready:false,failed:false,memory:[],sources:[],recentDays:[]});
   const [months, setMonths] = useState<string[]>([]);
   const [days, setDays] = useState<Record<string,string>>({});
+  // #1453: every day text this session has loaded (the months the view opened), for the loaded-months search.
+  const [loadedDays, setLoadedDays] = useState<LoadedDays>({});
+  useEffect(() => { setLoadedDays(prev => mergeLoadedDays(prev, days)); }, [days]);
   const [draft, setDraft] = useState('');
   const [turns, setTurns] = useState<Record<string,Turn[]>>({});
   const [busy, setBusy] = useState(false);
@@ -650,6 +655,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
       {localRecoveryError && <p className="conn-banner" role="alert">{localRecoveryError}</p>}
       {!!savedRecoveries.length && !folder && <section className="diary-pending"><div><strong>{t('diary.recovery.localSessionsTitle')}</strong><p>{t('diary.recovery.reconnectHint')}</p>{savedRecoveries.map(record=><div key={record.id}><span><bdi>{record.folder.name}</bdi> · {new Date(record.updatedAt).toLocaleString()}</span><button className="popup-tab" disabled={busy || !storage} onClick={()=>restoreLocalRecovery(record)}>{t('diary.recovery.reconnectAndRecover')}</button><button className="popup-tab" disabled={busy} onClick={()=>{if(window.confirm(t('diary.confirm.removeRecoveryCopy')))void forgetLocalRecovery(recoveryOwner,record.id).then(()=>listLocalRecovery(recoveryOwner)).then(setSavedRecoveries).catch(e=>setError(String(e)));}}>{t('diary.recovery.forget')}</button></div>)}</div></section>}
       {pendingCount > 0 && <div className="diary-pending" role="status"><span>{Object.keys(pendingLocal).length ? t('diary.pending.localSaveNeedsAttention') : t.plural('diary.pending.filesWaiting', Object.keys(pendingSync).length)}</span><button className="popup-tab" disabled={busy} onClick={()=>void run(async()=>{ if(Object.keys(pendingLocal).length) await commitLocal(pendingLocal); else await syncChanges(pendingSync); })}>{t('diary.pending.retry')}</button></div>}
+      {!day && <DiaryLoadedSearch loaded={loadedDays} onOpen={(picked) => navigate(picked.slice(0, 7), picked)} />}
       {!day && <DiaryCalendar month={month || today.slice(0,7)} today={today} days={days} busy={busy} ready={overview.ready} failed={overview.failed} navigate={navigate} />}
       {day && <section className="diary-day"><h1>{dayLabel(day)}</h1>{days[day]?.trim() ? <details className="diary-saved-record" key={`${day}-${!!conversation.length}`} open={!conversation.length}><summary>{t('diary.day.savedEntry')}</summary><MarkdownPreview text={days[day]} /></details> : !conversation.length && <p className="diary-intro">{t('diary.day.blankPage')}</p>}</section>}
       {!!conversation.length && <section className="diary-conversation" aria-live="polite" aria-busy={busy}>{conversation.map((t2,i)=><article className="diary-reply" data-role={t2.role} data-exchange-id={t2.exchangeId} tabIndex={t2.exchangeId ? -1 : undefined} key={i}><span className="msg-sender">{t2.role==='user'?t('diary.conversation.you'):t('diary.conversation.diaryCompanion')}</span>{t2.role === 'assistant' && t2.activity?.length && <details className="diary-activity" open={busy && i === conversation.length - 1}><summary>{busy && i === conversation.length - 1 ? <>{t2.activity.at(-1)}{t2.startedAt && <> · <LiveTimer startedAt={t2.startedAt} /></>}</> : t('diary.conversation.diaryActivity')}</summary><ol>{t2.activity.map((label,n)=><li key={n}>{label}</li>)}</ol></details>}{t2.reasoning && <ThinkingBlock text={t2.reasoning} live={busy && i === conversation.length - 1 && !t2.content} />}{!!t2.tools?.length && <ToolCalls calls={t2.tools.filter(Boolean)} />}<MarkdownPreview text={t2.content || (busy ? t('diary.conversation.workingOnDiary') : '')} /></article>)}</section>}
