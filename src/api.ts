@@ -326,6 +326,8 @@ export function createProject(body: {
   instructions?: string;
   files?: { name: string; content: string }[];
   routing?: 'manual' | 'auto';
+  /** #1522: a new project is created Automatic; the server stores it as toolsMode. */
+  toolsMode?: 'auto' | 'manual';
 }): Promise<Project> {
   return postJson('/api/projects', body);
 }
