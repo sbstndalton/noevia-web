@@ -149,7 +149,9 @@ export function RoutingDetails({ decision }: { decision: RoutingDecision }) {
       <p>{decision.status === 'accepted' ? t('chat.route.accepted') : t('chat.route.fallback', { reason })}{Number.isFinite(decision.latencyMs) ? ` · ${formatNumber(Math.round(decision.latencyMs!), t.locale, 0)} ms` : ''}</p>
       {selectedRole && selectedRole !== decision.effectiveRole && <p>{t('chat.route.selectedUsed', { selected: routeRoleName(t, selectedRole), used: routeRoleName(t, decision.effectiveRole) })}</p>}
       {offered.length > 0 && <ul>{offered.map(option => <li key={option.id}>
-        <span><strong>{routeRoleName(t, option.id)}</strong> ·{routeDescription(t, option.id, option.label)}</span>
+        {/* #1535: the label and its description are one grid, so a wrapped description hangs under the
+            description (after the label) and the dot is followed by a space, like the other separators. */}
+        <span className="route-option"><strong>{routeRoleName(t, option.id)}</strong><span className="route-option-desc">· {routeDescription(t, option.id, option.label)}</span></span>
         <span>{Object.hasOwn(scores, option.id) && Number.isFinite(scores[option.id]) ? formatNumber(scores[option.id], t.locale, { max: 4 }) : '—'}</span>
       </li>)}</ul>}
       <small>{t('chat.route.scoresNote')}</small>

@@ -1853,8 +1853,11 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 .routing-details-body p { margin: 0 0 6px; }
 .routing-details-body ul { list-style: none; padding: 0; margin: 8px 0; }
 .routing-details-body li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 5px 0; border-top: 1px solid var(--border-subtle); }
-.routing-details-body li span:first-child { min-width: 0; overflow-wrap: anywhere; }
-.routing-details-body li span:last-child { font-family: var(--font-mono); white-space: nowrap; }
+.routing-details-body li > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+/* #1535: label column, then the description column that wrapped lines stay in. */
+.routing-details-body .route-option { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 6px; align-items: baseline; }
+.routing-details-body .route-option-desc { min-width: 0; }
+.routing-details-body li > span:last-child { font-family: var(--font-mono); white-space: nowrap; }
 .routing-details-body small { display: block; color: var(--text-faint); }
 /* Anchored popover: the routing disclosure must never grow the stats strip itself (it
    would push the chat/composer around it) so it comes out of flow and opens upward from
