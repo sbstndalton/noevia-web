@@ -305,7 +305,7 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'notifications.event.replyFinishedDesc': "Uma resposta terminou, ou não conseguiu terminar, enquanto você estava em outra aba.",
   'notifications.event.approvalNeeded': "Aprovação necessária",
   'notifications.event.approvalNeededDesc': "Uma ferramenta quer mudar algo e está esperando sua decisão.",
-  'notifications.inAppNote': "Avisos dentro do app, como uma fonte que não sincronizou, sempre aparecem no noevia e não dependem destas chaves.",
+  'notifications.inAppNote': "Avisos dentro do app, como uma fonte que não sincronizou, sempre aparecem no noevia e não dependem destes interruptores.",
   'keyboard.intro': "Como a caixa de mensagem envia e todos os atalhos que o noevia entende. Pressione ? fora de um campo de texto para vê-los em qualquer lugar.",
   'keyboard.sending': "Envio de mensagens",
   'keyboard.sendWith': "Enviar com",
