@@ -5,8 +5,10 @@ import { useActiveCodeTasks } from './code/useActiveCodeTasks';
 import { CodingProjectList, CodingTaskList } from './CodingSidebarLists';
 import { orderedProjects, recentChats, readSidebarOrder, moveProject } from '../sidebar-order';
 import { normalizeRenameDraft } from '../rename-draft';
+import { archivePatch, undoArchivePatch } from '../chat-archive';
 import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { JSX } from 'react';
 import { AccountMenu } from './AccountMenu';
 import { ModeSwitch } from './ModeSwitch';
@@ -348,7 +350,7 @@ export function Sidebar({
   }, [chats]);
   const archiveChat = (c: ChatMeta, projectId: string | null, keyboardInitiated: boolean) => {
     pendingNotify.current = { id: c.id, archived: true };
-    onPatchChat(projectId, c.id, { archived: true });
+    onPatchChat(projectId, c.id, archivePatch());
     setArchiveUndo({ chat: c, projectId, keyboardInitiated });
     armAutoDismiss();
   };
@@ -356,7 +358,7 @@ export function Sidebar({
     if (!archiveUndo) return;
     if (archiveUndoTimer.current) clearTimeout(archiveUndoTimer.current);
     pendingNotify.current = { id: archiveUndo.chat.id, archived: false };
-    onPatchChat(archiveUndo.projectId, archiveUndo.chat.id, { archived: false });
+    onPatchChat(archiveUndo.projectId, archiveUndo.chat.id, undoArchivePatch(archiveUndo.chat));
     setArchiveUndo(null);
   };
   // The hover card lives in .spaces, which is overflow-y:auto — an absolutely
@@ -803,14 +805,17 @@ export function Sidebar({
 
       {/* Quick-archive has no confirmation, so it needs a way back (#362): a reversible-action
           toast, not an alert — same shape as the app's save-error toast. */}
-      {archiveUndo && (
+      {/* #1424 (adjacent): the sidebar paints its own stacking context, so a toast inside it sat under the
+          main pane and its Undo could not be pressed. It renders in the body, as the account menu does. */}
+      {archiveUndo && createPortal(
         <div className="save-error is-notice" role="status"
           onFocus={() => { if (archiveUndoTimer.current) { clearTimeout(archiveUndoTimer.current); archiveUndoTimer.current = null; } }}
           onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) armAutoDismiss(); }}>
           <span>{t('sidebar.chatArchivedToast')}</span>
           <button ref={undoButtonRef} className="btn btn-secondary" onClick={undoArchive}>{t('common.undo')}</button>
           <button onClick={() => setArchiveUndo(null)} aria-label={t('common.dismiss')}><ShellIcon name="close" size={16}/></button>
-        </div>
+        </div>,
+        document.body,
       )}
 
       <div className="side-footer">{mcp?.configured && (() => {

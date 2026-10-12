@@ -8,6 +8,7 @@ import { appLocale } from '../../user-preferences';
 import { ConfirmDialog } from '../ContextMenu';
 import { ShellIcon } from '../ShellIcon';
 import { notifyWorkspaceChanged, useWorkspaceChanged } from './workspace-changed';
+import { restorePatch } from '../../chat-archive';
 
 const PAGE = 50;
 
@@ -57,7 +58,7 @@ export function ArchivedChatsView({ onDelete, onOpenData }: { onDelete: (project
     for (const r of list) groups.set(r.projectId, [...(groups.get(r.projectId) || []), r]);
     let failed = 0, moved = 0;
     for (const [projectId, group] of groups) {
-      const next = group.map((r) => ({ ...r.chat, archived: false }));
+      const next = group.map((r) => ({ ...r.chat, ...restorePatch() }));
       // A chat moved to another list since this page loaded is not restored here (#765); the
       // workspace refresh below shows where it is now.
       try { moved += skippedChatIds(await (projectId ? saveProjectChats(projectId, next) : saveFreeChats(next))).length; } catch { failed += group.length; }
