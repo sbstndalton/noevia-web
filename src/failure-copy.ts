@@ -33,3 +33,10 @@ export function failedReply(message: Message, failure: string): Message {
   const partial = message.content.trim() ? message.content : '';
   return { ...message, error: true, failure, content: partial };
 }
+
+/** #1593: the patch for a Task/Cowork start that failed. The sentence is the failure and nothing had
+ *  streamed, so `content` stays empty: the failure card is the only place it appears, never also as an
+ *  "Incomplete" partial reply. */
+export function coworkStartFailure(failure: string, repository: string): Partial<Message> {
+  return { content: '', failure, error: true, coworkRepository: repository, processingStatus: undefined };
+}

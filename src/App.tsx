@@ -94,7 +94,7 @@ import { EmptyState } from './components/EmptyState';
 import { currentRoutingDecision } from './current-routing';
 import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, settingsOpenAtLoad, withoutChat, withoutProject, type NavState } from './settings-nav';
 import { useT, t as translateNow } from './i18n';
-import { failedReply, failureCopy } from './failure-copy';
+import { coworkStartFailure, failedReply, failureCopy } from './failure-copy';
 import { createThinkingClock } from './thinking-time';
 import { queueProjectPatch, restoreProjectPatch, takeProjectPatch, viewBelongsToProject, projectSaveErrorText, projectSyncErrorText, type PatchQueue } from './project-patches';
 import type { SkillPin } from './api-contract';
@@ -1271,7 +1271,7 @@ export default function App(): JSX.Element {
         patch = { content: task.branch ? translateNow('chat.cowork.startedBranch', { repo, branch: task.branch }) : translateNow('chat.cowork.started', { repo }),
           coworkTask: { projectId, taskId: task.taskId, repository: task.repository || repository }, processingStatus: undefined };
       } catch (err) {
-        patch = { content: translateNow('chat.cowork.failed', { reason: err instanceof Error ? err.message : translateNow('chat.cowork.unknownError') }), error: true, coworkRepository: repository, processingStatus: undefined };
+        patch = coworkStartFailure(translateNow('chat.cowork.failed', { reason: err instanceof Error ? err.message : translateNow('chat.cowork.unknownError') }), repository);
       }
       sendingChats.current.delete(chatId);
       setStreamingChats(prev => { const next = { ...prev }; delete next[chatId]; return next; });

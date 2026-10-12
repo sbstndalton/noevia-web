@@ -751,7 +751,8 @@ export function ChatView({
                   {m.error ? (
                     // Errors are our own strings, not model output, so they never render as Markdown.
                     // Text that streamed in before the failure is shown above the failure, marked incomplete (#1547).
-                    <FailedReply partial={body} failure={m.failure ?? body} canRetry={isLast} disabled={streaming || actionBusy}
+                    // A legacy error reply with no `failure` has the sentence as its content: never partial (#1593).
+                    <FailedReply partial={m.failure ? body : ''} failure={m.failure ?? body} canRetry={isLast} disabled={streaming || actionBusy}
                       onRetry={() => onRetry(chatId, m.id)} />
                   ) : body ? (
                     <div className="bubble">
