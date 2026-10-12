@@ -105,6 +105,8 @@ export const IT_IT_CUSTOMISE: CustomiseCatalogue = {
   'customise.couldNotRemoveKey': "Impossibile rimuovere la chiave. Riprova.",
   'customise.view': "Visualizza",
   'customise.viewAria': "Visualizza {name}",
+  'customise.viewNewTabAria': "Visualizza {name} (si apre in una nuova scheda)",
+  'customise.opensInNewTab': "Si apre in una nuova scheda",
   'customise.projectForAria': "Progetto per {name}",
   'customise.couldNotLoadSkills': "Impossibile caricare le skill.",
   'customise.directoryUnreachable': "Impossibile raggiungere la directory.",

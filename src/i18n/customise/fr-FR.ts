@@ -105,6 +105,8 @@ export const FR_FR_CUSTOMISE: CustomiseCatalogue = {
   'customise.couldNotRemoveKey': "Impossible de supprimer la clé. Réessayez.",
   'customise.view': "Voir",
   'customise.viewAria': "Voir {name}",
+  'customise.viewNewTabAria': "Voir {name} (s’ouvre dans un nouvel onglet)",
+  'customise.opensInNewTab': "S’ouvre dans un nouvel onglet",
   'customise.projectForAria': "Projet pour {name}",
   'customise.couldNotLoadSkills': "Impossible de charger les compétences.",
   'customise.directoryUnreachable': "L’annuaire n’a pas pu être joint.",

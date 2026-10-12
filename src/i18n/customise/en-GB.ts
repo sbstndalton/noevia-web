@@ -111,6 +111,8 @@ export const EN_GB_CUSTOMISE = {
   'customise.couldNotRemoveKey': 'Could not remove the key. Try again.',
   'customise.view': 'View',
   'customise.viewAria': 'View {name}',
+  'customise.viewNewTabAria': "View {name} (opens in a new tab)",
+  'customise.opensInNewTab': "Opens in a new tab",
   'customise.projectForAria': 'Project for {name}',
   'customise.couldNotLoadSkills': 'Could not load skills.',
   'customise.directoryUnreachable': 'The directory could not be reached.',

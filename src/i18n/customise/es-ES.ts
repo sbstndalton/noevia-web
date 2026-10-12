@@ -105,6 +105,8 @@ export const ES_ES_CUSTOMISE: CustomiseCatalogue = {
   'customise.couldNotRemoveKey': "No se pudo eliminar la clave. Inténtalo de nuevo.",
   'customise.view': "Ver",
   'customise.viewAria': "Ver {name}",
+  'customise.viewNewTabAria': "Ver {name} (se abre en una pestaña nueva)",
+  'customise.opensInNewTab': "Se abre en una pestaña nueva",
   'customise.projectForAria': "Proyecto para {name}",
   'customise.couldNotLoadSkills': "No se pudieron cargar las habilidades.",
   'customise.directoryUnreachable': "No se pudo acceder al directorio.",

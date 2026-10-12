@@ -132,7 +132,7 @@ function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp'
           {i.description && <small>{i.description}</small>}
         </span>
         <span className="plugin-card-actions">
-          {i.url && <a className="btn btn-secondary btn-sm plugin-card-link" href={i.url} target="_blank" rel="noreferrer noopener" aria-label={t('customise.viewAria', { name: i.name })}>{t('customise.view')}</a>}
+          {i.url && <a className="btn btn-secondary btn-sm plugin-card-link" href={i.url} target="_blank" rel="noreferrer noopener" aria-label={t('customise.viewNewTabAria', { name: i.name })} title={t('customise.opensInNewTab')}>{t('customise.view')}<ShellIcon name="external-link" size={13}/></a>}
           {kind === 'skills' && <AddSkill skill={i} projects={projects} installedIn={(skillsStatus === 'ready' ? projectSkills : []).filter((s) => s.file === `${i.id}/SKILL.md`).map(() => skillProject)} onAdded={() => { setSkillsAttempt((n) => n + 1); onProjectsChanged?.(); }}/>}
           {kind === 'mcp' && isAdmin && <AddServer item={i} added={added.find((a) => a.registryName === i.id)} onChange={setAdded}/>}
         </span>

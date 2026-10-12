@@ -105,6 +105,8 @@ export const NL_NL_CUSTOMISE: CustomiseCatalogue = {
   'customise.couldNotRemoveKey': "De sleutel kon niet worden verwijderd. Probeer het opnieuw.",
   'customise.view': "Bekijken",
   'customise.viewAria': "{name} bekijken",
+  'customise.viewNewTabAria': "{name} bekijken (opent in een nieuw tabblad)",
+  'customise.opensInNewTab': "Opent in een nieuw tabblad",
   'customise.projectForAria': "Project voor {name}",
   'customise.couldNotLoadSkills': "Kon skills niet laden.",
   'customise.directoryUnreachable': "De directory was niet bereikbaar.",

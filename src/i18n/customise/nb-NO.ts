@@ -105,6 +105,8 @@ export const NB_NO_CUSTOMISE: CustomiseCatalogue = {
   'customise.couldNotRemoveKey': "Kunne ikke fjerne nøkkelen. Prøv igjen.",
   'customise.view': "Vis",
   'customise.viewAria': "Vis {name}",
+  'customise.viewNewTabAria': "Vis {name} (åpnes i en ny fane)",
+  'customise.opensInNewTab': "Åpnes i en ny fane",
   'customise.projectForAria': "Prosjekt for {name}",
   'customise.couldNotLoadSkills': "Kunne ikke laste ferdigheter.",
   'customise.directoryUnreachable': "Katalogen kunne ikke nås.",

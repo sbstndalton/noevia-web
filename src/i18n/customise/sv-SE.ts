@@ -105,6 +105,8 @@ export const SV_SE_CUSTOMISE: CustomiseCatalogue = {
   'customise.couldNotRemoveKey': "Det gick inte att ta bort nyckeln. Försök igen.",
   'customise.view': "Visa",
   'customise.viewAria': "Visa {name}",
+  'customise.viewNewTabAria': "Visa {name} (öppnas i en ny flik)",
+  'customise.opensInNewTab': "Öppnas i en ny flik",
   'customise.projectForAria': "Projekt för {name}",
   'customise.couldNotLoadSkills': "Kunde inte läsa in färdigheter.",
   'customise.directoryUnreachable': "Katalogen kunde inte nås.",
