@@ -2067,6 +2067,13 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 .web-address-field input { flex: 1 1 240px; min-width: 0; min-height: 44px; padding: 6px 12px; border: 1px solid var(--control-border); border-radius: var(--radius-input); background: var(--bg); color: var(--text); font: inherit; }
 .web-address-field .btn, .web-address-form > .btn { min-height: 44px; }
 .web-address-form > .btn { align-self: flex-start; }
+/* #1460: each earlier address with its own Remove control; the confirm names what stops working. */
+.web-address-earlier { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.web-address-earlier-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.web-address-earlier-origin { overflow-wrap: anywhere; }
+.web-address-earlier-row .btn { min-height: 44px; }
+.web-address-remove-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--text-secondary); }
+.web-address-remove-confirm > span:first-child { flex: 1 1 100%; }
 
 /* The list of files a half-typed [[ could mean. Anchored to the source pane, not the caret:
    a caret-following popup in a textarea needs a mirrored copy of the text to measure, and

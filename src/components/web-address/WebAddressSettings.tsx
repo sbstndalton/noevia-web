@@ -35,6 +35,9 @@ export function WebAddressSettings(): JSX.Element {
   const [error, setError] = useState('');
   const [unreachable, setUnreachable] = useState(false);
   const [saved, setSaved] = useState('');
+  // #1460: the earlier address whose removal is being confirmed, and the request in flight.
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [removeBusy, setRemoveBusy] = useState(false);
   const mounted = useRef(false);
   const loadAttempt = useRef(0);
   const saveAttempt = useRef(0);
@@ -76,6 +79,22 @@ export function WebAddressSettings(): JSX.Element {
     }
   };
 
+  // #1460: an admin removes an earlier address. The server stops trusting it for sign-in and drops it from
+  // the related origins, so passkeys made at that address must be registered again at the current one.
+  const removeEarlier = async (origin: string) => {
+    setRemoveBusy(true); setError(''); setSaved('');
+    try {
+      const r = await call<Address>('/api/admin/web-address/remove-earlier', tRef.current('webAddress.readError'), { origin });
+      if (!mounted.current) return;
+      if (!r.ok) { setError(r.body.error || tRef.current('webAddress.removeError')); return; }
+      setCurrent(r.body); setRemoving(null);
+    } catch {
+      if (mounted.current) setError(tRef.current('webAddress.removeError'));
+    } finally {
+      if (mounted.current) setRemoveBusy(false);
+    }
+  };
+
   const moved = saved && saved !== window.location.origin;
   return <>
     <div className="settings-title"><h1>{t('settings.section.address')}</h1><p>{t('webAddress.intro')}</p></div>
@@ -84,7 +103,18 @@ export function WebAddressSettings(): JSX.Element {
     </div> : <>
       <div className="set-rows">
         <div className="set-row set-row-inline"><div className="set-row-text"><span className="set-row-label">{t('webAddress.current')}</span></div><div className="set-row-value">{current.origin || t('webAddress.notSet')}</div></div>
-        {current.previous.length > 0 && <div className="set-row set-row-inline"><div className="set-row-text"><span className="set-row-label">{t('webAddress.earlier')}</span><span className="set-row-desc">{t('webAddress.earlierDesc')}</span></div><div className="set-row-value">{current.previous.join(', ')}</div></div>}
+        {current.previous.length > 0 && <div className="set-row set-row-inline"><div className="set-row-text"><span className="set-row-label">{t('webAddress.earlier')}</span><span className="set-row-desc">{t('webAddress.earlierDesc')}</span></div><ul className="web-address-earlier" aria-label={t('webAddress.earlier')}>
+          {current.previous.map(origin => <li key={origin} className="web-address-earlier-row">
+            <span className="web-address-earlier-origin">{origin}</span>
+            {removing === origin
+              ? <span className="web-address-remove-confirm" role="group" aria-label={t('webAddress.removeNamed', { origin })}>
+                  <span>{t('webAddress.removeWarn', { origin })}</span>
+                  <button type="button" className="btn btn-primary" disabled={removeBusy} onClick={() => void removeEarlier(origin)}>{removeBusy ? t('common.checking') : t('webAddress.removeConfirm')}</button>
+                  <button type="button" className="btn btn-secondary" disabled={removeBusy} onClick={() => setRemoving(null)}>{t('webAddress.removeKeep')}</button>
+                </span>
+              : <button type="button" className="btn btn-secondary" aria-label={t('webAddress.removeNamed', { origin })} disabled={busy || removeBusy} onClick={() => setRemoving(origin)}>{t('webAddress.remove')}</button>}
+          </li>)}
+        </ul></div>}
       </div>
       <form className="settings-section web-address-form" onSubmit={(e) => { e.preventDefault(); void save(); }}>
         <h2>{t('webAddress.change')}</h2>
