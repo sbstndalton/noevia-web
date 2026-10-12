@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ContextMenu } from './ContextMenu';
 import { ShellIcon } from './ShellIcon';
-import { apiFetch } from '../api';
+import { apiFetch, fetchReasoningSettings } from '../api';
+import { invalidateReasoningSettings } from '../model-reads';
 import { useT } from '../i18n';
 import type { Project } from '../types';
 type Effort = 'default' | 'low' | 'high';
@@ -25,14 +26,14 @@ type Settings = { default: Effort; effort: Effort; mode: string; admin: boolean 
  *  ChatView reads it too, so the phone model button only names a level the sheet can offer. */
 export function useReasoningSettings(project: Project | null | undefined, enabled = true): Settings | null {
   const [revision,setRevision] = useState(0);
-  useEffect(()=>{const refresh=()=>setRevision(n=>n+1);window.addEventListener('cowork-reasoning-updated',refresh);return()=>window.removeEventListener('cowork-reasoning-updated',refresh);},[]);
+  useEffect(()=>{const refresh=()=>{invalidateReasoningSettings();setRevision(n=>n+1);};window.addEventListener('cowork-reasoning-updated',refresh);return()=>window.removeEventListener('cowork-reasoning-updated',refresh);},[]);
   const [settings,setSettings] = useState<Settings | null>(null);
   useEffect(() => {
     if(!enabled){setSettings(null);return;}
     let stale=false;
-    apiFetch('/api/reasoning-settings'+(project ? '?projectId='+encodeURIComponent(project.id) : ''))
-      .then(async r=>{if(!r.ok)throw Error('Effort settings unavailable');return r.json();})
-      .then(value=>{if(!stale && ['default','low','high'].includes(value.default))setSettings(value);})
+    // #1509: shared with the other mounts of this view (chat header, composer, Settings) instead of one GET each.
+    fetchReasoningSettings(project?.id ?? null)
+      .then(value=>{if(!stale && ['default','low','high'].includes(value.default))setSettings(value as Settings);})
       .catch(()=>{if(!stale)setSettings(null);});
     return()=>{stale=true;};
   },[enabled,revision,project?.id,project?.reasoningEffort,project?.model,project?.provider]);
