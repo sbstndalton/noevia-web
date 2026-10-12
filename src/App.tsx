@@ -81,6 +81,7 @@ import { StatsBar } from './components/StatsBar';
 import { finishedToolCall, pendingToolCall, settleReply, settleToolCalls } from './tool-call-state';
 import { chatHome } from './chat-home';
 import { declinedNames, editBase, modelHistory, persistableMessage, rerunBase, storedPause } from './applied-writes';
+import { interruptedFlag, storedInterrupted } from './interrupted-reply';
 import { mergeTranscripts } from './transcript-merge';
 import { skippedChatIds, withoutSkipped } from './list-save';
 import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, shouldSaveChat, upsertChatMeta } from './chat-save';
@@ -544,6 +545,7 @@ export default function App(): JSX.Element {
             sources: h.sources,
             ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}),
             ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}),
+            ...(storedInterrupted(h) ? { interrupted: true } : {}),
           }));
         setMessagesByChat((prev) => ({ ...prev, [id]: resolveLoadedHistory(prev[id] ?? [], loaded) }));
         setHistoryChecked((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
@@ -742,6 +744,7 @@ export default function App(): JSX.Element {
       sources: m.sources && m.sources.length ? m.sources : undefined,
       skill: m.role === 'user' ? m.skill : undefined,
       paused: m.role === 'assistant' ? m.paused : undefined,
+      interrupted: interruptedFlag(m),
     }));
     // Saves for one chat run in order. If another device saved first, merge its copy with ours
     // (nothing either side wrote is dropped), show the merged transcript, and save that.
@@ -749,7 +752,7 @@ export default function App(): JSX.Element {
       if (sendingChats.current.has(chatId)) { deferredMerges.current[chatId] = merged; return; }
       setMessagesByChat((prev) => ({
         ...prev,
-        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, ...(isRouteTarget(h.routeTarget) ? { routeTarget: h.routeTarget } : {}), reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats, coworkTask: h.coworkTask, sources: h.sources, ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}), ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}) })),
+        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, ...(isRouteTarget(h.routeTarget) ? { routeTarget: h.routeTarget } : {}), reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats, coworkTask: h.coworkTask, sources: h.sources, ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}), ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}), ...(storedInterrupted(h) ? { interrupted: true } : {}) })),
       }));
     };
     if (!shouldSaveChat(chatId, deletedChats.current)) return;
@@ -1246,7 +1249,7 @@ export default function App(): JSX.Element {
   const retryLast = useCallback((chatId: string, messageId: string) => {
     if (streamingChats[chatId]) return;
     const msgs = messagesRef.current[chatId] ?? [];
-    const index = msgs.findIndex(m => m.id === messageId && m.error);
+    const index = msgs.findIndex(m => m.id === messageId && (m.error || m.interrupted));
     // Retry is offered only for the final exchange. Never truncate later history.
     if (index !== msgs.length - 1 || index < 1 || msgs[index - 1].role !== 'user') return;
     const projectId = view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;

@@ -63,6 +63,8 @@ export interface Message {
   /** #658: the reply ended early after tool steps had run: step supervision paused it, or it
    *  failed after changes were saved. `applied` is how many changes were saved. Not an error. */
   paused?: ReplyPause;
+  /** #1507: a reply the server kept partway when it was cut off. Shown with Retry and Continue. */
+  interrupted?: boolean;
 }
 
 /** Why a reply ended before a final answer, and how many changes it had already saved (#658).
@@ -284,6 +286,8 @@ export interface HistoryEntry {
   skill?: string;
   /** Assistant turns (#658): the reply ended early after saving changes. */
   paused?: ReplyPause;
+  /** #1507: assistant turns only: the reply was saved partway and never finished (see interrupted-reply.ts). */
+  interrupted?: true;
 }
 
 /** One entry of the history sent to /api/chat: a turn, or (#658) a change an earlier reply
