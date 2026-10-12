@@ -81,7 +81,7 @@ import { StatsBar } from './components/StatsBar';
 import { finishedToolCall, pendingToolCall, settleReply, settleToolCalls } from './tool-call-state';
 import { chatHome } from './chat-home';
 import { declinedNames, editBase, modelHistory, persistableMessage, rerunBase, storedPause } from './applied-writes';
-import { mergeTranscripts } from './transcript-merge';
+import { foldDeferredMerge, mergeTranscripts, savedCopyExtends, type DeferredMerge } from './transcript-merge';
 import { skippedChatIds, withoutSkipped } from './list-save';
 import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, shouldSaveChat, upsertChatMeta } from './chat-save';
 import { readLastPlace, writeLastPlace, clearLastPlace, type LastPlace } from './last-view';
@@ -106,6 +106,48 @@ type View =
 
 /** #1508: how often the engine-wide stats snapshot is refreshed while the tab is visible. */
 const STATS_POLL_MS = 15_000;
+
+/** A saved transcript as the messages on screen (#1484 keeps this in one place for the load and the sync). */
+function messagesFromHistory(history: HistoryEntry[]): Message[] {
+  return history.map((h) => ({
+    id: uid(),
+    role: h.role,
+    content: h.content,
+    senderLabel: h.model,
+    routingDecision: h.routingDecision,
+    ...(isRouteTarget(h.routeTarget) ? { routeTarget: h.routeTarget } : {}),
+    reasoning: h.reasoning,
+    reasoningMs: h.reasoningMs,
+    toolCalls: settleToolCalls(h.toolCalls),
+    stats: h.stats,
+    coworkTask: h.coworkTask,
+    sources: h.sources,
+    ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}),
+    ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}),
+  }));
+}
+
+/** What a chat's messages save as: the transcript the server stores (and the multi-tab check compares against). */
+function historyEntriesOf(msgs: Message[]): HistoryEntry[] {
+  return msgs.map(persistableMessage).filter((m): m is Message => m !== null).map((m) => ({
+    role: m.role,
+    content: m.content,
+    model: m.senderLabel,
+    routingDecision: m.routingDecision,
+    ...(m.routeTarget ? { routeTarget: m.routeTarget } : {}),
+    reasoning: m.reasoning || undefined,
+    reasoningMs: m.reasoningMs,
+    toolCalls: m.toolCalls && m.toolCalls.length ? m.toolCalls : undefined,
+    stats: m.stats,
+    coworkTask: m.coworkTask,
+    sources: m.sources && m.sources.length ? m.sources : undefined,
+    skill: m.role === 'user' ? m.skill : undefined,
+    paused: m.role === 'assistant' ? m.paused : undefined,
+  }));
+}
+
+/** #1516: how often an open chat checks whether another tab changed it. */
+const CHAT_SYNC_MS = 15_000;
 
 function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -339,7 +381,9 @@ export default function App(): JSX.Element {
   // A merged transcript that arrived while a reply was streaming into that chat. Applying it then
   // would replace the live user message and reply placeholder; it is folded into the save made
   // when the stream ends instead.
-  const deferredMerges = useRef<Record<string, HistoryEntry[]>>({});
+  const deferredMerges = useRef<Record<string, DeferredMerge>>({});
+  // Saves queued or running per chat. The multi-tab sync (#1516) only adopts another tab's copy while none is.
+  const savesInFlight = useRef<Record<string, number>>({});
   // Chats whose transcript should be saved once the current render commits (kept out of state
   // updaters, which StrictMode runs twice).
   const persistAfterCommit = useRef<Set<string>>(new Set());
@@ -523,6 +567,36 @@ export default function App(): JSX.Element {
     };
   }, []);
 
+  // #1516: a chat open in two tabs. While this chat is open and idle (no send, no reply and no save in
+  // flight), its saved revision is checked every CHAT_SYNC_MS, and a newer copy that extends what is on
+  // screen is adopted, so the other tab's turns appear without a reload. A copy that diverges from this
+  // one is left to the next save, which merges it (#1515). Checks pause while the tab is hidden.
+  const chatViewId = view.kind === 'chat' ? view.chatId : null;
+  useEffect(() => {
+    if (!chatViewId) return;
+    const chatId = chatViewId;
+    let alive = true;
+    const busy = () => sendingChats.current.has(chatId) || (savesInFlight.current[chatId] ?? 0) > 0;
+    const check = () => {
+      if (!alive || document.visibilityState === 'hidden' || busy()) return;
+      void fetchChatHistoryRevision(chatId).then(({ history, revision }) => {
+        if (!alive || !revision || revision === historyRevisions.current[chatId] || busy()) return;
+        if (!shouldSaveChat(chatId, deletedChats.current)) return;
+        const local = historyEntriesOf(messagesRef.current[chatId] ?? []);
+        if (!savedCopyExtends(local, history)) return;
+        historyRevisions.current[chatId] = revision;
+        setMessagesByChat((prev) => ({ ...prev, [chatId]: resolveLoadedHistory(prev[chatId] ?? [], messagesFromHistory(history)) }));
+      }).catch(() => undefined);
+    };
+    const timer = window.setInterval(check, CHAT_SYNC_MS);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', check);
+    };
+  }, [chatViewId]);
+
   // Lazily load a chat's persisted history when it is opened.
   useEffect(() => {
     if (view.kind !== 'chat') return;
@@ -534,22 +608,7 @@ export default function App(): JSX.Element {
     const load = fetchChatHistoryRevision(id)
       .then(({ history, revision }) => {
         historyRevisions.current[id] = revision;
-        const loaded: Message[] = history.map((h) => ({
-            id: uid(),
-            role: h.role,
-            content: h.content,
-            senderLabel: h.model,
-            routingDecision: h.routingDecision,
-            ...(isRouteTarget(h.routeTarget) ? { routeTarget: h.routeTarget } : {}),
-            reasoning: h.reasoning,
-            reasoningMs: h.reasoningMs,
-            toolCalls: settleToolCalls(h.toolCalls),
-            stats: h.stats,
-            coworkTask: h.coworkTask,
-            sources: h.sources,
-            ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}),
-            ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}),
-          }));
+        const loaded: Message[] = messagesFromHistory(history);
         setMessagesByChat((prev) => ({ ...prev, [id]: resolveLoadedHistory(prev[id] ?? [], loaded) }));
         setHistoryChecked((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
         return loaded;
@@ -733,25 +792,11 @@ export default function App(): JSX.Element {
     // instead of a bare answer. The server strips these before replaying
     // history to a model, so they cost nothing in prompt tokens.
     // A failed reply is not saved, except as the record of changes it saved (#658).
-    const entries: HistoryEntry[] = msgs.map(persistableMessage).filter((m): m is Message => m !== null).map((m) => ({
-      role: m.role,
-      content: m.content,
-      model: m.senderLabel,
-      routingDecision: m.routingDecision,
-      ...(m.routeTarget ? { routeTarget: m.routeTarget } : {}),
-      reasoning: m.reasoning || undefined,
-      reasoningMs: m.reasoningMs,
-      toolCalls: m.toolCalls && m.toolCalls.length ? m.toolCalls : undefined,
-      stats: m.stats,
-      coworkTask: m.coworkTask,
-      sources: m.sources && m.sources.length ? m.sources : undefined,
-      skill: m.role === 'user' ? m.skill : undefined,
-      paused: m.role === 'assistant' ? m.paused : undefined,
-    }));
+    const entries = historyEntriesOf(msgs);
     // Saves for one chat run in order. If another device saved first, merge its copy with ours
     // (nothing either side wrote is dropped), show the merged transcript, and save that.
-    const show = (merged: HistoryEntry[]) => {
-      if (sendingChats.current.has(chatId)) { deferredMerges.current[chatId] = merged; return; }
+    const show = (merged: HistoryEntry[], ours: HistoryEntry[]) => {
+      if (sendingChats.current.has(chatId)) { deferredMerges.current[chatId] = { merged, ours }; return; }
       setMessagesByChat((prev) => ({
         ...prev,
         [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, ...(isRouteTarget(h.routeTarget) ? { routeTarget: h.routeTarget } : {}), reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats, coworkTask: h.coworkTask, sources: h.sources, ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}), ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}) })),
@@ -766,22 +811,26 @@ export default function App(): JSX.Element {
       const deferred = deferredMerges.current[chatId];
       if (deferred && !sendingChats.current.has(chatId)) {
         delete deferredMerges.current[chatId];
-        const merged = mergeTranscripts(deferred, next);
-        if (merged !== next) { next = merged; show(merged); }
+        // #1515: the held copy already holds the turns it was merged with; only what came after them is added.
+        const folded = foldDeferredMerge(deferred, next);
+        next = folded; show(folded, folded);
       }
       for (let attempt = 0; attempt < 3; attempt++) {
         if (!shouldSaveChat(chatId, deletedChats.current)) return;
         const result = await saveChatHistory(chatId, next, historyRevisions.current[chatId]);
         if (result.ok) { historyRevisions.current[chatId] = result.revision; return; }
-        const merged = mergeTranscripts(result.conflict.history, next);
+        const ours = next;
+        const merged = mergeTranscripts(result.conflict.history, ours);
         historyRevisions.current[chatId] = result.conflict.revision;
-        if (merged !== next) {
+        if (merged !== ours) {
           next = merged;
-          show(merged);
+          show(merged, ours);
         }
       }
     };
-    historySaves.current[chatId] = (historySaves.current[chatId] || Promise.resolve()).then(run).catch(() => undefined);
+    savesInFlight.current[chatId] = (savesInFlight.current[chatId] ?? 0) + 1;
+    historySaves.current[chatId] = (historySaves.current[chatId] || Promise.resolve()).then(run).catch(() => undefined)
+      .finally(() => { savesInFlight.current[chatId] = Math.max(0, (savesInFlight.current[chatId] ?? 1) - 1); });
   }, []);
 
   useEffect(() => {
