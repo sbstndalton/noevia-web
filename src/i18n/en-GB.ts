@@ -24,7 +24,7 @@ export const EN_GB = {
   'sidebar.newTask': 'New task',
   'sidebar.code.pullRequests': 'Pull requests',
   'sidebar.code.scheduled': 'Scheduled',
-  'sidebar.code.plugins': 'Plugins',
+  'sidebar.code.plugins': "Customise",
   'sidebar.code.explore': 'Explore',
   'sidebar.codingNavigation': 'Coding navigation',
   'sidebar.primary': 'Primary',

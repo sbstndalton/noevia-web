@@ -21,7 +21,7 @@ export const SV_SE: Catalogue = {
   'sidebar.newTask': "Ny uppgift",
   'sidebar.code.pullRequests': "Pull requests",
   'sidebar.code.scheduled': "Schemalagda",
-  'sidebar.code.plugins': "Tillägg",
+  'sidebar.code.plugins': "Anpassa",
   'sidebar.code.explore': "Utforska",
   'sidebar.codingNavigation': "Kodnavigering",
   'sidebar.primary': "Huvudnavigering",

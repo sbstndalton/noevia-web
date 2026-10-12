@@ -21,7 +21,7 @@ export const NL_NL: Catalogue = {
   'sidebar.newTask': "Nieuwe taak",
   'sidebar.code.pullRequests': "Pull requests",
   'sidebar.code.scheduled': "Gepland",
-  'sidebar.code.plugins': "Plug-ins",
+  'sidebar.code.plugins': "Aanpassen",
   'sidebar.code.explore': "Ontdekken",
   'sidebar.codingNavigation': "Code-navigatie",
   'sidebar.primary': "Hoofdnavigatie",

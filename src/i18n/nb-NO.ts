@@ -21,7 +21,7 @@ export const NB_NO: Catalogue = {
   'sidebar.newTask': "Ny oppgave",
   'sidebar.code.pullRequests': "Pull-forespørsler",
   'sidebar.code.scheduled': "Planlagt",
-  'sidebar.code.plugins': "Tillegg",
+  'sidebar.code.plugins': "Tilpass",
   'sidebar.code.explore': "Utforsk",
   'sidebar.codingNavigation': "Kodenavigasjon",
   'sidebar.primary': "Hovednavigasjon",

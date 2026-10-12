@@ -21,7 +21,7 @@ export const ES_ES: Catalogue = {
   'sidebar.newTask': "Nueva tarea",
   'sidebar.code.pullRequests': "Pull requests",
   'sidebar.code.scheduled': "Programadas",
-  'sidebar.code.plugins': "Plugins",
+  'sidebar.code.plugins': "Personalizar",
   'sidebar.code.explore': "Explorar",
   'sidebar.codingNavigation': "Navegación de código",
   'sidebar.primary': "Principal",

@@ -21,7 +21,7 @@ export const IT_IT: Catalogue = {
   'sidebar.newTask': "Nuova attività",
   'sidebar.code.pullRequests': "Pull request",
   'sidebar.code.scheduled': "Pianificate",
-  'sidebar.code.plugins': "Plugin",
+  'sidebar.code.plugins': "Personalizza",
   'sidebar.code.explore': "Esplora",
   'sidebar.codingNavigation': "Navigazione codice",
   'sidebar.primary': "Principale",

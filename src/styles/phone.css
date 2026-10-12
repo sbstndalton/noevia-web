@@ -483,6 +483,9 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .plugin-card-link { flex: none; align-self: center; }
 @media (pointer: coarse) { .plugin-card-link { min-height: 44px; display: inline-flex; align-items: center; } }
 .coding-content .plugins-page { padding-top: 0; }
+/* #1563: Code's Plugins page is the Customise page: it starts at the top and scrolls, like Customise in Chat, instead of sitting centred in the free height. */
+.app .coding-content.is-customise { justify-content: flex-start; overflow-y: auto; }
+.app .coding-content.is-customise .plugins-page { padding-top: var(--space-6); }
 /* Phone: the drawer toggle floats over each page's first row; Code and Plugins leave it room. */
 @media (max-width: 519px) {
   .app .coding-header { padding-left: 64px; padding-right: 12px; height: 60px; }
