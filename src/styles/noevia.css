@@ -127,7 +127,11 @@ button:disabled { opacity: .5; cursor: default; }
    diary content's own responsive gutter (.diary-compose, .diary-calendar-section) instead of
    chat's fixed 28px inset; they disagreed by ~30px at 1440px. Left edge and type scale only:
    .diary-home-link already matches chat's own .header-title (--text-callout/500). */
-.diary-header { padding-left: var(--diary-gutter); }
+/* #1541: the Diary header shares the content's column. --diary-inset is the side inset the content and
+   composer use (the 16px narrow value comes from the 1000px block below), and at wide widths the header
+   takes the same 820px column the calendar, list and conversation are centred in. */
+.diary-workspace { --diary-inset: var(--diary-gutter); }
+.diary-header { padding-left: max(var(--diary-inset), calc((100% - 820px) / 2)); padding-right: max(var(--diary-inset), calc((100% - 820px) / 2)); }
 .header-title, .crumb-back { font-size: var(--text-callout); font-weight: 500; }
 .model-pill { background: transparent; padding: 7px 9px; border-radius: var(--radius-control); color: var(--text-primary); }
 .model-pill:hover { background: var(--nav-hover); }
@@ -537,8 +541,8 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 /* Diary conversation and composer have independent layout; only content scrolls. */
 .diary-layout { overflow: hidden; }
 .diary-primary { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
-.diary-content-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-anchor: none; padding: 32px clamp(16px, 4vw, 64px); }
-.diary-composer-dock { flex: none; padding: 8px var(--diary-gutter) 12px; background: var(--bg-app); }
+.diary-content-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-anchor: none; padding: 32px var(--diary-inset); }
+.diary-composer-dock { flex: none; padding: 8px var(--diary-inset) 12px; background: var(--bg-app); }
 .diary-composer-dock .diary-compose { margin: 0 auto; }
 .diary-primary > .diary-save-status { flex: none; margin: 0; padding: 0 20px 8px; }
 .diary-context { min-height: 0; overflow-y: auto; }
@@ -548,8 +552,9 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 @media (max-width: 1000px) {
   .diary-layout { display: grid; grid-template-rows: minmax(0, 1fr) auto; }
   .diary-context { max-height: 150px; padding: 12px 18px; }
-  .diary-content-scroll { padding: 20px 16px; }
-  .diary-composer-dock { padding: 8px 16px; }
+  .diary-workspace { --diary-inset: 16px; }
+  .diary-content-scroll { padding: 20px var(--diary-inset); }
+  .diary-composer-dock { padding: 8px var(--diary-inset); }
 }
 
 .diary-activity { color: var(--text-secondary); margin: 8px 0 16px; font-size: var(--text-footnote); }
@@ -2395,7 +2400,8 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 :root[data-layout="mobile"] .diary-primary { flex: none; height: 100%; }
 :root[data-layout="mobile"] .diary-context { flex: none; display: block; border-left: 0; border-top: 1px solid var(--border); max-height: none; overflow: visible; padding: 12px 18px; }
 :root[data-layout="mobile"] .diary-context > section + section { border: 0; margin: 24px 0 0; padding: 0; }
-:root[data-layout="mobile"] .diary-content-scroll { padding: 20px 16px; }
+:root[data-layout="mobile"] .diary-workspace { --diary-inset: 16px; }
+:root[data-layout="mobile"] .diary-content-scroll { padding: 20px var(--diary-inset); }
 :root[data-layout="mobile"] .diary-composer-dock { padding: 8px 16px; }
 :root[data-layout="mobile"] .diary-landing { margin-top: 24px; }
 :root[data-layout="mobile"] .diary-landing h1 { font-size: var(--text-large); letter-spacing: -.9px; }
