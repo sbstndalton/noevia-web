@@ -81,12 +81,14 @@ async function keyboardScroll(locator) {
       assert.equal(await toast.locator('li').count(), 12, 'Settings close restores every error');
       await toast.getByRole('button', { name: 'Dismiss', exact: true }).click();
       singleError = true;
+      await page.getByRole('tab', { name: /^Sources(?: \(\d+\))?$/ }).click();
       await page.getByRole('button', { name: 'Refresh from storage', exact: true }).click();
       const message = toast.locator('.save-error-message');
       await message.waitFor();
       await keyboardScroll(message);
       assert.ok((await message.textContent()).includes('Synthetic long folder '.repeat(100)), 'Single error is retained completely');
       await toast.getByRole('button', { name: 'Dismiss', exact: true }).click();
+      await page.getByRole('tab', { name: /^Chats(?: \(\d+\))?$/ }).click();
       await page.getByText('Synthetic discussion', { exact: true }).last().click();
       const inspector = page.locator('#noevia-inspector');
       await inspector.waitFor();
