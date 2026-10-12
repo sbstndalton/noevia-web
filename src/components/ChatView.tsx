@@ -280,13 +280,16 @@ export function ChatView({
   const projectLead = t('chat.empty.project').split('{project}');
   const keyHint = sendHintText(t, sendKey, typeof navigator !== 'undefined' && isApple(navigator.platform || navigator.userAgent));
   const [freeContext, setFreeContext] = useState<Project | null>(null);
+  // #1484: opening a chat, or a Settings route over it, only READS its attachments project. The POST
+  // that creates it runs when the person acts on the composer (ensureFreeContext, below), so a chat
+  // that is never used leaves no orphan project behind.
   useEffect(() => {
     setFreeContext(null);
     if (project) return;
     let current = true;
-    apiFetch(`/api/chats/${encodeURIComponent(chatId)}/context`, { method: 'POST' }).then(async response => {
+    apiFetch(`/api/chats/${encodeURIComponent(chatId)}/context`).then(async response => {
       if (!response.ok) throw new Error('Could not load chat tools');
-      const value = await response.json(); if (current) setFreeContext(value.project);
+      const value = await response.json(); if (current) setFreeContext(value.project ?? null);
     }).catch(err => { if (current) statusOf(chatId, String(err)); });
     return () => { current = false; };
   }, [chatId, project?.id]);
@@ -303,6 +306,25 @@ export function ChatView({
     if (!response.ok) throw new Error('Could not refresh chat attachments');
     const value = (await response.json()).project;
     if (chatIdRef.current === forChat) setFreeContext(value);
+  };
+  // #1484: the attachments project of a free chat is created on the first composer action (the + menu,
+  // or a file dropped on the chat), not on open. One request is shared while it is in flight, and a
+  // failure is reported on this chat's status line rather than thrown.
+  const ensureInFlight = useRef<{ chatId: string; promise: Promise<Project | null> } | null>(null);
+  const ensureFreeContext = (): Promise<Project | null> => {
+    if (project) return Promise.resolve(project);
+    if (freeContext) return Promise.resolve(freeContext);
+    const forChat = chatId;
+    if (ensureInFlight.current?.chatId === forChat) return ensureInFlight.current.promise;
+    const promise: Promise<Project | null> = apiFetch(`/api/chats/${encodeURIComponent(forChat)}/context`, { method: 'POST' }).then(async response => {
+      if (!response.ok) throw new Error(response.status === 410 ? 'This chat was deleted.' : 'Could not load chat tools');
+      const created: Project | null = (await response.json()).project ?? null;
+      if (created && chatIdRef.current === forChat) setFreeContext(created);
+      return created;
+    }).catch(err => { statusOf(forChat, String(err instanceof Error ? err.message : err)); return null; })
+      .finally(() => { if (ensureInFlight.current?.promise === promise) ensureInFlight.current = null; });
+    ensureInFlight.current = { chatId: forChat, promise };
+    return promise;
   };
   // Every chat with work in flight, so overlapping uploads in two chats each keep their own lock.
   const [busyChats, setBusyChats] = useState<ReadonlySet<string>>(() => new Set());
@@ -532,6 +554,7 @@ export function ChatView({
   const { isDragOver, dropProps } = useAttachmentDrop({
     project: project || freeContext, disabled: streaming || actionBusy, chatOnly: !project,
     onChanged: refreshContext, onBusy: setActionBusy, onStatus: showActionStatus,
+    ensureProject: project ? undefined : ensureFreeContext,
   });
 
   const catalogue = !toolsByHand ? null : <ToolCatalogue open={catalogueOpen} onOpenChange={setCatalogueOpen} projectId={project?.id ?? null} mode={mode}
@@ -799,7 +822,7 @@ export function ChatView({
             onBlur={linkTargets ? () => setLinkAt(null) : undefined}
             aria-activedescendant={linkMenuOpen && linkOptions.length ? `chat-link-${chatId}-${Math.min(linkIndex, linkOptions.length - 1)}` : undefined}
           />
-          <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={showActionStatus}
+          <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={showActionStatus} onEnsureProject={project ? undefined : ensureFreeContext}
             browseTools={toolsByHand ? { onOpen: () => setCatalogueOpen(true), count: turnBoxes.length } : undefined} />
           {phone && <ModeToggle state={modeSwitch} disabled={streaming || actionBusy} compact />}
           <ComposerModel label={modelLabel} onClick={openModels}

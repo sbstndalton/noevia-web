@@ -19,6 +19,8 @@ import { toolboxCopy } from '../toolbox-copy';
 export interface AttachmentSink {
   project: Project | null; disabled: boolean; diary?: boolean; chatOnly?: boolean;
   onChanged: () => void | Promise<void>; onBusy: (busy: boolean) => void; onStatus: (status: string) => void;
+  /** #1484: a free chat has no attachments project until its first composer action; this creates it. */
+  ensureProject?: () => Promise<Project | null>;
 }
 
 /** The one attachment pipeline: size check, base64 read, `uploadProjectFile`, per-file status and
@@ -73,7 +75,7 @@ export function useAttachmentDrop(sink: AttachmentSink): { isDragOver: boolean; 
   // Nested elements each fire enter/leave as the pointer crosses their edges; a depth counter
   // (rather than the boolean state itself) is what tells a leave of a child from leaving the zone.
   const depth = useRef(0);
-  const canDrop = !sink.disabled && !!sink.project;
+  const canDrop = !sink.disabled && (!!sink.project || !!sink.ensureProject);
   // Plain closures, recreated each render like the rest of this component's handlers — always
   // reading the sink/translator passed in on *this* render rather than a memoized, possibly stale
   // one from a `useCallback` dependency list.
@@ -101,14 +103,19 @@ export function useAttachmentDrop(sink: AttachmentSink): { isDragOver: boolean; 
     setDragOver(false);
     if (!canDrop) return;
     const files = Array.from(event.dataTransfer?.files ?? []);
-    if (files.length) void uploadAttachments(sink, files, t);
+    if (!files.length) return;
+    if (sink.project) { void uploadAttachments(sink, files, t); return; }
+    // #1484: a file dropped on a chat with no attachments project yet creates it first, then uploads.
+    void sink.ensureProject?.().then(project => { if (project) return uploadAttachments({ ...sink, project }, files, t); return undefined; });
   };
   return { isDragOver, dropProps: { onDragEnter, onDragOver, onDragLeave, onDrop } };
 }
 
 /** Composer shortcuts use the existing project APIs; enabling tools never approves a write. */
-export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus, header, diary = false, chatOnly = false, browseTools }: {
+export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus, header, diary = false, chatOnly = false, browseTools, onEnsureProject }: {
   header?: ReactNode; diary?: boolean; chatOnly?: boolean;
+  /** #1484: creates a free chat's attachments project when the + menu opens over one that has none yet. */
+  onEnsureProject?: () => Promise<Project | null>;
   /** #510: on a phone the standalone Tools button above the composer is hidden, and this row in
    *  the + menu opens the same catalogue. Wider screens hide the row and keep the button. */
   browseTools?: { onOpen: () => void; count: number };
@@ -142,7 +149,15 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
   }, [open]);
 
   useEffect(() => { setSelected(project?.toolboxes ?? (diary ? [] : ['core'])); }, [project, diary]);
-  useEffect(() => { if (!diary) setOpen(false); setError(''); }, [project?.id, diary]);
+  // #1484: the first project a free chat gets (null -> id, from the + menu) must not close the menu it was opened from;
+  // only a switch between two real projects does.
+  const shownProjectId = useRef<string | null>(project?.id ?? null);
+  useEffect(() => {
+    const previous = shownProjectId.current;
+    shownProjectId.current = project?.id ?? null;
+    if (!diary && !(previous === null && project?.id)) setOpen(false);
+    setError('');
+  }, [project?.id, diary]);
   useEffect(() => {
     if (!open) return;
     let active = true;
@@ -197,7 +212,7 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
     {/* Like Claude's: a centred SVG plus, and a menu of what can be added — files first, then
         the tools this chat may use, each ticked when on. The model lives in its own control on
         the other side of the composer, so it is not repeated here. */}
-    <button ref={trigger} type="button" className="composer-add glass is-press" aria-label={browseTools?.count ? `${t('composer.addFilesAndTools')} · ${t('tools.forMessage', { count: browseTools.count })}` : t('composer.addFilesAndTools')} aria-expanded={open} aria-controls={panelId} disabled={disabled || saving} onClick={() => setOpen(!open)}><ShellIcon name="plus" size={18}/>
+    <button ref={trigger} type="button" className="composer-add glass is-press" aria-label={browseTools?.count ? `${t('composer.addFilesAndTools')} · ${t('tools.forMessage', { count: browseTools.count })}` : t('composer.addFilesAndTools')} aria-expanded={open} aria-controls={panelId} disabled={disabled || saving} onClick={() => { if (!open && !project) void onEnsureProject?.(); setOpen(!open); }}><ShellIcon name="plus" size={18}/>
       {/* #510: where the Tools button is hidden, the + carries how many toolboxes the next message adds. */}
       {!!browseTools?.count && <span className="composer-add-badge" aria-hidden="true">{browseTools.count}</span>}</button>
     <input ref={input} hidden type="file" multiple onChange={event => { const files = Array.from(event.target.files || []); event.target.value = ''; void upload(files); }} />
