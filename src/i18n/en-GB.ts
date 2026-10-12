@@ -430,6 +430,8 @@ export const EN_GB = {
   'mode.reason.freeChat': 'Cowork runs inside a project, and this is a free chat',
   'mode.reason.adminOnly': 'the coding harness is limited to administrators',
   'mode.reason.noRepository': 'no repository is selected',
+  'mode.runsInProject': 'Runs inside a project',
+  'mode.openProjects': 'Open Projects',
   'keys.ctrl': 'Ctrl',
   'keys.shift': 'Shift',
   'keys.enter': 'Enter',

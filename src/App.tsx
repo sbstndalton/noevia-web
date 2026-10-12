@@ -1754,6 +1754,7 @@ export default function App(): JSX.Element {
           streaming={view.kind === 'chat' ? !!streamingChats[view.chatId] : false}
           inferenceUp={health.inferenceUp}
           onSend={sendToCurrent}
+          onOpenProjects={() => { setAppMode('chat'); setView({ kind: 'projects' }); }}
           mode={activeMode}
           onModeChange={changeMode}
           onRetry={retryLast}

@@ -421,6 +421,8 @@ export const ES_ES: Catalogue = {
   'mode.reason.freeChat': "Cowork funciona dentro de un proyecto y este es un chat libre",
   'mode.reason.adminOnly': "el entorno de código es solo para administradores",
   'mode.reason.noRepository': "no hay ningún repositorio seleccionado",
+  'mode.runsInProject': "Se ejecuta dentro de un proyecto",
+  'mode.openProjects': "Abrir proyectos",
   'keys.ctrl': "Ctrl",
   'keys.shift': "Mayús",
   'keys.enter': "Intro",

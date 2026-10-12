@@ -92,6 +92,8 @@ interface ChatViewProps {
   routingControls?: ReactNode;
   /** #778: the answer to a "This looks sensitive" card. */
   onRouteDecision?: (messageId: string, pendingId: string, choice: 'cloud' | 'local', remember: boolean) => void;
+  /** #1564: opens the Projects page from a free chat's "Runs inside a project" hint. */
+  onOpenProjects?: () => void;
 }
 
 /** "12s", "1m 05s": how long the thinking took, the way people say it. */
@@ -271,6 +273,7 @@ export function ChatView({
   headerLinks = null,
   routingControls = null,
   onRouteDecision,
+  onOpenProjects,
 }: ChatViewProps): JSX.Element {
   const [freeModels, setFreeModels] = useState(false);
   const { sendKey } = useAccountPreferences();
@@ -443,7 +446,7 @@ export function ChatView({
   useEffect(() => {
     setRepository(current => current && coworkAccess.repositories.includes(current) ? current : coworkAccess.repositories[0] ?? null);
   }, [coworkAccess.repositories]);
-  const modeSwitch = useModeSwitch({ mode, messageCount: messages.length, projectId: project?.id ?? null, access: coworkAccess, repository, onModeChange });
+  const modeSwitch = useModeSwitch({ mode, messageCount: messages.length, projectId: project?.id ?? null, access: coworkAccess, repository, onModeChange, onOpenProjects });
   const chatConfig = project || freeContext;
   // The phone model button names a thinking level only when the sheet can offer one; with the
   // effort settings unavailable the sheet has no Thinking section, so the button drops the suffix.
@@ -770,7 +773,7 @@ export function ChatView({
           </div>
         ) : (
           <ComposerModeBar mode={mode} messageCount={messages.length} projectId={project?.id ?? null} disabled={streaming || actionBusy}
-            access={coworkAccess} repository={repository} onRepository={setRepository} onModeChange={onModeChange}>
+            access={coworkAccess} repository={repository} onRepository={setRepository} onModeChange={onModeChange} onOpenProjects={onOpenProjects}>
             {catalogue}{skillPicker}
           </ComposerModeBar>
         )}

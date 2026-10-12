@@ -421,6 +421,8 @@ export const NB_NO: Catalogue = {
   'mode.reason.freeChat': "Cowork kjører i et prosjekt, og dette er en fri chat",
   'mode.reason.adminOnly': "kodemiljøet er forbeholdt administratorer",
   'mode.reason.noRepository': "ingen repo er valgt",
+  'mode.runsInProject': "Kjører i et prosjekt",
+  'mode.openProjects': "Åpne prosjekter",
   'keys.ctrl': "Ctrl",
   'keys.shift': "Shift",
   'keys.enter': "Enter",

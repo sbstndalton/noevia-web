@@ -421,6 +421,8 @@ export const DE_DE: Catalogue = {
   'mode.reason.freeChat': "Cowork läuft in einem Projekt, und dies ist ein freier Chat",
   'mode.reason.adminOnly': "das Coding-Harness ist Admins vorbehalten",
   'mode.reason.noRepository': "kein Repository ausgewählt",
+  'mode.runsInProject': "Läuft in einem Projekt",
+  'mode.openProjects': "Projekte öffnen",
   'keys.ctrl': "Strg",
   'keys.shift': "Umschalt",
   'keys.enter': "Enter",
