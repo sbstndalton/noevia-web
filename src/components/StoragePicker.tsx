@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import { fetchStorage, pollNextcloud, saveStorage, startNextcloud, testStorage } from '../api';
+import { cancelNextcloud, fetchStorage, pollNextcloud, saveStorage, startNextcloud, testStorage } from '../api';
 import type { NextcloudError, StorageConnection, StorageSaveResult } from '../api';
 import { useT } from '../i18n';
 
@@ -64,6 +64,8 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
   const [popupBlocked, setPopupBlocked] = useState(false);
   const onSavedRef = useRef(onSaved);
   onSavedRef.current = onSaved;
+  // #1433: the poll request currently on its way, so Cancel can wait for it and see what it did.
+  const pollInFlight = useRef<Promise<unknown> | null>(null);
   const corpusRef = useRef('');
   corpusRef.current = value.corpusRoot || '';
   // The fields stay locked until the saved connection is known, so an edit can't overwrite
@@ -133,7 +135,25 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
       setProblem(nextcloudProblem(e));
     } finally { setStarting(false); }
   };
-  const cancel = () => { rememberFlow(null); setFlow(null); setPopupBlocked(false); setMessage(''); };
+  // #1433: Cancel ends the flow on the server as well. A poll already in flight may still have
+  // saved (Nextcloud handed the password over just before), so once it settles the saved
+  // connection is read again and shown as it really is.
+  const cancel = () => {
+    const current = flow;
+    rememberFlow(null); setFlow(null); setPopupBlocked(false); setMessage('');
+    if (!current) return;
+    const inFlight = pollInFlight.current;
+    void cancelNextcloud(current.flowId).catch(() => { /* the flow expires on its own */ }).then(async () => {
+      if (!inFlight) return;
+      const raced = await inFlight.catch(() => null) as { pending?: boolean } | null;
+      if (!raced || raced.pending) return; // nothing was saved
+      const latest = await fetchStorage().catch(() => null);
+      if (!latest || latest.kind !== 'nextcloud' || !latest.secretConfigured) return;
+      setValue(latest); setLoadedKind(latest.kind); setServer(nextcloudSignInAddress(latest.baseUrl));
+      setMessage(t('storage.nc.connected', { user: latest.username }));
+      onSavedRef.current?.(latest);
+    });
+  };
 
   // While a sign-in is open, ask the server every 2 s whether Nextcloud has handed over the app
   // password. One request at a time; it stops on success, a real error or expiry.
@@ -145,7 +165,9 @@ export function StoragePicker({ onSaved, onSkip, onlineOnly = false, backupOnly 
       if (!live) return;
       if (flow.expiresAt <= Date.now()) { rememberFlow(null); setFlow(null); setProblem(t('storage.nc.expired')); return; }
       try {
-        const result = await pollNextcloud(flow.flowId, corpusRef.current);
+        const request = pollNextcloud(flow.flowId, corpusRef.current);
+        pollInFlight.current = request;
+        const result = await request.finally(() => { if (pollInFlight.current === request) pollInFlight.current = null; });
         if (!live) return;
         if (result.pending) { timer = window.setTimeout(() => void tick(), POLL_MS); return; }
         rememberFlow(null); setFlow(null); setPopupBlocked(false);

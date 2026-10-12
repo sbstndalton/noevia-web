@@ -145,6 +145,8 @@ async function nextcloudCall<T>(url: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 export const startNextcloud = (baseUrl: string) => nextcloudCall<{ flowId: string; loginUrl: string; expiresAt: number }>('/api/integrations/storage/nextcloud/start', { baseUrl });
+/** #1433: ends the sign-in on the server too, so a poll already in flight revokes instead of saving. */
+export const cancelNextcloud = (flowId: string) => nextcloudCall<{ cancelled: boolean }>('/api/integrations/storage/nextcloud/cancel', { flowId });
 /** An empty corpusRoot keeps the folder already saved (the server falls back to it, then to Cowork/Diary). */
 export const pollNextcloud = (flowId: string, corpusRoot: string) => nextcloudCall<StorageSaveResult & { pending?: boolean }>('/api/integrations/storage/nextcloud/poll', { flowId, corpusRoot });
 export interface StorageEntry { name: string; path: string; isDir: boolean; size: number | null; ext: string }

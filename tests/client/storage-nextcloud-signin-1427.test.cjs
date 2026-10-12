@@ -47,3 +47,13 @@ test('the poll treats 202 as pending and keeps the error code, reason and wait',
   reply = () => new Response(JSON.stringify({ error: 'Nextcloud at drive.example.test did not answer within 10 seconds.', code: 'nextcloudUnreachable', reason: 'timeout' }), { status: 504, headers: { 'Content-Type': 'application/json' } });
   await assert.rejects(startNextcloud('https://drive.example.test'), (e) => e.code === 'nextcloudUnreachable' && e.reason === 'timeout' && !/^Error:/.test(e.message));
 }));
+
+test('#1433: cancel tells the server which flow to end', () => withModules(['/src/api.ts'], async ({ cancelNextcloud }) => {
+  const calls = [];
+  global.fetch = async (url, init) => { calls.push([String(url), init]); return new Response(JSON.stringify({ cancelled: true }), { status: 200, headers: { 'Content-Type': 'application/json' } }); };
+  assert.deepEqual(await cancelNextcloud('flow-9'), { cancelled: true });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], '/api/integrations/storage/nextcloud/cancel');
+  assert.equal(calls[0][1].method, 'POST');
+  assert.deepEqual(JSON.parse(calls[0][1].body), { flowId: 'flow-9' });
+}));
