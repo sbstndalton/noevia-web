@@ -92,7 +92,9 @@ input:not([type=checkbox]):not([type=radio]), textarea, select { border-color:va
    control scale. Keep these shared rules here, after component styles. */
 body { -webkit-font-smoothing: antialiased; }
 .app { position: relative; height: 100dvh; }
-.app-main { position: relative; overflow: hidden; margin: 0; border: 0; border-radius: 0; }
+/* #1478: overflow: clip (where supported) keeps the pane clipped without making it a scroll container, so a
+   programmatic focus or scrollIntoView cannot scroll the chat column out of place. hidden is the fallback. */
+.app-main { position: relative; overflow: hidden; overflow: clip; margin: 0; border: 0; border-radius: 0; }
 .app-stack { min-width: 0; }
 .sidebar { width: 248px; padding: 16px 12px 12px; gap: 8px; border-right: 0; }
 .side-logo span { font-size: var(--text-title3); font-weight: 600; letter-spacing: -.7px; }

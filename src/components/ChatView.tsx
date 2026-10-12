@@ -427,7 +427,9 @@ export function ChatView({
     if (!wasStreaming || streaming || typeof document === 'undefined' || isCoarsePointerDevice()) return;
     const stopped = stopRequestedRef.current;
     stopRequestedRef.current = false;
-    if (stopped || document.activeElement === document.body) composerRef.current?.focus();
+    // #1478: focus() scrolls every ancestor that can scroll, and the app's overflow-hidden main pane can; a
+    // composer focused after a long or failed reply pushed the header off screen. Scrolling is never wanted here.
+    if (stopped || document.activeElement === document.body) composerRef.current?.focus({ preventScroll: true });
   }, [streaming]);
   // When the current stream began, for the live elapsed counter. Reset on each
   // new stream rather than on every message change, or the timer would restart
@@ -522,7 +524,8 @@ export function ChatView({
     writeDraft(chatId, next.text);
     setLinkAt(null);
     onLinkChat?.(target);
-    requestAnimationFrame(() => { const el = composerRef.current; if (el) { el.focus(); el.setSelectionRange(next.caret, next.caret); } });
+    // preventScroll (#1478): the composer is already on screen; focusing it must not scroll the pane.
+    requestAnimationFrame(() => { const el = composerRef.current; if (el) { el.focus({ preventScroll: true }); el.setSelectionRange(next.caret, next.caret); } });
   };
   const onLinkKey = (e: KeyboardEvent<HTMLTextAreaElement>): boolean => {
     if (!linkMenuOpen || e.nativeEvent.isComposing) return false;
