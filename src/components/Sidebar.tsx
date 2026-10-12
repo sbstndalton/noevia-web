@@ -700,6 +700,8 @@ export function Sidebar({
       {['Pinned','Projects'].map(group => {
         const entries = group==='Pinned' ? pinnedProjects : unpinnedProjects;
         if(group==='Pinned' && !entries.length && !pinnedChats.length)return null;
+        // #1546: a search that matches no project leaves nothing under "Your projects"; hide the empty heading.
+        if(group==='Projects' && query && !entries.length)return null;
         return <div className={`spaces side-scroll side-scroll-${group.toLowerCase()}`} key={group}>
           <div className="sidebar-section-head"><button className="section-label section-toggle" aria-label={t('sidebar.sectionNamed', { name: group==='Projects' ? t('sidebar.projects') : t('sidebar.pinned') })} aria-expanded={!closedGroups[group]} onClick={()=>setClosedGroups(g=>({...g,[group]:!g[group]}))}>{group==='Projects' ? t('sidebar.yourProjects') : t('sidebar.pinned')}</button>{group==='Projects' && <button className="row-action section-options" aria-label={t('sidebar.projectOrdering')} aria-haspopup="menu" aria-expanded={!!sorting} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setSorting({x:r.left,y:r.bottom+4});}}><ShellIcon name="more" size={20}/></button>}</div>
           {group==='Pinned' && (!closedGroups[group] || query) && pinnedChats.map(renderChat)}
