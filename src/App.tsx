@@ -1207,10 +1207,10 @@ export default function App(): JSX.Element {
           // The raw exception stays in the console; the reply says it in plain words (#1472), and keeps
           // whatever text had streamed in, marked incomplete, instead of replacing it (#1547).
           console.error('Reply failed', err);
-          const failure = failureCopy(err, translateNow);
+          // #1547: the failure may say output was preserved only when partial text is on screen for this reply.
           setMessagesByChat((prev) => ({
             ...prev,
-            [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? failedReply(m, failure) : m)),
+            [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? failedReply(m, failureCopy(err, translateNow, Boolean(m.content.trim()))) : m)),
           }));
         }
       } finally {

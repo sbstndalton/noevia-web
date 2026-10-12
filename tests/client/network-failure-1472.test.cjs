@@ -63,3 +63,15 @@ test('#1547 a failure with nothing streamed has no partial text, only the failur
   assert.equal(failed.content, '');
   assert.equal(failed.failure, 'Cannot reach noevia.');
 });
+
+test('#1547 the server claim is kept only when partial text is on screen for that reply', () => {
+  const claim = new Error('The model stream failed. Partial output was preserved; check the backend before retrying.');
+  assert.equal(failureCopy(claim, say, true), 'The model stream failed. Partial output was preserved; check the backend before retrying.', 'partial text shown: the server sentence is true, so it stays');
+  assert.equal(failureCopy(claim, say, false), 'The model stopped before it finished. Check the backend, then try again.', 'nothing shown: no claim');
+});
+
+test('#1547 a server sentence without the claim is shown as the server sent it, shown text or not', () => {
+  const plain = new Error('The model stream failed. Check the backend before retrying.');
+  assert.equal(failureCopy(plain, say, false), 'The model stream failed. Check the backend before retrying.');
+  assert.equal(failureCopy(plain, say, true), 'The model stream failed. Check the backend before retrying.');
+});

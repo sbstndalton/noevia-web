@@ -5,8 +5,10 @@ import type { Message } from './types';
 
 type Say = (key: MessageKey) => string;
 
-/** The server's stream-failure copy claims that partial output was kept. Only the text the screen can
- *  show counts as kept, so a failure that mentions it is worded by this app instead (#1547). */
+/** The server's stream-failure copy claims that partial output was kept. The claim is true only when the
+ *  reply's partial text is on screen (#1547), so it is kept then. Without shown text the server is not
+ *  trusted to have meant it, and this app words the failure instead. The server itself now leaves the
+ *  claim out when it sent no text (core #1547), so the two sides agree. */
 const PARTIAL_CLAIM = /Partial output was preserved/i;
 
 /** A request that never reached the server: fetch rejected before any response. Browsers word it
@@ -15,12 +17,13 @@ export function isNetworkFailure(err: unknown): boolean {
   return err instanceof TypeError && /fetch|network|load failed/i.test(err.message);
 }
 
-/** The sentence to show for a failed request. `say` is the interface translator. */
-export function failureCopy(err: unknown, say: Say): string {
+/** The sentence to show for a failed request. `say` is the interface translator. `partialShown` is true
+ *  when the reply already shows partial text, the only case in which "output was preserved" is true. */
+export function failureCopy(err: unknown, say: Say, partialShown = false): string {
   if (isNetworkFailure(err)) return say('chat.failure.unreachable');
   const message = err instanceof Error ? err.message.trim() : '';
   if (!message) return say('chat.failure.unknown');
-  if (PARTIAL_CLAIM.test(message)) return say('chat.failure.stopped');
+  if (PARTIAL_CLAIM.test(message) && !partialShown) return say('chat.failure.stopped');
   return message;
 }
 
