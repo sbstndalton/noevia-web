@@ -1261,7 +1261,7 @@ button:disabled { cursor: not-allowed; }
 }
 .source-name { flex: 1; min-width: 0; font-size: var(--text-caption); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .source-size { font-size: var(--text-caption2); color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.source-actions { display: flex; gap: 8px; margin-top: 8px; }
+.source-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .source-actions .btn { cursor: pointer; }
 
 /* Segmented control, matching .app-mode-switch: the selected pill is a raised

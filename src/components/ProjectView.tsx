@@ -387,11 +387,9 @@ export function ProjectView({
                 <button className="btn btn-secondary btn-sm" onClick={onEdit}>{t('projects.view.editLinkedFolders')}</button>
                 <p className="source-status">{t('projects.view.linkedFoldersRefreshNote')}</p>
               </details>
+              {/* #1570: the three source actions are one row. */}
               <div className="source-actions">
                 <button className="btn btn-secondary btn-sm" disabled={syncing || busyDocs} onClick={()=>void updateFolders(project.sourceFolders || [])}>{syncing ? t('projects.view.refreshing') : t('projects.view.refreshFromStorage')}</button>
-              </div>
-
-              <div className="source-actions">
                 <label className={`btn btn-secondary btn-sm${busyDocs ? ' is-busy' : ''}`}>
                   {busyDocs ? t('projects.view.uploadingFiles') : t('projects.view.uploadFiles')}
                   <input type="file" multiple disabled={busyDocs} style={{ display: 'none' }} onChange={e => { void addFiles(e.target.files); e.target.value = ''; }} />
