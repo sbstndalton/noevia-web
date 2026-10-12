@@ -56,7 +56,7 @@ export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged
           {/* #527: the phone sheet opens on its heading, so the status block at the top is what is
               read and seen first; left to itself, initial focus would land on the first field (a
               model filter or a tool checkbox) and scroll the sheet past it. */}
-          <h2 {...(phoneSheet ? { tabIndex: -1, 'data-initial-focus': '' } : {})}><small>{t('modelPopup.title')}</small>{activeProject ? activeProject.name : t('modelPopup.model')}</h2>
+          <h2 {...(phoneSheet ? { tabIndex: -1, 'data-initial-focus': '' } : {})}><small>{t('modelPopup.title')}</small><span className="mp-head-name">{activeProject ? activeProject.name : t('modelPopup.model')}</span></h2>
           <button className="btn btn-ghost btn-sm mp-settings" onClick={() => openSettings()}><ShellIcon name="settings" size={16}/>{t('modelPopup.settings')}</button>
           <CloseButton onClick={onClose}/>
         </header>

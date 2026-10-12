@@ -1494,6 +1494,11 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 .mp-panel { width: 440px; max-width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-card); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22); overflow: hidden; display: flex; flex-direction: column; }
 .mp-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--bg-sidebar); }
 .mp-head h2 { flex: 1 1 auto; margin: 0; font-size: var(--text-callout); font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* #1532: the heading's name is the chat or project title, which can be long. It sits in a block of its
+   own so the ellipsis applies (a flex heading ignores text-overflow), and the Model settings button
+   keeps its width, so the title stops before the button instead of running under it. */
+.mp-head .mp-head-name { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-head .mp-settings { flex: none; }
 .mp-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
 
 .mp-mode { display: flex; gap: 8px; }
