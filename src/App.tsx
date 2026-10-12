@@ -80,10 +80,12 @@ import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
 import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
-import { finishedToolCall, pendingToolCall, resultSlot, settleReply, settleToolCalls } from './tool-call-state';
+import { finishedToolCall, pendingToolCall, resultSlot, settleReply } from './tool-call-state';
 import { chatHome } from './chat-home';
-import { declinedNames, editBase, modelHistory, persistableMessage, rerunBase, storedPause } from './applied-writes';
+import { declinedNames, editBase, modelHistory, rerunBase } from './applied-writes';
 import { foldDeferredMerge, mergeTranscripts, savedCopyExtends, type DeferredMerge } from './transcript-merge';
+import { entriesFor, messageFromEntry, withStoredAnswers } from './transcript-variants';
+import { answersBeforeRegenerate, branchesBeforeEdit, selectAnswer, selectBranch, type VariantSource } from './transcript-variants';
 import { skippedChatIds, withoutSkipped } from './list-save';
 import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, shouldSaveChat, upsertChatMeta } from './chat-save';
 import { readLastPlace, writeLastPlace, clearLastPlace, type LastPlace } from './last-view';
@@ -112,45 +114,6 @@ type View =
 
 /** #1508: how often the engine-wide stats snapshot is refreshed while the tab is visible. */
 const STATS_POLL_MS = 15_000;
-
-/** A saved transcript as the messages on screen (#1484 keeps this in one place for the load and the sync). */
-function messagesFromHistory(history: HistoryEntry[]): Message[] {
-  return history.map((h) => ({
-    id: uid(),
-    role: h.role,
-    content: h.content,
-    senderLabel: h.model,
-    routingDecision: h.routingDecision,
-    ...(isRouteTarget(h.routeTarget) ? { routeTarget: h.routeTarget } : {}),
-    reasoning: h.reasoning,
-    reasoningMs: h.reasoningMs,
-    toolCalls: settleToolCalls(h.toolCalls),
-    stats: h.stats,
-    coworkTask: h.coworkTask,
-    sources: h.sources,
-    ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}),
-    ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}),
-  }));
-}
-
-/** What a chat's messages save as: the transcript the server stores (and the multi-tab check compares against). */
-function historyEntriesOf(msgs: Message[]): HistoryEntry[] {
-  return msgs.map(persistableMessage).filter((m): m is Message => m !== null).map((m) => ({
-    role: m.role,
-    content: m.content,
-    model: m.senderLabel,
-    routingDecision: m.routingDecision,
-    ...(m.routeTarget ? { routeTarget: m.routeTarget } : {}),
-    reasoning: m.reasoning || undefined,
-    reasoningMs: m.reasoningMs,
-    toolCalls: m.toolCalls && m.toolCalls.length ? m.toolCalls : undefined,
-    stats: m.stats,
-    coworkTask: m.coworkTask,
-    sources: m.sources && m.sources.length ? m.sources : undefined,
-    skill: m.role === 'user' ? m.skill : undefined,
-    paused: m.role === 'assistant' ? m.paused : undefined,
-  }));
-}
 
 /** #1516: how often an open chat checks whether another tab changed it. */
 const CHAT_SYNC_MS = 15_000;
@@ -599,10 +562,10 @@ export default function App(): JSX.Element {
       void fetchChatHistoryRevision(chatId).then(({ history, revision }) => {
         if (!alive || !revision || revision === historyRevisions.current[chatId] || busy()) return;
         if (!shouldSaveChat(chatId, deletedChats.current)) return;
-        const local = historyEntriesOf(messagesRef.current[chatId] ?? []);
+        const local = entriesFor(messagesRef.current[chatId] ?? []);
         if (!savedCopyExtends(local, history)) return;
         historyRevisions.current[chatId] = revision;
-        setMessagesByChat((prev) => ({ ...prev, [chatId]: resolveLoadedHistory(prev[chatId] ?? [], messagesFromHistory(history)) }));
+        setMessagesByChat((prev) => ({ ...prev, [chatId]: resolveLoadedHistory(prev[chatId] ?? [], withStoredAnswers(history.map((h) => messageFromEntry(h, uid())), uid)) }));
       }).catch(() => undefined);
     };
     const timer = window.setInterval(check, CHAT_SYNC_MS);
@@ -625,7 +588,7 @@ export default function App(): JSX.Element {
     const load = fetchChatHistoryRevision(id)
       .then(({ history, revision }) => {
         historyRevisions.current[id] = revision;
-        const loaded: Message[] = messagesFromHistory(history);
+        const loaded: Message[] = withStoredAnswers(history.map((h) => messageFromEntry(h, uid())), uid);
         setMessagesByChat((prev) => ({ ...prev, [id]: resolveLoadedHistory(prev[id] ?? [], loaded) }));
         setHistoryChecked((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
         return loaded;
@@ -813,14 +776,14 @@ export default function App(): JSX.Element {
     // instead of a bare answer. The server strips these before replaying
     // history to a model, so they cost nothing in prompt tokens.
     // A failed reply is not saved, except as the record of changes it saved (#658).
-    const entries = historyEntriesOf(msgs);
+    const entries: HistoryEntry[] = entriesFor(msgs);
     // Saves for one chat run in order. If another device saved first, merge its copy with ours
     // (nothing either side wrote is dropped), show the merged transcript, and save that.
     const show = (merged: HistoryEntry[], ours: HistoryEntry[]) => {
       if (sendingChats.current.has(chatId)) { deferredMerges.current[chatId] = { merged, ours }; return; }
       setMessagesByChat((prev) => ({
         ...prev,
-        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, ...(isRouteTarget(h.routeTarget) ? { routeTarget: h.routeTarget } : {}), reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats, coworkTask: h.coworkTask, sources: h.sources, ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}), ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}) })),
+        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => messageFromEntry(h, id)),
       }));
     };
     if (!shouldSaveChat(chatId, deletedChats.current)) return;
@@ -948,7 +911,7 @@ export default function App(): JSX.Element {
   }, []);
 
   const handleSend = useCallback(
-    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; turnImageIds?: string[]; notice?: string | null; skill?: SkillPin; resend?: ResendOutcome; files?: string[] } = {}) => {
+    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; turnImageIds?: string[]; notice?: string | null; skill?: SkillPin; resend?: ResendOutcome; files?: string[]; variantOf?: VariantSource } = {}) => {
       // `streamingChats` is render state, so two sends in one tick both see it false. The ref
       // is updated synchronously and is the real guard against a duplicate generation.
       if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
@@ -961,7 +924,10 @@ export default function App(): JSX.Element {
       const sentImages = turnImageIdsToSend(turn.turnImageIds);
       // #1514: the files attached with this message are shown on it, in this session.
       const sentFiles = turn.files?.length ? turn.files : undefined;
-      const userMsg: Message = { id: uid(), role: 'user', content: text, ...(sentPin ? { skill: sentPin } : {}), ...(sentImages.length ? { turnImageIds: sentImages } : {}), ...(sentFiles ? { files: sentFiles } : {}) };
+      // #1517: the turn this one replaces keeps its answers (Regenerate) or its version (Edit & re-run).
+      const variantFields = turn.variantOf?.kind === 'answer' ? answersBeforeRegenerate(turn.variantOf.user, turn.variantOf.reply)
+        : turn.variantOf?.kind === 'branch' ? branchesBeforeEdit(turn.variantOf.user, turn.variantOf.tail) : {};
+      const userMsg: Message = { id: uid(), role: 'user', content: text, ...(sentPin ? { skill: sentPin } : {}), ...(sentImages.length ? { turnImageIds: sentImages } : {}), ...(sentFiles ? { files: sentFiles } : {}), ...variantFields };
       // History still loading: wait for it so the model sees the earlier turns and the load does
       // not land on top of this turn.
       const pendingLoad = base ? undefined : historyLoads.current[chatId];
@@ -1336,7 +1302,7 @@ export default function App(): JSX.Element {
   const retryLast = useCallback((chatId: string, messageId: string) => {
     if (streamingChats[chatId]) return;
     const msgs = messagesRef.current[chatId] ?? [];
-    const index = msgs.findIndex(m => m.id === messageId && m.error);
+    const index = msgs.findIndex(m => m.id === messageId && (m.error || m.interrupted));
     // Retry is offered only for the final exchange. Never truncate later history.
     if (index !== msgs.length - 1 || index < 1 || msgs[index - 1].role !== 'user') return;
     const projectId = view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
@@ -1374,7 +1340,7 @@ export default function App(): JSX.Element {
       const projectId =
         view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
       // #658: the records of changes saved by the dropped replies stay (editBase).
-      void handleSend(chatId, projectId, text, editBase(msgs, index));
+      void handleSend(chatId, projectId, text, editBase(msgs, index), { variantOf: { kind: 'branch', user: msgs[index], tail: msgs.slice(index + 1) } });
     },
     [activeChatMeta, handleSend, streamingChats, view],
   );
@@ -1390,8 +1356,21 @@ export default function App(): JSX.Element {
     const plan = planRegenerate(msgs, messageId);
     if (!plan) return;
     const projectId = view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
-    void handleSend(chatId, projectId, plan.userText, plan.base, { ...(plan.skill ? { skill: plan.skill } : {}), turnImageIds: plan.turnImageIds, resend: resendOutcome('regenerate', msgs[msgs.length - 1]) });
+    void handleSend(chatId, projectId, plan.userText, plan.base, { ...(plan.skill ? { skill: plan.skill } : {}), turnImageIds: plan.turnImageIds, resend: resendOutcome('regenerate', msgs[msgs.length - 1]), variantOf: { kind: 'answer', user: msgs[msgs.length - 2], reply: msgs[msgs.length - 1] } });
   }, [activeChatMeta, handleSend, streamingChats, view]);
+
+  // #1517: the 1/2 switcher. Shows another stored answer or version of a turn and saves the chat with it.
+  const showVariant = useCallback((chatId: string, pick: (msgs: Message[]) => Message[] | null) => {
+    if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
+    const msgs = messagesRef.current[chatId] ?? [];
+    const updated = pick(msgs);
+    if (!updated) return;
+    messagesRef.current = { ...messagesRef.current, [chatId]: updated };
+    setMessagesByChat((prev) => ({ ...prev, [chatId]: updated }));
+    if (!deletedChats.current.has(chatId)) persist(chatId, updated);
+  }, [persist, streamingChats]);
+  const chooseAnswer = useCallback((chatId: string, userId: string, next: number) => showVariant(chatId, (msgs) => { const i = msgs.findIndex((m) => m.id === userId); return i < 0 ? null : selectAnswer(msgs, i, next); }), [showVariant]);
+  const chooseVersion = useCallback((chatId: string, userId: string, next: number) => showVariant(chatId, (msgs) => { const i = msgs.findIndex((m) => m.id === userId); return i < 0 ? null : selectBranch(msgs, i, next, uid); }), [showVariant]);
 
   const startFreeChat = useCallback(() => {
     const chatId = freshChatId();
@@ -1627,6 +1606,26 @@ export default function App(): JSX.Element {
     [refreshProjects],
   );
 
+  // #1511: "Move to <project>" / "Remove from project" in the chat menu. It is the same move path as an
+  // accepted frame (moveChatToProject, POST /api/chats/:id/move), queued in the chat's current list so it
+  // cannot race a meta save. Only the list changes: the transcript stays put, and the frame is not sent,
+  // so the server keeps the saved one with the chat.
+  const moveChatTo = useCallback((chatId: string, fromProjectId: string | null, toProjectId: string | null) => {
+    if (fromProjectId === toProjectId) return;
+    const home = chatHome(chatId, allChatsRef.current, movedChats.current, fromProjectId);
+    const key = home === null ? 'free' : `project:${home}`;
+    setProjectError(null);
+    const pending = (chatMetaSaves.current.get(key) || Promise.resolve()).then(async () => {
+      await moveChatToProject(chatId, toProjectId);
+      movedChats.current.set(chatId, toProjectId);
+      workspaceRequest.current += 1;
+      await refreshProjects();
+      if (viewRef.current.kind === 'chat' && viewRef.current.chatId === chatId) setView({ kind: 'chat', chatId, projectId: toProjectId });
+    }).catch(() => { setProjectError(tr('sidebar.moveChatFailed')); });
+    chatMetaSaves.current.set(key, pending);
+    void pending.finally(() => { if (chatMetaSaves.current.get(key) === pending) chatMetaSaves.current.delete(key); });
+  }, [refreshProjects, tr]);
+
   const linkChat = useCallback((chatId: string, projectId: string | null, targetId: string) => {
     if (!targetId || targetId === chatId) return;
     const meta = allChatsRef.current.find((c) => c.id === chatId);
@@ -1762,6 +1761,7 @@ export default function App(): JSX.Element {
         onOpenChat={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
         onDeleteChat={handleDeleteChat}
         onPatchChat={handlePatchChat}
+        onMoveChat={moveChatTo}
         streamingChats={streamingChats}
         onPatchProject={handlePatchProject}
         onEditProject={setEditingProjectId}
@@ -1862,6 +1862,9 @@ export default function App(): JSX.Element {
           streaming={view.kind === 'chat' ? !!streamingChats[view.chatId] : false}
           inferenceUp={health.inferenceUp}
           onSend={sendToCurrent}
+          onChooseAnswer={chooseAnswer}
+          onChooseVersion={chooseVersion}
+          onOpenProjects={() => { setAppMode('chat'); setView({ kind: 'projects' }); }}
           mode={activeMode}
           onModeChange={changeMode}
           onRetry={retryLast}

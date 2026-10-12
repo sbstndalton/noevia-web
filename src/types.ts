@@ -82,6 +82,37 @@ export interface Message {
   /** #658: the reply ended early after tool steps had run: step supervision paused it, or it
    *  failed after changes were saved. `applied` is how many changes were saved. Not an error. */
   paused?: ReplyPause;
+  /** #1507: a reply the server kept partway when it was cut off. Shown with Retry and Continue. */
+  interrupted?: boolean;
+  /** #1517, user turns: the answers kept when Regenerate replaced one. `answer` is the one shown (the
+   *  assistant message after this turn holds it); the others are stored here. */
+  answers?: ReplyVariant[];
+  answer?: number;
+  /** #1517, user turns: the earlier versions of this turn kept when Edit & re-run replaced it, with
+   *  the chat that followed each one. `branch` is the version shown. */
+  branches?: TurnBranch[];
+  branch?: number;
+}
+
+/** #1517: one stored answer to a user turn. Regenerate keeps the answer it replaces. */
+export interface ReplyVariant {
+  content: string;
+  reasoning?: string;
+  reasoningMs?: number;
+  toolCalls?: ToolCallView[];
+  stats?: MessageStats;
+  senderLabel?: string;
+  routingDecision?: RoutingDecision;
+  sources?: SourceRef[];
+}
+
+/** #1517: an earlier version of a user turn, with its own answers and the chat that followed it, in the saved form. */
+export interface TurnBranch {
+  content: string;
+  skill?: string;
+  answers?: ReplyVariant[];
+  answer?: number;
+  tail: HistoryEntry[];
 }
 
 /** Why a reply ended before a final answer, and how many changes it had already saved (#658).
@@ -303,6 +334,13 @@ export interface HistoryEntry {
   skill?: string;
   /** Assistant turns (#658): the reply ended early after saving changes. */
   paused?: ReplyPause;
+  /** #1507: assistant turns only: the reply was saved partway and never finished (see interrupted-reply.ts). */
+  interrupted?: true;
+  /** #1517, user turns: stored answers and versions (see Message). */
+  answers?: ReplyVariant[];
+  answer?: number;
+  branches?: TurnBranch[];
+  branch?: number;
 }
 
 /** One entry of the history sent to /api/chat: a turn, or (#658) a change an earlier reply

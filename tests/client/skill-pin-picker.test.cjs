@@ -95,11 +95,14 @@ test('the composer sends the chosen pin with that one message only, and App forw
 test('Retry resends the pin its message was sent with, and the project home composer can pin (#562, #564)', () => {
   const app = fs.readFileSync(path.join(__dirname, '../../src/App.tsx'), 'utf8');
   const view = fs.readFileSync(path.join(__dirname, '../../src/components/ProjectView.tsx'), 'utf8');
-  assert.match(app, /const sentPin = storablePin\(turn\.skill\);[\s\S]{0,400}?const userMsg: Message = \{ id: uid\(\), role: 'user', content: text, \.\.\.\(sentPin \? \{ skill: sentPin \} : \{\}\), \.\.\.\(sentImages\.length \? \{ turnImageIds: sentImages \} : \{\}\) \};/, 'the pin is kept on the user turn (#571)');
+  // #1517 adds the variant fields to the same user turn (variantFields); #1512/#1514 add image ids and files.
+  assert.match(app, /const sentPin = storablePin\(turn\.skill\);[\s\S]*?const userMsg: Message = \{ id: uid\(\), role: 'user', content: text, \.\.\.\(sentPin \? \{ skill: sentPin \} : \{\}\), \.\.\.\(sentImages\.length \? \{ turnImageIds: sentImages \} : \{\}\), \.\.\.\(sentFiles \? \{ files: sentFiles \} : \{\}\), \.\.\.variantFields \};/, 'the pin is kept on the user turn (#571)');
   // #682 adds a text-free resend marker next to the pin.
   assert.match(app, /const pin = storablePin\(msgs\[index - 1\]\.skill\);[\s\S]{0,400}?void handleSend\(chatId, projectId, msgs\[index - 1\]\.content, rerunBase\(msgs, index\), \{ \.\.\.\(pin \? \{ skill: pin \} : \{\}\), turnImageIds: msgs\[index - 1\]\.turnImageIds, resend: resendOutcome\('retry', failed\) \}\)/);
   assert.doesNotMatch(app, /sentSkillPins/, 'no in-memory-only pin map: a reload would lose it');
-  assert.match(app, /skill: m\.role === 'user' \? m\.skill : undefined/, 'saved with the transcript');
+  // The save mapping moved to transcript-variants.ts (#1517); the pin is still written with the turn.
+  const mapping = fs.readFileSync(path.join(__dirname, '../../src/transcript-variants.ts'), 'utf8');
+  assert.match(mapping, /skill: m\.role === 'user' \? m\.skill : undefined/, 'saved with the transcript');
   assert.match(app, /pendingFirstSend\.current = \{ chatId, projectId, text, \.\.\.\(skill \? \{ skill \} : \{\}\) \}/);
   assert.match(app, /pending\.skill \? \{ skill: pending\.skill \} : \{\}/);
   assert.match(view, /<SkillPinSelect options=\{skillOptions\}/);

@@ -113,7 +113,8 @@ test('App.tsx wires Regenerate through planRegenerate + the existing handleSend 
   assert.match(fn, /if \(streamingChats\[chatId\]\) return;/);
   assert.match(fn, /planRegenerate\(msgs, messageId\)/);
   // #682: plus a text-free resend marker (kind and the replaced reply's routed role).
-  assert.match(fn, /void handleSend\(chatId, projectId, plan\.userText, plan\.base, \{ \.\.\.\(plan\.skill \? \{ skill: plan\.skill \} : \{\}\), turnImageIds: plan\.turnImageIds, resend: resendOutcome\('regenerate', msgs\[msgs\.length - 1\]\) \}\);/);
+  // #1517: the turn keeps the answer it replaces (variantOf), in the same call; #1512 keeps the image ids.
+  assert.match(fn, /void handleSend\(chatId, projectId, plan\.userText, plan\.base, \{ \.\.\.\(plan\.skill \? \{ skill: plan\.skill \} : \{\}\), turnImageIds: plan\.turnImageIds, resend: resendOutcome\('regenerate', msgs\[msgs\.length - 1\]\), variantOf: \{ kind: 'answer', user: msgs\[msgs\.length - 2\], reply: msgs\[msgs\.length - 1\] \} \}\);/);
   assert.doesNotMatch(fn, /apiFetch\(|fetch\(/, 'regenerateLast must not call a new endpoint directly');
 });
 

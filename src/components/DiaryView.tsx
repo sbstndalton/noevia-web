@@ -17,6 +17,8 @@ import type { Project, ToolCallView } from '../types';
 import { SendIcon } from './Icons';
 import { ComposerTextarea } from './ComposerTextarea';
 import { DiaryCalendar } from './DiaryCalendar';
+import { DiaryLoadedSearch } from './DiaryLoadedSearch';
+import { mergeLoadedDays, type LoadedDays } from '../diary-loaded-search';
 import { DiaryContextPanel } from './DiaryContextPanel';
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
@@ -80,6 +82,9 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   const [overview, setOverview] = useState<{ready: boolean; failed: boolean; memory: FileEntry[]; sources: FileEntry[]; recentDays: string[]}>({ready:false,failed:false,memory:[],sources:[],recentDays:[]});
   const [months, setMonths] = useState<string[]>([]);
   const [days, setDays] = useState<Record<string,string>>({});
+  // #1453: every day text this session has loaded (the months the view opened), for the loaded-months search.
+  const [loadedDays, setLoadedDays] = useState<LoadedDays>({});
+  useEffect(() => { setLoadedDays(prev => mergeLoadedDays(prev, days)); }, [days]);
   const [draft, setDraft] = useState('');
   const [turns, setTurns] = useState<Record<string,Turn[]>>({});
   const [busy, setBusy] = useState(false);
@@ -690,6 +695,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
       {localRecoveryError && <p className="conn-banner" role="alert">{localRecoveryError}</p>}
       {!!savedRecoveries.length && !folder && <section className="diary-pending"><div><strong>{t('diary.recovery.localSessionsTitle')}</strong><p>{t('diary.recovery.reconnectHint')}</p>{savedRecoveries.map(record=><div key={record.id}><span><bdi>{record.folder.name}</bdi> · {new Date(record.updatedAt).toLocaleString()}</span><button className="popup-tab" disabled={busy || !storage} onClick={()=>restoreLocalRecovery(record)}>{t('diary.recovery.reconnectAndRecover')}</button><button className="popup-tab" disabled={busy} onClick={()=>{if(window.confirm(t('diary.confirm.removeRecoveryCopy')))void forgetLocalRecovery(recoveryOwner,record.id).then(()=>listLocalRecovery(recoveryOwner)).then(setSavedRecoveries).catch(e=>setError(String(e)));}}>{t('diary.recovery.forget')}</button></div>)}</div></section>}
       {pendingCount > 0 && <div className="diary-pending" role="status"><span>{Object.keys(pendingLocal).length ? t('diary.pending.localSaveNeedsAttention') : t.plural('diary.pending.filesWaiting', Object.keys(pendingSync).length)}</span><button className="popup-tab" disabled={busy} onClick={()=>void run(async()=>{ if(Object.keys(pendingLocal).length) await commitLocal(pendingLocal); else await syncChanges(pendingSync); })}>{t('diary.pending.retry')}</button></div>}
+      {!day && <DiaryLoadedSearch loaded={loadedDays} onOpen={(picked) => navigate(picked.slice(0, 7), picked)} />}
       {!day && <DiaryCalendar month={month || today.slice(0,7)} today={today} days={days} busy={busy} ready={overview.ready} failed={overview.failed} navigate={navigate} focusDay={calendarFocus} onFocusDay={setCalendarFocus} onRetry={bumpRevision} />}
       {/* #1423: until the entries have loaded, a day is not blank; when they failed to load, say so and offer a retry. */}
       {day && <section className="diary-day"><h1 tabIndex={-1}>{dayLabel(day)}</h1>{days[day]?.trim() ? <details className="diary-saved-record" key={`${day}-${!!conversation.length}`} open={!conversation.length}><summary>{t('diary.day.savedEntry')}</summary><MarkdownPreview text={days[day]} /></details> : !conversation.length && (overview.ready
@@ -705,7 +711,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
     </section><DiaryContextPanel filesLoading={filesLoading} filesError={filesError} retryFiles={retryFileList} recovery={folder && <section><label className="diary-sync-toggle"><input type="checkbox" checked={localRecoveryEnabled} disabled={busy || !recoveryOwner} onChange={e=>void toggleLocalRecovery(e.target.checked)} />{t('diary.recovery.saveOnBrowser')}</label><p className="diary-context-note">{t('diary.recovery.storesNote')}</p></section>} busy={busy} files={files} filePath={filePath} setFilePath={setFilePath} openFile={openFile}
       newFile={newEditor}
       chooseStorage={() => setWizard('choose')} pendingCount={pendingCount} pendingLocal={Object.keys(pendingLocal).length > 0}
-      managed={storageMode === 'managed'} storageStatus={<DiaryStorageStatus active={active} onBusyChange={value=>{invalidateLocalRefresh();busyRef.current=value;setBusy(value);}} busy={busy} revision={revision} onMode={setStorageMode} onImported={()=>{bumpRevision();setWizard(null);}} />} folderName={folder?.name} savedLabel={savedLabel} corpusRoot={storage?.corpusRoot} sync={sync} setSync={setSync} disconnect={disconnect} /></div>
+      managed={storageMode === 'managed'} storageStatus={<DiaryStorageStatus active={active} onBusyChange={value=>{invalidateLocalRefresh();busyRef.current=value;setBusy(value);}} busy={busy} revision={revision} onMode={setStorageMode} storageKind={storage?.kind ?? null} onImported={()=>{bumpRevision();setWizard(null);}} />} folderName={folder?.name} savedLabel={savedLabel} corpusRoot={storage?.corpusRoot} sync={sync} setSync={setSync} disconnect={disconnect} /></div>
     {extraModels && extraProject && <ModelPopup projects={[extraProject]} activeProject={extraProject} onClose={()=>setExtraModels(false)} onProjectsChanged={refreshExtraProject} />}
     {extraFiles && <DiaryModal title={t('diary.attachments.title')} onClose={()=>setExtraFiles(false)}><p>{t('diary.attachments.storedSeparately')}</p>{(extraProject?.files || []).map(file=><div className="model-row" key={file.name}><span><bdi>{file.name}</bdi><small> · {file.attachment?.state || file.document?.state || t('diary.attachments.ready')}</small></span><button className="popup-tab" disabled={busy || extraBusy} onClick={()=>void (async()=>{if(!extraProject || !window.confirm(t('diary.confirm.deleteAttachment', { name: file.name })))return;setExtraBusy(true);try{await deleteProjectFile(extraProject.id,file.name);await refreshExtraProject();}catch(err){setExtraStatus(String(err));}finally{setExtraBusy(false);}})()}>{t('diary.attachments.delete')}</button></div>)}</DiaryModal>}
 

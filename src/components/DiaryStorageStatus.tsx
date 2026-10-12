@@ -1,13 +1,20 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
+import type { StorageConnection } from '../api';
 import { storagePollDelayMs } from '../diary-storage-poll';
 import { useT } from '../i18n';
 import { formatNumber } from '../number-format';
 import { appLocale } from '../user-preferences';
 
 type Status = { mode: 'managed' | 'legacy'; backup: 'not_configured' | 'pending' | 'failed' | 'complete'; lastBackedUp: number | null; error?: string };
+/** #1443: the import offer is for an old local diary only. A diary that already lives on connected
+ *  Nextcloud, WebDAV or S3 storage is not offered a copy, so the prompt never misdescribes it. */
+export function showsImportOffer(storageKind: StorageConnection['kind'] | null | undefined): boolean {
+  return storageKind === 'local';
+}
+
 type Preview = { fingerprint: string; fileCount: number; bytes: number; files: { path: string; bytes: number; sha256: string }[] };
-export function DiaryStorageStatus({ busy, revision, onMode, onImported, onBusyChange, active = true }: { busy: boolean; revision: number; onMode: (mode: 'managed' | 'legacy') => void; onImported: () => void; onBusyChange: (busy: boolean) => void; active?: boolean }) {
+export function DiaryStorageStatus({ busy, revision, onMode, storageKind = null, onImported, onBusyChange, active = true }: { busy: boolean; revision: number; onMode: (mode: 'managed' | 'legacy') => void; /** The connected storage kind (DiaryView's storage); null until it is known. */ storageKind?: StorageConnection['kind'] | null; onImported: () => void; onBusyChange: (busy: boolean) => void; active?: boolean }) {
   const t = useT();
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState('');
@@ -71,11 +78,11 @@ export function DiaryStorageStatus({ busy, revision, onMode, onImported, onBusyC
       {status.lastBackedUp && <p className="diary-context-note">{t('diary.storageStatus.lastBackedUp', { date: new Date(status.lastBackedUp * 1000).toLocaleString(appLocale()) })}</p>}
       {status.error && <p className="diary-context-note">{status.error}</p>}
       <p className="diary-context-note">{t('diary.storageStatus.webdavVersionedNote')}</p>
-    </> : status?.mode === 'legacy' ? <>
+    </> : status?.mode === 'legacy' ? (showsImportOffer(storageKind) ? <>
       <p>{t('diary.storageStatus.existingDiaryLegacy')}</p>
       <p className="diary-context-note">{t('diary.storageStatus.copyIntoNoeviaNote')}</p>
       <button className="popup-tab" disabled={busy || working} onClick={() => void importDiary(false)}>{working ? t('diary.storageStatus.checkingFiles') : t('diary.storageStatus.previewImport')}</button>
-    </> : !statusError && <p role="status">{t('diary.storageStatus.checkingStorage')}</p>}
+    </> : null) : !statusError && <p role="status">{t('diary.storageStatus.checkingStorage')}</p>}
     {preview && <div>
       <p>{t('diary.storageStatus.readyToCopy', { files: t.plural('diary.storageStatus.fileCount', preview.fileCount), kib: formatNumber(preview.bytes / 1024, appLocale(), 1) })}</p>
       <details><summary>{t('diary.storageStatus.reviewFileList')}</summary><ul>{preview.files.map(file => <li key={file.path}>{t('diary.storageStatus.fileBytes', { path: file.path, bytes: file.bytes })}</li>)}</ul></details>

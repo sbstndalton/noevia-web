@@ -284,7 +284,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await phone.getByRole('button',{name:'Open navigation',exact:true}).tap();await phone.getByRole('button',{name:'Code',exact:true}).first().tap();await phone.getByPlaceholder(/Describe a task/).waitFor();
   // Code shares the chat drawer (user review, 2026-09-19): the same toggle opens it, with Code's destinations.
   await phone.getByRole('button',{name:'Open navigation',exact:true}).tap();
-  const cd=phone.getByRole('dialog',{name:'Navigation'});await cd.getByRole('button',{name:'Pull requests'}).waitFor();
+  const cd=phone.getByRole('dialog',{name:'Navigation'});await cd.getByRole('button',{name:'Plugins'}).waitFor();
   assert.equal(await phone.locator('.coding-sidebar').count(),0,'no separate Code sidebar');
   await phone.getByRole('button',{name:'Chat',exact:true}).tap();await phone.getByPlaceholder('Message noevia…').waitFor();
   assert.equal(await phone.locator('.sidebar.pane').evaluate(e=>e.classList.contains('is-expanded')),false,'switching to Chat leaves the drawer closed');

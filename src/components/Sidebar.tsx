@@ -17,6 +17,7 @@ import type { MenuItem } from './ContextMenu';
 import { buildSearchResults, chatMatchesQuery, matchingDestinations, parseSidebarQuery, searchResultKey } from '../sidebar-search';
 import { hasTag, tagTree } from '../chat-organise';
 import type { TagNode } from '../chat-organise';
+import { chatMoveTargets } from '../chat-move';
 import type { SearchResultKind } from '../sidebar-search';
 import { fetchToolboxes, fetchProfile, searchChatText } from '../api';
 import { downloadChatExport } from '../chat-export';
@@ -31,7 +32,9 @@ import { useT } from '../i18n';
 import type { MessageKey } from '../i18n';
 
 // Code-mode destinations: the English name is the page's identity (onCodePage), the key its label.
-const CODE_PAGES: [page: string, icon: string, key: MessageKey][] = [['Pull requests', 'git', 'sidebar.code.pullRequests'], ['Scheduled', 'clock', 'sidebar.code.scheduled'], ['Plugins', 'plugins', 'sidebar.code.plugins'], ['Explore', 'explore', 'sidebar.code.explore']];
+// #1562: only destinations that work are listed. Pull requests, Scheduled and Explore were previews
+// with disabled controls, so they are removed until they are real (their catalogue keys stay).
+const CODE_PAGES: [page: string, icon: string, key: MessageKey][] = [['Plugins', 'plugins', 'sidebar.code.plugins']];
 
 interface SidebarProps {
   projects: Project[];
@@ -69,6 +72,8 @@ interface SidebarProps {
   onOpenChat: (chatId: string, projectId: string | null) => void;
   onDeleteChat: (projectId: string | null, chatId: string) => void;
   onPatchChat: (projectId: string | null, chatId: string, patch: Partial<ChatMeta>) => void;
+  /** #1511: moves a chat into the project `toProjectId`, or out of its project when null. */
+  onMoveChat?: (chatId: string, fromProjectId: string | null, toProjectId: string | null) => void;
   /** Chats generating right now, so work continuing elsewhere stays visible. */
   streamingChats: Record<string, true>;
   onPatchProject: (id: string, patch: Partial<Project>) => void;
@@ -116,6 +121,7 @@ export function Sidebar({
   onOpenChat,
   onDeleteChat,
   onPatchChat,
+  onMoveChat,
   streamingChats,
   onPatchProject,
   onEditProject,
@@ -552,9 +558,20 @@ export function Sidebar({
     },
   ];
 
+  // #1511: 'Remove from project' (a project chat) and 'Move to <project>' for each project that takes chats.
+  // The move goes through onMoveChat (App), which saves it in the chat's list queue.
+  const chatMoveItems = (c: ChatMeta): MenuItem[] => {
+    if (!onMoveChat) return [];
+    const from = c.projectId ?? null;
+    const remove: MenuItem[] = from ? [{ label: t('sidebar.removeFromProject'), icon:<ShellIcon name="folder"/>, onSelect: () => onMoveChat(c.id, from, null) }] : [];
+    const targets = chatMoveTargets(projects, c).map((p): MenuItem => ({ label: t('sidebar.moveToProject', { name: p.name }), icon:<ShellIcon name="folder"/>, onSelect: () => onMoveChat(c.id, from, p.id) }));
+    return [...remove, ...targets];
+  };
+
   const chatMenu = (c: ChatMeta): MenuItem[] => [
     { label: c.pinned ? t('sidebar.unpin') : t('sidebar.pin'), icon:<ShellIcon name="pin"/>, onSelect: () => onPatchChat(c.projectId ?? null, c.id, { pinned: !c.pinned }) },
     { label: t('sidebar.rename'), icon:<ShellIcon name="edit"/>, onSelect: () => startRename(c.id, c.title || '', menu?.source) },
+    ...chatMoveItems(c),
     // #1471: one chat out as Markdown, without exporting every chat (Settings > Data does that).
     { label: t('sidebar.exportChat'), icon:<ShellIcon name="file"/>, onSelect: () => void downloadChatExport(c.id).catch((e: unknown) => setConfirm({
       title: t('sidebar.exportChatFailedTitle'), body: e instanceof Error ? e.message : String(e), confirmLabel: t('sidebar.exportChatFailedOk'), run: () => undefined,
