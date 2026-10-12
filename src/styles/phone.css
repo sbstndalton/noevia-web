@@ -379,7 +379,9 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
    while touch sizing makes the + and send buttons 44px, so send spilled past the edge at 375px.
    Columns size to their buttons; on a narrow phone Thinking shows only its level. */
 .composer-inner.chat-composer-inner { grid-template-columns: auto minmax(0, 1fr) auto; }
-.chat-composer-inner:has(> .reasoning-control) { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+/* #1533: the model label keeps its own width (its first word and tier), and the Thinking control gives
+   way first when the row is tight (its label ellipsises; see noevia.css). */
+.chat-composer-inner:has(> .reasoning-control) { grid-template-columns: auto minmax(max-content, 1fr) minmax(80px, auto) auto; }
 .chat-composer-inner > .composer-model { min-width: 0; max-width: 100%; }
 @media (max-width: 430px) {
   .composer-inner.chat-composer-inner { column-gap: 6px; }

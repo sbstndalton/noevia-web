@@ -530,6 +530,16 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 .chat-composer-inner:has(> .reasoning-control) { grid-template-columns: 32px minmax(0,1fr) auto 32px; }
 .chat-composer-inner > .reasoning-control { grid-column: 3; grid-row: 2; align-self: center; }
 .chat-composer-inner:has(> .reasoning-control) > .send-btn { grid-column: 4; }
+/* #1533: when the row is tight, the Thinking pill gives up its word ("Thinking"), keeps its icon and
+   level, and names the setting in its tooltip. The model label keeps its own width (phone.css). */
+.chat-composer-inner > .reasoning-control { min-width: 0; }
+.chat-composer-inner > .reasoning-control .reasoning-pill { min-width: 0; max-width: 100%; }
+.chat-composer-inner > .reasoning-control .reasoning-pill > * { flex-shrink: 0; }
+.chat-composer-inner:has(> .reasoning-control) { container-type: inline-size; }
+@container (max-width: 399px) {
+  .chat-composer-inner > .reasoning-control .reasoning-pill > .reasoning-pill-label { display: none; }
+  .chat-composer-inner > .reasoning-control .reasoning-pill > .reasoning-pill-icon { display: inline-grid; place-items: center; }
+}
 .reasoning-result { display: block; color: var(--text-secondary); margin: 6px 0; }
 @media(max-width: 519px) { .chat-composer-inner > .reasoning-control select { max-width: 80px; } }
 .reasoning-control .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
