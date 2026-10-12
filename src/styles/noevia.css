@@ -1593,7 +1593,10 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 :root { --font-chat: var(--font-ui); --density-scale: 1; }
 :root[data-chat-font="serif"] { --font-chat: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif; }
 :root[data-chat-font="mono"] { --font-chat: var(--font-mono); }
-.msg .bubble, .msg .assistant-card, .markdown-preview { font-family: var(--font-chat); }
+/* The reply body follows the chat font setting. The card around it holds interface labels (routing,
+   thinking, tool count, Local, Sources), which stay in the interface face whatever that setting is (#1536). */
+.msg .bubble, .markdown-preview { font-family: var(--font-chat); }
+.msg .assistant-card { font-family: var(--font-ui); }
 
 /* Density trims the generous vertical rhythm without touching hit targets:
    a 44px button stays 44px, the space around it shrinks. */
