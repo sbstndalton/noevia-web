@@ -778,7 +778,6 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'connectors.nextcloud.ledeAfter': ". noevia stuurt je app-wachtwoord alleen naar dat adres, alleen voor jouw verzoeken en alleen naar de server die een beheerder heeft opgegeven.",
   'connectors.nextcloud.origin': "Nextcloud-adres ingesteld door de serverbeheerder",
   'connectors.nextcloud.scope': "Dit account; projectgereedschapskisten bepalen welke tools in de chat worden aangeboden",
-  'connectors.nextcloud.address': "Adres",
   'connectors.nextcloud.toolboxes': "Gereedschapskisten die het aanbiedt",
   'connectors.nextcloud.toolboxesNote': "Een project kiest welke hiervan het gebruikt.",
   'connectors.nextcloud.applyLater': "Deze gelden zodra Nextcloud is gekoppeld.",

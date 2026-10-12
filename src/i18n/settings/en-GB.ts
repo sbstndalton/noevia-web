@@ -779,7 +779,6 @@ export const EN_GB_SETTINGS = {
   'connectors.nextcloud.ledeAfter': ". noevia sends your app password only to that address, only for your requests, and only to the server an administrator listed.",
   'connectors.nextcloud.origin': "Nextcloud address set by the server administrator",
   'connectors.nextcloud.scope': "This account; project toolboxes choose which tools are offered in chat",
-  'connectors.nextcloud.address': "Address",
   'connectors.nextcloud.toolboxes': "Toolboxes it offers",
   'connectors.nextcloud.toolboxesNote': "A project chooses which of these it uses.",
   'connectors.nextcloud.applyLater': "These apply as soon as Nextcloud is connected.",

@@ -778,7 +778,6 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'connectors.nextcloud.ledeAfter': ". noevia sender app-passordet ditt bare til den adressen, bare for dine forespørsler og bare til serveren en administrator har oppført.",
   'connectors.nextcloud.origin': "Nextcloud-adresse angitt av serveradministratoren",
   'connectors.nextcloud.scope': "Denne kontoen; prosjektenes verktøykasser bestemmer hvilke verktøy som tilbys i chatten",
-  'connectors.nextcloud.address': "Adresse",
   'connectors.nextcloud.toolboxes': "Verktøykasser den tilbyr",
   'connectors.nextcloud.toolboxesNote': "Et prosjekt velger hvilke av disse det bruker.",
   'connectors.nextcloud.applyLater': "Disse gjelder så snart Nextcloud er tilkoblet.",

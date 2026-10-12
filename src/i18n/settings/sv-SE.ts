@@ -778,7 +778,6 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'connectors.nextcloud.ledeAfter': ". noevia skickar ditt applösenord bara till den adressen, bara för dina förfrågningar och bara till servern som en administratör har angett.",
   'connectors.nextcloud.origin': "Nextcloud-adress angiven av serveradministratören",
   'connectors.nextcloud.scope': "Det här kontot; projektens verktygslådor avgör vilka verktyg som erbjuds i chatten",
-  'connectors.nextcloud.address': "Adress",
   'connectors.nextcloud.toolboxes': "Verktygslådor som erbjuds",
   'connectors.nextcloud.toolboxesNote': "Ett projekt väljer vilka av dem det använder.",
   'connectors.nextcloud.applyLater': "De gäller så snart Nextcloud är anslutet.",

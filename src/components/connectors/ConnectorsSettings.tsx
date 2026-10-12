@@ -10,6 +10,7 @@ import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
 import '../../i18n/settings';
 import { formatNumber } from '../../number-format';
+import { displayAddress } from '../../connector-address';
 
 interface Tool { name: string; label: string; write: boolean; mode: ToolMode }
 interface Nextcloud {
@@ -285,11 +286,9 @@ function NextcloudPage({ nc, onBack, onChange }: { nc: Nextcloud; onBack: () => 
       </div>
     </div>
     <p className="lede">{t('connectors.nextcloud.ledeBefore')} <b>{t('settings.title')} → {t('settings.section.diary')}</b>{t('connectors.nextcloud.ledeAfter')}</p>
-    <TrustReview origin={nc.baseUrl || t('connectors.nextcloud.origin')} scope={t('connectors.nextcloud.scope')} tools={nc.tools} connected={nc.state === 'connected'}/>
+    {/* #1560: the address is shown once, decoded, as the Destination row above (no second Address card). */}
+    <TrustReview origin={nc.baseUrl ? displayAddress(nc.baseUrl) : t('connectors.nextcloud.origin')} scope={t('connectors.nextcloud.scope')} tools={nc.tools} connected={nc.state === 'connected'}/>
     {(error || nc.message) && <p className="route-note" role={error || nc.state === 'error' ? 'alert' : 'status'}>{error || nc.message}</p>}
-    {nc.baseUrl && <div className="group surface"><div className="row">
-      <div className="row-text"><span className="row-label">{t('connectors.nextcloud.address')}</span><span className="row-desc">{nc.baseUrl}</span></div>
-    </div></div>}
     {nc.boxes.length > 0 && <div className="group surface"><div className="row">
       <div className="row-text"><span className="row-label">{t('connectors.nextcloud.toolboxes')}</span>
         <span className="row-desc">{nc.boxes.map((b) => `${b.label} (${b.toolCount})`).join(' · ')}. {t('connectors.nextcloud.toolboxesNote')}</span></div>

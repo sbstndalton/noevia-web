@@ -778,7 +778,6 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'connectors.nextcloud.ledeAfter': ". noevia envía tu contraseña de aplicación solo a esa dirección, solo para tus solicitudes y solo al servidor que haya indicado un administrador.",
   'connectors.nextcloud.origin': "Dirección de Nextcloud definida por el administrador del servidor",
   'connectors.nextcloud.scope': "Esta cuenta; las cajas de herramientas del proyecto eligen qué herramientas se ofrecen en el chat",
-  'connectors.nextcloud.address': "Dirección",
   'connectors.nextcloud.toolboxes': "Cajas de herramientas que ofrece",
   'connectors.nextcloud.toolboxesNote': "Cada proyecto elige cuáles usa.",
   'connectors.nextcloud.applyLater': "Se aplican en cuanto se conecte Nextcloud.",

@@ -778,7 +778,6 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'connectors.nextcloud.ledeAfter': ". noevia n’envoie votre mot de passe d’application qu’à cette adresse, uniquement pour vos requêtes et uniquement au serveur qu’un administrateur a autorisé.",
   'connectors.nextcloud.origin': "Adresse Nextcloud définie par l’administrateur du serveur",
   'connectors.nextcloud.scope': "Ce compte ; les boîtes à outils du projet choisissent les outils proposés dans la discussion",
-  'connectors.nextcloud.address': "Adresse",
   'connectors.nextcloud.toolboxes': "Boîtes à outils proposées",
   'connectors.nextcloud.toolboxesNote': "Chaque projet choisit celles qu’il utilise.",
   'connectors.nextcloud.applyLater': "Elles s’appliquent dès que Nextcloud est connecté.",
