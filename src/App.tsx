@@ -88,7 +88,7 @@ import { readLastPlace, writeLastPlace, clearLastPlace, type LastPlace } from '.
 import { historyMode, matchPath, parsePath, routeForState, toPath, type CustomiseTab, type ProjectTab, type Route, type SyncedPlace } from './routes';
 import { EmptyState } from './components/EmptyState';
 import { currentRoutingDecision } from './current-routing';
-import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, withoutChat, withoutProject, type NavState } from './settings-nav';
+import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, settingsOpenAtLoad, withoutChat, withoutProject, type NavState } from './settings-nav';
 import { useT, t as translateNow } from './i18n';
 import { queueProjectPatch, restoreProjectPatch, takeProjectPatch, viewBelongsToProject, projectSaveErrorText, projectSyncErrorText, type PatchQueue } from './project-patches';
 import type { SkillPin } from './api-contract';
@@ -158,8 +158,8 @@ export default function App(): JSX.Element {
   useEffect(() => { const open = () => openSettings('status'); window.addEventListener('noevia:open-service-status', open); return () => window.removeEventListener('noevia:open-service-status', open); }, []);
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account');
     // A new account starts in Settings — unless it signed in at a link to somewhere else (#359).
-    if (initialRoute) return initialRoute.kind === 'settings';
-    return fresh || !!initialNav.stored?.settings; });
+    // A bare `/` never reopens a saved Settings overlay (#1444); only the place underneath returns.
+    return settingsOpenAtLoad(initialRoute, fresh); });
   const [appMode, setAppMode] = useState<'chat'|'code'>(initialRoute?.kind === 'code' ? 'code' : 'chat');
   // The tab a project and Customise are on, so the address bar can carry it (#359). A project's
   // tab is kept with its id: another project opens on its own first tab, not on this one.
