@@ -1,6 +1,6 @@
 // #1460 (web half): Settings → Web address lists each earlier address with its own Remove control. Removing
 // one asks first (the confirm says passkeys made at that address stop working there), then calls the core
-// endpoint this side expects (draft b21): POST /api/admin/web-address/remove-earlier with { origin }, answered
+// endpoint core implements (draft b21, server/routes/web-address.cjs): POST /api/admin/web-address/remove with { origin }, answered
 // with the same view as GET (current, source, previous, rpId) or { error }. The settings-row fetch happens in
 // an effect, so the list itself is checked by source contract (the click path is a browser check, unverified).
 const test = require('node:test');
@@ -13,7 +13,7 @@ const read = (f) => fs.readFileSync(path.join(SRC, f), 'utf8');
 
 test('removing an earlier address posts its origin to the core endpoint and takes the returned view', () => {
   const src = read('components/web-address/WebAddressSettings.tsx');
-  assert.match(src, /call<Address>\('\/api\/admin\/web-address\/remove-earlier', tRef\.current\('webAddress\.readError'\), \{ origin \}\)/);
+  assert.match(src, /call<Address>\('\/api\/admin\/web-address\/remove', tRef\.current\('webAddress\.readError'\), \{ origin \}\)/);
   assert.match(src, /if \(!r\.ok\) \{ setError\(r\.body\.error \|\| tRef\.current\('webAddress\.removeError'\)\); return; \}\n      setCurrent\(r\.body\); setRemoving\(null\);/);
 });
 

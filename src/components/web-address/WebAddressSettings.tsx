@@ -84,7 +84,7 @@ export function WebAddressSettings(): JSX.Element {
   const removeEarlier = async (origin: string) => {
     setRemoveBusy(true); setError(''); setSaved('');
     try {
-      const r = await call<Address>('/api/admin/web-address/remove-earlier', tRef.current('webAddress.readError'), { origin });
+      const r = await call<Address>('/api/admin/web-address/remove', tRef.current('webAddress.readError'), { origin });
       if (!mounted.current) return;
       if (!r.ok) { setError(r.body.error || tRef.current('webAddress.removeError')); return; }
       setCurrent(r.body); setRemoving(null);
