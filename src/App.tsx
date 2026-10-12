@@ -1528,6 +1528,26 @@ export default function App(): JSX.Element {
     [refreshProjects],
   );
 
+  // #1511: "Move to <project>" / "Remove from project" in the chat menu. It is the same move path as an
+  // accepted frame (moveChatToProject, POST /api/chats/:id/move), queued in the chat's current list so it
+  // cannot race a meta save. Only the list changes: the transcript stays put, and the frame is not sent,
+  // so the server keeps the saved one with the chat.
+  const moveChatTo = useCallback((chatId: string, fromProjectId: string | null, toProjectId: string | null) => {
+    if (fromProjectId === toProjectId) return;
+    const home = chatHome(chatId, allChatsRef.current, movedChats.current, fromProjectId);
+    const key = home === null ? 'free' : `project:${home}`;
+    setProjectError(null);
+    const pending = (chatMetaSaves.current.get(key) || Promise.resolve()).then(async () => {
+      await moveChatToProject(chatId, toProjectId);
+      movedChats.current.set(chatId, toProjectId);
+      workspaceRequest.current += 1;
+      await refreshProjects();
+      if (viewRef.current.kind === 'chat' && viewRef.current.chatId === chatId) setView({ kind: 'chat', chatId, projectId: toProjectId });
+    }).catch(() => { setProjectError(tr('sidebar.moveChatFailed')); });
+    chatMetaSaves.current.set(key, pending);
+    void pending.finally(() => { if (chatMetaSaves.current.get(key) === pending) chatMetaSaves.current.delete(key); });
+  }, [refreshProjects, tr]);
+
   const linkChat = useCallback((chatId: string, projectId: string | null, targetId: string) => {
     if (!targetId || targetId === chatId) return;
     const meta = allChatsRef.current.find((c) => c.id === chatId);
@@ -1662,6 +1682,7 @@ export default function App(): JSX.Element {
         onOpenChat={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
         onDeleteChat={handleDeleteChat}
         onPatchChat={handlePatchChat}
+        onMoveChat={moveChatTo}
         streamingChats={streamingChats}
         onPatchProject={handlePatchProject}
         onEditProject={setEditingProjectId}
