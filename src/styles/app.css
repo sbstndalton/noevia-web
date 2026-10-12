@@ -1165,6 +1165,8 @@ button:disabled { cursor: not-allowed; }
   background: var(--bg-surface-active); color: var(--text-secondary);
 }
 .project-card-time { margin-left: auto; font-size: var(--text-caption2); color: var(--text-faint); }
+/* #1572: the archived card's footer row (Restore), always at the end of the card. */
+.project-card-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
 
 @media (max-width: 640px) {
   .projects-head, .projects-grid { padding-left: 18px; padding-right: 18px; }
