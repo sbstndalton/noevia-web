@@ -4,7 +4,6 @@
 // in the interface font. Rendered through Vite's SSR pipeline like message-actions-render.test.cjs.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
 const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '../..');

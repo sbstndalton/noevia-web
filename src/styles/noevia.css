@@ -71,6 +71,15 @@ input:not([type=checkbox]):not([type=radio]), textarea, select { border-color:va
 .native-modal::backdrop { background: transparent; }
 
 .msg-warning { color: var(--text-secondary); border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg-surface); padding: 8px 12px; font-size: var(--text-footnote); line-height: 1.5; }
+/* #1547/#1549: a failed reply. Partial text is labelled incomplete; the failure is an inline error card
+   with its own mark, in the interface font, never the reply's body style or the accent green. */
+.msg-partial-label { display: block; margin-bottom: 4px; color: var(--text-secondary); font-family: var(--font-ui); font-size: var(--text-caption); }
+.msg-failure { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin-top: 4px; padding: 10px 12px;
+  border: 1px solid var(--danger); border-radius: var(--radius-control);
+  background: var(--bg-surface); color: var(--text-primary); font-family: var(--font-ui); font-size: var(--text-footnote); line-height: 1.5; }
+.msg-failure-icon { flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--danger); color: var(--on-danger); font-size: 12px; font-weight: 700; line-height: 1; }
+.msg-failure-text { flex: 1 1 220px; min-width: 0; margin: 0; overflow-wrap: anywhere; }
 @media (max-width: 519px) {
   .settings-detail .model-name-group { flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; }
   .settings-detail .model-name { max-width: 100%; }
