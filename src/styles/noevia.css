@@ -1657,6 +1657,9 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
    second line jump to the row's opposite edge instead of reading as ordinary wrapped text. */
 .mm-summary .model-row { min-width: 0; }
 .mm-summary .model-role { flex-shrink: 1; min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: left; }
+/* #1540: the row label keeps its full width ("Auto routing", never "Auto ro...") and the value takes
+   the rest of the row, wrapping inside its own column. */
+.mm-summary .model-name { flex: 0 0 auto; max-width: none; }
 @media (max-width: 700px) { .model-manager-page .settings-scroll { padding: 0 16px 32px; } }
 
 /* Easy / Advanced model settings */
