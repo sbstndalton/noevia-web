@@ -581,6 +581,8 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'usage.less': "Mindre",
   'usage.more': "Mer",
   'usage.inspectDay': "Se på en dag",
+  'usage.touchMonths': "Måneder",
+  'usage.monthDays': "Dager i {month}",
   'usage.inputTokens': "{count} inndata-tokens",
   'usage.outputTokens': "{count} utdata-tokens",
   'usage.peakHour': "Travleste time",

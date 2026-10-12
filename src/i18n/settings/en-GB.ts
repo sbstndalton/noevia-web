@@ -582,6 +582,8 @@ export const EN_GB_SETTINGS = {
   'usage.less': "Less",
   'usage.more': "More",
   'usage.inspectDay': "Inspect a day",
+  'usage.touchMonths': "Months",
+  'usage.monthDays': "Days in {month}",
   'usage.inputTokens': "{count} input tokens",
   'usage.outputTokens': "{count} output tokens",
   'usage.peakHour': "Peak hour",

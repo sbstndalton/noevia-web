@@ -581,6 +581,8 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'usage.less': "Moins",
   'usage.more': "Plus",
   'usage.inspectDay': "Examiner un jour",
+  'usage.touchMonths': "Mois",
+  'usage.monthDays': "Jours de {month}",
   'usage.inputTokens': "{count} jetons d’entrée",
   'usage.outputTokens': "{count} jetons de sortie",
   'usage.peakHour': "Heure de pointe",

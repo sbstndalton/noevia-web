@@ -581,6 +581,8 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'usage.less': "Weniger",
   'usage.more': "Mehr",
   'usage.inspectDay': "Tag ansehen",
+  'usage.touchMonths': "Monate",
+  'usage.monthDays': "Tage im {month}",
   'usage.inputTokens': "{count} Eingabe-Token",
   'usage.outputTokens': "{count} Ausgabe-Token",
   'usage.peakHour': "Stärkste Stunde",

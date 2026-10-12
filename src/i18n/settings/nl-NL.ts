@@ -581,6 +581,8 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'usage.less': "Minder",
   'usage.more': "Meer",
   'usage.inspectDay': "Een dag bekijken",
+  'usage.touchMonths': "Maanden",
+  'usage.monthDays': "Dagen in {month}",
   'usage.inputTokens': "{count} invoertokens",
   'usage.outputTokens': "{count} uitvoertokens",
   'usage.peakHour': "Drukste uur",

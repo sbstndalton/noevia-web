@@ -581,6 +581,8 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'usage.less': "Menos",
   'usage.more': "Mais",
   'usage.inspectDay': "Ver um dia",
+  'usage.touchMonths': "Meses",
+  'usage.monthDays': "Dias de {month}",
   'usage.inputTokens': "{count} tokens de entrada",
   'usage.outputTokens': "{count} tokens de saída",
   'usage.peakHour': "Horário de pico",

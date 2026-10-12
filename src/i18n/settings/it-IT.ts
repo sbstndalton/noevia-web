@@ -581,6 +581,8 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'usage.less': "Meno",
   'usage.more': "Più",
   'usage.inspectDay': "Esamina un giorno",
+  'usage.touchMonths': "Mesi",
+  'usage.monthDays': "Giorni di {month}",
   'usage.inputTokens': "{count} token di input",
   'usage.outputTokens': "{count} token di output",
   'usage.peakHour': "Ora di punta",
