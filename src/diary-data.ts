@@ -69,3 +69,15 @@ export function calendarDays(id: string, firstDay = 0): (string | null)[] {
   const count = new Date(start.getFullYear(), start.getMonth()+1, 0).getDate();
   return [...Array((start.getDay() - firstDay + 7) % 7).fill(null), ...Array.from({length: count}, (_, i) => `${id}-${String(i+1).padStart(2,'0')}`)];
 }
+/** #1518: the day `delta` days from `id` (a `YYYY-MM-DD` day id). Calendar arithmetic in UTC, so a
+ *  daylight-saving change never lands a step on the wrong day. */
+export function shiftDay(id: string, delta: number): string {
+  const date = new Date(`${id}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + delta);
+  return date.toISOString().slice(0, 10);
+}
+/** #1518: where an arrow key moves focus in the calendar grid. Left/Right step one day, Up/Down one week.
+ *  Null when the key is not an arrow. The caller decides whether the target is in the month and enabled. */
+export function calendarArrowStep(key: string): number | null {
+  return key === 'ArrowLeft' ? -1 : key === 'ArrowRight' ? 1 : key === 'ArrowUp' ? -7 : key === 'ArrowDown' ? 7 : null;
+}

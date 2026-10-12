@@ -143,7 +143,11 @@ button:disabled { opacity: .5; cursor: default; }
    diary content's own responsive gutter (.diary-compose, .diary-calendar-section) instead of
    chat's fixed 28px inset; they disagreed by ~30px at 1440px. Left edge and type scale only:
    .diary-home-link already matches chat's own .header-title (--text-callout/500). */
-.diary-header { padding-left: var(--diary-gutter); }
+/* #1541: the Diary header shares the content's column. --diary-inset is the side inset the content and
+   composer use (the 16px narrow value comes from the 1000px block below), and at wide widths the header
+   takes the same 820px column the calendar, list and conversation are centred in. */
+.diary-workspace { --diary-inset: var(--diary-gutter); }
+.diary-header { padding-left: max(var(--diary-inset), calc((100% - 820px) / 2)); padding-right: max(var(--diary-inset), calc((100% - 820px) / 2)); }
 .header-title, .crumb-back { font-size: var(--text-callout); font-weight: 500; }
 .model-pill { background: transparent; padding: 7px 9px; border-radius: var(--radius-control); color: var(--text-primary); }
 .model-pill:hover { background: var(--nav-hover); }
@@ -568,8 +572,11 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 /* Diary conversation and composer have independent layout; only content scrolls. */
 .diary-layout { overflow: hidden; }
 .diary-primary { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
-.diary-content-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-anchor: none; padding: 32px clamp(16px, 4vw, 64px); }
-.diary-composer-dock { flex: none; padding: 8px var(--diary-gutter) 12px; background: var(--bg-app); }
+/* #1568: the bottom 24px fades out and .diary-scroll-end keeps the last row clear of it, so a cut-off row reads as "scroll" and the composer never sits against it. */
+.diary-content-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-anchor: none; padding: 32px var(--diary-inset);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent); }
+.diary-scroll-end { height: 24px; }
+.diary-composer-dock { flex: none; padding: 8px var(--diary-inset) 12px; background: var(--bg-app); }
 .diary-composer-dock .diary-compose { margin: 0 auto; }
 .diary-primary > .diary-save-status { flex: none; margin: 0; padding: 0 20px 8px; }
 .diary-context { min-height: 0; overflow-y: auto; }
@@ -579,8 +586,9 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 @media (max-width: 1000px) {
   .diary-layout { display: grid; grid-template-rows: minmax(0, 1fr) auto; }
   .diary-context { max-height: 150px; padding: 12px 18px; }
-  .diary-content-scroll { padding: 20px 16px; }
-  .diary-composer-dock { padding: 8px 16px; }
+  .diary-workspace { --diary-inset: 16px; }
+  .diary-content-scroll { padding: 20px var(--diary-inset); }
+  .diary-composer-dock { padding: 8px var(--diary-inset); }
 }
 
 .diary-activity { color: var(--text-secondary); margin: 8px 0 16px; font-size: var(--text-footnote); }
@@ -1174,6 +1182,25 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 .diary-calendar-heading h1 { margin:8px 0; }
 .diary-calendar-heading button { min-width:44px; min-height:44px; }
 .diary-calendar { margin-top:16px; }
+/* #1566: the loading line holds one line of height, so clearing it moves nothing. */
+.diary-calendar-status { min-height:1lh; display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.diary-calendar-status .popup-tab { min-height:0; padding:2px 10px; }
+/* #1567: placeholders while the Diary chunk, the sidebar project list and Memory and context load. */
+.view-loading.diary-skeleton { display:grid; grid-template-columns:minmax(0,1fr) 260px; gap:24px; align-items:start; padding:32px var(--diary-gutter); }
+.diary-skeleton-main { display:flex; flex-direction:column; gap:12px; min-width:0; }
+.diary-skeleton-main > span { height:18px; border-radius:var(--radius-control); }
+.diary-skeleton-main > span:first-child { width:min(260px,60%); height:28px; }
+.diary-skeleton-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px; margin-top:16px; }
+.diary-skeleton-grid > span { height:44px; border-radius:var(--radius-control); }
+.diary-skeleton-side { display:flex; flex-direction:column; gap:12px; }
+.diary-skeleton-side > span { height:14px; border-radius:var(--radius-control); }
+.diary-skeleton-side > span:nth-child(3n) { width:70%; }
+.sidebar-skeleton { display:flex; flex-direction:column; gap:10px; padding:6px 12px; }
+.sidebar-skeleton > span { height:14px; border-radius:var(--radius-control); }
+.sidebar-skeleton > span:nth-child(2n) { width:75%; }
+.diary-file-skeleton { display:flex; flex-direction:column; gap:10px; padding:10px 6px; }
+.diary-file-skeleton > span { height:14px; border-radius:var(--radius-control); }
+.diary-file-skeleton > span:nth-child(2n) { width:60%; }
 .calendar-day { aspect-ratio:auto; min-height:44px; height:clamp(44px,7vh,76px); }
 .diary-composer-dock { background:transparent; padding-bottom:18px; }
 .diary-composer-dock .diary-compose { max-width:820px; }
@@ -2438,7 +2465,8 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 :root[data-layout="mobile"] .diary-primary { flex: none; height: 100%; }
 :root[data-layout="mobile"] .diary-context { flex: none; display: block; border-left: 0; border-top: 1px solid var(--border); max-height: none; overflow: visible; padding: 12px 18px; }
 :root[data-layout="mobile"] .diary-context > section + section { border: 0; margin: 24px 0 0; padding: 0; }
-:root[data-layout="mobile"] .diary-content-scroll { padding: 20px 16px; }
+:root[data-layout="mobile"] .diary-workspace { --diary-inset: 16px; }
+:root[data-layout="mobile"] .diary-content-scroll { padding: 20px var(--diary-inset); }
 :root[data-layout="mobile"] .diary-composer-dock { padding: 8px 16px; }
 :root[data-layout="mobile"] .diary-landing { margin-top: 24px; }
 :root[data-layout="mobile"] .diary-landing h1 { font-size: var(--text-large); letter-spacing: -.9px; }

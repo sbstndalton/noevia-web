@@ -19,6 +19,7 @@ import { ComposerTextarea } from './ComposerTextarea';
 import { DiaryCalendar } from './DiaryCalendar';
 import { DiaryContextPanel } from './DiaryContextPanel';
 import { useEffect, useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import { isFocusable } from '../focus-utils';
 import { apiFetch, fetchProfile, deleteProjectFile, fetchDiaryMonth, fetchDiarySource, fetchStorage, streamChat } from '../api';
 import type { StorageConnection } from '../api';
@@ -74,6 +75,8 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   };
   const [month, setMonth] = useState<string | null>(null);
   const [day, setDay] = useState<string | null>(null);
+  // #1518: the calendar cell that holds the tab stop; the day last opened or focused. Kept here so it survives the grid unmounting while a day is open.
+  const [calendarFocus, setCalendarFocus] = useState<string | null>(null);
   const [overview, setOverview] = useState<{ready: boolean; failed: boolean; memory: FileEntry[]; sources: FileEntry[]; recentDays: string[]}>({ready:false,failed:false,memory:[],sources:[],recentDays:[]});
   const [months, setMonths] = useState<string[]>([]);
   const [days, setDays] = useState<Record<string,string>>({});
@@ -532,8 +535,22 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   const navigate = (nextMonth: string | null, nextDay: string | null = null) => {
     if (busy) return;
     if (draft.trim() && !window.confirm(t('diary.confirm.discardDraft'))) return;
+    const leavingDay = day && !nextDay ? day : null;
     setDraft(''); setMonth(nextMonth); setDay(nextDay); setStatus(''); setError('');
     if (nextMonth !== month) setDays({});
+    if (nextDay) setCalendarFocus(nextDay);
+    // #1452/#1518: keyboard focus goes with the move: into the day just opened, or back onto that day's calendar cell.
+    // The rAF waits for React to commit the new view.
+    if (nextDay) requestAnimationFrame(() => document.querySelector<HTMLElement>('.diary-day > h1')?.focus());
+    else if (leavingDay) requestAnimationFrame(() => (document.querySelector<HTMLElement>(`.diary-calendar [data-day="${leavingDay}"]`) ?? document.querySelector<HTMLElement>('.diary-calendar [tabindex="0"]'))?.focus());
+  };
+  // #1518: Escape leaves an open day for its calendar, the same move as the breadcrumb's month link. It is ignored
+  // while typing in a field, and inside a dialog, so it never discards text or closes something else.
+  const escapeDay = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Escape' || event.defaultPrevented || !day || editor) return;
+    if ((event.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
+    event.preventDefault();
+    navigate(month);
   };
   const editorOperation = async (label: string, action: () => Promise<void>, restoreFocus = false) => {
     if (busyRef.current) return;
@@ -634,10 +651,12 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
     <button className="send-btn glass is-primary is-press" aria-label={t('diary.compose.sendLabel')} disabled={busy || recovering || extraBusy || !draft.trim()} onClick={submit}><SendIcon /></button></div>
     {!folder && !day && (turns[today] || []).length > 0 && <button className="popup-tab" onClick={()=>{setMonth(today.slice(0,7));setDay(today);}}>{t('diary.compose.openTodaysConversation')}</button>}
     {!folder && uncertain.length > 0 && <div className="composer-action-status diary-uncertain" role="status">
-      <p>{t.plural('diary.uncertain.banner', uncertain.length, { time: new Date(uncertain[0].startedAt).toLocaleTimeString(appLocale(), { hour: '2-digit', minute: '2-digit' }), day: dayLabel(uncertain[0].day) })}</p>
+      {/* #1506: the time is the earliest uncertain exchange's (a single one is the only one); "Put back" always
+          applies to the first listed, the one "Show it" reveals, and leaves the others in the banner. */}
+      <p>{t.plural('diary.uncertain.banner', uncertain.length, { time: new Date(Math.min(...uncertain.map(x => x.startedAt))).toLocaleTimeString(appLocale(), { hour: '2-digit', minute: '2-digit' }), day: dayLabel(uncertain[0].day) })}</p>
       <div className="diary-uncertain-actions">
         <button type="button" className="popup-tab" disabled={busy} onClick={() => showUncertain(uncertain[0])}>{t('diary.uncertain.show')}</button>
-        {uncertain.length === 1 && <button type="button" className="popup-tab" disabled={busy} onClick={() => void reuseUncertain(uncertain[0])}>{t('diary.uncertain.reuse')}</button>}
+        <button type="button" className="popup-tab" disabled={busy} onClick={() => void reuseUncertain(uncertain[0])}>{t('diary.uncertain.reuse')}</button>
         <button type="button" className="popup-tab" disabled={busy} onClick={() => void dismissUncertain()}>{t('diary.uncertain.dismiss')}</button>
       </div>
     </div>}
@@ -648,16 +667,21 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   </div>;
   return <main className="main diary-workspace" role={active ? undefined : 'none'}>
     <header className="chat-header diary-header"><div className="diary-breadcrumb"><button className="diary-home-link" disabled={busy} onClick={()=>editor?closeEditor():navigate(null)}>{t('diary.title')}</button>{month && <><span>/</span><button className="popup-tab" disabled={busy} onClick={()=>navigate(month)}>{monthLabel(month)}</button></>}{day && <span>/ {new Date(`${day}T12:00:00`).getDate()}</span>}</div><span className="diary-private">{t('diary.privateDiary')}</span></header>
-    <div className="diary-layout" style={editor?{display:'none'}:undefined}><section className="diary-primary"><div className="diary-content-scroll" ref={scrollRef} onScroll={onScroll}>
+    <div className="diary-layout" style={editor?{display:'none'}:undefined}><section className="diary-primary"><div className="diary-content-scroll" ref={scrollRef} onScroll={onScroll} onKeyDown={escapeDay}>
       {inferenceUp === false && <p className="conn-banner">{t('diary.banners.inferenceDown')}</p>}
       {error && <p className="conn-banner" role="alert">{error}</p>}{!editor && editorError && <p className="conn-banner" role="alert">{editorError}</p>}
       {storageError && <div className="conn-banner" role="alert">{storageError} <button className="popup-tab" onClick={() => setStorageAttempt(n => n + 1)}>{t('diary.banners.retryStorage')}</button></div>}
       {localRecoveryError && <p className="conn-banner" role="alert">{localRecoveryError}</p>}
       {!!savedRecoveries.length && !folder && <section className="diary-pending"><div><strong>{t('diary.recovery.localSessionsTitle')}</strong><p>{t('diary.recovery.reconnectHint')}</p>{savedRecoveries.map(record=><div key={record.id}><span><bdi>{record.folder.name}</bdi> · {new Date(record.updatedAt).toLocaleString()}</span><button className="popup-tab" disabled={busy || !storage} onClick={()=>restoreLocalRecovery(record)}>{t('diary.recovery.reconnectAndRecover')}</button><button className="popup-tab" disabled={busy} onClick={()=>{if(window.confirm(t('diary.confirm.removeRecoveryCopy')))void forgetLocalRecovery(recoveryOwner,record.id).then(()=>listLocalRecovery(recoveryOwner)).then(setSavedRecoveries).catch(e=>setError(String(e)));}}>{t('diary.recovery.forget')}</button></div>)}</div></section>}
       {pendingCount > 0 && <div className="diary-pending" role="status"><span>{Object.keys(pendingLocal).length ? t('diary.pending.localSaveNeedsAttention') : t.plural('diary.pending.filesWaiting', Object.keys(pendingSync).length)}</span><button className="popup-tab" disabled={busy} onClick={()=>void run(async()=>{ if(Object.keys(pendingLocal).length) await commitLocal(pendingLocal); else await syncChanges(pendingSync); })}>{t('diary.pending.retry')}</button></div>}
-      {!day && <DiaryCalendar month={month || today.slice(0,7)} today={today} days={days} busy={busy} ready={overview.ready} failed={overview.failed} navigate={navigate} />}
-      {day && <section className="diary-day"><h1>{dayLabel(day)}</h1>{days[day]?.trim() ? <details className="diary-saved-record" key={`${day}-${!!conversation.length}`} open={!conversation.length}><summary>{t('diary.day.savedEntry')}</summary><MarkdownPreview text={days[day]} /></details> : !conversation.length && <p className="diary-intro">{t('diary.day.blankPage')}</p>}</section>}
+      {!day && <DiaryCalendar month={month || today.slice(0,7)} today={today} days={days} busy={busy} ready={overview.ready} failed={overview.failed} navigate={navigate} focusDay={calendarFocus} onFocusDay={setCalendarFocus} onRetry={bumpRevision} />}
+      {/* #1423: until the entries have loaded, a day is not blank; when they failed to load, say so and offer a retry. */}
+      {day && <section className="diary-day"><h1 tabIndex={-1}>{dayLabel(day)}</h1>{days[day]?.trim() ? <details className="diary-saved-record" key={`${day}-${!!conversation.length}`} open={!conversation.length}><summary>{t('diary.day.savedEntry')}</summary><MarkdownPreview text={days[day]} /></details> : !conversation.length && (overview.ready
+        ? <p className="diary-intro">{t('diary.day.blankPage')}</p>
+        : <p className="diary-intro" role="status">{overview.failed ? t('diary.calendar.loadFailed') : t('diary.calendar.loading')}{overview.failed && <> <button className="popup-tab" disabled={busy} onClick={bumpRevision}>{t('diary.calendar.retryLoad')}</button></>}</p>)}</section>}
       {!!conversation.length && <section className="diary-conversation" aria-live="polite" aria-busy={busy}>{conversation.map((t2,i)=><article className="diary-reply" data-role={t2.role} data-exchange-id={t2.exchangeId} tabIndex={t2.exchangeId ? -1 : undefined} key={i}><span className="msg-sender">{t2.role==='user'?t('diary.conversation.you'):t('diary.conversation.diaryCompanion')}</span>{t2.role === 'assistant' && t2.activity?.length && <details className="diary-activity" open={busy && i === conversation.length - 1}><summary>{busy && i === conversation.length - 1 ? <>{t2.activity.at(-1)}{t2.startedAt && <> · <LiveTimer startedAt={t2.startedAt} /></>}</> : t('diary.conversation.diaryActivity')}</summary><ol>{t2.activity.map((label,n)=><li key={n}>{label}</li>)}</ol></details>}{t2.reasoning && <ThinkingBlock text={t2.reasoning} live={busy && i === conversation.length - 1 && !t2.content} />}{!!t2.tools?.length && <ToolCalls calls={t2.tools.filter(Boolean)} />}<MarkdownPreview text={t2.content || (busy ? t('diary.conversation.workingOnDiary') : '')} /></article>)}</section>}
+        {/* #1568: clear space after the last row, so the month and the list are not cut off against the composer. */}
+        <div className="diary-scroll-end" aria-hidden="true" />
       </div>
       <div className="diary-composer-dock">{composer}</div>
       {status && <p className="diary-save-status" role="status">{status}</p>}

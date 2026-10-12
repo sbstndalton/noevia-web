@@ -271,6 +271,8 @@ export default function App(): JSX.Element {
   }, [view]);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
+  // #1567: the last workspace fetch failed (the sidebar then stops showing a loading placeholder).
+  const [workspaceFailed, setWorkspaceFailed] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [freeChats, setFreeChats] = useState<ChatMeta[]>([]);
   const projectsRef = useRef(projects);
@@ -410,8 +412,9 @@ export default function App(): JSX.Element {
         setProjects(nextProjects);
         setFreeChats(nextFreeChats);
         setWorkspaceLoaded(true);
+        setWorkspaceFailed(false);
       })
-      .catch(() => undefined);
+      .catch(() => { if (request === workspaceRequest.current) setWorkspaceFailed(true); });
   }, []);
   useWorkspaceChanged(refreshProjects);
 
@@ -1682,6 +1685,7 @@ export default function App(): JSX.Element {
         showPreviews={showPreviews}
         projects={projects}
         projectsLoaded={workspaceLoaded}
+        projectsFailed={workspaceFailed}
         chats={allChats}
         organise={featureFlags.chatFraming === true}
         activeView={view.kind}
