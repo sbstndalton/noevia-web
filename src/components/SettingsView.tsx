@@ -294,7 +294,7 @@ function UsersCard(): JSX.Element {
     <div className="set-rows">
       {users.length === 0 && !loading && <p className="route-note">{t('users.empty')}</p>}
       {users.map(u => <div key={u.id}>
-        <div className="model-row"><div className="model-name-group"><span className="model-name">{u.displayName}</span><span className="model-quant">@{u.username} · {u.role}{u.disabled ? ` · ${t('users.disabled')}` : ''}</span></div>{u.id !== user.id && <>
+        <div className="model-row"><div className="model-name-group"><span className="model-name">{u.displayName}</span><span className="model-quant">@{u.username} · {u.role === 'admin' ? t('profile.admin') : t('profile.member')}{u.disabled ? ` · ${t('users.disabled')}` : ''}</span></div>{u.id !== user.id && <>
           <button className="popup-tab" disabled={!!busy[u.id] || loading} onClick={() => void act(u.id, u.disabled ? t('users.enableAccount') : t('users.disableAccount'), () => setUserDisabled(u.id, !u.disabled), t('users.accountUpdated'))}>{u.disabled ? t('users.enable') : t('users.disable')}</button>
           <button className="popup-tab" disabled={!!busy[u.id] || loading} onClick={() => void createLink(u.id, u.id)}>{t('users.recovery')}</button>
           <button className="recents-del" title={t('users.deleteUser')} aria-label={t('users.deleteUserNamed', { username: u.username })} disabled={!!busy[u.id] || loading} onClick={() => { const typed = window.prompt(t('users.deletePrompt', { username: u.username })); if (typed === u.username) void act(u.id, t('users.deleteAccount'), () => deleteUser(u.id, typed), t('users.accountDeleted'), true, true); }}><ShellIcon name="close" size={16}/></button>
