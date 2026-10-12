@@ -92,3 +92,38 @@ test('#1006 review: no Tools button beside the composer unless the chat picks to
   assert.match(chat, /const catalogue = !toolsByHand \? null : <ToolCatalogue/);
   assert.match(chat, /browseTools=\{toolsByHand \?/);
 });
+
+// #1397: synthetic availability data only; no API, inference or model selection.
+test('#1397: Auto availability preserves healthy/unconfigured states and bounds missing roles', () => {
+  const { missingAutoRoles, missingAutoRolesText } = load('auto-role-availability.ts');
+  const plain = (value) => JSON.parse(JSON.stringify(value));
+  const t = (key, params) => `${key}${params ? `: ${params.models}` : ''}`;
+  assert.deepEqual(plain(missingAutoRoles(null)), []);
+  assert.deepEqual(plain(missingAutoRoles({ configured: false, roles: null, missing: [{ role: 'fast', model: 'gone' }] })), []);
+  assert.deepEqual(plain(missingAutoRoles({ configured: true, roles: { fast: 'present' } })), []);
+  assert.deepEqual(plain(missingAutoRoles({ configured: true, roles: {}, missing: [] })), []);
+  const one = missingAutoRoles({ configured: true, roles: {}, missing: [{ role: 'smart', model: 'synthetic-smart' }] });
+  assert.equal(missingAutoRolesText(one, t), 'modelPopup.autoMissingOne: modelPopup.autoRole.smart (synthetic-smart)');
+  const several = missingAutoRoles({ configured: true, roles: {}, missing: [
+    { role: 'vision', model: '<synthetic-image>' }, { role: 'fast', model: 'synthetic-fast' },
+    { role: 'fast', model: 'duplicate' }, { role: 'unknown', model: 'ignored' },
+    { role: 'code', model: 'x'.repeat(300) }, { role: 'smart', model: '' }, null,
+  ] });
+  assert.deepEqual(plain(several.map((m) => m.role)), ['fast', 'vision', 'code']);
+  assert.equal(several[2].model.length, 256);
+  assert.match(missingAutoRolesText(several, t), /^modelPopup\.autoMissingSeveral:/);
+  assert.ok(missingAutoRolesText(several, t).includes('modelPopup.autoRole.vision (<synthetic-image>)'));
+});
+
+test('#1397: popup warning uses its own base-catalogue copy, escaped text and its settings link', () => {
+  const popup = read('components/ModelPopup.tsx');
+  assert.match(popup, /useState<AutoRoleInfo \| null>/);
+  assert.match(popup, /const showMissing = auto && missing\.length > 0/);
+  assert.ok(!popup.includes("import('../i18n/models')"));
+  assert.match(popup, /showMissing && <p className="mp-note mm-warn" role="alert"/);
+  assert.match(popup, /overflowWrap: 'anywhere'/);
+  assert.match(popup, /\{missingAutoRolesText\(missing, t\)\}/);
+  assert.match(popup, /roleSummary\(autoInfo\.roles, t\)/);
+  assert.match(popup, /onClick=\{\(\) => onOpenSettings\(\)\}>\{t\('modelPopup.change'\)\}/);
+  assert.ok(!popup.includes('dangerouslySetInnerHTML'));
+});

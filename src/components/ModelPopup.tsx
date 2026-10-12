@@ -6,12 +6,13 @@ import { useModelsChanged } from '../models-changed';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useModalDialog } from './useModalDialog';
 import { roleSummary } from '../routing-copy';
+import { missingAutoRoles, missingAutoRolesText } from '../auto-role-availability';
+import type { AutoRoleInfo } from '../auto-role-availability';
 import { CloseButton } from './CloseButton';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
 import type { JSX, ReactNode } from 'react';
 import type { InstalledModel, Project, Provider } from '../types';
-import type { AutoRoles } from '../api';
 import { apiFetch, fetchAutoRoles, fetchChatGptModels, fetchInstalledModels, fetchProviders, saveProjectConfig } from '../api';
 import { ProjectRoutingMode } from './ProjectRoutingMode';
 import { SegmentedControl } from './SegmentedControl';
@@ -74,7 +75,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [modelsLoading, setModelsLoading] = useState(true);
   const [providers, setProviders] = useState<Provider[]>([]);
-  const [autoInfo, setAutoInfo] = useState<{ configured: boolean; roles: AutoRoles | null } | null>(null);
+  const [autoInfo, setAutoInfo] = useState<AutoRoleInfo | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   // Every busy-gated control here (the Auto/Manual toggle, a model row, the provider
@@ -113,6 +114,8 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
   const activeProviderId = activeProject?.provider === 'lemonade' ? defaultProviderId : activeProject?.provider || defaultProviderId;
   const activeProvider = providers.find((p) => p.id === activeProviderId);
   const auto = activeProject?.routing === 'auto';
+  const missing = missingAutoRoles(autoInfo);
+  const showMissing = auto && missing.length > 0;
   // #447: a ChatGPT connection lists the account's own models; free text only if that list fails.
   const chatgptActive = activeProvider?.kind === 'chatgpt-oauth';
   const [accountModels, setAccountModels] = useState<string[] | null>(null);
@@ -192,6 +195,9 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
         {' '}<button className="mp-link" onClick={() => onOpenSettings()}>{t('modelPopup.change')}</button>
       </p>
     ) : null}
+    {showMissing && <p className="mp-note mm-warn" role="alert" style={{ overflowWrap: 'anywhere' }}>
+      {missingAutoRolesText(missing, t)}
+    </p>}
     {auto && contextControl}
     {auto ? <ProjectRoutingMode project={activeProject} disabled={busy !== null} onChanged={onChanged} /> : (
       <div className="mp-model-area">
