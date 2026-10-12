@@ -24,7 +24,7 @@ export const ES_ES_DIARY: DiaryCatalogue = {
   'diary.errors.contextFailed': "No se pudo leer tu diario. No se guardó nada, así que puedes reenviar.",
   'diary.errors.diaryUnavailable': "No se pudo acceder al compañero de diario. No se guardó nada, así que puedes reenviar.",
   'diary.uncertain.banner.one': "Un intercambio de las {time} del {day} tiene un resultado de guardado incierto. Revisa la entrada guardada antes de reenviar.",
-  'diary.uncertain.banner.other': "{count} intercambios del {day} tienen un resultado de guardado incierto. Revisa la entrada guardada antes de reenviar.",
+  'diary.uncertain.banner.other': "{count} intercambios del {day} desde {time} tienen un resultado de guardado incierto. Revisa la entrada guardada antes de reenviar.",
   'diary.uncertain.show': "Mostrar",
   'diary.uncertain.reuse': "Volver a poner el mensaje en el cuadro de escritura",
   'diary.uncertain.dismiss': "Descartar",

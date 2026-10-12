@@ -24,7 +24,7 @@ export const SV_SE_DIARY: DiaryCatalogue = {
   'diary.errors.contextFailed': "Det gick inte att läsa din dagbok. Inget sparades, så du kan skicka igen.",
   'diary.errors.diaryUnavailable': "Det gick inte att nå dagbokskompanjonen. Inget sparades, så du kan skicka igen.",
   'diary.uncertain.banner.one': "Ett utbyte från {time} den {day} har ett osäkert sparresultat. Kontrollera den sparade anteckningen innan du skickar igen.",
-  'diary.uncertain.banner.other': "{count} utbyten den {day} har ett osäkert sparresultat. Kontrollera den sparade anteckningen innan du skickar igen.",
+  'diary.uncertain.banner.other': "{count} utbyten den {day} från {time} har ett osäkert sparresultat. Kontrollera den sparade anteckningen innan du skickar igen.",
   'diary.uncertain.show': "Visa",
   'diary.uncertain.reuse': "Lägg tillbaka meddelandet i skrivfältet",
   'diary.uncertain.dismiss': "Avvisa",

@@ -629,10 +629,12 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
     <button className="send-btn glass is-primary is-press" aria-label={t('diary.compose.sendLabel')} disabled={busy || recovering || extraBusy || !draft.trim()} onClick={submit}><SendIcon /></button></div>
     {!folder && !day && (turns[today] || []).length > 0 && <button className="popup-tab" onClick={()=>{setMonth(today.slice(0,7));setDay(today);}}>{t('diary.compose.openTodaysConversation')}</button>}
     {!folder && uncertain.length > 0 && <div className="composer-action-status diary-uncertain" role="status">
-      <p>{t.plural('diary.uncertain.banner', uncertain.length, { time: new Date(uncertain[0].startedAt).toLocaleTimeString(appLocale(), { hour: '2-digit', minute: '2-digit' }), day: dayLabel(uncertain[0].day) })}</p>
+      {/* #1506: the time is the earliest uncertain exchange's (a single one is the only one); "Put back" always
+          applies to the first listed, the one "Show it" reveals, and leaves the others in the banner. */}
+      <p>{t.plural('diary.uncertain.banner', uncertain.length, { time: new Date(Math.min(...uncertain.map(x => x.startedAt))).toLocaleTimeString(appLocale(), { hour: '2-digit', minute: '2-digit' }), day: dayLabel(uncertain[0].day) })}</p>
       <div className="diary-uncertain-actions">
         <button type="button" className="popup-tab" disabled={busy} onClick={() => showUncertain(uncertain[0])}>{t('diary.uncertain.show')}</button>
-        {uncertain.length === 1 && <button type="button" className="popup-tab" disabled={busy} onClick={() => void reuseUncertain(uncertain[0])}>{t('diary.uncertain.reuse')}</button>}
+        <button type="button" className="popup-tab" disabled={busy} onClick={() => void reuseUncertain(uncertain[0])}>{t('diary.uncertain.reuse')}</button>
         <button type="button" className="popup-tab" disabled={busy} onClick={() => void dismissUncertain()}>{t('diary.uncertain.dismiss')}</button>
       </div>
     </div>}

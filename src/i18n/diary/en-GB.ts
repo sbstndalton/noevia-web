@@ -26,7 +26,7 @@ export const EN_GB_DIARY = {
   'diary.errors.contextFailed': "Couldn't read your diary. Nothing was saved, so you can resend.",
   'diary.errors.diaryUnavailable': "Couldn't reach the Diary companion. Nothing was saved, so you can resend.",
   'diary.uncertain.banner.one': 'An exchange from {time} on {day} has an uncertain save outcome. Check the saved entry before resending.',
-  'diary.uncertain.banner.other': '{count} exchanges on {day} have an uncertain save outcome. Check the saved entry before resending.',
+  'diary.uncertain.banner.other': '{count} exchanges on {day} from {time} have an uncertain save outcome. Check the saved entry before resending.',
   'diary.uncertain.show': 'Show it',
   'diary.uncertain.reuse': 'Put the message back in the composer',
   'diary.uncertain.dismiss': 'Dismiss',

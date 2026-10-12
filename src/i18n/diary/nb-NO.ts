@@ -24,7 +24,7 @@ export const NB_NO_DIARY: DiaryCatalogue = {
   'diary.errors.contextFailed': "Kunne ikke lese dagboken din. Ingenting ble lagret, så du kan sende på nytt.",
   'diary.errors.diaryUnavailable': "Fikk ikke kontakt med dagbokfølgesvennen. Ingenting ble lagret, så du kan sende på nytt.",
   'diary.uncertain.banner.one': "En utveksling fra {time} den {day} har et usikkert lagringsutfall. Sjekk den lagrede oppføringen før du sender på nytt.",
-  'diary.uncertain.banner.other': "{count} utvekslinger den {day} har et usikkert lagringsutfall. Sjekk den lagrede oppføringen før du sender på nytt.",
+  'diary.uncertain.banner.other': "{count} utvekslinger den {day} fra {time} har et usikkert lagringsutfall. Sjekk den lagrede oppføringen før du sender på nytt.",
   'diary.uncertain.show': "Vis",
   'diary.uncertain.reuse': "Legg meldingen tilbake i skrivefeltet",
   'diary.uncertain.dismiss': "Avvis",

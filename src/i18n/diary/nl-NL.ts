@@ -24,7 +24,7 @@ export const NL_NL_DIARY: DiaryCatalogue = {
   'diary.errors.contextFailed': "Je dagboek kon niet worden gelezen. Er is niets opgeslagen, dus je kunt opnieuw verzenden.",
   'diary.errors.diaryUnavailable': "De dagboekbegeleider was niet bereikbaar. Er is niets opgeslagen, dus je kunt opnieuw verzenden.",
   'diary.uncertain.banner.one': "Een uitwisseling van {time} op {day} heeft een onzeker opslagresultaat. Controleer het opgeslagen item voordat je opnieuw verzendt.",
-  'diary.uncertain.banner.other': "{count} uitwisselingen op {day} hebben een onzeker opslagresultaat. Controleer het opgeslagen item voordat je opnieuw verzendt.",
+  'diary.uncertain.banner.other': "{count} uitwisselingen op {day} vanaf {time} hebben een onzeker opslagresultaat. Controleer het opgeslagen item voordat je opnieuw verzendt.",
   'diary.uncertain.show': "Tonen",
   'diary.uncertain.reuse': "Zet het bericht terug in het invoerveld",
   'diary.uncertain.dismiss': "Negeren",
