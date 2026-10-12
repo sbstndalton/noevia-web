@@ -57,7 +57,7 @@ const pending = (id, label) => ({ id, label, status: 'pending', steps: [{ id: id
     await page.goto('http://localhost:31347');
     await openSettings(page);
     const settings = page.getByRole('dialog', { name: 'Settings' });
-    await settings.getByRole('button', { name: 'Models & routing' }).click();
+    await settings.getByRole('button', { name: 'Models and routing' }).click();
     await settings.getByRole('button', { name: 'Open model manager' }).click();
     const manager = page.locator('.model-manager-page');
     const open = manager.getByRole('button', { name: 'Tune untuned models', exact: true });

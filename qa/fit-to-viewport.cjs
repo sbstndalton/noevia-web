@@ -1,6 +1,6 @@
 // Shrink-to-fit (user review, 2026-09-19): a page or menu that is only slightly too tall is
 // scaled just enough to fit, so a phone never scrolls for one last line; long lists still scroll.
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');const {withLocale}=require('./qa-locale.cjs');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
 const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
@@ -11,7 +11,7 @@ const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit
  const report=[];
  try{
   for(const [w,h] of [[390,844],[375,667],[320,568]]){
-   const page=await browser.newPage({viewport:{width:w,height:h},hasTouch:true,isMobile:true,userAgent:IPHONE});page.on('pageerror',e=>errors.push(e.message));
+   const page=await browser.newPage(withLocale({viewport:{width:w,height:h},hasTouch:true,isMobile:true,userAgent:IPHONE}));page.on('pageerror',e=>errors.push(e.message));
    const chat=(id)=>({id,title:`Synthetic ${id}`,updatedAt:1000,messages:[]});
    await page.route('**/api/workspace',r=>r.fulfill({json:{projects:[],freeChats:Array.from({length:40},(_,i)=>chat(`recent${i}`))}}));
    await page.route('**/api/features',r=>r.fulfill({json:{flags:{previews:true}}}));
@@ -19,7 +19,7 @@ const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit
    const state=sel=>page.evaluate(s=>{const a=document.querySelector(s);const z=[...a.children].map(c=>c.style.zoom).find(Boolean)||'1';return {over:a.scrollHeight-a.clientHeight,zoom:+z};},sel);
    const open=()=>page.getByRole('button',{name:'Open navigation',exact:true}).tap();
    await open();await page.getByRole('dialog',{name:'Navigation'}).getByRole('button',{name:'Code',exact:true}).tap();
-   for(const p of ['New task','Plugins']){
+   for(const p of ['New task','Customise']){
     if(p!=='New task'){await open();await page.getByRole('dialog',{name:'Navigation'}).getByRole('button',{name:p}).tap();}
     await page.locator('.coding-header',{hasText:p}).waitFor();await page.waitForTimeout(120);
     const s=await state('.coding-content');report.push(`${w}x${h} ${p}: overflow ${s.over}px zoom ${s.zoom}`);
