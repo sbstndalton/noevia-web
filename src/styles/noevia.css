@@ -541,7 +541,10 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 /* Diary conversation and composer have independent layout; only content scrolls. */
 .diary-layout { overflow: hidden; }
 .diary-primary { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
-.diary-content-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-anchor: none; padding: 32px var(--diary-inset); }
+/* #1568: the bottom 24px fades out and .diary-scroll-end keeps the last row clear of it, so a cut-off row reads as "scroll" and the composer never sits against it. */
+.diary-content-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-anchor: none; padding: 32px var(--diary-inset);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent); }
+.diary-scroll-end { height: 24px; }
 .diary-composer-dock { flex: none; padding: 8px var(--diary-inset) 12px; background: var(--bg-app); }
 .diary-composer-dock .diary-compose { margin: 0 auto; }
 .diary-primary > .diary-save-status { flex: none; margin: 0; padding: 0 20px 8px; }
