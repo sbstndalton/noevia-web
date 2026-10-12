@@ -28,3 +28,20 @@ test('a throttle names its wait, or says to wait a little when none was given', 
   assert.equal(diaryErrorText(t, { code: 'storageLoginRejected' }, 'en-GB'), 'storage.refreshLoginRejected|{}');
   assert.equal(diaryErrorText(t, new Error('plain'), 'en-GB'), 'plain');
 });
+
+// #1422: failures the stream proves left nothing saved are worded by code, and say so.
+test('a Diary stream failure carries its code and "nothing saved" through to the sentence', () => {
+  const { diaryStreamFailure } = load('diary-errors');
+  const model = diaryStreamFailure({ type: 'error', text: 'English fallback', code: 'modelFailed', saved: false }, 'unused');
+  assert.equal(model.message, 'English fallback'); assert.equal(model.saved, false);
+  assert.equal(diaryErrorText(t, model, 'en-GB'), 'diary.errors.modelFailed|{}');
+  assert.equal(diaryErrorText(t, diaryStreamFailure({ code: 'modelNotServed', model: 'm1', saved: false }, 'x'), 'en-GB'), 'diary.errors.modelNotServed|{"model":"m1"}');
+  assert.equal(diaryErrorText(t, diaryStreamFailure({ code: 'contextFailed', saved: false }, 'x'), 'en-GB'), 'diary.errors.contextFailed|{}');
+  assert.equal(diaryErrorText(t, diaryStreamFailure({ code: 'diaryUnavailable', saved: false }, 'x'), 'en-GB'), 'diary.errors.diaryUnavailable|{}');
+  // A storage refusal reuses the storage wording and adds that nothing was saved; without `saved` it is unchanged.
+  assert.equal(diaryErrorText(t, diaryStreamFailure({ code: 'storageLoginRejected', saved: false }, 'x'), 'en-GB'), 'storage.refreshLoginRejected|{} diary.errors.nothingSaved|{}');
+  assert.equal(diaryErrorText(t, diaryStreamFailure({ code: 'storageThrottled', retryAfter: 42, saved: false }, 'x'), 'en-GB'), 'storage.throttledWait|{"wait":"42 seconds"} diary.errors.nothingSaved|{}');
+  // No code (an unknown outcome): the server's own sentence, with no "nothing saved" claim.
+  const unknown = diaryStreamFailure({ text: 'The diary connection was interrupted.' }, 'x');
+  assert.equal(unknown.saved, undefined); assert.equal(diaryErrorText(t, unknown, 'en-GB'), 'The diary connection was interrupted.');
+});

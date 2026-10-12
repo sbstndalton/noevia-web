@@ -646,6 +646,11 @@ export async function* streamChat(
   timeToFirstToken?: number | null;
   drafted?: number | null;
   accepted?: number | null;
+  /** 'error' on the Diary stream (#1422): a stable cause the screen words itself, `saved: false` when the
+   *  server knows nothing was written, and `retryAfter` seconds for a storage throttle. */
+  code?: string;
+  saved?: boolean;
+  retryAfter?: number;
   /** #778 'meta': where the reply went and why. */
   routing?: { route: string; reason: string; detail?: string };
   /** #778 'route_pending': why the turn looks sensitive. `id` is the question to answer. */
