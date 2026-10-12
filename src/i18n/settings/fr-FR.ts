@@ -28,7 +28,7 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'settings.close': "Fermer les réglages",
   // #618: Features, Experimental, Web address and Backups pages
   'admin.loading': "Chargement…",
-  'features.intro': "Fonctionnalités optionnelles pour tous les utilisateurs de ce serveur. Toutes sont désactivées au départ. Une fonctionnalité définie par l’opérateur dans la configuration du déploiement ne peut pas être modifiée ici.",
+  'features.intro': "Fonctionnalités optionnelles pour tous les utilisateurs de ce serveur. Désactivées par défaut. Une fonctionnalité marquée « Défini par l’opérateur » est fixée par la configuration du déploiement et ne peut pas être modifiée ici.",
   'features.experimentalIntro': "Essayez une autre logique applicative pour tous les utilisateurs de ce serveur. Chaque expérience décrit le comportement qu’elle modifie. Désactivez-la pour rétablir la logique existante. Ces expériences n’ont pas été validées en qualité.",
   'features.lockedBy': "Défini par l’opérateur ({env}).",
   'features.experimentalOn': "Activé · logique expérimentale sélectionnée",

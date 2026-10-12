@@ -28,7 +28,7 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'settings.close': "Chiudi impostazioni",
   // #618: Features, Experimental, Web address and Backups pages
   'admin.loading': "Caricamento…",
-  'features.intro': "Funzionalità facoltative per tutti su questo server. Tutte partono disattivate. Una funzionalità impostata dall’operatore nella configurazione del deployment non può essere modificata qui.",
+  'features.intro': "Funzionalità facoltative per tutti su questo server. Disattivate per impostazione predefinita. Una funzionalità contrassegnata come «Impostata dall’operatore» è fissata dalla configurazione del deployment e non può essere modificata qui.",
   'features.experimentalIntro': "Prova una logica applicativa alternativa per tutti su questo server. Ogni esperimento descrive il comportamento che modifica. Disattivalo per ripristinare la logica esistente. Questi esperimenti non sono validati per qualità.",
   'features.lockedBy': "Impostato dall’operatore ({env}).",
   'features.experimentalOn': "Attivo · logica sperimentale selezionata",

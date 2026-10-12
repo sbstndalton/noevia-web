@@ -28,7 +28,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'settings.close': "Instellingen sluiten",
   // #618: Features, Experimental, Web address and Backups pages
   'admin.loading': "Laden…",
-  'features.intro': "Optionele functies voor iedereen op deze server. Ze staan allemaal standaard uit. Een functie die de beheerder in de deploymentconfiguratie heeft ingesteld, kan hier niet worden gewijzigd.",
+  'features.intro': "Optionele functies voor iedereen op deze server. Standaard uit. Een functie met het label «Ingesteld door de beheerder» is vastgelegd in de deploymentconfiguratie en kan hier niet worden gewijzigd.",
   'features.experimentalIntro': "Probeer alternatieve applicatielogica voor iedereen op deze server. Elk experiment beschrijft het gedrag dat het wijzigt. Zet het uit om de bestaande logica te herstellen. Deze experimenten zijn niet op kwaliteit gevalideerd.",
   'features.lockedBy': "Ingesteld door de beheerder ({env}).",
   'features.experimentalOn': "Aan · experimentele logica geselecteerd",

@@ -28,7 +28,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'settings.close': "Stäng inställningar",
   // #618: Features, Experimental, Web address and Backups pages
   'admin.loading': "Läser in…",
-  'features.intro': "Valfria funktioner för alla på den här servern. Alla börjar avstängda. En funktion som operatören har ställt in i driftkonfigurationen kan inte ändras här.",
+  'features.intro': "Valfria funktioner för alla på den här servern. Avstängda som standard. En funktion markerad »Inställt av operatören« är låst av driftkonfigurationen och kan inte ändras här.",
   'features.experimentalIntro': "Prova alternativ applogik för alla på den här servern. Varje experiment beskriver beteendet det ändrar. Stäng av det för att återställa den befintliga logiken. Experimenten är inte kvalitetsvaliderade.",
   'features.lockedBy': "Inställt av operatören ({env}).",
   'features.experimentalOn': "På · experimentell logik vald",

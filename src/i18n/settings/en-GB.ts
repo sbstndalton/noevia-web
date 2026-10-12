@@ -20,7 +20,7 @@ export const EN_GB_SETTINGS = {
   'settings.close': 'Close settings',
   // #618: Features, Experimental, Web address and Backups pages
   'admin.loading': "Loading…",
-  'features.intro': "Optional capabilities for everyone on this server. All start off. A feature set by the operator in the deployment configuration can't be changed here.",
+  'features.intro': "Optional capabilities for everyone on this server. Off by default. A feature marked “Set by the operator” is fixed by the deployment configuration and can't be changed here.",
   'features.experimentalIntro': "Try alternative application logic for everyone on this server. Each experiment describes the behaviour it changes. Turn it off to restore the existing logic. These experiments are not quality-validated.",
   'features.lockedBy': "Set by the operator ({env}).",
   'features.experimentalOn': "On · experimental logic selected",

@@ -28,7 +28,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'settings.close': "Lukk innstillinger",
   // #618: Features, Experimental, Web address and Backups pages
   'admin.loading': "Laster …",
-  'features.intro': "Valgfrie funksjoner for alle på denne serveren. Alle starter avslått. En funksjon som operatøren har satt i driftskonfigurasjonen, kan ikke endres her.",
+  'features.intro': "Valgfrie funksjoner for alle på denne serveren. Avslått som standard. En funksjon merket «Satt av operatøren» er fastlagt i driftskonfigurasjonen og kan ikke endres her.",
   'features.experimentalIntro': "Prøv alternativ applikasjonslogikk for alle på denne serveren. Hvert eksperiment beskriver atferden det endrer. Slå det av for å gjenopprette den eksisterende logikken. Disse eksperimentene er ikke kvalitetsvalidert.",
   'features.lockedBy': "Satt av operatøren ({env}).",
   'features.experimentalOn': "På · eksperimentell logikk valgt",

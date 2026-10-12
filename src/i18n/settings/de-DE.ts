@@ -28,7 +28,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'settings.close': "Einstellungen schließen",
   // #618: Features, Experimental, Web address and Backups pages
   'admin.loading': "Wird geladen …",
-  'features.intro': "Optionale Funktionen für alle auf diesem Server. Alle sind anfangs ausgeschaltet. Eine Funktion, die der Betreiber in der Deployment-Konfiguration festlegt, lässt sich hier nicht ändern.",
+  'features.intro': "Optionale Funktionen für alle auf diesem Server. Standardmäßig ausgeschaltet. Eine Funktion mit der Angabe „Vom Betreiber festgelegt“ ist durch die Deployment-Konfiguration vorgegeben und lässt sich hier nicht ändern.",
   'features.experimentalIntro': "Alternative Anwendungslogik für alle auf diesem Server ausprobieren. Jedes Experiment beschreibt das Verhalten, das es ändert. Schalte es aus, um die bestehende Logik wiederherzustellen. Diese Experimente sind nicht qualitätsgeprüft.",
   'features.lockedBy': "Vom Betreiber festgelegt ({env}).",
   'features.experimentalOn': "An · experimentelle Logik gewählt",

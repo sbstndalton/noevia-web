@@ -28,7 +28,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'settings.close': "Cerrar ajustes",
   // #618: Features, Experimental, Web address and Backups pages
   'admin.loading': "Cargando…",
-  'features.intro': "Funciones opcionales para todos los usuarios de este servidor. Todas empiezan desactivadas. Una función fijada por el operador en la configuración del despliegue no se puede cambiar aquí.",
+  'features.intro': "Funciones opcionales para todos los usuarios de este servidor. Desactivadas por defecto. Una función marcada como «Fijado por el operador» viene determinada por la configuración del despliegue y no se puede cambiar aquí.",
   'features.experimentalIntro': "Prueba una lógica alternativa de la aplicación para todos en este servidor. Cada experimento describe el comportamiento que cambia. Desactívalo para restaurar la lógica existente. Estos experimentos no están validados en cuanto a calidad.",
   'features.lockedBy': "Fijado por el operador ({env}).",
   'features.experimentalOn': "Activado · lógica experimental seleccionada",

@@ -28,7 +28,7 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'settings.close': "Fechar configurações",
   // #618: Features, Experimental, Web address and Backups pages
   'admin.loading': "Carregando…",
-  'features.intro': "Recursos opcionais para todos neste servidor. Todos começam desativados. Um recurso definido pelo operador na configuração da implantação não pode ser alterado aqui.",
+  'features.intro': "Recursos opcionais para todos neste servidor. Desativados por padrão. Um recurso marcado como «Definido pelo operador» é fixado pela configuração da implantação e não pode ser alterado aqui.",
   'features.experimentalIntro': "Experimente uma lógica alternativa do aplicativo para todos neste servidor. Cada experimento descreve o comportamento que altera. Desative-o para restaurar a lógica existente. Esses experimentos não têm a qualidade validada.",
   'features.lockedBy': "Definido pelo operador ({env}).",
   'features.experimentalOn': "Ativado · lógica experimental selecionada",
