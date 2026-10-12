@@ -1290,6 +1290,7 @@ export const EN_GB = {
   'chat.routing.reason.forceLocal': "Force local is on for this chat",
   'chat.routing.reason.sensitiveRule': "it looked sensitive",
   'chat.routing.reason.failClosed': "the sensitivity check could not answer, or the question was not answered",
+  'chat.routing.reason.checkUnavailable': "the sensitivity check is unavailable{detail}, so this stayed local",
   'chat.routing.reason.remembered': "you allowed cloud for this chat",
   'chat.routing.flag.diary': "Diary content",
   'chat.routing.flag.secret': "a password or key",

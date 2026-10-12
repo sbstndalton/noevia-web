@@ -1279,6 +1279,7 @@ export const IT_IT: Catalogue = {
   'chat.routing.reason.forceLocal': "Forza locale è attivo per questa chat",
   'chat.routing.reason.sensitiveRule': "sembrava sensibile",
   'chat.routing.reason.failClosed': "il controllo di sensibilità non ha potuto rispondere, o la domanda non ha avuto risposta",
+  'chat.routing.reason.checkUnavailable': "il controllo di sensibilità non è disponibile{detail}, quindi è rimasto in locale",
   'chat.routing.reason.remembered': "hai consentito il cloud per questa chat",
   'chat.routing.flag.diary': "contenuto del Diario",
   'chat.routing.flag.secret': "una password o una chiave",

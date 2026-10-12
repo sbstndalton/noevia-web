@@ -1279,6 +1279,7 @@ export const DE_DE: Catalogue = {
   'chat.routing.reason.forceLocal': "Nur lokal ist für diesen Chat an",
   'chat.routing.reason.sensitiveRule': "es wirkte sensibel",
   'chat.routing.reason.failClosed': "die Sensibilitätsprüfung konnte nicht antworten, oder die Frage wurde nicht beantwortet",
+  'chat.routing.reason.checkUnavailable': "die Sensibilitätsprüfung ist nicht verfügbar{detail}, daher blieb dies lokal",
   'chat.routing.reason.remembered': "du hast Cloud für diesen Chat erlaubt",
   'chat.routing.flag.diary': "Tagebuchinhalt",
   'chat.routing.flag.secret': "ein Passwort oder Schlüssel",

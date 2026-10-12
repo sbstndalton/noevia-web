@@ -626,7 +626,7 @@ export async function* streamChat(
   drafted?: number | null;
   accepted?: number | null;
   /** #778 'meta': where the reply went and why. */
-  routing?: { route: string; reason: string };
+  routing?: { route: string; reason: string; detail?: string };
   /** #778 'route_pending': why the turn looks sensitive. `id` is the question to answer. */
   flag?: string;
   /** #778 'route_remembered': the chat's routing flags the server just saved. */

@@ -1279,6 +1279,7 @@ export const NL_NL: Catalogue = {
   'chat.routing.reason.forceLocal': "Alleen lokaal staat aan voor deze chat",
   'chat.routing.reason.sensitiveRule': "het leek gevoelig",
   'chat.routing.reason.failClosed': "de gevoeligheidscontrole kon niet antwoorden, of de vraag werd niet beantwoord",
+  'chat.routing.reason.checkUnavailable': "de gevoeligheidscontrole is niet beschikbaar{detail}, dus dit bleef lokaal",
   'chat.routing.reason.remembered': "je hebt cloud toegestaan voor deze chat",
   'chat.routing.flag.diary': "Dagboekinhoud",
   'chat.routing.flag.secret': "een wachtwoord of sleutel",

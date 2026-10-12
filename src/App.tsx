@@ -986,7 +986,7 @@ export default function App(): JSX.Element {
           }
           // #778: where this reply went (local/cloud, with the reason), and the sensitivity card.
           if (ev.type === 'meta' && isRouteTarget(ev.routing)) {
-            const target = { route: ev.routing.route, reason: ev.routing.reason };
+            const target = { route: ev.routing.route, reason: ev.routing.reason, ...(typeof ev.routing.detail === 'string' ? { detail: ev.routing.detail } : {}) };
             setMessagesByChat((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, routeTarget: target, routePending: undefined } : m)) }));
           }
           if (ev.type === 'route_pending' && typeof ev.id === 'string') {
