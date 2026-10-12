@@ -570,7 +570,7 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'usage.modelResponses': "Réponses du modèle",
   'usage.modelResponsesHint': "Réponses du fournisseur, {window}.",
   'usage.activity': "Activité",
-  'usage.activityIntro': "Les {count} derniers jours, heure de {zone}. Une réponse compte lorsque son fournisseur déclare l’utilisation ; les réponses annulées ou non déclarées peuvent manquer.",
+  'usage.activityIntro': "Les {count} derniers jours, à l’heure {zone}. Une réponse compte lorsque son fournisseur déclare l’utilisation ; les réponses annulées ou non déclarées peuvent manquer.",
   'usage.noActivity': "Aucune activité quotidienne enregistrée pour l’instant.",
   'usage.heatmapLabel': "Activité quotidienne des {count} derniers jours. {active}. Sélectionnez un jour pour voir le détail.",
   'usage.activeDays.one': "{count} jour actif",
