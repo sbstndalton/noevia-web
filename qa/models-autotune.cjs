@@ -111,7 +111,7 @@ const pending = (id, label) => ({ id, label, status: 'pending', steps: [{ id: id
     await resume.click();
     await panel.getByRole('button', { name: 'Cancel auto-tune' }).waitFor();
     assert.deepEqual(resumes, [{ confirmPause: true }]);
-    assert.ok(await panel.getByText(/context 16384/).isVisible());
+    assert.ok(await panel.getByText(/context 16,384/).isVisible());
     tuned = true;
     job = { ...job, status: 'passed', phase: 'Done', models: [{ ...job.models[0], status: 'passed',
       phases: job.models[0].phases.map(p => ({ ...p, status: 'passed' })),
