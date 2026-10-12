@@ -16,12 +16,12 @@ const EN = SETTINGS['en-GB'];
 const OLD_BELOW = { 'de-DE': 'unten', 'es-ES': 'abajo', 'fr-FR': 'ci-dessous', 'it-IT': 'qui sotto', 'nb-NO': 'nedenfor', 'nl-NL': 'hieronder', 'pt-BR': 'abaixo', 'sv-SE': 'nedan' };
 
 test('the MCP card no longer promises a list below it, in English or any locale', () => {
-  assert.equal(EN['connectors.mcp.summary'], 'Administrators add servers from the MCP directory or by URL, in {plugins} → {mcp}.');
+  assert.equal(EN['connectors.mcp.summary'], 'Administrators add servers from the MCP directory or by URL, in {section} → {mcp}.');
   assert.ok(!/listed below/.test(EN['connectors.mcp.summary']));
   for (const [locale, word] of Object.entries(OLD_BELOW)) {
     const text = SETTINGS[locale]['connectors.mcp.summary'];
     assert.ok(!new RegExp(`\\b${word}\\b`).test(text), `${locale} no longer says "${word}": ${text}`);
-    assert.match(text, /\{plugins\} → \{mcp\}/, `${locale} keeps the navigation placeholders`);
+    assert.match(text, /\{section\} → \{mcp\}/, `${locale} keeps the navigation placeholders`);
   }
 });
 
