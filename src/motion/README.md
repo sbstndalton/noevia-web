@@ -15,7 +15,7 @@ and state. Nothing in a component has to know about it:
 | a dialog (`dialog[open]`, `.aero`, `[data-motion="dialog"]`) is added | scale .98 → 1 and a fade; critically damped, about 220ms |
 | a toast (`.save-error`, `[data-motion="toast"]`) is added | rises 12px and fades in; critically damped |
 | a single new `.msg[data-role="user"]` at the end of the transcript | scale .92 / y 6px → rest, origin bottom right, light bounce |
-| chips (`.reply-source-chip`, `.composer-context-chips > *`, `.frame-chips > *`) are added | scale .8 → 1 and a fade, staggered 50ms + 30ms per sibling (max 8) |
+| chips (`.reply-source-chip`, `.frame-chips > *`) are added; the project's context chips are not animated (#1571) | scale .8 → 1 and a fade, staggered 50ms + 30ms per sibling (max 8) |
 | a single sidebar row is added | height and opacity from 0 |
 | `.sidebar` gains or loses `.is-collapsed` | the tile's width springs between the two sizes (about 240ms); main follows |
 | `.glass-switch[aria-checked]` changes | the knob springs 16px with a light bounce |
