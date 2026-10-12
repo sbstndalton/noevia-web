@@ -24,6 +24,7 @@ import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequest
 import { cached, invalidateCached, clearRequestCache } from './request-cache';
 import { AUTO_ROLES_KEY, INSTALLED_MODELS_KEY, MODEL_READ_TTL_MS, REASONING_KEY_PREFIX, REASONING_TTL_MS, invalidateModelReads, invalidateReasoningSettings, isModelWritePath, isReasoningWritePath } from './model-reads';
 import { clearDeviceState } from './account-device-state';
+import { rememberSystemModels } from './model-system';
 import { API_MAJOR, hasApiMajorMismatch, hasApiMajorMismatchHeader, type SkillPin } from './api-contract';
 
 function cookie(name: string): string {
@@ -526,6 +527,8 @@ export function fetchInstalledModels(): Promise<InstalledModel[]> {
   // do not each wait on their own copy of the same slow model-manager read.
   return cached(INSTALLED_MODELS_KEY, () => getJson<InstalledModel[]>('/api/models/installed').then(rows => {
     if(!Array.isArray(rows) || rows.some(row=>!row || typeof row.name!=='string' || !Array.isArray(row.labels) || row.labels.some(label=>typeof label!=='string')))throw new Error('Model list was invalid. Try loading it again.');
+    // #1179: the explicit system kind (Laya's `role = laya`) for isSystemModel.
+    rememberSystemModels(rows);
     return rows;
   }), MODEL_READ_TTL_MS);
 }
