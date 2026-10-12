@@ -2,7 +2,9 @@ import type { ModelHistoryEntry, ToolCallView } from './types';
 import { appliedCalls } from './applied-writes';
 import { localDay, localTimestamp } from './diary-data';
 
-export type DiaryTurn = { role: 'user' | 'assistant'; content: string; startedAt?: number; tools?: ToolCallView[]; activity?: string[]; reasoning?: string };
+/** `exchangeId` marks the user turn of a recovered exchange (the banner's "Show it" finds it); `failed`
+ *  marks both turns of an exchange the server knows saved nothing (#1422): shown, never sent as history. */
+export type DiaryTurn = { role: 'user' | 'assistant'; content: string; startedAt?: number; tools?: ToolCallView[]; activity?: string[]; reasoning?: string; exchangeId?: string; failed?: boolean };
 
 /** Pin the date once at Send, including history when returning through home.
  * This same target owns replies, retries and optional-tool approval scope. */
@@ -16,7 +18,8 @@ export function diaryExchangeTarget(day: string | null, turns: Record<string, Di
  *  done. Declined, failed and pending calls are not marked. Same shape as modelHistory (#658). */
 export function diaryHistory(turns: DiaryTurn[]): ModelHistoryEntry[] {
   const out: ModelHistoryEntry[] = [];
-  for (const { role, content, tools } of turns) {
+  for (const { role, content, tools, failed } of turns) {
+    if (failed) continue; // #1422: nothing of a failed exchange was saved or answered
     out.push({ role, content });
     if (role !== 'assistant') continue;
     for (const c of appliedCalls({ toolCalls: tools })) {

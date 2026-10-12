@@ -24,8 +24,8 @@ import { apiFetch, fetchProfile, deleteProjectFile, fetchDiaryMonth, fetchDiaryS
 import type { StorageConnection } from '../api';
 import { dateInText, dayLabel as formatDayLabel, localDay, monthLabel as formatMonthLabel, splitDays } from '../diary-data';
 import { appLocale } from '../user-preferences';
-import { diaryErrorText } from '../diary-errors';
-import { DiaryRequestError, directoryPicker, directoryPickerBlockedReason, invalidateFileListings, listFiles, randomSessionId, readFile, saveLocal, scanLocal, syncFileChange, writeFile } from '../diary-workspace';
+import { diaryErrorText, diaryStreamFailure } from '../diary-errors';
+import { DiaryRequestError, diaryRequest, directoryPicker, directoryPickerBlockedReason, invalidateFileListings, listFiles, randomSessionId, readFile, saveLocal, scanLocal, syncFileChange, writeFile } from '../diary-workspace';
 import type { DiaryFile, DirectoryHandle, FileEntry } from '../diary-workspace';
 import { DiaryModal, MarkdownPreview } from './DiaryModal';
 import { StoragePicker } from './StoragePicker';
@@ -247,8 +247,11 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   const today = localDay();
   const [recovering,setRecovering]=useState(false);
   const [recoveryNotice,setRecoveryNotice]=useState('');
+  // #1422: exchanges of the viewed day whose save outcome the server could not vouch for and that the
+  // person has not yet reviewed. The banner names them and offers Show / put back / Dismiss.
+  const [uncertain,setUncertain]=useState<{id:string;day:string;message:string;startedAt:number}[]>([]);
   useEffect(()=>{
-    if(folder){setRecovering(false);setRecoveryNotice('');return;}
+    if(folder){setRecovering(false);setRecoveryNotice('');setUncertain([]);return;}
     if(!active)return; // paused while hidden; re-runs (and refreshes immediately) on activation
     let stopped=false, polling=true;
     const target=day || localDay();
@@ -265,12 +268,37 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
           const restored = recoverDiaryTurns(exchanges);
           setTurns(prev=>{const existing=prev[target]||[];return JSON.stringify(existing)===JSON.stringify(restored)?prev:{...prev,[target]:restored};});
         }
-        setRecoveryNotice(running?t('diary.status.recoveringActive'):exchanges.some((e:{state:string;kind?:string})=>e.state==='uncertain'&&e.kind!=='preparation')?t('diary.status.uncertainSave'):'');
-      }catch(e){if(!stopped)setRecoveryNotice(e instanceof Error?diaryErrorText(t,e,appLocale()):t('diary.errors.recoveryGeneric'));}
+        setRecoveryNotice(running?t('diary.status.recoveringActive'):'');
+        setUncertain(exchanges.filter((e:{state:string;kind?:string;acknowledgedAt?:number})=>e.state==='uncertain'&&e.kind!=='preparation'&&!e.acknowledgedAt)
+          .map((e:{id:string;message:string;startedAt:number})=>({id:e.id,day:target,message:e.message,startedAt:e.startedAt})));
+      }catch(e){if(!stopped){setUncertain([]);setRecoveryNotice(e instanceof Error?diaryErrorText(t,e,appLocale()):t('diary.errors.recoveryGeneric'));}}
     };
     void recover();const timer=setInterval(()=>void recover(),5000);
     return()=>{stopped=true;clearInterval(timer);};
   },[day,folder,revision,active]);
+  // #1422: the uncertain-save banner's three actions. Dismissing records that the person looked (the
+  // exchange stays in the day's history); it never claims the entry was or was not saved.
+  const dismissUncertain = async (list = uncertain) => {
+    try {
+      for (const x of list) await diaryRequest('exchanges', { action: 'dismiss', day: x.day, id: x.id }, 'POST');
+      setUncertain(prev => prev.filter(p => !list.some(x => x.id === p.id)));
+      return true;
+    } catch (e) { setError(`${t('diary.uncertain.dismissFailed')} ${diaryErrorText(t, e, appLocale())}`); return false; }
+  };
+  const reuseUncertain = async (x: (typeof uncertain)[number]) => {
+    if (busyRef.current) return;
+    if (draft.trim() && !window.confirm(t('diary.uncertain.replaceDraft'))) return;
+    if (await dismissUncertain([x])) setDraft(x.message);
+  };
+  const showUncertain = (x: { id: string; day: string }) => {
+    if (busyRef.current) return;
+    setMonth(x.day.slice(0, 7)); setDay(x.day);
+    // The day view renders on the next frames; then bring the exchange into view and focus it.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLElement>(`[data-exchange-id="${CSS.escape(x.id)}"]`);
+      el?.scrollIntoView({ block: 'center' }); el?.focus({ preventScroll: true });
+    }));
+  };
   const scope = day || (month ? `month:${month}` : 'home');
   const conversation = turns[scope] || [];
   const { scrollRef, onScroll, follow } = useChatScroll(scope, turns, !!day);
@@ -457,7 +485,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
       diaryStarted = true;
       for await (const ev of streamChat({spaceId:'diary', files:snapshot, extrasEnabled:useExtras, extraContext,
         message, history, preparationId, exchangeId:snapshot ? undefined : randomSessionId(), sessionId:`${session.current.slice(0,36)}-${entryDay}`, entryDay, entryTime})) {
-        if (ev.type === 'error') throw new Error(ev.text || t('diary.errors.requestFailed'));
+        if (ev.type === 'error') throw diaryStreamFailure(ev, t('diary.errors.requestFailed'));
         if (ev.type === 'status') progress(ev.text || t('diary.progress.working'));
         if (ev.type === 'reasoning') { reasoning += ev.text || ''; patchReply({reasoning}); }
         if (ev.type === 'delta' || ev.type === 'answer') {
@@ -485,7 +513,12 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
       progress(cancelled ? t('diary.progress.contextCancelled') : t('diary.progress.needsAttention'));
       setExtraStatus(cancelled ? t('diary.status.contextCancelledNoSend') : '');
       patchReply({tools:calls.map(call => call?.status === 'pending' ? {...call,status:'denied',approvalId:undefined,args:t('diary.errors.contextEndedBeforeApproval')} : call)});
-      if (!answered && !diaryStarted) { setDraft(message); setTurns(previous => ({ ...previous, [entryDay]: displayHistory })); }
+      // #1422: the server proved nothing was saved, so the message goes back in the composer to resend
+      // (even when the companion had started to answer); the failed pair is kept as history, flagged.
+      if ((e as { saved?: unknown } | null)?.saved === false) {
+        setDraft(message);
+        setTurns(previous => { const current = previous[entryDay] || []; return { ...previous, [entryDay]: current.map((turn, i) => i >= current.length - 2 ? { ...turn, failed: true } : turn) }; });
+      } else if (!answered && !diaryStarted) { setDraft(message); setTurns(previous => ({ ...previous, [entryDay]: displayHistory })); }
       if(diaryStarted && !folder)bumpRevision();
       if (cancelled) throw new Error(t('diary.status.contextCancelledNoSend'));
       throw e;
@@ -595,6 +628,14 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
     {extrasEnabled && extraProject && <ReasoningControl project={extraProject} disabled={busy || extraBusy} onChanged={refreshExtraProject} />}
     <button className="send-btn glass is-primary is-press" aria-label={t('diary.compose.sendLabel')} disabled={busy || recovering || extraBusy || !draft.trim()} onClick={submit}><SendIcon /></button></div>
     {!folder && !day && (turns[today] || []).length > 0 && <button className="popup-tab" onClick={()=>{setMonth(today.slice(0,7));setDay(today);}}>{t('diary.compose.openTodaysConversation')}</button>}
+    {!folder && uncertain.length > 0 && <div className="composer-action-status diary-uncertain" role="status">
+      <p>{t.plural('diary.uncertain.banner', uncertain.length, { time: new Date(uncertain[0].startedAt).toLocaleTimeString(appLocale(), { hour: '2-digit', minute: '2-digit' }), day: dayLabel(uncertain[0].day) })}</p>
+      <div className="diary-uncertain-actions">
+        <button type="button" className="popup-tab" disabled={busy} onClick={() => showUncertain(uncertain[0])}>{t('diary.uncertain.show')}</button>
+        {uncertain.length === 1 && <button type="button" className="popup-tab" disabled={busy} onClick={() => void reuseUncertain(uncertain[0])}>{t('diary.uncertain.reuse')}</button>}
+        <button type="button" className="popup-tab" disabled={busy} onClick={() => void dismissUncertain()}>{t('diary.uncertain.dismiss')}</button>
+      </div>
+    </div>}
     {recoveryNotice && <p className="composer-action-status" role="status">{recoveryNotice}</p>}
     {extraStatus && <p className="composer-action-status" role="status">{extraStatus}</p>}
     {busy && extraAbort.current && <button className="popup-tab" onClick={()=>extraAbort.current?.abort()}>{t('diary.compose.cancelContext')}</button>}
@@ -611,7 +652,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
       {pendingCount > 0 && <div className="diary-pending" role="status"><span>{Object.keys(pendingLocal).length ? t('diary.pending.localSaveNeedsAttention') : t.plural('diary.pending.filesWaiting', Object.keys(pendingSync).length)}</span><button className="popup-tab" disabled={busy} onClick={()=>void run(async()=>{ if(Object.keys(pendingLocal).length) await commitLocal(pendingLocal); else await syncChanges(pendingSync); })}>{t('diary.pending.retry')}</button></div>}
       {!day && <DiaryCalendar month={month || today.slice(0,7)} today={today} days={days} busy={busy} ready={overview.ready} failed={overview.failed} navigate={navigate} />}
       {day && <section className="diary-day"><h1>{dayLabel(day)}</h1>{days[day]?.trim() ? <details className="diary-saved-record" key={`${day}-${!!conversation.length}`} open={!conversation.length}><summary>{t('diary.day.savedEntry')}</summary><MarkdownPreview text={days[day]} /></details> : !conversation.length && <p className="diary-intro">{t('diary.day.blankPage')}</p>}</section>}
-      {!!conversation.length && <section className="diary-conversation" aria-live="polite" aria-busy={busy}>{conversation.map((t2,i)=><article className="diary-reply" data-role={t2.role} key={i}><span className="msg-sender">{t2.role==='user'?t('diary.conversation.you'):t('diary.conversation.diaryCompanion')}</span>{t2.role === 'assistant' && t2.activity?.length && <details className="diary-activity" open={busy && i === conversation.length - 1}><summary>{busy && i === conversation.length - 1 ? <>{t2.activity.at(-1)}{t2.startedAt && <> · <LiveTimer startedAt={t2.startedAt} /></>}</> : t('diary.conversation.diaryActivity')}</summary><ol>{t2.activity.map((label,n)=><li key={n}>{label}</li>)}</ol></details>}{t2.reasoning && <ThinkingBlock text={t2.reasoning} live={busy && i === conversation.length - 1 && !t2.content} />}{!!t2.tools?.length && <ToolCalls calls={t2.tools.filter(Boolean)} />}<MarkdownPreview text={t2.content || (busy ? t('diary.conversation.workingOnDiary') : '')} /></article>)}</section>}
+      {!!conversation.length && <section className="diary-conversation" aria-live="polite" aria-busy={busy}>{conversation.map((t2,i)=><article className="diary-reply" data-role={t2.role} data-exchange-id={t2.exchangeId} tabIndex={t2.exchangeId ? -1 : undefined} key={i}><span className="msg-sender">{t2.role==='user'?t('diary.conversation.you'):t('diary.conversation.diaryCompanion')}</span>{t2.role === 'assistant' && t2.activity?.length && <details className="diary-activity" open={busy && i === conversation.length - 1}><summary>{busy && i === conversation.length - 1 ? <>{t2.activity.at(-1)}{t2.startedAt && <> · <LiveTimer startedAt={t2.startedAt} /></>}</> : t('diary.conversation.diaryActivity')}</summary><ol>{t2.activity.map((label,n)=><li key={n}>{label}</li>)}</ol></details>}{t2.reasoning && <ThinkingBlock text={t2.reasoning} live={busy && i === conversation.length - 1 && !t2.content} />}{!!t2.tools?.length && <ToolCalls calls={t2.tools.filter(Boolean)} />}<MarkdownPreview text={t2.content || (busy ? t('diary.conversation.workingOnDiary') : '')} /></article>)}</section>}
       </div>
       <div className="diary-composer-dock">{composer}</div>
       {status && <p className="diary-save-status" role="status">{status}</p>}

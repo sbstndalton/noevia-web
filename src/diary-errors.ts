@@ -18,16 +18,35 @@ export function formatWait(seconds: number, locale: string | undefined): string 
   catch { return `${value} ${unit}${value === 1 ? '' : 's'}`; }
 }
 
+/** #1422: an `error` event the server sent on the Diary stream. `saved === false` means the server
+ *  KNOWS nothing was written (the message can simply be resent); absent means the outcome is unknown.
+ *  The English `text` is the fallback; the screen words `code` itself in the interface language. */
+export function diaryStreamFailure(event: { text?: string; code?: string; saved?: boolean; retryAfter?: number; model?: string }, fallback: string): Error & { code?: string; saved?: boolean; retryAfter?: number; model?: string } {
+  return Object.assign(new Error(event.text || fallback), {
+    ...(typeof event.code === 'string' ? { code: event.code } : {}),
+    ...(event.saved === false ? { saved: false } : {}),
+    ...(typeof event.retryAfter === 'number' ? { retryAfter: event.retryAfter } : {}),
+    ...(typeof event.model === 'string' ? { model: event.model } : {}),
+  });
+}
+
 /** What to show for an error caught around the local Diary folder: the limit sentence in the
  *  interface language, or the error's own message. */
 export function diaryErrorText(t: Translator, error: unknown, locale: string | undefined): string {
   // #849: a storage login the server refused is worded like the refresh toast and the Settings save.
-  if ((error as { code?: unknown } | null)?.code === 'storageLoginRejected') return t('storage.refreshLoginRejected');
+  const nothingSaved = (error as { saved?: unknown } | null)?.saved === false ? ` ${t('diary.errors.nothingSaved')}` : '';
+  if ((error as { code?: unknown } | null)?.code === 'storageLoginRejected') return t('storage.refreshLoginRejected') + nothingSaved;
   // #1168: the storage server is throttling sign-ins; say how long to wait when it said.
   if ((error as { code?: unknown } | null)?.code === 'storageThrottled') {
     const wait = (error as { retryAfter?: unknown }).retryAfter;
-    return typeof wait === 'number' && wait > 0 ? t('storage.throttledWait', { wait: formatWait(wait, locale) }) : t('storage.throttled');
+    return (typeof wait === 'number' && wait > 0 ? t('storage.throttledWait', { wait: formatWait(wait, locale) }) : t('storage.throttled')) + nothingSaved;
   }
+  // #1422: failures the server proves left nothing saved, worded here rather than in English only.
+  const failure = error as { code?: unknown; saved?: unknown; model?: unknown } | null;
+  if (failure?.code === 'modelFailed') return t('diary.errors.modelFailed');
+  if (failure?.code === 'modelNotServed') return t('diary.errors.modelNotServed', { model: typeof failure.model === 'string' ? failure.model : '' });
+  if (failure?.code === 'contextFailed') return t('diary.errors.contextFailed');
+  if (failure?.code === 'diaryUnavailable') return t('diary.errors.diaryUnavailable');
   const limit = (error as { limit?: DiaryLimit } | null)?.limit;
   if (limit && typeof limit.code === 'string' && limit.params) {
     const p = limit.params, bytes = (n: number) => formatBinaryBytes(n, locale);
