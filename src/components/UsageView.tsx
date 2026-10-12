@@ -1,10 +1,11 @@
 import { appLocale } from '../user-preferences';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { fetchProfile, fetchUsage } from '../api';
 import type { UsageSummary, UsageTotals } from '../types';
 import { useT } from '../i18n';
 import { formatCompact } from '../number-format';
+import { revealLatestWeeks } from '../usage-heatmap-scroll';
 
 const compact = (n: number): string => formatCompact(n, appLocale());
 
@@ -62,6 +63,7 @@ export function UsageView(): JSX.Element {
   const [isAdmin,setIsAdmin]=useState(false);
   const [window_, setWindow] = useState<'7' | '30' | 'all'>('30');
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const heatmapScroll = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let live = true;
@@ -73,6 +75,9 @@ export function UsageView(): JSX.Element {
       .catch(() => { if (live) setError(true); });
     return () => { live = false; };
   }, [attempt,aggregate]);
+
+  // #1538: the heat map opens at its latest weeks (the right-hand end), not the oldest months.
+  useLayoutEffect(() => { if (heatmapScroll.current) revealLatestWeeks(heatmapScroll.current); }, [data]);
 
   if (error) return <><div className="settings-title"><h1>{t('settings.section.usage')}</h1></div><p className="route-note" role="alert">{t('usage.loadError')}</p><button className="btn btn-secondary" onClick={() => setAttempt(n => n + 1)}>{t('usage.retry')}</button>{aggregate&&<button className="btn btn-secondary" onClick={()=>setAggregate(false)}>{t('usage.returnToYours')}</button>}</>;
   if (!data) return <><div className="settings-title"><h1>{t('settings.section.usage')}</h1></div><p className="route-note">{t('settings.loading')}</p></>;
@@ -132,7 +137,7 @@ export function UsageView(): JSX.Element {
         <div><h2>{t('usage.activity')}</h2><p>{t('usage.activityIntro', { count: data.retentionDays, zone: data.timeZone })}</p></div>
       </div>
       {grid.length === 0 && <p className="route-note">{t('usage.noActivity')}</p>}
-      <div className="usage-heatmap-scroll">
+      <div className="usage-heatmap-scroll" ref={heatmapScroll}>
         <div className="usage-heatmap-inner">
           {/* The month strip must share the grid's exact column pitch (cell +
               gap). It previously used wider columns *and* the same gap, so the
