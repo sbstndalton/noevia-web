@@ -172,7 +172,7 @@ function BrowserApprovalCard({ approval, busy, onDecide }: {
   if (!approval) return null;
   const approvalId = approval.id;
   return <div className="code-approval" role="group" aria-label="Approval required">
-    <p className="code-approval-title"><ShellIcon name="security" size={16}/>{approval.action}{approval.origin ? ` — ${approval.origin}` : ''}</p>
+    <p className="code-approval-title"><ShellIcon name="security" size={16} tone="decorative"/>{approval.action}{approval.origin ? ` — ${approval.origin}` : ''}</p>
     {approval.reason && <p className="code-note">{approval.reason}</p>}
     {approval.element?.text && <pre className="code-approval-args" aria-label="Target">{approval.element.text}</pre>}
     {approval.typed !== null && approval.typed !== undefined && <pre className="code-approval-args" aria-label="Value">{approval.typed}</pre>}

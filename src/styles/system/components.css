@@ -453,3 +453,23 @@ dialog::backdrop { background: var(--scrim); backdrop-filter: blur(var(--scrim-b
 :root[data-layout="mobile"] .insp-toggle { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; flex: none; }
 :root[data-layout="mobile"] .insp-content { min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; }
 :root[data-layout="mobile"] .noevia-inspector[data-expanded="false"] .insp-content { display: none; }
+
+/* Two-tone icons (#1623). A decorative icon (data-tone="decorative": status, a section or
+   empty-state symbol, a type marker beside text) keeps the neutral outline (currentColor) and draws
+   its one inner part in --icon-accent: stroked (.ic-a) or a solid fill under the outline (.ic-af).
+   A control (data-tone="control", the default) renders no accent part at all.
+   Guard: an icon inside anything pressable is a control whatever its tone, so a decorative icon
+   composed into a button, link, menu item, tab or toggle falls back to one neutral colour. */
+.ic[data-tone='decorative'] .ic-a { stroke: var(--icon-accent); }
+.ic[data-tone='decorative'] .ic-a[fill='currentColor'] { fill: var(--icon-accent); }
+.ic[data-tone='decorative'] .ic-af { fill: var(--icon-accent); }
+/* Forced colours / Windows high contrast: the system palette has no accent role for artwork, so
+   the accent part takes the neutral colour (and a filled part stays a solid neutral shape). */
+@media (forced-colors: active) {
+  .ic[data-tone='decorative'] .ic-a { stroke: currentColor; }
+  .ic[data-tone='decorative'] :is(.ic-a[fill='currentColor'], .ic-af) { fill: currentColor; }
+}
+/* The guard: last, so it also wins over the forced-colours fill inside a control. */
+:is(button, a, summary, label, [role='button'], [role='link'], [role='menuitem'], [role='menuitemradio'], [role='menuitemcheckbox'], [role='tab'], [role='option'], [role='switch'], [role='checkbox'], [role='radio'], [role='treeitem']) .ic[data-tone='decorative'] .ic-a { stroke: inherit; }
+:is(button, a, summary, label, [role='button'], [role='link'], [role='menuitem'], [role='menuitemradio'], [role='menuitemcheckbox'], [role='tab'], [role='option'], [role='switch'], [role='checkbox'], [role='radio'], [role='treeitem']) .ic[data-tone='decorative'] .ic-a[fill='currentColor'] { fill: currentColor; }
+:is(button, a, summary, label, [role='button'], [role='link'], [role='menuitem'], [role='menuitemradio'], [role='menuitemcheckbox'], [role='tab'], [role='option'], [role='switch'], [role='checkbox'], [role='radio'], [role='treeitem']) .ic[data-tone='decorative'] .ic-af { fill: none; }

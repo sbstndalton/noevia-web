@@ -100,7 +100,7 @@ export function ArchivedChatsView({ onDelete, onOpenData }: { onDelete: (project
       <header className="archived-head">
         <h1>Archived chats</h1>
         <p>Archived chats are hidden from the sidebar but kept until you delete them. {onOpenData && sectionName && <>Want a copy first? <button className="link-button" onClick={onOpenData}>{`Export from ${sectionName}`}</button>.</>}</p>
-        <div className="settings-search archived-search"><ShellIcon name="search" size={16}/><input aria-label="Search archived chats" placeholder="Search by title or project" value={query} onChange={(e) => { setQuery(e.target.value); setShown(PAGE); }} /></div>
+        <div className="settings-search archived-search"><ShellIcon name="search" size={16} tone="decorative"/><input aria-label="Search archived chats" placeholder="Search by title or project" value={query} onChange={(e) => { setQuery(e.target.value); setShown(PAGE); }} /></div>
       </header>
       {error && <p className="modal-err" role="alert">{error} <button className="btn btn-secondary btn-sm" onClick={load}>Try again</button></p>}
       {status && <p className="route-note" role="status">{status}</p>}

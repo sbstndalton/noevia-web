@@ -1,5 +1,5 @@
 import type { JSX } from 'react';
-import { Icon } from './icons/Icon';
+import { Icon, type IconTone } from './icons/Icon';
 
 // Stable app-level names mapped to Lucide icons, so call sites keep their vocabulary and each
 // concept has one familiar symbol everywhere (HIG: consistent, recognisable symbols).
@@ -16,6 +16,7 @@ export const SHELL_ICONS: Record<string, string> = {
   keyboard: 'keyboard', memory: 'brain', bell: 'bell', notifications: 'bell',
 };
 
-export function ShellIcon({ name, size = 18 }: { name: string; size?: number }): JSX.Element {
-  return <Icon name={SHELL_ICONS[name] || name} size={size}/>;
+/** tone: 'control' (default) for anything pressable, 'decorative' for information only (#1623). */
+export function ShellIcon({ name, size = 18, tone = 'control' }: { name: string; size?: number; tone?: IconTone }): JSX.Element {
+  return <Icon name={SHELL_ICONS[name] || name} size={size} tone={tone}/>;
 }

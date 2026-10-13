@@ -152,14 +152,14 @@ export function EditProjectModal({
         <div className="field project-storage-summary">
           <span>{t('projects.edit.uploadFolder')}</span>
           <small>{t('projects.edit.uploadFolderHint')}</small>
-          {project.projectFolder ? <p className="storage-path"><ShellIcon name="folder"/><span>{project.projectFolder}</span></p>
+          {project.projectFolder ? <p className="storage-path"><ShellIcon name="folder" tone="decorative"/><span>{project.projectFolder}</span></p>
             : <small>{t('projects.edit.folderOnFirstUpload')}</small>}
         </div>
         <div className="field project-edit-folders">
           <span>{t('projects.edit.linkedFolders')}</span>
           <small>{t('projects.edit.linkedFoldersHint')}</small>
           {linkedFolders.length ? <ul className="source-list">{linkedFolders.map((folder) => <li key={folder}>
-            <span className="source-name" title={folder}><ShellIcon name="folder"/>{folder}</span>
+            <span className="source-name" title={folder}><ShellIcon name="folder" tone="decorative"/>{folder}</span>
             <button type="button" className="btn btn-ghost btn-sm" disabled={saving} aria-label={t('projects.edit.unlinkFolder', { folder })} onClick={() => setFolders((current) => current.filter((item) => item !== folder))}>{t('projects.edit.unlink')}</button>
           </li>)}</ul> : <small>{t('projects.edit.noFoldersLinked')}</small>}
           <button type="button" className="btn btn-secondary btn-sm" disabled={saving} onClick={() => setPickingFolder(true)}>{t('projects.edit.linkFolder')}</button>

@@ -25,7 +25,7 @@ export function ShortcutReference({ apple, query, onQuery }: { apple: boolean; q
     || filterShortcuts([{ ...r, group: t(`keyboard.group.${r.group}`) as typeof r.group }], query).length > 0);
   const groups = [...new Set(rows.map((r) => r.group))];
   return <div className="shortcut-reference">
-    <div className="settings-search shortcut-search"><ShellIcon name="search" size={16}/><input aria-label={t('keyboard.searchShortcuts')} placeholder={t('keyboard.searchShortcuts')} value={query} onChange={(e) => onQuery(e.target.value)} /></div>
+    <div className="settings-search shortcut-search"><ShellIcon name="search" size={16} tone="decorative"/><input aria-label={t('keyboard.searchShortcuts')} placeholder={t('keyboard.searchShortcuts')} value={query} onChange={(e) => onQuery(e.target.value)} /></div>
     {groups.map((g) => <section key={g} aria-label={t(`keyboard.group.${g}`)}>
       <h3 className="shortcut-group">{t(`keyboard.group.${g}`)}</h3>
       <dl className="shortcuts-list">{rows.filter((r) => r.group === g).map((r) => <div key={r.label}><dt>{r.label}</dt><dd><kbd>{r.keys}</kbd></dd></div>)}</dl>

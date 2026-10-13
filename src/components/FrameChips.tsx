@@ -34,9 +34,9 @@ export function FrameChips({ draft, projects, onAction, onAccept }: {
       <ul className="frame-chips">
         {chips.map((chip) => (
           <li key={chip.id} className={`chip frame-chip is-${chip.type}`}>
-            {chip.type === 'project' && <><Icon name="folder" size={13} /><span className="frame-chip-text">{chip.label}</span>
+            {chip.type === 'project' && <><Icon name="folder" size={13} tone="decorative"/><span className="frame-chip-text">{chip.label}</span>
               <button type="button" className="frame-chip-remove" disabled={busy} aria-label={t('chat.frame.removeProject', { name: chip.label })} onClick={() => onAction({ type: 'removeProject' })}><Icon name="x" size={12} /></button></>}
-            {chip.type === 'kind' && <><Icon name={KIND_ICON[chip.kind]} size={13} /><span className="frame-chip-text">{t(`chat.frame.kind.${chip.kind}` as MessageKey)}</span></>}
+            {chip.type === 'kind' && <><Icon name={KIND_ICON[chip.kind]} size={13} tone="decorative"/><span className="frame-chip-text">{t(`chat.frame.kind.${chip.kind}` as MessageKey)}</span></>}
             {chip.type === 'tag' && <><span className="frame-chip-text">#{chip.tag}</span>
               <button type="button" className="frame-chip-remove" disabled={busy} aria-label={t('chat.frame.removeTag', { tag: chip.tag })} onClick={() => onAction({ type: 'removeTag', tag: chip.tag })}><Icon name="x" size={12} /></button></>}
             {chip.type === 'links' && <><span className="frame-chip-glyph" aria-hidden="true">↔</span><span className="frame-chip-text">{t.plural('chat.frame.related', chip.count, { count: String(chip.count) })}</span>

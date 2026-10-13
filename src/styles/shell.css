@@ -73,7 +73,7 @@
 .preview-setting-row { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:20px 0; border-bottom:1px solid var(--border); font-size:var(--text-callout); }
 .preview-setting-row button, .coding-content button:disabled, .coding-connect { border:1px solid var(--border); background:var(--bg-card); color:var(--text-faint); padding:8px 12px; border-radius: var(--radius-button); font:inherit; font-size:var(--text-caption); cursor:default; }
 .preview-footnote { font-size:var(--text-caption)!important; color:var(--text-faint); line-height:1.65; }
-.feature-preview { padding:clamp(24px,6vw,80px); gap:20px; overflow:auto; }.feature-preview > svg { color:var(--accent-2); }
+.feature-preview { padding:clamp(24px,6vw,80px); gap:20px; overflow:auto; }.feature-preview > svg { color:var(--text-secondary); }
 .settings-shell { position:fixed; inset:0; margin:auto; padding:0; border:1px solid var(--border); border-radius: var(--radius-surface); width:min(1160px,calc(100vw - 60px)); height:min(820px,calc(100vh - 70px)); max-width:none; max-height:none; color:var(--text); background:var(--bg-card); box-shadow:0 30px 100px rgba(0,0,0,.25); overflow:hidden; }
 .settings-shell[open] { display:flex; }
 .settings-shell::backdrop { background:var(--scrim); backdrop-filter:blur(var(--scrim-blur)); }

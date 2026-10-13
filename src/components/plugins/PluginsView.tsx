@@ -124,7 +124,7 @@ function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp'
   const matchingSkills = [...projectSkills].filter((skill) => `${skill.name} ${skill.file} ${skill.description}`.toLocaleLowerCase().includes(yourQuery.trim().toLocaleLowerCase())).sort((a, b) => (a.name || a.file).localeCompare(b.name || b.file) || a.file.localeCompare(b.file));
   const matchingAdded = [...added].filter((a) => `${a.title} ${a.registryName}`.toLocaleLowerCase().includes(yourQuery.trim().toLocaleLowerCase())).sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
   const card = (i: Item, starter = false) => <li key={(starter ? 'starter:' : '') + i.id} className="plugin-card surface">
-        <span className="plugin-card-icon"><ShellIcon name={kind === 'mcp' ? 'server' : 'sparkles'} size={20}/></span>
+        <span className="plugin-card-icon"><ShellIcon name={kind === 'mcp' ? 'server' : 'sparkles'} size={20} tone="decorative"/></span>
         <span className="plugin-card-text">
           <b>{i.name}</b>
           {i.publisher && <small className="plugin-publisher">{i.publisher}{i.version && ` · v${i.version}`}{i.remote && ' · hosted'}</small>}
@@ -141,7 +141,7 @@ function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp'
     <SegmentedControl label={kind === 'mcp' ? t('customise.mcpInventory') : t('customise.skillInventory')} value={mode} onChange={setMode} options={[["yours", kind === 'mcp' ? t('customise.added') : t('customise.inProject')], ["discover", t('customise.discover')]]}/>
     {kind === 'skills' && mode === 'yours' ? <>
       <label className="plugins-project-picker">{t('customise.project')} <select value={skillProject} onChange={(e) => setSkillProject(e.target.value)}>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-      <div className="settings-search plugins-search"><ShellIcon name="search" size={16}/><input aria-label={t('customise.searchProjectSkillsAria')} placeholder={t('customise.searchSkillsPlaceholder')} value={yourQuery} onChange={(e) => setYourQuery(e.target.value)}/></div>
+      <div className="settings-search plugins-search"><ShellIcon name="search" size={16} tone="decorative"/><input aria-label={t('customise.searchProjectSkillsAria')} placeholder={t('customise.searchSkillsPlaceholder')} value={yourQuery} onChange={(e) => setYourQuery(e.target.value)}/></div>
       <p className="plugins-note">{t('customise.skillsInstructionNote')}</p>
       {!skillProject ? <p className="plugins-note">{t('customise.createProjectHint')}</p>
         : skillsStatus === 'loading' ? <p className="plugins-note" role="status">{t('customise.loadingProjectSkills')}</p>
@@ -149,14 +149,14 @@ function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp'
         : matchingSkills.length ? <ul className="plugin-grid plugin-grid-installed">{matchingSkills.map((skill) => <li key={skill.file} className="plugin-card surface"><span className="plugin-card-text"><b>{skill.name || skill.file}</b><small className="plugin-publisher">{t('customise.skillStatusProjectFile')} · {skill.status === 'enabled' ? t('customise.skillStatusEnabled') : skill.status === 'review' || skill.status === 'updated' ? t('customise.skillStatusReviewRequired') : skill.status === 'invalid' ? t('customise.skillStatusNeedsCorrection') : t('customise.skillStatusDisabled')}</small><small>{skill.file}{skill.version ? ` · v${skill.version}` : ''}</small>{skill.description && <small>{skill.description}</small>}<details><summary>{t('customise.viewInstructionsSummary')}</summary><p>{t('customise.instructionsScopeNote')}</p>{skill.missingTools?.length > 0 && <p>{t('customise.requiresTools', { tools: skill.missingTools.join(', ') })}</p>}{skill.error && <p role="alert">{skill.error}</p>}<pre>{skill.content}</pre></details></span></li>)}</ul>
         : <p className="plugins-note" role="status">{yourQuery ? t('customise.noProjectSkillsMatch', { query: yourQuery }) : t('customise.noProjectSkills')}</p>}
     </> : kind === 'mcp' && mode === 'yours' ? <>
-      <div className="settings-search plugins-search"><ShellIcon name="search" size={16}/><input aria-label={t('customise.searchAddedAria')} placeholder={t('customise.searchAddedPlaceholder')} value={yourQuery} onChange={(e) => setYourQuery(e.target.value)}/></div>
+      <div className="settings-search plugins-search"><ShellIcon name="search" size={16} tone="decorative"/><input aria-label={t('customise.searchAddedAria')} placeholder={t('customise.searchAddedPlaceholder')} value={yourQuery} onChange={(e) => setYourQuery(e.target.value)}/></div>
       <p className="plugins-note">{t('customise.addedServersNote')}</p>
       {!isAdmin ? <p className="plugins-note">{t('customise.adminManagesInventory')}</p>
         : addedStatus === 'loading' ? <p className="plugins-note" role="status">{t('customise.loadingAddedServers')}</p>
         : addedStatus === 'error' ? <p className="route-note" role="alert">{t('customise.loadAddedError')} <button className="btn btn-secondary btn-sm" onClick={() => setAddedAttempt((n) => n + 1)}>{t('connectors.tryAgain')}</button></p>
         : matchingAdded.length ? <ul className="plugin-grid">{matchingAdded.map((a) =>
           <li key={a.id} className="plugin-card surface">
-            <span className="plugin-card-icon"><ShellIcon name="server" size={20}/></span>
+            <span className="plugin-card-icon"><ShellIcon name="server" size={20} tone="decorative"/></span>
             <span className="plugin-card-text"><b>{a.title}</b><small className="plugin-publisher">{a.registryName.startsWith('url:') ? t('customise.addedByUrl') : t('customise.publicRegistry')} · {a.error ? t('connectors.needsAttention') : t('customise.availableToolsCount', { count: tools(t, a.toolCount) })}</small><small>{a.registryName.startsWith('url:') ? a.registryName.slice(4) : a.registryName}</small>
               <details className="plugin-tool-detail"><summary>{a.tools?.length ? t('customise.availableToolsCount', { count: a.toolCount ?? a.tools.length }) : t('customise.availableTools')}</summary>
                 {a.tools?.length ? <ul>{a.tools.map((tool) => <li key={tool.name}><b>{tool.name}</b>{tool.description && <span>{tool.description}</span>}</li>)}</ul> : <p>{a.error ? t('customise.toolsUnavailable') : t('customise.noToolsDiscovered')}</p>}
@@ -167,7 +167,7 @@ function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp'
           </li>)}</ul>
         : <p className="plugins-note" role="status">{yourQuery ? t('customise.noAddedServersMatch', { query: yourQuery }) : <>{t('customise.noAddedServers')} {t('customise.builtInServersNote')} <button type="button" className="link-button" onClick={() => window.dispatchEvent(new Event('noevia:open-service-status'))}>{t('customise.viewServiceStatus')}</button></>}</p>}
     </> : <>
-      <div className="settings-search plugins-search"><ShellIcon name="search" size={16}/><input aria-label={kind === 'mcp' ? t('customise.searchMcpPlaceholder') : t('customise.searchSkillsDiscoverPlaceholder')} placeholder={kind === 'mcp' ? t('customise.searchMcpPlaceholder') : t('customise.searchSkillsDiscoverPlaceholder')} value={query} onChange={(e) => setQuery(e.target.value)}/></div>
+      <div className="settings-search plugins-search"><ShellIcon name="search" size={16} tone="decorative"/><input aria-label={kind === 'mcp' ? t('customise.searchMcpPlaceholder') : t('customise.searchSkillsDiscoverPlaceholder')} placeholder={kind === 'mcp' ? t('customise.searchMcpPlaceholder') : t('customise.searchSkillsDiscoverPlaceholder')} value={query} onChange={(e) => setQuery(e.target.value)}/></div>
     <p className="plugins-note">{kind === 'mcp'
       ? (isAdmin ? t('customise.mcpDirectoryNoteAdmin') : t('customise.mcpDirectoryNoteMember'))
       : t('customise.skillsDirectoryNote')}
@@ -353,7 +353,7 @@ function SignInServers(): JSX.Element | null {
     <p className="plugins-note">{t('customise.signInServersNote')}</p>
     <ul className="plugin-grid">
       {servers.map((s) => <li key={s.id} className="plugin-card surface">
-        <span className="plugin-card-icon"><ShellIcon name="server" size={20}/></span>
+        <span className="plugin-card-icon"><ShellIcon name="server" size={20} tone="decorative"/></span>
         <span className="plugin-card-text"><b>{s.title}</b><small>{s.connected ? t('customise.signedIn') : s.needsReauth ? t('customise.signInAgain') : t('customise.notSignedIn')}</small></span>
         <span className="plugin-card-actions">{s.connected
           ? <button className="btn btn-ghost btn-sm" aria-label={t('customise.disconnectAria', { name: s.title })} onClick={() => void disconnect(s.id)}>{t('connectors.disconnect')}</button>
@@ -398,7 +398,7 @@ function KeyServers(): JSX.Element | null {
     <p className="plugins-note">{t('customise.keyServersNote')}</p>
     <ul className="plugin-grid">
       {servers.map((s) => <li key={s.id} className="plugin-card surface">
-        <span className="plugin-card-icon"><ShellIcon name="server" size={20}/></span>
+        <span className="plugin-card-icon"><ShellIcon name="server" size={20} tone="decorative"/></span>
         <span className="plugin-card-text"><b>{s.title}</b><small>{s.hasKey ? t('customise.yourKeySet') : t('customise.noKeyYet')}</small></span>
         <span className="plugin-card-actions">
           {open !== s.id && <span className="plugin-add">

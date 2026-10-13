@@ -335,7 +335,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
             rest of the detail pane, so it needs its own — still the same single close action. */}
         {view === 'list' && <CloseButton onClick={close} label={t('settings.close')}/>}
       </div>
-      <div className="settings-search"><ShellIcon name="search" size={16}/><input aria-label={t('settings.search')} placeholder={t('settings.search')} value={query} onChange={e => setQuery(e.target.value)}/>{query && <button className="settings-search-clear" onClick={clearSearch} aria-label={t('settings.clearSearchLabel')}><ShellIcon name="close" size={16}/></button>}</div>
+      <div className="settings-search"><ShellIcon name="search" size={16} tone="decorative"/><input aria-label={t('settings.search')} placeholder={t('settings.search')} value={query} onChange={e => setQuery(e.target.value)}/>{query && <button className="settings-search-clear" onClick={clearSearch} aria-label={t('settings.clearSearchLabel')}><ShellIcon name="close" size={16}/></button>}</div>
       {profileError && <p className="route-note" role="alert">{t('settings.accessError')} <button className="popup-tab" onClick={() => setProfileAttempt(n => n + 1)}>{t('settings.retryAccess')}</button></p>}
       <nav aria-label={t('settings.categories')}>
         {filtered.map(g => g.items.length > 0 && <section key={g.name} className={g.admin ? 'settings-nav-admin' : undefined} aria-label={g.name}>

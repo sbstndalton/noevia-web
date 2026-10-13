@@ -199,7 +199,7 @@ export function FileChips({ names, label, className }: { names: readonly string[
   if (!names.length) return null;
   return (
     <ul className={className} aria-label={label}>
-      {names.map((name) => <li key={name} className="chip file-chip"><ShellIcon name="file" size={13} /><span>{name}</span></li>)}
+      {names.map((name) => <li key={name} className="chip file-chip"><ShellIcon name="file" size={13} tone="decorative"/><span>{name}</span></li>)}
     </ul>
   );
 }

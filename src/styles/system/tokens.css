@@ -146,6 +146,9 @@
   /* Accent. The old names stay as aliases so every screen switches at once. */
   --accent-garnet: var(--md-primary);
   --accent-text: var(--md-primary);
+  /* Two-tone icons (#1623): the one inner part of a decorative icon. The theme's own accent, so
+     every palette shows up in light and dark; at least 3:1 on every ground (icon-tones test). */
+  --icon-accent: var(--accent-text);
   --on-accent: var(--md-on-primary);
   --focus-ring: var(--md-primary);
   --tint-garnet: var(--md-primary-container);
