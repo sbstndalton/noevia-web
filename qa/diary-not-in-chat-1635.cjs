@@ -14,8 +14,10 @@
 //      read returns the chat, not the Diary.
 //   2. Diary opened by a deliberate click shows; leaving it takes its panel out of the document (no
 //      hidden copy behind the chat) while its draft survives the round trip.
-//   3. An archived project's page, by address while the chat list loads and from Projects -> Archived,
+//   3. An open modal in the Diary (the storage wizard) is a modal again after Back/Forward.
+//   4. An archived project's page, by address while the chat list loads and from Projects -> Archived,
 //      has no Diary in its document either.
+//   5. Under the Code workspace (Diary still the chat-side view) the Diary is detached and stops fetching.
 // Screenshots go to QA_SCREENSHOTS (default /tmp/noevia-shots), never into the repo.
 // Run: npm run build && PLAYWRIGHT_MODULE=<path to playwright> node qa/diary-not-in-chat-1635.cjs
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
@@ -114,6 +116,22 @@ const diaryInDom = (page) => page.evaluate(() => document.querySelectorAll('.dia
     await page.goForward();
     await page.locator('#diary-draft').waitFor();
     check(await page.locator('#diary-draft').inputValue() === 'Synthetic unsent draft 1635', 'the Diary draft was lost on the round trip');
+
+    // An open modal inside the Diary (the storage wizard) is still a modal after the round trip: leaving
+    // the document drops it from the top layer, so it must be reopened as one (backdrop, Escape).
+    await page.locator('.diary-panel-heading', { hasText: 'Diary storage' }).getByRole('button', { name: 'Edit', exact: true }).click();
+    const wizard = page.locator('dialog.diary-modal');
+    await wizard.waitFor();
+    check(await wizard.evaluate((d) => d.matches(':modal')), 'the storage wizard did not open as a modal');
+    await page.goBack();
+    await page.waitForFunction((p) => location.pathname === p, chatPath);
+    check((await diaryInDom(page)) === 0, 'the Diary (with its open wizard) stays in the document behind the chat');
+    await page.goForward();
+    await wizard.waitFor();
+    check(await wizard.evaluate((d) => d.open && d.matches(':modal')), 'the storage wizard came back open but not modal');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    check(await wizard.count() === 0, 'Escape did not close the storage wizard after the round trip');
     check(errors.length === 0, `page errors: ${errors.join(' | ')}`);
 
     // The same read on a project page (second live sighting): an archived project opened from Projects ->
@@ -143,6 +161,29 @@ const diaryInDom = (page) => page.evaluate(() => document.querySelectorAll('.dia
     const projectRead = await pageText(projectPage);
     check(!projectRead.inDiary, `archived project opened from the Archived tab: page-text read picked ${projectRead.className}`);
     await projectPage.screenshot({ path: `${out}/1635-archived-project.png` });
+
+    // Code mode leaves the chat-side view on the Diary while the Code workspace covers it. The Diary is
+    // then detached and must not keep polling (/api/diary/exchanges every 5 s, storage status, overview).
+    const codePage = await browser.newPage(withLocale({ viewport: { width: 1280, height: 800 } }));
+    const codeDiaryRequests = [];
+    codePage.on('request', (req) => { const p = new URL(req.url()).pathname; if (p.startsWith('/api/diary/')) codeDiaryRequests.push(p); });
+    await codePage.route('**/api/features', (r) => r.fulfill({ json: { flags: { previews: true } } }));
+    // Keep both pollers going while the Diary is active: a synthetic exchange still running (recovery poll,
+    // 5 s) and a backup still pending (storage-status poll, 5 s).
+    await codePage.route('**/api/diary/exchanges*', (r) => r.fulfill({ json: { exchanges: [{ id: 'ex-synthetic-1635', kind: 'exchange', state: 'running', message: 'Synthetic running exchange', startedAt: Date.now() }] } }));
+    await codePage.route('**/api/diary/storage-status', (r) => r.fulfill({ json: { mode: 'legacy', backup: 'pending', lastBackedUp: null } }));
+    await codePage.goto(`http://localhost:${PORT}/`);
+    await codePage.getByPlaceholder('Message noevia…').waitFor();
+    await codePage.locator('.side-footer-row').getByRole('button', { name: 'Diary', exact: true }).click();
+    await codePage.locator('#diary-draft').waitFor();
+    await codePage.waitForTimeout(1000);
+    await codePage.getByRole('button', { name: 'Code', exact: true }).click();
+    await codePage.getByRole('heading', { name: 'What should we build next?' }).waitFor();
+    await codePage.waitForTimeout(500);
+    const atCode = codeDiaryRequests.length;
+    await codePage.waitForTimeout(6000);
+    check(codeDiaryRequests.length === atCode, `the Diary kept fetching under Code: ${JSON.stringify(codeDiaryRequests.slice(atCode))}`);
+    check((await diaryInDom(codePage)) === 0, 'the Diary is in the document under the Code workspace');
   } finally {
     await browser.close();
     await fixture.close();

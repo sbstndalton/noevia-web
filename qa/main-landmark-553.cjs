@@ -1,8 +1,9 @@
-// #553: every top-level view exposes exactly one visible <main> landmark. The Diary stays mounted
-// (display:none) behind the chat view, and its <main> used to be the page's only one, so chat and
-// project pages had none. Drives the built app against the synthetic diary-fixture.cjs (no real
-// Diary): chat (/c/<id>), project (/p/<id>), the Projects list and Diary must each have exactly one
-// visible main / [role=main], and a hidden Diary must not expose its own.
+// #553: every top-level view exposes exactly one visible <main> landmark. The Diary used to stay
+// mounted (display:none) behind the chat view, and its <main> used to be the page's only one, so chat
+// and project pages had none. Since #1635 the Diary is not in the document at all unless it is on
+// screen. Drives the built app against the synthetic diary-fixture.cjs (no real Diary): chat
+// (/c/<id>), project (/p/<id>), the Projects list and Diary must each have exactly one visible
+// main / [role=main], and a chat page must have no Diary in its document.
 // Run: npm run build && PLAYWRIGHT_MODULE=<path to playwright> node qa/main-landmark-553.cjs
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
@@ -40,11 +41,11 @@ const landmarks = (page) => page.evaluate(() => [...document.querySelectorAll('m
     await check('projects list', '/projects', (p) => p.locator('.projects-workspace').waitFor());
     await check('diary', '/diary', (p) => p.locator('#diary-draft').waitFor());
 
-    // Hidden Diary: still in the DOM behind chat, but it must not expose a second landmark.
+    // #1635: no Diary behind the chat, not even a hidden one (so no second landmark either).
     await page.goto(`http://localhost:${PORT}/c/c-free`);
     await page.getByRole('textbox', { name: /message/i }).waitFor();
-    const hiddenDiary = await page.evaluate(() => [...document.querySelectorAll('.diary-mount main')].map((m) => m.getAttribute('role')));
-    if (hiddenDiary.some((role) => role !== 'none')) failures.push(`hidden Diary main exposes a landmark: roles ${JSON.stringify(hiddenDiary)}`);
+    const diaryMounts = await page.locator('.diary-mount').count();
+    if (diaryMounts !== 0) failures.push(`chat page: expected no Diary in the document, found ${diaryMounts} .diary-mount`);
     // Chat is the workspace landmark itself, not just any main.
     if (!(await page.locator('main.chat-workspace').count())) failures.push('chat workspace is not a <main>');
   } finally {
@@ -52,5 +53,5 @@ const landmarks = (page) => page.evaluate(() => [...document.querySelectorAll('m
     await fixture.close();
   }
   if (failures.length) { console.error(failures.join('\n')); process.exit(1); }
-  console.log('Landmarks: exactly one visible main on chat, project, projects list and Diary; hidden Diary exposes none.');
+  console.log('Landmarks: exactly one visible main on chat, project, projects list and Diary; no Diary in the chat page.');
 })().catch((e) => { console.error(e); process.exit(1); });

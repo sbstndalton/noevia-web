@@ -20,11 +20,12 @@ async function realm(t) {
   bundle ??= build({
     stdin: { contents: `import {act, useLayoutEffect, useRef, useState} from 'react'; import {createRoot} from 'react-dom/client';
       import {KeptOffDocument} from './src/components/KeptOffDocument'; import {diaryOpened, diaryPresence} from './src/diary-presence';
-      export const log = { mounts: 0, unmounts: 0, attachedAtMount: null, clicks: 0 };
+      export const log = { mounts: 0, unmounts: 0, attachedAtMount: null, clicks: 0, active: null };
       // Synthetic stand-in for the Diary: private text, an unsent draft held in state, a scroller, a button.
       function SyntheticDiary({ active }) {
         const [draft, setDraft] = useState('');
         const self = useRef(null);
+        log.active = active;
         useLayoutEffect(() => { log.mounts++; log.attachedAtMount = document.contains(self.current); return () => { log.unmounts++; }; }, []);
         window.__setDraft = setDraft;
         return <main ref={self} className="main diary-workspace" role={active ? undefined : 'none'}>
@@ -36,12 +37,12 @@ async function realm(t) {
       // The same shape as App.tsx: the opened latch, the presence rule, the kept-off-document host.
       function Shell({ enabled, viewKind, covered }) {
         const [was, setWas] = useState(false);
-        const opened = diaryOpened(was, { enabled, viewKind });
+        const opened = diaryOpened(was, { enabled, viewKind, covered });
         if (opened !== was) setWas(opened);
         const place = diaryPresence({ enabled, viewKind, opened, covered });
         return <div className="chat-views" style={{ display: 'contents' }}>
           {viewKind === 'chat' && <main className="main chat-workspace"><p>Synthetic chat</p></main>}
-          {place !== 'absent' && <KeptOffDocument className="diary-mount" shown={place === 'shown'}><SyntheticDiary active={viewKind === 'diary'} /></KeptOffDocument>}
+          {place !== 'absent' && <KeptOffDocument className="diary-mount" shown={place === 'shown'}><SyntheticDiary active={place === 'shown'} /></KeptOffDocument>}
         </div>;
       }
       const root = createRoot(document.getElementById('root'));
@@ -81,9 +82,11 @@ test('presence rule: only the Diary being the view opens it; nothing else mounts
   assert.equal(api.diaryPresence({ enabled: true, viewKind: 'diary', opened }), 'shown');
   opened = api.diaryOpened(opened, { enabled: true, viewKind: 'chat' });
   assert.equal(api.diaryPresence({ enabled: true, viewKind: 'chat', opened }), 'detached', 'a left Diary is kept but out of the document');
-  // The Code workspace covers the chat views: a Diary still underneath is detached, not hidden in place.
+  // The Code workspace covers the chat views: a Diary opened before is detached, not hidden in place.
   assert.equal(api.diaryPresence({ enabled: true, viewKind: 'diary', opened, covered: true }), 'detached');
-  assert.equal(api.diaryPresence({ enabled: true, viewKind: 'diary', opened: false, covered: true }), 'detached');
+  // A Diary place restored while in Code was never on screen: it neither opens nor mounts.
+  assert.equal(api.diaryOpened(false, { enabled: true, viewKind: 'diary', covered: true }), false);
+  assert.equal(api.diaryPresence({ enabled: true, viewKind: 'diary', opened: false, covered: true }), 'absent');
   // Turning the Diary off drops it and forgets it was opened.
   assert.equal(api.diaryOpened(true, { enabled: false, viewKind: 'diary' }), false);
   assert.equal(api.diaryPresence({ enabled: false, viewKind: 'diary', opened: true }), 'absent');
@@ -96,6 +99,16 @@ test('a chat never has the Diary in its document; the page-text read gets the ch
   assert.equal(doc.querySelectorAll('.diary-mount, .diary-workspace').length, 0);
   assert.ok(!doc.body.textContent.includes('Synthetic private diary text'), 'Diary text is in the chat page');
   assert.equal(longestMain(doc)?.className, 'main chat-workspace');
+});
+
+test('a Diary place restored while in Code neither mounts nor fetches', async (t) => {
+  const { doc, api } = await realm(t);
+  await api.show({ enabled: true, viewKind: 'diary', covered: true });
+  assert.equal(api.log.mounts, 0, 'the Diary mounted under the Code workspace without being on screen');
+  assert.equal(doc.querySelectorAll('.diary-mount, .diary-workspace').length, 0);
+  await api.show({ enabled: true, viewKind: 'diary', covered: false }); // leaving Code shows it
+  assert.equal(api.log.mounts, 1);
+  assert.equal(api.log.active, true);
 });
 
 test('opened, left and reopened: kept alive, out of the document while left, draft and scroll kept', async (t) => {
@@ -124,8 +137,10 @@ test('opened, left and reopened: kept alive, out of the document while left, dra
   await api.click(doc.querySelector('.diary-mount button'));
   assert.equal(api.log.clicks, 1, 'events still reach the reattached Diary');
 
+  assert.equal(api.log.active, true);
   await api.show({ enabled: true, viewKind: 'diary', covered: true });
   assert.equal(doc.querySelectorAll('.diary-workspace').length, 0, 'under the Code workspace the Diary is detached');
+  assert.equal(api.log.active, false, 'a detached Diary under Code must not be active (it would keep polling /api/diary/*)');
   await api.show({ enabled: false, viewKind: 'chat' });
   assert.equal(api.log.unmounts, 1, 'turning the Diary off unmounts it');
   void w;
@@ -134,8 +149,11 @@ test('opened, left and reopened: kept alive, out of the document while left, dra
 test('App.tsx mounts the Diary through the presence rule, never display:none behind the chat', () => {
   const src = fs.readFileSync(path.join(ROOT, 'src/App.tsx'), 'utf8');
   assert.doesNotMatch(src, /className="diary-mount" style=\{\{ display:/, 'the Diary is again kept in the document with display:none');
-  assert.match(src, /const diaryOpenedNow = diaryOpened\(diaryWasOpened, \{ enabled: diaryEnabled, viewKind: view\.kind \}\);/);
-  assert.match(src, /const diaryPlace = diaryPresence\(\{ enabled: diaryEnabled, viewKind: view\.kind, opened: diaryOpenedNow, covered: appMode === 'code' && showPreviews \}\);/);
+  assert.match(src, /const diaryCovered = appMode === 'code' && showPreviews;/);
+  assert.match(src, /const diaryOpenedNow = diaryOpened\(diaryWasOpened, \{ enabled: diaryEnabled, viewKind: view\.kind, covered: diaryCovered \}\);/);
+  assert.match(src, /const diaryPlace = diaryPresence\(\{ enabled: diaryEnabled, viewKind: view\.kind, opened: diaryOpenedNow, covered: diaryCovered \}\);/);
+  // Only a Diary on screen fetches: Code mode leaves view.kind 'diary', so the view kind is not enough.
+  assert.match(src, /<Diary\.View inferenceUp=\{health\.inferenceUp\} active=\{diaryPlace === 'shown'\} \/>/);
   assert.match(src, /\{diaryPlace !== 'absent' && <KeptOffDocument className="diary-mount" shown=\{diaryPlace === 'shown'\}>/);
   assert.equal((src.match(/<Diary\.View\b/g) || []).length, 1, 'one Diary mount');
 });

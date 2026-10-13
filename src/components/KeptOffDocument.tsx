@@ -20,14 +20,19 @@ export function KeptOffDocument({ shown, className, children }: { shown: boolean
     el.style.display = 'contents';
     return el;
   });
-  const [saved] = useState<{ offsets: Offset[] }>(() => ({ offsets: [] }));
+  const [saved] = useState<{ offsets: Offset[]; modals: HTMLDialogElement[] }>(() => ({ offsets: [], modals: [] }));
   const slot = useCallback((el: HTMLDivElement | null) => {
     if (!el) return;
     if (shown) {
       if (host.parentNode !== el) el.appendChild(host);
+      // Leaving the document drops a modal dialog from the top layer: it comes back open but non-modal
+      // (no backdrop, no inert page, no Escape). Reopen the ones that are still open as modals.
+      for (const dialog of saved.modals) if (host.contains(dialog) && dialog.open) { dialog.close(); dialog.showModal(); }
+      saved.modals = [];
       for (const [node, top, left] of saved.offsets) if (host.contains(node)) { node.scrollTop = top; node.scrollLeft = left; }
       saved.offsets = [];
     } else if (host.parentNode) {
+      saved.modals = [...host.querySelectorAll('dialog')].filter((d) => d.matches(':modal'));
       saved.offsets = [...host.querySelectorAll('*')].filter((n) => n.scrollTop || n.scrollLeft).map((n): Offset => [n, n.scrollTop, n.scrollLeft]);
       host.remove();
     }

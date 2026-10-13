@@ -106,5 +106,6 @@ test('App.tsx: Diary.View only becomes active while it is the visible view', () 
   const src = readSrc('App.tsx');
   const mountLine = src.split('\n').find((line) => line.includes('<Diary.View'));
   assert.ok(mountLine, 'could not find the Diary.View mount in App.tsx');
-  assert.match(mountLine, /active=\{view\.kind === 'diary'\}/, 'Diary.View is not wired to the current view');
+  // #1635: on screen, not just the view kind: Code mode leaves view.kind 'diary' while the Diary is detached.
+  assert.match(mountLine, /active=\{diaryPlace === 'shown'\}/, 'Diary.View is not wired to the Diary being on screen');
 });
