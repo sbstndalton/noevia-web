@@ -1375,6 +1375,7 @@ export const EN_GB = {
   'chat.routing.flag.router': "the router judged it private",
   'chat.routing.flag.unavailable': "the sensitivity check could not answer",
   'chat.routing.pending': "This looks sensitive ({reason}).",
+  'chat.routing.pendingDetail': "Sending to the cloud also lets this reply read your project files and connected storage.",
   'chat.routing.sendCloud': "Send to cloud",
   'chat.routing.keepLocal': "Keep local",
   'chat.routing.remember': "Remember for this chat",

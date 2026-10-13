@@ -51,6 +51,8 @@ export function RoutePendingCard({ flag, busy, onDecide }: { flag: RouteFlag; bu
   return (
     <div className="route-pending" role="group" aria-label={t('chat.routing.pending', { reason: t(FLAG_KEY[flag] ?? FLAG_KEY.unavailable) })} data-testid="route-pending">
       <p>{t('chat.routing.pending', { reason: t(FLAG_KEY[flag] ?? FLAG_KEY.unavailable) })}</p>
+      {/* #1657: "Send to cloud" also lets this one reply read private-data tools (project files, Drive, Nextcloud). */}
+      <p data-testid="route-pending-detail">{t('chat.routing.pendingDetail')}</p>
       <div className="route-pending-actions">
         <button className="modal-btn secondary" disabled={busy} onClick={() => onDecide('cloud', remember)}>{t('chat.routing.sendCloud')}</button>
         <button className="modal-btn primary" disabled={busy} onClick={() => onDecide('local', remember)}>{t('chat.routing.keepLocal')}</button>
