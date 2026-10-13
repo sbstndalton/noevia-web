@@ -504,7 +504,8 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 .sidebar .chat-row:has(:focus-visible) .sidebar-label.is-overflowing .sidebar-label-text { animation:sidebar-title-scroll var(--label-duration) var(--delay-hover-intent) var(--ease-considered) infinite alternate; }
 @media(prefers-reduced-motion:reduce) {
   .sidebar .sidebar-label-text { animation:none !important; }
-  .sidebar .proj-row:hover .sidebar-label, .sidebar .proj-row:has(:focus-visible) .sidebar-label,
+  /* #1542: project names do not wrap here. A long identifier that does not fit the row would break mid-token, so a
+     project row stays on one line (truncated, with the full name in its title tooltip). Chat titles still wrap. */
   .sidebar .chat-row:hover .sidebar-label, .sidebar .chat-row:has(:focus-visible) .sidebar-label { white-space:normal; overflow:visible; mask-image:none; }
   .sidebar .sidebar-label-text { white-space:inherit; overflow-wrap:anywhere; }
 }

@@ -1204,6 +1204,11 @@ button:disabled { cursor: not-allowed; }
 .project-card-time { margin-left: auto; font-size: var(--text-caption2); color: var(--text-faint); }
 /* #1572: the archived card's footer row (Restore), always at the end of the card. */
 .project-card-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
+/* #1626: the card's open button is a stretched link (::after covers the whole card), so the footer must sit above it,
+   or Restore is hit-tested as "open project". The footer passes pointer events through, so the empty part of the row
+   still opens the project, and only the Restore button itself takes its own clicks. */
+.projects-workspace .project-card-foot { position: relative; z-index: 1; pointer-events: none; }
+.projects-workspace .project-card-foot .btn { pointer-events: auto; }
 
 @media (max-width: 640px) {
   .projects-head, .projects-grid { padding-left: 18px; padding-right: 18px; }
