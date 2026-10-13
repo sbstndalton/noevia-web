@@ -37,8 +37,9 @@ async function render(language, metas) {
 
 test('TaskMeta reads in English as before', async () => {
   const [full, one] = await render('en-GB', [META, { ...META, usage: null, commands: 1, failedCommands: 0 }]);
-  assert.equal(full, 'opencode 1.18.31 · 46,000 tokens · context 33% of 24,576 · 2 commands, 1 failed');
-  assert.equal(one, 'opencode 1.18.31 · context 33% of 24,576 · 1 command');
+  // #1581: the harness is named in plain words; its version moved to the hover text.
+  assert.equal(full, 'opencode · 46,000 tokens · context 33% of 24,576 · 2 commands, 1 failed');
+  assert.equal(one, 'opencode · context 33% of 24,576 · 1 command');
 });
 
 test('TaskMeta reads in German', async () => {
@@ -46,6 +47,6 @@ test('TaskMeta reads in German', async () => {
   // The words follow the interface language. The digits follow appLocale(), which for the
   // "system" preference is the runtime's own default (Node's here, the browser's in the app), so
   // only the separators are left loose; the German-browser digits are covered by qa/locale-600-603.cjs.
-  assert.match(de, /^opencode 1\.18\.31 · 46[.,]000 Tokens · Kontext 33 ?% von 24[.,]576 · 2 Befehle, 1 fehlgeschlagen$/);
+  assert.match(de, /^opencode · 46[.,]000 Tokens · Kontext 33 ?% von 24[.,]576 · 2 Befehle, 1 fehlgeschlagen$/);
   assert.doesNotMatch(de, /context|commands|failed/);
 });
