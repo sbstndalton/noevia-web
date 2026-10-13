@@ -15,10 +15,17 @@
 .code-choices > .code-field { flex: 1 1 260px; min-width: 0; }
 .code-capabilities { margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-control); }
 .code-capabilities legend { padding: 0 4px; font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); }
-.code-capability-list { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; }
+/* #1630: the options are a grid, not a flex wrap, so no option is left alone on a row. One column
+   when the group is too narrow for four legible labels (the container rule below), four across
+   otherwise (4 + 3 for the seven capabilities). */
+.code-capability-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 16px; margin-top: 8px; }
 .code-capability { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: var(--text-footnote); }
 .code-capability input { width: 18px; height: 18px; accent-color: var(--accent); }
 .code-capability.is-unavailable { color: var(--text-faint); cursor: not-allowed; }
+/* Four across needs about 490 px of list: the longest word, "dependencies", is 87 px at 13 px, beside an
+   18 px box and 8 px gap. The .code-compose content width is the list plus 30 px of fieldset padding and border. */
+.code-compose { container-type: inline-size; }
+@container (min-width: 520px) { .code-capability-list { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 12px; } }
 .code-fact { display: flex; flex-direction: column; gap: 4px; margin: 0; font-size: var(--text-callout); }
 .code-fact > span { font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); }
 .code-note { margin: 0; font-size: var(--text-caption); line-height: 1.5; color: var(--text-secondary); }
@@ -72,13 +79,12 @@
 @media (max-width: 640px) {
   .code-compose { padding: 14px; }
   .code-choices { flex-direction: column; gap: 12px; }
-  .code-capability-list { flex-direction: column; gap: 0; }
   .code-actions .btn, .code-approval-actions .btn { width: 100%; }
 }
 /* #650: the same phone rules in the Layout setting's Phone preview, where the width query never matches. */
 :root[data-layout="mobile"] .code-compose { padding: 14px; }
 :root[data-layout="mobile"] .code-choices { flex-direction: column; gap: 12px; }
-:root[data-layout="mobile"] .code-capability-list { flex-direction: column; gap: 0; }
+:root[data-layout="mobile"] .code-capability-list { grid-template-columns: minmax(0, 1fr); gap: 0; }
 :root[data-layout="mobile"] .code-actions .btn, :root[data-layout="mobile"] .code-approval-actions .btn { width: 100%; }
 
 /* Planner review (#519): the verdict is advice, set above the person's own question. */

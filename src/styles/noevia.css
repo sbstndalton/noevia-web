@@ -278,7 +278,9 @@ button:disabled { opacity: .5; cursor: default; }
 .code-emblem { color: var(--text-secondary); }
 .coding-composer { margin: 0 auto auto; max-width: 744px; }
 /* #368: the Code project picker sits where the composer would — same width, same centering. */
-.coding-project-picker { margin: 0 auto; max-width: 744px; width: 100%; }
+/* #1629: phone.css's `.plugin-grid { margin: 0 }` loads later at the same specificity, so the
+   picker needs the two-class selector to keep its centring margins. */
+.plugin-grid.coding-project-picker { margin: 0 auto; max-width: 744px; width: 100%; }
 .coding-quick-actions { gap: 10px; }
 .coding-sidebar .shell-sidebar-head > strong { font-weight: 600; }
 .coding-side-panel { font-family: var(--font-ui); }
