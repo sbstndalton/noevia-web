@@ -1364,6 +1364,7 @@ export const NB_NO: Catalogue = {
   'chat.routing.flag.router': "ruteren vurderte det som privat",
   'chat.routing.flag.unavailable': "sensitivitetssjekken kunne ikke svare",
   'chat.routing.pending': "Dette ser sensitivt ut ({reason}).",
+  'chat.routing.pendingDetail': "Å sende til sky gjør at dette svaret også kan lese prosjektfilene dine og tilkoblet lagring.",
   'chat.routing.sendCloud': "Send til sky",
   'chat.routing.keepLocal': "Behold lokalt",
   'chat.routing.remember': "Husk for denne chatten",

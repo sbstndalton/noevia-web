@@ -1364,6 +1364,7 @@ export const SV_SE: Catalogue = {
   'chat.routing.flag.router': "routern bedömde det som privat",
   'chat.routing.flag.unavailable': "känslighetskontrollen kunde inte svara",
   'chat.routing.pending': "Det här ser känsligt ut ({reason}).",
+  'chat.routing.pendingDetail': "Att skicka till molnet gör att svaret också kan läsa dina projektfiler och ansluten lagring.",
   'chat.routing.sendCloud': "Skicka till molnet",
   'chat.routing.keepLocal': "Behåll lokalt",
   'chat.routing.remember': "Kom ihåg för den här chatten",

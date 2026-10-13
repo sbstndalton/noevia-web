@@ -1364,6 +1364,7 @@ export const PT_BR: Catalogue = {
   'chat.routing.flag.router': "o roteador considerou privado",
   'chat.routing.flag.unavailable': "a verificação de sensibilidade não pôde responder",
   'chat.routing.pending': "Isto parece sensível ({reason}).",
+  'chat.routing.pendingDetail': "Enviar para a nuvem também permite que esta resposta leia os seus arquivos do projeto e o armazenamento conectado.",
   'chat.routing.sendCloud': "Enviar para a nuvem",
   'chat.routing.keepLocal': "Manter local",
   'chat.routing.remember': "Lembrar neste chat",

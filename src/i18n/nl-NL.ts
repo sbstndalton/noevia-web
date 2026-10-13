@@ -1364,6 +1364,7 @@ export const NL_NL: Catalogue = {
   'chat.routing.flag.router': "de router vond het privé",
   'chat.routing.flag.unavailable': "de gevoeligheidscontrole kon niet antwoorden",
   'chat.routing.pending': "Dit lijkt gevoelig ({reason}).",
+  'chat.routing.pendingDetail': "Naar je naar de cloud stuurt, kan dit antwoord ook je projectbestanden en verbonden opslag lezen.",
   'chat.routing.sendCloud': "Naar de cloud sturen",
   'chat.routing.keepLocal': "Lokaal houden",
   'chat.routing.remember': "Onthouden voor deze chat",
