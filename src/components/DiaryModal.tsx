@@ -84,6 +84,13 @@ function splitRow(line: string): string[] {
   return line.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map((c) => c.trim());
 }
 
+/** #1598: inside a table cell, a `<br>` in a plain-text piece is a line break. Called on text that `inline` has
+ *  already tokenised, so a code span is never split and bold, italic or a link label keeps its markers. */
+function inCellBreaks(text: string, key: number, inCell: boolean): ReactNode {
+  if (!inCell || !/<br\s*\/?>/i.test(text)) return text;
+  return text.split(/<br\s*\/?>/i).map((piece, k) => <Fragment key={`${key}.${k}`}>{k > 0 && <br />}{piece}</Fragment>);
+}
+
 const TABLE_DIVIDER = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
 
 /** #431: one parsed list-item line — bulleted, ordered, or a GFM task ("- [ ]"/"- [x]"), keeping
@@ -229,7 +236,7 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
     ? /(\$\$[^$\n]+\$\$|\\\([^\n]{1,500}?\\\)|\$(?!\s)(?:\\.|[^$\\\n])+?(?<!\s)\$(?!\d)|\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[\[[^\[\]\n]*\]\]|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g
     : /(\$\$[^$\n]+\$\$|\\\([^\n]{1,500}?\\\)|\$(?!\s)(?:\\.|[^$\\\n])+?(?<!\s)\$(?!\d)|\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g;
   const splitter = autolink ? new RegExp(INLINE_TOKENS.source.replace(/\)$/, () => `|${BARE_URL})`), 'g') : INLINE_TOKENS;
-  const inline = (line: string) =>
+  const inline = (line: string, inCell = false) =>
     line.split(splitter).map((part, i) => {
       // Escapes the Diary sidecar writes inside saved prose so it cannot become entry structure
       // (#803): `\*\*` and `<\!--` show as the literal characters. Plain text only, never HTML (#835).
@@ -240,7 +247,7 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
       if (part.length > 2 && part.startsWith('$') && part.endsWith('$')) return <MathSpan key={i} tex={part.slice(1, -1)} />;
       if (part.startsWith('\\*\\*')) return '**' + part.slice(4);
       if (part === '<\\!--') return '<!--';
-      if (part.startsWith('**')) return <strong key={i}>{unescapeOpener(part.slice(2, -2))}</strong>;
+      if (part.startsWith('**')) return <strong key={i}>{inCellBreaks(unescapeOpener(part.slice(2, -2)), i, inCell)}</strong>;
       // Checked before the plain-link branch below: `![alt](src)` contains `[alt](src)` as a
       // substring, so without its own branch the leading "!" leaked as stray text while the rest
       // was treated as a link (#390).
@@ -271,18 +278,18 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
           const open=internalLink?.(href);
           return open ? <button key={i} className="diary-markdown-link" onClick={open}>{label}</button> : <span key={i}>{label} ({href})</span>;
         }
-        return <a key={i} href={href} target="_blank" rel="noopener noreferrer nofollow">{label}</a>;
+        return <a key={i} href={href} target="_blank" rel="noopener noreferrer nofollow">{inCellBreaks(label, i, inCell)}</a>;
       }
       if (autolink && /^https?:\/\//i.test(part)) {
         const { url, tail } = splitUrlTail(part);
         return <Fragment key={i}><a href={url} target="_blank" rel="noopener noreferrer nofollow">{url}</a>{tail}</Fragment>;
       }
-      if (part.startsWith('*') && part.length > 2) return <em key={i}>{unescapeOpener(part.slice(1, -1))}</em>;
-      return part;
+      if (part.startsWith('*') && part.length > 2) return <em key={i}>{inCellBreaks(unescapeOpener(part.slice(1, -1)), i, inCell)}</em>;
+      return inCellBreaks(part, i, inCell);
     });
-  // #1598: a `<br>` in a table cell is a line break. The cell is split on it and each piece goes through
-  // `inline` as before, so the break is the only tag that reaches the page; everything else stays escaped text.
-  const cell = (text: string) => text.split(/<br\s*\/?>/i).map((piece, k) => <Fragment key={k}>{k > 0 && <br />}{inline(piece)}</Fragment>);
+  // #1598: in a table cell `inline` runs with the cell flag, so a `<br>` in plain text, bold, italic or a link label
+  // becomes a line break after tokenising. Code spans are not split.
+  const cell = (text: string) => inline(text, true);
 
   // The note's properties, shown as what they are. The body is rendered from after the block,
   // so nothing is rewritten and nothing is shown twice.

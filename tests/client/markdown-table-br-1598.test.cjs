@@ -67,3 +67,27 @@ test('#1598 other markup in a cell stays escaped text; only the line break is a 
     assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;a<br\/>&lt;b&gt;bold\?&lt;\/b&gt;/);
   });
 });
+
+test('#1598 a <br> inside a code span in a table cell stays literal code', async () => {
+  await withSsr(async (server) => {
+    const html = await renderChat(server, ['| Tag | Note |', '| --- | --- |', '| x | Use `<br>` here |'].join('\n'));
+    assert.match(html, /<td>Use <code>&lt;br&gt;<\/code> here<\/td>/, 'the code span keeps its text, with no break inside it');
+    assert.doesNotMatch(html, /<code>[^<]*<br/, 'no line break inside code');
+  });
+});
+
+test('#1598 a <br> inside bold or italic in a table cell is a line break inside the emphasis', async () => {
+  await withSsr(async (server) => {
+    const html = await renderChat(server, ['| Lead | Detail |', '| --- | --- |', '| **a<br>b** | *c<br>d* |'].join('\n'));
+    assert.match(html, /<td><strong>a<br\/>b<\/strong><\/td>/, 'bold keeps its markers and gets the break');
+    assert.match(html, /<td><em>c<br\/>d<\/em><\/td>/, 'italic keeps its markers and gets the break');
+    assert.doesNotMatch(html, /\*\*|&lt;br/, 'no stray asterisks or literal tags');
+  });
+});
+
+test('#1598 a <br> beside a code span still breaks, and a link label gets the break too', async () => {
+  await withSsr(async (server) => {
+    const html = await renderChat(server, ['| A | B |', '| --- | --- |', '| `one` then<br>two [site<br>name](https://example.org) | c |'].join('\n'));
+    assert.match(html, /<td><code>one<\/code> then<br\/>two <a href="https:\/\/example\.org" target="_blank" rel="noopener noreferrer nofollow">site<br\/>name<\/a><\/td>/);
+  });
+});
