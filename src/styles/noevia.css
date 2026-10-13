@@ -2269,11 +2269,12 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 .personal-actions .modal-btn.secondary:first-child { margin-right: auto; }
 
 .memory-list { list-style: none; margin: var(--space-3) 0; padding: 0; }
-.memory-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--border-subtle); min-width: 0; }
+.memory-item { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--border-subtle); min-width: 0; }
 .memory-item:last-child { border-bottom: 0; }
-.memory-item > input { flex: 1; min-width: 0; font: inherit; min-height: 36px; padding: 0 var(--space-3); border-radius: var(--radius-input); border: 1px solid var(--control-border); background: var(--bg-input); color: var(--text); }
-.memory-text { flex: 1; min-width: 0; font-size: var(--text-callout); overflow-wrap: anywhere; }
-.memory-actions { display: flex; gap: var(--space-1); flex-shrink: 0; }
+.memory-item > input { flex: 1 1 160px; min-width: 0; font: inherit; min-height: 36px; padding: 0 var(--space-3); border-radius: var(--radius-input); border: 1px solid var(--control-border); background: var(--bg-input); color: var(--text); }
+.memory-text { flex: 1 1 160px; min-width: 0; font-size: var(--text-callout); overflow-wrap: anywhere; }
+/* The actions drop under a line when the row is too narrow for both, rather than squeezing the line or its editor to a sliver (#1614). */
+.memory-actions { display: flex; gap: var(--space-1); flex-shrink: 0; margin-left: auto; }
 .memory-empty { padding: var(--space-3) var(--space-4); color: var(--text-secondary); font-size: var(--text-footnote); }
 .memory-add { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3); }
 .memory-add input { flex: 1 1 220px; min-width: 0; font: inherit; min-height: 36px; padding: 0 var(--space-3); border-radius: var(--radius-input); border: 1px solid var(--control-border); background: var(--bg-input); color: var(--text); }

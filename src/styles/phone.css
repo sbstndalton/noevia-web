@@ -851,9 +851,13 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .identity-colors button, .identity-icons button { min-width: 0; padding-inline: 0; }
 /* A connector's account line is often one long address. */
 .connector-text { overflow-wrap: anywhere; }
-/* A status badge never runs past its container: at phone sizes it wraps ("Connected as
-   <account>" was wider than the card). */
-.badge { max-width: 100%; }
+/* A status badge never runs past its container: it wraps at its spaces ("Connected as
+   <account>" was wider than the card), and only an account name with no space to break at gives way
+   mid-word. min-width: 0 lets a badge in a flex row shrink to the row instead of keeping its
+   unwrapped width (#1613). */
+.badge { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+.badge > svg { flex: none; }
+.connector-text .badge { white-space: normal; }
 @media (max-width: 767px), (max-height: 599px) { .badge { white-space: normal; } }
 /* The row-end delete keeps its 44px touch area (above) inside its row. The rule that centres that
    area on the 28px button lost to the shared :is() rule's higher specificity, so the area hung

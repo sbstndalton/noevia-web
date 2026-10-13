@@ -4,6 +4,7 @@ import { formatNumber } from '../number-format';
 import { McpStatus } from './McpStatus';
 import { openModelSettings } from '../models-open';
 import { ShellIcon } from './ShellIcon';
+import { UrlText } from './UrlText';
 import { ConfirmDialog } from './ContextMenu';
 import DiarySharing from './DiarySharing';
 import DiaryConnectors from './DiaryConnectors';
@@ -382,7 +383,7 @@ function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
             {p.isDefault && <span className={`model-dot${health.inferenceUp ? '' : ' down'}`} />}
             <div className="model-name-group">
               <span className="model-name">{providerDisplayName(p, t)}</span>
-              <span className="model-quant">{p.baseUrl}</span>
+              <span className="model-quant"><UrlText text={p.baseUrl}/></span>
             </div>
             {p.isDefault ? (
               <span className="model-role">{t('providers.defaultAlwaysOn')} · {health.inferenceUp === true ? t('models.available') : health.inferenceUp === false ? t('models.unavailable') : t('serviceStatus.notAvailable')}</span>
