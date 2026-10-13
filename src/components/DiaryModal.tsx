@@ -195,6 +195,7 @@ export function tableEdges(scrollLeft: number, clientWidth: number, scrollWidth:
 /** #1599: a table in a box that scrolls sideways. The box takes keyboard focus, and its edge fades while
  *  there are columns beyond it, so a cut column reads as "more this way", not as a rendering error. */
 function ScrollTable({ children }: { children: ReactNode }) {
+  const t = useT();
   const box = useRef<HTMLDivElement>(null);
   const [more, setMore] = useState('');
   useEffect(() => {
@@ -209,7 +210,10 @@ function ScrollTable({ children }: { children: ReactNode }) {
     el.addEventListener('scroll', measure, { passive: true });
     return () => { observer?.disconnect(); el.removeEventListener('scroll', measure); };
   }, []);
-  return <div ref={box} className="md-table-wrap" tabIndex={0} data-more={more || undefined}>{children}</div>;
+  // The frame carries the focus ring (the box itself is masked at its edges, which would clip a ring drawn on it).
+  // The box is a keyboard stop and a named region only while there is something to scroll to.
+  return <div className="md-table-frame"><div ref={box} className="md-table-wrap" tabIndex={more ? 0 : undefined} role={more ? 'region' : undefined}
+    aria-label={more ? t('diary.markdown.tableScroll') : undefined} data-more={more || undefined}>{children}</div></div>;
 }
 
 export function MarkdownPreview({ text, internalLink, wikiLink, properties = false, autolink = false }: {

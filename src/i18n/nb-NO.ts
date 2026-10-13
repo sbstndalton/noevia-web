@@ -331,6 +331,7 @@ export const NB_NO: Catalogue = {
   'diary.markdown.plainText': "tekst",
   'diary.markdown.copied': "Kopiert",
   'diary.markdown.copy': "Kopier",
+  'diary.markdown.tableScroll': "Tabell, kan rulles sideveis",
   'diary.markdown.noFileOfThatName': "Ingen fil med det navnet her",
   'diary.markdown.properties': "Egenskaper",
   'diary.markdown.empty': "tom",

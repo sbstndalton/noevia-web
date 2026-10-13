@@ -331,6 +331,7 @@ export const SV_SE: Catalogue = {
   'diary.markdown.plainText': "text",
   'diary.markdown.copied': "Kopierad",
   'diary.markdown.copy': "Kopiera",
+  'diary.markdown.tableScroll': "Tabell, kan rullas i sidled",
   'diary.markdown.noFileOfThatName': "Ingen fil med det namnet här",
   'diary.markdown.properties': "Egenskaper",
   'diary.markdown.empty': "tom",

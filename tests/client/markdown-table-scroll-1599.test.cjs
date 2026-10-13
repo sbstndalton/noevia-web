@@ -42,7 +42,7 @@ test('#1599 tableEdges says which side of a wide table still has columns to scro
   });
 });
 
-test('#1599 a wide table sits in a focusable scroll box that carries the edge state', async () => {
+test('#1599 a wide table sits in a frame around its scroll box; the box is not focusable until it overflows', async () => {
   await withSsr(async (server) => {
     const React = require('react');
     const { renderToStaticMarkup } = require('react-dom/server');
@@ -51,17 +51,25 @@ test('#1599 a wide table sits in a focusable scroll box that carries the edge st
       autolink: true,
       text: ['| Protocol | Multiplexing | Header compression | Connection reuse |', '| --- | --- | --- | --- |', '| HTTP/2 | Binary frames, interleaved streams | HPACK | One TCP connection |'].join('\n'),
     }));
-    assert.match(html, /<div class="md-table-wrap" tabindex="0">/, 'the scroll box is keyboard focusable');
-    assert.match(html, /<table class="md-table">/);
+    assert.match(html, /<div class="md-table-frame"><div class="md-table-wrap"><table class="md-table">/, 'the scroll box sits in the frame that carries the focus ring');
+    // Server render has not measured the box yet, so no tabindex and no region role; the component adds both on overflow.
+    assert.doesNotMatch(html, /tabindex=/);
+    const source = fs.readFileSync(path.join(ROOT, 'src/components/DiaryModal.tsx'), 'utf8');
+    assert.match(source, /tabIndex=\{more \? 0 : undefined\}/, 'focusable only while there are columns to scroll to');
+    assert.match(source, /role=\{more \? 'region' : undefined\}/);
+    assert.match(source, /aria-label=\{more \? t\('diary\.markdown\.tableScroll'\) : undefined\}/, 'the scroll region has a name');
   });
 });
 
-test('#1599 the CSS fades the edge that still has columns to scroll to, and shows a focus ring on the box', () => {
+test('#1599 the CSS fades the edge that still has columns to scroll to, and the focus ring is drawn on the frame, not the masked box', () => {
   const css = fs.readFileSync(path.join(ROOT, 'src/styles/diary-tab.css'), 'utf8');
   assert.match(css, /\.md-table-wrap\[data-more~="end"\]\s*\{[^}]*mask-image:\s*linear-gradient\(to right,\s*currentColor calc\(100% - \d+px\),\s*transparent\)/);
   assert.match(css, /\.md-table-wrap\[data-more~="start"\]\s*\{[^}]*mask-image:\s*linear-gradient\(to right,\s*transparent,\s*currentColor \d+px\)/);
   assert.match(css, /\.md-table-wrap\[data-more~="start"\]\[data-more~="end"\]\s*\{[^}]*mask-image/);
-  assert.match(css, /\.md-table-wrap:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--focus-ring\)/);
+  // The ring is on the frame, which has no mask. A mask clips anything drawn outside its box, and an outline is outside it.
+  assert.match(css, /\.md-table-frame:has\(> \.md-table-wrap:focus-visible\)\s*\{[^}]*outline:\s*2px solid var\(--focus-ring\)/);
+  assert.match(css, /\.md-table-wrap:focus\s*\{\s*outline:\s*none !important;?\s*\}/, 'the masked box shows no ring of its own; the global !important :focus-visible rule would otherwise add one');
+  assert.doesNotMatch(css, /\.md-table-frame[^{]*\{[^}]*mask-image/, 'the frame is never masked');
   // The fade is alpha only: it names no new colour, so the rule may only use currentColor, never a literal.
   const fadeRules = css.match(/\.md-table-wrap\[data-more[^{]*\{[^}]*\}/g) || [];
   assert.ok(fadeRules.length >= 3);
