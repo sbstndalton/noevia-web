@@ -45,6 +45,10 @@
   --enter-from: translateY(-4px) scale(.98);
   animation: motion-enter var(--motion-quick) var(--ease-quick) both;
 }
+/* #1627: the + menu slides in fully opaque. Its entrance used to fade from opacity 0 over the page, so the
+   greeting and the Chat/Task mode-bar text printed through the panel for its first ~200 ms (sampled at
+   0.2-0.36 opacity at 40 ms). An opaque surface from its first frame; the travel and the shadow are unchanged. */
+.composer-actions-panel { --enter-opacity: 1; }
 
 /* Soft and Material 3 give the overlay their own depth (materials.css stops at .aero). */
 

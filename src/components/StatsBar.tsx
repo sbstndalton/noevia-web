@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import type { JSX } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { CSSProperties, JSX } from 'react';
 import type { LiveStats, ReplyTelemetry, RoutingDecision } from '../types';
 import { Icon } from './icons/Icon';
 import { RoutingDetails } from './ChatView';
@@ -9,6 +9,7 @@ import { appLocale } from '../user-preferences';
 import { formatCompact, formatNumber, formatPercent, formatSizeUnit } from '../number-format';
 import { LOCAL_MODEL_FALLBACK } from '../model-guidance';
 import { engineEmptyKey } from '../stats-engine-text';
+import { anchorAboveComposer, type AnchorAbove } from '../stats-anchor';
 
 interface StatsBarProps {
   stats: LiveStats | null; // App polls /api/stats and passes it down (single poller)
@@ -59,6 +60,11 @@ function usePhone(): boolean {
   return phone;
 }
 
+/** The composer block this strip sits under (ChatView's `.composer`: context row, mode bar, box, hint). */
+function composerBlock(): HTMLElement | null {
+  return document.querySelector<HTMLElement>('.chat-composer-inner')?.closest<HTMLElement>('.composer') ?? null;
+}
+
 /** Inference status under the composer: on a phone a single line (status, model, speed) that
  *  expands into plain-language details; on a desktop the same details, always open, laid out
  *  across the width instead of stacked. Purely presentational: App owns the /api/stats poll. */
@@ -69,8 +75,27 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
   // #1527: where the one row cannot hold every pair, the lower-priority pairs open from a compact
   // toggle as a popover above the strip, so the composer never moves.
   const [moreOpen, setMoreOpen] = useState(false);
+  // #1628: while the popover is open, its bottom edge is measured to sit above the composer block, so it
+  // never covers the composer or the send button. Re-measured when the window or either box changes size.
+  const [moreAnchor, setMoreAnchor] = useState<AnchorAbove | null>(null);
   const rootRef = useRef<HTMLElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    if (!moreOpen) { setMoreAnchor(null); return undefined; }
+    const place = () => {
+      const strip = rootRef.current?.getBoundingClientRect();
+      const box = composerBlock()?.getBoundingClientRect();
+      const next = strip && box && box.height > 0 ? anchorAboveComposer(strip.bottom, box.top) : null;
+      setMoreAnchor(previous => (previous?.bottom === next?.bottom && previous?.maxHeight === next?.maxHeight ? previous : next));
+    };
+    place();
+    window.addEventListener('resize', place);
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(place);
+    if (rootRef.current) observer?.observe(rootRef.current);
+    const composer = composerBlock();
+    if (composer) observer?.observe(composer);
+    return () => { window.removeEventListener('resize', place); observer?.disconnect(); };
+  }, [moreOpen]);
   // The routing panel is an anchored popover (it must not grow the strip or squeeze the
   // chat), so give it the Escape-to-close a popover is expected to have even though the
   // underlying <details> element has no built-in keyboard dismissal.
@@ -174,7 +199,8 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
   // the compact toggle (CSS picks the width; the toggle is hidden where the row fits).
   if (!phone) {
     return (
-      <section ref={rootRef} className={`stats-disclosure is-open is-wide${moreOpen ? ' is-more-open' : ''}`} aria-label={t('stats.ariaLabel')}>
+      <section ref={rootRef} className={`stats-disclosure is-open is-wide${moreOpen ? ' is-more-open' : ''}`} aria-label={t('stats.ariaLabel')}
+        style={moreOpen && moreAnchor ? { '--stats-more-bottom': `${moreAnchor.bottom}px`, '--stats-more-max': `${moreAnchor.maxHeight}px` } as CSSProperties : undefined}>
         <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveAnnouncement}</span>
         <p className="stats-bar stats-bar-static">{status(false)}</p>
         {details}
