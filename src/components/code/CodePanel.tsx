@@ -3,13 +3,15 @@ import type { JSX } from 'react';
 import { cancelTask, decideTask, fetchCode, startTask } from './api';
 import type { CodeAction, CodeApproval, CodeReview, CodeState, CodeTask, NetworkActivity, PreparationMode } from './api';
 import { isDecisionStale } from './decision-guard';
+import { effectivePreparationId, harnessName, harnessVersionNote, offeredPreparations } from '../../code-panel-copy';
+import { fetchProfile } from '../../api';
+import { TechnicalDetail } from '../TechnicalDetail';
 import { EmptyState } from '../EmptyState';
 import { ShellIcon } from '../ShellIcon';
 import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
 import { formatBinaryBytes, formatDuration, formatNumber, formatPercent } from '../../number-format';
 import { appLocale } from '../../user-preferences';
-import { around } from '../../text-around';
 import { AcceptSummary, AcceptWhat, isPipelineCard, PipelineDetails, PipelineStrip, acceptLabel } from './pipeline';
 import './code.css';
 
@@ -21,6 +23,8 @@ const ACTIVE = new Set(['queued', 'running', 'waiting_approval']);
 const statusLabel = (t: Translate, status: CodeTask['status']): string => t(`code.status.${status}` as MessageKey);
 /** A catalogue string for a server-supplied id, or the server's own English when the id is not in the catalogue. */
 const byId = (t: Translate, key: string, fallback: string): string => { const text = t(key as MessageKey); return text === key ? fallback : text; };
+/** The catalogue lookup for the plain-name helpers: a key string, the key itself when the locale has none. */
+const harnessText = (t: Translate) => (key: string): string => t(key as MessageKey);
 const actionLabel = (t: Translate, action: CodeAction): string => byId(t, `code.action.${action}`, ACTION_LABEL[action]);
 const elapsed = (task: CodeTask): string => {
   const end = ACTIVE.has(task.status) ? Date.now() : task.updatedAt;
@@ -52,6 +56,8 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
   const [domains, setDomains] = useState('');
   const [harness, setHarness] = useState('');
   const [preparation, setPreparation] = useState('direct');
+  // The operator's variable names are for an administrator, and only where a note needs them (#1580 review).
+  const [isAdmin, setIsAdmin] = useState(false);
   const mounted = useRef(true);
   const requestGeneration = useRef(0);
   const ordinaryRequest = useRef(0);
@@ -98,6 +104,13 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
     };
   }, [load]);
   const running = !!state?.tasks.some(t => ACTIVE.has(t.status));
+  const needsAdmin = !!state && (!state.sandboxed || state.repositories.length === 0);
+  useEffect(() => {
+    if (!needsAdmin) return;
+    let live = true;
+    fetchProfile().then(p => { if (live) setIsAdmin(p?.user?.role === 'admin'); }, () => { if (live) setIsAdmin(false); });
+    return () => { live = false; };
+  }, [needsAdmin]);
   // A task that is waiting for an answer is polled faster: the person is looking at the card.
   useEffect(() => {
     if (!running) return;
@@ -145,6 +158,9 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
   const needsNetwork = (action: CodeAction) => action === 'network' || action === 'install_dependency';
   const needsDomains = online && (capabilities.includes('network') || capabilities.includes('install_dependency'));
   const noRepositories = state.repositories.length === 0;
+  // #1581: the preparation a task uses is the chosen one while it is offered, else the first offered one.
+  const offered = offeredPreparations(state.promptPreparation);
+  const selectedPreparation = effectivePreparationId(offered, preparation);
 
   return <div className="code-panel">
     <section className="code-compose" aria-labelledby="code-heading">
@@ -153,7 +169,8 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
         <p>{t('code.panel.intro')}</p>
       </div>
       {error && <p className="code-note is-error" role="alert">{error}</p>}
-      {noRepositories && <p className="code-note" role="status">{around(t('code.panel.noRepositories'), 'name')[0]}<code>CODE_REPOS</code>{around(t('code.panel.noRepositories'), 'name')[1]}</p>}
+      {noRepositories && <p className="code-note" role="status">{t('code.panel.noRepositories')}</p>}
+      {noRepositories && <TechnicalDetail isAdmin={isAdmin} name="CODE_REPOS" className="code-meta"/>}
 
       <div className="code-field">
         <label htmlFor="code-repository">{t('code.panel.repository')}</label>
@@ -171,21 +188,21 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
           ? <div className="code-field">
               <label htmlFor="code-harness">{t('code.panel.harness')}</label>
               <select id="code-harness" value={harness} disabled={running || !!busy} onChange={e => setHarness(e.target.value)}>
-                {state.harnesses.map(h => <option key={h.id} value={h.id}>{h.label}{h.version ? ` ${h.version}` : ''}</option>)}
+                {state.harnesses.map(h => <option key={h.id} value={h.id} title={harnessVersionNote(h)}>{harnessName(harnessText(t), h)}</option>)}
               </select>
             </div>
           : <div className="code-field">
-              <p className="code-fact"><span>{t('code.panel.harness')}</span>{state.harnesses[0]
-                ? `${state.harnesses[0].label}${state.harnesses[0].version ? ` ${state.harnesses[0].version}` : ''}`
+              <p className="code-fact" title={state.harnesses[0] ? harnessVersionNote(state.harnesses[0]) : undefined}><span>{t('code.panel.harness')}</span>{state.harnesses[0]
+                ? harnessName(harnessText(t), state.harnesses[0])
                 : t('code.panel.harnessNone')}</p>
             </div>}
         <div className="code-field">
           <label htmlFor="code-preparation">{t('code.panel.preparation')}</label>
-          <select id="code-preparation" value={preparation} disabled={running || !!busy} onChange={e => setPreparation(e.target.value)}>
-            {state.promptPreparation.map(m => <option key={m.id} value={m.id} disabled={!m.available}>
-              {byId(t, `code.prep.${m.id}.label`, m.label)}{m.available ? '' : ` — ${t('code.panel.notAvailable')}`}</option>)}
+          <select id="code-preparation" value={selectedPreparation} disabled={running || !!busy} onChange={e => setPreparation(e.target.value)}>
+            {offered.map(m => <option key={m.id} value={m.id}>
+              {byId(t, `code.prep.${m.id}.label`, m.label)}</option>)}
           </select>
-          <PreparationNote mode={state.promptPreparation.find(m => m.id === preparation)}/>
+          <PreparationNote mode={state.promptPreparation.find(m => m.id === selectedPreparation)}/>
         </div>
       </div>
 
@@ -197,6 +214,7 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
             : t('code.panel.sandboxOffline')
           : t('code.panel.notSandboxed')}
       </p>
+      {!state.sandboxed && <TechnicalDetail isAdmin={isAdmin} name="CODE_HARNESS_ENDPOINT" className="code-meta"/>}
 
       <div className="code-field">
         <label htmlFor="code-prompt">{t('code.panel.promptLabel')}</label>
@@ -229,7 +247,7 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
 
       <div className="code-actions">
         <button type="button" className="btn btn-primary" disabled={!prompt.trim() || !repository || running || !!busy}
-          onClick={() => act('start', () => startTask(projectId, { repository, prompt, capabilities: capabilities.filter(a => online || !needsNetwork(a)), harness, promptPreparation: preparation,
+          onClick={() => act('start', () => startTask(projectId, { repository, prompt, capabilities: capabilities.filter(a => online || !needsNetwork(a)), harness, promptPreparation: selectedPreparation,
             domains: domains.split(',').map(d => d.trim()).filter(Boolean) }), () => setPrompt(''))}>{busy === 'start' ? t('code.panel.starting') : t('code.panel.start')}</button>
       </div>
       {running && <p className="code-note" role="status">{t('code.panel.oneTask')}</p>}
@@ -359,8 +377,11 @@ function PreparationNote({ mode }: { mode?: PreparationMode }): JSX.Element | nu
  */
 export function TaskMeta({ meta }: { meta: NonNullable<CodeTask['meta']> }): JSX.Element {
   const t = useT();
+  // #1581: the harness by its plain name; its version is in the hover text, not the line.
+  const harnessInfo = meta.harness ? { id: meta.harness, label: meta.harness, version: meta.harnessVersion } : null;
+  const harness = harnessInfo ? harnessName(harnessText(t), harnessInfo) : null;
   const parts = [
-    meta.harnessVersion ? `${meta.harness || 'harness'} ${meta.harnessVersion}` : meta.harness,
+    harness,
     meta.usage?.total != null ? t('chat.meta.tokens', { tokens: formatNumber(meta.usage.total, appLocale(), 0) }) : null,
     // Context used is its own measurement; a harness can report it and not token usage (#600: in
     // the interface language, with the locale's own percent and grouping).
@@ -372,7 +393,7 @@ export function TaskMeta({ meta }: { meta: NonNullable<CodeTask['meta']> }): JSX
       : null,
   ].filter(Boolean);
   return <>
-    {parts.length > 0 && <p className="code-meta">{parts.join(' · ')}</p>}
+    {parts.length > 0 && <p className="code-meta" title={harnessInfo ? harnessVersionNote(harnessInfo) : undefined}>{parts.join(' · ')}</p>}
     {meta.limitations.length > 0 && <details className="code-limitations">
       <summary>{t('code.meta.limitations', { count: formatNumber(meta.limitations.length, appLocale(), 0) })}</summary>
       <ul>{meta.limitations.map(l => <li key={l}>{l}</li>)}</ul>

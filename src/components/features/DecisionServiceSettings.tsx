@@ -29,7 +29,7 @@ export function DecisionServiceSettings({ onSaved }: { onSaved: () => Promise<vo
     {error && <p ref={errorRef} tabIndex={-1} className="route-note" role="alert">{error}</p>}
     <form className="set-rows" onSubmit={e=>{e.preventDefault();void act('save');}}>
       <div className="set-row"><div className="set-row-text"><label className="set-row-label" htmlFor="decision-url">{t('decision.endpointLabel')}</label><p className="set-row-desc" id="decision-url-help">{t('decision.endpointHelp')}</p></div>
-        <div className="set-row-control"><input id="decision-url" className="modal-input" type="url" required value={draft.url} aria-describedby="decision-url-help" placeholder="http://laya:8040" disabled={!loaded||!!busy} onChange={e=>{setDraft({...draft,url:e.target.value});setStatus('');}} /></div></div>
+        <div className="set-row-control"><input id="decision-url" className="modal-input" type="url" required value={draft.url} aria-describedby="decision-url-help" placeholder="http://192.168.1.20:8040" disabled={!loaded||!!busy} onChange={e=>{setDraft({...draft,url:e.target.value});setStatus('');}} /></div></div>
       <div className="set-row"><div className="set-row-text"><label className="set-row-label" htmlFor="decision-deadline">{t('decision.deadlineLabel')}</label><p className="set-row-desc">{t('decision.deadlineHelp')}</p></div>
         <div className="set-row-control"><input id="decision-deadline" className="modal-input" type="number" min={100} max={2000} required value={draft.timeoutMs} disabled={!loaded||!!busy} onChange={e=>{setDraft({...draft,timeoutMs:Number(e.target.value)});setStatus('');}} /></div></div>
       <div className="set-row"><div className="set-row-control decision-service-actions">

@@ -3,13 +3,15 @@ import type { JSX } from 'react';
 import { FEATURES_CHANGED, fetchFeatureSettings, saveFeature } from './api';
 import type { FeatureInfo } from './api';
 import { DecisionServiceSettings } from './DecisionServiceSettings';
+import { TechnicalDetail } from '../TechnicalDetail';
 import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
 
 /** The catalogue's text for a server-supplied id, or the server's English when this build has none (#618). */
 const byId = (t: Translate, key: string, fallback: string): string => { const text = t(key as MessageKey); return text === key ? fallback : text; };
 
-export function FeatureSettings({ experimental = false }: { experimental?: boolean }): JSX.Element {
+/** `isAdmin` shows each row's operator variable to an administrator; members never see it (#1580 review). */
+export function FeatureSettings({ experimental = false, isAdmin = false }: { experimental?: boolean; isAdmin?: boolean }): JSX.Element {
   const t = useT();
   const [features, setFeatures] = useState<FeatureInfo[] | null>(null);
   const [error, setError] = useState('');
@@ -43,6 +45,7 @@ export function FeatureSettings({ experimental = false }: { experimental?: boole
       <div className="set-row-text">
         <span className="set-row-label" id={`feature-${f.name}`}>{byId(t, `features.item.${id}.label`, f.label)}</span>
         <span className="set-row-desc">{byId(t, `features.item.${id}.description`, f.description)}{f.locked ? ` ${t('features.lockedBy')}` : ''}</span>
+        <TechnicalDetail isAdmin={isAdmin} name={f.env} className="set-row-desc" />
         <span className="set-row-desc" role="status">{busy === f.name ? t('common.saving') : unavailable || (f.experimental ? (f.enabled ? t('features.experimentalOn') : t('features.experimentalOff')) : '')}</span>
         {f.pendingRestart && <span className="set-row-desc set-row-pending" role="status">{t('features.pendingRestart')}</span>}
       </div>

@@ -371,7 +371,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
         ) : section === 'notifications' ? (
           <NotificationSettings />
         ) : (section === 'features' || section === 'experimental') && isAdmin ? (
-          <FeatureSettings key={section} experimental={section === 'experimental'} />
+          <FeatureSettings key={section} experimental={section === 'experimental'} isAdmin={isAdmin} />
         ) : section === 'address' && isAdmin ? (
           <WebAddressSettings/>
         ) : section === 'backups' && isAdmin ? (

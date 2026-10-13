@@ -11,6 +11,7 @@ import type { MessageKey, Translate } from '../../i18n';
 import '../../i18n/settings';
 import { formatNumber } from '../../number-format';
 import { displayAddress } from '../../connector-address';
+import { TechnicalDetail } from '../TechnicalDetail';
 
 interface Tool { name: string; label: string; write: boolean; mode: ToolMode }
 interface Nextcloud {
@@ -206,7 +207,7 @@ function DrivePage({ drive, isAdmin, onBack, onChange, onActionStart, reload, on
       <div className="confirm-actions"><button className="btn btn-secondary" onClick={() => setConfirmOff(false)}>{t('connectors.keepConnected')}</button><button className="btn btn-danger" disabled={!!busy} onClick={() => void disconnect()}>{busy === 'disconnect' ? t('connectors.disconnecting') : t('connectors.disconnect')}</button></div>
     </div>}
 
-    {drive.state === 'not-configured' && <div className="group surface"><div className="row"><div className="row-text"><span className="row-label">{t('connectors.drive.unavailable')}</span><span className="row-desc">{isAdmin ? t('connectors.drive.unavailableAdmin') : t('connectors.drive.unavailableMember')}</span></div></div></div>}
+    {drive.state === 'not-configured' && <div className="group surface"><div className="row"><div className="row-text"><span className="row-label">{t('connectors.drive.unavailable')}</span><span className="row-desc">{isAdmin ? t('connectors.drive.unavailableAdmin') : t('connectors.drive.unavailableMember')}</span><TechnicalDetail isAdmin={isAdmin} name="GOOGLE_OAUTH_CLIENT_ID" className="row-desc" /></div></div></div>}
 
     {(drive.state === 'disconnected' || drive.state === 'error') && <div className="group surface"><div className="row">
       <div className="row-text"><span className="row-label">{t('connectors.drive.connectTitle')}</span><span className="row-desc">{t('connectors.drive.connectDesc')}</span></div>

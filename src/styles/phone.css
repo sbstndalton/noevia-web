@@ -260,9 +260,13 @@
   transition: background-color var(--duration-fast) var(--ease-standard);
 }
 .composer-actions-panel .composer-menu-row > svg { color: var(--text-secondary); }
-.composer-actions-panel .composer-menu-row small { display: block; margin-top: 1px; font-size: var(--text-caption); color: var(--text-secondary); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* #1583: the subtitle wraps onto a second line rather than being cut mid-phrase. */
+.composer-actions-panel .composer-menu-row small { display: block; margin-top: 1px; font-size: var(--text-caption); color: var(--text-secondary); line-height: 1.35; overflow-wrap: anywhere; }
 .composer-actions-panel .composer-menu-row:hover:not(:disabled), .composer-actions-panel .composer-menu-row:focus-visible { background: var(--nav-hover); outline: none; }
 .composer-actions-panel .composer-menu-row:disabled { opacity: .45; cursor: default; }
+/* #1583: a connected connector (Google Drive) is ticked because the account connected it. It cannot be
+   switched off here, but it is on, so it reads as enabled rather than dimmed like an unavailable item. */
+.composer-actions-panel .composer-tool-connected:disabled { opacity: 1; }
 .composer-actions-panel .composer-menu-check { display: grid; place-items: center; color: var(--md-primary); }
 .composer-actions-panel .composer-menu-divider { height: 1px; margin: 6px 10px; background: var(--border-subtle); }
 .composer-actions-panel .composer-menu-label { padding: 6px 10px 2px; font-size: var(--text-caption); font-weight: 500; color: var(--text-secondary); }
