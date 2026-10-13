@@ -1,5 +1,5 @@
-import type { ChatMeta, HistoryEntry, Message } from './types';
-import { unionVariants } from './transcript-merge';
+import type { ChatMeta, HistoryEntry, Message, TurnBranch } from './types';
+import { sameBranch, unionVariants } from './transcript-merge';
 import { capVariants } from './variant-cap';
 
 /** Move one chat's meta to the top of a chat list. `make` receives the entry already in the list,
@@ -53,12 +53,19 @@ export function adoptMergedTranscript(
 function withMergedVariants(local: Message, entry: HistoryEntry, next: HistoryEntry | undefined): Message {
   if (local.role !== 'user' || (entry.answers === undefined && entry.branches === undefined)) return local;
   const answers = unionVariants(entry.answers, local.answers);
-  const branches = unionVariants(entry.branches, local.branches);
+  const branches = unionVariants(entry.branches, local.branches, true);
   const alike = (a: readonly { content: string }[] | undefined, b: readonly { content: string }[] | undefined) =>
     (a?.length ?? 0) === (b?.length ?? 0) && (a ?? []).every((v, n) => v.content === b?.[n]?.content);
-  if (alike(answers, local.answers) && alike(branches, local.branches)) return local;
+  // A version also differs by its chat (#1616): the same text with a longer or another chat is not alike.
+  const alikeVersions = (a: readonly TurnBranch[] | undefined, b: readonly TurnBranch[] | undefined) =>
+    alike(a, b) && (a ?? []).every((v, n) => (v.tail?.length ?? 0) === (b?.[n]?.tail?.length ?? 0));
+  if (alike(answers, local.answers) && alikeVersions(branches, local.branches)) return local;
   const shown = next?.role === 'assistant' && answers ? answers.findIndex((a) => a.content === next.content) : -1;
-  const version = branches ? branches.findIndex((b) => b.content === local.content) : -1;
+  // The version on screen is told apart by its text and its chat, not by the first one with the same text (#1616).
+  const mine = local.branches?.[local.branch ?? 0];
+  const version = !branches ? -1
+    : mine ? [true, false].reduce((found, exact) => (found >= 0 ? found : branches.findIndex((b) => sameBranch(b, mine, exact))), -1)
+    : branches.findIndex((b) => b.content === local.content);
   // The union can pass the limit of 10 (#1517); the oldest others drop, the one shown stays.
   const keptAnswers = answers ? capVariants(answers, shown >= 0 ? shown : entry.answer ?? local.answer) : undefined;
   const keptBranches = branches ? capVariants(branches, version >= 0 ? version : entry.branch ?? local.branch) : undefined;

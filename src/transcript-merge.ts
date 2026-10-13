@@ -1,15 +1,47 @@
-import type { HistoryEntry } from './types';
+import type { HistoryEntry, TurnBranch } from './types';
 
 const same = (a: HistoryEntry, b: HistoryEntry) => a.role === b.role && a.content === b.content;
 
+/** #1616: the chat that followed a version of a turn, compared by role and text. */
+function sameTail(a: readonly HistoryEntry[], b: readonly HistoryEntry[]): boolean {
+  return a.length === b.length && a.every((e, i) => same(e, b[i]));
+}
+function tailPrefix(shorter: readonly HistoryEntry[], longer: readonly HistoryEntry[]): boolean {
+  return shorter.length <= longer.length && shorter.every((e, i) => same(e, longer[i]));
+}
+/** Two stored versions of a turn are one version when the text is equal and one chat is the start of the other
+ *  (a tab that only went on chatting). `exact` asks for the same chat. Edit & re-run with unchanged text makes
+ *  two versions with the same text and different chats; those are different versions. */
+export function sameBranch(a: TurnBranch, b: TurnBranch, exact = false): boolean {
+  if (a.content !== b.content) return false;
+  const x = a.tail ?? [];
+  const y = b.tail ?? [];
+  return exact ? sameTail(x, y) : tailPrefix(x, y) || tailPrefix(y, x);
+}
+
 /** #1517: two copies of one turn each hold the answers or versions that tab made (Regenerate, Edit & re-run).
  *  The union keeps `first`'s order, so its `answer`/`branch` pointer still points at the same one, then adds
- *  what only `second` has. Answers are told apart by their text, versions by the text of the turn. */
-export function unionVariants<T extends { content: string }>(first: readonly T[] | undefined, second: readonly T[] | undefined): T[] | undefined {
+ *  what only `second` has. Answers are told apart by their text. Versions (`versions`, #1616) by the text of the
+ *  turn and the chat after it: the same text with a chat that continues the other is one version (the longer
+ *  chat is kept, in the place of the shorter), the same text with a different chat is another version. */
+export function unionVariants<T extends { content: string }>(first: readonly T[] | undefined, second: readonly T[] | undefined, versions = false): T[] | undefined {
   if (first === undefined && second === undefined) return undefined;
   const out = [...(first ?? [])];
-  const seen = new Set(out.map((v) => v.content));
-  for (const v of second ?? []) if (!seen.has(v.content)) { seen.add(v.content); out.push(v); }
+  if (!versions) {
+    const seen = new Set(out.map((v) => v.content));
+    for (const v of second ?? []) if (!seen.has(v.content)) { seen.add(v.content); out.push(v); }
+    return out;
+  }
+  const taken = new Set<number>();
+  const asBranch = (v: T) => v as unknown as TurnBranch;
+  for (const v of second ?? []) {
+    const find = (exact: boolean) => out.findIndex((o, i) => !taken.has(i) && sameBranch(asBranch(o), asBranch(v), exact));
+    let i = find(true);
+    if (i < 0) i = find(false);
+    if (i < 0) { out.push(v); taken.add(out.length - 1); continue; }
+    taken.add(i);
+    if ((asBranch(v).tail ?? []).length > (asBranch(out[i]).tail ?? []).length) out[i] = v;
+  }
   return out;
 }
 
@@ -17,8 +49,8 @@ export function unionVariants<T extends { content: string }>(first: readonly T[]
 function withVariantsOf(entry: HistoryEntry, other: HistoryEntry): HistoryEntry {
   if (entry.role !== 'user' || (entry.answers === undefined && entry.branches === undefined && other.answers === undefined && other.branches === undefined)) return entry;
   const answers = unionVariants(entry.answers, other.answers);
-  const branches = unionVariants(entry.branches, other.branches);
-  const grew = (answers?.length ?? 0) !== (entry.answers?.length ?? 0) || (branches?.length ?? 0) !== (entry.branches?.length ?? 0);
+  const branches = unionVariants(entry.branches, other.branches, true);
+  const grew = (answers?.length ?? 0) !== (entry.answers?.length ?? 0) || (branches?.length ?? 0) !== (entry.branches?.length ?? 0) || (branches ?? []).some((b, n) => b !== entry.branches?.[n]);
   if (!grew) return entry;
   return { ...entry, ...(answers !== undefined ? { answers, answer: entry.answer ?? other.answer } : {}), ...(branches !== undefined ? { branches, branch: entry.branch ?? other.branch } : {}) };
 }
