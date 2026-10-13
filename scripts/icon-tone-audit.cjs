@@ -6,6 +6,10 @@
 // it renders with and the nearest pressable thing around it in the same JSX tree, so the
 // classification can be reviewed in one table and tests/client/icon-tones.test.cjs can hold the rule
 // "a decorative icon is never inside a control".
+// The one exception is an identity tile: a connector card's logo (<button className="connector-card">
+// <span className="logo"><Icon tone="decorative"/>), which names the connector the way a brand mark
+// does. The CSS guard spares exactly `.connector-card > .logo > .ic`; rows for it carry
+// exception: 'identity-tile', and any other decorative icon inside a control is an offender.
 //
 //   node scripts/icon-tone-audit.cjs            markdown table (file, line, icon, tone, context)
 //   node scripts/icon-tone-audit.cjs --json     the same rows as JSON
@@ -21,6 +25,13 @@ const INTERACTIVE_TAGS = new Set(['button', 'a', 'summary', 'select', 'option', 
 const INTERACTIVE_ROLES = new Set(['button', 'link', 'menuitem', 'menuitemradio', 'menuitemcheckbox', 'tab', 'option', 'switch', 'checkbox', 'radio', 'treeitem']);
 /** Object keys whose JSX value a menu renders inside a role="menuitem" button (ContextMenu). */
 const MENU_ICON_KEYS = new Set(['icon']);
+/** The identity tile the CSS guard spares: the icon is the direct child of span.logo, itself the direct
+ *  child of a <button> whose classes include connector-card. */
+function identityTile(ctx) {
+  return ctx.interactive && ctx.element !== undefined && tagName(ctx.element) === 'button'
+    && typeof ctx.className === 'string' && ctx.className.split(/\s+/).includes('connector-card')
+    && ctx.trail.length === 1 && ctx.trail[0] === 'span.logo';
+}
 
 function* tsxFiles(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -58,7 +69,7 @@ function context(node) {
   for (let p = node.parent; p; p = p.parent) {
     if (ts.isJsxElement(p) || ts.isJsxSelfClosingElement(p)) {
       const why = pressable(p);
-      if (why) return { interactive: true, where: why, trail };
+      if (why) return { interactive: true, where: why, trail, element: p, className: attr(p, 'className') };
       const cls = attr(p, 'className');
       trail.push(typeof cls === 'string' ? `${tagName(p)}.${cls.split(/\s+/)[0]}` : tagName(p));
     }
@@ -101,6 +112,7 @@ function audit(srcDir = path.join(ROOT, 'src')) {
             explicit: toneAttr !== undefined,
             interactive: ctx.interactive,
             where: ctx.where,
+            ...(identityTile(ctx) ? { exception: 'identity-tile' } : {}),
           });
         }
       }
@@ -119,7 +131,7 @@ if (require.main === module) {
   const cell = (s) => String(s).replace(/\|/g, '\\|');
   console.log('| File | Line | Icon | Tone | Context |');
   console.log('| --- | --- | --- | --- | --- |');
-  for (const r of rows) console.log(`| ${cell(r.file.replace(/^src\//, ''))} | ${r.line} | ${cell(r.icon)} | ${r.tone} | ${cell(r.where)} |`);
+  for (const r of rows) console.log(`| ${cell(r.file.replace(/^src\//, ''))} | ${r.line} | ${cell(r.icon)} | ${r.tone}${r.exception ? ` (${r.exception})` : ''} | ${cell(r.where)} |`);
   const count = (tone) => rows.filter((r) => r.tone === tone).length;
   console.log(`\n${rows.length} icon elements: ${count('decorative')} decorative, ${count('control')} control.`);
 }

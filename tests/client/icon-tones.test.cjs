@@ -31,6 +31,7 @@ const { Icon } = load(path.join(root, 'src/components/icons/Icon.tsx'));
 const { ShellIcon, SHELL_ICONS } = load(path.join(root, 'src/components/ShellIcon.tsx'));
 const { LUCIDE } = load(path.join(root, 'src/components/icons/lucide.ts'));
 const { ICON_ACCENTS, PLAIN_GLYPHS } = load(path.join(root, 'src/components/icons/accents.ts'));
+const { EmptyState, EMPTY_STATE_GLYPHS } = load(path.join(root, 'src/components/EmptyState.tsx'));
 const html = (el) => renderToStaticMarkup(el);
 const icon = (props) => html(React.createElement(Icon, props));
 const ACCENT_PART = /class="ic-af?"/;
@@ -101,8 +102,12 @@ test('ShellIcon passes the tone through and defaults to control', () => {
 const rows = audit();
 
 test('no decorative icon is written inside a button, link, menu item or other control', () => {
-  const offenders = rows.filter((r) => r.tone === 'decorative' && r.interactive);
+  const offenders = rows.filter((r) => r.tone === 'decorative' && r.interactive && r.exception !== 'identity-tile');
   assert.deepEqual(offenders, [], offenders.map((r) => `${r.file}:${r.line} ${r.icon} in ${r.where}`).join('\n'));
+  // The one exception is the connector list's Nextcloud identity tile (follow-up, owner's choice):
+  // exactly one icon, directly in span.logo, directly in <button className="connector-card">.
+  const tiles = rows.filter((r) => r.exception);
+  assert.deepEqual(tiles.map((r) => [r.file, r.icon, r.tone, r.exception]), [['src/components/connectors/ConnectorsSettings.tsx', 'hard-drive', 'decorative', 'identity-tile']]);
   // Menu definitions ({ label, icon: <ShellIcon/> }) render inside role="menuitem": controls.
   assert.ok(rows.some((r) => r.where === 'menu item (icon:)' && r.tone === 'control'));
 });
@@ -122,7 +127,10 @@ test('information-only icons are decorative: empty states, type markers, status 
     assert.ok(hit.length, `${file} ${icon} found`);
     for (const r of hit) assert.equal(r.tone, 'decorative', `${file}:${r.line} ${icon} (${r.where})`);
   };
-  decorative('src/components/EmptyState.tsx', '{icon}');
+  decorative('src/components/EmptyState.tsx', '{glyph}');
+  decorative('src/components/connectors/ConnectorsSettings.tsx', 'hard-drive', '<button>'); // the list's identity tile
+  decorative('src/components/connectors/ConnectorsSettings.tsx', 'hard-drive', 'span.logo'); // the Nextcloud page's header
+  decorative('src/components/connectors/ConnectorsSettings.tsx', 'server', 'span.logo');
   decorative('src/components/ProjectView.tsx', 'file', 'span.source-name');
   decorative('src/components/ProjectView.tsx', 'folder');
   decorative('src/components/EditProjectModal.tsx', 'folder');
@@ -147,12 +155,14 @@ test('the accent part is painted with --icon-accent only on a decorative icon', 
 });
 
 test('inside anything pressable the accent part falls back to the neutral colour (CSS guard, last)', () => {
-  const guards = [...components.matchAll(/:is\(([^)]*)\) \.ic\[data-tone='decorative'\] (\.ic-af?(?:\[fill='currentColor'\])?) \{ ([^}]*) \}/g)];
+  const guards = [...components.matchAll(/:is\(([^)]*)\) \.ic\[data-tone='decorative'\](:not\([^)]*\))? (\.ic-af?(?:\[fill='currentColor'\])?) \{ ([^}]*) \}/g)];
   assert.equal(guards.length, 3, 'stroke, dot fill and fill-layer guards');
+  // The guard spares exactly one thing: a connector card's logo tile (the Nextcloud identity tile).
+  assert.deepEqual(guards.map((g) => g[2]), Array(3).fill(':not(.connector-card > .logo > .ic)'));
   for (const [, list] of guards) for (const hook of ['button', 'a', 'summary', 'label', "[role='button']", "[role='link']", "[role='menuitem']", "[role='menuitemradio']", "[role='menuitemcheckbox']", "[role='tab']", "[role='option']", "[role='switch']", "[role='checkbox']", "[role='radio']"]) {
     assert.ok(list.split(',').map((s) => s.trim()).includes(hook), `the guard covers ${hook}`);
   }
-  assert.deepEqual(guards.map((g) => [g[2], g[3]]), [['.ic-a', 'stroke: inherit;'], [".ic-a[fill='currentColor']", 'fill: currentColor;'], ['.ic-af', 'fill: none;']]);
+  assert.deepEqual(guards.map((g) => [g[3], g[4]]), [['.ic-a', 'stroke: inherit;'], [".ic-a[fill='currentColor']", 'fill: currentColor;'], ['.ic-af', 'fill: none;']]);
   // Last in the file, so it outranks the forced-colours rule as well as the accent rule.
   assert.ok(components.lastIndexOf('@media (forced-colors: active)') < guards[0].index);
 });
@@ -162,6 +172,104 @@ test('forced colours: the accent part takes the neutral colour', () => {
   assert.ok(block, 'a forced-colors block exists');
   assert.match(block[1], /\.ic\[data-tone='decorative'\] \.ic-a \{ stroke: currentColor; \}/);
   assert.match(block[1], /\.ic\[data-tone='decorative'\] :is\(\.ic-a\[fill='currentColor'\], \.ic-af\) \{ fill: currentColor; \}/);
+});
+
+// ── Follow-ups (#1623, reopened): empty-state symbols, the active navigation row. ───────────────
+/** Every string literal a JSX attribute's value can produce (icon="x", icon={a ? 'x' : 'y'}). */
+function literalNames(attribute) {
+  const out = [];
+  const walk = (n) => { if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) out.push(n.text); ts.forEachChild(n, walk); };
+  if (attribute.initializer) walk(attribute.initializer);
+  return out;
+}
+function* tsx(dir) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) yield* tsx(full); else if (e.name.endsWith('.tsx')) yield full;
+  }
+}
+
+test('empty states: every symbol an EmptyState is given draws an inner part in the accent', () => {
+  const uses = [];
+  for (const file of tsx(path.join(root, 'src'))) {
+    const source = ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const visit = (n) => {
+      if ((ts.isJsxSelfClosingElement(n) || ts.isJsxOpeningElement(n)) && n.tagName.getText() === 'EmptyState') {
+        const a = n.attributes.properties.find((p) => ts.isJsxAttribute(p) && p.name.getText() === 'icon');
+        const names = a ? literalNames(a) : [];
+        assert.ok(names.length, `${path.relative(root, file)}: EmptyState icon is a literal (or a choice of literals)`);
+        for (const name of names) uses.push([path.relative(root, file), name]);
+      }
+      ts.forEachChild(n, visit);
+    };
+    visit(source);
+  }
+  assert.ok(uses.length >= 9, `${uses.length} EmptyState symbols found`);
+  for (const [file, name] of uses) {
+    const named = EMPTY_STATE_GLYPHS[name] ?? name, glyph = SHELL_ICONS[named] || named; // as EmptyState, then ShellIcon
+    assert.ok(ICON_ACCENTS[glyph], `${file}: EmptyState icon "${name}" draws ${glyph}, which has no accent part`);
+    const out = html(React.createElement(EmptyState, { icon: name, title: 'Synthetic' }));
+    assert.match(out, /data-tone="decorative"/, `${file} ${name}`);
+    assert.match(out, ACCENT_PART, `${file}: EmptyState icon "${name}" renders an accent part`);
+  }
+  // The plain symbols the owner saw ("No chats yet", "No tasks yet") now have inner detail.
+  assert.match(html(React.createElement(EmptyState, { icon: 'chat', title: 'No chats yet' })), /data-icon="message-square-text"/);
+  assert.match(html(React.createElement(EmptyState, { icon: 'code', title: 'No tasks yet' })), /data-icon="square-code"/);
+  assert.match(html(React.createElement(EmptyState, { icon: 'search', title: 'No match' })), /data-icon="search-x"/);
+  // Each variant is the same Lucide symbol with detail added: the plain glyph's outline is kept.
+  for (const [plain, variant] of [['message-square', 'message-square-text'], ['search', 'search-x']]) {
+    for (const node of LUCIDE[plain]) if (node[0] !== 'path' || !/^m21 21/.test(node[1].d)) assert.ok(LUCIDE[variant].some((v) => JSON.stringify(v) === JSON.stringify(node)), `${variant} keeps ${plain}'s outline`);
+  }
+});
+
+test('the vendored Lucide subset names its version, and the licence ships beside it', () => {
+  assert.match(fs.readFileSync(path.join(root, 'src/components/icons/lucide.ts'), 'utf8'), /^\/\/ Vendored subset of Lucide icons v1\.46\.0 \(ISC, see LICENSE-lucide\.txt\)/);
+  const licence = fs.readFileSync(path.join(root, 'src/components/icons/LICENSE-lucide.txt'), 'utf8');
+  assert.match(licence, /^ISC License/);
+  assert.match(licence, /Lucide Icons and Contributors/);
+});
+
+/** Every CSS rule under src/styles that paints with var(--icon-accent), as [selector, declarations]. */
+function accentRules() {
+  const out = [];
+  const sheets = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? sheets(path.join(dir, e.name)) : e.name.endsWith('.css') ? [path.join(dir, e.name)] : []));
+  for (const file of sheets(path.join(root, 'src/styles'))) {
+    for (const [, selector, body] of strip(fs.readFileSync(file, 'utf8')).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (!/var\(--icon-accent\)/.test(body.replace(/--icon-accent\s*:[^;]*;/g, ''))) continue;
+      for (const one of selector.split(',')) out.push([path.relative(root, file), one.replace(/\s+/g, ' ').trim()]);
+    }
+  }
+  return out;
+}
+
+test('active navigation: the current page\'s row icon is the one control painted in the accent', () => {
+  const ACTIVE = [".app .sidebar.pane [aria-current='page'] > .ic:first-child", ".settings-stage .settings-navigation nav button[aria-current='page'] > .ic:first-child"];
+  const DECORATIVE = [".ic[data-tone='decorative'] .ic-a", ".ic[data-tone='decorative'] .ic-a[fill='currentColor']", ".ic[data-tone='decorative'] .ic-af"];
+  const rules = accentRules();
+  // Exactly these selectors read the icon accent anywhere in the styles: the decorative parts and
+  // the active row. No hover, focus or other state, and no other control.
+  assert.deepEqual(rules.map(([, sel]) => sel).sort(), [...DECORATIVE, ...ACTIVE].sort(), rules.map((r) => r.join(': ')).join('\n'));
+  for (const [file] of rules) assert.equal(file, path.join('src', 'styles', 'system', 'components.css'));
+  // The active rule recolours the whole glyph (the svg's stroke), not a part: it is not two-tone.
+  const rule = components.match(/\.app \.sidebar\.pane \[aria-current='page'\] > \.ic:first-child,\s*\.settings-stage \.settings-navigation nav button\[aria-current='page'\] > \.ic:first-child \{ ([^}]*) \}/);
+  assert.ok(rule, 'one rule for both navigations');
+  assert.match(rule[1], /^stroke: var\(--icon-accent\);/);
+  assert.doesNotMatch(rule[0], /:hover|:focus|ic-af?\b/);
+  // A phone's Settings list hides the current row, so its icon stays neutral there; forced colours too.
+  assert.match(components, /@media \(max-width: 820px\) \{ \.settings-stage \.settings-navigation nav button\[aria-current='page'\] > \.ic:first-child \{ stroke: currentColor; \} \}/);
+  assert.match(components, /:root\[data-layout='mobile'\] \.settings-stage \.settings-navigation nav button\[aria-current='page'\] > \.ic:first-child \{ stroke: currentColor; \}/);
+  const forced = [...components.matchAll(/@media \(forced-colors: active\) \{([\s\S]*?\n)\}/g)].map((m) => m[1]).join('\n');
+  assert.match(forced, /\.app \.sidebar\.pane \[aria-current='page'\] > \.ic:first-child,\s*\.settings-stage \.settings-navigation nav button\[aria-current='page'\] > \.ic:first-child \{ stroke: currentColor; \}/);
+});
+
+test('active navigation: every current-page entry in the sidebar and Settings says so with aria-current', () => {
+  const sidebar = fs.readFileSync(path.join(root, 'src/components/Sidebar.tsx'), 'utf8');
+  // The chat row: the same condition that paints .is-active on the row marks its button as the page.
+  assert.match(sidebar, /className=\{`chat-row\$\{activeChatId === c\.id && activeView === 'chat' \? ' is-active' : ''\}`\}/);
+  assert.match(sidebar, /className="nav-item"\s+aria-current=\{activeChatId === c\.id && activeView === 'chat' \? 'page' : undefined\}/);
+  for (const re of [/className=\{`nav-item\$\{activeView === 'projects' \? ' is-active' : ''\}`\}\s+aria-label=\{t\('sidebar\.projects'\)\}\s+aria-current=\{activeView === 'projects' \? 'page' : undefined\}/,
+    /aria-current=\{activeView === 'plugins' \? 'page' : undefined\}/, /aria-current=\{codePage===page\?'page':undefined\}/, /aria-current=\{activeView === 'archived' \? 'page' : undefined\}/]) assert.match(sidebar, re);
+  assert.match(fs.readFileSync(path.join(root, 'src/components/SettingsShell.tsx'), 'utf8'), /aria-current=\{section === id \? 'page' : undefined\}/);
 });
 
 // Token evaluation, as tests/client/theme-family-contrast.test.cjs models the cascade.
@@ -231,6 +339,20 @@ for (const family of ['editorial', 'contemporary', 'glass']) for (const mode of 
       for (const pane of ['glass-pane', 'glass-pane-strong', 'glass-window', 'glass-menu']) grounds.push([`${pane} over the wash`, e.solid(pane, saturate(peak, 1.8))]);
       grounds.push(['glass-pane over the bare page', e.solid('glass-pane', saturate(page, 1.8))]);
     }
+    // The active navigation row (follow-up): the whole icon is the accent on the row's highlight,
+    // --fill-active (or --fill-hover while the pointer is on the current chat row, a later rule),
+    // over the sidebar's and the Settings navigation's own ground: --bg-chrome (also the Settings
+    // window at its middle widths: --bg-dialog), or in Glass the frosted sidebar pane and the opaque
+    // Settings window, over the accent wash or the bare page, and their reduced-transparency fill.
+    const navBases = [['bg-chrome', e.solid('bg-chrome', backdrop)], ['bg-dialog', e.solid('bg-dialog', backdrop)]];
+    if (family === 'glass') {
+      const page = e.solid('bg-app', black);
+      const peak = over(e.color('var(--md-primary)').rgb, parseFloat(e.v['glass-wash-a']) / 100, page);
+      for (const pane of ['glass-pane', 'glass-window']) for (const [under, ground] of [['the wash', saturate(peak, 1.8)], ['the bare page', saturate(page, 1.8)]]) navBases.push([`${pane} over ${under}`, e.solid(pane, ground)]);
+      navBases.push(['reduced transparency (surface-container-low)', e.solid('md-surface-container-low', backdrop)]);
+    }
+    for (const [name, g] of navBases) grounds.push([`active row: fill-active over ${name}`, e.solid('fill-active', g)], [`active row hovered: fill-hover over ${name}`, e.solid('fill-hover', g)]);
+    assert.ok(grounds.filter(([n]) => n.startsWith('active row')).length >= 4);
     const accentColour = e.solid('icon-accent', black);
     for (const [name, g] of grounds) {
       const ratio = contrast(accentColour, g);

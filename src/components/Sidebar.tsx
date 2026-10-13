@@ -651,6 +651,7 @@ export function Sidebar({
                   <button
                     ref={registerSearchResult('chat', c.id)}
                     className="nav-item"
+                    aria-current={activeChatId === c.id && activeView === 'chat' ? 'page' : undefined}
                     onClick={() => onOpenChat(c.id, c.projectId ?? null)}
                     onKeyDown={onSearchResultKeyDown('chat', c.id)}
                     title={c.title}

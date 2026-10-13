@@ -459,7 +459,9 @@ dialog::backdrop { background: var(--scrim); backdrop-filter: blur(var(--scrim-b
    its one inner part in --icon-accent: stroked (.ic-a) or a solid fill under the outline (.ic-af).
    A control (data-tone="control", the default) renders no accent part at all.
    Guard: an icon inside anything pressable is a control whatever its tone, so a decorative icon
-   composed into a button, link, menu item, tab or toggle falls back to one neutral colour. */
+   composed into a button, link, menu item, tab or toggle falls back to one neutral colour.
+   One exception: a connector card's logo tile (.connector-card > .logo) names the connector, as
+   Google Drive's brand mark does beside it, so it keeps its two tones although the card is a button. */
 .ic[data-tone='decorative'] .ic-a { stroke: var(--icon-accent); }
 .ic[data-tone='decorative'] .ic-a[fill='currentColor'] { fill: var(--icon-accent); }
 .ic[data-tone='decorative'] .ic-af { fill: var(--icon-accent); }
@@ -469,7 +471,19 @@ dialog::backdrop { background: var(--scrim); backdrop-filter: blur(var(--scrim-b
   .ic[data-tone='decorative'] .ic-a { stroke: currentColor; }
   .ic[data-tone='decorative'] :is(.ic-a[fill='currentColor'], .ic-af) { fill: currentColor; }
 }
+/* Active navigation (#1623): the one state in which a control icon takes the accent. The row of the
+   page you are on (aria-current="page") in the sidebar and in the Settings navigation draws its
+   leading icon wholly in --icon-accent (not two-tone) beside its --fill-active highlight. Hover and
+   focus are unchanged; a phone's Settings list shows no current row, so it keeps the neutral icon. */
+.app .sidebar.pane [aria-current='page'] > .ic:first-child,
+.settings-stage .settings-navigation nav button[aria-current='page'] > .ic:first-child { stroke: var(--icon-accent); transition: stroke var(--dur-instant) var(--ease-out-quart); }
+@media (max-width: 820px) { .settings-stage .settings-navigation nav button[aria-current='page'] > .ic:first-child { stroke: currentColor; } }
+:root[data-layout='mobile'] .settings-stage .settings-navigation nav button[aria-current='page'] > .ic:first-child { stroke: currentColor; }
+@media (forced-colors: active) {
+  .app .sidebar.pane [aria-current='page'] > .ic:first-child,
+  .settings-stage .settings-navigation nav button[aria-current='page'] > .ic:first-child { stroke: currentColor; }
+}
 /* The guard: last, so it also wins over the forced-colours fill inside a control. */
-:is(button, a, summary, label, [role='button'], [role='link'], [role='menuitem'], [role='menuitemradio'], [role='menuitemcheckbox'], [role='tab'], [role='option'], [role='switch'], [role='checkbox'], [role='radio'], [role='treeitem']) .ic[data-tone='decorative'] .ic-a { stroke: inherit; }
-:is(button, a, summary, label, [role='button'], [role='link'], [role='menuitem'], [role='menuitemradio'], [role='menuitemcheckbox'], [role='tab'], [role='option'], [role='switch'], [role='checkbox'], [role='radio'], [role='treeitem']) .ic[data-tone='decorative'] .ic-a[fill='currentColor'] { fill: currentColor; }
-:is(button, a, summary, label, [role='button'], [role='link'], [role='menuitem'], [role='menuitemradio'], [role='menuitemcheckbox'], [role='tab'], [role='option'], [role='switch'], [role='checkbox'], [role='radio'], [role='treeitem']) .ic[data-tone='decorative'] .ic-af { fill: none; }
+:is(button, a, summary, label, [role='button'], [role='link'], [role='menuitem'], [role='menuitemradio'], [role='menuitemcheckbox'], [role='tab'], [role='option'], [role='switch'], [role='checkbox'], [role='radio'], [role='treeitem']) .ic[data-tone='decorative']:not(.connector-card > .logo > .ic) .ic-a { stroke: inherit; }
+:is(button, a, summary, label, [role='button'], [role='link'], [role='menuitem'], [role='menuitemradio'], [role='menuitemcheckbox'], [role='tab'], [role='option'], [role='switch'], [role='checkbox'], [role='radio'], [role='treeitem']) .ic[data-tone='decorative']:not(.connector-card > .logo > .ic) .ic-a[fill='currentColor'] { fill: currentColor; }
+:is(button, a, summary, label, [role='button'], [role='link'], [role='menuitem'], [role='menuitemradio'], [role='menuitemcheckbox'], [role='tab'], [role='option'], [role='switch'], [role='checkbox'], [role='radio'], [role='treeitem']) .ic[data-tone='decorative']:not(.connector-card > .logo > .ic) .ic-af { fill: none; }
