@@ -142,7 +142,9 @@ export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false, li
         <ShellIcon name="chevron-right" size={18}/>
       </button>
       {nc && <button className="connector-card surface" onClick={() => setPage('nextcloud')} aria-label="Nextcloud">
-        <span className="logo"><ShellIcon name="hard-drive" size={22}/></span>
+        {/* #1623: the logo tile names the connector (as Google Drive's brand mark does), so it is two-tone
+            like the MCP servers tile; the CSS guard allows exactly this identity tile inside the card. */}
+        <span className="logo"><ShellIcon name="hard-drive" size={22} tone="decorative"/></span>
         <span className="connector-text"><b>Nextcloud</b><small>{t('connectors.nextcloud.summary')} {ncBadge(t, nc)}</small></span>
         <ShellIcon name="chevron-right" size={18}/>
       </button>}

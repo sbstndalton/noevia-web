@@ -60,6 +60,11 @@ export const ICON_ACCENTS: Record<string, IconAccent> = {
   'external-link': { stroke: [0, 1] },            // the arrow
   server: { stroke: [2, 3] },                     // the status lights
   'hard-drive': { stroke: [0, 2, 3] },            // the front panel: divider and lights
+  // Empty-state symbols (#1623 follow-up): the plain chat, code and search glyphs have no inner part,
+  // so EmptyState draws these variants, whose inner part carries the accent.
+  'message-square-text': { stroke: [1, 2, 3] },   // the text lines
+  'square-code': { stroke: [0, 1] },              // the brackets
+  'search-x': { stroke: [0, 1] },                 // the cross in the lens
 };
 
 /** Glyphs that are one shape (or only arrows/marks): no inner part, one colour in both tones. */
