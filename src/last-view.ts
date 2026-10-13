@@ -52,10 +52,15 @@ export function readLastPlace(): LastPlace | null {
   }
 }
 
+// #1643: installed by account-device-state.ts; a tab whose account another tab replaced writes nothing.
+let writesBlocked: () => boolean = () => false;
+export function guardLastPlaceWrites(blocked: () => boolean): void { writesBlocked = blocked; }
+
 /** Only written for a known account: a place saved before the profile loaded (`user: null`) would
  *  read as someone else's on the next sign-in and be cleared (#791), losing this account's own. */
 export function writeLastPlace(place: LastPlace): void {
   if (!place.user) return;
+  if (writesBlocked()) return;
   try { localStorage.setItem(KEY, JSON.stringify(place)); } catch { /* storage off: this session only */ }
 }
 

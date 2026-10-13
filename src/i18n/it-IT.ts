@@ -134,6 +134,8 @@ export const IT_IT: Catalogue = {
   'account.darkMode': "Modalità scura",
   'account.logOut': "Esci",
   'account.signOutError': "Non è stato possibile uscire. Riprova.",
+  'account.changedElsewhere': "L'account è cambiato in un'altra scheda. Ricaricamento.",
+  'account.signingInElsewhere': "Accesso in corso in un'altra scheda. Riprova tra un momento.",
   'account.menuLabel': "Menu account di {name}",
   'projects.archived': "Archiviato",
   'projects.modeChat': "Chat",

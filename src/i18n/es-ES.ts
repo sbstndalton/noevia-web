@@ -134,6 +134,8 @@ export const ES_ES: Catalogue = {
   'account.darkMode': "Modo oscuro",
   'account.logOut': "Cerrar sesión",
   'account.signOutError': "No se pudo cerrar sesión. Vuelve a intentarlo.",
+  'account.changedElsewhere': "La cuenta cambió en otra pestaña. Recargando.",
+  'account.signingInElsewhere': "Se está iniciando sesión en otra pestaña. Vuelve a intentarlo en un momento.",
   'account.menuLabel': "Menú de cuenta de {name}",
   'projects.archived': "Archivado",
   'projects.modeChat': "Chat",

@@ -12,7 +12,7 @@ test('upload transfer progress, CSRF, server processing and completion remain di
   setRequestHeader(k,v){headers[k]=v;}
   send(data){body=JSON.parse(data);this.upload.onprogress({lengthComputable:true,loaded:5,total:10});this.onload();}
  }
- const ctx={WORKSPACE_KEY:'workspace',invalidateCached:key=>{assert.equal(key,'workspace');assert.equal(calls,2);invalidations++;},clearRequestCache:()=>{},XMLHttpRequest:XHR,cookie:()=> 'synthetic-csrf',setTimeout:fn=>fn(),hasApiMajorMismatchHeader:()=>false,API_MAJOR:'1',window:{dispatchEvent(){}},getJson:async url=>{assert.equal(url,'/fixture/job');return ++calls===1?{done:false,stage:'Extracting PDF text / OCR'}:{done:true,status:200,body:{name:'fixture.docx'}};}};
+ const ctx={WORKSPACE_KEY:'workspace',invalidateCached:key=>{assert.equal(key,'workspace');assert.equal(calls,2);invalidations++;},clearRequestCache:()=>{},accountChangedElsewhere:()=>false,AccountChangedError:Error,XMLHttpRequest:XHR,cookie:()=> 'synthetic-csrf',setTimeout:fn=>fn(),hasApiMajorMismatchHeader:()=>false,API_MAJOR:'1',window:{dispatchEvent(){}},getJson:async url=>{assert.equal(url,'/fixture/job');return ++calls===1?{done:false,stage:'Extracting PDF text / OCR'}:{done:true,status:200,body:{name:'fixture.docx'}};}};
  vm.createContext(ctx);vm.runInContext(js,ctx);
  await ctx.uploadProjectFile('fixture',{name:'fixture.docx',dataBase64:'cWE='},p=>events.push(p));
  assert.equal(headers['X-CSRF-Token'],'synthetic-csrf');assert.equal(body.organized,true);

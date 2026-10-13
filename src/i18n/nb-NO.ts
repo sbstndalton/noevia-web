@@ -134,6 +134,8 @@ export const NB_NO: Catalogue = {
   'account.darkMode': "Mørk modus",
   'account.logOut': "Logg ut",
   'account.signOutError': "Kunne ikke logge ut. Prøv igjen.",
+  'account.changedElsewhere': "Kontoen ble endret i en annen fane. Laster på nytt.",
+  'account.signingInElsewhere': "Pålogging pågår i en annen fane. Prøv igjen om litt.",
   'account.menuLabel': "Kontomeny for {name}",
   'projects.archived': "Arkivert",
   'projects.modeChat': "Chat",

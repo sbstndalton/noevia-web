@@ -46,7 +46,15 @@ function readStore(): DraftStore {
   }
 }
 
+// #1643: localStorage is shared by every tab. A tab whose account was replaced by another tab's
+// sign-in must not put its account's unsent text into the new account's drafts. The check lives in
+// account-session.ts and is installed by account-device-state.ts, so this module stays free of
+// imports.
+let writesBlocked: () => boolean = () => false;
+export function guardDraftWrites(blocked: () => boolean): void { writesBlocked = blocked; }
+
 function writeStore(store: DraftStore): void {
+  if (writesBlocked()) return;
   try { localStorage.setItem(KEY, JSON.stringify(store)); } catch { /* storage off: this session only */ }
 }
 

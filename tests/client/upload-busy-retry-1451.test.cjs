@@ -19,7 +19,7 @@ function harness(responses) {
     send() { const r = responses.shift(); this.status = r.status; this.responseText = JSON.stringify(r.body); this.onload(); }
   }
   const ctx = {
-    WORKSPACE_KEY: 'workspace', invalidateCached() {}, clearRequestCache() {}, XMLHttpRequest: XHR, cookie: () => 'synthetic-csrf',
+    WORKSPACE_KEY: 'workspace', invalidateCached() {}, clearRequestCache() {}, accountChangedElsewhere: () => false, AccountChangedError: Error, XMLHttpRequest: XHR, cookie: () => 'synthetic-csrf',
     setTimeout: (fn, ms) => { delays.push(ms); fn(); }, hasApiMajorMismatchHeader: () => false, API_MAJOR: '1', window: { dispatchEvent() {} },
     getJson: async () => ({ done: true, status: 200, body: { name: 'notes.md', path: 'notes.md', bytes: 3 } }),
   };
