@@ -94,7 +94,8 @@
     /* #1628: StatsBar measures the composer and sets these, so the panel ends above the composer block
        and scrolls within the room above it. Without them (no composer on screen) it opens just above the strip. */
     position: absolute; right: var(--space-3); bottom: var(--stats-more-bottom, calc(100% + var(--space-2))); z-index: 15;
-    display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-2) var(--space-4);
+    /* #1610: the labels share the width with the values (no max-content label column), so a long label cannot squeeze a value into a sliver. */
+    display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--space-2) var(--space-4);
     width: min(360px, calc(100% - var(--space-6))); box-sizing: border-box;
     max-height: var(--stats-more-max, none); overflow-x: hidden; overflow-y: auto;
     padding: var(--space-3) var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--radius-card);
@@ -102,7 +103,10 @@
   }
   .stats-disclosure.is-wide.is-more-open .stats-details > div[data-stat] { display: contents; }
   .stats-disclosure.is-wide.is-more-open .stats-details > div[data-stat]::before { content: none; }
-  .stats-disclosure.is-wide.is-more-open .stats-details dd { overflow: visible; white-space: normal; overflow-wrap: anywhere; }
+  /* #1610: a value breaks between words only; `anywhere` split "Measuring…" inside the word. */
+  .stats-disclosure.is-wide.is-more-open .stats-details dd { overflow: visible; white-space: normal; overflow-wrap: normal; }
+  /* #1610: a label wraps inside its column too; the wide row's nowrap is inherited through display: contents. */
+  .stats-disclosure.is-wide.is-more-open .stats-details dt { white-space: normal; }
   .stats-disclosure.is-wide.is-more-open .stats-details .stats-mtp { display: contents; }
   .stats-disclosure.is-wide.is-more-open .stats-details .stats-mtp progress { display: block; width: 100%; margin: 4px 0 0; }
 }

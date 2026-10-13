@@ -49,7 +49,7 @@ test('#1527: the compact toggle is hidden where every pair fits, and it opens an
   const block = wideBlock();
   assert.match(block, /\.stats-disclosure\.is-wide \.stats-more \{ display: none; \}/);
   assert.match(block, /@container \(max-width: 1479px\) \{/);
-  assert.match(block, /\.stats-disclosure\.is-wide\.is-more-open \.stats-details \{[^}]*position: absolute;[^}]*grid-template-columns: max-content minmax\(0, 1fr\);/);
+  assert.match(block, /\.stats-disclosure\.is-wide\.is-more-open \.stats-details \{[^}]*position: absolute;[^}]*grid-template-columns: minmax\(0, 2fr\) minmax\(0, 3fr\);/); // #1610: labels share the width, no max-content column
   assert.match(block, /\.stats-disclosure\.is-wide\.is-more-open \.stats-details > div\[data-stat\] \{ display: contents; \}/);
 });
 
