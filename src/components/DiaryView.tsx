@@ -42,9 +42,10 @@ import type { DiaryTurn as Turn } from '../diary-conversation';
 const dayLabel = (id: string): string => formatDayLabel(id, appLocale());
 const monthLabel = (id: string): string => formatMonthLabel(id, appLocale());
 type Pending = { before: string | null; content: string };
-// `active` is false while the Diary view is mounted but hidden behind another
-// view (App.tsx keeps it alive so an in-progress draft, open editor, and
-// scroll position survive switching to chat and back). Data-fetching effects
+// `active` is false while the Diary view is mounted but not on screen
+// (App.tsx keeps it alive so an in-progress draft, open editor, and
+// scroll position survive switching to chat and back; since #1635 its DOM is
+// detached from the document meanwhile, see KeptOffDocument). Data-fetching effects
 // below gate on `active` so a hidden Diary makes zero /api/diary requests;
 // switching a still-mounted instance back to active re-runs those effects to
 // pick up anything that changed while it was hidden.

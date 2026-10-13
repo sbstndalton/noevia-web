@@ -71,6 +71,8 @@ import { rememberCreatedProject, withCreatedProjects } from './created-projects'
 import { ProjectView } from './components/ProjectView';
 import { ActiveCodeTasks } from './components/code/ActiveCodeTasks';
 import { Coding, Customise, Diary, ModelManager, Projects, Settings, ViewLoading, prefetchViewsWhenIdle } from './lazy-views';
+import { KeptOffDocument } from './components/KeptOffDocument';
+import { diaryOpened, diaryPresence } from './diary-presence';
 import type { SettingsSection } from './components/SettingsShell';
 import { FeaturePreview } from './components/PreviewPanel';
 import { ArchivedChatsView } from './components/data/ArchivedChats';
@@ -327,6 +329,12 @@ export default function App(): JSX.Element {
   const messagesRef = useRef(messagesByChat);
   messagesRef.current = messagesByChat;
   const [diaryEnabled, setDiaryEnabled] = useState(false);
+  // #1635: whether the Diary has been on screen in this tab; only the Diary becoming the view sets it.
+  const [diaryWasOpened, setDiaryWasOpened] = useState(false);
+  const diaryCovered = appMode === 'code' && showPreviews; // the Code workspace hides the chat views
+  const diaryOpenedNow = diaryOpened(diaryWasOpened, { enabled: diaryEnabled, viewKind: view.kind, covered: diaryCovered });
+  if (diaryOpenedNow !== diaryWasOpened) setDiaryWasOpened(diaryOpenedNow);
+  const diaryPlace = diaryPresence({ enabled: diaryEnabled, viewKind: view.kind, opened: diaryOpenedNow, covered: diaryCovered });
   const [popupOpen, setPopupOpen] = useState(false);
   // A restored chat must fetch its saved transcript; only a newly created empty
   // chat may skip that read until its first send.
@@ -1895,7 +1903,10 @@ export default function App(): JSX.Element {
         />
       )}
 
-      {diaryEnabled && <div className="diary-mount" style={{ display: view.kind === 'diary' ? 'contents' : 'none' }}><Suspense fallback={<ViewLoading name="diary" active={view.kind === 'diary' && appMode === 'chat' && !settingsOpen} />}><Diary.View inferenceUp={health.inferenceUp} active={view.kind === 'diary'} /></Suspense></div>}
+      {/* #1635: the Diary is in the document only while it is on screen. Never opened: not mounted. Left:
+          kept alive (draft, editor, in-flight save) but detached, not display:none behind the chat. */}
+      {diaryPlace !== 'absent' && <KeptOffDocument className="diary-mount" shown={diaryPlace === 'shown'}><Suspense fallback={<ViewLoading name="diary" active={diaryPlace === 'shown' && !settingsOpen} />}>
+        <Diary.View inferenceUp={health.inferenceUp} active={diaryPlace === 'shown'} /></Suspense></KeptOffDocument>}
 
       {popupOpen && (
         <ModelPopup
