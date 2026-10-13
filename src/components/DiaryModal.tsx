@@ -251,6 +251,9 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
       if (part.startsWith('*') && part.length > 2) return <em key={i}>{unescapeOpener(part.slice(1, -1))}</em>;
       return part;
     });
+  // #1598: a `<br>` in a table cell is a line break. The cell is split on it and each piece goes through
+  // `inline` as before, so the break is the only tag that reaches the page; everything else stays escaped text.
+  const cell = (text: string) => text.split(/<br\s*\/?>/i).map((piece, k) => <Fragment key={k}>{k > 0 && <br />}{inline(piece)}</Fragment>);
 
   // The note's properties, shown as what they are. The body is rendered from after the block,
   // so nothing is rewritten and nothing is shown twice.
@@ -307,9 +310,9 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
       out.push(
         <div className="md-table-wrap" key={`t${i}`}>
           <table className="md-table">
-            <thead><tr>{head.map((c, n) => <th key={n}>{inline(c)}</th>)}</tr></thead>
+            <thead><tr>{head.map((c, n) => <th key={n}>{cell(c)}</th>)}</tr></thead>
             <tbody>{rows.map((r, n) => (
-              <tr key={n}>{head.map((_, c) => <td key={c}>{inline(r[c] ?? '')}</td>)}</tr>
+              <tr key={n}>{head.map((_, c) => <td key={c}>{cell(r[c] ?? '')}</td>)}</tr>
             ))}</tbody>
           </table>
         </div>,
