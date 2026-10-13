@@ -5,6 +5,7 @@ import type { AutoRoles } from '../../api';
 import { fetchAutoRoles } from '../../api';
 import { notifyModelsChanged, useModelsChanged } from '../../models-changed';
 import { installedSummary } from '../../models-summary';
+import { displayNamer } from '../../model-display-name';
 import { useT } from '../../i18n';
 import { formatNumber } from '../../number-format';
 import { appLocale } from '../../user-preferences';
@@ -24,9 +25,13 @@ export function ModelsSummary({ models, modelsLoaded, modelsError, health, stats
   // on demand used to leave it stale, so this read "none loaded" beside a Loaded card (#205).
   // Opening the summary asks again.
   useEffect(() => { notifyModelsChanged(); }, []);
+  // #1582: one namer for the installed list and the roles shown here, so two quants of one model keep their tag.
+  const shownIds = [...models.map((m) => m.name), ...(roles?.roles ? [roles.roles.fast, roles.roles.smart, roles.roles.vision] : [])].filter((id): id is string => !!id);
+  const nameOf = displayNamer(shownIds);
   const routing = rolesError ? t('models.routingError') : !roles ? t('settings.loading') : roles.configured && roles.roles
-    ? `${t('models.roles', { fast: roles.roles.fast, smart: roles.roles.smart })}${roles.roles.vision ? ` · ${t('models.vision', { vision: roles.roles.vision })}` : ''}` : t('models.notConfigured');
-  const installed = installedSummary(models, { count: (n) => t.plural('models.count', n), loaded: (names) => t('models.loaded', { names }), noneLoaded: t('models.noneLoaded') });
+    ? `${t('models.roles', { fast: nameOf(roles.roles.fast), smart: nameOf(roles.roles.smart) })}${roles.roles.vision ? ` · ${t('models.vision', { vision: nameOf(roles.roles.vision) })}` : ''}` : t('models.notConfigured');
+  // #1582: the summary shows the display name of each model; the list itself keeps the ids.
+  const installed = installedSummary(models.map((m) => ({ ...m, name: nameOf(m.name) })), { count: (n) => t.plural('models.count', n), loaded: (names) => t('models.loaded', { names }), noneLoaded: t('models.noneLoaded') });
   return <div className="mm-summary">
     <div className="settings-title"><h1>{t('settings.section.models')}</h1><p>{t('models.intro')}</p></div>
     {modelsError && <p role="alert" className="modal-err">{modelsError}</p>}

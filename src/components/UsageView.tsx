@@ -8,6 +8,7 @@ import { formatCompact } from '../number-format';
 import { revealLatestWeeks } from '../usage-heatmap-scroll';
 import { isCoarsePointerDevice } from '../composer-focus';
 import { groupUsageDaysByMonth } from '../usage-months';
+import { modelDisplayName } from '../model-display-name';
 import { UsageTouchMonths } from './UsageTouchMonths';
 
 const compact = (n: number): string => formatCompact(n, appLocale());
@@ -202,7 +203,7 @@ export function UsageView(): JSX.Element {
     <section className="usage-section">
       <div className="usage-stat-grid">
         <Stat label={t('usage.peakHour')} value={data.peakHour ? hourLabel(data.peakHour.hour, appLocale()) : '—'} hint={data.peakHour ? t('usage.peakHourHint', { replies: t.plural('usage.replies', data.peakHour.replies, { count: data.peakHour.replies.toLocaleString(appLocale()) }), zone: data.timeZone }) : t('usage.peakHourEmpty')} />
-        <Stat label={t('usage.favouriteModel')} value={data.models[0]?.name || '—'} hint={data.models[0] ? t('usage.favouriteModelHint', { tokens: compact(data.models[0].input + data.models[0].output) }) : undefined} name />
+        <Stat label={t('usage.favouriteModel')} value={data.models[0]?.name ? modelDisplayName(data.models[0].name) : '—'} hint={data.models[0] ? t('usage.favouriteModelHint', { tokens: compact(data.models[0].input + data.models[0].output) }) : undefined} name />
         <Stat label={t('usage.toolCalls')} value={compact(toolCalls)} hint={toolCalls ? t.plural('usage.toolsUsed', data.tools.length) : t('usage.toolCallsEmpty')} />
         <Stat label={t('usage.currentStreak')} value={t.plural('usage.dayCount', data.currentStreak)} hint={t('usage.currentStreakHint')} />
         <Stat label={t('usage.longestStreak')} value={t.plural('usage.dayCount', data.longestStreak)} />
