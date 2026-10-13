@@ -44,11 +44,11 @@ test('#1491 the built-in engine\'s default provider label is translated; an oper
 });
 
 test('#1491 every locale has the local inference label, translated and free of placeholders', () => {
-  const english = catalogue('en-GB')['providers.localInference'];
+  const english = catalogue('en-GB')['displayName.localInference'];
   assert.equal(english, 'Local inference');
   for (const locale of LOCALES) {
-    const value = catalogue(locale)['providers.localInference'];
-    assert.ok(value && value.trim(), `${locale} has providers.localInference`);
+    const value = catalogue(locale)['displayName.localInference'];
+    assert.ok(value && value.trim(), `${locale} has displayName.localInference`);
     assert.doesNotMatch(value, /\{\w+\}/, `${locale} has no placeholder`);
     if (locale !== 'en-GB') assert.notEqual(value, english, `${locale} is translated`);
   }

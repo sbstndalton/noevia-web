@@ -31,7 +31,7 @@ export const DE_DE: Catalogue = {
   'sidebar.customise': "Anpassen",
   'sidebar.search': 'Noevia durchsuchen',
   'sidebar.workspaceMode': "Arbeitsmodus",
-  'providers.localInference': "Lokale Inferenz",
+  'displayName.localInference': "Lokale Inferenz",
   'sidebar.searchPlaceholder': 'Chats, Projekte und Seiten suchen…',
   'sidebar.destinations': 'Ziele',
   'sidebar.noSearchResults': 'Keine passenden Chats, Projekte oder Seiten.',

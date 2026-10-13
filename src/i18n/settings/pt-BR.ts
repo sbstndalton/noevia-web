@@ -47,7 +47,7 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'decision.msg.ready': "O serviço de decisão está pronto. Nenhuma inferência foi executada.",
   'decision.msg.notReady': "O serviço de decisão não está pronto ou não pôde ser alcançado. Verifique a URL e o status do serviço.",
   'decision.msg.invalidInput': "Informe a URL de um serviço de decisão privado e um prazo de 100 a 2000 ms.",
-  'decision.msg.invalidUrl': "Use um endereço HTTP privado como http://decision.local:8040, sem caminho, credenciais ou query string.",
+  'decision.msg.invalidUrl': "Use um endereço HTTP privado como http://192.168.1.20:8040, sem caminho, credenciais ou query string.",
   'features.item.stepSupervision.label': "Verificações por etapa",
   'features.item.stepSupervision.description': "Permite que um provedor de decisões aconselhe continuar, verificar os resultados das ferramentas ou pausar para revisão entre as etapas do chat. Mantém o comportamento existente se estiver indisponível. As aprovações e os limites de execução continuam valendo.",
   'features.item.systemOneRouting.label': "Decisões de roteamento",

@@ -34,7 +34,7 @@ export const EN_GB = {
   'sidebar.customise': 'Customise',
   'sidebar.search': 'Search noevia',
   'sidebar.workspaceMode': "Workspace mode",
-  'providers.localInference': "Local inference",
+  'displayName.localInference': "Local inference",
   'sidebar.searchPlaceholder': 'Search chats, projects and pages…',
   'sidebar.destinations': 'Destinations',
   'sidebar.noSearchResults': 'No matching chats, projects or pages.',

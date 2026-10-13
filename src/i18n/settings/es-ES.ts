@@ -47,7 +47,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'decision.msg.ready': "El servicio de decisión está listo. No se ejecutó ninguna inferencia.",
   'decision.msg.notReady': "El servicio de decisión no está listo o no se pudo alcanzar. Comprueba la URL y el estado del servicio.",
   'decision.msg.invalidInput': "Introduce la URL de un servicio de decisión privado y un plazo de 100 a 2000 ms.",
-  'decision.msg.invalidUrl': "Usa una dirección HTTP privada como http://decision.local:8040, sin ruta, credenciales ni cadena de consulta.",
+  'decision.msg.invalidUrl': "Usa una dirección HTTP privada como http://192.168.1.20:8040, sin ruta, credenciales ni cadena de consulta.",
   'features.item.stepSupervision.label': "Comprobaciones por pasos",
   'features.item.stepSupervision.description': "Permite que un proveedor de decisiones aconseje si continuar, verificar los resultados de las herramientas o pausar para revisión entre los pasos del chat. Mantiene el comportamiento existente si no está disponible. Las aprobaciones y los límites de ejecución siguen vigentes.",
   'features.item.systemOneRouting.label': "Decisiones de enrutamiento",

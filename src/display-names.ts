@@ -17,5 +17,5 @@ export function passkeyDisplayName(name: string, t: Translator): string {
 
 /** A model provider's label: the built-in local engine's default name is translated. */
 export function providerDisplayName(provider: { label: string }, t: Translator): string {
-  return provider.label === DEFAULT_PROVIDER_LABEL_EN ? t('providers.localInference') : provider.label;
+  return provider.label === DEFAULT_PROVIDER_LABEL_EN ? t('displayName.localInference') : provider.label;
 }

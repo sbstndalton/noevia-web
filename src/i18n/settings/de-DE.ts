@@ -47,7 +47,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'decision.msg.ready': "Der Entscheidungsdienst ist bereit. Es wurde keine Inferenz ausgeführt.",
   'decision.msg.notReady': "Der Entscheidungsdienst ist nicht bereit oder nicht erreichbar. Prüfe die URL und den Dienststatus.",
   'decision.msg.invalidInput': "Gib die URL eines privaten Entscheidungsdienstes und eine Frist von 100 bis 2000 ms ein.",
-  'decision.msg.invalidUrl': "Verwende eine private HTTP-Adresse wie http://decision.local:8040, ohne Pfad, Anmeldedaten oder Abfragezeichenfolge.",
+  'decision.msg.invalidUrl': "Verwende eine private HTTP-Adresse wie http://192.168.1.20:8040, ohne Pfad, Anmeldedaten oder Abfragezeichenfolge.",
   'features.item.stepSupervision.label': "Schrittprüfungen",
   'features.item.stepSupervision.description': "Lässt einen Entscheidungsanbieter zwischen Chat-Schritten raten, ob es weitergehen, Werkzeugergebnisse geprüft oder für eine Prüfung pausiert werden soll. Bei Nichtverfügbarkeit bleibt das bisherige Verhalten. Freigaben und Ausführungslimits gelten weiterhin.",
   'features.item.systemOneRouting.label': "Routing-Entscheidungen",

@@ -31,7 +31,7 @@ export const IT_IT: Catalogue = {
   'sidebar.customise': "Personalizza",
   'sidebar.search': 'Cerca in noevia',
   'sidebar.workspaceMode': "Modalità dell’area di lavoro",
-  'providers.localInference': "Inferenza locale",
+  'displayName.localInference': "Inferenza locale",
   'sidebar.searchPlaceholder': 'Cerca chat, progetti e pagine…',
   'sidebar.destinations': 'Destinazioni',
   'sidebar.noSearchResults': 'Nessuna chat, progetto o pagina corrispondente.',

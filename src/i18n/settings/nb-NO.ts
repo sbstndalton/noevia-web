@@ -47,7 +47,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'decision.msg.ready': "Beslutningstjenesten er klar. Ingen inferens ble kjørt.",
   'decision.msg.notReady': "Beslutningstjenesten er ikke klar eller kunne ikke nås. Sjekk URL-en og tjenestestatusen.",
   'decision.msg.invalidInput': "Skriv inn URL-en til en privat beslutningstjeneste og en frist fra 100 til 2000 ms.",
-  'decision.msg.invalidUrl': "Bruk en privat HTTP-adresse som http://decision.local:8040, uten sti, innlogging eller spørrestreng.",
+  'decision.msg.invalidUrl': "Bruk en privat HTTP-adresse som http://192.168.1.20:8040, uten sti, innlogging eller spørrestreng.",
   'features.item.stepSupervision.label': "Trinnkontroller",
   'features.item.stepSupervision.description': "La en beslutningsleverandør anbefale om man skal fortsette, verifisere verktøyresultater eller pause for gjennomgang mellom chatsteg. Beholder eksisterende atferd hvis den ikke er tilgjengelig. Godkjenninger og kjøregrenser gjelder fortsatt.",
   'features.item.systemOneRouting.label': "Rutingbeslutninger",

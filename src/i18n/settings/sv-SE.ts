@@ -47,7 +47,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'decision.msg.ready': "Beslutstjänsten är redo. Ingen inferens kördes.",
   'decision.msg.notReady': "Beslutstjänsten är inte redo eller gick inte att nå. Kontrollera URL:en och tjänstestatusen.",
   'decision.msg.invalidInput': "Ange URL:en till en privat beslutstjänst och en tidsgräns på 100 till 2000 ms.",
-  'decision.msg.invalidUrl': "Använd en privat HTTP-adress som http://decision.local:8040, utan sökväg, inloggning eller frågesträng.",
+  'decision.msg.invalidUrl': "Använd en privat HTTP-adress som http://192.168.1.20:8040, utan sökväg, inloggning eller frågesträng.",
   'features.item.stepSupervision.label': "Stegkontroller",
   'features.item.stepSupervision.description': "Låter en beslutsleverantör ge råd om att fortsätta, verifiera verktygsresultat eller pausa för granskning mellan chattstegen. Behåller det befintliga beteendet om den inte är tillgänglig. Godkännanden och körgränser gäller fortfarande.",
   'features.item.systemOneRouting.label': "Routningsbeslut",

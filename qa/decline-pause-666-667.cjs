@@ -109,7 +109,7 @@ const sse = (events) => events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join
     await scenario('A (#667 supervision pause)', async () => {
       await open('qa-667-paused');
       reply = lastReply();
-      assert.equal((await reply.locator('[data-testid="reply-paused"]').innerText()).trim(), 'Step supervision paused this reply before any further steps. Nothing was changed.');
+      assert.equal((await reply.locator('[data-testid="reply-paused"]').innerText()).trim(), 'Step checks paused this reply before any further steps. Nothing was changed.');
       a = actions(reply);
       assert.equal(await a.regenerate.count(), 1, 'A: the paused reply offers Regenerate after a reload');
       assert.equal(await a.copy.count(), 0, 'A: no Copy on a reply with no text');
@@ -127,7 +127,7 @@ const sse = (events) => events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join
     await scenario('B (#667 saved change)', async () => {
       await open('qa-667-saved');
       reply = lastReply();
-      assert.equal((await reply.locator('[data-testid="reply-paused"]').innerText()).trim(), '1 change was saved. Step supervision paused this reply before any further steps.');
+      assert.equal((await reply.locator('[data-testid="reply-paused"]').innerText()).trim(), '1 change was saved. Step checks paused this reply before any further steps.');
       a = actions(reply);
       assert.equal(await a.regenerate.count(), 1, 'B: a reply that saved a change offers Regenerate');
       assert.equal(await a.copy.count(), 0, 'B: no Copy on a reply with no text');

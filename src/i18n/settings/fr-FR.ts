@@ -47,7 +47,7 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'decision.msg.ready': "Le service de décision est prêt. Aucune inférence n’a été exécutée.",
   'decision.msg.notReady': "Le service de décision n’est pas prêt ou est injoignable. Vérifiez l’URL et l’état du service.",
   'decision.msg.invalidInput': "Saisissez l’URL d’un service de décision privé et un délai de 100 à 2000 ms.",
-  'decision.msg.invalidUrl': "Utilisez une adresse HTTP privée comme http://decision.local:8040, sans chemin, identifiants ni chaîne de requête.",
+  'decision.msg.invalidUrl': "Utilisez une adresse HTTP privée comme http://192.168.1.20:8040, sans chemin, identifiants ni chaîne de requête.",
   'features.item.stepSupervision.label': "Contrôles par étape",
   'features.item.stepSupervision.description': "Laisse un fournisseur de décision conseiller de continuer, de vérifier les résultats d’outils ou de faire une pause pour relecture entre les étapes de la discussion. Conserve le comportement existant s’il est indisponible. Les approbations et les limites d’exécution restent appliquées.",
   'features.item.systemOneRouting.label': "Décisions de routage",

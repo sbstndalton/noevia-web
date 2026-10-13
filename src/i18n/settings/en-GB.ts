@@ -39,7 +39,7 @@ export const EN_GB_SETTINGS = {
   'decision.msg.ready': "Decision service is ready. No inference was run.",
   'decision.msg.notReady': "The decision service is not ready or could not be reached. Check the URL and service status.",
   'decision.msg.invalidInput': "Enter a private decision-service URL and a deadline from 100 to 2000 ms.",
-  'decision.msg.invalidUrl': "Use a private HTTP address such as http://decision.local:8040, with no path, login or query string.",
+  'decision.msg.invalidUrl': "Use a private HTTP address such as http://192.168.1.20:8040, with no path, login or query string.",
   'features.item.stepSupervision.label': "Step checks",
   'features.item.stepSupervision.description': "Let a decision provider advise whether to continue, verify tool results or pause for review between chat steps. Keeps existing behaviour if unavailable. Approvals and execution limits still apply.",
   'features.item.systemOneRouting.label': "Routing decisions",

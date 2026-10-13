@@ -47,7 +47,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'decision.msg.ready': "De beslissingsservice is gereed. Er is geen inferentie uitgevoerd.",
   'decision.msg.notReady': "De beslissingsservice is niet gereed of niet bereikbaar. Controleer de URL en de status van de service.",
   'decision.msg.invalidInput': "Vul de URL van een privé-beslissingsservice in en een limiet van 100 tot 2000 ms.",
-  'decision.msg.invalidUrl': "Gebruik een privé HTTP-adres zoals http://decision.local:8040, zonder pad, inloggegevens of querystring.",
+  'decision.msg.invalidUrl': "Gebruik een privé HTTP-adres zoals http://192.168.1.20:8040, zonder pad, inloggegevens of querystring.",
   'features.item.stepSupervision.label': "Stapcontroles",
   'features.item.stepSupervision.description': "Laat een beslissingsprovider adviseren of er moet worden doorgegaan, toolresultaten moeten worden gecontroleerd of er tussen chatstappen moet worden gepauzeerd voor nazicht. Behoudt het bestaande gedrag als die niet beschikbaar is. Goedkeuringen en uitvoeringslimieten blijven gelden.",
   'features.item.systemOneRouting.label': "Routeringsbeslissingen",
