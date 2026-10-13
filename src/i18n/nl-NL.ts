@@ -134,6 +134,8 @@ export const NL_NL: Catalogue = {
   'account.darkMode': "Donkere modus",
   'account.logOut': "Uitloggen",
   'account.signOutError': "Kon niet uitloggen. Probeer het opnieuw.",
+  'account.changedElsewhere': "Het account is gewijzigd in een ander tabblad. Opnieuw laden.",
+  'account.signingInElsewhere': "Er wordt ingelogd in een ander tabblad. Probeer het zo opnieuw.",
   'account.menuLabel': "Accountmenu voor {name}",
   'projects.archived': "Gearchiveerd",
   'projects.modeChat': "Chat",

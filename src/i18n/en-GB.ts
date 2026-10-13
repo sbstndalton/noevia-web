@@ -139,6 +139,8 @@ export const EN_GB = {
   'account.darkMode': 'Dark mode',
   'account.logOut': 'Log out',
   'account.signOutError': 'Could not sign out. Please retry.',
+  'account.changedElsewhere': 'The account changed in another tab. Reloading.',
+  'account.signingInElsewhere': 'Signing in on another tab. Try again in a moment.',
   'account.menuLabel': 'Account menu for {name}',
   'projects.archived': 'Archived',
   'projects.modeChat': 'Chat',

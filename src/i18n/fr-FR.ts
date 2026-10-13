@@ -134,6 +134,8 @@ export const FR_FR: Catalogue = {
   'account.darkMode': "Mode sombre",
   'account.logOut': "Se déconnecter",
   'account.signOutError': "Impossible de se déconnecter. Veuillez réessayer.",
+  'account.changedElsewhere': "Le compte a changé dans un autre onglet. Rechargement.",
+  'account.signingInElsewhere': "Connexion en cours dans un autre onglet. Réessayez dans un instant.",
   'account.menuLabel': "Menu du compte de {name}",
   'projects.archived': "Archivé",
   'projects.modeChat': "Chat",

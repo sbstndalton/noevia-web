@@ -134,6 +134,8 @@ export const DE_DE: Catalogue = {
   'account.darkMode': "Dunkler Modus",
   'account.logOut': "Abmelden",
   'account.signOutError': "Abmeldung nicht möglich. Bitte erneut versuchen.",
+  'account.changedElsewhere': "Das Konto wurde in einem anderen Tab gewechselt. Seite wird neu geladen.",
+  'account.signingInElsewhere': "In einem anderen Tab läuft gerade eine Anmeldung. Bitte gleich noch einmal versuchen.",
   'account.menuLabel': "Kontomenü für {name}",
   'projects.archived': "Archiviert",
   'projects.modeChat': "Chat",

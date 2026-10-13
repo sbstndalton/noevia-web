@@ -134,6 +134,8 @@ export const SV_SE: Catalogue = {
   'account.darkMode': "Mörkt läge",
   'account.logOut': "Logga ut",
   'account.signOutError': "Det gick inte att logga ut. Försök igen.",
+  'account.changedElsewhere': "Kontot ändrades i en annan flik. Laddar om.",
+  'account.signingInElsewhere': "Inloggning pågår i en annan flik. Försök igen om en stund.",
   'account.menuLabel': "Kontomeny för {name}",
   'projects.archived': "Arkiverad",
   'projects.modeChat': "Chatt",

@@ -24,7 +24,8 @@ import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequest
 import { cached, invalidateCached, clearRequestCache } from './request-cache';
 import { AUTO_ROLES_KEY, INSTALLED_MODELS_KEY, MODEL_READ_TTL_MS, REASONING_KEY_PREFIX, REASONING_TTL_MS, invalidateModelReads, invalidateReasoningSettings, isModelWritePath, isReasoningWritePath } from './model-reads';
 import { clearDeviceState } from './account-device-state';
-import { accountChangedElsewhere } from './account-session';
+import { accountBlockReason, accountChangedElsewhere } from './account-session';
+import { t } from './i18n';
 import { rememberSystemModels } from './model-system';
 import { API_MAJOR, hasApiMajorMismatch, hasApiMajorMismatchHeader, type SkillPin } from './api-contract';
 import { withPartialTurn } from './interrupted-reply';
@@ -42,9 +43,16 @@ function cookie(name: string): string {
 // that must not let a stale profile survive a change (a save, a sign-out, a dropped session).
 const PROFILE_KEY = 'noevia:profile';
 
-/** #1643: another tab changed the browser's account; this tab is reloading and sends nothing more. */
+/** #1643: another tab changed the browser's account (this tab is reloading and sends nothing more) or is
+ *  signing in right now (nothing is sent for a moment, and the page stays). `reason` tells them apart. */
 export class AccountChangedError extends Error {
-  constructor() { super('The account changed in another tab. Reloading.'); this.name = 'AccountChangedError'; }
+  readonly reason: 'changed' | 'signing-in';
+  constructor() {
+    const reason = accountBlockReason();
+    super(t(reason === 'signing-in' ? 'account.signingInElsewhere' : 'account.changedElsewhere'));
+    this.name = 'AccountChangedError';
+    this.reason = reason;
+  }
 }
 
 export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {

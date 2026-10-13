@@ -39,6 +39,9 @@ let markerUsable = true;
 let changed = false;
 let probing = false;
 let lastProbeAt = 0;
+/** Why `accountChangedElsewhere` last said yes: the account changed (the tab reloads) or someone is signing in. */
+let blockReason: 'changed' | 'signing-in' = 'changed';
+export const accountBlockReason = (): 'changed' | 'signing-in' => blockReason;
 
 /** The marker's value: an account id, null when nobody is signed in, undefined when unreadable. */
 function readMarker(): string | null | undefined {
@@ -52,18 +55,28 @@ function signingInSince(marker: string): number | null {
   return Number.isFinite(at) ? at : 0;
 }
 
+/** The account a "signing in" marker carries (the one that stood before it), or '' for none. */
+function carriedAccount(marker: string): string {
+  const rest = marker.slice(SIGNING_IN.length).split(':').slice(2).join(':');
+  try { return decodeURIComponent(rest); } catch { return ''; }
+}
+
 /** Call before sending a credential (password, passkey, recovery, invitation): from then on other tabs
  *  of this browser send nothing. The returned function puts the previous marker back, for a credential
  *  that was refused (it does nothing if another tab has written its own marker since). A successful
  *  sign-in does not call it: `claimDeviceState` replaces the marker with the new account's id. */
 export function beginSignIn(): () => void {
-  const previous = readMarker();
-  const mine = `${SIGNING_IN}${Date.now()}:${Math.random().toString(36).slice(2)}`;
+  // Only an account (or nobody) is ever put back. When another tab is already signing in, its marker is
+  // not ours to restore: we carry the account it was carrying, so two refused sign-ins end on the account
+  // that was there before either, in whichever order they fail.
+  const existing = readMarker();
+  const previous = typeof existing === 'string' ? (signingInSince(existing) === null ? existing : carriedAccount(existing)) : '';
+  const mine = `${SIGNING_IN}${Date.now()}:${Math.random().toString(36).slice(2)}:${encodeURIComponent(previous)}`;
   try { localStorage.setItem(MARKER_KEY, mine); } catch { return () => undefined; }
   return () => {
     try {
       if (localStorage.getItem(MARKER_KEY) !== mine) return;
-      if (typeof previous === 'string') localStorage.setItem(MARKER_KEY, previous); else localStorage.removeItem(MARKER_KEY);
+      if (previous) localStorage.setItem(MARKER_KEY, previous); else localStorage.removeItem(MARKER_KEY);
     } catch { /* storage went away: nothing to restore */ }
   };
 }
@@ -94,17 +107,18 @@ export function unbindTabAccount(): void {
 /** True once this tab's account is no longer the browser's. Synchronous and cheap, so it can sit
  *  in front of every request and every write of account data. */
 export function accountChangedElsewhere(): boolean {
-  if (changed) return true;
+  if (changed) { blockReason = 'changed'; return true; }
   if (!tabAccount || !markerUsable) return false;
   const marker = readMarker();
   if (marker === undefined || marker === tabAccount) return false;
   const since = marker === null ? null : signingInSince(marker);
   if (since !== null) {
     // Someone is signing in: send nothing, but keep the page until it is known who they signed in as.
-    if (Date.now() - since < SIGNING_IN_TTL_MS) return true;
-    void verifySession(true); // the tab that was signing in is gone; the server says whose session this is
+    if (Date.now() - since < SIGNING_IN_TTL_MS) { blockReason = 'signing-in'; return true; }
+    void verifySession(); // the tab that was signing in is gone; the server says whose session this is
     return false;
   }
+  blockReason = 'changed';
   handleAccountChange();
   return true;
 }
@@ -118,16 +132,17 @@ function handleAccountChange(): void {
   try { window.dispatchEvent(new Event(ACCOUNT_CHANGED_EVENT)); } catch { /* no window: nothing to unmount */ }
   try { window.location.reload(); } catch { /* the stale flag still stops every request */ }
   // A page that is unloading never runs this. One that is still here had its reload declined.
-  setTimeout(() => { try { window.dispatchEvent(new Event(ACCOUNT_RELOAD_BLOCKED_EVENT)); } catch { /* no window */ } }, RELOAD_GRACE_MS);
+  try { const page = window; setTimeout(() => page.dispatchEvent(new Event(ACCOUNT_RELOAD_BLOCKED_EVENT)), RELOAD_GRACE_MS); } catch { /* no window */ }
 }
 
 /** Ask the server which account the shared cookie belongs to. The answer carries no data of this
  *  tab's account; only a different id, or no session, makes the tab stale. */
-async function verifySession(force = false): Promise<void> {
+async function verifySession(): Promise<void> {
   const bound = tabAccount;
   if (!bound || changed || probing) return;
-  // Focus and visibility fire together and often; one answer per interval is enough.
-  if (!force && Date.now() - lastProbeAt < PROBE_MIN_INTERVAL_MS) return;
+  // One probe in flight and at most one per interval, whoever asks: focus and visibility fire together,
+  // and a tab that keeps finding a stale marker while offline would otherwise ask on every API call.
+  if (Date.now() - lastProbeAt < PROBE_MIN_INTERVAL_MS) return;
   probing = true;
   lastProbeAt = Date.now();
   try {

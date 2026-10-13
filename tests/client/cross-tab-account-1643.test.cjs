@@ -80,6 +80,7 @@ async function twoTabs(fn) {
       drafts: await load('/src/chat-drafts.ts'),
       cache: await load('/src/request-cache.ts'),
       prefs: await load('/src/user-preferences.ts'),
+      flags: await load('/src/components/features/useFeatureFlags.ts'),
       // Run code "inside" a tab: the module under test reads window/document at call time.
       in(run) { globalThis.window = env.window; globalThis.document = env.document; return run(); },
     };
@@ -249,6 +250,108 @@ test('the feature-flag cache write is guarded the same way', () => {
   const hook = fs.readFileSync(path.join(root, 'src/components/features/useFeatureFlags.ts'), 'utf8');
   assert.match(hook, /import \{ accountChangedElsewhere \} from '\.\.\/\.\.\/account-session';/);
   assert.match(hook, /if \(accountChangedElsewhere\(\)\) return;\n\s*try \{ localStorage\.setItem\(CACHE_KEY/);
+});
+
+test('a refused flag read keeps the last flags and is retried once the other tab\'s sign-in has settled', () => twoTabs(async ({ tabs }) => {
+  const { a } = tabs;
+  const timers = [], real = globalThis.setTimeout, realClear = globalThis.clearTimeout;
+  globalThis.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
+  globalThis.clearTimeout = () => undefined;
+  const applied = [];
+  const refusal = (reason) => Object.assign(new Error('refused'), { name: 'AccountChangedError', reason });
+  try {
+    let reads = 0;
+    const stop = a.in(() => a.flags.startFlagReads(() => (++reads === 1 ? Promise.reject(refusal('signing-in')) : Promise.resolve({ previews: true })), (f) => applied.push(f)));
+    await new Promise((r) => real(r, 5));
+    assert.deepEqual(applied, [], 'a refusal while someone signs in does not switch every flag off');
+    assert.equal(timers.length, 1, 'and the read is scheduled again');
+    timers[0].fn();
+    await new Promise((r) => real(r, 5));
+    assert.deepEqual(applied, [{ previews: true }]);
+    stop();
+
+    // The account changed: the page reloads, so no retry and no flags written either.
+    applied.length = 0; timers.length = 0;
+    a.in(() => a.flags.startFlagReads(() => Promise.reject(refusal('changed')), (f) => applied.push(f)));
+    await new Promise((r) => real(r, 5));
+    assert.deepEqual(applied, []); assert.equal(timers.length, 0);
+
+    // Any other failure still means "no flags".
+    a.in(() => a.flags.startFlagReads(() => Promise.reject(new Error('500')), (f) => applied.push(f)));
+    await new Promise((r) => real(r, 5));
+    assert.deepEqual(applied, [{}]);
+
+    // The retries are bounded.
+    timers.length = 0;
+    a.in(() => a.flags.startFlagReads(() => Promise.reject(refusal('signing-in')), () => undefined));
+    for (let i = 0; i < 15; i += 1) { await new Promise((r) => real(r, 2)); const next = timers.shift(); if (next) next.fn(); }
+    assert.equal(timers.length, 0, 'gives up after ten tries');
+  } finally { globalThis.setTimeout = real; globalThis.clearTimeout = realClear; }
+}));
+
+test('a refusal says which it is: a change reloads, a sign-in in progress does not', () => twoTabs(async ({ tabs }) => {
+  const { a, b } = tabs;
+  a.in(() => { a.device.claimDeviceState('user-a'); a.sessionMod.watchAccountSession(); });
+  let restore;
+  b.in(() => { restore = b.sessionMod.beginSignIn(); });
+  const err = await a.in(() => a.api.apiFetch('/api/workspace').catch((e) => e));
+  assert.equal(err.name, 'AccountChangedError');
+  assert.equal(err.reason, 'signing-in');
+  assert.doesNotMatch(err.message, /reload/i, 'nothing is reloading, so the message does not say so');
+  b.in(() => restore());
+  b.in(() => b.device.claimDeviceState('user-b'));
+  const changed = await a.in(() => a.api.apiFetch('/api/workspace').catch((e) => e));
+  assert.equal(changed.reason, 'changed');
+  assert.match(changed.message, /Reloading/);
+}));
+
+test('two refused sign-ins end on the account that was there before either, in either order', () => twoTabs(async ({ tabs, storage }) => {
+  const { a, b } = tabs;
+  for (const order of [['x', 'y'], ['y', 'x']]) {
+    a.in(() => a.device.claimDeviceState('user-a'));
+    let rx, ry;
+    b.in(() => { rx = b.sessionMod.beginSignIn(); });
+    a.in(() => { ry = a.sessionMod.beginSignIn(); }); // a second login tab overwrites the first one's marker
+    for (const who of order) (who === 'x' ? rx : ry)();
+    assert.equal(storage.peek('noevia:session-account'), 'user-a', `order ${order}`);
+  }
+  // With nobody signed in before, a refused pair leaves no marker.
+  storage.removeItem('noevia:session-account');
+  const r1 = b.in(() => b.sessionMod.beginSignIn()), r2 = a.in(() => a.sessionMod.beginSignIn());
+  r2(); r1();
+  assert.equal(storage.peek('noevia:session-account'), null);
+}));
+
+test('a stale marker while offline costs one probe per interval, not one per request', () => twoTabs(async ({ tabs, probes, advance }) => {
+  const { a, b } = tabs;
+  a.in(() => { a.device.claimDeviceState('user-a'); });
+  b.in(() => b.sessionMod.beginSignIn());
+  advance(31000);
+  const realFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async (url) => { if (url === '/api/auth/session') { calls += 1; throw new TypeError('offline'); } return realFetch(url); };
+  try {
+    for (let i = 0; i < 20; i += 1) a.in(() => { void a.api.apiFetch('/api/workspace').catch(() => undefined); });
+    await new Promise((r) => setTimeout(r, 20));
+    assert.equal(calls, 1, 'one probe in flight, however many requests find the marker');
+    for (let i = 0; i < 20; i += 1) a.in(() => { void a.api.apiFetch('/api/workspace').catch(() => undefined); });
+    await new Promise((r) => setTimeout(r, 20));
+    assert.equal(calls, 1, 'and no second one inside five seconds');
+    advance(5001);
+    a.in(() => { void a.api.apiFetch('/api/workspace').catch(() => undefined); });
+    await new Promise((r) => setTimeout(r, 20));
+    assert.equal(calls, 2);
+  } finally { globalThis.fetch = realFetch; }
+  void probes;
+}));
+
+test('the two new messages exist in every locale', () => {
+  const { catalogue, LOCALES } = require('./i18n-catalogue.cjs');
+  for (const locale of LOCALES) {
+    const c = catalogue(locale);
+    assert.ok(c['account.changedElsewhere'], `${locale} changedElsewhere`);
+    assert.ok(c['account.signingInElsewhere'], `${locale} signingInElsewhere`);
+  }
 });
 
 test('a tab that is signing in stops the others at once; a refused credential puts everything back, a granted one reloads them', () => twoTabs(async ({ tabs, storage, sent, storageEvent }) => {
