@@ -28,8 +28,9 @@ function fresh({ storage = fakeLocalStorage(), apiFetch = async () => { throw Er
   const window = { dispatchEvent: (e) => events.push(e.type), addEventListener() {}, removeEventListener() {} };
   const prefs = load('user-preferences.ts', { react: { useEffect() {}, useSyncExternalStore() {} }, './api': { apiFetch: (...a) => apiFetch(...a) } }, { window, Event: class { constructor(type) { this.type = type; } } });
   const device = load('account-device-state.ts', {
-    './chat-drafts': { claimDrafts() {}, clearAllDrafts() {} },
-    './last-view': { readLastPlace: () => null, clearLastPlace() {} },
+    './account-session': { accountChangedElsewhere: () => false, bindTabAccount() {}, releaseTabAccount() {} },
+    './chat-drafts': { claimDrafts() {}, clearAllDrafts() {}, guardDraftWrites() {} },
+    './last-view': { readLastPlace: () => null, clearLastPlace() {}, guardLastPlaceWrites() {} },
     './user-preferences': prefs,
   });
   return { prefs, device, storage, events };

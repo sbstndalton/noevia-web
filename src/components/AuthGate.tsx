@@ -6,6 +6,7 @@ import { safeReturnPath } from '../routes';
 import type { AuthUser } from '../api';
 import { checkApiCompatibility } from '../api-contract';
 import { claimDeviceState } from '../account-device-state';
+import { ACCOUNT_CHANGED_EVENT, unbindTabAccount, watchAccountSession } from '../account-session';
 
 // Only first-run and resumed onboarding need the wizard, and only passkey
 // actions need WebAuthn, so neither delays the sign-in screen or the app.
@@ -52,13 +53,20 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
         if (active && !blocked) { setError('Could not reach noevia.'); setScreen('login'); }
       }
     })();
-    const lock = () => { if (!blocked) setScreen('login'); };
+    // #1643: another tab signed out or in as someone else. Nothing of this tab's account may stay on
+    // screen while the page reloads into the new account's state (or the sign-in page).
+    const accountChanged = () => { blocked = true; setOnboardingUser(null); setScreen('checking'); };
+    const lock = () => { unbindTabAccount(); if (!blocked) setScreen('login'); };
     const incompatible = () => { blocked = true; setScreen('incompatible'); };
     window.addEventListener('cowork:unauthorized', lock);
+    window.addEventListener(ACCOUNT_CHANGED_EVENT, accountChanged);
+    const stopWatching = watchAccountSession();
     window.addEventListener('noevia:api-mismatch', incompatible);
     return () => {
       active = false;
       window.removeEventListener('cowork:unauthorized', lock);
+      window.removeEventListener(ACCOUNT_CHANGED_EVENT, accountChanged);
+      stopWatching();
       window.removeEventListener('noevia:api-mismatch', incompatible);
     };
   }, []);
@@ -129,7 +137,7 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
     <p>This noevia app and server use different API versions. Reload the page to get the current app.</p>
     <button type="button" onClick={() => window.location.reload()}>Reload page</button>
   </section></main>;
-  if (screen === 'wizard') return <Suspense fallback={opening}><SetupWizard mode="fresh" onFinished={() => setScreen('ready')} /></Suspense>;
+  if (screen === 'wizard') return <Suspense fallback={opening}><SetupWizard mode="fresh" onFinished={() => { setScreen('ready'); void probeSession().then((user) => { if (user) claimDeviceState(user.id); }); }} /></Suspense>;
   if (screen === 'wizard-resume' && onboardingUser) return <Suspense fallback={opening}><SetupWizard key={onboardingUser.id} mode={onboardingUser.role === 'member' ? 'invited' : 'resume'} initialUser={onboardingUser} onFinished={() => setScreen('ready')} /></Suspense>;
   if (screen === 'secure') return <main className="auth-screen"><section className="auth-card">
     <div className="auth-mark" aria-hidden="true">n</div><h1>Secure your account</h1>

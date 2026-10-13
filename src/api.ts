@@ -24,6 +24,7 @@ import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequest
 import { cached, invalidateCached, clearRequestCache } from './request-cache';
 import { AUTO_ROLES_KEY, INSTALLED_MODELS_KEY, MODEL_READ_TTL_MS, REASONING_KEY_PREFIX, REASONING_TTL_MS, invalidateModelReads, invalidateReasoningSettings, isModelWritePath, isReasoningWritePath } from './model-reads';
 import { clearDeviceState } from './account-device-state';
+import { accountChangedElsewhere } from './account-session';
 import { rememberSystemModels } from './model-system';
 import { API_MAJOR, hasApiMajorMismatch, hasApiMajorMismatchHeader, type SkillPin } from './api-contract';
 import { withPartialTurn } from './interrupted-reply';
@@ -41,7 +42,14 @@ function cookie(name: string): string {
 // that must not let a stale profile survive a change (a save, a sign-out, a dropped session).
 const PROFILE_KEY = 'noevia:profile';
 
+/** #1643: another tab changed the browser's account; this tab is reloading and sends nothing more. */
+export class AccountChangedError extends Error {
+  constructor() { super('The account changed in another tab. Reloading.'); this.name = 'AccountChangedError'; }
+}
+
 export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  // The cookie every request carries is already the new account's; this tab's state and drafts are not.
+  if (accountChangedElsewhere()) throw new AccountChangedError();
   const headers = new Headers(init.headers);
   const method = (init.method || 'GET').toUpperCase();
   const csrf = cookie('cowork_csrf');
@@ -188,6 +196,7 @@ const BUSY_RETRY_DELAYS_MS = [1000, 2000, 4000, 8000];
 /** One upload POST (the file is accepted and a job is started, or the server refuses it outright). */
 function postSourceUpload(id: string, body: { name: string; dataBase64: string }, progress: (value: UploadProgress) => void): Promise<{ poll: string }> {
   return new Promise<{ poll: string }>((resolve, reject) => {
+    if (accountChangedElsewhere()) { reject(new AccountChangedError()); return; }
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `/api/projects/${encodeURIComponent(id)}/upload?background=1`);
     xhr.setRequestHeader('Content-Type', 'application/json');
