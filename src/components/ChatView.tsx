@@ -138,7 +138,8 @@ const ROUTE_REASONS = ['disabled', 'no-backend', 'missing-roles', 'deadline', 'n
 // #1070: "service did not answer" hid that Laya answered 503 after missing its own time limit.
 const ROUTE_CAUSES = ['http-503', 'deadline', 'network', 'benched', 'http-422'] as const;
 
-export function RoutingDetails({ decision }: { decision: RoutingDecision }) {
+/** `onOpenChange` lets the strip under the composer place the open panel clear of the composer (#1631). */
+export function RoutingDetails({ decision, onOpenChange }: { decision: RoutingDecision; onOpenChange?: (open: boolean) => void }) {
   const t = useT();
   if (!isDisplayableRoutingDecision(decision)) return null;
   const source = decision.model === 'convaiinnovations/laya' ? t('chat.route.srcDecision')
@@ -152,7 +153,7 @@ export function RoutingDetails({ decision }: { decision: RoutingDecision }) {
     .map(option => ({ ...option, label: option.label.slice(0, 200) }));
   const scores = decision.scores && typeof decision.scores === 'object' ? decision.scores : {};
   const selectedRole = typeof decision.selectedRole === 'string' && ['fast', 'smart', 'code'].includes(decision.selectedRole) ? decision.selectedRole : null;
-  return <details className="thinking-block routing-details">
+  return <details className="thinking-block routing-details" onToggle={onOpenChange ? event => onOpenChange(event.currentTarget.open) : undefined}>
     <summary>{t(decision.status === 'fallback' ? 'chat.route.summaryFallback' : 'chat.route.summary', { source, role: routeRoleName(t, decision.effectiveRole) })}</summary>
     <div className="routing-details-body">
       <p>{decision.status === 'accepted' ? t('chat.route.accepted') : t('chat.route.fallback', { reason })}{Number.isFinite(decision.latencyMs) ? ` · ${formatNumber(Math.round(decision.latencyMs!), t.locale, 0)} ms` : ''}</p>
