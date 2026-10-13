@@ -75,13 +75,18 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
   // #1527: where the one row cannot hold every pair, the lower-priority pairs open from a compact
   // toggle as a popover above the strip, so the composer never moves.
   const [moreOpen, setMoreOpen] = useState(false);
-  // #1628: while the popover is open, its bottom edge is measured to sit above the composer block, so it
+  // #1631: the routing details are the strip's other popover, and open over the same place.
+  const [routingOpen, setRoutingOpen] = useState(false);
+  useEffect(() => { if (!routingDecision) setRoutingOpen(false); }, [routingDecision]);
+  // #1628, #1631: while a popover is open, its bottom edge is measured to sit above the composer block, so it
   // never covers the composer or the send button. Re-measured when the window or either box changes size.
+  // The model sheet (variant 'sheet') lays the routing details out in flow, so there is nothing to place.
   const [moreAnchor, setMoreAnchor] = useState<AnchorAbove | null>(null);
+  const anchored = moreOpen || (routingOpen && variant !== 'sheet');
   const rootRef = useRef<HTMLElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
   useLayoutEffect(() => {
-    if (!moreOpen) { setMoreAnchor(null); return undefined; }
+    if (!anchored) { setMoreAnchor(null); return undefined; }
     const place = () => {
       const strip = rootRef.current?.getBoundingClientRect();
       const box = composerBlock()?.getBoundingClientRect();
@@ -95,7 +100,7 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
     const composer = composerBlock();
     if (composer) observer?.observe(composer);
     return () => { window.removeEventListener('resize', place); observer?.disconnect(); };
-  }, [moreOpen]);
+  }, [anchored]);
   // The routing panel is an anchored popover (it must not grow the strip or squeeze the
   // chat), so give it the Escape-to-close a popover is expected to have even though the
   // underlying <details> element has no built-in keyboard dismissal.
@@ -193,6 +198,7 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
     </dl>
   );
 
+  const anchorStyle = anchored && moreAnchor ? { '--stats-more-bottom': `${moreAnchor.bottom}px`, '--stats-more-max': `${moreAnchor.maxHeight}px` } as CSSProperties : undefined;
   const announcer = <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveAnnouncement}</span>;
   if (variant === 'announce') return <div className="stats-announcer">{announcer}</div>;
   // Wide: one row. Where the row is too narrow for every pair, the low-priority pairs sit behind
@@ -200,20 +206,20 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
   if (!phone) {
     return (
       <section ref={rootRef} className={`stats-disclosure is-open is-wide${moreOpen ? ' is-more-open' : ''}`} aria-label={t('stats.ariaLabel')}
-        style={moreOpen && moreAnchor ? { '--stats-more-bottom': `${moreAnchor.bottom}px`, '--stats-more-max': `${moreAnchor.maxHeight}px` } as CSSProperties : undefined}>
+        style={anchorStyle}>
         <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveAnnouncement}</span>
         <p className="stats-bar stats-bar-static">{status(false)}</p>
         {details}
         <button ref={moreRef} type="button" className="stats-more" aria-expanded={moreOpen} aria-controls="stats-details"
           aria-label={moreOpen ? t('stats.hide') : t('stats.show')} title={moreOpen ? t('stats.hide') : t('stats.show')}
           onClick={() => setMoreOpen(value => !value)}><Icon name="chevron-right" size={14} /></button>
-        {routingDecision && <RoutingDetails decision={routingDecision} />}
+        {routingDecision && <RoutingDetails decision={routingDecision} onOpenChange={setRoutingOpen} />}
       </section>
     );
   }
 
   return (
-    <section ref={rootRef} className={`stats-disclosure${open ? ' is-open' : ''}${variant === 'sheet' ? ' is-sheet' : ''}`} aria-label={t('stats.ariaLabel')}>
+    <section ref={rootRef} className={`stats-disclosure${open ? ' is-open' : ''}${variant === 'sheet' ? ' is-sheet' : ''}`} aria-label={t('stats.ariaLabel')} style={anchorStyle}>
       {variant !== 'sheet' && announcer}
       <button type="button" className="stats-bar" aria-expanded={open} aria-controls="stats-details" onClick={toggle}
         title={open ? t('stats.hide') : t('stats.show')}>
@@ -221,7 +227,7 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
         <Icon name={open ? 'chevron-down' : 'chevron-right'} size={14} />
       </button>
       {open && details}
-      {routingDecision && <RoutingDetails decision={routingDecision} />}
+      {routingDecision && <RoutingDetails decision={routingDecision} onOpenChange={setRoutingOpen} />}
     </section>
   );
 }
