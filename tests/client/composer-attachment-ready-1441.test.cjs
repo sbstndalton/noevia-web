@@ -16,6 +16,8 @@ function harness(upload) {
   const ctx = {
     uploadLimit: () => 1e6, fileToBase64: async () => 'cWE=', uploadProjectFile: upload, uploadUnreadableReason: () => '',
     uploadFailureText: (err) => String(err.message), formatPercent: String, appLocale: () => 'en-GB', Date, Math, Error,
+    // Collaborators added since (#1454 numbered copies, source-status stage text): pass-throughs here.
+    uniqueName: (name) => name, uploadStageText: (_t, value) => value.stage,
   };
   vm.createContext(ctx); vm.runInContext(js, ctx);
   const sink = { project: { id: 'ctx', name: 'Chat attachments' }, disabled: false, chatOnly: true, onChanged: async () => {}, onBusy: (b) => busy.push(b), onStatus: (s) => statuses.push(s) };
@@ -40,6 +42,7 @@ test('a source job that fails never leaves the "ready" line behind (#1441)', asy
   const h = harness(async (_id, _body, progress) => { progress({ stage: 'Extracting text' }); throw new Error('Source processing failed'); });
   await h.run();
   assert.ok(!h.statuses.some((s) => s.includes('composer.upload.nextMessage')));
-  assert.match(h.statuses.at(-1), /composer\.upload\.partial/);
+  // #1250: a batch with nothing kept says it was not saved (it never leads with "Saved").
+  assert.match(h.statuses.at(-1), /composer\.upload\.notSaved/);
   assert.deepEqual(h.busy, [true, false]);
 });
