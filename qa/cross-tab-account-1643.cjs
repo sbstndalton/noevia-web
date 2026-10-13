@@ -46,6 +46,7 @@ async function install(context, state) {
     if (p === '/api/auth/session' || p === '/api/profile') return state.user ? json({ user: state.user, passkeys: [] }) : json({ error: 'Not signed in' }, 401);
     if (p === '/api/auth/logout' && method === 'POST') { state.user = null; return json({ ok: true }); }
     if (p === '/api/auth/login/password' && method === 'POST') {
+      if (req.postDataJSON().password === 'wrong-password') return json({ error: 'Invalid username or password' }, 401);
       state.user = req.postDataJSON().username === users.b.username ? users.b : users.a;
       return json({ user: state.user });
     }
@@ -139,6 +140,23 @@ async function install(context, state) {
       assert.doesNotMatch(text, new RegExp(users.a.displayName), 'and nothing of A');
       assert.ok(!(await tab1.evaluate(() => localStorage.getItem('noevia:chat-drafts') || '')).includes(DRAFT), 'A\'s draft is not in the shared storage');
       assert.equal(sent.filter((r) => r.at >= switchedAt && r.body.includes(DRAFT)).length, 0, 'no request after the switch carries A\'s draft');
+      await context.close();
+    });
+
+    await check('#1643 a refused password in another tab does not reload this one, and its draft survives', async () => {
+      const { context, state, tab1, tab2, sent } = await open();
+      state.user = null;
+      await tab2.reload();
+      await tab2.locator('#username').waitFor({ timeout: 20000 });
+      await tab2.locator('#username').fill(users.b.username);
+      await tab2.locator('#password').fill('wrong-password');
+      await tab2.getByRole('button', { name: 'Sign in with password' }).click();
+      await tab2.locator('.auth-error').waitFor({ timeout: 10000 });
+      await wait(1500);
+      assert.equal(await tab1.evaluate(() => window.__tab1Alive === true), true, 'tab 1 was not reloaded');
+      assert.equal(await box(tab1).inputValue(), DRAFT, 'and still holds its own draft');
+      assert.equal(await tab1.evaluate(() => localStorage.getItem('noevia:session-account')), users.a.id, 'the marker is A\'s again');
+      void sent;
       await context.close();
     });
 

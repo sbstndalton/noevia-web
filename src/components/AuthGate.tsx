@@ -6,14 +6,14 @@ import { safeReturnPath } from '../routes';
 import type { AuthUser } from '../api';
 import { checkApiCompatibility } from '../api-contract';
 import { claimDeviceState } from '../account-device-state';
-import { ACCOUNT_CHANGED_EVENT, unbindTabAccount, watchAccountSession } from '../account-session';
+import { ACCOUNT_CHANGED_EVENT, ACCOUNT_RELOAD_BLOCKED_EVENT, beginSignIn, unbindTabAccount, watchAccountSession } from '../account-session';
 
 // Only first-run and resumed onboarding need the wizard, and only passkey
 // actions need WebAuthn, so neither delays the sign-in screen or the app.
 const SetupWizard = lazy(() => import('./SetupWizard').then((m) => ({ default: m.SetupWizard })));
 const webauthn = () => import('@simplewebauthn/browser');
 
-type Screen = 'checking' | 'incompatible' | 'wizard' | 'wizard-resume' | 'login' | 'secure' | 'ready';
+type Screen = 'checking' | 'account-changed' | 'incompatible' | 'wizard' | 'wizard-resume' | 'login' | 'secure' | 'ready';
 
 export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
   const [onboardingUser, setOnboardingUser] = useState<AuthUser | null>(null);
@@ -57,15 +57,19 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
     // screen while the page reloads into the new account's state (or the sign-in page).
     const accountChanged = () => { blocked = true; setOnboardingUser(null); setScreen('checking'); };
     const lock = () => { unbindTabAccount(); if (!blocked) setScreen('login'); };
+    // The reload was declined (the Diary asks before leaving a page with unsaved text): say why this tab is empty.
+    const reloadBlocked = () => setScreen('account-changed');
     const incompatible = () => { blocked = true; setScreen('incompatible'); };
     window.addEventListener('cowork:unauthorized', lock);
     window.addEventListener(ACCOUNT_CHANGED_EVENT, accountChanged);
+    window.addEventListener(ACCOUNT_RELOAD_BLOCKED_EVENT, reloadBlocked);
     const stopWatching = watchAccountSession();
     window.addEventListener('noevia:api-mismatch', incompatible);
     return () => {
       active = false;
       window.removeEventListener('cowork:unauthorized', lock);
       window.removeEventListener(ACCOUNT_CHANGED_EVENT, accountChanged);
+      window.removeEventListener(ACCOUNT_RELOAD_BLOCKED_EVENT, reloadBlocked);
       stopWatching();
       window.removeEventListener('noevia:api-mismatch', incompatible);
     };
@@ -75,9 +79,14 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
     event.preventDefault();
     setBusy(true); setError(null);
     try {
-      if (recovery) { await completeRecovery(recovery, password); window.history.replaceState({}, '', '/'); setScreen('login'); setPassword(''); return; }
-      if (invite) await acceptInvitation({ token: invite, username, displayName: displayName || username, password, diaryEnabled });
-      else await passwordLogin(username, password);
+      // #1643: other tabs send nothing from the moment the credential goes out, since the new cookie exists
+      // before this tab has read the session back. A refused credential puts the old marker back.
+      const restore = beginSignIn();
+      try {
+        if (recovery) { await completeRecovery(recovery, password); restore(); window.history.replaceState({}, '', '/'); setScreen('login'); setPassword(''); return; }
+        if (invite) await acceptInvitation({ token: invite, username, displayName: displayName || username, password, diaryEnabled });
+        else await passwordLogin(username, password);
+      } catch (e) { restore(); throw e; }
       const session = await fetchSession();
       // #791: another account's drafts and last chat go before the app renders for this one.
       claimDeviceState(session.user.id);
@@ -97,7 +106,8 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
     try {
       const challenge = await passkeyLoginOptions(username);
       const response = await (await webauthn()).startAuthentication({ optionsJSON: challenge.options });
-      await passkeyLoginVerify(challenge.challengeToken, response);
+      const restore = beginSignIn(); // #1643: from the credential request on, other tabs send nothing
+      try { await passkeyLoginVerify(challenge.challengeToken, response); } catch (e) { restore(); throw e; }
       const session = await fetchSession();
       // #791: another account's drafts and last chat go before the app renders for this one.
       claimDeviceState(session.user.id);
@@ -132,6 +142,11 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
   if (screen === 'ready') return <>{children}</>;
   const opening = <main className="auth-screen"><div className="auth-card"><h1>Opening noevia…</h1></div></main>;
   if (screen === 'checking') return opening;
+  if (screen === 'account-changed') return <main className="auth-screen"><section className="auth-card" role="alert">
+    <div className="auth-mark" aria-hidden="true">n</div><h1>Account changed</h1>
+    <p>You signed in as someone else in another tab, so this tab can no longer be used. Reload to continue with the current account. Anything unsaved here cannot be saved under it.</p>
+    <button type="button" onClick={() => window.location.reload()}>Reload page</button>
+  </section></main>;
   if (screen === 'incompatible') return <main className="auth-screen"><section className="auth-card" role="alert">
     <div className="auth-mark" aria-hidden="true">n</div><h1>Update required</h1>
     <p>This noevia app and server use different API versions. Reload the page to get the current app.</p>

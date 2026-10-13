@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FEATURES_CHANGED, fetchFeatureFlags } from './api';
 import type { FeatureFlags } from './api';
+import { accountChangedElsewhere } from '../../account-session';
 
 // Flags are presentation hints: the server enforces each feature on its own routes.
 // The last flags this browser saw paint first so an enabled surface doesn't shift the layout
@@ -21,6 +22,8 @@ export function useFeatureFlags(): FeatureFlags {
     const apply = (next: FeatureFlags) => {
       if (!live) return;
       setFlags(next);
+      // #1643: not under a new account's name once another tab has replaced this tab's account.
+      if (accountChangedElsewhere()) return;
       try { localStorage.setItem(CACHE_KEY, JSON.stringify(next)); } catch { /* storage unavailable */ }
     };
     const load = () => fetchFeatureFlags().then(apply).catch(() => apply({}));

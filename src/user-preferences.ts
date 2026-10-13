@@ -4,6 +4,7 @@
 // returns and when the network is gone. `noevia:` key because cowork-* keys are frozen contracts.
 import { useEffect, useSyncExternalStore } from 'react';
 import { apiFetch } from './api';
+import { accountChangedElsewhere } from './account-session';
 
 export type NotificationEvent = 'replyFinished' | 'approvalNeeded';
 export type SendKey = 'enter' | 'mod-enter';
@@ -80,7 +81,8 @@ let current: AccountPreferences = typeof localStorage === 'undefined' ? { ...DEF
 
 function publish(next: AccountPreferences): void {
   current = next;
-  try { localStorage.setItem(PREFERENCES_CACHE_KEY, JSON.stringify(next)); } catch { /* this session only */ }
+  // #1643: a tab whose account another tab replaced must not store its account's answer under the new owner.
+  if (!accountChangedElsewhere()) { try { localStorage.setItem(PREFERENCES_CACHE_KEY, JSON.stringify(next)); } catch { /* this session only */ } }
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(PREFERENCES_CHANGED));
 }
 

@@ -24,7 +24,7 @@ function load(name, requireMap, extra = {}) {
 }
 // #905: sign-in and sign-out also claim and clear the cached account preferences.
 const session = () => load('account-session.ts', { './request-cache': { clearRequestCache() {} } }, { window: { dispatchEvent() {}, location: { reload() {} }, addEventListener() {}, removeEventListener() {} }, sessionStorage: { removeItem() {} }, Event: class { constructor(type) { this.type = type; } } });
-const preferences = () => load('user-preferences.ts', { react: { useEffect() {}, useSyncExternalStore() {} }, './api': { apiFetch() {} } });
+const preferences = () => load('user-preferences.ts', { react: { useEffect() {}, useSyncExternalStore() {} }, './account-session': { accountChangedElsewhere: () => false }, './api': { apiFetch() {} } });
 function fresh() {
   global.localStorage = fakeLocalStorage();
   const drafts = load('chat-drafts.ts', {});
