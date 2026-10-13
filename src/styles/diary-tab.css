@@ -123,6 +123,12 @@
 /* Tables were unsupported and rendered as raw pipes. Wide ones scroll in
    their own container so the page body never scrolls sideways. */
 .md-table-wrap { overflow-x:auto; margin:12px 0; border:1px solid var(--border-subtle); border-radius:var(--radius-card); }
+/* #1599: a wide table scrolls in its box. The edge that still has columns beyond it fades. The mask only
+   sets opacity (currentColor is opaque), so it adds no colour. The box takes a focus ring from the keyboard. */
+.md-table-wrap:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
+.md-table-wrap[data-more~="end"] { -webkit-mask-image:linear-gradient(to right, currentColor calc(100% - 32px), transparent); mask-image:linear-gradient(to right, currentColor calc(100% - 32px), transparent); }
+.md-table-wrap[data-more~="start"] { -webkit-mask-image:linear-gradient(to right, transparent, currentColor 32px); mask-image:linear-gradient(to right, transparent, currentColor 32px); }
+.md-table-wrap[data-more~="start"][data-more~="end"] { -webkit-mask-image:linear-gradient(to right, transparent, currentColor 32px, currentColor calc(100% - 32px), transparent); mask-image:linear-gradient(to right, transparent, currentColor 32px, currentColor calc(100% - 32px), transparent); }
 .md-table { border-collapse:collapse; width:100%; font-size:var(--text-footnote); }
 .md-table th, .md-table td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--border-subtle); white-space:nowrap; }
 .md-table th { background:var(--bg-surface-hover); font-weight:600; font-size:var(--text-caption2); letter-spacing:0.04em; text-transform:uppercase; color:var(--text-secondary); }

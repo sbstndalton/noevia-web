@@ -176,6 +176,35 @@ export function splitUrlTail(raw: string): { url: string; tail: string } {
   return { url: raw.slice(0, end), tail: raw.slice(end) };
 }
 
+/** #1599: which edges of a wide table still have columns to scroll to, as a `data-more` value (space-separated,
+ *  empty when the table fits). Half a pixel of slack keeps a sub-pixel rounding gap from counting as overflow. */
+export function tableEdges(scrollLeft: number, clientWidth: number, scrollWidth: number): string {
+  const more: string[] = [];
+  if (scrollLeft > 0.5) more.push('start');
+  if (scrollLeft + clientWidth < scrollWidth - 0.5) more.push('end');
+  return more.join(' ');
+}
+
+/** #1599: a table in a box that scrolls sideways. The box takes keyboard focus, and its edge fades while
+ *  there are columns beyond it, so a cut column reads as "more this way", not as a rendering error. */
+function ScrollTable({ children }: { children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState('');
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return undefined;
+    const measure = () => setMore(tableEdges(el.scrollLeft, el.clientWidth, el.scrollWidth));
+    measure();
+    // The table grows while a reply streams in, and the box resizes with the column: watch both.
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(el);
+    if (el.firstElementChild) observer?.observe(el.firstElementChild);
+    el.addEventListener('scroll', measure, { passive: true });
+    return () => { observer?.disconnect(); el.removeEventListener('scroll', measure); };
+  }, []);
+  return <div ref={box} className="md-table-wrap" tabIndex={0} data-more={more || undefined}>{children}</div>;
+}
+
 export function MarkdownPreview({ text, internalLink, wikiLink, properties = false, autolink = false }: {
   text: string;
   /** #1474: chat replies link a bare http(s) URL; the Diary renders its text exactly as before. */
@@ -308,14 +337,14 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
       while (i < lines.length && lines[i].includes('|') && lines[i].trim()) { rows.push(splitRow(lines[i])); i += 1; }
       i -= 1;
       out.push(
-        <div className="md-table-wrap" key={`t${i}`}>
+        <ScrollTable key={`t${i}`}>
           <table className="md-table">
             <thead><tr>{head.map((c, n) => <th key={n}>{cell(c)}</th>)}</tr></thead>
             <tbody>{rows.map((r, n) => (
               <tr key={n}>{head.map((_, c) => <td key={c}>{cell(r[c] ?? '')}</td>)}</tr>
             ))}</tbody>
           </table>
-        </div>,
+        </ScrollTable>,
       );
       continue;
     }
