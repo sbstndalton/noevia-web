@@ -17,7 +17,7 @@ import { SendIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
 import { ConfirmDialog } from './ContextMenu';
 import { fileToBase64, uploadLimit } from '../sources';
-import { filesAfterRemoval, storageFolderKeepsOldName, uniqueName } from '../project-files';
+import { filesAfterRemoval, storageFolderKeepsOldName, uniqueName, uploadTakenNames, uploadUnderFreeName } from '../project-files';
 import { deleteProjectImage, projectImageUrl, uploadProjectFile, deleteProjectFile } from '../api';
 import { ResearchPanel } from './research/ResearchPanel';
 import { useResearchAccess } from './research/useResearchAccess';
@@ -187,15 +187,15 @@ export function ProjectView({
     const update = (i: number, value: { stage: string; percent?: number; finished?: number; failed?: boolean }) => setUploadRows(rows => rows.map((r, n) => n === i ? { ...r, percent: undefined, ...value } : r));
     // #1454: a name a source already has is kept as a numbered copy, never written over the source.
     // `taken` also holds the names this batch has already been given, so two files cannot collide.
-    const taken: { name: string }[] = project.files.map((f) => ({ name: f.name }));
+    const taken = uploadTakenNames(project);
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       try {
         if (file.size > uploadLimit(file.name)) throw new Error(t('projects.view.fileTooLarge'));
-        const name = uniqueName(file.name, taken);
-        taken.push({ name });
         update(i, { stage: t('projects.view.readingFile') });
-        const result = await uploadProjectFile(project.id, { name, dataBase64: await fileToBase64(file) }, value => update(i, { stage: uploadStageText(t, value), percent: value.percent }));
+        const dataBase64 = await fileToBase64(file);
+        const { name, result } = await uploadUnderFreeName(file.name, taken, (candidate) => uploadProjectFile(project.id, { name: candidate, dataBase64 }, value => update(i, { stage: uploadStageText(t, value), percent: value.percent })));
+        taken.push({ name });
         const unreadable = uploadUnreadableReason(result, t);
         const copy = name !== file.name ? t('projects.view.savedAsCopy', { name, original: file.name }) : '';
         const note = result.attachment?.reduction?.note;

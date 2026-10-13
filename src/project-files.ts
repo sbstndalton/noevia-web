@@ -31,6 +31,38 @@ export function uniqueName(name: string, existing: { name: string }[]): string {
 }
 
 /**
+ * The names an upload to this project can collide with (#1454). A stored upload is named by its whole
+ * storage path ("noevia projects/<id>/Text/report.md"), so comparing a bare "report.md" against `f.name`
+ * never found the clash and the server replaced the source. The collision is on the last segment of
+ * a source that lives in the project's own upload folder or has no folder at all; a file synced from a
+ * linked folder is a different file and does not take the name.
+ */
+export function uploadTakenNames(project: Pick<Project, 'files' | 'projectFolder'>): { name: string }[] {
+  return (project.files || [])
+    .filter((f) => !f.source || f.source === project.projectFolder)
+    .map((f) => ({ name: f.name.split('/').pop() || f.name }));
+}
+
+/**
+ * Runs `upload` under `name`, or the first free numbered copy of it, and returns the name it used.
+ * The list the client holds can be stale, so when the server refuses a name with its `sourceExists`
+ * code (it never replaces a source unless asked to) the next free number is tried instead; nothing is
+ * ever written over a source (#1454).
+ */
+export async function uploadUnderFreeName<T>(name: string, taken: { name: string }[], upload: (name: string) => Promise<T>): Promise<{ name: string; result: T }> {
+  const refused: { name: string }[] = [];
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const candidate = uniqueName(name, [...taken, ...refused]);
+    try { return { name: candidate, result: await upload(candidate) }; }
+    catch (err) {
+      if ((err as { code?: string } | null)?.code !== 'sourceExists') throw err;
+      refused.push({ name: candidate });
+    }
+  }
+  throw new Error(`Every numbered copy of ${name} is already taken`);
+}
+
+/**
  * The storage folder name a project gets from its name: a mirror of the server's projectFolderName
  * (noevia-core server/project-folders.cjs), so the web can tell whether a stored folder still matches.
  */
@@ -41,11 +73,13 @@ export function storageFolderName(name: string): string {
 
 /**
  * True when a project's stored storage folder no longer carries its current name (#1458). Renaming a
- * project does not move the folder, which keeps the name it was created with: it is fixed at the first
- * upload. Accepts the WebDAV forms ("Name", "Name (2)") and the S3 form ("Name--<id>").
+ * project does not move the folder: it is fixed at the first upload. Folders made before #1458 were named after
+ * the project, so only those can now disagree with its name; newer ones are keyed by the project id. Accepts the WebDAV forms ("Name", "Name (2)") and the S3 form ("Name--<id>").
  */
 export function storageFolderKeepsOldName(folder: string, name: string, id: string): boolean {
   const base = folder.split('/').filter(Boolean).pop() ?? '';
+  // A folder keyed by the project id (every folder made since #1458) never claims a name, so a rename cannot stale it.
+  if (base === storageFolderName(id) || base.startsWith(`${storageFolderName(id)} (`)) return false;
   const expected = storageFolderName(name);
   const current = base === expected || base.startsWith(`${expected} (`) || base === `${expected}--${id}`;
   return !current;

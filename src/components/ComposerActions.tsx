@@ -3,7 +3,7 @@ import type { CSSProperties, DragEvent, ReactNode } from 'react';
 import type { Project, Toolbox } from '../types';
 import { fetchToolboxes, saveProjectConfig, uploadProjectFile } from '../api';
 import { fileToBase64, uploadLimit } from '../sources';
-import { uniqueName } from '../project-files';
+import { uploadTakenNames, uploadUnderFreeName } from '../project-files';
 import { appLocale } from '../user-preferences';
 import { ShellIcon } from './ShellIcon';
 import { uploadFailureText, uploadStageText, uploadUnreadableReason } from '../source-status';
@@ -39,15 +39,15 @@ export async function uploadAttachments(sink: AttachmentSink, files: File[], t: 
   const started = Date.now();
   // #1454: a name the project already has is saved as a numbered copy, never written over the source;
   // the status line says so. `taken` also holds the names this batch has been given.
-  const taken: { name: string }[] = (project.files || []).map((f) => ({ name: f.name }));
+  const taken = uploadTakenNames(project);
   for (const [index, file] of files.entries()) {
     const status = (stage: string) => onStatus(`${index + 1}/${files.length} · ${file.name} · ${stage} · ${Math.round((Date.now() - started) / 1000)}s`);
     try {
       if (file.size > uploadLimit(file.name)) throw new Error(t('composer.upload.tooLarge'));
-      const name = uniqueName(file.name, taken);
-      taken.push({ name });
       status(t('composer.upload.reading'));
-      const result = await uploadProjectFile(project.id, { name, dataBase64: await fileToBase64(file) }, value => status(`${uploadStageText(t, value)}${value.percent == null ? '' : ` ${formatPercent(value.percent, appLocale(), 0)}`}`));
+      const dataBase64 = await fileToBase64(file);
+      const { name, result } = await uploadUnderFreeName(file.name, taken, (candidate) => uploadProjectFile(project.id, { name: candidate, dataBase64 }, value => status(`${uploadStageText(t, value)}${value.percent == null ? '' : ` ${formatPercent(value.percent, appLocale(), 0)}`}`)));
+      taken.push({ name });
       const unreadable = uploadUnreadableReason(result, t);
       if (unreadable) { failures.push(`${file.name}: ${unreadable}`); continue; }
       // The chip names the file as it was stored, which is what the model is given: a name the project
