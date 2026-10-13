@@ -333,7 +333,7 @@ export function ProjectView({
               )}
               {chats.length > 0 && <h2 className="rail-label">{t('projects.view.recentChats')}</h2>}
               {chats.length === 0 ? (
-                <EmptyState icon="chat" title={t('projects.view.noChatsTitle')}>{t('projects.view.noChatsBody', { name: project.name })}</EmptyState>
+                <EmptyState icon="chat" title={t('projects.view.noChatsTitle')}>{t('projects.view.noChatsBody', { name: keepIdentifiersWhole(project.name) })}</EmptyState>
               ) : (
                 <ul className="chat-index">
                   {chats.map((c) => (
@@ -476,7 +476,7 @@ export function ProjectView({
             </div>
             {composerStatus && <div className="composer-action-status" role="status">{composerStatus}</div>}
             <button className="project-newchat" onClick={() => onNewChat(project.id)}>
-              {t('projects.view.openEmptyChat', { name: project.name })}
+              {t('projects.view.openEmptyChat', { name: keepIdentifiersWhole(project.name) })}
             </button>
           </div>
         </div>

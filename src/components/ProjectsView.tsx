@@ -17,6 +17,7 @@ import { useT } from '../i18n';
 import type { Translate } from '../i18n';
 import '../i18n/projects';
 import { countProjectChats } from '../project-chat-count';
+import { keepIdentifiersWhole } from '../no-break-identifiers';
 
 interface ProjectsViewProps {
   projects: Project[];
@@ -122,7 +123,8 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
               <article key={p.id} className="project-card surface">
                 <div className="project-card-top">
                   <span className="project-badge" aria-hidden="true"><ProjectIcon project={p} size={24}/></span>
-                  <h2 className="project-card-name"><button className="project-card-open" onClick={() => onOpenProject(p.id)} aria-label={t('projects.openProject', { name: p.name })}>{p.name}</button></h2>
+                  {/* #1542: the name breaks at its spaces, never at the hyphen inside an identifier (display only). */}
+                  <h2 className="project-card-name"><button className="project-card-open" onClick={() => onOpenProject(p.id)} aria-label={t('projects.openProject', { name: p.name })}>{keepIdentifiersWhole(p.name)}</button></h2>
                   <button className="project-card-options" aria-label={t('projects.optionsFor', { name: p.name })} onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setMenu({project:p,at:{x:r.left,y:r.bottom+4}});}}><ShellIcon name="more"/></button>
                 </div>
                 {p.goal && <p className="project-card-goal">{p.goal}</p>}
