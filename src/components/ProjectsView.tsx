@@ -127,7 +127,7 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
                 </div>
                 {p.goal && <p className="project-card-goal">{p.goal}</p>}
                 <div className="project-card-meta">
-                  {p.pinned && <span className="project-card-pin"><ShellIcon name="pin" size={14}/>{t('projects.pinned')}</span>}
+                  {p.pinned && <span className="project-card-pin"><ShellIcon name="pin" size={14} tone="decorative"/>{t('projects.pinned')}</span>}
                   {p.archived && <span className="project-chip">{t('projects.archived')}</span>}
                   {(() => {
                     const counts = countProjectChats(p.chats);

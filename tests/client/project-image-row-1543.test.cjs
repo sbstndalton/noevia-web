@@ -7,7 +7,7 @@ const src = fs.readFileSync(path.join(__dirname, '../../src/components/ProjectVi
 const css = fs.readFileSync(path.join(__dirname, '../../src/styles/noevia.css'), 'utf8');
 
 test('an image row has no separate document glyph; document rows keep theirs', () => {
-  assert.match(src, /\{f\.attachment\?\.assetId \? null : <ShellIcon name="file"\/>\}/);
+  assert.match(src, /\{f\.attachment\?\.assetId \? null : <ShellIcon name="file"(?: tone="decorative")?\/>\}/);
   assert.match(src, /\{f\.attachment\?\.assetId && <img className="source-thumbnail"/, 'the thumbnail still shows for an image row');
 });
 

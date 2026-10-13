@@ -147,7 +147,7 @@ export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false, li
         <ShellIcon name="chevron-right" size={18}/>
       </button>}
       <div className="connector-card surface is-later" aria-disabled="true">
-        <span className="logo"><ShellIcon name="server" size={22}/></span>
+        <span className="logo"><ShellIcon name="server" size={22} tone="decorative"/></span>
         <span className="connector-text"><b>{t('connectors.mcp.title')}</b><small>{t('connectors.mcp.summary', { section: t('sidebar.customise'), mcp: t('connectors.mcp.title') })}</small></span>
       </div>
     </div>
@@ -281,7 +281,7 @@ function NextcloudPage({ nc, onBack, onChange }: { nc: Nextcloud; onBack: () => 
   return <div className="connector-page">
     <button className="crumb-link" onClick={onBack}><ShellIcon name="arrow"/>{t('connectors.title')}</button>
     <div className="conn-head">
-      <span className="logo"><ShellIcon name="hard-drive" size={24}/></span>
+      <span className="logo"><ShellIcon name="hard-drive" size={24} tone="decorative"/></span>
       <div className="conn-title"><h1>Nextcloud</h1>
         {ncBadge(t, nc)}
       </div>

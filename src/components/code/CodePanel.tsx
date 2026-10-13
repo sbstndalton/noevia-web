@@ -394,7 +394,7 @@ export function ApprovalCard({ approval, busy, onDecide }: {
   // of the approval actually on screen rather than whatever `approval` resolves to later.
   const approvalId = approval.id;
   return <div className="code-approval" role="group" aria-label={t('code.approval.group')}>
-    <p className="code-approval-title"><ShellIcon name="security" size={16}/>{actionLabel(t, approval.action)}{approval.title ? ` — ${approval.title}` : ''}</p>
+    <p className="code-approval-title"><ShellIcon name="security" size={16} tone="decorative"/>{actionLabel(t, approval.action)}{approval.title ? ` — ${approval.title}` : ''}</p>
     {approval.reason && <p className="code-note">{approval.reason}</p>}
     {approval.command && <pre className="code-approval-args" aria-label={t('code.approval.command')}>{approval.command}</pre>}
     {approval.diff && <pre className="code-approval-args" aria-label={t('code.approval.changesTo', { path: approval.diff.path })}>{approval.diff.newText ?? ''}</pre>}
@@ -439,7 +439,7 @@ function ReviewCard({ approval, busy, onDecide }: {
   const t = useT();
   const approvalId = approval.id;
   return <div className="code-approval code-review" role="group" aria-label={t('code.review.group')}>
-    <p className="code-approval-title"><ShellIcon name="security" size={16}/>{actionLabel(t, 'review_change')}</p>
+    <p className="code-approval-title"><ShellIcon name="security" size={16} tone="decorative"/>{actionLabel(t, 'review_change')}</p>
     {approval.review && <ReviewVerdict review={approval.review}/>}
     <AcceptWhat approval={approval}/>
     <AcceptSummary approval={approval}/>

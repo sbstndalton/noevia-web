@@ -55,7 +55,8 @@ Contemporary and Glass before paint.
   hairlines `--hairline`, `--hairline-strong`; `--ring-inset` (1px white 10%).
 - Semantic: `--bg-app`, `--bg-chrome`, `--bg-surface`, `--bg-dialog`, `--surface-raised`,
   `--surface-overlay`, `--border-subtle`, `--border-strong`, `--accent-text`, `--focus`,
-  `--selected`, `--scrim` (black 50%), `--brand` (logo/spark only), status roles.
+  `--selected`, `--scrim` (black 50%), `--brand` (logo/spark only), `--icon-accent` (the inner part
+  of a decorative icon, = `--accent-text`), status roles.
 - Shadows: `--shadow-pop` (dialogs), `--shadow-popover` (menus).
 - Type: `--font-ui` Inter Variable, `--font-display` Source Serif 4 (greeting/display only),
   `--font-mono`; sizes `--text-*` (body 14/20, section labels 13/16, page titles 22/28,
@@ -103,6 +104,7 @@ tile's width (see `src/motion`).
 | `.reply-source-chip`, `.frame-chips > *` | springs in, staggered 50ms + 30ms per sibling, max 8 (src/motion) |
 | `.thinking`, `.live-thinking`, `.typing` | opacity .6 ↔ 1 over 2s |
 | `.save-error` | inverse-surface toast |
+| `svg.ic[data-tone]` > `.ic-a` / `.ic-af` | two-tone icons (#1623): `decorative` (information only) strokes `.ic-a` / fills `.ic-af` in `--icon-accent` (the palette accent); `control` (default; anything pressable) has no accent part. Inside a button, link, summary, label, menu item, tab, option or toggle the accent falls back to the outline colour, and under forced colours it is the outline colour. Per-glyph parts: `src/components/icons/accents.ts`; audit: `node scripts/icon-tone-audit.cjs` |
 
 Reduced motion (`prefers-reduced-motion: reduce` or `data-motion="reduced"`) removes every
 transition and runs every animation in 1ms (`motion.css`).

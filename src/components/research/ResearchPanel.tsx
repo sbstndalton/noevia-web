@@ -154,7 +154,7 @@ function ResearchJobCard({ job, busy, onCancel, onSave }: { job: ResearchJob; bu
     </>}
     {job.error && <p className="research-note is-error">{job.error}</p>}
     {job.result && <p className="research-meta">{job.result.sections} of {job.result.questions} questions · {job.result.webCalls} web calls · {job.result.citations} citations, {Math.round(job.result.citationValidity * 100)}% verified{job.result.claims && (job.result.claims.dropped > 0 || job.result.claims.flagged > 0) ? ` · ${job.result.claims.dropped} unsupported claims removed, ${job.result.claims.flagged} flagged` : ''}</p>}
-    {job.artifacts.length > 0 && <ul className="research-files" aria-label="Saved files">{job.artifacts.map(name => <li key={name}><ShellIcon name="folder" size={14}/>{name}</li>)}</ul>}
+    {job.artifacts.length > 0 && <ul className="research-files" aria-label="Saved files">{job.artifacts.map(name => <li key={name}><ShellIcon name="folder" size={14} tone="decorative"/>{name}</li>)}</ul>}
     <div className="research-actions">
       {active && <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={!!busy}>Cancel</button>}
       {job.canSavePartial && <button type="button" className="btn btn-primary" onClick={onSave} disabled={!!busy}>Save partial report</button>}

@@ -133,7 +133,7 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
           <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-active' : ''} onClick={() => go(id, undefined, true)}>{t(label)}</button>)}
       </div>
       {tab === 'models' && <div className="mm-search mm-search-inline">
-        <ShellIcon name="search" size={16}/>
+        <ShellIcon name="search" size={16} tone="decorative"/>
         <input aria-label={t('mm.search')} placeholder={list === 'installed' ? t('mm.searchYours') : t('mm.searchHf')}
           value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>}
