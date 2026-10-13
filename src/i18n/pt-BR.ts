@@ -331,6 +331,7 @@ export const PT_BR: Catalogue = {
   'diary.markdown.plainText': "texto",
   'diary.markdown.copied': "Copiado",
   'diary.markdown.copy': "Copiar",
+  'diary.markdown.tableScroll': "Tabela, rolável na horizontal",
   'diary.markdown.noFileOfThatName': "Nenhum arquivo com esse nome aqui",
   'diary.markdown.properties': "Propriedades",
   'diary.markdown.empty': "vazio",

@@ -338,6 +338,7 @@ export const EN_GB = {
   'diary.markdown.plainText': 'text',
   'diary.markdown.copied': 'Copied',
   'diary.markdown.copy': 'Copy',
+  'diary.markdown.tableScroll': 'Table, scrolls sideways',
   'diary.markdown.noFileOfThatName': 'No file of that name here',
   'diary.markdown.properties': 'Properties',
   'diary.markdown.empty': 'empty',

@@ -1,4 +1,4 @@
-import { titleAfterSend } from './chat-title';
+import { deriveChatTitle, titleAfterSend } from './chat-title';
 import { ShellIcon } from './components/ShellIcon';
 import { sourceRefresher } from './source-refresh';
 import { mentionsStorageLogin, resolveSkippedToast, sourceRefreshFailure, type SkippedToastState } from './source-status';
@@ -971,7 +971,7 @@ export default function App(): JSX.Element {
       const sentAt = Date.now();
       const make = (existing: ChatMeta | undefined): ChatMeta => existing
         ? { ...existing, title: titleAfterSend(existing.title, priorMessages, base, text), preview: text.slice(0, 200), updatedAt: sentAt }
-        : { id: chatId, title: text.slice(0, 80), preview: text.slice(0, 200), updatedAt: sentAt,
+        : { id: chatId, title: deriveChatTitle(text), preview: text.slice(0, 200), updatedAt: sentAt,
             // The chosen mode is the session's even when this turn fell back to Chat (#236).
             ...(pendingModesRef.current[chatId] === 'cowork' ? { mode: 'cowork' as const } : {}),
             // #741: [[links]] chosen before the chat's first save travel with that save.
@@ -1271,7 +1271,7 @@ export default function App(): JSX.Element {
       const sentAt = Date.now();
       queueMetaUpsert(projectId, chatId, (meta) => meta
         ? { ...meta, preview: text.slice(0, 200), updatedAt: sentAt, mode: 'cowork' }
-        : { id: chatId, title: text.slice(0, 80), preview: text.slice(0, 200), updatedAt: sentAt, mode: 'cowork' });
+        : { id: chatId, title: deriveChatTitle(text), preview: text.slice(0, 200), updatedAt: sentAt, mode: 'cowork' });
       let patch: Partial<Message>;
       try {
         const task = await startCowork({ projectId, chatId, repository, message: text });

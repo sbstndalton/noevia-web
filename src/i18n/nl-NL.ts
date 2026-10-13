@@ -331,6 +331,7 @@ export const NL_NL: Catalogue = {
   'diary.markdown.plainText': "tekst",
   'diary.markdown.copied': "Gekopieerd",
   'diary.markdown.copy': "Kopiëren",
+  'diary.markdown.tableScroll': "Tabel, horizontaal scrollbaar",
   'diary.markdown.noFileOfThatName': "Geen bestand met die naam hier",
   'diary.markdown.properties': "Eigenschappen",
   'diary.markdown.empty': "leeg",

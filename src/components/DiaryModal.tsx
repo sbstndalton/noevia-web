@@ -84,6 +84,13 @@ function splitRow(line: string): string[] {
   return line.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map((c) => c.trim());
 }
 
+/** #1598: inside a table cell, a `<br>` in a plain-text piece is a line break. Called on text that `inline` has
+ *  already tokenised, so a code span is never split and bold, italic or a link label keeps its markers. */
+function inCellBreaks(text: string, key: number, inCell: boolean): ReactNode {
+  if (!inCell || !/<br\s*\/?>/i.test(text)) return text;
+  return text.split(/<br\s*\/?>/i).map((piece, k) => <Fragment key={`${key}.${k}`}>{k > 0 && <br />}{piece}</Fragment>);
+}
+
 const TABLE_DIVIDER = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
 
 /** #431: one parsed list-item line — bulleted, ordered, or a GFM task ("- [ ]"/"- [x]"), keeping
@@ -176,6 +183,39 @@ export function splitUrlTail(raw: string): { url: string; tail: string } {
   return { url: raw.slice(0, end), tail: raw.slice(end) };
 }
 
+/** #1599: which edges of a wide table still have columns to scroll to, as a `data-more` value (space-separated,
+ *  empty when the table fits). Half a pixel of slack keeps a sub-pixel rounding gap from counting as overflow. */
+export function tableEdges(scrollLeft: number, clientWidth: number, scrollWidth: number): string {
+  const more: string[] = [];
+  if (scrollLeft > 0.5) more.push('start');
+  if (scrollLeft + clientWidth < scrollWidth - 0.5) more.push('end');
+  return more.join(' ');
+}
+
+/** #1599: a table in a box that scrolls sideways. The box takes keyboard focus, and its edge fades while
+ *  there are columns beyond it, so a cut column reads as "more this way", not as a rendering error. */
+function ScrollTable({ children }: { children: ReactNode }) {
+  const t = useT();
+  const box = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState('');
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return undefined;
+    const measure = () => setMore(tableEdges(el.scrollLeft, el.clientWidth, el.scrollWidth));
+    measure();
+    // The table grows while a reply streams in, and the box resizes with the column: watch both.
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(el);
+    if (el.firstElementChild) observer?.observe(el.firstElementChild);
+    el.addEventListener('scroll', measure, { passive: true });
+    return () => { observer?.disconnect(); el.removeEventListener('scroll', measure); };
+  }, []);
+  // The frame carries the focus ring (the box itself is masked at its edges, which would clip a ring drawn on it).
+  // The box is a keyboard stop and a named region only while there is something to scroll to.
+  return <div className="md-table-frame"><div ref={box} className="md-table-wrap" tabIndex={more ? 0 : undefined} role={more ? 'region' : undefined}
+    aria-label={more ? t('diary.markdown.tableScroll') : undefined} data-more={more || undefined}>{children}</div></div>;
+}
+
 export function MarkdownPreview({ text, internalLink, wikiLink, properties = false, autolink = false }: {
   text: string;
   /** #1474: chat replies link a bare http(s) URL; the Diary renders its text exactly as before. */
@@ -200,7 +240,7 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
     ? /(\$\$[^$\n]+\$\$|\\\([^\n]{1,500}?\\\)|\$(?!\s)(?:\\.|[^$\\\n])+?(?<!\s)\$(?!\d)|\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[\[[^\[\]\n]*\]\]|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g
     : /(\$\$[^$\n]+\$\$|\\\([^\n]{1,500}?\\\)|\$(?!\s)(?:\\.|[^$\\\n])+?(?<!\s)\$(?!\d)|\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g;
   const splitter = autolink ? new RegExp(INLINE_TOKENS.source.replace(/\)$/, () => `|${BARE_URL})`), 'g') : INLINE_TOKENS;
-  const inline = (line: string) =>
+  const inline = (line: string, inCell = false) =>
     line.split(splitter).map((part, i) => {
       // Escapes the Diary sidecar writes inside saved prose so it cannot become entry structure
       // (#803): `\*\*` and `<\!--` show as the literal characters. Plain text only, never HTML (#835).
@@ -211,7 +251,7 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
       if (part.length > 2 && part.startsWith('$') && part.endsWith('$')) return <MathSpan key={i} tex={part.slice(1, -1)} />;
       if (part.startsWith('\\*\\*')) return '**' + part.slice(4);
       if (part === '<\\!--') return '<!--';
-      if (part.startsWith('**')) return <strong key={i}>{unescapeOpener(part.slice(2, -2))}</strong>;
+      if (part.startsWith('**')) return <strong key={i}>{inCellBreaks(unescapeOpener(part.slice(2, -2)), i, inCell)}</strong>;
       // Checked before the plain-link branch below: `![alt](src)` contains `[alt](src)` as a
       // substring, so without its own branch the leading "!" leaked as stray text while the rest
       // was treated as a link (#390).
@@ -242,15 +282,18 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
           const open=internalLink?.(href);
           return open ? <button key={i} className="diary-markdown-link" onClick={open}>{label}</button> : <span key={i}>{label} ({href})</span>;
         }
-        return <a key={i} href={href} target="_blank" rel="noopener noreferrer nofollow">{label}</a>;
+        return <a key={i} href={href} target="_blank" rel="noopener noreferrer nofollow">{inCellBreaks(label, i, inCell)}</a>;
       }
       if (autolink && /^https?:\/\//i.test(part)) {
         const { url, tail } = splitUrlTail(part);
         return <Fragment key={i}><a href={url} target="_blank" rel="noopener noreferrer nofollow">{url}</a>{tail}</Fragment>;
       }
-      if (part.startsWith('*') && part.length > 2) return <em key={i}>{unescapeOpener(part.slice(1, -1))}</em>;
-      return part;
+      if (part.startsWith('*') && part.length > 2) return <em key={i}>{inCellBreaks(unescapeOpener(part.slice(1, -1)), i, inCell)}</em>;
+      return inCellBreaks(part, i, inCell);
     });
+  // #1598: in a table cell `inline` runs with the cell flag, so a `<br>` in plain text, bold, italic or a link label
+  // becomes a line break after tokenising. Code spans are not split.
+  const cell = (text: string) => inline(text, true);
 
   // The note's properties, shown as what they are. The body is rendered from after the block,
   // so nothing is rewritten and nothing is shown twice.
@@ -305,14 +348,14 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
       while (i < lines.length && lines[i].includes('|') && lines[i].trim()) { rows.push(splitRow(lines[i])); i += 1; }
       i -= 1;
       out.push(
-        <div className="md-table-wrap" key={`t${i}`}>
+        <ScrollTable key={`t${i}`}>
           <table className="md-table">
-            <thead><tr>{head.map((c, n) => <th key={n}>{inline(c)}</th>)}</tr></thead>
+            <thead><tr>{head.map((c, n) => <th key={n}>{cell(c)}</th>)}</tr></thead>
             <tbody>{rows.map((r, n) => (
-              <tr key={n}>{head.map((_, c) => <td key={c}>{inline(r[c] ?? '')}</td>)}</tr>
+              <tr key={n}>{head.map((_, c) => <td key={c}>{cell(r[c] ?? '')}</td>)}</tr>
             ))}</tbody>
           </table>
-        </div>,
+        </ScrollTable>,
       );
       continue;
     }
