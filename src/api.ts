@@ -22,8 +22,11 @@ import type {
 } from './types';
 import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser';
 import { cached, invalidateCached, clearRequestCache } from './request-cache';
+import { AUTO_ROLES_KEY, INSTALLED_MODELS_KEY, MODEL_READ_TTL_MS, REASONING_KEY_PREFIX, REASONING_TTL_MS, invalidateModelReads, invalidateReasoningSettings, isModelWritePath, isReasoningWritePath } from './model-reads';
 import { clearDeviceState } from './account-device-state';
+import { rememberSystemModels } from './model-system';
 import { API_MAJOR, hasApiMajorMismatch, hasApiMajorMismatchHeader, type SkillPin } from './api-contract';
+import { withPartialTurn } from './interrupted-reply';
 
 function cookie(name: string): string {
   const item = document.cookie.split(';').map((x) => x.trim()).find((x) => x.startsWith(`${name}=`));
@@ -58,6 +61,13 @@ export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {})
   // deletion and configuration are examples). Successful writes invalidate before callers
   // can refresh. Conservatively include other writes, which may also change workspace data.
   if (response.ok && !['GET', 'HEAD', 'OPTIONS'].includes(method)) invalidateCached(WORKSPACE_KEY);
+  // #1509: a successful write under the model or effort paths drops the shared reads for them.
+  if (response.ok && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    const raw = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    const pathname = new URL(raw, 'http://noevia.invalid').pathname;
+    if (isModelWritePath(pathname)) invalidateModelReads();
+    if (isReasoningWritePath(pathname)) invalidateReasoningSettings();
+  }
   return response;
 }
 
@@ -160,23 +170,31 @@ export const projectImageUrl = (id: string, assetId: string) =>
 
 /** An Error that keeps the server's stable `code` (#849: `storageLoginRejected`), so the screen can word it
  *  in the interface language instead of showing the server's English sentence. */
-function failureWithCode(message: string, code: unknown): Error & { code?: string } {
-  const err = new Error(message) as Error & { code?: string };
+function failureWithCode(message: string, code: unknown, status?: number): Error & { code?: string; status?: number } {
+  const err = new Error(message) as Error & { code?: string; status?: number };
   if (typeof code === 'string') err.code = code;
+  if (typeof status === 'number') err.status = status;
   return err;
 }
 
 /** Upload a source file into the project's own storage folder. */
-export interface UploadProgress { stage: string; percent?: number }
-export async function uploadProjectFile(id: string, body: { name: string; dataBase64: string }, progress: (value: UploadProgress) => void = () => {}) {
-  const response = await new Promise<{ poll: string }>((resolve, reject) => {
+/** `stageKey` names a stage this client words itself, so the screen shows it in the interface language
+ *  (uploadStageText); `stage` stays the English fallback, and the only text for a stage the server words. */
+export type UploadStageKey = 'busy' | 'sending' | 'received' | 'queued' | 'saved';
+export interface UploadProgress { stage: string; stageKey?: UploadStageKey; percent?: number }
+/** #1451: the server runs at most two source jobs per account at once and answers 429 to a third. That
+ *  answer comes before any job exists, so sending the same file again is safe. Waits between tries. */
+const BUSY_RETRY_DELAYS_MS = [1000, 2000, 4000, 8000];
+/** One upload POST (the file is accepted and a job is started, or the server refuses it outright). */
+function postSourceUpload(id: string, body: { name: string; dataBase64: string }, progress: (value: UploadProgress) => void): Promise<{ poll: string }> {
+  return new Promise<{ poll: string }>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `/api/projects/${encodeURIComponent(id)}/upload?background=1`);
     xhr.setRequestHeader('Content-Type', 'application/json');
     const csrf = cookie('cowork_csrf');
     if (csrf) xhr.setRequestHeader('X-CSRF-Token', csrf);
     xhr.timeout = 120000;
-    xhr.upload.onprogress = e => progress({ stage: 'Sending file', percent: e.lengthComputable ? Math.round(100 * e.loaded / e.total) : undefined });
+    xhr.upload.onprogress = e => progress({ stage: 'Sending file', stageKey: 'sending', percent: e.lengthComputable ? Math.round(100 * e.loaded / e.total) : undefined });
     xhr.onerror = () => reject(new Error('Upload connection failed; retry.'));
     xhr.ontimeout = () => reject(new Error('Upload timed out; retry.'));
     xhr.onload = () => {
@@ -186,20 +204,37 @@ export async function uploadProjectFile(id: string, body: { name: string; dataBa
         return;
       }
       if (xhr.status === 401) { clearRequestCache(); window.dispatchEvent(new Event('cowork:unauthorized')); }
-      try { const value = JSON.parse(xhr.responseText); if (xhr.status >= 400) reject(failureWithCode(value.error || 'Upload failed', value.code)); else resolve(value); }
+      try { const value = JSON.parse(xhr.responseText); if (xhr.status >= 400) reject(failureWithCode(value.error || 'Upload failed', value.code, xhr.status)); else resolve(value); }
       catch { reject(new Error('Invalid upload response')); }
     };
     xhr.send(JSON.stringify({ ...body, organized: true }));
   });
-  progress({ stage: 'Upload received · waiting for processing' });
+}
+
+/** #1451: a busy answer (429) is retried a bounded number of times, with a stage line saying so. Any
+ *  other failure, or a busy answer after the last retry, is thrown as it was. */
+async function postSourceUploadWithBusyRetry(id: string, body: { name: string; dataBase64: string }, progress: (value: UploadProgress) => void): Promise<{ poll: string }> {
+  for (let attempt = 0; ; attempt++) {
+    try { return await postSourceUpload(id, body, progress); }
+    catch (err) {
+      if ((err as { status?: number }).status !== 429 || attempt >= BUSY_RETRY_DELAYS_MS.length) throw err;
+      progress({ stage: 'Waiting for another file to finish processing', stageKey: 'busy' });
+      await new Promise<void>(resolve => setTimeout(resolve, BUSY_RETRY_DELAYS_MS[attempt]));
+    }
+  }
+}
+
+export async function uploadProjectFile(id: string, body: { name: string; dataBase64: string }, progress: (value: UploadProgress) => void = () => {}) {
+  const response = await postSourceUploadWithBusyRetry(id, body, progress);
+  progress({ stage: 'Upload received · waiting for processing', stageKey: 'received' });
   for (;;) {
-    const job = await getJson<{ done: boolean; stage?: string; status?: number; body?: { error?: string; code?: string; name: string; path: string; bytes: number; attachment?: { reduction?: { note: string }; state?: string; group?: string; reason?: string; reasonId?: string; reasonParams?: Record<string, string | number> }; document?: { state?: string; error?: string; errorId?: string } } }>(response.poll);
+    const job = await getJson<{ done: boolean; stage?: string; status?: number; body?: { error?: string; code?: string; name: string; path: string; bytes: number; attachment?: { reduction?: { note: string }; assetId?: string; state?: string; group?: string; reason?: string; reasonId?: string; reasonParams?: Record<string, string | number> }; document?: { state?: string; error?: string; errorId?: string } } }>(response.poll);
     if (job.done) {
       if ((job.status || 500) >= 400) throw failureWithCode(job.body?.error || 'Source processing failed', job.body?.code);
       invalidateCached(WORKSPACE_KEY);
-      progress({ stage: 'Saved', percent: 100 }); return job.body!;
+      progress({ stage: 'Saved', stageKey: 'saved', percent: 100 }); return job.body!;
     }
-    progress({ stage: job.stage || 'Queued for processing' });
+    progress(job.stage ? { stage: job.stage } : { stage: 'Queued for processing', stageKey: 'queued' });
     await new Promise(resolve => setTimeout(resolve, 750));
   }
 }
@@ -213,10 +248,13 @@ export const deleteProjectFile = (id: string, path: string) =>
     body: JSON.stringify({ path }),
   }).then(async (r) => { if (!r.ok) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error || 'could not delete'); });
 
-/** Re-read every attached folder and refresh the project's sources from it. */
-export const syncProjectSources = (id: string) =>
-  postJson<{ files: { name: string; source: string | null; bytes: number }[]; skipped: { folder: string; file?: string; reason: string; retained?: boolean }[] }>(
-    `/api/projects/${encodeURIComponent(id)}/sources/sync?background=1`, {});
+/** Re-read every attached folder and refresh the project's sources from it. `storageRetry` is set only
+ *  by the person's own "Refresh from storage" press (#1428/#1429, the Diary's X-Cowork-Storage-Retry
+ *  contract): the server may then try storage again at once. Automatic refreshes never send it. */
+export const syncProjectSources = (id: string, options: { storageRetry?: boolean } = {}) =>
+  postJson<{ files: { name: string; source: string | null; bytes: number }[]; skipped: { folder: string; file?: string; reason: string; code?: string; retained?: boolean }[] }>(
+    `/api/projects/${encodeURIComponent(id)}/sources/sync?background=1`, {},
+    options.storageRetry ? { [STORAGE_RETRY_HEADER]: '1' } : {});
 /** Create one directory in connected storage. */
 export const createStorageFolder = (path: string) =>
   postJson<{ path: string; existed: boolean }>('/api/integrations/storage/folder', { path });
@@ -226,6 +264,12 @@ export const completeRecovery = (token: string, password: string) => postJson<{ 
 /** Prefer the server's own {error} message over a bare status code — the
  *  server already explains *why* (e.g. "origin not allowed", "invalid CSRF
  *  token"), and swallowing that forced users to guess from a status code alone. */
+/** The error for a failed request: the server's message, and its stable `code` when it sent one (#1428). */
+async function failureFromResponse(res: Response, fallback: string): Promise<Error & { code?: string }> {
+  const payload = await res.clone().json().catch(() => null) as { error?: unknown; code?: unknown } | null;
+  return failureWithCode(typeof payload?.error === 'string' && payload.error ? payload.error : `${fallback}: ${res.status}`, payload?.code);
+}
+
 async function describeFailure(res: Response, fallback: string): Promise<string> {
   try {
     const body = await res.clone().json();
@@ -242,13 +286,15 @@ async function getJson<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-async function postJson<T>(url: string, body: unknown): Promise<T> {
+/** The explicit-retry header (#1168, #1428): the same name diary-workspace.ts sends. */
+const STORAGE_RETRY_HEADER = 'X-Cowork-Storage-Retry';
+async function postJson<T>(url: string, body: unknown, headers: Record<string, string> = {}): Promise<T> {
   const res = await apiFetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(await describeFailure(res, `POST ${url} failed`));
+  if (!res.ok) throw await failureFromResponse(res, `POST ${url} failed`);
   if (res.status === 202) {
     const { poll } = await res.json() as { poll: string };
     // Source processing can outlive a proxy request. Each poll is short and authenticated.
@@ -326,6 +372,8 @@ export function createProject(body: {
   instructions?: string;
   files?: { name: string; content: string }[];
   routing?: 'manual' | 'auto';
+  /** #1522: a new project is created Automatic; the server stores it as toolsMode. */
+  toolsMode?: 'auto' | 'manual';
 }): Promise<Project> {
   return postJson('/api/projects', body);
 }
@@ -449,7 +497,8 @@ export function fetchToolboxes(): Promise<{ toolboxes: Toolbox[]; mcp: McpStatus
 export interface AutoRoles { fast: string; smart: string; vision?: string; code?: string }
 
 export function fetchAutoRoles(): Promise<{ configured: boolean; roles: AutoRoles | null; missing?: { role: 'fast' | 'smart' | 'vision' | 'code'; model: string }[] }> {
-  return getJson('/api/auto-roles');
+  // #1509: shared in flight and for MODEL_READ_TTL_MS; setAutoRoles and model writes drop it.
+  return cached(AUTO_ROLES_KEY, () => getJson('/api/auto-roles'), MODEL_READ_TTL_MS);
 }
 
 export const fetchRoutingDefault = () => getJson<{ routing: 'auto' | 'manual' }>('/api/routing-default');
@@ -457,7 +506,7 @@ export const putRoutingDefault = (routing: 'auto' | 'manual', applyToExisting = 
   putJson<{ routing: 'auto' | 'manual'; updated: number }>('/api/routing-default', { routing, applyToExisting });
 
 export function setAutoRoles(roles: AutoRoles): Promise<{ configured: boolean }> {
-  return putJson('/api/auto-roles', roles);
+  return putJson<{ configured: boolean }>('/api/auto-roles', roles).then(v => { invalidateModelReads(); return v; });
 }
 
 /** A whole-list chat save; `skipped` lists ids another list holds, which were not saved (#765). */
@@ -489,10 +538,19 @@ export function fetchHealth(): Promise<HealthState> {
 }
 
 export function fetchInstalledModels(): Promise<InstalledModel[]> {
-  return getJson<InstalledModel[]>('/api/models/installed').then(rows => {
+  // #1509/#1461: the list is shared in flight and for MODEL_READ_TTL_MS, so the chat, Settings and Diary
+  // do not each wait on their own copy of the same slow model-manager read.
+  return cached(INSTALLED_MODELS_KEY, () => getJson<InstalledModel[]>('/api/models/installed').then(rows => {
     if(!Array.isArray(rows) || rows.some(row=>!row || typeof row.name!=='string' || !Array.isArray(row.labels) || row.labels.some(label=>typeof label!=='string')))throw new Error('Model list was invalid. Try loading it again.');
+    // #1179: the explicit system kind (Laya, marked in models.roles.json) for isSystemModel.
+    rememberSystemModels(rows);
     return rows;
-  });
+  }), MODEL_READ_TTL_MS);
+}
+
+/** #1509: the effort settings for the deployment (no project) or one project, shared in flight. */
+export function fetchReasoningSettings(projectId?: string | null): Promise<{ default: string; effort: string; mode: string; admin: boolean }> {
+  return cached(REASONING_KEY_PREFIX + (projectId || ''), () => getJson('/api/reasoning-settings' + (projectId ? '?projectId=' + encodeURIComponent(projectId) : '')), REASONING_TTL_MS);
 }
 
 export function fetchDiarySource(): Promise<{ source: string; months: { id: string; label: string }[] }> {
@@ -505,10 +563,23 @@ export function fetchDiaryMonth(monthId: string): Promise<DiaryCorpus> {
 
 export const fetchUsage = (aggregate=false) => getJson<unknown>(aggregate?'/api/usage/aggregate':'/api/usage').then(parseUsage);
 
+/** #1450: the chat ids whose message text holds `text` (titles are matched in the sidebar itself). */
+export function searchChatText(text: string): Promise<{ chats: string[]; truncated: boolean }> {
+  return getJson<{ chats: string[]; truncated: boolean }>(`/api/chats/search?q=${encodeURIComponent(text)}`).then((r) => ({
+    chats: Array.isArray(r.chats) ? r.chats.filter((id): id is string => typeof id === 'string') : [],
+    truncated: r.truncated === true,
+  }));
+}
+
 export function fetchChatHistoryRevision(chatId: string): Promise<{ history: HistoryEntry[]; revision: string | null }> {
-  return getJson<{ history: HistoryEntry[]; revision?: string }>(
+  // #1507: core sends a reply it kept partway as `partial` beside `history` (already marked interrupted);
+  // it is added here as the chat's last turn, so the rest of the client reads one transcript.
+  return getJson<{ history: HistoryEntry[]; revision?: string; partial?: HistoryEntry }>(
     `/api/chats/${encodeURIComponent(chatId)}/history`,
-  ).then((r) => ({ history: Array.isArray(r.history) ? r.history : [], revision: typeof r.revision === 'string' ? r.revision : null }));
+  ).then((r) => ({
+    history: withPartialTurn(Array.isArray(r.history) ? r.history : [], r.partial),
+    revision: typeof r.revision === 'string' ? r.revision : null,
+  }));
 }
 
 // ── Free (non-project) chats — server-side metas so they survive browsers ──
@@ -589,6 +660,9 @@ export async function* streamChat(
     exchangeId?: string; recoveryId?: string; preparationId?: string; files?: Record<string,string>; entryTime?: string; entryDay?: string; sessionId?: string; message: string; history: ModelHistoryEntry[]; projectId?: string | null; chatId?: string | null;
     /** #236/#237: the session's harness, and boxes added for this turn only. */
     mode?: 'chat'; turnToolboxes?: string[];
+    /** #1512: the project image sources this message attaches. Always sent (`[]` when none), so the
+     *  server describes only these and a text-only turn does no vision work. */
+    turnImageIds?: string[];
     /** #272: one exact reviewed Skill version for this message, as `skill_<id>@<sha256>`. */
     skill?: SkillPin;
     /** #682: this turn re-runs the last one (text-free outcome record). */
@@ -605,6 +679,8 @@ export async function* streamChat(
   args?: string;
   index?: number; // 'tool' events: which call this is, for upsert-by-index
   id?: string; // 'tool_pending': the approval id to post a decision against
+  /** 'status' (#1449): for a 'loadingModel' status, the model being loaded, its routed role and the expected wait. */
+  detail?: unknown;
   /** 'tool_pending' (#648): the full stored path of the project file an edit would change; for a
    *  Google Drive write (#659) the Drive file's name and id. 'tool_result': the same, once it ran. */
   target?: string;
@@ -696,7 +772,7 @@ export async function* streamChat(
       }
     }
   }
-  if (!completed && body.spaceId !== 'diary') throw new Error('The model connection ended before the answer completed. Partial output was preserved; compact this chat or check the backend before retrying.');
+  if (!completed && body.spaceId !== 'diary') throw new Error('The model connection ended before the answer completed. Compact this chat or check the backend before retrying.');
   if (!completed && body.spaceId === 'diary') throw new Error('The diary connection ended before saving was confirmed. Check the saved diary before sending again.');
   } catch (error) {
     if (body.spaceId === 'diary' && !completed) throw new Error('The diary connection ended before saving was confirmed. Check the saved diary before sending again.');

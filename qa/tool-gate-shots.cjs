@@ -1,5 +1,5 @@
 'use strict';
-// Screenshots of Settings -> Experimental with the Tool gate toggle, against the synthetic
+// Screenshots of Settings -> Experimental with the Tool checks (tool gate) toggle, against the synthetic
 // experimental fixture (qa/experimental-fixture.cjs on :31240, real feature routes, no model).
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const {openSettings}=require('./nav.cjs');
@@ -14,7 +14,7 @@ const out = process.env.SHOTS_DIR || '/tmp/toolgate-shots';
       await openSettings(page);
       const settings = page.getByRole('dialog', { name: 'Settings', exact: true }); await settings.waitFor();
       await settings.locator('.settings-navigation').getByRole('button', { name: 'Experimental', exact: true }).click();
-      const row = settings.getByText('Tool gate', { exact: true }); await row.waitFor();
+      const row = settings.getByText('Tool checks', { exact: true }); await row.waitFor();
       await row.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);
       await page.screenshot({ path: `${out}/features-tool-gate-${width}.png` });
       console.log('saved', width);

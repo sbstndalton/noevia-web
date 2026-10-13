@@ -7,6 +7,8 @@ import type { JSX, KeyboardEvent, ReactNode } from 'react';
 import type { ChatMeta, Message, MessageStats, Project, InstalledModel, RoutingDecision } from '../types';
 import { wikiLinkQueryAt } from '../diary-markdown';
 import { chatLinkCandidates, insertChatLink } from '../chat-organise';
+import { failureCopy } from '../failure-copy';
+import { addAttachedNames } from '../attached-files';
 import { ShellIcon } from './ShellIcon';
 import { ChevronLeft, SendIcon, SlidersIcon } from './Icons';
 import { Icon } from './icons/Icon';
@@ -30,12 +32,14 @@ import { sendHintText, useT } from '../i18n';
 import type { MessageKey } from '../i18n';
 import { isApple } from './shortcuts/shortcuts';
 import { ComposerModeBar, ModeCaption, ModeConfirm, ModeToggle, useCoworkAccess, useModeSwitch } from './ComposerModeBar';
+import { answerCount, branchCount } from '../transcript-variants';
 import { ToolCatalogue } from './ToolCatalogue';
 import { toolsModeOf } from '../tools-mode';
 import { CoworkTaskCard } from './CoworkTaskCard';
 import { decideDispatch, type ChatMode } from '../chat-mode';
 import { insertMention, turnBoxesFor, type PermittedBox } from '../tool-catalogue';
 import { readDraft, writeDraft, clearDraft } from '../chat-drafts';
+import { addTurnImage, turnImageIdsToSend } from '../turn-images';
 import { onCancelEdit, focusAfterRender, type EditFocusState } from '../edit-focus';
 import { isCoarsePointerDevice } from '../composer-focus';
 import { useSpaceTier } from '../space-tier';
@@ -45,7 +49,7 @@ import { formatDuration, formatNumber } from '../number-format';
 
 /** What one send carries besides its text: per-turn boxes, a fallback notice, or a Cowork task. */
 /** `skill` (#272) pins one exact reviewed Skill version for this message only. */
-export interface SendTurn { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin }
+export interface SendTurn { turnToolboxes?: string[]; /** #1512: the project image sources this message attaches (`[]` when none). */ turnImageIds?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin; files?: string[] }
 
 interface ChatViewProps {
   project: Project | null;
@@ -92,6 +96,11 @@ interface ChatViewProps {
   routingControls?: ReactNode;
   /** #778: the answer to a "This looks sensitive" card. */
   onRouteDecision?: (messageId: string, pendingId: string, choice: 'cloud' | 'local', remember: boolean) => void;
+  /** #1517: the 1/2 switcher on a reply (`onChooseAnswer`) and on an edited turn (`onChooseVersion`). */
+  onChooseAnswer?: (chatId: string, userId: string, next: number) => void;
+  onChooseVersion?: (chatId: string, userId: string, next: number) => void;
+  /** #1564: opens the Projects page from a free chat's "Runs inside a project" hint. */
+  onOpenProjects?: () => void;
 }
 
 /** "12s", "1m 05s": how long the thinking took, the way people say it. */
@@ -132,7 +141,7 @@ const ROUTE_CAUSES = ['http-503', 'deadline', 'network', 'benched', 'http-422'] 
 export function RoutingDetails({ decision }: { decision: RoutingDecision }) {
   const t = useT();
   if (!isDisplayableRoutingDecision(decision)) return null;
-  const source = decision.model === 'convaiinnovations/laya' ? 'Laya'
+  const source = decision.model === 'convaiinnovations/laya' ? t('chat.route.srcDecision')
     : decision.backend === 'llama-logit' ? t('chat.route.srcLocalLogit')
     : decision.backend === 'decision-service' ? t('chat.route.srcDecision') : t('chat.route.srcLegacy');
   const fallbackId = ROUTE_REASONS.find(id => id === decision.fallbackReason) || 'unavailable';
@@ -149,7 +158,9 @@ export function RoutingDetails({ decision }: { decision: RoutingDecision }) {
       <p>{decision.status === 'accepted' ? t('chat.route.accepted') : t('chat.route.fallback', { reason })}{Number.isFinite(decision.latencyMs) ? ` · ${formatNumber(Math.round(decision.latencyMs!), t.locale, 0)} ms` : ''}</p>
       {selectedRole && selectedRole !== decision.effectiveRole && <p>{t('chat.route.selectedUsed', { selected: routeRoleName(t, selectedRole), used: routeRoleName(t, decision.effectiveRole) })}</p>}
       {offered.length > 0 && <ul>{offered.map(option => <li key={option.id}>
-        <span><strong>{routeRoleName(t, option.id)}</strong> ·{routeDescription(t, option.id, option.label)}</span>
+        {/* #1535: the label and its description are one grid, so a wrapped description hangs under the
+            description (after the label) and the dot is followed by a space, like the other separators. */}
+        <span className="route-option"><strong>{routeRoleName(t, option.id)}</strong><span className="route-option-desc">· {routeDescription(t, option.id, option.label)}</span></span>
         <span>{Object.hasOwn(scores, option.id) && Number.isFinite(scores[option.id]) ? formatNumber(scores[option.id], t.locale, { max: 4 }) : '—'}</span>
       </li>)}</ul>}
       <small>{t('chat.route.scoresNote')}</small>
@@ -181,6 +192,48 @@ function MessageMeta({ stats }: { stats?: MessageStats }): JSX.Element | null {
   if (stats?.tokensPerSecond) parts.push(`${formatNumber(stats.tokensPerSecond, appLocale(), 1)} ${t('stats.tokPerSecUnit')}`);
   if (!parts.length) return null;
   return <div className="msg-meta">{parts.join(' · ')}</div>;
+}
+
+/** The names of files attached to a message or the composer (#1514): named chips, never a file preview. */
+export function FileChips({ names, label, className }: { names: readonly string[]; label: string; className: string }): JSX.Element | null {
+  if (!names.length) return null;
+  return (
+    <ul className={className} aria-label={label}>
+      {names.map((name) => <li key={name} className="chip file-chip"><ShellIcon name="file" size={13} /><span>{name}</span></li>)}
+    </ul>
+  );
+}
+
+/** A reply that failed (#1547, #1549). Text that had streamed in stays, marked incomplete, and the failure
+ *  sits under it as an inline card: its own icon and border, in the interface font, not the reply's body
+ *  type and not green. Retry is offered on the last reply only. */
+export function FailedReply({ partial, failure, canRetry, disabled, onRetry }: {
+  partial: string;
+  failure: string;
+  canRetry: boolean;
+  disabled: boolean;
+  onRetry: () => void;
+}): JSX.Element {
+  const t = useT();
+  return (
+    <>
+      {partial && (
+        <div className="bubble msg-partial" data-testid="reply-partial">
+          <small className="msg-partial-label">{t('chat.failure.incomplete')}</small>
+          <MarkdownPreview text={partial} autolink />
+        </div>
+      )}
+      <div className="msg-failure" role="alert" data-testid="reply-failure">
+        <span className="msg-failure-icon" aria-hidden="true">!</span>
+        <p className="msg-failure-text">{failure}</p>
+        {canRetry && (
+          <button className="msg-retry" onClick={onRetry} disabled={disabled}>
+            ↻ Retry
+          </button>
+        )}
+      </div>
+    </>
+  );
 }
 
 // #356: Copy (every finished reply) and Regenerate (the last one only) — hover/focus actions
@@ -239,6 +292,17 @@ export function LiveTimer({ startedAt }: { startedAt: number }): JSX.Element {
 }
 
 
+/** #1517: the 1/2 ‹ › switcher for a reply's answers or a turn's versions. */
+function VariantSwitch({ index, count, disabled, label, previousLabel, nextLabel, onPrevious, onNext }: {
+  index: number; count: number; disabled: boolean; label: string; previousLabel: string; nextLabel: string; onPrevious: () => void; onNext: () => void;
+}) {
+  return <span className="variant-switch" role="group" aria-label={label}>
+    <button type="button" onClick={onPrevious} disabled={disabled || index <= 1} aria-label={previousLabel}>‹</button>
+    <span aria-live="polite">{index}/{count}</span>
+    <button type="button" onClick={onNext} disabled={disabled || index >= count} aria-label={nextLabel}>›</button>
+  </span>;
+}
+
 export function ChatView({
   title,
   project,
@@ -271,6 +335,9 @@ export function ChatView({
   headerLinks = null,
   routingControls = null,
   onRouteDecision,
+  onChooseAnswer,
+  onChooseVersion,
+  onOpenProjects,
 }: ChatViewProps): JSX.Element {
   const [freeModels, setFreeModels] = useState(false);
   const { sendKey } = useAccountPreferences();
@@ -280,14 +347,17 @@ export function ChatView({
   const projectLead = t('chat.empty.project').split('{project}');
   const keyHint = sendHintText(t, sendKey, typeof navigator !== 'undefined' && isApple(navigator.platform || navigator.userAgent));
   const [freeContext, setFreeContext] = useState<Project | null>(null);
+  // #1484: opening a chat, or a Settings route over it, only READS its attachments project. The POST
+  // that creates it runs when the person acts on the composer (ensureFreeContext, below), so a chat
+  // that is never used leaves no orphan project behind.
   useEffect(() => {
     setFreeContext(null);
     if (project) return;
     let current = true;
-    apiFetch(`/api/chats/${encodeURIComponent(chatId)}/context`, { method: 'POST' }).then(async response => {
+    apiFetch(`/api/chats/${encodeURIComponent(chatId)}/context`).then(async response => {
       if (!response.ok) throw new Error('Could not load chat tools');
-      const value = await response.json(); if (current) setFreeContext(value.project);
-    }).catch(err => { if (current) statusOf(chatId, String(err)); });
+      const value = await response.json(); if (current) setFreeContext(value.project ?? null);
+    }).catch(err => { console.error('Chat tools did not load', err); if (current) statusOf(chatId, failureCopy(err, t)); });
     return () => { current = false; };
   }, [chatId, project?.id]);
   // #789: ChatView stays mounted across chat switches, so an upload (or a compaction) started in
@@ -304,6 +374,25 @@ export function ChatView({
     const value = (await response.json()).project;
     if (chatIdRef.current === forChat) setFreeContext(value);
   };
+  // #1484: the attachments project of a free chat is created on the first composer action (the + menu,
+  // or a file dropped on the chat), not on open. One request is shared while it is in flight, and a
+  // failure is reported on this chat's status line rather than thrown.
+  const ensureInFlight = useRef<{ chatId: string; promise: Promise<Project | null> } | null>(null);
+  const ensureFreeContext = (): Promise<Project | null> => {
+    if (project) return Promise.resolve(project);
+    if (freeContext) return Promise.resolve(freeContext);
+    const forChat = chatId;
+    if (ensureInFlight.current?.chatId === forChat) return ensureInFlight.current.promise;
+    const promise: Promise<Project | null> = apiFetch(`/api/chats/${encodeURIComponent(forChat)}/context`, { method: 'POST' }).then(async response => {
+      if (!response.ok) throw new Error(response.status === 410 ? 'This chat was deleted.' : 'Could not load chat tools');
+      const created: Project | null = (await response.json()).project ?? null;
+      if (created && chatIdRef.current === forChat) setFreeContext(created);
+      return created;
+    }).catch(err => { statusOf(forChat, String(err instanceof Error ? err.message : err)); return null; })
+      .finally(() => { if (ensureInFlight.current?.promise === promise) ensureInFlight.current = null; });
+    ensureInFlight.current = { chatId: forChat, promise };
+    return promise;
+  };
   // Every chat with work in flight, so overlapping uploads in two chats each keep their own lock.
   const [busyChats, setBusyChats] = useState<ReadonlySet<string>>(() => new Set());
   const actionBusy = busyChats.has(chatId);
@@ -313,6 +402,15 @@ export function ChatView({
   // chat is left again (unless it still has work running), so an old "Saved" does not linger.
   const [actionStatuses, setActionStatuses] = useState<Readonly<Record<string, string>>>({});
   const actionStatus = actionStatuses[chatId] ?? '';
+  // #1514: the files saved by uploads in this chat since its last message, shown as chips in the composer and
+  // sent with the next message. Held per chat, like the status line: ChatView stays mounted across chat switches.
+  const [attachedByChat, setAttachedByChat] = useState<Readonly<Record<string, string[]>>>({});
+  const attached = attachedByChat[chatId] ?? [];
+  const noteSaved = (forChat: string) => (names: string[]) => setAttachedByChat(current => {
+    const known = current[forChat] ?? [];
+    const next = addAttachedNames(known, names);
+    return next.length === known.length ? current : { ...current, [forChat]: next };
+  });
   const statusOf = (forChat: string, status: string) => setActionStatuses(current => {
     if ((current[forChat] ?? '') === status) return current;
     const next = { ...current };
@@ -392,7 +490,9 @@ export function ChatView({
     if (!wasStreaming || streaming || typeof document === 'undefined' || isCoarsePointerDevice()) return;
     const stopped = stopRequestedRef.current;
     stopRequestedRef.current = false;
-    if (stopped || document.activeElement === document.body) composerRef.current?.focus();
+    // #1478: focus() scrolls every ancestor that can scroll, and the app's overflow-hidden main pane can; a
+    // composer focused after a long or failed reply pushed the header off screen. Scrolling is never wanted here.
+    if (stopped || document.activeElement === document.body) composerRef.current?.focus({ preventScroll: true });
   }, [streaming]);
   // When the current stream began, for the live elapsed counter. Reset on each
   // new stream rather than on every message change, or the timer would restart
@@ -443,7 +543,7 @@ export function ChatView({
   useEffect(() => {
     setRepository(current => current && coworkAccess.repositories.includes(current) ? current : coworkAccess.repositories[0] ?? null);
   }, [coworkAccess.repositories]);
-  const modeSwitch = useModeSwitch({ mode, messageCount: messages.length, projectId: project?.id ?? null, access: coworkAccess, repository, onModeChange });
+  const modeSwitch = useModeSwitch({ mode, messageCount: messages.length, projectId: project?.id ?? null, access: coworkAccess, repository, onModeChange, onOpenProjects });
   const chatConfig = project || freeContext;
   // The phone model button names a thinking level only when the sheet can offer one; with the
   // effort settings unavailable the sheet has no Thinking section, so the button drops the suffix.
@@ -460,6 +560,11 @@ export function ChatView({
   // Re-read when the project changes and after each reply, so a disabled or edited skill drops out.
   const [skillPin, setSkillPin] = useState('');
   useEffect(() => { setTurnBoxes([]); setCatalogueOpen(false); setSkillPin(''); }, [chatId, mode, project?.id]);
+  // #1512: project image sources attached (from the picker or a drop) for the next message, per chat.
+  // They are sent as turnImageIds, so only these images are described; the rest of the project's
+  // images are named to the model, not loaded. Cleared when the message is sent.
+  const [pendingImages, setPendingImages] = useState<Record<string, string[]>>({});
+  const onImageAttached = (assetId: string) => setPendingImages(prev => ({ ...prev, [chatId]: addTurnImage(prev[chatId] ?? [], assetId) }));
   // #790: what the catalogue permits follows its own scope (project and mode, see ToolCatalogue),
   // not the chat. Clearing it per chat while the catalogue kept its loaded boxes (and so never
   // re-reported them) silently dropped a box ticked "for this message" after a chat switch.
@@ -487,7 +592,8 @@ export function ChatView({
     writeDraft(chatId, next.text);
     setLinkAt(null);
     onLinkChat?.(target);
-    requestAnimationFrame(() => { const el = composerRef.current; if (el) { el.focus(); el.setSelectionRange(next.caret, next.caret); } });
+    // preventScroll (#1478): the composer is already on screen; focusing it must not scroll the pane.
+    requestAnimationFrame(() => { const el = composerRef.current; if (el) { el.focus({ preventScroll: true }); el.setSelectionRange(next.caret, next.caret); } });
   };
   const onLinkKey = (e: KeyboardEvent<HTMLTextAreaElement>): boolean => {
     if (!linkMenuOpen || e.nativeEvent.isComposing) return false;
@@ -520,18 +626,24 @@ export function ChatView({
     follow();
     const decision = decideDispatch({ mode, harnessEnabled: coworkAccess.harnessEnabled, canUseCode: coworkAccess.canUseCode, projectId: project?.id ?? null, repository });
     if (decision.harness === 'cowork' && repository) onSend(text, { cowork: { repository } });
-    else onSend(text, { turnToolboxes: turnBoxesFor(text, permitted, turnBoxes), notice: decision.notice, ...(skillPin ? { skill: skillPin as SkillPin } : {}) });
+    else {
+      onSend(text, { turnToolboxes: turnBoxesFor(text, permitted, turnBoxes), turnImageIds: turnImageIdsToSend(pendingImages[chatId]), notice: decision.notice, ...(skillPin ? { skill: skillPin as SkillPin } : {}), ...(attached.length ? { files: attached } : {}) });
+      // The files now travel with this message (and show on it), so the composer stops listing them.
+      if (attached.length) setAttachedByChat(current => { const next = { ...current }; delete next[chatId]; return next; });
+    }
     setDraft('');
     clearDraft(chatId);
     setTurnBoxes([]);
     setSkillPin('');
+    setPendingImages(prev => { const { [chatId]: _sent, ...rest } = prev; return rest; });
   };
   // #437: the whole chat pane is the drop target, not just the composer bar, so a file dropped
   // anywhere over the transcript still attaches — through the exact same pipeline (validation,
   // size limits, error copy) `ComposerActions`'s own picker uses below.
   const { isDragOver, dropProps } = useAttachmentDrop({
     project: project || freeContext, disabled: streaming || actionBusy, chatOnly: !project,
-    onChanged: refreshContext, onBusy: setActionBusy, onStatus: showActionStatus,
+    onChanged: refreshContext, onBusy: setActionBusy, onStatus: showActionStatus, onImageAttached, onSaved: noteSaved(chatId),
+    ensureProject: project ? undefined : ensureFreeContext,
   });
 
   const catalogue = !toolsByHand ? null : <ToolCatalogue open={catalogueOpen} onOpenChange={setCatalogueOpen} projectId={project?.id ?? null} mode={mode}
@@ -606,6 +718,10 @@ export function ChatView({
         )}
         {messages.map((m, i) => {
           const isLast = i === messages.length - 1;
+          // #1517: a reply's answer switcher is on the user turn before it; a turn's version switcher is on the turn.
+          const answerUser = m.role === 'assistant' && messages[i - 1]?.role === 'user' ? messages[i - 1] : undefined;
+          const answers = answerCount(answerUser);
+          const versions = branchCount(m);
           const thinkingLive = streaming && isLast && m.role === 'assistant' && !m.content;
           // The Stopped placeholder is drawn in the language active NOW, never the one it was saved in (#634).
           const body = messageBodyText(t, m);
@@ -618,7 +734,7 @@ export function ChatView({
                 : <span className="msg-sender is-assistant"><span className="sr-only">{t('chat.sender.assistant')} · </span>{senderLabelText(t, m.senderLabel ?? modelLabel)}</span>}
               {m.role === 'assistant' ? (
                 <div className="assistant-card">
-                  {m.reasoningMode && m.reasoningMode !== 'off' && <small className="reasoning-result">{effortLineText(t, m.reasoningEffort, m.reasoningMode)}</small>}
+                  {m.reasoningMode && <small className="reasoning-result">{effortLineText(t, m.reasoningEffort, m.reasoningMode)}</small>}
                   {m.warning && <p className="msg-warning" role="status">{m.warning}</p>}
                   {(m.toolScope || m.skillScope) && <small className="tool-scope" title={t('chat.scope.title')}>{m.toolScope && t('chat.scope.using', { tools: m.toolScope === 'all tools' ? t('chat.scope.allTools') : m.toolScopeBoxes?.length ? toolScopeText(t, m.toolScopeBoxes) : m.toolScope })}{m.toolScope && m.skillScope && ' · '}{m.skillScope && t('chat.scope.skill', { name: m.skillScope })}</small>}
                   {m.routingDecision && <RoutingDetails decision={m.routingDecision} />}
@@ -632,27 +748,27 @@ export function ChatView({
                   {m.paused && <p className="msg-warning msg-paused" role="status" data-testid="reply-paused">{pausedNoteText(t, m.paused, (n) => formatNumber(n, t.locale, 0))}</p>}
                   {m.coworkTask ? <CoworkTaskCard task={m.coworkTask} disabled={streaming || actionBusy}
                     onRetry={() => { const prompt = messages[i - 1]?.role === 'user' ? messages[i - 1].content : ''; if (prompt) onSend(prompt, { cowork: { repository: m.coworkTask!.repository } }); }} /> : null}
-                  {body ? (
+                  {m.error ? (
+                    // Errors are our own strings, not model output, so they never render as Markdown.
+                    // Text that streamed in before the failure is shown above the failure, marked incomplete (#1547).
+                    // A legacy error reply with no `failure` has the sentence as its content: never partial (#1593).
+                    <FailedReply partial={m.failure ? body : ''} failure={m.failure ?? body} canRetry={isLast} disabled={streaming || actionBusy}
+                      onRetry={() => onRetry(chatId, m.id)} />
+                  ) : body ? (
                     <div className="bubble">
                       {/* Model replies are Markdown. A bare <p> showed the raw
                           source (**bold**, list dashes) and collapsed every
                           newline, so multi-section answers arrived as one wall
-                          of text. Errors stay plain — they are our own strings,
-                          not model output. */}
-                      {m.error ? (
-                        <p style={{ color: 'var(--accent-text)' }}>{body}</p>
-                      ) : (
-                        <MarkdownPreview text={body} />
-                      )}
-                      {m.error && isLast && (
-                        <button
-                          className="msg-retry"
-                          onClick={() => onRetry(chatId, m.id)}
-                          disabled={streaming || actionBusy}
-                          title="Re-send your last message"
-                        >
-                          ↻ Retry
-                        </button>
+                          of text. */}
+                      <MarkdownPreview text={body} autolink />
+                      {/* #1507: a reply the server saved partway (a reload or a cut connection) is marked, and
+                          can be retried from its question or continued from where it stopped. */}
+                      {m.interrupted && isLast && !streaming && (
+                        <div className="msg-interrupted" role="status">
+                          <p>{t('chat.interrupted.note')}</p>
+                          <button className="msg-retry" onClick={() => onRetry(chatId, m.id)} disabled={streaming || actionBusy}>↻ {t('chat.interrupted.retry')}</button>
+                          <button className="msg-continue" onClick={() => onSend(t('chat.interrupted.continuePrompt'))} disabled={streaming || actionBusy}>{t('chat.interrupted.continue')}</button>
+                        </div>
                       )}
                     </div>
                   ) : (
@@ -668,7 +784,7 @@ export function ChatView({
                   {streaming && isLast && !m.error ? (
                     <div className="msg-meta" aria-live="off">
                       <LiveTimer startedAt={streamStart.current} />
-                      {m.reasoning && !m.content ? ` · ${t('chat.status.thinking')}` : ` · ${statusLineText(t, m.processingStatusId, m.processingStatus) || t('chat.status.generating')}`}
+                      {m.reasoning && !m.content ? ` · ${t('chat.status.thinking')}` : ` · ${statusLineText(t, m.processingStatusId, m.processingStatus, m.processingStatusDetail) || t('chat.status.generating')}`}
                     </div>
                   ) : (
                     !m.error && <MessageMeta stats={m.stats} />
@@ -686,6 +802,9 @@ export function ChatView({
                       regenerateDisabled={streaming || actionBusy}
                     />
                   )}
+                  {answerUser && answers > 1 && <VariantSwitch index={(answerUser.answer ?? 0) + 1} count={answers} disabled={streaming || actionBusy} label={t('chat.variant.answers')}
+                    previousLabel={t('chat.variant.previousAnswer')} nextLabel={t('chat.variant.nextAnswer')}
+                    onPrevious={() => onChooseAnswer?.(chatId, answerUser.id, (answerUser.answer ?? 0) - 1)} onNext={() => onChooseAnswer?.(chatId, answerUser.id, (answerUser.answer ?? 0) + 1)} />}
                 </div>
               ) : (
                 editingId === m.id ? (
@@ -725,6 +844,7 @@ export function ChatView({
                     </div>
                   </div>
                 ) : (
+                  <>
                   <div className="msg-user-row">
                     <p style={{ whiteSpace: 'pre-wrap' }}>{m.content}</p>
                     <button
@@ -737,7 +857,12 @@ export function ChatView({
                     >
                       ✎ {t('chat.edit.button')}
                     </button>
+                    {versions > 1 && <VariantSwitch index={(m.branch ?? 0) + 1} count={versions} disabled={streaming || actionBusy} label={t('chat.variant.versions')}
+                      previousLabel={t('chat.variant.previousVersion')} nextLabel={t('chat.variant.nextVersion')}
+                      onPrevious={() => onChooseVersion?.(chatId, m.id, (m.branch ?? 0) - 1)} onNext={() => onChooseVersion?.(chatId, m.id, (m.branch ?? 0) + 1)} />}
                   </div>
+                  <FileChips names={m.files ?? []} label={t('chat.files.label')} className="msg-file-chips" />
+                  </>
                 )
               )}
             </div>
@@ -745,13 +870,19 @@ export function ChatView({
             </Fragment>
           );
         })}
-        {!atBottom && messages.length > 0 && (
+      </div>
+
+      {/* #1534: the pill is not part of the scrolling transcript, which would draw it over answer and
+          bubble text as the content passes under it. It sits in a band of its own between the transcript
+          and the composer, present only while the pill is shown. */}
+      {!atBottom && messages.length > 0 && (
+        <div className="jump-band">
           <button type="button" className="jump-to-latest" onClick={follow} aria-label={t('chat.jumpToLatest')}>
             <Icon name="arrow-down" size={13} strokeWidth={2.25} />
             {t('chat.jumpToLatest')}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="composer" ref={composerBox}>
         <ChatContext key={chatId} chatId={chatId} projectId={project?.id || null} messages={messages} streaming={streaming} onBusy={setActionBusy}
@@ -770,7 +901,7 @@ export function ChatView({
           </div>
         ) : (
           <ComposerModeBar mode={mode} messageCount={messages.length} projectId={project?.id ?? null} disabled={streaming || actionBusy}
-            access={coworkAccess} repository={repository} onRepository={setRepository} onModeChange={onModeChange}>
+            access={coworkAccess} repository={repository} onRepository={setRepository} onModeChange={onModeChange} onOpenProjects={onOpenProjects}>
             {catalogue}{skillPicker}
           </ComposerModeBar>
         )}
@@ -799,7 +930,7 @@ export function ChatView({
             onBlur={linkTargets ? () => setLinkAt(null) : undefined}
             aria-activedescendant={linkMenuOpen && linkOptions.length ? `chat-link-${chatId}-${Math.min(linkIndex, linkOptions.length - 1)}` : undefined}
           />
-          <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={showActionStatus}
+          <ComposerActions chatOnly={!project} key={chatId} project={project || freeContext} disabled={streaming || actionBusy} onChanged={refreshContext} onModels={openModels} onBusy={setActionBusy} onStatus={showActionStatus} onImageAttached={onImageAttached} onSaved={noteSaved(chatId)} onEnsureProject={project ? undefined : ensureFreeContext}
             browseTools={toolsByHand ? { onOpen: () => setCatalogueOpen(true), count: turnBoxes.length } : undefined} />
           {phone && <ModeToggle state={modeSwitch} disabled={streaming || actionBusy} compact />}
           <ComposerModel label={modelLabel} onClick={openModels}
@@ -815,6 +946,7 @@ export function ChatView({
             </button>
           )}
         </div>
+        <FileChips names={attached} label={t('composer.attached.label')} className="composer-file-chips" />
         {actionStatus && <div className="composer-action-status" role="status">{actionStatus}</div>}
         <div className={`composer-hint${projectName ? '' : ' is-keyboard'}`}>
           {projectName ? t('composer.projectContext', { name: projectName }) : keyHint}

@@ -1,4 +1,6 @@
-import type { ChatMeta, HistoryEntry, Message } from './types';
+import type { ChatMeta, HistoryEntry, Message, TurnBranch } from './types';
+import { sameBranch, unionVariants } from './transcript-merge';
+import { capVariants } from './variant-cap';
 
 /** Move one chat's meta to the top of a chat list. `make` receives the entry already in the list,
  *  if any. Every other chat in `list` is kept, so callers must pass the latest list, not a copy
@@ -33,7 +35,7 @@ export function adoptMergedTranscript(
 ): Message[] {
   const used = new Set<number>();
   let from = 0;
-  return merged.map((entry) => {
+  return merged.map((entry, k) => {
     let at = -1;
     for (let i = from; i < current.length; i++) {
       if (!used.has(i) && !current[i].error && current[i].role === entry.role && current[i].content === entry.content) { at = i; break; }
@@ -41,8 +43,37 @@ export function adoptMergedTranscript(
     if (at < 0) return fromEntry(entry, mint());
     used.add(at);
     from = at + 1;
-    return current[at];
+    return withMergedVariants(current[at], entry, merged[k + 1]);
   });
+}
+
+/** #1517: the local copy of a user turn keeps its own fields, but the answers and versions the merged copy holds
+ *  (a Regenerate or an Edit & re-run in another tab) are added to it, so neither side's alternatives are lost.
+ *  `next` is the entry after the turn: the answer it shows decides which stored answer the pointer names. */
+function withMergedVariants(local: Message, entry: HistoryEntry, next: HistoryEntry | undefined): Message {
+  if (local.role !== 'user' || (entry.answers === undefined && entry.branches === undefined)) return local;
+  const answers = unionVariants(entry.answers, local.answers);
+  const branches = unionVariants(entry.branches, local.branches, true);
+  const alike = (a: readonly { content: string }[] | undefined, b: readonly { content: string }[] | undefined) =>
+    (a?.length ?? 0) === (b?.length ?? 0) && (a ?? []).every((v, n) => v.content === b?.[n]?.content);
+  // A version also differs by its chat (#1616): the same text with a longer or another chat is not alike.
+  const alikeVersions = (a: readonly TurnBranch[] | undefined, b: readonly TurnBranch[] | undefined) =>
+    alike(a, b) && (a ?? []).every((v, n) => (v.tail?.length ?? 0) === (b?.[n]?.tail?.length ?? 0));
+  if (alike(answers, local.answers) && alikeVersions(branches, local.branches)) return local;
+  const shown = next?.role === 'assistant' && answers ? answers.findIndex((a) => a.content === next.content) : -1;
+  // The version on screen is told apart by its text and its chat, not by the first one with the same text (#1616).
+  const mine = local.branches?.[local.branch ?? 0];
+  const version = !branches ? -1
+    : mine ? [true, false].reduce((found, exact) => (found >= 0 ? found : branches.findIndex((b) => sameBranch(b, mine, exact))), -1)
+    : branches.findIndex((b) => b.content === local.content);
+  // The union can pass the limit of 10 (#1517); the oldest others drop, the one shown stays.
+  const keptAnswers = answers ? capVariants(answers, shown >= 0 ? shown : entry.answer ?? local.answer) : undefined;
+  const keptBranches = branches ? capVariants(branches, version >= 0 ? version : entry.branch ?? local.branch) : undefined;
+  return {
+    ...local,
+    ...(keptAnswers ? { answers: keptAnswers.list, answer: keptAnswers.chosen } : {}),
+    ...(keptBranches ? { branches: keptBranches.list, branch: keptBranches.chosen } : {}),
+  };
 }
 
 /** Combine a chat's lazily loaded server history with whatever is already on screen for it. With

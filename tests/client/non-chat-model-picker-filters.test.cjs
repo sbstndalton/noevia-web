@@ -3,8 +3,8 @@
 // Your models) was offered as a normal pickable chat model in the composer's Manual picker and
 // the Routing tab's Fast/Smart/Code selectors — both filtered with matchesModelUse(labels,
 // 'all'), which only excludes embedding/reranking labels and has no concept of a system/routing
-// model. The fix is isChatGenerationModel, which additionally excludes Laya by name
-// (SYSTEM_NAME = /^laya(?:[_.-]|$)/i in src/model-kind.ts) — the same helper BenchmarksTab,
+// model. The fix is isChatGenerationModel, which additionally excludes Laya by its explicit system
+// kind from the models list, with the name rule as a logged fallback (#1179, src/model-system.ts) — the same helper BenchmarksTab,
 // LibraryTab and guided.ts already use (see library-tab-non-chat-models.test.cjs for the same
 // source-pattern approach; this repo has no jsdom/@testing-library to render these components).
 //

@@ -249,6 +249,18 @@ body { margin: 0; background: var(--bg); }
 }
 .msg-retry:hover:not(:disabled) { color: var(--accent-text); border-color: var(--accent-2); background: var(--accent-2-soft); }
 .msg-retry:disabled { opacity: 0.5; cursor: default; }
+/* #1507: a reply the server saved partway. The note sits under the partial text; Retry and Continue sit beside it. */
+.msg-interrupted { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); color: var(--text-secondary); font-size: var(--text-caption); }
+.msg-interrupted p { margin: 0; flex: 1 1 100%; }
+.msg-continue { font: inherit; padding: var(--space-1) var(--space-3); border: 1px solid var(--control-border); border-radius: var(--radius-input); background: var(--bg-surface); color: var(--text-primary); cursor: pointer; }
+.msg-continue:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.msg-continue:disabled { opacity: 0.5; cursor: default; }
+/* #1517: the 1/2 switcher for a reply's answers and an edited turn's versions. */
+.variant-switch { display: inline-flex; align-items: center; gap: var(--space-1); margin-top: var(--space-1); color: var(--text-secondary); font-size: var(--text-caption); }
+.variant-switch button { min-inline-size: 32px; min-block-size: 32px; padding: 0 var(--space-2); border: 1px solid var(--control-border); border-radius: var(--radius-input); background: var(--bg-surface); color: var(--text-primary); font: inherit; cursor: pointer; }
+.variant-switch button:disabled { opacity: 0.5; cursor: default; }
+.variant-switch button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+@media (pointer: coarse) { .variant-switch button { min-inline-size: 44px; min-block-size: 44px; } }
 
 /* Inline connection-health banner under the chat/diary header. */
 .conn-banner {
@@ -935,9 +947,17 @@ button:disabled { cursor: not-allowed; }
    Numbers first, chrome second: the stat cards carry the answer and the
    heat map gives it shape over time. */
 .usage-section { margin-bottom: 32px; }
-.usage-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+.usage-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; flex-wrap: nowrap; }
 .usage-section-head h2 { margin: 0 0 2px; font-size: var(--text-body); }
 .usage-section-head p { margin: 0; font-size: var(--text-caption); color: var(--text-secondary); }
+/* #1539: the period buttons sit on the section's own title row. The title text gives way (wraps)
+   before the buttons leave the row; only a narrow screen stacks them under the title. */
+.usage-section-head > div:first-child { flex: 1 1 0; min-width: 0; }
+.usage-section-head > .usage-window { flex: none; margin-bottom: 0; }
+@media (max-width: 519px) {
+  .usage-section-head { flex-wrap: wrap; }
+  .usage-section-head > div:first-child { flex-basis: 100%; }
+}
 
 .usage-window { display: flex; gap: 4px; }
 .usage-window button {
@@ -947,6 +967,12 @@ button:disabled { cursor: not-allowed; }
 .usage-window button.is-active { border-color: var(--accent); color: var(--text-primary); background: var(--bg-surface-active); }
 
 .usage-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--border-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-control); overflow: hidden; }
+/* #1539: four tiles always fill their rows evenly: one row of four, or two rows of two in a narrow
+   section (measured on the section, not the viewport, since the Settings sidebar takes its share).
+   auto-fit alone left three tiles and a lonely fourth whenever the column fit only three. */
+.usage-section { container-type: inline-size; }
+.usage-stat-grid--four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@container (max-width: 560px) { .usage-stat-grid--four { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .usage-stat { background: var(--bg-surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
 .usage-stat-label { font-size: var(--text-caption2); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); }
 .usage-stat-value { font-size: var(--text-title1); font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
@@ -977,6 +1003,17 @@ button:disabled { cursor: not-allowed; }
 .usage-day-detail p { margin: 0; color: var(--text-secondary); }
 .usage-day-detail strong { color: var(--text-primary); }
 .usage-cell.is-pad { background: transparent; }
+/* #1467: on touch, a month opens its days as full-size rows (44 px). The compact grid above keeps its 10 px cells. */
+.usage-touch { margin-block: var(--space-3); }
+.usage-touch-months { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.usage-touch-month { min-width: 44px; min-height: 44px; padding: 0 var(--space-3); border: 1px solid var(--control-border); border-radius: var(--radius-input); background: var(--bg-surface); color: var(--text-primary); font: inherit; cursor: pointer; }
+.usage-touch-month[aria-expanded='true'] { outline: 2px solid var(--text-primary); outline-offset: 1px; }
+.usage-touch-month:focus-visible, .usage-touch-day:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.usage-touch-days { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: grid; gap: var(--space-1); }
+.usage-touch-day { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); align-items: center; width: 100%; min-height: 44px; padding: var(--space-2) var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-input); background: var(--bg-surface); color: var(--text-primary); font: inherit; text-align: start; cursor: pointer; }
+.usage-touch-day[aria-pressed='true'] { outline: 2px solid var(--text-primary); outline-offset: 1px; }
+.usage-touch-date { font-variant-numeric: tabular-nums; }
+.usage-touch-tokens { grid-column: 1 / -1; color: var(--text-secondary); font-size: var(--text-caption); }
 .usage-cell.level-0 { background: var(--border-subtle); }
 .usage-cell.level-1 { background: color-mix(in srgb, var(--accent) 30%, transparent); }
 .usage-cell.level-2 { background: color-mix(in srgb, var(--accent) 55%, transparent); }
@@ -1165,6 +1202,8 @@ button:disabled { cursor: not-allowed; }
   background: var(--bg-surface-active); color: var(--text-secondary);
 }
 .project-card-time { margin-left: auto; font-size: var(--text-caption2); color: var(--text-faint); }
+/* #1572: the archived card's footer row (Restore), always at the end of the card. */
+.project-card-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
 
 @media (max-width: 640px) {
   .projects-head, .projects-grid { padding-left: 18px; padding-right: 18px; }
@@ -1261,7 +1300,7 @@ button:disabled { cursor: not-allowed; }
 }
 .source-name { flex: 1; min-width: 0; font-size: var(--text-caption); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .source-size { font-size: var(--text-caption2); color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.source-actions { display: flex; gap: 8px; margin-top: 8px; }
+.source-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .source-actions .btn { cursor: pointer; }
 
 /* Segmented control, matching .app-mode-switch: the selected pill is a raised

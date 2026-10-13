@@ -3,7 +3,8 @@ import type { ToolCallView } from '../types';
 import { useRef, useState } from 'react';
 import { decideToolApproval } from '../api';
 import { ShellIcon } from './ShellIcon';
-import { useT } from '../i18n';
+import { useT, type Translate } from '../i18n';
+import { summariseToolResult } from '../tool-result-summary';
 import { formatNumber } from '../number-format';
 import { around } from '../text-around';
 import { showDirectionControls } from '../visible-controls';
@@ -124,6 +125,19 @@ function pretty(text: string): string {
   try { return JSON.stringify(JSON.parse(text), null, 2); } catch { return text; }
 }
 
+/** The collapsed row's words for a finished call (#1524): a count for a listing or a search, a plain
+ *  word for an error or a structured result of unknown shape, the text itself when it is plain text. */
+function resultPreview(result: string, t: Translate, n: (count: number) => string): string {
+  const summary = summariseToolResult(result);
+  switch (summary.kind) {
+    case 'listed': return t.plural('chat.toolCalls.summary.listed', summary.items, { count: n(summary.items) });
+    case 'search': return t.plural('chat.toolCalls.summary.search', summary.results, { count: n(summary.results) });
+    case 'error': return t('chat.toolCalls.summary.error');
+    case 'received': return t('chat.toolCalls.summary.received');
+    default: return oneLine(result) || t('chat.toolCalls.emptyResult');
+  }
+}
+
 /** Every tool call for a reply, under its thinking block: one compact,
  *  collapsible list with a line per call. A write waiting for approval is
  *  never folded away — its full arguments are the approval gate. */
@@ -147,7 +161,8 @@ export function ToolCalls({ calls }: { calls: ToolCallView[] }): JSX.Element {
             {settled.map((c, i) => {
               const state = c.status === 'denied' ? 'declined' : c.status === 'done' ? 'done' : c.status === 'stopped' ? 'not run' : 'running';
               // The result text is what the model was told; the row says what happened in plain words.
-              const preview = state === 'declined' ? t('chat.toolCalls.previewDeclined') : state === 'not run' ? t('chat.toolCalls.previewNotRun') : c.result !== undefined ? oneLine(c.result) || t('chat.toolCalls.emptyResult') : c.args ? oneLine(c.args) : '';
+              // #1524: a finished call says what it returned in a few words; a running one never shows its raw arguments.
+              const preview = state === 'declined' ? t('chat.toolCalls.previewDeclined') : state === 'not run' ? t('chat.toolCalls.previewNotRun') : c.result !== undefined ? resultPreview(c.result, t, n) : state === 'running' ? t('chat.toolCalls.summary.running') : '';
               const STATE_LABEL: Record<string, string> = { done: t('chat.toolCalls.state.done'), declined: t('chat.toolCalls.state.declined'), 'not run': t('chat.toolCalls.state.notRun'), running: t('chat.toolCalls.state.running') };
               return (
                 <li key={i} className={`tool-call is-${state.replace(' ', '-')}`}>

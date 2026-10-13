@@ -12,7 +12,7 @@ const exports_ = {};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../../src/settings-nav.ts'), 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText, { exports: exports_ });
-const { initialNavState, nextNavState, resolveSettingsClose, restoreNavState, persistedView, withoutChat, withoutProject } = exports_;
+const { initialNavState, nextNavState, resolveSettingsClose, restoreNavState, persistedView, withoutChat, withoutProject, settingsOpenAtLoad } = exports_;
 
 // vm.runInNewContext runs the module in a separate realm, so objects it constructs (state,
 // resolveSettingsClose's result) have a different Object prototype than literals written in this
@@ -123,4 +123,20 @@ test('a deleted project is dropped as the return target, and so is any chat insi
   assert.equal(j(withoutProject(initialNavState(unrelated), 'doomed', { kind: 'projects' }).returnView), j(unrelated));
   const free = { kind: 'chat', chatId: 'c2', projectId: null };
   assert.equal(j(withoutProject(initialNavState(free), 'doomed', { kind: 'projects' }).returnView), j(free));
+});
+
+// #1444: the root URL must not reopen a Settings modal that was left open on the last visit.
+test('a bare root load does not reopen a saved Settings overlay (#1444)', () => {
+  // route null = the bare `/` (no place named in the address), not a fresh account.
+  assert.equal(settingsOpenAtLoad(null, false), false);
+});
+test('a Settings address opens Settings; any other address does not (#1444)', () => {
+  assert.equal(settingsOpenAtLoad({ kind: 'settings' }, false), true);
+  assert.equal(settingsOpenAtLoad({ kind: 'diary' }, false), false);
+  assert.equal(settingsOpenAtLoad({ kind: 'new' }, false), false);
+});
+test('a brand-new account still starts in Settings at the bare root (#359)', () => {
+  assert.equal(settingsOpenAtLoad(null, true), true);
+  // ...but a link to somewhere else keeps that place, not Settings.
+  assert.equal(settingsOpenAtLoad({ kind: 'chat' }, true), false);
 });

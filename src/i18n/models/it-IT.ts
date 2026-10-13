@@ -136,6 +136,7 @@ export const IT_IT_MODELS: ModelsCatalogue = {
   'mm.recover.healthUnavailableHelp': "Impossibile verificare il caricatore dei modelli. Riprova o apri i registri.",
   'mm.recover.noEngine': "Nessun motore trovato",
   'mm.recover.running': "{engine} in esecuzione",
+  'mm.recover.engineIndex': "Motore {index}",
   'mm.recover.runningWith': "{engine} in esecuzione · {model} caricato",
   'mm.recover.openLogs': "Apri i log",
   'mm.recover.checking': "Controllo dei processi…",

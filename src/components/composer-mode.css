@@ -10,6 +10,13 @@
 .composer-mode-toggle button:disabled { cursor: default; opacity: .6; }
 .composer-mode-harness { flex: 1 1 180px; min-width: 0; color: var(--text-secondary); font-size: var(--text-caption); }
 .composer-mode-harness select { font: inherit; color: var(--text-primary); background: var(--bg-surface); border: 1px solid var(--control-border); border-radius: var(--radius-input); padding: 2px var(--space-2); }
+/* #1564, #1595: a free chat says Task runs inside a project, with a button to the Projects page. The hint is
+   its own block under the Chat caption (a flex container is block-level), never run on after it. */
+.composer-mode-free { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--space-2); }
+.composer-mode-line + .composer-mode-free { margin-block-start: var(--space-1); }
+.composer-mode-open { font: inherit; color: var(--text-primary); background: none; border: 0; padding: 0 var(--space-1); text-decoration: underline; cursor: pointer; min-block-size: 24px; }
+.composer-mode-open:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.composer-mode-bar.is-slim .composer-mode-open { min-block-size: 44px; }
 .composer-mode-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-surface); font-size: var(--text-footnote); color: var(--text-primary); }
 .composer-mode-confirm > span { flex: 1 1 260px; }
 

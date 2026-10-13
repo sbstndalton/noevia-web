@@ -10,6 +10,7 @@ import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
 import '../../i18n/settings';
 import { formatNumber } from '../../number-format';
+import { displayAddress } from '../../connector-address';
 
 interface Tool { name: string; label: string; write: boolean; mode: ToolMode }
 interface Nextcloud {
@@ -99,7 +100,8 @@ const ncBadge = (t: Translate, nc: Nextcloud) => nc.state === 'connected'
   : <span className="badge count">{t('connectors.notConnected')}</span>;
 
 /** Settings → Connectors: what noevia can reach on your behalf, and what each tool may do. */
-export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false }: { isAdmin: boolean; onStartChat?: (prompt: string) => void; hideTitle?: boolean }): JSX.Element {
+/** `listHeading` (#1559) heads the list of connectors only; a connector's own page never shows it, so the list heading does not sit above a back link. */
+export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false, listHeading }: { isAdmin: boolean; onStartChat?: (prompt: string) => void; hideTitle?: boolean; listHeading?: string }): JSX.Element {
   const t = useT();
   const [drive, setDrive] = useState<Drive | null>(null);
   const [nc, setNc] = useState<Nextcloud | null>(null);
@@ -131,6 +133,7 @@ export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false }: 
 
   return <>
     {!hideTitle && <div className="settings-title"><h1>{t('connectors.title')}</h1><p>{t('connectors.intro')}</p></div>}
+    {listHeading && <h2 className="plugins-subhead">{listHeading}</h2>}
     {error && <p className="route-note" role="alert">{error} <button className="btn btn-secondary btn-sm" onClick={() => void load()}>{t('connectors.tryAgain')}</button></p>}
     <div className="connector-list">
       <button className="connector-card surface" onClick={() => setPage('gdrive')} disabled={!drive} aria-label="Google Drive">
@@ -145,7 +148,7 @@ export function ConnectorsSettings({ isAdmin, onStartChat, hideTitle = false }: 
       </button>}
       <div className="connector-card surface is-later" aria-disabled="true">
         <span className="logo"><ShellIcon name="server" size={22}/></span>
-        <span className="connector-text"><b>{t('connectors.mcp.title')}</b><small>{t('connectors.mcp.summary', { plugins: t('connectors.mcp.navPlugins'), mcp: t('connectors.mcp.title') })}</small></span>
+        <span className="connector-text"><b>{t('connectors.mcp.title')}</b><small>{t('connectors.mcp.summary', { section: t('sidebar.customise'), mcp: t('connectors.mcp.title') })}</small></span>
       </div>
     </div>
   </>;
@@ -223,7 +226,8 @@ function DrivePage({ drive, isAdmin, onBack, onChange, onActionStart, reload, on
           ? <>{t('connectors.backup.on', { folder: 'noevia-offsite' })} {drive.backup.copy?.state === 'ok' ? (drive.backup.lastBackup ? t('connectors.backup.lastCopySize', { date: when(t, drive.backup.copy.at), size: formatNumber(drive.backup.lastBackup.uploadedBytes / 1024 / 1024, appLocale(), 1) }) : t('connectors.backup.lastCopy', { date: when(t, drive.backup.copy.at) })) : drive.backup.copy?.message || t('connectors.backup.first')}</>
           : <>{t('connectors.backup.off')}</>}
       </span></div>
-      <Switch label={t('connectors.backup.switch')} checked={drive.backup.copyEnabled} disabled={!!busy} onChange={(on) => void act('backup', () => call<Drive>('/api/connectors/gdrive/backup-copy', 'PUT', { enabled: on }))}/>
+      {/* #1561: the switch is named by the label it visibly carries, so a screen reader says what the sighted user sees. */}
+      <Switch label={t('connectors.backup.title')} checked={drive.backup.copyEnabled} disabled={!!busy} onChange={(on) => void act('backup', () => call<Drive>('/api/connectors/gdrive/backup-copy', 'PUT', { enabled: on }))}/>
     </div></div>}
 
     {connected && onStartChat && <>
@@ -283,11 +287,9 @@ function NextcloudPage({ nc, onBack, onChange }: { nc: Nextcloud; onBack: () => 
       </div>
     </div>
     <p className="lede">{t('connectors.nextcloud.ledeBefore')} <b>{t('settings.title')} → {t('settings.section.diary')}</b>{t('connectors.nextcloud.ledeAfter')}</p>
-    <TrustReview origin={nc.baseUrl || t('connectors.nextcloud.origin')} scope={t('connectors.nextcloud.scope')} tools={nc.tools} connected={nc.state === 'connected'}/>
+    {/* #1560: the address is shown once, decoded, as the Destination row above (no second Address card). */}
+    <TrustReview origin={nc.baseUrl ? displayAddress(nc.baseUrl) : t('connectors.nextcloud.origin')} scope={t('connectors.nextcloud.scope')} tools={nc.tools} connected={nc.state === 'connected'}/>
     {(error || nc.message) && <p className="route-note" role={error || nc.state === 'error' ? 'alert' : 'status'}>{error || nc.message}</p>}
-    {nc.baseUrl && <div className="group surface"><div className="row">
-      <div className="row-text"><span className="row-label">{t('connectors.nextcloud.address')}</span><span className="row-desc">{nc.baseUrl}</span></div>
-    </div></div>}
     {nc.boxes.length > 0 && <div className="group surface"><div className="row">
       <div className="row-text"><span className="row-label">{t('connectors.nextcloud.toolboxes')}</span>
         <span className="row-desc">{nc.boxes.map((b) => `${b.label} (${b.toolCount})`).join(' · ')}. {t('connectors.nextcloud.toolboxesNote')}</span></div>

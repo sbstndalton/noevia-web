@@ -184,7 +184,7 @@ async function api(page, url, body, method = body === undefined ? 'GET' : 'POST'
     assert.equal(await page.locator('.msg-retry').count(), 0, 'no Retry button that would repeat the write');
     const note = page.locator('[data-testid="reply-paused"]');
     assert.equal(await note.count(), 1, 'the reply carries the paused note');
-    assert.equal((await note.innerText()).trim(), '1 change was saved. Step supervision paused this reply before any further steps.');
+    assert.equal((await note.innerText()).trim(), '1 change was saved. Step checks paused this reply before any further steps.');
     console.log('PASS turn 1: the approved write landed; the reply ends with "1 change was saved…", no "Request failed", no Retry');
 
     // ── Turn 2: the model proposes the same append again ──

@@ -136,6 +136,7 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.recover.healthUnavailableHelp': "Der Modell-Loader konnte nicht geprüft werden. Erneut prüfen oder Protokolle öffnen.",
   'mm.recover.noEngine': "Keine Engine gefunden",
   'mm.recover.running': "{engine} läuft",
+  'mm.recover.engineIndex': "Motor {index}",
   'mm.recover.runningWith': "{engine} läuft · {model} geladen",
   'mm.recover.openLogs': "Logs öffnen",
   'mm.recover.checking': "Jobs werden geprüft…",

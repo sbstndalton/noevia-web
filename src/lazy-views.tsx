@@ -68,5 +68,12 @@ export function ViewLoading({ name, active = true, settings = false }: { name: s
   if (!active) return null;
   const key = VIEW_NAME_KEY[name];
   const label = key ? tt(key) : name;
+  // #1567: the Diary's chunk loads before anything else is on screen, so its placeholder has the calendar's shape
+  // (a title, a 7-column month grid, a side column) rather than a bare line of text. The words stay for screen readers.
+  if (name === 'diary') return <div className="view-loading diary-skeleton" role="status" aria-busy="true">
+    <div className="diary-skeleton-main" aria-hidden="true"><span className="skeleton" /><span className="skeleton" /><div className="diary-skeleton-grid">{Array.from({ length: 35 }, (_, i) => <span key={i} className="skeleton" />)}</div></div>
+    <div className="diary-skeleton-side" aria-hidden="true"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>
+    <span className="sr-only">{tt('viewLoading.text', { name: label })}</span>
+  </div>;
   return <div className={`view-loading${settings ? ' settings-stage' : ''}`} role="status">{tt('viewLoading.text', { name: label })}</div>;
 }

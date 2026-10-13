@@ -11,6 +11,7 @@ import type { AutoRoleInfo } from '../auto-role-availability';
 import { CloseButton } from './CloseButton';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
+import { providerDisplayName } from '../display-names';
 import type { JSX, ReactNode } from 'react';
 import type { InstalledModel, Project, Provider } from '../types';
 import { apiFetch, fetchAutoRoles, fetchChatGptModels, fetchInstalledModels, fetchProviders, saveProjectConfig } from '../api';
@@ -56,7 +57,7 @@ export function ModelPopup({ projects, activeProject, onClose, onProjectsChanged
           {/* #527: the phone sheet opens on its heading, so the status block at the top is what is
               read and seen first; left to itself, initial focus would land on the first field (a
               model filter or a tool checkbox) and scroll the sheet past it. */}
-          <h2 {...(phoneSheet ? { tabIndex: -1, 'data-initial-focus': '' } : {})}><small>{t('modelPopup.title')}</small>{activeProject ? activeProject.name : t('modelPopup.model')}</h2>
+          <h2 {...(phoneSheet ? { tabIndex: -1, 'data-initial-focus': '' } : {})}><small>{t('modelPopup.title')}</small><span className="mp-head-name">{activeProject ? activeProject.name : t('modelPopup.model')}</span></h2>
           <button className="btn btn-ghost btn-sm mp-settings" onClick={() => openSettings()}><ShellIcon name="settings" size={16}/>{t('modelPopup.settings')}</button>
           <CloseButton onClick={onClose}/>
         </header>
@@ -205,7 +206,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
           <span>{t('modelPopup.provider')}</span>
           <select className="modal-input" value={activeProviderId} disabled={busy !== null}
             onChange={(e) => void save('provider', { provider: e.target.value })}>
-            {providers.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+            {providers.map((p) => <option key={p.id} value={p.id}>{providerDisplayName(p, t)}</option>)}
           </select>
         </label>}
 

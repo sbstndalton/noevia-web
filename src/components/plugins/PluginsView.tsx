@@ -52,7 +52,7 @@ export function PluginsView({ onStartChat, embedded = false, projects = [], onPr
       <SegmentedControl label={t('customise.title')} value={tab} onChange={setTab} options={[['skills', t('customise.tab.skills')], ['connectors', t('connectors.title')], ['plugins', t('customise.tab.plugins')]]}/>
     </header>
     {tab === 'connectors'
-      ? <div className="plugins-connected"><h2 className="plugins-subhead">{t('customise.connectedTitle')}</h2><ConnectorsSettings hideTitle isAdmin={isAdmin} onStartChat={onStartChat}/></div>
+      ? <div className="plugins-connected"><ConnectorsSettings hideTitle listHeading={t('customise.connectedTitle')} isAdmin={isAdmin} onStartChat={onStartChat}/></div>
       : tab === 'plugins'
         ? <div className="plugins-connected"><h2 className="plugins-subhead">{t('customise.installedTitle')}</h2><SignInServers/><KeyServers/><p className="plugins-note">{t('customise.mcpNote')}{!isAdmin && <> {t('customise.mcpAdminNote')}</>}</p><h2 className="plugins-subhead">{t('customise.library')}</h2><Directory key="mcp" kind="mcp" projects={projects} onProjectsChanged={onProjectsChanged} isAdmin={isAdmin}/></div>
         : <><p className="plugins-note">{t('customise.skillsNote')}</p><h2 className="plugins-subhead">{t('customise.library')}</h2><Directory key="skills" kind="skills" projects={projects} onProjectsChanged={onProjectsChanged} isAdmin={isAdmin}/></>}
@@ -132,7 +132,7 @@ function Directory({ kind, projects, onProjectsChanged, isAdmin }: { kind: 'mcp'
           {i.description && <small>{i.description}</small>}
         </span>
         <span className="plugin-card-actions">
-          {i.url && <a className="btn btn-secondary btn-sm plugin-card-link" href={i.url} target="_blank" rel="noreferrer noopener" aria-label={t('customise.viewAria', { name: i.name })}>{t('customise.view')}</a>}
+          {i.url && <a className="btn btn-secondary btn-sm plugin-card-link" href={i.url} target="_blank" rel="noreferrer noopener" aria-label={t('customise.viewNewTabAria', { name: i.name })} title={t('customise.opensInNewTab')}>{t('customise.view')}<ShellIcon name="external-link" size={13}/></a>}
           {kind === 'skills' && <AddSkill skill={i} projects={projects} installedIn={(skillsStatus === 'ready' ? projectSkills : []).filter((s) => s.file === `${i.id}/SKILL.md`).map(() => skillProject)} onAdded={() => { setSkillsAttempt((n) => n + 1); onProjectsChanged?.(); }}/>}
           {kind === 'mcp' && isAdmin && <AddServer item={i} added={added.find((a) => a.registryName === i.id)} onChange={setAdded}/>}
         </span>
@@ -268,7 +268,7 @@ function AddServer({ item, added, onChange }: { item: Item; added?: Added; onCha
       const d = await apiFetch('/api/admin/mcp-directory').then((r) => r.json()).catch(() => null);
       const me = d?.servers?.find((x: Added) => x.registryName === item.id);
       if (d?.servers) onChange(d.servers);
-      if ((me && me.toolCount) || n > 60) { window.clearInterval(timer); if (me?.toolCount) setNote({ text: t('customise.oauthCompleteNote', { tools: tools(t, me.toolCount), plugins: t('customise.tab.plugins'), connected: t('customise.connectedTitle') }) }); }
+      if ((me && me.toolCount) || n > 60) { window.clearInterval(timer); if (me?.toolCount) setNote({ text: t('customise.oauthCompleteNote', { tools: tools(t, me.toolCount), section: t('sidebar.customise'), tab: t('connectors.title') }) }); }
     }, 3000);
   };
   const msg = note && <small role={note.error ? 'alert' : 'status'} className={note.error ? 'plugin-add-error' : ''}>{note.text}</small>;
@@ -281,7 +281,7 @@ function AddServer({ item, added, onChange }: { item: Item; added?: Added; onCha
         onChange={(e) => setValues((v) => ({ ...v, [h.name]: e.target.value }))}/>
     </label>)}
     {method === 'POST' && <fieldset className="plugin-key-mode"><legend>{t('customise.whoUsesKey')}</legend>
-      <label><input type="radio" name={`mode-${item.id}`} checked={keyMode === 'personal'} onChange={() => setKeyMode('personal')}/> {t('customise.eachPersonOwnKey')} <small>{t('customise.eachPersonOwnKeyHint', { plugins: t('customise.tab.plugins'), connected: t('customise.connectedTitle') })}</small></label>
+      <label><input type="radio" name={`mode-${item.id}`} checked={keyMode === 'personal'} onChange={() => setKeyMode('personal')}/> {t('customise.eachPersonOwnKey')} <small>{t('customise.eachPersonOwnKeyHint', { section: t('sidebar.customise'), tab: t('customise.tab.plugins') })}</small></label>
       <label><input type="radio" name={`mode-${item.id}`} checked={keyMode === 'shared'} onChange={() => setKeyMode('shared')}/> {t('customise.everyoneUsesKey')}</label>
     </fieldset>}
     <small className="plugin-key-note">{t('customise.keyStoredNote')} {method === 'POST' ? (keyMode === 'shared' ? t('customise.keyUsedByEveryone') : t('customise.keyUsedByYouOnly')) : added?.personal ? t('customise.keyIsYourOwn') : t('customise.keyUsedByEveryone')}</small>

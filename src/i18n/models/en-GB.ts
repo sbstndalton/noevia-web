@@ -9,7 +9,7 @@ import { EN_GB_FIELDS } from './fields-en-GB';
 export const EN_GB_MODELS = {
   ...EN_GB_FIELDS,
   // Page, tabs and toolbar (ModelsSettings.tsx)
-  'mm.title': 'Models & routing',
+  'mm.title': 'Models and routing',
   'mm.lede': 'Download, configure, measure and route the models this server runs.',
   'mm.allModels': 'All models',
   'mm.navLabel': 'Model management',
@@ -144,6 +144,7 @@ export const EN_GB_MODELS = {
   'mm.recover.healthUnavailableHelp': 'Could not check the model loader. Check again or open logs.',
   'mm.recover.noEngine': 'No engine found',
   'mm.recover.running': '{engine} running',
+  'mm.recover.engineIndex': "Engine {index}",
   'mm.recover.runningWith': '{engine} running · {model} loaded',
   'mm.recover.openLogs': 'Open logs',
   'mm.recover.checking': 'Checking jobs…',

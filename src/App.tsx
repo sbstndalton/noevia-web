@@ -44,13 +44,14 @@ import {
 } from './api';
 import type { RoutingModeSettings } from './api';
 import { ForceLocalToggle, isRouteTarget } from './components/RouteControls';
+import { NEW_PROJECT_TOOLS_MODE } from './tools-mode';
 import { FrameChips } from './components/FrameChips';
 import { acceptPlan, acceptedFrame, chatDestinationIds, chatDestinations, frameDraftReducer, startDraft } from './chat-frame';
 import { frameWithLink, keepLinks, MAX_FRAME_LINKS } from './chat-organise';
 import { ChatLinks } from './components/ChatLinks';
 import type { FrameAction, FrameDraft } from './chat-frame';
 import { sessionMode, type ChatMode } from './chat-mode';
-import { STOPPED_SENDER } from './chat-labels';
+import { STOPPED_SENDER, statusDetail } from './chat-labels';
 import type {
   ChatMeta,
   HealthState,
@@ -66,6 +67,7 @@ import type {
 } from './types';
 import { ChatView } from './components/ChatView';
 import { ModelPopup } from './components/ModelPopup';
+import { rememberCreatedProject, withCreatedProjects } from './created-projects';
 import { ProjectView } from './components/ProjectView';
 import { ActiveCodeTasks } from './components/code/ActiveCodeTasks';
 import { Coding, Customise, Diary, ModelManager, Projects, Settings, ViewLoading, prefetchViewsWhenIdle } from './lazy-views';
@@ -78,21 +80,27 @@ import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
 import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
-import { finishedToolCall, pendingToolCall, settleReply, settleToolCalls } from './tool-call-state';
+import { finishedToolCall, pendingToolCall, resultSlot, settleReply } from './tool-call-state';
 import { chatHome } from './chat-home';
-import { declinedNames, editBase, modelHistory, persistableMessage, rerunBase, storedPause } from './applied-writes';
-import { mergeTranscripts } from './transcript-merge';
+import { declinedNames, editBase, modelHistory, rerunBase } from './applied-writes';
+import { foldDeferredMerge, mergeTranscripts, savedCopyExtends, type DeferredMerge } from './transcript-merge';
+import { entriesFor, messageFromEntry, withStoredAnswers } from './transcript-variants';
+import { answersBeforeRegenerate, branchesBeforeEdit, selectAnswer, selectBranch, type VariantSource } from './transcript-variants';
 import { skippedChatIds, withoutSkipped } from './list-save';
 import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, shouldSaveChat, upsertChatMeta } from './chat-save';
 import { readLastPlace, writeLastPlace, clearLastPlace, type LastPlace } from './last-view';
 import { historyMode, matchPath, parsePath, routeForState, toPath, type CustomiseTab, type ProjectTab, type Route, type SyncedPlace } from './routes';
 import { EmptyState } from './components/EmptyState';
 import { currentRoutingDecision } from './current-routing';
-import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, withoutChat, withoutProject, type NavState } from './settings-nav';
+import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, settingsOpenAtLoad, withoutChat, withoutProject, type NavState } from './settings-nav';
 import { useT, t as translateNow } from './i18n';
+import { coworkStartFailure, failedReply, failureCopy } from './failure-copy';
+import { createThinkingClock } from './thinking-time';
 import { queueProjectPatch, restoreProjectPatch, takeProjectPatch, viewBelongsToProject, projectSaveErrorText, projectSyncErrorText, type PatchQueue } from './project-patches';
 import type { SkillPin } from './api-contract';
 import { storablePin } from './skill-pin-store';
+import { turnImageIdsToSend } from './turn-images';
+import { contextMeterFromEvent, utf8Bytes } from './context-meter';
 
 type View =
   | { kind: 'diary' }
@@ -103,6 +111,12 @@ type View =
   | { kind: 'models'; model?: string }
   | { kind: 'project'; id: string; codeRequest?: string }
   | { kind: 'chat'; chatId: string; projectId?: string | null };
+
+/** #1508: how often the engine-wide stats snapshot is refreshed while the tab is visible. */
+const STATS_POLL_MS = 15_000;
+
+/** #1516: how often an open chat checks whether another tab changed it. */
+const CHAT_SYNC_MS = 15_000;
 
 function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -117,13 +131,15 @@ type InitialNav = {
   /** The saved place the view underneath comes from: always for `/`, and for the two overlays
    *  (Settings, Code) that have no view of their own. */
   stored: LastPlace | null;
+  /** The address names no page at all (#1469): the app says so, and keeps the address as it is. */
+  unknown: boolean;
 };
 function readInitialNav(): InitialNav {
   const matched = matchPath(window.location.pathname);
   const stored = readLastPlace();
-  if (!matched) return { route: { kind: 'new' }, stored: null };
-  if (matched.kind === 'new' && !matched.projectId) return { route: null, stored };
-  return { route: matched, stored: matched.kind === 'settings' || matched.kind === 'code' ? stored : null };
+  if (!matched) return { route: { kind: 'new' }, stored: null, unknown: true };
+  if (matched.kind === 'new' && !matched.projectId) return { route: null, stored, unknown: false };
+  return { route: matched, stored: matched.kind === 'settings' || matched.kind === 'code' ? stored : null, unknown: false };
 }
 
 export default function App(): JSX.Element {
@@ -158,9 +174,12 @@ export default function App(): JSX.Element {
   useEffect(() => { const open = () => openSettings('status'); window.addEventListener('noevia:open-service-status', open); return () => window.removeEventListener('noevia:open-service-status', open); }, []);
   const [settingsOpen, setSettingsOpen] = useState(() => { const fresh = !!sessionStorage.getItem('cowork-new-account'); sessionStorage.removeItem('cowork-new-account');
     // A new account starts in Settings — unless it signed in at a link to somewhere else (#359).
-    if (initialRoute) return initialRoute.kind === 'settings';
-    return fresh || !!initialNav.stored?.settings; });
+    // A bare `/` never reopens a saved Settings overlay (#1444); only the place underneath returns.
+    return settingsOpenAtLoad(initialRoute, fresh); });
   const [appMode, setAppMode] = useState<'chat'|'code'>(initialRoute?.kind === 'code' ? 'code' : 'chat');
+  // An address that names no page (#1469): shown as a not-found page with a way back into the app,
+  // and left in the address bar until the person goes somewhere else.
+  const [pageMissing, setPageMissing] = useState(initialNav.unknown);
   // The tab a project and Customise are on, so the address bar can carry it (#359). A project's
   // tab is kept with its id: another project opens on its own first tab, not on this one.
   // #552: a file a reply's source chip asked the project's Sources tab to reveal.
@@ -265,6 +284,8 @@ export default function App(): JSX.Element {
   }, [view]);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
+  // #1567: the last workspace fetch failed (the sidebar then stops showing a loading placeholder).
+  const [workspaceFailed, setWorkspaceFailed] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [freeChats, setFreeChats] = useState<ChatMeta[]>([]);
   const projectsRef = useRef(projects);
@@ -336,7 +357,9 @@ export default function App(): JSX.Element {
   // A merged transcript that arrived while a reply was streaming into that chat. Applying it then
   // would replace the live user message and reply placeholder; it is folded into the save made
   // when the stream ends instead.
-  const deferredMerges = useRef<Record<string, HistoryEntry[]>>({});
+  const deferredMerges = useRef<Record<string, DeferredMerge>>({});
+  // Saves queued or running per chat. The multi-tab sync (#1516) only adopts another tab's copy while none is.
+  const savesInFlight = useRef<Record<string, number>>({});
   // Chats whose transcript should be saved once the current render commits (kept out of state
   // updaters, which StrictMode runs twice).
   const persistAfterCommit = useRef<Set<string>>(new Set());
@@ -389,20 +412,24 @@ export default function App(): JSX.Element {
 
   const workspaceRequest = useRef(0);
   useEffect(() => () => { workspaceRequest.current += 1; }, []);
+  // #1417: projects created in this session, kept in the list until a workspace read includes them.
+  const createdProjects = useRef(new Map<string, { project: Project; at: number }>());
   const refreshProjects = useCallback(() => {
     const request = ++workspaceRequest.current;
     return fetchWorkspace()
       .then((w) => {
         if (request !== workspaceRequest.current) return;
-        const nextProjects = (w.projects || []).map((p) => ({ ...p, ...pendingPatches.current[p.id] }));
+        const listed = (w.projects || []).map((p) => ({ ...p, ...pendingPatches.current[p.id] }));
+        const nextProjects = withCreatedProjects(listed, createdProjects.current, Date.now());
         const nextFreeChats = Array.isArray(w.freeChats) ? w.freeChats : [];
         projectsRef.current = nextProjects;
         freeChatsRef.current = nextFreeChats;
         setProjects(nextProjects);
         setFreeChats(nextFreeChats);
         setWorkspaceLoaded(true);
+        setWorkspaceFailed(false);
       })
-      .catch(() => undefined);
+      .catch(() => { if (request === workspaceRequest.current) setWorkspaceFailed(true); });
   }, []);
   useWorkspaceChanged(refreshProjects);
 
@@ -497,6 +524,8 @@ export default function App(): JSX.Element {
 
   // Engine-wide totals and hardware are a background snapshot. Request-local
   // values arrive over the chat SSE stream and never wait on this poll.
+  // #1508: every poll costs the model manager several calls, so it runs every
+  // STATS_POLL_MS (not every 2.5 s) while visible; a reply's end still refreshes it at once.
   useEffect(() => {
     let alive = true, pending = false;
     const tick = () => {
@@ -509,7 +538,7 @@ export default function App(): JSX.Element {
         .finally(() => { pending = false; });
     };
     tick();
-    const t = setInterval(tick, 2500);
+    const t = setInterval(tick, STATS_POLL_MS);
     document.addEventListener('visibilitychange', tick);
     return () => {
       alive = false;
@@ -517,6 +546,36 @@ export default function App(): JSX.Element {
       document.removeEventListener('visibilitychange', tick);
     };
   }, []);
+
+  // #1516: a chat open in two tabs. While this chat is open and idle (no send, no reply and no save in
+  // flight), its saved revision is checked every CHAT_SYNC_MS, and a newer copy that extends what is on
+  // screen is adopted, so the other tab's turns appear without a reload. A copy that diverges from this
+  // one is left to the next save, which merges it (#1515). Checks pause while the tab is hidden.
+  const chatViewId = view.kind === 'chat' ? view.chatId : null;
+  useEffect(() => {
+    if (!chatViewId) return;
+    const chatId = chatViewId;
+    let alive = true;
+    const busy = () => sendingChats.current.has(chatId) || (savesInFlight.current[chatId] ?? 0) > 0;
+    const check = () => {
+      if (!alive || document.visibilityState === 'hidden' || busy()) return;
+      void fetchChatHistoryRevision(chatId).then(({ history, revision }) => {
+        if (!alive || !revision || revision === historyRevisions.current[chatId] || busy()) return;
+        if (!shouldSaveChat(chatId, deletedChats.current)) return;
+        const local = entriesFor(messagesRef.current[chatId] ?? []);
+        if (!savedCopyExtends(local, history)) return;
+        historyRevisions.current[chatId] = revision;
+        setMessagesByChat((prev) => ({ ...prev, [chatId]: resolveLoadedHistory(prev[chatId] ?? [], withStoredAnswers(history.map((h) => messageFromEntry(h, uid())), uid)) }));
+      }).catch(() => undefined);
+    };
+    const timer = window.setInterval(check, CHAT_SYNC_MS);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', check);
+    };
+  }, [chatViewId]);
 
   // Lazily load a chat's persisted history when it is opened.
   useEffect(() => {
@@ -529,22 +588,7 @@ export default function App(): JSX.Element {
     const load = fetchChatHistoryRevision(id)
       .then(({ history, revision }) => {
         historyRevisions.current[id] = revision;
-        const loaded: Message[] = history.map((h) => ({
-            id: uid(),
-            role: h.role,
-            content: h.content,
-            senderLabel: h.model,
-            routingDecision: h.routingDecision,
-            ...(isRouteTarget(h.routeTarget) ? { routeTarget: h.routeTarget } : {}),
-            reasoning: h.reasoning,
-            reasoningMs: h.reasoningMs,
-            toolCalls: settleToolCalls(h.toolCalls),
-            stats: h.stats,
-            coworkTask: h.coworkTask,
-            sources: h.sources,
-            ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}),
-            ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}),
-          }));
+        const loaded: Message[] = withStoredAnswers(history.map((h) => messageFromEntry(h, uid())), uid);
         setMessagesByChat((prev) => ({ ...prev, [id]: resolveLoadedHistory(prev[id] ?? [], loaded) }));
         setHistoryChecked((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
         return loaded;
@@ -641,11 +685,15 @@ export default function App(): JSX.Element {
   });
   const routePath = route ? toPath(route) : null;
   const syncedPlace = useRef<SyncedPlace | null>(null);
+  // Any move off the page the address did not name (a sidebar link, a Back step) leaves it (#1469).
+  const viewAtLoad = useRef(view);
+  useEffect(() => { if (view !== viewAtLoad.current) setPageMissing(false); }, [view]);
   // Every commit, not on deps: the replace flag must be consumed by the first commit after it
   // was raised even when that commit leaves the path alone.
   useEffect(() => {
     const flagged = replaceAfter.current !== null && thisRender > replaceAfter.current;
     if (flagged) replaceAfter.current = null;
+    if (pageMissing) return;
     if (!route || !routePath) return;
     const next: SyncedPlace = { path: routePath, kind: route.kind, chatId: view.kind === 'chat' ? view.chatId : null };
     const mode = historyMode(syncedPlace.current, next, { current: window.location.pathname, forceReplace: flagged });
@@ -728,28 +776,14 @@ export default function App(): JSX.Element {
     // instead of a bare answer. The server strips these before replaying
     // history to a model, so they cost nothing in prompt tokens.
     // A failed reply is not saved, except as the record of changes it saved (#658).
-    const entries: HistoryEntry[] = msgs.map(persistableMessage).filter((m): m is Message => m !== null).map((m) => ({
-      role: m.role,
-      content: m.content,
-      model: m.senderLabel,
-      routingDecision: m.routingDecision,
-      ...(m.routeTarget ? { routeTarget: m.routeTarget } : {}),
-      reasoning: m.reasoning || undefined,
-      reasoningMs: m.reasoningMs,
-      toolCalls: m.toolCalls && m.toolCalls.length ? m.toolCalls : undefined,
-      stats: m.stats,
-      coworkTask: m.coworkTask,
-      sources: m.sources && m.sources.length ? m.sources : undefined,
-      skill: m.role === 'user' ? m.skill : undefined,
-      paused: m.role === 'assistant' ? m.paused : undefined,
-    }));
+    const entries: HistoryEntry[] = entriesFor(msgs);
     // Saves for one chat run in order. If another device saved first, merge its copy with ours
     // (nothing either side wrote is dropped), show the merged transcript, and save that.
-    const show = (merged: HistoryEntry[]) => {
-      if (sendingChats.current.has(chatId)) { deferredMerges.current[chatId] = merged; return; }
+    const show = (merged: HistoryEntry[], ours: HistoryEntry[]) => {
+      if (sendingChats.current.has(chatId)) { deferredMerges.current[chatId] = { merged, ours }; return; }
       setMessagesByChat((prev) => ({
         ...prev,
-        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => ({ id, role: h.role, content: h.content, senderLabel: h.model, routingDecision: h.routingDecision, ...(isRouteTarget(h.routeTarget) ? { routeTarget: h.routeTarget } : {}), reasoning: h.reasoning, reasoningMs: h.reasoningMs, toolCalls: settleToolCalls(h.toolCalls), stats: h.stats, coworkTask: h.coworkTask, sources: h.sources, ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}), ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}) })),
+        [chatId]: adoptMergedTranscript(prev[chatId] ?? [], merged, uid, (h, id) => messageFromEntry(h, id)),
       }));
     };
     if (!shouldSaveChat(chatId, deletedChats.current)) return;
@@ -761,22 +795,26 @@ export default function App(): JSX.Element {
       const deferred = deferredMerges.current[chatId];
       if (deferred && !sendingChats.current.has(chatId)) {
         delete deferredMerges.current[chatId];
-        const merged = mergeTranscripts(deferred, next);
-        if (merged !== next) { next = merged; show(merged); }
+        // #1515: the held copy already holds the turns it was merged with; only what came after them is added.
+        const folded = foldDeferredMerge(deferred, next);
+        next = folded; show(folded, folded);
       }
       for (let attempt = 0; attempt < 3; attempt++) {
         if (!shouldSaveChat(chatId, deletedChats.current)) return;
         const result = await saveChatHistory(chatId, next, historyRevisions.current[chatId]);
         if (result.ok) { historyRevisions.current[chatId] = result.revision; return; }
-        const merged = mergeTranscripts(result.conflict.history, next);
+        const ours = next;
+        const merged = mergeTranscripts(result.conflict.history, ours);
         historyRevisions.current[chatId] = result.conflict.revision;
-        if (merged !== next) {
+        if (merged !== ours) {
           next = merged;
-          show(merged);
+          show(merged, ours);
         }
       }
     };
-    historySaves.current[chatId] = (historySaves.current[chatId] || Promise.resolve()).then(run).catch(() => undefined);
+    savesInFlight.current[chatId] = (savesInFlight.current[chatId] ?? 0) + 1;
+    historySaves.current[chatId] = (historySaves.current[chatId] || Promise.resolve()).then(run).catch(() => undefined)
+      .finally(() => { savesInFlight.current[chatId] = Math.max(0, (savesInFlight.current[chatId] ?? 1) - 1); });
   }, []);
 
   useEffect(() => {
@@ -873,7 +911,7 @@ export default function App(): JSX.Element {
   }, []);
 
   const handleSend = useCallback(
-    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; notice?: string | null; skill?: SkillPin; resend?: ResendOutcome } = {}) => {
+    async (chatId: string, projectId: string | null, text: string, base?: Message[], turn: { turnToolboxes?: string[]; turnImageIds?: string[]; notice?: string | null; skill?: SkillPin; resend?: ResendOutcome; files?: string[]; variantOf?: VariantSource } = {}) => {
       // `streamingChats` is render state, so two sends in one tick both see it false. The ref
       // is updated synchronously and is the real guard against a duplicate generation.
       if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
@@ -881,7 +919,15 @@ export default function App(): JSX.Element {
       // #562/#571: the pin travels with the turn (and is saved with the transcript), so Retry and
       // Regenerate resend the same pin, also after a reload.
       const sentPin = storablePin(turn.skill);
-      const userMsg: Message = { id: uid(), role: 'user', content: text, ...(sentPin ? { skill: sentPin } : {}) };
+      // #1512: the image sources this message attaches. Always an array on the request; kept on the
+      // user turn (in this session only) so Retry and Regenerate send the same images again.
+      const sentImages = turnImageIdsToSend(turn.turnImageIds);
+      // #1514: the files attached with this message are shown on it, in this session.
+      const sentFiles = turn.files?.length ? turn.files : undefined;
+      // #1517: the turn this one replaces keeps its answers (Regenerate) or its version (Edit & re-run).
+      const variantFields = turn.variantOf?.kind === 'answer' ? answersBeforeRegenerate(turn.variantOf.user, turn.variantOf.reply)
+        : turn.variantOf?.kind === 'branch' ? branchesBeforeEdit(turn.variantOf.user, turn.variantOf.tail) : {};
+      const userMsg: Message = { id: uid(), role: 'user', content: text, ...(sentPin ? { skill: sentPin } : {}), ...(sentImages.length ? { turnImageIds: sentImages } : {}), ...(sentFiles ? { files: sentFiles } : {}), ...variantFields };
       // History still loading: wait for it so the model sees the earlier turns and the load does
       // not land on top of this turn.
       const pendingLoad = base ? undefined : historyLoads.current[chatId];
@@ -938,13 +984,13 @@ export default function App(): JSX.Element {
       try {
         let acc = '';
         let reasoning = '';
-        // Thinking time: from the first thought to the first word of the answer. Measured here
-        // because it is what the person waited through; the engine's own timings cover tokens.
-        let thinkStart = 0, thought = false;
+        // Thinking time: the sum of every stretch of thought in this reply, each ended by the answer or a tool
+        // call (#1575). Measured here because it is what the person waited through; the engine's own timings
+        // cover tokens. Only a stretch that closed writes state, so this costs nothing per token.
+        const thinking = createThinkingClock();
         const endThinking = () => {
-          if (!thinkStart || thought) return;
-          thought = true;
-          const ms = Math.round(performance.now() - thinkStart);
+          const ms = thinking.stop();
+          if (ms === undefined) return;
           setMessagesByChat((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, reasoningMs: ms } : m)) }));
         };
         const tools: ToolCallView[] = [];
@@ -957,6 +1003,7 @@ export default function App(): JSX.Element {
             chatId,
             mode: 'chat',
             ...(turn.turnToolboxes && turn.turnToolboxes.length ? { turnToolboxes: turn.turnToolboxes } : {}),
+            turnImageIds: sentImages,
             // #272: an exact reviewed Skill version for this message. Retry resends the same pin (#562);
             // edits send none.
             ...(turn.skill ? { skill: turn.skill } : {}),
@@ -983,6 +1030,12 @@ export default function App(): JSX.Element {
                 timeToFirstToken: ev.timeToFirstToken,
               }),
             }));
+          }
+          // #1551: the server's context meter at prep and after each tool round. It counts tool output the client
+          // cannot see, so it is kept on this reply (with the prose it already covers) and ChatContext reads it there.
+          if (ev.type === 'context') {
+            const meter = contextMeterFromEvent(ev);
+            if (meter) setMessagesByChat((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, contextMeter: { meter, replyBytes: utf8Bytes(m.content) } } : m)) }));
           }
           // #778: where this reply went (local/cloud, with the reason), and the sensitivity card.
           if (ev.type === 'meta' && isRouteTarget(ev.routing)) {
@@ -1012,14 +1065,14 @@ export default function App(): JSX.Element {
           } else if (ev.type === 'tools_scope') {
             setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, toolScope: ev.text || undefined, toolScopeBoxes: ev.boxes } : m) }));
           } else if (ev.type === 'status' && ev.text) {
-            setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, processingStatus: ev.text, processingStatusId: typeof ev.id === 'string' ? ev.id : undefined } : m) }));
+            setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, processingStatus: ev.text, processingStatusId: typeof ev.id === 'string' ? ev.id : undefined, processingStatusDetail: statusDetail(ev.detail) } : m) }));
           } else if (ev.type === 'warning' && ev.text) {
             setMessagesByChat((prev) => ({
               ...prev,
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, warning: ev.text } : m)),
             }));
           } else if (ev.type === 'reasoning' && ev.text) {
-            if (!thinkStart) thinkStart = performance.now();
+            thinking.start();
             reasoning += ev.text;
             setMessagesByChat((prev) => ({
               ...prev,
@@ -1124,7 +1177,8 @@ export default function App(): JSX.Element {
             // second chip for the same call. This also clears any 'pending'
             // state, so an approved or refused call stops offering buttons
             // that would now 404.
-            const done = typeof ev.index === 'number' ? ev.index : tools.findIndex((t) => t && t.name === ev.name);
+            // #1575: a result whose index was never announced joins its open call of the same name, not a new chip.
+            const done = resultSlot(tools, typeof ev.index === 'number' ? ev.index : undefined, ev.name);
             const chip = finishedToolCall(done >= 0 ? tools[done] : undefined, { name: ev.name, text: ev.text, applied: ev.applied === true, target: ev.target, declined: ev.declined === true, notRun: ev.notRun === true }, TOOL_RESULT_LIMIT);
             if (done >= 0) tools[done] = chip; else tools.push(chip);
             setMessagesByChat((prev) => ({
@@ -1138,23 +1192,25 @@ export default function App(): JSX.Element {
       } catch (err) {
         if (controller.signal.aborted) {
           // User pressed Stop (or navigated away): keep what streamed in,
-          // mark nothing as an error.
+          // mark nothing as an error. #1447: a reply stopped while still thinking has no
+          // answer either, so it is labelled Stopped too (its thinking stays visible).
           setMessagesByChat((prev) => ({
             ...prev,
             [chatId]: (prev[chatId] ?? []).map((m) =>
-              m.id === replyId && !m.content && !m.reasoning
+              m.id === replyId && !m.content
                 ? { ...m, senderLabel: STOPPED_SENDER }
                 : m,
             ),
           }));
         } else {
           failed = true;
-          const detail = err instanceof Error ? err.message : 'unknown error';
+          // The raw exception stays in the console; the reply says it in plain words (#1472), and keeps
+          // whatever text had streamed in, marked incomplete, instead of replacing it (#1547).
+          console.error('Reply failed', err);
+          // #1547: the failure may say output was preserved only when partial text is on screen for this reply.
           setMessagesByChat((prev) => ({
             ...prev,
-            [chatId]: (prev[chatId] ?? []).map((m) =>
-              m.id === replyId ? { ...m, content: `Request failed — ${detail}`, error: true } : m,
-            ),
+            [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? failedReply(m, failureCopy(err, translateNow, Boolean(m.content.trim()))) : m)),
           }));
         }
       } finally {
@@ -1215,7 +1271,7 @@ export default function App(): JSX.Element {
         patch = { content: task.branch ? translateNow('chat.cowork.startedBranch', { repo, branch: task.branch }) : translateNow('chat.cowork.started', { repo }),
           coworkTask: { projectId, taskId: task.taskId, repository: task.repository || repository }, processingStatus: undefined };
       } catch (err) {
-        patch = { content: translateNow('chat.cowork.failed', { reason: err instanceof Error ? err.message : translateNow('chat.cowork.unknownError') }), error: true, coworkRepository: repository, processingStatus: undefined };
+        patch = coworkStartFailure(translateNow('chat.cowork.failed', { reason: err instanceof Error ? err.message : translateNow('chat.cowork.unknownError') }), repository);
       }
       sendingChats.current.delete(chatId);
       setStreamingChats(prev => { const next = { ...prev }; delete next[chatId]; return next; });
@@ -1230,7 +1286,7 @@ export default function App(): JSX.Element {
   const activeMode: ChatMode = view.kind === 'chat' ? sessionMode(activeChatMeta?.mode, pendingModes[view.chatId]) : 'chat';
 
   const sendToCurrent = useCallback(
-    (text: string, turn: { turnToolboxes?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin } = {}) => {
+    (text: string, turn: { turnToolboxes?: string[]; turnImageIds?: string[]; notice?: string | null; cowork?: { repository: string }; skill?: SkillPin; files?: string[] } = {}) => {
       if (view.kind !== 'chat') return;
       const chatId = view.chatId;
       const projectId = view.projectId ?? activeChatMeta?.projectId ?? null;
@@ -1246,7 +1302,7 @@ export default function App(): JSX.Element {
   const retryLast = useCallback((chatId: string, messageId: string) => {
     if (streamingChats[chatId]) return;
     const msgs = messagesRef.current[chatId] ?? [];
-    const index = msgs.findIndex(m => m.id === messageId && m.error);
+    const index = msgs.findIndex(m => m.id === messageId && (m.error || m.interrupted));
     // Retry is offered only for the final exchange. Never truncate later history.
     if (index !== msgs.length - 1 || index < 1 || msgs[index - 1].role !== 'user') return;
     const projectId = view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
@@ -1264,7 +1320,7 @@ export default function App(): JSX.Element {
     // #658: a failed reply that had already saved changes stays as their record, so the resend
     // tells the model they are done instead of replaying them (rerunBase).
     const pin = storablePin(msgs[index - 1].skill);
-    void handleSend(chatId, projectId, msgs[index - 1].content, rerunBase(msgs, index), { ...(pin ? { skill: pin } : {}), resend: resendOutcome('retry', failed) });
+    void handleSend(chatId, projectId, msgs[index - 1].content, rerunBase(msgs, index), { ...(pin ? { skill: pin } : {}), turnImageIds: msgs[index - 1].turnImageIds, resend: resendOutcome('retry', failed) });
   }, [activeChatMeta, handleSend, handleCoworkSend, streamingChats, view]);
 
   // Edit an earlier message and re-run the conversation from that point.
@@ -1284,7 +1340,7 @@ export default function App(): JSX.Element {
       const projectId =
         view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
       // #658: the records of changes saved by the dropped replies stay (editBase).
-      void handleSend(chatId, projectId, text, editBase(msgs, index));
+      void handleSend(chatId, projectId, text, editBase(msgs, index), { variantOf: { kind: 'branch', user: msgs[index], tail: msgs.slice(index + 1) } });
     },
     [activeChatMeta, handleSend, streamingChats, view],
   );
@@ -1300,8 +1356,21 @@ export default function App(): JSX.Element {
     const plan = planRegenerate(msgs, messageId);
     if (!plan) return;
     const projectId = view.kind === 'chat' ? view.projectId ?? activeChatMeta?.projectId ?? null : null;
-    void handleSend(chatId, projectId, plan.userText, plan.base, { ...(plan.skill ? { skill: plan.skill } : {}), resend: resendOutcome('regenerate', msgs[msgs.length - 1]) });
+    void handleSend(chatId, projectId, plan.userText, plan.base, { ...(plan.skill ? { skill: plan.skill } : {}), turnImageIds: plan.turnImageIds, resend: resendOutcome('regenerate', msgs[msgs.length - 1]), variantOf: { kind: 'answer', user: msgs[msgs.length - 2], reply: msgs[msgs.length - 1] } });
   }, [activeChatMeta, handleSend, streamingChats, view]);
+
+  // #1517: the 1/2 switcher. Shows another stored answer or version of a turn and saves the chat with it.
+  const showVariant = useCallback((chatId: string, pick: (msgs: Message[]) => Message[] | null) => {
+    if (streamingChats[chatId] || sendingChats.current.has(chatId)) return;
+    const msgs = messagesRef.current[chatId] ?? [];
+    const updated = pick(msgs);
+    if (!updated) return;
+    messagesRef.current = { ...messagesRef.current, [chatId]: updated };
+    setMessagesByChat((prev) => ({ ...prev, [chatId]: updated }));
+    if (!deletedChats.current.has(chatId)) persist(chatId, updated);
+  }, [persist, streamingChats]);
+  const chooseAnswer = useCallback((chatId: string, userId: string, next: number) => showVariant(chatId, (msgs) => { const i = msgs.findIndex((m) => m.id === userId); return i < 0 ? null : selectAnswer(msgs, i, next); }), [showVariant]);
+  const chooseVersion = useCallback((chatId: string, userId: string, next: number) => showVariant(chatId, (msgs) => { const i = msgs.findIndex((m) => m.id === userId); return i < 0 ? null : selectBranch(msgs, i, next, uid); }), [showVariant]);
 
   const startFreeChat = useCallback(() => {
     const chatId = freshChatId();
@@ -1372,7 +1441,14 @@ export default function App(): JSX.Element {
   const handleCreateProject = useCallback(
     async (body: { icon?: string; color?: string; name: string; goal: string; instructions: string; files: ProjectFile[] }) => {
       // No routing sent: the server applies the default from Models → Routing.
-      const project = await createProject(body);
+      // #1522: a new project starts Automatic (tools chosen by routing), not on the old Manual default.
+      const project = await createProject({ ...body, toolsMode: NEW_PROJECT_TOOLS_MODE });
+      // #1417: the new project is in the list before the page for it opens, and stays there until a
+      // workspace read includes it (that read can still be behind the create).
+      rememberCreatedProject(createdProjects.current, project, Date.now());
+      const next = [...projectsRef.current.filter((p) => p.id !== project.id), project];
+      projectsRef.current = next;
+      setProjects(next);
       refreshProjects();
       setView({ kind: 'project', id: project.id });
     },
@@ -1400,6 +1476,8 @@ export default function App(): JSX.Element {
 
   const handleDeleteProject = useCallback(
     (id: string) => {
+      // A project created here and deleted before the server listed it must not reappear (#1417).
+      createdProjects.current.delete(id);
       // A pin/archive made just before the delete is still waiting on its debounce; saving it
       // after the project is gone would report a false save error (#942).
       const held = takeProjectPatch(patchQueue, id);
@@ -1528,6 +1606,26 @@ export default function App(): JSX.Element {
     [refreshProjects],
   );
 
+  // #1511: "Move to <project>" / "Remove from project" in the chat menu. It is the same move path as an
+  // accepted frame (moveChatToProject, POST /api/chats/:id/move), queued in the chat's current list so it
+  // cannot race a meta save. Only the list changes: the transcript stays put, and the frame is not sent,
+  // so the server keeps the saved one with the chat.
+  const moveChatTo = useCallback((chatId: string, fromProjectId: string | null, toProjectId: string | null) => {
+    if (fromProjectId === toProjectId) return;
+    const home = chatHome(chatId, allChatsRef.current, movedChats.current, fromProjectId);
+    const key = home === null ? 'free' : `project:${home}`;
+    setProjectError(null);
+    const pending = (chatMetaSaves.current.get(key) || Promise.resolve()).then(async () => {
+      await moveChatToProject(chatId, toProjectId);
+      movedChats.current.set(chatId, toProjectId);
+      workspaceRequest.current += 1;
+      await refreshProjects();
+      if (viewRef.current.kind === 'chat' && viewRef.current.chatId === chatId) setView({ kind: 'chat', chatId, projectId: toProjectId });
+    }).catch(() => { setProjectError(tr('sidebar.moveChatFailed')); });
+    chatMetaSaves.current.set(key, pending);
+    void pending.finally(() => { if (chatMetaSaves.current.get(key) === pending) chatMetaSaves.current.delete(key); });
+  }, [refreshProjects, tr]);
+
   const linkChat = useCallback((chatId: string, projectId: string | null, targetId: string) => {
     if (!targetId || targetId === chatId) return;
     const meta = allChatsRef.current.find((c) => c.id === chatId);
@@ -1572,7 +1670,7 @@ export default function App(): JSX.Element {
   // that is attached but not read is indistinguishable from one that does not
   // work: the project lists it and the model sees nothing.
   const saveProjectAndSync = useCallback(
-    async (projectId: string, patch: Partial<Project>) => {
+    async (projectId: string, patch: Partial<Project>, options: { storageRetry?: boolean } = {}) => {
       patch = { ...pendingPatches.current[projectId], ...patch };
       delete pendingPatches.current[projectId];
       setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, ...patch, updatedAt: Date.now() } : p)));
@@ -1596,7 +1694,8 @@ export default function App(): JSX.Element {
         // several worked, because the sync rebuilds from what remains, which
         // is why the behaviour looked arbitrary.
         if (Array.isArray(patch.sourceFolders)) {
-          const r = await syncProjectSources(projectId);
+          // #1428/#1429: only the person's own "Refresh from storage" press asks storage to be tried again now.
+          const r = await syncProjectSources(projectId, { storageRetry: options.storageRetry === true });
           setProjectError(prevError => {
             const prev = lastSkippedSignature.current[projectId] || { signature: '', message: '' };
             const { signature, message, show } = resolveSkippedToast(prev, r.skipped || [], prevError, tr);
@@ -1650,6 +1749,7 @@ export default function App(): JSX.Element {
         showPreviews={showPreviews}
         projects={projects}
         projectsLoaded={workspaceLoaded}
+        projectsFailed={workspaceFailed}
         chats={allChats}
         organise={featureFlags.chatFraming === true}
         activeView={view.kind}
@@ -1662,6 +1762,7 @@ export default function App(): JSX.Element {
         onOpenChat={(chatId, projectId) => setView({ kind: 'chat', chatId, projectId })}
         onDeleteChat={handleDeleteChat}
         onPatchChat={handlePatchChat}
+        onMoveChat={moveChatTo}
         streamingChats={streamingChats}
         onPatchProject={handlePatchProject}
         onEditProject={setEditingProjectId}
@@ -1740,7 +1841,15 @@ export default function App(): JSX.Element {
           </EmptyState>
         </main>
       )}
-      {view.kind === 'chat' && !chatMissing && !projectMissing && (
+      {pageMissing && (
+        <main className="main">
+          <EmptyState icon="chat" title={tr('nav.notFound.pageTitle')}
+            action={<button className="btn btn-primary" onClick={() => { setPageMissing(false); startFreeChat(); }}>{tr('common.newChat')}</button>}>
+            {tr('nav.notFound.pageBody')}
+          </EmptyState>
+        </main>
+      )}
+      {view.kind === 'chat' && !chatMissing && !projectMissing && !pageMissing && (
         <ChatView
           project={activeProject ?? null}
           onProjectChanged={refreshProjects}
@@ -1754,6 +1863,9 @@ export default function App(): JSX.Element {
           streaming={view.kind === 'chat' ? !!streamingChats[view.chatId] : false}
           inferenceUp={health.inferenceUp}
           onSend={sendToCurrent}
+          onChooseAnswer={chooseAnswer}
+          onChooseVersion={chooseVersion}
+          onOpenProjects={() => { setAppMode('chat'); setView({ kind: 'projects' }); }}
           mode={activeMode}
           onModeChange={changeMode}
           onRetry={retryLast}
@@ -1862,7 +1974,8 @@ export default function App(): JSX.Element {
             project={p}
             models={models}
             onClose={() => setEditingProjectId(null)}
-            onSave={(patch) => saveProjectAndSync(p.id, patch)}
+            // #1589: saving the project settings is the person's own action, so a changed folder list may try storage again now.
+            onSave={(patch) => saveProjectAndSync(p.id, patch, { storageRetry: true })}
           />
         ) : null;
       })()}

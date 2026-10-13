@@ -24,37 +24,87 @@
 
 /* ── The inference strip under the composer ────────────────────────────────
    A phone gets one line — status, model, speed — and taps to see the rest. A
-   desktop has the width, so the whole thing is always open and reads across
-   the row instead of stacking into a panel. */
+   desktop has the width, so the strip is one row that reads across the composer.
+   #1527/#1548: the row never wraps and never grows. It reserves one line whatever the
+   metrics say, so the composer above it holds still while a reply streams. The model
+   name and the speed pair keep their values whole (#1527 QA: a 790px strip cut the model
+   name to "Synthetic-Ch…"); the routing pill is the element that gives way, with its own
+   ellipsis, when the row is short of width. Where the row cannot fit every pair (measured
+   on the strip's own width, not the window's), the low-priority pairs sit behind a compact
+   toggle and open as a popover above the strip; the popover is out of flow, so it never
+   pushes the chat up. */
 .stats-disclosure.is-wide {
-  flex-direction: row; align-items: center; flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
+  container-type: inline-size;
+  position: relative;
+  display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center;
+  gap: var(--space-1) var(--space-4);
+  box-sizing: border-box; min-width: 0; min-height: 36px;
   margin: 0 clamp(12px, 2vw, 24px) max(8px, env(safe-area-inset-bottom));
-  padding: 0;
+  padding: var(--space-1) var(--space-3);
 }
 .stats-disclosure.is-wide .stats-bar-static {
   margin: 0; min-height: 0; padding: 0; border: 0; background: none; cursor: default;
-  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; min-width: 4em; max-width: 40%;
+  overflow: hidden; white-space: nowrap;
 }
+.stats-disclosure.is-wide .stats-bar-static .stats-live-dot { flex: none; }
+.stats-disclosure.is-wide .stats-bar-static .stats-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stats-disclosure.is-wide .stats-bar-static .stats-value { flex: none; white-space: nowrap; }
 .stats-disclosure.is-wide .stats-details {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-4);
-  width: auto; flex: 1; min-width: 0;
+  display: flex; flex: 1 0 auto; flex-wrap: nowrap; align-items: baseline; gap: var(--space-1) var(--space-4);
+  width: auto; min-width: 0; overflow: hidden;
   margin: 0; padding: 0; border: 0; background: none; border-radius: 0;
 }
-.stats-disclosure.is-wide .stats-details > div { display: inline-flex; align-items: baseline; gap: 6px; }
-.stats-disclosure.is-wide .stats-details dt { margin: 0; }
+.stats-disclosure.is-wide .stats-details > div {
+  display: inline-flex; flex: 0 1 auto; align-items: baseline; gap: 6px; min-width: 0; position: relative; white-space: nowrap;
+}
+.stats-disclosure.is-wide .stats-details dt { margin: 0; flex: none; }
+.stats-disclosure.is-wide .stats-details > div[data-priority='high'] { flex: none; }
 .stats-disclosure.is-wide .stats-details dt::after { content: ''; }
-.stats-disclosure.is-wide .stats-details .stats-mtp { flex-basis: 100%; }
-.stats-disclosure.is-wide .stats-details .stats-mtp progress { display: inline-block; width: 120px; margin: 0 0 0 6px; }
+.stats-disclosure.is-wide .stats-details dd { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stats-disclosure.is-wide .stats-details .stats-mtp { display: inline-flex; flex-direction: row; align-items: baseline; gap: 6px; max-width: none; }
+.stats-disclosure.is-wide .stats-details .stats-mtp dd { overflow: visible; }
+.stats-disclosure.is-wide .stats-details .stats-mtp progress { display: inline-block; width: 60px; height: 5px; margin: 0 0 0 6px; }
 /* A separator between the pairs costs no height and stops the row reading as one sentence.
-   It sits in the gap to each pair's left; clipping the list's left edge hides the one on
-   whichever pair starts a wrapped line, so no line ever begins with a stray dot. */
+   It sits in the gap to each pair's left; the list's own edge clips the one on the first pair. */
 .stats-disclosure.is-wide > * + * { position: relative; }
-.stats-disclosure.is-wide .stats-details { clip-path: inset(-8px -8px -8px 0); }
-.stats-disclosure.is-wide .stats-details > div { position: relative; }
 .stats-disclosure.is-wide .stats-details > div::before {
   content: '·'; position: absolute; left: calc(var(--space-4) / -2); transform: translateX(-50%);
   color: var(--md-outline);
+}
+.stats-disclosure.is-wide > .routing-details:not([open]) { flex: 0 1 auto; min-width: 0; max-width: 240px; }
+.stats-disclosure.is-wide > .routing-details summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (pointer: fine) {
+  .stats-disclosure.is-wide > .routing-details summary { min-height: 0; padding-block: 2px; }
+}
+/* The toggle exists only where the row is too narrow for every pair. */
+.stats-disclosure.is-wide .stats-more { display: none; }
+@container (max-width: 1479px) {
+  .stats-disclosure.is-wide .stats-more {
+    display: inline-flex; flex: none; align-items: center; justify-content: center; box-sizing: border-box;
+    width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--radius-control);
+    background: transparent; color: var(--text-secondary); cursor: pointer;
+  }
+  .stats-disclosure.is-wide .stats-more > svg { transition: transform var(--motion-quick) var(--ease-considered); }
+  .stats-disclosure.is-wide .stats-more[aria-expanded='true'] > svg { transform: rotate(-90deg); }
+  .stats-disclosure.is-wide .stats-more:hover { color: var(--text-primary); background: var(--nav-hover); }
+  .stats-disclosure.is-wide .stats-more:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+  .stats-disclosure.is-wide .stats-details > div[data-priority='low'] { display: none; }
+  .stats-disclosure.is-wide.is-more-open .stats-details {
+    position: absolute; right: var(--space-3); bottom: calc(100% + var(--space-2)); z-index: 15;
+    display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-2) var(--space-4);
+    width: min(360px, calc(100% - var(--space-6))); box-sizing: border-box; overflow: visible;
+    padding: var(--space-3) var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--radius-card);
+    background: var(--bg-surface); box-shadow: var(--shadow-pop);
+  }
+  .stats-disclosure.is-wide.is-more-open .stats-details > div[data-stat] { display: contents; }
+  .stats-disclosure.is-wide.is-more-open .stats-details > div[data-stat]::before { content: none; }
+  .stats-disclosure.is-wide.is-more-open .stats-details dd { overflow: visible; white-space: normal; overflow-wrap: anywhere; }
+  .stats-disclosure.is-wide.is-more-open .stats-details .stats-mtp { display: contents; }
+  .stats-disclosure.is-wide.is-more-open .stats-details .stats-mtp progress { display: block; width: 100%; margin: 4px 0 0; }
+}
+@media (pointer: coarse) {
+  .stats-disclosure.is-wide .stats-more { width: 44px; height: 44px; }
 }
 
 @media (max-width: 700px) {
@@ -379,7 +429,9 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
    while touch sizing makes the + and send buttons 44px, so send spilled past the edge at 375px.
    Columns size to their buttons; on a narrow phone Thinking shows only its level. */
 .composer-inner.chat-composer-inner { grid-template-columns: auto minmax(0, 1fr) auto; }
-.chat-composer-inner:has(> .reasoning-control) { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+/* #1533: the model label keeps its own width (its first word and tier), and the Thinking control gives
+   way first when the row is tight (its label ellipsises; see noevia.css). */
+.chat-composer-inner:has(> .reasoning-control) { grid-template-columns: auto minmax(max-content, 1fr) minmax(80px, auto) auto; }
 .chat-composer-inner > .composer-model { min-width: 0; max-width: 100%; }
 @media (max-width: 430px) {
   .composer-inner.chat-composer-inner { column-gap: 6px; }
@@ -429,15 +481,20 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 :root:not([data-device='desktop']), :root:not([data-device='desktop']) body { overflow: hidden; overscroll-behavior: none; }
 :root:not([data-device='desktop']) .app { position: fixed; left: 0; right: 0; top: var(--visible-viewport-top, 0px); height: var(--visible-viewport-height, 100dvh); }
 
-/* Keep New chat available while scrolling. Only its rounded button paints a surface. */
+/* Keep New chat available while scrolling. The strip paints the sidebar's own opaque surface, so
+   list rows that scroll beneath it are clipped there instead of printing through the label (#1529).
+   Glass's sidebar is frosted, so its strip takes the solid menu fill instead of a translucent one. */
 .app .sidebar.pane .side-new {
   position: sticky; top: 0; z-index: 2;
   margin-top: calc(-1 * var(--space-1)); padding-top: var(--space-1);
+  background: var(--bg-sidebar);
 }
+[data-family='glass'] .app .sidebar.pane .side-new { background: var(--glass-menu); }
 .app .sidebar.pane .side-new .new-chat-btn.glass { width: 100%; }
 .app .sidebar.pane.is-collapsed .side-new { position: static; margin: 0; padding: 0; background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; display: flex; justify-content: center; width: 100%; }
 .app .sidebar.pane.is-collapsed .side-new .new-chat-btn.glass { width: 40px; }
-.app .sidebar.pane .coding-history .side-hint { margin: 0; padding: 2px 2px 0; color: var(--text-secondary); font-size: var(--text-footnote); line-height: 1.4; }
+/* #1565: the empty-state text starts on the section heading's own left edge (the labels sit 10px in), not 8px to its left. */
+.app .sidebar.pane .coding-history .side-hint { margin: 0 10px; padding: 2px 0 0; color: var(--text-secondary); font-size: var(--text-footnote); line-height: 1.4; }
 
 /* Collapsed rail: the name of whatever is under the pointer, beside it (ChatGPT). */
 .rail-tip {
@@ -482,6 +539,9 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .plugin-card-link { flex: none; align-self: center; }
 @media (pointer: coarse) { .plugin-card-link { min-height: 44px; display: inline-flex; align-items: center; } }
 .coding-content .plugins-page { padding-top: 0; }
+/* #1563: Code's Plugins page is the Customise page: it starts at the top and scrolls, like Customise in Chat, instead of sitting centred in the free height. */
+.app .coding-content.is-customise { justify-content: flex-start; overflow-y: auto; }
+.app .coding-content.is-customise .plugins-page { padding-top: var(--space-6); }
 /* Phone: the drawer toggle floats over each page's first row; Code and Plugins leave it room. */
 @media (max-width: 519px) {
   .app .coding-header { padding-left: 64px; padding-right: 12px; height: 60px; }
@@ -553,6 +613,14 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .plugin-copy { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .plugin-copy code { flex: 1; min-width: 0; overflow-wrap: anywhere; padding: 6px 8px; border-radius: var(--radius-sm); background: var(--nav-hover); font-size: var(--text-footnote); }
 .plugin-card-actions .plugin-add small[role] { text-align: left; }
+/* #1557: a Discover card's actions sit on the title's own left edge, in one row under the text, instead of
+   stacking on three different left edges (the title, the View chip and Add to project). The icon column is
+   the 36px of .plugin-card-icon. A card with a key form keeps its full-width form (the rules above). */
+.plugin-card:has(> .plugin-card-actions):not(:has(.plugin-key-form)) { display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: var(--space-3); row-gap: var(--space-2); align-items: start; }
+.plugin-card:has(> .plugin-card-actions):not(:has(.plugin-key-form)) > .plugin-card-icon { grid-column: 1; grid-row: 1; }
+.plugin-card:has(> .plugin-card-actions):not(:has(.plugin-key-form)) > .plugin-card-text { grid-column: 2; grid-row: 1; }
+.plugin-card:has(> .plugin-card-actions):not(:has(.plugin-key-form)) > .plugin-card-actions { grid-column: 2; grid-row: 2; flex: none; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; align-self: start; max-width: none; }
+.plugin-card:has(> .plugin-card-actions):not(:has(.plugin-key-form)) .plugin-add { max-width: none; justify-content: flex-start; }
 .plugin-key-mode { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .plugin-key-mode legend { font-weight: 600; font-size: var(--text-footnote); margin-bottom: 2px; }
 .plugin-key-mode label { flex-direction: row !important; align-items: baseline; gap: 6px !important; font-size: var(--text-footnote); }
@@ -783,9 +851,13 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .identity-colors button, .identity-icons button { min-width: 0; padding-inline: 0; }
 /* A connector's account line is often one long address. */
 .connector-text { overflow-wrap: anywhere; }
-/* A status badge never runs past its container: at phone sizes it wraps ("Connected as
-   <account>" was wider than the card). */
-.badge { max-width: 100%; }
+/* A status badge never runs past its container: it wraps at its spaces ("Connected as
+   <account>" was wider than the card), and only an account name with no space to break at gives way
+   mid-word. min-width: 0 lets a badge in a flex row shrink to the row instead of keeping its
+   unwrapped width (#1613). */
+.badge { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+.badge > svg { flex: none; }
+.connector-text .badge { white-space: normal; }
 @media (max-width: 767px), (max-height: 599px) { .badge { white-space: normal; } }
 /* The row-end delete keeps its 44px touch area (above) inside its row. The rule that centres that
    area on the 28px button lost to the shared :is() rule's higher specificity, so the area hung
@@ -794,4 +866,15 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 @media (pointer: coarse) {
   button.recents-del::after { left: 50%; right: auto; width: max(100%, var(--target-min)); transform: translate(-50%, -50%); }
   .recents-del { margin-inline-end: calc((var(--target-min) - 28px) / 2); }
+}
+
+/* #1466: phone tap targets. At phone width the touch controls reach the 44px platform minimum
+   (--target-min; WCAG 2.5.5 AAA, well above the 2.5.8 AA floor of 24px). Applied whatever the
+   pointer: the measured controls were the phone's own, and a narrow desktop window is the same layout. */
+@media (max-width: 519px) {
+  .composer-add.glass { min-width: var(--target-min); min-height: var(--target-min); }
+  .app .sidebar.pane .proj-row > .project-expand { min-width: var(--target-min); }
+  .app .sidebar.pane .app-mode-switch.is-compact button { min-height: var(--target-min); }
+  .diary-view-toggle .popup-tab { min-width: var(--target-min); min-height: var(--target-min); }
+  .diary-file-list button { min-height: var(--target-min); }
 }

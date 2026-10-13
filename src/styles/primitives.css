@@ -109,7 +109,10 @@ label.select > svg { position: absolute; right: 10px; pointer-events: none; colo
 /* A heading that shares its line with an action (#373: Service status → Reload) carries the step on
    the row, so the action lines up with the heading instead of floating above it. */
 .settings-stage .settings-section-heading { align-items: center; margin: var(--settings-group-gap) 0 var(--settings-content-gap); }
-.settings-stage .settings-section-heading > h2 { margin: 0; }
+.settings-stage .settings-section-heading { flex-wrap: wrap; row-gap: var(--space-2); }
+.settings-stage .settings-section-heading > h2 { margin: 0; min-width: 0; }
+/* A button beside a heading keeps its own words whole; the row wraps instead (#1613: "Reload s…"). */
+.settings-stage .settings-section-heading > :is(button, a) { flex-shrink: 0; white-space: nowrap; }
 .settings-stage :is(.settings-title + * > .settings-section-heading:first-child, .settings-section > .settings-section-heading:first-child) { margin-top: 0; }
 /* The older panels (Security, Users, Diary & storage, AI providers, Models, Service status)
    stack their blocks in .settings-live-content, a flex column whose own 28px gap used to add to

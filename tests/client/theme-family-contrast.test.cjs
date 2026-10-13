@@ -85,9 +85,14 @@ for (const family of ['editorial', 'contemporary', 'glass']) for (const mode of 
       grounds.push(['glass-pane over the bare page', e.solid('glass-pane', saturate(e.solid('bg-app', black), 1.8))]);
     }
     const text = e.solid('text-primary', black), secondary = e.solid('text-secondary', black), accentText = e.solid('accent-text', black), focus = e.solid('focus', black);
+    // #1525: in light, text-tertiary sets the 13px section and Settings group headings, which sit on
+    // the chrome and page tiles, so it needs AA on every light ground (it was 3.8-4.4:1 before). Dark
+    // keeps its own token value; its headings are not measured here.
+    const tertiary = e.solid('text-tertiary', black);
     for (const [name, g] of grounds) {
       assert.ok(contrast(text, g) >= 7, `${name} ${g}: text-primary ${contrast(text, g).toFixed(2)}`);
       assert.ok(contrast(secondary, g) >= 4.5, `${name} ${g}: text-secondary ${contrast(secondary, g).toFixed(2)}`);
+      if (mode === 'light') assert.ok(contrast(tertiary, g) >= 4.5, `${name} ${g}: text-tertiary ${contrast(tertiary, g).toFixed(2)}`);
       assert.ok(contrast(accentText, g) >= 4.5, `${name} ${g}: accent-text ${contrast(accentText, g).toFixed(2)}`);
       assert.ok(contrast(focus, g) >= 3, `${name} ${g}: focus ring ${contrast(focus, g).toFixed(2)}`);
     }

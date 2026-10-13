@@ -18,9 +18,15 @@ export interface RoutingDecision {
 /** #778: where a reply was sent and why (codes only). */
 export type RouteName = 'local' | 'cloud';
 export type RouteReason = 'mode' | 'user-choice' | 'force-local' | 'sensitive-rule' | 'fail-closed' | 'check-unavailable' | 'remembered';
-export type RouteFlag = 'diary' | 'secret' | 'iban' | 'card' | 'router' | 'unavailable';
+export type RouteFlag = 'diary' | 'secret' | 'iban' | 'card' | 'health' | 'router' | 'unavailable';
 /** `detail` (#1421): why the sensitivity check could not answer, a short code, only with 'check-unavailable'. */
 export interface RouteTarget { route: RouteName; reason: RouteReason; detail?: string }
+
+/** The context meter (#608, #1551): what the server counts in the next request, and its limit. */
+export interface ContextMeter {
+  historyCount: number; model: string; limit: number; limitSource: string; used: number; reserve: number; safety: number; threshold: number;
+  parts: { name: string; tokens: number }[]; compactedAt: number | null; covered: number; updatedAt?: number;
+}
 
 export interface Message {
   id: string;
@@ -31,6 +37,9 @@ export interface Message {
   routeTarget?: RouteTarget;
   /** #778: a sensitive-looking turn waiting for Send to cloud / Keep local. Never persisted. */
   routePending?: { id: string; flag: RouteFlag; busy?: boolean };
+  /** #1551: on the reply of the current turn: the context meter the server measured for it, and how many
+   *  characters of its prose that measurement already counted. Kept in this session; never saved. */
+  contextMeter?: { meter: ContextMeter; replyBytes: number };
   content: string;
   reasoningMode?: string;
   reasoningEffort?: string;
@@ -39,6 +48,10 @@ export interface Message {
   reasoningMs?: number;
   toolCalls?: ToolCallView[];
   error?: boolean;
+  /** #1547: the failure sentence for a reply that failed. Set beside `content`, which then holds only the
+   *  text that had streamed in before the failure (shown as incomplete); absent on older error replies,
+   *  where `content` is the sentence itself. */
+  failure?: string;
   warning?: string;
   /** Toolboxes the router picked for this reply, shown as "Using: …". */
   toolScope?: string;
@@ -49,6 +62,8 @@ export interface Message {
   processingStatus?: string;
   /** The server's stable id for `processingStatus` (#624), so the line can be worded in the interface language. */
   processingStatusId?: string;
+  /** #1449: the model, role and expected wait of a `loadingModel` status (see chat-labels statusLineText). */
+  processingStatusDetail?: { model?: string; role?: string; expectedSeconds?: number };
   stats?: MessageStats;
   /** Set when this message was edited and the exchange re-run from here. */
   edited?: boolean;
@@ -58,11 +73,48 @@ export interface Message {
   coworkRepository?: string;
   /** The project passages placed in this reply's prompt (#552), in prompt order. */
   sources?: SourceRef[];
+  /** On a user turn: the files attached with this message, by name (#1514). Shown as chips; this client's
+   *  session only, since the server's transcript does not carry them. */
+  files?: string[];
   /** On a user turn: the Skill pin it was sent with, `skill_<id>@<sha256>` (#571), so Retry survives a reload. */
   skill?: string;
+  /** #1512: On a user turn: the project image sources it attached. Kept in this session for Retry and
+   *  Regenerate; not saved with the transcript. */
+  turnImageIds?: string[];
   /** #658: the reply ended early after tool steps had run: step supervision paused it, or it
    *  failed after changes were saved. `applied` is how many changes were saved. Not an error. */
   paused?: ReplyPause;
+  /** #1507: a reply the server kept partway when it was cut off. Shown with Retry and Continue. */
+  interrupted?: boolean;
+  /** #1517, user turns: the answers kept when Regenerate replaced one. `answer` is the one shown (the
+   *  assistant message after this turn holds it); the others are stored here. */
+  answers?: ReplyVariant[];
+  answer?: number;
+  /** #1517, user turns: the earlier versions of this turn kept when Edit & re-run replaced it, with
+   *  the chat that followed each one. `branch` is the version shown. */
+  branches?: TurnBranch[];
+  branch?: number;
+}
+
+/** #1517: one stored answer to a user turn. Regenerate keeps the answer it replaces. */
+export interface ReplyVariant {
+  content: string;
+  reasoning?: string;
+  reasoningMs?: number;
+  toolCalls?: ToolCallView[];
+  stats?: MessageStats;
+  senderLabel?: string;
+  routingDecision?: RoutingDecision;
+  sources?: SourceRef[];
+}
+
+/** #1517: an earlier version of a user turn, with its own answers and the chat that followed it, in the saved form. */
+export interface TurnBranch {
+  content: string;
+  skill?: string;
+  answers?: ReplyVariant[];
+  answer?: number;
+  tail: HistoryEntry[];
 }
 
 /** Why a reply ended before a final answer, and how many changes it had already saved (#658).
@@ -284,6 +336,13 @@ export interface HistoryEntry {
   skill?: string;
   /** Assistant turns (#658): the reply ended early after saving changes. */
   paused?: ReplyPause;
+  /** #1507: assistant turns only: the reply was saved partway and never finished (see interrupted-reply.ts). */
+  interrupted?: true;
+  /** #1517, user turns: stored answers and versions (see Message). */
+  answers?: ReplyVariant[];
+  answer?: number;
+  branches?: TurnBranch[];
+  branch?: number;
 }
 
 /** One entry of the history sent to /api/chat: a turn, or (#658) a change an earlier reply
@@ -329,6 +388,8 @@ export interface InstalledModel {
   shape?: { arch?: string; moe?: boolean; experts?: number; active?: number; label: string } | null;
   source?: string | null;
   mtp?: {supported:boolean;enabled:boolean;reason:string};
+  /** #1179: true when the model is the system routing model (Laya, marked in models.roles.json); absent on older servers. */
+  system?: boolean;
   name: string;
   sizeGB: number | null;
   loaded: boolean;

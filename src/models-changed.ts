@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { invalidateModelReads } from './model-reads';
 
 /** The model list changed on the server: something was downloaded, registered,
  *  renamed, deleted, loaded or unloaded.
@@ -15,6 +16,8 @@ import { useEffect } from 'react';
 export const MODELS_CHANGED = 'noevia:models-changed';
 
 export function notifyModelsChanged(): void {
+  // #1509: drop the shared model reads before any listener refetches, or a listener would get the old list back.
+  invalidateModelReads();
   window.dispatchEvent(new Event(MODELS_CHANGED));
 }
 

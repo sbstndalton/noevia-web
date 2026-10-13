@@ -118,6 +118,12 @@ a { text-underline-offset: .18em; }
 :root .glass-seg > button { border: 0; background: transparent; box-shadow: none; outline-offset: -2px; }
 :root .glass-seg > .glass-thumb.glass { background: var(--bg-surface); border: 0; border-radius: var(--radius-button-inset); box-shadow: var(--ring-inset), 0 1px 2px rgb(0 0 0 / .12);
   transition: transform var(--dur-base) var(--ease-out-quart); }
+/* #1089: useSegmentThumb measures the chosen option and writes --thumb-x/-y/-w/-h on the track. The
+   track is the containing block for the thumb, which slides behind the options (they sit above it). */
+:root .glass-seg { position: relative; isolation: isolate; }
+:root .glass-seg > .glass-thumb { position: absolute; z-index: 0; left: 0; top: 0; width: var(--thumb-w, 0); height: var(--thumb-h, 0);
+  transform: translate(var(--thumb-x, 0), var(--thumb-y, 0)); pointer-events: none; }
+:root .glass-seg > button { position: relative; z-index: 1; }
 .glass-seg[data-wrapped='true'] { border-radius: var(--radius-control); }
 .composer-mode-toggle { border: 0; position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; isolation: isolate; }
 .composer-mode-toggle::before {
@@ -212,6 +218,9 @@ a { text-underline-offset: .18em; }
   transition: box-shadow var(--dur-base) var(--ease-in-out);
 }
 :root .app .composer-inner:is(:hover, :focus-within) { box-shadow: var(--ring-inset), 0 0 0 1px var(--border-strong), 0 4px 20px rgb(0 0 0 / .06); }
+/* #1464: the message box shows keyboard focus (WCAG 2.4.7). shell-v2 zeroes the outline on .composer-inner.pane,
+   so the only focus cue was a 1px border that looks like hover. A 2px focus-ring outline restores it while focus is inside. */
+:root .app .composer-inner.pane:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .composer-input { font-size: var(--text-body); line-height: 21px; }
 .send-btn { border-radius: var(--radius-button); transition: background-color var(--dur-instant) var(--ease-out-quart), scale var(--dur-spring) var(--spring-press); }
 :is(.model-pill, .reasoning-pill, .tool-catalogue-trigger, .composer-add) { background: transparent; border-radius: var(--radius-button); color: var(--text-secondary); }
@@ -258,7 +267,7 @@ dialog::backdrop { background: var(--scrim); backdrop-filter: blur(var(--scrim-b
 @media (min-width: 701px) {
   .settings-stage {
     position: fixed; inset: 0; z-index: 61; margin: auto; width: min(1024px, calc(100vw - 64px)); height: min(800px, calc(100dvh - 64px));
-    grid-template-columns: 192px minmax(0, 1fr); overflow: hidden;
+    overflow: hidden;
     background: var(--bg-dialog); border: 0; border-radius: var(--radius-dialog); box-shadow: var(--ring-inset), var(--shadow-pop);
     animation: none;
   }
@@ -268,6 +277,13 @@ dialog::backdrop { background: var(--scrim); backdrop-filter: blur(var(--scrim-b
      delay, so a fast load opens the real window once instead of twice. */
   .settings-stage.view-loading { transition: none; scale: 1; animation: motion-fade-in var(--dur-basic) var(--ease-out-std) var(--delay-skeleton) both; }
   .settings-stage .settings-navigation { background: var(--bg-chrome); border-right: 0; padding: 16px 8px; gap: 12px; }
+}
+/* The list and the page sit side by side only where the window is wide enough for both. Up to
+   820px (shell-v2.css, and SettingsShell's PHONE query) the window shows one pane at a time, so
+   it keeps the single column set there: a 192px column here would be applied to the page alone
+   once the list is hidden (#1612). */
+@media (min-width: 821px) {
+  .settings-stage { grid-template-columns: 192px minmax(0, 1fr); }
 }
 .settings-stage .settings-nav-title { font-family: var(--font-ui); font-size: var(--text-headline); line-height: 24px; font-weight: var(--weight-title); letter-spacing: 0; }
 .settings-stage .settings-navigation nav section h2 { margin: var(--space-4) 8px var(--space-1); font-size: var(--text-footnote); line-height: 16px; font-weight: 500; color: var(--text-tertiary); }
@@ -317,9 +333,13 @@ dialog::backdrop { background: var(--scrim); backdrop-filter: blur(var(--scrim-b
 .family-preview-message { justify-self: end; max-width: 80%; padding: 4px 8px; border-radius: var(--radius-control); background: var(--fill-hover); font-size: var(--text-caption2); }
 .family-preview-row { display: flex; gap: 6px; align-items: flex-start; }
 .family-preview-composer {
-  flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 30px; padding: 4px 4px 4px 8px;
+  flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 30px; padding: 4px 4px 4px 8px;
   background: var(--surface-raised); box-shadow: var(--ring-inset); border-radius: min(var(--radius-composer), 15px);
   font-size: var(--text-caption2); color: var(--text-secondary);
+}
+/* #1544: the placeholder stays on one line in the mock composer; a narrow preview clips it with an
+   ellipsis instead of breaking "Message noevia…" across two lines. */
+.family-preview-composer-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .family-preview-send { width: 20px; height: 20px; border-radius: var(--radius-pill); background: var(--md-primary); flex: none; }
 .family-preview-menu { display: grid; gap: 2px; padding: 4px; min-width: 64px; font-size: var(--text-caption2); background: var(--surface-overlay); border-radius: var(--radius-overlay); box-shadow: var(--ring-inset), var(--shadow-popover); }

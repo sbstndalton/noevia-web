@@ -10,6 +10,18 @@ export interface RegeneratePlan {
   base: Message[];
   /** The Skill pin the original message was sent with (#571), when it had one. */
   skill?: SkillPin;
+  /** #1512: the project image sources the original message attached, when it had any. */
+  turnImageIds?: string[];
+}
+
+/** #1517 with #658: when a record of saved changes keeps the old user turn in the transcript, the new turn takes
+ *  over that turn's stored answers and versions. The kept copy gives them up, so they live on one turn: left on
+ *  both, the record that follows it would be saved over one of its answers, and a reload would show two switchers. */
+function withoutTurnVariants(base: Message[], prompt: Message): Message[] {
+  const at = base.lastIndexOf(prompt);
+  if (at < 0 || (prompt.answers === undefined && prompt.branches === undefined)) return base;
+  const { answers: _answers, answer: _answer, branches: _branches, branch: _branch, ...rest } = prompt;
+  return [...base.slice(0, at), rest as Message, ...base.slice(at + 1)];
 }
 
 /** #356: Regenerate only ever targets the last completed assistant reply, produced by the user
@@ -33,7 +45,7 @@ export function planRegenerate(messages: Message[], messageId: string): Regenera
   // #658: a reply that saved changes (approved writes that ran) is replaced, but the user turn and
   // the record of those changes stay (its tool list and a note; none of its text, routing,
   // thinking or stats), so the re-run is told they are done instead of making them again.
-  return { userText: prompt.content, base: rerunBase(messages, index), ...(prompt.skill ? { skill: prompt.skill as SkillPin } : {}) };
+  return { userText: prompt.content, base: withoutTurnVariants(rerunBase(messages, index), prompt), ...(prompt.skill ? { skill: prompt.skill as SkillPin } : {}), ...(prompt.turnImageIds?.length ? { turnImageIds: prompt.turnImageIds } : {}) };
 }
 
 /** #682: what a Regenerate or Retry tells the server about the reply it replaces, for the

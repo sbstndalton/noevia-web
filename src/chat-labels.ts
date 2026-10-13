@@ -39,18 +39,41 @@ function byKey(t: Translator, key: string, fallback: string): string {
   return text === key ? fallback : text;
 }
 
-/** The "Effort: high · provider parameter" line of a reply, in the interface language (#624). */
+/** The "Effort: high · provider parameter" line of a reply, in the interface language (#624). #1476: a
+ *  Standard reply (mode "off") is named too, as "Effort: standard · model default", not left unlabelled. */
 export function effortLineText(t: Translator, effort: string | undefined, mode: string): string {
   return t('chat.effort.line', {
     effort: byKey(t, `chat.effort.value.${effort ?? ''}`, effort ?? ''),
-    basis: mode === 'real' ? t('chat.effort.real') : t('chat.effort.hint'),
+    basis: mode === 'real' ? t('chat.effort.real') : mode === 'off' ? t('chat.effort.off') : t('chat.effort.hint'),
   });
 }
 
+/** #1449: what a `loadingModel` status says about the load: the model, the routed role (fast/smart/code)
+ *  and the expected wait, which the server sends only once it has measured a load of that model. */
+export type StatusDetail = { model?: string; role?: string; expectedSeconds?: number };
+
+/** The status detail the server sent, checked field by field; anything else is no detail. */
+export function statusDetail(value: unknown): StatusDetail | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const v = value as Record<string, unknown>;
+  const out: StatusDetail = {};
+  if (typeof v.model === 'string' && v.model.trim()) out.model = v.model.trim().slice(0, 200);
+  if (typeof v.role === 'string' && v.role.trim()) out.role = v.role.trim().slice(0, 40);
+  if (typeof v.expectedSeconds === 'number' && Number.isFinite(v.expectedSeconds) && v.expectedSeconds >= 1) out.expectedSeconds = Math.round(v.expectedSeconds);
+  return out.model || out.role || out.expectedSeconds ? out : undefined;
+}
+
 /** The in-progress line of a reply. The server sends a stable id with its English text; the id is
- *  worded from the catalogue and the English stays as the fallback for an id this build lacks (#624). */
-export function statusLineText(t: Translator, id: string | undefined, text: string | undefined): string {
-  return id ? byKey(t, `chat.statusId.${id}`, text ?? '') : text ?? '';
+ *  worded from the catalogue and the English stays as the fallback for an id this build lacks (#624).
+ *  #1449: a `loadingModel` line with a model in its detail names the model, its role and the wait. */
+export function statusLineText(t: Translator, id: string | undefined, text: string | undefined, detail?: StatusDetail): string {
+  if (!id) return text ?? '';
+  if (id === 'loadingModel' && detail?.model) {
+    const role = detail.role ? routeRoleName(t, detail.role) : '';
+    const line = role ? t('chat.statusId.loadingModelFor', { model: detail.model, role }) : t('chat.statusId.loadingModelNamed', { model: detail.model });
+    return detail.expectedSeconds ? `${line} ${t('chat.statusId.expectedWait', { seconds: detail.expectedSeconds })}` : line;
+  }
+  return byKey(t, `chat.statusId.${id}`, text ?? '');
 }
 
 /** The Stopped placeholder (#634). A reply the user stopped before any text arrived is saved with
@@ -73,9 +96,10 @@ export const LEGACY_STOPPED_BODIES: readonly string[] = [
 
 type BodyMessage = { role?: string; senderLabel?: string; content: string; error?: boolean; reasoning?: string };
 
-/** True for an assistant reply that is only the Stopped placeholder (the new empty form, or a stored sentence). */
+/** True for an assistant reply that is only the Stopped placeholder (the new empty form, or a stored sentence).
+ *  #1447: a reply stopped during its thinking has reasoning and no answer, and is a placeholder too. */
 export function isStoppedPlaceholder(m: BodyMessage): boolean {
-  if (m.role !== 'assistant' || m.error || m.reasoning || m.senderLabel?.replace(/^Assistant · /, '') !== STOPPED_SENDER) return false;
+  if (m.role !== 'assistant' || m.error || m.senderLabel?.replace(/^Assistant · /, '') !== STOPPED_SENDER) return false;
   return !m.content || LEGACY_STOPPED_BODIES.includes(m.content.trim());
 }
 

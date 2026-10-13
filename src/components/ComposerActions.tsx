@@ -3,9 +3,10 @@ import type { CSSProperties, DragEvent, ReactNode } from 'react';
 import type { Project, Toolbox } from '../types';
 import { fetchToolboxes, saveProjectConfig, uploadProjectFile } from '../api';
 import { fileToBase64, uploadLimit } from '../sources';
+import { uniqueName } from '../project-files';
 import { appLocale } from '../user-preferences';
 import { ShellIcon } from './ShellIcon';
-import { uploadFailureText, uploadUnreadableReason } from '../source-status';
+import { uploadFailureText, uploadStageText, uploadUnreadableReason } from '../source-status';
 import { formatPercent } from '../number-format';
 import { useT, type Translate } from '../i18n';
 import { toolsModeOf } from '../tools-mode';
@@ -19,28 +20,46 @@ import { toolboxCopy } from '../toolbox-copy';
 export interface AttachmentSink {
   project: Project | null; disabled: boolean; diary?: boolean; chatOnly?: boolean;
   onChanged: () => void | Promise<void>; onBusy: (busy: boolean) => void; onStatus: (status: string) => void;
+  /** #1512: an image that was saved is attached to the next message (its project asset id). */
+  onImageAttached?: (assetId: string) => void;
+  /** #1514: the names of the files this upload saved, so the chat can show them as chips. */
+  onSaved?: (names: string[]) => void;
+  /** #1484: a free chat has no attachments project until its first composer action; this creates it. */
+  ensureProject?: () => Promise<Project | null>;
 }
 
 /** The one attachment pipeline: size check, base64 read, `uploadProjectFile`, per-file status and
  *  failure copy, then a single summary line. Extracted so drag-and-drop (#437) is a second way to
  *  call this, never a second implementation of it. */
 export async function uploadAttachments(sink: AttachmentSink, files: File[], t: Translate): Promise<void> {
-  const { project, disabled, diary = false, chatOnly = false, onChanged, onBusy, onStatus } = sink;
+  const { project, disabled, diary = false, chatOnly = false, onChanged, onBusy, onStatus, onImageAttached, onSaved } = sink;
   if (!project || !files.length || disabled) return;
   onBusy(true);
-  const failures: string[] = [], notices: string[] = [];
+  const failures: string[] = [], notices: string[] = [], saved: string[] = [];
   const started = Date.now();
+  // #1454: a name the project already has is saved as a numbered copy, never written over the source;
+  // the status line says so. `taken` also holds the names this batch has been given.
+  const taken: { name: string }[] = (project.files || []).map((f) => ({ name: f.name }));
   for (const [index, file] of files.entries()) {
     const status = (stage: string) => onStatus(`${index + 1}/${files.length} · ${file.name} · ${stage} · ${Math.round((Date.now() - started) / 1000)}s`);
     try {
       if (file.size > uploadLimit(file.name)) throw new Error(t('composer.upload.tooLarge'));
+      const name = uniqueName(file.name, taken);
+      taken.push({ name });
       status(t('composer.upload.reading'));
-      const result = await uploadProjectFile(project.id, { name: file.name, dataBase64: await fileToBase64(file) }, value => status(`${value.stage}${value.percent == null ? '' : ` ${formatPercent(value.percent, appLocale(), 0)}`}`));
+      const result = await uploadProjectFile(project.id, { name, dataBase64: await fileToBase64(file) }, value => status(`${uploadStageText(t, value)}${value.percent == null ? '' : ` ${formatPercent(value.percent, appLocale(), 0)}`}`));
       const unreadable = uploadUnreadableReason(result, t);
       if (unreadable) { failures.push(`${file.name}: ${unreadable}`); continue; }
+      // The chip names the file as it was stored, which is what the model is given: a name the project
+      // already had was saved as a numbered copy ('report (2).pdf'), not under the person's own name.
+      saved.push(name);
+      if (name !== file.name) notices.push(t('composer.upload.renamedCopy', { file: file.name, name }));
       if (result.attachment?.reduction?.note) notices.push(`${file.name}: ${result.attachment.reduction.note}`);
+      if (result.attachment?.assetId) onImageAttached?.(result.attachment.assetId);
     } catch (err) { failures.push(`${file.name}: ${uploadFailureText(err, t, t('composer.upload.failed'))}`); }
   }
+  // #1514: the files that did save are named where the chat shows them, before the refresh that may fail.
+  if (saved.length) onSaved?.(saved);
   // #905: a refresh that throws after the files were saved is reported in the status line, not
   // left to escape the `void uploadAttachments(...)` callers as an unhandled rejection.
   let refreshFailure = '';
@@ -48,7 +67,9 @@ export async function uploadAttachments(sink: AttachmentSink, files: File[], t: 
   catch (err) { refreshFailure = `${t('composer.upload.failed')}: ${uploadFailureText(err, t, t('composer.upload.failed'))}`; }
   finally {
     const problems = refreshFailure ? [...failures, refreshFailure] : failures;
-    onStatus(problems.length ? t('composer.upload.partial', { saved: files.length - failures.length, total: files.length, failures: problems.join('; ') }) : `${t.plural('composer.upload.saved', files.length, { target: chatOnly ? t('composer.upload.thisChat') : project.name })} · ${t(diary ? 'composer.upload.extras' : chatOnly ? 'composer.upload.nextMessage' : 'composer.upload.allChats')}${notices.length ? ' · ' + notices.join('; ') : ''}`);
+    // #1250: a batch with nothing kept does not lead with "Saved" (that read as success with an error in it).
+    const kept = files.length - failures.length;
+    onStatus(problems.length ? t(kept > 0 ? 'composer.upload.partial' : 'composer.upload.notSaved', { saved: kept, total: files.length, failures: problems.join('; ') }) :`${t.plural('composer.upload.saved', files.length, { target: chatOnly ? t('composer.upload.thisChat') : project.name })} · ${t(diary ? 'composer.upload.extras' : chatOnly ? 'composer.upload.nextMessage' : 'composer.upload.allChats')}${notices.length ? ' · ' + notices.join('; ') : ''}`);
     onBusy(false);
   }
 }
@@ -73,7 +94,7 @@ export function useAttachmentDrop(sink: AttachmentSink): { isDragOver: boolean; 
   // Nested elements each fire enter/leave as the pointer crosses their edges; a depth counter
   // (rather than the boolean state itself) is what tells a leave of a child from leaving the zone.
   const depth = useRef(0);
-  const canDrop = !sink.disabled && !!sink.project;
+  const canDrop = !sink.disabled && (!!sink.project || !!sink.ensureProject);
   // Plain closures, recreated each render like the rest of this component's handlers — always
   // reading the sink/translator passed in on *this* render rather than a memoized, possibly stale
   // one from a `useCallback` dependency list.
@@ -101,20 +122,27 @@ export function useAttachmentDrop(sink: AttachmentSink): { isDragOver: boolean; 
     setDragOver(false);
     if (!canDrop) return;
     const files = Array.from(event.dataTransfer?.files ?? []);
-    if (files.length) void uploadAttachments(sink, files, t);
+    if (!files.length) return;
+    if (sink.project) { void uploadAttachments(sink, files, t); return; }
+    // #1484: a file dropped on a chat with no attachments project yet creates it first, then uploads.
+    void sink.ensureProject?.().then(project => { if (project) return uploadAttachments({ ...sink, project }, files, t); return undefined; });
   };
   return { isDragOver, dropProps: { onDragEnter, onDragOver, onDragLeave, onDrop } };
 }
 
 /** Composer shortcuts use the existing project APIs; enabling tools never approves a write. */
-export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus, header, diary = false, chatOnly = false, browseTools }: {
+export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus, header, diary = false, chatOnly = false, browseTools, onImageAttached, onSaved, onEnsureProject }: {
   header?: ReactNode; diary?: boolean; chatOnly?: boolean;
+  /** #1484: creates a free chat's attachments project when the + menu opens over one that has none yet. */
+  onEnsureProject?: () => Promise<Project | null>;
   /** #510: on a phone the standalone Tools button above the composer is hidden, and this row in
    *  the + menu opens the same catalogue. Wider screens hide the row and keep the button. */
   browseTools?: { onOpen: () => void; count: number };
+  /** #1512: the picker's and the drop handler's saved images, attached to the next message. */
+  onImageAttached?: (assetId: string) => void;
   project: Project | null; disabled: boolean; onChanged: () => void | Promise<void>;
   /** Unused: the model is chosen from the composer's model control, not duplicated here. */
-  onModels?: () => void; onBusy: (busy: boolean) => void; onStatus: (status: string) => void;
+  onModels?: () => void; onBusy: (busy: boolean) => void; onStatus: (status: string) => void; onSaved?: (names: string[]) => void;
 }) {
   const panelId = useId();
   const t = useT();
@@ -141,8 +169,30 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
     return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
   }, [open]);
 
+  // #1554: Escape closes the menu wherever focus is (the + button, a row inside it, or the message box),
+  // not only when the key lands inside this element, and returns focus to the + button.
+  useEffect(() => {
+    if (!open) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      event.preventDefault();
+      setOpen(false);
+      trigger.current?.focus();
+    };
+    document.addEventListener('keydown', onEscape);
+    return () => document.removeEventListener('keydown', onEscape);
+  }, [open]);
+
   useEffect(() => { setSelected(project?.toolboxes ?? (diary ? [] : ['core'])); }, [project, diary]);
-  useEffect(() => { if (!diary) setOpen(false); setError(''); }, [project?.id, diary]);
+  // #1484: the first project a free chat gets (null -> id, from the + menu) must not close the menu it was opened from;
+  // only a switch between two real projects does.
+  const shownProjectId = useRef<string | null>(project?.id ?? null);
+  useEffect(() => {
+    const previous = shownProjectId.current;
+    shownProjectId.current = project?.id ?? null;
+    if (!diary && !(previous === null && project?.id)) setOpen(false);
+    setError('');
+  }, [project?.id, diary]);
   useEffect(() => {
     if (!open) return;
     let active = true;
@@ -188,7 +238,7 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
   const upload = async (files: File[]) => {
     if (!files.length) return;
     setOpen(false);
-    await uploadAttachments({ project, disabled, diary, chatOnly, onChanged, onBusy, onStatus }, files, t);
+    await uploadAttachments({ project, disabled, diary, chatOnly, onChanged, onBusy, onStatus, onImageAttached, onSaved }, files, t);
   };
   const tokens = boxes.filter(box => effectiveSelected.includes(box.id)).reduce((sum, box) => sum + box.estTokens, 0);
   return <div className="composer-actions" ref={root} onKeyDown={event => {
@@ -197,7 +247,7 @@ export function ComposerActions({ project, disabled, onChanged, onBusy, onStatus
     {/* Like Claude's: a centred SVG plus, and a menu of what can be added — files first, then
         the tools this chat may use, each ticked when on. The model lives in its own control on
         the other side of the composer, so it is not repeated here. */}
-    <button ref={trigger} type="button" className="composer-add glass is-press" aria-label={browseTools?.count ? `${t('composer.addFilesAndTools')} · ${t('tools.forMessage', { count: browseTools.count })}` : t('composer.addFilesAndTools')} aria-expanded={open} aria-controls={panelId} disabled={disabled || saving} onClick={() => setOpen(!open)}><ShellIcon name="plus" size={18}/>
+    <button ref={trigger} type="button" className="composer-add glass is-press" aria-label={browseTools?.count ? `${t('composer.addFilesAndTools')} · ${t('tools.forMessage', { count: browseTools.count })}` : t('composer.addFilesAndTools')} aria-expanded={open} aria-controls={panelId} disabled={disabled || saving} onClick={() => { if (!open && !project) void onEnsureProject?.(); setOpen(!open); }}><ShellIcon name="plus" size={18}/>
       {/* #510: where the Tools button is hidden, the + carries how many toolboxes the next message adds. */}
       {!!browseTools?.count && <span className="composer-add-badge" aria-hidden="true">{browseTools.count}</span>}</button>
     <input ref={input} hidden type="file" multiple onChange={event => { const files = Array.from(event.target.files || []); event.target.value = ''; void upload(files); }} />

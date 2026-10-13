@@ -136,6 +136,7 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.recover.healthUnavailableHelp': "Kan de modellader niet controleren. Probeer het opnieuw of open de logboeken.",
   'mm.recover.noEngine': "Geen engine gevonden",
   'mm.recover.running': "{engine} draait",
+  'mm.recover.engineIndex': "Motor {index}",
   'mm.recover.runningWith': "{engine} draait · {model} geladen",
   'mm.recover.openLogs': "Logs openen",
   'mm.recover.checking': "Taken controleren…",

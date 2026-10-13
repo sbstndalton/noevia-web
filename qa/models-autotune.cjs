@@ -57,7 +57,7 @@ const pending = (id, label) => ({ id, label, status: 'pending', steps: [{ id: id
     await page.goto('http://localhost:31347');
     await openSettings(page);
     const settings = page.getByRole('dialog', { name: 'Settings' });
-    await settings.getByRole('button', { name: 'Models & routing' }).click();
+    await settings.getByRole('button', { name: 'Models and routing' }).click();
     await settings.getByRole('button', { name: 'Open model manager' }).click();
     const manager = page.locator('.model-manager-page');
     const open = manager.getByRole('button', { name: 'Tune untuned models', exact: true });
@@ -111,7 +111,7 @@ const pending = (id, label) => ({ id, label, status: 'pending', steps: [{ id: id
     await resume.click();
     await panel.getByRole('button', { name: 'Cancel auto-tune' }).waitFor();
     assert.deepEqual(resumes, [{ confirmPause: true }]);
-    assert.ok(await panel.getByText(/context 16384/).isVisible());
+    assert.ok(await panel.getByText(/context 16,384/).isVisible());
     tuned = true;
     job = { ...job, status: 'passed', phase: 'Done', models: [{ ...job.models[0], status: 'passed',
       phases: job.models[0].phases.map(p => ({ ...p, status: 'passed' })),

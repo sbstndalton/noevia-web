@@ -6,7 +6,7 @@ import { ComposerModel } from './ComposerModel';
 import { ComposerTextarea } from './ComposerTextarea';
 import { SkillPinSelect, useSkillPinOptions } from './SkillPinPicker';
 import type { SkillPin } from '../api-contract';
-import { sourceStatus, uploadFailureText, uploadUnreadableReason, isUnreadableSource, attachmentReason } from '../source-status';
+import { sourceStatus, uploadFailureText, uploadStageText, uploadUnreadableReason, isUnreadableSource, attachmentReason } from '../source-status';
 import { ShellIcon } from './ShellIcon';
 import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
@@ -17,7 +17,7 @@ import { SendIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
 import { ConfirmDialog } from './ContextMenu';
 import { fileToBase64, uploadLimit } from '../sources';
-import { filesAfterRemoval } from '../project-files';
+import { filesAfterRemoval, storageFolderKeepsOldName, uniqueName } from '../project-files';
 import { deleteProjectImage, projectImageUrl, uploadProjectFile, deleteProjectFile } from '../api';
 import { ResearchPanel } from './research/ResearchPanel';
 import { useResearchAccess } from './research/useResearchAccess';
@@ -31,18 +31,7 @@ import { senderLabelText } from '../chat-labels';
 import type { Translate } from '../i18n';
 import { formatBytes, formatPercent } from '../number-format';
 import { appLocale } from '../user-preferences';
-
-/** First free "name", "name (2)", "name (3)", … avoiding collisions. */
-function uniqueName(name: string, existing: { name: string }[]): string {
-  if (!existing.some((f) => f.name === name)) return name;
-  const dot = name.lastIndexOf('.');
-  const stem = dot > 0 ? name.slice(0, dot) : name;
-  const ext = dot > 0 ? name.slice(dot) : '';
-  for (let n = 2; ; n++) {
-    const candidate = `${stem} (${n})${ext}`;
-    if (!existing.some((f) => f.name === candidate)) return candidate;
-  }
-}
+import { keepIdentifiersWhole } from '../no-break-identifiers';
 
 interface ProjectViewProps {
   project: Project;
@@ -58,7 +47,7 @@ interface ProjectViewProps {
   onTabChange?: (tab: ProjectTab, opts: { replace: boolean }) => void;
   onNewChat: (projectId: string) => void;
   onSendFirst: (projectId: string, text: string, skill?: SkillPin) => void;
-  onSave: (projectId: string, patch: Partial<Project>) => Promise<void>;
+  onSave: (projectId: string, patch: Partial<Project>, options?: { storageRetry?: boolean }) => Promise<void>;
   onOpenChat: (projectId: string, chatId: string) => void;
   onPatch: (projectId: string, patch: Partial<Project>) => void;
   onDeleteChat: (projectId: string, chatId: string) => void;
@@ -176,9 +165,11 @@ export function ProjectView({
   const [skillFiles, setSkillFiles] = useState<string[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [browsing, setBrowsing] = useState(false);
+  // #1297: the hidden file input the visible Upload files button opens.
+  const uploadInput = useRef<HTMLInputElement>(null);
   const [addError, setAddError] = useState('');
   const [busyDocs, setBusyDocs] = useState(false);
-  const [uploadRows, setUploadRows] = useState<{ name: string; stage: string; percent?: number; started: number; finished?: number }[]>([]);
+  const [uploadRows, setUploadRows] = useState<{ name: string; stage: string; percent?: number; started: number; finished?: number; failed?: boolean }[]>([]);
   const [now, setNow] = useState(Date.now());
   useEffect(() => { if (!busyDocs) return; const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, [busyDocs]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -193,16 +184,24 @@ export function ProjectView({
     const files = Array.from(list);
     setAddError(''); setBusyDocs(true);
     setUploadRows(files.map(f => ({ name: f.name, stage: t('projects.view.queued'), started: Date.now() })));
-    const update = (i: number, value: { stage: string; percent?: number; finished?: number }) => setUploadRows(rows => rows.map((r, n) => n === i ? { ...r, percent: undefined, ...value } : r));
+    const update = (i: number, value: { stage: string; percent?: number; finished?: number; failed?: boolean }) => setUploadRows(rows => rows.map((r, n) => n === i ? { ...r, percent: undefined, ...value } : r));
+    // #1454: a name a source already has is kept as a numbered copy, never written over the source.
+    // `taken` also holds the names this batch has already been given, so two files cannot collide.
+    const taken: { name: string }[] = project.files.map((f) => ({ name: f.name }));
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       try {
         if (file.size > uploadLimit(file.name)) throw new Error(t('projects.view.fileTooLarge'));
+        const name = uniqueName(file.name, taken);
+        taken.push({ name });
         update(i, { stage: t('projects.view.readingFile') });
-        const result = await uploadProjectFile(project.id, { name: file.name, dataBase64: await fileToBase64(file) }, value => update(i, value));
-        update(i, { stage: uploadUnreadableReason(result, t) || result.attachment?.reduction?.note || t('projects.view.saved'), percent: 100, finished: Date.now() });
+        const result = await uploadProjectFile(project.id, { name, dataBase64: await fileToBase64(file) }, value => update(i, { stage: uploadStageText(t, value), percent: value.percent }));
+        const unreadable = uploadUnreadableReason(result, t);
+        const copy = name !== file.name ? t('projects.view.savedAsCopy', { name, original: file.name }) : '';
+        const note = result.attachment?.reduction?.note;
+        update(i, { stage: unreadable || [copy, note].filter(Boolean).join(' · ') || t('projects.view.saved'), percent: 100, finished: Date.now(), failed: !!unreadable });
         onRefresh();
-      } catch (err) { update(i, { stage: uploadFailureText(err, t, t('projects.view.uploadFailed')), finished: Date.now() }); }
+      } catch (err) { update(i, { stage: uploadFailureText(err, t, t('projects.view.uploadFailed')), finished: Date.now(), failed: true }); }
     }
     setBusyDocs(false);
   };
@@ -210,7 +209,8 @@ export function ProjectView({
   const updateFolders = async (folders: string[]) => {
     setSyncing(true);
     setAddError('');
-    try { await onSave(project.id, {sourceFolders: folders}); }
+    // #1428/#1429: this is the "Refresh from storage" press, the one explicit retry of a source refresh.
+    try { await onSave(project.id, {sourceFolders: folders}, { storageRetry: true }); }
     catch (e) { setAddError(e instanceof Error ? e.message : t('projects.view.folderUpdateError')); }
     finally { setSyncing(false); }
   };
@@ -241,9 +241,10 @@ export function ProjectView({
         const undeletableSynced = !!f.source && !deletable;
         return <li key={f.name} data-source-name={f.name} tabIndex={-1} className={citedSource === f.name ? 'is-cited' : undefined}>
           {f.attachment?.assetId && <img className="source-thumbnail" src={projectImageUrl(project.id, f.attachment.assetId)} alt="" />}
-          <span className="source-name" title={f.name}><ShellIcon name="file"/><span>{f.name.split('/').pop()}
+          {/* #1543: an image row's thumbnail is its icon; a document row keeps the file glyph. */}
+          <span className="source-name" title={f.name}>{f.attachment?.assetId ? null : <ShellIcon name="file"/>}<span>{f.name.split('/').pop()}
             <small className="source-status">{skillFiles.includes(f.name) ? t('projects.view.instructionSkill') : f.document ? sourceStatus(f, t) : f.attachment?.state === 'stored' ? (attachmentReason(f.attachment, t) || t('projects.view.originalStored')) : f.attachment?.state === 'vision' ? t('projects.view.uploadedImage') : f.attachment?.state === 'partial' ? (attachmentReason(f.attachment, t) || t('projects.view.textPreviewLimited')) : t('projects.view.textReady')}</small>
-            <small className="source-status">{f.source ? f.name : t('projects.view.storedInNoevia')}{f.attachment ? ` · ${formatBytes(f.attachment.bytes, appLocale())}` : ''}</small>
+            <small className="source-status">{f.source ? keepIdentifiersWhole(f.name) : t('projects.view.storedInNoevia')}{f.attachment ? ` · ${formatBytes(f.attachment.bytes, appLocale())}` : ''}</small>
             {undeletableSynced && <small className="source-status">{t('projects.view.syncedFrom', { source: f.source || '' })}</small>}
           </span></span>
           {(f.attachment || f.document?.byteHash) && <a className="btn btn-ghost btn-sm" href={`/api/projects/${encodeURIComponent(project.id)}/${f.attachment ? 'uploads' : 'documents'}/original?name=${encodeURIComponent(f.name)}`} download>{t('projects.view.original')}</a>}
@@ -273,7 +274,7 @@ export function ProjectView({
         <div className="project-main">
           <header className="project-head">
             <div className="project-head-main">
-              <h1 className="project-title"><ProjectIcon project={project} size={30}/>{project.name}</h1>
+              <h1 className="project-title"><ProjectIcon project={project} size={30}/>{keepIdentifiersWhole(project.name)}</h1>
               {project.goal && <p className="project-goal">{project.goal}</p>}
               <p className="project-detail-meta">{project.archived ? `${t('projects.archived')} · ` : ''}{(() => { const c = countProjectChats(project.chats); return c.archived ? `${t.plural('projects.count.chats', c.active)} · ${t.plural('projects.count.archivedChats', c.archived)}` : t.plural('projects.count.chats', c.active); })()} · {t('projects.view.updatedLabel')} <time dateTime={new Date(project.updatedAt).toISOString()} title={new Date(project.updatedAt).toLocaleString()}>{timeAgo(t, project.updatedAt)}</time></p>
             </div>
@@ -375,7 +376,8 @@ export function ProjectView({
               <section className="project-storage-summary">
                 <h3>{t('projects.view.uploadFolder')}</h3>
                 <p className="rail-empty">{t('projects.view.uploadFolderBody')}</p>
-                {project.projectFolder ? <p className="storage-path"><ShellIcon name="folder"/><span>{project.projectFolder}</span></p>
+                {project.projectFolder && storageFolderKeepsOldName(project.projectFolder, project.name, project.id) && <p className="rail-empty">{t('projects.view.folderKeepsOldName')}</p>}
+                {project.projectFolder ? <p className="storage-path"><ShellIcon name="folder"/><span>{keepIdentifiersWhole(project.projectFolder)}</span></p>
                   : <p className="rail-empty">{t('projects.edit.folderOnFirstUpload')}</p>}
               </section>
               <details className="project-linked-folders">
@@ -387,19 +389,18 @@ export function ProjectView({
                 <button className="btn btn-secondary btn-sm" onClick={onEdit}>{t('projects.view.editLinkedFolders')}</button>
                 <p className="source-status">{t('projects.view.linkedFoldersRefreshNote')}</p>
               </details>
+              {/* #1570: the three source actions are one row. */}
               <div className="source-actions">
                 <button className="btn btn-secondary btn-sm" disabled={syncing || busyDocs} onClick={()=>void updateFolders(project.sourceFolders || [])}>{syncing ? t('projects.view.refreshing') : t('projects.view.refreshFromStorage')}</button>
-              </div>
-
-              <div className="source-actions">
-                <label className={`btn btn-secondary btn-sm${busyDocs ? ' is-busy' : ''}`}>
+                {/* #1297: a native button opens the picker, so Tab reaches it and Enter/Space activate it. */}
+                <button type="button" className={`btn btn-secondary btn-sm${busyDocs ? ' is-busy' : ''}`} disabled={busyDocs} aria-busy={busyDocs || undefined} onClick={() => uploadInput.current?.click()}>
                   {busyDocs ? t('projects.view.uploadingFiles') : t('projects.view.uploadFiles')}
-                  <input type="file" multiple disabled={busyDocs} style={{ display: 'none' }} onChange={e => { void addFiles(e.target.files); e.target.value = ''; }} />
-                </label>
+                </button>
+                <input ref={uploadInput} type="file" multiple disabled={busyDocs} style={{ display: 'none' }} onChange={e => { void addFiles(e.target.files); e.target.value = ''; }} />
                 <button className="btn btn-secondary btn-sm" onClick={() => setBrowsing(true)}>{t('projects.view.importFromStorage')}</button>
               </div>
               <p className="rail-empty">{t('projects.view.uploadLimitsNote')}</p>
-              {uploadRows.length > 0 && <details open={busyDocs}><summary>{busyDocs ? t('projects.view.uploadingFiles') : t('projects.view.uploadResults', { count: uploadRows.length, status: uploadRows.some(r => r.stage !== t('projects.view.saved')) ? t('projects.view.someNotAdded') : t('projects.view.savedStatus') })}</summary><ul className="source-list upload-progress" aria-label={t('projects.view.uploadProgress')} aria-live="polite">{uploadRows.map((r, i) => <li key={i}>
+              {uploadRows.length > 0 && <details open={busyDocs}><summary>{busyDocs ? t('projects.view.uploadingFiles') : t('projects.view.uploadResults', { count: uploadRows.length, status: uploadRows.some(r => r.failed) ?t('projects.view.someNotAdded') : t('projects.view.savedStatus') })}</summary><ul className="source-list upload-progress" aria-label={t('projects.view.uploadProgress')} aria-live="polite">{uploadRows.map((r, i) => <li key={i}>
                 <span><strong className="upload-name">{r.name}</strong><small className="source-status">{r.stage}{r.percent !== undefined ? ` · ${formatPercent(r.percent, appLocale(), 0)}` : ''} · {t('projects.view.seconds', { count: Math.max(0, Math.round(((r.finished || now) - r.started) / 1000)) })}</small></span>
               </li>)}</ul></details>}
               {groupKeys.map(([group, groupKey]) => {

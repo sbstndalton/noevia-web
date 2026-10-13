@@ -75,8 +75,11 @@ test('a keyboard-initiated archive focuses the toast\'s Undo button, and the aut
   assert.match(effect, /undoButtonRef\.current\?\.focus\(\)/);
 });
 test('undo restores the same chat without touching its position-determining fields (#362)', () => {
-  const undo = src.slice(src.indexOf('const undoArchive'), src.indexOf('const undoArchive') + 300);
-  assert.match(undo, /onPatchChat\(archiveUndo\.projectId, ?archiveUndo\.chat\.id, ?\{ ?archived: ?false ?\}\)/);
+  const undo = src.slice(src.indexOf('const undoArchive'), src.indexOf('const undoArchive') + 400);
+  // #1424: undo puts back the pin the chat had before the archive (undoArchivePatch), and nothing else:
+  // no timestamp or other field that would move the chat in the list.
+  assert.match(undo, /onPatchChat\(archiveUndo\.projectId, ?archiveUndo\.chat\.id, ?undoArchivePatch\(archiveUndo\.chat\)\)/);
+  assert.doesNotMatch(undo, /updatedAt/);
 });
 test('the row\'s own "…" menu Archive item goes through the same archive+undo path as the hover icon, at any width (#362, reopened a fourth time)', () => {
   const chatMenuStart = src.indexOf('const chatMenu');

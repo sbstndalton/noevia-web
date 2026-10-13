@@ -1,8 +1,10 @@
 import { appLocale } from '../user-preferences';
+import { passkeyDisplayName, providerDisplayName } from '../display-names';
 import { formatNumber } from '../number-format';
 import { McpStatus } from './McpStatus';
 import { openModelSettings } from '../models-open';
 import { ShellIcon } from './ShellIcon';
+import { UrlText } from './UrlText';
 import { ConfirmDialog } from './ContextMenu';
 import DiarySharing from './DiarySharing';
 import DiaryConnectors from './DiaryConnectors';
@@ -20,6 +22,7 @@ import { useFeatureFlags } from './features/useFeatureFlags';
 import { afterLayoutSettles, pickFocusable } from '../focus-utils';
 import { StoragePicker } from './StoragePicker';
 import { useT } from '../i18n';
+import { liveEngineNote } from '../live-engine-note';
 import type { Translate } from '../i18n';
 
 export interface SettingsViewProps {
@@ -41,6 +44,8 @@ export interface SettingsViewProps {
 
 export function SettingsView({ models, modelsLoaded, modelsError, health, stats, diaryEnabled, onDiaryEnabledChange, onOpenModelManager, onOpenSection, section = 'profile' }: SettingsViewProps): JSX.Element {
   const t = useT();
+  // Why the Live engine figures below have no value (#1485), said in words rather than as bare dashes.
+  const liveNote = liveEngineNote(t, stats);
   return <div className="settings-live-content">
     {section === 'security' && <SecurityCard onOpenSection={onOpenSection} />}
     {section === 'users' && <UsersCard />}
@@ -62,7 +67,7 @@ export function SettingsView({ models, modelsLoaded, modelsError, health, stats,
           {retrieval === 'degraded' && <p className="route-note">{t('serviceStatus.retrieval.degradedNote')}</p>}
         </>;
       })()}
-      </div><h2>{t('serviceStatus.liveEngine')}</h2><div className="settings-stat-row"><div><span title={t('serviceStatus.rateTitle')}>{t('serviceStatus.rate')}</span><strong>{stats?.tokensPerSecond != null ? formatNumber(stats.tokensPerSecond, appLocale(), 1) : '—'}</strong></div><div><span>{t('serviceStatus.requests')}</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${formatNumber(stats.vramGb, appLocale(), 1)} GB`:'—'}</strong></div></div></>}
+      </div><h2>{t('serviceStatus.liveEngine')}</h2>{liveNote && <p className="route-note" role="status">{liveNote}</p>}<div className="settings-stat-row"><div><span title={t('serviceStatus.rateTitle')}>{t('serviceStatus.rate')}</span><strong>{stats?.tokensPerSecond != null ? formatNumber(stats.tokensPerSecond, appLocale(), 1) : '—'}</strong></div><div><span>{t('serviceStatus.requests')}</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${formatNumber(stats.vramGb, appLocale(), 1)} GB`:'—'}</strong></div></div></>}
   </div>;
 }
 
@@ -162,7 +167,7 @@ function SecurityCard({ onOpenSection }: { onOpenSection?: (id: string) => void 
       {/* #404: a passkey has no online/offline state to show — it is a registered credential, not
           a live connection — so, per PRODUCT.md's "nothing fake", it gets no status dot at all
           (the same no-dot pattern Users' account rows already use) rather than a decorative one. */}
-      {passkeys.map(k => <div className="model-row" key={k.id}><div className="model-name-group"><span className="model-name">{k.name}</span><span className="model-quant">{k.backedUp ? t('security.syncedPasskey') : k.deviceType}</span></div><button className="recents-del" aria-label={t('security.removePasskeyNamed', { name: k.name })} onClick={() => setConfirmPasskey(k)}><ShellIcon name="close" size={16}/></button></div>)}
+      {passkeys.map(k => <div className="model-row" key={k.id}><div className="model-name-group"><span className="model-name">{passkeyDisplayName(k.name, t)}</span><span className="model-quant">{k.backedUp ? t('security.syncedPasskey') : k.deviceType}</span></div><button className="recents-del" aria-label={t('security.removePasskeyNamed', { name: k.name })} onClick={() => setConfirmPasskey(k)}><ShellIcon name="close" size={16}/></button></div>)}
       <button className="modal-btn secondary" onClick={() => void act(t('security.passkeySetup'), addKey, t('security.passkeyAdded'))}><ShellIcon name="plus" size={16}/>{t('security.addPasskey')}</button>
       {/* #404: the dot was hard-coded green for every row regardless of which session the browser
           is actually using. `s.current` (GET /api/profile marks the calling request's own
@@ -175,7 +180,7 @@ function SecurityCard({ onOpenSection }: { onOpenSection?: (id: string) => void 
           <div className="model-name-group">
             <span className="model-name">{sessionLabel(t, s.userAgent)}</span>
             <span className="model-quant">
-              {s.ip || t('security.unknownIp')} · {t('security.lastSeen', { date: new Date(s.lastSeenAt).toLocaleString(appLocale()) })}{s.current ? ` · ${t('security.thisDevice')}` : ''}
+              {s.ip || t('security.unknownIp')} · {t('security.lastSeen', { date: new Date(s.lastSeenAt).toLocaleString(appLocale()) })} · {t('security.expires', { date: new Date(s.expiresAt).toLocaleString(appLocale()) })}{s.current ? ` · ${t('security.thisDevice')}` : ''}
             </span>
           </div>
           <button className="recents-del" title={t('security.revokeSession')} aria-label={t('security.revokeSessionNamed', { device: sessionLabel(t, s.userAgent) })} onClick={() => void act(t('security.revokeSession'), () => revokeSession(s.id), t('security.sessionRevoked'))}><ShellIcon name="close" size={16}/></button>
@@ -294,7 +299,7 @@ function UsersCard(): JSX.Element {
     <div className="set-rows">
       {users.length === 0 && !loading && <p className="route-note">{t('users.empty')}</p>}
       {users.map(u => <div key={u.id}>
-        <div className="model-row"><div className="model-name-group"><span className="model-name">{u.displayName}</span><span className="model-quant">@{u.username} · {u.role}{u.disabled ? ` · ${t('users.disabled')}` : ''}</span></div>{u.id !== user.id && <>
+        <div className="model-row"><div className="model-name-group"><span className="model-name">{u.displayName}</span><span className="model-quant">@{u.username} · {u.role === 'admin' ? t('profile.admin') : t('profile.member')}{u.disabled ? ` · ${t('users.disabled')}` : ''}</span></div>{u.id !== user.id && <>
           <button className="popup-tab" disabled={!!busy[u.id] || loading} onClick={() => void act(u.id, u.disabled ? t('users.enableAccount') : t('users.disableAccount'), () => setUserDisabled(u.id, !u.disabled), t('users.accountUpdated'))}>{u.disabled ? t('users.enable') : t('users.disable')}</button>
           <button className="popup-tab" disabled={!!busy[u.id] || loading} onClick={() => void createLink(u.id, u.id)}>{t('users.recovery')}</button>
           <button className="recents-del" title={t('users.deleteUser')} aria-label={t('users.deleteUserNamed', { username: u.username })} disabled={!!busy[u.id] || loading} onClick={() => { const typed = window.prompt(t('users.deletePrompt', { username: u.username })); if (typed === u.username) void act(u.id, t('users.deleteAccount'), () => deleteUser(u.id, typed), t('users.accountDeleted'), true, true); }}><ShellIcon name="close" size={16}/></button>
@@ -377,8 +382,8 @@ function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
                 it gets no dot rather than a fabricated one. */}
             {p.isDefault && <span className={`model-dot${health.inferenceUp ? '' : ' down'}`} />}
             <div className="model-name-group">
-              <span className="model-name">{p.label}</span>
-              <span className="model-quant">{p.baseUrl}</span>
+              <span className="model-name">{providerDisplayName(p, t)}</span>
+              <span className="model-quant"><UrlText text={p.baseUrl}/></span>
             </div>
             {p.isDefault ? (
               <span className="model-role">{t('providers.defaultAlwaysOn')} · {health.inferenceUp === true ? t('models.available') : health.inferenceUp === false ? t('models.unavailable') : t('serviceStatus.notAvailable')}</span>
@@ -388,7 +393,7 @@ function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
                 {p.contextTokens && <span className="model-quant">{t('providers.contextHint', { tokens: p.contextTokens.toLocaleString(appLocale()) })}</span>}
                 <span className="provider-row-actions">
                   {canEdit(p) && (
-                    <button ref={(el) => { if (el) editRefs.current.set(p.id, el); else editRefs.current.delete(p.id); }} className="recents-del" title={t('providers.edit')} aria-label={t('providers.editNamed', { name: p.label })} aria-expanded={editing === p.id} disabled={loading || !!removing} onClick={() => setEditing(editing === p.id ? null : p.id)}>
+                    <button ref={(el) => { if (el) editRefs.current.set(p.id, el); else editRefs.current.delete(p.id); }} className="recents-del" title={t('providers.edit')} aria-label={t('providers.editNamed', { name: providerDisplayName(p, t) })} aria-expanded={editing === p.id} disabled={loading || !!removing} onClick={() => setEditing(editing === p.id ? null : p.id)}>
                       <ShellIcon name="pencil" size={16}/>
                     </button>
                   )}
@@ -400,7 +405,7 @@ function ProvidersCard({ health }: { health: HealthState }): JSX.Element {
             )}
           </div>
           {editing === p.id && canEdit(p) && (
-            <div className="provider-edit" role="group" aria-label={t('providers.editNamed', { name: p.label })}>
+            <div className="provider-edit" role="group" aria-label={t('providers.editNamed', { name: providerDisplayName(p, t) })}>
               <ProviderForm
                 key={p.id}
                 autoFocus

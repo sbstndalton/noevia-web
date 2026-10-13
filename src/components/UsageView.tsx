@@ -1,10 +1,14 @@
 import { appLocale } from '../user-preferences';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { fetchProfile, fetchUsage } from '../api';
 import type { UsageSummary, UsageTotals } from '../types';
 import { useT } from '../i18n';
 import { formatCompact } from '../number-format';
+import { revealLatestWeeks } from '../usage-heatmap-scroll';
+import { isCoarsePointerDevice } from '../composer-focus';
+import { groupUsageDaysByMonth } from '../usage-months';
+import { UsageTouchMonths } from './UsageTouchMonths';
 
 const compact = (n: number): string => formatCompact(n, appLocale());
 
@@ -62,6 +66,10 @@ export function UsageView(): JSX.Element {
   const [isAdmin,setIsAdmin]=useState(false);
   const [window_, setWindow] = useState<'7' | '30' | 'all'>('30');
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const heatmapScroll = useRef<HTMLDivElement>(null);
+  // #1467: on touch, a month opens its days as full-size rows under the compact grid.
+  const [touch] = useState(() => isCoarsePointerDevice());
+  const [openMonth, setOpenMonth] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -73,6 +81,9 @@ export function UsageView(): JSX.Element {
       .catch(() => { if (live) setError(true); });
     return () => { live = false; };
   }, [attempt,aggregate]);
+
+  // #1538: the heat map opens at its latest weeks (the right-hand end), not the oldest months.
+  useLayoutEffect(() => { if (heatmapScroll.current) revealLatestWeeks(heatmapScroll.current); }, [data]);
 
   if (error) return <><div className="settings-title"><h1>{t('settings.section.usage')}</h1></div><p className="route-note" role="alert">{t('usage.loadError')}</p><button className="btn btn-secondary" onClick={() => setAttempt(n => n + 1)}>{t('usage.retry')}</button>{aggregate&&<button className="btn btn-secondary" onClick={()=>setAggregate(false)}>{t('usage.returnToYours')}</button>}</>;
   if (!data) return <><div className="settings-title"><h1>{t('settings.section.usage')}</h1></div><p className="route-note">{t('settings.loading')}</p></>;
@@ -96,6 +107,8 @@ export function UsageView(): JSX.Element {
     if (date.getDate() === 1) monthMarks.push({ col: Math.floor((i + firstWeekday) / 7), label: shortName(appLocale(), date, 'month') });
   });
 
+  // #1467: the same days, grouped by month for the touch list (labels read like the month strip).
+  const touchMonths = groupUsageDaysByMonth(grid).map(month => ({ key: month.key, label: `${shortName(appLocale(), new Date(month.year, month.month - 1, 1, 12), 'month')} ${month.year}`, days: month.days }));
   return <>
     <div className="settings-title">
       <h1>{t('settings.section.usage')}</h1>
@@ -119,8 +132,9 @@ export function UsageView(): JSX.Element {
           ))}
         </div>
       </div>
-      <div className="usage-stat-grid">
-        <Stat label={t('usage.total')} value={compact(totals.input + totals.output)} hint={t('usage.totalHint')} />
+      {/* #1539: four tiles fill one row (two rows of two on a narrow screen), never three and one. */}
+      <div className="usage-stat-grid usage-stat-grid--four">
+        <Stat label={t('usage.total')} value={compact(totals.input + totals.output)} hint={t('usage.totalHint', { window: label })} />
         <Stat label={t('usage.input')} value={compact(totals.input)} hint={t('usage.inputHint')} />
         <Stat label={t('usage.output')} value={compact(totals.output)} hint={t('usage.outputHint')} />
         <Stat label={t('usage.modelResponses')} value={totals.replies.toLocaleString(appLocale())} hint={t('usage.modelResponsesHint', { window: label })} />
@@ -132,7 +146,7 @@ export function UsageView(): JSX.Element {
         <div><h2>{t('usage.activity')}</h2><p>{t('usage.activityIntro', { count: data.retentionDays, zone: data.timeZone })}</p></div>
       </div>
       {grid.length === 0 && <p className="route-note">{t('usage.noActivity')}</p>}
-      <div className="usage-heatmap-scroll">
+      <div className="usage-heatmap-scroll" ref={heatmapScroll}>
         <div className="usage-heatmap-inner">
           {/* The month strip must share the grid's exact column pitch (cell +
               gap). It previously used wider columns *and* the same gap, so the
@@ -173,6 +187,7 @@ export function UsageView(): JSX.Element {
           </div>
         </div>
       </div>
+      {touch && grid.length > 0 && <UsageTouchMonths months={touchMonths} openKey={openMonth} onOpen={setOpenMonth} activeDay={activeDay?.day ?? null} onPick={setSelectedDay} />}
       <div className="usage-legend">
         <span>{t.plural('usage.activeDays', data.activeDays)}</span>
         <span className="usage-scale">{t('usage.less')} {[0, 1, 2, 3, 4].map((l) => <i key={l} className={`usage-cell level-${l}`} />)} {t('usage.more')}</span>

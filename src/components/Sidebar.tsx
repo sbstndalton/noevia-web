@@ -5,8 +5,10 @@ import { useActiveCodeTasks } from './code/useActiveCodeTasks';
 import { CodingProjectList, CodingTaskList } from './CodingSidebarLists';
 import { orderedProjects, recentChats, readSidebarOrder, moveProject } from '../sidebar-order';
 import { normalizeRenameDraft } from '../rename-draft';
+import { archivePatch, undoArchivePatch } from '../chat-archive';
 import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { JSX } from 'react';
 import { AccountMenu } from './AccountMenu';
 import { ModeSwitch } from './ModeSwitch';
@@ -15,8 +17,10 @@ import type { MenuItem } from './ContextMenu';
 import { buildSearchResults, chatMatchesQuery, matchingDestinations, parseSidebarQuery, searchResultKey } from '../sidebar-search';
 import { hasTag, tagTree } from '../chat-organise';
 import type { TagNode } from '../chat-organise';
+import { chatMoveTargets } from '../chat-move';
 import type { SearchResultKind } from '../sidebar-search';
-import { fetchToolboxes, fetchProfile } from '../api';
+import { fetchToolboxes, fetchProfile, searchChatText } from '../api';
+import { downloadChatExport } from '../chat-export';
 import type { McpStatus } from '../api';
 import { useSpaceTier } from '../space-tier';
 import { notifyWorkspaceChanged } from './data/workspace-changed';
@@ -28,7 +32,9 @@ import { useT } from '../i18n';
 import type { MessageKey } from '../i18n';
 
 // Code-mode destinations: the English name is the page's identity (onCodePage), the key its label.
-const CODE_PAGES: [page: string, icon: string, key: MessageKey][] = [['Pull requests', 'git', 'sidebar.code.pullRequests'], ['Scheduled', 'clock', 'sidebar.code.scheduled'], ['Plugins', 'plugins', 'sidebar.code.plugins'], ['Explore', 'explore', 'sidebar.code.explore']];
+// #1562: only destinations that work are listed. Pull requests, Scheduled and Explore were previews
+// with disabled controls, so they are removed until they are real (their catalogue keys stay).
+const CODE_PAGES: [page: string, icon: string, key: MessageKey][] = [['Plugins', 'plugins', 'sidebar.code.plugins']];
 
 interface SidebarProps {
   projects: Project[];
@@ -37,6 +43,8 @@ interface SidebarProps {
    *  "no projects yet, still loading" (stay blank) apart from "confirmed zero projects" (show the
    *  honest hint), instead of treating an empty list as decided from the very first render. */
   projectsLoaded?: boolean;
+  /** #1567: the project list failed to load; the hint shows as before rather than a skeleton that never ends. */
+  projectsFailed?: boolean;
   chats: ChatMeta[];
   activeView: 'diary' | 'settings' | 'projects' | 'project' | 'chat' | 'preview' | 'models' | 'plugins' | 'archived';
   /** Archived chats (#232): the management view outside Settings. */
@@ -64,6 +72,8 @@ interface SidebarProps {
   onOpenChat: (chatId: string, projectId: string | null) => void;
   onDeleteChat: (projectId: string | null, chatId: string) => void;
   onPatchChat: (projectId: string | null, chatId: string, patch: Partial<ChatMeta>) => void;
+  /** #1511: moves a chat into the project `toProjectId`, or out of its project when null. */
+  onMoveChat?: (chatId: string, fromProjectId: string | null, toProjectId: string | null) => void;
   /** Chats generating right now, so work continuing elsewhere stays visible. */
   streamingChats: Record<string, true>;
   onPatchProject: (id: string, patch: Partial<Project>) => void;
@@ -90,6 +100,7 @@ const RECENT_LIMIT = 15;
 export function Sidebar({
   projects,
   projectsLoaded = true,
+  projectsFailed = false,
   chats,
   activeView,
   activeProjectId,
@@ -110,6 +121,7 @@ export function Sidebar({
   onOpenChat,
   onDeleteChat,
   onPatchChat,
+  onMoveChat,
   streamingChats,
   onPatchProject,
   onEditProject,
@@ -145,7 +157,8 @@ export function Sidebar({
   // Recents stay bounded so a long history never pushes everything else away (#239).
   const [allRecents, setAllRecents] = useState(false);
   // ⌘K / Ctrl+K from anywhere (components/shortcuts): open the rail and its search field.
-  useEffect(() => { const open = () => { setCollapsed(false); setExpanded(true); setSearching(true); }; window.addEventListener('noevia:open-search', open); return () => window.removeEventListener('noevia:open-search', open); }, []);
+  // #1470: the field takes focus even when the drawer was already open (its autoFocus only runs on mount).
+  useEffect(() => { const open = () => { setCollapsed(false); setExpanded(true); setSearching(true); window.requestAnimationFrame(() => searchInputRef.current?.focus()); }; window.addEventListener('noevia:open-search', open); return () => window.removeEventListener('noevia:open-search', open); }, []);
   // Below 600px the sidebar is gone entirely and opens as a drawer from one
   // toggle; `expanded` is that drawer. Focus is trapped while it is open and
   // handed back to the toggle when it closes.
@@ -171,11 +184,22 @@ export function Sidebar({
     if (!mobile) { wasOpen.current = false; return; }
     if (expanded) {
       wasOpen.current = true;
-      drawer.current?.querySelector<HTMLElement>('.side-expand')?.focus();
+      // #1470: a search-led open (⌘K, the search button) lands in the field, not on the close button.
+      if (searching && searchInputRef.current) searchInputRef.current.focus();
+      else drawer.current?.querySelector<HTMLElement>('.side-expand')?.focus();
     } else if (wasOpen.current) {
       wasOpen.current = false;
       toggle.current?.focus();
     }
+  }, [expanded, mobile]);
+  // #1465: at phone width the open drawer is a modal (aria-modal). The page behind it, and the toggle
+  // that opened it, are inert until it closes, so focus and the accessibility tree stay in the drawer.
+  // Released in the cleanup, which runs before the focus effect above hands focus back to the toggle.
+  useEffect(() => {
+    if (!mobile || !expanded) return;
+    const behind = [...document.querySelectorAll<HTMLElement>('.app-stack, .app .nav-drawer-toggle')];
+    for (const el of behind) el.setAttribute('inert', '');
+    return () => { for (const el of behind) el.removeAttribute('inert'); };
   }, [expanded, mobile]);
   // A software keyboard shrinks only the visual viewport; size the drawer to it so
   // nothing in it ends up behind the keyboard.
@@ -217,6 +241,19 @@ export function Sidebar({
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   };
   const [query, setQuery] = useState('');
+  // #1450: chats whose message text matches the query. Sent after a short pause, and kept only for the query it answered.
+  const [textHits, setTextHits] = useState<{ query: string; ids: ReadonlySet<string> } | null>(null);
+  const textQuery = query.trim();
+  useEffect(() => {
+    if (textQuery.length < 2) { setTextHits(null); return; }
+    let live = true;
+    const timer = window.setTimeout(() => {
+      searchChatText(textQuery)
+        .then((r) => { if (live) setTextHits({ query: textQuery, ids: new Set(r.chats) }); })
+        .catch(() => { if (live) setTextHits(null); });
+    }, 300);
+    return () => { live = false; window.clearTimeout(timer); };
+  }, [textQuery]);
   // #741: a tag (sidebar Tags section, a graph's tag hub) filters the lists through the search box,
   // so the filter shows what it is and Escape clears it the usual way.
   const [openTags, setOpenTags] = useState<Record<string, boolean>>({});
@@ -348,7 +385,7 @@ export function Sidebar({
   }, [chats]);
   const archiveChat = (c: ChatMeta, projectId: string | null, keyboardInitiated: boolean) => {
     pendingNotify.current = { id: c.id, archived: true };
-    onPatchChat(projectId, c.id, { archived: true });
+    onPatchChat(projectId, c.id, archivePatch());
     setArchiveUndo({ chat: c, projectId, keyboardInitiated });
     armAutoDismiss();
   };
@@ -356,7 +393,7 @@ export function Sidebar({
     if (!archiveUndo) return;
     if (archiveUndoTimer.current) clearTimeout(archiveUndoTimer.current);
     pendingNotify.current = { id: archiveUndo.chat.id, archived: false };
-    onPatchChat(archiveUndo.projectId, archiveUndo.chat.id, { archived: false });
+    onPatchChat(archiveUndo.projectId, archiveUndo.chat.id, undoArchivePatch(archiveUndo.chat));
     setArchiveUndo(null);
   };
   // The hover card lives in .spaces, which is overflow-y:auto — an absolutely
@@ -411,7 +448,8 @@ export function Sidebar({
   const parsedQuery = organise ? parseSidebarQuery(query) : { tags: [], text: query };
   const tagQuery = parsedQuery.tags.length > 0;
   const visibleProjects = sortedProjects.filter(p=>(!p.modes?.length || p.modes.includes('chat')) && !tagQuery && p.name.toLowerCase().includes(query.toLowerCase()));
-  const visibleChats = recentChats(chats).filter(c=>organise ? chatMatchesQuery(c, query, hasTag) : (c.title || '').toLowerCase().includes(query.toLowerCase()));
+  const messageHits = !tagQuery && textHits && textHits.query === textQuery ? textHits.ids : null;
+  const visibleChats = recentChats(chats).filter(c=>(organise ? chatMatchesQuery(c, query, hasTag) : (c.title || '').toLowerCase().includes(query.toLowerCase())) || !!messageHits?.has(c.id));
   const tags = organise ? tagTree(chats) : [];
   const pinnedChats = visibleChats.filter(c=>c.pinned);
   const pinnedProjects = visibleProjects.filter(p=>p.pinned);
@@ -454,6 +492,19 @@ export function Sidebar({
     if (e.key === 'ArrowDown') { e.preventDefault(); focusSearchResultAt(index + 1); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); if (index <= 0) searchInputRef.current?.focus(); else focusSearchResultAt(index - 1); }
     else if (e.key === 'Escape') { e.preventDefault(); searchInputRef.current?.focus(); }
+  };
+  // #1528: ArrowDown/ArrowUp move focus between the chat rows of the chat list, in DOM order. A query
+  // already handles arrows for its flat result list (onSearchResultKeyDown), so that case is skipped.
+  const onChatListKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.defaultPrevented || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) return;
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const current = e.target as HTMLElement;
+    if (!current.matches('.chat-row > .nav-item')) return;
+    const rows = [...e.currentTarget.querySelectorAll<HTMLElement>('.chat-row > .nav-item')].filter((el) => el.getClientRects().length);
+    const index = rows.indexOf(current);
+    if (index < 0) return;
+    e.preventDefault();
+    rows[index + (e.key === 'ArrowDown' ? 1 : -1)]?.focus();
   };
   const destinationResults = query && destinations.length > 0 && <div className="spaces side-scroll side-scroll-destinations">
     <div className="sidebar-section-head"><span className="section-label">{t('sidebar.destinations')}</span></div>
@@ -507,9 +558,24 @@ export function Sidebar({
     },
   ];
 
+  // #1511: 'Remove from project' (a project chat) and 'Move to <project>' for each project that takes chats.
+  // The move goes through onMoveChat (App), which saves it in the chat's list queue.
+  const chatMoveItems = (c: ChatMeta): MenuItem[] => {
+    if (!onMoveChat) return [];
+    const from = c.projectId ?? null;
+    const remove: MenuItem[] = from ? [{ label: t('sidebar.removeFromProject'), icon:<ShellIcon name="folder"/>, onSelect: () => onMoveChat(c.id, from, null) }] : [];
+    const targets = chatMoveTargets(projects, c).map((p): MenuItem => ({ label: t('sidebar.moveToProject', { name: p.name }), icon:<ShellIcon name="folder"/>, onSelect: () => onMoveChat(c.id, from, p.id) }));
+    return [...remove, ...targets];
+  };
+
   const chatMenu = (c: ChatMeta): MenuItem[] => [
     { label: c.pinned ? t('sidebar.unpin') : t('sidebar.pin'), icon:<ShellIcon name="pin"/>, onSelect: () => onPatchChat(c.projectId ?? null, c.id, { pinned: !c.pinned }) },
     { label: t('sidebar.rename'), icon:<ShellIcon name="edit"/>, onSelect: () => startRename(c.id, c.title || '', menu?.source) },
+    ...chatMoveItems(c),
+    // #1471: one chat out as Markdown, without exporting every chat (Settings > Data does that).
+    { label: t('sidebar.exportChat'), icon:<ShellIcon name="file"/>, onSelect: () => void downloadChatExport(c.id).catch((e: unknown) => setConfirm({
+      title: t('sidebar.exportChatFailedTitle'), body: e instanceof Error ? e.message : String(e), confirmLabel: t('sidebar.exportChatFailedOk'), run: () => undefined,
+    })) },
     {
       label: t('sidebar.archive'),
       icon:<ShellIcon name="archive"/>,
@@ -593,7 +659,7 @@ export function Sidebar({
                     <ShellIcon name={c.pinned ? 'pin' : 'chat'} size={17}/>
                     <SidebarLabel text={c.title || t('common.newChat')} highlight={query}/>
                     {/* Project context tells identically titled chats apart (#239). */}
-                    {c.projectId && projectNames.get(c.projectId) && <span className="chat-row-context">{projectNames.get(c.projectId)}</span>}
+                    {c.projectId && projectNames.get(c.projectId) && <span className="chat-row-context" title={projectNames.get(c.projectId)}>{projectNames.get(c.projectId)}</span>}
                     {streamingChats[c.id] && (
                       <span className="chat-working" aria-label={t('sidebar.stillGenerating')}><i /><i /><i /></span>
                     )}
@@ -625,7 +691,7 @@ export function Sidebar({
       }}
     >
       <div className="sidebar-scroll">
-      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? t('sidebar.closeNavigation') : collapsed ? t('sidebar.expandNavigation') : t('sidebar.collapseNavigation')} aria-expanded={mobile ? expanded : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div>{/* A small icon-only Chat/Code switch at the end of the header row. Switching
+      <div className="shell-sidebar-head"><div className="side-logo"><Logo/><span>noevia</span></div><div className="side-head-actions"><button className="shell-icon-button side-expand" aria-label={mobile ? t('sidebar.closeNavigation') : collapsed ? t('sidebar.expandNavigation') : t('sidebar.collapseNavigation')} aria-expanded={mobile ? undefined : !collapsed} onClick={() => {if(mobile)setExpanded(false);else setCollapsed(!collapsed);}}><ShellIcon name={mobile ? "close" : "panel"}/></button></div>{/* A small icon-only Chat/Code switch at the end of the header row. Switching
           closes the phone drawer, so the new mode is what you see. */}{showPreviews && <ModeSwitch compact mode={mode} onCode={() => { setExpanded(false); onEnterCode(); }} onChat={() => { setExpanded(false); onEnterChat?.(); }}/>}</div>
       {/* On a phone the drawer always shows the search field under its header. */}{(searching || (mobile && expanded))&&<>
       {/* #439: ArrowDown enters the results (focusSearchResultAt); a first Escape from a result
@@ -694,12 +760,14 @@ export function Sidebar({
             : <p className="side-hint">{t('sidebar.tasksEmpty')}</p>}
         </div>
         </>}
-      </div> : <div className="sidebar-history">
+      </div> : <div className="sidebar-history" onKeyDown={onChatListKeyDown}>
       {destinationResults}
       {query && searchResults.length === 0 && <p className="side-hint" role="status">{t('sidebar.noSearchResults')}</p>}
       {['Pinned','Projects'].map(group => {
         const entries = group==='Pinned' ? pinnedProjects : unpinnedProjects;
         if(group==='Pinned' && !entries.length && !pinnedChats.length)return null;
+        // #1546: a search that matches no project leaves nothing under "Your projects"; hide the empty heading.
+        if(group==='Projects' && query && !entries.length)return null;
         return <div className={`spaces side-scroll side-scroll-${group.toLowerCase()}`} key={group}>
           <div className="sidebar-section-head"><button className="section-label section-toggle" aria-label={t('sidebar.sectionNamed', { name: group==='Projects' ? t('sidebar.projects') : t('sidebar.pinned') })} aria-expanded={!closedGroups[group]} onClick={()=>setClosedGroups(g=>({...g,[group]:!g[group]}))}>{group==='Projects' ? t('sidebar.yourProjects') : t('sidebar.pinned')}</button>{group==='Projects' && <button className="row-action section-options" aria-label={t('sidebar.projectOrdering')} aria-haspopup="menu" aria-expanded={!!sorting} onClick={e=>{const r=e.currentTarget.getBoundingClientRect();setSorting({x:r.left,y:r.bottom+4});}}><ShellIcon name="more" size={20}/></button>}</div>
           {group==='Pinned' && (!closedGroups[group] || query) && pinnedChats.map(renderChat)}
@@ -720,7 +788,9 @@ export function Sidebar({
               {!p.chats?.some(c=>!c.archived && !c.pinned) && <p>{p.chats?.some(c=>!c.archived && c.pinned)?t('sidebar.chatsPinnedAbove'):t('sidebar.noChatsYet')}</p>}
             </div>}
           </div>)}
-          {!entries.length && group==='Projects' && !query && <p className="side-hint">{t('sidebar.createProjectHint')}</p>}
+          {/* #1567: until the list has loaded, a placeholder stands where the list will be; the empty-state copy is only for a confirmed zero. */}
+          {!entries.length && group==='Projects' && !query && !projectsLoaded && !projectsFailed && <div className="sidebar-skeleton" aria-hidden="true"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}
+          {!entries.length && group==='Projects' && !query && (projectsLoaded || projectsFailed) && <p className="side-hint">{t('sidebar.createProjectHint')}</p>}
         </div>;
       })}
 
@@ -801,14 +871,17 @@ export function Sidebar({
 
       {/* Quick-archive has no confirmation, so it needs a way back (#362): a reversible-action
           toast, not an alert — same shape as the app's save-error toast. */}
-      {archiveUndo && (
+      {/* #1424 (adjacent): the sidebar paints its own stacking context, so a toast inside it sat under the
+          main pane and its Undo could not be pressed. It renders in the body, as the account menu does. */}
+      {archiveUndo && createPortal(
         <div className="save-error is-notice" role="status"
           onFocus={() => { if (archiveUndoTimer.current) { clearTimeout(archiveUndoTimer.current); archiveUndoTimer.current = null; } }}
           onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) armAutoDismiss(); }}>
           <span>{t('sidebar.chatArchivedToast')}</span>
           <button ref={undoButtonRef} className="btn btn-secondary" onClick={undoArchive}>{t('common.undo')}</button>
           <button onClick={() => setArchiveUndo(null)} aria-label={t('common.dismiss')}><ShellIcon name="close" size={16}/></button>
-        </div>
+        </div>,
+        document.body,
       )}
 
       <div className="side-footer">{mcp?.configured && (() => {

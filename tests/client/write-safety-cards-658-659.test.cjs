@@ -35,7 +35,8 @@ test('the pending card carries the Drive kind and the repeat flag; a finished ch
   assert.match(app, /ev\.type === 'paused'/, 'a pause is handled before the error branch, as its own event');
   assert.match(app, /const history = modelHistory\(existing\)/);
   assert.match(app, /rerunBase\(msgs, index\)/, 'Retry keeps the record of saved changes');
-  assert.match(app, /void handleSend\(chatId, projectId, text, editBase\(msgs, index\)\)/, 'Edit and re-run keeps them too (#658 review)');
+  // #1517 adds the version the edit replaces (variantOf) to the same call.
+  assert.match(app, /void handleSend\(chatId, projectId, text, editBase\(msgs, index\), \{ variantOf: \{ kind: 'branch', user: msgs\[index\], tail: msgs\.slice\(index \+ 1\) \} \}\);/, 'Edit and re-run keeps them too (#658 review)');
   const diary = fs.readFileSync(path.join(__dirname, '../../src/components/DiaryView.tsx'), 'utf8');
   assert.match(diary, /finishedToolCall\(calls\[index\], \{ name: ev\.name, text: ev\.text, applied: ev\.applied === true, target: ev\.target, declined: ev\.declined === true, notRun: ev\.notRun === true \}/, 'Diary chips keep `applied` too');
 });
@@ -76,9 +77,9 @@ test('rendered cards: the repeat flag and the Drive file line, with every argume
     const core = await server.ssrLoadModule('/src/i18n/core.ts');
     const { pausedNoteText } = await server.ssrLoadModule('/src/chat-labels.ts');
     const t = Object.assign((k, p) => core.translate('en-GB', k, p), { plural: (k, c, p) => core.translatePlural('en-GB', k, c, p) });
-    assert.equal(pausedNoteText(t, { reason: 'supervision', applied: 1 }), '1 change was saved. Step supervision paused this reply before any further steps.');
-    assert.equal(pausedNoteText(t, { reason: 'supervision', applied: 2 }), '2 changes were saved. Step supervision paused this reply before any further steps.');
-    assert.equal(pausedNoteText(t, { reason: 'supervision', applied: 0 }), 'Step supervision paused this reply before any further steps. Nothing was changed.');
+    assert.equal(pausedNoteText(t, { reason: 'supervision', applied: 1 }), '1 change was saved. Step checks paused this reply before any further steps.');
+    assert.equal(pausedNoteText(t, { reason: 'supervision', applied: 2 }), '2 changes were saved. Step checks paused this reply before any further steps.');
+    assert.equal(pausedNoteText(t, { reason: 'supervision', applied: 0 }), 'Step checks paused this reply before any further steps. Nothing was changed.');
     assert.equal(pausedNoteText(t, { reason: 'stopped', applied: 1 }), '1 change was saved before this reply ended.');
   });
   const view = fs.readFileSync(path.join(__dirname, '../../src/components/ChatView.tsx'), 'utf8');

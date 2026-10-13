@@ -31,12 +31,21 @@
 .diary-context > section + section { margin-top:28px; padding-top:24px; border-top:1px solid var(--border); }
 .diary-panel-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .diary-panel-heading h2 { font-size:var(--text-callout); margin:0; }
-.diary-file-breadcrumb { display:flex; align-items:center; flex-wrap:wrap; font-size:var(--text-caption); overflow-wrap:anywhere; margin:12px 0; }
+/* #1569: the folder crumbs (also in the Markdown workspace rail) keep 8px between the current folder and Up, and
+   the current folder reads as the crumb's text, like the last crumb of the header breadcrumb. */
+.diary-file-breadcrumb { display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:var(--text-caption); overflow-wrap:anywhere; margin:12px 0; }
+.diary-file-breadcrumb > span { color:var(--text-primary); padding:0 2px; }
 .diary-file-list { display:flex; flex-direction:column; max-height:340px; overflow:auto; gap:4px; }
 .diary-file-list button { display:flex; align-items:center; gap:10px; text-align:left; padding:10px 6px; background:none; border:0; border-radius: var(--radius-button); color:var(--text); font:inherit; font-size:var(--text-footnote); overflow-wrap:anywhere; cursor:pointer; }
 .diary-file-list button:hover { background:var(--nav-hover); }
 .diary-file-list button span { color:var(--accent-2); font-size:var(--text-headline); }
 .diary-context-note { font-size:var(--text-caption); line-height:1.65; color:var(--text-secondary); }
+/* #1453: the loaded-days search is an app search field, drawn with the same control tokens as .projects-search
+   (34px high, control border, surface fill, input radius) instead of the browser's default box. */
+.diary-loaded-search { max-width:320px; margin-bottom:8px; }
+.diary-loaded-search input[type="search"] { display:block; box-sizing:border-box; width:100%; height:34px; padding:0 12px; border:1px solid var(--control-border); border-radius:var(--radius-input); background:var(--bg-surface); color:var(--text); font-family:var(--font-ui); font-size:var(--text-footnote); }
+.diary-loaded-search input[type="search"]::placeholder { color:var(--text-faint); }
+.diary-loaded-search input[type="search"]:focus-visible { outline:2px solid var(--focus-ring); outline-offset:1px; }
 .diary-storage-path { font-size:var(--text-footnote); color:var(--text-secondary); overflow-wrap:anywhere; }
 .diary-sync-toggle { display:flex; align-items:flex-start; gap:8px; line-height:1.5; font-size:var(--text-footnote); margin:16px 0; }
 .diary-sync-toggle input { margin-top:3px; accent-color:var(--accent-2); }

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { JSX, KeyboardEvent, ReactNode } from 'react';
-import { decideDispatch, MODE_LABELS, switchNeedsNewSession, type ChatMode } from '../chat-mode';
+import { decideDispatch, switchNeedsNewSession, type ChatMode } from '../chat-mode';
 import { useFeatureFlags } from './features/useFeatureFlags';
 import { fetchCode } from './code/api';
 import './composer-mode.css';
@@ -9,6 +9,8 @@ import type { MessageKey } from '../i18n';
 import { ShellIcon } from './ShellIcon';
 
 const MODE_DESCRIPTIONS: Record<ChatMode, MessageKey> = { chat: 'mode.chatDesc', cowork: 'mode.coworkDesc' };
+/** The user-facing mode names (#1502), translated like the Projects cards that also name them. The internal id stays 'cowork'. */
+const MODE_NAME_KEYS: Record<ChatMode, MessageKey> = { chat: 'projects.modeChat', cowork: 'projects.modeCowork' };
 
 export interface CoworkAccess { harnessEnabled: boolean; canUseCode: boolean; repositories: string[] }
 
@@ -35,16 +37,22 @@ export type ModeSwitch = ReturnType<typeof useModeSwitch>;
 
 /** The state one Chat / Cowork control needs, shared by the full bar (tiers 0 and 1) and the
  *  phone composer (#527), which puts the toggle inside the composer and the caption above it. */
-export function useModeSwitch({ mode, messageCount, projectId, access, repository, onModeChange }: {
+export function useModeSwitch({ mode, messageCount, projectId, access, repository, onModeChange, onOpenProjects }: {
   mode: ChatMode; messageCount: number; projectId: string | null; access: CoworkAccess; repository: string | null;
   onModeChange: (mode: ChatMode, newSession: boolean) => void;
+  /** Opens the Projects page; the free-chat hint offers it as the way to a Task (#1564). */
+  onOpenProjects?: () => void;
 }) {
   const id = useId();
   const [confirm, setConfirm] = useState<ChatMode | null>(null);
   const group = useRef<HTMLDivElement>(null);
   useEffect(() => { setConfirm(null); }, [mode, messageCount === 0]);
+  // #1564: Task (Cowork) runs inside a project, so a free chat cannot choose it. The option is
+  // disabled (ModeToggle) and the arrow keys cannot reach it either.
+  const coworkNeedsProject = !projectId;
   const choose = (next: ChatMode) => {
     if (next === mode) { setConfirm(null); return; }
+    if (next === 'cowork' && coworkNeedsProject) return;
     if (switchNeedsNewSession(messageCount, mode, next)) setConfirm(next);
     else onModeChange(next, false);
   };
@@ -58,22 +66,25 @@ export function useModeSwitch({ mode, messageCount, projectId, access, repositor
   };
   const decision = decideDispatch({ mode, harnessEnabled: access.harnessEnabled, canUseCode: access.canUseCode, projectId, repository });
   // #510: a phone drops the plain "Runs a conversational reply" line but keeps the Cowork
-  // repository choice and the "will send as chat" warning.
-  const caption: 'cowork' | 'fallback' | 'chat' = decision.harness === 'cowork' ? 'cowork' : mode === 'cowork' && decision.reason ? 'fallback' : 'chat';
-  return { id, mode, confirm, setConfirm, group, choose, onKey, decision, caption, access, repository, onModeChange };
+  // repository choice and the "will send as chat" warning. #1564: a free chat always carries the
+  // "Runs inside a project" hint, so its caption is not the plain one that a phone hides.
+  const caption: 'cowork' | 'fallback' | 'chat' = decision.harness === 'cowork' ? 'cowork'
+    : (mode === 'cowork' && decision.reason) || coworkNeedsProject ? 'fallback' : 'chat';
+  return { id, mode, confirm, setConfirm, group, choose, onKey, decision, caption, access, repository, onModeChange, projectId, coworkNeedsProject, onOpenProjects };
 }
 
 /** The Chat / Cowork radio group. `compact` (#527, phone composer) names only the chosen mode;
  *  the other keeps its name for assistive technology and shows a symbol. */
 export function ModeToggle({ state, disabled, compact = false }: { state: ModeSwitch; disabled: boolean; compact?: boolean }): JSX.Element {
   const t = useT();
-  const { id, mode, group, choose, onKey } = state;
+  const { id, mode, group, choose, onKey, coworkNeedsProject } = state;
   return <div ref={group} className={`composer-mode-toggle${compact ? ' is-compact' : ''}`} data-mode={mode} role="radiogroup" aria-label={t('mode.session')} onKeyDown={onKey}>
     {ORDER.map(option => <button key={option} type="button" role="radio" data-mode={option}
       aria-checked={option === mode} aria-describedby={`${id}-${option}`} tabIndex={option === mode ? 0 : -1}
-      disabled={disabled} onClick={() => choose(option)}>
+      title={option === 'cowork' && coworkNeedsProject ? t('mode.runsInProject') : undefined}
+      disabled={disabled || (option === 'cowork' && coworkNeedsProject)} onClick={() => choose(option)}>
       {compact && <ShellIcon name={option === 'chat' ? 'chat' : 'code'} size={15}/>}
-      {compact ? <span className="composer-mode-name">{MODE_LABELS[option].label}</span> : MODE_LABELS[option].label}
+      {compact ? <span className="composer-mode-name">{t(MODE_NAME_KEYS[option])}</span> : t(MODE_NAME_KEYS[option])}
     </button>)}
   </div>;
 }
@@ -81,16 +92,23 @@ export function ModeToggle({ state, disabled, compact = false }: { state: ModeSw
 /** What the chosen mode will run, with the Cowork repository choice. */
 export function ModeCaption({ state, disabled, onRepository }: { state: ModeSwitch; disabled: boolean; onRepository: (id: string) => void }): JSX.Element {
   const t = useT();
-  const { decision, caption, access, repository, mode } = state;
-  return <span className="composer-mode-harness" aria-live="polite" data-caption={caption}>
-    {decision.harness === 'cowork'
-      ? <>{t('mode.runsCoding')}{' '}
+  const { decision, caption, access, repository, mode, coworkNeedsProject, onOpenProjects } = state;
+  const line = decision.harness === 'cowork'
+    ? <>{t('mode.runsCoding')}{' '}
         {access.repositories.length > 1
           ? <select aria-label={t('mode.repository')} value={repository ?? ''} disabled={disabled} onChange={e => onRepository(e.target.value)}>
               {access.repositories.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           : <strong>{repository}</strong>}</>
-      : mode === 'cowork' && decision.reason ? t('mode.willSendAsChat', { reason: t(`mode.reason.${decision.reason}`) }) : t('mode.runsChat')}
+    : mode === 'cowork' && decision.reason ? t('mode.willSendAsChat', { reason: t(`mode.reason.${decision.reason}`) }) : t('mode.runsChat');
+  return <span className="composer-mode-harness" aria-live="polite" data-caption={caption}>
+    <span className="composer-mode-line">{line}</span>
+    {/* #1564, #1595: Task is disabled in a free chat. The hint names its subject (Task) and sits on its own
+        line, apart from what Chat runs, so it cannot read as part of the Chat caption. */}
+    {coworkNeedsProject && <span className="composer-mode-free" data-testid="free-chat-task-hint">
+      <span className="composer-mode-hint">{t('mode.runsInProject')}</span>
+      {onOpenProjects && <button type="button" className="composer-mode-open" onClick={onOpenProjects}>{t('mode.openProjects')}</button>}
+    </span>}
   </span>;
 }
 
@@ -101,9 +119,9 @@ export function ModeConfirm({ state }: { state: ModeSwitch }): JSX.Element {
   return <>
     {ORDER.map(option => <span key={option} id={`${id}-${option}`} hidden>{t(MODE_DESCRIPTIONS[option])}</span>)}
     {confirm && <div className="composer-mode-confirm" role="alertdialog" aria-label={t('mode.newSession')}>
-      <span>{t('mode.confirm', { mode: MODE_LABELS[confirm].label })}</span>
+      <span>{t('mode.confirm', { mode: t(MODE_NAME_KEYS[confirm]) })}</span>
       <button type="button" className="btn btn-primary" onClick={() => { setConfirm(null); onModeChange(confirm, true); }}>{t('mode.startNew')}</button>
-      <button type="button" className="btn btn-secondary" onClick={() => setConfirm(null)}>{t('mode.keep', { mode: MODE_LABELS[mode].label })}</button>
+      <button type="button" className="btn btn-secondary" onClick={() => setConfirm(null)}>{t('mode.keep', { mode: t(MODE_NAME_KEYS[mode]) })}</button>
     </div>}
   </>;
 }
@@ -114,12 +132,12 @@ export function ModeConfirm({ state }: { state: ModeSwitch }): JSX.Element {
  * the other mode asks to start a new session; the current one keeps its history and harness.
  * On a phone (#527) ChatView composes the same parts itself; see `useModeSwitch`.
  */
-export function ComposerModeBar({ mode, messageCount, projectId, disabled, access, repository, onRepository, onModeChange, children }: {
+export function ComposerModeBar({ mode, messageCount, projectId, disabled, access, repository, onRepository, onModeChange, onOpenProjects, children }: {
   mode: ChatMode; messageCount: number; projectId: string | null; disabled: boolean; access: CoworkAccess;
   repository: string | null; onRepository: (id: string) => void;
-  onModeChange: (mode: ChatMode, newSession: boolean) => void; children?: ReactNode;
+  onModeChange: (mode: ChatMode, newSession: boolean) => void; onOpenProjects?: () => void; children?: ReactNode;
 }): JSX.Element {
-  const state = useModeSwitch({ mode, messageCount, projectId, access, repository, onModeChange });
+  const state = useModeSwitch({ mode, messageCount, projectId, access, repository, onModeChange, onOpenProjects });
   return <div className="composer-mode-bar">
     <div className="composer-mode-row">
       <ModeToggle state={state} disabled={disabled}/>

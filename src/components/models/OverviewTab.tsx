@@ -9,6 +9,7 @@ import { canPromptSuite, groupByRole, recoveryItems, roleOf } from './guided';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 import { describeBackendError } from './backend-errors';
+import { loaderLines } from './loader-lines';
 import { ROLE_KEY, stuckStatus } from './mm-text';
 
 type Evidence = { category: string; state: string; value: { ctx?: number; rate?: number } | null; at: number | null };
@@ -125,9 +126,10 @@ function RecoverPanel({ onTab }: { onTab: (tab: 'discover' | 'hardware') => void
     <div className="mm-panel-head"><h3 id="mm-recover">{t('mm.recover.title')}</h3>
       <button type="button" className="modal-btn secondary" onClick={() => void load()}>{t('mm.recover.checkAgain')}</button></div>
     <div className="mm-loader-row"><span aria-hidden="true" className={`model-dot${backends === undefined ? ' pending' : backends && !unhealthy.length ? '' : ' down'}`}/><strong>{t('mm.recover.loader')}</strong>
-      <span className="mm-loader-state" aria-live="polite">{backends === undefined ? t('mm.recover.checkingLoader') : backends === null ? t('mm.recover.healthUnavailable') : !backends.length ? t('mm.recover.noEngine') : unhealthy.length
-        ? unhealthy.map((b) => `${b.name}: ${b.probe_error ? describeBackendError(t, b.probe_error) : b.last_restart_error || b.status}`).join(' · ')
-        : backends.map((b) => (b.loaded_model ? t('mm.recover.runningWith', { engine: b.name, model: b.loaded_model }) : t('mm.recover.running', { engine: b.name }))).join(' · ')}</span>
+      {/* #1545: one engine per line, named by its place in the list rather than its internal service
+          name, and no break inside a model name (the line clips instead; the title has the whole text). */}
+      <span className="mm-loader-state" aria-live="polite">{backends === undefined ? t('mm.recover.checkingLoader') : backends === null ? t('mm.recover.healthUnavailable') : !backends.length ? t('mm.recover.noEngine')
+        : loaderLines(t, backends, unhealthy, (probeError) => describeBackendError(t, probeError)).map((line) => <span className="mm-loader-item" key={line.key} title={line.text}>{line.text}</span>)}</span>
       <button type="button" className="mm-guided-link" onClick={() => onTab('hardware')}>{t('mm.recover.openLogs')}</button></div>
     {backends === null && <p className="mm-note">{t('mm.recover.healthUnavailableHelp')}</p>}
     {items === null && <p className="mm-note" role="status">{t('mm.recover.checking')}</p>}

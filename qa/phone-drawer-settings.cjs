@@ -55,7 +55,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await page.getByRole('button',{name:'Account',exact:true}).first().click();await page.locator('.settings-detail .set-row-label').first().waitFor();
   const lefts=await page.evaluate(()=>[...document.querySelectorAll('.settings-detail .set-row-label')].map(e=>Math.round(e.getBoundingClientRect().left)));
   assert.equal(new Set(lefts).size,1,`${w} ${theme}: Profile labels share one edge ${lefts}`);
-  await page.getByRole('button',{name:'All settings',exact:true}).click();await page.getByRole('button',{name:'Appearance & language',exact:true}).first().click();await page.locator('.theme-swatch').first().waitFor();
+  await page.getByRole('button',{name:'All settings',exact:true}).click();await page.getByRole('button',{name:'Appearance and language',exact:true}).first().click();await page.locator('.theme-swatch').first().waitFor();
   const lum=c=>{const [r,g,b]=c.match(/\d+/g).map(Number);return (r+g+b)/3;};
   const [light,dark]=await page.evaluate(()=>[...document.querySelectorAll('.theme-swatch:not(.is-system)')].map(e=>getComputedStyle(e).backgroundColor));
   assert.ok(lum(light)>180&&lum(dark)<80,`${w} ${theme}: previews show their own theme ${light} ${dark}`);
@@ -89,11 +89,11 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   assert.ok(fr<=1,`${w}: filter spans the row like the cards (${fr}px short)`);
   await page.getByRole('button',{name:'Open navigation',exact:true}).click();
   await page.getByRole('button',{name:/Account menu for/}).click();await page.locator('.account-popover').getByRole('menuitem',{name:'Settings',exact:true}).click();
-  for(const name of ['Security and login','Your data & privacy','Appearance & language','Diary & storage']){
+  for(const name of ['Security and login','Your data and privacy','Appearance and language','Diary and storage']){
    await page.locator('.settings-navigation nav button').filter({hasText:name}).first().click();await page.locator('.settings-detail').waitFor();
    const small=await page.evaluate(()=>[...document.querySelectorAll('.settings-detail :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea,select)')].filter(e=>e.offsetParent&&parseFloat(getComputedStyle(e).fontSize)<16).map(e=>(e.getAttribute('aria-label')||e.tagName)+' '+getComputedStyle(e).fontSize));
    assert.deepEqual(small,[],`${w} ${name}: fields under 16px on touch`);
-   if(name==='Appearance & language'){const seg=page.getByRole('radiogroup',{name:'Theme family'});await seg.getByRole('radio',{name:/^Contemporary/}).click();await page.waitForTimeout(300);
+   if(name==='Appearance and language'){const seg=page.getByRole('radiogroup',{name:'Theme family'});await seg.getByRole('radio',{name:/^Contemporary/}).click();await page.waitForTimeout(300);
     const g=await seg.evaluate(t=>{const q=t.getBoundingClientRect(),on=t.querySelector('[aria-checked="true"]').getBoundingClientRect();return {inScreen:q.left>=0&&q.right<=innerWidth,onVisible:on.left>=q.left-1&&on.right<=q.right+1,family:document.documentElement.dataset.family};});
     assert.ok(g.inScreen&&g.onVisible&&g.family==='contemporary',`${w}: family previews fit and show the choice ${JSON.stringify(g)}`);
     await seg.getByRole('radio',{name:/^Editorial/}).click();}
@@ -284,7 +284,7 @@ const out=process.env.QA_SCREENSHOTS||'/tmp/noevia-shots';
   await phone.getByRole('button',{name:'Open navigation',exact:true}).tap();await phone.getByRole('button',{name:'Code',exact:true}).first().tap();await phone.getByPlaceholder(/Describe a task/).waitFor();
   // Code shares the chat drawer (user review, 2026-09-19): the same toggle opens it, with Code's destinations.
   await phone.getByRole('button',{name:'Open navigation',exact:true}).tap();
-  const cd=phone.getByRole('dialog',{name:'Navigation'});await cd.getByRole('button',{name:'Pull requests'}).waitFor();
+  const cd=phone.getByRole('dialog',{name:'Navigation'});await cd.getByRole('button',{name:'Customise'}).waitFor();
   assert.equal(await phone.locator('.coding-sidebar').count(),0,'no separate Code sidebar');
   await phone.getByRole('button',{name:'Chat',exact:true}).tap();await phone.getByPlaceholder('Message noevia…').waitFor();
   assert.equal(await phone.locator('.sidebar.pane').evaluate(e=>e.classList.contains('is-expanded')),false,'switching to Chat leaves the drawer closed');

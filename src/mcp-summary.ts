@@ -11,7 +11,7 @@ export interface McpFooterSummary {
   danger: boolean;
 }
 
-/** The sidebar footer's MCP line, pulled out of Sidebar.tsx so it can be tested without a render
+/** The sidebar footer's tool line (#1556: no "MCP" prefix, plain words), pulled out of Sidebar.tsx so it can be tested without a render
  *  (#366). `directory` marks a server an administrator added through the MCP directory (Plugins →
  *  Added, PluginsView.tsx); everything else — the internal server or an MCP_SERVERS/
  *  MCP_SERVER_URL entry — is configured for this deployment and was never going to appear there.
@@ -37,10 +37,10 @@ export function mcpFooterSummary(mcp: McpStatus, t: Translate): McpFooterSummary
   // The plural form follows the number; the digits shown follow the locale.
   const tools = t.plural('sidebar.mcpTools', discovered, { count: num(discovered) });
   const label = !degraded
-    ? `MCP · ${tools}${serverNote}`
+    ? `${tools}${serverNote}`
     : allDown || !servers.length
-      ? `MCP · ${t('sidebar.mcpUnavailable')}`
-      : `MCP · ${tools} · ${t('sidebar.mcpDown', { ids: down.map((sv) => sv.id).join(', ') })}`;
+      ? t('sidebar.mcpUnavailable')
+      : `${tools} · ${t('sidebar.mcpDown', { ids: down.map((sv) => sv.id).join(', ') })}`;
   const title = down.length
     ? down.map((sv) => `${sv.id}: ${sv.error}`).join('\n')
     : servers.length > 1 && added < servers.length

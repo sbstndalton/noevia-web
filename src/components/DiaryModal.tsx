@@ -155,8 +155,31 @@ const ESCAPED_HEADING_LINE = /^\\#{1,6}(?:[ \t]|\r?$)/;
 // `<\!--` is how the sidecar escapes an xid opener; inside a bold/italic span it must still read as `<!--`.
 const unescapeOpener = (text: string) => text.replace(/<\\!--/g, '<!--');
 
-export function MarkdownPreview({ text, internalLink, wikiLink, properties = false }: {
+/** A bare http(s) URL in running text, as GitHub-flavoured Markdown autolinks it (#1474). The scheme is the
+ *  only one allowed, so the href it becomes is never a javascript: or data: URL. */
+const BARE_URL = 'https?:\\/\\/[^\\s<>\\[\\]"\'`]+';
+
+/** The URL in a bare match, without the sentence punctuation or an unmatched closing bracket that followed
+ *  it ("see https://example.net." links the address, and the full stop stays text). */
+export function splitUrlTail(raw: string): { url: string; tail: string } {
+  let end = raw.length;
+  for (;;) {
+    const ch = raw[end - 1];
+    if (ch && /[.,;:!?]/.test(ch)) { end -= 1; continue; }
+    if (ch === ')') {
+      const head = raw.slice(0, end);
+      const opens = head.split('(').length - 1, closes = head.split(')').length - 1;
+      if (closes > opens) { end -= 1; continue; }
+    }
+    break;
+  }
+  return { url: raw.slice(0, end), tail: raw.slice(end) };
+}
+
+export function MarkdownPreview({ text, internalLink, wikiLink, properties = false, autolink = false }: {
   text: string;
+  /** #1474: chat replies link a bare http(s) URL; the Diary renders its text exactly as before. */
+  autolink?: boolean;
   internalLink?: (href: string) => (() => void) | undefined;
   /** Obsidian-style `[[links]]`. Parsed only where a surface knows how to open one, so text
    *  that merely contains double brackets keeps rendering exactly as it did. */
@@ -171,10 +194,14 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
   // the italic branch. The link branch allows one level of nested parentheses
   // so that URLs like .../Foo_(bar) survive — [^)\s]+ stopped at the first
   // ")" and truncated the href mid-URL.
+  // The inline tokens, as one capture group so split() keeps each match. A bare URL is one more
+  // alternative, added only where autolinking is on (chat replies).
+  const INLINE_TOKENS = wikiLink
+    ? /(\$\$[^$\n]+\$\$|\\\([^\n]{1,500}?\\\)|\$(?!\s)(?:\\.|[^$\\\n])+?(?<!\s)\$(?!\d)|\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[\[[^\[\]\n]*\]\]|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g
+    : /(\$\$[^$\n]+\$\$|\\\([^\n]{1,500}?\\\)|\$(?!\s)(?:\\.|[^$\\\n])+?(?<!\s)\$(?!\d)|\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g;
+  const splitter = autolink ? new RegExp(INLINE_TOKENS.source.replace(/\)$/, () => `|${BARE_URL})`), 'g') : INLINE_TOKENS;
   const inline = (line: string) =>
-    line.split(wikiLink
-      ? /(\$\$[^$\n]+\$\$|\\\([^\n]{1,500}?\\\)|\$(?!\s)(?:\\.|[^$\\\n])+?(?<!\s)\$(?!\d)|\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\[\[[^\[\]\n]*\]\]|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g
-      : /(\$\$[^$\n]+\$\$|\\\([^\n]{1,500}?\\\)|\$(?!\s)(?:\\.|[^$\\\n])+?(?<!\s)\$(?!\d)|\\\*\\\*(?:(?:Me|Assistant|Claude):\*\*)?|<\\!--|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|!\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))+\)|\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/g).map((part, i) => {
+    line.split(splitter).map((part, i) => {
       // Escapes the Diary sidecar writes inside saved prose so it cannot become entry structure
       // (#803): `\*\*` and `<\!--` show as the literal characters. Plain text only, never HTML (#835).
       // The sidecar also escapes a role label's `**` on the first line, so `\*\*Assistant:**` can follow
@@ -216,6 +243,10 @@ export function MarkdownPreview({ text, internalLink, wikiLink, properties = fal
           return open ? <button key={i} className="diary-markdown-link" onClick={open}>{label}</button> : <span key={i}>{label} ({href})</span>;
         }
         return <a key={i} href={href} target="_blank" rel="noopener noreferrer nofollow">{label}</a>;
+      }
+      if (autolink && /^https?:\/\//i.test(part)) {
+        const { url, tail } = splitUrlTail(part);
+        return <Fragment key={i}><a href={url} target="_blank" rel="noopener noreferrer nofollow">{url}</a>{tail}</Fragment>;
       }
       if (part.startsWith('*') && part.length > 2) return <em key={i}>{unescapeOpener(part.slice(1, -1))}</em>;
       return part;
