@@ -4,7 +4,12 @@
 // PLAYWRIGHT_MODULE overrides the Playwright module (default ~/noevia-local-test/node_modules/playwright-core).
 // QA_SHOTS=<dir> writes a screenshot of every screen below, in every theme family, light and dark,
 // palette and width (375, 768, 1440). QA_SHOTS_ONLY=1 skips the assertions (the "before" set on an
-// older build); QA_DIST serves another build. QA_PALETTES / QA_WIDTHS (comma lists) narrow a run.
+// older build); QA_DIST serves another build. QA_FAMILIES / QA_PALETTES / QA_WIDTHS (comma lists)
+// narrow a run, and QA_PORT moves the fixture, so the matrix can run as parallel processes.
+// QA_COLLECT=1 lists every failed check instead of stopping at the first (for a "before" run).
+// Neutral palette: its accent is a grey, and in some families it is exactly --text-secondary, the
+// outline colour of tiles and empty states, so the two tones coincide there. That one case is
+// allowed (and counted in the summary); any other accent equal to its outline fails.
 // Screens: the sidebar, the composer (with its + menu), a Settings page, a project's source list, an
 // empty state, and the follow-ups: Settings -> Connected apps (the Nextcloud tile), the "No chats yet",
 // "No tasks yet" and "No matching projects" empty states, and the current chat and page in the sidebar.
@@ -26,10 +31,10 @@ const os = require('node:os');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || `${os.homedir()}/noevia-local-test/node_modules/playwright-core`);
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
 const { createFixture } = require('./diary-fixture.cjs');
-const PORT = 31623;
+const PORT = Number(process.env.QA_PORT || 31623);
 const shots = process.env.QA_SHOTS || '';
 const shotsOnly = process.env.QA_SHOTS_ONLY === '1';
-const FAMILIES = ['editorial', 'contemporary', 'glass'], MODES = ['light', 'dark'];
+const FAMILIES = (process.env.QA_FAMILIES || 'editorial,contemporary,glass').split(','), MODES = ['light', 'dark'];
 const PALETTES = (process.env.QA_PALETTES || 'iris,warm,cool,neutral,sage').split(',');
 const WIDTHS = [[375, 812], [768, 1024], [1440, 900]].filter(([w]) => !process.env.QA_WIDTHS || process.env.QA_WIDTHS.split(',').includes(String(w)));
 const FLAGS = { codeHarness: true };
@@ -66,7 +71,7 @@ function measure() {
   const IDENTITY = '.connector-card > .logo > .ic';
   const probe = document.createElement('i');
   const resolve = (host, value) => { probe.style.color = value; host.appendChild(probe); const c = getComputedStyle(probe).color; probe.remove(); return c; };
-  const out = { controls: 0, controlAccents: [], controlInAccent: [], active: [], identity: [], decorative: 0, accented: 0, wrong: [], accents: [], outlines: [], empty: [] };
+  const out = { controls: 0, controlAccents: [], controlInAccent: [], active: [], identity: [], decorative: 0, accented: 0, wrong: [], accents: [], outlines: [], greys: [], empty: [] };
   for (const svg of document.querySelectorAll('svg.ic')) {
     if (!svg.getClientRects().length) continue;
     const base = getComputedStyle(svg).stroke;
@@ -80,11 +85,11 @@ function measure() {
       const where = `${svg.dataset.icon} (${svg.dataset.tone}) in <${control.tagName.toLowerCase()} class="${control.className}">`;
       if (painted.length) out.controlAccents.push(where);
       const row = control.closest('.chat-row, .proj-row') || control;
-      if (svg.matches(ACTIVE)) out.active.push({ icon: svg.dataset.icon, stroke: base, accent, colour: getComputedStyle(svg).color, rowBackground: getComputedStyle(row).backgroundColor, settings: !!svg.closest('.settings-navigation'), parts: parts.length });
+      if (svg.matches(ACTIVE)) out.active.push({ icon: svg.dataset.icon, stroke: base, accent, colour: getComputedStyle(svg).color, grey: accent === resolve(svg.parentElement, 'var(--text-secondary)'), rowBackground: getComputedStyle(row).backgroundColor, settings: !!svg.closest('.settings-navigation'), parts: parts.length });
       else if (base === accent && base !== getComputedStyle(svg).color) out.controlInAccent.push(where);
       continue;
     }
-    if (identity) out.identity.push({ icon: svg.dataset.icon, tone: svg.dataset.tone, parts: parts.length, painted: painted.length });
+    if (identity) out.identity.push({ icon: svg.dataset.icon, tone: svg.dataset.tone, parts: parts.length, painted: painted.length, accentPaint: parts.every((p) => getComputedStyle(p).stroke === accent), grey: accent === resolve(svg.parentElement, 'var(--text-secondary)') });
     if (svg.dataset.tone !== 'decorative') continue;
     out.decorative++;
     if (svg.closest('.empty-state-icon')) out.empty.push({ icon: svg.dataset.icon, parts: parts.length });
@@ -94,7 +99,7 @@ function measure() {
       const paint = p.classList.contains('ic-af') ? getComputedStyle(p).fill : getComputedStyle(p).stroke;
       if (paint !== accent) out.wrong.push(`${svg.dataset.icon}: ${paint} is not the accent ${accent}`);
     }
-    out.accents.push(accent); out.outlines.push(base);
+    out.accents.push(accent); out.outlines.push(base); out.greys.push(accent === resolve(svg.parentElement, 'var(--text-secondary)'));
   }
   return out;
 }
@@ -132,8 +137,6 @@ async function openDrawer(page) {
   const toggle = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await toggle.isVisible()) { await toggle.click(); await page.getByRole('dialog', { name: 'Navigation' }).waitFor(); await page.waitForTimeout(400); }
 }
-
-const ACTIVE_ICON = ".app .sidebar.pane [aria-current='page'] > .ic:first-child";
 
 async function screens(page, width, name, shoot) {
   const go = async (url, ready) => { await page.goto(`http://localhost:${PORT}${url}`); await ready(); await page.waitForTimeout(250); };
@@ -182,10 +185,11 @@ async function screens(page, width, name, shoot) {
   await openDrawer(page);
   await page.locator('.chat-row.is-active').filter({ visible: true }).first().waitFor();
   result.chatPage = await page.evaluate(measure); await shoot(`${name}-active-chat`);
-  const activeIcon = page.locator(`.chat-row.is-active ${ACTIVE_ICON.replace('.app .sidebar.pane ', '')}`).filter({ visible: true }).first();
+  const activeIcon = page.locator('.chat-row.is-active > .nav-item > .ic:first-child').filter({ visible: true }).first();
   result.chatGround = await groundUnder(page, activeIcon);
   const other = page.locator('.chat-row:not(.is-active) .nav-item').filter({ hasText: 'Synthetic notes' }).filter({ visible: true }).first();
-  const otherStroke = () => other.locator('svg.ic').first().evaluate((s) => getComputedStyle(s).stroke);
+  // Neutral means the icon draws in its own text colour (currentColor), whatever that grey is.
+  const otherStroke = () => other.locator('svg.ic').first().evaluate((s) => ({ stroke: getComputedStyle(s).stroke, colour: getComputedStyle(s).color }));
   if (width >= 768) { await other.hover(); await page.waitForTimeout(200); result.otherHover = await otherStroke(); }
   await other.focus(); await page.waitForTimeout(200); result.otherFocus = await otherStroke();
   if (width >= 768) {
@@ -201,9 +205,10 @@ async function screens(page, width, name, shoot) {
   if (shots) fs.mkdirSync(shots, { recursive: true });
   const fixture = createFixture(PORT); await fixture.listen();
   const browser = await chromium.launch({ headless: true, channel: process.env.QA_CHANNEL || 'chrome' });
-  const errors = [], seenAccents = new Map(), ratios = [];
+  const errors = [], seenAccents = new Map(), ratios = [], neutralGreys = new Set();
   let checked = 0;
-  const ok = (cond, msg) => { checked++; if (!shotsOnly) assert.ok(cond, msg); };
+  const collect = process.env.QA_COLLECT === '1', failed = [];
+  const ok = (cond, msg) => { checked++; if (shotsOnly) return; if (collect) { if (!cond) failed.push(msg); } else assert.ok(cond, msg); };
   try {
     for (const family of FAMILIES) for (const theme of MODES) for (const palette of PALETTES) for (const [width, height] of WIDTHS) {
       const phone = width < 768;
@@ -223,12 +228,18 @@ async function screens(page, width, name, shoot) {
         ok(m.controlAccents.length === 0, `${name} ${screen}: a control paints an accent part: ${m.controlAccents.join('; ')}`);
         ok(m.controlInAccent.length === 0, `${name} ${screen}: a control that is not the current row is painted in the accent: ${m.controlInAccent.join('; ')}`);
         ok(m.wrong.length === 0, `${name} ${screen}: ${m.wrong.join('; ')}`);
-        ok(m.accents.every((a, i) => a !== m.outlines[i]), `${name} ${screen}: the accent part is distinct from the outline`);
+        // Distinct from the outline, except where the Neutral palette's accent is the outline's own grey.
+        m.accents.forEach((a, i) => {
+          if (a !== m.outlines[i]) return;
+          const allowed = palette === 'neutral' && m.greys[i];
+          if (allowed) neutralGreys.add(`${family}-${theme}`);
+          ok(allowed, `${name} ${screen}: the accent part ${a} is not distinct from the outline`);
+        });
         // The current row's icon: wholly the accent where the row is shown as current, else neutral.
         for (const a of m.active) {
           ok(a.parts === 0, `${name} ${screen}: the active ${a.icon} is a control glyph, not two-tone`);
           const shown = a.rowBackground !== 'rgba(0, 0, 0, 0)';
-          if (shown) ok(a.stroke === a.accent && a.stroke !== a.colour, `${name} ${screen}: the current row's ${a.icon} is the accent (${a.stroke}, accent ${a.accent})`);
+          if (shown) ok(a.stroke === a.accent && (a.stroke !== a.colour || (palette === 'neutral' && a.grey)), `${name} ${screen}: the current row's ${a.icon} is the accent (${a.stroke}, accent ${a.accent}, text ${a.colour})`);
           else ok(a.stroke === a.colour, `${name} ${screen}: a current row shown without a highlight keeps a neutral ${a.icon} (${a.stroke})`);
         }
       }
@@ -246,7 +257,7 @@ async function screens(page, width, name, shoot) {
       // Follow-up 1: the Nextcloud tile is two-tone like the MCP servers tile; Google Drive keeps its brand.
       const tiles = r.connectors.identity, nextcloud = tiles.filter((t) => t.icon === 'hard-drive'), mcp = tiles.filter((t) => t.icon === 'server');
       ok(tiles.length === 2 && nextcloud.length === 1 && mcp.length === 1, `${name} connectors: the Nextcloud and MCP servers tiles (${JSON.stringify(tiles)})`);
-      for (const t of [...nextcloud, ...mcp]) ok(t.tone === 'decorative' && t.parts >= 2 && t.painted === t.parts, `${name} connectors: the ${t.icon} tile is two-tone (${JSON.stringify(t)})`);
+      for (const t of [...nextcloud, ...mcp]) ok(t.tone === 'decorative' && t.parts >= 2 && t.accentPaint && (t.painted === t.parts || (palette === 'neutral' && t.grey)), `${name} connectors: the ${t.icon} tile is two-tone (${JSON.stringify(t)})`);
       ok(r.connectors.accented >= 2, `${name} connectors: the Nextcloud and MCP tiles both paint the accent (${r.connectors.accented})`);
       ok(!r.drive.ic && r.drive.fills >= 3, `${name} connectors: Google Drive keeps its brand logo (${JSON.stringify(r.drive)})`);
       // Follow-up 2: every empty state's symbol has an accent part.
@@ -259,9 +270,8 @@ async function screens(page, width, name, shoot) {
       ok(chat.length === 1 && chat[0].icon === 'message-square' && chat[0].stroke === chat[0].accent, `${name} chat: the current chat's icon is the accent (${JSON.stringify(chat)})`);
       const projects = r.projectsPage.active.filter((a) => !a.settings);
       ok(projects.length === 1 && projects[0].icon === 'folder' && projects[0].stroke === projects[0].accent, `${name} projects: the Projects row's icon is the accent (${JSON.stringify(projects)})`);
-      const neutral = chat[0]?.colour;
-      if (width >= 768) ok(r.otherHover === neutral, `${name}: hovering another chat leaves its icon neutral (${r.otherHover}, neutral ${neutral})`);
-      ok(r.otherFocus !== chat[0]?.accent, `${name}: focusing another chat leaves its icon neutral (${r.otherFocus})`);
+      if (width >= 768) ok(r.otherHover.stroke === r.otherHover.colour, `${name}: hovering another chat leaves its icon neutral (${JSON.stringify(r.otherHover)})`);
+      ok(r.otherFocus.stroke === r.otherFocus.colour, `${name}: focusing another chat leaves its icon neutral (${JSON.stringify(r.otherFocus)})`);
       if (width >= 768) ok(r.activeHovered === chat[0]?.accent, `${name}: the current chat keeps its accent icon on hover (${r.activeHovered})`);
       // Contrast >= 3:1 against what is really rendered under the icon (blur, wash and all).
       for (const [where, ground] of [['chat row', r.chatGround], ['hovered chat row', r.chatGroundHovered], ['Settings row', r.settingsGround]]) {
@@ -317,13 +327,15 @@ async function screens(page, width, name, shoot) {
       ok(f.every((x) => x.paint === x.base), `forced colours: accent parts are neutral: ${JSON.stringify(f.filter((x) => x.paint !== x.base))}`);
       if (shots) await page.screenshot({ path: path.join(shots, 'forced-colors-sources.png') });
       await page.goto(`http://localhost:${PORT}/c/c1`); await page.locator('.chat-row.is-active').first().waitFor(); await page.waitForTimeout(250);
-      const a = await page.locator(`.chat-row.is-active ${ACTIVE_ICON.replace('.app .sidebar.pane ', '')}`).first().evaluate((s) => ({ stroke: getComputedStyle(s).stroke, colour: getComputedStyle(s).color }));
+      const a = await page.locator('.chat-row.is-active > .nav-item > .ic:first-child').first().evaluate((s) => ({ stroke: getComputedStyle(s).stroke, colour: getComputedStyle(s).color }));
       ok(a.stroke === a.colour, `forced colours: the current chat's icon is the outline colour (${JSON.stringify(a)})`);
       if (shots) await page.screenshot({ path: path.join(shots, 'forced-colors-active-chat.png') });
       await ctx.close();
     }
 
     ok(errors.length === 0, errors.join('\n'));
+    if (failed.length) { console.error(`FAIL ${failed.length} of ${checked} checks:\n${failed.map((f) => `  - ${f}`).join('\n')}`); process.exitCode = 1; return; }
+    if (neutralGreys.size) console.log(`neutral palette: the accent is the outline's own grey (one tone) in ${[...neutralGreys].join(', ')}`);
     if (ratios.length) {
       const low = ratios.reduce((m, x) => (x.ratio < m.ratio ? x : m));
       console.log(`active-row contrast: ${ratios.length} samples, lowest ${low.ratio.toFixed(2)}:1 (${low.name}, ${low.where})`);
