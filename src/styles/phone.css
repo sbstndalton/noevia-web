@@ -103,8 +103,9 @@
   }
   .stats-disclosure.is-wide.is-more-open .stats-details > div[data-stat] { display: contents; }
   .stats-disclosure.is-wide.is-more-open .stats-details > div[data-stat]::before { content: none; }
-  /* #1610: a value breaks between words only; `anywhere` split "Measuring…" inside the word. */
-  .stats-disclosure.is-wide.is-more-open .stats-details dd { overflow: visible; white-space: normal; overflow-wrap: normal; }
+  /* #1610: a value wraps at its spaces. `anywhere` only breaks a word that cannot fit the column at all, so a long
+     unbroken token wraps instead of running out of the panel; a word that fits is never split. */
+  .stats-disclosure.is-wide.is-more-open .stats-details dd { overflow: visible; white-space: normal; overflow-wrap: anywhere; }
   /* #1610: a label wraps inside its column too; the wide row's nowrap is inherited through display: contents. */
   .stats-disclosure.is-wide.is-more-open .stats-details dt { white-space: normal; }
   .stats-disclosure.is-wide.is-more-open .stats-details .stats-mtp { display: contents; }

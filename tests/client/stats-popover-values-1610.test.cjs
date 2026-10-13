@@ -27,8 +27,9 @@ test('#1610 a label wraps inside its column: the wide row nowrap is inherited th
   assert.match(labels, /white-space:\s*normal/, 'a long label (MTP acceptance) wraps instead of running into the value');
 });
 
-test('#1610 a popover value breaks only between words, never inside one', () => {
+test('#1610 a popover value wraps at its spaces, and a long unbroken token wraps rather than running out of the panel', () => {
   const values = ruleBody('.stats-disclosure.is-wide.is-more-open .stats-details dd');
-  assert.doesNotMatch(values, /overflow-wrap:\s*anywhere/, 'no mid-word break');
+  assert.match(values, /overflow-wrap:\s*anywhere/, 'a token too long for its column breaks instead of clipping');
   assert.match(values, /white-space:\s*normal/, 'values still wrap at spaces');
+  assert.match(values, /overflow:\s*visible/, 'nothing is hidden behind an overflow clip');
 });
