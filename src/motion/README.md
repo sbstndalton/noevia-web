@@ -11,7 +11,8 @@ and state. Nothing in a component has to know about it:
 
 | Trigger | Animation |
 |---|---|
-| a menu (`.ctx-menu`, `.account-popover`, `.popup`, `.composer-actions-panel`, `.tool-catalogue-panel`, `[role="menu"]`) is added | scale .97 → 1 and a fade from the trigger side; critically damped, about 140ms |
+| a menu (`.ctx-menu`, `.account-popover`, `.popup`, `.tool-catalogue-panel`, `[role="menu"]`) is added | scale .97 → 1 and a fade from the trigger side; critically damped, about 140ms |
+| the composer's + menu (`.composer-actions-panel`) is added | scale .97 → 1 only, no fade, so it is opaque from its first frame (#1627); about 140ms |
 | a dialog (`dialog[open]`, `.aero`, `[data-motion="dialog"]`) is added | scale .98 → 1 and a fade; critically damped, about 220ms |
 | a toast (`.save-error`, `[data-motion="toast"]`) is added | rises 12px and fades in; critically damped |
 | a single new `.msg[data-role="user"]` at the end of the transcript | scale .92 / y 6px → rest, origin bottom right, light bounce |

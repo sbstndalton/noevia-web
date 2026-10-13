@@ -9,7 +9,7 @@
 // data-motion="reduced") turns springs into instant changes or short fades.
 import { animate } from 'motion';
 
-export type MotionKind = 'dialog' | 'menu' | 'toast' | 'message' | 'chip' | 'list' | 'fade';
+export type MotionKind = 'dialog' | 'menu' | 'panel' | 'toast' | 'message' | 'chip' | 'list' | 'fade';
 type Target = Record<string, number | string | Array<number | string>>;
 type Options = Record<string, unknown>;
 
@@ -17,6 +17,7 @@ type Options = Record<string, unknown>;
 const SPRINGS = {
   dialog: { type: 'spring', bounce: 0, visualDuration: 0.22 },
   menu: { type: 'spring', bounce: 0, visualDuration: 0.14 },
+  panel: { type: 'spring', bounce: 0, visualDuration: 0.14 },
   toast: { type: 'spring', bounce: 0, visualDuration: 0.26 },
   message: { type: 'spring', bounce: 0.25, visualDuration: 0.32 },
   chip: { type: 'spring', bounce: 0.15, visualDuration: 0.22 },
@@ -37,6 +38,9 @@ export function reducedMotion(): boolean {
 const ENTER: Record<MotionKind, { from: Target; to: Target }> = {
   dialog: { from: { opacity: 0, scale: 0.98 }, to: { opacity: 1, scale: 1 } },
   menu: { from: { opacity: 0, scale: 0.97 }, to: { opacity: 1, scale: 1 } },
+  // #1627: the + menu scales in without a fade. Motion's fade from opacity 0 let the greeting and the
+  // mode-bar text print through the panel while it arrived, so its entrance is scale only.
+  panel: { from: { scale: 0.97 }, to: { scale: 1 } },
   // The toast is centred with translateX(-50%); Motion owns the transform, so it keeps x.
   toast: { from: { opacity: 0, x: '-50%', y: 12 }, to: { opacity: 1, x: '-50%', y: 0 } },
   message: { from: { opacity: 0, scale: 0.92, y: 6 }, to: { opacity: 1, scale: 1, y: 0 } },
@@ -47,6 +51,7 @@ const ENTER: Record<MotionKind, { from: Target; to: Target }> = {
 const EXIT: Record<MotionKind, Target> = {
   dialog: { opacity: 0, scale: 0.98 },
   menu: { opacity: 0, scale: 0.97 },
+  panel: { scale: 0.97 },
   toast: { opacity: 0, x: '-50%', y: 12 },
   message: { opacity: 0 },
   chip: { opacity: 0, scale: 0.8 },
@@ -135,7 +140,7 @@ function onAdded(nodes: HTMLElement[]): void {
   }
   let chipIndex = 0;
   for (const node of nodes) {
-    if (node.matches(MENUS)) { menuOrigin(node); void enter(node, 'menu'); continue; }
+    if (node.matches(MENUS)) { menuOrigin(node); void enter(node, node.matches('.composer-actions-panel') ? 'panel' : 'menu'); continue; }
     if (node.matches(TOASTS)) { void enter(node, 'toast'); continue; }
     if (node.matches(DIALOGS) && !node.matches('.settings-stage') && !hasCssAnimation(node)) { void enter(node, 'dialog'); continue; }
     if (node.matches(CHIPS)) { void enter(node, 'chip', 0.05 + 0.03 * Math.min(chipIndex++, 7)); continue; }

@@ -91,9 +91,12 @@
   .stats-disclosure.is-wide .stats-more:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
   .stats-disclosure.is-wide .stats-details > div[data-priority='low'] { display: none; }
   .stats-disclosure.is-wide.is-more-open .stats-details {
-    position: absolute; right: var(--space-3); bottom: calc(100% + var(--space-2)); z-index: 15;
+    /* #1628: StatsBar measures the composer and sets these, so the panel ends above the composer block
+       and scrolls within the room above it. Without them (no composer on screen) it opens just above the strip. */
+    position: absolute; right: var(--space-3); bottom: var(--stats-more-bottom, calc(100% + var(--space-2))); z-index: 15;
     display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-2) var(--space-4);
-    width: min(360px, calc(100% - var(--space-6))); box-sizing: border-box; overflow: visible;
+    width: min(360px, calc(100% - var(--space-6))); box-sizing: border-box;
+    max-height: var(--stats-more-max, none); overflow-x: hidden; overflow-y: auto;
     padding: var(--space-3) var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--radius-card);
     background: var(--bg-surface); box-shadow: var(--shadow-pop);
   }
