@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, JSX } from 'react';
 import type { LiveStats, ReplyTelemetry, RoutingDecision } from '../types';
 import { Icon } from './icons/Icon';
 import { RoutingDetails } from './ChatView';
+import { isDisplayableRoutingDecision } from '../current-routing';
 import { useT } from '../i18n';
 import { senderLabelText } from '../chat-labels';
 import { appLocale } from '../user-preferences';
@@ -65,6 +66,14 @@ function composerBlock(): HTMLElement | null {
   return document.querySelector<HTMLElement>('.chat-composer-inner')?.closest<HTMLElement>('.composer') ?? null;
 }
 
+/** #1649: the routing details, reporting its open state to the strip. It leaves the page when the strip
+ *  switches between the wide row and the phone line, or when the decision stops being displayable, and the
+ *  <details> that replaces it is closed, so no toggle event clears the state. Clearing it on the way out does. */
+function RoutingPanel({ decision, onOpenChange }: { decision: RoutingDecision; onOpenChange: (open: boolean) => void }): JSX.Element | null {
+  useLayoutEffect(() => () => onOpenChange(false), [onOpenChange]);
+  return <RoutingDetails decision={decision} onOpenChange={onOpenChange} />;
+}
+
 /** Inference status under the composer: on a phone a single line (status, model, speed) that
  *  expands into plain-language details; on a desktop the same details, always open, laid out
  *  across the width instead of stacked. Purely presentational: App owns the /api/stats poll. */
@@ -77,12 +86,20 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
   const [moreOpen, setMoreOpen] = useState(false);
   // #1631: the routing details are the strip's other popover, and open over the same place.
   const [routingOpen, setRoutingOpen] = useState(false);
-  useEffect(() => { if (!routingDecision) setRoutingOpen(false); }, [routingDecision]);
+  // #1649: one popover at a time. Opening the routing details closes the metrics popover, and opening the
+  // metrics closes the routing details (its toggle event then clears routingOpen).
+  const onRoutingOpenChange = useCallback((open: boolean) => {
+    setRoutingOpen(open);
+    if (open) setMoreOpen(false);
+  }, []);
+  // #1649: the panel counts as open only while it is rendered (a displayable decision) and its state says so.
+  const shownRouting = routingDecision && isDisplayableRoutingDecision(routingDecision) ? routingDecision : null;
+  const routingPanelOpen = routingOpen && shownRouting !== null;
   // #1628, #1631: while a popover is open, its bottom edge is measured to sit above the composer block, so it
   // never covers the composer or the send button. Re-measured when the window or either box changes size.
   // The model sheet (variant 'sheet') lays the routing details out in flow, so there is nothing to place.
   const [moreAnchor, setMoreAnchor] = useState<AnchorAbove | null>(null);
-  const anchored = moreOpen || (routingOpen && variant !== 'sheet');
+  const anchored = moreOpen || (routingPanelOpen && variant !== 'sheet');
   const rootRef = useRef<HTMLElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
   useLayoutEffect(() => {
@@ -97,10 +114,30 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
     window.addEventListener('resize', place);
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(place);
     if (rootRef.current) observer?.observe(rootRef.current);
-    const composer = composerBlock();
-    if (composer) observer?.observe(composer);
-    return () => { window.removeEventListener('resize', place); observer?.disconnect(); };
+    // #1649: the composer is observed as the element that is on screen now. A replaced composer (the chat
+    // changes under an open popover) is unobserved and the new one observed, found by a MutationObserver on
+    // the strip's parent, which holds the chat view and the strip as siblings.
+    let composer: HTMLElement | null = null;
+    const follow = () => {
+      const next = composerBlock();
+      if (next === composer) return;
+      if (composer) observer?.unobserve(composer);
+      composer = next;
+      if (next) observer?.observe(next);
+      place();
+    };
+    follow();
+    const parent = rootRef.current?.parentElement ?? null;
+    const watch = parent && typeof MutationObserver !== 'undefined' ? new MutationObserver(follow) : null;
+    if (parent) watch?.observe(parent, { childList: true, subtree: true });
+    return () => { window.removeEventListener('resize', place); watch?.disconnect(); observer?.disconnect(); };
   }, [anchored]);
+  // #1649: opening the metrics closes the routing details (one popover at a time).
+  useEffect(() => {
+    if (!moreOpen) return;
+    const panel = rootRef.current?.querySelector<HTMLDetailsElement>('.routing-details[open]');
+    if (panel) panel.open = false;
+  }, [moreOpen]);
   // The routing panel is an anchored popover (it must not grow the strip or squeeze the
   // chat), so give it the Escape-to-close a popover is expected to have even though the
   // underlying <details> element has no built-in keyboard dismissal.
@@ -213,7 +250,7 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
         <button ref={moreRef} type="button" className="stats-more" aria-expanded={moreOpen} aria-controls="stats-details"
           aria-label={moreOpen ? t('stats.hide') : t('stats.show')} title={moreOpen ? t('stats.hide') : t('stats.show')}
           onClick={() => setMoreOpen(value => !value)}><Icon name="chevron-right" size={14} /></button>
-        {routingDecision && <RoutingDetails decision={routingDecision} onOpenChange={setRoutingOpen} />}
+        {shownRouting && <RoutingPanel decision={shownRouting} onOpenChange={onRoutingOpenChange} />}
       </section>
     );
   }
@@ -227,7 +264,7 @@ export function StatsBar({ stats, reply, routingDecision, modelLabel, variant = 
         <Icon name={open ? 'chevron-down' : 'chevron-right'} size={14} />
       </button>
       {open && details}
-      {routingDecision && <RoutingDetails decision={routingDecision} onOpenChange={setRoutingOpen} />}
+      {shownRouting && <RoutingPanel decision={shownRouting} onOpenChange={onRoutingOpenChange} />}
     </section>
   );
 }

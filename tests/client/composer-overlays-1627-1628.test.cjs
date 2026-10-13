@@ -53,7 +53,8 @@ test('StatsBar measures the composer block and sets the two custom properties on
   assert.match(src, /new ResizeObserver\(place\)/);
   // #1631: the routing popover shares the measurement, so the style is built once for both.
   assert.match(src, /const anchorStyle = anchored && moreAnchor \? \{ '--stats-more-bottom': `\$\{moreAnchor\.bottom\}px`, '--stats-more-max': `\$\{moreAnchor\.maxHeight\}px` \} as CSSProperties : undefined;/);
-  assert.match(src, /const anchored = moreOpen \|\| \(routingOpen && variant !== 'sheet'\);/);
+  // #1649: the routing popover counts as open only while it is rendered and its state says so.
+  assert.match(src, /const anchored = moreOpen \|\| \(routingPanelOpen && variant !== 'sheet'\);/);
 });
 
 test('the wide metrics popover is out of flow and ends at the measured anchor, scrolling inside its room (#1628)', () => {

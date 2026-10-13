@@ -50,11 +50,13 @@ test('with little room above the composer the popover keeps its floor height and
 test('the strip passes the routing popover\'s open state to the measurement, except in the model sheet (#1631)', () => {
   const stats = read('src/components/StatsBar.tsx');
   assert.match(stats, /const \[routingOpen, setRoutingOpen\] = useState\(false\);/);
-  assert.match(stats, /useEffect\(\(\) => \{ if \(!routingDecision\) setRoutingOpen\(false\); \}, \[routingDecision\]\);/);
-  assert.match(stats, /const anchored = moreOpen \|\| \(routingOpen && variant !== 'sheet'\);/, 'the sheet lays the details out in flow');
+  // #1649: the open state counts only while the panel is rendered (and is reset when it leaves the page).
+  assert.match(stats, /const shownRouting = routingDecision && isDisplayableRoutingDecision\(routingDecision\) \? routingDecision : null;/);
+  assert.match(stats, /const routingPanelOpen = routingOpen && shownRouting !== null;/);
+  assert.match(stats, /const anchored = moreOpen \|\| \(routingPanelOpen && variant !== 'sheet'\);/, 'the sheet lays the details out in flow');
   assert.match(stats, /if \(!anchored\) \{ setMoreAnchor\(null\); return undefined; \}/);
   assert.match(stats, /\}, \[anchored\]\);/);
-  assert.equal((stats.match(/<RoutingDetails decision=\{routingDecision\} onOpenChange=\{setRoutingOpen\} \/>/g) || []).length, 2, 'both the wide and the narrow strip');
+  assert.equal((stats.match(/<RoutingPanel decision=\{shownRouting\} onOpenChange=\{onRoutingOpenChange\} \/>/g) || []).length, 2, 'both the wide and the narrow strip');
   assert.equal((stats.match(/style=\{anchorStyle\}/g) || []).length, 2, 'the wide and the narrow strip both carry the anchor');
   assert.match(stats, /const anchorStyle = anchored && moreAnchor \? \{ '--stats-more-bottom': `\$\{moreAnchor\.bottom\}px`, '--stats-more-max': `\$\{moreAnchor\.maxHeight\}px` \}/);
 });
