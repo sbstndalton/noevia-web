@@ -21,6 +21,12 @@ test('a folder that still carries the current name is not stale, including colli
   assert.equal(storageFolderKeepsOldName('noevia projects/Alpha--p1', 'Alpha', 'p1'), false);
 });
 
+test('a folder keyed by the project id never claims a name, so no rename can stale it', () => {
+  assert.equal(storageFolderKeepsOldName('noevia projects/proj-1-a', 'Anything at all', 'proj-1-a'), false);
+  assert.equal(storageFolderKeepsOldName('noevia projects/proj-1-a (2)', 'Renamed', 'proj-1-a'), false);
+  assert.equal(storageFolderKeepsOldName('noevia projects/proj-1-a', 'Alpha', 'proj-2-b'), true, 'another project\'s id is not this one\'s folder');
+});
+
 test('after a rename the old folder is reported as keeping its old name', () => {
   assert.equal(storageFolderKeepsOldName('noevia projects/QA Haiku 20261012-0610', 'QA Haiku 20261012-0610 renamed', 'p1'), true);
   assert.equal(storageFolderKeepsOldName('noevia projects/Alpha--p1', 'Beta', 'p1'), true);

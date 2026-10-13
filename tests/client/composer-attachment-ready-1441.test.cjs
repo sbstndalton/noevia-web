@@ -16,8 +16,8 @@ function harness(upload) {
   const ctx = {
     uploadLimit: () => 1e6, fileToBase64: async () => 'cWE=', uploadProjectFile: upload, uploadUnreadableReason: () => '',
     uploadFailureText: (err) => String(err.message), formatPercent: String, appLocale: () => 'en-GB', Date, Math, Error,
-    // Collaborators added since (#1454 numbered copies, source-status stage text): pass-throughs here.
-    uniqueName: (name) => name, uploadStageText: (_t, value) => value.stage,
+    // Collaborators added since (#1454 free-name uploads, source-status stage text): pass-throughs here.
+    uploadTakenNames: () => [], uploadUnderFreeName: async (name, _taken, up) => ({ name, result: await up(name) }), uploadStageText: (_t, value) => value.stage,
   };
   vm.createContext(ctx); vm.runInContext(js, ctx);
   const sink = { project: { id: 'ctx', name: 'Chat attachments' }, disabled: false, chatOnly: true, onChanged: async () => {}, onBusy: (b) => busy.push(b), onStatus: (s) => statuses.push(s) };

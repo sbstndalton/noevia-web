@@ -5,7 +5,7 @@
 const test = require('node:test'), assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), ts = require('typescript');
 const read = (file) => fs.readFileSync(path.join(__dirname, '../..', file), 'utf8');
 const load = (file) => { const exports = {}; vm.runInNewContext(ts.transpileModule(read(file), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports, require }); return exports; };
-const { uniqueName } = load('src/project-files.ts');
+const { uniqueName, uploadTakenNames, uploadUnderFreeName } = load('src/project-files.ts');
 
 test('a free name is kept as it is', () => {
   assert.equal(uniqueName('notes.md', [{ name: 'other.md' }]), 'notes.md');
@@ -23,20 +23,55 @@ test('a folder-qualified source does not block a bare upload of the same last se
   assert.equal(uniqueName('notes.md', [{ name: 'Folder/notes.md' }]), 'notes.md');
 });
 
+const FOLDER = 'noevia projects/proj-1-a';
+const stored = (name, group = 'Text') => ({ name: `${FOLDER}/${group}/${name}`, content: '', source: FOLDER, attachment: { id: 'x', bytes: 1, group, state: 'ready' } });
+
+test('a stored upload is named by its storage path, and a bare upload of the same file still finds it (the live miss)', () => {
+  const project = { projectFolder: FOLDER, files: [stored('qa-notes.md'), stored('scan.pdf', 'Documents'), { name: 'plain.md', content: '' }, { name: 'Linked/notes.md', content: '', source: 'Linked' }] };
+  const taken = uploadTakenNames(project);
+  assert.deepEqual(taken.map((t) => t.name), ['qa-notes.md', 'scan.pdf', 'plain.md']);
+  assert.equal(uniqueName('qa-notes.md', taken), 'qa-notes (2).md');
+  assert.equal(uniqueName('scan.pdf', taken), 'scan (2).pdf');
+  assert.equal(uniqueName('notes.md', taken), 'notes.md', 'a file synced from a linked folder is a different file');
+  // Before: comparing against the full path never matched, so the server replaced the source.
+  assert.equal(uniqueName('qa-notes.md', project.files), 'qa-notes.md');
+});
+
+test('uploadUnderFreeName saves a taken name as a numbered copy and returns the name it used', async () => {
+  const sent = [];
+  const out = await uploadUnderFreeName('notes.md', [{ name: 'notes.md' }], async (n) => { sent.push(n); return 'ok'; });
+  assert.deepEqual(sent, ['notes (2).md']);
+  assert.deepEqual({ name: out.name, result: out.result }, { name: 'notes (2).md', result: 'ok' });
+});
+
+test('a stale list is recovered from: the server refusing a name (sourceExists) moves on to the next free number, never replaces', async () => {
+  const sent = [];
+  const refuse = (...names) => async (n) => { sent.push(n); if (names.includes(n)) throw Object.assign(new Error('exists'), { code: 'sourceExists' }); return 'ok'; };
+  const out = await uploadUnderFreeName('notes.md', [], refuse('notes.md', 'notes (2).md'));
+  assert.deepEqual(sent, ['notes.md', 'notes (2).md', 'notes (3).md']);
+  assert.equal(out.name, 'notes (3).md');
+});
+
+test('any other failure is thrown as it is, with no second attempt', async () => {
+  let calls = 0;
+  await assert.rejects(uploadUnderFreeName('notes.md', [], async () => { calls++; throw Object.assign(new Error('storage is down'), { code: 'storageLoginRejected' }); }), /storage is down/);
+  assert.equal(calls, 1);
+});
+
 test('the Sources tab keeps a taken name as a copy and says so; it never sends the raw name over a taken one', () => {
   const view = read('src/components/ProjectView.tsx');
-  assert.match(view, /import \{[^}]*uniqueName[^}]*\} from '\.\.\/project-files';/);
-  assert.match(view, /const name = uniqueName\(file\.name, taken\);/);
-  assert.match(view, /uploadProjectFile\(project\.id, \{ name, dataBase64/);
+  assert.match(view, /import \{[^}]*uploadUnderFreeName[^}]*\} from '\.\.\/project-files';/);
+  assert.match(view, /const taken = uploadTakenNames\(project\);/);
+  assert.match(view, /uploadUnderFreeName\(file\.name, taken, \(candidate\) => uploadProjectFile\(project\.id, \{ name: candidate, dataBase64/);
   assert.match(view, /t\('projects\.view\.savedAsCopy'/);
   assert.doesNotMatch(view, /uploadProjectFile\(project\.id, \{ name: file\.name,/);
 });
 
 test('the chat composer keeps a taken name as a copy and reports it in its status line', () => {
   const composer = read('src/components/ComposerActions.tsx');
-  assert.match(composer, /import \{[^}]*uniqueName[^}]*\} from '\.\.\/project-files';/);
-  assert.match(composer, /const name = uniqueName\(file\.name, taken\);/);
-  assert.match(composer, /uploadProjectFile\(project\.id, \{ name, dataBase64/);
+  assert.match(composer, /import \{[^}]*uploadUnderFreeName[^}]*\} from '\.\.\/project-files';/);
+  assert.match(composer, /const taken = uploadTakenNames\(project\);/);
+  assert.match(composer, /uploadUnderFreeName\(file\.name, taken, \(candidate\) => uploadProjectFile\(project\.id, \{ name: candidate, dataBase64/);
   assert.match(composer, /t\('composer\.upload\.renamedCopy'/);
   assert.doesNotMatch(composer, /uploadProjectFile\(project\.id, \{ name: file\.name,/);
 });
