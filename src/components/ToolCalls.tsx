@@ -23,7 +23,7 @@ export function toolCallRowState(call: Pick<ToolCallView, 'status' | 'result'>):
   if (call.result === undefined) return 'done';
   // #1699: core mostly reports a failure as plain text starting "ERROR:" (Drive, toolboxes, MCP
   // refusals, timeouts); a JSON body with an error field is the other shape.
-  return /^\s*ERROR:/.test(call.result) || summariseToolResult(call.result).kind === 'error' ? 'error' : 'done';
+  return /^\s*ERROR:/.test(call.result) || ['error', 'allFailed'].includes(summariseToolResult(call.result).kind) ? 'error' : 'done';
 }
 
 export const TOOL_RESULT_LIMIT = 4000;
@@ -143,7 +143,11 @@ function resultPreview(result: string, t: Translate, n: (count: number) => strin
   const summary = summariseToolResult(result);
   switch (summary.kind) {
     case 'listed': return t.plural('chat.toolCalls.summary.listed', summary.items, { count: n(summary.items) });
-    case 'search': return t.plural('chat.toolCalls.summary.search', summary.results, { count: n(summary.results) });
+    case 'search': {
+      const found = t.plural('chat.toolCalls.summary.search', summary.results, { count: n(summary.results) });
+      return summary.failed ? `${found} · ${t.plural('chat.toolCalls.summary.someFailed', summary.failed, { count: n(summary.failed) })}` : found;
+    }
+    case 'allFailed': return t.plural('chat.toolCalls.summary.allFailed', summary.failed, { count: n(summary.failed) });
     case 'error': return t('chat.toolCalls.summary.error');
     case 'received': return t('chat.toolCalls.summary.received');
     default: return oneLine(result) || t('chat.toolCalls.emptyResult');
