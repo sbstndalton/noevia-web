@@ -832,13 +832,15 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
   .recents-del::after { left: 50%; right: auto; width: max(100%, var(--target-min)); transform: translate(-50%, -50%); }
 }
 
-/* #1663: one status pill for cards and the service overview: a dot and a word, toned by state. */
-.mm-state { display: inline-flex; align-items: center; gap: 6px; flex: none; padding: 2px 10px 2px 8px; border-radius: var(--radius-pill); font-size: var(--text-caption); line-height: 1.5; white-space: nowrap; background: var(--bg-sidebar); color: var(--text-secondary); }
-.mm-state::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .8; }
-.mm-state[data-tone="good"] { color: var(--accent-text); background: color-mix(in srgb, var(--accent-text) 10%, transparent); }
-.mm-state[data-tone="warn"] { color: var(--status-warn); background: color-mix(in srgb, var(--status-warn) 12%, transparent); }
-.mm-state[data-tone="bad"] { color: var(--danger, #c0392b); background: color-mix(in srgb, var(--danger, #c0392b) 10%, transparent); }
-.model-card .model-card-state.mm-state { padding: 2px 10px 2px 8px; }
+/* #1663: status pills follow the owner's Settings mockup (Settings.dc.html status pill): a 999px
+   capsule, small bold caption, toned fill; neutral states are the mockup's "off" pill (muted text,
+   off fill, hairline border). Dark tones mix the status colour into the surface (claude.ai dark
+   success/danger 900-on-text pairing) instead of hard-coding vendor colours. */
+.mm-state { display: inline-flex; align-items: center; flex: none; padding: 3px 9px; border-radius: 999px; font-size: var(--text-caption); font-weight: 700; line-height: 1.35; white-space: nowrap; border: 1px solid transparent; }
+.mm-state[data-tone="good"] { color: var(--accent-text); background: color-mix(in srgb, var(--accent-text) 12%, var(--bg-surface)); }
+.mm-state[data-tone="warn"] { color: var(--status-warn); background: color-mix(in srgb, var(--status-warn) 14%, var(--bg-surface)); }
+.mm-state[data-tone="bad"] { color: var(--status-danger, var(--danger)); background: color-mix(in srgb, var(--status-danger, var(--danger)) 12%, var(--bg-surface)); }
+.mm-state[data-tone="muted"] { padding: 2px 8px; color: var(--text-secondary); background: var(--bg-off); border-color: var(--border-subtle, var(--control-border)); }
 .model-card-note { margin: 0; font-size: var(--text-footnote); }
 .model-card-actions > button.model-card-danger, .model-card-actions > button.model-card-danger:first-child { margin-left: auto; background: transparent; border-color: transparent; color: var(--danger, #c0392b); font-weight: 500; }
 .model-card-actions > button.model-card-danger[aria-expanded="true"] { background: color-mix(in srgb, var(--danger, #c0392b) 8%, transparent); }
@@ -867,33 +869,51 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .model-card button:focus:not(:focus-visible), .mm-assign button:focus:not(:focus-visible) { outline: none; box-shadow: none; }
 .model-card button:focus-visible, .mm-assign :is(button, select):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
-/* #1662: what each service uses: one column, one grid track set, so labels, models, pills and
-   controls line up on every row: label | model or select | state | control (or read-only note). */
-.mm-assign .mm-panel-head h2 { margin: 0; font-size: var(--text-headline, 1.05rem); }
-.mm-assign.mm-panel { padding-bottom: var(--space-2, 8px); }
-.mm-assign-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(96px, 160px) minmax(0, 420px) 132px minmax(0, 1fr); }
-.mm-assign-row { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; column-gap: 20px; padding: 6px 0; border-top: 1px solid var(--control-border); min-height: 44px; }
-.mm-assign-row:first-child { border-top: 0; }
-.mm-assign-label { font-weight: 600; font-size: var(--text-callout); }
-.mm-assign-model { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-callout); }
-.mm-assign-model .mm-select, .mm-assign-model select { width: 100%; max-width: 100%; }
+/* #1662: what each service uses. Structure follows the owner's Settings mockup (Settings.dc.html
+   grouped list): an uppercase section label, a faint helper line, then ONE bordered 12px card whose
+   rows are 12px × 16px with hairline dividers (last row none). All rows share one subgrid, so
+   label | model or select | status pill | control line up down the whole card. */
+.mm-assign.mm-panel { background: none; border: 0; box-shadow: none; padding: 0; }
+.mm-assign .mm-panel-head h2 { margin: 0 2px 4px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); }
+.mm-assign > .mm-note { margin: 0 2px 10px; font-size: var(--text-footnote); color: var(--text-secondary); }
+.mm-assign-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(96px, 150px) minmax(0, 420px) 120px minmax(0, 1fr);
+  border: 1px solid var(--control-border); border-radius: var(--radius-dialog); background: var(--bg-surface); overflow: hidden; }
+.mm-assign-row { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; column-gap: 20px; padding: 10px 16px; border-bottom: 1px solid var(--control-border); min-height: 44px; box-sizing: border-box;
+  transition: background-color var(--dur-instant, 60ms) var(--ease-out-quart, ease-out); }
+.mm-assign-row:last-child { border-bottom: 0; }
+.mm-assign-row:hover { background: var(--bg-surface-hover); }
+.mm-assign-label { font-weight: 700; font-size: var(--text-footnote); }
+.mm-assign-model { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-footnote); color: var(--text-secondary); }
+.mm-assign-model .mm-select, .mm-assign-model select { width: 100%; max-width: 100%; color: var(--text); }
 .mm-assign-model small { color: var(--text-secondary); }
 .mm-assign-row > .mm-state { justify-self: start; }
 .mm-assign-control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
 .mm-assign-control select { max-width: 260px; }
-/* Read-only: a quiet caption, not an empty slot where a control should be. */
-.mm-assign-fixed { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-footnote); color: var(--text-secondary); }
-.mm-assign-fixed::before { content: ""; width: 8px; height: 8px; flex: none; border: 1.5px solid currentColor; border-radius: 50%; opacity: .6; }
-.mm-assign-status { margin: 8px 0 0; }
+/* Read-only: the mockup's faint helper caption with a hollow marker; never an empty control slot. */
+.mm-assign-fixed { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-caption); color: var(--text-secondary); }
+.mm-assign-fixed::before { content: ""; width: 7px; height: 7px; flex: none; border: 1.5px solid currentColor; border-radius: 50%; opacity: .6; }
+.mm-assign-status { margin: 8px 2px 0; }
+@media (pointer: fine) { .mm-assign-row select { height: 34px; min-height: 34px; padding-block: 0; } .mm-assign-row { min-height: 52px; } }
+@media (prefers-reduced-motion: reduce) { .mm-assign-row { transition: none; } }
 @media (max-width: 720px) {
   .mm-assign-list { grid-template-columns: minmax(0, 1fr) auto; }
-  .mm-assign-row { grid-template-columns: subgrid; row-gap: 4px; }
+  .mm-assign-row { row-gap: 4px; padding: 10px 14px; }
   .mm-assign-label { grid-column: 1; grid-row: 1; }
   .mm-assign-row > .mm-state { grid-column: 2; grid-row: 1; justify-self: end; }
   .mm-assign-model { grid-column: 1 / -1; grid-row: 2; }
   .mm-assign-control { grid-column: 1 / -1; grid-row: 3; }
   .mm-assign-control:empty { display: none; }
 }
+
+/* Cards follow the mockup's 12px hairline card (no shadow) with claude.ai's card press (.99). The
+   delete confirm uses claude.ai's soft danger fill (danger at ~10% fill, ~30% border) and its
+   danger focus ring; buttons press to .97 on the instant/snap timing from motion-tokens.css. */
+.model-grid > .model-card.surface { border-radius: var(--radius-dialog); box-shadow: none; }
+.model-card .popup-tab { transition: transform var(--dur-instant, 60ms) var(--ease-snap, ease-out), background-color var(--dur-instant, 60ms) var(--ease-out-quart, ease-out); }
+.model-card .popup-tab:active:not(:disabled) { transform: scale(.97); }
+.model-card .model-card-confirm { background: color-mix(in srgb, var(--danger, #c0392b) 10%, var(--bg-surface)); border-color: color-mix(in srgb, var(--danger, #c0392b) 30%, transparent); }
+.model-card-confirm .model-card-danger.is-solid:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--bg), 0 0 0 1px var(--danger, #c0392b), 0 0 6px 1px color-mix(in srgb, var(--danger, #c0392b) 60%, transparent); }
+@media (prefers-reduced-motion: reduce) { .model-card .popup-tab { transition: none; } .model-card .popup-tab:active:not(:disabled) { transform: none; } }
 
 /* ── Everything fits the viewport (#530) ─────────────────────────────────────
    On a phone nothing may be wider than the screen: content wraps, truncates, or scrolls inside

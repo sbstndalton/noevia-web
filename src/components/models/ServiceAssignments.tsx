@@ -21,7 +21,7 @@ type Role = (typeof ROLES)[number];
 const ROLE: Record<Role, MessageKey> = { fast: 'mm.assign.role.fast', smart: 'mm.assign.role.smart', code: 'mm.assign.role.code', vision: 'mm.assign.role.vision' };
 type Tone = 'good' | 'warn' | 'bad' | 'muted';
 const STATE: Record<string, [MessageKey, Tone]> = {
-  active: ['mm.assign.state.active', 'good'], switching: ['mm.assign.state.switching', 'warn'], missing: ['mm.assign.state.missing', 'bad'], off: ['mm.assign.state.off', 'muted'],
+  active: ['mm.assign.state.active', 'good'], switching: ['mm.assign.state.switching', 'warn'], missing: ['mm.assign.state.missing', 'bad'], notInstalled: ['mm.assign.state.notInstalled', 'bad'], off: ['mm.assign.state.off', 'muted'],
   loaded: ['mm.loaded', 'good'], unloaded: ['mm.card.unloaded', 'muted'], unset: ['mm.assign.state.unset', 'muted'],
 };
 
@@ -74,11 +74,11 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
 
   const serviceRow = (svc: ServiceAssignment) => {
     const options = svc.id === 'embedding' ? embeddingOptions(svc) : [];
-    const name = svc.model || (svc.state === 'off' ? t('mm.assign.none') : t('mm.assign.builtIn'));
+    const name = svc.model || ((svc.id === 'ocr' || svc.id === 'documents') && svc.state === 'active' ? t('mm.assign.builtIn') : t('mm.assign.none'));
     return <li key={svc.id} className="mm-assign-row" data-service={svc.id}>
       <span className="mm-assign-label">{t(SERVICE[svc.id])}</span>
       <span className="mm-assign-model" title={svc.model || undefined}>{name}{svc.next ? <small> → {svc.next}</small> : null}</span>
-      <StatePill state={svc.state}/>
+      <StatePill state={svc.state === 'missing' && !svc.model ? 'notInstalled' : svc.state}/>
       <span className="mm-assign-control">
         {svc.id === 'embedding' && admin && svc.canChange && (svc.next
           ? <button className="popup-tab" disabled={busy !== ''} onClick={() => void runEmbedding(svc, true)}>{busy === 'embedding' ? t('mm.assign.switching') : t('mm.assign.finish')}</button>

@@ -54,7 +54,7 @@ function initialModels() {
       services: [
         { id: 'embedding', model: services.embedding, state: 'active', options: installed.filter((m) => m.labels.includes('embeddings') && m.name !== services.embedding).map((m) => ({ model: m.name, profile: /gemma/.test(m.name) ? 'embeddinggemma-2' : 'nomic-v1' })), canChange: true, baseUrl: null },
         { id: 'reranker', model: services.reranker, state: installed.some((m) => m.name === services.reranker && !m.missingFile) ? 'active' : 'missing', options: installed.filter((m) => m.labels.includes('reranking')).map((m) => m.name), canChange: false },
-        { id: 'decision', model: services.decision, state: 'active', options: [], canChange: false },
+        (() => { const laya = installed.find((m) => m.system); return { id: 'decision', model: laya ? laya.name : null, state: laya ? 'active' : 'missing', canChange: false }; })(),
       ],
       roles,
     });
@@ -80,6 +80,7 @@ function initialModels() {
         const mo = installed.find((x) => x.name === b.name);
         if (!mo) return json({ error: 'not found' }, 404);
         if (mo.sidecarProtected) return json({ error: 'in use', errorId: 'modelInUse' }, 409);
+        if (mo.system && b.confirmSystem !== true) return json({ error: 'System routing model — not deleted', errorId: 'systemModel', service: 'decision' }, 400);
         installed = installed.filter((x) => x.name !== b.name);
         if (services.reranker === b.name) services.reranker = '';
         if (services.decision === b.name) services.decision = '';
@@ -206,6 +207,19 @@ function initialModels() {
       await root.getByRole('region', { name: 'What each service uses' }).getByText('embeddinggemma-2').first().waitFor({ timeout: 2000 });
     });
 
+    await check('#1660 deleting Laya says what Auto loses, and Decision then reads missing', async () => {
+      const name = 'laya_multilingual_f16';
+      const card = root.getByRole('article', { name });
+      await card.getByRole('button', { name: `Delete ${name}`, exact: true }).click();
+      await card.getByText('Auto routing uses this model to check messages first. Without it, messages that need that check stay on this server. This cannot be undone.').waitFor({ timeout: 1000 });
+      assert.equal(await card.getByText(/turns off/i).count(), 0, 'no claim that Decision turns off');
+      await card.getByRole('button', { name: 'Delete files' }).click();
+      await root.getByRole('article', { name }).waitFor({ state: 'detached', timeout: 2000 });
+      const row = root.locator('[data-service="decision"]');
+      await row.locator('.mm-state[data-tone="bad"]').waitFor({ timeout: 2000 });
+      assert.match(await row.innerText(), /None/);
+    });
+
     await check('#1662 a chat role can be changed in place from the overview', async () => {
       const overview = root.getByRole('region', { name: 'What each service uses' });
       await overview.getByRole('combobox', { name: 'Fast' }).selectOption('gemma-4-E4B');
@@ -242,6 +256,11 @@ function initialModels() {
       }
       return [...new Set(out)];
     });
+    reset();
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 2000, height: 1250 });
+    root = await open();
+    await check('light 2000: overview, pills and cards are readable (4.5:1)', async () => { const bad = await contrastIssues(); assert.deepEqual(bad, [], bad.join('; ')); });
     for (const width of [2000, 390]) {
       reset();
       await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
