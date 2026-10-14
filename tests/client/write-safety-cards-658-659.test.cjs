@@ -31,7 +31,7 @@ test('the pending card carries the Drive kind and the repeat flag; a finished ch
   assert.equal(finishedToolCall(card, { name: 'synthetic_lookup', text: 'ERROR: the user was not found.' }, 4000).status, 'done');
   assert.equal(finishedToolCall(card, { name: 'drive_update_file', text: 'ERROR: not run.', notRun: true }, 4000).status, 'stopped');
   const app = fs.readFileSync(path.join(__dirname, '../../src/App.tsx'), 'utf8');
-  assert.match(app, /finishedToolCall\(done >= 0 \? tools\[done\] : undefined, \{ name: ev\.name, text: ev\.text, applied: ev\.applied === true, target: ev\.target, declined: ev\.declined === true, notRun: ev\.notRun === true \}/);
+  assert.match(app, /finishedToolCall\(done >= 0 \? tools\[done\] : undefined, \{ name: ev\.name, text: ev\.text, applied: ev\.applied === true, target: ev\.target, declined: ev\.declined === true, notRun: ev\.notRun === true, public: ev\.public === true \}/);
   assert.match(app, /ev\.type === 'paused'/, 'a pause is handled before the error branch, as its own event');
   assert.match(app, /const history = modelHistory\(existing\)/);
   assert.match(app, /rerunBase\(msgs, index\)/, 'Retry keeps the record of saved changes');

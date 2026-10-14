@@ -19,9 +19,12 @@ function writeSignature(c: ToolCallView): string {
 /** #1692: how many finished reads of a failed reply are sent with the next turn. */
 export const FAILED_REPLY_READS = 5;
 
-/** #1692: the calls of a reply that ran, are not writes (applied or declined) and returned a usable result. */
+/** #1692: the calls of a reply that ran, are not writes (applied or declined) and returned a usable result.
+ *  #1700: only tools the server marked public (search, Wikipedia; core tools-mode isPublicToolName): a private read
+ *  (notes, files, Drive, the project reader) is never resent, so it cannot reach a cloud model on the next turn.
+ *  #1702: a call the server did not run is not a result. */
 export function finishedReads(m: Pick<Message, 'toolCalls'>): ToolCallView[] {
-  return (m.toolCalls || []).filter((c) => c && c.status === 'done' && c.applied !== true && typeof c.name === 'string'
+  return (m.toolCalls || []).filter((c) => c && c.status === 'done' && c.public === true && c.notRun !== true && c.applied !== true && typeof c.name === 'string'
     && typeof c.result === 'string' && c.result.trim() !== '' && !/^ERROR\b/.test(c.result));
 }
 

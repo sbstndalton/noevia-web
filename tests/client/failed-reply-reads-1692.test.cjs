@@ -11,7 +11,7 @@ async function load(name) {
   try { return await server.ssrLoadModule(name); } finally { await server.close(); }
 }
 
-const read = (name, result, extra = {}) => ({ name, args: '{}', status: 'done', result, ...extra });
+const read = (name, result, extra = {}) => ({ name, args: '{}', status: 'done', result, public: true, ...extra });
 
 test('#1692: the finished reads of a failed reply are sent; failed reads, writes and answered replies are not', async () => {
   const aw = await load('/src/applied-writes.ts');
@@ -48,4 +48,32 @@ test('#1692: at most FAILED_REPLY_READS reads are sent for one reply', async () 
   const calls = Array.from({ length: 9 }, (_, i) => read(`synthetic_read_${i}`, `result ${i}`));
   const history = aw.modelHistory([{ id: 'u1', role: 'user', content: 'Go.' }, { id: 'a1', role: 'assistant', content: '', error: true, toolCalls: calls }]);
   assert.equal(history.filter((h) => h.role === 'tool').length, aw.FAILED_REPLY_READS);
+});
+
+test('#1700: finishedReads drops private and unmarked tools: only server-marked public reads are resent', async () => {
+  const aw = await load('/src/applied-writes.ts');
+  const m = { toolCalls: [
+    read('nc_notes_search_notes', 'SYNTHETIC-PRIVATE-NOTE', { public: undefined }),
+    read('read_project_file', 'SYNTHETIC-PRIVATE-FILE', { public: false }),
+    read('drive_search_files', 'SYNTHETIC-DRIVE', { public: undefined }),
+    read('tavily_search', 'synthetic public result'),
+  ] };
+  assert.deepEqual(aw.finishedReads(m).map((c) => c.name), ['tavily_search']);
+  const history = aw.modelHistory([{ id: 'u1', role: 'user', content: 'Go.' }, { id: 'a1', role: 'assistant', content: '', error: true, ...m }]);
+  assert.doesNotMatch(JSON.stringify(history), /SYNTHETIC-PRIVATE|SYNTHETIC-DRIVE/);
+});
+
+test('#1702: finishedReads drops calls the server did not run', async () => {
+  const aw = await load('/src/applied-writes.ts');
+  const m = { toolCalls: [read('tavily_search', 'Not run: this step only writes the final answer.', { notRun: true }), read('tavily_extract', 'page text')] };
+  assert.deepEqual(aw.finishedReads(m).map((c) => c.name), ['tavily_extract']);
+});
+
+test('#1700: the chip keeps the public mark only for a public read that ran', async () => {
+  const st = await load('/src/tool-call-state.ts');
+  assert.equal(st.finishedToolCall(undefined, { name: 'tavily_search', text: 'r', public: true }, 300).public, true);
+  assert.equal(st.finishedToolCall(undefined, { name: 'nc_notes_search_notes', text: 'r' }, 300).public, undefined);
+  const skipped = st.finishedToolCall(undefined, { name: 'tavily_search', text: 'Not run', public: true, notRun: true }, 300);
+  assert.equal(skipped.public, undefined);
+  assert.equal(skipped.notRun, true);
 });

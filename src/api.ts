@@ -718,6 +718,8 @@ export async function* streamChat(
   declined?: string[] | boolean;
   /** 'tool_result' (#666 review): a write skipped because an earlier one in the reply was declined. */
   notRun?: boolean;
+  /** 'tool_result' (#1700): the tool is positively public (search, Wikipedia). */
+  public?: boolean;
   decision?: string;
   reasoning?: string;
   reasoningEffort?: string;

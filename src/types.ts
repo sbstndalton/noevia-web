@@ -164,6 +164,11 @@ export interface ToolCallView {
   server?: string;
   /** #658: a write that ran and succeeded. Later turns tell the model it is done. */
   applied?: boolean;
+  /** #1700: the server marked this tool positively public (search, Wikipedia). Only such a read is resent after a
+   *  failed reply; anything unmarked (private, unknown, or saved before the mark existed) never is. */
+  public?: boolean;
+  /** #1702: the server skipped this call (not run). */
+  notRun?: boolean;
   /** What the tool returned, bounded for display and history. */
   result?: string;
 }
