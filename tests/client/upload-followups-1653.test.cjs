@@ -62,8 +62,8 @@ test('#1653 a batch where one file fails still says which file was saved as a nu
 
 test('#1653 a folder keyed by a long project id (hashed tail) is never mistaken for an old name-keyed folder', () => {
   const id = 'chat-context-'.padEnd(90, 'c');
-  // What the server's projectFolderKey makes of an id longer than 80: the first 67 characters, '-', 12 hex.
-  const key = `${id.slice(0, 67)}-0123456789ab`;
+  // Golden value from noevia-core projectFolderKey (tests/server/project-folders.test.cjs pins the same pair).
+  const key = 'chat-context-cccccccccccccccccccccccccccccccccccccccccccccccccccccc-7912f25b6e6e';
   assert.equal(storageFolderKeepsOldName(`noevia projects/${key}`, 'Renamed project', id), false);
   assert.equal(storageFolderKeepsOldName(`noevia projects/${key} (2)`, 'Renamed project', id), false);
   // A short id keeps today's exact key and behaviour.
