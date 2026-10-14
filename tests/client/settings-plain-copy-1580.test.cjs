@@ -13,10 +13,12 @@ const ROOT = path.join(__dirname, '../..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 const ENV_LIKE = /\b[A-Z][A-Z0-9]*_[A-Z0-9_]+\b/;
 
-// The Settings keys this batch changes. Two rows are not here: the preview row and the Offline Wikipedia
-// row are pinned to the server registry's English (noevia-core tests/server/i18n-617-619.test.cjs compares
-// en-GB with the registry), so they change together with that registry text in noevia-core.
+// The Settings keys this batch changes. The preview row and the Offline Wikipedia row are pinned to the
+// server registry's English (noevia-core tests/server/i18n-617-619.test.cjs compares en-GB with the
+// registry), so their new text lands together with the same registry text in noevia-core.
 const CHANGED = [
+  'features.item.previews.description',
+  'features.item.kiwix.description',
   'features.unavailable.browserPlaywright',
   'features.unavailable.browserChromium',
   'profile.avatarDesc',
@@ -55,6 +57,8 @@ test('#1580 the English copy for the changed Settings rows says what a person ca
   assert.match(en['connectors.drive.unavailableAdmin'], /administrator/i);
   assert.doesNotMatch(en['serviceStatus.mcp.notConfigured'], /MCP_SERVERS/);
   assert.equal(en['serviceStatus.mcp.notConfigured'], 'Not set up on this server');
+  assert.doesNotMatch(en['features.item.previews.description'], /unbuilt|not built/i);
+  assert.match(en['features.item.kiwix.description'], /offline copy of Wikipedia/);
 });
 
 test('#1580 every interface locale has its own wording for each changed row, not the English copy', () => {

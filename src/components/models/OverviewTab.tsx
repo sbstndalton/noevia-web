@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { apiFetch, fetchAutoRoles, fetchInstalledModels } from '../../api';
 import type { InstalledModel } from '../../types';
@@ -9,7 +9,7 @@ import { canPromptSuite, groupByRole, recoveryItems, roleOf } from './guided';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 import { describeBackendError } from './backend-errors';
-import { loaderLines } from './loader-lines';
+import { loaderLines, RECOVER_READ_TIMEOUT_MS, recoverRuns, within } from './loader-lines';
 import { ROLE_KEY, stuckStatus } from './mm-text';
 
 type Evidence = { category: string; state: string; value: { ctx?: number; rate?: number } | null; at: number | null };
@@ -83,28 +83,42 @@ function QualityPanel({ models, modelsLoaded, modelsError, roles, onOpen, onTab 
   </section>;
 }
 
+/** #1545: the line may wrap, but never inside the model name; a narrow window moves the whole name down. */
+function wholeName(text: string, model?: string): JSX.Element | string {
+  const at = model ? text.indexOf(model) : -1;
+  if (!model || at < 0) return text;
+  return <>{text.slice(0, at)}<span className="mm-loader-model">{model}</span>{text.slice(at + model.length)}</>;
+}
+
 function RecoverPanel({ onTab }: { onTab: (tab: 'discover' | 'hardware') => void }): JSX.Element {
   // undefined is a check in progress; null is a completed check with no usable response.
   const [items, setItems] = useState<Stuck[] | null>(null), [backends, setBackends] = useState<Backend[] | null | undefined>(undefined);
   const t = useT();
   const [error, setError] = useState(''), [note, setNote] = useState(''), [busy, setBusy] = useState(''), [confirmed, setConfirmed] = useState(false);
+  // #1545 review: each check aborts the previous one's requests, and only the newest writes its results,
+  // so "Check again" or an action never gets an older or timed-out answer shown over a newer one.
+  const runs = useRef(recoverRuns()).current;
   const load = useCallback(async () => {
-    setBackends(undefined);
-    const read = (path: string) => apiFetch(path).then(async (r) => (r.ok ? (await r.json()).job ?? null : null)).catch(() => null);
-    const [autotune, calibration, downloads, engines, installed] = await Promise.all([
+    const { signal, abort, isCurrent } = runs.start();
+    setBackends(undefined); setItems(null);
+    // #1545: every read is bounded (and aborted when the wait gives up), and the engine line and the job
+    // list each show as soon as their own reads answer, so one slow read no longer holds both on "Checking…".
+    const bounded = <T, F>(p: Promise<T>, fallback: F) => within(p, RECOVER_READ_TIMEOUT_MS, fallback, abort);
+    const read = (path: string) => bounded(apiFetch(path, { signal }).then(async (r) => (r.ok ? (await r.json()).job ?? null : null)), null);
+    // `v.backends` is missing rather than `[]` when the endpoint answers with an unexpected or
+    // malformed body (a stale server, a proxy swallowing the route) — `?? null` keeps that the
+    // same "unavailable" state as a rejected request instead of a bare `undefined` that crashes
+    // the `!backends.length` read below.
+    const engines = bounded(mm<{ backends: Backend[] }>('backends', { signal }).then((v) => v.backends ?? null), null).then((v) => { if (isCurrent()) setBackends(v); });
+    const jobs = Promise.all([
       read('/api/models/autotune?model='), read('/api/models/calibration?model='),
-      mm<{ jobs: { id: string; filename: string; repo: string; status: string; error: string | null }[] }>('downloads').then((v) => v.jobs || []).catch(() => []),
-      // `v.backends` is missing rather than `[]` when the endpoint answers with an unexpected or
-      // malformed body (a stale server, a proxy swallowing the route) — `?? null` keeps that the
-      // same "unavailable" state as a rejected request instead of a bare `undefined` that crashes
-      // the `!backends.length` read below.
-      mm<{ backends: Backend[] }>('backends').then((v) => v.backends ?? null).catch(() => null),
+      bounded(mm<{ jobs: { id: string; filename: string; repo: string; status: string; error: string | null }[] }>('downloads', { signal }).then((v) => v.jobs || []), []),
       // #551: runs for models that are no longer installed are history, not something to resume.
-      fetchInstalledModels().then((v) => v.map((m) => m.name)).catch(() => null),
-    ]);
-    setItems(recoveryItems({ autotune, calibration, downloads, now: Date.now(), installed })); setBackends(engines);
-  }, []);
-  useEffect(() => { void load(); }, [load]);
+      bounded(fetchInstalledModels().then((v) => v.map((m) => m.name)), null),
+    ]).then(([autotune, calibration, downloads, installed]) => { if (isCurrent()) setItems(recoveryItems({ autotune, calibration, downloads, now: Date.now(), installed })); });
+    await Promise.all([engines, jobs]);
+  }, [runs]);
+  useEffect(() => { void load(); return () => runs.stop(); }, [load, runs]);
   const act = async (item: Stuck, action: Stuck['actions'][number]) => {
     if (action === 'discover') { onTab('discover'); return; }
     setBusy(item.id + action); setError(''); setNote('');
@@ -127,9 +141,9 @@ function RecoverPanel({ onTab }: { onTab: (tab: 'discover' | 'hardware') => void
       <button type="button" className="modal-btn secondary" onClick={() => void load()}>{t('mm.recover.checkAgain')}</button></div>
     <div className="mm-loader-row"><span aria-hidden="true" className={`model-dot${backends === undefined ? ' pending' : backends && !unhealthy.length ? '' : ' down'}`}/><strong>{t('mm.recover.loader')}</strong>
       {/* #1545: one engine per line, named by its place in the list rather than its internal service
-          name, and no break inside a model name (the line clips instead; the title has the whole text). */}
+          name; a line may wrap, but never inside a model name. */}
       <span className="mm-loader-state" aria-live="polite">{backends === undefined ? t('mm.recover.checkingLoader') : backends === null ? t('mm.recover.healthUnavailable') : !backends.length ? t('mm.recover.noEngine')
-        : loaderLines(t, backends, unhealthy, (probeError) => describeBackendError(t, probeError)).map((line) => <span className="mm-loader-item" key={line.key} title={line.text}>{line.text}</span>)}</span>
+        : loaderLines(t, backends, unhealthy, (probeError) => describeBackendError(t, probeError)).map((line) => <span className="mm-loader-item" key={line.key} title={line.text}>{wholeName(line.text, line.model)}</span>)}</span>
       <button type="button" className="mm-guided-link" onClick={() => onTab('hardware')}>{t('mm.recover.openLogs')}</button></div>
     {backends === null && <p className="mm-note">{t('mm.recover.healthUnavailableHelp')}</p>}
     {items === null && <p className="mm-note" role="status">{t('mm.recover.checking')}</p>}

@@ -5,12 +5,13 @@ import { binaryUnitLabel, formatBinaryBytes, formatBytes, formatBinaryUnit, form
 type FractionDigitsArg = number | { min?: number; max: number };
 
 // Client for the model manager JSON API (administrators only), proxied by noevia's server.
-export async function mm<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+export async function mm<T>(path: string, init: { method?: string; body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
   const hasBody = init.body !== undefined;
   const r = await apiFetch('/api/model-manager/' + path, {
     method: init.method || (hasBody ? 'POST' : 'GET'),
     headers: hasBody ? { 'Content-Type': 'application/json' } : undefined,
     body: hasBody ? JSON.stringify(init.body) : undefined,
+    signal: init.signal,
   });
   const v = await r.json().catch(() => ({}));
   if (!r.ok) throw Object.assign(Error((v as { error?: string }).error || `Request failed (${r.status})`), { status: r.status, code: typeof (v as { code?: unknown }).code === 'string' ? (v as { code: string }).code : undefined,

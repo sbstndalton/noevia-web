@@ -17,11 +17,11 @@ const shots=process.env.QA_SCREENSHOTS||'';
    await page.route('**/api/features',r=>r.fulfill({json:{flags:{previews}}}));
    await page.route('**/api/profile',r=>r.fulfill({json:{user:{id:'qa-admin',username:'admin',displayName:'Synthetic admin',role:'admin',diaryEnabled:true,onboarded:true},passkeys:[],sessions:[]}}));
    await page.route('**/api/admin/features',r=>r.fulfill({json:{features:[
-     {name:'previews',label:'Preview surfaces',description:'Show the unbuilt Scheduled, Plugins, Explore and Code previews.',enabled:previews,source:'default',locked:false,env:'NOEVIA_FEATURE_PREVIEWS'},
-     {name:'kiwix',label:'Offline Wikipedia',description:'A read-only lookup tool backed by an internal kiwix-serve.',enabled:true,source:'env',locked:true,env:'NOEVIA_FEATURE_KIWIX'},
+     {name:'previews',label:'Preview surfaces',description:'Show early versions of Scheduled, Plugins, Explore and Code that are still being built.',enabled:previews,source:'default',locked:false,env:'NOEVIA_FEATURE_PREVIEWS'},
+     {name:'kiwix',label:'Offline Wikipedia',description:'Look things up in an offline copy of Wikipedia kept on this server. Read-only.',enabled:true,source:'env',locked:true,env:'NOEVIA_FEATURE_KIWIX'},
      {name:'diaryMcpWrite',label:'Diary append tool',description:'Offer an approval-gated, append-only Diary tool through the in-app MCP server.',enabled:true,source:'admin',locked:false,env:'NOEVIA_FEATURE_DIARY_MCP_WRITE',pendingRestart:true}]}}));
    await page.route('**/api/admin/features/*',async r=>{const body=r.request().postDataJSON();saved.push(body);previews=body.enabled;
-     return r.fulfill({json:{name:'previews',label:'Preview surfaces',description:'Show the unbuilt Scheduled, Plugins, Explore and Code previews.',enabled:previews,source:'admin',locked:false,env:'NOEVIA_FEATURE_PREVIEWS'}});});
+     return r.fulfill({json:{name:'previews',label:'Preview surfaces',description:'Show early versions of Scheduled, Plugins, Explore and Code that are still being built.',enabled:previews,source:'admin',locked:false,env:'NOEVIA_FEATURE_PREVIEWS'}});});
    await page.goto('http://localhost:31341');
    await page.getByPlaceholder('Message noevia…').waitFor();
    assert.equal(await page.locator('.app-mode-switch').count(),0,`Code switch hidden by default ${width}`);
