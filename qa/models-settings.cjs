@@ -1,13 +1,14 @@
 // Settings → Models & routing against synthetic model-manager and engine APIs only.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const {openSettings}=require('./nav.cjs');
+const {openSettings,openModelsTab,MODELS_SECTION}=require('./nav.cjs');
+const {withLocale}=require('./qa-locale.cjs');
 const assert=require('node:assert/strict');
 const {createFixture}=require('./diary-fixture.cjs');
 const shots=process.env.QA_SCREENSHOTS||'/tmp';
 (async()=>{
  const fixture=createFixture(31341);await fixture.listen();const browser=await chromium.launch({headless:true,channel:'chrome'});
  try{
- const page=await browser.newPage({viewport:{width:1440,height:950}});await page.emulateMedia({reducedMotion:'reduce'});
+ const page=await browser.newPage(withLocale({viewport:{width:1440,height:950}}));await page.emulateMedia({reducedMotion:'reduce'});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  const calls=[],routingPuts=[];let routingDefault='auto';let saveAttempts=0,revision='r1',deleted=[],reloads=[],safeDefaults=[],downloadBodies=[],logPolls=0,badges=[],extraJob=null,extraRegistered=false,prompts=[{id:1,name:'Short answer',body:'Reply with OK.'}],benchStarted=null;
  const now=Date.now()/1000,hist=Array.from({length:40},(_,i)=>({ts:now-(39-i)*2,gpu_util:i%10*9,vram_used_gb:0.15,cpu_pct:40+i%5*10,mem_used_gb:1.2,shared_used_gb:6+i*0.1,temp_c:48,power_w:18+i%4,per_gpu_util:[],per_gpu_vram_used_gb:[]}));
@@ -94,17 +95,18 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await page.goto('http://localhost:31341');
  await openSettings(page);
  const settings=page.getByRole('dialog',{name:'Settings'});
- await settings.getByRole('button',{name:'Models & routing'}).click();
+ await settings.getByRole('button',{name:MODELS_SECTION,exact:true}).click();
  // Settings keeps a summary only; managing models happens on its own page.
  await settings.getByText(/loaded: Qwen-9B/).waitFor();
  assert.equal(await settings.getByRole('tab',{name:'Your models'}).count(),0);
  await settings.getByRole('button',{name:'Open model manager'}).click();
  await settings.waitFor({state:'detached'});
  const dialog=page.locator('.model-manager-page');await dialog.waitFor();
+ // #1008: four sections; openModelsTab maps the old tab names onto them.
  // One interface now: one tab bar — Your models, Discover, Routing, Hardware, Benchmarks,
  // collapsed panels. The helpers keep the assertions below about behaviour
  // rather than about which tab something used to live in.
- const tab=async name=>{const back=dialog.locator('.modal-btn').filter({hasText:'All models'});if(await back.count())await back.click();await dialog.getByRole('tab',{name,exact:true}).click();};
+ const tab=async name=>{const back=dialog.locator('.modal-btn').filter({hasText:'All models'});if(await back.count())await back.click();await openModelsTab(dialog,name);};
  const yours=()=>tab('Your models');
  const discover=()=>tab('Discover');
  const searchQueries=[];
@@ -115,15 +117,19 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await yours();
  await dialog.getByRole('article',{name:'Gemma-E2B'}).waitFor();
  assert.ok(await dialog.getByText('Update available (2026-09-10)').isVisible());
- assert.equal(await dialog.getByTestId('models-disk').innerText(),'Models folder: 139.7 GB free of 465.7 GB (70% used).');
+ assert.equal(await dialog.getByTestId('models-disk').innerText(),'Models folder: 140 GB free of 466 GB (70% used).' /* #636: numeric bytes use the client's locale formatter */);
  const gemma=dialog.getByRole('article',{name:'Gemma-E2B'});
  await gemma.getByRole('button',{name:'Details'}).click();await gemma.getByText('gemma4',{exact:true}).waitFor();assert.ok(await gemma.getByText('5.1 B').isVisible());
  // #421: the Delete button's own accessible name now carries the model name too.
  await gemma.getByRole('button',{name:'Delete Gemma-E2B',exact:true}).click();
- assert.ok(await gemma.getByText(/Delete Gemma-E2B.gguf \(3.0 GB\)/).isVisible());
+ assert.ok(await gemma.getByText(/Delete Gemma-E2B.gguf \(3 GB\)/ /* model sizes use formatModelSizeGB, as on the card */).isVisible());
+ // The settings cleanup runs after the files delete resolves and the card stays listed (the
+ // stub keeps it), so wait for that request rather than racing it.
+ const sectionDelete=page.waitForRequest(r=>r.method()==='DELETE'&&new URL(r.url()).pathname==='/api/model-manager/sections/Gemma-E2B',{timeout:10000});
  await gemma.getByRole('button',{name:'Delete files'}).click();
+ await sectionDelete;
  await dialog.getByRole('article',{name:'Gemma-E2B'}).getByRole('button',{name:'Delete Gemma-E2B',exact:true}).waitFor();
- assert.deepEqual(deleted,['g/Gemma-E2B.gguf']);assert.ok(calls.includes('DELETE /api/model-manager/sections/Gemma-E2B'));
+
  await dialog.getByRole('button',{name:'Create settings'}).first().waitFor();
  // Configure via Library → Settings
  await dialog.getByRole('article',{name:'Qwen-9B'}).getByRole('button',{name:'Tune'}).click();
@@ -133,20 +139,29 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  assert.ok(await dialog.getByText(/models\.ini\.bak-1/).isVisible());
  if(process.env.QA_SCREENSHOTS)await page.screenshot({path:process.env.QA_SCREENSHOTS+'/models-raw.png'});
  await dialog.getByText('Raw file & backups').click();
- // Easy is the default: tune against this machine, MTP and KV cache choices only.
+ // #1008: no Easy/Advanced toggle any more. The guided path (tune against this machine, MTP and KV
+ // cache choices) is always shown and 'All engine settings' is a disclosure, closed by default.
+ const allSettings=dialog.locator('details.mm-all-settings');
+ // #1008: Tune for this machine sits in the collapsed 'Other ways to size the context'.
+ const tuneHere=async()=>{const other=dialog.locator('details.mm-easy-other');if(!(await other.evaluate(d=>d.open)))await other.locator('summary').first().click();await dialog.getByRole('button',{name:'Tune for this machine'}).click();};
  await page.evaluate(()=>localStorage.removeItem('noevia:model-settings-mode'));
- assert.equal(await dialog.getByRole('button',{name:'Easy',exact:true}).getAttribute('aria-pressed'),'true');
- assert.equal(await dialog.getByLabel('Context size').count(),0,'the full form shows in Easy mode');
- await dialog.getByRole('button',{name:'Tune for this machine'}).click();
+ assert.equal(await allSettings.evaluate(d=>d.open),false,'All engine settings starts closed');
+ assert.equal(await dialog.getByLabel('Context size').count(),0,'the full form shows while All engine settings is closed');
+ await tuneHere();
  await dialog.getByText(/Recommended: 256K tokens on cowork-llama-1/).waitFor();
  // Why the recommendation is lower than memory allows, measured context on this machine, and MTP availability.
  await dialog.getByText(/Memory would allow 1,024K; limited because prompt speed not measured yet/).waitFor();
  await dialog.getByText(/IQ3_XXS is below Q4/).waitFor();
  await dialog.getByText(/MTP layers built in/).waitFor();
  await dialog.getByText(/Saved: MTP \(engine defaults\), 33.4 tokens\/s\./).waitFor();
- assert.equal(await dialog.getByRole('progressbar').getAttribute('value'),'50','progress bar shows how far the run got');
- await dialog.getByText('50% of this model').waitFor();
- assert.match(await dialog.getByRole('region',{name:'Auto-tune steps'}).innerText(),/measured earlier/,'reused measurements are labelled');
+ // NO LONGER EXISTS (noevia#1697): the '50% of this model' bar went in dbaa970. Progress is now
+ // '{done} of {total} settings saved' and only for per-model jobs (job.models); this fixture's
+ // single-model `steps` job never shows one. Kept for the record, not run:
+ // assert.equal(await dialog.getByRole('progressbar').getAttribute('value'),'50','progress bar shows how far the run got');
+ // await dialog.getByText('50% of this model').waitFor();
+ // NO LONGER EXISTS (noevia#1697): the 'measured earlier' label for reused steps also went in dbaa970;
+ // the client has no reused-step wording any more. Kept for the record, not run:
+ //assert.match(await dialog.getByRole('region',{name:'Auto-tune steps'}).innerText(),/measured earlier/,'reused measurements are labelled');
  // A finished run keeps its account of itself, folded away so the result is what you see first.
  const account=dialog.locator('.mm-activity-details');
  await account.locator('summary').filter({hasText:'What it did (8 lines)'}).click();
@@ -156,10 +171,14 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  assert.equal(await tuneLog.locator('li.is-heading').count(),1,'a test name reads as a heading');
  if(process.env.QA_SCREENSHOTS)await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/models-autotune-log.png`});
  await account.locator('summary').click();
- await dialog.getByText(/Context can likely grow from 32,768 to about 63,720 tokens/).waitFor();
+ // NO LONGER EXISTS (noevia#1697): the 'Context can likely grow' extension line went in dbaa970.
+ // Kept for the record, not run:
+ //await dialog.getByText(/Context can likely grow from 32,768 to about 63,720 tokens/).waitFor();
  assert.equal(await dialog.getByRole('region',{name:'Auto-tune steps'}).getByRole('row').count(),5);
- await dialog.locator('.mm-easy-measure > summary').filter({hasText:'Measure context on this machine'}).waitFor();
- await dialog.getByLabel('KV cache quantisation').selectOption('q4_0');
+ // #1008: measuring context is a sub-heading inside 'Other ways to size the context', not its own disclosure.
+ await dialog.locator('details.mm-easy-other h4.mm-subhead').filter({hasText:'Measure context on this machine'}).waitFor();
+ // #246: the KV cache floor is q5_0; q4_0 is no longer offered.
+ await dialog.getByLabel('KV cache quantisation').selectOption('q5_0');
  await dialog.getByLabel('Speculative decoding (MTP)').selectOption('ngram-simple');
  if(process.env.QA_SCREENSHOTS){
   for(const [w,theme] of [[1440,'light'],[1440,'dark'],[768,'light'],[768,'dark'],[375,'light'],[375,'dark']]){
@@ -168,15 +187,16 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/models-easy-top-${w}-${theme}.png`});
    await dialog.getByRole('region',{name:'Auto-tune steps'}).scrollIntoViewIfNeeded();
    await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/models-autotune-${w}-${theme}.png`});
-   await dialog.getByText(/Memory would allow/).scrollIntoViewIfNeeded();if(w===1440&&theme==='light')await dialog.locator('.mm-easy-measure > summary').click();
+   await dialog.getByText(/Memory would allow/).scrollIntoViewIfNeeded();
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`easy overflow ${w}`);
    await page.screenshot({path:`${process.env.QA_SCREENSHOTS}/models-easy-${w}-${theme}.png`});
   }
   await page.setViewportSize({width:1440,height:950});await page.emulateMedia({colorScheme:'light',reducedMotion:'reduce'});
  }
- await dialog.getByRole('button',{name:'Advanced',exact:true}).click();
- assert.equal(await page.evaluate(()=>localStorage.getItem('noevia:model-settings-mode')),'advanced');
+ await allSettings.locator('summary').first().click();
+ // The details toggle event is async: the fields mount once it has fired.
  await dialog.getByLabel('Context size').waitFor();
+ assert.equal(await page.evaluate(()=>localStorage.getItem('noevia:model-settings-mode')),'advanced');
  await dialog.getByText('Autoconfig: work out settings that fit this machine').click();
  await dialog.getByRole('button',{name:'Run autoconfig'}).click();
  await dialog.getByText(/recommended 256K tokens per chat/).waitFor();
@@ -196,17 +216,21 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await dialog.getByRole('button',{name:'Apply now (unloads the model)'}).click();
  await dialog.getByText(/Saved and applied. Qwen-9B was unloaded/).waitFor();
  assert.deepEqual(reloads,[{unload:false},{unload:true}]);
- // Easy's one-step path saves the tuned values through the same revision-checked save.
- await dialog.getByRole('button',{name:'Easy',exact:true}).click();
- await dialog.getByRole('button',{name:'Tune for this machine'}).click();
+ // The guided one-step path saves the tuned values through the same revision-checked save.
+ // (#1008: it is always on screen; closing All engine settings remembers that choice.)
+ await allSettings.locator('summary').first().click();
+ await page.waitForFunction(()=>localStorage.getItem('noevia:model-settings-mode')==='easy',null,{timeout:5000});
+ await tuneHere();
  const putsBefore=saveAttempts;
  await dialog.getByRole('button',{name:'Use and save'}).click();
  await dialog.getByText(/Qwen-9B is loaded, so the engine keeps the old settings/).waitFor();
  assert.equal(saveAttempts,putsBefore+1);
- await dialog.getByRole('button',{name:'Advanced',exact:true}).click();
+ // Back to the full form (it stays open for later model pages: the choice is remembered).
+ await allSettings.locator('summary').first().click();
+ await page.waitForFunction(()=>localStorage.getItem('noevia:model-settings-mode')==='advanced',null,{timeout:5000});
  // Download → Set up
  await discover();
- assert.equal(await dialog.getByTestId('download-target').innerText(),"Downloads go to /mnt/user/ai-models · 139.7 GB free. The engine reads this whole folder; other shares appear here once they are mounted inside it.");
+ assert.equal(await dialog.getByTestId('download-target').innerText(),/* #636: client-formatted bytes */"Downloads go to /mnt/user/ai-models · 140 GB free. The engine reads this whole folder; other shares appear here once they are mounted inside it.");
  // Search results carry what the server judged: fit, size, parameters, publisher trust.
  await dialog.getByText(/9B · dense · Q4_K_M · 5.2 GB · vision · apache-2.0/).waitFor();
  const pills=dialog.locator('.mm-results .mm-pill');
@@ -237,7 +261,7 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  await dialog.getByRole('button',{name:'Download',exact:true}).click();
  assert.equal(downloadBodies.at(-1).target,'archive');await dialog.getByText(/Queued model-Q4_K_M.gguf and 1 companion file/).waitFor();
  await dialog.getByRole('button',{name:'Set up this model'}).click();
- await dialog.getByRole('heading',{name:'new-model-Q4_K_M',level:1}).waitFor();assert.ok(await dialog.getByText('Defaults from the model file.').isVisible());
+ await dialog.getByRole('heading',{name:'new-model-Q4_K_M',level:1}).waitFor();await dialog.getByText('Defaults from the model file.').waitFor();/* the hints load after the heading */
 
  // A finished download must reach the rest of the app WITHOUT remounting anything.
  // Both halves of the 2026-09-15 "downloaded models don't appear until later"
@@ -272,6 +296,9 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
  // And the Library list picks it up in place, without being remounted.
  await yours();
  await dialog.getByRole('article',{name:'new-model-Q4_K_M'}).waitFor();
+ // #1509: model reads are shared for MODEL_READ_TTL_MS (2 s); a bare event (no notifyModelsChanged,
+ // which also drops that cache) inside the window gets the shared copy. Let it expire first.
+ await new Promise(r=>setTimeout(r,2200));
  const beforeInPlace=calls.filter(c=>c==='GET /api/models/installed').length;
  await page.evaluate(()=>window.dispatchEvent(new Event('noevia:models-changed')));
  await page.waitForFunction(n=>performance.now()>=0&&n===n,beforeInPlace);
@@ -340,8 +367,14 @@ const shots=process.env.QA_SCREENSHOTS||'/tmp';
    else await tab(name);
    await page.waitForTimeout(150);
    assert.ok(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1),`overflow ${name} ${width} ${theme}`);
-   const small=await dialog.evaluate(el=>[...el.querySelectorAll('.mm-root button, .mm-root select')].filter(b=>{const r=b.getBoundingClientRect();return r.width&&r.height&&r.height<40&&!b.classList.contains('mm-link')}).map(b=>b.textContent.trim()).slice(0,5));
+   const small=await dialog.evaluate(el=>[...el.querySelectorAll('.mm-root button, .mm-root select')].filter(b=>{const r=b.getBoundingClientRect();return r.width&&r.height&&r.height<40&&!b.classList.contains('mm-link')&&!b.matches('.glass-seg > button')}).map(b=>b.textContent.trim()).slice(0,5));
    assert.deepEqual(small,[],`small targets ${name} ${width}`);
+   // #380/#1008: segmented controls (Installed | Discover) stay visually compact by design; on a touch
+   // screen an invisible ::after grows each segment to the 44px target. Check that rule covers them.
+   if(await dialog.locator('.glass-seg > button').count()){
+    const touchHit=await page.evaluate(()=>{const walk=rules=>[...rules].some(r=>r.media?(/pointer:\s*coarse/.test(r.media.mediaText)&&[...r.cssRules].some(x=>/\.glass-seg\s*>\s*button/.test(x.selectorText||'')&&/::?after\s*$/.test(x.selectorText||'')&&/target-min/.test(x.style?.height||''))):r.cssRules?walk(r.cssRules):false);return [...document.styleSheets].some(sh=>{try{return walk(sh.cssRules);}catch{return false;}});});
+    assert.ok(touchHit,`segmented controls have no 44px touch hit area ${name} ${width}`);
+   }
    await page.screenshot({path:`${shots}/noevia-models-${name.toLowerCase().replace(/ /g,'-')}-${width}-${theme}.png`,fullPage:false});
   }
  }

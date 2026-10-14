@@ -14,7 +14,7 @@
 // reporting "3.1 GB" (the mismatched external string), the exact ~7% gap #443 was filed against.
 // This asserts both surfaces show the identical string for that model.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const {openSettings, openModelsTab } = require('./nav.cjs');
+const { openModelsPage, openModelsTab } = require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 
@@ -91,14 +91,9 @@ const MODELS = [
       if (r === 'models/updates') return json({ status: {} });
       return json({});
     });
-    await settingsPage.goto('http://localhost:31900');
-    await openSettings(settingsPage);
-    const settings = settingsPage.getByRole('dialog', { name: 'Settings' });
-    await settings.getByRole('button', { name: 'Models & routing' }).click();
-    await settings.getByRole('button', { name: 'Open model manager' }).click();
-    await settings.waitFor({ state: 'detached' });
-    const manager = settingsPage.locator('.model-manager-page');
-    await manager.waitFor();
+    const manager = await openModelsPage(settingsPage, 'http://localhost:31900');
+    // Opening the model manager closes Settings.
+    await settingsPage.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'detached' });
 
     // "Your models": read the size the card shows for the same file the composer just showed.
     await openModelsTab(manager, 'Your models');
