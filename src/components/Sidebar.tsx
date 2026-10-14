@@ -171,6 +171,18 @@ export function Sidebar({
   // moves into that menu.
   const phoneRows = useSpaceTier() === 2;
   const drawer = useRef<HTMLDivElement>(null);
+  // #1716: the sticky New chat strip's height, for the Glass family's clip of rows that scroll
+  // beneath it (phone.css). Glass's strip is see-through, so it hides nothing by itself.
+  const sideNew = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const strip = sideNew.current, scroller = strip?.parentElement;
+    if (!strip || !scroller || typeof ResizeObserver === 'undefined') return;
+    const sync = () => scroller.style.setProperty('--side-new-h', `${strip.offsetHeight}px`);
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(strip);
+    return () => observer.disconnect();
+  }, []);
   const toggle = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
   useEffect(() => {
@@ -704,7 +716,7 @@ export function Sidebar({
       </>}
 
       {/* New chat sticks inside the navigation scroller; the footer stays outside it. */}
-      <div className="side-new">
+      <div className="side-new" ref={sideNew}>
       <button className="new-chat-btn glass" onClick={()=>{if(code)onCodePage?.('New task');else onNewChat();setExpanded(false);}} title={code?t('sidebar.newTask'):t('common.newChat')} data-tip={code?t('sidebar.newTask'):t('common.newChat')}>
         <ShellIcon name="compose" size={17}/>
         <span>{code?t('sidebar.newTask'):t('common.newChat')}</span>

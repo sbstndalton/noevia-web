@@ -85,3 +85,11 @@
   transition: none !important;
   scroll-behavior: auto !important;
 }
+
+/* #1716: not a timed motion. Driven by a view() scroll timeline (phone.css), it clips the top of
+   each sidebar block as it scrolls beneath Glass's see-through New chat strip, so rows never print
+   through the label. Scroll-driven, so reduced motion (which only shortens durations) keeps it. */
+@keyframes side-new-underlap {
+  from { clip-path: inset(0 -100vw -100vh -100vw); }
+  to { clip-path: inset(100% -100vw -100vh -100vw); }
+}
