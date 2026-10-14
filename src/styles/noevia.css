@@ -2594,3 +2594,9 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 .mm-fold[open] > summary::after { transform: rotate(225deg); }
 .mm-fold > summary small { font-weight: 400; color: var(--text-secondary); }
 .mm-fold > .mm-fold-body { display: flex; flex-direction: column; gap: 12px; padding: 0 16px 16px; }
+/* #1709: the Projects grid while the first workspace read is in flight (same blocks as the sidebar). */
+.project-card-skeleton { cursor: default; gap: 12px; }
+.project-card-skeleton:hover { border-color: var(--border); background: transparent; }
+.project-card-skeleton > span { height: 14px; border-radius: var(--radius-control); }
+.project-card-skeleton > span:first-child { width: 55%; height: 18px; }
+.project-card-skeleton > span:last-child { width: 35%; margin-top: auto; }

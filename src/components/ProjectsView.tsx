@@ -26,6 +26,11 @@ interface ProjectsViewProps {
   onCreate: (body: { icon?: string; color?: string; name: string; goal: string; instructions: string; files: { name: string; content: string }[] }) => Promise<void>;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  /** #1709: false until the first workspace read resolves; the empty state waits for it. */
+  loaded?: boolean;
+  /** #1709: the workspace read failed and nothing has loaded yet. */
+  failed?: boolean;
+  onRetry?: () => void;
 }
 
 function timeAgo(t: Translate, ts: number): string {
@@ -39,7 +44,7 @@ function timeAgo(t: Translate, ts: number): string {
   return t.plural('projects.timeAgo.days', days);
 }
 
-export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDelete, onEdit }: ProjectsViewProps): JSX.Element {
+export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDelete, onEdit, loaded = true, failed = false, onRetry }: ProjectsViewProps): JSX.Element {
   const t = useT();
   const [creating, setCreating] = useState(false);
   const tabsId = useId();
@@ -50,6 +55,9 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<'active' | 'archived'>('active');
   const [sort, setSort] = useState<'recent' | 'name'>('recent');
+  // #1709: "No projects yet" only after a read that returned none; until then a skeleton, and a
+  // failed first read says so (with a retry) instead of claiming there are no projects.
+  const listState: 'loading' | 'failed' | 'ready' = projects.length > 0 || loaded ? 'ready' : failed ? 'failed' : 'loading';
   const archivedCount = projects.filter((p) => p.archived).length;
   // The headline describes "Your projects"; archived ones are counted on their own tab.
   const activeProjects = projects.filter((p) => !p.archived);
@@ -106,7 +114,16 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
         </div>
 
         <div role="tabpanel" id={`${tabsId}-panel`} aria-labelledby={`${tabsId}-${tab}`}>
-        {projects.length === 0 ? (
+        {listState === 'loading' ? (
+          <div className="projects-grid" role="status" aria-busy="true" aria-label={t('projects.loading')}>
+            {[0, 1, 2].map((i) => <div key={i} className="project-card project-card-skeleton" aria-hidden="true"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>)}
+          </div>
+        ) : listState === 'failed' ? (
+          <EmptyState icon="circle-alert" title={t('projects.loadErrorTitle')}
+            action={onRetry ? <button className="btn btn-secondary" onClick={() => onRetry()}>{t('projects.loadErrorRetry')}</button> : undefined}>
+            {t('projects.loadErrorBody')}
+          </EmptyState>
+        ) : projects.length === 0 ? (
           <EmptyState icon="folder" title={t('projects.emptyTitle')}
             action={<button className="btn btn-primary" onClick={() => setCreating(true)}><PlusIcon /><span>{t('projects.newProject')}</span></button>}>
             {t('projects.emptyBody')}
