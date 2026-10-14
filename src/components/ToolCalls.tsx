@@ -20,7 +20,10 @@ export function toolCallRowState(call: Pick<ToolCallView, 'status' | 'result'>):
   if (call.status === 'denied') return 'declined';
   if (call.status === 'stopped') return 'not run';
   if (call.status !== 'done') return 'running';
-  return call.result !== undefined && summariseToolResult(call.result).kind === 'error' ? 'error' : 'done';
+  if (call.result === undefined) return 'done';
+  // #1699: core mostly reports a failure as plain text starting "ERROR:" (Drive, toolboxes, MCP
+  // refusals, timeouts); a JSON body with an error field is the other shape.
+  return /^\s*ERROR:/.test(call.result) || summariseToolResult(call.result).kind === 'error' ? 'error' : 'done';
 }
 
 export const TOOL_RESULT_LIMIT = 4000;

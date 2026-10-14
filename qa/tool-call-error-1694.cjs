@@ -31,22 +31,26 @@ require('node:fs').mkdirSync(shots, { recursive: true });
       fixture.liveEvent({ type: 'tool_result', index: 1, name: 'synthetic_search', text: JSON.stringify({ success: false, error: 'synthetic rate limit' }) });
       fixture.liveEvent({ type: 'tool', index: 2, name: 'synthetic_research', args: '{"topic":"c"}' });
       fixture.liveEvent({ type: 'tool_result', index: 2, name: 'synthetic_research', text: 'Synthetic research summary.' });
+      // #1699: the plain-text shape core mostly uses (here, the timeout text).
+      fixture.liveEvent({ type: 'tool', index: 3, name: 'synthetic_write', args: '{"path":"a.md"}' });
+      fixture.liveEvent({ type: 'tool_result', index: 3, name: 'synthetic_write', text: 'ERROR: the user did not respond in time, so synthetic_write was not run. Ask before trying again.' });
       fixture.liveEvent({ type: 'delta', text: 'Synthetic answer after failed tools' });
       fixture.finishLive();
       await page.getByText('Synthetic answer after failed tools', { exact: true }).waitFor();
       const list = page.locator('.tool-calls').last();
       await list.locator(':scope > summary').click();
       const items = list.locator('.tool-call');
-      await check(`${width} ${theme}: three rows`, async () => assert.equal(await items.count(), 3));
+      await check(`${width} ${theme}: four rows`, async () => assert.equal(await items.count(), 4));
       const rows = await items.evaluateAll((els) => els.map((el) => {
         const state = el.querySelector('.tool-call-state');
         return { cls: el.className, label: state?.getAttribute('aria-label'), icon: state?.innerHTML || '', color: state ? getComputedStyle(state).color : '' };
       }));
       await check(`${width} ${theme}: failed calls are in the error state`, async () => {
         assert.match(rows[0].cls, /\bis-error\b/); assert.match(rows[1].cls, /\bis-error\b/); assert.match(rows[2].cls, /\bis-done\b/);
+        assert.match(rows[3].cls, /\bis-error\b/, 'a plain-text "ERROR:" result (#1699)');
       });
       await check(`${width} ${theme}: failed calls are named "failed" for screen readers`, async () => {
-        assert.equal(rows[0].label, 'failed'); assert.equal(rows[2].label, 'done');
+        assert.equal(rows[0].label, 'failed'); assert.equal(rows[2].label, 'done'); assert.equal(rows[3].label, 'failed');
       });
       await check(`${width} ${theme}: a failed call has a different icon from a success`, async () => assert.notEqual(rows[0].icon, rows[2].icon));
       await check(`${width} ${theme}: a failed call has a different colour from a success`, async () => assert.notEqual(rows[0].color, rows[2].color));

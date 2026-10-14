@@ -25,6 +25,19 @@ test('#1694 an error result is the error state; success, declined, stopped and r
   assert.equal(state({ status: 'running' }), 'running');
 });
 
+// #1699: core mostly reports a failed tool as plain text starting "ERROR:" (Drive, toolboxes, MCP refusals, timeouts).
+test('#1699 a plain-text "ERROR:" result is the error state', () => {
+  const js = ts.transpileModule(helper[0], { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+  const exports = {};
+  new Function('exports', 'summariseToolResult', js)(exports, summary.summariseToolResult);
+  const state = exports.toolCallRowState;
+  assert.equal(state({ status: 'done', result: 'ERROR: unknown Drive tool synthetic_tool' }), 'error');
+  assert.equal(state({ status: 'done', result: 'ERROR: the user did not respond in time, so synthetic_write was not run. Ask before trying again.' }), 'error', 'the timeout text');
+  assert.equal(state({ status: 'done', result: '  ERROR: leading whitespace still counts' }), 'error');
+  assert.equal(state({ status: 'done', result: 'No ERROR: here, a normal answer' }), 'done');
+  assert.equal(state({ status: 'denied', result: 'ERROR: the user declined this action.' }), 'declined', 'a declined call stays declined');
+});
+
 test('#1694 the error state has an x icon, a danger colour and a "failed" label in every catalogue', () => {
   assert.match(component, /error: 'x'/);
   assert.match(src('styles/overlays.css'), /\.tool-call\.is-error \.tool-call-state \{ color: var\(--status-danger\); \}/);
