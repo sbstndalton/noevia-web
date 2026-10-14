@@ -362,7 +362,7 @@ function DeleteModel({ model: m, file, kind: initialKind, onDeleted, onCancel, o
   else if (kind === 'system') text = t('mm.delete.confirmDecision');
   else if (kind === 'inuse' && !service && !error) { text = t('mm.loading'); action = null; }
   else if (kind === 'inuse') {
-    text = rerank ? t('mm.delete.inUseReranker') : options.length ? t('mm.delete.inUseEmbedding') : t('mm.delete.noEmbeddingOptions');
+    text = rerank ? t('mm.delete.inUseReranker') : options.length ? t('mm.delete.inUseEmbedding') : t('mm.delete.inUseEmbeddingFixed');
     action = !rerank && options.length ? t('mm.delete.switchAndDelete') : null;
   } else text = file ? t(file.projector ? 'mm.delete.confirmFileProjector' : 'mm.delete.confirmFile', { file: file.name, size: sizeText }) : t('mm.delete.confirmCache');
   return <div className="model-card-confirm" role="group" aria-label={label}>

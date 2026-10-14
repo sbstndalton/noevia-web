@@ -9,7 +9,7 @@ export interface ServiceAssignment {
   id: ServiceId; model: string | null; state: ServiceState; canChange: boolean;
   next?: string; ready?: boolean;
   /** Admins only. Embedding: { model, profile }; reranker: names. */
-  options?: (string | { model: string; profile: string })[];
+  options?: (string | { model: string; profile: string; served?: boolean })[];
   baseUrl?: string | null;
 }
 export interface Assignments { admin: boolean; services: ServiceAssignment[]; available?: boolean }
@@ -21,8 +21,11 @@ export async function fetchAssignments(): Promise<Assignments> {
   return { admin: v.admin === true, services: Array.isArray(v.services) ? v.services : [], available: v.available };
 }
 
+/** Embedding models a switch may target: only those the server reports a running embeddings
+ *  endpoint really serves (#1660 review). A single-model sidecar serves only its own model, so a
+ *  switch to anything else would embed with the wrong model; such options are never offered. */
 export const embeddingOptions = (s: ServiceAssignment | undefined): { model: string; profile: string }[] =>
-  (s?.options || []).filter((o): o is { model: string; profile: string } => typeof o === 'object' && !!o && typeof o.model === 'string');
+  (s?.options || []).filter((o): o is { model: string; profile: string; served: true } => typeof o === 'object' && !!o && typeof o.model === 'string' && (o as { served?: unknown }).served === true);
 
 type EmbedReply = { projects?: { error?: string; code?: string }; diary?: { error?: string } };
 async function embeddingAction(body: Record<string, unknown>): Promise<{ ok: boolean; status: number; code?: string; error?: string }> {

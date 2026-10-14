@@ -51,12 +51,12 @@ function initialModels() {
     const calls = [];
     // Server behaviour switches: a re-index that is not ready once; a server that keeps the old model
     // protected after a switch (the refusal path); a slow delete (busy state); a member session.
-    const mode = { notReadyOnce: false, keepProtected: false, deleteDelayMs: 0, member: false };
+    const mode = { noServed: false, notReadyOnce: false, keepProtected: false, deleteDelayMs: 0, member: false };
     const files = () => installed.filter((m) => !m.missingFile && !m.servedElsewhere).map((m) => ({ key: `f/${m.name}.gguf`, name: `${m.name}.gguf`, subdir: 'f', bytes: (m.sizeGB || 1) * 1e9, size: `${m.sizeGB} GB`, modified: '2026-09-01', sharded: false, parts: 1, projector: null, sections: [m.name], modelId: m.name, file: `f/${m.name}.gguf`, shape: null, loadedOn: [], fit: [], badges: [] }));
     const assignments = () => ({
       admin: !mode.member,
       services: [
-        { id: 'embedding', model: services.embedding, state: services.next && services.next !== services.embedding ? 'switching' : 'active', ...(services.next && services.next !== services.embedding ? { next: services.next } : {}), options: installed.filter((m) => m.labels.includes('embeddings') && m.name !== services.embedding).map((m) => ({ model: m.name, profile: /gemma/.test(m.name) ? 'embeddinggemma-2' : 'nomic-v1' })), canChange: !mode.member, baseUrl: null },
+        { id: 'embedding', model: services.embedding, state: services.next && services.next !== services.embedding ? 'switching' : 'active', ...(services.next && services.next !== services.embedding ? { next: services.next } : {}), options: installed.filter((m) => m.labels.includes('embeddings') && m.name !== services.embedding).map((m) => ({ model: m.name, profile: /gemma/.test(m.name) ? 'embeddinggemma-2' : 'nomic-v1', served: !mode.noServed })), canChange: !mode.member, baseUrl: null },
         { id: 'reranker', model: services.reranker, state: installed.some((m) => m.name === services.reranker && !m.missingFile) ? 'active' : 'missing', options: installed.filter((m) => m.labels.includes('reranking')).map((m) => m.name), canChange: false },
         (() => { const laya = installed.find((m) => m.system); return { id: 'decision', model: laya ? laya.name : null, state: laya ? 'active' : 'missing', canChange: false }; })(),
       ],
@@ -204,6 +204,26 @@ function initialModels() {
       assert.equal(await page.getByText(name, { exact: true }).count(), 0, 'the name is nowhere on the reloaded page');
     });
 
+    await check('#1660 review: in-use embedding with no other model served by a running endpoint: an honest explanation, no switch', async () => {
+      const name = 'nomic-embed-text-v1';
+      mode.noServed = true;
+      try {
+        await page.evaluate(() => window.dispatchEvent(new Event('noevia:models-changed')));
+        await root.locator('[data-service="embedding"]').getByText('No other model is available from a running embeddings server.').waitFor({ timeout: 3000 });
+        const card = root.getByRole('article', { name });
+        await card.getByRole('button', { name: `Delete ${name}`, exact: true }).click();
+        const group = card.getByRole('group', { name: `Delete ${name}` });
+        await group.getByText('The embedding service runs this model. It can be deleted once that service is moved to another model.').waitFor({ timeout: 2000 });
+        assert.equal(await group.getByRole('combobox').count(), 0, 'no picker');
+        assert.equal(await group.getByRole('button', { name: 'Switch and delete' }).count(), 0, 'no switch');
+        await group.getByRole('button', { name: 'Close' }).click();
+      } finally {
+        mode.noServed = false;
+        await page.evaluate(() => window.dispatchEvent(new Event('noevia:models-changed')));
+        await root.locator('[data-service="embedding"]').getByRole('combobox', { name: 'Switch embedding to' }).waitFor({ timeout: 3000 }).catch(() => {});
+      }
+    });
+
     await check('#1660/#1637 in-use embedding: switch first (re-index not ready, then finished), then delete (core C1)', async () => {
       const name = 'nomic-embed-text-v1';
       mode.notReadyOnce = true;
@@ -238,7 +258,7 @@ function initialModels() {
       const group = card.getByRole('group', { name: `Delete ${name}` });
       await group.getByRole('combobox', { name: 'Switch embedding to' }).selectOption('nomic-embed-text-v2');
       await group.getByRole('button', { name: 'Switch and delete' }).click();
-      await group.getByRole('alert').getByText('The server still protects this model. Finish the embedding switch, then delete again.').waitFor({ timeout: 2000 });
+      await group.getByRole('alert').getByText('The embedding service still runs this model, so it cannot be deleted yet.').waitFor({ timeout: 2000 });
       assert.equal(await root.getByRole('article', { name }).count(), 1);
       mode.keepProtected = false;
       await group.getByRole('button', { name: 'Keep' }).click();

@@ -19,7 +19,8 @@ export const EN_GB_MODELS = {
   'mm.delete.inUseReranker': "Reranking uses this model. Reranking is set in the server configuration, so turn it off there before deleting this model.",
   'mm.delete.noEmbeddingOptions': "The embedding service uses this model and no other embedding model is installed. Download one under Discover first.",
   'mm.delete.switchAndDelete': "Switch and delete",
-  'mm.delete.stillInUse': "The server still protects this model. Finish the embedding switch, then delete again.",
+  'mm.delete.stillInUse': "The embedding service still runs this model, so it cannot be deleted yet.",
+  'mm.delete.inUseEmbeddingFixed': "The embedding service runs this model. It can be deleted once that service is moved to another model.",
   'mm.delete.reindexStarted': "Re-indexing for {model} has started. Delete again once the switch is finished.",
   'mm.assign.title': "What each service uses",
   'mm.assign.intro': "The model behind each part of noevia. Change one here; your models are listed below.",
@@ -49,7 +50,7 @@ export const EN_GB_MODELS = {
   'mm.assign.saved': "Saved.",
   'mm.assign.loadError': "Could not read what each service uses.",
   'mm.assign.fixedByServer': "Set in the server configuration.",
-  'mm.assign.noEmbeddingOptions': "No other embedding model installed.",
+  'mm.assign.noEmbeddingOptions': "No other model is available from a running embeddings server.",
   ...EN_GB_FIELDS,
   // Page, tabs and toolbar (ModelsSettings.tsx)
   'mm.title': 'Models and routing',
