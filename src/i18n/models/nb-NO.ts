@@ -237,6 +237,7 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.library.leftoverRemoved.other': "Fjernet innstillingene for {count} modeller uten fil.",
   'mm.library.leftoverKept': "Ingenting ble fjernet: modelltjenesten ser fortsatt disse filene, eller svarte ikke.",
   'mm.library.leftoverFailed': "Kunne ikke fjerne de gjenværende innstillingene.",
+  'mm.library.leftoverFolderUnavailable': "Modellmappen ser ut til å være utilgjengelig; ingenting ble fjernet.",
   'mm.guided.missingNote': "Filen til denne modellen er ikke lenger i modellmappen, så det er ingenting å optimalisere.",
   'mm.assign.rerankerMissing': "Filen er borte. Last ned en reranker, og angi den i serverkonfigurasjonen.",
   'mm.assign.rerankerMissingWith': "Filen er borte. Angi en installert reranker i serverkonfigurasjonen: {models}.",

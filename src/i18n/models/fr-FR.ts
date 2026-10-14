@@ -237,6 +237,7 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.library.leftoverRemoved.other': "Réglages retirés pour {count} modèles sans fichier.",
   'mm.library.leftoverKept': "Rien n'a été retiré : le service de modèles voit encore ces fichiers ou n'a pas répondu.",
   'mm.library.leftoverFailed': "Impossible de retirer les réglages restants.",
+  'mm.library.leftoverFolderUnavailable': "Le dossier des modèles semble indisponible ; rien n'a été retiré.",
   'mm.guided.missingNote': "Le fichier de ce modèle n'est plus dans le dossier des modèles, il n'y a donc rien à optimiser.",
   'mm.assign.rerankerMissing': "Son fichier a disparu. Téléchargez un reranker, puis définissez-le dans la configuration du serveur.",
   'mm.assign.rerankerMissingWith': "Son fichier a disparu. Indiquez dans la configuration du serveur un reranker installé : {models}.",

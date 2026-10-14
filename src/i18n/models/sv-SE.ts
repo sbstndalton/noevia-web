@@ -237,6 +237,7 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.library.leftoverRemoved.other': "Tog bort inställningarna för {count} modeller utan fil.",
   'mm.library.leftoverKept': "Inget togs bort: modelltjänsten ser fortfarande filerna, eller svarade inte.",
   'mm.library.leftoverFailed': "Kunde inte ta bort de kvarvarande inställningarna.",
+  'mm.library.leftoverFolderUnavailable': "Modellmappen verkar inte vara tillgänglig; inget togs bort.",
   'mm.guided.missingNote': "Modellens fil finns inte längre i modellmappen, så det finns inget att optimera.",
   'mm.assign.rerankerMissing': "Filen är borta. Ladda ner en reranker och ange den i serverkonfigurationen.",
   'mm.assign.rerankerMissingWith': "Filen är borta. Ange en installerad reranker i serverkonfigurationen: {models}.",

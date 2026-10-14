@@ -237,6 +237,7 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.library.leftoverRemoved.other': "Instellingen van {count} modellen zonder bestand verwijderd.",
   'mm.library.leftoverKept': "Niets verwijderd: de modeldienst ziet deze bestanden nog of reageerde niet.",
   'mm.library.leftoverFailed': "Kon de overgebleven instellingen niet verwijderen.",
+  'mm.library.leftoverFolderUnavailable': "De modelmap lijkt niet beschikbaar; er is niets verwijderd.",
   'mm.guided.missingNote': "Het bestand van dit model staat niet meer in de modelmap, dus er valt niets te optimaliseren.",
   'mm.assign.rerankerMissing': "Het bestand is weg. Download een reranker en stel die in de serverconfiguratie in.",
   'mm.assign.rerankerMissingWith': "Het bestand is weg. Stel in de serverconfiguratie een geïnstalleerde reranker in: {models}.",

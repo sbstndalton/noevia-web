@@ -35,7 +35,7 @@ const initialModels = () => [
   const failures = [], errors = [];
   const check = async (name, fn) => { try { await fn(); console.log(`ok   ${name}`); } catch (e) { failures.push(name); console.log(`FAIL ${name}: ${String(e.message).split('\n')[0]}`); } };
   // keep: names the (synthetic) server keeps on prune, as when the model service still sees a file.
-  const session = async ({ width, theme, keep }) => {
+  const session = async ({ width, theme, keep, untrusted = false }) => {
     const page = await browser.newPage({ viewport: { width, height: 1250 }, isMobile: width < 768, hasTouch: width < 768 });
     page.on('pageerror', (e) => errors.push(e.message));
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -51,6 +51,7 @@ const initialModels = () => [
       if (p === '/api/models/installed') return json(installed);
       if (p === '/api/auto-roles' && m === 'GET') return json({ configured: true, roles: { fast: 'Qwen3.5-4B', smart: 'Qwen3.5-9B' }, missing: [] });
       if (p === '/api/models/prune-missing' && m === 'POST') {
+        if (untrusted) { calls.push(['prune-refused']); return json({ error: 'The model folder looks unavailable, so nothing was removed.', code: 'scanUntrusted' }, 409); }
         const gone = installed.filter((x) => x.missingFile).map((x) => x.name);
         const removed = gone.filter((n) => !keep.includes(n)), kept = gone.filter((n) => keep.includes(n));
         calls.push(['prune', removed]);
@@ -122,6 +123,19 @@ const initialModels = () => [
       });
       await check(`${width} ${theme}: no horizontal overflow`, async () => assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)));
       await page.screenshot({ path: `${shots}/models-missing-${tag}-${width}-${theme}.png`, fullPage: width >= 768 });
+      await page.close();
+    }
+    // 3. #1698: the server refuses (folder looks unavailable): the automatic run is silent, a click explains.
+    {
+      const { page, root, calls } = await session({ width: 2000, theme: 'light', keep: [], untrusted: true });
+      await check('#1698 an automatic refused prune shows no error', async () => {
+        assert.ok(calls.some(([k]) => k === 'prune-refused'));
+        assert.equal(await root.locator('.modal-err[role="alert"]').count(), 0);
+      });
+      await check('#1698 a manual refused prune says the folder looks unavailable', async () => {
+        await root.getByTestId('models-leftover').getByRole('button', { name: 'Remove leftover settings' }).click();
+        await root.getByText('Model folder looks unavailable; nothing was removed.', { exact: true }).waitFor({ timeout: 2000 });
+      });
       await page.close();
     }
     await check('no page errors', async () => assert.deepEqual(errors, []));

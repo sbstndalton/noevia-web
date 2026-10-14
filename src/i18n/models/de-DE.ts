@@ -237,6 +237,7 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.library.leftoverRemoved.other': "Die Einstellungen von {count} Modellen ohne Datei wurden entfernt.",
   'mm.library.leftoverKept': "Nichts entfernt: Der Modelldienst sieht diese Dateien noch oder war nicht erreichbar.",
   'mm.library.leftoverFailed': "Die übrigen Einstellungen konnten nicht entfernt werden.",
+  'mm.library.leftoverFolderUnavailable': "Der Modellordner scheint nicht verfügbar zu sein; es wurde nichts entfernt.",
   'mm.guided.missingNote': "Die Datei dieses Modells liegt nicht mehr im Modellordner, daher gibt es nichts zu optimieren.",
   'mm.assign.rerankerMissing': "Seine Datei ist nicht mehr vorhanden. Lade einen Reranker herunter und lege ihn in der Serverkonfiguration fest.",
   'mm.assign.rerankerMissingWith': "Seine Datei ist nicht mehr vorhanden. Stelle in der Serverkonfiguration einen installierten Reranker ein: {models}.",

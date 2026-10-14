@@ -237,6 +237,7 @@ export const ES_ES_MODELS: ModelsCatalogue = {
   'mm.library.leftoverRemoved.other': "Se quitaron los ajustes de {count} modelos sin archivo.",
   'mm.library.leftoverKept': "No se quitó nada: el servicio de modelos aún ve estos archivos o no respondió.",
   'mm.library.leftoverFailed': "No se pudieron quitar los ajustes sobrantes.",
+  'mm.library.leftoverFolderUnavailable': "La carpeta de modelos parece no estar disponible; no se quitó nada.",
   'mm.guided.missingNote': "El archivo de este modelo ya no está en la carpeta de modelos, así que no hay nada que optimizar.",
   'mm.assign.rerankerMissing': "Su archivo ya no está. Descarga un reranker y configúralo en el servidor.",
   'mm.assign.rerankerMissingWith': "Su archivo ya no está. Configura en el servidor un reranker instalado: {models}.",

@@ -246,6 +246,7 @@ export const EN_GB_MODELS = {
   'mm.library.leftoverRemoved.other': "Removed the settings of {count} models whose files are gone.",
   'mm.library.leftoverKept': "Nothing was removed: the model service still sees these files, or could not be reached.",
   'mm.library.leftoverFailed': "Could not remove the leftover settings.",
+  'mm.library.leftoverFolderUnavailable': "Model folder looks unavailable; nothing was removed.",
   'mm.guided.missingNote': "This model's file is no longer in the models folder, so there is nothing to optimise.",
   'mm.assign.rerankerMissing': "Its file is gone. Download a reranker, then set it in the server configuration.",
   'mm.assign.rerankerMissingWith': "Its file is gone. Set the server configuration to an installed reranker: {models}.",

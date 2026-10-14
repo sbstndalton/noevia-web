@@ -104,7 +104,10 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
       const r = await pruneMissingPresets();
       if (r.removed.length) { notifyModelsChanged(); changedRef.current(); }
       if (manual) setMessage(r.removed.length ? tRef.current.plural('mm.library.leftoverRemoved', r.removed.length) : tRef.current('mm.library.leftoverKept'));
-    } catch (e) { if (manual) setError(errorText(e, tRef.current('mm.library.leftoverFailed'))); }
+    } catch (e) {
+      // The automatic run stays quiet whatever happens; a click says what went wrong.
+      if (manual) setError((e as { code?: string })?.code === 'scanUntrusted' ? tRef.current('mm.library.leftoverFolderUnavailable') : errorText(e, tRef.current('mm.library.leftoverFailed')));
+    }
     finally { setBusy(''); }
   }, []);
   // Once per set of leftovers per visit, so a preset the server keeps is not retried on every render.
@@ -304,6 +307,8 @@ type DeleteKind = 'normal' | 'missing' | 'system' | 'inuse';
 async function pruneMissingPresets(): Promise<{ removed: string[]; kept: string[] }> {
   const r = await apiFetch('/api/models/prune-missing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
   const v = await r.json().catch(() => ({}));
+  // #1698: 409 scanUntrusted = the model folder looked unavailable; the server changed nothing.
+  if (r.status === 409 && v.code === 'scanUntrusted') throw Object.assign(new Error('scanUntrusted'), { code: 'scanUntrusted' });
   if (!r.ok) throw new Error(httpErrorMessage(r.status, typeof v.error === 'string' ? v.error : undefined));
   return { removed: Array.isArray(v.removed) ? v.removed : [], kept: Array.isArray(v.kept) ? v.kept : [] };
 }
