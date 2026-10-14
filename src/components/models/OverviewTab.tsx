@@ -34,8 +34,10 @@ function routesFor(name: string, roles: Roles | null): MessageKey[] {
   return (['fast', 'smart', 'vision', 'code'] as const).filter((k) => r[k] === name).map((k) => ROUTE_BADGE[k]);
 }
 
-function QualityPanel({ models, modelsLoaded, modelsError, roles, onOpen, onTab }: { models: InstalledModel[]; modelsLoaded: boolean; modelsError: string | null; roles: Roles | null; onOpen: (name: string) => void; onTab: (tab: 'benchmarks') => void }): JSX.Element {
+function QualityPanel({ models: listed, modelsLoaded, modelsError, roles, onOpen, onTab }: { models: InstalledModel[]; modelsLoaded: boolean; modelsError: string | null; roles: Roles | null; onOpen: (name: string) => void; onTab: (tab: 'benchmarks') => void }): JSX.Element {
   const t = useT();
+  // #1695: a preset whose file is gone is not a model here: no row, no "Needs attention", no Optimize.
+  const models = listed.filter((m) => m.missingFile !== true);
   const [evidence, setEvidence] = useState<Record<string, Evidence[] | null>>({});
   const evState = (state: string) => (EV_STATE[state] ? t(EV_STATE[state]) : state);
   const chatNames = models.filter((m) => canPromptSuite(roleOf(m.name, m.labels))).map((m) => m.name).join('\n');

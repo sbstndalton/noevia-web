@@ -85,6 +85,8 @@ function initialModels() {
         }
         return json({ projects: {}, diary: {} });
       }
+      // #1695: the page asks the server to remove presets whose file is gone.
+      if (p === '/api/models/prune-missing' && m === 'POST') { const removed = installed.filter((x) => x.missingFile).map((x) => x.name); calls.push(['prune', removed]); installed = installed.filter((x) => !x.missingFile); return json({ removed, kept: [], reloaded: true }); }
       if (p === '/api/models/delete' && m === 'POST') {
         const b = body(); calls.push(['delete', b.name]);
         if (mode.deleteDelayMs) await new Promise((r) => setTimeout(r, mode.deleteDelayMs));
@@ -154,8 +156,9 @@ function initialModels() {
       assert.ok(geo.tail <= 24, `${geo.tail}px of empty card under the last row`);
     });
 
-    await check('#1660 every card has Delete (in-use embedding, Laya, missing presets)', async () => {
-      for (const name of ['nomic-embed-text-v1', 'laya_multilingual_f16', 'gemma-4-E2B_q4_0-it', 'qwen3-reranker-0.6b-q8_0', 'Qwen3.5-9B']) {
+    // #1695: presets whose file is gone are no longer cards (the page has the server remove them).
+    await check('#1660 every card has Delete (in-use embedding, Laya)', async () => {
+      for (const name of ['nomic-embed-text-v1', 'laya_multilingual_f16', 'Qwen3.5-9B']) {
         await root.getByRole('article', { name }).getByRole('button', { name: `Delete ${name}`, exact: true }).waitFor({ timeout: 1000 });
       }
     });
@@ -186,20 +189,13 @@ function initialModels() {
     });
     await page.screenshot({ path: `${shots}/${tag}-2000-details.png`, fullPage: true });
 
-    await check('#1661 deleting a "File missing" preset removes the card, and it stays gone after reload', async () => {
+    // #1695 supersedes the #1661 card flow: a "File missing" preset is never a card; after a reload
+    // the leftover line is the only trace, and the name is not a card.
+    await check('#1661/#1695 a "File missing" preset is not a card, and stays so after reload', async () => {
       const name = 'gemma-4-E2B_q4_0-it';
-      const card = root.getByRole('article', { name });
-      const width = (await card.boundingBox()).width;
-      await card.getByRole('button', { name: `Delete ${name}`, exact: true }).click();
-      const confirm = card.getByRole('button', { name: 'Remove preset' });
-      await confirm.waitFor({ timeout: 1000 });
-      assert.ok(Math.abs((await card.boundingBox()).width - width) < 2, 'the confirm keeps the card width');
-      await page.screenshot({ path: `${shots}/${tag}-2000-confirm-missing.png`, fullPage: true });
-      await confirm.click();
-      await root.getByRole('article', { name }).waitFor({ state: 'detached', timeout: 2000 });
-      assert.ok(calls.some(([k, v]) => k === 'delete' && v === name), 'the delete reached /api/models/delete');
+      assert.equal(await root.getByRole('article', { name }).count(), 0, 'no card for a missing preset');
       root = await open();   // a real reload: a new document that asks the server again
-      await root.getByText(/^9 of 9 models/).waitFor({ timeout: 3000 });
+      await root.getByText(/^8 of 8 models/).waitFor({ timeout: 3000 });
       assert.equal(await root.getByRole('article', { name }).count(), 0, 'card back after reload');
       assert.equal(await page.getByText(name, { exact: true }).count(), 0, 'the name is nowhere on the reloaded page');
     });

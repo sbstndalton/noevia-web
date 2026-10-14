@@ -751,6 +751,7 @@ export const SV_SE: Catalogue = {
   'chat.toolCalls.notRun': "{count} inte körda",
   'chat.toolCalls.awaiting': "{count} väntar på godkännande",
   'chat.toolCalls.state.done': "klart",
+  'chat.toolCalls.state.error': "misslyckades",
   'chat.toolCalls.state.declined': "avvisat",
   'chat.toolCalls.state.notRun': "inte körts",
   'chat.toolCalls.state.running': "pågår",

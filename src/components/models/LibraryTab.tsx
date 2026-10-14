@@ -96,6 +96,26 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   // Tabs mount per selection, so a mount-only fetch left this list showing
   // whatever was true when the tab was last opened.
   useModelsChanged(useCallback(() => { void refresh(); }, [refresh]));
+  const leftoverKey = (models || []).filter(m => m.missingFile === true).map(m => m.name).sort().join('\n');
+  const pruned = useRef('');
+  const prune = useCallback(async (manual: boolean) => {
+    setBusy('prune');
+    try {
+      const r = await pruneMissingPresets();
+      if (r.removed.length) { notifyModelsChanged(); changedRef.current(); }
+      if (manual) setMessage(r.removed.length ? tRef.current.plural('mm.library.leftoverRemoved', r.removed.length) : tRef.current('mm.library.leftoverKept'));
+    } catch (e) {
+      // The automatic run stays quiet whatever happens; a click says what went wrong.
+      if (manual) setError((e as { code?: string })?.code === 'scanUntrusted' ? tRef.current('mm.library.leftoverFolderUnavailable') : errorText(e, tRef.current('mm.library.leftoverFailed')));
+    }
+    finally { setBusy(''); }
+  }, []);
+  // Once per set of leftovers per visit, so a preset the server keeps is not retried on every render.
+  useEffect(() => {
+    if (!admin || !leftoverKey || pruned.current === leftoverKey) return;
+    pruned.current = leftoverKey;
+    void prune(false);
+  }, [admin, leftoverKey, prune]);
   const fileFor = (name: string) => files.find(f => f.sections.includes(name) || f.modelId === name);
   const act = async (verb: 'load' | 'unload', name: string) => {
     setBusy(name); setMessage('');
@@ -122,7 +142,12 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   };
   // Hex names are Hugging Face cache artefacts, not something anyone chose to
   // install, and they cannot be configured usefully.
-  const installed = (models || []).filter(m => !/^[0-9a-f]{32,40}$/i.test(m.name));
+  // #1695: a preset whose file is gone is not an installed model: it is left out of the grid and the
+  // count. The server removes such presets (prune-missing, run once below for an admin); any it had
+  // to keep are named in one line with a retry, never as cards.
+  const listedModels = (models || []).filter(m => !/^[0-9a-f]{32,40}$/i.test(m.name));
+  const installed = listedModels.filter(m => m.missingFile !== true);
+  const leftover = listedModels.filter(m => m.missingFile === true);
   const needle = query.trim().toLowerCase();
   const servable = installed
     .filter(m => !needle || m.name.toLowerCase().includes(needle))
@@ -162,6 +187,8 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     {message && <p role="status" className="mm-note">{message}</p>}
     {filesNote && <p className="mm-note">{filesNote}</p>}
     {models && !servable.length && !orphanFiles.length && installed.length > 0 && <p className="mm-note">{t('mm.library.nothing')}</p>}
+    {leftover.length > 0 && <p className="mm-note mm-leftover" role="status" data-testid="models-leftover"><span>{t.plural('mm.library.leftover', leftover.length, { models: leftover.map(m => m.name).join(', ') })}</span>
+      {admin && <button className="btn btn-secondary btn-sm" disabled={busy === 'prune'} onClick={() => void prune(true)}>{busy === 'prune' ? t('mm.library.leftoverRemoving') : t('mm.library.leftoverRemove')}</button>}</p>}
     <div className="model-grid">
     {servable.map(m => <ModelCard key={m.name} admin={admin} runtimeOptions={runtimeOptions} onRefresh={() => void refresh()} model={m} file={fileFor(m.name)} update={updates[fileFor(m.name)?.name || '']} busy={busy === m.name}
       onToggle={() => void act(m.loaded ? 'unload' : 'load', m.name)} onConfigure={() => onConfigure(m.name)}
@@ -276,6 +303,16 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
 
 type DeleteKind = 'normal' | 'missing' | 'system' | 'inuse';
 /** POST /api/models/delete. Resolves the roles cleared; a refusal keeps the server's errorId. */
+/** #1695: ask the server to remove the presets of models whose file is gone (idempotent). */
+async function pruneMissingPresets(): Promise<{ removed: string[]; kept: string[] }> {
+  const r = await apiFetch('/api/models/prune-missing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  const v = await r.json().catch(() => ({}));
+  // #1698: 409 scanUntrusted = the model folder looked unavailable; the server changed nothing.
+  if (r.status === 409 && v.code === 'scanUntrusted') throw Object.assign(new Error('scanUntrusted'), { code: 'scanUntrusted' });
+  if (!r.ok) throw new Error(httpErrorMessage(r.status, typeof v.error === 'string' ? v.error : undefined));
+  return { removed: Array.isArray(v.removed) ? v.removed : [], kept: Array.isArray(v.kept) ? v.kept : [] };
+}
+
 async function deleteByName(name: string, extra: Record<string, unknown> = {}): Promise<string[]> {
   const r = await apiFetch('/api/models/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, ...extra }) });
   if (!r.ok) { const b = await readErrorBody(r) as { error?: string; errorId?: string }; throw Object.assign(Error(httpErrorMessage(r.status, b.error)), { errorId: b.errorId }); }
