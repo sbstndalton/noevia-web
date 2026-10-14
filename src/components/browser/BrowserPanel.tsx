@@ -2,10 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { cancelBrowserTask, decideBrowserTask, fetchBrowser, startBrowserTask } from './api';
 import type { BrowserState, BrowserTask } from './api';
+import { fetchProfile } from '../../api';
+import { useT } from '../../i18n';
 import { isDecisionStale } from '../code/decision-guard';
 import { ConfirmDialog } from '../ContextMenu';
 import { EmptyState } from '../EmptyState';
 import { ShellIcon } from '../ShellIcon';
+import { TechnicalDetail } from '../TechnicalDetail';
 import '../code/code.css';
 
 const ACTIVE = new Set(['queued', 'running', 'waiting_approval']);
@@ -68,6 +71,16 @@ function ProjectBrowserPanel({ projectId }: { projectId: string }): JSX.Element 
     const timer = window.setInterval(() => { void load(); }, waiting ? 1000 : 2000);
     return () => window.clearInterval(timer);
   }, [running, state, load]);
+  // The variable behind the offline note is for an administrator (#1656). The role is fetched only
+  // where that note shows, and the profile is cached.
+  const [isAdmin, setIsAdmin] = useState(false);
+  const needsAdmin = !!state && state.network !== true;
+  useEffect(() => {
+    if (!needsAdmin) return;
+    let live = true;
+    fetchProfile().then(p => { if (live) setIsAdmin(p?.user?.role === 'admin'); }, () => { if (live) setIsAdmin(false); });
+    return () => { live = false; };
+  }, [needsAdmin]);
 
   const act = async (label: string, work: () => Promise<unknown>, onSuccess?: () => void) => {
     if (activeMutation.current) return;
@@ -111,7 +124,7 @@ function ProjectBrowserPanel({ projectId }: { projectId: string }): JSX.Element 
           session submits, sends, deletes or navigates off-site stops here for your answer first.</p>
       </div>
       {error && <p className="code-note is-error" role="alert">{error}</p>}
-      {!online && <p className="code-note is-error" role="status">This server does not run the egress proxy, so a browser task cannot open at all. An administrator configures <code>CODE_EGRESS_PORT</code>.</p>}
+      {!online && <EgressUnavailableNote isAdmin={isAdmin}/>}
 
       <div className="code-field">
         <label htmlFor="browser-domains">Domains it may reach</label>
@@ -144,6 +157,16 @@ function ProjectBrowserPanel({ projectId }: { projectId: string }): JSX.Element 
       body="The session closes immediately. Anything it was in the middle of doing is left as it was; a card still waiting for your answer is refused, not carried out."
       confirmLabel="Cancel task" danger onCancel={() => setConfirmCancel(null)} onConfirm={confirmedCancel}/>}
   </div>;
+}
+
+/** This server runs no egress proxy, so no browser task can open (#1656). Plain words for everyone; the
+ *  variable name it needs is shown to an administrator only. */
+export function EgressUnavailableNote({ isAdmin }: { isAdmin: boolean }): JSX.Element {
+  const t = useT();
+  return <>
+    <p className="code-note is-error" role="status">{t('browser.egressUnavailable')}</p>
+    <TechnicalDetail isAdmin={isAdmin} name="CODE_EGRESS_PORT" className="code-note"/>
+  </>;
 }
 
 function BrowserTaskCard({ task, busy, onDecide, onCancel }: {
