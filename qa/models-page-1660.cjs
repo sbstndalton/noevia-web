@@ -25,6 +25,7 @@ function initialModels() {
     base({ name: 'laya_multilingual_f16', sizeGB: 0.6, system: true, servedElsewhere: true, labels: [] }),
     base({ name: 'nomic-embed-text-v1', sizeGB: 0.3, loaded: true, status: 'loaded', sidecarProtected: true, labels: ['embeddings'] }),
     base({ name: 'embeddinggemma-2', sizeGB: 0.4, labels: ['embeddings'] }),
+    base({ name: 'nomic-embed-text-v2', sizeGB: 0.3, labels: ['embeddings'] }),
     base({ name: 'qwen3-reranker-0.6b-q8_0', sizeGB: null, missingFile: true, failed: true, status: 'failed', labels: ['reranking'] }),
     base({ name: 'Qwen3.5-4B', sizeGB: 3, shape: { label: 'dense' } }),
     base({ name: 'Qwen3.5-9B', sizeGB: 6, loaded: true, status: 'loaded', shape: { label: 'dense' } }),
@@ -48,23 +49,26 @@ function initialModels() {
     const services = { embedding: 'nomic-embed-text-v1', reranker: 'qwen3-reranker-0.6b-q8_0', decision: 'laya_multilingual_f16' };
     const reset = () => { installed = initialModels(); roles = { fast: 'Qwen3.5-4B', smart: 'Qwen3.5-9B', code: 'Qwen3.5-9B', vision: 'gemma-4-12b-it-qat-q4_0' }; Object.assign(services, { embedding: 'nomic-embed-text-v1', reranker: 'qwen3-reranker-0.6b-q8_0', decision: 'laya_multilingual_f16', next: undefined }); };
     const calls = [];
+    // Server behaviour switches: a re-index that is not ready once; a server that keeps the old model
+    // protected after a switch (the refusal path); a slow delete (busy state); a member session.
+    const mode = { notReadyOnce: false, keepProtected: false, deleteDelayMs: 0, member: false };
     const files = () => installed.filter((m) => !m.missingFile && !m.servedElsewhere).map((m) => ({ key: `f/${m.name}.gguf`, name: `${m.name}.gguf`, subdir: 'f', bytes: (m.sizeGB || 1) * 1e9, size: `${m.sizeGB} GB`, modified: '2026-09-01', sharded: false, parts: 1, projector: null, sections: [m.name], modelId: m.name, file: `f/${m.name}.gguf`, shape: null, loadedOn: [], fit: [], badges: [] }));
     const assignments = () => ({
-      admin: true,
+      admin: !mode.member,
       services: [
-        { id: 'embedding', model: services.embedding, state: 'active', options: installed.filter((m) => m.labels.includes('embeddings') && m.name !== services.embedding).map((m) => ({ model: m.name, profile: /gemma/.test(m.name) ? 'embeddinggemma-2' : 'nomic-v1' })), canChange: true, baseUrl: null },
+        { id: 'embedding', model: services.embedding, state: services.next && services.next !== services.embedding ? 'switching' : 'active', ...(services.next && services.next !== services.embedding ? { next: services.next } : {}), options: installed.filter((m) => m.labels.includes('embeddings') && m.name !== services.embedding).map((m) => ({ model: m.name, profile: /gemma/.test(m.name) ? 'embeddinggemma-2' : 'nomic-v1' })), canChange: !mode.member, baseUrl: null },
         { id: 'reranker', model: services.reranker, state: installed.some((m) => m.name === services.reranker && !m.missingFile) ? 'active' : 'missing', options: installed.filter((m) => m.labels.includes('reranking')).map((m) => m.name), canChange: false },
         (() => { const laya = installed.find((m) => m.system); return { id: 'decision', model: laya ? laya.name : null, state: laya ? 'active' : 'missing', canChange: false }; })(),
       ],
       roles,
     });
 
-    await page.route('**/api/**', (route) => {
+    await page.route('**/api/**', async (route) => {
       const req = route.request(), url = new URL(req.url()), p = url.pathname, m = req.method();
       const json = (b, status = 200) => route.fulfill({ status, json: b });
       const body = () => { try { return req.postDataJSON() || {}; } catch { return {}; } };
-      if (p === '/api/profile' || p === '/api/auth/session') return json({ user: { id: 'qa', username: 'admin', displayName: 'Synthetic admin', role: 'admin', diaryEnabled: true, onboarded: true }, passkeys: [] });
-      if (p === '/api/models/capabilities') return json({ kind: 'llamacpp', admin: true, presets: true, download: true, runtimeOptions: false, modelManagement: true });
+      if (p === '/api/profile' || p === '/api/auth/session') return json({ user: { id: 'qa', username: mode.member ? 'member' : 'admin', displayName: mode.member ? 'Synthetic member' : 'Synthetic admin', role: mode.member ? 'member' : 'admin', diaryEnabled: true, onboarded: true }, passkeys: [] });
+      if (p === '/api/models/capabilities') return json({ kind: 'llamacpp', admin: !mode.member, presets: true, download: true, runtimeOptions: false, modelManagement: true });
       if (p === '/api/models/installed') return json(installed);
       if (p === '/api/auto-roles' && m === 'GET') return json({ configured: true, roles, missing: [] });
       if (p === '/api/auto-roles' && m === 'PUT') { roles = { ...body() }; for (const k of Object.keys(roles)) if (!roles[k]) delete roles[k]; calls.push(['roles', roles]); return json({ configured: true }); }
@@ -72,11 +76,18 @@ function initialModels() {
       if (p === '/api/embedding' && m === 'POST') {
         const b = body(); calls.push([`embedding-${b.action}`, b.target?.model || '']);
         if (b.action === 'set-next') services.next = b.target.model;
-        if (b.action === 'switch') { services.embedding = services.next; calls.push(['embedding', services.next]); for (const x of installed) x.sidecarProtected = x.name === services.embedding; }
+        if (b.action === 'switch') {
+          if (mode.notReadyOnce) { mode.notReadyOnce = false; return json({ projects: { error: 'The new model has not finished indexing every project yet.', code: 'notReady', status: 409 } }, 409); }
+          // core C1: once the saved configuration has switched away (and finished), the env-seeded
+          // old model is no longer protected; keepProtected models a server that still protects it.
+          const old = services.embedding; services.embedding = services.next; calls.push(['embedding', services.next]);
+          for (const x of installed) x.sidecarProtected = x.name === services.embedding || (mode.keepProtected && x.name === old);
+        }
         return json({ projects: {}, diary: {} });
       }
       if (p === '/api/models/delete' && m === 'POST') {
         const b = body(); calls.push(['delete', b.name]);
+        if (mode.deleteDelayMs) await new Promise((r) => setTimeout(r, mode.deleteDelayMs));
         const mo = installed.find((x) => x.name === b.name);
         if (!mo) return json({ error: 'not found' }, 404);
         if (mo.sidecarProtected) return json({ error: 'in use', errorId: 'modelInUse' }, 409);
@@ -93,6 +104,7 @@ function initialModels() {
       if (r === 'models') return json({ models: files(), unregistered: [], revision: 'r1' });
       if (r === 'models/delete' && m === 'POST') {
         const key = body().models[0]; calls.push(['proxy-delete', key]);
+        if (mode.deleteDelayMs) await new Promise((r) => setTimeout(r, mode.deleteDelayMs));
         const mo = installed.find((x) => `f/${x.name}.gguf` === key);
         if (mo) installed = installed.filter((x) => x !== mo);
         return json({ results: [{ key, ok: !!mo, message: mo ? 'deleted' : 'no file' }], rolesCleared: [] });
@@ -186,25 +198,63 @@ function initialModels() {
       await confirm.click();
       await root.getByRole('article', { name }).waitFor({ state: 'detached', timeout: 2000 });
       assert.ok(calls.some(([k, v]) => k === 'delete' && v === name), 'the delete reached /api/models/delete');
-      root = await open();
+      root = await open();   // a real reload: a new document that asks the server again
+      await root.getByText(/^9 of 9 models/).waitFor({ timeout: 3000 });
       assert.equal(await root.getByRole('article', { name }).count(), 0, 'card back after reload');
-      const listed = await page.evaluate(() => fetch('/api/models/installed').then((r) => r.json()));
-      assert.ok(!listed.some((x) => x.name === name), 'the models list API still has it');
+      assert.equal(await page.getByText(name, { exact: true }).count(), 0, 'the name is nowhere on the reloaded page');
     });
 
-    await check('#1660/#1637 deleting the in-use embedding model offers a switch first, then deletes', async () => {
+    await check('#1660/#1637 in-use embedding: switch first (re-index not ready, then finished), then delete (core C1)', async () => {
       const name = 'nomic-embed-text-v1';
+      mode.notReadyOnce = true;
       const card = root.getByRole('article', { name });
       await card.getByRole('button', { name: `Delete ${name}`, exact: true }).click();
       const group = card.getByRole('group', { name: `Delete ${name}` });
-      await group.getByText(/Switch embedding to another model first/).waitFor({ timeout: 2000 });
-      await group.getByRole('combobox', { name: 'Switch embedding to' }).selectOption('embeddinggemma-2');
+      const picker = group.getByRole('combobox', { name: 'Switch embedding to' });
+      await picker.waitFor({ timeout: 2000 });
+      const offered = await picker.locator('option').allTextContents();
+      assert.deepEqual(offered.sort(), ['embeddinggemma-2', 'nomic-embed-text-v2'], 'neither the model being deleted nor the active one is offered');
+      await picker.selectOption('embeddinggemma-2');
       await page.screenshot({ path: `${shots}/${tag}-2000-confirm-inuse.png`, fullPage: true });
       await group.getByRole('button', { name: 'Switch and delete' }).click();
+      await group.getByText(/Re-indexing for embeddinggemma-2 has started/).waitFor({ timeout: 2000 });
+      assert.equal(await root.getByRole('article', { name }).count(), 1, 'nothing deleted while re-indexing');
+      await group.getByRole('button', { name: 'Keep' }).click();
+      // The re-index has finished: the next attempt finishes the switch instead of starting it again.
+      await card.getByRole('button', { name: `Delete ${name}`, exact: true }).click();
+      await group.getByRole('combobox', { name: 'Switch embedding to' }).selectOption('embeddinggemma-2');
+      await group.getByRole('button', { name: 'Switch and delete' }).click();
       await root.getByRole('article', { name }).waitFor({ state: 'detached', timeout: 3000 });
-      const order = calls.filter(([k]) => k === 'embedding' || k === 'delete').map(([k, v]) => `${k}:${v}`);
-      assert.deepEqual(order.slice(-2), ['embedding:embeddinggemma-2', `delete:${name}`], 'switch happens before delete');
-      await root.getByRole('region', { name: 'What each service uses' }).getByText('embeddinggemma-2').first().waitFor({ timeout: 2000 });
+      const seq = calls.filter(([k]) => k.startsWith('embedding-') || k === 'delete').map(([k, v]) => `${k}:${v}`);
+      assert.deepEqual(seq.slice(-5), ['embedding-set-next:embeddinggemma-2', 'embedding-switch:', 'embedding-switch:', 'embedding-finish:', `delete:${name}`], seq.join(' '));
+      await root.locator('[data-service="embedding"]').getByText('embeddinggemma-2').waitFor({ timeout: 2000 });
+    });
+
+    await check('#1660 review: a server that still protects the old model after the switch shows why (never a silent no-op)', async () => {
+      const name = 'embeddinggemma-2';
+      mode.keepProtected = true;
+      const card = root.getByRole('article', { name });
+      await card.getByRole('button', { name: `Delete ${name}`, exact: true }).click();
+      const group = card.getByRole('group', { name: `Delete ${name}` });
+      await group.getByRole('combobox', { name: 'Switch embedding to' }).selectOption('nomic-embed-text-v2');
+      await group.getByRole('button', { name: 'Switch and delete' }).click();
+      await group.getByRole('alert').getByText('The server still protects this model. Finish the embedding switch, then delete again.').waitFor({ timeout: 2000 });
+      assert.equal(await root.getByRole('article', { name }).count(), 1);
+      mode.keepProtected = false;
+      await group.getByRole('button', { name: 'Keep' }).click();
+    });
+
+    await check('#1660 review: while a delete runs, Keep and the card\'s Delete are disabled', async () => {
+      const name = 'gemma-4-E4B';
+      mode.deleteDelayMs = 900;
+      const card = root.getByRole('article', { name });
+      await card.getByRole('button', { name: `Delete ${name}`, exact: true }).click();
+      await card.getByRole('button', { name: 'Delete files' }).click();
+      await card.getByRole('button', { name: 'Deleting…' }).waitFor({ timeout: 1000 });
+      assert.equal(await card.getByRole('button', { name: 'Keep' }).isDisabled(), true, 'Keep disabled');
+      await card.locator('.model-card-actions .model-card-danger[disabled]').waitFor({ timeout: 500 });   // the card's Delete toggle, while the confirm is busy
+      await root.getByRole('article', { name }).waitFor({ state: 'detached', timeout: 3000 });
+      mode.deleteDelayMs = 0;
     });
 
     await check('#1660 deleting Laya says what Auto loses, and Decision then reads missing', async () => {
@@ -222,9 +272,9 @@ function initialModels() {
 
     await check('#1662 a chat role can be changed in place from the overview', async () => {
       const overview = root.getByRole('region', { name: 'What each service uses' });
-      await overview.getByRole('combobox', { name: 'Fast' }).selectOption('gemma-4-E4B');
+      await overview.getByRole('combobox', { name: 'Fast' }).selectOption('gemma-4-12b-it-qat-q4_0');
       await page.waitForTimeout(200);
-      assert.equal(roles.fast, 'gemma-4-E4B');
+      assert.equal(roles.fast, 'gemma-4-12b-it-qat-q4_0');
       assert.equal(roles.smart, 'Qwen3.5-9B', 'other roles untouched');
     });
 
@@ -256,6 +306,18 @@ function initialModels() {
       }
       return [...new Set(out)];
     });
+    reset(); mode.member = true;
+    root = await open();
+    await check('#1660 review: a member sees the page read-only (no Delete, Load, Tune, Switch or role pickers)', async () => {
+      await root.getByRole('region', { name: 'What each service uses' }).getByText('Only an administrator can change these.', { exact: false }).waitFor({ timeout: 2000 });
+      assert.equal(await root.getByRole('button', { name: /^Delete / }).count(), 0, 'no Delete');
+      assert.equal(await root.getByRole('button', { name: /^(Load|Unload|Tune) / }).count(), 0, 'no engine controls');
+      assert.equal(await root.getByRole('region', { name: 'What each service uses' }).getByRole('combobox').count(), 0, 'no Switch or role selects');
+      assert.deepEqual(errors, []);
+    });
+    await page.screenshot({ path: `${shots}/${tag}-2000-member.png`, fullPage: true });
+    mode.member = false;
+
     reset();
     await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
     await page.setViewportSize({ width: 2000, height: 1250 });

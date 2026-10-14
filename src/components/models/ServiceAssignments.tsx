@@ -37,10 +37,11 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
   const [roles, setRoles] = useState<AutoRoles | null>(null);
   const [error, setError] = useState(''), [status, setStatus] = useState(''), [busy, setBusy] = useState('');
   const [embedPick, setEmbedPick] = useState('');
-  const live = useRef(true);
+  const live = useRef(true), request = useRef(0);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   const load = useCallback(() => {
-    fetchAssignments().then((v) => { if (live.current) { setInfo(v); setError(''); } }).catch(() => { if (live.current) setError(t('mm.assign.loadError')); });
+    const id = ++request.current;   // only the newest load may update the rows
+    fetchAssignments().then((v) => { if (live.current && id === request.current) { setInfo(v); setError(''); } }).catch(() => { if (live.current && id === request.current) setError(t('mm.assign.loadError')); });
     fetchAutoRoles().then((v) => { if (live.current) setRoles(v.roles); }).catch(() => undefined);
   }, [t]);
   useEffect(() => { load(); }, [load]);
@@ -66,14 +67,14 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
     if (!finish && !target) return;
     setBusy('embedding'); setError(''); setStatus('');
     try {
-      const outcome = finish ? await finishEmbeddingSwitch() : await switchEmbedding(target!, svc.baseUrl);
+      const outcome = finish || svc.next === target!.model ? await finishEmbeddingSwitch() : await switchEmbedding(target!, svc.baseUrl);
       setStatus(outcome === 'done' ? t('mm.assign.saved') : t('mm.assign.reindexing', { model: finish ? svc.next || '' : target!.model }));
       setEmbedPick(''); notifyModelsChanged(); load();
     } catch (e) { setError(errorText(e, t('mm.saveError'))); } finally { setBusy(''); }
   };
 
   const serviceRow = (svc: ServiceAssignment) => {
-    const options = svc.id === 'embedding' ? embeddingOptions(svc) : [];
+    const options = svc.id === 'embedding' ? embeddingOptions(svc).filter((o) => o.model !== svc.model) : [];
     const name = svc.model || ((svc.id === 'ocr' || svc.id === 'documents') && svc.state === 'active' ? t('mm.assign.builtIn') : t('mm.assign.none'));
     return <li key={svc.id} className="mm-assign-row" data-service={svc.id}>
       <span className="mm-assign-label">{t(SERVICE[svc.id])}</span>

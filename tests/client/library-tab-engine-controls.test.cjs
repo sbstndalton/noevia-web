@@ -11,7 +11,7 @@ const src = load('components/models/LibraryTab.tsx');
 
 test('the Load/Unload button only renders when the model is not system, sidecar-protected or missing its file', () => {
   assert.match(src, /const missing = m\.missingFile === true;/);
-  assert.match(src, /const engineControls = !system && !protectedModel && !missing;/);
+  assert.match(src, /const engineControls = admin && !system && !protectedModel && !missing;/, '#1660 review: engine controls are for administrators only');
   assert.match(src, /\{engineControls && <button className="popup-tab" disabled=\{busy\}[^\n]*onClick=\{onToggle\}>/);
   assert.doesNotMatch(src, /\n\s*<button className="popup-tab" disabled=\{busy\}[^\n]*onClick=\{onToggle\}>/, 'no unconditional Load/Unload button remains');
 });

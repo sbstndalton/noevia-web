@@ -18,11 +18,12 @@ test('ModelCard imports the chat-generation-model check and derives protectedMod
 
 test('Tune is hidden for any non-chat (embedding/reranking) model, not just Laya', () => {
   // #421: the button also carries a per-model aria-label now, between className and onClick.
-  assert.match(src, /\{!system && !missing && chatModel && <button className="popup-tab" aria-label=\{t\('mm\.card\.tuneNamed', \{ model: m\.name \}\)\} onClick=\{onConfigure\}>\{t\('mm\.card\.tune'\)\}<\/button>\}/);
+  assert.match(src, /\{admin && !system && !missing && chatModel && <button className="popup-tab" aria-label=\{t\('mm\.card\.tuneNamed', \{ model: m\.name \}\)\} onClick=\{onConfigure\}>\{t\('mm\.card\.tune'\)\}<\/button>\}/);
 });
 
 test('#1660: Delete is always offered; the confirm says which service uses the model instead of hiding the button', () => {
-  assert.match(src, /\n\s*<button className="popup-tab model-card-danger" aria-expanded=\{confirming\}/, 'Delete is unconditional');
+  // Every model for an administrator (members get no destructive controls, #1660 review).
+  assert.match(src, /\{admin && <button className="popup-tab model-card-danger" aria-expanded=\{confirming\} disabled=\{deleting\}/, 'Delete is on every card for an administrator');
   assert.match(src, /kind=\{missing \? 'missing' : system \? 'system' : protectedModel \? 'inuse' : 'normal'\}/);
   assert.doesNotMatch(src, /!system && !protectedModel && <DeleteModel/, 'no hidden-Delete dead end remains');
 });

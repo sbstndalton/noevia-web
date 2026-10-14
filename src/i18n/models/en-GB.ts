@@ -19,6 +19,7 @@ export const EN_GB_MODELS = {
   'mm.delete.inUseReranker': "Reranking uses this model. Reranking is set in the server configuration, so turn it off there before deleting this model.",
   'mm.delete.noEmbeddingOptions': "The embedding service uses this model and no other embedding model is installed. Download one under Discover first.",
   'mm.delete.switchAndDelete': "Switch and delete",
+  'mm.delete.stillInUse': "The server still protects this model. Finish the embedding switch, then delete again.",
   'mm.delete.reindexStarted': "Re-indexing for {model} has started. Delete again once the switch is finished.",
   'mm.assign.title': "What each service uses",
   'mm.assign.intro': "The model behind each part of noevia. Change one here; your models are listed below.",
@@ -248,7 +249,7 @@ export const EN_GB_MODELS = {
   // #336: the embedding model (and reranker, when configured) a live sidecar is pointed at —
   // deleting it crash-loops that sidecar with no fallback to load instead.
   'mm.card.protectedLabel': 'In use · protected',
-  'mm.card.protectedTitle': 'A running sidecar (embedding or reranking) depends on this model; it cannot be deleted while that is configured.',
+  'mm.card.protectedTitle': "A running service (embedding or reranking) uses this model. Delete offers to switch that service first.",
   'mm.card.protectedNote': ' — a running sidecar (embedding or reranking) depends on this model; it cannot be deleted while that is configured.',
   'mm.card.nonChatNote': 'An embedding or reranking model — tuning applies to chat models only.',
   'mm.card.missingNote': "This preset points at a model file that is not in the models folder, so it cannot be chosen, loaded or tuned. Restore the file or remove the preset.",
