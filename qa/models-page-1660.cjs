@@ -8,7 +8,7 @@
 //    and a mouse click leaves no focus ring (#1663).
 // QA_SCREENSHOTS (default /tmp/models-1660) receives desktop (2000px) and narrow (390px) shots.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const { openModelsTab } = require('./nav.cjs');
+const { openModelsPage, openModelsTab } = require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
@@ -120,9 +120,7 @@ function initialModels() {
     });
 
     const open = async () => {
-      await page.goto('http://localhost:31360/models');
-      const root = page.locator('.model-manager-page');
-      await root.waitFor();
+      const root = await openModelsPage(page, 'http://localhost:31360', { direct: true });
       await openModelsTab(root, 'Your models');
       await root.getByRole('article', { name: 'Qwen3.5-9B' }).waitFor();
       return root;

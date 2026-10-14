@@ -5,7 +5,7 @@
 //  - #551: Overview > Recover shows no Resume for a failed auto-tune of a model that is no longer installed.
 // Fails against the pre-fix UI (Load/Unload was unconditional; Recover offered Resume).
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const {openSettings, openModelsTab } = require('./nav.cjs');
+const { openModelsPage, openModelsTab } = require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
@@ -48,13 +48,7 @@ const { withLocale } = require('./qa-locale.cjs');
       return route.continue();
     });
 
-    await page.goto('http://localhost:31475');
-    await openSettings(page);
-    const settings = page.getByRole('dialog', { name: 'Settings' });
-    await settings.getByRole('button', { name: 'Models & routing' }).click();
-    await settings.getByRole('button', { name: 'Open model manager' }).click();
-    const manager = page.locator('.model-manager-page');
-    await manager.waitFor();
+    const manager = await openModelsPage(page, 'http://localhost:31475');
 
     // #551 first: Overview is the default tab.
     await openModelsTab(manager, 'Overview');
