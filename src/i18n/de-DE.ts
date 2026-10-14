@@ -1019,6 +1019,8 @@ export const DE_DE: Catalogue = {
   'code.panel.harness': "Harness",
   'code.harness.pi.label': "Programmierassistent",
   'common.technicalDetail': "Technisches Detail: {name}",
+  'wizard.originPrivateLan': "Diese Adresse funktioniert nur in deinem lokalen Netzwerk. Passkeys und einige Sicherheitsfunktionen des Browsers setzen HTTPS voraus und funktionieren mit einer reinen IP-Adresse nicht – du kannst dich aber weiterhin mit deinem Passwort anmelden. Später kannst du noevia unter einem echten Domainnamen betreiben und diese Adresse weiter nutzen; ein Administrator richtet das in der Serverkonfiguration ein.",
+  'browser.egressUnavailable': "Dieser Server betreibt keinen Netzwerk-Proxy, daher kann eine Browser-Aufgabe gar nicht geöffnet werden. Ein Administrator richtet ihn in der Serverkonfiguration ein.",
   'code.panel.harnessNone': "Auf diesem Server ist keines konfiguriert",
   'code.panel.preparation': "Prompt-Aufbereitung",
   'code.prep.direct.label': "Direkt",

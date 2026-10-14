@@ -21,6 +21,8 @@ import { StorageChoice } from './StorageChoice';
 import { GoogleDriveConnect, RecoveryKeyLink } from './offsite-backup/GoogleDriveSetup';
 import type { GoogleState } from './offsite-backup/GoogleDriveSetup';
 import { ReasoningControl } from './ReasoningControl';
+import { TechnicalDetail } from './TechnicalDetail';
+import { useT } from '../i18n';
 
 type Step = 'welcome' | 'choice' | 'account' | 'provider' | 'diary' | 'backup' | 'prefs' | 'passkey' | 'done';
 
@@ -44,6 +46,17 @@ const STEP_TITLES: Record<Step, string> = {
   passkey: 'Secure your account',
   done: 'Setup complete',
 };
+
+/** The private-address warning on the account step (#1656). Plain words for everyone; the variable name
+ *  it points at is shown to an administrator only. The account step only runs for the first
+ *  administrator (mode 'fresh'), so a member (mode 'invited') never reaches it. */
+export function PrivateLanOriginNote({ isAdmin }: { isAdmin: boolean }): JSX.Element {
+  const t = useT();
+  return <>
+    <p className="auth-error" role="alert">{t('wizard.originPrivateLan')}</p>
+    <TechnicalDetail isAdmin={isAdmin} name="ADDITIONAL_TRUSTED_ORIGINS" className="route-note"/>
+  </>;
+}
 
 export interface SetupWizardProps {
   /** Once setup finishes, hand control back (AuthGate proceeds to the app). */
@@ -231,15 +244,7 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
               <small>Recommended — passkeys and remote access will work here.</small>
             )}
             {originClass === 'loopback' && <small>This machine only — other devices cannot reach it.</small>}
-            {originClass === 'private-lan-http' && (
-              <p className="auth-error" role="alert">
-                This address only works on your local network. Passkeys and some browser security
-                features require HTTPS and will not work from a plain IP address — you can still sign
-                in with your password. You can point noevia at a real domain later, and{' '}
-                <code>ADDITIONAL_TRUSTED_ORIGINS</code>{' '}
-                (see README.md) lets you keep this address working alongside it.
-              </p>
-            )}
+            {originClass === 'private-lan-http' && <PrivateLanOriginNote isAdmin={mode !== 'invited'}/>}
             {originClass === 'invalid' && (
               <p className="auth-error" role="alert">{INVALID_ORIGIN_MESSAGE}</p>
             )}
