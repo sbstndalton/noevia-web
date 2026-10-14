@@ -46,6 +46,7 @@ function initialModels() {
     let installed = initialModels();
     let roles = { fast: 'Qwen3.5-4B', smart: 'Qwen3.5-9B', code: 'Qwen3.5-9B', vision: 'gemma-4-12b-it-qat-q4_0' };
     const services = { embedding: 'nomic-embed-text-v1', reranker: 'qwen3-reranker-0.6b-q8_0', decision: 'laya_multilingual_f16' };
+    const reset = () => { installed = initialModels(); roles = { fast: 'Qwen3.5-4B', smart: 'Qwen3.5-9B', code: 'Qwen3.5-9B', vision: 'gemma-4-12b-it-qat-q4_0' }; Object.assign(services, { embedding: 'nomic-embed-text-v1', reranker: 'qwen3-reranker-0.6b-q8_0', decision: 'laya_multilingual_f16', next: undefined }); };
     const calls = [];
     const files = () => installed.filter((m) => !m.missingFile && !m.servedElsewhere).map((m) => ({ key: `f/${m.name}.gguf`, name: `${m.name}.gguf`, subdir: 'f', bytes: (m.sizeGB || 1) * 1e9, size: `${m.sizeGB} GB`, modified: '2026-09-01', sharded: false, parts: 1, projector: null, sections: [m.name], modelId: m.name, file: `f/${m.name}.gguf`, shape: null, loadedOn: [], fit: [], badges: [] }));
     const assignments = () => ({
@@ -124,6 +125,22 @@ function initialModels() {
       assert.ok(o.y < g.y, 'overview sits above the grid');
     });
 
+    await check('#1662 overview rows line up: one column of pills, inline controls, no empty block under the last row', async () => {
+      const overview = root.getByRole('region', { name: 'What each service uses' });
+      const geo = await overview.evaluate((sec) => {
+        const rows = [...sec.querySelectorAll('.mm-assign-row')];
+        return { pills: rows.map((r) => Math.round(r.querySelector('.mm-state').getBoundingClientRect().left)),
+          rowTops: rows.map((r) => Math.round(r.getBoundingClientRect().top)),
+          embedHeight: Math.round(sec.querySelector('[data-service="embedding"]').getBoundingClientRect().height),
+          fastHeight: Math.round(sec.querySelector('[data-role="fast"]').getBoundingClientRect().height),
+          tail: Math.round(sec.getBoundingClientRect().bottom - rows[rows.length - 1].getBoundingClientRect().bottom) };
+      });
+      assert.equal(new Set(geo.pills).size, 1, `status pills start at ${[...new Set(geo.pills)].join(', ')}`);
+      assert.equal(new Set(geo.rowTops).size, geo.rowTops.length, 'one row per line (no side-by-side columns to misalign)');
+      assert.ok(Math.abs(geo.embedHeight - geo.fastHeight) <= 4, `Embedding row ${geo.embedHeight}px vs Fast ${geo.fastHeight}px: its switch is inline`);
+      assert.ok(geo.tail <= 24, `${geo.tail}px of empty card under the last row`);
+    });
+
     await check('#1660 every card has Delete (in-use embedding, Laya, missing presets)', async () => {
       for (const name of ['nomic-embed-text-v1', 'laya_multilingual_f16', 'gemma-4-E2B_q4_0-it', 'qwen3-reranker-0.6b-q8_0', 'Qwen3.5-9B']) {
         await root.getByRole('article', { name }).getByRole('button', { name: `Delete ${name}`, exact: true }).waitFor({ timeout: 1000 });
@@ -179,7 +196,7 @@ function initialModels() {
       const card = root.getByRole('article', { name });
       await card.getByRole('button', { name: `Delete ${name}`, exact: true }).click();
       const group = card.getByRole('group', { name: `Delete ${name}` });
-      await group.getByText(/The embedding service uses this model/).waitFor({ timeout: 1000 });
+      await group.getByText(/Switch embedding to another model first/).waitFor({ timeout: 2000 });
       await group.getByRole('combobox', { name: 'Switch embedding to' }).selectOption('embeddinggemma-2');
       await page.screenshot({ path: `${shots}/${tag}-2000-confirm-inuse.png`, fullPage: true });
       await group.getByRole('button', { name: 'Switch and delete' }).click();
@@ -205,6 +222,46 @@ function initialModels() {
       assert.ok(over <= 1, `page scrolls ${over}px sideways`);
     });
     await page.screenshot({ path: `${shots}/${tag}-390.png`, fullPage: true });
+
+    // Dark mode (the owner's appearance): fresh state, each width, initial / details / delete confirm.
+    // Every pill, read-only caption, danger button and confirm text must reach 4.5:1 against what is behind it.
+    const contrastIssues = () => page.evaluate(() => {
+      const parse = (c) => { const m = c.match(/rgba?\(([^)]+)\)/) || c.match(/color\(srgb ([^)]+)\)/); if (!m) return null;
+        const p = m[1].replace('/', ' ').split(/[ ,]+/).filter(Boolean).map(Number); const srgb = c.startsWith('color(');
+        return { r: srgb ? p[0] * 255 : p[0], g: srgb ? p[1] * 255 : p[1], b: srgb ? p[2] * 255 : p[2], a: p[3] ?? 1 }; };
+      const over = (top, under) => ({ r: top.r * top.a + under.r * (1 - top.a), g: top.g * top.a + under.g * (1 - top.a), b: top.b * top.a + under.b * (1 - top.a), a: 1 });
+      const bgOf = (el) => { const stack = []; for (let n = el; n; n = n.parentElement) { const c = parse(getComputedStyle(n).backgroundColor); if (c && c.a > 0) { stack.push(c); if (c.a >= 1) break; } }
+        return stack.reverse().reduce((acc, c) => over(c, acc), { r: 255, g: 255, b: 255, a: 1 }); };
+      const lum = ({ r, g, b }) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+      const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+      const out = [];
+      for (const el of document.querySelectorAll('.mm-state, .mm-assign-fixed, .mm-assign-label, .mm-assign-model, .model-card-danger, .model-card-confirm p, .model-card-name, .model-card-meta > span, .mm-facts dt, .mm-facts dd')) {
+        if (!el.getClientRects().length) continue;
+        const bg = bgOf(el), fg = over(parse(getComputedStyle(el).color), bg), r = ratio(fg, bg);
+        if (r < 4.5) out.push(`${el.className || el.tagName} "${el.textContent.trim().slice(0, 24)}" ${r.toFixed(2)}:1`);
+      }
+      return [...new Set(out)];
+    });
+    for (const width of [2000, 390]) {
+      reset();
+      await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+      await page.setViewportSize({ width, height: width === 2000 ? 1250 : 844 });
+      root = await open();
+      await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
+      await page.waitForTimeout(250);
+      await page.screenshot({ path: `${shots}/${tag}-dark-${width}-initial.png`, fullPage: true });
+      await check(`dark ${width}: overview, pills and cards are readable (4.5:1)`, async () => { const bad = await contrastIssues(); assert.deepEqual(bad, [], bad.join('; ')); });
+      const nomic = root.getByRole('article', { name: 'nomic-embed-text-v1' });
+      await nomic.getByRole('button', { name: 'Details for nomic-embed-text-v1' }).click();
+      await nomic.locator('.mm-facts').waitFor({ timeout: 2000 });
+      await nomic.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: `${shots}/${tag}-dark-${width}-details.png`, fullPage: true });
+      await check(`dark ${width}: details are readable`, async () => { const bad = await contrastIssues(); assert.deepEqual(bad, [], bad.join('; ')); });
+      for (const name of ['gemma-4-E4B', 'nomic-embed-text-v1']) await root.getByRole('article', { name }).getByRole('button', { name: `Delete ${name}`, exact: true }).click();
+      await root.getByRole('article', { name: 'nomic-embed-text-v1' }).getByRole('combobox', { name: 'Switch embedding to' }).waitFor({ timeout: 2000 });
+      await page.screenshot({ path: `${shots}/${tag}-dark-${width}-confirm.png`, fullPage: true });
+      await check(`dark ${width}: delete confirms are readable`, async () => { const bad = await contrastIssues(); assert.deepEqual(bad, [], bad.join('; ')); });
+    }
     await check('no page errors', async () => assert.deepEqual(errors, []));
   } finally {
     await browser.close();

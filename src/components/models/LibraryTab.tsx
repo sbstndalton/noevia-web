@@ -343,6 +343,7 @@ function DeleteModel({ model: m, file, kind: initialKind, onDeleted, onCancel }:
   let text: string, action: string | null = t('mm.delete.files');
   if (kind === 'missing') { text = t('mm.delete.confirmMissing'); action = t('mm.delete.removePreset'); }
   else if (kind === 'system') text = t('mm.delete.confirmDecision');
+  else if (kind === 'inuse' && !service && !error) { text = t('mm.loading'); action = null; }
   else if (kind === 'inuse') {
     text = rerank ? t('mm.delete.inUseReranker') : options.length ? t('mm.delete.inUseEmbedding') : t('mm.delete.noEmbeddingOptions');
     action = !rerank && options.length ? t('mm.delete.switchAndDelete') : null;

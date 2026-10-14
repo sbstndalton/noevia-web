@@ -89,8 +89,8 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
                   {options.map((o) => <option key={o.model} value={o.model}>{o.model}</option>)}
                 </select></label>
               {embedPick && <button className="popup-tab" disabled={busy !== ''} onClick={() => void runEmbedding(svc, false)}>{busy === 'embedding' ? t('mm.assign.switching') : t('mm.assign.switch')}</button>}</>
-            : <small className="mm-note">{t('mm.assign.noEmbeddingOptions')}</small>)}
-        {admin && (svc.id === 'reranker' || svc.id === 'ocr' || svc.id === 'documents' || svc.id === 'decision') && <small className="mm-note">{t('mm.assign.fixedByServer')}</small>}
+            : <span className="mm-assign-fixed">{t('mm.assign.noEmbeddingOptions')}</span>)}
+        {(svc.id === 'reranker' || svc.id === 'ocr' || svc.id === 'documents' || svc.id === 'decision') && <span className="mm-assign-fixed">{t('mm.assign.fixedByServer')}</span>}
       </span>
     </li>;
   };
@@ -121,6 +121,6 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
       {ROLES.map(roleRow)}
       {info.services.filter((s) => s.id === 'ocr' || s.id === 'documents').map(serviceRow)}
     </ul>}
-    <p className="mm-assign-status" aria-live="polite">{status && <span role="status" className="mm-note">{status}</span>}{error && <span role="alert" className="modal-err">{error}</span>}</p>
+    <div aria-live="polite">{(status || error) && <p className="mm-assign-status">{status && <span role="status" className="mm-note">{status}</span>}{error && <span role="alert" className="modal-err">{error}</span>}</p>}</div>
   </section>;
 }
