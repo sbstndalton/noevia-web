@@ -762,6 +762,7 @@ export const EN_GB = {
   'chat.toolCalls.notRun': "{count} not run",
   'chat.toolCalls.awaiting': "{count} awaiting approval",
   'chat.toolCalls.state.done': "done",
+  'chat.toolCalls.state.error': "failed",
   'chat.toolCalls.state.declined': "declined",
   'chat.toolCalls.state.notRun': "not run",
   'chat.toolCalls.state.running': "running",

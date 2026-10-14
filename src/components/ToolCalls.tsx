@@ -12,7 +12,16 @@ import { useServerLabel } from '../mcp-server-label';
 
 /** One drawn symbol per outcome — the list used ✓ and ⃠, which render differently on
  *  every platform and are not part of the icon set. */
-const STATE_ICON: Record<string, string> = { done: 'check', declined: 'ban', 'not run': 'ban', running: 'refresh-cw' };
+const STATE_ICON: Record<string, string> = { done: 'check', error: 'x', declined: 'ban', 'not run': 'ban', running: 'refresh-cw' };
+
+/** #1694: a finished call whose result is an error is its own state, so it never wears the
+ *  success check: an x in the danger colour, named "failed" for screen readers. */
+export function toolCallRowState(call: Pick<ToolCallView, 'status' | 'result'>): 'done' | 'error' | 'declined' | 'not run' | 'running' {
+  if (call.status === 'denied') return 'declined';
+  if (call.status === 'stopped') return 'not run';
+  if (call.status !== 'done') return 'running';
+  return call.result !== undefined && summariseToolResult(call.result).kind === 'error' ? 'error' : 'done';
+}
 
 export const TOOL_RESULT_LIMIT = 4000;
 
@@ -159,11 +168,11 @@ export function ToolCalls({ calls }: { calls: ToolCallView[] }): JSX.Element {
           <summary>{summary}</summary>
           <ol>
             {settled.map((c, i) => {
-              const state = c.status === 'denied' ? 'declined' : c.status === 'done' ? 'done' : c.status === 'stopped' ? 'not run' : 'running';
+              const state = toolCallRowState(c);
               // The result text is what the model was told; the row says what happened in plain words.
               // #1524: a finished call says what it returned in a few words; a running one never shows its raw arguments.
               const preview = state === 'declined' ? t('chat.toolCalls.previewDeclined') : state === 'not run' ? t('chat.toolCalls.previewNotRun') : c.result !== undefined ? resultPreview(c.result, t, n) : state === 'running' ? t('chat.toolCalls.summary.running') : '';
-              const STATE_LABEL: Record<string, string> = { done: t('chat.toolCalls.state.done'), declined: t('chat.toolCalls.state.declined'), 'not run': t('chat.toolCalls.state.notRun'), running: t('chat.toolCalls.state.running') };
+              const STATE_LABEL: Record<string, string> = { done: t('chat.toolCalls.state.done'), error: t('chat.toolCalls.state.error'), declined: t('chat.toolCalls.state.declined'), 'not run': t('chat.toolCalls.state.notRun'), running: t('chat.toolCalls.state.running') };
               return (
                 <li key={i} className={`tool-call is-${state.replace(' ', '-')}`}>
                   <details>
