@@ -4,7 +4,7 @@
 //  #1174 the inference memory budget refuses -1 inline, beside the field, and sends nothing
 //  #1175 the locked "Always allow" status region exists before the first click
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const { openSettings, openModelsTab, navClick } = require('./nav.cjs');
+const { openModelsPage, openModelsTab, navClick } = require('./nav.cjs');
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
@@ -103,12 +103,7 @@ const NAME = 'synthetic-12b-it';
         if (p.startsWith('/api/model-manager/')) return json({});
         return route.continue();
       });
-      await page.goto(`http://localhost:${PORT}`);
-      await openSettings(page);
-      const settings = page.getByRole('dialog', { name: 'Settings' });
-      await settings.getByRole('button', { name: 'Models & routing' }).click();
-      await settings.getByRole('button', { name: 'Open model manager' }).click();
-      const manager = page.locator('.model-manager-page');
+      const manager = await openModelsPage(page, `http://localhost:${PORT}`);
       await openModelsTab(manager, 'Overview');
       const field = manager.getByLabel('Budget (GiB)');
       await field.waitFor({ timeout: 5000 });

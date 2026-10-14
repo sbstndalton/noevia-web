@@ -7,7 +7,7 @@
 // Synthetic fixtures only; no tune is ever started (any POST fails the run).
 // QA_DIST serves a build elsewhere; QA_SCREENSHOTS is the screenshot directory.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const {openSettings, openModelsTab } = require('./nav.cjs');
+const { openModelsPage, openModelsTab } = require('./nav.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { createFixture } = require('./diary-fixture.cjs');
@@ -70,12 +70,7 @@ const schema = [{ tier: 'Common', open: true, fields: [{ key: 'ctx-size', label:
         if (p.startsWith('/api/model-manager/')) return json({});
         return route.continue();
       });
-      await page.goto('http://localhost:31328');
-      await openSettings(page);
-      const settings = page.getByRole('dialog', { name: 'Settings' });
-      await settings.getByRole('button', { name: 'Models & routing' }).click();
-      await settings.getByRole('button', { name: 'Open model manager' }).click();
-      const manager = page.locator('.model-manager-page');
+      const manager = await openModelsPage(page, 'http://localhost:31328');
       await openModelsTab(manager, 'Your models');
       await manager.getByRole('article', { name: NAME }).getByRole('button', { name: 'Tune' }).click();
       const panel = page.locator('.mm-easy-autotune');

@@ -15,7 +15,7 @@ const os = require('node:os');
 const fs = require('node:fs');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || `${os.homedir()}/noevia-local-test/node_modules/playwright-core`);
 const assert = require('node:assert/strict');
-const { openModelsTab } = require('./nav.cjs');
+const { openModelsTab, MODELS_SECTION } = require('./nav.cjs');
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
 
@@ -159,7 +159,7 @@ async function openModelDialog(page) {
       await page.evaluate(() => { history.pushState({}, '', '/settings/providers'); dispatchEvent(new PopStateEvent('popstate')); });
       const settings = page.getByRole('dialog', { name: 'Settings' });
       await settings.waitFor();
-      await settings.getByRole('button', { name: 'Open Models & routing' }).click();
+      await settings.getByRole('button', { name: `Open ${MODELS_SECTION}`, exact: true }).click();
       await settings.waitFor({ state: 'hidden' });
       await root.getByRole('tab', { name: 'Routing', exact: true }).waitFor();
       await page.waitForFunction(() => document.querySelector('.model-manager-page [role="tab"][aria-selected="true"]')?.textContent?.trim() === 'Routing');
