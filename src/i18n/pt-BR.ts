@@ -751,6 +751,7 @@ export const PT_BR: Catalogue = {
   'chat.toolCalls.notRun': "{count} não executadas",
   'chat.toolCalls.awaiting': "{count} aguardando aprovação",
   'chat.toolCalls.state.done': "concluída",
+  'chat.toolCalls.state.error': "falhou",
   'chat.toolCalls.state.declined': "recusada",
   'chat.toolCalls.state.notRun': "não executada",
   'chat.toolCalls.state.running': "em andamento",

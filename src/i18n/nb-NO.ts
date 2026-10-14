@@ -751,6 +751,7 @@ export const NB_NO: Catalogue = {
   'chat.toolCalls.notRun': "{count} ikke kjørt",
   'chat.toolCalls.awaiting': "{count} venter på godkjenning",
   'chat.toolCalls.state.done': "ferdig",
+  'chat.toolCalls.state.error': "mislyktes",
   'chat.toolCalls.state.declined': "avslått",
   'chat.toolCalls.state.notRun': "ikke kjørt",
   'chat.toolCalls.state.running': "pågår",

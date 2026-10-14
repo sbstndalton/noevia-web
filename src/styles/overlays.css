@@ -256,6 +256,8 @@ dialog.confirm-dialog.dialog-sheet { width: min(420px, calc(100vw - 32px)); }
 .tool-call.is-running .tool-call-state > svg { animation: motion-spin var(--motion-async) var(--ease-async) infinite; }
 .tool-call.is-running .tool-call-state { color: var(--text-secondary); }
 .tool-call.is-declined .tool-call-state, .tool-call.is-not-run .tool-call-state { color: var(--status-danger); }
+/* #1694: a call that returned an error never wears the success check: an x in the danger colour. */
+.tool-call.is-error .tool-call-state { color: var(--status-danger); }
 .tool-call-name { font-family: var(--font-mono); font-size: var(--text-caption); color: var(--text-primary); }
 .tool-call-preview { color: var(--text-secondary); font-size: var(--text-caption); }
 .tool-call-label { margin: var(--space-2) var(--space-2) 2px; font-size: var(--text-caption); font-weight: 500; color: var(--text-secondary); }

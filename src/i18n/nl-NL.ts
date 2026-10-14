@@ -751,6 +751,7 @@ export const NL_NL: Catalogue = {
   'chat.toolCalls.notRun': "{count} niet uitgevoerd",
   'chat.toolCalls.awaiting': "{count} wachten op goedkeuring",
   'chat.toolCalls.state.done': "klaar",
+  'chat.toolCalls.state.error': "mislukt",
   'chat.toolCalls.state.declined': "geweigerd",
   'chat.toolCalls.state.notRun': "niet uitgevoerd",
   'chat.toolCalls.state.running': "bezig",
