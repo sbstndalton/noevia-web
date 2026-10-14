@@ -71,9 +71,8 @@ const { withLocale } = require('./qa-locale.cjs');
     assert.equal(await laya.getByText(/not in the models folder/).count(), 0, 'no missing-file note');
     pass('Laya reads "Runs in its own service", not "File missing"');
 
-    const gone = card('gone-13b');
-    assert.equal(await gone.locator('.model-card-state').innerText(), 'File missing');
-    pass('an ordinary preset with no file still reads "File missing"');
+    assert.equal(await card('gone-13b').count(), 0, '#1695: an ordinary preset with no file has no card');
+    pass('an ordinary preset with no file is not a card (#1695)');
 
     assert.deepEqual(errors, []);
     console.log(`PASS models-size-shape-1084: all ${passed} scenarios.`);

@@ -61,19 +61,12 @@ const { withLocale } = require('./qa-locale.cjs');
     await openModelsTab(manager, 'Your models');
     const card = (name) => manager.getByRole('article', { name });
 
-    const laya = card('gone-13b');
-    await laya.waitFor();
-    assert.equal(await laya.locator('.model-card-state').innerText(), 'File missing', 'a missing preset does not read "Failed to load"');
-    await laya.getByText(/not in the models folder/).waitFor();
-    pass('The missing preset\'s card reads "File missing" and carries the missing-file note');
-
-    await laya.getByRole('button', { name: 'Details for gone-13b', exact: true }).click();
-    await laya.getByText(/not in the models folder/).waitFor();
-    await page.waitForTimeout(300);
-    assert.equal(await laya.getByText(/download cache/).count(), 0, 'a missing preset is not "served from the download cache"');
-    assert.equal(await laya.getByText('Qualification', { exact: false }).count(), 0, 'no chat qualification for a missing preset');
-    assert.equal(await laya.getByRole('button', { name: 'Recheck' }).count(), 0, 'no Recheck for a missing preset');
-    pass('Missing preset Details: missing note, no download-cache line, no qualification, no Recheck');
+    // #1695: a preset whose file is gone is not a card (no Details, qualification or Recheck to offer);
+    // one line names it instead.
+    await card('synthetic-embed-v1').waitFor();
+    assert.equal(await card('gone-13b').count(), 0, 'a missing preset has no card');
+    await manager.getByTestId('models-leftover').getByText(/gone-13b/).waitFor();
+    pass('The missing preset has no card; the leftover line names it (#1695)');
 
     const embed = card('synthetic-embed-v1');
     await embed.getByRole('button', { name: 'Details for synthetic-embed-v1', exact: true }).click();
