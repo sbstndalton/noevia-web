@@ -229,7 +229,7 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.library.updateFailed': "Uppdateringskontrollen misslyckades",
   'mm.library.count.one': "{shown} av {count} modell",
   'mm.library.count.other': "{shown} av {count} modeller",
-  'mm.library.leftover.one': "Filen för {models} är borta, så den visas inte.",
+  'mm.library.leftover.one': "Filen för {count} modell är borta, så den visas inte: {models}.",
   'mm.library.leftover.other': "Filerna för {count} modeller är borta, så de visas inte: {models}.",
   'mm.library.leftoverRemove': "Ta bort kvarvarande inställningar",
   'mm.library.leftoverRemoving': "Tar bort…",

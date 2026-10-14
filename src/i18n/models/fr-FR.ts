@@ -229,7 +229,7 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.library.updateFailed': "La recherche de mises à jour a échoué",
   'mm.library.count.one': "{shown} sur {count} modèle",
   'mm.library.count.other': "{shown} sur {count} modèles",
-  'mm.library.leftover.one': "Le fichier de {models} a disparu, il n'est donc pas listé.",
+  'mm.library.leftover.one': "Le fichier de {count} modèle a disparu, il n'est donc pas listé : {models}.",
   'mm.library.leftover.other': "Les fichiers de {count} modèles ont disparu, ils ne sont donc pas listés : {models}.",
   'mm.library.leftoverRemove': "Retirer les réglages restants",
   'mm.library.leftoverRemoving': "Retrait…",

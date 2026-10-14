@@ -229,7 +229,7 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.library.updateFailed': "Update-Prüfung fehlgeschlagen",
   'mm.library.count.one': "{shown} von {count} Modell",
   'mm.library.count.other': "{shown} von {count} Modellen",
-  'mm.library.leftover.one': "Die Datei von {models} ist nicht mehr vorhanden, daher wird es nicht aufgeführt.",
+  'mm.library.leftover.one': "Die Datei von {count} Modell ist nicht mehr vorhanden, daher wird es nicht aufgeführt: {models}.",
   'mm.library.leftover.other': "Die Dateien von {count} Modellen sind nicht mehr vorhanden, daher werden sie nicht aufgeführt: {models}.",
   'mm.library.leftoverRemove': "Übrige Einstellungen entfernen",
   'mm.library.leftoverRemoving': "Wird entfernt…",

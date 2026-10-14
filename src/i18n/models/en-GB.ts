@@ -238,7 +238,7 @@ export const EN_GB_MODELS = {
   'mm.library.updateFailed': 'Update check failed',
   'mm.library.count.one': '{shown} of {count} model',
   'mm.library.count.other': '{shown} of {count} models',
-  'mm.library.leftover.one': "The file of {models} is gone, so it is not listed.",
+  'mm.library.leftover.one': "{count} model's file is gone, so it is not listed: {models}.",
   'mm.library.leftover.other': "{count} models' files are gone, so they are not listed: {models}.",
   'mm.library.leftoverRemove': "Remove leftover settings",
   'mm.library.leftoverRemoving': "Removing…",

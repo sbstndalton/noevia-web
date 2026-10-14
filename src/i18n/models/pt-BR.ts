@@ -229,7 +229,7 @@ export const PT_BR_MODELS: ModelsCatalogue = {
   'mm.library.updateFailed': "A verificação de atualizações falhou",
   'mm.library.count.one': "{shown} de {count} modelo",
   'mm.library.count.other': "{shown} de {count} modelos",
-  'mm.library.leftover.one': "O arquivo de {models} não existe mais, então ele não é listado.",
+  'mm.library.leftover.one': "O arquivo de {count} modelo não existe mais, então ele não é listado: {models}.",
   'mm.library.leftover.other': "Os arquivos de {count} modelos não existem mais, então eles não são listados: {models}.",
   'mm.library.leftoverRemove': "Remover configurações restantes",
   'mm.library.leftoverRemoving': "Removendo…",

@@ -116,7 +116,7 @@ const initialModels = () => [
       await check(`${width} ${theme}: a kept leftover is one line with a retry, not a card`, async () => {
         assert.equal(await root.getByRole('article', { name: GONE_CHAT }).count(), 0);
         const line = root.getByTestId('models-leftover');
-        assert.match(await line.innerText(), new RegExp(`The file of ${GONE_CHAT.replace(/[.]/g, '\\.')} is gone`));
+        assert.match(await line.innerText(), new RegExp(`1 model's file is gone, so it is not listed: ${GONE_CHAT.replace(/[.]/g, '\\.')}`));
         await line.getByRole('button', { name: 'Remove leftover settings' }).waitFor({ timeout: 1000 });
         assert.match(await root.locator('.mm-library-bar .mm-note').first().innerText(), /^6 of 6 models/);
       });

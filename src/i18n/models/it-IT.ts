@@ -229,7 +229,7 @@ export const IT_IT_MODELS: ModelsCatalogue = {
   'mm.library.updateFailed': "Controllo aggiornamenti non riuscito",
   'mm.library.count.one': "{shown} di {count} modello",
   'mm.library.count.other': "{shown} di {count} modelli",
-  'mm.library.leftover.one': "Il file di {models} non c'è più, quindi non è elencato.",
+  'mm.library.leftover.one': "Il file di {count} modello non c'è più, quindi non è elencato: {models}.",
   'mm.library.leftover.other': "I file di {count} modelli non ci sono più, quindi non sono elencati: {models}.",
   'mm.library.leftoverRemove': "Rimuovi impostazioni residue",
   'mm.library.leftoverRemoving': "Rimozione…",

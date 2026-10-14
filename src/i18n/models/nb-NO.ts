@@ -229,7 +229,7 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.library.updateFailed': "Oppdateringssjekken mislyktes",
   'mm.library.count.one': "{shown} av {count} modell",
   'mm.library.count.other': "{shown} av {count} modeller",
-  'mm.library.leftover.one': "Filen til {models} er borte, så den vises ikke.",
+  'mm.library.leftover.one': "Filen til {count} modell er borte, så den vises ikke: {models}.",
   'mm.library.leftover.other': "Filene til {count} modeller er borte, så de vises ikke: {models}.",
   'mm.library.leftoverRemove': "Fjern gjenværende innstillinger",
   'mm.library.leftoverRemoving': "Fjerner…",

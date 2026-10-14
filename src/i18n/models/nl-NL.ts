@@ -229,7 +229,7 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.library.updateFailed': "Controle op updates mislukt",
   'mm.library.count.one': "{shown} van {count} model",
   'mm.library.count.other': "{shown} van {count} modellen",
-  'mm.library.leftover.one': "Het bestand van {models} is weg, dus het wordt niet getoond.",
+  'mm.library.leftover.one': "Het bestand van {count} model is weg, dus het wordt niet getoond: {models}.",
   'mm.library.leftover.other': "De bestanden van {count} modellen zijn weg, dus ze worden niet getoond: {models}.",
   'mm.library.leftoverRemove': "Overgebleven instellingen verwijderen",
   'mm.library.leftoverRemoving': "Verwijderen…",
