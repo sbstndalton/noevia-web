@@ -42,6 +42,8 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.assign.switch': "Basculer",
   'mm.assign.switching': "Bascule…",
   'mm.assign.reindexing': "Réindexation pour {model}. La recherche garde le modèle actuel jusqu’à la fin de la bascule.",
+  'mm.assign.diaryPending': "Les projets utilisent maintenant {model}. Le Journal est encore en cours de réindexation ; utilisez « Terminer la bascule » une fois terminé.",
+  'mm.assign.diaryFailed': "Les projets utilisent maintenant {model}, mais le Journal n’a pas basculé. Il garde son modèle actuel ; réessayez « Terminer la bascule » plus tard.",
   'mm.assign.finish': "Terminer la bascule",
   'mm.assign.saved': "Enregistré.",
   'mm.assign.loadError': "Impossible de lire ce que chaque service utilise.",

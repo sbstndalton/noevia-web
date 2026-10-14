@@ -68,7 +68,9 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
     setBusy('embedding'); setError(''); setStatus('');
     try {
       const outcome = finish || svc.next === target!.model ? await finishEmbeddingSwitch() : svc.managed ? await serviceSwitchEmbedding(target!) : await switchEmbedding(target!, svc.baseUrl);
-      setStatus(outcome === 'done' ? t('mm.assign.saved') : t('mm.assign.reindexing', { model: finish ? svc.next || '' : target!.model }));
+      const model = finish ? svc.next || '' : target!.model;
+      if (outcome === 'diaryFailed') setError(t('mm.assign.diaryFailed', { model }));
+      else setStatus(outcome === 'done' ? t('mm.assign.saved') : outcome === 'diaryPending' ? t('mm.assign.diaryPending', { model }) : t('mm.assign.reindexing', { model }));
       setEmbedPick(''); notifyModelsChanged(); load();
     } catch (e) { setError(errorText(e, t('mm.saveError'))); } finally { setBusy(''); }
   };

@@ -42,6 +42,8 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.assign.switch': "Bytt",
   'mm.assign.switching': "Bytter…",
   'mm.assign.reindexing': "Indekserer for {model}. Søk bruker gjeldende modell til byttet er ferdig.",
+  'mm.assign.diaryPending': "Prosjektene bruker nå {model}. Dagboken indekseres fortsatt på nytt; bruk «Fullfør bytte» når den er ferdig.",
+  'mm.assign.diaryFailed': "Prosjektene bruker nå {model}, men dagboken byttet ikke. Den beholder sin nåværende modell; prøv «Fullfør bytte» igjen senere.",
   'mm.assign.finish': "Fullfør bytte",
   'mm.assign.saved': "Lagret.",
   'mm.assign.loadError': "Kunne ikke lese hva hver tjeneste bruker.",

@@ -31,20 +31,41 @@ export async function fetchAssignments(): Promise<Assignments> {
 export const embeddingOptions = (s: ServiceAssignment | undefined): { model: string; profile: string }[] =>
   (s?.options || []).filter((o): o is { model: string; profile: string; served: true } => typeof o === 'object' && !!o && typeof o.model === 'string' && (o as { served?: unknown }).served === true);
 
-type EmbedReply = { projects?: { error?: string; code?: string }; diary?: { error?: string } };
-async function embeddingAction(body: Record<string, unknown>): Promise<{ ok: boolean; status: number; code?: string; error?: string }> {
+/** How the Diary's half of a step went. 'none': no Diary on this server. */
+export type DiaryHalf = 'ok' | 'pending' | 'failed' | 'none';
+/** 'done': search uses the new model everywhere; 'reindexing': the projects are still building it;
+ *  'diaryPending' / 'diaryFailed': the projects switched but the Diary is still re-indexing, or
+ *  refused (#1668 review: a 207 is not a full success). */
+export type SwitchOutcome = 'done' | 'reindexing' | 'diaryPending' | 'diaryFailed';
+
+type EmbedReply = { projects?: { error?: string; code?: string }; diary?: { error?: string; code?: string } };
+export function diaryHalf(diary: EmbedReply['diary']): DiaryHalf {
+  if (!diary) return 'none';
+  if (!diary.error) return 'ok';
+  if (diary.code === 'notConfigured') return 'none';
+  return diary.code === 'notReady' ? 'pending' : 'failed';
+}
+async function embeddingAction(body: Record<string, unknown>): Promise<{ ok: boolean; status: number; code?: string; error?: string; diary: DiaryHalf; diaryError?: string }> {
   const r = await apiFetch('/api/embedding', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const v = await r.json().catch(() => ({})) as EmbedReply & { error?: string };
-  // 207: one half (usually an unconfigured Diary) refused; the projects half decides.
+  // 207: one half refused. The projects half decides whether the step went on; the Diary's half is
+  // reported with it, never counted as success.
   const projectsError = v.projects?.error;
-  return { ok: (r.ok || r.status === 207) && !projectsError, status: r.status, code: v.projects?.code, error: projectsError || v.error };
+  return { ok: (r.ok || r.status === 207) && !projectsError, status: r.status, code: v.projects?.code, error: projectsError || v.error, diary: diaryHalf(v.diary), diaryError: v.diary?.error };
+}
+
+/** The outcome of a switch whose projects half finished, given the Diary's half of each step. */
+export function finished(steps: { diary: DiaryHalf }[]): SwitchOutcome {
+  if (steps.some((s) => s.diary === 'failed')) return 'diaryFailed';
+  if (steps.some((s) => s.diary === 'pending')) return 'diaryPending';
+  return 'done';
 }
 
 /**
  * Switches the embedding service to `target`. Resolves 'done' when search now uses it (the old
  * model is free to delete), 'reindexing' when the re-index has started but is not finished yet.
  */
-export async function switchEmbedding(target: { model: string; profile: string }, baseUrl: string | null | undefined): Promise<'done' | 'reindexing'> {
+export async function switchEmbedding(target: { model: string; profile: string }, baseUrl: string | null | undefined): Promise<SwitchOutcome> {
   const next = await embeddingAction({ action: 'set-next', target: { baseUrl: baseUrl ?? '', model: target.model, profile: target.profile } });
   if (!next.ok && next.code !== 'alreadyActive') throw Error(next.error || `HTTP ${next.status}`);
   const sw = await embeddingAction({ action: 'switch' });
@@ -54,7 +75,7 @@ export async function switchEmbedding(target: { model: string; profile: string }
   }
   const fin = await embeddingAction({ action: 'finish' });
   if (!fin.ok) throw Error(fin.error || `HTTP ${fin.status}`);
-  return 'done';
+  return finished([next, sw, fin]);
 }
 
 /**
@@ -63,18 +84,18 @@ export async function switchEmbedding(target: { model: string; profile: string }
  * old model is freed once the service has dropped it), 'reindexing' when the re-index is still
  * running. Also turns embedding back on from off.
  */
-export async function serviceSwitchEmbedding(target: { model: string; profile: string }): Promise<'done' | 'reindexing'> {
+export async function serviceSwitchEmbedding(target: { model: string; profile: string }): Promise<SwitchOutcome> {
   const r = await embeddingAction({ action: 'service-switch', model: target.model, profile: target.profile });
   if (!r.ok) throw Error(r.error || `HTTP ${r.status}`);
   const st = await embeddingAction({ action: 'switch' });
   if (!st.ok) {
     if (st.code === 'notReady') return 'reindexing';
-    if (st.code === 'noNext') return 'done'; // back on with the model the vectors already belong to
+    if (st.code === 'noNext') return finished([r]); // back on with the model the vectors already belong to
     throw Error(st.error || `HTTP ${st.status}`);
   }
   const fin = await embeddingAction({ action: 'finish' });
   if (!fin.ok) throw Error(fin.error || `HTTP ${fin.status}`);
-  return 'done';
+  return finished([r, st, fin]);
 }
 
 /** #1668: stops the managed embedding service. Search and the Diary then say embedding is off. */
@@ -87,10 +108,10 @@ export async function turnEmbeddingOff(): Promise<void> {
 }
 
 /** Finishes a switch that was re-indexing (the overview's "Finish switch"). */
-export async function finishEmbeddingSwitch(): Promise<'done' | 'reindexing'> {
+export async function finishEmbeddingSwitch(): Promise<SwitchOutcome> {
   const sw = await embeddingAction({ action: 'switch' });
   if (!sw.ok) { if (sw.code === 'notReady') return 'reindexing'; throw Error(sw.error || `HTTP ${sw.status}`); }
   const fin = await embeddingAction({ action: 'finish' });
   if (!fin.ok) throw Error(fin.error || `HTTP ${fin.status}`);
-  return 'done';
+  return finished([sw, fin]);
 }

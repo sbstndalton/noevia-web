@@ -42,6 +42,8 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.assign.switch': "Byt",
   'mm.assign.switching': "Byter…",
   'mm.assign.reindexing': "Indexerar för {model}. Sökningen använder nuvarande modell tills bytet är klart.",
+  'mm.assign.diaryPending': "Projekten använder nu {model}. Dagboken indexeras fortfarande om; använd ”Slutför bytet” när den är klar.",
+  'mm.assign.diaryFailed': "Projekten använder nu {model}, men dagboken bytte inte. Den behåller sin nuvarande modell; försök ”Slutför bytet” igen senare.",
   'mm.assign.finish': "Slutför bytet",
   'mm.assign.saved': "Sparat.",
   'mm.assign.loadError': "Kunde inte läsa vad varje tjänst använder.",

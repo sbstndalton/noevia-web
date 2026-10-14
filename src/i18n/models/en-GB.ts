@@ -46,6 +46,8 @@ export const EN_GB_MODELS = {
   'mm.assign.switch': "Switch",
   'mm.assign.switching': "Switching…",
   'mm.assign.reindexing': "Re-indexing for {model}. Search keeps using the current model until the switch is finished.",
+  'mm.assign.diaryPending': "Projects now use {model}. The Diary is still re-indexing for it; use Finish switch once it is done.",
+  'mm.assign.diaryFailed': "Projects now use {model}, but the Diary did not switch. The Diary keeps its current model; try Finish switch again later.",
   'mm.assign.finish': "Finish switch",
   'mm.assign.saved': "Saved.",
   'mm.assign.loadError': "Could not read what each service uses.",

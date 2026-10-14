@@ -42,6 +42,8 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.assign.switch': "Overzetten",
   'mm.assign.switching': "Bezig met overzetten…",
   'mm.assign.reindexing': "Indexeren voor {model}. Zoeken gebruikt het huidige model tot het overzetten klaar is.",
+  'mm.assign.diaryPending': "Projecten gebruiken nu {model}. Het Dagboek wordt nog opnieuw geïndexeerd; gebruik ‘Overzetten afronden’ zodra het klaar is.",
+  'mm.assign.diaryFailed': "Projecten gebruiken nu {model}, maar het Dagboek is niet overgezet. Het houdt zijn huidige model; probeer ‘Overzetten afronden’ later opnieuw.",
   'mm.assign.finish': "Overzetten afronden",
   'mm.assign.saved': "Opgeslagen.",
   'mm.assign.loadError': "Kon niet lezen wat elke dienst gebruikt.",

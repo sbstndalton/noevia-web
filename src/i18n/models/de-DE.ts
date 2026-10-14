@@ -42,6 +42,8 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.assign.switch': "Umstellen",
   'mm.assign.switching': "Wird umgestellt…",
   'mm.assign.reindexing': "Neuindexierung für {model}. Die Suche nutzt das aktuelle Modell, bis die Umstellung abgeschlossen ist.",
+  'mm.assign.diaryPending': "Projekte nutzen jetzt {model}. Das Tagebuch indiziert noch neu; verwende „Umstellung abschließen“, sobald es fertig ist.",
+  'mm.assign.diaryFailed': "Projekte nutzen jetzt {model}, aber das Tagebuch hat nicht gewechselt. Es behält sein aktuelles Modell; versuche „Umstellung abschließen“ später erneut.",
   'mm.assign.finish': "Umstellung abschließen",
   'mm.assign.saved': "Gespeichert.",
   'mm.assign.loadError': "Konnte nicht lesen, was jeder Dienst verwendet.",

@@ -42,6 +42,8 @@ export const ES_ES_MODELS: ModelsCatalogue = {
   'mm.assign.switch': "Cambiar",
   'mm.assign.switching': "Cambiando…",
   'mm.assign.reindexing': "Reindexando para {model}. La búsqueda sigue usando el modelo actual hasta terminar el cambio.",
+  'mm.assign.diaryPending': "Los proyectos ya usan {model}. El Diario aún se está reindexando; usa «Terminar cambio» cuando acabe.",
+  'mm.assign.diaryFailed': "Los proyectos ya usan {model}, pero el Diario no ha cambiado. Conserva su modelo actual; vuelve a intentar «Terminar cambio» más tarde.",
   'mm.assign.finish': "Terminar cambio",
   'mm.assign.saved': "Guardado.",
   'mm.assign.loadError': "No se pudo leer qué usa cada servicio.",

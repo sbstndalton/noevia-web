@@ -42,6 +42,8 @@ export const IT_IT_MODELS: ModelsCatalogue = {
   'mm.assign.switch': "Passa",
   'mm.assign.switching': "Passaggio…",
   'mm.assign.reindexing': "Reindicizzazione per {model}. La ricerca usa il modello attuale finché il passaggio non è finito.",
+  'mm.assign.diaryPending': "I progetti ora usano {model}. Il Diario sta ancora reindicizzando; usa «Completa il passaggio» quando ha finito.",
+  'mm.assign.diaryFailed': "I progetti ora usano {model}, ma il Diario non è passato. Mantiene il modello attuale; riprova «Completa il passaggio» più tardi.",
   'mm.assign.finish': "Completa il passaggio",
   'mm.assign.saved': "Salvato.",
   'mm.assign.loadError': "Impossibile leggere cosa usa ogni servizio.",

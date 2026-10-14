@@ -345,6 +345,9 @@ function DeleteModel({ model: m, file, kind: initialKind, onDeleted, onCancel, o
         const outcome = service?.next === target.model ? await finishEmbeddingSwitch() : managed ? await serviceSwitchEmbedding(target) : await switchEmbedding(target, service?.baseUrl);
         notifyModelsChanged();
         if (outcome === 'reindexing') { setNote(t('mm.delete.reindexStarted', { model: target.model })); return; }
+        // The Diary has not switched yet: it may still search with this model, so it is not deleted.
+        if (outcome === 'diaryPending') { setNote(t('mm.assign.diaryPending', { model: target.model })); return; }
+        if (outcome === 'diaryFailed') { setNote(t('mm.assign.diaryFailed', { model: target.model })); return; }
         if (cancelled.current) return;
         onDeleted(null, managed ? await deleteAfterRelease(m.name, cancelled) : await deleteByName(m.name)); return;
       }

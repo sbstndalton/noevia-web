@@ -42,6 +42,8 @@ export const PT_BR_MODELS: ModelsCatalogue = {
   'mm.assign.switch': "Trocar",
   'mm.assign.switching': "Trocando…",
   'mm.assign.reindexing': "Reindexando para {model}. A busca continua no modelo atual até a troca terminar.",
+  'mm.assign.diaryPending': "Os projetos agora usam {model}. O Diário ainda está reindexando; use “Concluir troca” quando terminar.",
+  'mm.assign.diaryFailed': "Os projetos agora usam {model}, mas o Diário não trocou. Ele mantém o modelo atual; tente “Concluir troca” novamente mais tarde.",
   'mm.assign.finish': "Concluir troca",
   'mm.assign.saved': "Salvo.",
   'mm.assign.loadError': "Não foi possível ler o que cada serviço usa.",
