@@ -13,11 +13,14 @@ test('chat qualification evidence (and its Recheck) only renders for a model the
 });
 
 test('"served from the download cache" is only the fallback for a plain model without a file', () => {
-  assert.match(src, /\{missing \? <p className="mm-note" role="status">\{t\('mm\.card\.missingNote'\)\}<\/p>\n\s*: !file && \(system \|\| protectedModel\) \? <p className="mm-note">\{t\('mm\.card\.sidecarSource'\)\}<\/p>\n\s*: !file && <p className="mm-note">\{t\('mm\.card\.fromCache'\)\}<\/p>\}/);
+  // #1663: a missing preset has no Details (its one-line note is on the card).
+  assert.match(src, /\{open && !missing && <div className="mm-detail">/);
+  assert.match(src, /\{!file && \(system \|\| protectedModel\) \? <p className="mm-note">\{t\('mm\.card\.sidecarSource'\)\}<\/p>\n\s*: !file && <p className="mm-note">\{t\('mm\.card\.fromCache'\)\}<\/p>\}/);
 });
 
 test('a missing file reads "File missing" (not "Failed to load") and hides the "model folder" source tag', () => {
-  assert.match(src, /\{missing \? t\('mm\.card\.missing'\) : m\.servedElsewhere \? t\('mm\.card\.servedElsewhere'\) : m\.failed \? t\('mm\.card\.failed'\)/);
+  assert.match(src, /const pill: PillState = missing \? 'missing' : m\.servedElsewhere \? 'service' : m\.failed \? 'failed'/);
+  assert.match(src, /missing: \['mm\.card\.missing', 'bad'\]/);
   assert.match(src, /\{m\.source && !missing && <span>/);
 });
 
