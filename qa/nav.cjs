@@ -56,3 +56,26 @@ async function openToolCatalogue(page) {
   await row.click();
 }
 module.exports.openToolCatalogue = openToolCatalogue;
+
+// noevia#1697: one way into Models and routing for the qa scripts. #1503 renamed the Settings
+// entry from "Models & routing" to "Models and routing", which left scripts that hard-coded the
+// old label timing out. By default this takes the user's path (Settings -> Models and routing ->
+// Open model manager); { direct: true } loads the /models route instead. Either way it resolves
+// once the model manager page is on screen and returns it.
+const MODELS_SECTION = 'Models and routing';
+async function openModelsPage(page, origin, { direct = false } = {}) {
+  const root = page.locator('.model-manager-page');
+  if (direct) {
+    await page.goto(`${origin}/models`);
+  } else {
+    await page.goto(origin);
+    await openSettings(page);
+    const settings = page.getByRole('dialog', { name: 'Settings' });
+    await settings.getByRole('button', { name: MODELS_SECTION, exact: true }).click();
+    await settings.getByRole('button', { name: 'Open model manager', exact: true }).click();
+  }
+  await root.waitFor();
+  return root;
+}
+module.exports.openModelsPage = openModelsPage;
+module.exports.MODELS_SECTION = MODELS_SECTION;

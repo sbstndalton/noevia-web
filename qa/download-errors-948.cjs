@@ -10,7 +10,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || `${os.homedir()}/n
 const assert = require('node:assert/strict');
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
-const {openSettings, openModelsTab } = require('./nav.cjs');
+const { openModelsPage, openModelsTab } = require('./nav.cjs');
 
 const PORT = Number(process.env.QA_PORT || 31948);
 (async () => {
@@ -55,13 +55,7 @@ const PORT = Number(process.env.QA_PORT || 31948);
       return json({});
     });
 
-    await page.goto(`http://localhost:${PORT}`);
-    await openSettings(page);
-    const settings = page.getByRole('dialog', { name: 'Settings' });
-    await settings.getByRole('button', { name: 'Models & routing' }).click();
-    await settings.getByRole('button', { name: 'Open model manager' }).click();
-    const dialog = page.locator('.model-manager-page');
-    await dialog.waitFor();
+    const dialog = await openModelsPage(page, `http://localhost:${PORT}`);
     await openModelsTab(dialog, 'Discover');
 
     await check('#948 (1) a failed token Save / Save and test / Remove shows an alert and keeps the typed token', async () => {
