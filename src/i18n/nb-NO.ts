@@ -580,6 +580,7 @@ export const NB_NO: Catalogue = {
   'storage.refresh.forbidden': "Lagringen nektet tilgang til denne mappen. Sjekk deling og tillatelser i lagringsappen, og prøv igjen.",
   'storage.refresh.timeout': "Lagringen svarte ikke i tide. Prøv igjen om litt.",
   'storage.refresh.unreachable': "Lagringen kunne ikke nås. Sjekk serveradressen og at den er på nett, og prøv igjen.",
+  'upload.noFreeName': "Alle nummererte kopier av dette navnet er allerede tatt. Gi filen nytt navn og prøv igjen.",
   'storage.openSettings': "Åpne lagringsinnstillinger",
   'storage.loading': "Laster den lagrede lagringstilkoblingen din…",
   'storage.loadFailed': "Den lagrede lagringstilkoblingen din kunne ikke lastes, så disse feltene er låst for å unngå å overskrive den. Serveren kan være opptatt eller utilgjengelig.",

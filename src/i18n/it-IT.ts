@@ -580,6 +580,7 @@ export const IT_IT: Catalogue = {
   'storage.refresh.forbidden': "Lo storage ha negato l’accesso a questa cartella. Controlla la condivisione e i permessi nell’app di storage, poi riprova.",
   'storage.refresh.timeout': "Lo storage non ha risposto in tempo. Riprova tra poco.",
   'storage.refresh.unreachable': "Impossibile raggiungere lo storage. Controlla l’indirizzo del server e che sia online, poi riprova.",
+  'upload.noFreeName': "Tutte le copie numerate di questo nome esistono già. Rinomina il file e riprova.",
   'storage.openSettings': "Apri impostazioni di archiviazione",
   'storage.loading': "Caricamento della connessione di archiviazione salvata…",
   'storage.loadFailed': "Non è stato possibile caricare la connessione di archiviazione salvata, quindi questi campi sono bloccati per non sovrascriverla. Il server potrebbe essere occupato o irraggiungibile.",

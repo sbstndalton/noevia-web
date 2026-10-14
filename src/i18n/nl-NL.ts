@@ -580,6 +580,7 @@ export const NL_NL: Catalogue = {
   'storage.refresh.forbidden': "De opslag weigert toegang tot deze map. Controleer het delen en de rechten in je opslag-app en probeer het opnieuw.",
   'storage.refresh.timeout': "De opslag reageerde niet op tijd. Probeer het zo nog eens.",
   'storage.refresh.unreachable': "De opslag is niet bereikbaar. Controleer het serveradres en of de server online is, en probeer het opnieuw.",
+  'upload.noFreeName': "Alle genummerde kopieën van deze naam bestaan al. Geef het bestand een andere naam en probeer het opnieuw.",
   'storage.openSettings': "Opslaginstellingen openen",
   'storage.loading': "Je opgeslagen opslagverbinding laden…",
   'storage.loadFailed': "Je opgeslagen opslagverbinding kon niet worden geladen, dus deze velden zijn vergrendeld om haar niet te overschrijven. De server is mogelijk bezet of onbereikbaar.",

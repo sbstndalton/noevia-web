@@ -580,6 +580,7 @@ export const PT_BR: Catalogue = {
   'storage.refresh.forbidden': "O armazenamento recusou o acesso a esta pasta. Verifique o compartilhamento e as permissões no seu app de armazenamento e tente novamente.",
   'storage.refresh.timeout': "O armazenamento não respondeu a tempo. Tente novamente em instantes.",
   'storage.refresh.unreachable': "Não foi possível acessar o armazenamento. Verifique o endereço do servidor e se ele está online, e tente novamente.",
+  'upload.noFreeName': "Todas as cópias numeradas deste nome já existem. Renomeie o arquivo e tente novamente.",
   'storage.openSettings': "Abrir configurações de armazenamento",
   'storage.loading': "Carregando sua conexão de armazenamento salva…",
   'storage.loadFailed': "Não foi possível carregar sua conexão de armazenamento salva, então estes campos estão bloqueados para não sobrescrevê-la. O servidor pode estar ocupado ou inacessível.",

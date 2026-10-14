@@ -8,7 +8,7 @@ const test = require('node:test'), assert = require('node:assert/strict'), fs = 
 const ts = require('typescript');
 const source = fs.readFileSync(path.join(__dirname, '../../src/components/ComposerActions.tsx'), 'utf8');
 const body = source.slice(source.indexOf('export async function uploadAttachments'), source.indexOf('/** True only for a drag'));
-const js = ts.transpileModule(body.replace(/^export /, ''), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+const js = ts.transpileModule(body.replace(/^export /gm, ''), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
 
 function harness(upload) {
   const statuses = [], busy = [];
