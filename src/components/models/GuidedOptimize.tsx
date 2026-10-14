@@ -53,6 +53,10 @@ export function GuidedOptimize({ model, installed, onOpenTab }: { model: string;
   const role = roleOf(model, installed?.labels || []);
   const t = useT();
   const [openSteps, setOpenSteps] = useState(false);
+  // #1695: there is nothing to optimise for a model whose file is gone.
+  if (installed?.missingFile === true) return <section className="mm-panel mm-guided" aria-label={t('mm.guided.title')}>
+    <p className="mm-note" role="status">{t('mm.guided.missingNote')}</p>
+  </section>;
   if (isSystemModel(model)) return <section className="mm-panel mm-guided" aria-label={t('mm.guided.title')}>
     <p className="mm-note" role="status">{t('model.systemLabel')}{t('mm.guided.systemNote')}</p>
   </section>;
