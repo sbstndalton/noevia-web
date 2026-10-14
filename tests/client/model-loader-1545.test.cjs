@@ -64,10 +64,38 @@ test('every locale has a numbered engine label with its placeholder, translated'
   }
 });
 
-test('the panel renders loaderLines, and the stylesheet keeps each line unbroken', () => {
+test('the panel renders loaderLines, and the stylesheet never breaks inside a model name', () => {
   const tsx = fs.readFileSync(path.join(__dirname, '../../src/components/models/OverviewTab.tsx'), 'utf8');
   assert.match(tsx, /loaderLines\(t, backends, unhealthy, \(probeError\) => describeBackendError\(t, probeError\)\)/);
   const css = fs.readFileSync(path.join(__dirname, '../../src/styles/noevia.css'), 'utf8');
-  assert.match(css, /\.mm-loader-item \{[^}]*white-space: nowrap;[^}]*\}/);
+  assert.match(tsx, /<span className="mm-loader-model">\{model\}<\/span>/, 'the model name is its own unit');
+  assert.match(css, /\.mm-loader-model \{[^}]*white-space: nowrap;[^}]*\}/);
+  assert.equal(loaderLines(t, healthy, [], describe)[0].model, 'gemma-4-12b-it-qat-q4_0');
   assert.match(css, /\.mm-loader-state \{[^}]*flex: 1 1 100%;[^}]*\}/, 'the engine lines take the full row');
+});
+
+// #1545 (live, ab1445b0): the row kept its internal "Model loader" name and could stay on "Checking…"
+// for good, because the panel waited for five reads together with no time limit.
+test('every read is bounded: a read that never answers gives the fallback, a fast one its own value', async () => {
+  const { within, RECOVER_READ_TIMEOUT_MS } = load('components/models/loader-lines');
+  assert.ok(RECOVER_READ_TIMEOUT_MS > 0 && RECOVER_READ_TIMEOUT_MS <= 15000, `${RECOVER_READ_TIMEOUT_MS} ms`);
+  assert.equal(await within(new Promise(() => {}), 20, 'unavailable'), 'unavailable');
+  assert.equal(await within(Promise.resolve('ok'), 1000, 'unavailable'), 'ok');
+  assert.equal(await within(Promise.reject(new Error('down')), 1000, null), null);
+});
+
+test('the engine row and the job list settle on their own reads, not on one shared wait', () => {
+  const src = fs.readFileSync(path.join(__dirname, '../../src/components/models/OverviewTab.tsx'), 'utf8');
+  const load = src.slice(src.indexOf('const load = useCallback'), src.indexOf('useEffect(() => { void load(); }, [load]);'));
+  assert.match(load, /bounded\(mm<\{ backends: Backend\[\] \}>\('backends'\)[^;]*setBackends\(v\)/s);
+  assert.doesNotMatch(load, /const \[autotune, calibration, downloads, engines, installed\]/);
+});
+
+test('the row is named in plain words in every locale, not after the internal model loader', () => {
+  for (const [locale, cat] of Object.entries(MODELS)) {
+    for (const key of ['mm.recover.loader', 'mm.recover.checkingLoader', 'mm.recover.healthUnavailableHelp']) {
+      assert.doesNotMatch(cat[key] || '', /loader|cargador|chargeur|caricatore|lader|laster|inläsare/i, `${locale} ${key}: ${cat[key]}`);
+    }
+  }
+  assert.equal(MODELS['en-GB']['mm.recover.loader'], 'Engines');
 });

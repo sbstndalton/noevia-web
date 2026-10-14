@@ -40,7 +40,7 @@ async function check(browser, width, theme, result) {
     await requestStarted;
     const state = page.locator('.mm-loader-state');
     await state.waitFor();
-    assert.equal(await state.innerText(), 'Checking model loader…', `${width}/${theme}/${result}: initial probe is pending`);
+    assert.equal(await state.innerText(), 'Checking engines…', `${width}/${theme}/${result}: initial probe is pending`);
     assert.equal(await page.locator('.mm-loader-row .model-dot.down').count(), 0, 'pending is not an unavailable-status dot');
     if (OUT) {
       fs.mkdirSync(OUT, { recursive: true });
@@ -51,10 +51,10 @@ async function check(browser, width, theme, result) {
     else await heldRoute.fulfill({ json: {} });
     heldRoute = null;
     await page.waitForFunction(expected => document.querySelector('.mm-loader-state')?.textContent?.trim() === expected,
-      result === 'success' ? 'synthetic-engine running' : 'Health unavailable');
-    assert.equal(await state.innerText(), result === 'success' ? 'synthetic-engine running' : 'Health unavailable');
+      result === 'success' ? 'Engine 1 running' : 'Health unavailable');
+    assert.equal(await state.innerText(), result === 'success' ? 'Engine 1 running' : 'Health unavailable');
     assert.equal(await page.locator('.mm-loader-row .model-dot.down').count(), result === 'success' ? 0 : 1);
-    const help = page.getByText('Could not check the model loader. Check again or open logs.');
+    const help = page.getByText('Could not check the engines. Check again or open logs.');
     assert.equal(await help.count(), result === 'success' ? 0 : 1);
     assert.ok(await page.locator('.model-manager-page').evaluate(element => element.scrollWidth <= element.clientWidth + 1), `${width}/${theme}/${result}: horizontal overflow`);
     if (OUT) await page.screenshot({ path: path.join(OUT, `models-loader-${width}-${theme}-${result}-settled.png`) });

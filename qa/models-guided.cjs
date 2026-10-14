@@ -56,7 +56,7 @@ const rows = [4096, 8192, 16384, 32768, 65536, 131072, 262144].map(ctx => ({ ctx
     const manager = page.locator('.model-manager-page');
     await openModelsTab(manager, 'Overview');
     await manager.getByText('No KV cache type passed quality and throughput checks.').waitFor();
-    await manager.getByText(/Model loader/).waitFor();
+    await manager.getByText(/^Engines$/).waitFor();
     await manager.getByText(/Context verified · 16,384 tokens/).first().waitFor();
     assert.equal(await manager.locator('.mm-role-list li', { hasText: 'laya_multilingual_f16' }).getByRole('button').count(), 0, 'Laya has no controls');
     const shots = [];

@@ -20,7 +20,7 @@ export function loaderLines(
   backends: LoaderBackend[],
   unhealthy: LoaderBackend[],
   describeError: (probeError: string) => string,
-): { key: string; text: string }[] {
+): { key: string; text: string; model?: string }[] {
   const engine = (b: LoaderBackend) => t('mm.recover.engineIndex', { index: backends.indexOf(b) + 1 });
   if (unhealthy.length) {
     return unhealthy.map((b) => ({
@@ -30,8 +30,25 @@ export function loaderLines(
   }
   return backends.map((b) => ({
     key: b.name,
+    ...(b.loaded_model ? { model: b.loaded_model } : {}),
     text: b.loaded_model
       ? t('mm.recover.runningWith', { engine: engine(b), model: b.loaded_model })
       : t('mm.recover.running', { engine: engine(b) }),
   }));
+}
+
+/** How long the Recover panel waits for one of its reads before it shows that read as unavailable
+ *  (#1545: a model-manager read that never answered left the panel on "Checking…" for good). */
+export const RECOVER_READ_TIMEOUT_MS = 12_000;
+
+/** `promise`, or `fallback` once `ms` pass without an answer (or when it rejects). The timer is
+ *  cleared when the promise settles first. */
+export function within<T, F>(promise: Promise<T>, ms: number, fallback: F): Promise<T | F> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      () => { clearTimeout(timer); resolve(fallback); },
+    );
+  });
 }
