@@ -164,6 +164,11 @@ export interface ToolCallView {
   server?: string;
   /** #658: a write that ran and succeeded. Later turns tell the model it is done. */
   applied?: boolean;
+  /** #1700: the server marked this tool positively public (search, Wikipedia). Only such a read is resent after a
+   *  failed reply; anything unmarked (private, unknown, or saved before the mark existed) never is. */
+  public?: boolean;
+  /** #1702: the server skipped this call (not run). */
+  notRun?: boolean;
   /** What the tool returned, bounded for display and history. */
   result?: string;
 }
@@ -349,7 +354,9 @@ export interface HistoryEntry {
  *  already saved, which the server words for the model as done so it is not proposed again. */
 export type ModelHistoryEntry = HistoryEntry | { role: 'tool'; name: string; content: string; applied: true; target?: string; args?: string }
   /** #666: a write the user did not approve; the server tells the model it did not run. */
-  | { role: 'tool'; name: string; content: string; declined: true };
+  | { role: 'tool'; name: string; content: string; declined: true }
+  /** #1692: a finished read of a reply that failed before its answer; the server carries it for the next turn. */
+  | { role: 'tool'; name: string; content: string };
 
 export interface WorkspaceInfo {
   projects: Project[];

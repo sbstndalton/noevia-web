@@ -16,6 +16,18 @@ function writeSignature(c: ToolCallView): string {
   return [c.name, c.target || '', c.args || '', c.result || ''].join('\u0000');
 }
 
+/** #1692: how many finished reads of a failed reply are sent with the next turn. */
+export const FAILED_REPLY_READS = 5;
+
+/** #1692: the calls of a reply that ran, are not writes (applied or declined) and returned a usable result.
+ *  #1700: only tools the server marked public (search, Wikipedia; core tools-mode isPublicToolName): a private read
+ *  (notes, files, Drive, the project reader) is never resent, so it cannot reach a cloud model on the next turn.
+ *  #1702: a call the server did not run is not a result. */
+export function finishedReads(m: Pick<Message, 'toolCalls'>): ToolCallView[] {
+  return (m.toolCalls || []).filter((c) => c && c.status === 'done' && c.public === true && c.notRun !== true && c.applied !== true && typeof c.name === 'string'
+    && typeof c.result === 'string' && c.result.trim() !== '' && !/^ERROR\b/.test(c.result));
+}
+
 /** The history sent with a turn. Each turn as before (a failed reply's own text is left out),
  *  plus one entry per change an earlier reply already saved, INCLUDING a reply that then failed
  *  or was paused (#658). The server words those for the model as done, so it does not propose
@@ -44,6 +56,12 @@ export function modelHistory(messages: Message[]): ModelHistoryEntry[] {
       if (skip.has(`${i}:${n}`)) continue;
       out.push({ role: 'tool', name: c.name, content: c.result || '', applied: true,
         ...(c.target ? { target: c.target } : {}), ...(c.args ? { args: c.args } : {}) });
+    }
+    // #1692: a reply that failed before its answer keeps no text, so the reads it did finish are all the next turn
+    // has of it ("using what your search found..."). Their bounded results are sent; the server carries them under
+    // its own note. A reply with an answer is not repeated: its text already says what the tools found.
+    if (m.error || !m.content.trim()) {
+      for (const c of finishedReads(m).slice(0, FAILED_REPLY_READS)) out.push({ role: 'tool', name: c.name, content: c.result || '' });
     }
     // #666: writes the user declined (or did not answer in time). The reply that asked for them
     // has no text after the decline, so the model is told they did not run. The on-screen note

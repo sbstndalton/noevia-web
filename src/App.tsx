@@ -1187,7 +1187,7 @@ export default function App(): JSX.Element {
             // that would now 404.
             // #1575: a result whose index was never announced joins its open call of the same name, not a new chip.
             const done = resultSlot(tools, typeof ev.index === 'number' ? ev.index : undefined, ev.name);
-            const chip = finishedToolCall(done >= 0 ? tools[done] : undefined, { name: ev.name, text: ev.text, applied: ev.applied === true, target: ev.target, declined: ev.declined === true, notRun: ev.notRun === true }, TOOL_RESULT_LIMIT);
+            const chip = finishedToolCall(done >= 0 ? tools[done] : undefined, { name: ev.name, text: ev.text, applied: ev.applied === true, target: ev.target, declined: ev.declined === true, notRun: ev.notRun === true, public: ev.public === true }, TOOL_RESULT_LIMIT);
             if (done >= 0) tools[done] = chip; else tools.push(chip);
             setMessagesByChat((prev) => ({
               ...prev,
