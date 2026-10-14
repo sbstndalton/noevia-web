@@ -34,13 +34,18 @@ require('node:fs').mkdirSync(shots, { recursive: true });
       // #1699: the plain-text shape core mostly uses (here, the timeout text).
       fixture.liveEvent({ type: 'tool', index: 3, name: 'synthetic_write', args: '{"path":"a.md"}' });
       fixture.liveEvent({ type: 'tool_result', index: 3, name: 'synthetic_write', text: 'ERROR: the user did not respond in time, so synthetic_write was not run. Ask before trying again.' });
+      // #1707: a fetch where every URL failed, and one where only some did.
+      fixture.liveEvent({ type: 'tool', index: 4, name: 'synthetic_extract', args: '{"urls":["https://qa-1707.invalid/page"]}' });
+      fixture.liveEvent({ type: 'tool_result', index: 4, name: 'synthetic_extract', text: JSON.stringify({ results: [], failed_results: [{ url: 'https://qa-1707.invalid/page', error: 'Failed to fetch url' }] }) });
+      fixture.liveEvent({ type: 'tool', index: 5, name: 'synthetic_extract', args: '{"urls":["a","b"]}' });
+      fixture.liveEvent({ type: 'tool_result', index: 5, name: 'synthetic_extract', text: JSON.stringify({ results: [{ url: 'https://example.invalid/a', raw_content: 'synthetic' }], failed_results: [{ url: 'https://qa-1707.invalid/b', error: 'Failed to fetch url' }] }) });
       fixture.liveEvent({ type: 'delta', text: 'Synthetic answer after failed tools' });
       fixture.finishLive();
       await page.getByText('Synthetic answer after failed tools', { exact: true }).waitFor();
       const list = page.locator('.tool-calls').last();
       await list.locator(':scope > summary').click();
       const items = list.locator('.tool-call');
-      await check(`${width} ${theme}: four rows`, async () => assert.equal(await items.count(), 4));
+      await check(`${width} ${theme}: six rows`, async () => assert.equal(await items.count(), 6));
       const rows = await items.evaluateAll((els) => els.map((el) => {
         const state = el.querySelector('.tool-call-state');
         return { cls: el.className, label: state?.getAttribute('aria-label'), icon: state?.innerHTML || '', color: state ? getComputedStyle(state).color : '' };
@@ -55,11 +60,19 @@ require('node:fs').mkdirSync(shots, { recursive: true });
       await check(`${width} ${theme}: a failed call has a different icon from a success`, async () => assert.notEqual(rows[0].icon, rows[2].icon));
       await check(`${width} ${theme}: a failed call has a different colour from a success`, async () => assert.notEqual(rows[0].color, rows[2].color));
       await check(`${width} ${theme}: the row still says "Returned an error"`, async () => assert.equal((await items.nth(0).locator('.tool-call-preview').innerText()).trim(), 'Returned an error'));
+      await check(`${width} ${theme}: #1707 a fetch where every URL failed is in the error state`, async () => {
+        assert.match(rows[4].cls, /\bis-error\b/); assert.equal(rows[4].label, 'failed');
+        assert.equal((await items.nth(4).locator('.tool-call-preview').innerText()).trim(), 'Could not fetch 1 URL');
+      });
+      await check(`${width} ${theme}: #1707 a partial failure stays done with a note`, async () => {
+        assert.match(rows[5].cls, /\bis-done\b/);
+        assert.equal((await items.nth(5).locator('.tool-call-preview').innerText()).trim(), '1 result · 1 URL failed');
+      });
       await check(`${width} ${theme}: no horizontal overflow`, async () => assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)));
       await list.screenshot({ path: `${shots}/tool-call-error-${tag}-${width}-${theme}.png` });
       await page.close();
     }
     await check('no page errors', async () => assert.deepEqual(errors, []));
   } finally { await browser.close(); await fixture.close(); }
-  if (failures.length) { console.log(`FAIL ${failures.length} check(s)`); process.exitCode = 1; } else console.log('PASS #1694 failed tool calls show an x in the danger colour, distinct from the success check, 2000/390 light/dark.');
+  if (failures.length) { console.log(`FAIL ${failures.length} check(s)`); process.exitCode = 1; } else console.log('PASS #1694 failed tool calls show an x in the danger colour, distinct from the success check (including all-URLs-failed fetches, #1707), 2000/390 light/dark.');
 })().catch((e) => { console.error(e); process.exitCode = 1; });
