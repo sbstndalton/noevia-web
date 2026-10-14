@@ -13,10 +13,10 @@ export const EMPTY_STATE_GLYPHS: Readonly<Record<string, string>> = {
 };
 
 /** What is missing, why it matters, and what to do next — one calm symbol, one line, at most one action. */
-export function EmptyState({ icon, title, children, action, compact = false }: { icon: string; title: string; children?: ReactNode; action?: ReactNode; compact?: boolean }): JSX.Element {
+export function EmptyState({ icon, title, children, action, compact = false, role = 'status' }: { icon: string; title: string; children?: ReactNode; action?: ReactNode; compact?: boolean; role?: 'status' | 'alert' }): JSX.Element {
   const glyph = EMPTY_STATE_GLYPHS[icon] ?? icon;
   return (
-    <div className={`empty-state-card${compact ? ' is-compact' : ''}`} role="status">
+    <div className={`empty-state-card${compact ? ' is-compact' : ''}`} role={role}>
       <span className="empty-state-icon" aria-hidden="true"><ShellIcon name={glyph} size={compact ? 18 : 22} tone="decorative"/></span>
       <p className="empty-state-title">{title}</p>
       {children && <p className="empty-state-text">{children}</p>}

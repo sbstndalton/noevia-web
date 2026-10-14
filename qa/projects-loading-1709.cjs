@@ -78,9 +78,30 @@ async function watchFor(page, text, ms, stepMs = 30) {
           assert.equal(await page.getByText(EMPTY).count(), 0);
         });
         await page.screenshot({ path: `${shots}/projects-error-${tag}-${width}-${theme}.png` });
-        fail = false;
-        await check(`${at}: Try again loads the projects`, async () => {
+        await check(`${at}: the error card is announced (role=alert)`, async () => assert.equal(await page.locator('.empty-state-card[role="alert"]').count(), 1));
+        // Fail twice: each retry shows the skeleton while in flight, and the second failure brings the error back.
+        let release;
+        await page.unroute('**/api/workspace');
+        await page.route('**/api/workspace', async (r) => { await new Promise((res) => { release = res; }); return fail ? r.fulfill({ status: 503, json: { error: 'synthetic outage' } }) : r.fulfill({ json: { projects: PROJECTS, freeChats: [] } }); });
+        const retryOnce = async (label) => {
+          release = null;
           await page.getByRole('button', { name: 'Try again' }).click();
+          await check(`${at}: ${label}: the skeleton shows while the retry is in flight`, async () => {
+            await page.locator('.projects-workspace [aria-busy="true"]').waitFor({ timeout: 2000 });
+            assert.equal(await page.getByText('Couldn’t load projects').count(), 0);
+          });
+          for (let i = 0; !release && i < 100; i++) await page.waitForTimeout(20);
+          release && release();
+        };
+        await retryOnce('retry 1');
+        await check(`${at}: a second failure shows the error again`, async () => {
+          await page.getByText('Couldn’t load projects').waitFor({ timeout: 5000 });
+          assert.equal(await page.locator('.projects-workspace [aria-busy="true"]').count(), 0);
+          assert.equal(await page.getByText(EMPTY).count(), 0);
+        });
+        fail = false;
+        await retryOnce('retry 2');
+        await check(`${at}: Try again loads the projects`, async () => {
           await page.locator('.project-card-name', { hasText: 'QA synthetic beta' }).waitFor({ timeout: 5000 });
         });
         await page.close();

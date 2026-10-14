@@ -119,7 +119,7 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
             {[0, 1, 2].map((i) => <div key={i} className="project-card project-card-skeleton" aria-hidden="true"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>)}
           </div>
         ) : listState === 'failed' ? (
-          <EmptyState icon="circle-alert" title={t('projects.loadErrorTitle')}
+          <EmptyState role="alert" icon="circle-alert" title={t('projects.loadErrorTitle')}
             action={onRetry ? <button className="btn btn-secondary" onClick={() => onRetry()}>{t('projects.loadErrorRetry')}</button> : undefined}>
             {t('projects.loadErrorBody')}
           </EmptyState>

@@ -1809,7 +1809,7 @@ export default function App(): JSX.Element {
             onDelete={handleDeleteProject}
             loaded={workspaceLoaded}
             failed={workspaceFailed}
-            onRetry={() => { void refreshProjects(); }}
+            onRetry={() => { setWorkspaceFailed(false); void refreshProjects(); }}
           />
         </Suspense>
       )}

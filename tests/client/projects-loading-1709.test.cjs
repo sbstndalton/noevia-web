@@ -10,7 +10,7 @@ test('#1709 App passes the workspace load state and a retry to the Projects page
   const view = /<Projects\.View[\s\S]*?\/>/.exec(app)[0];
   assert.match(view, /loaded=\{workspaceLoaded\}/);
   assert.match(view, /failed=\{workspaceFailed\}/);
-  assert.match(view, /onRetry=\{\(\) => \{ void refreshProjects\(\); \}\}/);
+  assert.match(view, /onRetry=\{\(\) => \{ setWorkspaceFailed\(false\); void refreshProjects\(\); \}\}/, 'a retry clears the failure so the skeleton shows and a second failure is re-announced');
 });
 
 test('#1709 the empty state is gated on a loaded list; loading and failed states come first', () => {
