@@ -11,14 +11,15 @@ const src = load('components/models/LibraryTab.tsx');
 
 test('the Load/Unload button only renders when the model is not system, sidecar-protected or missing its file', () => {
   assert.match(src, /const missing = m\.missingFile === true;/);
-  assert.match(src, /const engineControls = !system && !protectedModel && !missing;/);
+  assert.match(src, /const engineControls = admin && !system && !protectedModel && !missing;/, '#1660 review: engine controls are for administrators only');
   assert.match(src, /\{engineControls && <button className="popup-tab" disabled=\{busy\}[^\n]*onClick=\{onToggle\}>/);
   assert.doesNotMatch(src, /\n\s*<button className="popup-tab" disabled=\{busy\}[^\n]*onClick=\{onToggle\}>/, 'no unconditional Load/Unload button remains');
 });
 
 test('a missing-file preset gets an explanatory note (after the system and sidecar notes) and no MTP/tune controls', () => {
-  assert.match(src, /\{missing && !open && <p className="mm-note" role="status">\{t\('mm\.card\.missingNote'\)\}<\/p>\}/, 'the card itself carries the note');
-  assert.match(src, /\{missing \? <p className="mm-note" role="status">\{t\('mm\.card\.missingNote'\)\}<\/p>\n\s*: !file && \(system \|\| protectedModel\)/, 'Details leads with the missing note, even for system models');
+  // #1663: one short note on the card (hidden while the delete confirm explains instead); no Details wall.
+  assert.match(src, /\{missing && !confirming && <p className="mm-note model-card-note" role="status">\{t\('mm\.card\.missingShort'\)\}<\/p>\}/, 'the card itself carries the note');
+  assert.match(src, /\{open && !missing && <div className="mm-detail">/, 'no Details panel for a missing preset');
   assert.match(src, /runtimeOptions && !missing && <MtpControl/);
 });
 

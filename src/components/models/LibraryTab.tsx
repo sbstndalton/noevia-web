@@ -15,6 +15,9 @@ import { isSystemModel } from '../../model-system';
 import { isChatGenerationModel } from '../../model-kind';
 import { bytesToModelSizeGB, formatModelSizeGB } from '../../model-size';
 import { useT } from '../../i18n';
+import { notifyModelsChanged } from '../../models-changed';
+import { embeddingOptions, fetchAssignments, finishEmbeddingSwitch, switchEmbedding } from './assignments';
+import type { ServiceAssignment } from './assignments';
 import type { MessageKey } from '../../i18n';
 
 type FileEntry = { key: string; name: string; subdir: string; bytes: number; size: string; modified: string; mtime?: number; sharded: boolean; parts: number;
@@ -56,7 +59,9 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   const [updates, setUpdates] = useState<Record<string, Update>>({});
   const [disk, setDisk] = useState<{ freeH: string; totalH: string; free?: number; total?: number; usedPct: number } | null>(null);
   const [scanned, setScanned] = useState(false);
-  const [canTune, setCanTune] = useState(false), [showTune, setShowTune] = useState(false);
+  const [canTune, setCanTune] = useState(false), [showTune, setShowTune] = useState(false), [admin, setAdmin] = useState(false);
+  // A refresh that started before a newer one (or before a delete) must not overwrite its result.
+  const requestRef = useRef(0);
   const [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(''), [filesNote, setFilesNote] = useState(''), [runtimeOptions, setRuntimeOptions] = useState(false);
   // The parent passes a fresh callback each render; the refresh below must stay stable.
   const changedRef = useRef(onChanged);
@@ -65,16 +70,19 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   // list as soon as it arrives and let file details, updates and disk space fill in after.
   const refresh = useCallback(async () => {
     setError('');
-    const listed = fetchInstalledModels().then((installed) => { setModels(installed); return installed; });
+    const request = ++requestRef.current;
+    const current = () => request === requestRef.current;
+    const listed = fetchInstalledModels().then((installed) => { if (current()) setModels(installed); return installed; });
     const local = mm<{ models: FileEntry[]; unregistered: string[] }>('models').catch(() => null);
     // `u.status` is missing rather than `{}` when the endpoint answers with an unexpected body —
     // `|| {}` keeps `updates[...]` a safe lookup instead of crashing on an undefined record.
     void mm<{ status: Record<string, Update> }>('models/updates').then((u) => setUpdates(u.status || {})).catch(() => undefined);
-    void apiFetch('/api/models/capabilities').then(r => r.json()).then((caps) => { setRuntimeOptions(caps?.runtimeOptions === true); setCanTune(caps?.admin === true && caps?.autotune === true); }).catch(() => undefined);
+    void apiFetch('/api/models/capabilities').then(r => r.json()).then((caps) => { setRuntimeOptions(caps?.runtimeOptions === true); setAdmin(caps?.admin === true); setCanTune(caps?.admin === true && caps?.autotune === true); }).catch(() => undefined);
     void mm<{ modelsDir?: { disk?: { freeH: string; totalH: string; free?: number; total?: number; usedPct: number } | null } }>('overview').then((o) => setDisk(o?.modelsDir?.disk ?? null)).catch(() => undefined);
     try {
       await listed;
       const scan = await local;
+      if (!current()) return;
       setFiles(scan?.models || []); setUnregistered(scan?.unregistered || []); setScanned(true);
       if (scan?.unregistered?.length) {
         const synced = await registerNewFolderModels(scan.unregistered);
@@ -155,13 +163,14 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     {filesNote && <p className="mm-note">{filesNote}</p>}
     {models && !servable.length && !orphanFiles.length && installed.length > 0 && <p className="mm-note">{t('mm.library.nothing')}</p>}
     <div className="model-grid">
-    {servable.map(m => <ModelCard key={m.name} runtimeOptions={runtimeOptions} onRefresh={() => void refresh()} model={m} file={fileFor(m.name)} update={updates[fileFor(m.name)?.name || '']} busy={busy === m.name}
+    {servable.map(m => <ModelCard key={m.name} admin={admin} runtimeOptions={runtimeOptions} onRefresh={() => void refresh()} model={m} file={fileFor(m.name)} update={updates[fileFor(m.name)?.name || '']} busy={busy === m.name}
       onToggle={() => void act(m.loaded ? 'unload' : 'load', m.name)} onConfigure={() => onConfigure(m.name)}
       onDeleted={(err, rolesCleared) => {
         if (err) setError(err);
         else {
           // The card leaves the list the moment the server confirms the delete — the
           // noevia:models-changed refetch below is a consistency check, not what removes it.
+          requestRef.current += 1;   // an older refresh still in flight must not bring the card back
           setModels(prev => (prev || []).filter(x => x.name !== m.name));
           if (rolesCleared && rolesCleared.length) setMessage(t('mm.delete.rolesCleared', { roles: rolesCleared.map(r => r.charAt(0).toUpperCase() + r.slice(1)).join(', ') }));
         }
@@ -185,20 +194,22 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   </div>;
 }
 
-function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDeleted, runtimeOptions, onRefresh }: { model: InstalledModel; file?: FileEntry; update?: Update; busy: boolean; onToggle: () => void; onConfigure: () => void; onDeleted: (error?: string | null, rolesCleared?: string[]) => void; runtimeOptions: boolean; onRefresh: () => void }) {
+type PillState = 'loaded' | 'unloaded' | 'failed' | 'missing' | 'service';
+const PILL: Record<PillState, [MessageKey, 'good' | 'muted' | 'bad']> = {
+  loaded: ['mm.loaded', 'good'], unloaded: ['mm.card.unloaded', 'muted'], failed: ['mm.card.failed', 'bad'], missing: ['mm.card.missing', 'bad'], service: ['mm.card.servedElsewhere', 'muted'],
+};
+
+function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDeleted, runtimeOptions, onRefresh, admin }: { admin: boolean; model: InstalledModel; file?: FileEntry; update?: Update; busy: boolean; onToggle: () => void; onConfigure: () => void; onDeleted: (error?: string | null, rolesCleared?: string[]) => void; runtimeOptions: boolean; onRefresh: () => void }) {
   const t = useT();
-  const [detail, setDetail] = useState<Detail | null>(null), [open, setOpen] = useState(false);
+  const [detail, setDetail] = useState<Detail | null>(null), [open, setOpen] = useState(false), [confirming, setConfirming] = useState(false), [deleting, setDeleting] = useState(false);
   const state = m.failed ? 'failed' : m.loaded ? 'loaded' : 'unloaded';
   useEffect(() => { if (open && file && !detail) void mm<Detail>(`models/detail?key=${encodeURIComponent(file.key)}`).then(setDetail).catch(() => {}); }, [open, file, detail]);
   const model = detail?.summary?.model || {};
   const system = isSystemModel(m.name);
-  // #343/#336: tuning is a chat-model concept (the Overview copy says so) — hide it for any
-  // embedding/reranking model, not just Laya. Delete stays hidden only for models a live sidecar
-  // actually depends on right now (server-computed sidecarProtected, model-system.cjs
-  // isSidecarModel) — deliberately NOT canDelete: canDelete can be false for other reasons (the
-  // manager's own can_remove), and DeleteModel's run() already falls back to the folder-scan
-  // delete path in exactly that case, so hiding the button on canDelete alone would hide a delete
-  // path that still works and mislabel the model as sidecar-protected when it just isn't one.
+  // #343/#336: tuning is a chat-model concept — hidden for embedding/reranking models and Laya.
+  // #1660: Delete is always offered. A model a live sidecar uses (server-computed
+  // sidecarProtected) or Laya gets a confirm that says which service uses it and what happens
+  // (switch embedding first, or turn Decision off) instead of a dead end.
   const chatModel = isChatGenerationModel(m.name, m.labels);
   const protectedModel = !system && m.sidecarProtected === true;
   // #548: Laya and the in-use embedding/reranker models are run by their own sidecars, so the
@@ -206,44 +217,38 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
   // preset whose file is missing can only fail to load; it is also not tunable.
   const missing = m.missingFile === true;
   const sizeLabel = formatModelSizeGB(m.sizeGB ?? (file ? bytesToModelSizeGB(file.bytes) : null), appLocale());
-  const engineControls = !system && !protectedModel && !missing;
-  return <article className={`model-card surface${open ? ' is-open' : ''}`} data-state={state} aria-label={m.name}>
-    <header className="model-card-head"><h3 className="model-card-name"><MiddleTruncate text={m.name}/></h3><span className="model-card-state">{missing ? t('mm.card.missing') : m.servedElsewhere ? t('mm.card.servedElsewhere') : m.failed ? t('mm.card.failed') : m.loaded ? t('mm.loaded') : t('mm.card.unloaded')}</span></header>
+  // #1660 review: Load/Unload, Tune and Delete are administrator controls; members see the cards read-only.
+  const engineControls = admin && !system && !protectedModel && !missing;
+  const pill: PillState = missing ? 'missing' : m.servedElsewhere ? 'service' : m.failed ? 'failed' : m.loaded ? 'loaded' : 'unloaded';
+  return <article className={`model-card surface${open ? ' is-open' : ''}${confirming ? ' is-confirming' : ''}`} data-state={state} aria-label={m.name}>
+    <header className="model-card-head"><h3 className="model-card-name"><MiddleTruncate text={m.name}/></h3><span className="model-card-state mm-state" data-tone={PILL[pill][1]}>{t(PILL[pill][0])}</span></header>
     <p className="model-card-meta">
-      {/* #443: this used to prefer file.size — a string formatted by the external Model Loader
-          service, which most likely uses binary GiB while calling it "GB" — over m.sizeGB (the
-          composer's decimal-GB number), so the same file showed two different sizes depending on
-          which page you were on. m.sizeGB, run through the same shared formatter the composer
-          uses, is now the only source: same field, same rounding, same label everywhere. */}
-      {/* #1088: when the server could not read the folder scan for the installed list (slow or
-          unreachable loader) m.sizeGB is null for every model that is not loaded, but this page's own
-          scan already holds the file. Same decimal-GB rounding, so the two never disagree. */}
+      {/* #443/#1088: one size source (decimal GB through the shared formatter) everywhere. */}
       {sizeLabel && <span>{sizeLabel}</span>}
       {m.maxContext != null && <span>{t('mm.card.trainedFor', { tokens: tokens(m.maxContext) })}</span>}
       {(m.shape ?? file?.shape) && <span>{tagLabel(t, (m.shape ?? file?.shape)!.label)}</span>}
       {file?.projector && <span className="model-card-tag">{t('mm.card.vision')}</span>}
       {system && <span className="model-card-tag" title={t('mm.card.systemTitle')}>{t('model.systemLabel')}</span>}
-      {protectedModel && <span className="model-card-tag" title={t('mm.card.protectedTitle')}>{t('mm.card.protectedLabel')}</span>}
+      {protectedModel && <span className="model-card-tag" title={t('mm.card.protectedTitle')}>{t('mm.card.inUseLabel')}</span>}
       {m.labels.filter(l => l !== 'vision').map(l => <span key={l} className="model-card-tag">{tagLabel(t, l)}</span>)}
       {m.source && !missing && <span>{m.source === 'preset' ? t('mm.card.sourceFolder') : m.source === 'cache' ? t('mm.card.sourceCache') : m.source}</span>}
       {update?.status === 'stale' && <span className="mm-pill is-warn">{t('mm.card.update', { remote: update.remote })}</span>}
     </p>
     {file?.badges && file.badges.length > 0 && <p className="model-card-meta">{file.badges.map(b => <span key={b.category} className="model-card-tag">{BADGE[b.category] ? t(BADGE[b.category]) : b.category} {b.rating}/5</span>)}</p>}
+    {missing && !confirming && <p className="mm-note model-card-note" role="status">{t('mm.card.missingShort')}</p>}
     <div className="model-card-actions">
       {engineControls && <button className="popup-tab" disabled={busy} aria-label={t(m.loaded ? 'mm.card.unloadNamed' : 'mm.card.loadNamed', { model: m.name })} onClick={onToggle}>{busy ? t('mm.working') : m.loaded ? t('mm.card.unload') : t('mm.card.load')}</button>}
-      {!system && !missing && chatModel && <button className="popup-tab" aria-label={t('mm.card.tuneNamed', { model: m.name })} onClick={onConfigure}>{t('mm.card.tune')}</button>}
-      <button className="popup-tab" aria-expanded={open} aria-label={t(open ? 'mm.card.hideDetailsNamed' : 'mm.card.detailsNamed', { model: m.name })} onClick={() => setOpen(!open)}>{open ? t('mm.card.hideDetails') : t('mm.details')}</button>
-      {!system && !protectedModel && <DeleteModel model={m} file={file} onDeleted={onDeleted}/>}
+      {admin && !system && !missing && chatModel && <button className="popup-tab" aria-label={t('mm.card.tuneNamed', { model: m.name })} onClick={onConfigure}>{t('mm.card.tune')}</button>}
+      {!missing && <button className="popup-tab" aria-expanded={open} aria-label={t(open ? 'mm.card.hideDetailsNamed' : 'mm.card.detailsNamed', { model: m.name })} onClick={() => setOpen(!open)}>{open ? t('mm.card.hideDetails') : t('mm.details')}</button>}
+      {admin && <button className="popup-tab model-card-danger" aria-expanded={confirming} disabled={deleting} aria-label={t('mm.delete.label', { model: m.name })} onClick={() => setConfirming(v => !v)}>{t('mm.delete')}</button>}
     </div>
-    {missing && !open && <p className="mm-note" role="status">{t('mm.card.missingNote')}</p>}
+    {admin && confirming && <DeleteModel onBusy={setDeleting} model={m} file={file} kind={missing ? 'missing' : system ? 'system' : protectedModel ? 'inuse' : 'normal'} onCancel={() => setConfirming(false)} onDeleted={(err, roles) => { if (err !== undefined) setConfirming(false); onDeleted(err, roles); }}/>}
     {runtimeOptions && !missing && <MtpControl model={m} onChanged={onRefresh}/>}
-    {open && <div className="mm-detail">
+    {open && !missing && <div className="mm-detail">
       {!detail && file && <p role="status">{t('mm.readingFile')}</p>}
-      {/* #579: the source line must match what the model actually is. A missing preset says so
-          (even Laya); sidecar models have no file in the folder because their own service runs
-          them; only a genuine download-cache model says it is served from the cache. */}
-      {missing ? <p className="mm-note" role="status">{t('mm.card.missingNote')}</p>
-        : !file && (system || protectedModel) ? <p className="mm-note">{t('mm.card.sidecarSource')}</p>
+      {/* #579: sidecar models have no file in the folder because their own service runs them;
+          only a genuine download-cache model says it is served from the cache. */}
+      {!file && (system || protectedModel) ? <p className="mm-note">{t('mm.card.sidecarSource')}</p>
         : !file && <p className="mm-note">{t('mm.card.fromCache')}</p>}
       {detail && <dl className="mm-facts">
         <div><dt>{t('mm.card.arch')}</dt><dd>{detail.summary.arch || '—'}</dd></div>
@@ -254,46 +259,77 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
         <div><dt>{t('mm.card.heads')}</dt><dd>{tokens(model.attention_head_count as number)} ({typeof model.attention_head_count_kv === 'number' ? model.attention_head_count_kv : t('mm.card.varies')})</dd></div>
         {file?.shape?.moe && <div><dt>{t('mm.card.experts')}</dt><dd>{t('mm.card.expertsValue', { experts: file.shape.experts, active: file.shape.active })}</dd></div>}
         {detail.projector && <div><dt>{t('mm.card.projector')}</dt><dd>{detail.projector.name}</dd></div>}
-        <div><dt>{t('mm.card.file')}</dt><dd className="mm-mono">{detail.file}{detail.sharded ? ` (${t('mm.card.parts', { parts: detail.parts })})` : ''}</dd></div>
         <div><dt>{t('mm.card.modified')}</dt><dd>{modifiedText(detail, appLocale())}</dd></div>
         {templateFlags(detail.summary.chat_template_features).length > 0 && <div><dt>{t('mm.card.template')}</dt><dd title={templateFlags(detail.summary.chat_template_features).join(', ')}>{templateFlags(detail.summary.chat_template_features).map(k => TEMPLATE_FLAGS.has(k) ? t(`mm.tpl.${k}` as MessageKey) : k.replace(/_/g, ' ')).join(', ')}</dd></div>}
+        {/* #1663: the path is one line, shortened in the middle; the full path is its tooltip. */}
+        <div className="mm-fact-wide"><dt>{t('mm.card.file')}</dt><dd className="mm-mono" title={detail.file}><MiddleTruncate text={`${detail.file}${detail.sharded ? ` (${t('mm.card.parts', { parts: detail.parts })})` : ''}`}/></dd></div>
       </dl>}
-      {/* Chat qualification evidence (and its Recheck) only means something for a chat model the
-          engine runs: not Laya, not a sidecar model, not a preset whose file is missing. */}
+      {/* Chat qualification evidence (and its Recheck) only means something for a chat model the engine runs. */}
       {engineControls && <EvidenceList model={m.name}/>}
       {system ? <p className="mm-note" role="status">{t('model.systemLabel')}{t('mm.card.systemNote')}</p>
-        : protectedModel ? <p className="mm-note" role="status">{t('mm.card.protectedLabel')}{t('mm.card.protectedNote')}</p>
-        : missing ? null
+        : protectedModel ? <p className="mm-note" role="status">{t('mm.card.inUseNote')}</p>
         : !chatModel ? <p className="mm-note" role="status">{t('mm.card.nonChatNote')}</p>
         : <NativeCalibration model={m.name} onChanged={() => {}}/>}
     </div>}
   </article>;
 }
 
-function DeleteModel({ model: m, file, onDeleted }: { model: InstalledModel; file?: FileEntry; onDeleted: (error?: string | null, rolesCleared?: string[]) => void }) {
+type DeleteKind = 'normal' | 'missing' | 'system' | 'inuse';
+/** POST /api/models/delete. Resolves the roles cleared; a refusal keeps the server's errorId. */
+async function deleteByName(name: string, extra: Record<string, unknown> = {}): Promise<string[]> {
+  const r = await apiFetch('/api/models/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, ...extra }) });
+  if (!r.ok) { const b = await readErrorBody(r) as { error?: string; errorId?: string }; throw Object.assign(Error(httpErrorMessage(r.status, b.error)), { errorId: b.errorId }); }
+  const body = (await r.json().catch(() => ({}))) as { rolesCleared?: string[] };
+  return Array.isArray(body.rolesCleared) ? body.rolesCleared : [];
+}
+
+function DeleteModel({ model: m, file, kind: initialKind, onDeleted, onCancel, onBusy }: { onBusy: (busy: boolean) => void; model: InstalledModel; file?: FileEntry; kind: DeleteKind; onDeleted: (error?: string | null, rolesCleared?: string[]) => void; onCancel: () => void }) {
   const t = useT();
-  const [confirming, setConfirming] = useState(false), [removeSettings, setRemoveSettings] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState('');
+  const [kind, setKind] = useState<DeleteKind>(initialKind);
+  const [removeSettings, setRemoveSettings] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState(''), [note, setNote] = useState('');
+  const [service, setService] = useState<ServiceAssignment | null>(null), [rerank, setRerank] = useState(false), [pick, setPick] = useState('');
+  // Never offer the model being deleted or the one embedding already uses.
+  const options = embeddingOptions(service ?? undefined).filter((o) => o.model !== m.name && o.model !== service?.model);
+  // Keep (or the card closing) stops a delete that has not been sent yet.
+  const cancelled = useRef(false);
+  useEffect(() => () => { cancelled.current = true; }, []);
+  useEffect(() => { onBusy(busy); }, [busy, onBusy]);
+  useEffect(() => {
+    if (kind !== 'inuse') return;
+    let live = true;
+    fetchAssignments().then((a) => {
+      if (!live) return;
+      const embed = a.services.find((s) => s.id === 'embedding');
+      setRerank(a.services.some((s) => s.id === 'reranker' && s.model === m.name) && embed?.model !== m.name);
+      setService(embed ?? null);
+      const first = embeddingOptions(embed).find((o) => o.model !== m.name && o.model !== embed?.model);
+      if (first) setPick((p) => p || first.model);
+    }).catch(() => { if (live) setError(t('mm.assign.loadError')); });
+    return () => { live = false; };
+  }, [kind, m.name, t]);
   // The files are gone but settings clean-up failed: say so in the interface language.
   const cleanupText = (detail?: string) => (detail ? t('mm.delete.cleanupFailedDetail', { detail }) : t('mm.delete.cleanupFailed'));
   const run = async () => {
-    setBusy(true); setError('');
+    setBusy(true); setError(''); setNote('');
     try {
-      if (m.canDelete !== false && m.source !== 'preset') {
-        const outcome = await runDeleteModelFiles(async () => {
-          const r = await apiFetch('/api/models/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: m.name }) });
-          if (!r.ok) throw Error(httpErrorMessage(r.status, (await readErrorBody(r)).error));
-          const body = (await r.json().catch(() => ({}))) as { rolesCleared?: string[] };
-          return Array.isArray(body.rolesCleared) ? body.rolesCleared : [];
-        });
-        setConfirming(false); onDeleted(outcome.error && cleanupText(outcome.cleanupDetail), outcome.rolesCleared); return;
+      if (kind === 'inuse') {
+        const target = options.find((o) => o.model === pick);
+        if (!target) return;
+        // A re-index already building this target is finished, not started again.
+        const outcome = service?.next === target.model ? await finishEmbeddingSwitch() : await switchEmbedding(target, service?.baseUrl);
+        notifyModelsChanged();
+        if (outcome === 'reindexing') { setNote(t('mm.delete.reindexStarted', { model: target.model })); return; }
+        if (cancelled.current) return;
+        onDeleted(null, await deleteByName(m.name)); return;
       }
-      if (file) {
+      if (cancelled.current) return;
+      if (kind === 'missing' || kind === 'system') { onDeleted(null, await deleteByName(m.name, kind === 'system' ? { confirmSystem: true } : {})); return; }
+      if (file && (m.canDelete === false || m.source === 'preset')) {
         const outcome = await runDeleteModelFiles(
           async () => {
             // Folder-configured (source: 'preset') models take this path: the proxy also
             // unloads the engine model(s) the deleted file backed and clears any auto-role
-            // that named them (#302), reporting back the same rolesCleared shape as the
-            // primary /api/models/delete path above.
+            // that named them (#302).
             const v = await mm<{ results: { ok: boolean; message: string }[]; rolesCleared?: string[] }>('models/delete', { body: { models: [file.key] } });
             if (!v.results[0]?.ok) throw Error(v.results[0]?.message || t('mm.deleteFailed'));
             return Array.isArray(v.rolesCleared) ? v.rolesCleared : [];
@@ -304,17 +340,43 @@ function DeleteModel({ model: m, file, onDeleted }: { model: InstalledModel; fil
             for (const section of file.sections) rev = (await mm<{ revision: string }>(`sections/${encodeURIComponent(section)}?baseRevision=${rev}`, { method: 'DELETE' })).revision;
           } : undefined,
         );
-        setConfirming(false); onDeleted(outcome.error && cleanupText(outcome.cleanupDetail), outcome.rolesCleared); return;
+        onDeleted(outcome.error && cleanupText(outcome.cleanupDetail), outcome.rolesCleared); return;
       }
-      throw Error(t('mm.delete.noFiles'));
-    } catch (e) { setError(errorText(e, t('mm.deleteFailed'))); } finally { setBusy(false); }
+      // #1661: everything else (cache models, and a preset the folder scan has no file for) goes
+      // through /api/models/delete, which removes the files and the preset together.
+      const outcome = await runDeleteModelFiles(() => deleteByName(m.name));
+      onDeleted(outcome.error && cleanupText(outcome.cleanupDetail), outcome.rolesCleared);
+    } catch (e) {
+      const id = (e as { errorId?: string })?.errorId;
+      // A refusal that changes what the confirm should offer switches to that confirm; the same
+      // refusal again (the server still protects it after a switch) is shown, never swallowed.
+      if (id === 'modelInUse' && kind !== 'inuse') { setKind('inuse'); return; }
+      if (id === 'systemModel' && kind !== 'system') { setKind('system'); return; }
+      setError(id === 'modelInUse' ? t('mm.delete.stillInUse') : errorText(e, t('mm.deleteFailed')));
+    } finally { setBusy(false); }
   };
-  if (!confirming) return <button className="popup-tab model-card-danger" aria-label={t('mm.delete.label', { model: m.name })} onClick={() => setConfirming(true)}>{t('mm.delete')}</button>;
-  return <div className="model-card-confirm" role="group" aria-label={t('mm.delete.label', { model: m.name })}>
-    <p>{file ? t(file.projector ? 'mm.delete.confirmFileProjector' : 'mm.delete.confirmFile', { file: file.name, size: formatModelSizeGB(bytesToModelSizeGB(file.bytes), appLocale()) || human(file.size) }) : t('mm.delete.confirmCache')}</p>
-    {file && file.sections.length > 0 && <label className="mm-check"><input type="checkbox" checked={removeSettings} onChange={e => setRemoveSettings(e.target.checked)}/>{t('mm.delete.alsoSettings', { sections: file.sections.join(', ') })}</label>}
-    <button className="popup-tab model-card-danger" disabled={busy} onClick={() => void run()}>{busy ? t('mm.delete.deleting') : t('mm.delete.files')}</button>
-    <button className="popup-tab" onClick={() => setConfirming(false)}>{t('mm.keep')}</button>
+  const label = t('mm.delete.label', { model: m.name });
+  const sizeText = file ? formatModelSizeGB(bytesToModelSizeGB(file.bytes), appLocale()) || human(file.size) : '';
+  let text: string, action: string | null = t('mm.delete.files');
+  if (kind === 'missing') { text = t('mm.delete.confirmMissing'); action = t('mm.delete.removePreset'); }
+  else if (kind === 'system') text = t('mm.delete.confirmDecision');
+  else if (kind === 'inuse' && !service && !error) { text = t('mm.loading'); action = null; }
+  else if (kind === 'inuse') {
+    text = rerank ? t('mm.delete.inUseReranker') : options.length ? t('mm.delete.inUseEmbedding') : t('mm.delete.inUseEmbeddingFixed');
+    action = !rerank && options.length ? t('mm.delete.switchAndDelete') : null;
+  } else text = file ? t(file.projector ? 'mm.delete.confirmFileProjector' : 'mm.delete.confirmFile', { file: file.name, size: sizeText }) : t('mm.delete.confirmCache');
+  return <div className="model-card-confirm" role="group" aria-label={label}>
+    <p>{text}</p>
+    {kind === 'inuse' && !rerank && options.length > 0 && <label className="mm-select model-card-confirm-pick"><span>{t('mm.assign.switchEmbedding')}</span>
+      <select aria-label={t('mm.assign.switchEmbedding')} value={pick} disabled={busy} onChange={(e) => setPick(e.target.value)}>
+        {options.map((o) => <option key={o.model} value={o.model}>{o.model}</option>)}
+      </select></label>}
+    {kind === 'normal' && file && file.sections.length > 0 && <label className="mm-check"><input type="checkbox" checked={removeSettings} onChange={e => setRemoveSettings(e.target.checked)}/>{t('mm.delete.alsoSettings', { sections: file.sections.join(', ') })}</label>}
+    <div className="model-card-confirm-actions">
+      {action && <button className="popup-tab model-card-danger is-solid" disabled={busy || !!note} onClick={() => void run()}>{busy ? t('mm.delete.deleting') : action}</button>}
+      <button className="popup-tab" disabled={busy} onClick={() => { cancelled.current = true; onCancel(); }}>{action ? t('mm.keep') : t('mm.close')}</button>
+    </div>
+    {note && <p role="status" className="mm-note">{note}</p>}
     {error && <p role="alert" className="modal-err">{error}</p>}
   </div>;
 }

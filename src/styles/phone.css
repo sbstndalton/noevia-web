@@ -706,13 +706,14 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
    Up to three per row, two when narrower, one on a phone; a card with its details open takes
    the whole row so its facts have room. */
 .model-grid { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(max(280px, calc((100% - 2 * var(--space-3)) / 3)), 1fr)); align-items: start; }
-.model-grid > .model-card.is-open { grid-column: 1 / -1; }
-.model-grid > .model-card { min-width: 0; height: 100%; box-sizing: border-box; }
+/* #1663: a card is as tall as its content (no stretching to the row's tallest card), and opening
+   details or a delete confirm grows that card only; it never spans the row and reflows the grid. */
+.model-grid > .model-card { min-width: 0; box-sizing: border-box; }
 .model-card-head { align-items: center; }
 .model-card-name { min-width: 0; flex: 1; font-size: var(--text-callout); }
 .model-card-name .mid-trunc { max-width: 100%; }
 .model-card-meta { gap: 2px 10px; }
-.model-card-actions { margin-top: auto; gap: 6px; }
+.model-card-actions { gap: 6px; }
 .model-card-actions > button { min-height: 36px; padding: 6px 12px; }
 .model-card-actions > button:first-child { background: var(--accent-2-soft, var(--nav-active)); border-color: transparent; font-weight: 600; }
 .model-card-actions > .model-card-danger { margin-left: auto; border-color: transparent; background: transparent; color: var(--danger, #c0392b); }
@@ -830,6 +831,89 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
   }
   .recents-del::after { left: 50%; right: auto; width: max(100%, var(--target-min)); transform: translate(-50%, -50%); }
 }
+
+/* #1663: status pills follow the owner's Settings mockup (Settings.dc.html status pill): a 999px
+   capsule, small bold caption, toned fill; neutral states are the mockup's "off" pill (muted text,
+   off fill, hairline border). Dark tones mix the status colour into the surface (claude.ai dark
+   success/danger 900-on-text pairing) instead of hard-coding vendor colours. */
+.mm-state { display: inline-flex; align-items: center; flex: none; padding: 3px 9px; border-radius: 999px; font-size: var(--text-caption); font-weight: 700; line-height: 1.35; white-space: nowrap; border: 1px solid transparent; }
+.mm-state[data-tone="good"] { color: var(--accent-text); background: color-mix(in srgb, var(--accent-text) 12%, var(--bg-surface)); }
+.mm-state[data-tone="warn"] { color: var(--status-warn); background: color-mix(in srgb, var(--status-warn) 14%, var(--bg-surface)); }
+.mm-state[data-tone="bad"] { color: var(--status-danger, var(--danger)); background: color-mix(in srgb, var(--status-danger, var(--danger)) 12%, var(--bg-surface)); }
+.mm-state[data-tone="muted"] { padding: 2px 8px; color: var(--text-secondary); background: var(--bg-off); border-color: var(--border-subtle, var(--control-border)); }
+.model-card-note { margin: 0; font-size: var(--text-footnote); }
+.model-card-actions > button.model-card-danger, .model-card-actions > button.model-card-danger:first-child { margin-left: auto; background: transparent; border-color: transparent; color: var(--danger, #c0392b); font-weight: 500; }
+.model-card-actions > button.model-card-danger[aria-expanded="true"] { background: color-mix(in srgb, var(--danger, #c0392b) 8%, transparent); }
+.model-card[data-state="loaded"] { border-color: color-mix(in srgb, var(--accent, var(--control-border)) 55%, var(--control-border)); }
+
+/* The delete confirm is its own block under the buttons, inside the card. */
+.model-card .model-card-confirm { display: grid; gap: 10px; padding: 12px; border-radius: calc(var(--radius-card) - 4px); background: color-mix(in srgb, var(--danger, #c0392b) 6%, var(--bg-surface, var(--bg))); border: 1px solid color-mix(in srgb, var(--danger, #c0392b) 22%, transparent); }
+.model-card .model-card-confirm p { margin: 0; font-size: var(--text-footnote); line-height: 1.45; }
+.model-card-confirm-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.model-card-confirm-actions > button { min-height: 36px; padding: 6px 14px; }
+.model-card-confirm .model-card-danger.is-solid, .model-card-confirm .model-card-danger.is-solid:hover:not(:disabled) { background: var(--danger, #c0392b); border-color: transparent; color: var(--bg); font-weight: 600; }
+.model-card-confirm-pick { display: grid; gap: 4px; font-size: var(--text-footnote); color: var(--text-secondary); }
+.model-card-confirm-pick select { width: 100%; }
+@media (pointer: coarse) { .model-card-confirm-actions > button { min-height: 44px; } }
+
+/* Details: label over value in a two-column grid; the file path is one middle-truncated line. */
+.model-card .mm-detail { border-top: 1px solid var(--control-border); padding-top: 10px; display: grid; gap: 10px; min-width: 0; }
+.model-card .mm-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px 16px; margin: 0; }
+.model-card .mm-facts > div { min-width: 0; display: grid; gap: 1px; }
+.model-card .mm-facts dt { font-size: var(--text-caption); color: var(--text-secondary); }
+.model-card .mm-facts dd { margin: 0; font-size: var(--text-footnote); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-card .mm-facts .mm-fact-wide { grid-column: 1 / -1; }
+.model-card .mm-facts .mm-mono .mid-trunc { max-width: 100%; }
+
+/* A mouse click leaves no ring; the keyboard still gets :focus-visible. */
+.model-card button:focus:not(:focus-visible), .mm-assign button:focus:not(:focus-visible) { outline: none; box-shadow: none; }
+.model-card button:focus-visible, .mm-assign :is(button, select):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* #1662: what each service uses. Structure follows the owner's Settings mockup (Settings.dc.html
+   grouped list): an uppercase section label, a faint helper line, then ONE bordered 12px card whose
+   rows are 12px × 16px with hairline dividers (last row none). All rows share one subgrid, so
+   label | model or select | status pill | control line up down the whole card. */
+.mm-assign.mm-panel { background: none; border: 0; box-shadow: none; padding: 0; }
+.mm-assign .mm-panel-head h2 { margin: 0 2px 4px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); }
+.mm-assign > .mm-note { margin: 0 2px 10px; font-size: var(--text-footnote); color: var(--text-secondary); }
+.mm-assign-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(96px, 150px) minmax(0, 420px) 120px minmax(0, 1fr);
+  border: 1px solid var(--control-border); border-radius: var(--radius-dialog); background: var(--bg-surface); overflow: hidden; }
+.mm-assign-row { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; column-gap: 20px; padding: 10px 16px; border-bottom: 1px solid var(--control-border); min-height: 44px; box-sizing: border-box;
+  transition: background-color var(--dur-instant, 60ms) var(--ease-out-quart, ease-out); }
+.mm-assign-row:last-child { border-bottom: 0; }
+.mm-assign-row:hover { background: var(--bg-surface-hover); }
+.mm-assign-label { font-weight: 700; font-size: var(--text-footnote); }
+.mm-assign-model { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-footnote); color: var(--text-secondary); }
+.mm-assign-model .mm-select, .mm-assign-model select { width: 100%; max-width: 100%; color: var(--text); }
+.mm-assign-model small { color: var(--text-secondary); }
+.mm-assign-row > .mm-state { justify-self: start; }
+.mm-assign-control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.mm-assign-control select { max-width: 260px; }
+/* Read-only: the mockup's faint helper caption with a hollow marker; never an empty control slot. */
+.mm-assign-fixed { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-caption); color: var(--text-secondary); }
+.mm-assign-fixed::before { content: ""; width: 7px; height: 7px; flex: none; border: 1.5px solid currentColor; border-radius: 50%; opacity: .6; }
+.mm-assign-status { margin: 8px 2px 0; }
+@media (pointer: fine) { .mm-assign-row select { height: 34px; min-height: 34px; padding-block: 0; } .mm-assign-row { min-height: 52px; } }
+@media (prefers-reduced-motion: reduce) { .mm-assign-row { transition: none; } }
+@media (max-width: 720px) {
+  .mm-assign-list { grid-template-columns: minmax(0, 1fr) auto; }
+  .mm-assign-row { row-gap: 4px; padding: 10px 14px; }
+  .mm-assign-label { grid-column: 1; grid-row: 1; }
+  .mm-assign-row > .mm-state { grid-column: 2; grid-row: 1; justify-self: end; }
+  .mm-assign-model { grid-column: 1 / -1; grid-row: 2; }
+  .mm-assign-control { grid-column: 1 / -1; grid-row: 3; }
+  .mm-assign-control:empty { display: none; }
+}
+
+/* Cards follow the mockup's 12px hairline card (no shadow) with claude.ai's card press (.99). The
+   delete confirm uses claude.ai's soft danger fill (danger at ~10% fill, ~30% border) and its
+   danger focus ring; buttons press to .97 on the instant/snap timing from motion-tokens.css. */
+.model-grid > .model-card.surface { border-radius: var(--radius-dialog); box-shadow: none; }
+.model-card .popup-tab { transition: transform var(--dur-instant, 60ms) var(--ease-snap, ease-out), background-color var(--dur-instant, 60ms) var(--ease-out-quart, ease-out); }
+.model-card .popup-tab:active:not(:disabled) { transform: scale(.97); }
+.model-card .model-card-confirm { background: color-mix(in srgb, var(--danger, #c0392b) 10%, var(--bg-surface)); border-color: color-mix(in srgb, var(--danger, #c0392b) 30%, transparent); }
+.model-card-confirm .model-card-danger.is-solid:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--bg), 0 0 0 1px var(--danger, #c0392b), 0 0 6px 1px color-mix(in srgb, var(--danger, #c0392b) 60%, transparent); }
+@media (prefers-reduced-motion: reduce) { .model-card .popup-tab { transition: none; } .model-card .popup-tab:active:not(:disabled) { transform: none; } }
 
 /* ── Everything fits the viewport (#530) ─────────────────────────────────────
    On a phone nothing may be wider than the screen: content wraps, truncates, or scrolls inside

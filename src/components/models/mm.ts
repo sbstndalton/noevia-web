@@ -13,7 +13,10 @@ export async function mm<T>(path: string, init: { method?: string; body?: unknow
     body: hasBody ? JSON.stringify(init.body) : undefined,
   });
   const v = await r.json().catch(() => ({}));
-  if (!r.ok) throw Object.assign(Error((v as { error?: string }).error || `Request failed (${r.status})`), { status: r.status, code: typeof (v as { code?: unknown }).code === 'string' ? (v as { code: string }).code : undefined });
+  if (!r.ok) throw Object.assign(Error((v as { error?: string }).error || `Request failed (${r.status})`), { status: r.status, code: typeof (v as { code?: unknown }).code === 'string' ? (v as { code: string }).code : undefined,
+    // #1660: refusals name why (systemModel / modelInUse) and which service, as /api/models/delete does.
+    errorId: typeof (v as { errorId?: unknown }).errorId === 'string' ? (v as { errorId: string }).errorId : undefined,
+    service: typeof (v as { service?: unknown }).service === 'string' ? (v as { service: string }).service : undefined });
   return v as T;
 }
 

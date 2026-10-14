@@ -14,6 +14,7 @@ import { ConfigureTab } from './ConfigureTab';
 import { DownloadTab } from './DownloadTab';
 import { HardwareTab } from './HardwareTab';
 import { LibraryTab } from './LibraryTab';
+import { ServiceAssignments } from './ServiceAssignments';
 import { GuidedOptimize } from './GuidedOptimize';
 import { OverviewTab } from './OverviewTab';
 import { notifyModelsChanged, useModelsChanged } from '../../models-changed';
@@ -156,6 +157,8 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
 
     <div role="tabpanel" className="mm-section-panels" aria-label={t(TABS.find(([id]) => id === tab)?.[1] ?? 'mm.section.models')}>
       {tab === 'models' && <>
+        {/* #1662: what each service uses comes first; the model library follows. */}
+        <ServiceAssignments models={models} />
         <SegmentedControl label={t('mm.models.which')} value={list} options={[['installed', t('mm.models.installed')], ['discover', t('mm.models.discover')]]} onChange={chooseList} />
         {list === 'installed'
           ? <LibraryTab query={query} sort={sort} filter={filter} onConfigure={openModel} onChanged={changed} />

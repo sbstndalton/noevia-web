@@ -18,29 +18,32 @@ test('ModelCard imports the chat-generation-model check and derives protectedMod
 
 test('Tune is hidden for any non-chat (embedding/reranking) model, not just Laya', () => {
   // #421: the button also carries a per-model aria-label now, between className and onClick.
-  assert.match(src, /\{!system && !missing && chatModel && <button className="popup-tab" aria-label=\{t\('mm\.card\.tuneNamed', \{ model: m\.name \}\)\} onClick=\{onConfigure\}>\{t\('mm\.card\.tune'\)\}<\/button>\}/);
+  assert.match(src, /\{admin && !system && !missing && chatModel && <button className="popup-tab" aria-label=\{t\('mm\.card\.tuneNamed', \{ model: m\.name \}\)\} onClick=\{onConfigure\}>\{t\('mm\.card\.tune'\)\}<\/button>\}/);
 });
 
-test('Delete is hidden for a model a live sidecar depends on (protectedModel), matching the system-model treatment', () => {
-  assert.match(src, /\{!system && !protectedModel && <DeleteModel model=\{m\} file=\{file\} onDeleted=\{onDeleted\}\/>\}/);
+test('#1660: Delete is always offered; the confirm says which service uses the model instead of hiding the button', () => {
+  // Every model for an administrator (members get no destructive controls, #1660 review).
+  assert.match(src, /\{admin && <button className="popup-tab model-card-danger" aria-expanded=\{confirming\} disabled=\{deleting\}/, 'Delete is on every card for an administrator');
+  assert.match(src, /kind=\{missing \? 'missing' : system \? 'system' : protectedModel \? 'inuse' : 'normal'\}/);
+  assert.doesNotMatch(src, /!system && !protectedModel && <DeleteModel/, 'no hidden-Delete dead end remains');
 });
 
 test('the meta row shows a short "protected" tag (with a title explaining why) for a sidecar-dependent model', () => {
-  assert.match(src, /\{protectedModel && <span className="model-card-tag" title=\{t\('mm\.card\.protectedTitle'\)\}>\{t\('mm\.card\.protectedLabel'\)\}<\/span>\}/);
+  assert.match(src, /\{protectedModel && <span className="model-card-tag" title=\{t\('mm\.card\.protectedTitle'\)\}>\{t\('mm\.card\.inUseLabel'\)\}<\/span>\}/);
 });
 
 test('the expanded detail note distinguishes system, sidecar-protected, and merely non-chat models', () => {
-  assert.match(src, /protectedModel \? <p className="mm-note" role="status">\{t\('mm\.card\.protectedLabel'\)\}\{t\('mm\.card\.protectedNote'\)\}<\/p>/);
-  assert.match(src, /: missing \? null\n\s*: !chatModel \? <p className="mm-note" role="status">\{t\('mm\.card\.nonChatNote'\)\}<\/p>/);
+  assert.match(src, /protectedModel \? <p className="mm-note" role="status">\{t\('mm\.card\.inUseNote'\)\}<\/p>/);
+  assert.match(src, /\n\s*: !chatModel \? <p className="mm-note" role="status">\{t\('mm\.card\.nonChatNote'\)\}<\/p>/);
 });
 
 test('DeleteModel\'s own canDelete fallback (folder-scan delete path) is untouched by the sidecarProtected guard', () => {
-  assert.match(src, /if \(m\.canDelete !== false && m\.source !== 'preset'\) \{/, 'a model with canDelete:false but sidecarProtected:false must still be able to delete through the folder-scan fallback');
+  assert.match(src, /if \(file && \(m\.canDelete === false \|\| m\.source === 'preset'\)\) \{/, 'a model with canDelete:false but sidecarProtected:false must still be able to delete through the folder-scan fallback');
 });
 
 test('every new mm.card.* key referenced by LibraryTab is defined in the English base catalogue', () => {
   const enGB = fs.readFileSync(path.join(__dirname, '../../src/i18n/models/en-GB.ts'), 'utf8');
-  for (const key of ['mm.card.protectedLabel', 'mm.card.protectedTitle', 'mm.card.protectedNote', 'mm.card.nonChatNote']) {
+  for (const key of ['mm.card.inUseLabel', 'mm.card.protectedTitle', 'mm.card.inUseNote', 'mm.card.nonChatNote']) {
     assert.match(src, new RegExp(key.replace(/[.]/g, '\\.')), `${key} referenced in LibraryTab.tsx`);
     assert.match(enGB, new RegExp(`'${key.replace(/[.]/g, '\\.')}':`), `${key} defined in en-GB.ts`);
   }
