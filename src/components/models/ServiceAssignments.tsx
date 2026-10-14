@@ -103,7 +103,10 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
               {embedPick && <button className="popup-tab" disabled={busy !== ''} onClick={() => void runEmbedding(svc, false)}>{busy === 'embedding' ? t('mm.assign.switching') : off ? t('mm.assign.turnOn') : t('mm.assign.switch')}</button>}</>
             : <span className="mm-assign-fixed">{t(svc.managed ? 'mm.assign.noEmbeddingInstalled' : 'mm.assign.noEmbeddingOptions')}</span>)}
         {svc.id === 'embedding' && admin && svc.canTurnOff && !embedPick && <button className="popup-tab" disabled={busy !== ''} onClick={() => void turnOff()}>{t('mm.assign.turnOff')}</button>}
-        {(svc.id === 'reranker' || svc.id === 'ocr' || svc.id === 'documents' || svc.id === 'decision') && <span className="mm-assign-fixed">{t('mm.assign.fixedByServer')}</span>}
+        {/* #1695: a reranker whose file is gone says so, and names what it can be set to instead. */}
+        {svc.id === 'reranker' && svc.state === 'missing' && svc.model
+          ? <span className="mm-assign-fixed" data-testid="reranker-missing">{svc.options?.length ? t('mm.assign.rerankerMissingWith', { models: svc.options.map((o) => (typeof o === 'string' ? o : o.model)).join(', ') }) : t('mm.assign.rerankerMissing')}</span>
+          : (svc.id === 'reranker' || svc.id === 'ocr' || svc.id === 'documents' || svc.id === 'decision') && <span className="mm-assign-fixed">{t('mm.assign.fixedByServer')}</span>}
       </span>
     </li>;
   };

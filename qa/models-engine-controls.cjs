@@ -22,7 +22,7 @@ const { withLocale } = require('./qa-locale.cjs');
     page.on('pageerror', (e) => errors.push(e.message));
     const installed = [
       { name: 'Synthetic-7B', labels: [], loaded: false, sizeGB: 4, source: 'preset', canDelete: true, status: 'unloaded' },
-      { name: 'laya_multilingual_f16', labels: [], loaded: false, sizeGB: 0, source: 'preset', canDelete: true, status: 'missing', failed: true, missingFile: true },
+      { name: 'laya_multilingual_f16', labels: [], loaded: false, sizeGB: 0, source: 'preset', canDelete: true, status: 'served-elsewhere', failed: false, missingFile: false, servedElsewhere: true, system: true },
       { name: 'synthetic-embed-v1', labels: ['embedding'], loaded: false, sizeGB: 0.3, source: 'preset', canDelete: true, status: 'unloaded', sidecarProtected: true },
       { name: 'synthetic-reranker-0.6b', labels: ['reranking'], loaded: true, sizeGB: 0.6, source: 'preset', canDelete: true, status: 'loaded', sidecarProtected: true },
       { name: 'Ghost-13B', labels: [], loaded: false, sizeGB: 0, source: 'preset', canDelete: true, status: 'missing', failed: true, missingFile: true },
@@ -76,13 +76,10 @@ const { withLocale } = require('./qa-locale.cjs');
     }
     pass('Laya and the protected embedding/reranker models have no Load/Unload (#548)');
 
-    const ghost = card('Ghost-13B');
-    await ghost.waitFor();
-    assert.equal(await ghost.getByRole('button', { name: /^(Load|Unload|Tune) Ghost-13B$/ }).count(), 0, 'a missing-file preset offers no Load/Tune');
-    assert.equal(await ghost.getAttribute('data-state'), 'failed', 'a missing-file preset reads as failed');
-    await ghost.getByRole('button', { name: 'Details for Ghost-13B', exact: true }).click();
-    await ghost.getByText(/not in the models folder/).waitFor();
-    pass('a preset whose model file is missing is shown as failed, without Load or Tune (#545)');
+    // #1695: a preset whose model file is missing is not a card at all (so it offers no Load or Tune).
+    assert.equal(await card('Ghost-13B').count(), 0, 'a missing-file preset has no card');
+    await manager.getByTestId('models-leftover').getByText(/Ghost-13B/).waitFor();
+    pass('a preset whose model file is missing has no card and so no Load or Tune (#545, #1695)');
 
     assert.deepEqual(errors, []);
     console.log(`PASS models-engine-controls: all ${passed} scenarios.`);
