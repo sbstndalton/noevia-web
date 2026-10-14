@@ -16,7 +16,7 @@ import { isChatGenerationModel } from '../../model-kind';
 import { bytesToModelSizeGB, formatModelSizeGB } from '../../model-size';
 import { useT } from '../../i18n';
 import { notifyModelsChanged } from '../../models-changed';
-import { embeddingOptions, fetchAssignments, finishEmbeddingSwitch, switchEmbedding } from './assignments';
+import { embeddingOptions, fetchAssignments, finishEmbeddingSwitch, serviceSwitchEmbedding, switchEmbedding, turnEmbeddingOff } from './assignments';
 import type { ServiceAssignment } from './assignments';
 import type { MessageKey } from '../../i18n';
 
@@ -283,6 +283,18 @@ async function deleteByName(name: string, extra: Record<string, unknown> = {}): 
   return Array.isArray(body.rolesCleared) ? body.rolesCleared : [];
 }
 
+// #1668: right after a switch or "turn off" the embedding service may still hold the old model for a
+// few seconds (its router restarts). The server keeps refusing (modelInUse) until it has let go, so
+// retry briefly instead of telling the admin it is still in use.
+async function deleteAfterRelease(name: string, cancelled: { current: boolean }, attempts = 12, waitMs = 2500): Promise<string[]> {
+  for (let i = 0; ; i++) {
+    try { return await deleteByName(name); } catch (e) {
+      if ((e as { errorId?: string })?.errorId !== 'modelInUse' || i >= attempts - 1 || cancelled.current) throw e;
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+}
+
 function DeleteModel({ model: m, file, kind: initialKind, onDeleted, onCancel, onBusy }: { onBusy: (busy: boolean) => void; model: InstalledModel; file?: FileEntry; kind: DeleteKind; onDeleted: (error?: string | null, rolesCleared?: string[]) => void; onCancel: () => void }) {
   const t = useT();
   const [kind, setKind] = useState<DeleteKind>(initialKind);
@@ -309,18 +321,32 @@ function DeleteModel({ model: m, file, kind: initialKind, onDeleted, onCancel, o
   }, [kind, m.name, t]);
   // The files are gone but settings clean-up failed: say so in the interface language.
   const cleanupText = (detail?: string) => (detail ? t('mm.delete.cleanupFailedDetail', { detail }) : t('mm.delete.cleanupFailed'));
-  const run = async () => {
+  const managed = service?.managed === true;
+  // #1668: a managed service that no longer runs this model (a switch finished, or embedding was
+  // turned off) may hold it for a few more seconds while its router restarts: just wait and delete.
+  const releasing = kind === 'inuse' && managed && !rerank && !!service && service.model !== m.name && service.next !== m.name;
+  const run = async (mode: 'switch' | 'off' = 'switch') => {
     setBusy(true); setError(''); setNote('');
     try {
+      if (releasing) {
+        if (cancelled.current) return;
+        onDeleted(null, await deleteAfterRelease(m.name, cancelled)); return;
+      }
+      if (kind === 'inuse' && mode === 'off') {
+        await turnEmbeddingOff();
+        notifyModelsChanged();
+        if (cancelled.current) return;
+        onDeleted(null, await deleteAfterRelease(m.name, cancelled)); return;
+      }
       if (kind === 'inuse') {
         const target = options.find((o) => o.model === pick);
         if (!target) return;
         // A re-index already building this target is finished, not started again.
-        const outcome = service?.next === target.model ? await finishEmbeddingSwitch() : await switchEmbedding(target, service?.baseUrl);
+        const outcome = service?.next === target.model ? await finishEmbeddingSwitch() : managed ? await serviceSwitchEmbedding(target) : await switchEmbedding(target, service?.baseUrl);
         notifyModelsChanged();
         if (outcome === 'reindexing') { setNote(t('mm.delete.reindexStarted', { model: target.model })); return; }
         if (cancelled.current) return;
-        onDeleted(null, await deleteByName(m.name)); return;
+        onDeleted(null, managed ? await deleteAfterRelease(m.name, cancelled) : await deleteByName(m.name)); return;
       }
       if (cancelled.current) return;
       if (kind === 'missing' || kind === 'system') { onDeleted(null, await deleteByName(m.name, kind === 'system' ? { confirmSystem: true } : {})); return; }
@@ -362,19 +388,20 @@ function DeleteModel({ model: m, file, kind: initialKind, onDeleted, onCancel, o
   else if (kind === 'system') text = t('mm.delete.confirmDecision');
   else if (kind === 'inuse' && !service && !error) { text = t('mm.loading'); action = null; }
   else if (kind === 'inuse') {
-    text = rerank ? t('mm.delete.inUseReranker') : options.length ? t('mm.delete.inUseEmbedding') : t('mm.delete.inUseEmbeddingFixed');
-    action = !rerank && options.length ? t('mm.delete.switchAndDelete') : null;
+    text = rerank ? t('mm.delete.inUseReranker') : releasing ? t('mm.delete.releasing') : managed ? t('mm.delete.inUseEmbeddingManaged') : options.length ? t('mm.delete.inUseEmbedding') : t('mm.delete.inUseEmbeddingFixed');
+    action = releasing ? t('mm.delete.files') : !rerank && options.length ? t('mm.delete.switchAndDelete') : null;
   } else text = file ? t(file.projector ? 'mm.delete.confirmFileProjector' : 'mm.delete.confirmFile', { file: file.name, size: sizeText }) : t('mm.delete.confirmCache');
   return <div className="model-card-confirm" role="group" aria-label={label}>
     <p>{text}</p>
-    {kind === 'inuse' && !rerank && options.length > 0 && <label className="mm-select model-card-confirm-pick"><span>{t('mm.assign.switchEmbedding')}</span>
+    {kind === 'inuse' && !rerank && !releasing && options.length > 0 && <label className="mm-select model-card-confirm-pick"><span>{t('mm.assign.switchEmbedding')}</span>
       <select aria-label={t('mm.assign.switchEmbedding')} value={pick} disabled={busy} onChange={(e) => setPick(e.target.value)}>
         {options.map((o) => <option key={o.model} value={o.model}>{o.model}</option>)}
       </select></label>}
     {kind === 'normal' && file && file.sections.length > 0 && <label className="mm-check"><input type="checkbox" checked={removeSettings} onChange={e => setRemoveSettings(e.target.checked)}/>{t('mm.delete.alsoSettings', { sections: file.sections.join(', ') })}</label>}
     <div className="model-card-confirm-actions">
       {action && <button className="popup-tab model-card-danger is-solid" disabled={busy || !!note} onClick={() => void run()}>{busy ? t('mm.delete.deleting') : action}</button>}
-      <button className="popup-tab" disabled={busy} onClick={() => { cancelled.current = true; onCancel(); }}>{action ? t('mm.keep') : t('mm.close')}</button>
+      {kind === 'inuse' && !rerank && !releasing && managed && service?.canTurnOff && <button className="popup-tab model-card-danger" disabled={busy || !!note} onClick={() => void run('off')}>{t('mm.delete.turnOffAndDelete')}</button>}
+      <button className="popup-tab" disabled={busy} onClick={() => { cancelled.current = true; onCancel(); }}>{action || (kind === 'inuse' && !rerank && managed && service?.canTurnOff) ? t('mm.keep') : t('mm.close')}</button>
     </div>
     {note && <p role="status" className="mm-note">{note}</p>}
     {error && <p role="alert" className="modal-err">{error}</p>}

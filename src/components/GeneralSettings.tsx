@@ -299,7 +299,7 @@ function ProfileCard(): JSX.Element {
 // unreachable embedding service left it true while semantic search returned nothing. `retrieval`
 // is the tri-state that distinguishes that from a real outage; a deployment that only sends the
 // older boolean (mixed-version rollout) still gets a truthful available/unavailable read.
-export function retrievalState(health: HealthState | null): 'available' | 'degraded' | 'unavailable' | null {
+export function retrievalState(health: HealthState | null): 'available' | 'degraded' | 'off' | 'unavailable' | null {
   if (!health) return null;
   if (health.retrieval) return health.retrieval;
   if (health.ragAvailable == null) return null;
@@ -307,12 +307,14 @@ export function retrievalState(health: HealthState | null): 'available' | 'degra
 }
 
 export function retrievalDescription(health: HealthState | null, t: Translate): string {
-  return retrievalState(health) === 'degraded' ? t('capabilities.retrievalDegradedNote') : t('capabilities.retrievalDesc');
+  const state = retrievalState(health);
+  return state === 'degraded' ? t('capabilities.retrievalDegradedNote') : state === 'off' ? t('capabilities.retrievalOffNote') : t('capabilities.retrievalDesc');
 }
 
 export function retrievalBadge(health: HealthState | null, t: Translate, badge: (on: boolean | null, onText: string, offText: string) => JSX.Element): JSX.Element {
   const state = retrievalState(health);
   if (state === 'degraded') return <span className="set-badge is-warn">{t('capabilities.retrievalDegraded')}</span>;
+  if (state === 'off') return <span className="set-badge">{t('capabilities.retrievalOff')}</span>;
   return badge(state === null ? null : state === 'available', t('capabilities.available'), t('capabilities.noIndex'));
 }
 

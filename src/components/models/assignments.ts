@@ -11,6 +11,10 @@ export interface ServiceAssignment {
   /** Admins only. Embedding: { model, profile }; reranker: names. */
   options?: (string | { model: string; profile: string; served?: boolean })[];
   baseUrl?: string | null;
+  /** #1668: noevia runs this embedding service itself, so a switch loads the model first. */
+  managed?: boolean;
+  /** #1668: admins only, managed service: "Turn embedding off" is possible now. */
+  canTurnOff?: boolean;
 }
 export interface Assignments { admin: boolean; services: ServiceAssignment[]; available?: boolean }
 
@@ -51,6 +55,35 @@ export async function switchEmbedding(target: { model: string; profile: string }
   const fin = await embeddingAction({ action: 'finish' });
   if (!fin.ok) throw Error(fin.error || `HTTP ${fin.status}`);
   return 'done';
+}
+
+/**
+ * #1668: switches a managed embedding service to `target`: noevia (re)starts the service with it,
+ * waits until it reports the model loaded, then re-indexes. 'done' when search now uses it (the
+ * old model is freed once the service has dropped it), 'reindexing' when the re-index is still
+ * running. Also turns embedding back on from off.
+ */
+export async function serviceSwitchEmbedding(target: { model: string; profile: string }): Promise<'done' | 'reindexing'> {
+  const r = await embeddingAction({ action: 'service-switch', model: target.model, profile: target.profile });
+  if (!r.ok) throw Error(r.error || `HTTP ${r.status}`);
+  const st = await embeddingAction({ action: 'switch' });
+  if (!st.ok) {
+    if (st.code === 'notReady') return 'reindexing';
+    if (st.code === 'noNext') return 'done'; // back on with the model the vectors already belong to
+    throw Error(st.error || `HTTP ${st.status}`);
+  }
+  const fin = await embeddingAction({ action: 'finish' });
+  if (!fin.ok) throw Error(fin.error || `HTTP ${fin.status}`);
+  return 'done';
+}
+
+/** #1668: stops the managed embedding service. Search and the Diary then say embedding is off. */
+export async function turnEmbeddingOff(): Promise<void> {
+  const r = await apiFetch('/api/embedding', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'service-off' }) });
+  if (!r.ok) {
+    const v = await r.json().catch(() => ({})) as { error?: string };
+    throw Error(v.error || `HTTP ${r.status}`);
+  }
 }
 
 /** Finishes a switch that was re-indexing (the overview's "Finish switch"). */

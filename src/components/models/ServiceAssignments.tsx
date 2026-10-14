@@ -11,7 +11,7 @@ import { matchesModelUse } from '../../model-guidance';
 import { notifyModelsChanged, useModelsChanged } from '../../models-changed';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
-import { embeddingOptions, fetchAssignments, finishEmbeddingSwitch, switchEmbedding } from './assignments';
+import { embeddingOptions, fetchAssignments, finishEmbeddingSwitch, serviceSwitchEmbedding, switchEmbedding, turnEmbeddingOff } from './assignments';
 import type { Assignments, ServiceAssignment, ServiceId } from './assignments';
 import { errorText } from './mm';
 
@@ -67,14 +67,23 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
     if (!finish && !target) return;
     setBusy('embedding'); setError(''); setStatus('');
     try {
-      const outcome = finish || svc.next === target!.model ? await finishEmbeddingSwitch() : await switchEmbedding(target!, svc.baseUrl);
+      const outcome = finish || svc.next === target!.model ? await finishEmbeddingSwitch() : svc.managed ? await serviceSwitchEmbedding(target!) : await switchEmbedding(target!, svc.baseUrl);
       setStatus(outcome === 'done' ? t('mm.assign.saved') : t('mm.assign.reindexing', { model: finish ? svc.next || '' : target!.model }));
       setEmbedPick(''); notifyModelsChanged(); load();
     } catch (e) { setError(errorText(e, t('mm.saveError'))); } finally { setBusy(''); }
   };
 
+  const turnOff = async () => {
+    setBusy('embedding'); setError(''); setStatus('');
+    try { await turnEmbeddingOff(); setStatus(t('mm.assign.turnedOff')); notifyModelsChanged(); load(); }
+    catch (e) { setError(errorText(e, t('mm.saveError'))); } finally { setBusy(''); }
+  };
+
   const serviceRow = (svc: ServiceAssignment) => {
-    const options = svc.id === 'embedding' ? embeddingOptions(svc).filter((o) => o.model !== svc.model) : [];
+    const off = svc.id === 'embedding' && svc.managed === true && svc.state === 'off';
+    // Off: any installed embedding model, the previous one included, turns it back on.
+    const options = svc.id === 'embedding' ? embeddingOptions(svc).filter((o) => off || o.model !== svc.model) : [];
+    const pickLabel = off ? t('mm.assign.turnOnWith') : t('mm.assign.switchEmbedding');
     const name = svc.model || ((svc.id === 'ocr' || svc.id === 'documents') && svc.state === 'active' ? t('mm.assign.builtIn') : t('mm.assign.none'));
     return <li key={svc.id} className="mm-assign-row" data-service={svc.id}>
       <span className="mm-assign-label">{t(SERVICE[svc.id])}</span>
@@ -84,13 +93,14 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
         {svc.id === 'embedding' && admin && svc.canChange && (svc.next
           ? <button className="popup-tab" disabled={busy !== ''} onClick={() => void runEmbedding(svc, true)}>{busy === 'embedding' ? t('mm.assign.switching') : t('mm.assign.finish')}</button>
           : options.length > 0
-            ? <><label className="mm-select"><span className="sr-only">{t('mm.assign.switchEmbedding')}</span>
-                <select aria-label={t('mm.assign.switchEmbedding')} value={embedPick} disabled={busy !== ''} onChange={(e) => setEmbedPick(e.target.value)}>
-                  <option value="">{t('mm.assign.switchEmbedding')}</option>
+            ? <><label className="mm-select"><span className="sr-only">{pickLabel}</span>
+                <select aria-label={pickLabel} value={embedPick} disabled={busy !== ''} onChange={(e) => setEmbedPick(e.target.value)}>
+                  <option value="">{pickLabel}</option>
                   {options.map((o) => <option key={o.model} value={o.model}>{o.model}</option>)}
                 </select></label>
-              {embedPick && <button className="popup-tab" disabled={busy !== ''} onClick={() => void runEmbedding(svc, false)}>{busy === 'embedding' ? t('mm.assign.switching') : t('mm.assign.switch')}</button>}</>
-            : <span className="mm-assign-fixed">{t('mm.assign.noEmbeddingOptions')}</span>)}
+              {embedPick && <button className="popup-tab" disabled={busy !== ''} onClick={() => void runEmbedding(svc, false)}>{busy === 'embedding' ? t('mm.assign.switching') : off ? t('mm.assign.turnOn') : t('mm.assign.switch')}</button>}</>
+            : <span className="mm-assign-fixed">{t(svc.managed ? 'mm.assign.noEmbeddingInstalled' : 'mm.assign.noEmbeddingOptions')}</span>)}
+        {svc.id === 'embedding' && admin && svc.canTurnOff && !embedPick && <button className="popup-tab" disabled={busy !== ''} onClick={() => void turnOff()}>{t('mm.assign.turnOff')}</button>}
         {(svc.id === 'reranker' || svc.id === 'ocr' || svc.id === 'documents' || svc.id === 'decision') && <span className="mm-assign-fixed">{t('mm.assign.fixedByServer')}</span>}
       </span>
     </li>;
