@@ -20,9 +20,9 @@ const t = (key, params = {}) => {
   return text.replace(/\{(\w+)\}/g, (_, name) => String(params[name]));
 };
 const describe = (probeError) => `described: ${probeError}`;
-const { knownBackendError } = load('components/models/backend-errors');
+const { describeBackendError } = load('components/models/backend-errors');
 const tAny = (key, params = {}) => (EN[key] || key).replace(/\{(\w+)\}/g, (_, name) => String(params[name]));
-const known = (probeError) => knownBackendError(tAny, probeError);
+const known = (probeError) => describeBackendError(tAny, probeError);
 
 const healthy = [
   { name: 'cowork-llama-1', status: 'running', loaded_model: 'gemma-4-12b-it-qat-q4_0', probe_error: null, last_restart_error: null },

@@ -8,7 +8,7 @@ import type { Stuck } from './guided';
 import { canPromptSuite, groupByRole, recoveryItems, roleOf } from './guided';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
-import { knownBackendError } from './backend-errors';
+import { describeBackendError } from './backend-errors';
 import { loaderLines, RECOVER_READ_TIMEOUT_MS, recoverRuns, within } from './loader-lines';
 import { ROLE_KEY, stuckStatus } from './mm-text';
 
@@ -143,7 +143,7 @@ function RecoverPanel({ onTab }: { onTab: (tab: 'discover' | 'hardware') => void
       {/* #1545: one engine per line, named by its place in the list rather than its internal service
           name; a line may wrap, but never inside a model name. */}
       <span className="mm-loader-state" aria-live="polite">{backends === undefined ? t('mm.recover.checkingLoader') : backends === null ? t('mm.recover.healthUnavailable') : !backends.length ? t('mm.recover.noEngine')
-        : loaderLines(t, backends, unhealthy, (probeError) => knownBackendError(t, probeError)).map((line) => <span className="mm-loader-item" key={line.key} title={line.text}>{wholeName(line.text, line.model)}</span>)}</span>
+        : loaderLines(t, backends, unhealthy, (probeError) => describeBackendError(t, probeError)).map((line) => <span className="mm-loader-item" key={line.key} title={line.text}>{wholeName(line.text, line.model)}</span>)}</span>
       <button type="button" className="mm-guided-link" onClick={() => onTab('hardware')}>{t('mm.recover.openLogs')}</button></div>
     {backends === null && <p className="mm-note">{t('mm.recover.healthUnavailableHelp')}</p>}
     {items === null && <p className="mm-note" role="status">{t('mm.recover.checking')}</p>}

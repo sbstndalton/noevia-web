@@ -17,9 +17,10 @@ const CONTAINER_STATES = ['exited', 'created', 'paused', 'restarting', 'dead', '
 
 /** #1545 review: what is wrong with one engine, in the interface language. The service's raw text
  *  (a Docker exception naming an internal container, an English status word) never reaches the row;
- *  `describeError` returns null for a message it does not recognise. */
-function problem(t: Translator, b: LoaderBackend & { found?: boolean }, describeError: (probeError: string) => string | null): string {
-  if (b.probe_error) { const known = describeError(b.probe_error); if (known) return known; }
+ *  `describeError` hands back a message it does not recognise unchanged, so an unchanged (or empty)
+ *  answer counts as unknown here. */
+function problem(t: Translator, b: LoaderBackend & { found?: boolean }, describeError: (probeError: string) => string): string {
+  if (b.probe_error) { const known = describeError(b.probe_error); if (known && known !== b.probe_error) return known; }
   if (b.last_restart_error) return t('mm.recover.restartFailed');
   if (b.found === false) return t('mm.hw.err.containerNotFound');
   if (CONTAINER_STATES.includes(b.status)) return t(`mm.hw.err.container.${b.status}` as MessageKey);
@@ -33,7 +34,7 @@ export function loaderLines(
   t: Translator,
   backends: LoaderBackend[],
   unhealthy: LoaderBackend[],
-  describeError: (probeError: string) => string | null,
+  describeError: (probeError: string) => string,
 ): { key: string; text: string; model?: string }[] {
   const engine = (b: LoaderBackend) => t('mm.recover.engineIndex', { index: backends.indexOf(b) + 1 });
   if (unhealthy.length) {
