@@ -11,7 +11,7 @@
 //  (c) with the list scrolled under the strip, the strip area paints the same pixels as with every
 //      row hidden (no print-through, the #1529 guarantee);
 //  (d) every family (editorial, contemporary, glass), light and dark, desktop 2000px and phone 390px,
-//      plus the collapsed rail on desktop.
+//      plus the collapsed rail on desktop and Glass under reduced motion.
 //
 // Offline: the app is built from this checkout and every API is a synthetic stub (diary-fixture.cjs).
 //   npm run build -- --outDir ../dist-x
@@ -45,8 +45,8 @@ async function decode(decoder, buf) {
 const px = (im, x, y) => { const i = (y * im.w + x) * 4; return im.data.slice(i, i + 3); };
 const diff = (a, b) => Math.max(...a.map((v, i) => Math.abs(v - b[i])));
 
-async function openSidebar(browser, { family, theme, viewport }) {
-  const page = await browser.newPage(withLocale({ viewport, deviceScaleFactor: 1 }));
+async function openSidebar(browser, { family, theme, viewport, reducedMotion = 'no-preference' }) {
+  const page = await browser.newPage(withLocale({ viewport, deviceScaleFactor: 1, reducedMotion }));
   await page.addInitScript(([f, t]) => {
     localStorage.setItem('noevia:theme-family', f);
     localStorage.setItem('cowork-theme', t);
@@ -86,14 +86,18 @@ const geometry = (page) => page.evaluate(() => {
     catch (e) { results.push([name, e]); console.log(`FAIL sidebar-new-chat-1716: ${name}\n  ${String(e.message).split('\n').slice(0, 6).join('\n  ')}`); }
   };
   try {
-    for (const family of FAMILIES) for (const theme of THEMES) for (const [vpName, viewport] of VIEWPORTS) {
-      const id = `${family} ${theme} ${vpName}`;
+    const cases = [];
+    for (const family of FAMILIES) for (const theme of THEMES) for (const [vpName, viewport] of VIEWPORTS) cases.push([family, theme, vpName, viewport, 'no-preference']);
+    // Reduced motion shortens every animation to 1ms (motion.css); the scroll-driven clip must survive it.
+    cases.push(['glass', 'light', 'desktop', VIEWPORTS[0][1], 'reduce'], ['glass', 'dark', 'phone', VIEWPORTS[1][1], 'reduce']);
+    for (const [family, theme, vpName, viewport, reducedMotion] of cases) {
+      const id = `${family} ${theme} ${vpName}${reducedMotion === 'reduce' ? ' reduced-motion' : ''}`;
       await check(`${id}: New chat sits on the sidebar's own surface, rounded like the rows, with no print-through`, async () => {
-        const page = await openSidebar(browser, { family, theme, viewport });
+        const page = await openSidebar(browser, { family, theme, viewport, reducedMotion });
         try {
           let g = await geometry(page);
           assert.equal(g.family, family); assert.equal(g.theme, theme);
-          if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `${TAG}-${family}-${theme}-${viewport.width}.png`) });
+          if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `${TAG}-${family}-${theme}-${viewport.width}${reducedMotion === 'reduce' ? '-reduced' : ''}.png`) });
 
           // (b) corner: non-zero and the nav rows' own.
           assert.ok(g.btnRadius > 0, `New chat has a rounded corner, got ${g.btnRadius}px`);
@@ -144,7 +148,7 @@ const geometry = (page) => page.evaluate(() => {
           assert.ok(under > 0, 'a row really passes beneath the strip (the check is meaningful)');
           const clip = { x: Math.floor(g.strip.x), y: Math.max(0, Math.floor(g.strip.y)), width: Math.floor(g.strip.w), height: Math.floor(g.strip.b - Math.max(0, g.strip.y)) };
           const withRows = await decode(decoder, await page.screenshot({ clip }));
-          if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `${TAG}-${family}-${theme}-${viewport.width}-scrolled.png`) });
+          if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `${TAG}-${family}-${theme}-${viewport.width}${reducedMotion === 'reduce' ? '-reduced' : ''}-scrolled.png`) });
           await page.addStyleTag({ content: '.sidebar-scroll > :not(.side-new), .sidebar-scroll > :not(.side-new) * { visibility: hidden !important; }' });
           await page.waitForTimeout(100);
           const without = await decode(decoder, await page.screenshot({ clip }));
