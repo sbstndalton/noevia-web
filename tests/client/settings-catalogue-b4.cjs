@@ -17,7 +17,7 @@ function load(file) {
   const code = ts.transpileModule(fs.readFileSync(path.join(SRC, `${file}.ts`), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const here = path.posix.dirname(file);
   vm.runInNewContext(code, {
-    exports: exports_, Intl, Object, Array, Error, Promise, setTimeout, clearTimeout,
+    exports: exports_, Intl, Object, Array, Error, Promise, setTimeout, clearTimeout, AbortController,
     require: (m) => { if (!/^\.\.?\//.test(m)) throw Error(`unexpected import ${m}`); return load(path.posix.join(here, m)); },
   });
   return exports_;

@@ -6,7 +6,9 @@
 //  2. with the downloads read hanging, the engine line still shows as soon as its own read answers;
 //  3. with the engine read hanging, the row shows "Health unavailable" after the bounded wait, and the
 //     job list does not wait for it;
-//  4. each model name is whole (one line, not clipped) and nothing scrolls sideways, at 2000px and 390px, light and dark.
+//  4. "Check again" while the engine read hangs: the newer answer shows, the older run's timeout never
+//     flashes "Health unavailable" over it (#1545 review: runs are aborted and only the newest writes);
+//  5. each model name is whole (one line, not clipped) and nothing scrolls sideways, at 2000px and 390px, light and dark.
 //
 // Fails on a build without the change, passes with it:
 //   npm run build -- --outDir ../dist-before   (the parent commit)
@@ -29,7 +31,7 @@ const BACKENDS = [
   { name: 'cowork-embed-1', found: true, status: 'running', loaded_model: 'nomic-embed-text-v1', probe_error: null, last_restart_error: null },
 ];
 
-async function open(browser, { width, theme, hang }) {
+async function open(browser, { width, theme, hang, backends }) {
   const page = await browser.newPage(withLocale({ viewport: { width, height: 950 } }));
   await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
   await page.addInitScript((t) => { try { localStorage.setItem('cowork-theme', t); } catch { /* ignore */ } }, theme);
@@ -40,6 +42,8 @@ async function open(browser, { width, theme, hang }) {
     if (p === '/api/profile' || p === '/api/auth/session') return route.fulfill({ json: { user: { id: 'qa', username: 'admin', displayName: 'Synthetic admin', role: 'admin', diaryEnabled: false, onboarded: true }, passkeys: [] } });
     // A read that never answers: the route is left pending for the life of the page.
     if (p === `/api/model-manager/${hang}`) return undefined;
+    // A scripted engine read: each request takes the next answer; `null` never answers.
+    if (p === '/api/model-manager/backends' && backends) { const next = backends.shift(); return next === null ? undefined : route.fulfill({ json: { backends: next } }); }
     if (p === '/api/model-manager/backends') return route.fulfill({ json: { backends: BACKENDS } });
     if (p === '/api/model-manager/downloads') return route.fulfill({ json: { jobs: [] } });
     if (p === '/api/models/installed') return route.fulfill({ json: [] });
@@ -100,6 +104,22 @@ async function waitText(page, sel, re, ms) {
         check(`${at} a hanging engine read does not hold the job list`, jobs);
         const ended = await waitText(page, '.mm-loader-state', /^Health unavailable$/, 16000);
         check(`${at} a hanging engine read ends as Health unavailable`, ended, await textOf(page, '.mm-loader-state'));
+        await page.close();
+      }
+      if (width === 2000) {
+        const second = [{ ...BACKENDS[0], loaded_model: 'qa-second-answer-model' }];
+        const { page, errors } = await open(browser, { width, theme, backends: [null, second] });
+        await page.waitForTimeout(6000);
+        await page.getByRole('button', { name: 'Check again' }).click();
+        const fresh = await waitText(page, '.mm-loader-state', /qa-second-answer-model/, 4000);
+        check(`${at} Check again shows the newer engine answer`, fresh, await textOf(page, '.mm-loader-state'));
+        // Watch past the first run's 12 s limit: its timeout must not replace the newer answer.
+        const seen = new Set();
+        const end = Date.now() + 10000;
+        while (Date.now() < end) { seen.add(await textOf(page, '.mm-loader-state')); await page.waitForTimeout(100); }
+        const flashed = [...seen].filter((text) => !/qa-second-answer-model/.test(text));
+        check(`${at} the older run never overwrites the newer answer`, !flashed.length, flashed.join(' | '));
+        check(`${at} no page errors after Check again`, !errors.length, errors.join(' | '));
         await page.close();
       }
     }

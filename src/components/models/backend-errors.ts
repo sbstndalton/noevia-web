@@ -32,6 +32,12 @@ export function backendErrorId(message: string | null | undefined): string | nul
   return null;
 }
 
+/** The interface's words for a known state, or null for a message it does not recognise (#1545 review:
+ *  member-visible rows must not show the raw service text). */
+export function knownBackendError(t: Translator, message: string | null | undefined): string | null {
+  return backendErrorId(message) === null ? null : describeBackendError(t, message);
+}
+
 export function describeBackendError(t: Translator, message: string | null | undefined): string {
   if (!message) return '';
   const id = backendErrorId(message);
