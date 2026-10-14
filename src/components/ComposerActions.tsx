@@ -67,11 +67,22 @@ export async function uploadAttachments(sink: AttachmentSink, files: File[], t: 
   catch (err) { refreshFailure = `${t('composer.upload.failed')}: ${uploadFailureText(err, t, t('composer.upload.failed'))}`; }
   finally {
     const problems = refreshFailure ? [...failures, refreshFailure] : failures;
-    // #1250: a batch with nothing kept does not lead with "Saved" (that read as success with an error in it).
-    const kept = files.length - failures.length;
-    onStatus(problems.length ? t(kept > 0 ? 'composer.upload.partial' : 'composer.upload.notSaved', { saved: kept, total: files.length, failures: problems.join('; ') }) :`${t.plural('composer.upload.saved', files.length, { target: chatOnly ? t('composer.upload.thisChat') : project.name })} · ${t(diary ? 'composer.upload.extras' : chatOnly ? 'composer.upload.nextMessage' : 'composer.upload.allChats')}${notices.length ? ' · ' + notices.join('; ') : ''}`);
+    onStatus(uploadSummaryText({ t, total: files.length, failedFiles: failures.length, problems, notices,
+      target: chatOnly ? t('composer.upload.thisChat') : project.name,
+      where: t(diary ? 'composer.upload.extras' : chatOnly ? 'composer.upload.nextMessage' : 'composer.upload.allChats') }));
     onBusy(false);
   }
+}
+
+/** The one status line after a batch. #1250: a batch with nothing kept does not lead with "Saved". #1653: the
+ *  notices (a file saved as a numbered copy, a reduced image) are kept when another file of the batch failed. */
+export function uploadSummaryText({ t, total, failedFiles, problems, notices, target, where }: {
+  t: Translate; total: number; failedFiles?: number; problems: string[]; notices: string[]; target: string; where: string;
+}): string {
+  const tail = notices.length ? ' · ' + notices.join('; ') : '';
+  if (!problems.length) return `${t.plural('composer.upload.saved', total, { target })} · ${where}${tail}`;
+  const kept = total - (failedFiles ?? problems.length);
+  return `${t(kept > 0 ? 'composer.upload.partial' : 'composer.upload.notSaved', { saved: kept, total, failures: problems.join('; ') })}${tail}`;
 }
 
 /** True only for a drag carrying files — a dragged link or selected text also fires these events,

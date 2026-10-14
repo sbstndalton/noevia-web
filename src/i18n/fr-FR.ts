@@ -580,6 +580,7 @@ export const FR_FR: Catalogue = {
   'storage.refresh.forbidden': "Le stockage a refusé l’accès à ce dossier. Vérifiez son partage et ses autorisations dans votre application de stockage, puis réessayez.",
   'storage.refresh.timeout': "Le stockage n’a pas répondu à temps. Réessayez dans un instant.",
   'storage.refresh.unreachable': "Le stockage est injoignable. Vérifiez l’adresse du serveur et qu’il est en ligne, puis réessayez.",
+  'upload.noFreeName': "Toutes les copies numérotées de ce nom existent déjà. Renommez le fichier, puis réessayez.",
   'storage.openSettings': "Ouvrir les réglages de stockage",
   'storage.loading': "Chargement de votre connexion de stockage enregistrée…",
   'storage.loadFailed': "Votre connexion de stockage enregistrée n’a pas pu être chargée : ces champs sont verrouillés pour éviter de l’écraser. Le serveur est peut-être occupé ou injoignable.",

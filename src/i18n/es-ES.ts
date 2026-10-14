@@ -580,6 +580,7 @@ export const ES_ES: Catalogue = {
   'storage.refresh.forbidden': "El almacenamiento ha denegado el acceso a esta carpeta. Revise su uso compartido y sus permisos en la app de almacenamiento y vuelva a intentarlo.",
   'storage.refresh.timeout': "El almacenamiento no respondió a tiempo. Vuelva a intentarlo en unos minutos.",
   'storage.refresh.unreachable': "No se pudo conectar con el almacenamiento. Compruebe la dirección del servidor y que esté en línea, y vuelva a intentarlo.",
+  'upload.noFreeName': "Todas las copias numeradas de este nombre ya existen. Cambie el nombre del archivo y vuelva a intentarlo.",
   'storage.openSettings': "Abrir ajustes de almacenamiento",
   'storage.loading': "Cargando tu conexión de almacenamiento guardada…",
   'storage.loadFailed': "No se pudo cargar tu conexión de almacenamiento guardada, así que estos campos están bloqueados para no sobrescribirla. Puede que el servidor esté ocupado o inaccesible.",

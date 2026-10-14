@@ -580,6 +580,7 @@ export const SV_SE: Catalogue = {
   'storage.refresh.forbidden': "Lagringen nekade åtkomst till den här mappen. Kontrollera delningen och behörigheterna i din lagringsapp och försök igen.",
   'storage.refresh.timeout': "Lagringen svarade inte i tid. Försök igen om en stund.",
   'storage.refresh.unreachable': "Lagringen kunde inte nås. Kontrollera serveradressen och att den är igång, och försök igen.",
+  'upload.noFreeName': "Alla numrerade kopior av det här namnet är redan tagna. Byt namn på filen och försök igen.",
   'storage.openSettings': "Öppna lagringsinställningar",
   'storage.loading': "Läser in din sparade lagringsanslutning…",
   'storage.loadFailed': "Din sparade lagringsanslutning kunde inte läsas in, så fälten är låsta för att den inte ska skrivas över. Servern kan vara upptagen eller onåbar.",

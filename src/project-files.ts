@@ -49,9 +49,11 @@ export function uploadTakenNames(project: Pick<Project, 'files' | 'projectFolder
  * code (it never replaces a source unless asked to) the next free number is tried instead; nothing is
  * ever written over a source (#1454).
  */
+/** #1653: each attempt resends the whole file, so a list that is this stale gives up instead of retrying on. */
+export const FREE_NAME_ATTEMPTS = 10;
 export async function uploadUnderFreeName<T>(name: string, taken: { name: string }[], upload: (name: string) => Promise<T>): Promise<{ name: string; result: T }> {
   const refused: { name: string }[] = [];
-  for (let attempt = 0; attempt < 50; attempt++) {
+  for (let attempt = 0; attempt < FREE_NAME_ATTEMPTS; attempt++) {
     const candidate = uniqueName(name, [...taken, ...refused]);
     try { return { name: candidate, result: await upload(candidate) }; }
     catch (err) {
@@ -59,7 +61,8 @@ export async function uploadUnderFreeName<T>(name: string, taken: { name: string
       refused.push({ name: candidate });
     }
   }
-  throw new Error(`Every numbered copy of ${name} is already taken`);
+  // The code is what the interface translates (upload.noFreeName); the English message is for logs.
+  throw Object.assign(new Error(`Every numbered copy of ${name} is already taken`), { code: 'noFreeName' });
 }
 
 /**
@@ -80,6 +83,13 @@ export function storageFolderKeepsOldName(folder: string, name: string, id: stri
   const base = folder.split('/').filter(Boolean).pop() ?? '';
   // A folder keyed by the project id (every folder made since #1458) never claims a name, so a rename cannot stale it.
   if (base === storageFolderName(id) || base.startsWith(`${storageFolderName(id)} (`)) return false;
+  // #1653: an id longer than 80 characters is keyed as its first 67 characters, '-', then 12 hex of a sha256
+  // of the whole id (core projectFolderKey), so the key stays unique. The hash is not recomputed here.
+  const whole = String(id || '').replace(/[\x00-\x1f\x7f/\\:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim().replace(/^\.+|[.\s]+$/g, '');
+  if (whole.length > 80) {
+    const head = whole.slice(0, 67).replace(/[.\s]+$/g, '');
+    if (base.startsWith(`${head}-`) && /^[0-9a-f]{12}( \(\d+\))?$/.test(base.slice(head.length + 1))) return false;
+  }
   const expected = storageFolderName(name);
   const current = base === expected || base.startsWith(`${expected} (`) || base === `${expected}--${id}`;
   return !current;

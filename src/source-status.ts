@@ -57,6 +57,8 @@ const STORAGE_CODE_TEXT: Record<string, { key: MessageKey; en: string }> = {
   storageForbidden: { key: 'storage.refresh.forbidden', en: 'Storage refused access to this folder. Check its sharing and permissions in your storage app, then retry.' },
   storageThrottled: { key: 'storage.throttled', en: 'Your storage server is limiting sign-in attempts. Wait a little, then try again.' },
   storageTimeout: { key: 'storage.refresh.timeout', en: 'Storage did not answer in time. Try again shortly.' },
+  // #1653: the web gave up finding a free numbered copy of the name (project-files uploadUnderFreeName).
+  noFreeName: { key: 'upload.noFreeName', en: 'Every numbered copy of this name is already taken. Rename the file and try again.' },
   storageUnreachable: { key: 'storage.refresh.unreachable', en: 'Storage could not be reached. Check the server address and that it is online, then retry.' },
 };
 /** The words for a storage error code, or '' when the code is not one of those above. */
