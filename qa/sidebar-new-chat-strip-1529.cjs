@@ -1,7 +1,8 @@
 // #1529: the sidebar's New chat row is sticky inside the scrolling sidebar. Its strip painted no
 // surface, so recent-chat rows scrolled underneath it and printed through "New chat". The strip
-// now paints an opaque surface (the sidebar's own colour; the Glass family's solid menu fill,
-// because its sidebar is frosted), so list content is clipped beneath it.
+// now paints an opaque surface (the sidebar's own colour), so list content is clipped beneath it.
+// #1716: in Glass the strip is the frosted sidebar itself, so the blocks after it clip their own
+// top edge at the strip's bottom instead (qa/sidebar-new-chat-1716.cjs checks the pixels).
 //
 // Offline: the app is built from this checkout and every API is a synthetic stub (diary-fixture.cjs).
 //   npm run build -- --outDir ../dist-b1-after   (or any build of the parent commit for the "before" run)
@@ -76,7 +77,25 @@ async function openSidebar(browser, { family, theme }) {
         if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `strip-1529-${family}-${theme}.png`) });
         assert.ok(m.scrollTop > 0, 'the list really scrolled');
         assert.ok(m.rowsUnderStrip > 0, 'a list row really passes beneath the strip (the test is meaningful)');
-        assert.equal(alpha(m.bg), 1, `the strip paints an opaque surface, got ${m.bg}`);
+        if (family === 'glass') {
+          // #1716: Glass's strip is the frosted sidebar itself (see-through); the blocks after it
+          // clip their top edge at its bottom, so a row passing beneath it is cut away there.
+          const cut = await page.evaluate(() => {
+            const strip = document.querySelector('.side-new').getBoundingClientRect();
+            const block = [...document.querySelectorAll('.side-new ~ *')].find((el) => {
+              const b = el.getBoundingClientRect(); return b.height > 0 && b.top < strip.bottom - 4 && b.bottom > strip.bottom;
+            });
+            if (!block) return null;
+            const box = block.getBoundingClientRect();
+            const clip = getComputedStyle(block).clipPath.match(/inset\(([\d.]+)(px|%)/);
+            const top = !clip ? 0 : clip[2] === '%' ? (Number(clip[1]) / 100) * box.height : Number(clip[1]);
+            return { visibleTop: box.top + top, stripBottom: strip.bottom };
+          });
+          assert.ok(cut, 'a block passes beneath the strip');
+          assert.ok(Math.abs(cut.visibleTop - cut.stripBottom) <= 2, `the block under the strip is clipped at its bottom edge (visible from ${cut.visibleTop}, strip ends ${cut.stripBottom})`);
+        } else {
+          assert.equal(alpha(m.bg), 1, `the strip paints an opaque surface, got ${m.bg}`);
+        }
         assert.ok(Math.abs(m.stripTop - m.scrollerTop) <= 1, 'the strip is stuck to the top of the scroller');
         await page.close();
       });
