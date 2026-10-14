@@ -37,6 +37,7 @@ export const ICON_ACCENTS: Record<string, IconAccent> = {
   palette: { stroke: [1, 2, 3, 4] },              // the paint dots
   sparkles: { stroke: [1, 2, 3] },                // the small sparkles
   'notebook-pen': { stroke: [5] },                // the pen
+  'circle-alert': { stroke: [1, 2] },             // the exclamation mark
   plug: { stroke: [1, 3] },                       // the prongs
   'chart-column': { stroke: [1, 2, 3] },          // the bars
   map: { stroke: [1, 2] },                        // the folds

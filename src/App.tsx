@@ -1807,6 +1807,9 @@ export default function App(): JSX.Element {
             onOpenProject={(id) => setView({ kind: 'project', id })}
             onCreate={handleCreateProject}
             onDelete={handleDeleteProject}
+            loaded={workspaceLoaded}
+            failed={workspaceFailed}
+            onRetry={() => { setWorkspaceFailed(false); void refreshProjects(); }}
           />
         </Suspense>
       )}
