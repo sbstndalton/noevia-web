@@ -370,7 +370,7 @@ button:disabled { opacity: .5; cursor: default; }
   background: var(--status-danger);
   box-shadow: inset 0 1px 1px rgb(255 255 255 / 40%), 0 0 4px color-mix(in srgb, var(--status-danger) 25%, transparent);
 }
-.status-dot:not(.is-up):not(.is-down), .model-dot.down, .model-dot.warn { box-shadow: none; }
+.status-dot:not(.is-up):not(.is-down), .model-dot.down, .model-dot.warn, .model-dot.off { box-shadow: none; }
 
 /* Project identity: color is a label, not another card surface. */
 .project-icon { flex-shrink:0; }

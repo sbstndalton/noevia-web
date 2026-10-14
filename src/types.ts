@@ -367,9 +367,10 @@ export interface HealthState {
    * Tri-state retrieval readiness (#340): 'available' the embedding probe answered; 'degraded'
    * the index is installed but the configured embedding endpoint could not be reached (small
    * files and source excerpts still reach the model, semantic search does not); 'unavailable'
-   * native index deps are missing. Older/newer mixed deployments may omit this field.
+   * native index deps are missing; 'off' an administrator turned the embedding service off
+   * (#1668). Older/newer mixed deployments may omit this field.
    */
-  retrieval?: 'available' | 'degraded' | 'unavailable' | null;
+  retrieval?: 'available' | 'degraded' | 'off' | 'unavailable' | null;
 }
 
 export interface InstalledModel {

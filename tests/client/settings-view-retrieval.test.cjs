@@ -68,3 +68,12 @@ test('#340 an older/mixed deployment sending only the boolean ragAvailable still
   const down = render({ inferenceUp: true, diaryUp: null, ragAvailable: false });
   assert.match(down.slice(down.indexOf('Project retrieval'), down.indexOf('Project retrieval') + 400), />unavailable</);
 }));
+
+test('#1668 retrieval "off" (an admin turned embedding off) renders "Off" and its note, never "Degraded" or "Available"', () => withSettingsView((render) => {
+  const html = render({ inferenceUp: true, diaryUp: null, ragAvailable: true, retrieval: 'off' });
+  assert.match(html, /Project retrieval/);
+  assert.match(html, />Off</);
+  assert.match(html, /Embedding is turned off/);
+  assert.doesNotMatch(html, /Degraded/);
+  assert.doesNotMatch(html, /cannot be reached/);
+}));

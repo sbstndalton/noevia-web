@@ -60,11 +60,12 @@ export function SettingsView({ models, modelsLoaded, modelsError, health, stats,
           Older/mixed deployments that only send ragAvailable fall back to the boolean. */}
       {(() => {
         const retrieval = health.retrieval ?? (health.ragAvailable == null ? null : health.ragAvailable ? 'available' : 'unavailable');
-        const dotClass = retrieval === 'available' ? '' : retrieval === 'degraded' ? ' warn' : ' down';
-        const roleText = retrieval === 'available' ? t('models.available') : retrieval === 'degraded' ? t('serviceStatus.retrieval.degraded') : retrieval === 'unavailable' ? t('models.unavailable') : t('serviceStatus.notAvailable');
+        const dotClass = retrieval === 'available' ? '' : retrieval === 'degraded' ? ' warn' : retrieval === 'off' ? ' off' : ' down';
+        const roleText = retrieval === 'available' ? t('models.available') : retrieval === 'degraded' ? t('serviceStatus.retrieval.degraded') : retrieval === 'off' ? t('serviceStatus.retrieval.off') : retrieval === 'unavailable' ? t('models.unavailable') : t('serviceStatus.notAvailable');
         return <>
           <div className="model-row" key="retrieval"><span className={`model-dot${dotClass}`}/><span className="model-name">{t('serviceStatus.retrieval')}</span><span className="model-role">{roleText}</span></div>
           {retrieval === 'degraded' && <p className="route-note">{t('serviceStatus.retrieval.degradedNote')}</p>}
+          {retrieval === 'off' && <p className="route-note">{t('serviceStatus.retrieval.offNote')}</p>}
         </>;
       })()}
       </div><h2>{t('serviceStatus.liveEngine')}</h2>{liveNote && <p className="route-note" role="status">{liveNote}</p>}<div className="settings-stat-row"><div><span title={t('serviceStatus.rateTitle')}>{t('serviceStatus.rate')}</span><strong>{stats?.tokensPerSecond != null ? formatNumber(stats.tokensPerSecond, appLocale(), 1) : '—'}</strong></div><div><span>{t('serviceStatus.requests')}</span><strong>{stats?.requestCount ?? '—'}</strong></div><div><span>VRAM</span><strong>{stats?.vramGb != null ? `${formatNumber(stats.vramGb, appLocale(), 1)} GB`:'—'}</strong></div></div></>}
