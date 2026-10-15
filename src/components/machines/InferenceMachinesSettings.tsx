@@ -9,7 +9,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent, JSX } from 'react';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
-import { switchEmbedding } from '../models/assignments';
 import { notifyModelsChanged } from '../../models-changed';
 import { fetchMachines, machineAction, MachineError, parsePort } from './api';
 import type { EmbeddingTarget, Machine, MachineAction, MachineService, MachineServiceId, MachinesView } from './api';
@@ -107,6 +106,8 @@ export function InferenceMachinesSettings(): JSX.Element {
     const { target, machine } = reindex;
     setBusy('reindex'); setError(''); setStatus('');
     try {
+      // The model manager modules stay in their lazy chunk (core tests/server/i18n.test.cjs): loaded on demand here.
+      const { switchEmbedding } = await import('../models/assignments');
       const outcome = await switchEmbedding({ model: target.model, profile: target.profile }, target.baseUrl);
       if (!live.current) return;
       setReindex(null);
