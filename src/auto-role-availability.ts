@@ -5,10 +5,10 @@ export type AutoRoleInfo = Awaited<ReturnType<typeof fetchAutoRoles>>;
 type T = (key: MessageKey, params?: Params) => string;
 const ROLE_KEYS = {
   fast: 'modelPopup.autoRole.fast', smart: 'modelPopup.autoRole.smart',
-  vision: 'modelPopup.autoRole.vision', code: 'modelPopup.autoRole.code',
+  vision: 'modelPopup.autoRole.vision', code: 'modelPopup.autoRole.code', creative: 'modelPopup.autoRole.creative',
 } as const;
 
-/** Display only the four server roles, once each; this never changes routing policy. */
+/** Display only the five server roles, once each; this never changes routing policy. */
 export function missingAutoRoles(info: AutoRoleInfo | null): NonNullable<AutoRoleInfo['missing']> {
   if (!info?.configured || !Array.isArray(info.missing)) return [];
   return (Object.keys(ROLE_KEYS) as (keyof typeof ROLE_KEYS)[]).flatMap((role) => {

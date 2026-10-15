@@ -33,7 +33,8 @@ run('models-decision-row-1796', Number(process.env.QA_PORT || 31796), async (che
       await overview.locator('.mm-assign-list').waitFor({ timeout: 15000 });
 
       await check(`${tag}: Decision is kev-0.8b from the deployment, Sensitivity check is laya`, async () => {
-        assert.deepEqual(await rowText(overview, 'decision'), { label: 'Decision', model: 'kev-0.8b', state: 'Configured', note: 'Set in the server configuration.' });
+        // #1666: an administrator is told where the decision model and address are chosen.
+        assert.deepEqual(await rowText(overview, 'decision'), { label: 'Decision', model: 'kev-0.8b', state: 'Configured', note: 'Choose its address and model in Settings, Models and routing, Decision service setup.' });
         assert.deepEqual(await rowText(overview, 'sensitivity'), { label: 'Sensitivity check', model: 'laya', state: 'Configured', note: 'Set in the server configuration.' });
       });
       await check(`${tag}: the embedding row, whose model is really loaded, still says Running`, async () => {

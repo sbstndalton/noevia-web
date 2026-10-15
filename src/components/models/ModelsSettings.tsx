@@ -40,9 +40,9 @@ const LIST_KEY = 'noevia-models-list';
 const SORTS: [ModelSort, MessageKey][] = [['name', 'mm.sort.name'], ['size', 'mm.sort.size'], ['modified', 'mm.sort.modified']];
 const FILTERS: [ModelFilter, MessageKey][] = [['all', 'mm.filter.all'], ['loaded', 'mm.filter.loaded'], ['vision', 'mm.filter.vision'], ['unconfigured', 'mm.filter.unconfigured']];
 const HF_SORTS: [string, MessageKey][] = [['fit', 'mm.hfSort.fit'], ['trendingScore', 'mm.hfSort.trending'], ['downloads', 'mm.hfSort.downloads'], ['likes', 'mm.hfSort.likes'], ['lastModified', 'mm.sort.modified']];
-type RouteRole = 'fast' | 'smart' | 'vision' | 'code';
+type RouteRole = 'fast' | 'smart' | 'vision' | 'code' | 'creative';
 // Auto's role names and explanation for the Routing panel (routing-copy.ts has the summary).
-const ROUTE_ROLE: Record<RouteRole, MessageKey> = { fast: 'mm.route.role.fast', smart: 'mm.route.role.smart', vision: 'mm.route.role.vision', code: 'mm.route.role.code' };
+const ROUTE_ROLE: Record<RouteRole, MessageKey> = { fast: 'mm.route.role.fast', smart: 'mm.route.role.smart', vision: 'mm.route.role.vision', code: 'mm.route.role.code', creative: 'mm.route.role.creative' };
 const AUTO_EXPLAINED: MessageKey[] = ['mm.route.explain1', 'mm.route.explain2', 'mm.route.explain3', 'mm.route.explain4', 'mm.route.explain5'];
 
 /** A panel that opens on demand and mounts its content only while open, so a closed benchmark or
@@ -194,7 +194,7 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
 // it competed with switching model — the one action people take mid-chat.
 function RoutingSection({ models, modelsError, providersRev = 0 }: { models: InstalledModel[]; modelsError: string | null; providersRev?: number }): JSX.Element {
   const [info, setInfo] = useState<Awaited<ReturnType<typeof fetchAutoRoles>> | null>(null);
-  const [pending, setPending] = useState<{ fast?: string; smart?: string; vision?: string; code?: string }>({});
+  const [pending, setPending] = useState<{ fast?: string; smart?: string; vision?: string; code?: string; creative?: string }>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState('');
@@ -227,15 +227,15 @@ function RoutingSection({ models, modelsError, providersRev = 0 }: { models: Ins
   // the other roles — both excludes Laya and narrows to models the server actually reported as
   // able to read images.
   const visionModels = chatModels.filter((m) => matchesModelUse(m.labels, 'vision'));
-  const valueFor = (role: 'fast' | 'smart' | 'vision' | 'code') => pending[role] ?? info?.roles?.[role] ?? '';
+  const valueFor = (role: RouteRole) => pending[role] ?? info?.roles?.[role] ?? '';
 
   const save = async () => {
-    const fast = valueFor('fast').trim(), smart = valueFor('smart').trim(), vision = valueFor('vision').trim(), code = valueFor('code').trim();
+    const fast = valueFor('fast').trim(), smart = valueFor('smart').trim(), vision = valueFor('vision').trim(), code = valueFor('code').trim(), creative = valueFor('creative').trim();
     if (!fast || !smart) { setError(t('mm.route.needBoth')); return; }
     setBusy(true); setError(''); setSaved('');
     try {
-      await putAutoRoles({ fast, smart, vision, code });
-      setPending({}); setInfo({ configured: true, roles: { fast, smart, ...(vision ? { vision } : {}), ...(code ? { code } : {}) } });
+      await putAutoRoles({ fast, smart, vision, code, creative });
+      setPending({}); setInfo({ configured: true, roles: { fast, smart, ...(vision ? { vision } : {}), ...(code ? { code } : {}), ...(creative ? { creative } : {}) } });
       setSaved(t('mm.route.saved'));
       // The Settings summary card (ModelsSummary.tsx) fetched Auto's roles once on mount and
       // cached them; without this it keeps showing the pre-save state until the page remounts.
@@ -258,7 +258,7 @@ function RoutingSection({ models, modelsError, providersRev = 0 }: { models: Ins
     {!!info?.missing?.length && <p className="mm-note warn" role="alert">{t(info.missing.length === 1 ? 'mm.route.missingOne' : 'mm.route.missingSeveral', { models: info.missing.map((m) => `${t(ROUTE_ROLE[m.role])} (${m.model})`).join(', ') })}</p>}
     {view !== 'loading' && view !== 'error' && <>
     <div className="mm-form route-roles">
-      {(['fast', 'smart', 'vision', 'code'] as const).map((role) => { const roleModels = role === 'vision' ? visionModels : chatModels;
+      {(['fast', 'smart', 'vision', 'code', 'creative'] as const).map((role) => { const roleModels = role === 'vision' ? visionModels : chatModels;
         const saved = info?.roles?.[role];
         // A saved role can name a model that either (a) no longer exists, or (b) — #442 follow-up
         // — is still installed but no longer fits this role's filter: Vision was narrowed to
@@ -273,7 +273,7 @@ function RoutingSection({ models, modelsError, providersRev = 0 }: { models: Ins
         return <label key={role}>
         {t(ROUTE_ROLE[role])}
         <select value={valueFor(role)} disabled={busy} onChange={(e) => setPending((prev) => ({ ...prev, [role]: e.target.value }))}>
-          <option value="">{role === 'vision' || role === 'code' ? t('mm.route.none') : t('mm.route.pick')}</option>
+          <option value="">{role === 'vision' || role === 'code' || role === 'creative' ? t('mm.route.none') : t('mm.route.pick')}</option>
           {roleModels.map((m) => <option key={m.name} value={m.name}>{isResident(m) ? t('mm.route.loadedOption', { model: m.name }) : m.name}</option>)}
           {savedUnavailable && <option value={saved}>{t(savedInstalled ? 'mm.route.unsuitableOption' : 'mm.route.notInstalledOption', { model: saved ?? '' })}</option>}
         </select>

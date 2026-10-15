@@ -25,12 +25,16 @@ const ENV = {
   COWORK_DECISION_URL: 'http://kev:11435', COWORK_DECISION_MODEL: 'kev-0.8b', COWORK_SENSITIVITY_DECISION_URL: 'http://laya:8040',
 };
 const ROLES = { fast: 'Qwen3.5-4B', smart: 'Qwen3.5-9B', code: 'Qwen3.5-9B', vision: 'gemma-4-12b-it' };
+// #1665: the live reranker (core#121): the TEI gte sidecar, switched on by the deployment.
+const RERANK_ENV = { NOEVIA_FEATURE_RAG_RERANK: 'true', RERANK_BACKEND: 'tei', RERANK_BASE_URL: 'http://rerank.invalid:8080', RERANK_MODEL: 'gte-multilingual-reranker-base' };
 
 /**
  * One synthetic server state. `embedLoaded`: whether the managed embedding service reports its model
  * loaded. `savedDecisionUrl`: a decision URL an administrator saved in Settings (or none).
  */
-async function createState({ embedLoaded = true, savedDecisionUrl = null } = {}) {
+async function createState({ embedLoaded = true, savedDecisionUrl = null, rerank = false, member = false } = {}) {
+  // #1665: `rerank` adds the live reranker environment; `member` signs in a member instead of the administrator.
+  const env = { ...ENV, ...(rerank ? RERANK_ENV : {}) };
   // Router rows as llama.cpp lists them: one chat model asleep after its idle time (#1747/#1758), one
   // loaded, one unloaded, the embedding model (the router's own status says nothing about the sidecar)
   // and the stale Laya preset (#1796).
@@ -57,37 +61,43 @@ async function createState({ embedLoaded = true, savedDecisionUrl = null } = {})
     return { ok: false, status: 404, body: {} };
   };
   const embeddingService = core('embedding-service.cjs');
-  const svc = embeddingService.createEmbeddingService({ env: ENV, fetchJson: loaderFetch, log: () => {} });
+  const svc = embeddingService.createEmbeddingService({ env, fetchJson: loaderFetch, log: () => {} });
   embeddingService.install(svc);
   await svc.refresh();
 
-  const service = core('models.cjs').createModelService({ fetchJson: loaderFetch, env: ENV, modelManager, currentWorkspace: () => ({ saveAutoRoles() {} }), listWorkspaces: () => [] });
+  // The auto-roles go through core's real route over this in-memory workspace (#1667 saves a Creative role).
+  const workspace = { userId: 'qa-admin', autoRoles: { ...ROLES }, saveAutoRoles() {} };
+  const service = core('models.cjs').createModelService({ fetchJson: loaderFetch, env, modelManager, currentWorkspace: () => workspace, listWorkspaces: () => [] });
 
   const values = new Map();
   const store = { get: (k) => values.get(k), set: (k, v) => values.set(k, v), delete: (k) => values.delete(k) };
   const audits = [];
-  const decisionSettings = core('decision-settings.cjs').createDecisionSettings({ store, env: ENV, fetchImpl: async () => Response.json({ ready: true }), audit: (...a) => audits.push(a) });
+  const decisionSettings = core('decision-settings.cjs').createDecisionSettings({ store, env, fetchImpl: async () => Response.json({ ready: true }), audit: (...a) => audits.push(a) });
   if (savedDecisionUrl) decisionSettings.save({ url: savedDecisionUrl, timeoutMs: 1200 }, 'qa-admin');
+  // #1665: the reranker switch, when this core has it (an older core shows the "before" state).
+  const rerankSettings = fs.existsSync(path.join(CORE, 'rerank-settings.cjs')) ? core('rerank-settings.cjs').createRerankSettings({ store, env, audit: (...a) => audits.push(a) }) : null;
   const features = core('features.cjs').createFeatures({ store, env: {}, availability: { stepSupervision: decisionSettings.unavailable, systemOneRouting: decisionSettings.unavailable, toolGate: decisionSettings.unavailable } });
 
   const respond = (out) => (res, status, body) => { out.status = status; out.body = body; };
   const featureRoutes = (out) => core('routes/features.cjs').createFeatureRoutes({ features, decisionSettings, json: respond(out), readJson: async (req) => req.body });
   const modelRoutes = (out) => core('routes/models.cjs').createModelRoutes({
-    servedEmbeddingModels: async () => [EMBED], json: respond(out), readBody: async () => '', readJson: async (req) => req.body || {},
-    fetchJson: loaderFetch, env: ENV, modelManager, getProvider: () => ({}), providerHeaders: () => ({}), DEFAULT_PROVIDER_ID: 'default',
-    createVisionProbe: () => async () => ({ supported: true }), reportedTokenRate: () => null, missingRoles: () => null,
-    currentWorkspace: () => ({ userId: 'qa-admin' }), service, decisionSettings,
+    servedEmbeddingModels: async () => [EMBED], json: respond(out), readBody: async (req) => (req.body === undefined ? '' : JSON.stringify(req.body)), readJson: async (req) => req.body || {},
+    fetchJson: loaderFetch, env, modelManager, getProvider: () => ({}), providerHeaders: () => ({}), DEFAULT_PROVIDER_ID: 'default',
+    createVisionProbe: () => async () => ({ supported: true }), reportedTokenRate: () => null, missingRoles: () => [],
+    currentWorkspace: () => workspace, service, decisionSettings, ...(rerankSettings ? { rerankSettings } : {}),
   });
-  const user = { id: 'qa-admin', username: 'qa-admin', displayName: 'Synthetic admin', role: 'admin', diaryEnabled: true, onboarded: true };
+  const user = member ? { id: 'qa-member', username: 'qa-member', displayName: 'Synthetic member', role: 'member', diaryEnabled: true, onboarded: true }
+    : { id: 'qa-admin', username: 'qa-admin', displayName: 'Synthetic admin', role: 'admin', diaryEnabled: true, onboarded: true };
+  const calls = [];
 
   /** Answers one API request through the real core routes, or null when no route here handles it. */
   async function handle(method, pathname, body) {
     const out = {};
     const req = { method, body, headers: {}, [Symbol.asyncIterator]: async function* () { if (body !== undefined) yield Buffer.from(JSON.stringify(body)); } };
     const ctx = { path: pathname, authn: { user }, url: new URL(`http://localhost${pathname}`) };
+    calls.push([method, pathname]);
     if (pathname === '/api/profile' || pathname === '/api/auth/session') return { status: 200, body: { user, passkeys: [] } };
-    if (pathname === '/api/auto-roles' && method === 'GET') return { status: 200, body: { configured: true, roles: ROLES, missing: [] } };
-    if (pathname === '/api/models/capabilities') return { status: 200, body: { kind: 'llamacpp', admin: true, presets: true, download: true, runtimeOptions: false, modelManagement: true } };
+    if (pathname === '/api/models/capabilities') return { status: 200, body: { kind: 'llamacpp', admin: !member, presets: true, download: true, runtimeOptions: false, modelManagement: !member } };
     if (pathname.startsWith('/api/model-manager/')) {
       const r = pathname.slice('/api/model-manager/'.length);
       if (r === 'models') return { status: 200, body: { models: [], unregistered: [], revision: 'r1' } };
@@ -96,7 +106,7 @@ async function createState({ embedLoaded = true, savedDecisionUrl = null } = {})
       if (r === 'sections') return { status: 200, body: { revision: 'r1', sections: [] } };
       return { status: 200, body: {} };
     }
-    if (pathname === '/api/models/installed' || pathname === '/api/models/assignments') {
+    if (pathname === '/api/models/installed' || pathname === '/api/models/assignments' || pathname === '/api/models/reranker' || pathname === '/api/auto-roles') {
       await modelRoutes(out)(req, { setHeader() {} }, ctx);
       return out.status ? out : null;
     }
@@ -107,7 +117,7 @@ async function createState({ embedLoaded = true, savedDecisionUrl = null } = {})
     if (pathname.startsWith('/api/models/')) return { status: 200, body: [] };
     return null;
   }
-  return { handle, values, audits, close: () => embeddingService.install(null) };
+  return { handle, values, audits, calls, workspace, close: () => embeddingService.install(null) };
 }
 
 /** A page whose /api/** goes to `state` (everything else to the diary fixture's synthetic APIs). */
@@ -148,4 +158,4 @@ const VIEWS = [[2000, 1250, 'light'], [2000, 1250, 'dark'], [390, 844, 'light'],
 const SHOTS = process.env.QA_SHOTS || '';
 const TAG = process.env.QA_TAG || 'after';
 
-module.exports = { createState, openPage, run, VIEWS, SHOTS, TAG, EMBED, STALE_LAYA, ROLES, CORE };
+module.exports = { createState, openPage, run, VIEWS, SHOTS, TAG, EMBED, STALE_LAYA, ROLES, CORE, RERANK_ENV };

@@ -6,7 +6,7 @@ import { toolboxCopy } from './toolbox-copy';
 
 type Translator = (key: MessageKey, params?: Record<string, string | number>) => string;
 
-const ROUTES = ['fast', 'smart', 'code'] as const;
+const ROUTES = ['fast', 'smart', 'code', 'creative'] as const;
 
 /** The compact English label of a not-yet-routed Auto reply (also the composer's model label). */
 export const AUTO_PENDING_LABEL = 'Auto (Fast/Smart)';

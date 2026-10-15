@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { fetchDecisionSettings, resetDecisionSettings, saveDecisionSettings, testDecisionSettings } from './api';
+import { fetchDecisionChoices, fetchDecisionSettings, resetDecisionSettings, saveDecisionSettings, testDecisionSettings } from './api';
 import type { DecisionSettings } from './api';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
@@ -15,13 +15,20 @@ export function DecisionServiceSettings({ onSaved }: { onSaved: () => Promise<vo
   const [status, setStatus] = useState('');
   const errorRef = useRef<HTMLParagraphElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  // #1666: the model saved now ('' = automatic), so a pending change can be told apart from the saved one.
+  const [savedModel, setSavedModel] = useState('');
+  // The choosable decision models and the deployment's own come with the administrator's Decision row (#1666).
+  const [choices, setChoices] = useState<{ models: string[]; deploymentModel?: string }>({ models: [] });
+  // A model's own name is not translated (Kev-0.8B); only the built-in model is described in words (#1499).
+  const modelName = (id: string) => id === 'laya' ? t('decision.modelLaya') : id === 'kev-0.8b' ? 'Kev-0.8B' : id;
   const serverText = (id: string | undefined, english: string) => { if (!id) return english; const key = `decision.msg.${id}` as MessageKey; const text = t(key); return text === key ? english : text; };
-  useEffect(() => { let live=true; fetchDecisionSettings().then(value=>{if(live){setDraft(value);setSource(value.source);setLoaded(true);}}).catch(e=>{if(live)setError(e.message);});return ()=>{live=false;}; }, []);
+  useEffect(() => { let live=true; fetchDecisionChoices().then(c=>{if(live)setChoices(c);}).catch(()=>undefined);return ()=>{live=false;}; }, []);
+  useEffect(() => { let live=true; fetchDecisionSettings().then(value=>{if(live){setDraft(value);setSource(value.source);setSavedModel(value.model||'');setLoaded(true);}}).catch(e=>{if(live)setError(e.message);});return ()=>{live=false;}; }, []);
   const act = async (action: 'save' | 'test' | 'reset') => {
     setBusy(action); setError('');setStatus('');
     try {
-      if(action==='save') { const value=await saveDecisionSettings(draft);setDraft(value);setSource(value.source);await onSaved();setStatus(t('decision.saved')); }
-      else if(action==='reset') { const value=await resetDecisionSettings();setDraft(value);setSource(value.source);await onSaved();setStatus(t('decision.resetDone'));
+      if(action==='save') { const value=await saveDecisionSettings(draft);setDraft(value);setSource(value.source);setSavedModel(value.model||'');await onSaved();setStatus(t('decision.saved')); }
+      else if(action==='reset') { const value=await resetDecisionSettings();setDraft(value);setSource(value.source);setSavedModel(value.model||'');await onSaved();setStatus(t('decision.resetDone'));
         // The button just pressed is gone (nothing saved to reset any more): focus the section heading; the
         // status line below announces the result once (focusing that live region as it mounts could read it twice).
         requestAnimationFrame(()=>headingRef.current?.focus()); }
@@ -38,6 +45,14 @@ export function DecisionServiceSettings({ onSaved }: { onSaved: () => Promise<vo
     <form className="set-rows" onSubmit={e=>{e.preventDefault();void act('save');}}>
       <div className="set-row"><div className="set-row-text"><label className="set-row-label" htmlFor="decision-url">{t('decision.endpointLabel')}</label><p className="set-row-desc" id="decision-url-help">{t('decision.endpointHelp')}</p></div>
         <div className="set-row-control"><input id="decision-url" className="modal-input" type="url" required value={draft.url} aria-describedby="decision-url-help" placeholder="http://192.168.1.20:8040" disabled={!loaded||!!busy} onChange={e=>{setDraft({...draft,url:e.target.value});setStatus('');}} /></div></div>
+      {/* #1666: the model behind the address decides how every decision is asked (decision-models.cjs). Automatic is the
+          deployment's choice; a change is deliberate: it applies only when the administrator saves (the #1639 soak). */}
+      <div className="set-row"><div className="set-row-text"><label className="set-row-label" htmlFor="decision-model">{t('decision.modelLabel')}</label><p className="set-row-desc" id="decision-model-help">{t('decision.modelHelp')}</p></div>
+        <div className="set-row-control"><select id="decision-model" className="modal-input" value={draft.model || ''} aria-describedby="decision-model-help" disabled={!loaded||!!busy} onChange={e=>{setDraft({...draft,model:e.target.value});setStatus(e.target.value!==(savedModel||'')?t('decision.modelChanged'):'');}}>
+          <option value="">{choices.deploymentModel ? t('decision.modelAutoNamed', { model: modelName(choices.deploymentModel) }) : t('decision.modelAuto')}</option>
+          {choices.models.map(id=><option key={id} value={id}>{modelName(id)}</option>)}
+          {draft.model && !choices.models.includes(draft.model) && <option value={draft.model}>{modelName(draft.model)}</option>}
+        </select></div></div>
       <div className="set-row"><div className="set-row-text"><label className="set-row-label" htmlFor="decision-deadline">{t('decision.deadlineLabel')}</label><p className="set-row-desc">{t('decision.deadlineHelp')}</p></div>
         <div className="set-row-control"><input id="decision-deadline" className="modal-input" type="number" min={100} max={2000} required value={draft.timeoutMs} disabled={!loaded||!!busy} onChange={e=>{setDraft({...draft,timeoutMs:Number(e.target.value)});setStatus('');}} /></div></div>
       <div className="set-row"><div className="set-row-control decision-service-actions">

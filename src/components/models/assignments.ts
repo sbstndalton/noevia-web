@@ -20,7 +20,18 @@ export interface ServiceAssignment {
   source?: 'admin' | 'deployment';
   /** #1796, sensitivity: true when the check uses the decision service itself. */
   shared?: boolean;
+  /** #1666, decision, admins only: 'admin' when the model was chosen in Settings; the ids that can be chosen and the deployment's. */
+  modelSource?: 'admin';
+  models?: string[];
+  deploymentModel?: string;
+  /** #1665, reranker, admins only: the runtime switch (never an address). */
+  enabled?: boolean;
+  choice?: string | null;
+  choices?: RerankerChoice[];
 }
+/** #1665: a reranker this server can use: 'tei' or 'llamacpp:<preset>'. */
+export interface RerankerChoice { id: string; backend: 'tei' | 'llamacpp'; model: string }
+export interface RerankerSettings { enabled: boolean; choice: string | null; source: 'admin' | 'deployment'; options: RerankerChoice[] }
 export interface Assignments { admin: boolean; services: ServiceAssignment[]; available?: boolean }
 
 export async function fetchAssignments(): Promise<Assignments> {
@@ -120,3 +131,14 @@ export async function finishEmbeddingSwitch(): Promise<SwitchOutcome> {
   if (!fin.ok) throw Error(fin.error || `HTTP ${fin.status}`);
   return finished([sw, fin]);
 }
+
+/** #1665: the reranker's runtime switch (admins only; the server refuses anyone else). */
+async function rerankerRequest(method: 'PUT' | 'DELETE', body?: Record<string, unknown>): Promise<RerankerSettings> {
+  const r = await apiFetch('/api/models/reranker', { method, ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}) });
+  const v = await r.json().catch(() => ({})) as RerankerSettings & { error?: string; errorId?: string };
+  if (!r.ok) throw Object.assign(Error(v.error || `HTTP ${r.status}`), { id: v.errorId });
+  return v;
+}
+export const saveReranker = (enabled: boolean, choice: string | null): Promise<RerankerSettings> => rerankerRequest('PUT', { enabled, choice });
+/** Back to the deployment's reranker configuration ("Use deployment default"). */
+export const resetReranker = (): Promise<RerankerSettings> => rerankerRequest('DELETE');

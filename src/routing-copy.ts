@@ -7,11 +7,12 @@ import type { MessageKey, Params } from './i18n/core';
 type T = (key: MessageKey, params?: Params) => string;
 
 /** "Fast: a · Smart: b", in the interface language through the caller's translate function. */
-export function roleSummary(roles: { fast?: string; smart?: string; vision?: string; code?: string } | null | undefined, t: T): string {
+export function roleSummary(roles: { fast?: string; smart?: string; vision?: string; code?: string; creative?: string } | null | undefined, t: T): string {
   if (!roles) return t('routing.notConfigured');
   const notSet = t('routing.notSet');
   return [t('routing.fast', { model: roles.fast || notSet }), t('routing.smart', { model: roles.smart || notSet }),
-    ...(roles.vision ? [t('routing.vision', { model: roles.vision })] : []), ...(roles.code ? [t('routing.code', { model: roles.code })] : [])].join(' · ');
+    ...(roles.vision ? [t('routing.vision', { model: roles.vision })] : []), ...(roles.code ? [t('routing.code', { model: roles.code })] : []),
+    ...(roles.creative ? [t('routing.creative', { model: roles.creative })] : [])].join(' · ');
 }
 
 /** #616: the server sends stable role ids with English descriptions (the same text the router's

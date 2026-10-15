@@ -35,7 +35,7 @@ const plain = (s) => s.replace(/[\u00a0\u202f]/g, ' ');
 const labels = load('chat-labels');
 
 test('#643 the known sender tokens are exactly the ones the app stores', () => {
-  assert.deepEqual([...labels.SENDER_TOKENS], ['Auto (fast)', 'Auto (smart)', 'Auto (code)', 'Auto (Fast/Smart)', 'Stopped']);
+  assert.deepEqual([...labels.SENDER_TOKENS], ['Auto (fast)', 'Auto (smart)', 'Auto (code)', 'Auto (creative)', 'Auto (Fast/Smart)', 'Stopped']);
 });
 
 test('#643 every known sender token is worded in every locale, with and without the "Assistant · " prefix', () => {
@@ -45,7 +45,7 @@ test('#643 every known sender token is worded in every locale, with and without 
       for (const stored of [token, `Assistant · ${token}`]) {
         const shown = labels.senderLabelText(t, stored);
         assert.notEqual(shown, stored, `${locale}: "${stored}" is still as stored`);
-        assert.doesNotMatch(shown, /Fast\/Smart|\((fast|smart|code)\)|^Stopped$/, `${locale}: "${shown}" still has English`);
+        assert.doesNotMatch(shown, /Fast\/Smart|\((fast|smart|code|creative)\)|^Stopped$/, `${locale}: "${shown}" still has English`);
       }
     }
     assert.equal(labels.senderLabelText(t, 'Auto (Fast/Smart)'), t('composer.autoFastSmart'), `${locale}: same as the composer's label`);
