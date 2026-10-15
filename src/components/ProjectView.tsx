@@ -11,14 +11,16 @@ import { ShellIcon } from './ShellIcon';
 import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
 import type { ProjectTab } from '../routes';
-import type { JSX } from 'react';
+import type { DragEvent, JSX } from 'react';
 import type { Project } from '../types';
 import { SendIcon } from './Icons';
 import { StorageFileBrowser } from './StorageFileBrowser';
 import { ConfirmDialog } from './ContextMenu';
 import { fileToBase64, uploadLimit } from '../sources';
 import { filesAfterRemoval, storageFolderKeepsOldName, uniqueName, uploadTakenNames, uploadUnderFreeName } from '../project-files';
-import { deleteProjectImage, projectImageUrl, uploadProjectFile, deleteProjectFile } from '../api';
+import { deleteProjectImage, projectImageUrl, uploadProjectFile, deleteProjectFile, planFolderImport } from '../api';
+import { dragHasFiles, FOLDER_IMPORT_DEFAULTS, fromDrop, fromInput, sha256, sortFolder, sourceDisplayPath } from '../folder-import';
+import type { FolderFile, SkippedItem } from '../folder-import';
 import { ResearchPanel } from './research/ResearchPanel';
 import { useResearchAccess } from './research/useResearchAccess';
 import { CodePanel } from './code/CodePanel';
@@ -71,6 +73,13 @@ function outputsOf(project: Project): { name: string; base: string; date: string
       return { name: f.name, base, date: base.slice(9, 19), sources: names.has(sidecar) ? sidecar : undefined };
     })
     .sort((a, b) => b.base.localeCompare(a.base));
+}
+
+/** #1805: a source's path with a line-break opportunity after each `/`, so a narrow screen wraps
+ *  `docs/api/auth.md` between folders rather than inside a name. */
+function pathWithBreaks(value: string): JSX.Element {
+  const parts = value.split('/');
+  return <>{parts.map((part, i) => <span key={i}>{keepIdentifiersWhole(part)}{i < parts.length - 1 ? <>/<wbr/></> : null}</span>)}</>;
 }
 
 function timeAgo(t: Translate, ts: number): string {
@@ -182,7 +191,7 @@ export function ProjectView({
   const addFiles = async (list: FileList | null) => {
     if (!list || busyDocs) return;
     const files = Array.from(list);
-    setAddError(''); setBusyDocs(true);
+    setAddError(''); setBusyDocs(true); setFolderMode(false);
     setUploadRows(files.map(f => ({ name: f.name, stage: t('projects.view.queued'), started: Date.now() })));
     const update = (i: number, value: { stage: string; percent?: number; finished?: number; failed?: boolean }) => setUploadRows(rows => rows.map((r, n) => n === i ? { ...r, percent: undefined, ...value } : r));
     // #1454: a name a source already has is kept as a numbered copy, never written over the source.
@@ -204,6 +213,89 @@ export function ProjectView({
       } catch (err) { update(i, { stage: uploadFailureText(err, t, t('projects.view.uploadFailed')), finished: Date.now(), failed: true }); }
     }
     setBusyDocs(false);
+  };
+
+  // #1805: a whole folder from this computer, every subfolder included. The server plans the import
+  // (what is new, changed, unchanged or skipped, within its caps); only the accepted files are sent,
+  // each with its path inside the folder. The result is announced once, when the import ends.
+  const folderInput = useRef<HTMLInputElement>(null);
+  const [dropActive, setDropActive] = useState(false);
+  const [folderResult, setFolderResult] = useState<{ added: number; updated: number; unchanged: number; failed: number; skipped: SkippedItem[]; limits: typeof FOLDER_IMPORT_DEFAULTS } | null>(null);
+  const [folderAnnouncement, setFolderAnnouncement] = useState('');
+  const [folderMode, setFolderMode] = useState(false);
+  const addFolder = async (items: FolderFile[], walkedSkipped: SkippedItem[] = []) => {
+    if (busyDocs) return;
+    setAddError(''); setBusyDocs(true); setFolderMode(true); setFolderResult(null); setFolderAnnouncement('');
+    const result = { added: 0, updated: 0, unchanged: 0, failed: 0, skipped: [...walkedSkipped], limits: FOLDER_IMPORT_DEFAULTS };
+    const finish = () => {
+      setFolderResult(result);
+      setFolderAnnouncement(t('projects.folder.summary', { added: result.added, updated: result.updated, unchanged: result.unchanged, skipped: result.skipped.length, failed: result.failed }));
+      setBusyDocs(false);
+    };
+    try {
+      const { candidates, skipped } = sortFolder(items);
+      result.skipped.push(...skipped);
+      if (!candidates.length) { setUploadRows([]); return finish(); }
+      setUploadRows([{ name: t('projects.folder.checking', { count: candidates.length }), stage: t('projects.view.readingFile'), started: Date.now() }]);
+      const byPath = new Map(candidates.map((c) => [c.path, c.file]));
+      const entries = [];
+      for (const c of candidates) entries.push({ path: c.path, size: c.file.size, sha256: c.file.size <= 60 * 1024 * 1024 ? await sha256(c.file) : '' });
+      const plan = await planFolderImport(project.id, entries);
+      result.limits = plan.limits;
+      result.unchanged = plan.unchanged.length;
+      result.skipped.push(...plan.skipped.map((s) => ({ path: s.path, code: s.code as SkippedItem['code'], reason: s.reason, max: s.max })));
+      const rows = plan.accepted.map((a) => ({ name: a.path, stage: t('projects.view.queued'), started: Date.now() }));
+      setUploadRows(rows);
+      const update = (i: number, value: { stage: string; percent?: number; finished?: number; failed?: boolean }) => setUploadRows(list => list.map((r, n) => n === i ? { ...r, percent: undefined, ...value } : r));
+      for (let i = 0; i < plan.accepted.length; i++) {
+        const a = plan.accepted[i];
+        const file = byPath.get(a.path);
+        try {
+          if (!file) throw new Error(t('projects.view.uploadFailed'));
+          update(i, { stage: t('projects.view.readingFile') });
+          const dataBase64 = await fileToBase64(file);
+          const done = await uploadProjectFile(project.id, { name: a.path.split('/').pop() || a.path, dataBase64, relativePath: a.path, importId: plan.importId }, value => update(i, { stage: uploadStageText(t, value), percent: value.percent }));
+          const unreadable = uploadUnreadableReason(done, t);
+          if (done.unchanged) result.unchanged += 1; else if (a.change === 'changed') result.updated += 1; else result.added += 1;
+          update(i, { stage: unreadable || (done.unchanged ? t('projects.folder.unchanged') : a.change === 'changed' ? t('projects.folder.updated') : t('projects.view.saved')), percent: 100, finished: Date.now(), failed: !!unreadable });
+        } catch (err) {
+          result.failed += 1;
+          const message = uploadFailureText(err, t, t('projects.view.uploadFailed'));
+          result.skipped.push({ path: a.path, code: 'failed', reason: message });
+          update(i, { stage: message, finished: Date.now(), failed: true });
+        }
+        if (i % 10 === 9) void onRefresh();
+      }
+      void onRefresh();
+      finish();
+    } catch (err) {
+      setAddError(uploadFailureText(err, t, t('projects.folder.failed')));
+      setUploadRows([]);
+      finish();
+    }
+  };
+  const skipText = (s: SkippedItem): string => {
+    if (s.code === 'failed') return s.reason || t('projects.view.uploadFailed');
+    if (s.code === 'fileLimit') return t('projects.folder.skip.fileLimit', { max: folderResult?.limits.maxFiles ?? FOLDER_IMPORT_DEFAULTS.maxFiles });
+    if (s.code === 'sizeLimit') return t('projects.folder.skip.sizeLimit', { max: formatBytes(folderResult?.limits.maxBytes ?? FOLDER_IMPORT_DEFAULTS.maxBytes, appLocale()) });
+    const limitsNow = folderResult?.limits ?? FOLDER_IMPORT_DEFAULTS;
+    if (s.code === 'projectLimit') return t('projects.folder.skip.projectLimit', { max: s.max ?? limitsNow.projectSources });
+    if (s.code === 'documentLimit') return t('projects.folder.skip.documentLimit', { max: s.max ?? limitsNow.projectDocuments });
+    if (s.code === 'imageLimit') return t('projects.folder.skip.imageLimit', { max: s.max ?? limitsNow.projectImages });
+    const keys = { system: 'projects.folder.skip.system', hidden: 'projects.folder.skip.hidden', unsupported: 'projects.folder.skip.unsupported', invalidPath: 'projects.folder.skip.invalidPath',
+      duplicate: 'projects.folder.skip.duplicate', caseCollision: 'projects.folder.skip.caseCollision', empty: 'projects.folder.skip.empty', tooLarge: 'projects.folder.skip.tooLarge',
+      sizeMismatch: 'projects.folder.skip.sizeMismatch' } as const;
+    return s.code in keys ? t(keys[s.code as keyof typeof keys]) : (s.reason || s.code);
+  };
+  const onSourcesDrop = (e: DragEvent<HTMLDivElement>) => {
+    if (!dragHasFiles(e)) return;
+    e.preventDefault();
+    setDropActive(false);
+    if (busyDocs) return;
+    const loose = e.dataTransfer.files;
+    const hasFolder = Array.from(e.dataTransfer.items || []).some((item) => (item as DataTransferItem & { webkitGetAsEntry?: () => { isDirectory: boolean } | null }).webkitGetAsEntry?.()?.isDirectory);
+    if (!hasFolder) { void addFiles(loose); return; }
+    void fromDrop(e.dataTransfer.items).then(({ files, skipped }) => addFolder(files, skipped));
   };
 
   const updateFolders = async (folders: string[]) => {
@@ -242,7 +334,7 @@ export function ProjectView({
         return <li key={f.name} data-source-name={f.name} tabIndex={-1} className={citedSource === f.name ? 'is-cited' : undefined}>
           {f.attachment?.assetId && <img className="source-thumbnail" src={projectImageUrl(project.id, f.attachment.assetId)} alt="" />}
           {/* #1543: an image row's thumbnail is its icon; a document row keeps the file glyph. */}
-          <span className="source-name" title={f.name}>{f.attachment?.assetId ? null : <ShellIcon name="file" tone="decorative"/>}<span>{f.name.split('/').pop()}
+          <span className="source-name" title={f.name}>{f.attachment?.assetId ? null : <ShellIcon name="file" tone="decorative"/>}<span>{pathWithBreaks(sourceDisplayPath(f, project.projectFolder))}
             <small className="source-status">{skillFiles.includes(f.name) ? t('projects.view.instructionSkill') : f.document ? sourceStatus(f, t) : f.attachment?.state === 'stored' ? (attachmentReason(f.attachment, t) || t('projects.view.originalStored')) : f.attachment?.state === 'vision' ? t('projects.view.uploadedImage') : f.attachment?.state === 'partial' ? (attachmentReason(f.attachment, t) || t('projects.view.textPreviewLimited')) : t('projects.view.textReady')}</small>
             <small className="source-status">{f.source ? keepIdentifiersWhole(f.name) : t('projects.view.storedInNoevia')}{f.attachment ? ` · ${formatBytes(f.attachment.bytes, appLocale())}` : ''}</small>
             {undeletableSynced && <small className="source-status">{t('projects.view.syncedFrom', { source: f.source || '' })}</small>}
@@ -367,7 +459,10 @@ export function ProjectView({
               )}
             </div>
           ) : (
-            <div className="project-scroll project-sources">
+            <div className={`project-scroll project-sources${dropActive ? ' is-drop-target' : ''}`}
+              onDragOver={(e) => { if (!dragHasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = busyDocs ? 'none' : 'copy'; if (!dropActive) setDropActive(true); }}
+              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropActive(false); }}
+              onDrop={onSourcesDrop}>
               <InstructionSkills key={project.id} projectId={project.id} updatedAt={project.updatedAt} onRefresh={onRefresh} onFiles={setSkillFiles} />
               <p className="rail-empty">
                 {t('projects.view.referenceFilesHint')}
@@ -397,10 +492,31 @@ export function ProjectView({
                   {busyDocs ? t('projects.view.uploadingFiles') : t('projects.view.uploadFiles')}
                 </button>
                 <input ref={uploadInput} type="file" multiple disabled={busyDocs} style={{ display: 'none' }} onChange={e => { void addFiles(e.target.files); e.target.value = ''; }} />
+                {/* #1805: a folder and every subfolder. The visible button opens a labelled directory picker. */}
+                <button type="button" className="btn btn-secondary btn-sm" disabled={busyDocs} onClick={() => folderInput.current?.click()}>
+                  {busyDocs && folderMode ? t('projects.folder.importing') : t('projects.folder.add')}
+                </button>
+                <input ref={(el) => { folderInput.current = el; if (el) { el.setAttribute('webkitdirectory', ''); el.setAttribute('directory', ''); } }} type="file" multiple disabled={busyDocs}
+                  aria-label={t('projects.folder.inputLabel')} className="folder-import-input" data-testid="folder-import-input" style={{ display: 'none' }}
+                  onChange={e => { const items = fromInput(e.target.files); e.target.value = ''; void addFolder(items); }} />
                 <button className="btn btn-secondary btn-sm" onClick={() => setBrowsing(true)}>{t('projects.view.importFromStorage')}</button>
               </div>
               <p className="rail-empty">{t('projects.view.uploadLimitsNote')}</p>
-              {uploadRows.length > 0 && <details open={busyDocs}><summary>{busyDocs ? t('projects.view.uploadingFiles') : t('projects.view.uploadResults', { count: uploadRows.length, status: uploadRows.some(r => r.failed) ?t('projects.view.someNotAdded') : t('projects.view.savedStatus') })}</summary><ul className="source-list upload-progress" aria-label={t('projects.view.uploadProgress')} aria-live="polite">{uploadRows.map((r, i) => <li key={i}>
+              <p className="rail-empty folder-drop-hint">{t('projects.folder.dropHint', { files: folderResult?.limits.maxFiles ?? FOLDER_IMPORT_DEFAULTS.maxFiles, size: formatBytes(folderResult?.limits.maxBytes ?? FOLDER_IMPORT_DEFAULTS.maxBytes, appLocale()) })}</p>
+              {dropActive && <p className="folder-drop-active" aria-hidden="true">{t('projects.folder.dropActive')}</p>}
+              {/* Announced once, when a folder import ends; the rows below stay quiet meanwhile. */}
+              <p className="sr-only" role="status">{folderAnnouncement}</p>
+              {folderResult && !busyDocs && <section className="folder-import-result" aria-label={t('projects.folder.resultLabel')}>
+                <p className="source-status">{folderAnnouncement}</p>
+                {folderResult.skipped.length > 0 && <details className="folder-import-skipped">
+                  <summary>{t('projects.folder.skippedTitle', { count: folderResult.skipped.length })}</summary>
+                  <ul className="source-list">{folderResult.skipped.map((s, i) => <li key={`${s.path}-${i}`}>
+                    <span className="source-name"><span><strong className="upload-name">{s.count ? t.plural('projects.folder.skippedFolder', s.count, { path: s.path }) : s.path}</strong>
+                      <small className="source-status">{skipText(s)}</small></span></span>
+                  </li>)}</ul>
+                </details>}
+              </section>}
+              {uploadRows.length > 0 && <details open={busyDocs}><summary>{busyDocs ? t('projects.view.uploadingFiles') : t('projects.view.uploadResults', { count: uploadRows.length, status: uploadRows.some(r => r.failed) ?t('projects.view.someNotAdded') : t('projects.view.savedStatus') })}</summary><ul className="source-list upload-progress" aria-label={t('projects.view.uploadProgress')} aria-live={folderMode ? 'off' : 'polite'}>{uploadRows.map((r, i) => <li key={i}>
                 <span><strong className="upload-name">{r.name}</strong><small className="source-status">{r.stage}{r.percent !== undefined ? ` · ${formatPercent(r.percent, appLocale(), 0)}` : ''} · {t('projects.view.seconds', { count: Math.max(0, Math.round(((r.finished || now) - r.started) / 1000)) })}</small></span>
               </li>)}</ul></details>}
               {groupKeys.map(([group, groupKey]) => {
