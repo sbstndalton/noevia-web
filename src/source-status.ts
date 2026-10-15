@@ -102,7 +102,7 @@ export function sourceStatus(file: ProjectFile, t?: Translate): string {
   return `${d.stale ? 'Refresh failed · using previous text' : d.state === 'failed' ? (t ? t('projects.view.notReadable') : 'Not readable') : d.state === 'partial' || fallback.length ? partial : (d.pageStatus || []).some(p => p.status === 'ocr') ? 'Text ready · OCR used; verify numbers' : 'Native text ready'}${pages}` +
     `${incomplete.length ? ' · check pages ' + incomplete.slice(0, 20).map(p => p.number).join(', ') + (incomplete.length > 20 ? '…' : '') : ''}${d.truncated ? ' · extraction/summary limited' : ''}` +
     `${fallback.length ? ' · ' + (t ? t('projects.view.reason.nativeFallback', { pages: fallbackPages }) : `pages ${fallbackPages}: layout analysis found no text, so the PDF's own text layer was used; reading order and tables there may be rough`) : ''}` +
-    `${d.error ? ' · ' + documentError(d, t) : ''}${d.indexing === 'pending' ? ' · indexing' : file.content && ['unavailable', 'failed', 'partial'].includes(d.indexing || '') ? ' · search limited; page reads available for extracted text' : ''}`;
+    `${d.error ? ' · ' + documentError(d, t) : ''}${d.indexing === 'pending' ? ' · indexing' : sourceChars(file) > 0 && ['unavailable', 'failed', 'partial'].includes(d.indexing || '') ? ' · search limited; page reads available for extracted text' : ''}`;
 }
 export type SkippedSource = { folder: string; file?: string; reason: string; code?: string; retained?: boolean };
 
@@ -186,7 +186,12 @@ export function uploadUnreadableReason(result: { attachment?: { state?: string; 
 export function isUnreadableSource(file: ProjectFile): boolean {
   const a = file.attachment, d = file.document;
   if (a && a.state === 'stored' && (a.group === 'Text' || a.group === 'Documents')) return true;
-  return !!(d && d.state === 'failed' && !String(file.content || '').trim());
+  return !!(d && d.state === 'failed' && !(typeof file.content === 'string' ? file.content.trim() : sourceChars(file)));
+}
+
+/** #1806: a source's text length: the server lists it as `chars` (the text is fetched per source). */
+export function sourceChars(file: Pick<ProjectFile, 'content' | 'chars'>): number {
+  return typeof file.content === 'string' ? file.content.length : typeof file.chars === 'number' ? file.chars : 0;
 }
 
 /** The stage line of an upload (#1451), in the interface language for the stages this client words itself.

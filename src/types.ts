@@ -194,7 +194,12 @@ export interface ProjectFile {
   attachment?: { id: string; bytes: number; group: string; state: string; reason?: string; reasonId?: string; reasonParams?: Record<string, string | number>; assetId?: string; readerVersion?: string };
   document?: DocumentStatus;
   name: string;
-  content: string;
+  /** #1806: absent in GET /api/workspace, which lists sources without their text; the text is
+   *  GET /api/projects/{id}/sources/text. Present on a source this client is about to send. */
+  content?: string;
+  /** #1806: the text's length and the pointer to it, as the server lists a source. */
+  chars?: number;
+  textRef?: string;
   /** The attached storage folder this came from. Absent for uploaded files,
    *  which a folder sync must never overwrite. */
   source?: string;
