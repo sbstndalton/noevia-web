@@ -70,7 +70,7 @@ const PERSONAL: Group[] = [
 // is a courtesy, never the access control.
 const ADMIN: Group = { name: 'Server administration', admin: true, items: [
   ['users', 'Users', 'members invite accounts'],
-  ['models', 'Models and routing', 'model tuning auto routing download gguf'],
+  ['models', 'Models and routing', 'model tuning auto routing download gguf decision service sensitivity'],
   ['address', 'Web address', 'deployment domain url https'],
   ['features', 'Features', 'deployment feature flags operator'],
   ['experimental', 'Experimental', 'deployment preview'],
@@ -358,7 +358,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
       <div className="settings-detail-scroll" key={section} tabIndex={-1} aria-label={title}>
         <SettingsPanelBoundary>
         {['security', 'users', 'diary', 'providers', 'models', 'status'].includes(section) ? (
-          <SettingsView {...props} section={section} onOpenSection={open}/>
+          <SettingsView {...props} section={section} onOpenSection={open} adminConfirmed={profileKnown && isAdmin}/>
         ) : section === 'profile' ? (
           <ProfileSettings />
         ) : section === 'appearance' ? (

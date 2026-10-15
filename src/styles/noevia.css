@@ -566,9 +566,20 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
 .jump-band > .jump-to-latest { position: static; bottom: auto; }
 /* #1789: the band kept the pill off the text, but the transcript still cut its last visible line in half
    right above the pill, so that line read as hidden under it. While the pill is shown the bottom 24px of
-   the transcript fades out (the Diary pattern, #1568): a cut-off line reads as "scroll", never as covered. */
+   the transcript fades out (the Diary pattern, #1568): a cut-off line reads as "scroll", never as covered.
+   #1794: only the content fades, not the scrollbar. The fade layer stops short of the scrollbar's column
+   (--transcript-scrollbar-w, measured by ChatView; 0 for overlay scrollbars) and a solid layer keeps that
+   column fully drawn. The vertical scrollbar sits on the inline-end side. */
 .chat-workspace > .transcript:has(+ .jump-band) {
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent); }
+  --fade-mask: linear-gradient(to bottom, #000 calc(100% - 24px), transparent), linear-gradient(#000, #000);
+  -webkit-mask-image: var(--fade-mask); mask-image: var(--fade-mask);
+  -webkit-mask-size: calc(100% - var(--transcript-scrollbar-w, 0px)) 100%, var(--transcript-scrollbar-w, 0px) 100%;
+  mask-size: calc(100% - var(--transcript-scrollbar-w, 0px)) 100%, var(--transcript-scrollbar-w, 0px) 100%;
+  -webkit-mask-position: left top, right top; mask-position: left top, right top;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-origin: border-box; mask-origin: border-box; }
+.chat-workspace > .transcript:has(+ .jump-band):dir(rtl) {
+  -webkit-mask-position: right top, left top; mask-position: right top, left top; }
 /* #1533: when the row is tight, the Thinking pill gives up its word ("Thinking"), keeps its icon and
    level, and names the setting in its tooltip. The model label keeps its own width (phone.css). */
 .chat-composer-inner > .reasoning-control { min-width: 0; }

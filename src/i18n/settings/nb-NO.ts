@@ -42,6 +42,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Koble til en privat beslutningstjeneste, og start noevia på nytt.",
   'features.unavailable.decisionSetup': "Sett opp beslutningstjenesten nedenfor før du slår på dette eksperimentet.",
+  'features.unavailable.decisionSetupModels': "Sett opp beslutningstjenesten i Innstillinger, Modeller og ruting, før du slår på dette eksperimentet.",
   'features.unavailable.decisionUnsupported': "Den konfigurerte beslutningstjenesten støtter ikke valgbeslutninger, så dette eksperimentet kan ikke kjøres.",
   'features.unavailable.systemOneUrl': "Ikke konfigurert. Operatøren må peke den mot et dedikert lokalt endepunkt for beslutningsmodell, og deretter starte noevia på nytt.",
   'decision.msg.ready': "Beslutningstjenesten er klar. Ingen inferens ble kjørt.",
@@ -204,7 +205,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'settings.keywords.connectors': "koblinger google drive tilpass tillegg ferdigheter tillatelser",
   'settings.keywords.providers': "openai endepunkt api-nøkkel leverandør",
   'settings.keywords.users': "medlemmer inviter kontoer",
-  'settings.keywords.models': "modell justering auto ruting last ned gguf",
+  'settings.keywords.models': "modell justering auto ruting last ned gguf beslutningstjeneste sensitivitet",
   'settings.keywords.address': "installasjon domene url https",
   'settings.keywords.features': "installasjon funksjonsflagg operatør",
   'settings.keywords.experimental': "installasjon forhåndsvisning",

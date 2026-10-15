@@ -42,6 +42,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Anslut en privat beslutstjänst och starta sedan om noevia.",
   'features.unavailable.decisionSetup': "Ställ in beslutstjänsten nedan innan du aktiverar det här experimentet.",
+  'features.unavailable.decisionSetupModels': "Ställ in beslutstjänsten i Inställningar, Modeller och routning, innan du aktiverar det här experimentet.",
   'features.unavailable.decisionUnsupported': "Den konfigurerade beslutstjänsten stöder inte valbeslut, så det här experimentet kan inte köras.",
   'features.unavailable.systemOneUrl': "Inte konfigurerad. Operatören måste peka den mot en dedikerad lokal slutpunkt för beslutsmodell och sedan starta om noevia.",
   'decision.msg.ready': "Beslutstjänsten är redo. Ingen inferens kördes.",
@@ -204,7 +205,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'settings.keywords.connectors': "kopplingar google drive anpassa tillägg färdigheter behörigheter",
   'settings.keywords.providers': "openai slutpunkt api-nyckel leverantör",
   'settings.keywords.users': "medlemmar bjud in konton",
-  'settings.keywords.models': "modell finjustering auto routning ladda ned gguf",
+  'settings.keywords.models': "modell finjustering auto routning ladda ned gguf beslutstjänst känslighet",
   'settings.keywords.address': "driftsättning domän url https",
   'settings.keywords.features': "driftsättning funktionsflaggor operatör",
   'settings.keywords.experimental': "driftsättning förhandsvisning",

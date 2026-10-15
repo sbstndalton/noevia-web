@@ -50,7 +50,7 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.assign.saved': "Gespeichert.",
   'mm.assign.loadError': "Konnte nicht lesen, was jeder Dienst verwendet.",
   'mm.assign.fixedByServer': "In der Serverkonfiguration festgelegt.",
-  'mm.assign.decisionFromSettings': "In den Einstellungen unter „Einrichtung des Entscheidungsdienstes“ festgelegt.",
+  'mm.assign.decisionFromSettings': "In den Einstellungen unter „Modelle & Routing“, „Einrichtung des Entscheidungsdienstes“ festgelegt.",
   'mm.assign.sensitivityShared': "Nutzt den Decision-Dienst.",
   'mm.assign.noEmbeddingOptions': "Kein anderes Modell ist über einen laufenden Embedding-Server verfügbar.",
   'mm.assign.noEmbeddingInstalled': "Kein anderes Embedding-Modell ist installiert.",

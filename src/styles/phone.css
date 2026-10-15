@@ -146,7 +146,10 @@
    Recent chats as flat labelled lists, all in one surface that scrolls together. The
    account row sits outside the scroller, so rows never paint behind it. No nested scrollers, no tree lines. */
 .app .sidebar.pane { overflow: hidden; }
-.app .sidebar.pane .sidebar-scroll { display: flex; flex-direction: column; gap: var(--space-1); flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; scroll-padding-block: var(--space-2); }
+.app .sidebar.pane .sidebar-scroll { display: flex; flex-direction: column; gap: var(--space-1); flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; scroll-padding-block: calc(var(--side-new-h, 54px) + var(--space-2)) var(--space-2); }
+/* #1721: the top padding reserves the sticky New chat strip (its measured height, --side-new-h from
+   Sidebar.tsx), so a row focused by Shift+Tab or a search result reached with ArrowUp scrolls in
+   below the strip instead of under it, focus ring included. */
 .app .sidebar.pane .sidebar-scroll > * { flex-shrink: 0; }
 .app .sidebar.pane > * { flex-shrink: 0; }
 .app .sidebar.pane .sidebar-history { display: flex; flex-direction: column; gap: 0; flex: none; overflow: visible; margin-bottom: var(--space-3); }
@@ -199,6 +202,10 @@
   .app .sidebar.pane .side-footer { position: static; }
 }
 [data-short-viewport] .app .sidebar.pane { overflow-y: auto; }
+/* #1721: there the pane is the scroller under the sticky New chat strip, so it reserves the strip,
+   which sticks below the pane's own top padding (var(--space-3), shell-v2.css). */
+@media (max-height: 600px) { .app .sidebar.pane { scroll-padding-top: calc(var(--space-3) + var(--side-new-h, 54px) + var(--space-2)); } }
+[data-short-viewport] .app .sidebar.pane { scroll-padding-top: calc(var(--space-3) + var(--side-new-h, 54px) + var(--space-2)); }
 [data-short-viewport] .app .sidebar.pane .sidebar-scroll { display: contents; }
 [data-short-viewport] .app .sidebar.pane .side-footer { position: static; }
 

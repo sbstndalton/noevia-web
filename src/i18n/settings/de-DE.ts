@@ -42,6 +42,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Verbinde einen privaten Entscheidungsdienst und starte noevia dann neu.",
   'features.unavailable.decisionSetup': "Richte den Entscheidungsdienst unten ein, bevor du dieses Experiment aktivierst.",
+  'features.unavailable.decisionSetupModels': "Richte den Entscheidungsdienst unter Einstellungen, „Modelle & Routing“ ein, bevor du dieses Experiment aktivierst.",
   'features.unavailable.decisionUnsupported': "Der konfigurierte Entscheidungsdienst unterstützt keine Auswahlentscheidungen, daher kann dieses Experiment nicht laufen.",
   'features.unavailable.systemOneUrl': "Nicht konfiguriert. Der Betreiber muss sie auf einen eigenen lokalen Entscheidungsmodell-Endpunkt richten und noevia dann neu starten.",
   'decision.msg.ready': "Der Entscheidungsdienst ist bereit. Es wurde keine Inferenz ausgeführt.",
@@ -204,7 +205,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'settings.keywords.connectors': "connectoren google drive anpassen plugins skills berechtigungen",
   'settings.keywords.providers': "openai endpunkt api-schlüssel anbieter",
   'settings.keywords.users': "mitglieder einladen konten",
-  'settings.keywords.models': "modell tuning auto routing herunterladen gguf",
+  'settings.keywords.models': "modell tuning auto routing herunterladen gguf entscheidungsdienst sensibilität",
   'settings.keywords.address': "bereitstellung domain url https",
   'settings.keywords.features': "bereitstellung feature-flags betreiber",
   'settings.keywords.experimental': "bereitstellung vorschau",

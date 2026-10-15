@@ -42,6 +42,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Conecta un servicio de decisión privado y reinicia noevia.",
   'features.unavailable.decisionSetup': "Configura el servicio de decisión de abajo antes de activar este experimento.",
+  'features.unavailable.decisionSetupModels': "Configura el servicio de decisión en Ajustes, Modelos y enrutamiento, antes de activar este experimento.",
   'features.unavailable.decisionUnsupported': "El servicio de decisión configurado no admite decisiones de elección, así que este experimento no puede ejecutarse.",
   'features.unavailable.systemOneUrl': "Sin configurar. El operador debe apuntarla a un punto de conexión dedicado de modelo de decisión local y luego reiniciar noevia.",
   'decision.msg.ready': "El servicio de decisión está listo. No se ejecutó ninguna inferencia.",
@@ -204,7 +205,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'settings.keywords.connectors': "conectores google drive personalizar plugins skills permisos",
   'settings.keywords.providers': "openai endpoint clave api proveedor",
   'settings.keywords.users': "miembros invitar cuentas",
-  'settings.keywords.models': "modelo ajuste auto enrutamiento descargar gguf",
+  'settings.keywords.models': "modelo ajuste auto enrutamiento descargar gguf servicio de decisión sensibilidad",
   'settings.keywords.address': "despliegue dominio url https",
   'settings.keywords.features': "despliegue funciones operador",
   'settings.keywords.experimental': "despliegue vista previa",

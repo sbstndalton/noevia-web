@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { FEATURES_CHANGED, fetchFeatureSettings, saveFeature } from './api';
 import type { FeatureInfo } from './api';
-import { DecisionServiceSettings } from './DecisionServiceSettings';
 import { TechnicalDetail } from '../TechnicalDetail';
 import { useT } from '../../i18n';
 import type { MessageKey, Translate } from '../../i18n';
@@ -37,10 +36,12 @@ export function FeatureSettings({ experimental = false, isAdmin = false }: { exp
     <div className="settings-title"><h1>{experimental ? t('settings.section.experimental') : t('settings.section.features')}</h1><p>{experimental ? t('features.experimentalIntro') : t('features.intro')}</p></div>
     {error && <p className="route-note" role="alert">{error}</p>}
     {!features && !error && <p className="preview-footnote">{t('admin.loading')}</p>}
-    {experimental && <DecisionServiceSettings onSaved={async () => { setFeatures(await fetchFeatureSettings()); window.dispatchEvent(new Event(FEATURES_CHANGED)); }} />}
     {features && <div className="set-rows feature-settings">{features.filter(f => !!f.experimental === experimental).map(f => {
       const id = f.id ?? f.name;
-      const unavailable = f.unavailable ? (f.unavailableId ? byId(t, `features.unavailable.${f.unavailableId}`, f.unavailable) : f.unavailable) : f.unavailable;
+      // #1804: the server's decisionSetup text says "below", from when the setup was on this page; it now
+      // lives on Models and routing, so this page words that id itself. The server's key stays its English.
+      const unavailableKey = f.unavailableId === 'decisionSetup' ? 'features.unavailable.decisionSetupModels' : `features.unavailable.${f.unavailableId}`;
+      const unavailable = f.unavailable ? (f.unavailableId ? byId(t, unavailableKey, f.unavailable) : f.unavailable) : f.unavailable;
       return <div className="set-row set-row-inline" key={f.name}>
       <div className="set-row-text">
         <span className="set-row-label" id={`feature-${f.name}`}>{byId(t, `features.item.${id}.label`, f.label)}</span>

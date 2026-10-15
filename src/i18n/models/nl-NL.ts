@@ -50,7 +50,7 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.assign.saved': "Opgeslagen.",
   'mm.assign.loadError': "Kon niet lezen wat elke dienst gebruikt.",
   'mm.assign.fixedByServer': "Ingesteld in de serverconfiguratie.",
-  'mm.assign.decisionFromSettings': "Ingesteld in Instellingen, Instellen van de beslissingsdienst.",
+  'mm.assign.decisionFromSettings': "Ingesteld in Instellingen, Modellen en routering, Instellen van de beslissingsdienst.",
   'mm.assign.sensitivityShared': "Gebruikt de Decision-dienst.",
   'mm.assign.noEmbeddingOptions': "Er is geen ander model beschikbaar op een draaiende embeddingserver.",
   'mm.assign.noEmbeddingInstalled': "Er is geen ander embeddingmodel geïnstalleerd.",

@@ -4,3 +4,5 @@ ui-data/
 coverage/
 .vite/
 *.log
+# QA screenshots stay outside the repo (#1794); scripts write them to $QA_SHOTS.
+qa-shots*/

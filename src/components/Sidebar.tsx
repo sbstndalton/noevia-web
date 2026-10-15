@@ -173,15 +173,17 @@ export function Sidebar({
   const drawer = useRef<HTMLDivElement>(null);
   // #1716: the sticky New chat strip's height, for the Glass family's clip of rows that scroll
   // beneath it (phone.css). Glass's strip is see-through, so it hides nothing by itself.
+  // #1721: also the scroll padding that keeps a focused row below the strip. Set on the pane, not
+  // the list: on a short screen the list is display: contents and the pane itself scrolls.
   const sideNew = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const strip = sideNew.current, scroller = strip?.parentElement;
+    const strip = sideNew.current, scroller = strip?.closest<HTMLElement>('.sidebar') ?? strip?.parentElement;
     if (!strip || !scroller || typeof ResizeObserver === 'undefined') return;
     const sync = () => scroller.style.setProperty('--side-new-h', `${strip.offsetHeight}px`);
     sync();
     const observer = new ResizeObserver(sync);
     observer.observe(strip);
-    return () => observer.disconnect();
+    return () => { observer.disconnect(); scroller.style.removeProperty('--side-new-h'); };
   }, []);
   const toggle = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
