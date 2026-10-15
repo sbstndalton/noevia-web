@@ -313,6 +313,7 @@ export const DE_DE: Catalogue = {
   'projects.view.uploadedImage': "Hochgeladen · Bild wird beim Senden einer Nachricht gelesen",
   'projects.view.textPreviewLimited': "Textvorschau eingeschränkt · Original beibehalten",
   'projects.view.textReady': "Text bereit",
+  'projects.view.textMissing': "Text fehlt — erneut hochladen oder aktualisieren",
   'projects.view.storedInNoevia': "In noevia gespeichert",
   'projects.view.syncedFrom': "Synchronisiert von {source}; im Speicher entfernen.",
   'projects.view.original': "Original",

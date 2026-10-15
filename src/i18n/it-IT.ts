@@ -313,6 +313,7 @@ export const IT_IT: Catalogue = {
   'projects.view.uploadedImage': "Caricato · l’immagine viene letta quando invii un messaggio",
   'projects.view.textPreviewLimited': "Anteprima testo limitata · originale conservato",
   'projects.view.textReady': "Testo pronto",
+  'projects.view.textMissing': "Testo mancante — ricarica il file o aggiorna",
   'projects.view.storedInNoevia': "Salvato in noevia",
   'projects.view.syncedFrom': "Sincronizzato da {source}; rimuovilo nello storage.",
   'projects.view.original': "Originale",

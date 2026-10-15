@@ -313,6 +313,7 @@ export const NL_NL: Catalogue = {
   'projects.view.uploadedImage': "Geüpload · afbeelding wordt gelezen wanneer je een bericht verstuurt",
   'projects.view.textPreviewLimited': "Tekstvoorbeeld beperkt · origineel behouden",
   'projects.view.textReady': "Tekst gereed",
+  'projects.view.textMissing': "Tekst ontbreekt — upload opnieuw of vernieuw",
   'projects.view.storedInNoevia': "Opgeslagen in noevia",
   'projects.view.syncedFrom': "Gesynchroniseerd vanuit {source}; verwijder het in de opslag.",
   'projects.view.original': "Origineel",

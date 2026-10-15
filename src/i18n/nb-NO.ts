@@ -313,6 +313,7 @@ export const NB_NO: Catalogue = {
   'projects.view.uploadedImage': "Lastet opp · bildet leses når du sender en melding",
   'projects.view.textPreviewLimited': "Tekstforhåndsvisning er begrenset · original beholdt",
   'projects.view.textReady': "Tekst klar",
+  'projects.view.textMissing': "Teksten mangler — last opp på nytt eller oppdater",
   'projects.view.storedInNoevia': "Lagret i noevia",
   'projects.view.syncedFrom': "Synkronisert fra {source}; fjern den i lagringen.",
   'projects.view.original': "Original",
