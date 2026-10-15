@@ -36,7 +36,7 @@ import { answerCount, branchCount } from '../transcript-variants';
 import { ToolCatalogue } from './ToolCatalogue';
 import { toolsModeOf } from '../tools-mode';
 import { CoworkTaskCard } from './CoworkTaskCard';
-import { decideDispatch, type ChatMode } from '../chat-mode';
+import { decideDispatch, modeWithAccess, type ChatMode } from '../chat-mode';
 import { insertMention, turnBoxesFor, type PermittedBox } from '../tool-catalogue';
 import { readDraft, writeDraft, clearDraft } from '../chat-drafts';
 import { addTurnImage, turnImageIdsToSend } from '../turn-images';
@@ -67,6 +67,8 @@ interface ChatViewProps {
   onModeChange?: (mode: ChatMode, newSession: boolean) => void;
   /** #1576: the signed-in account is an administrator; with codeHarness on, only then is Task offered. */
   isAdmin?: boolean;
+  /** #1839: false while the profile is still loading, so `isAdmin` is not yet an answer. */
+  adminKnown?: boolean;
   onRetry: (chatId: string, messageId: string) => void;
   onRegenerate: (chatId: string, messageId: string) => void;
   onEditMessage: (chatId: string, messageId: string, text: string) => void;
@@ -317,9 +319,10 @@ export function ChatView({
   streaming,
   inferenceUp = null,
   onSend,
-  mode = 'chat',
+  mode: askedMode = 'chat',
   onModeChange = () => {},
   isAdmin = false,
+  adminKnown = true,
   onRetry,
   onRegenerate,
   onEditMessage,
@@ -567,7 +570,9 @@ export function ChatView({
   // object directly (#352).
   const defaultProviderId = useDefaultProviderId(); // the id the server treats as local (#876)
   if (!project && freeContext) modelLabel = modelChoiceLabel(freeContext, installedModels ?? null, true, defaultProviderId);
-  const coworkAccess = useCoworkAccess(project?.id ?? null, isAdmin);
+  const coworkAccess = useCoworkAccess(project?.id ?? null, isAdmin, adminKnown);
+  // #1839: a Task choice this viewer cannot run (non-admin, or codeHarness off) is Chat here, so the caption matches the send.
+  const mode = modeWithAccess(askedMode, coworkAccess);
   const [repository, setRepository] = useState<string | null>(null);
   useEffect(() => {
     setRepository(current => current && coworkAccess.repositories.includes(current) ? current : coworkAccess.repositories[0] ?? null);

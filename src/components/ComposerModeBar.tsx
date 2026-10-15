@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { JSX, KeyboardEvent, ReactNode } from 'react';
 import { decideDispatch, switchNeedsNewSession, type ChatMode } from '../chat-mode';
-import { useFeatureFlags } from './features/useFeatureFlags';
+import { useFeatureFlagState } from './features/useFeatureFlags';
 import { fetchCode } from './code/api';
 import './composer-mode.css';
 import { useT } from '../i18n';
@@ -17,12 +17,14 @@ export interface CoworkAccess {
   /** #1576: whether Task is offered at all. Task is admin-only behind codeHarness (chat-mode.cjs), so
    *  anyone else gets a plain Chat composer with no Task option, no hint and no fallback caption. */
   offered: boolean;
+  /** #1839: whether the profile (role) and the feature flags have answered. Until then the mode bar is held, not shown as for a non-admin. */
+  known?: boolean;
 }
 
 /** What this viewer may run as Cowork here: the flag, the account's role, and the code state the
  *  server gives admins. `isAdmin` is the signed-in profile's role; the server re-checks every send. */
-export function useCoworkAccess(projectId: string | null, isAdmin = false): CoworkAccess {
-  const flags = useFeatureFlags();
+export function useCoworkAccess(projectId: string | null, isAdmin = false, adminKnown = true): CoworkAccess {
+  const { flags, settled } = useFeatureFlagState();
   const [state, setState] = useState<{ projectId: string | null; canUseCode: boolean; repositories: string[] }>({ projectId: null, canUseCode: false, repositories: [] });
   useEffect(() => {
     setState({ projectId, canUseCode: false, repositories: [] });
@@ -34,7 +36,7 @@ export function useCoworkAccess(projectId: string | null, isAdmin = false): Cowo
     return () => { live = false; };
   }, [flags.codeHarness, projectId]);
   const current = state.projectId === projectId;
-  return { harnessEnabled: !!flags.codeHarness, canUseCode: current && state.canUseCode, repositories: current ? state.repositories : [], offered: !!flags.codeHarness && isAdmin };
+  return { harnessEnabled: !!flags.codeHarness, canUseCode: current && state.canUseCode, repositories: current ? state.repositories : [], offered: !!flags.codeHarness && isAdmin, known: adminKnown && settled };
 }
 
 const ORDER: ChatMode[] = ['chat', 'cowork'];
@@ -87,7 +89,7 @@ export function ModeToggle({ state, disabled, compact = false }: { state: ModeSw
   const t = useT();
   const { id, mode, group, choose, onKey, coworkNeedsProject, offered } = state;
   // #1576: with Task not offered there is only Chat, and a one-option switch is a dead control.
-  if (!offered) return null;
+  if (!offered || state.access.known === false) return null;
   return <div ref={group} className={`composer-mode-toggle${compact ? ' is-compact' : ''}`} data-mode={mode} role="radiogroup" aria-label={t('mode.session')} onKeyDown={onKey}>
     {ORDER.map(option => <button key={option} type="button" role="radio" data-mode={option}
       aria-checked={option === mode} aria-describedby={`${id}-${option}`} tabIndex={option === mode ? 0 : -1}
@@ -110,8 +112,9 @@ export function ModeCaption({ state, disabled, onRepository }: { state: ModeSwit
               {access.repositories.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           : <strong>{repository}</strong>}</>
+    : state.access.known === false && mode === 'cowork' ? null
     : state.offered && mode === 'cowork' && decision.reason ? t('mode.willSendAsChat', { reason: t(`mode.reason.${decision.reason}`) }) : t('mode.runsChat');
-  return <span className="composer-mode-harness" aria-live="polite" data-caption={caption}>
+  return <span className="composer-mode-harness" aria-live="polite" data-caption={caption} {...(access.known === false && mode === 'cowork' ? { 'data-held': 'true' } : {})}>
     <span className="composer-mode-line">{line}</span>
     {/* #1564, #1595: Task is disabled in a free chat. The hint names its subject (Task) and sits on its own
         line, apart from what Chat runs, so it cannot read as part of the Chat caption. */}

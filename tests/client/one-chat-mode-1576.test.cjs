@@ -74,9 +74,9 @@ test('an administrator with codeHarness keeps Task in a project chat', () => wit
 test('useCoworkAccess offers Task only to an administrator with codeHarness on', () => {
   const src = fs.readFileSync(path.join(root, 'src/components/ComposerModeBar.tsx'), 'utf8');
   assert.match(src, /offered: !!flags\.codeHarness && isAdmin/);
-  assert.match(src, /export function useCoworkAccess\(projectId: string \| null, isAdmin = false\)/, 'not an administrator unless told so');
+  assert.match(src, /export function useCoworkAccess\(projectId: string \| null, isAdmin = false, adminKnown = true\)/, 'not an administrator unless told so');
   const chat = fs.readFileSync(path.join(root, 'src/components/ChatView.tsx'), 'utf8');
-  assert.match(chat, /useCoworkAccess\(project\?\.id \?\? null, isAdmin\)/);
+  assert.match(chat, /useCoworkAccess\(project\?\.id \?\? null, isAdmin, adminKnown\)/);
   const app = fs.readFileSync(path.join(root, 'src/App.tsx'), 'utf8');
   assert.match(app, /setIsAdmin\(profile\.user\.role === 'admin'\)/);
   assert.match(app, /isAdmin=\{isAdmin\}/);
@@ -120,3 +120,27 @@ test('every catalogue carries the New task picker strings, translated outside En
     await server.close();
   }
 });
+
+test('a pending Task choice is Chat on the client when Task is not offered, and held while access is unknown (#1839)', () => withModule('/src/chat-mode.ts', (chatMode) => {
+  const { modeWithAccess } = chatMode;
+  assert.equal(modeWithAccess('cowork', { offered: false, known: true }), 'chat', 'demoted admin / codeHarness off');
+  assert.equal(modeWithAccess('cowork', { offered: false }), 'chat', 'known by default');
+  assert.equal(modeWithAccess('cowork', { offered: true, known: true }), 'cowork');
+  assert.equal(modeWithAccess('cowork', { offered: false, known: false }), 'cowork', 'an admin is not demoted by a profile still loading');
+  assert.equal(modeWithAccess('chat', { offered: false, known: true }), 'chat');
+}));
+
+test('the mode bar is held, not drawn as for a non-admin, while the profile or flags are unknown (#1839)', () => withModule('/src/components/ComposerModeBar.tsx', (mod, React, render) => {
+  const LOADING = { ...OFFERED, known: false };
+  for (const mode of ['chat', 'cowork']) {
+    const { html } = renderBar(mod, React, render, { access: LOADING, projectId: 'p1', mode });
+    assert.doesNotMatch(html, /role="radiogroup"/, `${mode}: no toggle yet`);
+  }
+  const held = renderBar(mod, React, render, { access: LOADING, projectId: 'p1', mode: 'cowork' }).html;
+  assert.doesNotMatch(held, /Runs a conversational reply|Sent as Chat|will be sent as/i, 'a pending Task shows no Chat caption while unknown');
+  assert.match(renderBar(mod, React, render, { access: { ...OFFERED, known: true }, projectId: 'p1', mode: 'cowork' }).html, /role="radiogroup"/, 'shown once known');
+  const app = fs.readFileSync(path.join(root, 'src/App.tsx'), 'utf8');
+  assert.match(app, /setProfileKnown\(true\);/);
+  assert.match(app, /adminKnown=\{profileKnown\}/);
+  assert.match(fs.readFileSync(path.join(root, 'src/components/ChatView.tsx'), 'utf8'), /modeWithAccess\(askedMode, coworkAccess\)/);
+}));

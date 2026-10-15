@@ -20,6 +20,12 @@ export function parseMode(value: unknown): ChatMode {
   return value === 'cowork' ? 'cowork' : 'chat';
 }
 
+/** #1839: a Task (cowork) choice nobody may act on is Chat on the client, so the caption and the send agree.
+ *  Held as asked until `known` (the profile and the feature flags have both answered), so an administrator is not demoted by a load. */
+export function modeWithAccess(mode: ChatMode, access: { offered: boolean; known?: boolean }): ChatMode {
+  return mode === 'cowork' && access.known !== false && !access.offered ? 'chat' : mode;
+}
+
 /** The session's mode: its saved record first, then an unsent choice for this chat, then the default. */
 export function sessionMode(saved: unknown, pending: ChatMode | undefined, fallback: ChatMode = 'chat'): ChatMode {
   if (saved === 'cowork' || saved === 'chat') return saved;
