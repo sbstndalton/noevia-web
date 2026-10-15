@@ -3,10 +3,13 @@
    API; this file keeps the CSS keyframes for loops and simple fades, and the reduced-motion floor. The timing contract (four
    purposes: immediate, quick, considered, async) lives in tokens.css; this file holds every
    keyframe the app uses and the reduced-motion guarantees. There were 29 one-off keyframes;
-   these five replace them. Each is parameterised by custom properties on the element, so a
+   the few below replace them. Each is parameterised by custom properties on the element, so a
    new surface picks a distance, not a new animation.
 
-   Rules: animate opacity and transform only (never layout, never `transition: all`); enter
+   Rules: animate opacity and transform only (never layout, never `transition: all`). One
+   exception: side-new-underlap (last in this file) animates clip-path, because it is not timed
+   motion but a scroll-linked clip on a view() timeline that hides sidebar rows beneath Glass's
+   see-through New chat strip (#1716, #1721); clip-path is composited and never moves layout. Enter
    with --ease-quick, move on screen with --ease-considered, loop with --ease-async; motion is
    never the only signal — every state it accompanies also changes text, colour or an icon. */
 
