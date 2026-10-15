@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { fetchDecisionSettings, resetDecisionSettings, saveDecisionSettings, testDecisionSettings } from './api';
+import { fetchDecisionChoices, fetchDecisionSettings, resetDecisionSettings, saveDecisionSettings, testDecisionSettings } from './api';
 import type { DecisionSettings } from './api';
-import { fetchAssignments } from '../models/assignments';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 
@@ -20,9 +19,10 @@ export function DecisionServiceSettings({ onSaved }: { onSaved: () => Promise<vo
   const [savedModel, setSavedModel] = useState('');
   // The choosable decision models and the deployment's own come with the administrator's Decision row (#1666).
   const [choices, setChoices] = useState<{ models: string[]; deploymentModel?: string }>({ models: [] });
-  const modelName = (id: string) => id === 'laya' ? t('decision.modelLaya') : id === 'kev-0.8b' ? t('decision.modelKev') : id;
+  // A model's own name is not translated (Kev-0.8B); only the built-in model is described in words (#1499).
+  const modelName = (id: string) => id === 'laya' ? t('decision.modelLaya') : id === 'kev-0.8b' ? 'Kev-0.8B' : id;
   const serverText = (id: string | undefined, english: string) => { if (!id) return english; const key = `decision.msg.${id}` as MessageKey; const text = t(key); return text === key ? english : text; };
-  useEffect(() => { let live=true; fetchAssignments().then(a=>{const row=a.services.find(s=>s.id==='decision');if(live&&row)setChoices({models:Array.isArray(row.models)?row.models:[],deploymentModel:row.deploymentModel});}).catch(()=>undefined);return ()=>{live=false;}; }, []);
+  useEffect(() => { let live=true; fetchDecisionChoices().then(c=>{if(live)setChoices(c);}).catch(()=>undefined);return ()=>{live=false;}; }, []);
   useEffect(() => { let live=true; fetchDecisionSettings().then(value=>{if(live){setDraft(value);setSource(value.source);setSavedModel(value.model||'');setLoaded(true);}}).catch(e=>{if(live)setError(e.message);});return ()=>{live=false;}; }, []);
   const act = async (action: 'save' | 'test' | 'reset') => {
     setBusy(action); setError('');setStatus('');

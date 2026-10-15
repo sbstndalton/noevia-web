@@ -109,7 +109,6 @@ export const EN_GB_SETTINGS = {
   'decision.modelAuto': "Automatic (deployment setting)",
   'decision.modelAutoNamed': "Automatic (deployment: {model})",
   'decision.modelLaya': "Built-in decision model",
-  'decision.modelKev': "Kev-0.8B",
   'decision.modelChanged': "The decision model changes when you save.",
   'webAddress.intro': "The address people use to open noevia. Change it here after pointing the new name at this server (for example a Cloudflare tunnel route).",
   'webAddress.loadError': "The web address could not be loaded. Please try again.",

@@ -45,6 +45,10 @@ export const saveFeature = (name: FeatureName, enabled: boolean) => apiFetch(`/a
 export interface DecisionSettings { url: string; timeoutMs: number; source?: string; model?: string }
 export const fetchDecisionSettings = () => apiFetch('/api/admin/decision-settings').then(r => read<DecisionSettings>(r, 'Could not load decision settings'));
 export const saveDecisionSettings = (value: DecisionSettings) => apiFetch('/api/admin/decision-settings', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(value) }).then(r => read<DecisionSettings>(r, 'Could not save decision settings'));
+// #1666: the decision model ids an administrator can choose and the deployment's own, from the admin's Decision row of
+// /api/models/assignments (read directly: the model manager modules stay in their lazy chunk).
+export const fetchDecisionChoices = () => apiFetch('/api/models/assignments').then(r => read<{ services?: { id: string; models?: unknown; deploymentModel?: unknown }[] }>(r, 'Could not load decision models'))
+  .then(b => { const row = (b.services || []).find(s => s.id === 'decision'); return { models: Array.isArray(row?.models) ? row.models.filter((m): m is string => typeof m === 'string') : [], deploymentModel: typeof row?.deploymentModel === 'string' ? row.deploymentModel : undefined }; });
 // #1765: forgets the address saved in Settings; the deployment's decision service applies again.
 export const resetDecisionSettings = () => apiFetch('/api/admin/decision-settings', { method:'DELETE' }).then(r => read<DecisionSettings>(r, 'Could not reset decision settings'));
 export const testDecisionSettings = (value: DecisionSettings) => apiFetch('/api/admin/decision-settings/test', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(value) }).then(r => read<{ok:boolean;message:string;messageId?:string}>(r, 'Could not reach decision service'));

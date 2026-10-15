@@ -117,7 +117,6 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'decision.modelAuto': "Automatisk (fra driftsoppsettet)",
   'decision.modelAutoNamed': "Automatisk (driftsoppsett: {model})",
   'decision.modelLaya': "Innebygd beslutningsmodell",
-  'decision.modelKev': "Kev-0.8B",
   'decision.modelChanged': "Beslutningsmodellen endres når du lagrer.",
   'webAddress.intro': "Adressen folk bruker for å åpne noevia. Endre den her etter at du har pekt det nye navnet mot denne serveren (for eksempel en Cloudflare-tunnelrute).",
   'webAddress.loadError': "Nettadressen kunne ikke lastes. Prøv igjen.",

@@ -117,7 +117,6 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'decision.modelAuto': "Automatisch (Deployment-Einstellung)",
   'decision.modelAutoNamed': "Automatisch (Deployment: {model})",
   'decision.modelLaya': "Integriertes Entscheidungsmodell",
-  'decision.modelKev': "Kev-0.8B",
   'decision.modelChanged': "Das Entscheidungsmodell ändert sich, wenn du speicherst.",
   'webAddress.intro': "Die Adresse, unter der Leute noevia öffnen. Ändere sie hier, nachdem du den neuen Namen auf diesen Server gerichtet hast (zum Beispiel über eine Cloudflare-Tunnel-Route).",
   'webAddress.loadError': "Die Webadresse konnte nicht geladen werden. Bitte versuche es erneut.",

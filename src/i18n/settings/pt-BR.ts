@@ -117,7 +117,6 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'decision.modelAuto': "Automático (configuração da implantação)",
   'decision.modelAutoNamed': "Automático (implantação: {model})",
   'decision.modelLaya': "Modelo de decisão integrado",
-  'decision.modelKev': "Kev-0.8B",
   'decision.modelChanged': "O modelo de decisão muda quando você salva.",
   'webAddress.intro': "O endereço que as pessoas usam para abrir o noevia. Altere-o aqui depois de apontar o novo nome para este servidor (por exemplo, uma rota de túnel da Cloudflare).",
   'webAddress.loadError': "Não foi possível carregar o endereço web. Tente novamente.",

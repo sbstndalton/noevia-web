@@ -117,7 +117,6 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'decision.modelAuto': "Automatisch (instelling van de deployment)",
   'decision.modelAutoNamed': "Automatisch (deployment: {model})",
   'decision.modelLaya': "Ingebouwd beslissingsmodel",
-  'decision.modelKev': "Kev-0.8B",
   'decision.modelChanged': "Het beslissingsmodel verandert wanneer je opslaat.",
   'webAddress.intro': "Het adres waarmee mensen noevia openen. Wijzig het hier nadat je de nieuwe naam naar deze server hebt laten wijzen (bijvoorbeeld een Cloudflare-tunnelroute).",
   'webAddress.loadError': "Het webadres kon niet worden geladen. Probeer het opnieuw.",

@@ -117,7 +117,6 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'decision.modelAuto': "Automatiskt (driftsättningens inställning)",
   'decision.modelAutoNamed': "Automatiskt (driftsättning: {model})",
   'decision.modelLaya': "Inbyggd beslutsmodell",
-  'decision.modelKev': "Kev-0.8B",
   'decision.modelChanged': "Beslutsmodellen ändras när du sparar.",
   'webAddress.intro': "Adressen som folk använder för att öppna noevia. Ändra den här efter att du har pekat det nya namnet mot den här servern (till exempel en Cloudflare-tunnelrutt).",
   'webAddress.loadError': "Webbadressen kunde inte läsas in. Försök igen.",
