@@ -1,7 +1,7 @@
 // #1638: Settings → Inference machines (GET/POST /api/models/machines, administrators only). Kept React-free.
 import { apiFetch } from '../../api';
 
-export type MachineServiceId = 'chatFast' | 'chatSmart' | 'chatCode' | 'chatCreative' | 'vision' | 'decision' | 'embedding' | 'reranker' | 'ocr';
+export type MachineServiceId = 'chatFast' | 'chatSmart' | 'chatCode' | 'chatCreative' | 'vision' | 'decision' | 'sensitivity' | 'embedding' | 'reranker' | 'ocr' | 'documents';
 /** How a service moves: 'runtime' at once, 'chat' at once with the model the machine serves (#1840), 'reindex' through the
  *  embedding re-index, 'local' stays here (servers before #1840), 'deployment' set by the deployment. */
 export type MachineServiceMode = 'runtime' | 'chat' | 'reindex' | 'local' | 'deployment';
@@ -27,6 +27,8 @@ export interface MachineService {
   protocol?: 'tei' | 'llamacpp';
   /** #1840: a chat role on a machine names the model that machine serves. */
   model?: string;
+  /** OCR and Docling only: whether the deployment has switched the worker on. False: nothing to move (#1847). */
+  enabled?: boolean;
   /** Where it reaches now (administrators only). */
   url?: string | null;
 }

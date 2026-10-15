@@ -2,10 +2,11 @@
 // machine each part of noevia uses. Default: everything on this machine, which changes nothing. Administrators
 // only: the Settings shell mounts this page for them alone, and the server refuses everyone else on every method.
 //
-// Decision service and reranker move at once. Embeddings move only through the #1636 re-index (the same
-// set-next → switch → finish the Models page uses), so the page asks first. OCR's address is set by the deployment
-// and says so instead of offering a control. #1840: a chat role (Fast, Smart, Code, Creative) or Vision moves to a
-// machine's OpenAI-compatible server with a port and the model that server lists, asked for through the server.
+// Decision service, sensitivity check, OCR, Docling and reranker move at once. Embeddings move only through the #1636 re-index (the same
+// set-next → switch → finish the Models page uses), so the page asks first. OCR, Docling (#1841) and the sensitivity check (#1844) move at
+// once like the decision service; with nothing assigned they keep the deployment's address, and the sensitivity check says it is shared.
+// #1840: a chat role (Fast, Smart, Code, Creative) or Vision moves to a machine's OpenAI-compatible server with a port and the model
+// that server lists, asked for through the server.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent, JSX } from 'react';
 import { useT } from '../../i18n';
@@ -17,9 +18,12 @@ import './machines.css';
 
 const SERVICE_LABEL: Record<MachineServiceId, MessageKey> = {
   chatFast: 'machines.svc.chatFast', chatSmart: 'machines.svc.chatSmart', chatCode: 'machines.svc.chatCode', chatCreative: 'machines.svc.chatCreative', vision: 'machines.svc.vision',
-  decision: 'machines.svc.decision', embedding: 'machines.svc.embedding', reranker: 'machines.svc.reranker', ocr: 'machines.svc.ocr',
+  decision: 'machines.svc.decision', sensitivity: 'machines.svc.sensitivity', embedding: 'machines.svc.embedding', reranker: 'machines.svc.reranker', ocr: 'machines.svc.ocr', documents: 'machines.svc.documents',
 };
-const ORDER: MachineServiceId[] = ['chatFast', 'chatSmart', 'chatCode', 'chatCreative', 'vision', 'decision', 'embedding', 'reranker', 'ocr'];
+const ORDER: MachineServiceId[] = ['chatFast', 'chatSmart', 'chatCode', 'chatCreative', 'vision', 'decision', 'sensitivity', 'embedding', 'reranker', 'ocr', 'documents'];
+/** Services whose health is probed (GET /health at their address). */
+const PROBED = new Set<MachineServiceId>(['decision', 'sensitivity', 'embedding', 'reranker', 'ocr', 'documents']);
+const PLACEHOLDER_PORT: Partial<Record<MachineServiceId, string>> = { decision: '8040', sensitivity: '8040', ocr: '8030', documents: '8031' };
 const HEALTH: Record<string, [MessageKey, 'good' | 'warn' | 'bad' | 'muted']> = {
   up: ['machines.health.up', 'good'], down: ['machines.health.down', 'warn'], unreachable: ['machines.health.unreachable', 'bad'],
   unknown: ['machines.health.unknown', 'muted'], idle: ['machines.health.idle', 'muted'],
@@ -160,8 +164,10 @@ export function InferenceMachinesSettings(): JSX.Element {
   const serviceRow = (s: MachineService) => {
     const d = drafts[s.id] || draftOf(s);
     const setDraft = (patch: Partial<Draft>) => setDrafts((all) => ({ ...all, [s.id]: { ...d, ...patch } }));
+    // #1847: a worker the deployment has not switched on cannot be moved (assigning a machine would switch it on).
+    const notEnabled = s.enabled === false && s.machine === 'local';
     const chat = s.mode === 'chat';
-    const movable = s.mode === 'runtime' || s.mode === 'reindex' || chat;
+    const movable = (s.mode === 'runtime' || s.mode === 'reindex' || chat) && !notEnabled;
     const onRemote = d.machine !== 'local';
     const port = parsePort(d.port);
     const changed = d.machine !== draftOf(s).machine || (onRemote && (d.port !== draftOf(s).port || (s.id === 'reranker' && d.protocol !== draftOf(s).protocol) || (chat && d.model !== draftOf(s).model)));
@@ -202,10 +208,10 @@ export function InferenceMachinesSettings(): JSX.Element {
               </select></label>
           : <span>{machineName(s.machine)}</span>}
       </span>
-      {(s.id === 'decision' || s.id === 'embedding' || s.id === 'reranker' || (chat && s.machine !== 'local')) ? <HealthPill state={health?.state}/> : <span className="machines-pill-slot" aria-hidden="true"/>}
+      {PROBED.has(s.id) || (chat && s.machine !== 'local') ? <HealthPill state={health?.state}/> : <span className="machines-pill-slot" aria-hidden="true"/>}
       <span className="mm-assign-control">
         {movable && onRemote && <label className="machines-port">{t('machines.port')}
-          <input aria-label={t('machines.portFor', { service: label })} value={d.port} inputMode="numeric" size={6} placeholder={s.id === 'decision' ? '8040' : '8080'} disabled={busy !== ''} onChange={(e) => setDraft({ port: e.target.value })}/></label>}
+          <input aria-label={t('machines.portFor', { service: label })} value={d.port} inputMode="numeric" size={6} placeholder={PLACEHOLDER_PORT[s.id] || '8080'} disabled={busy !== ''} onChange={(e) => setDraft({ port: e.target.value })}/></label>}
         {chat && onRemote && <button type="button" className="popup-tab" disabled={busy !== '' || !!listing?.loading} onClick={() => void findModels()}>{listing?.loading ? t('common.checking') : t('machines.findModels')}</button>}
         {chat && onRemote && modelChoices.length > 0 && <label className="mm-select"><span className="sr-only">{t('machines.modelFor', { service: label })}</span>
           <select aria-label={t('machines.modelFor', { service: label })} value={d.model} disabled={busy !== ''} onChange={(e) => setDraft({ model: e.target.value })}>
@@ -220,10 +226,13 @@ export function InferenceMachinesSettings(): JSX.Element {
             <option value="llamacpp">{t('machines.protocol.llamacpp')}</option>
           </select></label>}
         {movable && changed && <button type="button" className="popup-tab" disabled={busy !== ''} onClick={apply}>{busy === `assign:${s.id}` ? t('common.checking') : s.mode === 'reindex' ? t('machines.move') : t('machines.apply')}</button>}
+        {notEnabled && <span className="mm-assign-fixed">{t('machines.note.workerNotEnabled')}</span>}
         {s.mode === 'local' && <span className="mm-assign-fixed">{t('machines.note.local')}</span>}
         {s.mode === 'deployment' && <span className="mm-assign-fixed">{t('machines.note.deployment')}</span>}
         {s.id === 'embedding' && <span className="mm-assign-fixed">{t('machines.note.embedding')}</span>}
         {chat && s.machine !== 'local' && !changed && <span className="mm-assign-fixed">{t('machines.note.chat', { model: s.model || '' })}</span>}
+        {/* #1844: no address of its own and nothing assigned: it follows the decision service. */}
+        {s.id === 'sensitivity' && s.machine === 'local' && !s.url && <span className="mm-assign-fixed">{t('machines.note.sensitivityShared')}</span>}
         {health?.state === 'unreachable' && <span className="mm-assign-fixed machines-unreachable" role="status">{t(s.id === 'decision' ? 'machines.unreachable.decision' : chat ? 'machines.unreachable.chat' : 'machines.unreachable.service')}</span>}
       </span>
     </li>;

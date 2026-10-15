@@ -88,8 +88,8 @@ run('inference-machines-1638', Number(process.env.QA_PORT || 31638), async (chec
         await page.locator('.machines-row').first().waitFor({ timeout: 10000 });
         assert.equal(await page.locator('.machines-row').count(), 1, 'only this machine');
         const local = row(page, 'This machine');
-        assert.match(await local.innerText(), /Fast chat, Smart chat, Code chat, Creative chat, Vision, Decisions \(Laya\/Kev\), Embeddings \(projects and Diary\), Reranker, OCR \(scanned pages\)/);
-        for (const id of ['chatFast', 'chatSmart', 'chatCode', 'chatCreative', 'vision', 'decision', 'embedding', 'reranker', 'ocr']) {
+        assert.match(await local.innerText(), /Fast chat, Smart chat, Code chat, Creative chat, Vision, Decisions \(Laya\/Kev\), Sensitivity check \(Laya\), Embeddings \(projects and Diary\), Reranker, OCR \(scanned pages\), Documents \(Docling\)/);
+        for (const id of ['chatFast', 'chatSmart', 'chatCode', 'chatCreative', 'vision', 'decision', 'sensitivity', 'embedding', 'reranker', 'ocr', 'documents']) {
           const r = page.locator(`.machines-assign[data-service="${id}"]`);
           await r.waitFor();
           const select = r.locator('select').first();
