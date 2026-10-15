@@ -1092,6 +1092,7 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.rmode.useCustom': "Använd ”{model}”",
   'mm.rmode.listError': "Det gick inte att lista leverantörens modeller ({error}). Skriv ett modell-ID i stället.",
   'mm.rmode.listEmpty': "Leverantören listade inga modeller. Skriv ett modell-ID.",
+  'mm.rmode.noLongerOffered': "{model} (erbjuds inte längre). Kontots modelllista innehåller den inte. Den förblir vald tills du väljer en annan.",
   'mm.rmode.listCount': "{count} modeller från {provider}.",
   'mm.editor.allSettings': "Alla motorinställningar (avancerat)",
   'mm.easy.otherWays': "Andra sätt att dimensionera kontexten",

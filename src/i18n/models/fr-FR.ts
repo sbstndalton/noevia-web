@@ -1092,6 +1092,7 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.rmode.useCustom': "Utiliser « {model} »",
   'mm.rmode.listError': "Impossible de lister les modèles de ce fournisseur ({error}). Saisissez plutôt un identifiant de modèle.",
   'mm.rmode.listEmpty': "Ce fournisseur n’a listé aucun modèle. Saisissez un identifiant de modèle.",
+  'mm.rmode.noLongerOffered': "{model} (n’est plus proposé). La liste des modèles de votre compte ne l’inclut pas. Il reste sélectionné jusqu’à ce que vous en choisissiez un autre.",
   'mm.rmode.listCount': "{count} modèles proposés par {provider}.",
   'mm.editor.allSettings': "Tous les réglages du moteur (avancé)",
   'mm.easy.otherWays': "Autres façons de dimensionner le contexte",

@@ -1092,6 +1092,7 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.rmode.useCustom': "„{model}“ verwenden",
   'mm.rmode.listError': "Die Modelle dieses Anbieters konnten nicht abgerufen werden ({error}). Gib stattdessen eine Modell-ID ein.",
   'mm.rmode.listEmpty': "Dieser Anbieter hat keine Modelle gemeldet. Gib eine Modell-ID ein.",
+  'mm.rmode.noLongerOffered': "{model} (nicht mehr angeboten). Die Modellliste deines Kontos enthält es nicht. Es bleibt ausgewählt, bis du ein anderes wählst.",
   'mm.rmode.listCount': "{count} Modelle von {provider}.",
   'mm.editor.allSettings': "Alle Engine-Einstellungen (erweitert)",
   'mm.easy.otherWays': "Weitere Wege, den Kontext zu bemessen",

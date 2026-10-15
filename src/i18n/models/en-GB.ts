@@ -1117,6 +1117,7 @@ export const EN_GB_MODELS = {
   'mm.rmode.useCustom': "Use “{model}”",
   'mm.rmode.listError': "Could not list this provider's models ({error}). Type a model ID instead.",
   'mm.rmode.listEmpty': "This provider listed no models. Type a model ID instead.",
+  'mm.rmode.noLongerOffered': "{model} (no longer offered). Your account's model list does not include it. It stays selected until you choose another.",
   'mm.rmode.listCount': "{count} models listed by {provider}.",
   'mm.editor.allSettings': "All engine settings (advanced)",
   'mm.easy.otherWays': "Other ways to size the context",

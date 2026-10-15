@@ -47,13 +47,15 @@ const REASON: Record<string, MessageKey> = {
   refused: 'machines.reason.refused', timeout: 'machines.reason.timeout', 'not-found': 'machines.reason.notFound',
   'not-on-this-network': 'machines.reason.notOnNetwork', network: 'machines.reason.network',
 };
-function HealthPill({ state, reason }: { state: string | undefined; reason?: string }): JSX.Element {
+/** `service`: on a machine's roll-up, the failing service's label, so "This machine" says which one is behind the Error (#1861). */
+function HealthPill({ state, reason, service }: { state: string | undefined; reason?: string; service?: string }): JSX.Element {
   const t = useT();
   const [key, tone] = HEALTH[state || 'unknown'] || HEALTH.unknown;
   if (state === 'up' && reason === 'needs-auth') return <span className="mm-state" data-tone="good" data-reason="needs-auth">{t('machines.reason.needsAuth')}</span>;
   const http = /^http-(\d{3})$/.exec(reason || '');
-  const why = (state === 'down' || state === 'unreachable') && reason ? (http ? t('machines.reason.http', { status: http[1] }) : REASON[reason] ? t(REASON[reason]) : '') : '';
-  return <span className="mm-state" data-tone={tone} data-reason={why ? reason : undefined} title={why || undefined}>{t(key)}{why ? ` · ${why}` : ''}</span>;
+  const why = (state === 'down' || state === 'unreachable') && reason ? (http ? (http[1] === '404' ? t('machines.reason.httpNotFound') : t('machines.reason.http', { status: http[1] })) : REASON[reason] ? t(REASON[reason]) : '') : '';
+  const shown = why && service ? t('machines.reason.inService', { service, reason: why }) : why;
+  return <span className="mm-state" data-tone={tone} data-reason={why ? reason : undefined} data-service={why && service ? service : undefined} title={shown || undefined}>{t(key)}{shown ? ` · ${shown}` : ''}</span>;
 }
 
 export function InferenceMachinesSettings(): JSX.Element {
@@ -137,6 +139,9 @@ export function InferenceMachinesSettings(): JSX.Element {
     } finally { if (live.current) setBusy(''); }
   };
 
+  /** #1861: the label of the service behind a degraded roll-up ('engine' is this machine's own inference engine). */
+  const failingLabel = (id: string | undefined): string | undefined => (!id ? undefined : id === 'engine' ? t('machines.service.engine') : SERVICE_LABEL[id as MachineServiceId] ? t(SERVICE_LABEL[id as MachineServiceId]) : undefined);
+
   const machineRow = (m: Machine) => {
     const state = view?.health?.machines?.[m.id];
     const label = m.builtIn ? t('machines.thisMachine') : m.name || m.id;
@@ -161,7 +166,7 @@ export function InferenceMachinesSettings(): JSX.Element {
           <button type="button" className="btn btn-secondary" disabled={busy !== ''} onClick={() => setRemoving(null)}>{t('machines.cancel')}</button>
         </span>}
       </div>
-      <HealthPill state={state} reason={view?.health?.reasons?.[m.id]}/>
+      <HealthPill state={state} reason={view?.health?.reasons?.[m.id]} service={failingLabel(view?.health?.failing?.[m.id])}/>
       {!m.builtIn && !editingThis && removing !== m.id && <span className="machines-actions">
         <button type="button" className="popup-tab" aria-label={t('machines.editNamed', { name: label })} disabled={busy !== ''} onClick={() => { setEditing({ id: m.id, name: m.name || '', address: m.address || '' }); setRemoving(null); }}>{t('machines.edit')}</button>
         <button type="button" className="popup-tab" aria-label={t('machines.removeNamed', { name: label })} disabled={busy !== ''} onClick={() => { setRemoving(m.id); setEditing(null); }}>{t('machines.remove')}</button>

@@ -7,8 +7,8 @@ import { useT } from '../../i18n';
 
 const SHOWN_MAX = 60;
 
-export function ModelCombobox({ label, value, options, disabled = false, onChange }: {
-  label: string; value: string; options: string[]; disabled?: boolean; onChange: (value: string) => void;
+export function ModelCombobox({ label, value, options, disabled = false, stale = false, onChange }: {
+  label: string; value: string; options: string[]; disabled?: boolean; /** #1862: the saved id is not in the provider's refreshed list. */ stale?: boolean; onChange: (value: string) => void;
 }): JSX.Element {
   const t = useT();
   const id = useId();
@@ -32,7 +32,7 @@ export function ModelCombobox({ label, value, options, disabled = false, onChang
     <label htmlFor={`${id}-input`}>{label}</label>
     <input ref={input} id={`${id}-input`} type="text" role="combobox" aria-expanded={open && rows.length > 0} aria-controls={listId} aria-autocomplete="list"
       aria-activedescendant={open && active >= 0 ? `${id}-opt-${active}` : undefined}
-      value={value} disabled={disabled} spellCheck={false} autoComplete="off" placeholder={t('mm.rmode.modelSearch')}
+      value={value} disabled={disabled} aria-invalid={stale || undefined} spellCheck={false} autoComplete="off" placeholder={t('mm.rmode.modelSearch')}
       onChange={(e) => { onChange(e.target.value); setOpen(true); setActive(-1); }}
       onFocus={() => setOpen(true)} onBlur={() => window.setTimeout(() => setOpen(false), 120)} onKeyDown={onKey} />
     {open && rows.length > 0 && <ul id={listId} role="listbox" className="model-combobox-list overlay" aria-label={label}>
@@ -45,5 +45,6 @@ export function ModelCombobox({ label, value, options, disabled = false, onChang
         </li>;
       })}
     </ul>}
+    {stale && value.trim() && <p className="mm-note warn" role="alert" data-testid="model-no-longer-offered">{t('mm.rmode.noLongerOffered', { model: value.trim() })}</p>}
   </div>;
 }

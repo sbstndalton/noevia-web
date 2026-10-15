@@ -56,7 +56,7 @@ run('inference-health-1856', Number(process.env.QA_PORT || 31856), async (check,
         assert.equal((await decision.innerText()).trim(), 'Healthy · needs sign-in');
         const local = page.locator('.machines-row[data-machine="local"] .mm-state');
         await page.waitForFunction(() => /Unreachable/.test(document.querySelector('.machines-row[data-machine="local"] .mm-state')?.textContent || ''), null, { timeout: 10000 });
-        assert.equal((await local.innerText()).trim(), 'Unreachable · Connection refused');
+        assert.equal((await local.innerText()).trim(), 'Unreachable · Inference engine: Connection refused');
         assert.doesNotMatch(await page.locator('.inference-machines').innerText(), /\bError\b|Answering/);
         if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `1856-health-refused-${width}-${theme}.png`) });
       });
