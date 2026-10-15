@@ -20,8 +20,10 @@ export interface ServiceAssignment {
   source?: 'admin' | 'deployment';
   /** #1796, sensitivity: true when the check uses the decision service itself. */
   shared?: boolean;
-  /** #1666, decision, admins only: 'admin' when the model was chosen in Settings. */
+  /** #1666, decision, admins only: 'admin' when the model was chosen in Settings; the ids that can be chosen and the deployment's. */
   modelSource?: 'admin';
+  models?: string[];
+  deploymentModel?: string;
   /** #1665, reranker, admins only: the runtime switch (never an address). */
   enabled?: boolean;
   choice?: string | null;

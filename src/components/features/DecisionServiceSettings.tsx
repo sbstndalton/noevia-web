@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchDecisionSettings, resetDecisionSettings, saveDecisionSettings, testDecisionSettings } from './api';
 import type { DecisionSettings } from './api';
+import { fetchAssignments } from '../models/assignments';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 
@@ -17,8 +18,11 @@ export function DecisionServiceSettings({ onSaved }: { onSaved: () => Promise<vo
   const headingRef = useRef<HTMLHeadingElement>(null);
   // #1666: the model saved now ('' = automatic), so a pending change can be told apart from the saved one.
   const [savedModel, setSavedModel] = useState('');
+  // The choosable decision models and the deployment's own come with the administrator's Decision row (#1666).
+  const [choices, setChoices] = useState<{ models: string[]; deploymentModel?: string }>({ models: [] });
   const modelName = (id: string) => id === 'laya' ? t('decision.modelLaya') : id === 'kev-0.8b' ? t('decision.modelKev') : id;
   const serverText = (id: string | undefined, english: string) => { if (!id) return english; const key = `decision.msg.${id}` as MessageKey; const text = t(key); return text === key ? english : text; };
+  useEffect(() => { let live=true; fetchAssignments().then(a=>{const row=a.services.find(s=>s.id==='decision');if(live&&row)setChoices({models:Array.isArray(row.models)?row.models:[],deploymentModel:row.deploymentModel});}).catch(()=>undefined);return ()=>{live=false;}; }, []);
   useEffect(() => { let live=true; fetchDecisionSettings().then(value=>{if(live){setDraft(value);setSource(value.source);setSavedModel(value.model||'');setLoaded(true);}}).catch(e=>{if(live)setError(e.message);});return ()=>{live=false;}; }, []);
   const act = async (action: 'save' | 'test' | 'reset') => {
     setBusy(action); setError('');setStatus('');
@@ -45,8 +49,9 @@ export function DecisionServiceSettings({ onSaved }: { onSaved: () => Promise<vo
           deployment's choice; a change is deliberate: it applies only when the administrator saves (the #1639 soak). */}
       <div className="set-row"><div className="set-row-text"><label className="set-row-label" htmlFor="decision-model">{t('decision.modelLabel')}</label><p className="set-row-desc" id="decision-model-help">{t('decision.modelHelp')}</p></div>
         <div className="set-row-control"><select id="decision-model" className="modal-input" value={draft.model || ''} aria-describedby="decision-model-help" disabled={!loaded||!!busy} onChange={e=>{setDraft({...draft,model:e.target.value});setStatus(e.target.value!==(savedModel||'')?t('decision.modelChanged'):'');}}>
-          <option value="">{draft.deploymentModel ? t('decision.modelAutoNamed', { model: modelName(draft.deploymentModel) }) : t('decision.modelAuto')}</option>
-          {(draft.models || []).map(id=><option key={id} value={id}>{modelName(id)}</option>)}
+          <option value="">{choices.deploymentModel ? t('decision.modelAutoNamed', { model: modelName(choices.deploymentModel) }) : t('decision.modelAuto')}</option>
+          {choices.models.map(id=><option key={id} value={id}>{modelName(id)}</option>)}
+          {draft.model && !choices.models.includes(draft.model) && <option value={draft.model}>{modelName(draft.model)}</option>}
         </select></div></div>
       <div className="set-row"><div className="set-row-text"><label className="set-row-label" htmlFor="decision-deadline">{t('decision.deadlineLabel')}</label><p className="set-row-desc">{t('decision.deadlineHelp')}</p></div>
         <div className="set-row-control"><input id="decision-deadline" className="modal-input" type="number" min={100} max={2000} required value={draft.timeoutMs} disabled={!loaded||!!busy} onChange={e=>{setDraft({...draft,timeoutMs:Number(e.target.value)});setStatus('');}} /></div></div>
