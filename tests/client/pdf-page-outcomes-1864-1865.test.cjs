@@ -29,7 +29,6 @@ const status = load('source-status');
 const NOTES = [
   { id: 'stoppedAtPage', params: { page: 1000, limit: 'pages' } },
   { id: 'stoppedAtPage', params: { page: 400, limit: 'text' } },
-  { id: 'stoppedAtPage', params: { page: 300, limit: 'extractor' } },
   { id: 'stoppedAtPage', params: { page: 25, limit: 'error', reason: 'SYN-READ-ERROR' } },
   { id: 'ocrRetryFailed', params: { pages: '1, 4', reason: 'SYN-OCR-REASON' } },
   { id: 'ocrRetryEmpty', params: { pages: '2' } },
@@ -45,7 +44,7 @@ test('every note is worded in every locale, with its numbers and reason, never a
     for (const [i, text] of words.entries()) {
       assert.ok(text.length > 10, `${locale} ${NOTES[i].id}: "${text}"`);
       assert.doesNotMatch(text, /projects\.view\.|\{\w+\}/, `${locale} ${NOTES[i].id}: a key or placeholder leaked: ${text}`);
-      for (const v of Object.values(NOTES[i].params).filter((v) => !['pages', 'text', 'extractor', 'error'].includes(v))) assert.ok(text.includes(String(v)), `${locale} ${NOTES[i].id} keeps ${v}: ${text}`);
+      for (const v of Object.values(NOTES[i].params).filter((v) => !['pages', 'text', 'error'].includes(v))) assert.ok(text.includes(String(v)), `${locale} ${NOTES[i].id} keeps ${v}: ${text}`);
     }
     assert.equal(new Set(words).size, words.length, `${locale}: each note reads differently`);
     if (locale !== 'en-GB') assert.notEqual(words[0], status.noteText(NOTES[0], tFor('en-GB')), `${locale} is translated`);
@@ -55,8 +54,8 @@ test('every note is worded in every locale, with its numbers and reason, never a
 test('English (no translator and en-GB) matches the server\'s own words', () => {
   assert.equal(status.noteText(NOTES[0]), 'stopped at page 1000 (page limit)');
   assert.equal(status.noteText(NOTES[0], tFor('en-GB')), 'stopped at page 1000 (page limit)');
-  assert.equal(status.noteText(NOTES[3]), 'stopped at page 25 (read error: SYN-READ-ERROR)');
-  assert.equal(status.noteText(NOTES[4]), 'pages 1, 4: OCR retry failed: SYN-OCR-REASON');
+  assert.equal(status.noteText(NOTES[2]), 'stopped at page 25 (read error: SYN-READ-ERROR)');
+  assert.equal(status.noteText(NOTES[3]), 'pages 1, 4: OCR retry failed: SYN-OCR-REASON');
   assert.equal(status.noteText({ id: 'somethingNew', params: {} }), '', 'an unknown id is skipped, not shown raw');
 });
 
@@ -91,4 +90,13 @@ test('the toast words the server\'s notes in the interface language, and keeps t
   assert.deepEqual(status.sourceRefreshEntries([failed], tFor('en-GB')), ['Synthetic/large.pdf: partial; pages 1: OCR retry failed: OCR is busy; refresh to retry.'], 'one full stop');
   const old = { folder: '/Synthetic', file: 'Synthetic/old.pdf', reason: 'partial; 3 pages.' };
   assert.deepEqual(status.sourceRefreshEntries([old], tFor('de-DE')), ['Synthetic/old.pdf: partial; 3 pages.'], 'an entry without notes is as before');
+});
+
+test('a PDF too large for OCR says so in every locale (#1864, errorId ocrTooLarge)', () => {
+  for (const locale of LOCALES) {
+    const text = status.documentError({ error: 'English from the server', errorId: 'ocrTooLarge' }, tFor(locale));
+    assert.match(text, /25/, `${locale}: ${text}`);
+    assert.doesNotMatch(text, /projects\.view\./);
+    if (locale !== 'en-GB') assert.notEqual(text, status.documentError({ errorId: 'ocrTooLarge', error: 'x' }, tFor('en-GB')));
+  }
 });

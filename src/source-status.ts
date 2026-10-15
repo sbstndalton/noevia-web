@@ -19,7 +19,7 @@ const LEGACY_REASONS: Record<string, string> = {
 };
 type Reasoned = { reason?: string; reasonId?: string; reasonParams?: Record<string, string | number> };
 
-const REASON_IDS = new Set(['binaryText', 'encoding', 'docxPartial', 'docxEmpty', 'imageTooLarge', 'ocrPageLimit', 'ocrOmittedPages', 'noOcrText', 'noNativeText']);
+const REASON_IDS = new Set(['binaryText', 'encoding', 'docxPartial', 'docxEmpty', 'imageTooLarge', 'ocrPageLimit', 'ocrOmittedPages', 'noOcrText', 'noNativeText', 'ocrTooLarge']);
 
 function reasonText(t: Translate | undefined, id: string | undefined, params: Record<string, string | number> | undefined, english: string | undefined): string {
   if (!t) return english || '';
@@ -100,7 +100,7 @@ const NOTE_EN: Record<string, string> = {
   ocrRetryLimit: 'pages {pages}: not retried (OCR retry limit reached)',
   ocrRetryRecovered: 'pages {pages}: recovered by an OCR retry; verify numbers against the original',
 };
-const LIMIT_EN: Record<string, string> = { pages: 'page limit', text: 'text limit', extractor: 'the document extraction service needs an update to read page ranges', error: 'read error' };
+const LIMIT_EN: Record<string, string> = { pages: 'page limit', text: 'text limit', error: 'read error' };
 const fill = (text: string, params: Record<string, string | number>) => text.replace(/\{(\w+)\}/g, (m, k: string) => (k in params ? String(params[k]) : m));
 
 /** One note in the interface language (English without `t`). An id this client does not know is skipped. */

@@ -190,7 +190,7 @@ export interface DocumentStatus {
   /** #1865: `retry` is what a page's OCR retry came to, when the first pass left it incomplete. */
   pageStatus?: { number: number; status: string; reason?: string; retry?: PageRetry }[];
   /** #1864: where reading stopped and why, when the document has more pages than were read. */
-  stoppedAt?: { page: number; limit: 'pages' | 'text' | 'extractor' | 'error'; error?: string };
+  stoppedAt?: { page: number; limit: 'pages' | 'text' | 'error'; error?: string };
 }
 
 export interface PageRetry {
