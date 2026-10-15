@@ -32,6 +32,7 @@ const freeChats = [{ id: 'fc1784', title: 'Stopped partial', updatedAt: 5000, ar
 const INTERRUPTED = 'This reply was interrupted before it finished.';
 const UNSEEN = ' UNSEEN-AFTER-STOP';
 const LIVE_PROMPT = 'QA-1784 live list 40 numbered facts about octopuses';
+const DROP_PROMPT = 'QA-1784 DROP list 40 numbered facts about octopuses';
 const { createTurnRecord } = require(path.join(process.env.QA_CORE_SERVER || path.join(__dirname, '../../noevia-core/server'), 'chat-interrupted-turn.cjs'));
 
 // The live flow's server side: /api/chat streams over real HTTP until the client aborts, and the chat's history
@@ -67,7 +68,12 @@ function installLiveServer(fixture) {
     send({ type: 'meta', model: 'Synthetic-Chat-Q4', route: 'Fast' });
     send({ type: 'reasoning', text: 'Synthetic plan: list the facts.' });
     let n = 0;
-    const timer = setInterval(() => { n++; send({ type: 'delta', text: `${n === 1 ? '' : '\n'}${n}. Synthetic octopus fact number ${n}.` }); if (n >= 400) clearInterval(timer); }, 60);
+    // A message with DROP has its connection cut by the server side (a tunnel drop), not stopped by the person.
+    const drop = String(body.message).includes('DROP');
+    const timer = setInterval(() => {
+      n++; send({ type: 'delta', text: `${n === 1 ? '' : '\n'}${n}. Synthetic octopus fact number ${n}.` });
+      if (drop && n === 8) res.destroy(); else if (n >= 400) clearInterval(timer);
+    }, 60);
     res.on('close', () => {
       if (closed) return;
       closed = true;
@@ -259,6 +265,35 @@ const lastReply = (page) => page.locator('.msg[data-role=assistant]').last();
         assert.equal(await lastReply(live.page).locator('.msg-interrupted').count(), 0, 'no interrupted note after a reload');
       });
       await live.page.close();
+
+      // Review of web#61: a connection the server side drops is NOT a Stop. The reply is the server's kept copy,
+      // with the interrupted note and Retry/Continue, and no Stopped note.
+      liveStore.history = []; liveStore.rev = 1;
+      const dropped = await open(browser, { width, height, theme, live: true });
+      await dropped.box.fill(DROP_PROMPT);
+      await dropped.box.press('Enter');
+      await dropped.page.getByTitle('Stop generating').waitFor({ state: 'detached', timeout: 15000 });
+      await dropped.page.waitForTimeout(1500);
+      await check(`#1784 dropped ${tag}: a dropped connection keeps the server's interrupted copy, never a Stopped note`, async () => {
+        const entry = liveStore.history.filter((h) => h.role === 'assistant').at(-1);
+        assert.ok(entry, 'the server kept the reply');
+        assert.equal(entry.interrupted, true, 'saved as interrupted');
+        assert.notEqual(entry.stopped, true, 'not saved as stopped');
+        // The chat is reloaded the way a person returns to it after the error.
+        await dropped.page.reload();
+        await lastReply(dropped.page).waitFor({ timeout: 20000 });
+        await dropped.page.waitForTimeout(500);
+        const reply = lastReply(dropped.page);
+        assert.equal(await reply.getByTestId('reply-stopped').count(), 0, 'no Stopped note');
+        assert.equal(await reply.locator('.msg-interrupted').count(), 1, 'one interrupted note');
+        assert.ok((await reply.innerText()).includes(INTERRUPTED));
+        assert.equal(await reply.getByRole('button', { name: /Retry/ }).count() >= 1, true, 'Retry is offered');
+        if (SHOTS) {
+          await reply.scrollIntoViewIfNeeded();
+          await dropped.page.screenshot({ path: path.join(SHOTS, `1784-dropped-${width}-${theme}.png`) });
+        }
+      });
+      await dropped.page.close();
     }
   } finally {
     await browser.close();

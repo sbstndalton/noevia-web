@@ -31,7 +31,18 @@ test('#1784: the server-kept interrupted copy never replaces the reply this tab 
  const server={role:'assistant',content:'partial answer and the words after Stop',interrupted:true};
  const stopped=m.mergeTranscripts([u('q'),server],[u('q'),{role:'assistant',content:'partial answer',stopped:true}]);
  assert.equal(stopped.length,2);assert.equal(stopped[1].content,'partial answer');assert.equal(stopped[1].stopped,true);assert.equal(stopped[1].interrupted,undefined);
- const finished=m.mergeTranscripts([u('q'),server],[u('q'),a('short')]);assert.equal(finished[1].content,'short');
+ // A reply this tab finished cleanly (no error, not a failure record) is settled here and wins as well.
+ const finished=m.mergeTranscripts([u('q'),server],[u('q'),{role:'assistant',content:'short finished answer'}]);assert.equal(finished[1].content,'short finished answer');assert.equal(finished[1].interrupted,undefined);
  // Two server-kept copies (or none) still keep the longer one.
  const both=m.mergeTranscripts([u('q'),server],[u('q'),{...server,content:'partial'}]);assert.equal(both[1].content,server.content);
+});
+test('#1784 review: a copy cut short by a dropped connection loses to the longer server copy',()=>{
+ const server={role:'assistant',content:'the complete answer the server kept after the connection dropped',interrupted:true};
+ const failed=m.mergeTranscripts([u('q'),server],[u('q'),{role:'assistant',content:'the complete',error:true,failure:'The connection was lost.'}]);
+ assert.equal(failed[1].content,server.content,'an errored copy does not beat the server copy');assert.equal(failed[1].interrupted,true);
+ const record={role:'assistant',content:'',toolCalls:[{name:'project_create_file',status:'done',applied:true}],paused:{reason:'stopped',applied:1}};
+ const rec=m.mergeTranscripts([u('q'),server],[u('q'),record]);
+ assert.equal(rec[1].content,server.content,'the bare changes record of a cut-off reply does not beat the server copy');
+ // A person's Stop still wins even with empty text beside a pause.
+ const stoppedRecord=m.mergeTranscripts([u('q'),server],[u('q'),{...record,stopped:true}]);assert.equal(stoppedRecord[1].stopped,true);
 });
