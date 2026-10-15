@@ -96,7 +96,7 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
       <label className="mm-assign-toggle">
         <input type="checkbox" role="switch" className="noevia-switch" checked={svc.enabled === true}
           disabled={busy !== '' || (!current && svc.enabled !== true)}
-          onChange={(e) => { const on = e.currentTarget.checked; void runReranker(() => saveReranker(on, current || null), on ? 'mm.assign.rerankerOn' : 'mm.assign.rerankerOff'); }}/>
+          onChange={(e) => { const on = e.currentTarget.checked; void runReranker(() => saveReranker(on, savedOutside && !on ? undefined : current || null), on ? 'mm.assign.rerankerOn' : 'mm.assign.rerankerOff'); }}/>
         <span>{t('mm.assign.rerankerToggle')}</span>
       </label>
       {choices.length > 0

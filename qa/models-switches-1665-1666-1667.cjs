@@ -125,6 +125,34 @@ run('models-switches-1665-1666-1667', Number(process.env.QA_PORT || 31665), asyn
     } finally { state.close(); }
   }
 
+  // #1817: a saved llama.cpp reranker that the catalogue no longer offers must still be switchable off.
+  for (const [width, height, theme] of VIEWS) {
+    const tag = `unoffered saved reranker ${width} px ${theme}`;
+    const state = await createState({ rerankSavedOutside: true });
+    try {
+      const { page, errors } = await openPage(browser, state, { width, height, theme });
+      const overview = await overviewOf(page, origin);
+      const reranker = overview.locator('[data-service="reranker"]');
+      await check(`${tag}: #1817 turning reranking off succeeds (200, no error toast) and keeps the saved choice`, async () => {
+        const toggle = reranker.getByRole('switch', { name: 'Reranking' });
+        await toggle.waitFor({ timeout: 3000 });
+        assert.equal(await toggle.isChecked(), true);
+        const put = page.waitForResponse((r) => r.url().endsWith('/api/models/reranker') && r.request().method() === 'PUT');
+        await toggle.click();
+        const res = await put;
+        assert.equal(res.status(), 200, 'the PUT is accepted');
+        assert.equal('choice' in (res.request().postDataJSON() || {}), false, 'no choice key is sent for an unoffered saved choice');
+        await overview.getByRole('status').filter({ hasText: 'Reranking is off. Project search ranks results without it.' }).waitFor({ timeout: 5000 });
+        assert.equal(await reranker.getByRole('switch', { name: 'Reranking' }).isChecked(), false);
+        assert.equal(await overview.getByRole('alert').count(), 0, 'no error is shown');
+        assert.deepEqual(JSON.parse(state.values.get('rerank:configuration')), { enabled: false, choice: 'llamacpp:synthetic-gone-reranker' });
+        await shot(page, '1817-reranker-off-unoffered', width, theme, reranker);
+      });
+      assert.deepEqual(errors, []);
+      await page.close();
+    } finally { state.close(); }
+  }
+
   // Members: read-only rows, and no admin endpoint is called, also from a deep link.
   for (const [width, height, theme] of [[2000, 1250, 'light'], [390, 844, 'dark']]) {
     const tag = `member ${width} px ${theme}`;

@@ -144,6 +144,7 @@ async function rerankerRequest(method: 'PUT' | 'DELETE', body?: Record<string, u
   if (!r.ok) throw Object.assign(Error(v.error || `HTTP ${r.status}`), { id: v.errorId });
   return v;
 }
-export const saveReranker = (enabled: boolean, choice: string | null): Promise<RerankerSettings> => rerankerRequest('PUT', { enabled, choice });
+/** `choice` undefined sends no choice key at all: the server keeps the saved one (#1817: turning off a saved choice that is no longer offered). */
+export const saveReranker = (enabled: boolean, choice?: string | null): Promise<RerankerSettings> => rerankerRequest('PUT', choice === undefined ? { enabled } : { enabled, choice });
 /** Back to the deployment's reranker configuration ("Use deployment default"). */
 export const resetReranker = (): Promise<RerankerSettings> => rerankerRequest('DELETE');
