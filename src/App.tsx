@@ -1,4 +1,4 @@
-import { deriveChatTitle, titleAfterSend } from './chat-title';
+import { adoptGeneratedTitle, deriveChatTitle, titleAfterSend } from './chat-title';
 import { ShellIcon } from './components/ShellIcon';
 import { sourceRefresher } from './source-refresh';
 import { mentionsStorageLogin, resolveSkippedToast, sourceRefreshFailure, type SkippedToastState } from './source-status';
@@ -1060,6 +1060,12 @@ export default function App(): JSX.Element {
             if (typeof ev.allowCloud === 'boolean') patch.allowCloud = ev.allowCloud;
             // The chat's current list: an accepted frame may have moved it mid-reply (#793).
             patchChatRef.current(chatHome(chatId, allChatsRef.current, movedChats.current, projectId), chatId, patch);
+          } else if (ev.type === 'title' && typeof ev.title === 'string') {
+            // #1785: the title the server generated after the first reply. Applied to the meta as it is when the save
+            // runs, and only over the title derived from the first message, so a rename made meanwhile is kept.
+            const generated = ev.title;
+            patchChatRef.current(chatHome(chatId, allChatsRef.current, movedChats.current, projectId), chatId,
+              (current) => { const title = adoptGeneratedTitle(current.title, text, generated); return title ? { title } : null; });
           }
           if (ev.type === 'meta' && ev.route) {
             setMessagesByChat((prev) => ({
@@ -1566,7 +1572,7 @@ export default function App(): JSX.Element {
   // reading the latest list only when that action reaches the head of the queue.
   // Keep the UI at its confirmed state until the save succeeds; a failed save
   // then needs no rollback or workspace fetch (which can fail at the same time).
-  const patchChatRef = useRef<(projectId: string | null, chatId: string, patch: Partial<ChatMeta>) => void>(() => undefined);
+  const patchChatRef = useRef<(projectId: string | null, chatId: string, patch: Partial<ChatMeta> | ((current: ChatMeta) => Partial<ChatMeta> | null)) => void>(() => undefined);
   const handlePatchChat = useCallback(
     (projectId: string | null, chatId: string, patchOrUpdate: Partial<ChatMeta> | ((current: ChatMeta) => Partial<ChatMeta> | null)) => {
       const key = projectId === null ? 'free' : `project:${projectId}`;
