@@ -769,7 +769,8 @@ export function ChatView({
                       )}
                       {/* #1507: a reply the server saved partway (a reload or a cut connection) is marked, and
                           can be retried from its question or continued from where it stopped. */}
-                      {m.interrupted && isLast && !streaming && (
+                      {/* #1784: a reply the person stopped shows only the Stopped note, never the interrupted one too. */}
+                      {m.interrupted && !m.stopped && isLast && !streaming && (
                         <div className="msg-interrupted" role="status">
                           <p>{t('chat.interrupted.note')}</p>
                           <button className="msg-retry" onClick={() => onRetry(chatId, m.id)} disabled={streaming || actionBusy}>↻ {t('chat.interrupted.retry')}</button>

@@ -26,3 +26,12 @@ test('when the other device went further, its answer stays and every user turn s
  assert.equal(roles(out),'user,assistant,user,assistant,user');
  assert.deepEqual([...out.map(x=>x.content)],['q','laptop','q2','laptop 2','q3']);
 });
+test('#1784: the server-kept interrupted copy never replaces the reply this tab stopped or finished',()=>{
+ // Core #679 keeps the reply when the client goes away and keeps observing the engine after Stop, so its copy is longer.
+ const server={role:'assistant',content:'partial answer and the words after Stop',interrupted:true};
+ const stopped=m.mergeTranscripts([u('q'),server],[u('q'),{role:'assistant',content:'partial answer',stopped:true}]);
+ assert.equal(stopped.length,2);assert.equal(stopped[1].content,'partial answer');assert.equal(stopped[1].stopped,true);assert.equal(stopped[1].interrupted,undefined);
+ const finished=m.mergeTranscripts([u('q'),server],[u('q'),a('short')]);assert.equal(finished[1].content,'short');
+ // Two server-kept copies (or none) still keep the longer one.
+ const both=m.mergeTranscripts([u('q'),server],[u('q'),{...server,content:'partial'}]);assert.equal(both[1].content,server.content);
+});

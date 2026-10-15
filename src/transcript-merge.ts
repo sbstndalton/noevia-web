@@ -81,7 +81,13 @@ export function mergeTranscripts(theirs: HistoryEntry[], ours: HistoryEntry[]): 
   const start = shareVariants(theirs.slice(0, shared), ours, shared);
   if (tail[tail.length - 1].role === 'assistant' && mine[0].role === 'assistant') {
     if (tail.length === 1) {
-      const keep = tail[0].content.length > mine[0].content.length ? tail[0] : mine[0];
+      // #1784: the server keeps a reply whose client went away as `interrupted` (core #679). When this tab
+      // settled the same reply itself (finished, or stopped by the person), its own copy is the answer: the
+      // server's copy can hold text the engine produced after Stop that was never shown, and would replace
+      // the quiet Stopped note with the interrupted one.
+      const serverKept = (e: HistoryEntry) => e.role === 'assistant' && e.interrupted === true;
+      const keep = serverKept(tail[0]) && !serverKept(mine[0]) ? mine[0]
+        : tail[0].content.length > mine[0].content.length ? tail[0] : mine[0];
       return [...start, keep, ...mine.slice(1)];
     }
     return [...start, ...tail, ...mine.slice(1)];
