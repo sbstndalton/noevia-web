@@ -463,6 +463,31 @@ export function ChatView({
   // worse outcome than leaving focus on <body>. `isCoarsePointerDevice` is the one thing worth
   // pulling out into its own module — it needs no ref, no DOM beyond `window`, so it has its own
   // test independent of this effect.
+  // #1794: the #1789 fade (noevia.css) covers the content only; the transcript's own scrollbar
+  // column, as wide as a classic scrollbar takes (0 for overlay scrollbars), stays unfaded.
+  const jumpShown = !atBottom && messages.length > 0;
+  useLayoutEffect(() => {
+    const scroller = scrollRef.current;
+    if (!scroller || !jumpShown) return;
+    const sync = () => {
+      const cs = getComputedStyle(scroller);
+      const bar = scroller.offsetWidth - scroller.clientWidth - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth);
+      scroller.style.setProperty('--transcript-scrollbar-w', `${Math.max(0, bar)}px`);
+    };
+    sync();
+    // The scrollbar appears or goes when the content grows or shrinks (the box keeps its size), and its
+    // width changes with the scrollbar style: watch the content and the attributes that restyle it too.
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(sync);
+    observer?.observe(scroller);
+    for (const child of Array.from(scroller.children)) observer?.observe(child);
+    const mutations = typeof MutationObserver === 'undefined' ? null : new MutationObserver((records) => {
+      for (const r of records) for (const node of Array.from(r.addedNodes)) if (node instanceof Element && node.parentElement === scroller) observer?.observe(node);
+      sync();
+    });
+    mutations?.observe(scroller, { childList: true });
+    mutations?.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style', 'data-theme', 'data-family', 'data-density'] });
+    return () => { observer?.disconnect(); mutations?.disconnect(); scroller.style.removeProperty('--transcript-scrollbar-w'); };
+  }, [jumpShown, scrollRef]);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const composerBox = useRef<HTMLDivElement | null>(null);
   // #527: on a phone the composer floats over the transcript, which keeps room under its last
@@ -763,9 +788,10 @@ export function ChatView({
                           of text. */}
                       <MarkdownPreview text={body} autolink />
                       {/* #1784: a reply stopped partway keeps its text, and says it was stopped, so it never
-                          reads as a finished answer. Quiet, like the Stopped placeholder's sentence. */}
+                          reads as a finished answer. Quiet, like the Stopped placeholder's sentence. Plain text,
+                          no live region (#1794): it is saved with the chat and must not be re-announced on load. */}
                       {m.stopped && !(streaming && isLast) && (
-                        <p className="msg-stopped" role="status" data-testid="reply-stopped">{t('chat.stopped.partial')}</p>
+                        <p className="msg-stopped" data-testid="reply-stopped">{t('chat.stopped.partial')}</p>
                       )}
                       {/* #1507: a reply the server saved partway (a reload or a cut connection) is marked, and
                           can be retried from its question or continued from where it stopped. */}
@@ -882,7 +908,7 @@ export function ChatView({
       {/* #1534: the pill is not part of the scrolling transcript, which would draw it over answer and
           bubble text as the content passes under it. It sits in a band of its own between the transcript
           and the composer, present only while the pill is shown. */}
-      {!atBottom && messages.length > 0 && (
+      {jumpShown && (
         <div className="jump-band">
           <button type="button" className="jump-to-latest" onClick={follow} aria-label={t('chat.jumpToLatest')}>
             <Icon name="arrow-down" size={13} strokeWidth={2.25} />
