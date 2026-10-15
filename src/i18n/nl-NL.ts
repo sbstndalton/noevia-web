@@ -231,6 +231,7 @@ export const NL_NL: Catalogue = {
   'projects.view.groupOther': "Overig",
   'projects.view.groupNotReadable': "Niet leesbaar",
   'projects.view.notReadableHint': "Deze bestanden zijn als origineel bewaard, maar er kon geen tekst uit worden gelezen. Ze worden niet gebruikt in chats en tellen niet mee als bronnen.",
+  'projects.view.sourcesCountNote': "Hier tellen {count} bronnen mee. {notReadable} extra bestanden die als origineel zijn bewaard staan onder ‘Niet leesbaar’ en tellen niet mee.",
   'projects.view.newChat': "Nieuwe chat",
   'projects.view.projectSettings': "Projectinstellingen",
   'projects.view.tablistLabel': "Project",

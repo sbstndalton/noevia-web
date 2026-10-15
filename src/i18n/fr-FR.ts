@@ -231,6 +231,7 @@ export const FR_FR: Catalogue = {
   'projects.view.groupOther': "Autre",
   'projects.view.groupNotReadable': "Illisibles",
   'projects.view.notReadableHint': "Ces fichiers sont conservés comme originaux, mais aucun texte n’a pu en être lu. Ils ne sont pas utilisés dans les conversations et ne sont pas comptés comme sources.",
+  'projects.view.sourcesCountNote': "{count} sources sont comptées ici. {notReadable} autres fichiers conservés comme originaux figurent sous « Illisibles » et ne sont pas comptés.",
   'projects.view.newChat': "Nouvelle discussion",
   'projects.view.projectSettings': "Réglages du projet",
   'projects.view.tablistLabel': "Projet",

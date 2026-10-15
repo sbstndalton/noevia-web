@@ -231,6 +231,7 @@ export const NB_NO: Catalogue = {
   'projects.view.groupOther': "Annet",
   'projects.view.groupNotReadable': "Ikke lesbare",
   'projects.view.notReadableHint': "Disse filene er beholdt som originaler, men ingen tekst kunne leses fra dem. De brukes ikke i chatter og telles ikke som kilder.",
+  'projects.view.sourcesCountNote': "{count} kilder telles her. {notReadable} andre filer som er beholdt som originaler står under «Ikke lesbare» og telles ikke.",
   'projects.view.newChat': "Ny samtale",
   'projects.view.projectSettings': "Prosjektinnstillinger",
   'projects.view.tablistLabel': "Prosjekt",

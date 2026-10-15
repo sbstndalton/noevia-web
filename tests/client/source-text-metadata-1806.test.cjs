@@ -36,3 +36,27 @@ test('#1806: the project limits shown before the server answers are 1000 sources
   const contract = JSON.parse(fs.readFileSync(path.join(__dirname, '../../contracts/folder-import.json'), 'utf8'));
   assert.deepEqual(contract.projectLimits, { sources: 1000, documents: 200, images: 12 });
 });
+
+// #1879: the Sources header and the list are counted by one function; a source whose length is not yet
+// known never moves between the counted list and the not-readable list.
+test('#1879: the header count equals the readable rows, a partial or processing source included', () => {
+  const files = [
+    { name: 'a.txt', textRef: ref, chars: 10 },
+    { name: 'b.pdf', textRef: ref, chars: 30, document: { state: 'partial', pages: 9 } },
+    { name: 'c.pdf', textRef: ref, chars: 5, document: { state: 'processing' } },
+    { name: 'd.pdf', chars: 0, document: { state: 'failed', error: 'synthetic' } },
+  ];
+  const counts = status.sourceCounts({ files, assets: [{ id: 'i1', name: 'old.png' }, { id: 'i2', name: 'x.png', sourceName: 'x.png' }] });
+  assert.equal(counts.counted, 4, 'a, b (partial), c (processing) and one earlier image upload');
+  assert.equal(counts.notReadable, 1);
+  assert.equal(counts.rows, 5);
+  assert.equal(status.sourceCounts({ files: files.slice(0, 3) }).counted, 3, 'with one source partial the header equals the list length');
+});
+
+test('#1879: a failed document with neither text nor length is unknown, so it is not moved to Not readable', () => {
+  const failed = { state: 'failed', error: 'synthetic' };
+  const before = status.sourceCounts({ files: [{ name: 'a.pdf', document: failed }] });
+  const after = status.sourceCounts({ files: [{ name: 'a.pdf', textRef: ref, chars: 80, document: failed }] });
+  assert.equal(before.counted, after.counted, 'the count does not flip when the length arrives');
+  assert.equal(status.sourceCounts({ files: [{ name: 'a.pdf', textRef: ref, chars: 0, document: failed }] }).counted, 0, 'a known-empty failed document stays uncounted');
+});
