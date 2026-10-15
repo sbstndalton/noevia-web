@@ -15,7 +15,7 @@ import { useT } from '../i18n';
 import { providerDisplayName } from '../display-names';
 import type { JSX, ReactNode } from 'react';
 import type { InstalledModel, Project, Provider } from '../types';
-import { apiFetch, fetchAutoRoles, fetchChatGptModels, fetchInstalledModels, fetchProviders, saveProjectConfig } from '../api';
+import { apiFetch, fetchAutoRoles, fetchChatGptModels, fetchInstalledModels, fetchProviders, refreshChatGptModels, saveProjectConfig } from '../api';
 import { ProjectRoutingMode } from './ProjectRoutingMode';
 import { SegmentedControl } from './SegmentedControl';
 
@@ -129,6 +129,20 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
     return () => { live = false; };
   }, [chatgptActive]);
 
+  // #1306: never automatic; one explicit press asks the server to re-read the account's catalogue.
+  const [refreshState, setRefreshState] = useState<'idle' | 'busy' | 'updated' | 'wait' | 'failed'>('idle');
+  useEffect(() => { setRefreshState('idle'); }, [chatgptActive, activeProviderId]);
+  const refreshAccountModels = async () => {
+    if (refreshState === 'busy') return;
+    setRefreshState('busy');
+    try {
+      const r = await refreshChatGptModels();
+      if (r.throttled) { if (r.models.length) setAccountModels(r.models); setRefreshState('wait'); return; }
+      setAccountModels(r.models);
+      setRefreshState('updated');
+    } catch { setRefreshState('failed'); }
+  };
+
   const save = async (key: string, patch: Record<string, unknown>) => {
     if (!activeProject) return;
     focusOnIdle.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -222,6 +236,12 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
                 <span className="model-role">{busy === id ? t('modelPopup.switching') : activeProject.model === id ? <><ShellIcon name="check" size={15}/>{t('modelPopup.selected')}</> : ''}</span>
               </button>
             </div>)}
+            <div className="mp-row-end">
+              <span className="mp-hint" role="status" aria-live="polite">{refreshState === 'updated' ? t('modelPopup.refreshUpdated') : refreshState === 'wait' ? t('modelPopup.refreshWait') : refreshState === 'failed' ? t('modelPopup.refreshFailed') : ''}</span>
+              <button type="button" className="popup-tab" disabled={refreshState === 'busy' || busy !== null} onClick={() => void refreshAccountModels()}>
+                {refreshState === 'busy' ? t('modelPopup.refreshing') : t('modelPopup.refreshModels')}
+              </button>
+            </div>
           </div>
         : activeProvider && !activeProvider.managed ? <>
           {/* A hosted API has no catalogue to list and no download flow, so the

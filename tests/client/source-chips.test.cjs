@@ -37,3 +37,12 @@ test('the chips are keyboard-reachable buttons that open the project Sources tab
   assert.match(read('src/components/ChatView.tsx'), /<SourceChips sources=\{m\.sources\}/);
   assert.match(read('src/App.tsx'), /setProjectTab\(\{ id: projectId, tab: 'sources' \}\)/);
 });
+
+test('same-named files get the shortest tail that tells them apart; the full path rides along (#1809)', () => {
+  const { distinguishingNames } = load('src/source-chips.ts');
+  const names = ['readme.md', 'docs/readme.md', 'docs/api/auth.md', 'a/docs/readme.md', 'solo.md'];
+  const labels = Object.fromEntries(JSON.parse(JSON.stringify([...distinguishingNames(names)])));
+  assert.deepEqual(labels, { 'readme.md': 'readme.md', 'docs/readme.md': 'docs/readme.md', 'docs/api/auth.md': 'auth.md', 'a/docs/readme.md': 'a/docs/readme.md', 'solo.md': 'solo.md' });
+  const chips = sourceChips([{ id: 'x', file: 'docs/readme.md', snippet: 's', kind: 'file' }, { id: 'y', file: 'readme.md', snippet: 't', kind: 'file' }], [{ name: 'readme.md' }, { name: 'docs/readme.md' }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(chips.map((c) => [c.label, c.path]))), [['docs/readme.md', 'docs/readme.md'], ['readme.md', 'readme.md']]);
+});
