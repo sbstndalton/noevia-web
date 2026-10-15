@@ -320,6 +320,7 @@ export const EN_GB = {
   'projects.view.uploadedImage': 'Uploaded · image read when you send a message',
   'projects.view.textPreviewLimited': 'Text preview limited · original kept',
   'projects.view.textReady': 'Text ready',
+  'projects.view.textMissing': 'Text missing — re-upload or refresh',
   'projects.view.storedInNoevia': 'Stored in noevia',
   'projects.view.syncedFrom': 'Synced from {source}; remove it in storage.',
   'projects.view.original': 'Original',

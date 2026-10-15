@@ -313,6 +313,7 @@ export const SV_SE: Catalogue = {
   'projects.view.uploadedImage': "Uppladdad · bilden läses när du skickar ett meddelande",
   'projects.view.textPreviewLimited': "Textförhandsvisning begränsad · original behållet",
   'projects.view.textReady': "Text klar",
+  'projects.view.textMissing': "Text saknas — ladda upp igen eller uppdatera",
   'projects.view.storedInNoevia': "Sparat i noevia",
   'projects.view.syncedFrom': "Synkroniserad från {source}; ta bort den i lagringen.",
   'projects.view.original': "Original",

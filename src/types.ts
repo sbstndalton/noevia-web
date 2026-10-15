@@ -200,6 +200,9 @@ export interface ProjectFile {
   /** #1806: the text's length and the pointer to it, as the server lists a source. */
   chars?: number;
   textRef?: string;
+  /** #1815: set by the server when the source's text file is gone or unreadable. The source and
+   *  its pointer are kept; re-uploading or refreshing it writes the text again. */
+  textMissing?: boolean;
   /** The attached storage folder this came from. Absent for uploaded files,
    *  which a folder sync must never overwrite. */
   source?: string;
