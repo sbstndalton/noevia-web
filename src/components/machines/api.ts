@@ -34,7 +34,7 @@ export interface MachineService {
   /** Where it reaches now (administrators only). */
   url?: string | null;
 }
-export interface MachinesHealth { services: Partial<Record<MachineServiceId, { state: HealthState; reason?: string }>>; machines: Record<string, MachineHealthState> }
+export interface MachinesHealth { services: Partial<Record<MachineServiceId | 'engine', { state: HealthState; reason?: string }>>; machines: Record<string, MachineHealthState>; /** #1856: why a machine is not healthy (its worst service's reason). */ reasons?: Record<string, string> }
 export interface MachinesView { machines: Machine[]; services: MachineService[]; health?: MachinesHealth }
 export interface EmbeddingTarget { baseUrl: string; model: string; profile: string }
 

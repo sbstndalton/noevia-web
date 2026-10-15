@@ -405,6 +405,19 @@ dialog::backdrop { background: var(--scrim); backdrop-filter: blur(var(--scrim-b
 :root[data-layout="mobile"] .save-error-storage .save-error-dismiss {
   grid-column: 2; grid-row: 1; width: 44px; min-height: 44px; align-self: start;
 }
+/* #1858: the indexing-problems toast sits at the top of the canvas, never over the composer (bottom), and a list
+   of problems is one line with a count until opened. Same at 390 px and in the mobile layout. */
+.save-error.save-error-storage, :root[data-layout="mobile"] .save-error.save-error-storage {
+  top: calc(env(safe-area-inset-top) + var(--space-3)); bottom: auto;
+}
+@media (max-width: 700px) { .save-error.save-error-storage { top: calc(env(safe-area-inset-top) + var(--space-3)); bottom: auto; } }
+.save-error.save-error-storage.is-list, :root[data-layout="mobile"] .save-error.save-error-storage.is-list {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3);
+}
+.save-error-storage .save-error-summary { flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.save-error-storage.is-list .save-error-toggle { min-height: 44px; flex: 0 0 auto; }
+.save-error-storage.is-list .save-error-dismiss { flex: 0 0 auto; width: 44px; min-height: 44px; }
+.save-error-storage.is-list .save-error-list { flex: 1 0 100%; order: 5; max-height: 40vh; }
 .save-error-storage :is(.save-error-list, .save-error-message):focus-visible {
   outline: 2px solid var(--focus-ring); outline-offset: -2px;
 }

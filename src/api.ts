@@ -487,11 +487,13 @@ export interface ProjectRoutingMode { mode: RoutingModeId; whenSensitive: 'ask' 
 
 /** #1009: a stored provider's model ids, fetched and cached by the server with the stored key.
  *  `refresh` skips the server's cache. The key itself never reaches the browser. */
-export async function fetchProviderModels(providerId: string, refresh = false): Promise<{ models: string[]; cached?: boolean; fetchedAt?: number }> {
+export async function fetchProviderModels(providerId: string, refresh = false): Promise<{ models: string[]; cached?: boolean; fetchedAt?: number; throttled?: boolean }> {
   const r = await apiFetch(`/api/providers/${encodeURIComponent(providerId)}/models${refresh ? '?refresh=1' : ''}`);
-  const body = await r.json().catch(() => ({})) as { models?: unknown; cached?: boolean; fetchedAt?: number; error?: string };
+  const body = await r.json().catch(() => ({})) as { models?: unknown; cached?: boolean; fetchedAt?: number; error?: string; throttled?: unknown };
+  // #1857: a refresh pressed again within the server's window is "wait", not a failure (as for the model popup, #1306).
+  if (refresh && r.status === 429) return { models: [], throttled: true };
   if (!r.ok) throw new Error(body.error || `provider models ${r.status}`);
-  return { models: Array.isArray(body.models) ? body.models.filter((m): m is string => typeof m === 'string') : [], cached: body.cached, fetchedAt: body.fetchedAt };
+  return { models: Array.isArray(body.models) ? body.models.filter((m): m is string => typeof m === 'string') : [], cached: body.cached, fetchedAt: body.fetchedAt, ...(body.throttled === true ? { throttled: true } : {}) };
 }
 
 export async function saveAllowedRoutingModes(allowed: ('local' | 'cloud' | 'hybrid')[]): Promise<{ allowed: ('local' | 'cloud' | 'hybrid')[] }> {

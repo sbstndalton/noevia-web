@@ -138,6 +138,16 @@ export function skippedSignature(skipped: SkippedSource[]): string {
     .join('\u0001');
 }
 
+/** #1858: once the person dismisses a project's indexing-problems toast it stays away for the rest of the browser
+ *  session (sessionStorage is per tab and per viewer). Storage that is blocked or full just means no memory. */
+const DISMISSED_PREFIX = 'noevia:skipped-dismissed:';
+export function skippedToastDismissed(projectId: string): boolean {
+  try { return sessionStorage.getItem(DISMISSED_PREFIX + projectId) === '1'; } catch { return false; }
+}
+export function dismissSkippedToast(projectId: string): void {
+  try { sessionStorage.setItem(DISMISSED_PREFIX + projectId, '1'); } catch { /* unavailable: it can come back */ }
+}
+
 export type SkippedToastState = { signature: string; message: string };
 
 /**

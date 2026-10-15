@@ -42,10 +42,18 @@ const draftOf = (s: MachineService): Draft => ({ machine: s.machine === 'other' 
 /** #1840: what a machine listed for a chat role's row, for the machine and port it was asked at. */
 type Listing = { key: string; loading?: boolean; models?: string[]; error?: string };
 
-function HealthPill({ state }: { state: string | undefined }): JSX.Element {
+/** #1856: a short reason for any state that is not plainly healthy: refused / timeout / http NNN. */
+const REASON: Record<string, MessageKey> = {
+  refused: 'machines.reason.refused', timeout: 'machines.reason.timeout', 'not-found': 'machines.reason.notFound',
+  'not-on-this-network': 'machines.reason.notOnNetwork', network: 'machines.reason.network',
+};
+function HealthPill({ state, reason }: { state: string | undefined; reason?: string }): JSX.Element {
   const t = useT();
   const [key, tone] = HEALTH[state || 'unknown'] || HEALTH.unknown;
-  return <span className="mm-state" data-tone={tone}>{t(key)}</span>;
+  if (state === 'up' && reason === 'needs-auth') return <span className="mm-state" data-tone="good" data-reason="needs-auth">{t('machines.reason.needsAuth')}</span>;
+  const http = /^http-(\d{3})$/.exec(reason || '');
+  const why = (state === 'down' || state === 'unreachable') && reason ? (http ? t('machines.reason.http', { status: http[1] }) : REASON[reason] ? t(REASON[reason]) : '') : '';
+  return <span className="mm-state" data-tone={tone} data-reason={why ? reason : undefined} title={why || undefined}>{t(key)}{why ? ` · ${why}` : ''}</span>;
 }
 
 export function InferenceMachinesSettings(): JSX.Element {
@@ -153,7 +161,7 @@ export function InferenceMachinesSettings(): JSX.Element {
           <button type="button" className="btn btn-secondary" disabled={busy !== ''} onClick={() => setRemoving(null)}>{t('machines.cancel')}</button>
         </span>}
       </div>
-      <HealthPill state={state}/>
+      <HealthPill state={state} reason={view?.health?.reasons?.[m.id]}/>
       {!m.builtIn && !editingThis && removing !== m.id && <span className="machines-actions">
         <button type="button" className="popup-tab" aria-label={t('machines.editNamed', { name: label })} disabled={busy !== ''} onClick={() => { setEditing({ id: m.id, name: m.name || '', address: m.address || '' }); setRemoving(null); }}>{t('machines.edit')}</button>
         <button type="button" className="popup-tab" aria-label={t('machines.removeNamed', { name: label })} disabled={busy !== ''} onClick={() => { setRemoving(m.id); setEditing(null); }}>{t('machines.remove')}</button>
@@ -208,7 +216,7 @@ export function InferenceMachinesSettings(): JSX.Element {
               </select></label>
           : <span>{machineName(s.machine)}</span>}
       </span>
-      {PROBED.has(s.id) || (chat && s.machine !== 'local') ? <HealthPill state={health?.state}/> : <span className="machines-pill-slot" aria-hidden="true"/>}
+      {PROBED.has(s.id) || (chat && s.machine !== 'local') ? <HealthPill state={health?.state} reason={health?.reason}/> : <span className="machines-pill-slot" aria-hidden="true"/>}
       <span className="mm-assign-control">
         {movable && onRemote && <label className="machines-port">{t('machines.port')}
           <input aria-label={t('machines.portFor', { service: label })} value={d.port} inputMode="numeric" size={6} placeholder={PLACEHOLDER_PORT[s.id] || '8080'} disabled={busy !== ''} onChange={(e) => setDraft({ port: e.target.value })}/></label>}
