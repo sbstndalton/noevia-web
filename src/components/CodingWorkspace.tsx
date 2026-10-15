@@ -23,7 +23,7 @@ const SIDE_SECTIONS: MessageKey[] = ['code.landing.sideFiles', 'code.landing.sid
  *  `<CodePanel>`, gated by the same `useCodeAccess`). This landing page has no project to run a
  *  task in, so a viewer who could use that harness gets a picker into the real thing instead of
  *  the honest "not connected yet" stub everyone else still sees. */
-export function CodingWorkspace({ page, onStartChat, projects, projectsLoaded = true, onProjectsChanged, onOpenProjectCode }: { page: string; onStartChat?: (prompt: string) => void; projects?: { id: string; name: string; archived?: boolean }[]; projectsLoaded?: boolean; onProjectsChanged?: () => void; onOpenProjectCode?: (projectId: string) => void }) {
+export function CodingWorkspace({ page, onStartChat, projects, projectsLoaded = true, onProjectsChanged, onStartTask }: { page: string; onStartChat?: (prompt: string) => void; projects?: { id: string; name: string; archived?: boolean }[]; projectsLoaded?: boolean; onProjectsChanged?: () => void; onStartTask?: (projectId: string) => void }) {
   const t = useT();
   const [draft,setDraft]=useState('');
   const [panel,setPanel]=useState(false);
@@ -40,13 +40,13 @@ export function CodingWorkspace({ page, onStartChat, projects, projectsLoaded = 
   // with zero projects would see the loading skeleton forever.
   const codeAccess = accessProbe === 'checking' && projectsLoaded && list.length === 0 ? 'denied' : accessProbe;
   const checking = codeAccess === 'checking';
-  const canOpenProjectCode = codeAccess === 'allowed' && !!onOpenProjectCode;
+  const canOpenProjectCode = codeAccess === 'allowed' && !!onStartTask;
   // 'Checking' must read as neither claim below is true yet — not "no execution" (denied, wrong
   // for an admin who does have access) and not "runs in a project" (not confirmed yet either).
   const newTaskBadge = checking ? t('code.landing.checking') : canOpenProjectCode ? t('code.landing.runsInProject') : t('code.landing.preview');
   const pageName = PAGE_KEYS[page] ? t(PAGE_KEYS[page]) : page;
   return <div className="coding-workspace">
-    <main className="coding-main"><header className="coding-header"><span>{pageName}</span><div>{/* #1563: Plugins is the live Customise page, so it carries no "preview · no execution" label. */}{page==='Plugins'?null:<span className="preview-badge">{page==='New task'?newTaskBadge:t('code.landing.preview')}</span>}<button className="shell-icon-button" aria-label={t('code.landing.togglePanel')} aria-expanded={panel} onClick={()=>setPanel(!panel)}><ShellIcon name="panel"/></button></div></header><div className={`coding-content${page==='Plugins'?' is-customise':''}`}>{page==='New task'?(checking?<CodingAccessSkeleton/>:canOpenProjectCode?<CodeProjectPicker projects={list} onOpen={onOpenProjectCode!}/>:<><div className="coding-welcome"><span className="code-emblem"><ShellIcon name="code" size={28} tone="decorative"/></span><h1>{t('code.landing.welcomeTitle')}</h1><p>{t('code.landing.welcomeBody')}</p></div><div className="coding-quick-actions">{QUICK_ACTIONS.map(key=><button disabled key={key}>{t(key)}</button>)}</div><div className="coding-composer"><div className="coding-context-chips"><button disabled><ShellIcon name="folder"/>{t('code.landing.selectProject')}</button><button disabled><ShellIcon name="git"/>{t('code.landing.chooseBranch')}</button><button disabled>{t('code.landing.localEnvironment')}</button></div><label className="coding-draft-label" htmlFor="coding-draft">{t('code.landing.draftLabel')}</label><textarea id="coding-draft" value={draft} onChange={e=>setDraft(e.target.value)} placeholder={t('code.landing.draftPlaceholder')} rows={3}/><div className="coding-composer-footer"><div><button disabled><ShellIcon name="plus" size={14}/>{t('code.landing.addContext')}</button><button disabled>{t('code.landing.auto')}</button></div><div><button disabled>{t('code.landing.selectModel')}</button><button className="code-submit" disabled aria-label={t('code.landing.runDisabled')}><ShellIcon name="arrow-up" size={16}/></button></div></div><p className="preview-footnote">{t('code.landing.footnote')}</p></div></>):page==='Plugins'?<PluginsView embedded initialTab="plugins" onStartChat={onStartChat} projects={projects} onProjectsChanged={onProjectsChanged}/>:<PreviewPanel title={pageName} description={t('code.landing.previewDescription')} items={(PREVIEW_ITEMS[page] ?? OTHER_PREVIEW_ITEMS).map(key=>t(key))}/>}</div></main>
+    <main className="coding-main"><header className="coding-header"><span>{pageName}</span><div>{/* #1563: Plugins is the live Customise page, so it carries no "preview · no execution" label. */}{page==='Plugins'?null:<span className="preview-badge">{page==='New task'?newTaskBadge:t('code.landing.preview')}</span>}<button className="shell-icon-button" aria-label={t('code.landing.togglePanel')} aria-expanded={panel} onClick={()=>setPanel(!panel)}><ShellIcon name="panel"/></button></div></header><div className={`coding-content${page==='Plugins'?' is-customise':''}`}>{page==='New task'?(checking?<CodingAccessSkeleton/>:canOpenProjectCode?<CodeProjectPicker projects={list} onOpen={onStartTask!}/>:<><div className="coding-welcome"><span className="code-emblem"><ShellIcon name="code" size={28} tone="decorative"/></span><h1>{t('code.landing.welcomeTitle')}</h1><p>{t('code.landing.welcomeBody')}</p></div><div className="coding-quick-actions">{QUICK_ACTIONS.map(key=><button disabled key={key}>{t(key)}</button>)}</div><div className="coding-composer"><div className="coding-context-chips"><button disabled><ShellIcon name="folder"/>{t('code.landing.selectProject')}</button><button disabled><ShellIcon name="git"/>{t('code.landing.chooseBranch')}</button><button disabled>{t('code.landing.localEnvironment')}</button></div><label className="coding-draft-label" htmlFor="coding-draft">{t('code.landing.draftLabel')}</label><textarea id="coding-draft" value={draft} onChange={e=>setDraft(e.target.value)} placeholder={t('code.landing.draftPlaceholder')} rows={3}/><div className="coding-composer-footer"><div><button disabled><ShellIcon name="plus" size={14}/>{t('code.landing.addContext')}</button><button disabled>{t('code.landing.auto')}</button></div><div><button disabled>{t('code.landing.selectModel')}</button><button className="code-submit" disabled aria-label={t('code.landing.runDisabled')}><ShellIcon name="arrow-up" size={16}/></button></div></div><p className="preview-footnote">{t('code.landing.footnote')}</p></div></>):page==='Plugins'?<PluginsView embedded initialTab="plugins" onStartChat={onStartChat} projects={projects} onProjectsChanged={onProjectsChanged}/>:<PreviewPanel title={pageName} description={t('code.landing.previewDescription')} items={(PREVIEW_ITEMS[page] ?? OTHER_PREVIEW_ITEMS).map(key=>t(key))}/>}</div></main>
     {panel&&<aside className="coding-side-panel"><h2>{t('code.landing.sideWorkspace')}</h2>{SIDE_SECTIONS.map(key=><details key={key}><summary>{t(key)}</summary><p>{t('code.landing.sideNote')}</p></details>)}</aside>}
   </div>;
 }
@@ -72,10 +72,9 @@ export function CodingAccessSkeleton() {
   </div>;
 }
 
-/** Sends an admin with a working Code harness to the project that actually runs it (#368), rather
- *  than leaving them on a stub once the feature is live. Reuses the app's own project list and its
- *  existing project+Code navigation (`onOpenProjectCode`, wired from App.tsx the same way
- *  `ActiveCodeTasks`'s `onOpenProject` already is). */
+/** "New task" for an admin who can run Task (#368, #1576): pick a project and a new chat opens in it
+ *  with Task preselected in the composer (`onStartTask`, App.tsx startProjectTask). There is no
+ *  separate task view; the reply is the inline task card in that chat. */
 /** Exported for tests: a pure, hook-free presentational component (unlike CodingWorkspace itself,
  *  which resolves access through an effect and so cannot render its "granted" state statically). */
 export function CodeProjectPicker({ projects: all, onOpen }: { projects: { id: string; name: string; archived?: boolean }[]; onOpen: (projectId: string) => void }) {
@@ -83,9 +82,9 @@ export function CodeProjectPicker({ projects: all, onOpen }: { projects: { id: s
   // #566: archived projects are not offered here.
   const projects = all.filter((p) => !p.archived);
   return <>
-    <div className="coding-welcome"><span className="code-emblem"><ShellIcon name="code" size={28} tone="decorative"/></span><h1>{t('code.picker.title')}</h1><p>{t('code.picker.body')}</p></div>
+    <div className="coding-welcome"><span className="code-emblem"><ShellIcon name="code" size={28} tone="decorative"/></span><h1>{t('code.picker.taskTitle')}</h1><p>{t('code.picker.taskBody')}</p></div>
     {projects.length
-      ? <ul className="plugin-grid coding-project-picker" aria-label={t('code.picker.listLabel')}>{projects.map((p) => <li key={p.id} className="plugin-card surface"><span className="plugin-card-icon"><ShellIcon name="folder" size={20} tone="decorative"/></span><span className="plugin-card-text"><b>{p.name}</b></span><span className="plugin-card-actions"><button className="btn btn-secondary btn-sm" onClick={() => onOpen(p.id)}>{t('code.picker.open')}</button></span></li>)}</ul>
-      : <p className="preview-footnote">{t('code.picker.noProjects')}</p>}
+      ? <ul className="plugin-grid coding-project-picker" aria-label={t('code.picker.listLabel')}>{projects.map((p) => <li key={p.id} className="plugin-card surface"><span className="plugin-card-icon"><ShellIcon name="folder" size={20} tone="decorative"/></span><span className="plugin-card-text"><b>{p.name}</b></span><span className="plugin-card-actions"><button className="btn btn-secondary btn-sm" aria-label={t('code.picker.startTaskIn', { name: p.name })} onClick={() => onOpen(p.id)}>{t('code.picker.startTask')}</button></span></li>)}</ul>
+      : <p className="preview-footnote">{t('code.picker.taskNoProjects')}</p>}
   </>;
 }

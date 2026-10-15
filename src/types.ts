@@ -217,6 +217,7 @@ export interface ProjectAsset {
   bytes: number;
 }
 
+/** Values once recorded in `Project.modes` (storage name only since #1576). */
 export type ProjectMode = 'chat' | 'cowork' | 'code';
 
 export interface Project {
@@ -251,7 +252,8 @@ export interface Project {
   toolsMode?: 'auto' | 'manual';
   /** #1007: this chat's or project's own routing mode; absent follows the account's. */
   routingMode?: { mode: 'local' | 'cloud' | 'hybrid'; whenSensitive: 'ask' | 'local' };
-  /** App modes this project appears in; the server migrates older projects to ['chat']. */
+  /** #1576: informational only. Every project is a chat project; Task is a per-send composer
+   *  choice. Older data may still hold 'cowork' or 'code' here; this client never reads or sends it. */
   modes?: ProjectMode[];
   /** Which modes receive the others' context (shared-context.cjs); both off by default. */
   sharedContext?: { chat: boolean; code: boolean };

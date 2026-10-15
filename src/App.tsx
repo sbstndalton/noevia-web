@@ -284,6 +284,8 @@ export default function App(): JSX.Element {
     pendingFromSettingsRef.current = null;
   }, [view]);
   const [accountId, setAccountId] = useState<string | null>(null);
+  // #1576: Task is admin-only (behind codeHarness); the composer offers it only to administrators.
+  const [isAdmin, setIsAdmin] = useState(false);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
   // #1567: the last workspace fetch failed (the sidebar then stops showing a loading placeholder).
   const [workspaceFailed, setWorkspaceFailed] = useState(false);
@@ -475,6 +477,7 @@ export default function App(): JSX.Element {
     fetchProfile().then((profile) => {
       setDiaryEnabled(profile.user.diaryEnabled);
       setAccountId(profile.user.id);
+      setIsAdmin(profile.user.role === 'admin');
       // A different account on this browser starts on its own fresh chat rather
       // than on a reference it cannot load.
       if (restored.current && restored.current.user && restored.current.user !== profile.user.id) {
@@ -1436,6 +1439,23 @@ export default function App(): JSX.Element {
     [],
   );
 
+  // #1576: the Code sidebar's "New task" is a shortcut, not a separate view: a new chat in the
+  // chosen project with Task (internal id 'cowork') preselected in the composer. It is only offered
+  // to a viewer the server lets run Task (CodingWorkspace shows the picker after useCodeAccess says
+  // 'allowed'); the composer and chat-mode.cjs still decide each send, so nothing is bypassed.
+  const startProjectTask = useCallback(
+    (projectId: string) => {
+      const chatId = freshChatId();
+      loadedChats.current.add(chatId);
+      setPendingModes((prev) => ({ ...prev, [chatId]: 'cowork' }));
+      setMessagesByChat((prev) => ({ ...prev, [chatId]: [] }));
+      setSettingsOpen(false);
+      setAppMode('chat');
+      setView({ kind: 'chat', chatId, projectId });
+    },
+    [],
+  );
+
   // Send straight from the project page: open a new chat in the project and
   // deliver the first message into it, rather than dropping into a blank chat
   // the person then has to retype into.
@@ -1808,7 +1828,7 @@ export default function App(): JSX.Element {
       <div className="app-main" ref={appMain}>
       {/* In flow at the top of the pane: it pushes the view down rather than covering its header. */}
       {featureFlags.codeHarness === true && <ActiveCodeTasks onOpenProject={(id) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}/>}
-      {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} projectsLoaded={workspaceLoaded} onProjectsChanged={refreshProjects} onOpenProjectCode={(id) => { setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
+      {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} projectsLoaded={workspaceLoaded} onProjectsChanged={refreshProjects} onStartTask={startProjectTask}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
       <div className="chat-views" style={{display:appMode==='code'&&showPreviews?'none':'contents'}}>
       {view.kind === 'plugins' && <Suspense fallback={<ViewLoading name="customise" active={appMode === 'chat' && !settingsOpen} />}><Customise.View onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects} initialTab={customiseTab} onTabChange={setCustomiseTab}/></Suspense>}
       {view.kind === 'archived' && <ArchivedChatsView onDelete={handleDeleteChat} onOpenData={() => openSettings('data')}/>}
@@ -1885,7 +1905,7 @@ export default function App(): JSX.Element {
           project={activeProject ?? null}
           onProjectChanged={refreshProjects}
           chatId={view.chatId}
-          title={activeChatMeta?.title ?? (view.projectId ? tr('sidebar.newTask') : tr('common.newChat'))}
+          title={activeChatMeta?.title ?? (activeMode === 'cowork' ? tr('sidebar.newTask') : tr('common.newChat'))}
           projectName={activeProject?.name ?? null}
           modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured, defaultProviderId)}
           installedModels={modelsLoaded && !modelsError ? models : null}
@@ -1898,6 +1918,7 @@ export default function App(): JSX.Element {
           onChooseVersion={chooseVersion}
           onOpenProjects={() => { setAppMode('chat'); setView({ kind: 'projects' }); }}
           mode={activeMode}
+          isAdmin={isAdmin}
           onModeChange={changeMode}
           onRetry={retryLast}
           onRegenerate={regenerateLast}

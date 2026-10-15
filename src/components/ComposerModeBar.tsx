@@ -12,10 +12,16 @@ const MODE_DESCRIPTIONS: Record<ChatMode, MessageKey> = { chat: 'mode.chatDesc',
 /** The user-facing mode names (#1502), translated like the Projects cards that also name them. The internal id stays 'cowork'. */
 const MODE_NAME_KEYS: Record<ChatMode, MessageKey> = { chat: 'projects.modeChat', cowork: 'projects.modeCowork' };
 
-export interface CoworkAccess { harnessEnabled: boolean; canUseCode: boolean; repositories: string[] }
+export interface CoworkAccess {
+  harnessEnabled: boolean; canUseCode: boolean; repositories: string[];
+  /** #1576: whether Task is offered at all. Task is admin-only behind codeHarness (chat-mode.cjs), so
+   *  anyone else gets a plain Chat composer with no Task option, no hint and no fallback caption. */
+  offered: boolean;
+}
 
-/** What this viewer may run as Cowork here: the flag, and the code state the server gives admins. */
-export function useCoworkAccess(projectId: string | null): CoworkAccess {
+/** What this viewer may run as Cowork here: the flag, the account's role, and the code state the
+ *  server gives admins. `isAdmin` is the signed-in profile's role; the server re-checks every send. */
+export function useCoworkAccess(projectId: string | null, isAdmin = false): CoworkAccess {
   const flags = useFeatureFlags();
   const [state, setState] = useState<{ projectId: string | null; canUseCode: boolean; repositories: string[] }>({ projectId: null, canUseCode: false, repositories: [] });
   useEffect(() => {
@@ -28,7 +34,7 @@ export function useCoworkAccess(projectId: string | null): CoworkAccess {
     return () => { live = false; };
   }, [flags.codeHarness, projectId]);
   const current = state.projectId === projectId;
-  return { harnessEnabled: !!flags.codeHarness, canUseCode: current && state.canUseCode, repositories: current ? state.repositories : [] };
+  return { harnessEnabled: !!flags.codeHarness, canUseCode: current && state.canUseCode, repositories: current ? state.repositories : [], offered: !!flags.codeHarness && isAdmin };
 }
 
 const ORDER: ChatMode[] = ['chat', 'cowork'];
@@ -49,16 +55,18 @@ export function useModeSwitch({ mode, messageCount, projectId, access, repositor
   useEffect(() => { setConfirm(null); }, [mode, messageCount === 0]);
   // #1564: Task (Cowork) runs inside a project, so a free chat cannot choose it. The option is
   // disabled (ModeToggle) and the arrow keys cannot reach it either.
-  const coworkNeedsProject = !projectId;
+  // #1576: a viewer who cannot run Task is never offered it, so there is nothing to explain either.
+  const offered = access.offered;
+  const coworkNeedsProject = offered && !projectId;
   const choose = (next: ChatMode) => {
     if (next === mode) { setConfirm(null); return; }
-    if (next === 'cowork' && coworkNeedsProject) return;
+    if (next === 'cowork' && (!offered || coworkNeedsProject)) return;
     if (switchNeedsNewSession(messageCount, mode, next)) setConfirm(next);
     else onModeChange(next, false);
   };
   const onKey = (event: KeyboardEvent<HTMLDivElement>) => {
     const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
-    if (!step) return;
+    if (!step || !offered) return;
     event.preventDefault();
     const next = ORDER[(ORDER.indexOf(mode) + step + ORDER.length) % ORDER.length];
     choose(next);
@@ -69,15 +77,17 @@ export function useModeSwitch({ mode, messageCount, projectId, access, repositor
   // repository choice and the "will send as chat" warning. #1564: a free chat always carries the
   // "Runs inside a project" hint, so its caption is not the plain one that a phone hides.
   const caption: 'cowork' | 'fallback' | 'chat' = decision.harness === 'cowork' ? 'cowork'
-    : (mode === 'cowork' && decision.reason) || coworkNeedsProject ? 'fallback' : 'chat';
-  return { id, mode, confirm, setConfirm, group, choose, onKey, decision, caption, access, repository, onModeChange, projectId, coworkNeedsProject, onOpenProjects };
+    : offered && ((mode === 'cowork' && decision.reason) || coworkNeedsProject) ? 'fallback' : 'chat';
+  return { id, mode, confirm, setConfirm, group, choose, onKey, decision, caption, access, repository, onModeChange, projectId, coworkNeedsProject, onOpenProjects, offered };
 }
 
 /** The Chat / Cowork radio group. `compact` (#527, phone composer) names only the chosen mode;
  *  the other keeps its name for assistive technology and shows a symbol. */
-export function ModeToggle({ state, disabled, compact = false }: { state: ModeSwitch; disabled: boolean; compact?: boolean }): JSX.Element {
+export function ModeToggle({ state, disabled, compact = false }: { state: ModeSwitch; disabled: boolean; compact?: boolean }): JSX.Element | null {
   const t = useT();
-  const { id, mode, group, choose, onKey, coworkNeedsProject } = state;
+  const { id, mode, group, choose, onKey, coworkNeedsProject, offered } = state;
+  // #1576: with Task not offered there is only Chat, and a one-option switch is a dead control.
+  if (!offered) return null;
   return <div ref={group} className={`composer-mode-toggle${compact ? ' is-compact' : ''}`} data-mode={mode} role="radiogroup" aria-label={t('mode.session')} onKeyDown={onKey}>
     {ORDER.map(option => <button key={option} type="button" role="radio" data-mode={option}
       aria-checked={option === mode} aria-describedby={`${id}-${option}`} tabIndex={option === mode ? 0 : -1}
@@ -100,7 +110,7 @@ export function ModeCaption({ state, disabled, onRepository }: { state: ModeSwit
               {access.repositories.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           : <strong>{repository}</strong>}</>
-    : mode === 'cowork' && decision.reason ? t('mode.willSendAsChat', { reason: t(`mode.reason.${decision.reason}`) }) : t('mode.runsChat');
+    : state.offered && mode === 'cowork' && decision.reason ? t('mode.willSendAsChat', { reason: t(`mode.reason.${decision.reason}`) }) : t('mode.runsChat');
   return <span className="composer-mode-harness" aria-live="polite" data-caption={caption}>
     <span className="composer-mode-line">{line}</span>
     {/* #1564, #1595: Task is disabled in a free chat. The hint names its subject (Task) and sits on its own
@@ -115,9 +125,9 @@ export function ModeCaption({ state, disabled, onRepository }: { state: ModeSwit
 /** The option descriptions and, when switching would fork the session, the confirmation. */
 export function ModeConfirm({ state }: { state: ModeSwitch }): JSX.Element {
   const t = useT();
-  const { id, confirm, setConfirm, mode, onModeChange } = state;
+  const { id, confirm, setConfirm, mode, onModeChange, offered } = state;
   return <>
-    {ORDER.map(option => <span key={option} id={`${id}-${option}`} hidden>{t(MODE_DESCRIPTIONS[option])}</span>)}
+    {offered && ORDER.map(option => <span key={option} id={`${id}-${option}`} hidden>{t(MODE_DESCRIPTIONS[option])}</span>)}
     {confirm && <div className="composer-mode-confirm" role="alertdialog" aria-label={t('mode.newSession')}>
       <span>{t('mode.confirm', { mode: t(MODE_NAME_KEYS[confirm]) })}</span>
       <button type="button" className="btn btn-primary" onClick={() => { setConfirm(null); onModeChange(confirm, true); }}>{t('mode.startNew')}</button>

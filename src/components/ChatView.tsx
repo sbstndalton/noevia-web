@@ -65,6 +65,8 @@ interface ChatViewProps {
   /** The session's harness (#236) and how to change it; `newSession` forks instead of switching. */
   mode?: ChatMode;
   onModeChange?: (mode: ChatMode, newSession: boolean) => void;
+  /** #1576: the signed-in account is an administrator; with codeHarness on, only then is Task offered. */
+  isAdmin?: boolean;
   onRetry: (chatId: string, messageId: string) => void;
   onRegenerate: (chatId: string, messageId: string) => void;
   onEditMessage: (chatId: string, messageId: string, text: string) => void;
@@ -317,6 +319,7 @@ export function ChatView({
   onSend,
   mode = 'chat',
   onModeChange = () => {},
+  isAdmin = false,
   onRetry,
   onRegenerate,
   onEditMessage,
@@ -564,7 +567,7 @@ export function ChatView({
   // object directly (#352).
   const defaultProviderId = useDefaultProviderId(); // the id the server treats as local (#876)
   if (!project && freeContext) modelLabel = modelChoiceLabel(freeContext, installedModels ?? null, true, defaultProviderId);
-  const coworkAccess = useCoworkAccess(project?.id ?? null);
+  const coworkAccess = useCoworkAccess(project?.id ?? null, isAdmin);
   const [repository, setRepository] = useState<string | null>(null);
   useEffect(() => {
     setRepository(current => current && coworkAccess.repositories.includes(current) ? current : coworkAccess.repositories[0] ?? null);

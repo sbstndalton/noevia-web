@@ -2,7 +2,8 @@ import { ProjectIdentityPicker } from './ProjectIdentity';
 import { isResident } from '../model-residency';
 import { useState } from 'react';
 import type { JSX } from 'react';
-import type { InstalledModel, Project, ProjectMode } from '../types';
+import type { InstalledModel, Project } from '../types';
+import { useCodeAccess } from './code/useCodeAccess';
 import { ShellIcon } from './ShellIcon';
 import { CloseButton } from './CloseButton';
 import { FolderPicker } from './FolderPicker';
@@ -31,10 +32,12 @@ export function EditProjectModal({
   const [instructions, setInstructions] = useState(project.instructions || '');
   const [effort, setEffort] = useState<'inherit' | 'default' | 'low' | 'high'>(project.reasoningEffort || 'inherit');
   const [model, setModel] = useState(project.model || '');
-  const [modes, setModes] = useState<ProjectMode[]>(project.modes?.length ? project.modes : ['chat']);
-  const toggleMode = (mode: ProjectMode, on: boolean) => setModes((prev) => (['chat', 'cowork', 'code'] as ProjectMode[]).filter((m) => (m === mode ? on : prev.includes(m))));
   const [shared, setShared] = useState({ chat: project.sharedContext?.chat === true, code: project.sharedContext?.code === true });
-  const bothModes = modes.includes('chat') && modes.includes('code');
+  // #1576: there is no per-project "Available in" any more; every project is a chat project and Task
+  // is a per-send choice. Sharing context with Code tasks is offered to whoever can run them (admin +
+  // codeHarness, the same probe as the Code tab), or when it is already on so it can be turned off.
+  const codeAccess = useCodeAccess(project.id);
+  const showShared = codeAccess === 'allowed' || project.sharedContext?.chat === true || project.sharedContext?.code === true;
   const [addError, setAddError] = useState('');
   const [saving, setSaving] = useState(false);
   const [folders, setFolders] = useState(project.sourceFolders || []);
@@ -54,9 +57,9 @@ export function EditProjectModal({
         instructions,
         model,
         reasoningEffort: effort === 'inherit' ? null : effort,
-        modes,
-        // Sharing only means something across two modes; with one, it is saved off.
-        sharedContext: bothModes ? shared : { chat: false, code: false },
+        // #1576: `modes` is no longer sent; the server keeps whatever it stored. Shared context is
+        // only sent when the section was shown, so a viewer who cannot see it never changes it.
+        ...(showShared ? { sharedContext: shared } : {}),
         ...(JSON.stringify(folders) !== JSON.stringify(project.sourceFolders || []) ? { sourceFolders: folders } : {}),
       });
       onClose();
@@ -95,16 +98,7 @@ export function EditProjectModal({
             {t('projects.edit.nameLengthCounter', { count: name.length, max: PROJECT_NAME_MAX_LENGTH })}
           </small>
         </div>
-        <fieldset className="field project-modes">
-          <legend>{t('projects.edit.availableIn')}</legend>
-          <div className="project-mode-options">
-            {([['chat', t('projects.modeChat'), ''], ['cowork', t('projects.modeCowork'), t('projects.edit.notBuiltYet')], ['code', t('projects.modeCode'), t('projects.edit.preview')]] as [ProjectMode, string, string][]).map(([mode, label, note]) => (
-              <label key={mode} className="mm-check"><input type="checkbox" checked={modes.includes(mode)} onChange={(e) => toggleMode(mode, e.target.checked)} />{label}{note && <small> · {note}</small>}</label>
-            ))}
-          </div>
-          <small>{modes.length ? t('projects.edit.modesHint') : t('projects.edit.chooseMode')}</small>
-        </fieldset>
-        {bothModes && <fieldset className="field project-modes">
+        {showShared && <fieldset className="field project-modes">
           <legend>{t('projects.edit.sharedContext')}</legend>
           <div className="project-mode-options">
             <label className="mm-check"><input type="checkbox" checked={shared.code} onChange={(e) => setShared((s) => ({ ...s, code: e.target.checked }))} />{t('projects.edit.codeSeesProject')}<small> · {t('projects.edit.codeSeesProjectDetail')}</small></label>
@@ -171,7 +165,7 @@ export function EditProjectModal({
       {addError && <p role="alert" className="modal-err project-save-error">{addError}</p>}
       <footer>
         <button className="btn btn-secondary" onClick={onClose}>{t('projects.cancel')}</button>
-        <button className="btn btn-primary" onClick={() => void save()} disabled={!name.trim() || !modes.length || saving}>{saving ? t('projects.edit.saving') : t('projects.edit.save')}</button>
+        <button className="btn btn-primary" onClick={() => void save()} disabled={!name.trim() || saving}>{saving ? t('projects.edit.saving') : t('projects.edit.save')}</button>
       </footer>
 
       {pickingFolder && <FolderPicker onClose={() => setPickingFolder(false)} onPick={(path) => { setFolders((current) => [...new Set([...current, path])]); setPickingFolder(false); }} />}

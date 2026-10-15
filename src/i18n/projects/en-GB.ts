@@ -32,7 +32,6 @@ export const EN_GB_PROJECTS = {
   'projects.openProject': 'Open project {name}',
   'projects.optionsFor': 'Project options for {name}',
   'projects.pinned': 'Pinned',
-  'projects.availableIn': 'Available in {modes}',
   'projects.updatedAt': 'Updated {date}',
   'projects.restore': 'Restore',
   'projects.aProject': 'project',

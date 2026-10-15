@@ -25,7 +25,7 @@ async function withModule(fn) {
   }
 }
 
-const ACCESS = { harnessEnabled: true, canUseCode: true, repositories: ['repo-a'] };
+const ACCESS = { harnessEnabled: true, canUseCode: true, repositories: ['repo-a'], offered: true };
 
 // Renders the toggle and caption from one useModeSwitch, and hands its state to the test.
 function harnessFor(mod, React, capture) {

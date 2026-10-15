@@ -30,7 +30,6 @@ export const SV_SE_PROJECTS: ProjectsCatalogue = {
   'projects.openProject': "Öppna projektet {name}",
   'projects.optionsFor': "Projektalternativ för {name}",
   'projects.pinned': "Nålad",
-  'projects.availableIn': "Tillgänglig i {modes}",
   'projects.updatedAt': "Uppdaterad {date}",
   'projects.restore': "Återställ",
   'projects.aProject': "projekt",

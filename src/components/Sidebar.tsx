@@ -461,7 +461,7 @@ export function Sidebar({
   // tags, so a tag query leaves only chats. Without a `#` everything matches exactly as before.
   const parsedQuery = organise ? parseSidebarQuery(query) : { tags: [], text: query };
   const tagQuery = parsedQuery.tags.length > 0;
-  const visibleProjects = sortedProjects.filter(p=>(!p.modes?.length || p.modes.includes('chat')) && !tagQuery && p.name.toLowerCase().includes(query.toLowerCase()));
+  const visibleProjects = sortedProjects.filter(p=>!tagQuery && p.name.toLowerCase().includes(query.toLowerCase()));
   const messageHits = !tagQuery && textHits && textHits.query === textQuery ? textHits.ids : null;
   const visibleChats = recentChats(chats).filter(c=>(organise ? chatMatchesQuery(c, query, hasTag) : (c.title || '').toLowerCase().includes(query.toLowerCase())) || !!messageHits?.has(c.id));
   const tags = organise ? tagTree(chats) : [];

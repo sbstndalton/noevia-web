@@ -154,7 +154,6 @@ export function ProjectsView({ projects, onOpenProject, onPatch, onCreate, onDel
                     return <span className="project-chip" data-project-chat-count="">{counts.archived ? `${chats} · ${t.plural('projects.count.archivedChats', counts.archived)}` : chats}</span>;
                   })()}
                   {p.files.length > 0 && <span className="project-chip">{t.plural('projects.count.files', p.files.length)}</span>}
-                  {p.modes?.length && (p.modes.length > 1 || p.modes[0] !== 'chat') ? <span className="project-chip" aria-label={t('projects.availableIn', { modes: p.modes.join(', ') })}>{p.modes.map((m) => m === 'chat' ? t('projects.modeChat') : m === 'cowork' ? t('projects.modeCowork') : t('projects.modeCode')).join(' · ')}</span> : null}
                   <time className="project-card-time" dateTime={new Date(p.updatedAt).toISOString()} title={t('projects.updatedAt', { date: new Date(p.updatedAt).toLocaleString(appLocale()) })}>{timeAgo(t, p.updatedAt)}</time>
                 </div>
                 {/* #1572: Restore has a footer row of its own on every archived card, so it sits in the same place across the grid. */}

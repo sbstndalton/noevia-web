@@ -21,5 +21,5 @@ test('#1579 the project chat list title for a long first message ends at a word 
 
 test('#1579 the project list renders the stored title as is, so the derived ellipsis is what shows', () => {
   const projectView = fs.readFileSync(path.join(__dirname, '../../src/components/ProjectView.tsx'), 'utf8');
-  assert.match(projectView, /<span className="chat-index-title">[\s\S]*?<span>\{c\.title \|\| t\('projects\.view\.newTask'\)\}<\/span>/);
+  assert.match(projectView, /<span className="chat-index-title">[\s\S]*?<span>\{c\.title \|\| \(c\.mode === 'cowork' \? t\('projects\.view\.newTask'\) : t\('projects\.view\.newChat'\)\)\}<\/span>/);
 });

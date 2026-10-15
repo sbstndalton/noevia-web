@@ -34,7 +34,8 @@ test('CodeProjectPicker lists real projects and labels the way in, one per proje
   const html = render(React.createElement(CodeProjectPicker, { projects: [{ id: 'p1', name: 'Garden planner' }, { id: 'p2', name: 'Invoice bot' }], onOpen: () => {} }));
   assert.match(html, /Garden planner/);
   assert.match(html, /Invoice bot/);
-  assert.match(html, /Open Code/);
+  assert.match(html, /Start task/);
+  assert.match(html, /aria-label="Start a task in Garden planner"/, 'each button names its project');
   // The generic "not connected yet" stub language must not leak into the working path.
   assert.doesNotMatch(html, /Interface preview/);
   assert.doesNotMatch(html, /not connected yet/);
@@ -43,21 +44,21 @@ test('CodeProjectPicker lists real projects and labels the way in, one per proje
 test('CodeProjectPicker with no projects points at creating one instead of an empty list', () => withModule('/src/components/CodingWorkspace.tsx', ({ CodeProjectPicker }, React, render) => {
   const html = render(React.createElement(CodeProjectPicker, { projects: [], onOpen: () => {} }));
   assert.match(html, /Create a project/);
-  assert.doesNotMatch(html, /Open Code/);
+  assert.doesNotMatch(html, /Start task/);
 }));
 
 test('the initial render — before useCodeAccess\' effect resolves anything — keeps the honest stub for every page, whether or not a navigation callback was even wired up', () => withModule('/src/components/CodingWorkspace.tsx', ({ CodingWorkspace }, React, render) => {
-  for (const onOpenProjectCode of [undefined, () => {}]) {
-    const html = render(React.createElement(CodingWorkspace, { page: 'New task', projects: [{ id: 'p1', name: 'Garden planner' }], onOpenProjectCode }));
+  for (const onStartTask of [undefined, () => {}]) {
+    const html = render(React.createElement(CodingWorkspace, { page: 'New task', projects: [{ id: 'p1', name: 'Garden planner' }], onStartTask }));
     assert.match(html, /Interface preview · no execution/, 'the preview badge must not swap before access is known');
     assert.match(html, /What should we build next/);
     assert.match(html, /not connected yet/);
-    assert.doesNotMatch(html, /Open Code/, 'the picker must not render before useCodeAccess resolves');
+    assert.doesNotMatch(html, /Start task/, 'the picker must not render before useCodeAccess resolves');
   }
 }));
 
 test('a viewer without a wired-up navigation callback always sees the stub, never the picker, regardless of page', () => withModule('/src/components/CodingWorkspace.tsx', ({ CodingWorkspace }, React, render) => {
   const html = render(React.createElement(CodingWorkspace, { page: 'Pull requests', projects: [] }));
   assert.match(html, /Interface preview · no execution/);
-  assert.doesNotMatch(html, /Open Code/);
+  assert.doesNotMatch(html, /Start task/);
 }));

@@ -351,10 +351,9 @@ export function ProjectView({
   const sourceCount = readableFiles.length + (project.assets || []).filter((a) => !a.sourceName).length;
   const linkedFolders = (project.sourceFolders || []).filter((f) => f !== project.projectFolder);
   const outputs = outputsOf(project);
-  const chatEnabled = !project.modes?.length || project.modes.includes('chat');
   const send = () => {
     const text = draft.trim();
-    if (!chatEnabled || !text || composerBusy || busyDocs || syncing) return;
+    if (!text || composerBusy || busyDocs || syncing) return;
     setDraft('');
     setSkillPin('');
     onSendFirst(project.id, text, skillPin ? (skillPin as SkillPin) : undefined);
@@ -371,7 +370,7 @@ export function ProjectView({
               <p className="project-detail-meta">{project.archived ? `${t('projects.archived')} · ` : ''}{(() => { const c = countProjectChats(project.chats); return c.archived ? `${t.plural('projects.count.chats', c.active)} · ${t.plural('projects.count.archivedChats', c.archived)}` : t.plural('projects.count.chats', c.active); })()} · {t('projects.view.updatedLabel')} <time dateTime={new Date(project.updatedAt).toISOString()} title={new Date(project.updatedAt).toLocaleString()}>{timeAgo(t, project.updatedAt)}</time></p>
             </div>
             <div className="project-head-actions">
-              {chatEnabled && <button className="btn btn-secondary btn-sm" onClick={() => onNewChat(project.id)}>{t('projects.view.newChat')}</button>}
+              <button className="btn btn-secondary btn-sm" onClick={() => onNewChat(project.id)}>{t('projects.view.newChat')}</button>
               <button className="btn btn-secondary btn-sm" onClick={onEdit}>{t('projects.view.projectSettings')}</button>
             </div>
           </header>
@@ -434,7 +433,7 @@ export function ProjectView({
                         <span className="chat-index-main">
                           <span className="chat-index-title">
                             {c.pinned && <ShellIcon name="pin" size={14}/>}
-                            <span>{c.title || t('projects.view.newTask')}</span>
+                            <span>{c.title || (c.mode === 'cowork' ? t('projects.view.newTask') : t('projects.view.newChat'))}</span>
                           </span>
                           {/* The title is the first message, so until a second
                               one arrives the preview repeats it verbatim. */}
@@ -543,10 +542,9 @@ export function ProjectView({
           {/* Starting a chat from the project page is the point of being here,
               so the composer is present rather than a button that empties into
               a blank chat. */}
-          {!chatEnabled && <p className="route-note" role="status">{t('projects.view.chatDisabled')}</p>}
           {/* Research and Code each have their own way to start something; a chat composer
               under them is a second, unrelated send button taking half the height. */}
-          <div className="project-composer" hidden={!chatEnabled || tab === 'research' || tab === 'code' || tab === 'browser'}>
+          <div className="project-composer" hidden={tab === 'research' || tab === 'code' || tab === 'browser'}>
             {/* What rides along with the next message, stated before it is sent
                 rather than discovered afterwards. Each chip opens what it counts. */}
             <ul className="composer-context-chips" aria-label={t('projects.view.contextChipsLabel')}>
