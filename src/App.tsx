@@ -1997,6 +1997,7 @@ export default function App(): JSX.Element {
           onConfigureModels={() => setPopupOpen(true)}
           onEditProject={setEditingProjectId}
           onOpenSource={openProjectSource}
+          replyModel={replyTelemetryByChat[view.chatId]?.model}
         />
       )}
       </div>

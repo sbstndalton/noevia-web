@@ -277,6 +277,7 @@ function RoutingSection({ models, modelsError, providersRev = 0 }: { models: Ins
           {roleModels.map((m) => <option key={m.name} value={m.name}>{isResident(m) ? t('mm.route.loadedOption', { model: m.name }) : m.name}</option>)}
           {savedUnavailable && <option value={saved}>{t(savedInstalled ? 'mm.route.unsuitableOption' : 'mm.route.notInstalledOption', { model: saved ?? '' })}</option>}
         </select>
+        {role === 'creative' && <p className="mm-note" data-testid="routing-creative-note">{t('mm.assign.creativeNote')}</p>}
         {savedInstalled && <p className="mm-note warn" role="alert">{t('mm.route.unsuitableWarning', { model: saved ?? '' })}</p>}
       </label>; })}
     </div>

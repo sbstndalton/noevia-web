@@ -1,5 +1,7 @@
-import { useState, type JSX, type ReactNode } from 'react';
-import { isResident } from '../model-residency';
+import { useEffect, useState, type JSX, type ReactNode } from 'react';
+import { pickInspectorModel } from '../inspector-model';
+import { fetchAutoRoles } from '../api';
+import { roleSummary } from '../routing-copy';
 import type { InstalledModel, Project } from '../types';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
@@ -37,12 +39,15 @@ export function Inspector({
   onConfigureModels,
   onEditProject,
   onOpenSource,
+  replyModel,
 }: {
   project: Project | null;
   models: InstalledModel[];
   onConfigureModels: () => void;
   onEditProject: (id: string) => void;
   onOpenSource?: (projectId: string, file: string) => void;
+  /** #1829: the model that answered this chat's last turn, from the reply's stream metadata. */
+  replyModel?: string | null;
 }): JSX.Element {
   const t = useT();
   const [expanded, setExpanded] = useState(false);
@@ -50,7 +55,17 @@ export function Inspector({
   // and never counts it), so this rail leaves it out too.
   const sources = (project?.files || []).filter((f) => !isUnreadableSource(f));
   const names = distinguishingNames((project?.files || []).map((f) => f.name));
-  const model = project?.model || models.find(isResident)?.name || models.find((m) => m.loaded)?.name || t('inspector.notSelected');
+  const [autoRoles, setAutoRoles] = useState<Parameters<typeof roleSummary>[0]>(null);
+  const onAuto = project?.routing === 'auto';
+  useEffect(() => {
+    if (!onAuto) return;
+    let live = true;
+    fetchAutoRoles().then((v) => { if (live && v.configured) setAutoRoles(v.roles); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [onAuto]);
+  const picked = pickInspectorModel({ replyModel, project, models });
+  const model = picked.kind === 'auto' ? (autoRoles ? roleSummary(autoRoles, t) : t('inspector.routingAuto'))
+    : picked.kind === 'none' ? t('inspector.notSelected') : picked.model;
 
   return (
     <aside id="noevia-inspector" className="noevia-inspector" data-expanded={expanded} aria-label={t('inspector.contextAria')}>
@@ -66,7 +81,7 @@ export function Inspector({
         title={t('inspector.model')}
         action={{ icon: 'settings', onClick: onConfigureModels, aria: t('inspector.configureAria') }}
       >
-        <p className="insp-value">{model}</p>
+        <p className="insp-value" data-testid="inspector-model" data-source={picked.kind}>{model}</p>
         <p className="insp-note">
           {t('inspector.routing', { value: project?.routing === 'auto' ? t('inspector.routingAuto') : t('inspector.routingManual') })}
         </p>
