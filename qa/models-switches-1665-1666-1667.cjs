@@ -82,6 +82,16 @@ run('models-switches-1665-1666-1667', Number(process.env.QA_PORT || 31665), asyn
         await shot(page, '1667-creative-row', width, theme, row);
       });
 
+      await check(`${tag}: #1816 the Creative row says it is used only when already loaded, and the note fits the row`, async () => {
+        const row = overview.locator('[data-role="creative"]');
+        const note = row.getByText("Used only when it's already loaded, to avoid swapping models.");
+        await note.waitFor({ timeout: 3000 });
+        const [rowBox, noteBox] = [await row.boundingBox(), await note.boundingBox()];
+        assert.ok(noteBox.x >= rowBox.x - 1 && noteBox.x + noteBox.width <= rowBox.x + rowBox.width + 1, 'the note stays inside the row');
+        assert.equal(await overview.locator('[data-role="fast"]').getByText('Used only when').count(), 0, 'only the Creative row has it');
+        await shot(page, '1816-creative-note', width, theme, row);
+      });
+
       await check(`${tag}: #1666 the Decision row tells an administrator where to choose its model`, async () => {
         const row = overview.locator('[data-service="decision"]');
         assert.equal((await row.locator('.mm-assign-control').textContent()).trim(), 'Choose its address and model in Settings, Models and routing, Decision service setup.');

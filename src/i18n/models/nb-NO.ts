@@ -32,6 +32,7 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.assign.role.code': "Kode",
   'mm.assign.role.vision': "Bilder",
   'mm.assign.role.creative': "Kreativ",
+  'mm.assign.creativeNote': "Brukes bare når den allerede er lastet, for å unngå å bytte modell.",
   'mm.assign.state.active': "Kjører",
   'mm.assign.state.configured': "Konfigurert",
   'mm.assign.state.switching': "Indekserer",

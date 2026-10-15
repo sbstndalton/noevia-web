@@ -32,6 +32,7 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.assign.role.code': "Code",
   'mm.assign.role.vision': "Bilder",
   'mm.assign.role.creative': "Kreativ",
+  'mm.assign.creativeNote': "Wird nur verwendet, wenn es bereits geladen ist, um Modellwechsel zu vermeiden.",
   'mm.assign.state.active': "Läuft",
   'mm.assign.state.configured': "Eingerichtet",
   'mm.assign.state.switching': "Neuindexierung",

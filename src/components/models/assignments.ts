@@ -32,6 +32,11 @@ export interface ServiceAssignment {
 /** #1665: a reranker this server can use: 'tei' or 'llamacpp:<preset>'. */
 export interface RerankerChoice { id: string; backend: 'tei' | 'llamacpp'; model: string }
 export interface RerankerSettings { enabled: boolean; choice: string | null; source: 'admin' | 'deployment'; options: RerankerChoice[] }
+/** #1816: the reranker choice to show and to send back. A saved choice is kept even when it is not in `choices` (a
+ *  llama.cpp preset not currently offered); turning reranking off must not drop it. '' when nothing is saved. */
+export const rerankerCurrent = (svc: Pick<ServiceAssignment, 'choice' | 'choices'>): string =>
+  typeof svc.choice === 'string' && svc.choice && ((svc.choices || []).some((c) => c.id === svc.choice) || svc.choice.startsWith('llamacpp:')) ? svc.choice : '';
+
 export interface Assignments { admin: boolean; services: ServiceAssignment[]; available?: boolean }
 
 export async function fetchAssignments(): Promise<Assignments> {
