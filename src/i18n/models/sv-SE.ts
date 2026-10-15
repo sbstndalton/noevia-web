@@ -50,7 +50,7 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.assign.saved': "Sparat.",
   'mm.assign.loadError': "Kunde inte läsa vad varje tjänst använder.",
   'mm.assign.fixedByServer': "Inställt i serverkonfigurationen.",
-  'mm.assign.decisionFromSettings': "Inställt i Inställningar, Konfiguration av beslutstjänsten.",
+  'mm.assign.decisionFromSettings': "Inställt i Inställningar, Modeller och routning, Konfiguration av beslutstjänsten.",
   'mm.assign.sensitivityShared': "Använder Decision-tjänsten.",
   'mm.assign.noEmbeddingOptions': "Ingen annan modell finns tillgänglig från en embeddingserver som körs.",
   'mm.assign.noEmbeddingInstalled': "Ingen annan embeddingmodell är installerad.",

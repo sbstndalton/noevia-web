@@ -34,6 +34,7 @@ export const EN_GB_SETTINGS = {
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Connect a private decision service, then restart noevia.",
   'features.unavailable.decisionSetup': "Set up the decision service below before enabling this experiment.",
+  'features.unavailable.decisionSetupModels': "Set up the decision service in Settings, Models and routing, before enabling this experiment.",
   'features.unavailable.decisionUnsupported': "The configured decision service does not support choice decisions, so this experiment cannot run.",
   'features.unavailable.systemOneUrl': "Not configured. The operator needs to point it at a dedicated local decision-model endpoint, then restart noevia.",
   'decision.msg.ready': "Decision service is ready. No inference was run.",
@@ -196,7 +197,7 @@ export const EN_GB_SETTINGS = {
   'settings.keywords.connectors': 'connectors google drive customise plugins skills permissions',
   'settings.keywords.providers': 'openai endpoint api key provider',
   'settings.keywords.users': 'members invite accounts',
-  'settings.keywords.models': 'model tuning auto routing download gguf',
+  'settings.keywords.models': 'model tuning auto routing download gguf decision service sensitivity',
   'settings.keywords.address': 'deployment domain url https',
   'settings.keywords.features': 'deployment feature flags operator',
   'settings.keywords.experimental': 'deployment preview',

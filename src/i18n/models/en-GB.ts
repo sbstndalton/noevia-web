@@ -54,7 +54,7 @@ export const EN_GB_MODELS = {
   'mm.assign.saved': "Saved.",
   'mm.assign.loadError': "Could not read what each service uses.",
   'mm.assign.fixedByServer': "Set in the server configuration.",
-  'mm.assign.decisionFromSettings': "Set in Settings, Decision service setup.",
+  'mm.assign.decisionFromSettings': "Set in Settings, Models and routing, Decision service setup.",
   'mm.assign.sensitivityShared': "Uses the Decision service.",
   'mm.assign.noEmbeddingOptions': "No other model is available from a running embeddings server.",
   'mm.assign.noEmbeddingInstalled': "No other embedding model is installed.",

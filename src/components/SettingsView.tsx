@@ -19,6 +19,8 @@ import type { AuthUser, PasskeyInfo, SessionInfo } from '../api';
 import { startRegistration } from '@simplewebauthn/browser';
 import { ProviderForm } from './ProviderForm';
 import { useFeatureFlags } from './features/useFeatureFlags';
+import { DecisionServiceSettings } from './features/DecisionServiceSettings';
+import { FEATURES_CHANGED } from './features/api';
 import { afterLayoutSettles, pickFocusable } from '../focus-utils';
 import { StoragePicker } from './StoragePicker';
 import { useT } from '../i18n';
@@ -40,9 +42,11 @@ export interface SettingsViewProps {
   onDiaryEnabledChange: (enabled: boolean) => void;
   /** #733: lets Security link to the Diary & storage page, where "Connect a device" lives. */
   onOpenSection?: (id: string) => void;
+  /** #1804: the profile has loaded and says administrator. Admin-only panels mount only then. */
+  adminConfirmed?: boolean;
 }
 
-export function SettingsView({ models, modelsLoaded, modelsError, health, stats, diaryEnabled, onDiaryEnabledChange, onOpenModelManager, onOpenSection, section = 'profile' }: SettingsViewProps): JSX.Element {
+export function SettingsView({ models, modelsLoaded, modelsError, health, stats, diaryEnabled, onDiaryEnabledChange, onOpenModelManager, onOpenSection, adminConfirmed = false, section = 'profile' }: SettingsViewProps): JSX.Element {
   const t = useT();
   // Why the Live engine figures below have no value (#1485), said in words rather than as bare dashes.
   const liveNote = liveEngineNote(t, stats);
@@ -52,6 +56,10 @@ export function SettingsView({ models, modelsLoaded, modelsError, health, stats,
     {section === 'diary' && <><div className="settings-title"><h1>{t('settings.section.diary')}</h1><p>{t('diarySettings.lede')}</p></div><DiaryAddonCard enabled={diaryEnabled} onChange={onDiaryEnabledChange}/>{diaryEnabled && <StorageCard />}</>}
     {section === 'providers' && <ProvidersCard health={health} />}
     {section === 'models' && <ModelsSummary models={models} modelsLoaded={modelsLoaded} modelsError={modelsError} health={health} stats={stats} onOpen={onOpenModelManager}/>}
+    {/* #1804: the decision service picks where each Auto-routed message goes, so its setup lives with
+        routing, not behind Experimental. Saving tells the experiments that need it (FEATURES_CHANGED).
+        Administrators only, once the profile says so: a member deep-linking here never calls the admin API. */}
+    {section === 'models' && adminConfirmed && <DecisionServiceSettings onSaved={async () => { window.dispatchEvent(new Event(FEATURES_CHANGED)); }}/>}
     {/* #414: the "Connected" list moves onto .set-rows, the same grouped surface Appearance/Data
         already use, instead of the bare .card-list (see noevia.css's .set-rows .model-row rules). */}
     {section === 'status' && <><div className="settings-title"><h1>{t('settings.section.status')}</h1></div><McpStatus /><h2>{t('serviceStatus.connected')}</h2><div className="set-rows">{([['inference', t('serviceStatus.inference'), health.inferenceUp], ['diary', t('serviceStatus.diary'), diaryEnabled ? health.diaryUp : null]] as const).map(([id, label, up])=><div className="model-row" key={id}><span className={`model-dot${up?'':' down'}`}/><span className="model-name">{label}</span><span className="model-role">{up===true?t('models.available'):up===false?t('models.unavailable'):t('serviceStatus.notAvailable')}</span></div>)}

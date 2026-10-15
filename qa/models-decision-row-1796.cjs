@@ -61,7 +61,7 @@ run('models-decision-row-1796', Number(process.env.QA_PORT || 31796), async (che
     await overview.locator('.mm-assign-list').waitFor({ timeout: 15000 });
     await check('a decision address saved in Settings: the row says so and names the model it is sent as', async () => {
       const d = await rowText(overview, 'decision');
-      assert.deepEqual([d.model, d.note], ['laya', 'Set in Settings, Decision service setup.']);
+      assert.deepEqual([d.model, d.note], ['laya', 'Set in Settings, Models and routing, Decision service setup.']);
       assert.equal((await rowText(overview, 'sensitivity')).model, 'laya');
     });
     await page.close();

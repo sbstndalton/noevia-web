@@ -42,6 +42,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   // #624: server-supplied decision-service reasons and test messages, by id
   'features.unavailable.decisionUrl': "Verbind een privé-beslissingsservice en start noevia daarna opnieuw.",
   'features.unavailable.decisionSetup': "Stel de beslissingsservice hieronder in voordat je dit experiment inschakelt.",
+  'features.unavailable.decisionSetupModels': "Stel de beslissingsdienst in via Instellingen, Modellen en routering, voordat je dit experiment inschakelt.",
   'features.unavailable.decisionUnsupported': "De ingestelde beslissingsservice ondersteunt geen keuzebeslissingen, dus dit experiment kan niet draaien.",
   'features.unavailable.systemOneUrl': "Niet geconfigureerd. De beheerder moet die naar een apart lokaal eindpunt voor een beslissingsmodel laten wijzen en daarna noevia opnieuw starten.",
   'decision.msg.ready': "De beslissingsservice is gereed. Er is geen inferentie uitgevoerd.",
@@ -204,7 +205,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'settings.keywords.connectors': "koppelingen google drive aanpassen plug-ins vaardigheden rechten",
   'settings.keywords.providers': "openai endpoint api-sleutel aanbieder",
   'settings.keywords.users': "leden uitnodigen accounts",
-  'settings.keywords.models': "model afstemmen auto routering downloaden gguf",
+  'settings.keywords.models': "model afstemmen auto routering downloaden gguf beslissingsdienst gevoeligheid",
   'settings.keywords.address': "installatie domein url https",
   'settings.keywords.features': "installatie functievlaggen beheerder",
   'settings.keywords.experimental': "installatie voorvertoning",

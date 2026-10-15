@@ -50,7 +50,7 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.assign.saved': "Enregistré.",
   'mm.assign.loadError': "Impossible de lire ce que chaque service utilise.",
   'mm.assign.fixedByServer': "Défini dans la configuration du serveur.",
-  'mm.assign.decisionFromSettings': "Défini dans Réglages, Configuration du service de décision.",
+  'mm.assign.decisionFromSettings': "Défini dans Réglages, Modèles et routage, Configuration du service de décision.",
   'mm.assign.sensitivityShared': "Utilise le service Decision.",
   'mm.assign.noEmbeddingOptions': "Aucun autre modèle n’est disponible sur un serveur d’embeddings actif.",
   'mm.assign.noEmbeddingInstalled': "Aucun autre modèle d’embeddings n’est installé.",

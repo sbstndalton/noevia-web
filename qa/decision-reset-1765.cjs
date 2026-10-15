@@ -20,7 +20,8 @@ run('decision-reset-1765', Number(process.env.QA_PORT || 31765), async (check, b
     const state = await createState({ savedDecisionUrl: SAVED });
     try {
       const { page, errors } = await openPage(browser, state, { width, height, theme });
-      await page.goto(`${origin}/settings/experimental`);
+      // #1804: the setup lives on Models and routing.
+      await page.goto(`${origin}/settings/models`);
       const section = page.getByRole('region', { name: 'Decision service setup' });
       const url = section.getByRole('textbox', { name: 'Decision endpoint' });
       await url.waitFor({ timeout: 15000 });

@@ -178,7 +178,9 @@ const ENGLISH = /Open a project to run Code|Code mode runs inside|Open Code|Runs
           for (const f of features.filter((x) => !x.experimental)) assert.ok(!labels.includes(f.label) || (f.label === 'Backups' && locale === 'de-DE'), `${f.name} is still "${f.label}": ${labels.join(' | ')}`);
         }
         if (section === 'experimental') {
-          for (const w of [A.title, A.label, A.planner]) assert.ok(shown.includes(w), `${w} in: ${shown.slice(0, 400)}`);
+          assert.ok(shown.includes(A.planner), `${A.planner} in: ${shown.slice(0, 400)}`);
+          // #1804: Decision service setup moved to Models and routing; it is checked there below.
+          assert.ok(!shown.includes(A.title), `${A.title} is no longer on Experimental`);
         }
         if (section === 'backups') {
           for (const w of [A.destination, A.schedule, A.retention, A.snapshots, A.last]) assert.ok(shown.includes(w), `${w} in: ${shown}`);
@@ -187,6 +189,15 @@ const ENGLISH = /Open a project to run Code|Code mode runs inside|Open Code|Runs
         }
       });
     }
+
+    await check(`#1804 ${tag}: Decision service setup on Settings > Models and routing is translated`, async () => {
+      await page.goto(`${ORIGIN}/settings/models`);
+      const section = page.locator('.decision-service-settings');
+      await section.waitFor({ timeout: 15000 });
+      const shown = await text(section);
+      for (const w of [L.experimental.title, L.experimental.label]) assert.ok(shown.includes(w), `${w} in: ${shown.slice(0, 400)}`);
+      assert.doesNotMatch(shown, ENGLISH, shown);
+    });
 
     await check(`#619 ${tag}: the Diary calendar has a localised heading, day names and a Monday-first week`, async () => {
       await page.goto(`${ORIGIN}/diary`);

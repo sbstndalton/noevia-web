@@ -50,7 +50,7 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.assign.saved': "Lagret.",
   'mm.assign.loadError': "Kunne ikke lese hva hver tjeneste bruker.",
   'mm.assign.fixedByServer': "Satt i serverkonfigurasjonen.",
-  'mm.assign.decisionFromSettings': "Satt i Innstillinger, Oppsett av beslutningstjenesten.",
+  'mm.assign.decisionFromSettings': "Satt i Innstillinger, Modeller og ruting, Oppsett av beslutningstjenesten.",
   'mm.assign.sensitivityShared': "Bruker Decision-tjenesten.",
   'mm.assign.noEmbeddingOptions': "Ingen annen modell er tilgjengelig fra en kjørende embedding-server.",
   'mm.assign.noEmbeddingInstalled': "Ingen annen embedding-modell er installert.",
