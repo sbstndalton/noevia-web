@@ -537,7 +537,10 @@ export function fetchToolboxes(): Promise<{ toolboxes: Toolbox[]; mcp: McpStatus
 
 export interface AutoRoles { fast: string; smart: string; vision?: string; code?: string; creative?: string }
 
-export function fetchAutoRoles(): Promise<{ configured: boolean; roles: AutoRoles | null; missing?: { role: 'fast' | 'smart' | 'vision' | 'code' | 'creative'; model: string }[] }> {
+/** #1849: a model a chat role's Inference machine serves; a Manual pick of it runs on that machine. */
+export interface MachineModel { model: string; machine: { id: string; name: string }; roles: string[] }
+
+export function fetchAutoRoles(): Promise<{ configured: boolean; roles: AutoRoles | null; missing?: { role: 'fast' | 'smart' | 'vision' | 'code' | 'creative'; model: string }[]; machineModels?: MachineModel[] }> {
   // #1509: shared in flight and for MODEL_READ_TTL_MS; setAutoRoles and model writes drop it.
   return cached(AUTO_ROLES_KEY, () => getJson('/api/auto-roles'), MODEL_READ_TTL_MS);
 }

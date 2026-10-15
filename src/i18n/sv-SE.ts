@@ -532,6 +532,7 @@ export const SV_SE: Catalogue = {
   'modelPopup.selected': "Vald",
   'modelPopup.loaded': "Inläst",
   'modelPopup.sleeping': "Vilar",
+  'modelPopup.onMachine': "På {machine}",
   'modelPopup.tune': "Justera {model}",
   'modelPopup.tuneTitle': "Justera den här modellen",
   'modelPopup.context': "Kontext",

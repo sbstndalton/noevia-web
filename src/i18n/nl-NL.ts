@@ -532,6 +532,7 @@ export const NL_NL: Catalogue = {
   'modelPopup.selected': "Geselecteerd",
   'modelPopup.loaded': "Geladen",
   'modelPopup.sleeping': "Slaapt",
+  'modelPopup.onMachine': "Op {machine}",
   'modelPopup.tune': "{model} afstemmen",
   'modelPopup.tuneTitle': "Dit model afstemmen",
   'modelPopup.context': "Context",

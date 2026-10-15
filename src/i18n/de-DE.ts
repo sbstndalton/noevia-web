@@ -532,6 +532,7 @@ export const DE_DE: Catalogue = {
   'modelPopup.selected': "Ausgewählt",
   'modelPopup.loaded': "Geladen",
   'modelPopup.sleeping': "Ruht",
+  'modelPopup.onMachine': "Auf {machine}",
   'modelPopup.tune': "{model} tunen",
   'modelPopup.tuneTitle': "Dieses Modell tunen",
   'modelPopup.context': "Kontext",
