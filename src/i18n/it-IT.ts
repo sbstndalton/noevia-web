@@ -532,6 +532,7 @@ export const IT_IT: Catalogue = {
   'modelPopup.selected': "Selezionato",
   'modelPopup.loaded': "Caricato",
   'modelPopup.sleeping': "In pausa",
+  'modelPopup.onMachine': "Su {machine}",
   'modelPopup.tune': "Regola {model}",
   'modelPopup.tuneTitle': "Regola questo modello",
   'modelPopup.context': "Contesto",

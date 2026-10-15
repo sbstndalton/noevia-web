@@ -532,6 +532,7 @@ export const PT_BR: Catalogue = {
   'modelPopup.selected': "Selecionado",
   'modelPopup.loaded': "Carregado",
   'modelPopup.sleeping': "Em repouso",
+  'modelPopup.onMachine': "Em {machine}",
   'modelPopup.tune': "Ajustar {model}",
   'modelPopup.tuneTitle': "Ajustar este modelo",
   'modelPopup.context': "Contexto",

@@ -15,6 +15,7 @@ import { useT } from '../i18n';
 import { providerDisplayName } from '../display-names';
 import type { JSX, ReactNode } from 'react';
 import type { InstalledModel, Project, Provider } from '../types';
+import type { MachineModel } from '../api';
 import { apiFetch, fetchAutoRoles, fetchChatGptModels, fetchInstalledModels, fetchProviders, refreshChatGptModels, saveProjectConfig } from '../api';
 import { ProjectRoutingMode } from './ProjectRoutingMode';
 import { SegmentedControl } from './SegmentedControl';
@@ -112,6 +113,16 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
   // A long catalogue gets a filter; a handful of models does not need one.
   const [modelQuery, setModelQuery] = useState('');
   const shownModels = chatModels.filter((m) => m.name.toLowerCase().includes(modelQuery.trim().toLowerCase()));
+  // #1849: models a chat role's Inference machine serves, listed after this machine's own and labelled with the
+  // machine. A name this machine lists is its row (the server answers that pick here), so it is not repeated.
+  const localNames = new Set(chatModels.map((m) => m.name));
+  const machineModels: MachineModel[] = [];
+  for (const row of autoInfo?.machineModels ?? []) {
+    if (!row || typeof row.model !== 'string' || !row.model.trim() || typeof row.machine?.name !== 'string') continue;
+    if (localNames.has(row.model) || !isChatGenerationModel(row.model) || machineModels.some((m) => m.model === row.model)) continue;
+    machineModels.push(row);
+  }
+  const shownMachineModels = machineModels.filter((m) => m.model.toLowerCase().includes(modelQuery.trim().toLowerCase()));
   const defaultProviderId = providers.find((p) => p.isDefault)?.id || 'default';
   const activeProviderId = activeProject?.provider === 'lemonade' ? defaultProviderId : activeProject?.provider || defaultProviderId;
   const activeProvider = providers.find((p) => p.id === activeProviderId);
@@ -268,9 +279,9 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
           </div>
         </> : <>
           {modelsLoading && <p role="status" className="rail-empty">{t('modelPopup.loading')}</p>}
-          {!modelsLoading && !err && !chatModels.length && <p role="status" className="rail-empty">{t('modelPopup.none')} <button className="mp-link" onClick={() => onOpenSettings()}>{t('modelPopup.download')}</button></p>}
-          {chatModels.length > 6 && <div className="settings-search mp-model-search"><input type="search" aria-label={t('modelPopup.filter')} placeholder={t('modelPopup.filter')} value={modelQuery} onChange={(e) => setModelQuery(e.target.value)}/></div>}
-          {modelQuery && !shownModels.length && <p role="status" className="rail-empty">{t('modelPopup.noMatch', { query: modelQuery })}</p>}
+          {!modelsLoading && !err && !chatModels.length && !machineModels.length && <p role="status" className="rail-empty">{t('modelPopup.none')} <button className="mp-link" onClick={() => onOpenSettings()}>{t('modelPopup.download')}</button></p>}
+          {chatModels.length + machineModels.length > 6 && <div className="settings-search mp-model-search"><input type="search" aria-label={t('modelPopup.filter')} placeholder={t('modelPopup.filter')} value={modelQuery} onChange={(e) => setModelQuery(e.target.value)}/></div>}
+          {modelQuery && !shownModels.length && !shownMachineModels.length && <p role="status" className="rail-empty">{t('modelPopup.noMatch', { query: modelQuery })}</p>}
           <div className="mp-models">
             {shownModels.map((m) => <div key={m.name} className="mp-model-item">
               <button className="model-row mp-model" aria-pressed={activeProject.model === m.name}
@@ -283,6 +294,18 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
                 <span className="model-role">{busy === m.name ? t('modelPopup.switching') : activeProject.model === m.name ? <><ShellIcon name="check" size={15}/>{t('modelPopup.selected')}</> : isSleeping(m) ? t('modelPopup.sleeping') : m.loaded ? t('modelPopup.loaded') : ''}</span>
               </button>
               {canTune && <button className="shell-icon-button mp-tune" aria-label={t('modelPopup.tune', { model: m.name })} title={t('modelPopup.tuneTitle')} onClick={() => onOpenSettings(m.name)}><ShellIcon name="personalization" size={17}/></button>}
+            </div>)}
+            {shownMachineModels.map((m) => <div key={`machine:${m.model}`} className="mp-model-item" data-machine-model="">
+              <button className="model-row mp-model" aria-pressed={activeProject.model === m.model}
+                disabled={busy !== null} onClick={() => void save(m.model, { model: m.model, routing: 'manual' })}>
+                {/* The machine's load state is not known here: the dot keeps the names aligned and says nothing. */}
+                <span className="model-dot" aria-hidden="true" style={{ visibility: 'hidden' }} />
+                <div className="model-name-group">
+                  <MiddleTruncate className="model-name" text={m.model}/>
+                  <span className="model-quant">{t('modelPopup.onMachine', { machine: m.machine.name })}</span>
+                </div>
+                <span className="model-role">{busy === m.model ? t('modelPopup.switching') : activeProject.model === m.model ? <><ShellIcon name="check" size={15}/>{t('modelPopup.selected')}</> : ''}</span>
+              </button>
             </div>)}
           </div>
           {contextControl}
