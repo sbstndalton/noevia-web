@@ -981,6 +981,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   "machines.modelsNone": "Den maskinen visar inga modeller på den här porten.",
   "machines.modelsError": "Maskinen visade inte sina modeller på den porten.",
   "machines.note.chat": "Svarar med {model} på den maskinen; inget för den här rollen läses in här.",
+  "machines.note.confirmModel": "Den här maskinen serverar inte längre {model} sedan adressen ändrades. Välj modellen igen och tillämpa, annars slutar chattar med den här rollen med ett fel.",
   "machines.unreachable.chat": "Svarar inte. Chattar för den här rollen misslyckas tills den svarar igen, eller flytta tillbaka rollen till den här maskinen.",
   "machines.error.invalidModel": "Välj modellen som den här maskinen erbjuder för rollen.",
   "machines.error.unknownModel": "Den maskinen erbjuder inte den här modellen på den porten. Hitta modellerna igen.",

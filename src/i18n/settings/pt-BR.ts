@@ -981,6 +981,7 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   "machines.modelsNone": "Essa máquina não oferece modelos nesta porta.",
   "machines.modelsError": "A máquina não listou seus modelos nessa porta.",
   "machines.note.chat": "Responde com {model} naquela máquina; nada desta função é carregado aqui.",
+  "machines.note.confirmModel": "Desde a mudança de endereço, esta máquina não serve mais {model}. Escolha o modelo de novo e aplique, ou os chats com esta função terminarão com um erro.",
   "machines.unreachable.chat": "Não está respondendo. Os chats desta função falham até ela responder de novo, ou leve a função de volta para esta máquina.",
   "machines.error.invalidModel": "Escolha o modelo que esta máquina oferece para a função.",
   "machines.error.unknownModel": "Essa máquina não oferece este modelo nessa porta. Busque os modelos de novo.",

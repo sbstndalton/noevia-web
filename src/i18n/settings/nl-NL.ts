@@ -981,6 +981,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   "machines.modelsNone": "Die machine biedt op deze poort geen modellen aan.",
   "machines.modelsError": "De machine heeft op die poort geen modellen genoemd.",
   "machines.note.chat": "Antwoordt met {model} op die machine; voor deze rol wordt hier niets geladen.",
+  "machines.note.confirmModel": "Deze machine serveert {model} niet meer sinds het adres is gewijzigd. Kies het model opnieuw en pas toe, anders eindigen chats met deze rol met een fout.",
   "machines.unreachable.chat": "Reageert niet. Chats voor deze rol mislukken tot hij weer reageert, of zet de rol terug op deze machine.",
   "machines.error.invalidModel": "Kies het model dat deze machine voor de rol aanbiedt.",
   "machines.error.unknownModel": "Die machine biedt dit model niet aan op die poort. Zoek de modellen opnieuw.",

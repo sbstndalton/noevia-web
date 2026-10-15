@@ -981,6 +981,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   "machines.modelsNone": "Dieser Rechner nennt an diesem Port keine Modelle.",
   "machines.modelsError": "Der Rechner hat an diesem Port keine Modelle genannt.",
   "machines.note.chat": "Antwortet mit {model} auf diesem Rechner; für diese Rolle wird hier nichts geladen.",
+  "machines.note.confirmModel": "Dieser Rechner stellt {model} seit der Adressänderung nicht mehr bereit. Wähle das Modell erneut und wende es an, sonst enden Chats mit dieser Rolle mit einem Fehler.",
   "machines.unreachable.chat": "Antwortet nicht. Chats dieser Rolle schlagen fehl, bis er wieder antwortet, oder verschiebe die Rolle zurück auf diesen Rechner.",
   "machines.error.invalidModel": "Wähle das Modell, das dieser Rechner für die Rolle bereitstellt.",
   "machines.error.unknownModel": "Dieser Rechner stellt dieses Modell an diesem Port nicht bereit. Suche seine Modelle erneut.",

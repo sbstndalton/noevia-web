@@ -22,9 +22,9 @@ const REMOTE = ['qa-synthetic-fast-4b', 'qa-synthetic-smart-9b'];
 /** The machine's server, as the on-this-network fetch would reach it: only http://192.168.1.50:8080 answers. */
 async function machineFetch(input) {
   const url = new URL(String(input));
-  if (url.hostname !== '192.168.1.50' || url.port !== '8080') throw Object.assign(Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' });
+  if (!['192.168.1.50', '192.168.1.51'].includes(url.hostname) || url.port !== '8080') throw Object.assign(Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' });
   if (url.pathname === '/health') return new Response('{"status":"ok"}', { status: 200 });
-  if (url.pathname === '/v1/models') return new Response(JSON.stringify({ object: 'list', data: REMOTE.map((id) => ({ id, object: 'model' })) }), { status: 200 });
+  if (url.pathname === '/v1/models') return new Response(JSON.stringify({ object: 'list', data: (url.hostname === '192.168.1.51' ? ['qa-synthetic-other-7b'] : REMOTE).map((id) => ({ id, object: 'model' })) }), { status: 200 });
   return new Response('not found', { status: 404 });
 }
 
@@ -35,7 +35,7 @@ function machinesBackend(role) {
   const store = { get: (k) => values.get(k), set: (k, v) => values.set(k, v), delete: (k) => values.delete(k) };
   const audits = [];
   const audit = (action, actor, detail) => audits.push({ action, actor, detail });
-  const machines = core('inference-machines.cjs').createInferenceMachines({ store, audit, embeddingActive: () => null, localEmbeddingUrl: () => null, log: () => {} });
+  const machines = core('inference-machines.cjs').createInferenceMachines({ store, audit, embeddingActive: () => null, localEmbeddingUrl: () => null, log: () => {}, modelsAt: (address, port) => chatMachines.modelsAt(address, port) });
   const health = core('machine-health.cjs').createMachineHealth({ fetchImpl: machineFetch, decisionFetchImpl: machineFetch });
   const chatMachines = core('chat-machines.cjs').createChatMachines({ machines, health, fetchImpl: machineFetch });
   const routes = core('routes/inference-machines.cjs').createInferenceMachineRoutes({
@@ -135,6 +135,19 @@ run('inference-machines-1840', Number(process.env.QA_PORT || 31840), async (chec
         await smart.scrollIntoViewIfNeeded();
         await shot(page, 'port-not-answering', width, theme);
         await smart.getByLabel('Machine for Smart chat').selectOption({ label: 'This machine' });
+      });
+
+      await check(`${tag}: a changed address whose server no longer lists the model shows a confirm note`, async () => {
+        const fast = page.locator('.machines-assign[data-service="chatFast"]');
+        assert.equal(await fast.locator('[data-note="confirm-model"]').count(), 0, 'no note before the change');
+        await backend.machines.update({ id: backend.machines.chatTarget('fast').machine.id, address: '192.168.1.51' }, 'qa-admin');
+        assert.equal(backend.machines.chatTarget('fast').needsConfirm, true);
+        await page.reload();
+        const note = fast.locator('[data-note="confirm-model"]');
+        await note.waitFor({ timeout: 15000 });
+        assert.match(await note.innerText(), /qa-synthetic-fast-4b/);
+        await fast.scrollIntoViewIfNeeded();
+        await shot(page, 'confirm-model', width, theme);
       });
       assert.deepEqual(errors, []);
       await page.close();

@@ -231,6 +231,7 @@ export function InferenceMachinesSettings(): JSX.Element {
         {s.mode === 'deployment' && <span className="mm-assign-fixed">{t('machines.note.deployment')}</span>}
         {s.id === 'embedding' && <span className="mm-assign-fixed">{t('machines.note.embedding')}</span>}
         {chat && s.machine !== 'local' && !changed && <span className="mm-assign-fixed">{t('machines.note.chat', { model: s.model || '' })}</span>}
+        {chat && s.machine !== 'local' && s.needsConfirm && !changed && <span className="mm-assign-fixed machines-unreachable" role="status" data-note="confirm-model">{t('machines.note.confirmModel', { model: s.model || '' })}</span>}
         {/* #1844: no address of its own and nothing assigned: it follows the decision service. */}
         {s.id === 'sensitivity' && s.machine === 'local' && !s.url && <span className="mm-assign-fixed">{t('machines.note.sensitivityShared')}</span>}
         {health?.state === 'unreachable' && <span className="mm-assign-fixed machines-unreachable" role="status">{t(s.id === 'decision' ? 'machines.unreachable.decision' : chat ? 'machines.unreachable.chat' : 'machines.unreachable.service')}</span>}

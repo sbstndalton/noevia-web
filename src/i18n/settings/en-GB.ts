@@ -986,6 +986,7 @@ export const EN_GB_SETTINGS = {
   "machines.modelsNone": "That machine lists no models at this port.",
   "machines.modelsError": "The machine did not list its models at that port.",
   "machines.note.chat": "Answers from {model} on that machine; nothing for this role loads here.",
+  "machines.note.confirmModel": "This machine no longer serves {model} since its address changed. Choose the model again and apply, or chats on this role will stop with an error.",
   "machines.unreachable.chat": "Not answering. Chats for this role fail until it answers again, or move the role back to this machine.",
   "machines.error.invalidModel": "Choose the model this machine serves for the role.",
   "machines.error.unknownModel": "That machine does not serve this model at that port. Find its models again.",
