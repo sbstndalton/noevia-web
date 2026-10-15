@@ -776,6 +776,7 @@ export const PT_BR: Catalogue = {
   'chat.status.thinking': "pensando…",
   'chat.status.generating': "gerando…",
   'chat.stopped.content': "Interrompido antes de escrever uma resposta.",
+  'chat.stopped.partial': "Interrompido antes de a resposta terminar.",
   'chat.failure.unreachable': "Não foi possível alcançar o noevia. Verifique sua conexão e tente novamente.",
   'chat.failure.stopped': "O modelo parou antes de terminar. Verifique o backend e tente novamente.",
   'chat.failure.incomplete': "Resposta incompleta",

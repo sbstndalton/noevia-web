@@ -762,6 +762,11 @@ export function ChatView({
                           newline, so multi-section answers arrived as one wall
                           of text. */}
                       <MarkdownPreview text={body} autolink />
+                      {/* #1784: a reply stopped partway keeps its text, and says it was stopped, so it never
+                          reads as a finished answer. Quiet, like the Stopped placeholder's sentence. */}
+                      {m.stopped && !(streaming && isLast) && (
+                        <p className="msg-stopped" role="status" data-testid="reply-stopped">{t('chat.stopped.partial')}</p>
+                      )}
                       {/* #1507: a reply the server saved partway (a reload or a cut connection) is marked, and
                           can be retried from its question or continued from where it stopped. */}
                       {m.interrupted && isLast && !streaming && (

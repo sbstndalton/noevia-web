@@ -776,6 +776,7 @@ export const NB_NO: Catalogue = {
   'chat.status.thinking': "tenker…",
   'chat.status.generating': "genererer…",
   'chat.stopped.content': "Stoppet før et svar ble skrevet.",
+  'chat.stopped.partial': "Stoppet før svaret var ferdig.",
   'chat.failure.unreachable': "Får ikke kontakt med noevia. Sjekk tilkoblingen og prøv igjen.",
   'chat.failure.stopped': "Modellen stoppet før den var ferdig. Sjekk backend og prøv igjen.",
   'chat.failure.incomplete': "Ufullstendig svar",

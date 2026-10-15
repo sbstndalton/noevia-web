@@ -776,6 +776,7 @@ export const NL_NL: Catalogue = {
   'chat.status.thinking': "denkt na…",
   'chat.status.generating': "genereert…",
   'chat.stopped.content': "Gestopt voordat er een antwoord was geschreven.",
+  'chat.stopped.partial': "Gestopt voordat het antwoord klaar was.",
   'chat.failure.unreachable': "noevia is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.",
   'chat.failure.stopped': "Het model is gestopt voordat het klaar was. Controleer de backend en probeer het opnieuw.",
   'chat.failure.incomplete': "Onvolledig antwoord",

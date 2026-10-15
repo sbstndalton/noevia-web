@@ -47,5 +47,7 @@ test('#1447 the Stop handler labels a thinking-only reply too: its condition no 
   const src = fs.readFileSync(path.join(SRC, 'App.tsx'), 'utf8');
   assert.match(src, /m\.id === replyId && !m\.content\s*\? \{ \.\.\.m, senderLabel: STOPPED_SENDER \}/);
   assert.doesNotMatch(src, /m\.id === replyId && !m\.content && !m\.reasoning/);
+  // #1784: a reply with text is kept and marked stopped instead.
+  assert.match(src, /: m\.id === replyId \? \{ \.\.\.m, stopped: true \} : m/);
 });
 
