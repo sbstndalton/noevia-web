@@ -32,7 +32,7 @@ test('nothing saved, or an unknown non-llamacpp id, is not a current value', () 
 
 test('the component sends the current choice when toggling, and every locale has the Creative note', () => {
   const tsx = fs.readFileSync(path.join(__dirname, '../../src/components/models/ServiceAssignments.tsx'), 'utf8');
-  assert.match(tsx, /saveReranker\(on, current \|\| null\)/);
+  assert.match(tsx, /saveReranker\(on, savedOutside && !on \? undefined : current \|\| null\)/);
   const dir = path.join(__dirname, '../../src/i18n/models');
   for (const l of ['de-DE', 'en-GB', 'es-ES', 'fr-FR', 'it-IT', 'nb-NO', 'nl-NL', 'pt-BR', 'sv-SE']) {
     assert.match(fs.readFileSync(path.join(dir, `${l}.ts`), 'utf8'), /'mm\.assign\.creativeNote': ".{20,}"/, l);
