@@ -1,4 +1,4 @@
-import type { ProjectFile } from './types';
+import type { DocumentStatus, ProjectFile } from './types';
 import type { MessageKey, Translate } from './i18n';
 import type { UploadProgress } from './api';
 
@@ -89,6 +89,49 @@ export function documentError(d: { error?: string; errorId?: string } | undefine
   return reasonText(t, d.errorId || (d.error ? LEGACY_REASONS[d.error] : undefined), undefined, d.error);
 }
 
+/** #1864/#1865: a per-page outcome, as the server names it (document-sources.cjs notes). */
+export type DocumentNote = { id: string; params?: Record<string, string | number> };
+
+const NOTE_EN: Record<string, string> = {
+  stoppedAtPage: 'stopped at page {page} ({limit})',
+  ocrRetryFailed: 'pages {pages}: OCR retry failed: {reason}',
+  ocrRetryEmpty: 'pages {pages}: OCR retry found no text',
+  ocrRetryUnavailable: 'pages {pages}: OCR retry unavailable (no OCR service is configured)',
+  ocrRetryLimit: 'pages {pages}: not retried (OCR retry limit reached)',
+  ocrRetryRecovered: 'pages {pages}: recovered by an OCR retry; verify numbers against the original',
+};
+const LIMIT_EN: Record<string, string> = { pages: 'page limit', text: 'text limit', extractor: 'the document extraction service needs an update to read page ranges', error: 'read error' };
+const fill = (text: string, params: Record<string, string | number>) => text.replace(/\{(\w+)\}/g, (m, k: string) => (k in params ? String(params[k]) : m));
+
+/** One note in the interface language (English without `t`). An id this client does not know is skipped. */
+export function noteText(note: DocumentNote, t?: Translate): string {
+  if (!(note?.id in NOTE_EN)) return '';
+  const params = { ...(note.params || {}) };
+  if (note.id === 'stoppedAtPage') {
+    const limit = String(params.limit || 'error');
+    const word = limit in LIMIT_EN ? (t ? t(`projects.view.note.limit.${limit}` as MessageKey) : LIMIT_EN[limit]) : limit;
+    params.limit = params.reason ? `${word}: ${params.reason}` : word;
+  }
+  return t ? t(`projects.view.note.${note.id}` as MessageKey, params) : fill(NOTE_EN[note.id], params);
+}
+
+const pageList = (pages: { number: number }[]) => pages.slice(0, 20).map(p => p.number).join(', ') + (pages.length > 20 ? '…' : '');
+/** The notes of a document record, the same list the server sends with a skipped source. */
+export function documentNotes(d: DocumentStatus | undefined): DocumentNote[] {
+  if (!d) return [];
+  const out: DocumentNote[] = [];
+  if (d.stoppedAt) out.push({ id: 'stoppedAtPage', params: { page: d.stoppedAt.page, limit: d.stoppedAt.limit, ...(d.stoppedAt.error ? { reason: d.stoppedAt.error } : {}) } });
+  const pages = d.pageStatus || [];
+  const failed = new Map<string, { number: number }[]>();
+  for (const p of pages) if (p.retry?.outcome === 'failed') { const r = p.retry.error || 'unknown'; failed.set(r, [...(failed.get(r) || []), p]); }
+  for (const [reason, list] of failed) out.push({ id: 'ocrRetryFailed', params: { pages: pageList(list), reason } });
+  for (const [outcome, id] of [['empty', 'ocrRetryEmpty'], ['unavailable', 'ocrRetryUnavailable'], ['skipped', 'ocrRetryLimit'], ['recovered', 'ocrRetryRecovered']] as const) {
+    const list = pages.filter(p => p.retry?.outcome === outcome);
+    if (list.length) out.push({ id, params: { pages: pageList(list) } });
+  }
+  return out;
+}
+
 export function sourceStatus(file: ProjectFile, t?: Translate): string {
   const d = file.document;
   if (!d) return '';
@@ -102,13 +145,23 @@ export function sourceStatus(file: ProjectFile, t?: Translate): string {
   return `${d.stale ? 'Refresh failed · using previous text' : d.state === 'failed' ? (t ? t('projects.view.notReadable') : 'Not readable') : d.state === 'partial' || fallback.length ? partial : (d.pageStatus || []).some(p => p.status === 'ocr') ? 'Text ready · OCR used; verify numbers' : 'Native text ready'}${pages}` +
     `${incomplete.length ? ' · check pages ' + incomplete.slice(0, 20).map(p => p.number).join(', ') + (incomplete.length > 20 ? '…' : '') : ''}${d.truncated ? ' · extraction/summary limited' : ''}` +
     `${fallback.length ? ' · ' + (t ? t('projects.view.reason.nativeFallback', { pages: fallbackPages }) : `pages ${fallbackPages}: layout analysis found no text, so the PDF's own text layer was used; reading order and tables there may be rough`) : ''}` +
+    `${documentNotes(d).map(n => noteText(n, t)).filter(Boolean).map(text => ' · ' + text).join('')}` +
     `${d.error ? ' · ' + documentError(d, t) : ''}${d.indexing === 'pending' ? ' · indexing' : sourceChars(file) > 0 && ['unavailable', 'failed', 'partial'].includes(d.indexing || '') ? ' · search limited; page reads available for extracted text' : ''}`;
 }
-export type SkippedSource = { folder: string; file?: string; reason: string; code?: string; retained?: boolean };
+/** #1864/#1865: a document's skipped entry also carries its per-page outcomes as `notes`, with the server's
+ *  problem line without them as `reasonBase`, so they can be worded in the interface language. */
+export type SkippedSource = { folder: string; file?: string; reason: string; code?: string; retained?: boolean; reasonBase?: string; notes?: DocumentNote[] };
 
-/** What a skipped source says: its storage code's words (#1428), else the login sentence (#770), else the reason. */
+/** What a skipped source says: its storage code's words (#1428), else the login sentence (#770), else the reason
+ *  (with its page outcomes in the interface language when the server sent them as notes). */
 function skippedReasonText(s: SkippedSource, t?: Translate): string {
-  return storageCodeText(s.code, t) || (isStorageLoginRejected(s.reason) ? storageLoginText(t) : s.reason);
+  const coded = storageCodeText(s.code, t) || (isStorageLoginRejected(s.reason) ? storageLoginText(t) : '');
+  if (coded) return coded;
+  if (t && typeof s.reasonBase === 'string' && Array.isArray(s.notes) && s.notes.length) {
+    const words = s.notes.map(n => noteText(n, t)).filter(Boolean);
+    if (words.length) return `${s.reasonBase.replace(/\.$/, '')}; ${words.join('; ').replace(/\.$/, '')}.`;
+  }
+  return s.reason;
 }
 
 export function sourceRefreshEntries(skipped: SkippedSource[], t?: Translate): string[] {
