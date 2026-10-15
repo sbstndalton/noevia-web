@@ -82,6 +82,16 @@ run('models-switches-1665-1666-1667', Number(process.env.QA_PORT || 31665), asyn
         await shot(page, '1667-creative-row', width, theme, row);
       });
 
+      await check(`${tag}: #1816 the Creative row says it is used only when already loaded, and the note fits the row`, async () => {
+        const row = overview.locator('[data-role="creative"]');
+        const note = row.getByText("Used only when it's already loaded, to avoid swapping models.");
+        await note.waitFor({ timeout: 3000 });
+        const [rowBox, noteBox] = [await row.boundingBox(), await note.boundingBox()];
+        assert.ok(noteBox.x >= rowBox.x - 1 && noteBox.x + noteBox.width <= rowBox.x + rowBox.width + 1, 'the note stays inside the row');
+        assert.equal(await overview.locator('[data-role="fast"]').getByText('Used only when').count(), 0, 'only the Creative row has it');
+        await shot(page, '1816-creative-note', width, theme, row);
+      });
+
       await check(`${tag}: #1666 the Decision row tells an administrator where to choose its model`, async () => {
         const row = overview.locator('[data-service="decision"]');
         assert.equal((await row.locator('.mm-assign-control').textContent()).trim(), 'Choose its address and model in Settings, Models and routing, Decision service setup.');
@@ -109,6 +119,34 @@ run('models-switches-1665-1666-1667', Number(process.env.QA_PORT || 31665), asyn
         assert.equal((await row.locator('.mm-assign-model').textContent()).trim(), 'laya');
         assert.equal((await row.locator('.mm-assign-control').textContent()).trim(), 'Model and address set in Settings, Models and routing, Decision service setup.');
         await shot(page, '1666-decision-row', width, theme, row);
+      });
+      assert.deepEqual(errors, []);
+      await page.close();
+    } finally { state.close(); }
+  }
+
+  // #1817: a saved llama.cpp reranker that the catalogue no longer offers must still be switchable off.
+  for (const [width, height, theme] of VIEWS) {
+    const tag = `unoffered saved reranker ${width} px ${theme}`;
+    const state = await createState({ rerankSavedOutside: true });
+    try {
+      const { page, errors } = await openPage(browser, state, { width, height, theme });
+      const overview = await overviewOf(page, origin);
+      const reranker = overview.locator('[data-service="reranker"]');
+      await check(`${tag}: #1817 turning reranking off succeeds (200, no error toast) and keeps the saved choice`, async () => {
+        const toggle = reranker.getByRole('switch', { name: 'Reranking' });
+        await toggle.waitFor({ timeout: 3000 });
+        assert.equal(await toggle.isChecked(), true);
+        const put = page.waitForResponse((r) => r.url().endsWith('/api/models/reranker') && r.request().method() === 'PUT');
+        await toggle.click();
+        const res = await put;
+        assert.equal(res.status(), 200, 'the PUT is accepted');
+        assert.equal('choice' in (res.request().postDataJSON() || {}), false, 'no choice key is sent for an unoffered saved choice');
+        await overview.getByRole('status').filter({ hasText: 'Reranking is off. Project search ranks results without it.' }).waitFor({ timeout: 5000 });
+        assert.equal(await reranker.getByRole('switch', { name: 'Reranking' }).isChecked(), false);
+        assert.equal(await overview.getByRole('alert').count(), 0, 'no error is shown');
+        assert.deepEqual(JSON.parse(state.values.get('rerank:configuration')), { enabled: false, choice: 'llamacpp:synthetic-gone-reranker' });
+        await shot(page, '1817-reranker-off-unoffered', width, theme, reranker);
       });
       assert.deepEqual(errors, []);
       await page.close();

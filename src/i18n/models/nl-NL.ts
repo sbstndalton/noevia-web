@@ -32,6 +32,7 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.assign.role.code': "Code",
   'mm.assign.role.vision': "Beeld",
   'mm.assign.role.creative': "Creatief",
+  'mm.assign.creativeNote': "Wordt alleen gebruikt als het al geladen is, om het wisselen van model te voorkomen.",
   'mm.assign.state.active': "Actief",
   'mm.assign.state.configured': "Ingesteld",
   'mm.assign.state.switching': "Indexeren",

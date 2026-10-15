@@ -36,6 +36,7 @@ export const EN_GB_MODELS = {
   'mm.assign.role.code': "Code",
   'mm.assign.role.vision': "Vision",
   'mm.assign.role.creative': "Creative",
+  'mm.assign.creativeNote': "Used only when it's already loaded, to avoid swapping models.",
   'mm.assign.state.active': "Running",
   'mm.assign.state.configured': "Configured",
   'mm.assign.state.switching': "Re-indexing",

@@ -32,9 +32,10 @@ const RERANK_ENV = { NOEVIA_FEATURE_RAG_RERANK: 'true', RERANK_BACKEND: 'tei', R
  * One synthetic server state. `embedLoaded`: whether the managed embedding service reports its model
  * loaded. `savedDecisionUrl`: a decision URL an administrator saved in Settings (or none).
  */
-async function createState({ embedLoaded = true, savedDecisionUrl = null, rerank = false, member = false } = {}) {
+async function createState({ embedLoaded = true, savedDecisionUrl = null, rerank = false, member = false, rerankSavedOutside = false } = {}) {
   // #1665: `rerank` adds the live reranker environment; `member` signs in a member instead of the administrator.
-  const env = { ...ENV, ...(rerank ? RERANK_ENV : {}) };
+  // #1817: `rerankSavedOutside` saves a llama.cpp reranker choice that the catalogue no longer offers (its address is configured).
+  const env = { ...ENV, ...(rerank || rerankSavedOutside ? RERANK_ENV : {}), ...(rerankSavedOutside ? { RERANK_LLAMACPP_BASE_URL: 'http://rerank-llama.invalid:8091' } : {}) };
   // Router rows as llama.cpp lists them: one chat model asleep after its idle time (#1747/#1758), one
   // loaded, one unloaded, the embedding model (the router's own status says nothing about the sidecar)
   // and the stale Laya preset (#1796).
@@ -72,6 +73,7 @@ async function createState({ embedLoaded = true, savedDecisionUrl = null, rerank
   const values = new Map();
   const store = { get: (k) => values.get(k), set: (k, v) => values.set(k, v), delete: (k) => values.delete(k) };
   const audits = [];
+  if (rerankSavedOutside) values.set('rerank:configuration', JSON.stringify({ enabled: true, choice: 'llamacpp:synthetic-gone-reranker' }));
   const decisionSettings = core('decision-settings.cjs').createDecisionSettings({ store, env, fetchImpl: async () => Response.json({ ready: true }), audit: (...a) => audits.push(a) });
   if (savedDecisionUrl) decisionSettings.save({ url: savedDecisionUrl, timeoutMs: 1200 }, 'qa-admin');
   // #1665: the reranker switch, when this core has it (an older core shows the "before" state).

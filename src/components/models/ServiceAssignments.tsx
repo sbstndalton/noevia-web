@@ -11,7 +11,7 @@ import { matchesModelUse } from '../../model-guidance';
 import { notifyModelsChanged, useModelsChanged } from '../../models-changed';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
-import { embeddingOptions, fetchAssignments, finishEmbeddingSwitch, resetReranker, saveReranker, serviceSwitchEmbedding, switchEmbedding, turnEmbeddingOff } from './assignments';
+import { embeddingOptions, fetchAssignments, rerankerCurrent, finishEmbeddingSwitch, resetReranker, saveReranker, serviceSwitchEmbedding, switchEmbedding, turnEmbeddingOff } from './assignments';
 import type { Assignments, ServiceAssignment, ServiceId } from './assignments';
 import { errorText } from './mm';
 import { isSleeping } from '../../model-residency';
@@ -88,14 +88,15 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
   };
   const rerankerControls = (svc: ServiceAssignment) => {
     const choices = svc.choices || [];
-    const current = svc.choice && choices.some((c) => c.id === svc.choice) ? svc.choice : '';
+    const current = rerankerCurrent(svc);
+    const savedOutside = current !== '' && !choices.some((c) => c.id === current);
     // The reranker service (TEI) is named by its model alone; a llama.cpp preset says where it runs.
     const label = (c: { backend: string; model: string }) => (c.backend === 'tei' ? c.model : t('mm.assign.rerankerLlamacpp', { model: c.model }));
     return <span className="mm-assign-reranker" data-testid="reranker-switch">
       <label className="mm-assign-toggle">
         <input type="checkbox" role="switch" className="noevia-switch" checked={svc.enabled === true}
           disabled={busy !== '' || (!current && svc.enabled !== true)}
-          onChange={(e) => { const on = e.currentTarget.checked; void runReranker(() => saveReranker(on, current || null), on ? 'mm.assign.rerankerOn' : 'mm.assign.rerankerOff'); }}/>
+          onChange={(e) => { const on = e.currentTarget.checked; void runReranker(() => saveReranker(on, savedOutside && !on ? undefined : current || null), on ? 'mm.assign.rerankerOn' : 'mm.assign.rerankerOff'); }}/>
         <span>{t('mm.assign.rerankerToggle')}</span>
       </label>
       {choices.length > 0
@@ -103,6 +104,7 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
             <select aria-label={t('mm.assign.rerankerModel')} value={current} disabled={busy !== ''}
               onChange={(e) => { const id = e.target.value; if (id) void runReranker(() => saveReranker(svc.enabled === true, id), 'mm.assign.saved'); }}>
               {!current && <option value="">{t('mm.assign.rerankerPick')}</option>}
+              {savedOutside && <option value={current}>{label({ backend: 'llamacpp', model: current.slice('llamacpp:'.length) })}</option>}
               {choices.map((c) => <option key={c.id} value={c.id}>{label(c)}</option>)}
             </select></label>
         : <span className="mm-assign-fixed">{t('mm.assign.rerankerNoOptions')}</span>}
@@ -166,7 +168,7 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
             </select></label></span>
         : <span className="mm-assign-model" title={current || undefined}>{current || t('mm.assign.none')}</span>}
       <StatePill state={modelState(current)}/>
-      <span className="mm-assign-control"/>
+      <span className="mm-assign-control">{role === 'creative' && <span className="mm-assign-fixed" data-testid="creative-swap-note">{t('mm.assign.creativeNote')}</span>}</span>
     </li>;
   };
 

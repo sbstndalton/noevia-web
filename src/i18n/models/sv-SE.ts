@@ -32,6 +32,7 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.assign.role.code': "Kod",
   'mm.assign.role.vision': "Bild",
   'mm.assign.role.creative': "Kreativ",
+  'mm.assign.creativeNote': "Används bara när den redan är laddad, för att undvika modellbyten.",
   'mm.assign.state.active': "Körs",
   'mm.assign.state.configured': "Konfigurerad",
   'mm.assign.state.switching': "Indexerar",
