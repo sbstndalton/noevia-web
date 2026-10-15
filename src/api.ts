@@ -526,9 +526,9 @@ export function fetchToolboxes(): Promise<{ toolboxes: Toolbox[]; mcp: McpStatus
   return getJson('/api/toolboxes');
 }
 
-export interface AutoRoles { fast: string; smart: string; vision?: string; code?: string }
+export interface AutoRoles { fast: string; smart: string; vision?: string; code?: string; creative?: string }
 
-export function fetchAutoRoles(): Promise<{ configured: boolean; roles: AutoRoles | null; missing?: { role: 'fast' | 'smart' | 'vision' | 'code'; model: string }[] }> {
+export function fetchAutoRoles(): Promise<{ configured: boolean; roles: AutoRoles | null; missing?: { role: 'fast' | 'smart' | 'vision' | 'code' | 'creative'; model: string }[] }> {
   // #1509: shared in flight and for MODEL_READ_TTL_MS; setAutoRoles and model writes drop it.
   return cached(AUTO_ROLES_KEY, () => getJson('/api/auto-roles'), MODEL_READ_TTL_MS);
 }

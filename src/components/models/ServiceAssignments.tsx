@@ -11,15 +11,15 @@ import { matchesModelUse } from '../../model-guidance';
 import { notifyModelsChanged, useModelsChanged } from '../../models-changed';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
-import { embeddingOptions, fetchAssignments, finishEmbeddingSwitch, serviceSwitchEmbedding, switchEmbedding, turnEmbeddingOff } from './assignments';
+import { embeddingOptions, fetchAssignments, finishEmbeddingSwitch, resetReranker, saveReranker, serviceSwitchEmbedding, switchEmbedding, turnEmbeddingOff } from './assignments';
 import type { Assignments, ServiceAssignment, ServiceId } from './assignments';
 import { errorText } from './mm';
 import { isSleeping } from '../../model-residency';
 
 const SERVICE: Record<ServiceId, MessageKey> = { embedding: 'mm.assign.svc.embedding', reranker: 'mm.assign.svc.reranker', decision: 'mm.assign.svc.decision', sensitivity: 'mm.assign.svc.sensitivity', ocr: 'mm.assign.svc.ocr', documents: 'mm.assign.svc.documents' };
-const ROLES = ['fast', 'smart', 'code', 'vision'] as const;
+const ROLES = ['fast', 'smart', 'code', 'vision', 'creative'] as const;
 type Role = (typeof ROLES)[number];
-const ROLE: Record<Role, MessageKey> = { fast: 'mm.assign.role.fast', smart: 'mm.assign.role.smart', code: 'mm.assign.role.code', vision: 'mm.assign.role.vision' };
+const ROLE: Record<Role, MessageKey> = { fast: 'mm.assign.role.fast', smart: 'mm.assign.role.smart', code: 'mm.assign.role.code', vision: 'mm.assign.role.vision', creative: 'mm.assign.role.creative' };
 type Tone = 'good' | 'warn' | 'bad' | 'muted';
 const STATE: Record<string, [MessageKey, Tone]> = {
   active: ['mm.assign.state.active', 'good'], configured: ['mm.assign.state.configured', 'muted'], switching: ['mm.assign.state.switching', 'warn'], missing: ['mm.assign.state.missing', 'bad'], notInstalled: ['mm.assign.state.notInstalled', 'bad'], off: ['mm.assign.state.off', 'muted'],
@@ -59,7 +59,7 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
     if (!next.fast || !next.smart) { setError(t('mm.route.needBoth')); return; }
     setBusy(role); setError(''); setStatus('');
     try {
-      await setAutoRoles({ fast: next.fast, smart: next.smart, vision: next.vision || '', code: next.code || '' });
+      await setAutoRoles({ fast: next.fast, smart: next.smart, vision: next.vision || '', code: next.code || '', creative: next.creative || '' });
       setRoles(next); setStatus(t('mm.assign.saved')); notifyModelsChanged();
     } catch (e) { setError(errorText(e, t('mm.saveError'))); } finally { setBusy(''); }
   };
@@ -74,6 +74,41 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
       else setStatus(outcome === 'done' ? t('mm.assign.saved') : outcome === 'diaryPending' ? t('mm.assign.diaryPending', { model }) : t('mm.assign.reindexing', { model }));
       setEmbedPick(''); notifyModelsChanged(); load();
     } catch (e) { setError(errorText(e, t('mm.saveError'))); } finally { setBusy(''); }
+  };
+
+  // #1665: the reranker's runtime switch. Each change applies at once (like the role pickers); the server checks
+  // the administrator, audits it, and maps the chosen id to the reranker's address (none is ever sent here).
+  const runReranker = async (action: () => Promise<unknown>, done: MessageKey) => {
+    setBusy('reranker'); setError(''); setStatus('');
+    try { await action(); setStatus(t(done)); notifyModelsChanged(); load(); }
+    catch (e) {
+      const id = (e as { id?: string }).id;
+      setError(id === 'noReranker' ? t('mm.assign.rerankerNoChoice') : id === 'unknownReranker' ? t('mm.assign.rerankerUnknown') : errorText(e, t('mm.saveError')));
+    } finally { setBusy(''); }
+  };
+  const rerankerControls = (svc: ServiceAssignment) => {
+    const choices = svc.choices || [];
+    const current = svc.choice && choices.some((c) => c.id === svc.choice) ? svc.choice : '';
+    // The reranker service (TEI) is named by its model alone; a llama.cpp preset says where it runs.
+    const label = (c: { backend: string; model: string }) => (c.backend === 'tei' ? c.model : t('mm.assign.rerankerLlamacpp', { model: c.model }));
+    return <span className="mm-assign-reranker" data-testid="reranker-switch">
+      <label className="mm-assign-toggle">
+        <input type="checkbox" role="switch" className="noevia-switch" checked={svc.enabled === true}
+          disabled={busy !== '' || (!current && svc.enabled !== true)}
+          onChange={(e) => { const on = e.currentTarget.checked; void runReranker(() => saveReranker(on, current || null), on ? 'mm.assign.rerankerOn' : 'mm.assign.rerankerOff'); }}/>
+        <span>{t('mm.assign.rerankerToggle')}</span>
+      </label>
+      {choices.length > 0
+        ? <label className="mm-select"><span className="sr-only">{t('mm.assign.rerankerModel')}</span>
+            <select aria-label={t('mm.assign.rerankerModel')} value={current} disabled={busy !== ''}
+              onChange={(e) => { const id = e.target.value; if (id) void runReranker(() => saveReranker(svc.enabled === true, id), 'mm.assign.saved'); }}>
+              {!current && <option value="">{t('mm.assign.rerankerPick')}</option>}
+              {choices.map((c) => <option key={c.id} value={c.id}>{label(c)}</option>)}
+            </select></label>
+        : <span className="mm-assign-fixed">{t('mm.assign.rerankerNoOptions')}</span>}
+      {svc.source === 'admin' && <button type="button" className="popup-tab" disabled={busy !== ''} onClick={() => void runReranker(resetReranker, 'mm.assign.rerankerReset')}>{t('mm.assign.useDeployment')}</button>}
+      <span className="mm-assign-fixed">{t(svc.source === 'admin' ? 'mm.assign.rerankerFromSettings' : 'mm.assign.rerankerFromDeployment')}</span>
+    </span>;
   };
 
   const turnOff = async () => {
@@ -106,10 +141,12 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
             : <span className="mm-assign-fixed">{t(svc.managed ? 'mm.assign.noEmbeddingInstalled' : 'mm.assign.noEmbeddingOptions')}</span>)}
         {svc.id === 'embedding' && admin && svc.canTurnOff && !embedPick && <button className="popup-tab" disabled={busy !== ''} onClick={() => void turnOff()}>{t('mm.assign.turnOff')}</button>}
         {/* #1695: a reranker whose file is gone says so, and names what it can be set to instead. */}
-        {svc.id === 'reranker' && svc.state === 'missing' && svc.model
+        {svc.id === 'reranker' && admin && svc.canChange ? rerankerControls(svc)
+          : svc.id === 'reranker' && svc.state === 'missing' && svc.model
           ? <span className="mm-assign-fixed" data-testid="reranker-missing">{svc.options?.length ? t('mm.assign.rerankerMissingWith', { models: svc.options.map((o) => (typeof o === 'string' ? o : o.model)).join(', ') }) : t('mm.assign.rerankerMissing')}</span>
           // #1796: the decision address saved in Settings, or the sensitivity check that shares it, says so.
-          : svc.id === 'decision' && svc.source === 'admin' ? <span className="mm-assign-fixed">{t('mm.assign.decisionFromSettings')}</span>
+          // #1666: administrators choose the decision model (and address) in Decision service setup; say where.
+          : svc.id === 'decision' && admin ? <span className="mm-assign-fixed">{t(svc.source !== 'admin' ? 'mm.assign.decisionChoose' : svc.modelSource === 'admin' ? 'mm.assign.decisionModelFromSettings' : 'mm.assign.decisionFromSettings')}</span>
           : svc.id === 'sensitivity' && svc.shared ? <span className="mm-assign-fixed">{t('mm.assign.sensitivityShared')}</span>
           : (svc.id === 'reranker' || svc.id === 'ocr' || svc.id === 'documents' || svc.id === 'decision' || svc.id === 'sensitivity') && <span className="mm-assign-fixed">{t('mm.assign.fixedByServer')}</span>}
       </span>
@@ -123,7 +160,7 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
       {admin && roles
         ? <span className="mm-assign-model"><label className="mm-select"><span className="sr-only">{t(ROLE[role])}</span>
             <select aria-label={t(ROLE[role])} value={current} disabled={busy !== ''} onChange={(e) => void saveRole(role, e.target.value)}>
-              {(role === 'vision' || role === 'code' || !current) && <option value="">{t('mm.assign.none')}</option>}
+              {(role === 'vision' || role === 'code' || role === 'creative' || !current) && <option value="">{t('mm.assign.none')}</option>}
               {pool.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
               {current && !pool.some((m) => m.name === current) && <option value={current}>{current}</option>}
             </select></label></span>

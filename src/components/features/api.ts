@@ -41,7 +41,8 @@ export const saveFeature = (name: FeatureName, enabled: boolean) => apiFetch(`/a
   method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }),
 }).then(r => read<FeatureInfo>(r, 'Could not save the feature')).then(v => { invalidateCached(FEATURES_KEY); return v; });
 
-export interface DecisionSettings { url: string; timeoutMs: number; source?: string }
+// #1666: `model` is the decision model chosen here ('' = automatic, the deployment's); `models` the choosable ids.
+export interface DecisionSettings { url: string; timeoutMs: number; source?: string; model?: string; models?: string[]; deploymentModel?: string }
 export const fetchDecisionSettings = () => apiFetch('/api/admin/decision-settings').then(r => read<DecisionSettings>(r, 'Could not load decision settings'));
 export const saveDecisionSettings = (value: DecisionSettings) => apiFetch('/api/admin/decision-settings', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(value) }).then(r => read<DecisionSettings>(r, 'Could not save decision settings'));
 // #1765: forgets the address saved in Settings; the deployment's decision service applies again.
