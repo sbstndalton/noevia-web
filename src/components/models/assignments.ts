@@ -3,8 +3,9 @@
 // POST /api/embedding migration: set-next → switch → finish). Kept React-free.
 import { apiFetch } from '../../api';
 
-export type ServiceId = 'embedding' | 'reranker' | 'decision' | 'ocr' | 'documents';
-export type ServiceState = 'active' | 'switching' | 'missing' | 'off';
+export type ServiceId = 'embedding' | 'reranker' | 'decision' | 'sensitivity' | 'ocr' | 'documents';
+/** 'unloaded' (#1795): embedding only, its model is installed but not loaded, as its card says. */
+export type ServiceState = 'active' | 'switching' | 'missing' | 'off' | 'unloaded';
 export interface ServiceAssignment {
   id: ServiceId; model: string | null; state: ServiceState; canChange: boolean;
   next?: string; ready?: boolean;
@@ -15,6 +16,10 @@ export interface ServiceAssignment {
   managed?: boolean;
   /** #1668: admins only, managed service: "Turn embedding off" is possible now. */
   canTurnOff?: boolean;
+  /** #1796, decision, admins only: 'admin' when the address saved in Settings replaces the deployment's. */
+  source?: 'admin' | 'deployment';
+  /** #1796, sensitivity: true when the check uses the decision service itself. */
+  shared?: boolean;
 }
 export interface Assignments { admin: boolean; services: ServiceAssignment[]; available?: boolean }
 

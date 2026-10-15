@@ -501,6 +501,7 @@ export const FR_FR: Catalogue = {
   'modelPopup.switching': "changement…",
   'modelPopup.selected': "Sélectionné",
   'modelPopup.loaded': "Chargé",
+  'modelPopup.sleeping': "En veille",
   'modelPopup.tune': "Régler {model}",
   'modelPopup.tuneTitle': "Régler ce modèle",
   'modelPopup.context': "Contexte",

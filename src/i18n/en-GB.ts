@@ -512,6 +512,7 @@ export const EN_GB = {
   'modelPopup.switching': "switching…",
   'modelPopup.selected': "Selected",
   'modelPopup.loaded': "Loaded",
+  'modelPopup.sleeping': "Sleeping",
   'modelPopup.tune': "Tune {model}",
   'modelPopup.tuneTitle': "Tune this model",
   'modelPopup.context': "Context",

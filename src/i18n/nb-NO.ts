@@ -501,6 +501,7 @@ export const NB_NO: Catalogue = {
   'modelPopup.switching': "bytter…",
   'modelPopup.selected': "Valgt",
   'modelPopup.loaded': "Lastet",
+  'modelPopup.sleeping': "Hviler",
   'modelPopup.tune': "Juster {model}",
   'modelPopup.tuneTitle': "Juster denne modellen",
   'modelPopup.context': "Kontekst",

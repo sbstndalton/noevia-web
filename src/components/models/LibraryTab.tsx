@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { isResident, isSleeping } from '../../model-residency';
 import { apiFetch, fetchInstalledModels } from '../../api';
 import type { InstalledModel } from '../../types';
 import { MtpControl } from '../MtpControl';
@@ -152,7 +153,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   const servable = installed
     .filter(m => !needle || m.name.toLowerCase().includes(needle))
     .filter(m => {
-      if (filter === 'loaded') return m.loaded;
+      if (filter === 'loaded') return isResident(m);
       if (filter === 'vision') return !!fileFor(m.name)?.projector || m.labels.includes('vision');
       // "Needs setup" means the engine lists it but no models.ini section
       // points at a file, so it cannot actually be served.
@@ -221,15 +222,16 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   </div>;
 }
 
-type PillState = 'loaded' | 'unloaded' | 'failed' | 'missing' | 'service';
+type PillState = 'loaded' | 'sleeping' | 'unloaded' | 'failed' | 'missing' | 'service';
 const PILL: Record<PillState, [MessageKey, 'good' | 'muted' | 'bad']> = {
-  loaded: ['mm.loaded', 'good'], unloaded: ['mm.card.unloaded', 'muted'], failed: ['mm.card.failed', 'bad'], missing: ['mm.card.missing', 'bad'], service: ['mm.card.servedElsewhere', 'muted'],
+  loaded: ['mm.loaded', 'good'], sleeping: ['mm.card.sleeping', 'muted'], unloaded: ['mm.card.unloaded', 'muted'], failed: ['mm.card.failed', 'bad'], missing: ['mm.card.missing', 'bad'], service: ['mm.card.servedElsewhere', 'muted'],
 };
 
 function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDeleted, runtimeOptions, onRefresh, admin }: { admin: boolean; model: InstalledModel; file?: FileEntry; update?: Update; busy: boolean; onToggle: () => void; onConfigure: () => void; onDeleted: (error?: string | null, rolesCleared?: string[]) => void; runtimeOptions: boolean; onRefresh: () => void }) {
   const t = useT();
   const [detail, setDetail] = useState<Detail | null>(null), [open, setOpen] = useState(false), [confirming, setConfirming] = useState(false), [deleting, setDeleting] = useState(false);
-  const state = m.failed ? 'failed' : m.loaded ? 'loaded' : 'unloaded';
+  // #1761: a model asleep after its idle time is not "Loaded": its weights are freed until the next request.
+  const state = m.failed ? 'failed' : isSleeping(m) ? 'sleeping' : m.loaded ? 'loaded' : 'unloaded';
   useEffect(() => { if (open && file && !detail) void mm<Detail>(`models/detail?key=${encodeURIComponent(file.key)}`).then(setDetail).catch(() => {}); }, [open, file, detail]);
   const model = detail?.summary?.model || {};
   const system = isSystemModel(m.name);
@@ -246,9 +248,10 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
   const sizeLabel = formatModelSizeGB(m.sizeGB ?? (file ? bytesToModelSizeGB(file.bytes) : null), appLocale());
   // #1660 review: Load/Unload, Tune and Delete are administrator controls; members see the cards read-only.
   const engineControls = admin && !system && !protectedModel && !missing;
-  const pill: PillState = missing ? 'missing' : m.servedElsewhere ? 'service' : m.failed ? 'failed' : m.loaded ? 'loaded' : 'unloaded';
+  const pill: PillState = missing ? 'missing' : m.servedElsewhere ? 'service' : m.failed ? 'failed' : isSleeping(m) ? 'sleeping' : m.loaded ? 'loaded' : 'unloaded';
   return <article className={`model-card surface${open ? ' is-open' : ''}${confirming ? ' is-confirming' : ''}`} data-state={state} aria-label={m.name}>
     <header className="model-card-head"><h3 className="model-card-name"><MiddleTruncate text={m.name}/></h3><span className="model-card-state mm-state" data-tone={PILL[pill][1]}>{t(PILL[pill][0])}</span></header>
+    {pill === 'sleeping' && <p className="model-card-meta">{t('mm.card.sleepingNote')}</p>}
     <p className="model-card-meta">
       {/* #443/#1088: one size source (decimal GB through the shared formatter) everywhere. */}
       {sizeLabel && <span>{sizeLabel}</span>}

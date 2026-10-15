@@ -14,15 +14,16 @@ import type { MessageKey } from '../../i18n';
 import { embeddingOptions, fetchAssignments, finishEmbeddingSwitch, serviceSwitchEmbedding, switchEmbedding, turnEmbeddingOff } from './assignments';
 import type { Assignments, ServiceAssignment, ServiceId } from './assignments';
 import { errorText } from './mm';
+import { isSleeping } from '../../model-residency';
 
-const SERVICE: Record<ServiceId, MessageKey> = { embedding: 'mm.assign.svc.embedding', reranker: 'mm.assign.svc.reranker', decision: 'mm.assign.svc.decision', ocr: 'mm.assign.svc.ocr', documents: 'mm.assign.svc.documents' };
+const SERVICE: Record<ServiceId, MessageKey> = { embedding: 'mm.assign.svc.embedding', reranker: 'mm.assign.svc.reranker', decision: 'mm.assign.svc.decision', sensitivity: 'mm.assign.svc.sensitivity', ocr: 'mm.assign.svc.ocr', documents: 'mm.assign.svc.documents' };
 const ROLES = ['fast', 'smart', 'code', 'vision'] as const;
 type Role = (typeof ROLES)[number];
 const ROLE: Record<Role, MessageKey> = { fast: 'mm.assign.role.fast', smart: 'mm.assign.role.smart', code: 'mm.assign.role.code', vision: 'mm.assign.role.vision' };
 type Tone = 'good' | 'warn' | 'bad' | 'muted';
 const STATE: Record<string, [MessageKey, Tone]> = {
   active: ['mm.assign.state.active', 'good'], switching: ['mm.assign.state.switching', 'warn'], missing: ['mm.assign.state.missing', 'bad'], notInstalled: ['mm.assign.state.notInstalled', 'bad'], off: ['mm.assign.state.off', 'muted'],
-  loaded: ['mm.loaded', 'good'], unloaded: ['mm.card.unloaded', 'muted'], unset: ['mm.assign.state.unset', 'muted'],
+  loaded: ['mm.loaded', 'good'], sleeping: ['mm.card.sleeping', 'muted'], unloaded: ['mm.card.unloaded', 'muted'], unset: ['mm.assign.state.unset', 'muted'],
 };
 
 export function StatePill({ state }: { state: string }): JSX.Element {
@@ -50,7 +51,7 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
   const admin = info?.admin === true;
   const chat = models.filter((m) => !m.missingFile && isChatGenerationModel(m.name, m.labels));
   const byName = new Map(models.map((m) => [m.name, m]));
-  const modelState = (name: string | null | undefined) => !name ? 'unset' : !byName.has(name) || byName.get(name)!.missingFile ? 'missing' : byName.get(name)!.loaded ? 'loaded' : 'unloaded';
+  const modelState = (name: string | null | undefined) => !name ? 'unset' : !byName.has(name) || byName.get(name)!.missingFile ? 'missing' : isSleeping(byName.get(name)) ? 'sleeping' : byName.get(name)!.loaded ? 'loaded' : 'unloaded';
 
   const saveRole = async (role: Role, model: string) => {
     if (!roles) return;
@@ -106,7 +107,10 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
         {/* #1695: a reranker whose file is gone says so, and names what it can be set to instead. */}
         {svc.id === 'reranker' && svc.state === 'missing' && svc.model
           ? <span className="mm-assign-fixed" data-testid="reranker-missing">{svc.options?.length ? t('mm.assign.rerankerMissingWith', { models: svc.options.map((o) => (typeof o === 'string' ? o : o.model)).join(', ') }) : t('mm.assign.rerankerMissing')}</span>
-          : (svc.id === 'reranker' || svc.id === 'ocr' || svc.id === 'documents' || svc.id === 'decision') && <span className="mm-assign-fixed">{t('mm.assign.fixedByServer')}</span>}
+          // #1796: the decision address saved in Settings, or the sensitivity check that shares it, says so.
+          : svc.id === 'decision' && svc.source === 'admin' ? <span className="mm-assign-fixed">{t('mm.assign.decisionFromSettings')}</span>
+          : svc.id === 'sensitivity' && svc.shared ? <span className="mm-assign-fixed">{t('mm.assign.sensitivityShared')}</span>
+          : (svc.id === 'reranker' || svc.id === 'ocr' || svc.id === 'documents' || svc.id === 'decision' || svc.id === 'sensitivity') && <span className="mm-assign-fixed">{t('mm.assign.fixedByServer')}</span>}
       </span>
     </li>;
   };
@@ -133,7 +137,7 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
     <p className="mm-note">{t('mm.assign.intro')}{info && !admin ? ` ${t('mm.assign.readOnly')}` : ''}</p>
     {!info && !error && <p className="mm-note" role="status">{t('mm.loading')}</p>}
     {info && <ul className="mm-assign-list">
-      {info.services.filter((s) => s.id === 'embedding' || s.id === 'reranker' || s.id === 'decision').map(serviceRow)}
+      {info.services.filter((s) => s.id === 'embedding' || s.id === 'reranker' || s.id === 'decision' || s.id === 'sensitivity').map(serviceRow)}
       {ROLES.map(roleRow)}
       {info.services.filter((s) => s.id === 'ocr' || s.id === 'documents').map(serviceRow)}
     </ul>}
