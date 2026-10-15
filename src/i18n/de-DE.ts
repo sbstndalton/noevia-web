@@ -231,6 +231,7 @@ export const DE_DE: Catalogue = {
   'projects.view.groupOther': "Sonstiges",
   'projects.view.groupNotReadable': "Nicht lesbar",
   'projects.view.notReadableHint': "Diese Dateien wurden als Originale behalten, aber es konnte kein Text daraus gelesen werden. Sie werden in Chats nicht verwendet und nicht als Quellen gezählt.",
+  'projects.view.sourcesCountNote': "Hier werden {count} Quellen gezählt. {notReadable} weitere, als Original behaltene Dateien stehen unter „Nicht lesbar“ und werden nicht gezählt.",
   'projects.view.newChat': "Neuer Chat",
   'projects.view.projectSettings': "Projekteinstellungen",
   'projects.view.tablistLabel': "Projekt",

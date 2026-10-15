@@ -238,6 +238,7 @@ export const EN_GB = {
   'projects.view.groupOther': 'Other',
   'projects.view.groupNotReadable': 'Not readable',
   'projects.view.notReadableHint': 'These files were kept as originals, but no text could be read from them. They are not used in chats and are not counted as sources.',
+  'projects.view.sourcesCountNote': '{count} sources are counted here. {notReadable} more kept as originals are listed under Not readable and are not counted.',
   'projects.view.newChat': 'New chat',
   'projects.view.projectSettings': 'Project settings',
   'projects.view.tablistLabel': 'Project',

@@ -6,7 +6,7 @@ import { ComposerModel } from './ComposerModel';
 import { ComposerTextarea } from './ComposerTextarea';
 import { SkillPinSelect, useSkillPinOptions } from './SkillPinPicker';
 import type { SkillPin } from '../api-contract';
-import { sourceStatus, uploadFailureText, uploadStageText, uploadUnreadableReason, isUnreadableSource, attachmentReason } from '../source-status';
+import { sourceStatus, uploadFailureText, uploadStageText, uploadUnreadableReason, isUnreadableSource, attachmentReason, sourceCounts } from '../source-status';
 import { ShellIcon } from './ShellIcon';
 import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
@@ -348,7 +348,7 @@ export function ProjectView({
   // own list below and is left out of the groups and every source count.
   const unreadableFiles = project.files.filter(isUnreadableSource);
   const readableFiles = project.files.filter((f) => !isUnreadableSource(f));
-  const sourceCount = readableFiles.length + (project.assets || []).filter((a) => !a.sourceName).length;
+  const sourceCount = sourceCounts(project).counted;
   const linkedFolders = (project.sourceFolders || []).filter((f) => f !== project.projectFolder);
   const outputs = outputsOf(project);
   const send = () => {
@@ -518,6 +518,7 @@ export function ProjectView({
               {uploadRows.length > 0 && <details open={busyDocs}><summary>{busyDocs ? t('projects.view.uploadingFiles') : t('projects.view.uploadResults', { count: uploadRows.length, status: uploadRows.some(r => r.failed) ?t('projects.view.someNotAdded') : t('projects.view.savedStatus') })}</summary><ul className="source-list upload-progress" aria-label={t('projects.view.uploadProgress')} aria-live={folderMode ? 'off' : 'polite'}>{uploadRows.map((r, i) => <li key={i}>
                 <span><strong className="upload-name">{r.name}</strong><small className="source-status">{r.stage}{r.percent !== undefined ? ` · ${formatPercent(r.percent, appLocale(), 0)}` : ''} · {t('projects.view.seconds', { count: Math.max(0, Math.round(((r.finished || now) - r.started) / 1000)) })}</small></span>
               </li>)}</ul></details>}
+              {unreadableFiles.length > 0 && <p className="rail-empty sources-count-note" data-testid="sources-count-note">{t('projects.view.sourcesCountNote', { count: sourceCount, notReadable: unreadableFiles.length })}</p>}
               {groupKeys.map(([group, groupKey]) => {
                 const files = readableFiles.filter(f => fileGroup(f) === group);
                 const legacyImages = group === 'Images' ? (project.assets || []).filter(a => !a.sourceName) : [];

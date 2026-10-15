@@ -231,6 +231,7 @@ export const ES_ES: Catalogue = {
   'projects.view.groupOther': "Otro",
   'projects.view.groupNotReadable': "No legibles",
   'projects.view.notReadableHint': "Estos archivos se conservan como originales, pero no se pudo leer texto de ellos. No se usan en los chats ni se cuentan como fuentes.",
+  'projects.view.sourcesCountNote': "Aquí se cuentan {count} fuentes. Otros {notReadable} archivos conservados como originales aparecen en «No legibles» y no se cuentan.",
   'projects.view.newChat': "Chat nuevo",
   'projects.view.projectSettings': "Ajustes del proyecto",
   'projects.view.tablistLabel': "Proyecto",

@@ -249,7 +249,22 @@ export function uploadUnreadableReason(result: { attachment?: { state?: string; 
 export function isUnreadableSource(file: ProjectFile): boolean {
   const a = file.attachment, d = file.document;
   if (a && a.state === 'stored' && (a.group === 'Text' || a.group === 'Documents')) return true;
-  return !!(d && d.state === 'failed' && !(typeof file.content === 'string' ? file.content.trim() : sourceChars(file)));
+  // #1879: a failed document is unreadable only when its text is known to be empty. A file that carries
+  // neither its text nor a length (a copy not yet refreshed from the list) is unknown, not empty; reading
+  // unknown as empty moved the file between the counted and uncounted lists as the data settled.
+  if (!(d && d.state === 'failed')) return false;
+  if (typeof file.content === 'string') return !file.content.trim();
+  return typeof file.chars === 'number' ? file.chars <= 0 : false;
+}
+
+/** #1879: what the Sources header counts and what the list shows, from one place. `counted` is every
+ *  readable source (each row of the groups, including partial and still-processing ones, plus earlier
+ *  image uploads); `notReadable` rows sit in their own list and are not counted. */
+export function sourceCounts(project: { files: ProjectFile[]; assets?: { sourceName?: string }[] }): { counted: number; notReadable: number; rows: number } {
+  const readable = project.files.filter((f) => !isUnreadableSource(f));
+  const counted = readable.length + (project.assets || []).filter((a) => !a.sourceName).length;
+  const notReadable = project.files.length - readable.length;
+  return { counted, notReadable, rows: counted + notReadable };
 }
 
 /** #1806: a source's text length: the server lists it as `chars` (the text is fetched per source). */

@@ -231,6 +231,7 @@ export const SV_SE: Catalogue = {
   'projects.view.groupOther': "Övrigt",
   'projects.view.groupNotReadable': "Kan inte läsas",
   'projects.view.notReadableHint': "Dessa filer behölls som original, men ingen text kunde läsas från dem. De används inte i chattar och räknas inte som källor.",
+  'projects.view.sourcesCountNote': "{count} källor räknas här. {notReadable} andra filer som behölls som original visas under ”Kan inte läsas” och räknas inte.",
   'projects.view.newChat': "Ny chatt",
   'projects.view.projectSettings': "Projektinställningar",
   'projects.view.tablistLabel': "Projekt",
