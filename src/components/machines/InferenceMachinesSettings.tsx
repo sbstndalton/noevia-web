@@ -12,8 +12,9 @@ import type { FormEvent, JSX } from 'react';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 import { notifyModelsChanged } from '../../models-changed';
+import { formatNumber } from '../../number-format';
 import { fetchMachineModels, fetchMachines, machineAction, MachineError, parsePort } from './api';
-import type { EmbeddingTarget, Machine, MachineAction, MachineService, MachineServiceId, MachinesView } from './api';
+import type { EmbeddingTarget, Machine, MachineAction, MachineMeasured, MachineService, MachineServiceId, MachinesView } from './api';
 import './machines.css';
 
 const SERVICE_LABEL: Record<MachineServiceId, MessageKey> = {
@@ -41,6 +42,15 @@ type Draft = { machine: string; port: string; protocol: 'tei' | 'llamacpp'; mode
 const draftOf = (s: MachineService): Draft => ({ machine: s.machine === 'other' ? 'local' : s.machine, port: s.port ? String(s.port) : '', protocol: s.protocol || 'tei', model: s.model || '' });
 /** #1840: what a machine listed for a chat role's row, for the machine and port it was asked at. */
 type Listing = { key: string; loading?: boolean; models?: string[]; error?: string };
+
+/** #1854: what a chat role's machine measured for its model, one line; null when nothing came back. */
+function measuredFacts(m: MachineMeasured | undefined, t: ReturnType<typeof useT>): string | null {
+  if (!m) return null;
+  const context = typeof m.contextTokens === 'number' ? t('machines.measured.context', { tokens: formatNumber(m.contextTokens, t.locale, 0) }) : t('machines.measured.contextUnknown');
+  const thinking = t(m.thinking === true ? 'machines.measured.thinkingYes' : m.thinking === false ? 'machines.measured.thinkingNo' : 'machines.measured.thinkingUnknown');
+  const vision = t(m.vision === true ? 'machines.measured.visionYes' : m.vision === false ? 'machines.measured.visionNo' : 'machines.measured.visionUnknown');
+  return [context, thinking, vision].join(' · ');
+}
 
 /** #1856: a short reason for any state that is not plainly healthy: refused / timeout / http NNN. */
 const REASON: Record<string, MessageKey> = {
@@ -244,6 +254,11 @@ export function InferenceMachinesSettings(): JSX.Element {
         {s.mode === 'deployment' && <span className="mm-assign-fixed">{t('machines.note.deployment')}</span>}
         {s.id === 'embedding' && <span className="mm-assign-fixed">{t('machines.note.embedding')}</span>}
         {chat && s.machine !== 'local' && !changed && <span className="mm-assign-fixed">{t('machines.note.chat', { model: s.model || '' })}</span>}
+        {chat && s.machine !== 'local' && !changed && (() => {
+          // #1854: measured on that machine for its model; the engine-only measurements are named as not taken there.
+          const facts = measuredFacts(view?.health?.measured?.[s.id], t);
+          return facts ? <span className="mm-assign-fixed" data-note="measured">{t('machines.measured', { machine: machineName(s.machine), facts })} {t('machines.notMeasured', { machine: machineName(s.machine) })}</span> : null;
+        })()}
         {chat && s.machine !== 'local' && s.needsConfirm && !changed && <span className="mm-assign-fixed machines-unreachable" role="status" data-note="confirm-model">{t('machines.note.confirmModel', { model: s.model || '' })}</span>}
         {/* #1844: no address of its own and nothing assigned: it follows the decision service. */}
         {s.id === 'sensitivity' && s.machine === 'local' && !s.url && <span className="mm-assign-fixed">{t('machines.note.sensitivityShared')}</span>}
