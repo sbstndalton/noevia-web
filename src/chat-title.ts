@@ -22,3 +22,16 @@ export function titleAfterSend(title: string, previous: Message[], base: Message
   const derived = !!first && (title === deriveChatTitle(first.content) || title === first.content.slice(0, CHAT_TITLE_MAX));
   return base?.length === 0 && derived ? deriveChatTitle(text) : title;
 }
+
+/** The longest title the server generates after a chat's first reply (noevia-core chat-title.cjs TITLE_MAX). */
+export const GENERATED_TITLE_MAX = 60;
+
+/** #1785: the title the server generated after the chat's first reply, if the chat should take it. Only a title
+ *  still derived from the first message (or none) is replaced, so a name the person gave in the meantime wins. */
+export function adoptGeneratedTitle(current: string | undefined, firstMessage: string, incoming: unknown): string | null {
+  if (typeof incoming !== 'string') return null;
+  const title = incoming.replace(/\s+/g, ' ').trim().slice(0, GENERATED_TITLE_MAX);
+  if (!title || title === current) return null;
+  const derived = !current || current === deriveChatTitle(firstMessage) || current === firstMessage.slice(0, CHAT_TITLE_MAX) || current === firstMessage.trim();
+  return derived ? title : null;
+}

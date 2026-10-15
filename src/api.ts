@@ -753,6 +753,8 @@ export async function* streamChat(
   /** #778 'route_remembered': the chat's routing flags the server just saved. */
   forceLocal?: boolean;
   allowCloud?: boolean;
+  /** #1785 'title': a short title the local model gave the chat after its first reply. */
+  title?: string;
 }> {
   const res = await apiFetch(body.files ? '/api/diary/local-exchange' : '/api/chat', {
     method: 'POST',

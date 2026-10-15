@@ -37,3 +37,24 @@ test('#1601 both places a send names a new chat use the word-boundary title, not
  assert.ok(!/text\.slice\(0, ?80\)/.test(app),'no bare 80-character cut left in App.tsx');
  assert.equal(app.match(/deriveChatTitle\(text\)/g)?.length,2);
 });
+// #1785: the server names a chat after its first reply (a `title` event). The client takes it only over the title it
+// derived from the first message, so the next list save carries it, and a name the person gave meanwhile is kept.
+test('#1785 a generated title replaces the derived title only',()=>{
+ const first='QA-SYNTH-2 Say hello in one short sentence.';
+ assert.equal(result.adoptGeneratedTitle(first,first,'Friendly Greeting'),'Friendly Greeting');
+ assert.equal(result.adoptGeneratedTitle(undefined,first,'Friendly Greeting'),'Friendly Greeting');
+ assert.equal(result.adoptGeneratedTitle('My own name',first,'Friendly Greeting'),null,'a rename wins');
+ const long='z '.repeat(60).trim();
+ assert.equal(result.adoptGeneratedTitle(result.deriveChatTitle(long),long,'Zed Notes'),'Zed Notes');
+ assert.equal(result.adoptGeneratedTitle(long.slice(0,80),long,'Zed Notes'),'Zed Notes','the old bare 80-character cut');
+ assert.equal(result.adoptGeneratedTitle(first,first,'   '),null);
+ assert.equal(result.adoptGeneratedTitle(first,first,42),null);
+ assert.equal(result.adoptGeneratedTitle('Friendly Greeting',first,'Friendly Greeting'),null,'nothing to change');
+ assert.equal(result.adoptGeneratedTitle(first,first,'A  title\nwith   spaces'),'A title with spaces');
+ assert.ok(result.adoptGeneratedTitle(first,first,'x'.repeat(200)).length<=result.GENERATED_TITLE_MAX);
+});
+test('#1785 the chat stream adopts the title event through the list patch, against the meta at save time',()=>{
+ const app=fs.readFileSync(path.join(__dirname,'../../src/App.tsx'),'utf8');
+ assert.match(app,/ev\.type === 'title' && typeof ev\.title === 'string'/);
+ assert.match(app,/\(current\) => \{ const title = adoptGeneratedTitle\(current\.title, text, generated\); return title \? \{ title \} : null; \}/);
+});
