@@ -30,7 +30,6 @@ export const NB_NO_PROJECTS: ProjectsCatalogue = {
   'projects.openProject': "Åpne prosjektet {name}",
   'projects.optionsFor': "Prosjektalternativer for {name}",
   'projects.pinned': "Festnålet",
-  'projects.availableIn': "Tilgjengelig i {modes}",
   'projects.updatedAt': "Oppdatert {date}",
   'projects.restore': "Gjenopprett",
   'projects.aProject': "prosjekt",

@@ -30,7 +30,6 @@ export const IT_IT_PROJECTS: ProjectsCatalogue = {
   'projects.openProject': "Apri il progetto {name}",
   'projects.optionsFor': "Opzioni del progetto {name}",
   'projects.pinned': "Bloccato in alto",
-  'projects.availableIn': "Disponibile in {modes}",
   'projects.updatedAt': "Aggiornato il {date}",
   'projects.restore': "Ripristina",
   'projects.aProject': "progetto",

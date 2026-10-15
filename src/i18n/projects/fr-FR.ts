@@ -30,7 +30,6 @@ export const FR_FR_PROJECTS: ProjectsCatalogue = {
   'projects.openProject': "Ouvrir le projet {name}",
   'projects.optionsFor': "Options du projet {name}",
   'projects.pinned': "Épinglé",
-  'projects.availableIn': "Disponible dans {modes}",
   'projects.updatedAt': "Mis à jour {date}",
   'projects.restore': "Restaurer",
   'projects.aProject': "projet",

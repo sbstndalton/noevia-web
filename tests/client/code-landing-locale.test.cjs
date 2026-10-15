@@ -27,24 +27,24 @@ async function render(language, build) {
   }
 }
 
-const ENGLISH = /Open a project to run Code|Code mode runs inside|Open Code|What should we build next|Interface preview|Draft only|Build a feature|Select project|Describe a coding task|Checking Code access|Create a project, then/;
+const ENGLISH = /Start a task in a project|Pick a project\. A new chat|Start task|Create a project first|What should we build next|Interface preview|Draft only|Build a feature|Select project|Describe a coding task|Checking Code access|Create a project, then/;
 
 test('the project picker (Code landing once access is granted) reads in German', () => render('de-DE', ({ CodeProjectPicker }, React, text) => {
   const shown = text(React.createElement(CodeProjectPicker, { projects: [{ id: 'p1', name: 'Gartenplan' }], onOpen: () => {} }));
-  assert.match(shown, /Projekt öffnen, um Code auszuführen/);
-  assert.match(shown, /Der Code-Modus läuft im eigenen Code-Tab jedes Projekts/);
+  assert.match(shown, /Aufgabe in einem Projekt starten/);
+  assert.match(shown, /mit ausgewählter Aufgabe/);
   assert.match(shown, /Gartenplan/);
-  assert.match(shown, /Code öffnen/);
+  assert.match(shown, /Aufgabe starten/);
   assert.doesNotMatch(shown, ENGLISH);
   const empty = text(React.createElement(CodeProjectPicker, { projects: [], onOpen: () => {} }));
-  assert.match(empty, /Lege ein Projekt an/);
+  assert.match(empty, /Lege zuerst ein Projekt an/);
   assert.doesNotMatch(empty, ENGLISH);
 }));
 
 test('the project picker reads in French', () => render('fr-FR', ({ CodeProjectPicker }, React, text) => {
   const shown = text(React.createElement(CodeProjectPicker, { projects: [{ id: 'p1', name: 'Jardin' }], onOpen: () => {} }));
-  assert.match(shown, /Ouvrez un projet pour lancer Code/);
-  assert.match(shown, /Ouvrir Code/);
+  assert.match(shown, /Lancer une tâche dans un projet/);
+  assert.match(shown, /Lancer la tâche/);
   assert.doesNotMatch(shown, ENGLISH);
 }));
 

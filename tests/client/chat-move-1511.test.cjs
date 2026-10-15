@@ -23,11 +23,11 @@ async function loadMove() {
 
 const project = (id, extra = {}) => ({ id, name: id, goal: '', instructions: '', memories: [], files: [], chats: [], createdAt: 0, updatedAt: 0, ...extra });
 
-test('a chat can move into any live project with Chat mode, and not into its own', async () => {
+test('a chat can move into any live project, whatever its stored modes, and not into its own (#1576)', async () => {
   const { chatMoveTargets } = await loadMove();
   const projects = [project('a'), project('b', { modes: ['chat', 'code'] }), project('c', { archived: true }), project('d', { modes: ['cowork'] }), project('e', { modes: [] })];
-  // a is the chat’s own project and c is archived; d has no Chat mode; e has an empty modes list, which the server reads as Chat.
-  assert.deepEqual(chatMoveTargets(projects, { projectId: 'a' }).map(p => p.id), ['b', 'e']);
+  // a is the chat’s own project and c is archived; d (once Task-only) and e (empty modes) are chat projects since #1576.
+  assert.deepEqual(chatMoveTargets(projects, { projectId: 'a' }).map(p => p.id), ['b', 'd', 'e']);
 });
 
 test('a project without a modes list counts as Chat, as the server reads it', async () => {

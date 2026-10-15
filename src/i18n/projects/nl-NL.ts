@@ -30,7 +30,6 @@ export const NL_NL_PROJECTS: ProjectsCatalogue = {
   'projects.openProject': "Project {name} openen",
   'projects.optionsFor': "Projectopties voor {name}",
   'projects.pinned': "Vastgezet",
-  'projects.availableIn': "Beschikbaar in {modes}",
   'projects.updatedAt': "Bijgewerkt {date}",
   'projects.restore': "Herstellen",
   'projects.aProject': "project",

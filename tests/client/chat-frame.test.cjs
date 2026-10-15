@@ -91,13 +91,14 @@ test('App asks for a frame only on a new chat, behind the flag, without awaiting
   assert.match(app, /moveChatToProject\(chatId, plan\.projectId, frame\)/, 'accept goes through the one move path');
 });
 
-test('a suggestion naming a Code-only, Cowork-only or archived project gets no project (#810)', () => {
+test('a suggestion may name any live project, once Code- or Cowork-only included; an archived one gets no project (#810, #1576)', () => {
   const mine = [{ id: 'p-chat', name: 'Chat', modes: ['chat', 'code'] }, { id: 'p-legacy', name: 'Legacy' }, { id: 'p-empty', name: 'Empty', modes: [] },
     { id: 'p-code', name: 'Code', modes: ['code'] }, { id: 'p-cowork', name: 'Cowork', modes: ['cowork'] }, { id: 'p-old', name: 'Old', modes: ['chat'], archived: true }];
   const ids = chatDestinationIds(mine);
-  assert.deepEqual(plain(ids), ['p-chat', 'p-legacy', 'p-empty'], 'absent or empty modes read as Chat, as on the server');
-  assert.deepEqual(plain(chatDestinations(mine).map((p) => p.name)), ['Chat', 'Legacy', 'Empty'], 'the Edit picker list keeps the project objects');
-  for (const id of ['p-code', 'p-cowork', 'p-old']) assert.equal(startDraft({ ...suggestion, projectId: id }, ids).frame.projectId, null, id);
+  assert.deepEqual(plain(ids), ['p-chat', 'p-legacy', 'p-empty', 'p-code', 'p-cowork'], 'every project is a chat project since #1576, as on the server');
+  assert.deepEqual(plain(chatDestinations(mine).map((p) => p.name)), ['Chat', 'Legacy', 'Empty', 'Code', 'Cowork'], 'the Edit picker list keeps the project objects');
+  assert.equal(startDraft({ ...suggestion, projectId: 'p-old' }, ids).frame.projectId, null, 'p-old');
+  assert.equal(startDraft({ ...suggestion, projectId: 'p-cowork' }, ids).frame.projectId, 'p-cowork');
   assert.equal(startDraft({ ...suggestion, projectId: 'p-chat' }, ids).frame.projectId, 'p-chat');
   // App.tsx hands startDraft exactly this filter, not every project id.
   assert.match(read('src/App.tsx'), /startDraft\(suggestion, chatDestinationIds\(projectsRef\.current\)\)/);
