@@ -40,13 +40,18 @@ export function startFlagReads(read: () => Promise<FeatureFlags>, apply: (flags:
   return () => { live = false; clearTimeout(retry); window.removeEventListener(FEATURES_CHANGED, load); };
 }
 
-export function useFeatureFlags(): FeatureFlags {
+/** The flags plus whether the server has answered yet (#1839): until then `flags` is only the cached paint. */
+export function useFeatureFlagState(): { flags: FeatureFlags; settled: boolean } {
   const [flags, setFlags] = useState<FeatureFlags>(cached);
+  const [settled, setSettled] = useState(false);
   useEffect(() => startFlagReads(fetchFeatureFlags, (next) => {
     setFlags(next);
+    setSettled(true);
     // #1643: not under a new account's name once another tab has replaced this tab's account.
     if (accountChangedElsewhere()) return;
     try { localStorage.setItem(CACHE_KEY, JSON.stringify(next)); } catch { /* storage unavailable */ }
   }), []);
-  return flags;
+  return { flags, settled };
 }
+
+export function useFeatureFlags(): FeatureFlags { return useFeatureFlagState().flags; }

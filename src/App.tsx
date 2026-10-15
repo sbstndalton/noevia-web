@@ -50,7 +50,7 @@ import { acceptPlan, acceptedFrame, chatDestinationIds, chatDestinations, frameD
 import { frameWithLink, keepLinks, MAX_FRAME_LINKS } from './chat-organise';
 import { ChatLinks } from './components/ChatLinks';
 import type { FrameAction, FrameDraft } from './chat-frame';
-import { sessionMode, type ChatMode } from './chat-mode';
+import { modeWithAccess, sessionMode, type ChatMode } from './chat-mode';
 import { STOPPED_SENDER, statusDetail } from './chat-labels';
 import type {
   ChatMeta,
@@ -76,7 +76,7 @@ import type { SettingsSection } from './components/SettingsShell';
 import { FeaturePreview } from './components/PreviewPanel';
 import { ArchivedChatsView } from './components/data/ArchivedChats';
 import { recentChats } from './sidebar-order';
-import { useFeatureFlags } from './components/features/useFeatureFlags';
+import { useFeatureFlagState } from './components/features/useFeatureFlags';
 import { Sidebar } from './components/Sidebar';
 import { EditProjectModal } from './components/EditProjectModal';
 import { Inspector } from './components/Inspector';
@@ -226,7 +226,7 @@ export default function App(): JSX.Element {
   // Code is chosen; codeShown swaps that loading view for the mounted workspace.
   const [codeShown, setCodeShown] = useState(false);
   useEffect(() => { if (appMode !== 'code') setCodeShown(false); }, [appMode]);
-  const featureFlags = useFeatureFlags();
+  const { flags: featureFlags, settled: flagsSettled } = useFeatureFlagState();
   // #778 (features.routingModes): this account's routing mode, for the chat's Force local toggle.
   // Re-read when Settings saves it. Flag off: never fetched, nothing shown.
   const [routingMode, setRoutingMode] = useState<RoutingModeSettings | null>(null);
@@ -286,6 +286,8 @@ export default function App(): JSX.Element {
   const [accountId, setAccountId] = useState<string | null>(null);
   // #1576: Task is admin-only (behind codeHarness); the composer offers it only to administrators.
   const [isAdmin, setIsAdmin] = useState(false);
+  // #1839: the composer mode bar is held until the role is known, not drawn as for a non-admin.
+  const [profileKnown, setProfileKnown] = useState(false);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
   // #1567: the last workspace fetch failed (the sidebar then stops showing a loading placeholder).
   const [workspaceFailed, setWorkspaceFailed] = useState(false);
@@ -327,6 +329,9 @@ export default function App(): JSX.Element {
   const [pendingModes, setPendingModes] = useState<Record<string, ChatMode>>({});
   const pendingModesRef = useRef(pendingModes);
   pendingModesRef.current = pendingModes;
+  // #1839: a pending Task choice this account cannot run is not recorded as the new chat's mode.
+  const taskAccessRef = useRef({ offered: false, known: false });
+  taskAccessRef.current = { offered: featureFlags.codeHarness === true && isAdmin, known: profileKnown && flagsSettled };
   const messagesRef = useRef(messagesByChat);
   messagesRef.current = messagesByChat;
   const [diaryEnabled, setDiaryEnabled] = useState(false);
@@ -478,6 +483,7 @@ export default function App(): JSX.Element {
       setDiaryEnabled(profile.user.diaryEnabled);
       setAccountId(profile.user.id);
       setIsAdmin(profile.user.role === 'admin');
+      setProfileKnown(true);
       // A different account on this browser starts on its own fresh chat rather
       // than on a reference it cannot load.
       if (restored.current && restored.current.user && restored.current.user !== profile.user.id) {
@@ -488,7 +494,7 @@ export default function App(): JSX.Element {
         markReplace();
         setView(freshChatView());
       }
-    }).catch(() => undefined);
+    }).catch(() => setProfileKnown(true));
     fetchHealth()
       .then(setHealth)
       .catch(() => setHealth({ inferenceUp: false, diaryUp: null }));
@@ -975,7 +981,7 @@ export default function App(): JSX.Element {
         ? { ...existing, title: titleAfterSend(existing.title, priorMessages, base, text), preview: text.slice(0, 200), updatedAt: sentAt }
         : { id: chatId, title: deriveChatTitle(text), preview: text.slice(0, 200), updatedAt: sentAt,
             // The chosen mode is the session's even when this turn fell back to Chat (#236).
-            ...(pendingModesRef.current[chatId] === 'cowork' ? { mode: 'cowork' as const } : {}),
+            ...(modeWithAccess(pendingModesRef.current[chatId] ?? 'chat', taskAccessRef.current) === 'cowork' ? { mode: 'cowork' as const } : {}),
             // #741: [[links]] chosen before the chat's first save travel with that save.
             ...(pendingLinks.current.get(chatId)?.length ? { frame: { projectId, kind: 'question' as const, tags: [], links: pendingLinks.current.get(chatId)!, confirmed: false, source: 'user' as const } } : {}) };
       pendingLinks.current.delete(chatId);
@@ -1919,6 +1925,7 @@ export default function App(): JSX.Element {
           onOpenProjects={() => { setAppMode('chat'); setView({ kind: 'projects' }); }}
           mode={activeMode}
           isAdmin={isAdmin}
+          adminKnown={profileKnown}
           onModeChange={changeMode}
           onRetry={retryLast}
           onRegenerate={regenerateLast}

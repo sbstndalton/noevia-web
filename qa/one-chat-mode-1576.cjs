@@ -7,6 +7,11 @@
 //      old chat still shows the inline task card, with a working composer;
 //   4. a member (not an administrator) never sees Task, in a project chat or a free chat.
 //
+//   5. (#1839) an administrator restoring into a Task chat while the profile is still loading sees the
+//      mode bar held (no toggle, no Chat caption), then the Task toggle once the role is known;
+//   6. (#1839) a member opening an old Task chat gets a Chat composer: the edit button works, as in any
+//      Chat, because the pending Task choice was reset to Chat on the client.
+//
 // Offline: the app is built from this checkout and every API is a synthetic stub.
 //   PLAYWRIGHT_MODULE=<playwright-core> QA_DIST=<dist dir> QA_CORE_SERVER=<noevia-core/server> [QA_SHOTS=<dir>] [QA_TAG=after] node qa/one-chat-mode-1576.cjs
 // Fails on a build without the change, passes with it.
@@ -36,7 +41,7 @@ const task = { id: TASK, status: 'completed', stage: null, error: null, createdA
 const codeState = { repositories: [{ id: 'synthetic-repo' }], capabilities: CAPS, defaultCapabilities: ['read_repository'], harnesses: [{ id: 'synthetic', label: 'Synthetic', version: '1' }],
   promptPreparation: [{ id: 'direct', label: 'Direct', available: true, reason: 'Synthetic direct.' }], sandboxed: true, network: false, tasks: [task] };
 
-async function open(browser, { width, theme, role }) {
+async function open(browser, { width, theme, role, gate }) {
   const phone = width < 768;
   const page = await browser.newPage(withLocale({ viewport: { width, height: phone ? 844 : 1100 }, isMobile: phone, hasTouch: phone }));
   page.errors = [];
@@ -44,7 +49,7 @@ async function open(browser, { width, theme, role }) {
   await page.addInitScript((t) => { localStorage.setItem('cowork-theme', t); }, theme);
   const user = { id: `synthetic-${role}`, username: role, displayName: `Synthetic ${role}`, role, diaryEnabled: false, onboarded: true };
   await page.route('**/api/auth/session', (r) => r.fulfill({ json: { user, passkeys: [] } }));
-  await page.route('**/api/profile', (r) => r.fulfill({ json: { user, passkeys: [] } }));
+  await page.route('**/api/profile', async (r) => { if (gate) await gate.promise; await r.fulfill({ json: { user, passkeys: [] } }); });
   await page.route('**/api/features', (r) => r.fulfill({ json: { flags: { codeHarness: true, previews: true } } }));
   await page.route('**/api/workspace', (r) => r.fulfill({ json: { projects: projects(), freeChats: [{ id: 'fc1', title: 'Synthetic free chat', updatedAt: 4000 }] } }));
   await page.route('**/api/projects/*/skills', (r) => r.fulfill({ json: { skills: [] } }));
@@ -169,6 +174,60 @@ const composerBox = (page) => page.locator('.composer').filter({ visible: true }
           assert.equal(await projectBox.locator('[data-mode="cowork"]').count(), 0, 'no Task option in a project chat');
           assert.doesNotMatch(await projectBox.innerText(), /\bTask\b/, 'the project composer never names Task');
           await shot(page, 'member-project-chat', width, theme);
+          assert.deepEqual(page.errors, []);
+        } finally { await page.close(); }
+      });
+
+      await check(`${at}: an administrator restoring into a Task chat sees the mode bar held until the profile loads (#1839)`, async () => {
+        let release; const gate = { promise: new Promise((resolve) => { release = resolve; }) };
+        const page = await open(browser, { width, theme, role: 'admin', gate });
+        try {
+          release();
+          await page.goto(`http://localhost:${PORT}/`);
+          await page.getByPlaceholder(/Message/).first().waitFor({ timeout: 20000 });
+          await openDrawer(page);
+          await page.locator('.sidebar').getByRole('button', { name: 'Open Synthetic task project', exact: true }).click();
+          await page.locator('.chat-index-row').filter({ hasText: 'Synthetic old task chat' }).click();
+          await page.locator('section.cowork-task').waitFor({ timeout: 15000 });
+          // Reload into that chat with the profile held back.
+          const held = { promise: new Promise((resolve) => { release = resolve; }) };
+          await page.unroute('**/api/profile');
+          await page.route('**/api/profile', async (r) => { await held.promise; await r.fulfill({ json: { user: { id: 'synthetic-admin', username: 'admin', displayName: 'Synthetic admin', role: 'admin', diaryEnabled: false, onboarded: true }, passkeys: [] } }); });
+          await page.reload();
+          const box = composerBox(page);
+          await box.waitFor({ timeout: 20000 });
+          await page.waitForTimeout(600);
+          assert.equal(await box.locator('[role="radiogroup"]').count(), 0, 'no toggle while the role is unknown');
+          const caption = box.locator('xpath=ancestor::*[contains(@class,"chat-workspace")]//*[contains(@class,"composer-mode-harness")]').first();
+          assert.equal(await caption.getAttribute('data-held'), 'true', 'the bar is held, not drawn as for a non-admin');
+          assert.doesNotMatch(await caption.innerText(), /conversational|Runs Chat/i, 'no Chat caption for a Task chat');
+          await shot(page, 'restore-held', width, theme);
+          release();
+          const taskRadio = box.locator('[role="radio"][data-mode="cowork"]');
+          await taskRadio.waitFor({ timeout: 15000 });
+          assert.equal(await taskRadio.getAttribute('aria-checked'), 'true', 'Task is still the chosen mode once the role is known');
+          assert.equal(await caption.getAttribute('data-held'), null, 'released');
+          await shot(page, 'restore-released', width, theme);
+          assert.deepEqual(page.errors, []);
+        } finally { await page.close(); }
+      });
+
+      await check(`${at}: a member's pending Task choice is reset to Chat on the client (#1839)`, async () => {
+        const page = await open(browser, { width, theme, role: 'member' });
+        try {
+          await page.goto(`http://localhost:${PORT}/`);
+          await page.getByPlaceholder(/Message/).first().waitFor({ timeout: 20000 });
+          await openDrawer(page);
+          await page.locator('.sidebar').getByRole('button', { name: 'Open Synthetic task project', exact: true }).click();
+          await page.locator('.chat-index-row').filter({ hasText: 'Synthetic old task chat' }).click();
+          const edit = page.locator('.msg-edit-btn').first();
+          await edit.waitFor({ state: 'attached', timeout: 15000 });
+          await page.waitForTimeout(500);
+          assert.equal(await edit.isDisabled(), false, 'the chat edits like any Chat chat');
+          assert.equal(await edit.getAttribute('title'), 'Edit this message and re-run the conversation from here');
+          const box = composerBox(page);
+          assert.equal(await box.locator('[data-mode="cowork"]').count(), 0, 'no Task option');
+          await shot(page, 'member-task-chat', width, theme);
           assert.deepEqual(page.errors, []);
         } finally { await page.close(); }
       });
