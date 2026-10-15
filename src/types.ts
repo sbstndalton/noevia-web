@@ -191,6 +191,11 @@ export interface DocumentStatus {
   pageStatus?: { number: number; status: string; reason?: string; retry?: PageRetry }[];
   /** #1864: where reading stopped and why, when the document has more pages than were read. */
   stoppedAt?: { page: number; limit: 'pages' | 'text' | 'error'; error?: string };
+  /** The version whose text is readable (the current one, or the last readable one when stale). */
+  availableVersion?: string;
+  /** #1868: how far search covers a long document's text past its 200,000-character head: up to `page`
+   *  while `complete` is false (the rest is still being indexed), for the record of `version`. */
+  searchable?: { version: string; page: number | null; complete: boolean; limited?: boolean };
 }
 
 export interface PageRetry {

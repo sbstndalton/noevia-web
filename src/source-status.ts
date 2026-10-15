@@ -99,6 +99,7 @@ const NOTE_EN: Record<string, string> = {
   ocrRetryUnavailable: 'pages {pages}: OCR retry unavailable (no OCR service is configured)',
   ocrRetryLimit: 'pages {pages}: not retried (OCR retry limit reached)',
   ocrRetryRecovered: 'pages {pages}: recovered by an OCR retry; verify numbers against the original',
+  searchableToPage: 'searchable up to page {page} so far; later pages are still being indexed',
 };
 const LIMIT_EN: Record<string, string> = { pages: 'page limit', text: 'text limit', error: 'read error' };
 const fill = (text: string, params: Record<string, string | number>) => text.replace(/\{(\w+)\}/g, (m, k: string) => (k in params ? String(params[k]) : m));
@@ -121,6 +122,10 @@ export function documentNotes(d: DocumentStatus | undefined): DocumentNote[] {
   if (!d) return [];
   const out: DocumentNote[] = [];
   if (d.stoppedAt) out.push({ id: 'stoppedAtPage', params: { page: d.stoppedAt.page, limit: d.stoppedAt.limit, ...(d.stoppedAt.error ? { reason: d.stoppedAt.error } : {}) } });
+  // #1868: the text past the 200,000-character head is still being added to search.
+  if (d.searchable && d.searchable.version === d.availableVersion && d.searchable.complete === false && Number.isInteger(d.searchable.page)) {
+    out.push({ id: 'searchableToPage', params: { page: d.searchable.page as number } });
+  }
   const pages = d.pageStatus || [];
   const failed = new Map<string, { number: number }[]>();
   for (const p of pages) if (p.retry?.outcome === 'failed') { const r = p.retry.error || 'unknown'; failed.set(r, [...(failed.get(r) || []), p]); }

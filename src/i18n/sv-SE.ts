@@ -1402,6 +1402,7 @@ export const SV_SE: Catalogue = {
   'projects.view.note.ocrRetryUnavailable': "sidor {pages}: nytt OCR-försök inte tillgängligt (ingen OCR-tjänst är konfigurerad)",
   'projects.view.note.ocrRetryLimit': "sidor {pages}: inte försökt igen (gränsen för OCR-försök är nådd)",
   'projects.view.note.ocrRetryRecovered': "sidor {pages}: återställda med ett nytt OCR-försök; kontrollera siffrorna mot originalet",
+  'projects.view.note.searchableToPage': "sökbar till och med sida {page}; senare sidor indexeras fortfarande",
   'projects.view.reason.noText': "originalet behålls, men ingen text kunde läsas",
   'chat.routing.local': "Lokal",
   'chat.routing.cloud': "Moln",

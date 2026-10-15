@@ -1413,6 +1413,7 @@ export const EN_GB = {
   'projects.view.note.ocrRetryUnavailable': 'pages {pages}: OCR retry unavailable (no OCR service is configured)',
   'projects.view.note.ocrRetryLimit': 'pages {pages}: not retried (OCR retry limit reached)',
   'projects.view.note.ocrRetryRecovered': 'pages {pages}: recovered by an OCR retry; verify numbers against the original',
+  'projects.view.note.searchableToPage': 'searchable up to page {page} so far; later pages are still being indexed',
   'projects.view.reason.noText': 'the original is kept, but no text could be read from it',
   'chat.routing.local': "Local",
   'chat.routing.cloud': "Cloud",

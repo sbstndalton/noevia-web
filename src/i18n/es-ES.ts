@@ -1402,6 +1402,7 @@ export const ES_ES: Catalogue = {
   'projects.view.note.ocrRetryUnavailable': "páginas {pages}: reintento de OCR no disponible (no hay servicio de OCR configurado)",
   'projects.view.note.ocrRetryLimit': "páginas {pages}: sin reintento (se alcanzó el límite de reintentos de OCR)",
   'projects.view.note.ocrRetryRecovered': "páginas {pages}: recuperadas con un reintento de OCR; verifica los números con el original",
+  'projects.view.note.searchableToPage': "se puede buscar hasta la página {page}; las páginas siguientes aún se están indexando",
   'projects.view.reason.noText': "se conserva el original, pero no se pudo leer texto",
   'chat.routing.local': "Local",
   'chat.routing.cloud': "Nube",
