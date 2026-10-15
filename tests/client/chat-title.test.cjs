@@ -56,5 +56,12 @@ test('#1785 a generated title replaces the derived title only',()=>{
 test('#1785 the chat stream adopts the title event through the list patch, against the meta at save time',()=>{
  const app=fs.readFileSync(path.join(__dirname,'../../src/App.tsx'),'utf8');
  assert.match(app,/ev\.type === 'title' && typeof ev\.title === 'string'/);
- assert.match(app,/\(current\) => \{ const title = adoptGeneratedTitle\(current\.title, text, generated\); return title \? \{ title \} : null; \}/);
+ // Reopen: judged against the chat's FIRST message, so a title after a stopped first reply is still adopted.
+ assert.match(app,/const firstMessage = existing\.find\(\(m\) => m\.role === 'user'\)\?\.content \?\? text;/);
+ assert.match(app,/\(current\) => \{ const title = adoptGeneratedTitle\(current\.title, firstMessage, generated\); return title \? \{ title \} : null; \}/);
+});
+test('#1785 reopen: a title after a later turn is adopted over the title derived from the FIRST message',()=>{
+ const first='QA-1785 explain synthetic photosynthesis in six paragraphs.';
+ assert.equal(result.adoptGeneratedTitle(first,first,'Synthetic Notes'),'Synthetic Notes');
+ assert.equal(result.adoptGeneratedTitle(first,'QA-1785 now list three facts.','Synthetic Notes'),null,'judged against the follow-up it is refused: the old bug');
 });

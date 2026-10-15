@@ -61,6 +61,21 @@ function shareVariants(winner: HistoryEntry[], other: HistoryEntry[], shared: nu
   return out.every((entry, i) => entry === winner[i]) ? winner : out;
 }
 
+/** #1784: a reply core kept for a client that went away (chat-interrupted-turn.cjs). */
+function serverKept(e: HistoryEntry): boolean {
+  return e.role === 'assistant' && e.interrupted === true;
+}
+
+/** #1784 review: a reply this tab settled itself: the person stopped it, or it finished cleanly. A failed reply
+ *  (`error`, App.tsx failedReply) or the bare record of changes a failed or cut-off reply saved (no text, a
+ *  `stopped` pause: applied-writes.ts appliedRecord) is not. */
+function settledHere(e: HistoryEntry): boolean {
+  if (e.role !== 'assistant' || serverKept(e)) return false;
+  if (e.stopped === true) return true;
+  if ((e as { error?: unknown }).error) return false;
+  return !(e.paused?.reason === 'stopped' && !e.content.trim());
+}
+
 /** Merge the server's copy of a transcript with ours after a concurrent save. The shared start is
  *  kept once; if one copy extends the other it wins; otherwise the other device's later turns come
  *  first, then ours, so no user turn either device wrote is lost.
@@ -81,7 +96,13 @@ export function mergeTranscripts(theirs: HistoryEntry[], ours: HistoryEntry[]): 
   const start = shareVariants(theirs.slice(0, shared), ours, shared);
   if (tail[tail.length - 1].role === 'assistant' && mine[0].role === 'assistant') {
     if (tail.length === 1) {
-      const keep = tail[0].content.length > mine[0].content.length ? tail[0] : mine[0];
+      // #1784: the server keeps a reply whose client went away as `interrupted` (core #679). When this tab
+      // settled the same reply itself, by the person's Stop or by finishing cleanly, its own copy is the answer:
+      // the server's copy can hold text the engine produced after Stop that was never shown, and would replace
+      // the quiet Stopped note with the interrupted one. A copy cut short by a dropped connection (an error, or
+      // only the record of saved changes) is not settled: the longer copy still wins.
+      const keep = serverKept(tail[0]) && settledHere(mine[0]) ? mine[0]
+        : tail[0].content.length > mine[0].content.length ? tail[0] : mine[0];
       return [...start, keep, ...mine.slice(1)];
     }
     return [...start, ...tail, ...mine.slice(1)];

@@ -53,9 +53,9 @@ test('Retry on an interrupted reply uses the same path as a failed one', () => {
   assert.match(app, /const index = msgs\.findIndex\(m => m\.id === messageId && \(m\.error \|\| m\.interrupted\)\);/);
 });
 
-test('an interrupted reply shows its note with Retry and Continue, only as the last message and not while streaming', () => {
+test('an interrupted reply shows its note with Retry and Continue, only as the last message, not while streaming and never beside the Stopped note (#1784)', () => {
   const view = read('components/ChatView.tsx');
-  const block = view.slice(view.indexOf('m.interrupted && isLast && !streaming'), view.indexOf('m.interrupted && isLast && !streaming') + 700);
+  const block = view.slice(view.indexOf('m.interrupted && !m.stopped && isLast && !streaming'), view.indexOf('m.interrupted && !m.stopped && isLast && !streaming') + 700);
   assert.match(block, /<div className="msg-interrupted" role="status">/);
   assert.match(block, /t\('chat\.interrupted\.note'\)/);
   assert.match(block, /onClick=\{\(\) => onRetry\(chatId, m\.id\)\}/);

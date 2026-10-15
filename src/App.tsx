@@ -1100,9 +1100,12 @@ export default function App(): JSX.Element {
           } else if (ev.type === 'title' && typeof ev.title === 'string') {
             // #1785: the title the server generated after the first reply. Applied to the meta as it is when the save
             // runs, and only over the title derived from the first message, so a rename made meanwhile is kept.
+            // Reopen: the title can follow a later turn (the first reply was stopped), so "still derived" is judged
+            // against the chat's FIRST message, not this turn's.
             const generated = ev.title;
+            const firstMessage = existing.find((m) => m.role === 'user')?.content ?? text;
             patchChatRef.current(chatHome(chatId, allChatsRef.current, movedChats.current, projectId), chatId,
-              (current) => { const title = adoptGeneratedTitle(current.title, text, generated); return title ? { title } : null; });
+              (current) => { const title = adoptGeneratedTitle(current.title, firstMessage, generated); return title ? { title } : null; });
           }
           if (ev.type === 'meta' && ev.route) {
             setMessagesByChat((prev) => ({
