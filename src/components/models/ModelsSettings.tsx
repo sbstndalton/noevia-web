@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { isResident } from '../../model-residency';
 import { ShellIcon } from '../ShellIcon';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, RouteRule } from '../../types';
@@ -273,7 +274,7 @@ function RoutingSection({ models, modelsError, providersRev = 0 }: { models: Ins
         {t(ROUTE_ROLE[role])}
         <select value={valueFor(role)} disabled={busy} onChange={(e) => setPending((prev) => ({ ...prev, [role]: e.target.value }))}>
           <option value="">{role === 'vision' || role === 'code' ? t('mm.route.none') : t('mm.route.pick')}</option>
-          {roleModels.map((m) => <option key={m.name} value={m.name}>{m.loaded ? t('mm.route.loadedOption', { model: m.name }) : m.name}</option>)}
+          {roleModels.map((m) => <option key={m.name} value={m.name}>{isResident(m) ? t('mm.route.loadedOption', { model: m.name }) : m.name}</option>)}
           {savedUnavailable && <option value={saved}>{t(savedInstalled ? 'mm.route.unsuitableOption' : 'mm.route.notInstalledOption', { model: saved ?? '' })}</option>}
         </select>
         {savedInstalled && <p className="mm-note warn" role="alert">{t('mm.route.unsuitableWarning', { model: saved ?? '' })}</p>}
@@ -342,7 +343,7 @@ function ProjectRoutingSection({ models, routes, projects, modelsError }: {
   const t = useT();
   const defaultProviderId = useDefaultProviderId();
   useEffect(() => { let live = true; fetchAutoRoles().then((v) => { if (live) setInfo(v); }).catch(() => undefined); return () => { live = false; }; }, []);
-  const loaded = models.filter((m) => m.loaded).map((m) => m.name);
+  const loaded = models.filter(isResident).map((m) => m.name);
   return <section className="mm-panel">
     <div className="mm-panel-head"><h3>{t.plural('mm.projects.title', projects.length)}</h3></div>
     {projects.length ? <div className="mm-table-wrap">
@@ -365,7 +366,7 @@ function ProjectRoutingSection({ models, routes, projects, modelsError }: {
 // change the figure here (the deployment's INFERENCE_MEMORY_BUDGET_GIB is only its first value).
 type BudgetEstimate = { totalGib: number | null; cacheRamUnbounded?: boolean };
 type BudgetInfo = { budgetGib: number; source: 'admin' | 'deployment'; defaultGib: number; minGib: number; maxGib: number; limited?: boolean;
-  models: { model: string; loaded: boolean; system: boolean; labels: string[]; estimate: BudgetEstimate | null; fits: boolean | null }[] | null; estimateError?: string };
+  models: { model: string; loaded: boolean; sleeping?: boolean; system: boolean; labels: string[]; estimate: BudgetEstimate | null; fits: boolean | null }[] | null; estimateError?: string };
 function InferenceBudgetSection(): JSX.Element | null {
   const t = useT();
   const [info, setInfo] = useState<BudgetInfo | null>(null);
@@ -435,7 +436,7 @@ function InferenceBudgetSection(): JSX.Element | null {
         : rows.length ? <div className="mm-table-wrap"><table className="mm-table">
           <thead><tr><th scope="col">{t('mm.budget.colModel')}</th><th scope="col">{t('mm.budget.colEstimate')}</th><th scope="col">{t('mm.budget.colVerdict')}</th></tr></thead>
           <tbody>{rows.map((m) => <tr key={m.model}>
-            <td data-label={t('mm.budget.colModel')}>{m.loaded ? t('mm.budget.loaded', { model: m.model }) : m.model}</td>
+            <td data-label={t('mm.budget.colModel')}>{m.loaded && !m.sleeping ? t('mm.budget.loaded', { model: m.model }) : m.model}</td>
             <td data-label={t('mm.budget.colEstimate')}>{m.estimate?.totalGib != null ? t('mm.budget.of', { gib: gib(m.estimate.totalGib), budget: gib(info.budgetGib) }) : '—'}</td>
             <td data-label={t('mm.budget.colVerdict')}>{verdict(m)}</td>
           </tr>)}</tbody>

@@ -501,6 +501,7 @@ export const NL_NL: Catalogue = {
   'modelPopup.switching': "wisselen…",
   'modelPopup.selected': "Geselecteerd",
   'modelPopup.loaded': "Geladen",
+  'modelPopup.sleeping': "Slaapt",
   'modelPopup.tune': "{model} afstemmen",
   'modelPopup.tuneTitle': "Dit model afstemmen",
   'modelPopup.context': "Context",

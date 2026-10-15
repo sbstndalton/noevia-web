@@ -1,4 +1,5 @@
 import { isChatGenerationModel } from '../model-kind';
+import { isResident, isSleeping } from '../model-residency';
 import { formatModelSizeGB } from '../model-size';
 import { appLocale } from '../user-preferences';
 import { MiddleTruncate } from './MiddleTruncate';
@@ -245,12 +246,12 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
             {shownModels.map((m) => <div key={m.name} className="mp-model-item">
               <button className="model-row mp-model" aria-pressed={activeProject.model === m.name}
                 disabled={busy !== null} onClick={() => void save(m.name, { model: m.name, routing: 'manual' })}>
-                <span className={`model-dot${m.loaded ? '' : ' down'}`} />
+                <span className={`model-dot${isResident(m) ? '' : ' down'}`} />
                 <div className="model-name-group">
                   <MiddleTruncate className="model-name" text={m.name}/>
                   {formatModelSizeGB(m.sizeGB, appLocale()) && <span className="model-quant">{formatModelSizeGB(m.sizeGB, appLocale())}</span>}
                 </div>
-                <span className="model-role">{busy === m.name ? t('modelPopup.switching') : activeProject.model === m.name ? <><ShellIcon name="check" size={15}/>{t('modelPopup.selected')}</> : m.loaded ? t('modelPopup.loaded') : ''}</span>
+                <span className="model-role">{busy === m.name ? t('modelPopup.switching') : activeProject.model === m.name ? <><ShellIcon name="check" size={15}/>{t('modelPopup.selected')}</> : isSleeping(m) ? t('modelPopup.sleeping') : m.loaded ? t('modelPopup.loaded') : ''}</span>
               </button>
               {canTune && <button className="shell-icon-button mp-tune" aria-label={t('modelPopup.tune', { model: m.name })} title={t('modelPopup.tuneTitle')} onClick={() => onOpenSettings(m.name)}><ShellIcon name="personalization" size={17}/></button>}
             </div>)}

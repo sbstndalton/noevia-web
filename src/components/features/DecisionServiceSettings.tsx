@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { fetchDecisionSettings, saveDecisionSettings, testDecisionSettings } from './api';
+import { fetchDecisionSettings, resetDecisionSettings, saveDecisionSettings, testDecisionSettings } from './api';
 import type { DecisionSettings } from './api';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
@@ -8,24 +8,32 @@ export function DecisionServiceSettings({ onSaved }: { onSaved: () => Promise<vo
   const t = useT();
   const [draft, setDraft] = useState<DecisionSettings>({url:'',timeoutMs:1500});
   const [loaded, setLoaded] = useState(false);
+  // #1765: where the active address comes from: 'admin' (saved here) or 'deployment'. Only the saved one can be reset.
+  const [source, setSource] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
   const errorRef = useRef<HTMLParagraphElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const serverText = (id: string | undefined, english: string) => { if (!id) return english; const key = `decision.msg.${id}` as MessageKey; const text = t(key); return text === key ? english : text; };
-  useEffect(() => { let live=true; fetchDecisionSettings().then(value=>{if(live){setDraft(value);setLoaded(true);}}).catch(e=>{if(live)setError(e.message);});return ()=>{live=false;}; }, []);
-  const act = async (action: 'save' | 'test') => {
+  useEffect(() => { let live=true; fetchDecisionSettings().then(value=>{if(live){setDraft(value);setSource(value.source);setLoaded(true);}}).catch(e=>{if(live)setError(e.message);});return ()=>{live=false;}; }, []);
+  const act = async (action: 'save' | 'test' | 'reset') => {
     setBusy(action); setError('');setStatus('');
     try {
-      if(action==='save') { const value=await saveDecisionSettings(draft);setDraft(value);await onSaved();setStatus(t('decision.saved')); }
+      if(action==='save') { const value=await saveDecisionSettings(draft);setDraft(value);setSource(value.source);await onSaved();setStatus(t('decision.saved')); }
+      else if(action==='reset') { const value=await resetDecisionSettings();setDraft(value);setSource(value.source);await onSaved();setStatus(t('decision.resetDone'));
+        // The button just pressed is gone (nothing saved to reset any more): focus the section heading; the
+        // status line below announces the result once (focusing that live region as it mounts could read it twice).
+        requestAnimationFrame(()=>headingRef.current?.focus()); }
       // The server's message is English with a stable id (#624); the id is worded from the catalogue.
       else { const result = await testDecisionSettings(draft); setStatus(`${serverText(result.messageId, result.message)} ${t('decision.saveToApply')}`); }
     } catch(e) {setError(serverText((e as { id?: string }).id, (e as Error).message));requestAnimationFrame(()=>errorRef.current?.focus());}
     finally {setBusy('');}
   };
   return <section aria-labelledby="decision-setup-title" className="decision-service-settings">
-    <h2 id="decision-setup-title">{t('decision.title')}</h2>
+    <h2 id="decision-setup-title" ref={headingRef} tabIndex={-1}>{t('decision.title')}</h2>
     <p className="preview-footnote">{t('decision.intro')}</p>
+    {loaded && source && <p className="preview-footnote" data-testid="decision-source">{t(source==='admin'?'decision.sourceAdmin':'decision.sourceDeployment')}</p>}
     {error && <p ref={errorRef} tabIndex={-1} className="route-note" role="alert">{error}</p>}
     <form className="set-rows" onSubmit={e=>{e.preventDefault();void act('save');}}>
       <div className="set-row"><div className="set-row-text"><label className="set-row-label" htmlFor="decision-url">{t('decision.endpointLabel')}</label><p className="set-row-desc" id="decision-url-help">{t('decision.endpointHelp')}</p></div>
@@ -35,6 +43,7 @@ export function DecisionServiceSettings({ onSaved }: { onSaved: () => Promise<vo
       <div className="set-row"><div className="set-row-control decision-service-actions">
         <button type="button" className="modal-btn secondary" disabled={!loaded||!!busy} onClick={()=>{setDraft({...draft,url:'http://laya:8040'});setStatus(t('decision.layaSelected'));}}>{t('decision.useLaya')}</button>
         <button type="button" className="modal-btn secondary" disabled={!loaded||!!busy} onClick={()=>void act('test')}>{busy==='test'?t('decision.testing'):t('decision.test')}</button>
+        {source==='admin' && <button type="button" className="modal-btn secondary" disabled={!loaded||!!busy} onClick={()=>void act('reset')}>{busy==='reset'?t('decision.resetting'):t('decision.useDeployment')}</button>}
         <button type="submit" className="modal-btn primary" disabled={!loaded||!!busy}>{busy==='save'?t('common.saving'):t('decision.saveButton')}</button>
       </div></div>
     </form>

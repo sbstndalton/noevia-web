@@ -1,4 +1,5 @@
 import { ProjectIdentityPicker } from './ProjectIdentity';
+import { isResident } from '../model-residency';
 import { useState } from 'react';
 import type { JSX } from 'react';
 import type { InstalledModel, Project, ProjectMode } from '../types';
@@ -142,7 +143,7 @@ export function EditProjectModal({
           <select className="modal-input" value={model} onChange={(e) => setModel(e.target.value)}>
             <option value="">{t('projects.edit.useLoadedModel')}</option>
             {models.map((m) => (
-              <option key={m.name} value={m.name}>{m.name}{m.loaded ? ` · ${t('projects.edit.loaded')}` : ''}</option>
+              <option key={m.name} value={m.name}>{m.name}{isResident(m) ? ` · ${t('projects.edit.loaded')}` : ''}</option>
             ))}
           </select>
           <small>{t('projects.edit.defaultModelHint')}</small>

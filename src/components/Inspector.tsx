@@ -1,4 +1,5 @@
 import { useState, type JSX, type ReactNode } from 'react';
+import { isResident } from '../model-residency';
 import type { InstalledModel, Project } from '../types';
 import { ShellIcon } from './ShellIcon';
 import { useT } from '../i18n';
@@ -48,7 +49,7 @@ export function Inspector({
   // #586: an original whose text could not be read is not a source (the Sources tab lists it apart
   // and never counts it), so this rail leaves it out too.
   const sources = (project?.files || []).filter((f) => !isUnreadableSource(f));
-  const model = project?.model || models.find((m) => m.loaded)?.name || t('inspector.notSelected');
+  const model = project?.model || models.find(isResident)?.name || models.find((m) => m.loaded)?.name || t('inspector.notSelected');
 
   return (
     <aside id="noevia-inspector" className="noevia-inspector" data-expanded={expanded} aria-label={t('inspector.contextAria')}>

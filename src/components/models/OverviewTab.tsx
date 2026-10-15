@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { isSleeping } from '../../model-residency';
 import type { JSX } from 'react';
 import { apiFetch, fetchAutoRoles, fetchInstalledModels } from '../../api';
 import type { InstalledModel } from '../../types';
@@ -69,7 +70,7 @@ function QualityPanel({ models: listed, modelsLoaded, modelsError, roles, onOpen
         return <li key={m.name}>
           <div className="mm-role-name"><strong>{m.name}</strong>
             <span className="mm-badges">
-              {m.loaded && <span className="mm-pill is-good">{t('mm.loaded')}</span>}
+              {isSleeping(m) ? <span className="mm-pill" title={t('mm.card.sleepingNote')}>{t('mm.card.sleeping')}</span> : m.loaded && <span className="mm-pill is-good">{t('mm.loaded')}</span>}
               {routes.map((r) => <span key={r} className="mm-pill">{t(r)}</span>)}
               {attention && <span className="mm-pill is-warn">{t('mm.overview.attention')}</span>}
               {g.role === 'routing' && <span className="mm-pill">{t('model.systemLabel')}</span>}

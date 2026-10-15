@@ -39,7 +39,7 @@ export function usesLocalProvider(provider: string | undefined, defaultProviderI
  *  Models on a non-default provider aren't in that catalogue, so never flagged. */
 export function modelChoiceLabel(
   choice: { routing?: string; model?: string; provider?: string } | null | undefined,
-  installed: { name: string; loaded?: boolean }[] | null,
+  installed: { name: string; loaded?: boolean; status?: string }[] | null,
   // Whether Auto routing (Fast/Smart) is actually configured server-side (fetchAutoRoles().configured).
   // Defaults true: most callers (a project) never reach the branch this guards, and existing tests
   // exercise the null-choice case explicitly either way.
@@ -63,8 +63,13 @@ export function modelChoiceLabel(
   // would really route it that way: without Fast/Smart roles configured it falls back to the
   // loaded model server-side too (chat.cjs), and the label must not promise a routing decision
   // that will not happen.
-  if (!choice) return autoRolesConfigured ? 'Auto (Fast/Smart)' : (installed?.find(m => m.loaded)?.name ?? LOCAL_MODEL_FALLBACK);
-  return installed?.find(m => m.loaded)?.name ?? LOCAL_MODEL_FALLBACK;
+  if (!choice) return autoRolesConfigured ? 'Auto (Fast/Smart)' : defaultLoaded(installed);
+  return defaultLoaded(installed);
+}
+// #1761: the model holding its weights now first; a sleeping one (status 'sleeping', still `loaded`) only
+// when none is. Inline, not model-residency.ts: tests load this file on its own.
+function defaultLoaded(installed: { name: string; loaded?: boolean; status?: string }[] | null | undefined): string {
+  return installed?.find(m => m.loaded && m.status !== 'sleeping')?.name ?? installed?.find(m => m.loaded)?.name ?? LOCAL_MODEL_FALLBACK;
 }
 
 /** On unified-memory GPUs (message is English; borrowGB/hostGB/capGB let the UI phrase it per locale) the kernel lets the GPU borrow system RAM (GTT) outside any container
