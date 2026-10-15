@@ -19,10 +19,10 @@ const core = (file) => require(path.join(CORE, file));
 const hasCore = fs.existsSync(path.join(CORE, 'document-workers.cjs'));
 
 /** Core's machines route over the real code, the live shape except that the sensitivity check is shared (no URL of its own). */
-function backend() {
+function backend({ workers = true } = {}) {
   const values = new Map();
   const store = { get: (k) => values.get(k), set: (k, v) => values.set(k, v), delete: (k) => values.delete(k) };
-  const machines = core('inference-machines.cjs').createInferenceMachines({ store, embeddingActive: () => null, localEmbeddingUrl: () => null, log: () => {} });
+  const machines = core('inference-machines.cjs').createInferenceMachines({ store, embeddingActive: () => null, localEmbeddingUrl: () => null, workerEnabled: () => workers, log: () => {} });
   const env = { COWORK_DECISION_URL: 'http://kev:11435', COWORK_DECISION_MODEL: 'kev-0.8b' };
   const decision = core('decision-settings.cjs').createDecisionSettings({ store, env, machineUrl: () => machines.urlFor('decision'), sensitivityMachineUrl: () => machines.urlFor('sensitivity') });
   if (hasCore) core('document-workers.cjs').useMachines((kind) => machines.urlFor(kind));
@@ -48,7 +48,7 @@ run('inference-machines-1841', Number(process.env.QA_PORT || 31841), async (chec
   for (const [width, height, theme] of VIEWS) {
     const tag = `${width} px ${theme}`;
     const state = await createState();
-    const b = backend();
+    let b = backend();
     try {
       const { page, errors } = await openPage(browser, state, { width, height, theme });
       await page.route(/\/api\/models\/machines(\?.*)?$/, async (route) => {
@@ -98,6 +98,16 @@ run('inference-machines-1841', Number(process.env.QA_PORT || 31841), async (chec
         await r.getByRole('button', { name: 'Apply' }).click();
         await r.getByText('Shared with Decisions').waitFor({ timeout: 10000 });
         assert.equal(b.machines.urlFor('sensitivity'), null);
+      });
+      await check(`${tag}: a worker the deployment has not switched on shows a note and cannot be assigned (#1847)`, async () => {
+        b = backend({ workers: false });
+        await page.reload();
+        for (const id of ['ocr', 'documents']) {
+          await service(page, id).waitFor({ timeout: 15000 });
+          assert.match(await service(page, id).innerText(), /Turn it on in the deployment first\./);
+          assert.equal(await service(page, id).locator('select').count(), 0, `${id} has no machine select`);
+        }
+        if (SHOTS) { await service(page, 'ocr').scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(SHOTS, `1847-not-enabled-${width}-${theme}.png`) }); }
       });
       assert.deepEqual(errors, []);
       await page.close();

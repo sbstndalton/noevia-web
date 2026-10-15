@@ -952,6 +952,7 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   "machines.svc.sensitivity": "Verificação de sensibilidade (Laya)",
   "machines.svc.documents": "Documentos (Docling)",
   "machines.note.sensitivityShared": "Compartilhado com as decisões: segue o serviço de decisões até ter o seu próprio.",
+  "machines.note.workerNotEnabled": "Ative-o primeiro na implantação.",
   "machines.reindexTitle": "Reindexação necessária",
   "machines.reindexBody": "Mover os embeddings para {machine} reindexa todos os projetos e o Diário com {model} no novo endereço. A busca continua usando o endereço atual até a reindexação terminar.",
   "machines.reindexConfirm": "Reindexar e mover",

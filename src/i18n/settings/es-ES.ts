@@ -952,6 +952,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   "machines.svc.sensitivity": "Comprobación de sensibilidad (Laya)",
   "machines.svc.documents": "Documentos (Docling)",
   "machines.note.sensitivityShared": "Compartida con las decisiones: sigue al servicio de decisiones hasta que tenga uno propio.",
+  "machines.note.workerNotEnabled": "Actívalo primero en el despliegue.",
   "machines.reindexTitle": "Hace falta reindexar",
   "machines.reindexBody": "Mover los embeddings a {machine} reindexa todos los proyectos y el Diario con {model} en la nueva dirección. La búsqueda sigue usando la dirección actual hasta que termine la reindexación.",
   "machines.reindexConfirm": "Reindexar y mover",

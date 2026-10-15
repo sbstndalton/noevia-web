@@ -952,6 +952,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   "machines.svc.sensitivity": "Sensitivitetssjekk (Laya)",
   "machines.svc.documents": "Dokumenter (Docling)",
   "machines.note.sensitivityShared": "Delt med beslutningene: følger beslutningstjenesten til den får sin egen.",
+  "machines.note.workerNotEnabled": "Slå det på i utrullingen først.",
   "machines.reindexTitle": "Ny indeksering trengs",
   "machines.reindexBody": "Å flytte embeddings til {machine} indekserer hvert prosjekt og dagboken på nytt med {model} på den nye adressen. Søket bruker den nåværende adressen til indekseringen er ferdig.",
   "machines.reindexConfirm": "Indekser og flytt",

@@ -24,6 +24,8 @@ export interface MachineService {
   machine: string;
   port?: number;
   protocol?: 'tei' | 'llamacpp';
+  /** OCR and Docling only: whether the deployment has switched the worker on. False: nothing to move (#1847). */
+  enabled?: boolean;
   /** Where it reaches now (administrators only). */
   url?: string | null;
 }

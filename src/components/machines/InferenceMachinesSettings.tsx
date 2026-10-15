@@ -159,7 +159,9 @@ export function InferenceMachinesSettings(): JSX.Element {
   const serviceRow = (s: MachineService) => {
     const d = drafts[s.id] || draftOf(s);
     const setDraft = (patch: Partial<Draft>) => setDrafts((all) => ({ ...all, [s.id]: { ...d, ...patch } }));
-    const movable = s.mode === 'runtime' || s.mode === 'reindex';
+    // #1847: a worker the deployment has not switched on cannot be moved (assigning a machine would switch it on).
+    const notEnabled = s.enabled === false && s.machine === 'local';
+    const movable = (s.mode === 'runtime' || s.mode === 'reindex') && !notEnabled;
     const onRemote = d.machine !== 'local';
     const port = parsePort(d.port);
     const changed = d.machine !== draftOf(s).machine || (onRemote && (d.port !== draftOf(s).port || (s.id === 'reranker' && d.protocol !== draftOf(s).protocol)));
@@ -192,6 +194,7 @@ export function InferenceMachinesSettings(): JSX.Element {
             <option value="llamacpp">{t('machines.protocol.llamacpp')}</option>
           </select></label>}
         {movable && changed && <button type="button" className="popup-tab" disabled={busy !== ''} onClick={apply}>{busy === `assign:${s.id}` ? t('common.checking') : s.mode === 'reindex' ? t('machines.move') : t('machines.apply')}</button>}
+        {notEnabled && <span className="mm-assign-fixed">{t('machines.note.workerNotEnabled')}</span>}
         {s.mode === 'local' && <span className="mm-assign-fixed">{t('machines.note.local')}</span>}
         {s.mode === 'deployment' && <span className="mm-assign-fixed">{t('machines.note.deployment')}</span>}
         {s.id === 'embedding' && <span className="mm-assign-fixed">{t('machines.note.embedding')}</span>}

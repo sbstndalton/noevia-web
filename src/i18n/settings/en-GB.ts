@@ -957,6 +957,7 @@ export const EN_GB_SETTINGS = {
   "machines.svc.sensitivity": "Sensitivity check (Laya)",
   "machines.svc.documents": "Documents (Docling)",
   "machines.note.sensitivityShared": "Shared with Decisions: it follows the decision service until it has its own.",
+  "machines.note.workerNotEnabled": "Turn it on in the deployment first.",
   "machines.reindexTitle": "Re-index needed",
   "machines.reindexBody": "Moving embeddings to {machine} re-indexes every project and the Diary with {model} at the new address. Search keeps using the current address until the re-index finishes.",
   "machines.reindexConfirm": "Re-index and move",

@@ -952,6 +952,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   "machines.svc.sensitivity": "Sensibilitätsprüfung (Laya)",
   "machines.svc.documents": "Dokumente (Docling)",
   "machines.note.sensitivityShared": "Mit den Entscheidungen geteilt: folgt dem Entscheidungsdienst, bis ein eigener festgelegt ist.",
+  "machines.note.workerNotEnabled": "Schalte es zuerst in der Bereitstellung ein.",
   "machines.reindexTitle": "Neuindizierung nötig",
   "machines.reindexBody": "Embeddings auf {machine} zu verschieben indiziert jedes Projekt und das Tagebuch mit {model} unter der neuen Adresse neu. Die Suche nutzt die aktuelle Adresse, bis die Neuindizierung fertig ist.",
   "machines.reindexConfirm": "Neu indizieren und verschieben",
