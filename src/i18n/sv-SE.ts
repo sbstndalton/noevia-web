@@ -776,6 +776,7 @@ export const SV_SE: Catalogue = {
   'chat.status.thinking': "tänker…",
   'chat.status.generating': "genererar…",
   'chat.stopped.content': "Stoppad innan något svar skrevs.",
+  'chat.stopped.partial': "Stoppad innan svaret var klart.",
   'chat.failure.unreachable': "Kan inte nå noevia. Kontrollera anslutningen och försök igen.",
   'chat.failure.stopped': "Modellen stannade innan den var klar. Kontrollera backend och försök igen.",
   'chat.failure.incomplete': "Ofullständigt svar",

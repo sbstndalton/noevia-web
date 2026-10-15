@@ -35,6 +35,7 @@ export function messageFromEntry(h: HistoryEntry, id: string): Message {
     ...(h.role === 'user' && h.skill ? { skill: h.skill } : {}),
     ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}),
     ...(storedInterrupted(h) ? { interrupted: true } : {}),
+    ...(h.role === 'assistant' && h.stopped === true ? { stopped: true } : {}),
     ...(h.role === 'user' && h.answers !== undefined ? { answers: h.answers, answer: h.answer } : {}),
     ...(h.role === 'user' && h.branches !== undefined ? { branches: h.branches, branch: h.branch } : {}),
   };
@@ -57,6 +58,7 @@ function entryOf(m: Message): HistoryEntry {
     skill: m.role === 'user' ? m.skill : undefined,
     paused: m.role === 'assistant' ? m.paused : undefined,
     interrupted: interruptedFlag(m),
+    stopped: m.role === 'assistant' && m.stopped === true ? true : undefined,
     ...(m.role === 'user' && m.answers !== undefined ? { answers: m.answers, answer: m.answer } : {}),
     ...(m.role === 'user' && m.branches !== undefined ? { branches: m.branches, branch: m.branch } : {}),
   };
@@ -86,6 +88,7 @@ export function answerOf(m: Message): ReplyVariant {
     ...(m.senderLabel ? { senderLabel: m.senderLabel } : {}),
     ...(m.routingDecision ? { routingDecision: m.routingDecision } : {}),
     ...(m.sources?.length ? { sources: m.sources } : {}),
+    ...(m.role === 'assistant' && m.stopped === true ? { stopped: true as const } : {}),
   };
 }
 
@@ -105,6 +108,7 @@ export function answerFields(v: ReplyVariant): Partial<Message> {
     warning: undefined,
     paused: undefined,
     interrupted: undefined,
+    stopped: v.stopped === true ? true : undefined,
     routeTarget: undefined,
     coworkTask: undefined,
   };

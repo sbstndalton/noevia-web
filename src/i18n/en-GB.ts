@@ -787,6 +787,7 @@ export const EN_GB = {
   'chat.status.thinking': "thinking…",
   'chat.status.generating': "generating…",
   'chat.stopped.content': "Stopped before a reply was written.",
+  'chat.stopped.partial': "Stopped before the reply finished.",
   'chat.failure.unreachable': "Cannot reach noevia. Check your connection and try again.",
   'chat.failure.stopped': "The model stopped before it finished. Check the backend, then try again.",
   'chat.failure.incomplete': "Incomplete reply",

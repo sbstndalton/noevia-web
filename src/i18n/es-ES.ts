@@ -776,6 +776,7 @@ export const ES_ES: Catalogue = {
   'chat.status.thinking': "pensando…",
   'chat.status.generating': "generando…",
   'chat.stopped.content': "Detenido antes de escribir una respuesta.",
+  'chat.stopped.partial': "Detenido antes de terminar la respuesta.",
   'chat.failure.unreachable': "No se puede conectar con noevia. Comprueba tu conexión e inténtalo de nuevo.",
   'chat.failure.stopped': "El modelo se detuvo antes de terminar. Revisa el backend y vuelve a intentarlo.",
   'chat.failure.incomplete': "Respuesta incompleta",

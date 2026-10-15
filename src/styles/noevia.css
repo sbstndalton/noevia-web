@@ -74,6 +74,8 @@ input:not([type=checkbox]):not([type=radio]), textarea, select { border-color:va
 /* #1547/#1549: a failed reply. Partial text is labelled incomplete; the failure is an inline error card
    with its own mark, in the interface font, never the reply's body style or the accent green. */
 .msg-partial-label { display: block; margin-bottom: 4px; color: var(--text-secondary); font-family: var(--font-ui); font-size: var(--text-caption); }
+/* #1784: the note under a reply the person stopped partway: quiet, in the voice of the partial label above. */
+.msg p.msg-stopped { margin: var(--space-2) 0 0; color: var(--text-secondary); font-family: var(--font-ui); font-size: var(--text-caption); line-height: 1.5; }
 .msg-failure { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin-top: 4px; padding: 10px 12px;
   border: 1px solid var(--danger); border-radius: var(--radius-control);
   background: var(--bg-surface); color: var(--text-primary); font-family: var(--font-ui); font-size: var(--text-footnote); line-height: 1.5; }
@@ -562,6 +564,11 @@ dialog.folder-picker::backdrop { background:var(--scrim); backdrop-filter:blur(v
    transcript never runs under it. The band exists only while the pill is shown (ChatView). */
 .jump-band { flex: none; display: flex; justify-content: center; align-items: center; height: 44px; }
 .jump-band > .jump-to-latest { position: static; bottom: auto; }
+/* #1789: the band kept the pill off the text, but the transcript still cut its last visible line in half
+   right above the pill, so that line read as hidden under it. While the pill is shown the bottom 24px of
+   the transcript fades out (the Diary pattern, #1568): a cut-off line reads as "scroll", never as covered. */
+.chat-workspace > .transcript:has(+ .jump-band) {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent); }
 /* #1533: when the row is tight, the Thinking pill gives up its word ("Thinking"), keeps its icon and
    level, and names the setting in its tooltip. The model label keeps its own width (phone.css). */
 .chat-composer-inner > .reasoning-control { min-width: 0; }

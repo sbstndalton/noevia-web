@@ -86,6 +86,8 @@ export interface Message {
   paused?: ReplyPause;
   /** #1507: a reply the server kept partway when it was cut off. Shown with Retry and Continue. */
   interrupted?: boolean;
+  /** #1784: the person pressed Stop after part of the answer had arrived. The text is kept and marked Stopped. */
+  stopped?: boolean;
   /** #1517, user turns: the answers kept when Regenerate replaced one. `answer` is the one shown (the
    *  assistant message after this turn holds it); the others are stored here. */
   answers?: ReplyVariant[];
@@ -106,6 +108,8 @@ export interface ReplyVariant {
   senderLabel?: string;
   routingDecision?: RoutingDecision;
   sources?: SourceRef[];
+  /** #1784: this answer was stopped partway. */
+  stopped?: true;
 }
 
 /** #1517: an earlier version of a user turn, with its own answers and the chat that followed it, in the saved form. */
@@ -343,6 +347,8 @@ export interface HistoryEntry {
   paused?: ReplyPause;
   /** #1507: assistant turns only: the reply was saved partway and never finished (see interrupted-reply.ts). */
   interrupted?: true;
+  /** #1784: assistant turns only: the person stopped the reply after part of its text had arrived. */
+  stopped?: true;
   /** #1517, user turns: stored answers and versions (see Message). */
   answers?: ReplyVariant[];
   answer?: number;

@@ -1202,12 +1202,14 @@ export default function App(): JSX.Element {
           // User pressed Stop (or navigated away): keep what streamed in,
           // mark nothing as an error. #1447: a reply stopped while still thinking has no
           // answer either, so it is labelled Stopped too (its thinking stays visible).
+          // #1784: a reply stopped partway keeps its text and its sender, and is marked stopped,
+          // so it is never mistaken for a finished answer.
           setMessagesByChat((prev) => ({
             ...prev,
             [chatId]: (prev[chatId] ?? []).map((m) =>
-              m.id === replyId && !m.content
-                ? { ...m, senderLabel: STOPPED_SENDER }
-                : m,
+              m.id !== replyId ? m
+                : !m.content ? { ...m, senderLabel: STOPPED_SENDER }
+                : { ...m, stopped: true },
             ),
           }));
         } else {
