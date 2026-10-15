@@ -366,7 +366,7 @@ function ProjectRoutingSection({ models, routes, projects, modelsError }: {
 // change the figure here (the deployment's INFERENCE_MEMORY_BUDGET_GIB is only its first value).
 type BudgetEstimate = { totalGib: number | null; cacheRamUnbounded?: boolean };
 type BudgetInfo = { budgetGib: number; source: 'admin' | 'deployment'; defaultGib: number; minGib: number; maxGib: number; limited?: boolean;
-  models: { model: string; loaded: boolean; system: boolean; labels: string[]; estimate: BudgetEstimate | null; fits: boolean | null }[] | null; estimateError?: string };
+  models: { model: string; loaded: boolean; sleeping?: boolean; system: boolean; labels: string[]; estimate: BudgetEstimate | null; fits: boolean | null }[] | null; estimateError?: string };
 function InferenceBudgetSection(): JSX.Element | null {
   const t = useT();
   const [info, setInfo] = useState<BudgetInfo | null>(null);
@@ -436,7 +436,7 @@ function InferenceBudgetSection(): JSX.Element | null {
         : rows.length ? <div className="mm-table-wrap"><table className="mm-table">
           <thead><tr><th scope="col">{t('mm.budget.colModel')}</th><th scope="col">{t('mm.budget.colEstimate')}</th><th scope="col">{t('mm.budget.colVerdict')}</th></tr></thead>
           <tbody>{rows.map((m) => <tr key={m.model}>
-            <td data-label={t('mm.budget.colModel')}>{m.loaded ? t('mm.budget.loaded', { model: m.model }) : m.model}</td>
+            <td data-label={t('mm.budget.colModel')}>{m.loaded && !m.sleeping ? t('mm.budget.loaded', { model: m.model }) : m.model}</td>
             <td data-label={t('mm.budget.colEstimate')}>{m.estimate?.totalGib != null ? t('mm.budget.of', { gib: gib(m.estimate.totalGib), budget: gib(info.budgetGib) }) : '—'}</td>
             <td data-label={t('mm.budget.colVerdict')}>{verdict(m)}</td>
           </tr>)}</tbody>

@@ -2,7 +2,8 @@
 // #1796: Settings → Models said Decision = laya_multilingual_f16 (a stale preset marked as Laya) while
 // every decision went to Kev. The Decision row now names the model decisions are sent to (the decision
 // settings plus COWORK_DECISION_MODEL: kev-0.8b) and a Sensitivity check row names its own service's
-// (Laya). A decision address saved in Settings says so; the stale preset name is gone from the overview.
+// (Laya). Both say "Configured", not "Running": core only knows an address is set up (review of web#60).
+// A decision address saved in Settings says so; the stale preset name is gone from the overview.
 //
 // Offline: the app is built from this checkout; the overview comes from noevia-core's real code with the
 // live deployment's decision configuration and synthetic everything else (models-state-fixture.cjs).
@@ -32,8 +33,11 @@ run('models-decision-row-1796', Number(process.env.QA_PORT || 31796), async (che
       await overview.locator('.mm-assign-list').waitFor({ timeout: 15000 });
 
       await check(`${tag}: Decision is kev-0.8b from the deployment, Sensitivity check is laya`, async () => {
-        assert.deepEqual(await rowText(overview, 'decision'), { label: 'Decision', model: 'kev-0.8b', state: 'Running', note: 'Set in the server configuration.' });
-        assert.deepEqual(await rowText(overview, 'sensitivity'), { label: 'Sensitivity check', model: 'laya', state: 'Running', note: 'Set in the server configuration.' });
+        assert.deepEqual(await rowText(overview, 'decision'), { label: 'Decision', model: 'kev-0.8b', state: 'Configured', note: 'Set in the server configuration.' });
+        assert.deepEqual(await rowText(overview, 'sensitivity'), { label: 'Sensitivity check', model: 'laya', state: 'Configured', note: 'Set in the server configuration.' });
+      });
+      await check(`${tag}: the embedding row, whose model is really loaded, still says Running`, async () => {
+        assert.equal((await rowText(overview, 'embedding')).state, 'Running');
       });
       await check(`${tag}: the stale ${STALE_LAYA} value is not in the overview`, async () => {
         assert.equal(await overview.getByText(STALE_LAYA).count(), 0);

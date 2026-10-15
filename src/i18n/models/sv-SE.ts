@@ -32,6 +32,7 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.assign.role.code': "Kod",
   'mm.assign.role.vision': "Bild",
   'mm.assign.state.active': "Körs",
+  'mm.assign.state.configured': "Konfigurerad",
   'mm.assign.state.switching': "Indexerar",
   'mm.assign.state.missing': "Fil saknas",
   'mm.assign.state.notInstalled': "Inte installerad",

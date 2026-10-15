@@ -37,14 +37,17 @@ run('decision-reset-1765', Number(process.env.QA_PORT || 31765), async (check, b
         }
       });
 
-      await check(`${tag}: "Use deployment default" forgets it; the deployment's address is back, audited, focus on the result`, async () => {
+      await check(`${tag}: "Use deployment default" forgets it; the deployment's address is back, audited, focus on the section heading`, async () => {
         await section.getByRole('button', { name: 'Use deployment default' }).click();
         const done = section.getByRole('status').filter({ hasText: "The deployment's decision service is used again." });
         await done.waitFor({ timeout: 5000 });
         assert.equal(await url.inputValue(), 'http://kev:11435');
         await section.getByText("This is the deployment's decision service.").waitFor({ timeout: 2000 });
         assert.equal(await section.getByRole('button', { name: 'Use deployment default' }).count(), 0, 'nothing saved here to reset any more');
-        await page.waitForFunction(() => document.activeElement?.getAttribute('role') === 'status');
+        // Review of web#60: focus goes to the section heading, never to the live region as it mounts (read twice).
+        await page.waitForFunction(() => document.activeElement?.id === 'decision-setup-title');
+        assert.equal(await done.evaluate((el) => el === document.activeElement || el.hasAttribute('tabindex')), false, 'the status line is not focused or focusable');
+        assert.equal(await section.getByRole('status').count(), 1, 'one live region announces the result');
         assert.equal(state.values.has('decision:configuration'), false, 'the stored key is gone');
         assert.equal(state.audits.at(-1)[0], 'decision.reset');
         if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `1765-reset-${TAG}-${width}-${theme}.png`) });

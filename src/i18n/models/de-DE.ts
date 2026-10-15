@@ -32,6 +32,7 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.assign.role.code': "Code",
   'mm.assign.role.vision': "Bilder",
   'mm.assign.state.active': "Läuft",
+  'mm.assign.state.configured': "Eingerichtet",
   'mm.assign.state.switching': "Neuindexierung",
   'mm.assign.state.missing': "Datei fehlt",
   'mm.assign.state.notInstalled': "Nicht installiert",

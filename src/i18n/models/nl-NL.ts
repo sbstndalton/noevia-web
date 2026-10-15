@@ -32,6 +32,7 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.assign.role.code': "Code",
   'mm.assign.role.vision': "Beeld",
   'mm.assign.state.active': "Actief",
+  'mm.assign.state.configured': "Ingesteld",
   'mm.assign.state.switching': "Indexeren",
   'mm.assign.state.missing': "Bestand ontbreekt",
   'mm.assign.state.notInstalled': "Niet geïnstalleerd",

@@ -22,7 +22,7 @@ type Role = (typeof ROLES)[number];
 const ROLE: Record<Role, MessageKey> = { fast: 'mm.assign.role.fast', smart: 'mm.assign.role.smart', code: 'mm.assign.role.code', vision: 'mm.assign.role.vision' };
 type Tone = 'good' | 'warn' | 'bad' | 'muted';
 const STATE: Record<string, [MessageKey, Tone]> = {
-  active: ['mm.assign.state.active', 'good'], switching: ['mm.assign.state.switching', 'warn'], missing: ['mm.assign.state.missing', 'bad'], notInstalled: ['mm.assign.state.notInstalled', 'bad'], off: ['mm.assign.state.off', 'muted'],
+  active: ['mm.assign.state.active', 'good'], configured: ['mm.assign.state.configured', 'muted'], switching: ['mm.assign.state.switching', 'warn'], missing: ['mm.assign.state.missing', 'bad'], notInstalled: ['mm.assign.state.notInstalled', 'bad'], off: ['mm.assign.state.off', 'muted'],
   loaded: ['mm.loaded', 'good'], sleeping: ['mm.card.sleeping', 'muted'], unloaded: ['mm.card.unloaded', 'muted'], unset: ['mm.assign.state.unset', 'muted'],
 };
 
@@ -91,7 +91,8 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
     return <li key={svc.id} className="mm-assign-row" data-service={svc.id}>
       <span className="mm-assign-label">{t(SERVICE[svc.id])}</span>
       <span className="mm-assign-model" title={svc.model || undefined}>{name}{svc.next ? <small> → {svc.next}</small> : null}</span>
-      <StatePill state={svc.state === 'missing' && !svc.model ? 'notInstalled' : svc.state}/>
+      {/* #1796 review: for Decision and Sensitivity core's 'active' only means an address is set up; nothing checks it answers. */}
+      <StatePill state={svc.state === 'missing' && !svc.model ? 'notInstalled' : (svc.id === 'decision' || svc.id === 'sensitivity') && svc.state === 'active' ? 'configured' : svc.state}/>
       <span className="mm-assign-control">
         {svc.id === 'embedding' && admin && svc.canChange && (svc.next
           ? <button className="popup-tab" disabled={busy !== ''} onClick={() => void runEmbedding(svc, true)}>{busy === 'embedding' ? t('mm.assign.switching') : t('mm.assign.finish')}</button>

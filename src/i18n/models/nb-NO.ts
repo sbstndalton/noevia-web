@@ -32,6 +32,7 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.assign.role.code': "Kode",
   'mm.assign.role.vision': "Bilder",
   'mm.assign.state.active': "Kjører",
+  'mm.assign.state.configured': "Konfigurert",
   'mm.assign.state.switching': "Indekserer",
   'mm.assign.state.missing': "Fil mangler",
   'mm.assign.state.notInstalled': "Ikke installert",
