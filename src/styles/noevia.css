@@ -1090,6 +1090,15 @@ select { color:var(--text-primary); background-color:var(--bg-surface); border:1
 .project-sources { gap:14px; }
 .project-sources > * { margin-block:0; }
 .project-main:has(.project-sources) > .project-composer { display:none; }
+/* #1805: a folder (or files) dragged over Sources. The pane itself is the drop target; the outline
+   and the one-line cue say so without moving anything. */
+.project-sources { position:relative; }
+.project-sources.is-drop-target { outline:2px dashed var(--accent); outline-offset:-6px; border-radius: var(--radius-control); background:color-mix(in srgb,var(--accent) 5%,transparent); }
+.project-sources .folder-drop-active { position:sticky; top:8px; z-index:2; align-self:center; margin:0; padding:8px 14px; border-radius:999px; background:var(--bg-surface); border:1px solid var(--accent); color:var(--accent-ink); font-size:var(--text-caption); font-weight:600; pointer-events:none; }
+.project-sources .folder-drop-hint { font-size:var(--text-caption); color:var(--text-secondary); }
+.project-sources .folder-import-result { display:flex; flex-direction:column; gap:8px; }
+.project-sources .folder-import-result > .source-status { margin:0; overflow-wrap:anywhere; }
+.project-sources .folder-import-skipped .upload-name { overflow-wrap:anywhere; }
 
 /* Markdown reading panes and responsive comparison. */
 .diary-editor-tabs { flex-wrap:wrap; align-items:center; }

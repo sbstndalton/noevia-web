@@ -198,11 +198,26 @@ function failureWithCode(message: string, code: unknown, status?: number): Error
  *  (uploadStageText); `stage` stays the English fallback, and the only text for a stage the server words. */
 export type UploadStageKey = 'busy' | 'sending' | 'received' | 'queued' | 'saved';
 export interface UploadProgress { stage: string; stageKey?: UploadStageKey; percent?: number }
+/** One source upload. A folder import's file (#1805) also carries its path inside the folder and the
+ *  import id its plan answered; the server refuses a path that plan did not accept. */
+export interface SourceUploadBody { name: string; dataBase64: string; relativePath?: string; importId?: string }
+
+/** #1805: what a folder import will do, before anything is uploaded. */
+export interface FolderImportPlan {
+  importId: string;
+  limits: { maxFiles: number; maxBytes: number };
+  accepted: { path: string; size: number; change: 'new' | 'changed' }[];
+  unchanged: { path: string }[];
+  skipped: { path: string; code: string; reason: string }[];
+}
+export const planFolderImport = (id: string, entries: { path: string; size: number; sha256?: string }[]) =>
+  postJson<FolderImportPlan>(`/api/projects/${encodeURIComponent(id)}/folder-import/plan`, { entries });
+
 /** #1451: the server runs at most two source jobs per account at once and answers 429 to a third. That
  *  answer comes before any job exists, so sending the same file again is safe. Waits between tries. */
 const BUSY_RETRY_DELAYS_MS = [1000, 2000, 4000, 8000];
 /** One upload POST (the file is accepted and a job is started, or the server refuses it outright). */
-function postSourceUpload(id: string, body: { name: string; dataBase64: string }, progress: (value: UploadProgress) => void): Promise<{ poll: string }> {
+function postSourceUpload(id: string, body: SourceUploadBody, progress: (value: UploadProgress) => void): Promise<{ poll: string }> {
   return new Promise<{ poll: string }>((resolve, reject) => {
     if (accountChangedElsewhere()) { reject(new AccountChangedError()); return; }
     const xhr = new XMLHttpRequest();
@@ -230,7 +245,7 @@ function postSourceUpload(id: string, body: { name: string; dataBase64: string }
 
 /** #1451: a busy answer (429) is retried a bounded number of times, with a stage line saying so. Any
  *  other failure, or a busy answer after the last retry, is thrown as it was. */
-async function postSourceUploadWithBusyRetry(id: string, body: { name: string; dataBase64: string }, progress: (value: UploadProgress) => void): Promise<{ poll: string }> {
+async function postSourceUploadWithBusyRetry(id: string, body: SourceUploadBody, progress: (value: UploadProgress) => void): Promise<{ poll: string }> {
   for (let attempt = 0; ; attempt++) {
     try { return await postSourceUpload(id, body, progress); }
     catch (err) {
@@ -241,11 +256,11 @@ async function postSourceUploadWithBusyRetry(id: string, body: { name: string; d
   }
 }
 
-export async function uploadProjectFile(id: string, body: { name: string; dataBase64: string }, progress: (value: UploadProgress) => void = () => {}) {
+export async function uploadProjectFile(id: string, body: SourceUploadBody, progress: (value: UploadProgress) => void = () => {}) {
   const response = await postSourceUploadWithBusyRetry(id, body, progress);
   progress({ stage: 'Upload received · waiting for processing', stageKey: 'received' });
   for (;;) {
-    const job = await getJson<{ done: boolean; stage?: string; status?: number; body?: { error?: string; code?: string; name: string; path: string; bytes: number; attachment?: { reduction?: { note: string }; assetId?: string; state?: string; group?: string; reason?: string; reasonId?: string; reasonParams?: Record<string, string | number> }; document?: { state?: string; error?: string; errorId?: string } } }>(response.poll);
+    const job = await getJson<{ done: boolean; stage?: string; status?: number; body?: { error?: string; code?: string; name: string; path: string; bytes: number; unchanged?: boolean; attachment?: { reduction?: { note: string }; assetId?: string; state?: string; group?: string; reason?: string; reasonId?: string; reasonParams?: Record<string, string | number> }; document?: { state?: string; error?: string; errorId?: string } } }>(response.poll);
     if (job.done) {
       if ((job.status || 500) >= 400) throw failureWithCode(job.body?.error || 'Source processing failed', job.body?.code);
       invalidateCached(WORKSPACE_KEY);
