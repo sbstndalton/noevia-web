@@ -1402,6 +1402,7 @@ export const DE_DE: Catalogue = {
   'projects.view.note.ocrRetryUnavailable': "Seiten {pages}: OCR-Wiederholung nicht verfügbar (kein OCR-Dienst eingerichtet)",
   'projects.view.note.ocrRetryLimit': "Seiten {pages}: nicht wiederholt (OCR-Wiederholungslimit erreicht)",
   'projects.view.note.ocrRetryRecovered': "Seiten {pages}: durch OCR-Wiederholung gelesen; Zahlen mit dem Original abgleichen",
+  'projects.view.note.searchableToPage': "bis Seite {page} durchsuchbar; spätere Seiten werden noch indexiert",
   'projects.view.reason.noText': "das Original bleibt erhalten, aber es konnte kein Text gelesen werden",
   'chat.routing.local': "Lokal",
   'chat.routing.cloud': "Cloud",

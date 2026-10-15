@@ -35,6 +35,7 @@ const NOTES = [
   { id: 'ocrRetryUnavailable', params: { pages: '3' } },
   { id: 'ocrRetryLimit', params: { pages: '21, 22' } },
   { id: 'ocrRetryRecovered', params: { pages: '5' } },
+  { id: 'searchableToPage', params: { page: 412 } }, // #1868
 ];
 
 test('every note is worded in every locale, with its numbers and reason, never a key or a placeholder', () => {
@@ -99,4 +100,16 @@ test('a PDF too large for OCR says so in every locale (#1864, errorId ocrTooLarg
     assert.doesNotMatch(text, /projects\.view\./);
     if (locale !== 'en-GB') assert.notEqual(text, status.documentError({ errorId: 'ocrTooLarge', error: 'x' }, tFor('en-GB')));
   }
+});
+
+test('#1868: a long document says how far search covers it while its later pages are still indexed', () => {
+  const V = 'a'.repeat(64);
+  const long = doc({ pages: 900, truncated: true, availableVersion: V, searchable: { version: V, page: 412, complete: false } });
+  assert.deepEqual(JSON.parse(JSON.stringify(status.documentNotes(long.document))), [{ id: 'searchableToPage', params: { page: 412 } }]);
+  assert.match(status.sourceStatus(long), /searchable up to page 412 so far; later pages are still being indexed/);
+  assert.match(status.sourceStatus(long, tFor('de-DE')), /bis Seite 412 durchsuchbar/);
+  for (const d of [
+    { availableVersion: V, searchable: { version: V, page: null, complete: true } },
+    { availableVersion: 'b'.repeat(64), searchable: { version: V, page: 412, complete: false } },
+  ]) assert.equal(status.documentNotes(doc(d).document).length, 0, 'complete, or for another version: nothing to say');
 });

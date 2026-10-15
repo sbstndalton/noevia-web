@@ -1402,6 +1402,7 @@ export const NL_NL: Catalogue = {
   'projects.view.note.ocrRetryUnavailable': "pagina’s {pages}: nieuwe OCR-poging niet beschikbaar (geen OCR-service ingesteld)",
   'projects.view.note.ocrRetryLimit': "pagina’s {pages}: niet opnieuw geprobeerd (limiet voor OCR-pogingen bereikt)",
   'projects.view.note.ocrRetryRecovered': "pagina’s {pages}: hersteld met een nieuwe OCR-poging; controleer de getallen met het origineel",
+  'projects.view.note.searchableToPage': "doorzoekbaar tot en met pagina {page}; latere pagina’s worden nog geïndexeerd",
   'projects.view.reason.noText': "het origineel blijft bewaard, maar er kon geen tekst worden gelezen",
   'chat.routing.local': "Lokaal",
   'chat.routing.cloud': "Cloud",

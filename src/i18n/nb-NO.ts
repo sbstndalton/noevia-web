@@ -1402,6 +1402,7 @@ export const NB_NO: Catalogue = {
   'projects.view.note.ocrRetryUnavailable': "sider {pages}: nytt OCR-forsøk utilgjengelig (ingen OCR-tjeneste er satt opp)",
   'projects.view.note.ocrRetryLimit': "sider {pages}: ikke forsøkt på nytt (grensen for OCR-forsøk er nådd)",
   'projects.view.note.ocrRetryRecovered': "sider {pages}: hentet med nytt OCR-forsøk; kontroller tallene mot originalen",
+  'projects.view.note.searchableToPage': "søkbar til og med side {page}; senere sider indekseres fortsatt",
   'projects.view.reason.noText': "originalen beholdes, men ingen tekst kunne leses",
   'chat.routing.local': "Lokal",
   'chat.routing.cloud': "Sky",
