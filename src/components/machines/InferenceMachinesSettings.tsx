@@ -3,22 +3,23 @@
 // only: the Settings shell mounts this page for them alone, and the server refuses everyone else on every method.
 //
 // Decision service and reranker move at once. Embeddings move only through the #1636 re-index (the same
-// set-next → switch → finish the Models page uses), so the page asks first. Chat models stay on this machine
-// for now, and OCR's address is set by the deployment; both say so instead of offering a control.
+// set-next → switch → finish the Models page uses), so the page asks first. OCR's address is set by the deployment
+// and says so instead of offering a control. #1840: a chat role (Fast, Smart, Code, Creative) or Vision moves to a
+// machine's OpenAI-compatible server with a port and the model that server lists, asked for through the server.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent, JSX } from 'react';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 import { notifyModelsChanged } from '../../models-changed';
-import { fetchMachines, machineAction, MachineError, parsePort } from './api';
+import { fetchMachineModels, fetchMachines, machineAction, MachineError, parsePort } from './api';
 import type { EmbeddingTarget, Machine, MachineAction, MachineService, MachineServiceId, MachinesView } from './api';
 import './machines.css';
 
 const SERVICE_LABEL: Record<MachineServiceId, MessageKey> = {
-  chatFast: 'machines.svc.chatFast', chatSmart: 'machines.svc.chatSmart', chatCode: 'machines.svc.chatCode', vision: 'machines.svc.vision',
+  chatFast: 'machines.svc.chatFast', chatSmart: 'machines.svc.chatSmart', chatCode: 'machines.svc.chatCode', chatCreative: 'machines.svc.chatCreative', vision: 'machines.svc.vision',
   decision: 'machines.svc.decision', embedding: 'machines.svc.embedding', reranker: 'machines.svc.reranker', ocr: 'machines.svc.ocr',
 };
-const ORDER: MachineServiceId[] = ['chatFast', 'chatSmart', 'chatCode', 'vision', 'decision', 'embedding', 'reranker', 'ocr'];
+const ORDER: MachineServiceId[] = ['chatFast', 'chatSmart', 'chatCode', 'chatCreative', 'vision', 'decision', 'embedding', 'reranker', 'ocr'];
 const HEALTH: Record<string, [MessageKey, 'good' | 'warn' | 'bad' | 'muted']> = {
   up: ['machines.health.up', 'good'], down: ['machines.health.down', 'warn'], unreachable: ['machines.health.unreachable', 'bad'],
   unknown: ['machines.health.unknown', 'muted'], idle: ['machines.health.idle', 'muted'],
@@ -29,10 +30,13 @@ const ERRORS: Partial<Record<string, MessageKey>> = {
   invalidName: 'machines.error.invalidName', duplicateName: 'machines.error.duplicateName', duplicateAddress: 'machines.error.duplicateAddress',
   inUse: 'machines.error.inUse', embeddingOnMachine: 'machines.error.embeddingOnMachine', invalidPort: 'machines.error.invalidPort',
   noLocalEmbedding: 'machines.error.noLocalEmbedding', embeddingOff: 'machines.error.embeddingOff', tooMany: 'machines.error.tooMany',
+  invalidModel: 'machines.error.invalidModel', unknownModel: 'machines.error.unknownModel', machineUnreachable: 'machines.error.machineUnreachable',
 };
 
-type Draft = { machine: string; port: string; protocol: 'tei' | 'llamacpp' };
-const draftOf = (s: MachineService): Draft => ({ machine: s.machine === 'other' ? 'local' : s.machine, port: s.port ? String(s.port) : '', protocol: s.protocol || 'tei' });
+type Draft = { machine: string; port: string; protocol: 'tei' | 'llamacpp'; model: string };
+const draftOf = (s: MachineService): Draft => ({ machine: s.machine === 'other' ? 'local' : s.machine, port: s.port ? String(s.port) : '', protocol: s.protocol || 'tei', model: s.model || '' });
+/** #1840: what a machine listed for a chat role's row, for the machine and port it was asked at. */
+type Listing = { key: string; loading?: boolean; models?: string[]; error?: string };
 
 function HealthPill({ state }: { state: string | undefined }): JSX.Element {
   const t = useT();
@@ -51,6 +55,7 @@ export function InferenceMachinesSettings(): JSX.Element {
   const [addError, setAddError] = useState(''), [addStatus, setAddStatus] = useState('');
   const [busy, setBusy] = useState('');
   const [drafts, setDrafts] = useState<Partial<Record<MachineServiceId, Draft>>>({});
+  const [listings, setListings] = useState<Partial<Record<MachineServiceId, Listing>>>({});
   const [name, setName] = useState(''), [address, setAddress] = useState('');
   const [editing, setEditing] = useState<{ id: string; name: string; address: string } | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -155,15 +160,34 @@ export function InferenceMachinesSettings(): JSX.Element {
   const serviceRow = (s: MachineService) => {
     const d = drafts[s.id] || draftOf(s);
     const setDraft = (patch: Partial<Draft>) => setDrafts((all) => ({ ...all, [s.id]: { ...d, ...patch } }));
-    const movable = s.mode === 'runtime' || s.mode === 'reindex';
+    const chat = s.mode === 'chat';
+    const movable = s.mode === 'runtime' || s.mode === 'reindex' || chat;
     const onRemote = d.machine !== 'local';
     const port = parsePort(d.port);
-    const changed = d.machine !== draftOf(s).machine || (onRemote && (d.port !== draftOf(s).port || (s.id === 'reranker' && d.protocol !== draftOf(s).protocol)));
+    const changed = d.machine !== draftOf(s).machine || (onRemote && (d.port !== draftOf(s).port || (s.id === 'reranker' && d.protocol !== draftOf(s).protocol) || (chat && d.model !== draftOf(s).model)));
     const health = view?.health?.services?.[s.id];
     const label = t(SERVICE_LABEL[s.id]);
+    // #1840: the models the machine lists at this port; asked for on request, kept only for the machine and port asked.
+    const listingKey = `${d.machine}:${port ?? ''}`;
+    const listing = listings[s.id]?.key === listingKey ? listings[s.id] : undefined;
+    const modelChoices = [...(listing?.models || []), ...(d.model && !(listing?.models || []).includes(d.model) ? [d.model] : [])];
+    const findModels = async () => {
+      if (port === null) { setError(t('machines.error.invalidPort')); return; }
+      setError('');
+      setListings((all) => ({ ...all, [s.id]: { key: listingKey, loading: true } }));
+      try {
+        const models = await fetchMachineModels(d.machine, port);
+        if (!live.current) return;
+        setListings((all) => ({ ...all, [s.id]: { key: listingKey, models } }));
+        if (models.length && !models.includes(d.model)) setDraft({ model: models[0] });
+      } catch (e) {
+        if (live.current) setListings((all) => ({ ...all, [s.id]: { key: listingKey, error: message(e, 'machines.modelsError') } }));
+      }
+    };
     const apply = () => {
       if (onRemote && port === null) { setError(t('machines.error.invalidPort')); return; }
-      void act(`assign:${s.id}`, { action: 'assign', service: s.id, machine: d.machine, ...(onRemote && port ? { port } : {}), ...(s.id === 'reranker' && onRemote ? { protocol: d.protocol } : {}) }, 'machines.assigned',
+      if (chat && onRemote && !d.model) { setError(t('machines.error.invalidModel')); return; }
+      void act(`assign:${s.id}`, { action: 'assign', service: s.id, machine: d.machine, ...(onRemote && port ? { port } : {}), ...(s.id === 'reranker' && onRemote ? { protocol: d.protocol } : {}), ...(chat && onRemote ? { model: d.model } : {}) }, 'machines.assigned',
         () => setDrafts((all) => { const next = { ...all }; delete next[s.id]; return next; }));
     };
     return <li key={s.id} className="mm-assign-row machines-assign" data-service={s.id}>
@@ -178,10 +202,18 @@ export function InferenceMachinesSettings(): JSX.Element {
               </select></label>
           : <span>{machineName(s.machine)}</span>}
       </span>
-      {(s.id === 'decision' || s.id === 'embedding' || s.id === 'reranker') ? <HealthPill state={health?.state}/> : <span className="machines-pill-slot" aria-hidden="true"/>}
+      {(s.id === 'decision' || s.id === 'embedding' || s.id === 'reranker' || (chat && s.machine !== 'local')) ? <HealthPill state={health?.state}/> : <span className="machines-pill-slot" aria-hidden="true"/>}
       <span className="mm-assign-control">
         {movable && onRemote && <label className="machines-port">{t('machines.port')}
           <input aria-label={t('machines.portFor', { service: label })} value={d.port} inputMode="numeric" size={6} placeholder={s.id === 'decision' ? '8040' : '8080'} disabled={busy !== ''} onChange={(e) => setDraft({ port: e.target.value })}/></label>}
+        {chat && onRemote && <button type="button" className="popup-tab" disabled={busy !== '' || !!listing?.loading} onClick={() => void findModels()}>{listing?.loading ? t('common.checking') : t('machines.findModels')}</button>}
+        {chat && onRemote && modelChoices.length > 0 && <label className="mm-select"><span className="sr-only">{t('machines.modelFor', { service: label })}</span>
+          <select aria-label={t('machines.modelFor', { service: label })} value={d.model} disabled={busy !== ''} onChange={(e) => setDraft({ model: e.target.value })}>
+            {!d.model && <option value="">{t('machines.chooseModel')}</option>}
+            {modelChoices.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select></label>}
+        {chat && onRemote && listing?.models && listing.models.length === 0 && <span className="mm-assign-fixed" role="status">{t('machines.modelsNone')}</span>}
+        {chat && onRemote && listing?.error && <span className="mm-assign-fixed machines-unreachable" role="alert">{listing.error}</span>}
         {s.id === 'reranker' && onRemote && <label className="mm-select"><span className="sr-only">{t('machines.protocol')}</span>
           <select aria-label={t('machines.protocol')} value={d.protocol} disabled={busy !== ''} onChange={(e) => setDraft({ protocol: e.target.value === 'llamacpp' ? 'llamacpp' : 'tei' })}>
             <option value="tei">{t('machines.protocol.tei')}</option>
@@ -191,7 +223,8 @@ export function InferenceMachinesSettings(): JSX.Element {
         {s.mode === 'local' && <span className="mm-assign-fixed">{t('machines.note.local')}</span>}
         {s.mode === 'deployment' && <span className="mm-assign-fixed">{t('machines.note.deployment')}</span>}
         {s.id === 'embedding' && <span className="mm-assign-fixed">{t('machines.note.embedding')}</span>}
-        {health?.state === 'unreachable' && <span className="mm-assign-fixed machines-unreachable" role="status">{t(s.id === 'decision' ? 'machines.unreachable.decision' : 'machines.unreachable.service')}</span>}
+        {chat && s.machine !== 'local' && !changed && <span className="mm-assign-fixed">{t('machines.note.chat', { model: s.model || '' })}</span>}
+        {health?.state === 'unreachable' && <span className="mm-assign-fixed machines-unreachable" role="status">{t(s.id === 'decision' ? 'machines.unreachable.decision' : chat ? 'machines.unreachable.chat' : 'machines.unreachable.service')}</span>}
       </span>
     </li>;
   };

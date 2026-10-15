@@ -1,9 +1,10 @@
 // #1638: Settings → Inference machines (GET/POST /api/models/machines, administrators only). Kept React-free.
 import { apiFetch } from '../../api';
 
-export type MachineServiceId = 'chatFast' | 'chatSmart' | 'chatCode' | 'vision' | 'decision' | 'embedding' | 'reranker' | 'ocr';
-/** How a service moves: 'runtime' at once, 'reindex' through the embedding re-index, 'local' stays here, 'deployment' set by the deployment. */
-export type MachineServiceMode = 'runtime' | 'reindex' | 'local' | 'deployment';
+export type MachineServiceId = 'chatFast' | 'chatSmart' | 'chatCode' | 'chatCreative' | 'vision' | 'decision' | 'embedding' | 'reranker' | 'ocr';
+/** How a service moves: 'runtime' at once, 'chat' at once with the model the machine serves (#1840), 'reindex' through the
+ *  embedding re-index, 'local' stays here (servers before #1840), 'deployment' set by the deployment. */
+export type MachineServiceMode = 'runtime' | 'chat' | 'reindex' | 'local' | 'deployment';
 export type HealthState = 'up' | 'down' | 'unreachable' | 'unknown';
 export type MachineHealthState = 'up' | 'down' | 'unreachable' | 'idle';
 
@@ -24,6 +25,8 @@ export interface MachineService {
   machine: string;
   port?: number;
   protocol?: 'tei' | 'llamacpp';
+  /** #1840: a chat role on a machine names the model that machine serves. */
+  model?: string;
   /** Where it reaches now (administrators only). */
   url?: string | null;
 }
@@ -57,13 +60,21 @@ export type MachineAction =
   | { action: 'add'; name: string; address: string }
   | { action: 'update'; id: string; name?: string; address?: string }
   | { action: 'remove'; id: string }
-  | { action: 'assign'; service: MachineServiceId; machine: string; port?: number; protocol?: 'tei' | 'llamacpp' };
+  | { action: 'assign'; service: MachineServiceId; machine: string; port?: number; protocol?: 'tei' | 'llamacpp'; model?: string };
 
 export async function machineAction(body: MachineAction): Promise<MachinesView> {
   const r = await apiFetch(MACHINES_PATH, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const v = await r.json().catch(() => null) as (MachinesView & { error?: string; code?: string; target?: EmbeddingTarget }) | null;
   if (!r.ok) throw new MachineError(v?.error || `HTTP ${r.status}`, r.status, v?.code, v?.target);
   return shape(v);
+}
+
+/** #1840: the models a machine's OpenAI-compatible server lists at `port` (its /v1/models), asked through the server. */
+export async function fetchMachineModels(machine: string, port: number): Promise<string[]> {
+  const r = await apiFetch(`${MACHINES_PATH}?models=${encodeURIComponent(machine)}&port=${port}`);
+  const v = await r.json().catch(() => null) as { models?: unknown; error?: string; code?: string } | null;
+  if (!r.ok) throw new MachineError(v?.error || `HTTP ${r.status}`, r.status, v?.code);
+  return Array.isArray(v?.models) ? v!.models.filter((m): m is string => typeof m === 'string') : [];
 }
 
 /** A port as typed: a whole number from 1 to 65535, else null. */
