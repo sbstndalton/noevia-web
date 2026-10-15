@@ -1,7 +1,7 @@
 import { adoptGeneratedTitle, deriveChatTitle, titleAfterSend } from './chat-title';
 import { ShellIcon } from './components/ShellIcon';
 import { sourceRefresher } from './source-refresh';
-import { mentionsStorageLogin, resolveSkippedToast, sourceRefreshFailure, type SkippedToastState } from './source-status';
+import { dismissSkippedToast, mentionsStorageLogin, resolveSkippedToast, skippedToastDismissed, sourceRefreshFailure, type SkippedToastState } from './source-status';
 import { useAppearance } from './useAppearance';
 import { useWorkspaceChanged } from './components/data/workspace-changed';
 import { useGlobalShortcuts, OPEN_SEARCH } from './components/shortcuts/useGlobalShortcuts';
@@ -312,6 +312,7 @@ export default function App(): JSX.Element {
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [projectError, setProjectError] = useState<string | null>(null);
+  const [skippedOpen, setSkippedOpen] = useState(false);
   const pendingFirstSend = useRef<{ chatId: string; projectId: string | null; text: string; skill?: SkillPin } | null>(null);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthState>({ inferenceUp: null, diaryUp: null });
@@ -656,7 +657,8 @@ export default function App(): JSX.Element {
           const prev = lastSkippedSignature.current[sourceProjectId] || { signature: '', message: '' };
           const { signature, message, show } = resolveSkippedToast(prev, result.skipped || [], prevError, tr);
           lastSkippedSignature.current[sourceProjectId] = { signature, message };
-          return show === undefined ? prevError : show;
+          // #1858: dismissed once, it stays away for the session (a clear still applies).
+          return show === undefined || (show && skippedToastDismissed(sourceProjectId)) ? prevError : show;
         });
         void refreshProjects();
       },
@@ -1754,7 +1756,7 @@ export default function App(): JSX.Element {
             const prev = lastSkippedSignature.current[projectId] || { signature: '', message: '' };
             const { signature, message, show } = resolveSkippedToast(prev, r.skipped || [], prevError, tr);
             lastSkippedSignature.current[projectId] = { signature, message };
-            return show === undefined ? prevError : show;
+            return show === undefined || (show && skippedToastDismissed(projectId)) ? prevError : show;
           });
         }
       } catch (e) {
@@ -2044,19 +2046,29 @@ export default function App(): JSX.Element {
       })()}
       {projectError && !settingsOpen && (() => {
         const lines = projectError.split('\n').filter(Boolean);
+        // #1858: a list of problems is one line with a count until the person opens it.
+        const list = lines.length > 1;
         return (
-          <div className="save-error save-error-storage" role="alert">
-            {lines.length > 1 ? (
-              <ul className="save-error-list" tabIndex={0}>
-                {lines.map((line, i) => <li key={i}>{line}</li>)}
-              </ul>
+          <div className={`save-error save-error-storage${list ? ' is-list' : ''}`} role="alert" data-collapsed={list && !skippedOpen ? 'true' : undefined}>
+            {list ? (
+              <>
+                <span className="save-error-summary">{tr('storage.skippedSummary', { count: lines.length })}</span>
+                <button type="button" className="save-error-link save-error-toggle" aria-expanded={skippedOpen} onClick={() => setSkippedOpen(open => !open)}>{skippedOpen ? tr('storage.skippedHide') : tr('storage.skippedShow')}</button>
+                {skippedOpen && <ul className="save-error-list" tabIndex={0}>
+                  {lines.map((line, i) => <li key={i}>{line}</li>)}
+                </ul>}
+              </>
             ) : (
               <span className="save-error-message" tabIndex={0}>{projectError}</span>
             )}
             {mentionsStorageLogin(projectError, tr) && (
               <button type="button" className="save-error-link" onClick={(e) => openSettings('diary', e.currentTarget)}>{tr('storage.openSettings')}</button>
             )}
-            <button className="save-error-dismiss" onClick={() => setProjectError(null)} aria-label={tr('common.dismiss')}><ShellIcon name="close" size={16}/></button>
+            <button className="save-error-dismiss" onClick={() => {
+              // #1858: a dismissed indexing-problems toast does not come back in this session.
+              for (const [id, state] of Object.entries(lastSkippedSignature.current)) if (state.message && state.message === projectError) dismissSkippedToast(id);
+              setSkippedOpen(false); setProjectError(null);
+            }} aria-label={tr('common.dismiss')}><ShellIcon name="close" size={16}/></button>
           </div>
         );
       })()}

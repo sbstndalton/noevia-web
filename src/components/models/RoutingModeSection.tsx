@@ -12,6 +12,7 @@ import type { Provider } from '../../types';
 import { RoutingModeChoice, ROUTING_MODES, useRoutingModeLabel } from '../RoutingModeChoice';
 import { ModelCombobox } from './ModelCombobox';
 import { useT } from '../../i18n';
+import { refreshOutcome, useRefreshNote } from '../useRefreshNote';
 
 type Mode = 'local' | 'cloud' | 'hybrid';
 const MODES: Mode[] = ROUTING_MODES;
@@ -34,13 +35,25 @@ export function RoutingModeSection({ providersRev = 0 }: { providersRev?: number
   // Only the newest request may write: a slow answer for an earlier provider (or an earlier
   // refresh) never replaces a newer one.
   const listRequest = useRef(0);
+  // #1857: the explicit Refresh press says what happened, with the model popup's note (useRefreshNote).
+  const [, setRefreshState, refreshNote] = useRefreshNote();
   const loadModels = (providerId: string, refresh = false) => {
     const n = ++listRequest.current;
-    if (!providerId) { setListed({ providerId: '', models: [], error: '', loading: false }); return; }
+    if (!providerId) { setListed({ providerId: '', models: [], error: '', loading: false }); setRefreshState('idle'); return; }
+    setRefreshState(refresh ? 'busy' : 'idle');
     setListed((l) => ({ providerId, models: l.providerId === providerId ? l.models : [], error: '', loading: true }));
     fetchProviderModels(providerId, refresh)
-      .then((r) => { if (n === listRequest.current) setListed({ providerId, models: r.models, error: '', loading: false }); })
-      .catch((e) => { if (n === listRequest.current) setListed({ providerId, models: [], error: e instanceof Error ? e.message : String(e), loading: false }); });
+      .then((r) => {
+        if (n !== listRequest.current) return;
+        // A throttled or empty refresh is not a catalogue of zero: keep what was listed (#1814).
+        setListed((l) => ({ providerId, models: refresh && !r.models.length && l.providerId === providerId ? l.models : r.models, error: '', loading: false }));
+        if (refresh) setRefreshState(refreshOutcome(r));
+      })
+      .catch((e) => {
+        if (n !== listRequest.current) return;
+        if (refresh) { setListed((l) => ({ providerId, models: l.providerId === providerId ? l.models : [], error: '', loading: false })); setRefreshState('failed'); return; }
+        setListed({ providerId, models: [], error: e instanceof Error ? e.message : String(e), loading: false });
+      });
   };
   // A provider connected meanwhile (Sign in with ChatGPT above) joins the list without a remount,
   // so unsaved edits here survive.
@@ -106,6 +119,7 @@ export function RoutingModeSection({ providersRev = 0 }: { providersRev?: number
               : listed.error ? t('mm.rmode.listError', { error: listed.error })
               : listed.models.length ? t('mm.rmode.listCount', { count: listed.models.length, provider: providers.find((p) => p.id === cloud.providerId)?.label ?? '' })
               : t('mm.rmode.listEmpty')}</span>
+            <span className="mm-note" role="status" aria-live="polite" data-testid="routing-refresh-note">{refreshNote}</span>
             <button type="button" className="modal-btn secondary" disabled={busy || listed.loading} onClick={() => loadModels(cloud.providerId, true)}>{listed.loading ? t('mm.rmode.refreshing') : t('mm.rmode.refresh')}</button>
           </div>}
           {(['fast', 'smart', 'code'] as const).map((role) => (
