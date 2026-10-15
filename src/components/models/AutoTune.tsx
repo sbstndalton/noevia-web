@@ -219,7 +219,7 @@ export function AutoTune({ model = '', onChanged }: { model?: string; onChanged:
         <p className="mm-note"><strong>{mine.status === 'running' ? mine.phase : mine.status === 'passed' ? t('mm.autotune.tuned') : mine.status === 'cancelled' ? t('mm.queue.cancelled') : mine.status === 'interrupted' ? t('mm.autotune.interrupted') : t('mm.hw.status.dead')}</strong>{mine.error ? ' — ' + mine.error : ''}</p>
         {mine.queueProgress && <p className="mm-note">{t('mm.autotune.completed', { done: mine.queueProgress.done, total: mine.queueProgress.total })} {running ? t('mm.autotune.now', { model: mine.model }) : ''}</p>}
         {mine.models && <label className="mm-progress"><span className="sr-only">{t('mm.autotune.progress')}</span>
-          <progress value={progress.done} max={Math.max(1, progress.total)}/><span aria-hidden="true">{t('mm.autotune.saved', { done: progress.done, total: progress.total })}</span>
+          <progress value={progress.done} max={Math.max(1, progress.total)} aria-valuetext={t('mm.autotune.saved', { done: progress.done, total: progress.total })}/><span aria-hidden="true">{t('mm.autotune.saved', { done: progress.done, total: progress.total })}</span>
         </label>}
         {running && <button className="modal-btn secondary mm-cancel-action" disabled={busy} onClick={() => void mutate('/api/models/autotune/cancel')}>{busy ? t('mm.cancelling') : t('mm.autotune.cancel')}</button>}
       </div>
