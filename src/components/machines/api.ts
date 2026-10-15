@@ -34,7 +34,9 @@ export interface MachineService {
   /** Where it reaches now (administrators only). */
   url?: string | null;
 }
-export interface MachinesHealth { services: Partial<Record<MachineServiceId | 'engine', { state: HealthState; reason?: string }>>; machines: Record<string, MachineHealthState>; /** #1856: why a machine is not healthy (its worst service's reason). */ reasons?: Record<string, string>; /** #1861: the service behind that reason ('engine' = this machine's own engine). */ failing?: Record<string, string> }
+/** #1854: what a chat role's machine measured for its model (its own /props); null where the server did not say. */
+export interface MachineMeasured { contextTokens: number | null; thinking: boolean | null; vision: boolean | null; /** Engine-only measurements never taken on a machine. */ notMeasured?: string[] }
+export interface MachinesHealth { services: Partial<Record<MachineServiceId | 'engine', { state: HealthState; reason?: string }>>; machines: Record<string, MachineHealthState>; /** #1856: why a machine is not healthy (its worst service's reason). */ reasons?: Record<string, string>; /** #1861: the service behind that reason ('engine' = this machine's own engine). */ failing?: Record<string, string>; /** #1854: per chat role on a machine that answers. */ measured?: Partial<Record<MachineServiceId, MachineMeasured>> }
 export interface MachinesView { machines: Machine[]; services: MachineService[]; health?: MachinesHealth }
 export interface EmbeddingTarget { baseUrl: string; model: string; profile: string }
 
