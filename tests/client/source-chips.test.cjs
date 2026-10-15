@@ -46,3 +46,9 @@ test('same-named files get the shortest tail that tells them apart; the full pat
   const chips = sourceChips([{ id: 'x', file: 'docs/readme.md', snippet: 's', kind: 'file' }, { id: 'y', file: 'readme.md', snippet: 't', kind: 'file' }], [{ name: 'readme.md' }, { name: 'docs/readme.md' }]);
   assert.deepEqual(JSON.parse(JSON.stringify(chips.map((c) => [c.label, c.path]))), [['docs/readme.md', 'docs/readme.md'], ['readme.md', 'readme.md']]);
 });
+
+test('#1814: backslash-separated paths label like slash paths', () => {
+  assert.equal(displayName('docs\\api\\auth.md'), 'auth.md');
+  const chips = sourceChips([{ id: 'a', file: 'folder\\readme.md', snippet: '', kind: 'file' }, { id: 'b', file: 'folder\\docs\\readme.md', snippet: '', kind: 'file' }, { id: 'c', file: 'a\\b\\solo.md', snippet: '', kind: 'file' }], []);
+  assert.deepEqual(JSON.parse(JSON.stringify(chips.map((c) => [c.label, c.path]))), [['folder/readme.md', 'folder\\readme.md'], ['docs/readme.md', 'folder\\docs\\readme.md'], ['solo.md', 'a\\b\\solo.md']]);
+});

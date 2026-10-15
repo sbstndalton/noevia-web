@@ -523,6 +523,7 @@ export const SV_SE: Catalogue = {
   'modelPopup.refreshing': "Uppdaterar…",
   'modelPopup.refreshUpdated': "Modelllistan har uppdaterats",
   'modelPopup.refreshWait': "Försök igen om några sekunder",
+  'modelPopup.refreshEmpty': "Inga modeller returnerades. Den tidigare listan behålls",
   'modelPopup.refreshFailed': "Det gick inte att uppdatera modelllistan",
   'modelPopup.modelId': "Modell-id",
   'modelPopup.modelIdPlaceholder': "t.ex. model-name",

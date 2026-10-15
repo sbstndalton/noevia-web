@@ -523,6 +523,7 @@ export const PT_BR: Catalogue = {
   'modelPopup.refreshing': "Atualizando…",
   'modelPopup.refreshUpdated': "Lista de modelos atualizada",
   'modelPopup.refreshWait': "Tente de novo em alguns segundos",
+  'modelPopup.refreshEmpty': "Nenhum modelo retornado. A lista anterior foi mantida",
   'modelPopup.refreshFailed': "Não foi possível atualizar a lista de modelos",
   'modelPopup.modelId': "ID do modelo",
   'modelPopup.modelIdPlaceholder': "ex.: model-name",

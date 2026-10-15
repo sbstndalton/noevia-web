@@ -130,14 +130,23 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
   }, [chatgptActive]);
 
   // #1306: never automatic; one explicit press asks the server to re-read the account's catalogue.
-  const [refreshState, setRefreshState] = useState<'idle' | 'busy' | 'updated' | 'wait' | 'failed'>('idle');
+  const [refreshState, setRefreshState] = useState<'idle' | 'busy' | 'updated' | 'wait' | 'empty' | 'failed'>('idle');
   useEffect(() => { setRefreshState('idle'); }, [chatgptActive, activeProviderId]);
+  // #1814: the outcome is a passing note, not a permanent label; clearing it also lets a repeat of the same
+  // outcome be announced again (busy -> same text is a fresh live-region change).
+  useEffect(() => {
+    if (refreshState === 'idle' || refreshState === 'busy') return;
+    const id = setTimeout(() => setRefreshState('idle'), 5000);
+    return () => clearTimeout(id);
+  }, [refreshState]);
   const refreshAccountModels = async () => {
     if (refreshState === 'busy') return;
     setRefreshState('busy');
     try {
       const r = await refreshChatGptModels();
       if (r.throttled) { if (r.models.length) setAccountModels(r.models); setRefreshState('wait'); return; }
+      // #1814: a successful answer with no models is not a catalogue of zero; keep what was listed.
+      if (!r.models.length) { setRefreshState('empty'); return; }
       setAccountModels(r.models);
       setRefreshState('updated');
     } catch { setRefreshState('failed'); }
@@ -237,7 +246,7 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
               </button>
             </div>)}
             <div className="mp-row-end">
-              <span className="mp-hint" role="status" aria-live="polite">{refreshState === 'updated' ? t('modelPopup.refreshUpdated') : refreshState === 'wait' ? t('modelPopup.refreshWait') : refreshState === 'failed' ? t('modelPopup.refreshFailed') : ''}</span>
+              <span className="mp-hint" role="status" aria-live="polite">{refreshState === 'updated' ? t('modelPopup.refreshUpdated') : refreshState === 'wait' ? t('modelPopup.refreshWait') : refreshState === 'empty' ? t('modelPopup.refreshEmpty') : refreshState === 'failed' ? t('modelPopup.refreshFailed') : ''}</span>
               <button type="button" className="popup-tab" disabled={refreshState === 'busy' || busy !== null} onClick={() => void refreshAccountModels()}>
                 {refreshState === 'busy' ? t('modelPopup.refreshing') : t('modelPopup.refreshModels')}
               </button>

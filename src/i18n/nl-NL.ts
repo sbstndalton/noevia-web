@@ -523,6 +523,7 @@ export const NL_NL: Catalogue = {
   'modelPopup.refreshing': "Vernieuwen…",
   'modelPopup.refreshUpdated': "Modellenlijst bijgewerkt",
   'modelPopup.refreshWait': "Probeer het over een paar seconden opnieuw",
+  'modelPopup.refreshEmpty': "Geen modellen teruggekregen. De vorige lijst blijft staan",
   'modelPopup.refreshFailed': "De modellenlijst kon niet worden vernieuwd",
   'modelPopup.modelId': "Model-id",
   'modelPopup.modelIdPlaceholder': "bijv. model-name",
