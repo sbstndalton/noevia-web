@@ -523,6 +523,7 @@ export const NB_NO: Catalogue = {
   'modelPopup.refreshing': "Oppdaterer…",
   'modelPopup.refreshUpdated': "Modelllisten er oppdatert",
   'modelPopup.refreshWait': "Prøv igjen om noen sekunder",
+  'modelPopup.refreshEmpty': "Ingen modeller returnert. Den forrige listen beholdes",
   'modelPopup.refreshFailed': "Kunne ikke oppdatere modelllisten",
   'modelPopup.modelId': "Modell-ID",
   'modelPopup.modelIdPlaceholder': "f.eks. model-name",

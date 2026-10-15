@@ -534,6 +534,7 @@ export const EN_GB = {
   'modelPopup.refreshing': "Refreshing…",
   'modelPopup.refreshUpdated': "Model list updated",
   'modelPopup.refreshWait': "Try again in a few seconds",
+  'modelPopup.refreshEmpty': "No models returned. Kept the previous list",
   'modelPopup.refreshFailed': "Couldn't refresh the model list",
   'modelPopup.modelId': "Model ID",
   'modelPopup.modelIdPlaceholder': "e.g. model-name",

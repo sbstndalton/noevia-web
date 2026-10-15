@@ -16,7 +16,7 @@ export interface SourceChip {
 
 /** The last path segment, so a synced or renamed-folder path never shows as a source's name. */
 export function displayName(name: string): string {
-  return name.split('/').filter(Boolean).pop() || name;
+  return name.split(/[\\/]/).filter(Boolean).pop() || name;
 }
 
 /** For each name, the shortest run of trailing path segments that no other name also ends with, so two
@@ -24,13 +24,16 @@ export function displayName(name: string): string {
  *  A name that is itself the tail of another one (the root `readme.md`) keeps its full name. */
 export function distinguishingNames(names: string[]): Map<string, string> {
   const all = Array.from(new Set(names.filter((n) => typeof n === 'string' && n)));
+  // #1814: a Windows-style `a\b\readme.md` splits like `a/b/readme.md`; compare on the slash form.
+  const norm = new Map(all.map((n) => [n, n.replace(/\\/g, '/')] as const));
   const out = new Map<string, string>();
   for (const name of all) {
-    const parts = name.split('/').filter(Boolean);
-    let label = name;
+    const flat = norm.get(name)!;
+    const parts = flat.split('/').filter(Boolean);
+    let label = flat;
     for (let k = 1; k <= parts.length; k++) {
       const tail = parts.slice(-k).join('/');
-      if (!all.some((o) => o !== name && (o === tail || o.endsWith('/' + tail)))) { label = tail; break; }
+      if (!all.some((o) => o !== name && (norm.get(o) === tail || norm.get(o)!.endsWith('/' + tail)))) { label = tail; break; }
     }
     out.set(name, label);
   }
