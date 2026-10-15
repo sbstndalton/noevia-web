@@ -1092,6 +1092,7 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.rmode.useCustom': "Bruk «{model}»",
   'mm.rmode.listError': "Kunne ikke hente modellene til denne leverandøren ({error}). Skriv inn en modell-ID i stedet.",
   'mm.rmode.listEmpty': "Denne leverandøren oppga ingen modeller. Skriv inn en modell-ID.",
+  'mm.rmode.noLongerOffered': "{model} (tilbys ikke lenger). Modelllisten for kontoen din inneholder den ikke. Den forblir valgt til du velger en annen.",
   'mm.rmode.listCount': "{count} modeller fra {provider}.",
   'mm.editor.allSettings': "Alle motorinnstillinger (avansert)",
   'mm.easy.otherWays': "Andre måter å dimensjonere konteksten på",

@@ -1092,6 +1092,7 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.rmode.useCustom': "„{model}” gebruiken",
   'mm.rmode.listError': "De modellen van deze provider konden niet worden opgehaald ({error}). Typ in plaats daarvan een model-ID.",
   'mm.rmode.listEmpty': "Deze provider gaf geen modellen op. Typ een model-ID.",
+  'mm.rmode.noLongerOffered': "{model} (niet meer aangeboden). De modellijst van je account bevat het niet. Het blijft geselecteerd tot je een ander kiest.",
   'mm.rmode.listCount': "{count} modellen van {provider}.",
   'mm.editor.allSettings': "Alle engine-instellingen (geavanceerd)",
   'mm.easy.otherWays': "Andere manieren om de context te bepalen",

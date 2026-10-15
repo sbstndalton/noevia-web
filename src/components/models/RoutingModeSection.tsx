@@ -97,6 +97,9 @@ export function RoutingModeSection({ providersRev = 0 }: { providersRev?: number
     catch (e) { setError(e instanceof Error ? e.message : t('mm.saveError')); }
     finally { setBusy(false); }
   };
+  // #1862: a saved cloud model the account's refreshed list no longer holds is flagged, never silently kept or changed.
+  const listReady = listed.providerId === cloud.providerId && !listed.loading && !listed.error && listed.models.length > 0;
+  const noLongerOffered = (role: 'fast' | 'smart' | 'code') => listReady && !!cloud[role].trim() && cloud[role] === info.cloud?.[role] && !listed.models.includes(cloud[role].trim());
   const serverAllowed = info.allowed ?? MODES;
 
   return (
@@ -125,6 +128,7 @@ export function RoutingModeSection({ providersRev = 0 }: { providersRev?: number
           {(['fast', 'smart', 'code'] as const).map((role) => (
             <ModelCombobox key={role} label={t(role === 'fast' ? 'mm.rmode.modelFast' : role === 'smart' ? 'mm.rmode.modelSmart' : 'mm.rmode.modelCode')}
               value={cloud[role]} disabled={busy} options={listed.providerId === cloud.providerId ? listed.models : []}
+              stale={noLongerOffered(role)}
               onChange={(v) => setCloud((c) => ({ ...c, [role]: v }))} />
           ))}
         </div>

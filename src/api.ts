@@ -380,10 +380,14 @@ export const fetchChatGptStatus = (): Promise<ChatGptStatus> => getJson('/api/pr
 export const startChatGptLogin = (): Promise<ChatGptDeviceLogin> => postJson('/api/providers/chatgpt/device', {});
 export const pollChatGptLogin = (loginId: string): Promise<ChatGptPoll> => postJson('/api/providers/chatgpt/device/poll', { loginId });
 export const cancelChatGptLogin = (loginId: string): Promise<{ ok: boolean }> => postJson('/api/providers/chatgpt/device/cancel', { loginId });
-export const fetchChatGptModels = (): Promise<{ models: string[] }> => getJson('/api/providers/chatgpt/models');
+// #1862: the Routing tab shows this list twice (the connection note and the cloud model pickers); both ask through one
+// shared read, so opening it makes one request. An explicit refresh drops it.
+const CHATGPT_MODELS_KEY = 'chatgpt:models';
+export const fetchChatGptModels = (): Promise<{ models: string[]; cached?: boolean; fetchedAt?: number }> => cached(CHATGPT_MODELS_KEY, () => getJson('/api/providers/chatgpt/models'));
 /** An explicit "Refresh models" (#1306): asks the server to re-read the account's catalogue. The server allows one
  *  refresh per 10 s and answers `throttled: true` (with the cached list) or 429 when it has nothing to serve. */
 export async function refreshChatGptModels(): Promise<{ models: string[]; throttled: boolean }> {
+  invalidateCached(CHATGPT_MODELS_KEY);
   const res = await apiFetch('/api/providers/chatgpt/models?refresh=1');
   if (res.status === 429) return { models: [], throttled: true };
   if (!res.ok) throw new Error(await describeFailure(res, 'Refreshing the ChatGPT model list failed'));
@@ -488,6 +492,9 @@ export interface ProjectRoutingMode { mode: RoutingModeId; whenSensitive: 'ask' 
 /** #1009: a stored provider's model ids, fetched and cached by the server with the stored key.
  *  `refresh` skips the server's cache. The key itself never reaches the browser. */
 export async function fetchProviderModels(providerId: string, refresh = false): Promise<{ models: string[]; cached?: boolean; fetchedAt?: number; throttled?: boolean }> {
+  // #1862: the ChatGPT connection's plain list is the one shared read above, not a second request for the same data.
+  if (!refresh && providerId === 'chatgpt-oauth') { const r = await fetchChatGptModels(); return { models: Array.isArray(r.models) ? r.models.filter((m): m is string => typeof m === 'string') : [], cached: r.cached, fetchedAt: r.fetchedAt }; }
+  if (refresh && providerId === 'chatgpt-oauth') invalidateCached(CHATGPT_MODELS_KEY);
   const r = await apiFetch(`/api/providers/${encodeURIComponent(providerId)}/models${refresh ? '?refresh=1' : ''}`);
   const body = await r.json().catch(() => ({})) as { models?: unknown; cached?: boolean; fetchedAt?: number; error?: string; throttled?: unknown };
   // #1857: a refresh pressed again within the server's window is "wait", not a failure (as for the model popup, #1306).
