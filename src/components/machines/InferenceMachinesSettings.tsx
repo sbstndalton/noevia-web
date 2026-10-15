@@ -2,9 +2,10 @@
 // machine each part of noevia uses. Default: everything on this machine, which changes nothing. Administrators
 // only: the Settings shell mounts this page for them alone, and the server refuses everyone else on every method.
 //
-// Decision service and reranker move at once. Embeddings move only through the #1636 re-index (the same
+// Decision service, sensitivity check, OCR, Docling and reranker move at once. Embeddings move only through the #1636 re-index (the same
 // set-next → switch → finish the Models page uses), so the page asks first. Chat models stay on this machine
-// for now, and OCR's address is set by the deployment; both say so instead of offering a control.
+// for now and say so instead of offering a control. OCR, Docling (#1841) and the sensitivity check (#1844) move at once like the
+// decision service; with nothing assigned they keep the deployment's address, and the sensitivity check says it is shared.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent, JSX } from 'react';
 import { useT } from '../../i18n';
@@ -16,9 +17,12 @@ import './machines.css';
 
 const SERVICE_LABEL: Record<MachineServiceId, MessageKey> = {
   chatFast: 'machines.svc.chatFast', chatSmart: 'machines.svc.chatSmart', chatCode: 'machines.svc.chatCode', vision: 'machines.svc.vision',
-  decision: 'machines.svc.decision', embedding: 'machines.svc.embedding', reranker: 'machines.svc.reranker', ocr: 'machines.svc.ocr',
+  decision: 'machines.svc.decision', sensitivity: 'machines.svc.sensitivity', embedding: 'machines.svc.embedding', reranker: 'machines.svc.reranker', ocr: 'machines.svc.ocr', documents: 'machines.svc.documents',
 };
-const ORDER: MachineServiceId[] = ['chatFast', 'chatSmart', 'chatCode', 'vision', 'decision', 'embedding', 'reranker', 'ocr'];
+const ORDER: MachineServiceId[] = ['chatFast', 'chatSmart', 'chatCode', 'vision', 'decision', 'sensitivity', 'embedding', 'reranker', 'ocr', 'documents'];
+/** Services whose health is probed (GET /health at their address). */
+const PROBED = new Set<MachineServiceId>(['decision', 'sensitivity', 'embedding', 'reranker', 'ocr', 'documents']);
+const PLACEHOLDER_PORT: Partial<Record<MachineServiceId, string>> = { decision: '8040', sensitivity: '8040', ocr: '8030', documents: '8031' };
 const HEALTH: Record<string, [MessageKey, 'good' | 'warn' | 'bad' | 'muted']> = {
   up: ['machines.health.up', 'good'], down: ['machines.health.down', 'warn'], unreachable: ['machines.health.unreachable', 'bad'],
   unknown: ['machines.health.unknown', 'muted'], idle: ['machines.health.idle', 'muted'],
@@ -178,10 +182,10 @@ export function InferenceMachinesSettings(): JSX.Element {
               </select></label>
           : <span>{machineName(s.machine)}</span>}
       </span>
-      {(s.id === 'decision' || s.id === 'embedding' || s.id === 'reranker') ? <HealthPill state={health?.state}/> : <span className="machines-pill-slot" aria-hidden="true"/>}
+      {PROBED.has(s.id) ? <HealthPill state={health?.state}/> : <span className="machines-pill-slot" aria-hidden="true"/>}
       <span className="mm-assign-control">
         {movable && onRemote && <label className="machines-port">{t('machines.port')}
-          <input aria-label={t('machines.portFor', { service: label })} value={d.port} inputMode="numeric" size={6} placeholder={s.id === 'decision' ? '8040' : '8080'} disabled={busy !== ''} onChange={(e) => setDraft({ port: e.target.value })}/></label>}
+          <input aria-label={t('machines.portFor', { service: label })} value={d.port} inputMode="numeric" size={6} placeholder={PLACEHOLDER_PORT[s.id] || '8080'} disabled={busy !== ''} onChange={(e) => setDraft({ port: e.target.value })}/></label>}
         {s.id === 'reranker' && onRemote && <label className="mm-select"><span className="sr-only">{t('machines.protocol')}</span>
           <select aria-label={t('machines.protocol')} value={d.protocol} disabled={busy !== ''} onChange={(e) => setDraft({ protocol: e.target.value === 'llamacpp' ? 'llamacpp' : 'tei' })}>
             <option value="tei">{t('machines.protocol.tei')}</option>
@@ -191,6 +195,8 @@ export function InferenceMachinesSettings(): JSX.Element {
         {s.mode === 'local' && <span className="mm-assign-fixed">{t('machines.note.local')}</span>}
         {s.mode === 'deployment' && <span className="mm-assign-fixed">{t('machines.note.deployment')}</span>}
         {s.id === 'embedding' && <span className="mm-assign-fixed">{t('machines.note.embedding')}</span>}
+        {/* #1844: no address of its own and nothing assigned: it follows the decision service. */}
+        {s.id === 'sensitivity' && s.machine === 'local' && !s.url && <span className="mm-assign-fixed">{t('machines.note.sensitivityShared')}</span>}
         {health?.state === 'unreachable' && <span className="mm-assign-fixed machines-unreachable" role="status">{t(s.id === 'decision' ? 'machines.unreachable.decision' : 'machines.unreachable.service')}</span>}
       </span>
     </li>;

@@ -1,7 +1,7 @@
 // #1638: Settings → Inference machines (GET/POST /api/models/machines, administrators only). Kept React-free.
 import { apiFetch } from '../../api';
 
-export type MachineServiceId = 'chatFast' | 'chatSmart' | 'chatCode' | 'vision' | 'decision' | 'embedding' | 'reranker' | 'ocr';
+export type MachineServiceId = 'chatFast' | 'chatSmart' | 'chatCode' | 'vision' | 'decision' | 'sensitivity' | 'embedding' | 'reranker' | 'ocr' | 'documents';
 /** How a service moves: 'runtime' at once, 'reindex' through the embedding re-index, 'local' stays here, 'deployment' set by the deployment. */
 export type MachineServiceMode = 'runtime' | 'reindex' | 'local' | 'deployment';
 export type HealthState = 'up' | 'down' | 'unreachable' | 'unknown';
