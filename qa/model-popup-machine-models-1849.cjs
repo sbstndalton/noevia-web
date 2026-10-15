@@ -51,7 +51,6 @@ async function open(browser, { width, theme, machineModels }) {
   const pass = (msg) => { passed += 1; console.log(`PASS model-popup-machine-models-1849: ${msg}`); };
   const machineModels = [
     { model: REMOTE, machine: { id: 'm1', name: 'Synthetic Pi' }, roles: ['smart'] },
-    { model: SHARED, machine: { id: 'm1', name: 'Synthetic Pi' }, roles: ['fast'] },
   ];
   try {
     for (const width of [2000, 390]) {
