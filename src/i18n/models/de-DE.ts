@@ -54,6 +54,7 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.assign.fixedByServer': "In der Serverkonfiguration festgelegt.",
   'mm.assign.decisionFromSettings': "In den Einstellungen unter „Modelle & Routing“, „Einrichtung des Entscheidungsdienstes“ festgelegt.",
   'mm.assign.decisionChoose': "Adresse und Modell wählst du in den Einstellungen unter „Modelle & Routing“, „Einrichtung des Entscheidungsdienstes“.",
+  'mm.assign.decisionOnMachine': "Läuft auf einem Rechner, der in den Einstellungen unter „Inferenz-Rechner“ gewählt ist.",
   'mm.assign.decisionModelFromSettings': "Modell und Adresse sind in den Einstellungen unter „Modelle & Routing“, „Einrichtung des Entscheidungsdienstes“ festgelegt.",
   'mm.assign.rerankerToggle': "Reranking",
   'mm.assign.rerankerModel': "Reranker-Modell",

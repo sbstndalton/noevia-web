@@ -1,0 +1,36 @@
+/* #1638: Settings → Inference machines. The machine list reuses the grouped .set-rows / .model-row surface of
+   Users and Service status; the assignments reuse the Models page's "What each service uses" card
+   (.mm-assign-list, phone.css), so the two pages read as one design. Only what is new lives here. */
+.inference-machines .settings-section + .settings-section { margin-top: var(--space-6); }
+.inference-machines .settings-section-heading { margin-bottom: var(--space-2); }
+.inference-machines .settings-section-heading h2,
+.inference-machines .settings-section > h2 { margin: 0 2px var(--space-1); font-size: var(--text-footnote); font-weight: 700; color: var(--text-secondary); }
+.inference-machines .settings-section > .mm-note { margin: 0 2px var(--space-3); }
+.machines-row .model-name-group { gap: var(--space-1); }
+/* The Settings pane is narrower than the model manager: a shorter machine column leaves the notes room. */
+.inference-machines .mm-assign-list { grid-template-columns: minmax(96px, 170px) minmax(0, 200px) 110px minmax(0, 1fr); }
+.machines-runs { font-size: var(--text-caption); color: var(--text-secondary); line-height: 1.5; }
+.machines-actions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.machines-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2) var(--space-3); margin-top: var(--space-4); }
+.machines-form h3 { flex-basis: 100%; margin: 0; font-size: var(--text-footnote); font-weight: 600; }
+.machines-form label { display: flex; flex-direction: column; gap: var(--space-1); flex: 1 1 200px; min-width: 0; font-size: var(--text-footnote); color: var(--text-secondary); }
+.machines-form input,
+.machines-port input { min-height: 40px; padding: 6px 12px; border: 1px solid var(--control-border); border-radius: var(--radius-input); background: var(--bg); color: var(--text); font: inherit; min-width: 0; }
+.machines-form .btn { min-height: 40px; }
+.machines-form .gdrive-note { flex-basis: 100%; margin: 0; }
+.machines-form-outcome { flex-basis: 100%; }
+.machines-form-outcome:empty { display: none; }
+.machines-edit { margin-top: var(--space-2); }
+.machines-port { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-caption); color: var(--text-secondary); }
+.machines-port input { width: 7ch; min-height: 34px; padding: 4px 8px; }
+.machines-unreachable { color: var(--status-danger); }
+.machines-reindex { padding: var(--space-4); border: 1px solid var(--control-border); border-radius: var(--radius-control); background: var(--bg-surface); }
+.machines-reindex p { margin: 0 0 var(--space-3); font-size: var(--text-footnote); line-height: 1.6; }
+@media (max-width: 720px) {
+  .inference-machines .mm-assign-list { grid-template-columns: minmax(0, 1fr) auto; }
+  .machines-pill-slot { display: none; }
+  .machines-form label { flex-basis: 100%; }
+  .machines-form .btn { width: 100%; }
+  .machines-row { flex-wrap: wrap; }
+}
+.inference-machines .modal-err { color: var(--status-danger); font-size: var(--text-footnote); }

@@ -17,7 +17,7 @@ export interface ServiceAssignment {
   /** #1668: admins only, managed service: "Turn embedding off" is possible now. */
   canTurnOff?: boolean;
   /** #1796, decision, admins only: 'admin' when the address saved in Settings replaces the deployment's. */
-  source?: 'admin' | 'deployment';
+  source?: 'admin' | 'deployment' | 'machine';
   /** #1796, sensitivity: true when the check uses the decision service itself. */
   shared?: boolean;
   /** #1666, decision, admins only: 'admin' when the model was chosen in Settings; the ids that can be chosen and the deployment's. */

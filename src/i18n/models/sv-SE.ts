@@ -54,6 +54,7 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.assign.fixedByServer': "Inställt i serverkonfigurationen.",
   'mm.assign.decisionFromSettings': "Inställt i Inställningar, Modeller och routning, Konfiguration av beslutstjänsten.",
   'mm.assign.decisionChoose': "Välj adress och modell i Inställningar, Modeller och routning, Konfiguration av beslutstjänsten.",
+  'mm.assign.decisionOnMachine': "Körs på en maskin vald i Inställningar, Inferensmaskiner.",
   'mm.assign.decisionModelFromSettings': "Modell och adress inställda i Inställningar, Modeller och routning, Konfiguration av beslutstjänsten.",
   'mm.assign.rerankerToggle': "Omrankning",
   'mm.assign.rerankerModel': "Rerankermodell",

@@ -148,7 +148,7 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
           ? <span className="mm-assign-fixed" data-testid="reranker-missing">{svc.options?.length ? t('mm.assign.rerankerMissingWith', { models: svc.options.map((o) => (typeof o === 'string' ? o : o.model)).join(', ') }) : t('mm.assign.rerankerMissing')}</span>
           // #1796: the decision address saved in Settings, or the sensitivity check that shares it, says so.
           // #1666: administrators choose the decision model (and address) in Decision service setup; say where.
-          : svc.id === 'decision' && admin ? <span className="mm-assign-fixed">{t(svc.source !== 'admin' ? 'mm.assign.decisionChoose' : svc.modelSource === 'admin' ? 'mm.assign.decisionModelFromSettings' : 'mm.assign.decisionFromSettings')}</span>
+          : svc.id === 'decision' && admin ? <span className="mm-assign-fixed">{t(svc.source === 'machine' ? 'mm.assign.decisionOnMachine' : svc.source !== 'admin' ? 'mm.assign.decisionChoose' : svc.modelSource === 'admin' ? 'mm.assign.decisionModelFromSettings' : 'mm.assign.decisionFromSettings')}</span>
           : svc.id === 'sensitivity' && svc.shared ? <span className="mm-assign-fixed">{t('mm.assign.sensitivityShared')}</span>
           : (svc.id === 'reranker' || svc.id === 'ocr' || svc.id === 'documents' || svc.id === 'decision' || svc.id === 'sensitivity') && <span className="mm-assign-fixed">{t('mm.assign.fixedByServer')}</span>}
       </span>

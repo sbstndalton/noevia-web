@@ -40,7 +40,7 @@ export function DecisionServiceSettings({ onSaved }: { onSaved: () => Promise<vo
   return <section aria-labelledby="decision-setup-title" className="decision-service-settings">
     <h2 id="decision-setup-title" ref={headingRef} tabIndex={-1}>{t('decision.title')}</h2>
     <p className="preview-footnote">{t('decision.intro')}</p>
-    {loaded && source && <p className="preview-footnote" data-testid="decision-source">{t(source==='admin'?'decision.sourceAdmin':'decision.sourceDeployment')}</p>}
+    {loaded && source && <p className="preview-footnote" data-testid="decision-source">{t(source==='machine'?'decision.sourceMachine':source==='admin'?'decision.sourceAdmin':'decision.sourceDeployment')}</p>}
     {error && <p ref={errorRef} tabIndex={-1} className="route-note" role="alert">{error}</p>}
     <form className="set-rows" onSubmit={e=>{e.preventDefault();void act('save');}}>
       <div className="set-row"><div className="set-row-text"><label className="set-row-label" htmlFor="decision-url">{t('decision.endpointLabel')}</label><p className="set-row-desc" id="decision-url-help">{t('decision.endpointHelp')}</p></div>
