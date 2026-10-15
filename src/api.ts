@@ -381,6 +381,15 @@ export const startChatGptLogin = (): Promise<ChatGptDeviceLogin> => postJson('/a
 export const pollChatGptLogin = (loginId: string): Promise<ChatGptPoll> => postJson('/api/providers/chatgpt/device/poll', { loginId });
 export const cancelChatGptLogin = (loginId: string): Promise<{ ok: boolean }> => postJson('/api/providers/chatgpt/device/cancel', { loginId });
 export const fetchChatGptModels = (): Promise<{ models: string[] }> => getJson('/api/providers/chatgpt/models');
+/** An explicit "Refresh models" (#1306): asks the server to re-read the account's catalogue. The server allows one
+ *  refresh per 10 s and answers `throttled: true` (with the cached list) or 429 when it has nothing to serve. */
+export async function refreshChatGptModels(): Promise<{ models: string[]; throttled: boolean }> {
+  const res = await apiFetch('/api/providers/chatgpt/models?refresh=1');
+  if (res.status === 429) return { models: [], throttled: true };
+  if (!res.ok) throw new Error(await describeFailure(res, 'Refreshing the ChatGPT model list failed'));
+  const r = await res.json() as { models?: unknown; throttled?: unknown };
+  return { models: Array.isArray(r.models) ? r.models.filter((m): m is string => typeof m === 'string') : [], throttled: r.throttled === true };
+}
 export async function disconnectChatGpt(): Promise<{ ok: boolean }> {
   const res = await apiFetch('/api/providers/chatgpt', { method: 'DELETE' });
   if (!res.ok) throw new Error(await describeFailure(res, 'Disconnecting ChatGPT failed'));

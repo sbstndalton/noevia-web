@@ -20,12 +20,12 @@ export function SourceChips({ sources, files, onOpen }: {
         {chips.map((c) => (
           <li key={c.file}>
             {c.available && onOpen ? (
-              <button type="button" className="chip reply-source-chip" title={c.snippet || c.file}
-                aria-label={t('chat.sources.open', { name: c.label })} onClick={() => onOpen(c.file)}>
+              <button type="button" className="chip reply-source-chip" title={c.snippet ? `${c.path}\n${c.snippet}` : c.path}
+                aria-label={t('chat.sources.open', { name: c.path })} onClick={() => onOpen(c.file)}>
                 <span className="reply-source-name">{c.label}</span>
               </button>
             ) : (
-              <span className="chip reply-source-chip is-gone" title={t('chat.sources.gone', { name: c.label })}>
+              <span className="chip reply-source-chip is-gone" title={t('chat.sources.gone', { name: c.path })}>
                 <span className="reply-source-name">{c.label}</span>
               </span>
             )}
