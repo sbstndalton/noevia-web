@@ -949,6 +949,7 @@ export const EN_GB_SETTINGS = {
   "machines.svc.chatFast": "Fast chat",
   "machines.svc.chatSmart": "Smart chat",
   "machines.svc.chatCode": "Code chat",
+  "machines.svc.chatCreative": "Creative chat",
   "machines.svc.vision": "Vision",
   "machines.svc.decision": "Decisions (Laya/Kev)",
   "machines.svc.embedding": "Embeddings (projects and Diary)",
@@ -979,6 +980,16 @@ export const EN_GB_SETTINGS = {
   "machines.error.noLocalEmbedding": "This deployment names no embeddings server on this machine, so embeddings cannot move back here from Settings.",
   "machines.error.embeddingOff": "Embeddings are not set up, so there is nothing to move.",
   "machines.error.tooMany": "No more machines can be added.",
+  "machines.findModels": "Find models",
+  "machines.modelFor": "Model for {service}",
+  "machines.chooseModel": "Choose a model",
+  "machines.modelsNone": "That machine lists no models at this port.",
+  "machines.modelsError": "The machine did not list its models at that port.",
+  "machines.note.chat": "Answers from {model} on that machine; nothing for this role loads here.",
+  "machines.unreachable.chat": "Not answering. Chats for this role fail until it answers again, or move the role back to this machine.",
+  "machines.error.invalidModel": "Choose the model this machine serves for the role.",
+  "machines.error.unknownModel": "That machine does not serve this model at that port. Find its models again.",
+  "machines.error.machineUnreachable": "The machine did not answer at that port. Check it is on and serving models there.",
 } as const;
 
 export type SettingsKey = keyof typeof EN_GB_SETTINGS;
