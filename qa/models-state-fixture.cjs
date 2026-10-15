@@ -4,11 +4,13 @@
 // inputs only (a fake model manager, a fake managed embedding service, an in-memory settings store).
 // No model server, no decision service, no network: the page's /api/** calls are answered in-process.
 //
-// QA_CORE_SERVER names the noevia-core server/ directory to use (default: ../server, the CI
-// workspace layout), so a run against an older core shows the "before" state.
+// QA_CORE_SERVER names the noevia-core server/ directory to use, so a run against an older core shows
+// the "before" state.
 const path = require('node:path');
 
-const CORE = path.resolve(process.env.QA_CORE_SERVER || path.join(__dirname, '../server'));
+// Default: the CI workspace's server/ beside qa/, else a sibling noevia-core checkout (as diary-fixture.cjs).
+const fs = require('node:fs');
+const CORE = path.resolve(process.env.QA_CORE_SERVER || [path.join(__dirname, '../server'), path.join(__dirname, '../../noevia-core/server')].find((d) => fs.existsSync(path.join(d, 'decision-settings.cjs'))) || path.join(__dirname, '../server'));
 process.env.QA_CORE_SERVER = CORE; // diary-fixture.cjs reads its route table from the same core
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
