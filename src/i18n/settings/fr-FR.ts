@@ -981,6 +981,7 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   "machines.modelsNone": "Cette machine ne propose aucun modèle sur ce port.",
   "machines.modelsError": "La machine n’a pas listé ses modèles sur ce port.",
   "machines.note.chat": "Répond avec {model} sur cette machine ; rien n’est chargé ici pour ce rôle.",
+  "machines.note.confirmModel": "Depuis le changement d’adresse, cette machine ne sert plus {model}. Choisissez de nouveau le modèle et appliquez, sinon les conversations avec ce rôle s’arrêteront sur une erreur.",
   "machines.unreachable.chat": "Ne répond pas. Les chats de ce rôle échouent jusqu’à ce qu’elle réponde, ou ramenez le rôle sur cette machine.",
   "machines.error.invalidModel": "Choisissez le modèle que cette machine sert pour ce rôle.",
   "machines.error.unknownModel": "Cette machine ne sert pas ce modèle sur ce port. Cherchez à nouveau ses modèles.",

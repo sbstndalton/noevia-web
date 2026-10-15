@@ -981,6 +981,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   "machines.modelsNone": "Den maskinen viser ingen modeller på denne porten.",
   "machines.modelsError": "Maskinen viste ikke modellene sine på den porten.",
   "machines.note.chat": "Svarer med {model} på den maskinen; ingenting for denne rollen lastes her.",
+  "machines.note.confirmModel": "Denne maskinen serverer ikke lenger {model} etter at adressen ble endret. Velg modellen på nytt og bruk den, ellers stopper samtaler med denne rollen med en feil.",
   "machines.unreachable.chat": "Svarer ikke. Chatter for denne rollen mislykkes til den svarer igjen, eller flytt rollen tilbake til denne maskinen.",
   "machines.error.invalidModel": "Velg modellen denne maskinen tilbyr for rollen.",
   "machines.error.unknownModel": "Den maskinen tilbyr ikke denne modellen på den porten. Finn modellene igjen.",

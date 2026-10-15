@@ -27,6 +27,8 @@ export interface MachineService {
   protocol?: 'tei' | 'llamacpp';
   /** #1840: a chat role on a machine names the model that machine serves. */
   model?: string;
+  /** #1851: the machine's address changed and the server there no longer lists `model`; choose the model again. */
+  needsConfirm?: boolean;
   /** OCR and Docling only: whether the deployment has switched the worker on. False: nothing to move (#1847). */
   enabled?: boolean;
   /** Where it reaches now (administrators only). */

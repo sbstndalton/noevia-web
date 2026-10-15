@@ -981,6 +981,7 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   "machines.modelsNone": "Quella macchina non offre modelli su questa porta.",
   "machines.modelsError": "La macchina non ha elencato i suoi modelli su quella porta.",
   "machines.note.chat": "Risponde {model} su quella macchina; per questo ruolo qui non si carica nulla.",
+  "machines.note.confirmModel": "Dopo il cambio di indirizzo questa macchina non serve più {model}. Scegli di nuovo il modello e applica, altrimenti le chat con questo ruolo si fermeranno con un errore.",
   "machines.unreachable.chat": "Non risponde. Le chat di questo ruolo non riescono finché non risponde di nuovo, oppure riporta il ruolo su questa macchina.",
   "machines.error.invalidModel": "Scegli il modello che questa macchina offre per il ruolo.",
   "machines.error.unknownModel": "Quella macchina non offre questo modello su quella porta. Cerca di nuovo i suoi modelli.",
