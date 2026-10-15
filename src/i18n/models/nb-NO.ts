@@ -54,6 +54,7 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.assign.fixedByServer': "Satt i serverkonfigurasjonen.",
   'mm.assign.decisionFromSettings': "Satt i Innstillinger, Modeller og ruting, Oppsett av beslutningstjenesten.",
   'mm.assign.decisionChoose': "Velg adresse og modell i Innstillinger, Modeller og ruting, Oppsett av beslutningstjenesten.",
+  'mm.assign.decisionOnMachine': "Kjører på en maskin valgt i Innstillinger, Inferensmaskiner.",
   'mm.assign.decisionModelFromSettings': "Modell og adresse er satt i Innstillinger, Modeller og ruting, Oppsett av beslutningstjenesten.",
   'mm.assign.rerankerToggle': "Omrangering",
   'mm.assign.rerankerModel': "Reranker-modell",

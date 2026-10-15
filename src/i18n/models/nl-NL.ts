@@ -54,6 +54,7 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.assign.fixedByServer': "Ingesteld in de serverconfiguratie.",
   'mm.assign.decisionFromSettings': "Ingesteld in Instellingen, Modellen en routering, Instellen van de beslissingsdienst.",
   'mm.assign.decisionChoose': "Kies het adres en het model in Instellingen, Modellen en routering, Instellen van de beslissingsdienst.",
+  'mm.assign.decisionOnMachine': "Draait op een machine gekozen in Instellingen, Inferentiemachines.",
   'mm.assign.decisionModelFromSettings': "Model en adres ingesteld in Instellingen, Modellen en routering, Instellen van de beslissingsdienst.",
   'mm.assign.rerankerToggle': "Herordenen",
   'mm.assign.rerankerModel': "Rerankermodel",

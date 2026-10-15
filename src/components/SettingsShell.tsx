@@ -13,6 +13,7 @@ import { PersonalizationSettings } from './personalization/PersonalizationSettin
 import { FeatureSettings } from './features/FeatureSettings';
 import { OffsiteBackupSettings } from './offsite-backup/OffsiteBackupSettings';
 import { WebAddressSettings } from './web-address/WebAddressSettings';
+import { InferenceMachinesSettings } from './machines/InferenceMachinesSettings';
 import { ConnectorsSettings } from './connectors/ConnectorsSettings';
 import { NotificationSettings } from './notifications/NotificationSettings';
 import { MemorySettings } from './personalization/MemorySettings';
@@ -71,6 +72,7 @@ const PERSONAL: Group[] = [
 const ADMIN: Group = { name: 'Server administration', admin: true, items: [
   ['users', 'Users', 'members invite accounts'],
   ['models', 'Models and routing', 'model tuning auto routing download gguf decision service sensitivity'],
+  ['machines', 'Inference machines', 'machines machine pi raspberry rock lan tailscale remote host embedding reranker decision'],
   ['address', 'Web address', 'deployment domain url https'],
   ['features', 'Features', 'deployment feature flags operator'],
   ['experimental', 'Experimental', 'deployment preview'],
@@ -93,7 +95,7 @@ export function filterGroups<G extends { items: Item[] }>(groups: G[], query: st
 }
 
 // Each section has its own symbol; names resolve through ShellIcon's Lucide map.
-const ICONS: Record<string, string> = { ...Object.fromEntries(['profile','security','appearance','personalization','capabilities','diary','providers','usage','data','planned','users','models','status','features','backups','address','connectors'].map(id => [id, id])), keyboard: 'keyboard', memory: 'memory', notifications: 'bell' };
+const ICONS: Record<string, string> = { ...Object.fromEntries(['profile','security','appearance','personalization','capabilities','diary','providers','usage','data','planned','users','models','machines','status','features','backups','address','connectors'].map(id => [id, id])), keyboard: 'keyboard', memory: 'memory', notifications: 'bell' };
 
 // Kept in step with the single-pane breakpoint in shell-v2.css.
 const PHONE = '(max-width: 820px)';
@@ -372,6 +374,8 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
           <NotificationSettings />
         ) : (section === 'features' || section === 'experimental') && isAdmin ? (
           <FeatureSettings key={section} experimental={section === 'experimental'} isAdmin={isAdmin} />
+        ) : section === 'machines' && isAdmin ? (
+          <InferenceMachinesSettings/>
         ) : section === 'address' && isAdmin ? (
           <WebAddressSettings/>
         ) : section === 'backups' && isAdmin ? (

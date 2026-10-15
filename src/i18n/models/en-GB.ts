@@ -58,6 +58,7 @@ export const EN_GB_MODELS = {
   'mm.assign.fixedByServer': "Set in the server configuration.",
   'mm.assign.decisionFromSettings': "Set in Settings, Models and routing, Decision service setup.",
   'mm.assign.decisionChoose': "Choose its address and model in Settings, Models and routing, Decision service setup.",
+  'mm.assign.decisionOnMachine': "Runs on a machine chosen in Settings, Inference machines.",
   'mm.assign.decisionModelFromSettings': "Model and address set in Settings, Models and routing, Decision service setup.",
   'mm.assign.rerankerToggle': "Reranking",
   'mm.assign.rerankerModel': "Reranker model",

@@ -1,6 +1,7 @@
 import type { SettingsCatalogue } from './en-GB';
 
 export const EN_US_SETTINGS: SettingsCatalogue = {
+  'machines.unreachable.decision': "The decision service is not answering. Decisions keep the normal behavior until it does.",
   // #618: Features, Experimental, Web address and Backups pages
   'features.experimentalIntro': "Try alternative application logic for everyone on this server. Each experiment describes the behavior it changes. Turn it off to restore the existing logic. These experiments are not quality-validated.",
   'style.advancedSet': "{count} customized",

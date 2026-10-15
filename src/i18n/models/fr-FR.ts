@@ -54,6 +54,7 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.assign.fixedByServer': "Défini dans la configuration du serveur.",
   'mm.assign.decisionFromSettings': "Défini dans Réglages, Modèles et routage, Configuration du service de décision.",
   'mm.assign.decisionChoose': "Choisissez son adresse et son modèle dans Réglages, Modèles et routage, Configuration du service de décision.",
+  'mm.assign.decisionOnMachine': "Tourne sur une machine choisie dans Réglages, Machines d’inférence.",
   'mm.assign.decisionModelFromSettings': "Modèle et adresse définis dans Réglages, Modèles et routage, Configuration du service de décision.",
   'mm.assign.rerankerToggle': "Reclassement",
   'mm.assign.rerankerModel': "Modèle de reranker",
