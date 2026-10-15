@@ -12,8 +12,8 @@
 import contract from '../contracts/folder-import.json';
 
 export interface FolderFile { file: File; path: string }
-export type SkipCode = 'invalidPath' | 'system' | 'hidden' | 'unsupported' | 'duplicate' | 'empty' | 'tooLarge' | 'fileLimit' | 'sizeLimit' | 'projectLimit' | 'failed';
-export interface SkippedItem { path: string; code: SkipCode; count?: number; reason?: string }
+export type SkipCode = 'invalidPath' | 'system' | 'hidden' | 'unsupported' | 'duplicate' | 'caseCollision' | 'empty' | 'tooLarge' | 'fileLimit' | 'sizeLimit' | 'sizeMismatch' | 'projectLimit' | 'documentLimit' | 'imageLimit' | 'failed';
+export interface SkippedItem { path: string; code: SkipCode; count?: number; reason?: string; max?: number }
 
 const SKIP = new Set(contract.skipNames.map((n) => n.toLowerCase()));
 const READABLE = new Set(contract.readableExtensions);
@@ -54,7 +54,8 @@ export function sortFolder(items: FolderFile[]): { candidates: FolderFile[]; ski
 
 /** The files an <input webkitdirectory> picked, with their paths inside the chosen folder. */
 export function fromInput(list: FileList | File[] | null): FolderFile[] {
-  return Array.from(list || []).map((file) => ({ file, path: (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name }));
+  // NFC, as the server stores it: a decomposed name from macOS must find its file in the plan's answer.
+  return Array.from(list || []).map((file) => ({ file, path: ((file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name).normalize('NFC') }));
 }
 
 // The File and Directory Entries API, as much of it as a drop needs.
@@ -76,7 +77,7 @@ export async function fromDrop(items: DataTransferItemList | null): Promise<{ fi
   while (queue.length) {
     const next: Entry[] = [];
     for (const entry of queue) {
-      const path = entry.fullPath.replace(/^\/+/, '') || entry.name;
+      const path = (entry.fullPath.replace(/^\/+/, '') || entry.name).normalize('NFC');
       const why = skippedName(entry.name);
       if (why) { skipped.push({ path, code: why }); continue; }
       if (entry.isDirectory) {
@@ -123,4 +124,5 @@ export function sourceDisplayPath(file: { name: string; source?: string | null; 
   return name.split('/').pop() || name;
 }
 
-export const FOLDER_IMPORT_DEFAULTS = { maxFiles: contract.maxFiles, maxBytes: contract.maxBytes };
+/** Until a plan answers with the server's values: a folder import's file cap follows the project source limit. */
+export const FOLDER_IMPORT_DEFAULTS = { maxFiles: contract.projectLimits.sources, maxBytes: contract.maxBytes, projectSources: contract.projectLimits.sources, projectDocuments: contract.projectLimits.documents, projectImages: contract.projectLimits.images };

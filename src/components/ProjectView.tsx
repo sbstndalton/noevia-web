@@ -220,7 +220,7 @@ export function ProjectView({
   // each with its path inside the folder. The result is announced once, when the import ends.
   const folderInput = useRef<HTMLInputElement>(null);
   const [dropActive, setDropActive] = useState(false);
-  const [folderResult, setFolderResult] = useState<{ added: number; updated: number; unchanged: number; failed: number; skipped: SkippedItem[]; limits: { maxFiles: number; maxBytes: number } } | null>(null);
+  const [folderResult, setFolderResult] = useState<{ added: number; updated: number; unchanged: number; failed: number; skipped: SkippedItem[]; limits: typeof FOLDER_IMPORT_DEFAULTS } | null>(null);
   const [folderAnnouncement, setFolderAnnouncement] = useState('');
   const [folderMode, setFolderMode] = useState(false);
   const addFolder = async (items: FolderFile[], walkedSkipped: SkippedItem[] = []) => {
@@ -243,7 +243,7 @@ export function ProjectView({
       const plan = await planFolderImport(project.id, entries);
       result.limits = plan.limits;
       result.unchanged = plan.unchanged.length;
-      result.skipped.push(...plan.skipped.map((s) => ({ path: s.path, code: s.code as SkippedItem['code'], reason: s.reason })));
+      result.skipped.push(...plan.skipped.map((s) => ({ path: s.path, code: s.code as SkippedItem['code'], reason: s.reason, max: s.max })));
       const rows = plan.accepted.map((a) => ({ name: a.path, stage: t('projects.view.queued'), started: Date.now() }));
       setUploadRows(rows);
       const update = (i: number, value: { stage: string; percent?: number; finished?: number; failed?: boolean }) => setUploadRows(list => list.map((r, n) => n === i ? { ...r, percent: undefined, ...value } : r));
@@ -278,8 +278,13 @@ export function ProjectView({
     if (s.code === 'failed') return s.reason || t('projects.view.uploadFailed');
     if (s.code === 'fileLimit') return t('projects.folder.skip.fileLimit', { max: folderResult?.limits.maxFiles ?? FOLDER_IMPORT_DEFAULTS.maxFiles });
     if (s.code === 'sizeLimit') return t('projects.folder.skip.sizeLimit', { max: formatBytes(folderResult?.limits.maxBytes ?? FOLDER_IMPORT_DEFAULTS.maxBytes, appLocale()) });
+    const limitsNow = folderResult?.limits ?? FOLDER_IMPORT_DEFAULTS;
+    if (s.code === 'projectLimit') return t('projects.folder.skip.projectLimit', { max: s.max ?? limitsNow.projectSources });
+    if (s.code === 'documentLimit') return t('projects.folder.skip.documentLimit', { max: s.max ?? limitsNow.projectDocuments });
+    if (s.code === 'imageLimit') return t('projects.folder.skip.imageLimit', { max: s.max ?? limitsNow.projectImages });
     const keys = { system: 'projects.folder.skip.system', hidden: 'projects.folder.skip.hidden', unsupported: 'projects.folder.skip.unsupported', invalidPath: 'projects.folder.skip.invalidPath',
-      duplicate: 'projects.folder.skip.duplicate', empty: 'projects.folder.skip.empty', tooLarge: 'projects.folder.skip.tooLarge', projectLimit: 'projects.folder.skip.projectLimit' } as const;
+      duplicate: 'projects.folder.skip.duplicate', caseCollision: 'projects.folder.skip.caseCollision', empty: 'projects.folder.skip.empty', tooLarge: 'projects.folder.skip.tooLarge',
+      sizeMismatch: 'projects.folder.skip.sizeMismatch' } as const;
     return s.code in keys ? t(keys[s.code as keyof typeof keys]) : (s.reason || s.code);
   };
   const onSourcesDrop = (e: DragEvent<HTMLDivElement>) => {

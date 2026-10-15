@@ -205,10 +205,10 @@ export interface SourceUploadBody { name: string; dataBase64: string; relativePa
 /** #1805: what a folder import will do, before anything is uploaded. */
 export interface FolderImportPlan {
   importId: string;
-  limits: { maxFiles: number; maxBytes: number };
+  limits: { maxFiles: number; maxBytes: number; projectSources: number; projectDocuments: number; projectImages: number };
   accepted: { path: string; size: number; change: 'new' | 'changed' }[];
   unchanged: { path: string }[];
-  skipped: { path: string; code: string; reason: string }[];
+  skipped: { path: string; code: string; reason: string; max?: number }[];
 }
 export const planFolderImport = (id: string, entries: { path: string; size: number; sha256?: string }[]) =>
   postJson<FolderImportPlan>(`/api/projects/${encodeURIComponent(id)}/folder-import/plan`, { entries });

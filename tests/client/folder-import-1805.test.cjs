@@ -40,6 +40,8 @@ test('#1805: sortFolder keeps readable files, folds each skipped folder into one
 test('#1805: fromInput takes each file\'s path inside the chosen folder', () => {
   const picked = [Object.assign(file('auth.md'), { webkitRelativePath: 'notes/docs/api/auth.md' }), file('loose.md')];
   assert.deepEqual(fi.fromInput(picked).map((x) => x.path), ['notes/docs/api/auth.md', 'loose.md']);
+  const decomposed = [Object.assign(file('cafe\u0301.md'), { webkitRelativePath: 'notes/cafe\u0301.md' })];
+  assert.deepEqual(fi.fromInput(decomposed).map((x) => x.path), ['notes/caf\u00e9.md'], 'NFC, as the server answers');
 });
 
 /** A synthetic dropped tree in the File and Directory Entries shape, with readEntries in batches of 2. */
@@ -86,7 +88,7 @@ test('#1805: ProjectView offers a labelled "Add folder" directory input and drop
 test('#1805: every folder-import string exists in all nine catalogues', () => {
   const english = fs.readFileSync(path.join(root, 'src/i18n/en-GB.ts'), 'utf8');
   const keys = [...english.matchAll(/'(projects\.folder\.[A-Za-z.]+)'/g)].map((m) => m[1]);
-  assert.equal(keys.length, 24, `found ${keys.length}`);
+  assert.equal(keys.length, 28, `found ${keys.length}`);
   for (const locale of ['de-DE', 'es-ES', 'fr-FR', 'it-IT', 'nb-NO', 'nl-NL', 'pt-BR', 'sv-SE']) {
     const text = fs.readFileSync(path.join(root, `src/i18n/${locale}.ts`), 'utf8');
     for (const key of keys) assert.ok(text.includes(`'${key}'`), `${locale} has ${key}`);
