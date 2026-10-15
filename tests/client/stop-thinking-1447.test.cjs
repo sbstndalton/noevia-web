@@ -45,9 +45,9 @@ test('#1447 a reply that has an answer is never the placeholder, even with think
 
 test('#1447 the Stop handler labels a thinking-only reply too: its condition no longer requires empty reasoning', () => {
   const src = fs.readFileSync(path.join(SRC, 'App.tsx'), 'utf8');
-  // #1784: the handler now branches on the reply first; an empty reply is still labelled Stopped
-  // whatever its reasoning, and a reply with text is marked stopped instead.
-  assert.match(src, /m\.id !== replyId \? m\s*: !m\.content \? \{ \.\.\.m, senderLabel: STOPPED_SENDER \}\s*: \{ \.\.\.m, stopped: true \}/);
+  assert.match(src, /m\.id === replyId && !m\.content\s*\? \{ \.\.\.m, senderLabel: STOPPED_SENDER \}/);
   assert.doesNotMatch(src, /m\.id === replyId && !m\.content && !m\.reasoning/);
+  // #1784: a reply with text is kept and marked stopped instead.
+  assert.match(src, /: m\.id === replyId \? \{ \.\.\.m, stopped: true \} : m/);
 });
 

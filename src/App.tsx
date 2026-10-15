@@ -1207,9 +1207,9 @@ export default function App(): JSX.Element {
           setMessagesByChat((prev) => ({
             ...prev,
             [chatId]: (prev[chatId] ?? []).map((m) =>
-              m.id !== replyId ? m
-                : !m.content ? { ...m, senderLabel: STOPPED_SENDER }
-                : { ...m, stopped: true },
+              m.id === replyId && !m.content
+                ? { ...m, senderLabel: STOPPED_SENDER }
+                : m.id === replyId ? { ...m, stopped: true } : m,
             ),
           }));
         } else {
