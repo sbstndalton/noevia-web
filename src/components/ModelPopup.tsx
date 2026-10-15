@@ -16,6 +16,7 @@ import { providerDisplayName } from '../display-names';
 import type { JSX, ReactNode } from 'react';
 import type { InstalledModel, Project, Provider } from '../types';
 import type { MachineModel } from '../api';
+import { machineModelRows } from '../model-popup-machines';
 import { apiFetch, fetchAutoRoles, fetchChatGptModels, fetchInstalledModels, fetchProviders, refreshChatGptModels, saveProjectConfig } from '../api';
 import { ProjectRoutingMode } from './ProjectRoutingMode';
 import { SegmentedControl } from './SegmentedControl';
@@ -113,15 +114,9 @@ function ModelChooser({ projects, activeProject, onChanged, onOpenSettings, befo
   // A long catalogue gets a filter; a handful of models does not need one.
   const [modelQuery, setModelQuery] = useState('');
   const shownModels = chatModels.filter((m) => m.name.toLowerCase().includes(modelQuery.trim().toLowerCase()));
-  // #1849: models a chat role's Inference machine serves, listed after this machine's own and labelled with the
-  // machine. A name this machine lists is its row (the server answers that pick here), so it is not repeated.
-  const localNames = new Set(chatModels.map((m) => m.name));
-  const machineModels: MachineModel[] = [];
-  for (const row of autoInfo?.machineModels ?? []) {
-    if (!row || typeof row.model !== 'string' || !row.model.trim() || typeof row.machine?.name !== 'string') continue;
-    if (localNames.has(row.model) || !isChatGenerationModel(row.model) || machineModels.some((m) => m.model === row.model)) continue;
-    machineModels.push(row);
-  }
+  // #1849/#1855: models a chat role's Inference machine serves, listed after this machine's own and labelled with the
+  // machine. The server already left out any name its catalogue lists (that pick runs here), so this shows what it sent.
+  const machineModels: MachineModel[] = machineModelRows(autoInfo?.machineModels);
   const shownMachineModels = machineModels.filter((m) => m.model.toLowerCase().includes(modelQuery.trim().toLowerCase()));
   const defaultProviderId = providers.find((p) => p.isDefault)?.id || 'default';
   const activeProviderId = activeProject?.provider === 'lemonade' ? defaultProviderId : activeProject?.provider || defaultProviderId;
