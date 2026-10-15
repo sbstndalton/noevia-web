@@ -989,6 +989,41 @@ export default function App(): JSX.Element {
       const startedAt = Date.now();
       let failed = false;
       let streamCompleted = false;
+      // #1797: the reply is over when the server says 'done', not when the connection closes: a title event can
+      // follow by up to 8 s. Everything that ends the generating state runs once, from 'done' or from the end of
+      // the stream, whichever comes first. A new message started in between is never touched by the late call.
+      let settled = false;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        setReplyTelemetryByChat((prev) => ({
+          ...prev,
+          [chatId]: finishReplyTelemetry(
+            prev[chatId],
+            controller.signal.aborted ? 'stopped' : failed || !streamCompleted ? 'error' : 'complete',
+          ),
+        }));
+        // Titles and replies stay out of the notification: lock screens are not private.
+        if (!controller.signal.aborted) notifyIfAway(failed ? 'Reply failed' : 'Reply ready', failed ? 'noevia could not finish answering.' : 'noevia finished answering.', `reply-${chatId}`, 'replyFinished');
+        sendingChats.current.delete(chatId);
+        // The engine loads models on demand, so a reply can change what is loaded (#205).
+        notifyModelsChanged();
+        if (streamAbort.current[chatId] === controller) delete streamAbort.current[chatId];
+        setStreamingChats((prev) => {
+          const next = { ...prev };
+          delete next[chatId];
+          return next;
+        });
+        // A chat deleted mid-reply stays deleted: no settle write, no save.
+        if (!deletedChats.current.has(chatId)) {
+          persistAfterCommit.current.add(chatId);
+          setMessagesByChat((prev) => ({
+            ...prev,
+            // Tool approvals and a routing question both die with the request (#793).
+            [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? settleReply(m) : m)),
+          }));
+        }
+      };
       try {
         let acc = '';
         let reasoning = '';
@@ -1019,6 +1054,8 @@ export default function App(): JSX.Element {
           },
           controller.signal,
         )) {
+          // After 'done' only the trailing title still matters (#1797); the reply and its chat state are settled.
+          if (settled && ev.type !== 'title') continue;
           if (ev.type === 'meta' && ev.reasoning) {
             window.dispatchEvent(new Event('cowork-reasoning-updated'));
             setMessagesByChat(prev => ({...prev,[chatId]:(prev[chatId] ?? []).map(m => m.id === replyId ? {...m,reasoningMode:ev.reasoning,reasoningEffort:ev.reasoningEffort} : m)}));
@@ -1169,10 +1206,7 @@ export default function App(): JSX.Element {
             void fetchStats().then((s) => { if (statsGate.current.isLatest(statsSeq)) setStats(s); }).catch(() => undefined);
           } else if (ev.type === 'done') {
             streamCompleted = true;
-            setReplyTelemetryByChat((prev) => ({
-              ...prev,
-              [chatId]: finishReplyTelemetry(prev[chatId], 'complete'),
-            }));
+            settle();
           } else if (ev.type === 'paused') {
             // #658: step supervision stopped the reply after tool steps that finished. Not a
             // failure: the reply ends normally ('done' follows) with a note of what was saved.
@@ -1204,7 +1238,9 @@ export default function App(): JSX.Element {
           }
         }
       } catch (err) {
-        if (controller.signal.aborted) {
+        // #1797: the reply already finished; a connection that drops while waiting for the title changes nothing.
+        if (settled) console.warn('Stream ended after the reply finished', err);
+        else if (controller.signal.aborted) {
           // User pressed Stop (or navigated away): keep what streamed in,
           // mark nothing as an error. #1447: a reply stopped while still thinking has no
           // answer either, so it is labelled Stopped too (its thinking stays visible).
@@ -1230,33 +1266,7 @@ export default function App(): JSX.Element {
           }));
         }
       } finally {
-        setReplyTelemetryByChat((prev) => ({
-          ...prev,
-          [chatId]: finishReplyTelemetry(
-            prev[chatId],
-            controller.signal.aborted ? 'stopped' : failed || !streamCompleted ? 'error' : 'complete',
-          ),
-        }));
-        // Titles and replies stay out of the notification: lock screens are not private.
-        if (!controller.signal.aborted) notifyIfAway(failed ? 'Reply failed' : 'Reply ready', failed ? 'noevia could not finish answering.' : 'noevia finished answering.', `reply-${chatId}`, 'replyFinished');
-        sendingChats.current.delete(chatId);
-        // The engine loads models on demand, so a reply can change what is loaded (#205).
-        notifyModelsChanged();
-        if (streamAbort.current[chatId] === controller) delete streamAbort.current[chatId];
-        setStreamingChats((prev) => {
-          const next = { ...prev };
-          delete next[chatId];
-          return next;
-        });
-        // A chat deleted mid-reply stays deleted: no settle write, no save.
-        if (!deletedChats.current.has(chatId)) {
-          persistAfterCommit.current.add(chatId);
-          setMessagesByChat((prev) => ({
-            ...prev,
-            // Tool approvals and a routing question both die with the request (#793).
-            [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? settleReply(m) : m)),
-          }));
-        }
+        settle();
       }
     },
     [refreshProjects, streamingChats, queueMetaUpsert, persist],
