@@ -60,7 +60,6 @@ import type {
   LiveStats,
   Message,
   Project,
-  ProjectFile,
   ReplyPause,
   ReplyTelemetry,
   ToolCallView,
@@ -1468,7 +1467,7 @@ export default function App(): JSX.Element {
   }, [view, handleSend]);
 
   const handleCreateProject = useCallback(
-    async (body: { icon?: string; color?: string; name: string; goal: string; instructions: string; files: ProjectFile[] }) => {
+    async (body: { icon?: string; color?: string; name: string; goal: string; instructions: string; files: { name: string; content: string }[] }) => {
       // No routing sent: the server applies the default from Models → Routing.
       // #1522: a new project starts Automatic (tools chosen by routing), not on the old Manual default.
       const project = await createProject({ ...body, toolsMode: NEW_PROJECT_TOOLS_MODE });
