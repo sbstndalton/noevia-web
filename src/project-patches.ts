@@ -87,3 +87,24 @@ export function projectSyncErrorText(e: unknown, tr: Tr): string {
   const reason = reasonOf(e);
   return reason ? tr('projectSave.syncFailed', { reason }) : tr('projectSave.syncFailedGeneric');
 }
+
+function sameValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((v, i) => sameValue(v, b[i]));
+  const ka = Object.keys(a as object), kb = Object.keys(b as object);
+  return ka.length === kb.length && ka.every((k) => k in (b as object) && sameValue((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]));
+}
+
+/** #1886: the part of `patch` that differs from what the project already holds. A press of
+ *  "Refresh from storage" re-submits the unchanged folder list; that is a read plus a sync, not
+ *  a settings write, so it must not POST /config (it can overwrite concurrent edits and takes the
+ *  projects store lock). An empty result means there is nothing to save. */
+export function changedProjectPatch<P extends object>(current: object | undefined, patch: P): Partial<P> {
+  const out: Partial<P> = {};
+  for (const key of Object.keys(patch) as (keyof P)[]) {
+    if (!current || !sameValue((current as Record<string, unknown>)[key as string], patch[key])) out[key] = patch[key];
+  }
+  return out;
+}

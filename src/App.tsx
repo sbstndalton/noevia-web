@@ -97,7 +97,7 @@ import { nextNavState, persistedView, resolveSettingsClose, restoreNavState, set
 import { useT, t as translateNow } from './i18n';
 import { coworkStartFailure, failedReply, failureCopy } from './failure-copy';
 import { createThinkingClock } from './thinking-time';
-import { queueProjectPatch, restoreProjectPatch, takeProjectPatch, viewBelongsToProject, projectSaveErrorText, projectSyncErrorText, type PatchQueue } from './project-patches';
+import { changedProjectPatch, queueProjectPatch, restoreProjectPatch, takeProjectPatch, viewBelongsToProject, projectSaveErrorText, projectSyncErrorText, type PatchQueue } from './project-patches';
 import type { SkillPin } from './api-contract';
 import { storablePin } from './skill-pin-store';
 import { turnImageIdsToSend } from './turn-images';
@@ -1727,9 +1727,14 @@ export default function App(): JSX.Element {
   // work: the project lists it and the model sees nothing.
   const saveProjectAndSync = useCallback(
     async (projectId: string, patch: Partial<Project>, options: { storageRetry?: boolean } = {}) => {
-      patch = { ...pendingPatches.current[projectId], ...patch };
+      // #1886: keys this press leaves unchanged (the folder list on "Refresh from storage") are not a
+      // settings write. Queued rail edits are still flushed with it.
+      const requested = patch;
+      const changed = changedProjectPatch(projectsRef.current.find((p) => p.id === projectId), requested);
+      patch = { ...pendingPatches.current[projectId], ...changed };
       delete pendingPatches.current[projectId];
-      setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, ...patch, updatedAt: Date.now() } : p)));
+      const hasWrite = Object.keys(patch).length > 0;
+      if (hasWrite) setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, ...patch, updatedAt: Date.now() } : p)));
       // A pending debounced patch would otherwise land after this one and
       // overwrite it with older values.
       if (patchTimers.current[projectId]) {
@@ -1737,7 +1742,7 @@ export default function App(): JSX.Element {
         delete patchTimers.current[projectId];
       }
       try {
-        await saveProjectConfig(projectId, patch);
+        if (hasWrite) await saveProjectConfig(projectId, patch);
       } catch (e) {
         setProjectError(projectSaveErrorText(e, tr));
         refreshProjects();
@@ -1749,7 +1754,7 @@ export default function App(): JSX.Element {
         // folder skipped the sync and left its files behind — detaching one of
         // several worked, because the sync rebuilds from what remains, which
         // is why the behaviour looked arbitrary.
-        if (Array.isArray(patch.sourceFolders)) {
+        if (Array.isArray(requested.sourceFolders)) {
           // #1428/#1429: only the person's own "Refresh from storage" press asks storage to be tried again now.
           const r = await syncProjectSources(projectId, { storageRetry: options.storageRetry === true });
           setProjectError(prevError => {
