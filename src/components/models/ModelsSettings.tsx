@@ -364,10 +364,12 @@ function ProjectRoutingSection({ models, routes, projects, modelsError }: {
 }
 
 // noevia#1863: how long an idle chat model stays loaded before the engine frees it. The model
-// manager keeps the value (the deployment's CHAT_MODEL_IDLE_UNLOAD_SECONDS seeds it); a change
-// reaches the engine at once when nothing is running, otherwise when the running model unloads.
+// manager keeps the value (the deployment's CHAT_MODEL_IDLE_UNLOAD_SECONDS seeds it). The engine
+// reads it only on a settings reload, which waits while any model runs (asleep ones too), so the
+// server says whether the saved value is live (`applied`); until it is, "Apply now" is offered,
+// also after the page is reloaded.
 type IdleUnloadInfo = { seconds: number; source: 'setting' | 'env' | 'default'; fallbackSeconds: number | null; fallbackSource: 'env' | 'default' | null;
-  defaultSeconds: number; minSeconds: number; maxSeconds: number };
+  defaultSeconds: number; minSeconds: number; maxSeconds: number; applied?: boolean };
 type IdleApply = { state: 'applied' | 'pending' | 'failed'; loaded?: string[] };
 const IDLE_CHOICES = [300, 600, 900, 1800, 3600, 7200, 14400, 28800, 43200, 86400, 0];
 function IdleUnloadSection(): JSX.Element | null {
@@ -377,7 +379,6 @@ function IdleUnloadSection(): JSX.Element | null {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
-  const [pending, setPending] = useState(false);
   const [hidden, setHidden] = useState(false);
   const liveRef = useRef(true);
   useEffect(() => { liveRef.current = true; return () => { liveRef.current = false; }; }, []);
@@ -398,34 +399,31 @@ function IdleUnloadSection(): JSX.Element | null {
     : t.plural('mm.idle.minutes', Math.round(seconds / 60));
   const choices = info && !IDLE_CHOICES.includes(info.seconds) ? [...IDLE_CHOICES.slice(0, -1), info.seconds].sort((a, b) => a - b).concat(0) : IDLE_CHOICES;
   const send = async (seconds: number | null) => {
-    setBusy(true); setError(''); setStatus(''); setPending(false);
+    setBusy(true); setError(''); setStatus('');
     try {
       const r = await apiFetch('/api/models/idle-unload', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seconds }) });
       const body = await r.json().catch(() => ({})) as Partial<IdleUnloadInfo> & { apply?: IdleApply; errorId?: string };
-      if (!r.ok) { setError(body.errorId === 'idleUnloadInvalid' ? t('mm.idle.invalid') : t('mm.saveError')); return; }
       if (!liveRef.current) return;
-      const apply = body.apply?.state;
-      if (apply === 'failed') setError(t('mm.idle.savedFailed'));
-      else if (apply === 'pending') {
-        const models = (body.apply?.loaded || []).join(', ');
-        setStatus(models ? t('mm.idle.savedPending', { models }) : t('mm.idle.savedPendingAny'));
-        setPending(true);
-      } else setStatus(t('mm.idle.savedApplied'));
+      if (!r.ok) { setError(body.errorId === 'idleUnloadInvalid' ? t('mm.idle.invalid') : t('mm.saveError')); return; }
+      if (body.apply?.state === 'failed') setError(t('mm.idle.savedFailed'));
+      // Not live yet: the persistent pending line below says so (from the server, after load()).
+      else if (body.applied) setStatus(t('mm.idle.savedApplied'));
       load();
-    } catch { setError(t('mm.saveError')); }
+    } catch { if (liveRef.current) setError(t('mm.saveError')); }
     finally { if (liveRef.current) setBusy(false); }
   };
   // The same unload-and-reload as other preset changes (POST /api/models/presets/reload).
   const applyNow = async () => {
-    setBusy(true); setError('');
+    setBusy(true); setError(''); setStatus('');
     try {
       const r = await apiFetch('/api/models/presets/reload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unload: true }) });
       if (!liveRef.current) return;
-      if (r.ok) { setStatus(t('mm.idle.appliedNow')); setPending(false); notifyModelsChanged(); }
+      if (r.ok) { setStatus(t('mm.idle.appliedNow')); notifyModelsChanged(); load(); }
       else setError(t('mm.idle.applyFailed'));
-    } catch { setError(t('mm.idle.applyFailed')); }
+    } catch { if (liveRef.current) setError(t('mm.idle.applyFailed')); }
     finally { if (liveRef.current) setBusy(false); }
   };
+  const pending = !!info && info.applied === false && draft === info.seconds;
   const source = !info ? '' : info.source === 'setting'
     ? t('mm.idle.sourceSetting', { time: label(info.fallbackSeconds ?? info.defaultSeconds) })
     : info.source === 'env' ? t('mm.idle.sourceEnv') : t('mm.idle.sourceDefault');
@@ -436,12 +434,13 @@ function IdleUnloadSection(): JSX.Element | null {
     {info && draft !== null && <>
       <div className="mm-form">
         <label>{t('mm.idle.label')}
-          <select value={String(draft)} disabled={busy} onChange={(e) => { setDraft(Number(e.target.value)); setStatus(''); setPending(false); }}>
+          <select value={String(draft)} disabled={busy} onChange={(e) => { setDraft(Number(e.target.value)); setStatus(''); }}>
             {choices.map((s) => <option key={s} value={String(s)}>{label(s)}{s === info.defaultSeconds ? ` (${t('mm.idle.default')})` : ''}</option>)}
           </select>
         </label>
         <p className="mm-note">{source}</p>
         {draft === 0 && <p className="mm-note warn" role="note">{t('mm.idle.neverWarn')}</p>}
+        {pending && <p className="mm-note warn" data-testid="idle-pending">{t('mm.idle.pending')} {t('mm.idle.applyNote')}</p>}
       </div>
       <div className="mm-actions">
         <button className="modal-btn primary" disabled={busy || draft === info.seconds} onClick={() => void send(draft)}>{busy ? t('mm.saving') : t('mm.idle.save')}</button>

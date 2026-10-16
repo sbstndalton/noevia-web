@@ -1,7 +1,8 @@
 'use strict';
 // noevia#1863: the chat-model idle unload time is an administrator setting on the Models page
 // (Performance, beside the inference memory budget). Default 30 minutes; Never warns about memory;
-// a save reaches the engine at once when nothing is running, otherwise it offers "Unload and apply now".
+// a save reaches the engine at once when nothing is running; otherwise the card says it is not live
+// yet and offers "Apply now", also after the page is reloaded (review of web#87).
 //
 // Offline: the app is built from this checkout; /api/models/idle-unload and /api/models/presets/reload
 // go through noevia-core's REAL route and idle-unload-setting.cjs over a synthetic model manager that
@@ -30,21 +31,27 @@ function createState({ member = false, running = [] } = {}) {
     return { ok: true, status: 200, body: { ...view(), preset: before === loader.ini ? 'unchanged' : 'written' } };
   };
   const live = [...running], reloads = [];
+  // What the router last read: [*] as the model manager writes it. A plain reload is refused while
+  // any model runs (a sleeping one too), so the saved value is not live until "Apply now".
+  const ini = (seconds) => (seconds ? `[*]\nsleep-idle-seconds = ${seconds}\n` : '[*]\n');
+  const router = { text: ini(1800) };
   const modelManager = {
     enabled: true, kind: 'llamacpp', capabilities: {}, requireEnabled() {},
     listModels: async () => ({ ok: true, status: 200, body: { data: [] } }),
     health: async () => ({ ok: true, body: { all_models_loaded: [] } }),
+    presetsInRouter: async () => router.text,
     reloadPresets: async ({ unload = false } = {}) => {
       reloads.push(unload);
       if (live.length && !unload) return { ok: false, status: 409, body: { error: 'A model is loaded. Unload it to apply the new settings.', loaded: [...live] } };
       const unloaded = live.splice(0);
+      router.text = ini(loader.ini);
       return { ok: true, status: 200, body: { reloaded: true, unloaded } };
     },
   };
   const env = { MODEL_LOADER_URL: 'http://model-loader.invalid' };
   const audits = [];
   const has = fs.existsSync(path.join(CORE, 'idle-unload-setting.cjs'));
-  const idleUnload = has ? core('idle-unload-setting.cjs').createIdleUnloadSetting({ env, fetchJson: loaderFetch, reloadPresets: (o) => modelManager.reloadPresets(o), audit: (...a) => audits.push(a) }) : null;
+  const idleUnload = has ? core('idle-unload-setting.cjs').createIdleUnloadSetting({ env, fetchJson: loaderFetch, reloadPresets: (o) => modelManager.reloadPresets(o), presetsInRouter: () => modelManager.presetsInRouter(), audit: (...a) => audits.push(a) }) : null;
   const workspace = { userId: 'qa-admin', autoRoles: {}, saveAutoRoles() {} };
   const service = core('models.cjs').createModelService({ fetchJson: loaderFetch, env, modelManager, currentWorkspace: () => workspace, listWorkspaces: () => [] });
   const respond = (out) => (res, status, body) => { out.status = status; out.body = body; };
@@ -70,7 +77,7 @@ function createState({ member = false, running = [] } = {}) {
     if (pathname.startsWith('/api/models/')) return { status: 200, body: [] };
     return null;
   }
-  return { handle, loader, audits, reloads, live };
+  return { handle, loader, audits, reloads, live, router };
 }
 
 async function openPerformance(page, origin, { direct = true } = {}) {
@@ -108,35 +115,50 @@ run('models-idle-unload-1863', Number(process.env.QA_PORT || 31863), async (chec
       assert.equal(await card.getByRole('note').count(), 0);
     });
 
-    await check(`${tag}: saving with a model running keeps it running and offers to apply now`, async () => {
+    const pendingLine = card.getByTestId('idle-pending');
+    await check(`${tag}: saving while a model runs says it is not live yet and offers Apply now`, async () => {
+      assert.equal(await pendingLine.count(), 0, 'the default is live before any save');
       await card.getByRole('button', { name: 'Save' }).click();
-      await card.getByRole('status').filter({ hasText: 'Saved. Qwen3.5-9B keeps its current timer until it is unloaded.' }).waitFor({ timeout: 5000 });
+      await pendingLine.filter({ hasText: 'Saved — applies after the next reload.' }).waitFor({ timeout: 5000 });
+      assert.match(await pendingLine.textContent(), /including one asleep after its idle time/);
+      await card.getByRole('button', { name: 'Apply now' }).waitFor({ timeout: 2000 });
       assert.deepEqual(state.loader.puts, [3600]);
       assert.equal(state.loader.ini, 3600, 'the model manager rewrote the preset key');
       assert.deepEqual(state.reloads, [false], 'the router was asked to reload without unloading');
       assert.deepEqual(state.live, ['Qwen3.5-9B']);
       assert.equal(state.audits.length, 1);
       await card.getByText('Set by an administrator. The deployment default is 30 minutes.').waitFor({ timeout: 3000 });
+      assert.equal(await card.getByText('keeps its current timer').count(), 0, 'the old, wrong copy is gone');
+    });
+
+    await check(`${tag}: after a page reload the value is still pending and Apply now is still offered`, async () => {
+      await page.reload(); await openModelsTab(root, 'Performance');
+      assert.equal(await select.inputValue(), '3600');
+      await pendingLine.filter({ hasText: 'Saved — applies after the next reload.' }).waitFor({ timeout: 5000 });
+      await card.getByRole('button', { name: 'Apply now' }).waitFor({ timeout: 2000 });
       if (SHOTS) { await card.scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(SHOTS, `1863-pending-${TAG}-${width}-${theme}.png`) }); }
     });
 
-    await check(`${tag}: "Unload and apply now" reloads with unload and the new time is live`, async () => {
-      await card.getByRole('button', { name: 'Unload and apply now' }).click();
+    await check(`${tag}: Apply now reloads with unload and the new time is live`, async () => {
+      await card.getByRole('button', { name: 'Apply now' }).click();
       await card.getByRole('status').filter({ hasText: 'Applied. The model loads again with the next message.' }).waitFor({ timeout: 5000 });
       assert.deepEqual(state.reloads, [false, true]);
       assert.deepEqual(state.live, []);
-      assert.equal(await card.getByRole('button', { name: 'Unload and apply now' }).count(), 0);
+      await card.getByRole('button', { name: 'Apply now' }).waitFor({ state: 'detached', timeout: 3000 });
+      assert.equal(await pendingLine.count(), 0);
     });
 
     await check(`${tag}: with nothing running a change applies at once, and the default comes back`, async () => {
       await page.reload(); await openModelsTab(root, 'Performance');
       assert.equal(await select.inputValue(), '3600', 'the saved value persists across a reload');
+      assert.equal(await pendingLine.count(), 0, 'applied stays applied after a reload');
       await card.getByRole('button', { name: 'Use deployment default' }).click();
       await card.getByRole('status').filter({ hasText: 'Saved. The next model load uses it.' }).waitFor({ timeout: 5000 });
       assert.equal(state.loader.ini, 1800);
       assert.equal(await select.inputValue(), '1800');
       await card.getByText('Using the default.').waitFor({ timeout: 3000 });
       assert.equal(await card.getByRole('button', { name: 'Use deployment default' }).count(), 0);
+      assert.equal(await pendingLine.count(), 0);
     });
     assert.deepEqual(errors, []);
     await page.close();
