@@ -173,6 +173,7 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
         <p className="mm-note">{t('mm.section.performanceNote')}</p>
         <Fold id="status" title={t('mm.tab.overview')} open={panels.has('status')} onToggle={togglePanel}>{() => <OverviewTab models={models} modelsLoaded={modelsLoaded} modelsError={modelsError} onOpen={openModel} onTab={goLegacy} />}</Fold>
         <InferenceBudgetSection />
+        <IdleUnloadSection />
         <Fold id="benchmarks" title={t('mm.tab.benchmarks')} note={t('mm.benchmarksNote')} open={panels.has('benchmarks')} onToggle={togglePanel}>{() => <BenchmarksTab />}</Fold>
         <Fold id="hardware" title={t('mm.tab.hardware')} note={t('mm.hardwareNote')} open={panels.has('hardware')} onToggle={togglePanel}>{() => <HardwareTab />}</Fold>
       </>}
@@ -359,6 +360,97 @@ function ProjectRoutingSection({ models, routes, projects, modelsError }: {
     </div> : <p className="mm-note">{t('mm.projects.none')}</p>}
     {routes.some((r) => r.task === 'Diary app') && <p className="mm-note">{t('mm.projects.diary')}</p>}
     <p className="route-note">{t('mm.projects.change')} {loaded.length ? t('mm.projects.loadedNow', { models: loaded.join(', ') }) : t('mm.projects.noneLoaded')}</p>
+  </section>;
+}
+
+// noevia#1863: how long an idle chat model stays loaded before the engine frees it. The model
+// manager keeps the value (the deployment's CHAT_MODEL_IDLE_UNLOAD_SECONDS seeds it); a change
+// reaches the engine at once when nothing is running, otherwise when the running model unloads.
+type IdleUnloadInfo = { seconds: number; source: 'setting' | 'env' | 'default'; fallbackSeconds: number | null; fallbackSource: 'env' | 'default' | null;
+  defaultSeconds: number; minSeconds: number; maxSeconds: number };
+type IdleApply = { state: 'applied' | 'pending' | 'failed'; loaded?: string[] };
+const IDLE_CHOICES = [300, 600, 900, 1800, 3600, 7200, 14400, 28800, 43200, 86400, 0];
+function IdleUnloadSection(): JSX.Element | null {
+  const t = useT();
+  const [info, setInfo] = useState<IdleUnloadInfo | null>(null);
+  const [draft, setDraft] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
+  const [pending, setPending] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const liveRef = useRef(true);
+  useEffect(() => { liveRef.current = true; return () => { liveRef.current = false; }; }, []);
+  const load = useCallback(() => {
+    apiFetch('/api/models/idle-unload').then(async (r) => {
+      if (!liveRef.current) return;
+      // No model manager, an older one (404) or not an administrator (403): nothing to show.
+      if (r.status === 404 || r.status === 403) { setHidden(true); return; }
+      if (!r.ok) { setError(t('mm.idle.loadError')); return; }
+      const v = await r.json() as IdleUnloadInfo;
+      if (liveRef.current) { setInfo(v); setDraft(v.seconds); }
+    }).catch(() => { if (liveRef.current) setError(t('mm.idle.loadError')); });
+  }, [t]);
+  useEffect(() => { load(); }, [load]);
+  if (hidden) return null;
+  const label = (seconds: number) => seconds === 0 ? t('mm.idle.never')
+    : seconds % 3600 === 0 ? t.plural('mm.idle.hours', seconds / 3600)
+    : t.plural('mm.idle.minutes', Math.round(seconds / 60));
+  const choices = info && !IDLE_CHOICES.includes(info.seconds) ? [...IDLE_CHOICES.slice(0, -1), info.seconds].sort((a, b) => a - b).concat(0) : IDLE_CHOICES;
+  const send = async (seconds: number | null) => {
+    setBusy(true); setError(''); setStatus(''); setPending(false);
+    try {
+      const r = await apiFetch('/api/models/idle-unload', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seconds }) });
+      const body = await r.json().catch(() => ({})) as Partial<IdleUnloadInfo> & { apply?: IdleApply; errorId?: string };
+      if (!r.ok) { setError(body.errorId === 'idleUnloadInvalid' ? t('mm.idle.invalid') : t('mm.saveError')); return; }
+      if (!liveRef.current) return;
+      const apply = body.apply?.state;
+      if (apply === 'failed') setError(t('mm.idle.savedFailed'));
+      else if (apply === 'pending') {
+        const models = (body.apply?.loaded || []).join(', ');
+        setStatus(models ? t('mm.idle.savedPending', { models }) : t('mm.idle.savedPendingAny'));
+        setPending(true);
+      } else setStatus(t('mm.idle.savedApplied'));
+      load();
+    } catch { setError(t('mm.saveError')); }
+    finally { if (liveRef.current) setBusy(false); }
+  };
+  // The same unload-and-reload as other preset changes (POST /api/models/presets/reload).
+  const applyNow = async () => {
+    setBusy(true); setError('');
+    try {
+      const r = await apiFetch('/api/models/presets/reload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unload: true }) });
+      if (!liveRef.current) return;
+      if (r.ok) { setStatus(t('mm.idle.appliedNow')); setPending(false); notifyModelsChanged(); }
+      else setError(t('mm.idle.applyFailed'));
+    } catch { setError(t('mm.idle.applyFailed')); }
+    finally { if (liveRef.current) setBusy(false); }
+  };
+  const source = !info ? '' : info.source === 'setting'
+    ? t('mm.idle.sourceSetting', { time: label(info.fallbackSeconds ?? info.defaultSeconds) })
+    : info.source === 'env' ? t('mm.idle.sourceEnv') : t('mm.idle.sourceDefault');
+  return <section className="mm-panel" aria-labelledby="mm-idle-title" data-testid="models-idle-unload">
+    <div className="mm-panel-head"><h3 id="mm-idle-title">{t('mm.idle.title')}</h3></div>
+    <p className="mm-note">{t('mm.idle.intro')}</p>
+    {!info && !error && <p className="mm-note" role="status">{t('mm.loading')}</p>}
+    {info && draft !== null && <>
+      <div className="mm-form">
+        <label>{t('mm.idle.label')}
+          <select value={String(draft)} disabled={busy} onChange={(e) => { setDraft(Number(e.target.value)); setStatus(''); setPending(false); }}>
+            {choices.map((s) => <option key={s} value={String(s)}>{label(s)}{s === info.defaultSeconds ? ` (${t('mm.idle.default')})` : ''}</option>)}
+          </select>
+        </label>
+        <p className="mm-note">{source}</p>
+        {draft === 0 && <p className="mm-note warn" role="note">{t('mm.idle.neverWarn')}</p>}
+      </div>
+      <div className="mm-actions">
+        <button className="modal-btn primary" disabled={busy || draft === info.seconds} onClick={() => void send(draft)}>{busy ? t('mm.saving') : t('mm.idle.save')}</button>
+        {info.source === 'setting' && <button className="modal-btn" disabled={busy} onClick={() => void send(null)}>{t('mm.idle.reset')}</button>}
+        {pending && <button className="modal-btn" disabled={busy} onClick={() => void applyNow()}>{t('mm.idle.applyNow')}</button>}
+        {status && <span role="status" className="mm-note">{status}</span>}
+      </div>
+    </>}
+    {error && <p role="alert" className="modal-err">{error}</p>}
   </section>;
 }
 
