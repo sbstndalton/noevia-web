@@ -1,6 +1,7 @@
 import { ChevronDown } from './Icons';
 import { MiddleTruncate } from './MiddleTruncate';
 import { useT } from '../i18n';
+import { LOCAL_MODEL_FALLBACK } from '../model-guidance';
 
 const AUTO_LABEL = 'Auto (Fast/Smart)';
 
@@ -16,6 +17,7 @@ export function ComposerModel({ label, onClick, disabled = false, hint, compact 
   const short = label === AUTO_LABEL ? 'Auto' : '';
   // #615: the pill's full text follows the interface language; model names are shown as they are.
   if (label === AUTO_LABEL) label = t('composer.autoFastSmart');
+  else if (label === LOCAL_MODEL_FALLBACK) label = t('stats.localModel'); // #1895: nothing loaded that can chat
   if (compact) {
     const name = t('composer.chooseModel', { name: label }) + (compact.thinking ? ` · ${t('composer.thinking.label')}: ${compact.thinking}` : '');
     return <button type="button" className={`composer-model is-compact${compact.live ? ' is-live' : ''}`} onClick={onClick} disabled={disabled}

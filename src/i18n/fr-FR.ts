@@ -818,6 +818,7 @@ export const FR_FR: Catalogue = {
   'chat.failure.stopped': "Le modèle s’est arrêté avant la fin. Vérifiez le backend, puis réessayez.",
   'chat.failure.incomplete': "Réponse incomplète",
   'chat.failure.unknown': "La réponse n’a pas pu être terminée. Réessayez.",
+  'chat.failure.stillFinishing': "La réponse précédente se termine encore. Réessayez dans un instant.",
   'chat.files.label': "Fichiers joints",
   'composer.attached.label': "Joint à ce message",
   'chat.stopped.sender': "Arrêté",
