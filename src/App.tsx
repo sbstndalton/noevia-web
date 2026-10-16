@@ -9,6 +9,7 @@ import { ShortcutsDialog } from './components/shortcuts/ShortcutsDialog';
 import { notifyIfAway } from './components/notifications/notify';
 import { notifyModelsChanged, useModelsChanged } from './models-changed';
 import { modelChoiceLabel } from './model-guidance';
+import { chatGenerationModels } from './model-kind';
 import { applyReplyTelemetry, beginReplyTelemetry, finishReplyTelemetry, lastReplyTelemetry } from './reply-telemetry';
 import { shouldShowStatsBar } from './statsbar-visibility';
 import { useSpaceTier } from './space-tier';
@@ -688,7 +689,7 @@ export default function App(): JSX.Element {
     stats,
     reply: view.kind === 'chat' ? replyTelemetryByChat[view.chatId] || lastReplyTelemetry(messages) : null,
     routingDecision,
-    modelLabel: modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured, defaultProviderId),
+    modelLabel: modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? chatGenerationModels(models) : null, autoRolesConfigured, defaultProviderId),
   };
 
   // ── The address bar (#359) ──────────────────────────────────────────────────────────────
@@ -1870,7 +1871,7 @@ export default function App(): JSX.Element {
       {view.kind === 'project' && activeProject && (
         <ProjectView
           key={activeProject.id}
-          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured, defaultProviderId)}
+          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? chatGenerationModels(models) : null, autoRolesConfigured, defaultProviderId)}
           codeRequest={view.codeRequest}
           requestedTab={projectTab?.id === activeProject.id ? projectTab.tab : undefined}
           focusSource={sourceFocus?.id === activeProject.id ? sourceFocus : null}
@@ -1920,7 +1921,7 @@ export default function App(): JSX.Element {
           chatId={view.chatId}
           title={activeChatMeta?.title ?? (activeMode === 'cowork' ? tr('sidebar.newTask') : tr('common.newChat'))}
           projectName={activeProject?.name ?? null}
-          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? models : null, autoRolesConfigured, defaultProviderId)}
+          modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? chatGenerationModels(models) : null, autoRolesConfigured, defaultProviderId)}
           installedModels={modelsLoaded && !modelsError ? models : null}
           messages={messages}
           onEditMessage={editAndResend}

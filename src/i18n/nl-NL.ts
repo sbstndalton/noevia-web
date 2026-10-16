@@ -818,6 +818,7 @@ export const NL_NL: Catalogue = {
   'chat.failure.stopped': "Het model is gestopt voordat het klaar was. Controleer de backend en probeer het opnieuw.",
   'chat.failure.incomplete': "Onvolledig antwoord",
   'chat.failure.unknown': "Het antwoord kon niet worden afgerond. Probeer het opnieuw.",
+  'chat.failure.stillFinishing': "Het vorige antwoord wordt nog afgerond. Probeer het zo meteen opnieuw.",
   'chat.files.label': "Bijgevoegde bestanden",
   'composer.attached.label': "Bij dit bericht gevoegd",
   'chat.stopped.sender': "Gestopt",

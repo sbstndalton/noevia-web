@@ -792,7 +792,7 @@ export async function* streamChat(
   /** #1785 'title': a short title the local model gave the chat after its first reply. */
   title?: string;
 }> {
-  const res = await apiFetch(body.files ? '/api/diary/local-exchange' : '/api/chat', {
+  const send = () => apiFetch(body.files ? '/api/diary/local-exchange' : '/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({...body, ...(body.spaceId === 'diary' ? {stream:true} : {})}),
@@ -801,10 +801,25 @@ export async function* streamChat(
     if (body.spaceId === 'diary') throw new Error('The diary connection failed. Saving is unconfirmed; check the saved diary before sending again.');
     throw error;
   });
+  let res = await send();
+  // #1896: the server answers a retryable 503 (code inferenceMaintenance) while the engine is still busy with the
+  // previous reply or a short maintenance step, after waiting a few seconds itself. Retry once, quietly.
+  let retryableBusy = false;
+  if (res.status === 503 && !body.files && body.spaceId !== 'diary') {
+    const parsed = await readChatRefusal(res.clone());
+    retryableBusy = parsed.retryable;
+    if (retryableBusy && !signal?.aborted) {
+      await abortableDelay(Math.min(Math.max(parsed.retryAfter, 1), 3) * 1000, signal);
+      res = await send();
+      retryableBusy = res.status === 503;
+    }
+  }
   if (!res.ok || !res.body) {
     const detail = await res.text().catch(() => '');
     let message = '';
     try { const error = JSON.parse(detail); message = typeof error.error === 'string' ? error.error : ''; } catch { /* Proxy HTML is not a useful error. */ }
+    // Still refused after the one retry: say what is going on instead of a bare failure (the reason is the server's own text).
+    if (retryableBusy) throw new Error(`${t('chat.failure.stillFinishing')}${message ? ` (${message})` : ''}`);
     throw new Error(message || (res.status === 524
       ? (body.spaceId === 'diary' ? 'The connection timed out. Your diary entry may still be saving; check the saved diary before sending again.' : 'The model connection timed out. Try compacting this chat or check the backend.')
       : `Chat request failed (${res.status}). Please check the connection.`));
@@ -850,4 +865,19 @@ export async function startCowork(body: { projectId: string; chatId: string; rep
   if (!res.ok) throw Object.assign(new Error(await describeFailure(res, 'Cowork task could not start')), { status: res.status });
   const { task } = await res.json() as { task: { taskId: string; branch: string; repository: string } };
   return task;
+}
+
+/** #1896: whether a 503 from /api/chat is the server's retryable "still busy" refusal, and how long it suggests waiting. */
+async function readChatRefusal(res: Response): Promise<{ retryable: boolean; retryAfter: number }> {
+  try {
+    const j = JSON.parse(await res.text());
+    return { retryable: j?.retryable === true, retryAfter: Number.isFinite(Number(j?.retryAfter)) ? Number(j.retryAfter) : 3 };
+  } catch { return { retryable: false, retryAfter: 3 }; }
+}
+function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(done, ms);
+    function done() { clearTimeout(timer); signal?.removeEventListener('abort', done); resolve(); }
+    signal?.addEventListener('abort', done, { once: true });
+  });
 }
