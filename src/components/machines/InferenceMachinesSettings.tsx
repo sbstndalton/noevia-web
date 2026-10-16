@@ -7,14 +7,17 @@
 // once like the decision service; with nothing assigned they keep the deployment's address, and the sensitivity check says it is shared.
 // #1840: a chat role (Fast, Smart, Code, Creative) or Vision moves to a machine's OpenAI-compatible server with a port and the model
 // that server lists, asked for through the server.
+// #1880: on such a role, an administrator can start a bounded measurement of its model on that machine (generation and
+// prompt-reading speed, speculative-decoding acceptance) and stop it; the result and the suggested flags show beside it.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent, JSX } from 'react';
 import { useT } from '../../i18n';
 import type { MessageKey } from '../../i18n';
 import { notifyModelsChanged } from '../../models-changed';
-import { formatNumber } from '../../number-format';
-import { fetchMachineModels, fetchMachines, machineAction, MachineError, parsePort } from './api';
-import type { EmbeddingTarget, Machine, MachineAction, MachineMeasured, MachineService, MachineServiceId, MachinesView } from './api';
+import { formatNumber, formatPercent } from '../../number-format';
+import { appLocale } from '../../user-preferences';
+import { fetchMachineModels, fetchMachines, fetchMachineTune, machineAction, MachineError, machineTuneAction, parsePort } from './api';
+import type { EmbeddingTarget, Machine, MachineAction, MachineMeasured, MachineService, MachineServiceId, MachinesView, MachineTuneResult, MachineTuneStatus } from './api';
 import './machines.css';
 
 const SERVICE_LABEL: Record<MachineServiceId, MessageKey> = {
@@ -36,7 +39,10 @@ const ERRORS: Partial<Record<string, MessageKey>> = {
   inUse: 'machines.error.inUse', embeddingOnMachine: 'machines.error.embeddingOnMachine', invalidPort: 'machines.error.invalidPort',
   noLocalEmbedding: 'machines.error.noLocalEmbedding', embeddingOff: 'machines.error.embeddingOff', tooMany: 'machines.error.tooMany',
   invalidModel: 'machines.error.invalidModel', unknownModel: 'machines.error.unknownModel', machineUnreachable: 'machines.error.machineUnreachable',
+  machineBusy: 'machines.error.machineBusy', tuneRunning: 'machines.error.tuneRunning',
 };
+/** #1880: how often the page asks how the measurement is going, and for how long at most. */
+const TUNE_POLL_MS = 1000, TUNE_POLL_DEADLINE_MS = 10 * 60 * 1000;
 
 type Draft = { machine: string; port: string; protocol: 'tei' | 'llamacpp'; model: string };
 const draftOf = (s: MachineService): Draft => ({ machine: s.machine === 'other' ? 'local' : s.machine, port: s.port ? String(s.port) : '', protocol: s.protocol || 'tei', model: s.model || '' });
@@ -50,6 +56,23 @@ function measuredFacts(m: MachineMeasured | undefined, t: ReturnType<typeof useT
   const thinking = t(m.thinking === true ? 'machines.measured.thinkingYes' : m.thinking === false ? 'machines.measured.thinkingNo' : 'machines.measured.thinkingUnknown');
   const vision = t(m.vision === true ? 'machines.measured.visionYes' : m.vision === false ? 'machines.measured.visionNo' : 'machines.measured.visionUnknown');
   return [context, thinking, vision].join(' · ');
+}
+
+/** #1880: the last measurement of a role's model on its machine, one line. */
+function tunedFacts(r: MachineTuneResult, t: ReturnType<typeof useT>): string {
+  const rate = (v: number) => formatNumber(v, t.locale, { max: 1 });
+  const parts: string[] = [];
+  if (typeof r.decode?.tokensPerSecond === 'number') parts.push(t('machines.tuned.decode', { rate: rate(r.decode.tokensPerSecond) }));
+  for (const p of r.prefill || []) if (typeof p.tokensPerSecond === 'number') parts.push(t('machines.tuned.prefill', { rate: rate(p.tokensPerSecond), tokens: formatNumber(p.tokens, t.locale, 0) }));
+  parts.push(r.speculative?.measured && typeof r.speculative.acceptance === 'number' ? t('machines.tuned.specAccepted', { percent: formatPercent(r.speculative.acceptance * 100, t.locale) }) : t('machines.tuned.specNone'));
+  return parts.join(' · ');
+}
+/** #1880: what the owner could change on that machine, from the measurement's rules. */
+function tunedAdvice(r: MachineTuneResult, machine: string, t: ReturnType<typeof useT>): string[] {
+  const out = (r.recommendations || []).map((rec) => rec.key === 'contextTokens'
+    ? t('machines.tuned.suggestContext', { machine, flag: rec.flag, tokens: formatNumber(r.contextTokens || 0, t.locale, 0), seconds: formatNumber(rec.fillSeconds || 0, t.locale, 0) })
+    : t('machines.tuned.suggestSpecOff', { machine, flag: rec.flag, percent: formatPercent((rec.acceptance || 0) * 100, t.locale) }));
+  return out.length ? out : [t('machines.tuned.keep')];
 }
 
 /** #1856: a short reason for any state that is not plainly healthy: refused / timeout / http NNN. */
@@ -86,6 +109,10 @@ export function InferenceMachinesSettings(): JSX.Element {
   const [reindex, setReindex] = useState<{ target: EmbeddingTarget; machine: string } | null>(null);
   const live = useRef(true), request = useRef(0);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
+  // #1880: the measurement in progress (or the last one) and the role whose start is being confirmed.
+  const [tune, setTune] = useState<MachineTuneStatus | null>(null);
+  const [confirmTune, setConfirmTune] = useState<MachineServiceId | null>(null);
+  const polling = useRef(false);
 
   const load = useCallback(async (health = true) => {
     const id = ++request.current;
@@ -99,6 +126,27 @@ export function InferenceMachinesSettings(): JSX.Element {
     }
   }, []);
   useEffect(() => { void load(true); }, [load]);
+
+  /** #1880: follow a running measurement until it ends (or the deadline passes), then refresh the measured lines. */
+  const follow = useCallback(async () => {
+    if (polling.current) return;
+    polling.current = true;
+    const until = Date.now() + TUNE_POLL_DEADLINE_MS;
+    try {
+      while (live.current && Date.now() < until) {
+        await new Promise((r) => setTimeout(r, TUNE_POLL_MS));
+        if (!live.current) return;
+        let next: MachineTuneStatus | null = null;
+        try { next = await fetchMachineTune(); } catch { continue; }
+        if (!live.current) return;
+        setTune(next);
+        if (next?.state !== 'running') { void load(true); return; }
+      }
+    } finally { polling.current = false; }
+  }, [load]);
+  useEffect(() => {
+    void fetchMachineTune().then((s) => { if (!live.current) return; setTune(s); if (s?.state === 'running') void follow(); }, () => {});
+  }, [follow]);
 
   const message = (e: unknown, fallback: MessageKey) => {
     if (e instanceof MachineError) { const key = e.code ? ERRORS[e.code] : undefined; return key ? t(key) : e.message || t(fallback); }
@@ -119,6 +167,29 @@ export function InferenceMachinesSettings(): JSX.Element {
       if (e instanceof MachineError && e.code === 'reindexRequired' && e.target && body.action === 'assign') { setReindex({ target: e.target, machine: body.machine }); return; }
       fail(message(e, 'machines.saveError'));
     } finally { if (live.current) setBusy(''); }
+  };
+
+  const startTune = async (service: MachineServiceId) => {
+    setBusy(`tune:${service}`); setError(''); setStatus('');
+    try {
+      const s = await machineTuneAction({ action: 'tune', service, confirm: true });
+      if (!live.current) return;
+      setConfirmTune(null); setTune(s);
+      void follow();
+    } catch (e) {
+      if (live.current) { setConfirmTune(null); setError(message(e, 'machines.tune.failedStart')); }
+    } finally { if (live.current) setBusy(''); }
+  };
+  const stopTune = async () => {
+    try { const s = await machineTuneAction({ action: 'tuneAbort' }); if (live.current) setTune(s); } catch (e) { if (live.current) setError(message(e, 'machines.saveError')); }
+  };
+  /** #1880: how the last measurement ended, said once on the role it measured. */
+  const tuneOutcome = (s: MachineTuneStatus): string => {
+    const machine = s.machine.name;
+    if (s.state === 'done') return t('machines.tune.done', { model: s.model, machine });
+    if (s.state === 'aborted') return t('machines.tune.aborted');
+    if (s.state === 'interrupted') return t('machines.tune.interrupted', { machine });
+    return t(s.code === 'stepTimeout' || s.code === 'runTimeout' ? 'machines.tune.failedTimeout' : 'machines.tune.failed', { machine });
   };
 
   const machines = view?.machines || [];
@@ -256,8 +327,38 @@ export function InferenceMachinesSettings(): JSX.Element {
         {chat && s.machine !== 'local' && !changed && <span className="mm-assign-fixed">{t('machines.note.chat', { model: s.model || '' })}</span>}
         {chat && s.machine !== 'local' && !changed && (() => {
           // #1854: measured on that machine for its model; the engine-only measurements are named as not taken there.
-          const facts = measuredFacts(view?.health?.measured?.[s.id], t);
-          return facts ? <span className="mm-assign-fixed" data-note="measured">{t('machines.measured', { machine: machineName(s.machine), facts })} {t('machines.notMeasured', { machine: machineName(s.machine) })}</span> : null;
+          const measured = view?.health?.measured?.[s.id];
+          const facts = measuredFacts(measured, t);
+          const name = machineName(s.machine);
+          return facts ? <span className="mm-assign-fixed" data-note="measured">{t('machines.measured', { machine: name, facts })} {t(measured?.tune ? 'machines.notMeasuredAfterTune' : 'machines.notMeasured', { machine: name })}</span> : null;
+        })()}
+        {chat && s.machine !== 'local' && !changed && (() => {
+          // #1880: the last administrator-started measurement of this model there, and what it suggests.
+          const r = view?.health?.measured?.[s.id]?.tune;
+          if (!r) return null;
+          const name = machineName(s.machine);
+          const when = new Date(r.measuredAt);
+          const date = Number.isNaN(when.getTime()) ? '' : new Intl.DateTimeFormat(appLocale(), { dateStyle: 'medium', timeStyle: 'short' }).format(when);
+          return <span className="mm-assign-fixed" data-note="tuned">{t('machines.tuned', { machine: name, date, facts: tunedFacts(r, t) })} {tunedAdvice(r, name, t).join(' ')}</span>;
+        })()}
+        {chat && s.machine !== 'local' && !changed && (() => {
+          // #1880: start (after a confirmation), follow and stop a measurement on this role's machine.
+          const name = machineName(s.machine);
+          const mine = tune && tune.service === s.id;
+          if (tune && mine && tune.state === 'running') return <span className="machines-actions" data-note="tune-running" role="status">
+            <span>{t('machines.tune.running', { machine: tune.machine.name, step: formatNumber(Math.max(1, tune.stepIndex), t.locale, 0), steps: formatNumber(tune.steps, t.locale, 0) })}</span>
+            <button type="button" className="btn btn-secondary" data-action="tune-stop" onClick={() => void stopTune()}>{t('machines.tune.stop')}</button>
+          </span>;
+          if (confirmTune === s.id) return <span className="machines-actions" role="group" data-note="tune-confirm" aria-label={t('machines.tune.measure', { machine: name })}>
+            <span>{t('machines.tune.confirm', { model: s.model || '', machine: name })}</span>
+            <button type="button" className="btn btn-primary" data-action="tune-start" disabled={busy !== ''} onClick={() => void startTune(s.id)}>{busy === `tune:${s.id}` ? t('common.checking') : t('machines.tune.start')}</button>
+            <button type="button" className="btn btn-secondary" disabled={busy !== ''} onClick={() => setConfirmTune(null)}>{t('machines.cancel')}</button>
+          </span>;
+          const otherRunning = tune?.state === 'running';
+          return <>
+            {mine && tune && tune.state !== 'running' && <span className="mm-assign-fixed" data-note="tune-outcome" role="status">{tuneOutcome(tune)}</span>}
+            {health?.state === 'up' && <button type="button" className="popup-tab" data-action="tune" disabled={busy !== '' || otherRunning} onClick={() => { setConfirmTune(s.id); setError(''); }}>{t('machines.tune.measure', { machine: name })}</button>}
+          </>;
         })()}
         {chat && s.machine !== 'local' && s.needsConfirm && !changed && <span className="mm-assign-fixed machines-unreachable" role="status" data-note="confirm-model">{t('machines.note.confirmModel', { model: s.model || '' })}</span>}
         {/* #1844: no address of its own and nothing assigned: it follows the decision service. */}

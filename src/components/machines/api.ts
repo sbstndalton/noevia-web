@@ -35,7 +35,17 @@ export interface MachineService {
   url?: string | null;
 }
 /** #1854: what a chat role's machine measured for its model (its own /props); null where the server did not say. */
-export interface MachineMeasured { contextTokens: number | null; thinking: boolean | null; vision: boolean | null; /** Engine-only measurements never taken on a machine. */ notMeasured?: string[] }
+/** #1880: an administrator-started measurement of a role's model on its machine (kept per machine + served model). */
+export interface MachineTuneResult {
+  machineId: string; model: string; measuredAt: string; contextTokens: number | null;
+  decode: { tokensPerSecond: number | null; workloads: { id: string; tokensPerSecond: number | null; source: 'server' | 'wall' }[] };
+  prefill: { tokens: number; tokensPerSecond: number | null; source: 'server' | 'wall' }[];
+  speculative: { measured: boolean; drafted: number; accepted: number; acceptance: number | null };
+  recommendations: { key: 'contextTokens' | 'speculative'; value: number | string; flag: string; reason: string; fillSeconds?: number; acceptance?: number }[];
+}
+export type MachineTuneState = 'running' | 'done' | 'aborted' | 'interrupted' | 'failed';
+export interface MachineTuneStatus { id: string; service: MachineServiceId; machine: { id: string; name: string }; model: string; state: MachineTuneState; step: string | null; stepIndex: number; steps: number; startedAt: string; finishedAt?: string; code?: string }
+export interface MachineMeasured { contextTokens: number | null; thinking: boolean | null; vision: boolean | null; /** Engine-only measurements never taken on a machine. */ notMeasured?: string[]; /** #1880 */ tune?: MachineTuneResult }
 export interface MachinesHealth { services: Partial<Record<MachineServiceId | 'engine', { state: HealthState; reason?: string }>>; machines: Record<string, MachineHealthState>; /** #1856: why a machine is not healthy (its worst service's reason). */ reasons?: Record<string, string>; /** #1861: the service behind that reason ('engine' = this machine's own engine). */ failing?: Record<string, string>; /** #1854: per chat role on a machine that answers. */ measured?: Partial<Record<MachineServiceId, MachineMeasured>> }
 export interface MachinesView { machines: Machine[]; services: MachineService[]; health?: MachinesHealth }
 export interface EmbeddingTarget { baseUrl: string; model: string; profile: string }
@@ -89,4 +99,20 @@ export function parsePort(text: string): number | null {
   if (!/^\d{1,5}$/.test(t)) return null;
   const n = Number(t);
   return n >= 1 && n <= 65535 ? n : null;
+}
+
+/** #1880: the measurement in progress, or the last one since the server started (null: none). */
+export async function fetchMachineTune(): Promise<MachineTuneStatus | null> {
+  const r = await apiFetch(`${MACHINES_PATH}?tune=1`);
+  const v = await r.json().catch(() => null) as { tune?: MachineTuneStatus | null; error?: string } | null;
+  if (!r.ok) throw new MachineError(v?.error || `HTTP ${r.status}`, r.status);
+  return v?.tune ?? null;
+}
+
+/** #1880: start (administrator, confirmed) or stop the measurement of a chat role's model on its machine. */
+export async function machineTuneAction(body: { action: 'tune'; service: MachineServiceId; confirm: true } | { action: 'tuneAbort' }): Promise<MachineTuneStatus | null> {
+  const r = await apiFetch(MACHINES_PATH, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const v = await r.json().catch(() => null) as { tune?: MachineTuneStatus | null; error?: string; code?: string } | null;
+  if (!r.ok) throw new MachineError(v?.error || `HTTP ${r.status}`, r.status, v?.code);
+  return v?.tune ?? null;
 }
