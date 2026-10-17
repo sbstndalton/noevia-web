@@ -26,6 +26,16 @@ export const errorText = (e: unknown, fallback: string) => (e instanceof Error ?
  *  `digits` fixes the decimals, otherwise up to two are shown. 32768 is "32,768" in en-GB and
  *  "32.768" in de-DE. */
 export const num = (n: number, digits?: number) => formatNumber(n, appLocale(), digits == null ? { max: 2 } : digits);
+/** "5 minutes ago" / "2 days ago" in the interface locale (a time in the future reads as "now"). */
+export function relativeAgo(at: number, now: number, locale: string | undefined): string {
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+  const secs = Math.max(0, Math.round((now - at) / 1000));
+  if (secs < 60) return rtf.format(0, 'second');
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return rtf.format(-mins, 'minute');
+  const hours = Math.round(mins / 60);
+  return hours < 24 ? rtf.format(-hours, 'hour') : rtf.format(-Math.round(hours / 24), 'day');
+}
 /** Up to `max` decimals, none forced ("8", "8,3"): chart axis ticks. */
 export const numUpTo = (n: number, max: number) => formatNumber(n, appLocale(), { max });
 /** A quantity the model manager service already formatted ("5.3 TB", "10 MB/s"), with its number

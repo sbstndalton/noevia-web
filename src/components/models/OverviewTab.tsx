@@ -4,7 +4,7 @@ import type { JSX } from 'react';
 import { apiFetch, fetchAutoRoles, fetchInstalledModels } from '../../api';
 import type { InstalledModel } from '../../types';
 import { appLocale } from '../../user-preferences';
-import { errorText, mm, num } from './mm';
+import { errorText, mm, num, relativeAgo } from './mm';
 import type { Stuck } from './guided';
 import { canPromptSuite, groupByRole, recoveryItems, roleOf } from './guided';
 import { useT } from '../../i18n';
@@ -154,7 +154,10 @@ function RecoverPanel({ onTab }: { onTab: (tab: 'discover' | 'hardware') => void
     {!!items?.length && <ul className="mm-recover-list">{items.map((item) => <li key={item.kind + item.id}>
       <div><span><strong>{item.kind === 'autotune' ? t('mm.recover.kind.autotune') : item.kind === 'calibration' ? t('mm.recover.kind.calibration') : t('mm.recover.kind.download')}</strong> · {item.model || t('mm.recover.unknownModel')} · {stuckStatus(t, item.status)}</span>
         {item.detail && <small>{item.detail}</small>}
+        {!!item.at && <small><time dateTime={new Date(item.at).toISOString()} title={new Date(item.at).toLocaleString(appLocale())}>{t('mm.recover.endedAt', { when: relativeAgo(item.at, Date.now(), appLocale()) })}</time></small>}
+        {item.where && <small>{t('mm.recover.stoppedAt', { where: item.where })}</small>}
         {item.kind !== 'download' && <small>{t('mm.recover.settingsStay')}</small>}
+        {item.actions.includes('resume') && <small>{t('mm.recover.resumeHelp')}</small>}
         {!item.actions.length && <small>{t('mm.recover.systemNote', { label: t('model.systemLabel') })}</small>}</div>
       <span className="mm-actions">{item.actions.map((a) => <button key={a} type="button" className="modal-btn secondary" disabled={!!busy || ((a === 'resume' || a === 'retry') && !confirmed)} onClick={() => void act(item, a)}>
         {busy === item.id + a ? t('mm.working') : a === 'cancel' ? t('common.cancel') : a === 'resume' ? t('mm.recover.resume') : a === 'retry' ? t('mm.recover.retry') : t('mm.recover.retryDiscover')}</button>)}</span>
