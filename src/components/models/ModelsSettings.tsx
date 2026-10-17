@@ -380,6 +380,8 @@ function IdleUnloadSection(): JSX.Element | null {
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
   const [hidden, setHidden] = useState(false);
+  // #1976: a value saved in this session that the router has not picked up yet.
+  const [savedHere, setSavedHere] = useState(false);
   const liveRef = useRef(true);
   useEffect(() => { liveRef.current = true; return () => { liveRef.current = false; }; }, []);
   const load = useCallback(() => {
@@ -408,6 +410,7 @@ function IdleUnloadSection(): JSX.Element | null {
       if (body.apply?.state === 'failed') setError(t('mm.idle.savedFailed'));
       // Not live yet: the persistent pending line below says so (from the server, after load()).
       else if (body.applied) setStatus(t('mm.idle.savedApplied'));
+      setSavedHere(seconds !== null);
       load();
     } catch { if (liveRef.current) setError(t('mm.saveError')); }
     finally { if (liveRef.current) setBusy(false); }
@@ -418,12 +421,14 @@ function IdleUnloadSection(): JSX.Element | null {
     try {
       const r = await apiFetch('/api/models/presets/reload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unload: true }) });
       if (!liveRef.current) return;
-      if (r.ok) { setStatus(t('mm.idle.appliedNow')); notifyModelsChanged(); load(); }
+      if (r.ok) { setStatus(t('mm.idle.appliedNow')); setSavedHere(false); notifyModelsChanged(); load(); }
       else setError(t('mm.idle.applyFailed'));
     } catch { if (liveRef.current) setError(t('mm.idle.applyFailed')); }
     finally { if (liveRef.current) setBusy(false); }
   };
-  const pending = !!info && info.applied === false && draft === info.seconds;
+  // #1976: "Saved — applies after the next reload" only for a value that was saved: the server's own saved
+  // setting, or one saved in this session. A default the router merely does not show is not a pending save.
+  const pending = !!info && info.applied === false && draft === info.seconds && (info.source === 'setting' || savedHere);
   const source = !info ? '' : info.source === 'setting'
     ? t('mm.idle.sourceSetting', { time: label(info.fallbackSeconds ?? info.defaultSeconds) })
     : info.source === 'env' ? t('mm.idle.sourceEnv') : t('mm.idle.sourceDefault');
