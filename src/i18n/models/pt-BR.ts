@@ -229,6 +229,8 @@ export const PT_BR_MODELS: ModelsCatalogue = {
   'mm.recover.systemNote': "{label} — não é ajustado nem calibrado.",
   'mm.recover.resume': "Retomar",
   'mm.recover.endedAt': "Terminou {when}.",
+  'mm.recover.dismiss': "Dispensar",
+  'mm.recover.dismissed': "Dispensado. As medições e as configurações salvas foram mantidas.",
   'mm.recover.stoppedAt': "Parou em: {where}",
   'mm.recover.resumeHelp': "“Retomar” continua esta execução: os modelos e etapas já medidos são mantidos e o restante roda de novo. O chat fica em pausa enquanto ela roda.",
   'mm.recover.retry': "Tentar de novo",

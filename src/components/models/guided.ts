@@ -199,10 +199,10 @@ export function groupByRole<T extends { name: string; labels: string[] }>(models
 // ── Recovery ─────────────────────────────────────────────────────────────────────────────────
 export type Stuck = { kind: 'autotune' | 'calibration' | 'download'; id: string; model: string; status: string; detail: string;
   /** When the run ended (ms), and where it stopped (phase, step and its reason), both as the server recorded them. */
-  at?: number; where?: string; actions: ('cancel' | 'resume' | 'retry' | 'discover')[] };
+  at?: number; where?: string; /** #1978: a finished auto-tune record the server can clear (POST /api/models/autotune/clear). */ canDismiss?: boolean; actions: ('cancel' | 'resume' | 'retry' | 'discover')[] };
 type RunStepLike = { label?: string; status?: string; reason?: string };
 type RunPhaseLike = RunStepLike & { steps?: RunStepLike[] };
-type JobLike = { id?: string; model?: string; status?: string; error?: string; startedAt?: number; finishedAt?: number; phase?: string; models?: unknown[] } | null | undefined;
+type JobLike = { id?: string; model?: string; status?: string; error?: string; startedAt?: number; finishedAt?: number; phase?: string; failedPhase?: string; failedStep?: string; models?: unknown[] } | null | undefined;
 /** #1977: where a finished auto-tune stopped, from the phase and step the server marked failed or interrupted,
  *  with their reason when it says more than the job's own error. Nothing is invented: '' when none is marked. */
 export function stoppedAt(j: NonNullable<JobLike>): string {
@@ -210,10 +210,12 @@ export function stoppedAt(j: NonNullable<JobLike>): string {
   const item = items.find((m) => m.model === j.model) ?? items[0];
   const bad = (x: RunStepLike) => x.status === 'failed' || x.status === 'interrupted';
   const phase = item?.phases?.find(bad);
-  if (!phase?.label) return '';
-  const step = phase.steps?.find(bad);
-  const reason = [step?.reason, phase.reason].find((r) => r && r !== j.error && !(j.error || '').includes(r));
-  return [phase.label, step?.label].filter(Boolean).join(' — ') + (reason ? `: ${reason}` : '');
+  const step = phase?.steps?.find(bad);
+  // #1978: the server keeps the failing phase and step on the job (job.phase becomes "Failed"); prefer them.
+  const kept = typeof j.failedPhase === 'string' && j.failedPhase ? [j.failedPhase, typeof j.failedStep === 'string' ? j.failedStep : ''] : null;
+  if (!kept && !phase?.label) return '';
+  const reason = [step?.reason, phase?.reason].find((r) => r && r !== j.error && !(j.error || '').includes(r));
+  return (kept ?? [phase?.label, step?.label]).filter(Boolean).join(' — ') + (reason ? `: ${reason}` : '');
 }
 type DownloadLike = { id: string; filename?: string; repo?: string; status: string; error?: string | null };
 /** A running job older than this with no progress is shown as possibly stuck. */
@@ -239,6 +241,7 @@ export function recoveryItems({ autotune, calibration, downloads, now, installed
     const system = isSystemModel(j.model || '');
     out.push({ kind, id: j.id || kind, model: j.model || '', status: stale ? 'running for over 2 hours' : j.status, detail: j.error || j.phase || '',
       ...(j.status !== 'running' && typeof j.finishedAt === 'number' ? { at: j.finishedAt } : {}), ...(j.status !== 'running' && kind === 'autotune' && stoppedAt(j) ? { where: stoppedAt(j) } : {}),
+      ...(j.status !== 'running' && kind === 'autotune' ? { canDismiss: true } : {}),
       actions: j.status === 'running' ? ['cancel'] : system ? [] : resumable ? ['resume'] : ['retry'] });
   };
   job('autotune', autotune); job('calibration', calibration);

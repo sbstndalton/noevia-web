@@ -209,3 +209,12 @@ test('#328 the floor note lists the server\'s own KV candidates, else this build
 test('#328 model names are listed once',()=>{
   assert.deepEqual(g.uniqueNames(['a','b','a','c','b']),['a','b','c']);
 });
+test('#1978 a finished auto-tune can be dismissed, a running or calibration job cannot; failedPhase/failedStep win for "Stopped at"',()=>{
+  const now=Date.parse('2026-10-17T12:00:00Z');
+  const failed={id:'t1',model:'Synthetic-20B',status:'failed',phase:'Failed',error:'The model server request failed.',failedPhase:'Drafting',failedStep:'n-gram drafting',models:[{model:'Synthetic-20B',phases:[{label:'KV cache',status:'failed',steps:[{label:'q8_0 KV cache',status:'failed'}]}]}]};
+  const [a]=g.recoveryItems({now,autotune:failed,calibration:null,downloads:[]});
+  assert.equal(a.canDismiss,true); assert.equal(a.where,'Drafting — n-gram drafting');
+  assert.equal(g.recoveryItems({now,autotune:{...failed,failedPhase:undefined,failedStep:undefined},calibration:null,downloads:[]})[0].where,'KV cache — q8_0 KV cache','falls back to the phases');
+  assert.equal(g.recoveryItems({now,autotune:{...failed,status:'running',startedAt:now-3*3600e3},calibration:null,downloads:[]})[0].canDismiss,undefined,'a running job is cancelled, not dismissed');
+  assert.equal(g.recoveryItems({now,autotune:null,calibration:{id:'c',model:'m',status:'failed'},downloads:[]})[0].canDismiss,undefined);
+});

@@ -122,18 +122,19 @@ function RecoverPanel({ onTab }: { onTab: (tab: 'discover' | 'hardware') => void
     await Promise.all([engines, jobs]);
   }, [runs]);
   useEffect(() => { void load(); return () => runs.stop(); }, [load, runs]);
-  const act = async (item: Stuck, action: Stuck['actions'][number]) => {
+  const act = async (item: Stuck, action: Stuck['actions'][number] | 'dismiss') => {
     if (action === 'discover') { onTab('discover'); return; }
     setBusy(item.id + action); setError(''); setNote('');
     const base = item.kind === 'autotune' ? '/api/models/autotune' : '/api/models/calibration';
-    const [path, body] = action === 'cancel' ? [base + '/cancel', undefined]
+    const [path, body] = action === 'dismiss' ? [base + '/clear', undefined]
+      : action === 'cancel' ? [base + '/cancel', undefined]
       : action === 'resume' ? [base + '/resume', { confirmPause: confirmed }]
       : [base, { model: item.model, confirmPause: confirmed }];
     try {
       const r = await apiFetch(path, { method: 'POST', ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}) });
       const v = await r.json().catch(() => ({}));
       if (!r.ok) throw Error(v.error || t('mm.requestFailed', { status: r.status }));
-      setNote(action === 'cancel' ? t('mm.recover.cancelRequested') : action === 'resume' ? t('mm.recover.resumed') : t('mm.recover.restarted'));
+      setNote(action === 'dismiss' ? t('mm.recover.dismissed') : action === 'cancel' ? t('mm.recover.cancelRequested') : action === 'resume' ? t('mm.recover.resumed') : t('mm.recover.restarted'));
       await load();
     } catch (e) { setError(errorText(e, t('mm.recover.failed'))); } finally { setBusy(''); }
   };
@@ -158,9 +159,10 @@ function RecoverPanel({ onTab }: { onTab: (tab: 'discover' | 'hardware') => void
         {item.where && <small>{t('mm.recover.stoppedAt', { where: item.where })}</small>}
         {item.kind !== 'download' && <small>{t('mm.recover.settingsStay')}</small>}
         {item.actions.includes('resume') && <small>{t('mm.recover.resumeHelp')}</small>}
-        {!item.actions.length && <small>{t('mm.recover.systemNote', { label: t('model.systemLabel') })}</small>}</div>
+        {!item.actions.length && !item.canDismiss && <small>{t('mm.recover.systemNote', { label: t('model.systemLabel') })}</small>}</div>
       <span className="mm-actions">{item.actions.map((a) => <button key={a} type="button" className="modal-btn secondary" disabled={!!busy || ((a === 'resume' || a === 'retry') && !confirmed)} onClick={() => void act(item, a)}>
-        {busy === item.id + a ? t('mm.working') : a === 'cancel' ? t('common.cancel') : a === 'resume' ? t('mm.recover.resume') : a === 'retry' ? t('mm.recover.retry') : t('mm.recover.retryDiscover')}</button>)}</span>
+        {busy === item.id + a ? t('mm.working') : a === 'cancel' ? t('common.cancel') : a === 'resume' ? t('mm.recover.resume') : a === 'retry' ? t('mm.recover.retry') : t('mm.recover.retryDiscover')}</button>)}
+        {item.canDismiss && <button type="button" className="modal-btn secondary" disabled={!!busy} onClick={() => void act(item, 'dismiss')}>{busy === item.id + 'dismiss' ? t('mm.working') : t('mm.recover.dismiss')}</button>}</span>
     </li>)}</ul>}
     {needsPause && <label className="mm-check"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)}/>{t('mm.recover.confirmPause')}</label>}
     {note && <p className="mm-note" role="status">{note}</p>}

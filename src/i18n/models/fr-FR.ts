@@ -229,6 +229,8 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.recover.systemNote': "{label} — ni réglé ni étalonné.",
   'mm.recover.resume': "Reprendre",
   'mm.recover.endedAt': "Terminé {when}.",
+  'mm.recover.dismiss': "Ignorer",
+  'mm.recover.dismissed': "Ignoré. Les mesures et les réglages enregistrés sont conservés.",
   'mm.recover.stoppedAt': "Arrêté à : {where}",
   'mm.recover.resumeHelp': "« Reprendre » poursuit cette exécution : les modèles et étapes déjà mesurés sont conservés et le reste est relancé. Le chat se met en pause pendant l’exécution.",
   'mm.recover.retry': "Réessayer",

@@ -229,6 +229,8 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.recover.systemNote': "{label} — wordt niet afgestemd of gekalibreerd.",
   'mm.recover.resume': "Hervatten",
   'mm.recover.endedAt': "Beëindigd {when}.",
+  'mm.recover.dismiss': "Verbergen",
+  'mm.recover.dismissed': "Verborgen. Metingen en opgeslagen instellingen blijven bewaard.",
   'mm.recover.stoppedAt': "Gestopt bij: {where}",
   'mm.recover.resumeHelp': "‘Hervatten’ zet deze run voort: modellen en stappen die al gemeten zijn blijven bewaard en de rest draait opnieuw. De chat pauzeert zolang de run bezig is.",
   'mm.recover.retry': "Opnieuw proberen",

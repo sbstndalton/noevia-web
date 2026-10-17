@@ -237,6 +237,8 @@ export const EN_GB_MODELS = {
   'mm.recover.systemNote': '{label} — not tuned or calibrated.',
   'mm.recover.resume': 'Resume',
   'mm.recover.endedAt': 'Ended {when}.',
+  'mm.recover.dismiss': 'Dismiss',
+  'mm.recover.dismissed': 'Dismissed. Measurements and saved settings are kept.',
   'mm.recover.stoppedAt': 'Stopped at: {where}',
   'mm.recover.resumeHelp': 'Resume carries on this run: models and steps already measured are kept and the rest run again. Chat pauses while it runs.',
   'mm.recover.retry': 'Retry',

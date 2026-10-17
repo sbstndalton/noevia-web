@@ -229,6 +229,8 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.recover.systemNote': "{label} – wird nicht getunt oder kalibriert.",
   'mm.recover.resume': "Fortsetzen",
   'mm.recover.endedAt': "Beendet {when}.",
+  'mm.recover.dismiss': "Ausblenden",
+  'mm.recover.dismissed': "Ausgeblendet. Messwerte und gespeicherte Einstellungen bleiben erhalten.",
   'mm.recover.stoppedAt': "Gestoppt bei: {where}",
   'mm.recover.resumeHelp': "„Fortsetzen“ setzt diesen Lauf fort: bereits gemessene Modelle und Schritte bleiben erhalten, der Rest läuft erneut. Der Chat pausiert, solange er läuft.",
   'mm.recover.retry': "Wiederholen",

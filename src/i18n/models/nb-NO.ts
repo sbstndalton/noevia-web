@@ -229,6 +229,8 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.recover.systemNote': "{label} — justeres eller kalibreres ikke.",
   'mm.recover.resume': "Gjenoppta",
   'mm.recover.endedAt': "Avsluttet {when}.",
+  'mm.recover.dismiss': "Lukk",
+  'mm.recover.dismissed': "Lukket. Målinger og lagrede innstillinger beholdes.",
   'mm.recover.stoppedAt': "Stoppet ved: {where}",
   'mm.recover.resumeHelp': "«Gjenoppta» fortsetter denne kjøringen: modeller og trinn som allerede er målt beholdes, og resten kjøres på nytt. Chatten pauser mens den kjører.",
   'mm.recover.retry': "Prøv igjen",
