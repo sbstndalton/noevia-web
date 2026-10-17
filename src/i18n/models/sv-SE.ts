@@ -229,6 +229,8 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.recover.systemNote': "{label} — justeras eller kalibreras inte.",
   'mm.recover.resume': "Återuppta",
   'mm.recover.endedAt': "Avslutades {when}.",
+  'mm.recover.dismiss': "Avfärda",
+  'mm.recover.dismissed': "Avfärdad. Mätningar och sparade inställningar behålls.",
   'mm.recover.stoppedAt': "Stoppade vid: {where}",
   'mm.recover.resumeHelp': "”Återuppta” fortsätter den här körningen: modeller och steg som redan mätts behålls och resten körs om. Chatten pausas medan den körs.",
   'mm.recover.retry': "Försök igen",

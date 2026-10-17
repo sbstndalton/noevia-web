@@ -229,6 +229,8 @@ export const IT_IT_MODELS: ModelsCatalogue = {
   'mm.recover.systemNote': "{label}: non viene regolato né calibrato.",
   'mm.recover.resume': "Riprendi",
   'mm.recover.endedAt': "Terminata {when}.",
+  'mm.recover.dismiss': "Ignora",
+  'mm.recover.dismissed': "Ignorata. Le misure e le impostazioni salvate restano.",
   'mm.recover.stoppedAt': "Interrotta a: {where}",
   'mm.recover.resumeHelp': "«Riprendi» continua questa esecuzione: i modelli e i passaggi già misurati vengono mantenuti e il resto viene rieseguito. La chat resta in pausa durante l’esecuzione.",
   'mm.recover.retry': "Riprova",

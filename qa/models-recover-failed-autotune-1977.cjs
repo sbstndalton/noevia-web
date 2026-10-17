@@ -69,7 +69,7 @@ async function open(browser, autotuneJob, posts) {
       assert.ok((await when.getAttribute('title')).length > 8, 'the absolute time is on hover');
       await row.getByText('Stopped at: KV cache — q8_0 KV cache').waitFor({ timeout: 2000 });
       await row.getByText(/Resume carries on this run/).waitFor({ timeout: 2000 });
-      assert.equal(await row.getByRole('button', { name: /dismiss|clear/i }).count(), 0, 'the server cannot clear a finished run');
+      // #1978: the server can now clear a finished run; the Dismiss control is covered by models-recover-dismiss-autotune-1978.cjs.
       assert.deepEqual(posts, []); assert.deepEqual(errors, []); await page.close();
     });
     await check('a step reason that says more than the job error is shown', async () => {
