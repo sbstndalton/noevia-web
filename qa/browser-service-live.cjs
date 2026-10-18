@@ -22,9 +22,9 @@
 // genuinely public target, which this sandbox is not allowed to use. `browser-service.cjs`'s own
 // `direct: true` escape hatch — a real, first-class constructor option, not something invented for
 // this script — is used instead, exactly the way qa/browser-executor.cjs's own "control" case at
-// its end uses it. `browser-policy.cjs`'s own allow/needs_approval/blocked rules (private IPs,
-// localhost, unlisted hosts; the Rust browser-policy crate decides them since noevia-core#188) still run unmodified; only the network-layer SSRF proxy is out of
-// scope for this run, and that gap is called out again in the results at the bottom.
+// its end uses it. The browser policy rules (now the Rust browser-policy crate, noevia-core#188) still
+// run unmodified: allow, needs_approval or blocked for private IPs, localhost and unlisted hosts. Only the
+// network-layer SSRF proxy is out of scope for this run, and that gap is called out again in the results at the bottom.
 //
 // Synthetic fixture page only, served by a local HTTP server this script starts and closes.
 // Never a real network target.
