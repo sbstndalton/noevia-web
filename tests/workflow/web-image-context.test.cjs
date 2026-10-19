@@ -30,7 +30,7 @@ test('web image assembly supplies the actual Dockerfile COPY inputs', () => {
   const docker = fs.readFileSync(path.join(integration, 'build/web.Dockerfile'), 'utf8');
   assert.match(docker, /^COPY rs\/ \/src\/$/m);
   assert.match(docker, /^COPY noevia\/build\/web-supervisor\.sh \/app\/web-supervisor\.sh$/m);
-  assert.match(docker, /node --test --test-timeout=120000 tests\/client\/\*\.test\.cjs tests\/server\/\*\.test\.cjs/);
+  assert.match(docker, /node --test --test-concurrency=1 --test-timeout=120000 tests\/client\/\*\.test\.cjs tests\/server\/\*\.test\.cjs/);
   assert.doesNotMatch(docker, /node --test[^\n]*(?:tests\/workflow|tests\/\*\*)/, 'Docker test glob must exclude host-only workflow tests');
   const supervisor = fs.readFileSync(path.join(integration, 'build/web-supervisor.sh'));
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'noevia-web-context-'));
