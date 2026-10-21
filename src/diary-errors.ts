@@ -21,9 +21,10 @@ export function formatWait(seconds: number, locale: string | undefined): string 
 /** #1422: an `error` event the server sent on the Diary stream. `saved === false` means the server
  *  KNOWS nothing was written (the message can simply be resent); absent means the outcome is unknown.
  *  The English `text` is the fallback; the screen words `code` itself in the interface language. */
-export function diaryStreamFailure(event: { text?: string; code?: string; saved?: boolean; retryAfter?: number; model?: string }, fallback: string): Error & { code?: string; saved?: boolean; retryAfter?: number; model?: string } {
+export function diaryStreamFailure(event: { text?: string; code?: string; reason?: unknown; saved?: boolean; retryAfter?: number; model?: string }, fallback: string): Error & { code?: string; reason?: string; saved?: boolean; retryAfter?: number; model?: string } {
   return Object.assign(new Error(event.text || fallback), {
     ...(typeof event.code === 'string' ? { code: event.code } : {}),
+    ...(typeof event.reason === 'string' ? { reason: event.reason } : {}),
     ...(event.saved === false ? { saved: false } : {}),
     ...(typeof event.retryAfter === 'number' ? { retryAfter: event.retryAfter } : {}),
     ...(typeof event.model === 'string' ? { model: event.model } : {}),
@@ -42,8 +43,10 @@ export function diaryErrorText(t: Translator, error: unknown, locale: string | u
     return (typeof wait === 'number' && wait > 0 ? t('storage.throttledWait', { wait: formatWait(wait, locale) }) : t('storage.throttled')) + nothingSaved;
   }
   // #1422: failures the server proves left nothing saved, worded here rather than in English only.
-  const failure = error as { code?: unknown; saved?: unknown; model?: unknown } | null;
-  if (failure?.code === 'modelFailed') return t('diary.errors.modelFailed');
+  const failure = error as { code?: unknown; reason?: unknown; saved?: unknown; model?: unknown } | null;
+  // #94: the companion says why the model failed. A timeout and a length cut are not "couldn't reach the
+  // model"; an unknown or missing reason keeps that original wording.
+  if (failure?.code === 'modelFailed') return t(failure.reason === 'chat_timeout' ? 'diary.errors.modelTimedOut' : failure.reason === 'length_cap' ? 'diary.errors.modelLengthCap' : 'diary.errors.modelFailed');
   if (failure?.code === 'modelNotServed') return t('diary.errors.modelNotServed', { model: typeof failure.model === 'string' ? failure.model : '' });
   if (failure?.code === 'contextFailed') return t('diary.errors.contextFailed');
   if (failure?.code === 'diaryUnavailable') return t('diary.errors.diaryUnavailable');

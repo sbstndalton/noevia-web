@@ -22,6 +22,8 @@ export const EN_GB_DIARY = {
   'diary.status.uncertainSave': 'A previous exchange has an uncertain save outcome. Check the saved diary before resending.',
   'diary.errors.nothingSaved': 'Nothing was saved, so you can resend.',
   'diary.errors.modelFailed': "Couldn't reach the local model. Nothing was saved, so you can resend.",
+  'diary.errors.modelTimedOut': "The answer took too long. Nothing was saved, so you can resend or ask a shorter question.",
+  'diary.errors.modelLengthCap': "The answer reached its length limit before any text appeared. Nothing was saved, so you can resend or ask for a shorter answer.",
   'diary.errors.modelNotServed': 'The Diary companion is set to use the model "{model}", which the local engine does not serve. Nothing was saved. Ask an administrator to change the Diary model.',
   'diary.errors.contextFailed': "Couldn't read your diary. Nothing was saved, so you can resend.",
   'diary.errors.diaryUnavailable': "Couldn't reach the Diary companion. Nothing was saved, so you can resend.",

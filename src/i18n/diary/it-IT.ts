@@ -20,6 +20,8 @@ export const IT_IT_DIARY: DiaryCatalogue = {
   'diary.status.uncertainSave': "Uno scambio precedente ha un esito di salvataggio incerto. Controlla il diario salvato prima di reinviare.",
   'diary.errors.nothingSaved': "Non è stato salvato nulla, quindi puoi reinviare.",
   'diary.errors.modelFailed': "Impossibile raggiungere il modello locale. Non è stato salvato nulla, quindi puoi reinviare.",
+  'diary.errors.modelTimedOut': "La risposta ha impiegato troppo tempo. Non è stato salvato nulla, quindi puoi reinviare o fare una domanda più breve.",
+  'diary.errors.modelLengthCap': "La risposta ha raggiunto il limite di lunghezza prima che comparisse del testo. Non è stato salvato nulla, quindi puoi reinviare o chiedere una risposta più breve.",
   'diary.errors.modelNotServed': "Il compagno del diario è impostato sul modello «{model}», che il motore locale non fornisce. Non è stato salvato nulla. Chiedi a un amministratore di cambiare il modello del diario.",
   'diary.errors.contextFailed': "Impossibile leggere il tuo diario. Non è stato salvato nulla, quindi puoi reinviare.",
   'diary.errors.diaryUnavailable': "Impossibile raggiungere il compagno del diario. Non è stato salvato nulla, quindi puoi reinviare.",
