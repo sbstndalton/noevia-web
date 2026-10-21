@@ -285,7 +285,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
         if(stopped || busyRef.current)return;
         const running=exchanges.some((e:{state:string})=>e.state==='running');setRecovering(running);polling=running;
         if(exchanges.length){
-          const restored = recoverDiaryTurns(exchanges);
+          const restored = recoverDiaryTurns(exchanges, failure => diaryErrorText(t, failure, appLocale()));
           setTurns(prev=>{const existing=prev[target]||[];return JSON.stringify(existing)===JSON.stringify(restored)?prev:{...prev,[target]:restored};});
         }
         setRecoveryNotice(running?t('diary.status.recoveringActive'):'');
