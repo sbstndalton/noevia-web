@@ -20,6 +20,8 @@ export const NB_NO_DIARY: DiaryCatalogue = {
   'diary.status.uncertainSave': "En tidligere utveksling har et usikkert lagringsutfall. Sjekk den lagrede dagboken før du sender på nytt.",
   'diary.errors.nothingSaved': "Ingenting ble lagret, så du kan sende på nytt.",
   'diary.errors.modelFailed': "Fikk ikke kontakt med den lokale modellen. Ingenting ble lagret, så du kan sende på nytt.",
+  'diary.errors.modelTimedOut': "Svaret tok for lang tid. Ingenting ble lagret, så du kan sende på nytt eller stille et kortere spørsmål.",
+  'diary.errors.modelLengthCap': "Svaret nådde lengdegrensen før noen tekst dukket opp. Ingenting ble lagret, så du kan sende på nytt eller be om et kortere svar.",
   'diary.errors.modelNotServed': "Dagbokfølgesvennen er satt til å bruke modellen «{model}», som den lokale motoren ikke tilbyr. Ingenting ble lagret. Be en administrator endre dagbokmodellen.",
   'diary.errors.contextFailed': "Kunne ikke lese dagboken din. Ingenting ble lagret, så du kan sende på nytt.",
   'diary.errors.diaryUnavailable': "Fikk ikke kontakt med dagbokfølgesvennen. Ingenting ble lagret, så du kan sende på nytt.",

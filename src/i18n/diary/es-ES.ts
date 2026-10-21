@@ -20,6 +20,8 @@ export const ES_ES_DIARY: DiaryCatalogue = {
   'diary.status.uncertainSave': "Un intercambio anterior tiene un resultado de guardado incierto. Revisa el diario guardado antes de reenviar.",
   'diary.errors.nothingSaved': "No se guardó nada, así que puedes reenviar.",
   'diary.errors.modelFailed': "No se pudo acceder al modelo local. No se guardó nada, así que puedes reenviar.",
+  'diary.errors.modelTimedOut': "La respuesta tardó demasiado. No se guardó nada, así que puedes reenviar o hacer una pregunta más corta.",
+  'diary.errors.modelLengthCap': "La respuesta alcanzó su límite de longitud antes de que apareciera texto. No se guardó nada, así que puedes reenviar o pedir una respuesta más corta.",
   'diary.errors.modelNotServed': "El compañero de diario está configurado para usar el modelo «{model}», que el motor local no ofrece. No se guardó nada. Pide a un administrador que cambie el modelo del diario.",
   'diary.errors.contextFailed': "No se pudo leer tu diario. No se guardó nada, así que puedes reenviar.",
   'diary.errors.diaryUnavailable': "No se pudo acceder al compañero de diario. No se guardó nada, así que puedes reenviar.",

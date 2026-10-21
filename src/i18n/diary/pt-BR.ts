@@ -20,6 +20,8 @@ export const PT_BR_DIARY: DiaryCatalogue = {
   'diary.status.uncertainSave': "Uma troca anterior tem um resultado de salvamento incerto. Verifique o diário salvo antes de reenviar.",
   'diary.errors.nothingSaved': "Nada foi salvo, então você pode reenviar.",
   'diary.errors.modelFailed': "Não foi possível acessar o modelo local. Nada foi salvo, então você pode reenviar.",
+  'diary.errors.modelTimedOut': "A resposta demorou demais. Nada foi salvo, então você pode reenviar ou fazer uma pergunta mais curta.",
+  'diary.errors.modelLengthCap': "A resposta atingiu o limite de tamanho antes de aparecer qualquer texto. Nada foi salvo, então você pode reenviar ou pedir uma resposta mais curta.",
   'diary.errors.modelNotServed': "O companheiro de diário está configurado para usar o modelo “{model}”, que o mecanismo local não oferece. Nada foi salvo. Peça a um administrador que altere o modelo do diário.",
   'diary.errors.contextFailed': "Não foi possível ler o seu diário. Nada foi salvo, então você pode reenviar.",
   'diary.errors.diaryUnavailable': "Não foi possível acessar o companheiro de diário. Nada foi salvo, então você pode reenviar.",

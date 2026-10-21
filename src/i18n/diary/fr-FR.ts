@@ -20,6 +20,8 @@ export const FR_FR_DIARY: DiaryCatalogue = {
   'diary.status.uncertainSave': "Un échange précédent a un résultat d’enregistrement incertain. Vérifiez le journal enregistré avant de renvoyer.",
   'diary.errors.nothingSaved': "Rien n’a été enregistré, vous pouvez donc renvoyer.",
   'diary.errors.modelFailed': "Le modèle local est injoignable. Rien n’a été enregistré, vous pouvez donc renvoyer.",
+  'diary.errors.modelTimedOut': "La réponse a pris trop de temps. Rien n’a été enregistré, vous pouvez donc renvoyer ou poser une question plus courte.",
+  'diary.errors.modelLengthCap': "La réponse a atteint sa limite de longueur avant qu’un texte n’apparaisse. Rien n’a été enregistré, vous pouvez donc renvoyer ou demander une réponse plus courte.",
   'diary.errors.modelNotServed': "Le compagnon de journal est configuré pour utiliser le modèle « {model} », que le moteur local ne fournit pas. Rien n’a été enregistré. Demandez à un administrateur de changer le modèle du journal.",
   'diary.errors.contextFailed': "Votre journal n’a pas pu être lu. Rien n’a été enregistré, vous pouvez donc renvoyer.",
   'diary.errors.diaryUnavailable': "Le compagnon de journal est injoignable. Rien n’a été enregistré, vous pouvez donc renvoyer.",

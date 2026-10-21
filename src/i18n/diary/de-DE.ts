@@ -20,6 +20,8 @@ export const DE_DE_DIARY: DiaryCatalogue = {
   'diary.status.uncertainSave': "Ein früherer Austausch hat ein unsicheres Speicherergebnis. Überprüfe das gespeicherte Tagebuch, bevor du erneut sendest.",
   'diary.errors.nothingSaved': "Es wurde nichts gespeichert, du kannst also erneut senden.",
   'diary.errors.modelFailed': "Das lokale Modell war nicht erreichbar. Es wurde nichts gespeichert, du kannst also erneut senden.",
+  'diary.errors.modelTimedOut': "Die Antwort hat zu lange gedauert. Es wurde nichts gespeichert, du kannst also erneut senden oder eine kürzere Frage stellen.",
+  'diary.errors.modelLengthCap': "Die Antwort hat ihre Längengrenze erreicht, bevor Text erschien. Es wurde nichts gespeichert, du kannst also erneut senden oder um eine kürzere Antwort bitten.",
   'diary.errors.modelNotServed': "Der Tagebuchbegleiter nutzt das Modell „{model}“, das die lokale Engine nicht bereitstellt. Es wurde nichts gespeichert. Bitte eine Administratorin oder einen Administrator, das Tagebuchmodell zu ändern.",
   'diary.errors.contextFailed': "Dein Tagebuch konnte nicht gelesen werden. Es wurde nichts gespeichert, du kannst also erneut senden.",
   'diary.errors.diaryUnavailable': "Der Tagebuchbegleiter war nicht erreichbar. Es wurde nichts gespeichert, du kannst also erneut senden.",

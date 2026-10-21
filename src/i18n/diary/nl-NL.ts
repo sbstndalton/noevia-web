@@ -20,6 +20,8 @@ export const NL_NL_DIARY: DiaryCatalogue = {
   'diary.status.uncertainSave': "Een eerdere uitwisseling heeft een onzeker opslagresultaat. Controleer het opgeslagen dagboek voordat je opnieuw verzendt.",
   'diary.errors.nothingSaved': "Er is niets opgeslagen, dus je kunt opnieuw verzenden.",
   'diary.errors.modelFailed': "Het lokale model was niet bereikbaar. Er is niets opgeslagen, dus je kunt opnieuw verzenden.",
+  'diary.errors.modelTimedOut': "Het antwoord duurde te lang. Er is niets opgeslagen, dus je kunt opnieuw verzenden of een kortere vraag stellen.",
+  'diary.errors.modelLengthCap': "Het antwoord bereikte de lengtelimiet voordat er tekst verscheen. Er is niets opgeslagen, dus je kunt opnieuw verzenden of om een korter antwoord vragen.",
   'diary.errors.modelNotServed': "De dagboekbegeleider is ingesteld op het model “{model}”, dat de lokale engine niet aanbiedt. Er is niets opgeslagen. Vraag een beheerder het dagboekmodel te wijzigen.",
   'diary.errors.contextFailed': "Je dagboek kon niet worden gelezen. Er is niets opgeslagen, dus je kunt opnieuw verzenden.",
   'diary.errors.diaryUnavailable': "De dagboekbegeleider was niet bereikbaar. Er is niets opgeslagen, dus je kunt opnieuw verzenden.",

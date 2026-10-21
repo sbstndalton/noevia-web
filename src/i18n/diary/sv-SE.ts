@@ -20,6 +20,8 @@ export const SV_SE_DIARY: DiaryCatalogue = {
   'diary.status.uncertainSave': "Ett tidigare utbyte har ett osäkert sparresultat. Kontrollera den sparade dagboken innan du skickar igen.",
   'diary.errors.nothingSaved': "Inget sparades, så du kan skicka igen.",
   'diary.errors.modelFailed': "Det gick inte att nå den lokala modellen. Inget sparades, så du kan skicka igen.",
+  'diary.errors.modelTimedOut': "Svaret tog för lång tid. Inget sparades, så du kan skicka igen eller ställa en kortare fråga.",
+  'diary.errors.modelLengthCap': "Svaret nådde sin längdgräns innan någon text visades. Inget sparades, så du kan skicka igen eller be om ett kortare svar.",
   'diary.errors.modelNotServed': "Dagbokskompanjonen är inställd på modellen ”{model}”, som den lokala motorn inte tillhandahåller. Inget sparades. Be en administratör ändra dagbokens modell.",
   'diary.errors.contextFailed': "Det gick inte att läsa din dagbok. Inget sparades, så du kan skicka igen.",
   'diary.errors.diaryUnavailable': "Det gick inte att nå dagbokskompanjonen. Inget sparades, så du kan skicka igen.",
