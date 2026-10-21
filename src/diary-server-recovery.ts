@@ -5,11 +5,23 @@ export interface DiaryRecord {
   message: string; content: string; reasoning: string; startedAt: number;
   activity: string[]; state: string; decision?: string; truncated?: boolean;
   tools?: ToolCallView[];
-  /** #1422: why a `failed` exchange failed (the server's wording) and when the person marked it reviewed. */
-  error?: string; code?: string; acknowledgedAt?: number;
+  /** #1422: why a `failed` exchange failed (the server's wording) and when the person marked it reviewed.
+   *  #96: `code` and `reason` are the same fields the live stream error carried (`reason` only on `modelFailed`). */
+  error?: string; code?: string; reason?: string; acknowledgedAt?: number;
+}
+/** A recovered failed exchange in the shape of the live stream error, for the `diary-errors.ts` mapping. */
+export type RecoveredFailure = { message: string; code: string; reason?: string; saved: false };
+/** Codes whose live sentence needs a detail the stored row does not keep (the model's name): the row's own text stays. */
+const NEEDS_LIVE_DETAIL = new Set(['modelNotServed']);
+/** #96: a failed row that has a `code` is worded by the same mapping as the live error (a reloaded `chat_timeout` or
+ *  `length_cap` reads like the live one). A row without a code, an unmapped code or no mapping keeps the server's text. */
+function failedNotice(record: DiaryRecord, failureText?: (failure: RecoveredFailure) => string): string {
+  const own = record.error || 'Nothing was saved. You can resend.';
+  if (!failureText || typeof record.code !== 'string' || !record.code || NEEDS_LIVE_DETAIL.has(record.code)) return own;
+  return failureText({ message: own, code: record.code, ...(typeof record.reason === 'string' ? { reason: record.reason } : {}), saved: false }) || own;
 }
 /** Recovered tools are display history, never live approval controls or replay instructions. */
-export function recoverDiaryTurns(records: DiaryRecord[]): DiaryTurn[] {
+export function recoverDiaryTurns(records: DiaryRecord[], failureText?: (failure: RecoveredFailure) => string): DiaryTurn[] {
   const byId = new Map(records.map(record => [record.id, record]));
   const linked = new Set(records.filter(record => record.kind !== 'preparation').map(record => record.preparationId));
   return records.filter(record => record.kind !== 'preparation' || !linked.has(record.id)).flatMap(record => {
@@ -26,7 +38,7 @@ export function recoverDiaryTurns(records: DiaryRecord[]): DiaryTurn[] {
       ? record.state === 'running' ? 'Optional preparation is still active. No diary entry has been sent.'
         : 'Optional preparation history only. No diary entry was sent; tools are not replayed.'
       : record.state === 'running' ? 'Still processing on the server.'
-        : failed ? record.error || 'Nothing was saved. You can resend.'
+        : failed ? failedNotice(record, failureText)
         : record.state === 'uncertain' ? record.acknowledgedAt ? 'Marked as reviewed. The save outcome was never confirmed.' : 'Save outcome is uncertain. Check the saved diary before sending again.'
           : record.decision === 'logged' || record.decision === 'ok' ? 'Diary entry saved.' : 'Conversation complete · no entry saved.';
     return [
