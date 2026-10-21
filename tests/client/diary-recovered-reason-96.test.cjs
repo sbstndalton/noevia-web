@@ -67,3 +67,77 @@ test('the Diary screen passes the live mapping when it recovers rows', () => {
   const view = fs.readFileSync(path.join(SRC, 'components/DiaryView.tsx'), 'utf8');
   assert.match(view, /recoverDiaryTurns\(exchanges,\s*failure\s*=>\s*diaryErrorText\(t,\s*failure,\s*appLocale\(\)\)\)/);
 });
+
+// Behavioural check: the real DiaryView, rendered in an isolated jsdom realm (the harness of diary-load-1510), with
+// a synthetic failed row served by the recovery request. The wording on screen is the live mapping's, not the server's.
+const { JSDOM } = require('jsdom');
+const { build } = require('esbuild');
+let bundle;
+async function mountDiary(t, exchanges) {
+  bundle ??= build({
+    stdin: { contents: `import {act} from 'react'; import {createRoot} from 'react-dom/client'; import {DiaryView} from './src/components/DiaryView';
+      const root=createRoot(document.getElementById('root'));
+      export async function render(){await act(async()=>{root.render(<DiaryView active={true} inferenceUp={false}/>);await new Promise(r=>setTimeout(r,0));});}
+      export async function settle(ms){await act(async()=>{await new Promise(r=>setTimeout(r,ms));});}
+      export async function close(){await act(async()=>root.unmount());}`,
+      resolveDir: path.resolve(__dirname, '../..'), loader: 'tsx' },
+    jsx: 'automatic', bundle: true, write: false, format: 'iife', globalName: 'DiaryRecoveredFixture', platform: 'browser',
+    loader: { '.css': 'empty' }, define: { 'process.env.NODE_ENV': '"test"' }, logLevel: 'silent',
+  });
+  const code = (await bundle).outputFiles[0].text;
+  const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/', runScripts: 'outside-only', pretendToBeVisual: true });
+  const w = dom.window;
+  w.IS_REACT_ACT_ENVIRONMENT = true;
+  w.MessageChannel = class { constructor() { this.port1 = { onmessage: null }; this.port2 = { postMessage: () => w.setTimeout(() => this.port1.onmessage?.(), 0) }; } };
+  for (const key of ['Headers', 'Response', 'TextEncoder', 'TextDecoder', 'ReadableStream']) w[key] = globalThis[key];
+  w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+  w.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+  w.HTMLDialogElement.prototype.close = function () { this.open = false; };
+  w.HTMLElement.prototype.scrollIntoView = function () {};
+  w.HTMLElement.prototype.scrollTo = function () {};
+  w.ResizeObserver = class { observe() {} disconnect() {} };
+  w.setInterval = () => 0; w.clearInterval = () => {};
+  w.indexedDB = undefined;
+  w.fetch = async (input, init = {}) => {
+    const url = String(input);
+    let data = {};
+    if (url === '/api/profile') data = { user: { id: 'synthetic', username: 'fixture', displayName: 'Synthetic fixture', role: 'member', diaryEnabled: true }, passkeys: [] };
+    else if (url === '/api/integrations/storage') data = { kind: 'local', corpusRoot: '' };
+    else if (url === '/api/diary/storage-status') data = { mode: 'legacy', backup: 'not_configured' };
+    else if (url === '/api/diary/source') data = { source: 'synthetic', months: [] };
+    else if (url.startsWith('/api/diary/files')) data = { files: [] };
+    else if (url.startsWith('/api/diary/today')) data = { todayLog: '', standingSections: {}, memoryFiles: [] };
+    else if (url.startsWith('/api/diary/exchanges')) data = { exchanges };
+    else throw Error('unexpected synthetic request ' + (init.method || 'GET') + ' ' + url);
+    return new w.Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' } });
+  };
+  w.eval(code);
+  t.after(async () => { await w.DiaryRecoveredFixture.close(); w.close(); });
+  return { w, render: w.DiaryRecoveredFixture.render, settle: w.DiaryRecoveredFixture.settle };
+}
+// Opens today's recovered conversation and returns the text on screen.
+async function screenWith(t, over) {
+  const failedRow = { id: 'synthetic-exchange-0001', kind: 'capture', message: 'Synthetic question', content: '', reasoning: '', startedAt: Date.now(), activity: [], tools: [], state: 'failed', error: SERVER_TEXT, ...over };
+  const f = await mountDiary(t, [failedRow]);
+  await f.render(); await f.settle(50);
+  const open = [...f.w.document.querySelectorAll('button')].find(b => b.textContent.includes('Open today’s conversation'));
+  assert.ok(open, 'the recovered conversation is offered');
+  open.click();
+  await f.settle(50);
+  const text = f.w.document.body.textContent;
+  assert.ok(text.includes('Synthetic question'), 'the recovered exchange is on screen');
+  return text;
+}
+const { EN_GB_DIARY } = load('i18n/diary/en-GB');
+
+test('a reloaded chat_timeout row shows the timeout sentence on the Diary screen, not the server text', async (t) => {
+  const text = await screenWith(t, { code: 'modelFailed', reason: 'chat_timeout' });
+  assert.ok(text.includes(EN_GB_DIARY['diary.errors.modelTimedOut']), 'timeout sentence');
+  assert.ok(!text.includes("Couldn't reach the local model"), 'the server wording is not shown');
+});
+test('a reloaded modelFailed row without a reason shows the generic en-GB sentence on the Diary screen', async (t) => {
+  const text = await screenWith(t, { code: 'modelFailed' });
+  assert.ok(text.includes(EN_GB_DIARY['diary.errors.modelFailed']), 'generic sentence');
+  assert.ok(!text.includes(EN_GB_DIARY['diary.errors.modelTimedOut']), 'not the timeout sentence');
+  assert.ok(!text.includes(SERVER_TEXT), 'the server wording is not shown');
+});

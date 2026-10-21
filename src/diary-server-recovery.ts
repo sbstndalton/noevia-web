@@ -17,6 +17,8 @@ const NEEDS_LIVE_DETAIL = new Set(['modelNotServed']);
  *  `length_cap` reads like the live one). A row without a code, an unmapped code or no mapping keeps the server's text. */
 function failedNotice(record: DiaryRecord, failureText?: (failure: RecoveredFailure) => string): string {
   const own = record.error || 'Nothing was saved. You can resend.';
+  // Mapping replaces the stored text with a fixed sentence for the code. A future producer that stores an error text
+  // more specific than that generic sentence must add its code to NEEDS_LIVE_DETAIL, or the detail is hidden.
   if (!failureText || typeof record.code !== 'string' || !record.code || NEEDS_LIVE_DETAIL.has(record.code)) return own;
   return failureText({ message: own, code: record.code, ...(typeof record.reason === 'string' ? { reason: record.reason } : {}), saved: false }) || own;
 }
