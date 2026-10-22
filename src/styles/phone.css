@@ -910,12 +910,16 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .mm-assign-control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
 .mm-assign-control select { max-width: 260px; }
 /* #1665: the reranker's runtime switch on its row: the switch with its label, the reranker picker and the reset in one
-   wrapping line, the source caption under them. The picker never wraps its text (long model ids are cut). */
+   wrapping line, the source caption under them. The picker never wraps its text (long model ids are cut with an ellipsis, #2114). */
 .mm-assign-reranker { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-width: 0; }
 .mm-assign-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: var(--text-footnote); color: var(--text); cursor: pointer; }
 .mm-assign-toggle .noevia-switch { margin: 0; flex: none; }
 .mm-assign-reranker .mm-select { min-width: 0; max-width: 100%; }
 .mm-assign-reranker .mm-select select { max-width: min(360px, 100%); white-space: nowrap; }
+/* #2114: a long reranker name is cut inside the picker with an ellipsis (the full name is its title and the open list), never
+   painted past the picker's border into the card edge. The customizable select (appearance: base-select) lays its text out
+   as flex content that text-overflow cannot cut, so this picker keeps the browser's own select, which can. */
+.mm-assign-reranker .mm-select select { appearance: auto; overflow: hidden; text-overflow: ellipsis; }
 .mm-assign-reranker .mm-assign-fixed { flex-basis: 100%; }
 /* Read-only: the mockup's faint helper caption with a hollow marker; never an empty control slot. */
 .mm-assign-fixed { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-caption); color: var(--text-secondary); }

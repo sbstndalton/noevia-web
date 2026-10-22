@@ -92,6 +92,9 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
     const savedOutside = current !== '' && !choices.some((c) => c.id === current);
     // The reranker service (TEI) is named by its model alone; a llama.cpp preset says where it runs.
     const label = (c: { backend: string; model: string }) => (c.backend === 'tei' ? c.model : t('mm.assign.rerankerLlamacpp', { model: c.model }));
+    // #2114: a long name is cut inside the picker; its full text stays available as the title.
+    const currentChoice = choices.find((c) => c.id === current);
+    const currentLabel = current ? (currentChoice ? label(currentChoice) : savedOutside ? label({ backend: 'llamacpp', model: current.slice('llamacpp:'.length) }) : undefined) : undefined;
     return <span className="mm-assign-reranker" data-testid="reranker-switch">
       <label className="mm-assign-toggle">
         <input type="checkbox" role="switch" className="noevia-switch" checked={svc.enabled === true}
@@ -101,7 +104,7 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
       </label>
       {choices.length > 0
         ? <label className="mm-select"><span className="sr-only">{t('mm.assign.rerankerModel')}</span>
-            <select aria-label={t('mm.assign.rerankerModel')} value={current} disabled={busy !== ''}
+            <select aria-label={t('mm.assign.rerankerModel')} title={currentLabel} value={current} disabled={busy !== ''}
               onChange={(e) => { const id = e.target.value; if (id) void runReranker(() => saveReranker(svc.enabled === true, id), 'mm.assign.saved'); }}>
               {!current && <option value="">{t('mm.assign.rerankerPick')}</option>}
               {savedOutside && <option value={current}>{label({ backend: 'llamacpp', model: current.slice('llamacpp:'.length) })}</option>}
