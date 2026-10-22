@@ -153,7 +153,10 @@ test('a failed reply is not stored as an answer, and a turn with no alternatives
   const q = user('Q');
   const failed = reply('partial', { error: true });
   const kept = tv.entriesFor([q, failed]);
-  assert.equal(kept.length, 1, 'the failed reply is not saved');
+  // #2116: it is saved as a failed turn (so a reload still shows the failure), but never as one of the turn's answers.
+  assert.equal(kept.length, 2, 'the failed reply is saved as a failed turn');
+  assert.equal(kept[1].failure, 'partial');
+  assert.equal(kept[1].content, '');
   assert.equal(tv.answerCount(q), 1);
   assert.equal(tv.branchCount(q), 1);
   assert.equal(tv.selectAnswer([q, reply('A')], 0, 1), null, 'nothing stored means nothing to switch to');

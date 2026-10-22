@@ -72,7 +72,7 @@ function serverKept(e: HistoryEntry): boolean {
 function settledHere(e: HistoryEntry): boolean {
   if (e.role !== 'assistant' || serverKept(e)) return false;
   if (e.stopped === true) return true;
-  if ((e as { error?: unknown }).error) return false;
+  if ((e as { error?: unknown }).error || e.failure) return false;
   return !(e.paused?.reason === 'stopped' && !e.content.trim());
 }
 
