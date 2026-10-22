@@ -101,7 +101,10 @@ export function mergeTranscripts(theirs: HistoryEntry[], ours: HistoryEntry[]): 
       // the server's copy can hold text the engine produced after Stop that was never shown, and would replace
       // the quiet Stopped note with the interrupted one. A copy cut short by a dropped connection (an error, or
       // only the record of saved changes) is not settled: the longer copy still wins.
-      const keep = serverKept(tail[0]) && settledHere(mine[0]) ? mine[0]
+      // #2116: a reply that failed is only the record of the failure and any text it had streamed in. When exactly one copy
+      // failed, the other one is the answer, however long the failed copy's partial text is.
+      const keep = !!tail[0].failure !== !!mine[0].failure ? (tail[0].failure ? mine[0] : tail[0])
+        : serverKept(tail[0]) && settledHere(mine[0]) ? mine[0]
         : tail[0].content.length > mine[0].content.length ? tail[0] : mine[0];
       return [...start, keep, ...mine.slice(1)];
     }

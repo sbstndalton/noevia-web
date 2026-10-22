@@ -118,6 +118,14 @@ test('#2116: merging with another device keeps a real answer over a failed copy 
   const theirsFailed = [u, { role: 'assistant', content: '', failure: FAILURE }];
   const oursAnswered = [u, { role: 'assistant', content: 'A real answer.' }];
   assert.deepEqual(mergeTranscripts(theirsFailed, oursAnswered)[1].content, 'A real answer.');
+  // Exactly one failed copy: the other is the answer, in both directions, even when the failed copy streamed more text.
+  const longFailed = { role: 'assistant', content: 'A long partial text that streamed in before the failure, longer than the answer.', failure: FAILURE };
+  const shortReal = { role: 'assistant', content: 'Short real answer.' };
+  assert.equal(mergeTranscripts([u, longFailed], [u, shortReal])[1].content, 'Short real answer.');
+  assert.equal(mergeTranscripts([u, shortReal], [u, longFailed])[1].content, 'Short real answer.');
+  assert.equal(mergeTranscripts([u, longFailed], [u, { role: 'assistant', content: '', stopped: true }])[1].failure, undefined, 'a stopped reply is not a failure');
+  // Two failed copies are two failures: the usual longer-copy rule.
+  assert.equal(mergeTranscripts([u, { ...longFailed, content: 'x' }], [u, longFailed])[1].content, longFailed.content);
   // The server's copy of a reply it kept (interrupted) is not replaced by a failed copy made in this tab.
   const theirsKept = [u, { role: 'assistant', content: 'Half an answ', interrupted: true }];
   assert.equal(mergeTranscripts(theirsKept, [u, { role: 'assistant', content: '', failure: FAILURE }])[1].content, 'Half an answ');
