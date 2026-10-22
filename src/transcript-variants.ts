@@ -10,7 +10,7 @@
 //   that followed it) and `branch` (the version shown). The live messages are the shown version's chat.
 
 import type { HistoryEntry, Message, ReplyVariant, TurnBranch } from './types';
-import { persistableMessage, storedPause } from './applied-writes';
+import { persistableMessage, storedFailure, storedPause } from './applied-writes';
 import { interruptedFlag, storedInterrupted } from './interrupted-reply';
 import { settleToolCalls } from './tool-call-state';
 import { isRouteTarget } from './components/RouteControls';
@@ -36,6 +36,7 @@ export function messageFromEntry(h: HistoryEntry, id: string): Message {
     ...(h.role === 'assistant' && storedPause(h) ? { paused: storedPause(h) } : {}),
     ...(storedInterrupted(h) ? { interrupted: true } : {}),
     ...(h.role === 'assistant' && h.stopped === true ? { stopped: true } : {}),
+    ...(storedFailure(h) ? { error: true, failure: storedFailure(h) } : {}),
     ...(h.role === 'user' && h.answers !== undefined ? { answers: h.answers, answer: h.answer } : {}),
     ...(h.role === 'user' && h.branches !== undefined ? { branches: h.branches, branch: h.branch } : {}),
   };
@@ -59,6 +60,7 @@ function entryOf(m: Message): HistoryEntry {
     paused: m.role === 'assistant' ? m.paused : undefined,
     interrupted: interruptedFlag(m),
     stopped: m.role === 'assistant' && m.stopped === true ? true : undefined,
+    failure: m.role === 'assistant' && m.error === true ? m.failure : undefined,
     ...(m.role === 'user' && m.answers !== undefined ? { answers: m.answers, answer: m.answer } : {}),
     ...(m.role === 'user' && m.branches !== undefined ? { branches: m.branches, branch: m.branch } : {}),
   };

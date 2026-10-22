@@ -110,11 +110,32 @@ export function editBase(messages: Message[], index: number): Message[] {
   return [...kept, ...records];
 }
 
-/** What a reply is saved as. A failed reply is not saved, unless it saved changes: then its
- *  record is, so a reload still shows (and tells the model) what was done. */
+/** Longest failure sentence that is saved (the server bounds it too). */
+export const STORED_FAILURE_MAX = 1000;
+
+/** What a reply is saved as. A failed reply (#2116) is saved as a failed turn: the sentence the person was shown,
+ *  the text that had streamed in before it, and the record of any changes it saved (#658), so a reload shows the
+ *  failure with Retry instead of a question nobody answered. It is never replayed to a model: it carries `error`,
+ *  which modelHistory leaves out, and only the record of saved changes is told as done. */
 export function persistableMessage(m: Message): Message | null {
   if (!m.error) return m;
-  return appliedRecord(m);
+  if (m.role !== 'assistant') return null;
+  const record = appliedRecord(m);
+  // A failed Cowork start is retried on the harness that failed (retryLast), which a saved entry cannot say; it is not saved.
+  if (m.coworkRepository) return record;
+  // An older error reply has no `failure`: its content is the sentence itself and nothing had streamed in.
+  const failure = (m.failure ?? m.content).trim().slice(0, STORED_FAILURE_MAX);
+  if (!failure) return record;
+  return { id: m.id, role: 'assistant', content: m.failure !== undefined ? m.content : '', error: true, failure,
+    ...(record ? { toolCalls: record.toolCalls, paused: record.paused } : {}) };
+}
+
+/** The failure sentence read back from a saved assistant entry (#2116): a non-empty string, bounded. Anything else
+ *  reads as a reply that did not fail. */
+export function storedFailure(h: Pick<HistoryEntry, 'role' | 'failure'>): string | undefined {
+  if (h.role !== 'assistant' || typeof h.failure !== 'string') return undefined;
+  const text = h.failure.trim().slice(0, STORED_FAILURE_MAX);
+  return text || undefined;
 }
 
 /** The `paused` field read back from a saved history entry, if it is well formed. */

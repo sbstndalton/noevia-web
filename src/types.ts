@@ -368,6 +368,9 @@ export interface HistoryEntry {
   skill?: string;
   /** Assistant turns (#658): the reply ended early after saving changes. */
   paused?: ReplyPause;
+  /** #2116: assistant turns only: the reply failed. The sentence the person was shown, saved so a reload still shows
+   *  the failure and Retry; `content` then holds only the text that had streamed in before it (usually none). */
+  failure?: string;
   /** #1507: assistant turns only: the reply was saved partway and never finished (see interrupted-reply.ts). */
   interrupted?: true;
   /** #1784: assistant turns only: the person stopped the reply after part of its text had arrived. */
