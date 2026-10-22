@@ -49,8 +49,10 @@ export function effortLineText(t: Translator, effort: string | undefined, mode: 
 }
 
 /** #1449: what a `loadingModel` status says about the load: the model, the routed role (fast/smart/code)
- *  and the expected wait, which the server sends only once it has measured a load of that model. */
-export type StatusDetail = { model?: string; role?: string; expectedSeconds?: number };
+ *  and the expected wait, which the server sends only once it has measured a load of that model.
+ *  noevia#2115: a `waitingForModel` status adds the turn's place in the local model's queue and how long it
+ *  has waited, while another chat's model is in use. */
+export type StatusDetail = { model?: string; role?: string; expectedSeconds?: number; position?: number; waitedSeconds?: number };
 
 /** The status detail the server sent, checked field by field; anything else is no detail. */
 export function statusDetail(value: unknown): StatusDetail | undefined {
@@ -60,18 +62,28 @@ export function statusDetail(value: unknown): StatusDetail | undefined {
   if (typeof v.model === 'string' && v.model.trim()) out.model = v.model.trim().slice(0, 200);
   if (typeof v.role === 'string' && v.role.trim()) out.role = v.role.trim().slice(0, 40);
   if (typeof v.expectedSeconds === 'number' && Number.isFinite(v.expectedSeconds) && v.expectedSeconds >= 1) out.expectedSeconds = Math.round(v.expectedSeconds);
-  return out.model || out.role || out.expectedSeconds ? out : undefined;
+  if (typeof v.position === 'number' && Number.isInteger(v.position) && v.position >= 1 && v.position <= 10000) out.position = v.position;
+  if (typeof v.waitedSeconds === 'number' && Number.isFinite(v.waitedSeconds) && v.waitedSeconds >= 0 && v.waitedSeconds <= 604800) out.waitedSeconds = Math.round(v.waitedSeconds);
+  return out.model || out.role || out.expectedSeconds || out.position ? out : undefined;
 }
 
 /** The in-progress line of a reply. The server sends a stable id with its English text; the id is
  *  worded from the catalogue and the English stays as the fallback for an id this build lacks (#624).
- *  #1449: a `loadingModel` line with a model in its detail names the model, its role and the wait. */
+ *  #1449: a `loadingModel` line with a model in its detail names the model, its role and the wait.
+ *  noevia#2115: a `waitingForModel` line names the model, its role, the place in the queue and the wait so far. */
 export function statusLineText(t: Translator, id: string | undefined, text: string | undefined, detail?: StatusDetail): string {
   if (!id) return text ?? '';
   if (id === 'loadingModel' && detail?.model) {
     const role = detail.role ? routeRoleName(t, detail.role) : '';
     const line = role ? t('chat.statusId.loadingModelFor', { model: detail.model, role }) : t('chat.statusId.loadingModelNamed', { model: detail.model });
     return detail.expectedSeconds ? `${line} ${t('chat.statusId.expectedWait', { seconds: detail.expectedSeconds })}` : line;
+  }
+  // noevia#2115: the turn waits in the local model's queue while another chat uses it.
+  if (id === 'waitingForModel' && detail?.model) {
+    const role = detail.role ? routeRoleName(t, detail.role) : '';
+    const position = detail.position ?? 1;
+    const line = role ? t('chat.statusId.waitingForModelFor', { model: detail.model, role, position }) : t('chat.statusId.waitingForModelNamed', { model: detail.model, position });
+    return detail.waitedSeconds ? `${line} ${t('chat.statusId.waitedSoFar', { seconds: detail.waitedSeconds })}` : line;
   }
   return byKey(t, `chat.statusId.${id}`, text ?? '');
 }

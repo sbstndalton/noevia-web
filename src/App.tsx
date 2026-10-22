@@ -1233,7 +1233,8 @@ export default function App(): JSX.Element {
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, paused: pause } : m)),
             }));
           } else if (ev.type === 'error') {
-            throw new Error(ev.text || 'Generation failed');
+            // noevia#2115: a refusal from the local model's queue carries a stable code, worded by failureCopy.
+            throw Object.assign(new Error(ev.text || 'Generation failed'), typeof ev.code === 'string' ? { code: ev.code } : {});
           } else if (ev.type === 'tool_result' && ev.name) {
             // Mark the call that produced it as complete rather than adding a
             // second chip for the same call. This also clears any 'pending'

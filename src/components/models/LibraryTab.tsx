@@ -118,9 +118,20 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     void prune(false);
   }, [admin, leftoverKey, prune]);
   const fileFor = (name: string) => files.find(f => f.sections.includes(name) || f.modelId === name);
-  const act = async (verb: 'load' | 'unload', name: string) => {
-    setBusy(name); setMessage('');
-    try { const r = await apiFetch(`/api/models/${verb}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); if (!r.ok) throw Error((await r.json()).error || t(verb === 'load' ? 'mm.library.loadFailed' : 'mm.library.unloadFailed')); onChanged(); }
+  // noevia#2115: the local model's queue (the inference gate) does not unload a model that is answering a request.
+  // The card then says so; an admin whose server holds the gate's admin token may unload it anyway.
+  const [inUse, setInUse] = useState<{ name: string; canForce: boolean } | null>(null);
+  const act = async (verb: 'load' | 'unload', name: string, force = false) => {
+    setBusy(name); setMessage(''); setError('');
+    try {
+      const r = await apiFetch(`/api/models/${verb}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(force ? { name, force: true } : { name }) });
+      const v = await r.json().catch(() => ({})) as { error?: string; code?: string; canForce?: boolean };
+      if (verb === 'unload' && !force && r.status === 409 && v.code === 'model_in_use') { setInUse({ name, canForce: v.canForce === true }); return; }
+      if (!r.ok) throw Error(v.error || t(verb === 'load' ? 'mm.library.loadFailed' : 'mm.library.unloadFailed'));
+      setInUse(null);
+      if (force) setMessage(t('mm.unload.forced', { model: name }));
+      onChanged();
+    }
     catch (e) { setError(errorText(e, t('mm.library.opFailed'))); } finally { setBusy(''); }
   };
   // #1036: same reload call and 409 handling as the settings editor (ConfigureTab.apply).
@@ -193,6 +204,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     <div className="model-grid">
     {servable.map(m => <ModelCard key={m.name} admin={admin} runtimeOptions={runtimeOptions} onRefresh={() => void refresh()} model={m} file={fileFor(m.name)} update={updates[fileFor(m.name)?.name || '']} busy={busy === m.name}
       onToggle={() => void act(m.loaded ? 'unload' : 'load', m.name)} onConfigure={() => onConfigure(m.name)}
+      inUse={inUse?.name === m.name ? inUse : null} onUnloadAnyway={() => void act('unload', m.name, true)} onKeep={() => setInUse(null)}
       onDeleted={(err, rolesCleared) => {
         if (err) setError(err);
         else {
@@ -227,7 +239,7 @@ const PILL: Record<PillState, [MessageKey, 'good' | 'muted' | 'bad']> = {
   loaded: ['mm.loaded', 'good'], sleeping: ['mm.card.sleeping', 'muted'], unloaded: ['mm.card.unloaded', 'muted'], failed: ['mm.card.failed', 'bad'], missing: ['mm.card.missing', 'bad'], service: ['mm.card.servedElsewhere', 'muted'],
 };
 
-function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDeleted, runtimeOptions, onRefresh, admin }: { admin: boolean; model: InstalledModel; file?: FileEntry; update?: Update; busy: boolean; onToggle: () => void; onConfigure: () => void; onDeleted: (error?: string | null, rolesCleared?: string[]) => void; runtimeOptions: boolean; onRefresh: () => void }) {
+function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDeleted, runtimeOptions, onRefresh, admin, inUse, onUnloadAnyway, onKeep }: { admin: boolean; model: InstalledModel; file?: FileEntry; update?: Update; busy: boolean; onToggle: () => void; onConfigure: () => void; onDeleted: (error?: string | null, rolesCleared?: string[]) => void; runtimeOptions: boolean; onRefresh: () => void; inUse: { canForce: boolean } | null; onUnloadAnyway: () => void; onKeep: () => void }) {
   const t = useT();
   const [detail, setDetail] = useState<Detail | null>(null), [open, setOpen] = useState(false), [confirming, setConfirming] = useState(false), [deleting, setDeleting] = useState(false);
   // #1761: a model asleep after its idle time is not "Loaded": its weights are freed until the next request.
@@ -272,6 +284,13 @@ function ModelCard({ model: m, file, update, busy, onToggle, onConfigure, onDele
       {!missing && <button className="popup-tab" aria-expanded={open} aria-label={t(open ? 'mm.card.hideDetailsNamed' : 'mm.card.detailsNamed', { model: m.name })} onClick={() => setOpen(!open)}>{open ? t('mm.card.hideDetails') : t('mm.details')}</button>}
       {admin && <button className="popup-tab model-card-danger" aria-expanded={confirming} disabled={deleting} aria-label={t('mm.delete.label', { model: m.name })} onClick={() => setConfirming(v => !v)}>{t('mm.delete')}</button>}
     </div>
+    {admin && inUse && <div className="model-card-confirm" role="group" aria-label={t('mm.card.unloadNamed', { model: m.name })} data-testid="model-in-use">
+      <p role="status">{t(inUse.canForce ? 'mm.unload.inUse' : 'mm.unload.inUseNoForce', { model: m.name })}</p>
+      <div className="model-card-confirm-actions">
+        {inUse.canForce && <button className="popup-tab model-card-danger is-solid" disabled={busy} onClick={onUnloadAnyway}>{busy ? t('mm.working') : t('mm.unload.anyway')}</button>}
+        <button className="popup-tab" disabled={busy} onClick={onKeep}>{inUse.canForce ? t('mm.keep') : t('mm.close')}</button>
+      </div>
+    </div>}
     {admin && confirming && <DeleteModel onBusy={setDeleting} model={m} file={file} kind={missing ? 'missing' : system ? 'system' : protectedModel ? 'inuse' : 'normal'} onCancel={() => setConfirming(false)} onDeleted={(err, roles) => { if (err !== undefined) setConfirming(false); onDeleted(err, roles); }}/>}
     {runtimeOptions && !missing && <MtpControl model={m} onChanged={onRefresh}/>}
     {open && !missing && <div className="mm-detail">
