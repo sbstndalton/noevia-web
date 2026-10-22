@@ -29,13 +29,13 @@ const ROLES = { fast: 'Qwen3.5-4B', smart: 'Qwen3.5-9B', code: 'Qwen3.5-9B', vis
 const RERANK_ENV = { NOEVIA_FEATURE_RAG_RERANK: 'true', RERANK_BACKEND: 'tei', RERANK_BASE_URL: 'http://rerank.invalid:8080', RERANK_MODEL: 'gte-multilingual-reranker-base' };
 
 /**
- * One synthetic server state. `embedLoaded`: whether the managed embedding service reports its model
+ * One synthetic server state. `rerankModel` (#2114): the reranker's model id, for a long one. `embedLoaded`: whether the managed embedding service reports its model
  * loaded. `savedDecisionUrl`: a decision URL an administrator saved in Settings (or none).
  */
-async function createState({ embedLoaded = true, savedDecisionUrl = null, rerank = false, member = false, rerankSavedOutside = false } = {}) {
+async function createState({ embedLoaded = true, savedDecisionUrl = null, rerank = false, member = false, rerankSavedOutside = false, rerankModel = '' } = {}) {
   // #1665: `rerank` adds the live reranker environment; `member` signs in a member instead of the administrator.
   // #1817: `rerankSavedOutside` saves a llama.cpp reranker choice that the catalogue no longer offers (its address is configured).
-  const env = { ...ENV, ...(rerank || rerankSavedOutside ? RERANK_ENV : {}), ...(rerankSavedOutside ? { RERANK_LLAMACPP_BASE_URL: 'http://rerank-llama.invalid:8091' } : {}) };
+  const env = { ...ENV, ...(rerank || rerankSavedOutside ? RERANK_ENV : {}), ...(rerankModel ? { RERANK_MODEL: rerankModel } : {}), ...(rerankSavedOutside ? { RERANK_LLAMACPP_BASE_URL: 'http://rerank-llama.invalid:8091' } : {}) };
   // Router rows as llama.cpp lists them: one chat model asleep after its idle time (#1747/#1758), one
   // loaded, one unloaded, the embedding model (the router's own status says nothing about the sidecar)
   // and the stale Laya preset (#1796).
