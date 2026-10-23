@@ -91,6 +91,7 @@ export const NL_NL: Catalogue = {
   'sidebar.moveToProject': 'Verplaats naar {name}',
   'sidebar.removeFromProject': 'Uit project verwijderen',
   'sidebar.moveChatFailed': 'De chat is niet verplaatst. Probeer het opnieuw.',
+  'chat.saveFailed': "Deze chat kon niet worden opgeslagen. Hij wordt opnieuw opgeslagen bij je volgende bericht.",
   'chat.interrupted.note': 'Dit antwoord is onderbroken voordat het klaar was.',
   'chat.interrupted.retry': 'Opnieuw proberen',
   'chat.interrupted.continue': 'Doorgaan',

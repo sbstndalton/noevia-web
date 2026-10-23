@@ -91,6 +91,7 @@ export const NB_NO: Catalogue = {
   'sidebar.moveToProject': 'Flytt til {name}',
   'sidebar.removeFromProject': 'Fjern fra prosjekt',
   'sidebar.moveChatFailed': 'Chatten ble ikke flyttet. Prøv igjen.',
+  'chat.saveFailed': "Denne chatten ble ikke lagret. Den lagres på nytt med neste melding.",
   'chat.interrupted.note': 'Svaret ble avbrutt før det var ferdig.',
   'chat.interrupted.retry': 'Prøv igjen',
   'chat.interrupted.continue': 'Fortsett',

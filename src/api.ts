@@ -676,11 +676,28 @@ export const saveVaultMirrorPreferences = (prefs: { enabled: boolean }) => putJs
 
 export type HistorySave = { ok: true; revision: string | null } | { ok: false; conflict: { history: HistoryEntry[]; revision: string } };
 /** Save a transcript. With a base revision, a concurrent save elsewhere returns the current copy to merge. */
+/** The longest wait a busy (503) history save is retried after, whatever Retry-After asks. */
+export const HISTORY_SAVE_RETRY_CAP_MS = 10_000;
+
+/** Retry-After (delta seconds) as a wait in ms, capped; 1 s when absent or not a number. */
+export function historySaveRetryDelay(header: string | null): number {
+  const seconds = Number(header);
+  const ms = header !== null && header.trim() !== '' && Number.isFinite(seconds) && seconds >= 0 ? seconds * 1000 : 1000;
+  return Math.min(ms, HISTORY_SAVE_RETRY_CAP_MS);
+}
+
 export async function saveChatHistory(chatId: string, history: HistoryEntry[], baseRevision?: string | null): Promise<HistorySave> {
-  const res = await apiFetch(`/api/chats/${encodeURIComponent(chatId)}/history`, {
+  const post = () => apiFetch(`/api/chats/${encodeURIComponent(chatId)}/history`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(baseRevision ? { history, baseRevision } : { history }),
   });
+  let res = await post();
+  // The transcript store is busy (lock wait, restart): nothing was written, so one retry after
+  // the wait the server asks for (capped) is safe. A second refusal is thrown to the caller.
+  if (res.status === 503) {
+    await new Promise((resolve) => setTimeout(resolve, historySaveRetryDelay(res.headers.get('Retry-After'))));
+    res = await post();
+  }
   if (res.status === 409) {
     const body = await res.json();
     return { ok: false, conflict: { history: Array.isArray(body.history) ? body.history : [], revision: String(body.revision || '') } };

@@ -91,6 +91,7 @@ export const DE_DE: Catalogue = {
   'sidebar.moveToProject': 'Verschieben nach {name}',
   'sidebar.removeFromProject': 'Aus Projekt entfernen',
   'sidebar.moveChatFailed': 'Der Chat wurde nicht verschoben. Versuche es erneut.',
+  'chat.saveFailed': "Dieser Chat konnte nicht gespeichert werden. Er wird mit deiner nächsten Nachricht erneut gespeichert.",
   'chat.interrupted.note': 'Diese Antwort wurde unterbrochen, bevor sie fertig war.',
   'chat.interrupted.retry': 'Erneut versuchen',
   'chat.interrupted.continue': 'Fortsetzen',

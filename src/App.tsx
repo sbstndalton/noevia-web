@@ -148,6 +148,9 @@ function readInitialNav(): InitialNav {
 export default function App(): JSX.Element {
   const {theme,preference,setTheme,setPreference,appearanceStatus,appearanceError,retryAppearance} = useAppearance();
   const tr = useT();
+  // For callbacks that are created once (persist) but must show text in the current language.
+  const trRef = useRef(tr);
+  trRef.current = tr;
   const [initialNav] = useState(readInitialNav);
   const initialRoute = initialNav.route;
   // Chats created in this tab that nobody has written in yet: they have no address of their own
@@ -833,7 +836,10 @@ export default function App(): JSX.Element {
       }
     };
     savesInFlight.current[chatId] = (savesInFlight.current[chatId] ?? 0) + 1;
-    historySaves.current[chatId] = (historySaves.current[chatId] || Promise.resolve()).then(run).catch(() => undefined)
+    // N5 (#1071): a save that still fails is shown, not swallowed; the next message saves the whole
+    // transcript again, so the banner says that rather than offering a button.
+    historySaves.current[chatId] = (historySaves.current[chatId] || Promise.resolve()).then(run)
+      .catch(() => { setProjectError(trRef.current('chat.saveFailed')); })
       .finally(() => { savesInFlight.current[chatId] = Math.max(0, (savesInFlight.current[chatId] ?? 1) - 1); });
   }, []);
 

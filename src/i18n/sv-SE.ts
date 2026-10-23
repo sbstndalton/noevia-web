@@ -91,6 +91,7 @@ export const SV_SE: Catalogue = {
   'sidebar.moveToProject': 'Flytta till {name}',
   'sidebar.removeFromProject': 'Ta bort från projekt',
   'sidebar.moveChatFailed': 'Chatten flyttades inte. Försök igen.',
+  'chat.saveFailed': "Chatten kunde inte sparas. Den sparas igen med ditt nästa meddelande.",
   'chat.interrupted.note': 'Svaret avbröts innan det var klart.',
   'chat.interrupted.retry': 'Försök igen',
   'chat.interrupted.continue': 'Fortsätt',
