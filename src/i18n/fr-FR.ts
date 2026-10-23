@@ -91,6 +91,7 @@ export const FR_FR: Catalogue = {
   'sidebar.moveToProject': 'Déplacer vers {name}',
   'sidebar.removeFromProject': 'Retirer du projet',
   'sidebar.moveChatFailed': 'La discussion n’a pas été déplacée. Réessayez.',
+  'chat.saveFailed': "Impossible d’enregistrer cette discussion. Elle sera de nouveau enregistrée avec votre prochain message.",
   'chat.interrupted.note': 'Cette réponse a été interrompue avant la fin.',
   'chat.interrupted.retry': 'Réessayer',
   'chat.interrupted.continue': 'Continuer',

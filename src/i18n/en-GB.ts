@@ -96,6 +96,7 @@ export const EN_GB = {
   'sidebar.moveToProject': 'Move to {name}',
   'sidebar.removeFromProject': 'Remove from project',
   'sidebar.moveChatFailed': 'The chat did not move. Try again.',
+  'chat.saveFailed': "Couldn't save this chat. It will be saved again with your next message.",
   'chat.interrupted.note': 'This reply was interrupted before it finished.',
   'chat.interrupted.retry': 'Retry',
   'chat.interrupted.continue': 'Continue',
