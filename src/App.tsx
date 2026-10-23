@@ -52,7 +52,7 @@ import { frameWithLink, keepLinks, MAX_FRAME_LINKS } from './chat-organise';
 import { ChatLinks } from './components/ChatLinks';
 import type { FrameAction, FrameDraft } from './chat-frame';
 import { modeWithAccess, sessionMode, type ChatMode } from './chat-mode';
-import { STOPPED_SENDER, statusDetail } from './chat-labels';
+import { STOPPED_SENDER } from './chat-labels';
 import type {
   ChatMeta,
   HealthState,
@@ -83,6 +83,7 @@ import { EditProjectModal } from './components/EditProjectModal';
 import { Inspector } from './components/Inspector';
 import { StatsBar } from './components/StatsBar';
 import { finishedToolCall, pendingToolCall, resultSlot, settleReply } from './tool-call-state';
+import { clearTransientStatus, statusStep } from './reply-status';
 import { chatHome } from './chat-home';
 import { declinedNames, editBase, modelHistory, rerunBase } from './applied-writes';
 import { foldDeferredMerge, mergeTranscripts, savedCopyExtends, type DeferredMerge } from './transcript-merge';
@@ -1031,7 +1032,7 @@ export default function App(): JSX.Element {
           setMessagesByChat((prev) => ({
             ...prev,
             // Tool approvals and a routing question both die with the request (#793).
-            [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? settleReply(m) : m)),
+            [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? clearTransientStatus(settleReply(m)) : m)),
           }));
         }
       };
@@ -1048,6 +1049,8 @@ export default function App(): JSX.Element {
           setMessagesByChat((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, reasoningMs: ms } : m)) }));
         };
         const tools: ToolCallView[] = [];
+        // noevia#2115: whether a "waiting for the model" or "loading the model" line is on this reply.
+        let waitLineShown = false;
         for await (const ev of streamChat(
           {
             spaceId: projectId || 'free',
@@ -1067,6 +1070,14 @@ export default function App(): JSX.Element {
         )) {
           // After 'done' only the trailing title still matters (#1797); the reply and its chat state are settled.
           if (settled && ev.type !== 'title') continue;
+          // The status line: set by a status event, and ended by the first sign that the model is answering, because
+          // the server sends no status when a wait ends (noevia#2115).
+          const status = statusStep(ev, waitLineShown);
+          waitLineShown = status.transientShown;
+          if (status.patch) {
+            const patch = status.patch;
+            setMessagesByChat((prev) => ({ ...prev, [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, ...patch } : m)) }));
+          }
           if (ev.type === 'meta' && ev.reasoning) {
             window.dispatchEvent(new Event('cowork-reasoning-updated'));
             setMessagesByChat(prev => ({...prev,[chatId]:(prev[chatId] ?? []).map(m => m.id === replyId ? {...m,reasoningMode:ev.reasoning,reasoningEffort:ev.reasoningEffort} : m)}));
@@ -1129,8 +1140,6 @@ export default function App(): JSX.Element {
             setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, skillScope: ev.text || undefined } : m) }));
           } else if (ev.type === 'tools_scope') {
             setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, toolScope: ev.text || undefined, toolScopeBoxes: ev.boxes } : m) }));
-          } else if (ev.type === 'status' && ev.text) {
-            setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => m.id === replyId ? { ...m, processingStatus: ev.text, processingStatusId: typeof ev.id === 'string' ? ev.id : undefined, processingStatusDetail: statusDetail(ev.detail) } : m) }));
           } else if (ev.type === 'warning' && ev.text) {
             setMessagesByChat((prev) => ({
               ...prev,
@@ -1233,7 +1242,8 @@ export default function App(): JSX.Element {
               [chatId]: (prev[chatId] ?? []).map((m) => (m.id === replyId ? { ...m, paused: pause } : m)),
             }));
           } else if (ev.type === 'error') {
-            throw new Error(ev.text || 'Generation failed');
+            // noevia#2115: a refusal from the local model's queue carries a stable code, worded by failureCopy.
+            throw Object.assign(new Error(ev.text || 'Generation failed'), typeof ev.code === 'string' ? { code: ev.code } : {});
           } else if (ev.type === 'tool_result' && ev.name) {
             // Mark the call that produced it as complete rather than adding a
             // second chip for the same call. This also clears any 'pending'

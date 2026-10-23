@@ -62,8 +62,9 @@ export interface Message {
   processingStatus?: string;
   /** The server's stable id for `processingStatus` (#624), so the line can be worded in the interface language. */
   processingStatusId?: string;
-  /** #1449: the model, role and expected wait of a `loadingModel` status (see chat-labels statusLineText). */
-  processingStatusDetail?: { model?: string; role?: string; expectedSeconds?: number };
+  /** #1449: the model, role and expected wait of a `loadingModel` status (see chat-labels statusLineText).
+   *  noevia#2115: the place in the queue and the wait so far of a `waitingForModel` status. */
+  processingStatusDetail?: { model?: string; role?: string; expectedSeconds?: number; position?: number; waitedSeconds?: number };
   stats?: MessageStats;
   /** Set when this message was edited and the exchange re-run from here. */
   edited?: boolean;

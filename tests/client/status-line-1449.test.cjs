@@ -71,7 +71,9 @@ test('#1449 statusDetail keeps only well-formed fields from the server event', (
 
 test('#1449 the web reads the detail the core sends and the chat view passes it on', () => {
   const app = fs.readFileSync(path.join(SRC, 'App.tsx'), 'utf8');
-  assert.match(app, /processingStatusDetail: statusDetail\(ev\.detail\)/);
+  // noevia#2115: the status step lives in reply-status, which reads the detail through statusDetail; App applies its patch.
+  assert.match(fs.readFileSync(path.join(SRC, 'reply-status.ts'), 'utf8'), /processingStatusDetail: statusDetail\(ev\.detail\)/);
+  assert.match(app, /statusStep\(ev, waitLineShown\)/);
   const view = fs.readFileSync(path.join(SRC, 'components/ChatView.tsx'), 'utf8');
   assert.match(view, /statusLineText\(t, m\.processingStatusId, m\.processingStatus, m\.processingStatusDetail\)/);
 });

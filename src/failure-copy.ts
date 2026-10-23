@@ -17,10 +17,23 @@ export function isNetworkFailure(err: unknown): boolean {
   return err instanceof TypeError && /fetch|network|load failed/i.test(err.message);
 }
 
+/** noevia#2115: the local model's queue (the inference gate) refused or ended the wait. Each of these may
+ *  succeed if the person tries again, so the sentence says so, in the interface language. */
+const GATE_FAILURES: Record<string, MessageKey> = {
+  inference_queue_timeout: 'chat.failure.inferenceQueueTimeout',
+  inference_queue_full: 'chat.failure.inferenceQueueFull',
+  engine_switch_stuck: 'chat.failure.engineSwitchStuck',
+  engine_unavailable: 'chat.failure.engineUnavailable',
+  engine_busy: 'chat.failure.engineBusy',
+  gate_busy: 'chat.failure.engineBusy',
+};
+
 /** The sentence to show for a failed request. `say` is the interface translator. `partialShown` is true
  *  when the reply already shows partial text, the only case in which "output was preserved" is true. */
 export function failureCopy(err: unknown, say: Say, partialShown = false): string {
   if (isNetworkFailure(err)) return say('chat.failure.unreachable');
+  const code = (err as { code?: unknown } | null)?.code;
+  if (typeof code === 'string' && Object.prototype.hasOwnProperty.call(GATE_FAILURES, code)) return say(GATE_FAILURES[code]);
   const message = err instanceof Error ? err.message.trim() : '';
   if (!message) return say('chat.failure.unknown');
   if (PARTIAL_CLAIM.test(message) && !partialShown) return say('chat.failure.stopped');

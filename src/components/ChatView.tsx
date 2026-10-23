@@ -824,10 +824,16 @@ export function ChatView({
                     <SourceChips sources={m.sources} files={project.files} onOpen={onOpenSource ? (file) => onOpenSource(project.id, file) : undefined} />
                   )}
                   {streaming && isLast && !m.error ? (
+                    <>
+                    {/* noevia#2115: the meta line below ticks, so it stays silent. This region says once that the turn waits:
+                        its text is the same on every update, so a screen reader announces it when the wait starts, not on
+                        each tick, and nothing takes focus. */}
+                    <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{m.processingStatusId === 'waitingForModel' ? t('chat.statusId.waitingForModel') : ''}</span>
                     <div className="msg-meta" aria-live="off">
                       <LiveTimer startedAt={streamStart.current} />
                       {m.reasoning && !m.content ? ` · ${t('chat.status.thinking')}` : ` · ${statusLineText(t, m.processingStatusId, m.processingStatus, m.processingStatusDetail) || t('chat.status.generating')}`}
                     </div>
+                    </>
                   ) : (
                     !m.error && <MessageMeta stats={m.stats} />
                   )}
