@@ -1302,6 +1302,8 @@ export const ES_ES: Catalogue = {
   'chat.statusId.waitingForModel': "Esperando a que otro chat termine con el modelo local…",
   'chat.statusId.waitingForModelNamed': "Esperando a que otro chat termine para que {model} pueda responder (puesto {position} en la cola)…",
   'chat.statusId.waitingForModelFor': "Esperando a que otro chat termine para que {model} ({role}) pueda responder (puesto {position} en la cola)…",
+  'chat.statusId.waitingForModelNamedNoPlace': "Esperando a que otro chat termine para que {model} pueda responder…",
+  'chat.statusId.waitingForModelForNoPlace': "Esperando a que otro chat termine para que {model} ({role}) pueda responder…",
   'chat.statusId.waitedSoFar': "{seconds} s de espera hasta ahora.",
   'chat.statusId.compactingTools': "Compactando el contexto antes del siguiente paso de herramienta… Tu transcripción completa sigue disponible.",
   'chat.statusId.compactingOlder': "Compactando los mensajes anteriores… Tu transcripción completa sigue disponible.",

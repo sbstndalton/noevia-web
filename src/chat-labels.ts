@@ -81,8 +81,11 @@ export function statusLineText(t: Translator, id: string | undefined, text: stri
   // noevia#2115: the turn waits in the local model's queue while another chat uses it.
   if (id === 'waitingForModel' && detail?.model) {
     const role = detail.role ? routeRoleName(t, detail.role) : '';
-    const position = detail.position ?? 1;
-    const line = role ? t('chat.statusId.waitingForModelFor', { model: detail.model, role, position }) : t('chat.statusId.waitingForModelNamed', { model: detail.model, position });
+    // No place in the queue is worded without one; a place is never made up.
+    const position = detail.position;
+    const line = position === undefined
+      ? (role ? t('chat.statusId.waitingForModelForNoPlace', { model: detail.model, role }) : t('chat.statusId.waitingForModelNamedNoPlace', { model: detail.model }))
+      : (role ? t('chat.statusId.waitingForModelFor', { model: detail.model, role, position }) : t('chat.statusId.waitingForModelNamed', { model: detail.model, position }));
     return detail.waitedSeconds ? `${line} ${t('chat.statusId.waitedSoFar', { seconds: detail.waitedSeconds })}` : line;
   }
   return byKey(t, `chat.statusId.${id}`, text ?? '');

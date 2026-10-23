@@ -1302,6 +1302,8 @@ export const SV_SE: Catalogue = {
   'chat.statusId.waitingForModel': "Väntar på att en annan chatt ska bli klar med den lokala modellen …",
   'chat.statusId.waitingForModelNamed': "Väntar på att en annan chatt ska bli klar innan {model} kan svara (plats {position} i kön) …",
   'chat.statusId.waitingForModelFor': "Väntar på att en annan chatt ska bli klar innan {model} ({role}) kan svara (plats {position} i kön) …",
+  'chat.statusId.waitingForModelNamedNoPlace': "Väntar på att en annan chatt ska bli klar innan {model} kan svara …",
+  'chat.statusId.waitingForModelForNoPlace': "Väntar på att en annan chatt ska bli klar innan {model} ({role}) kan svara …",
   'chat.statusId.waitedSoFar': "Väntat {seconds} s hittills.",
   'chat.statusId.compactingTools': "Komprimerar kontexten inför nästa verktygssteg … Hela din transkription finns kvar.",
   'chat.statusId.compactingOlder': "Komprimerar äldre meddelanden … Hela din transkription finns kvar.",

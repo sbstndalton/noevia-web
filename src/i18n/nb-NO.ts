@@ -1302,6 +1302,8 @@ export const NB_NO: Catalogue = {
   'chat.statusId.waitingForModel': "Venter på at en annen chat blir ferdig med den lokale modellen …",
   'chat.statusId.waitingForModelNamed': "Venter på at en annen chat blir ferdig før {model} kan svare (plass {position} i køen) …",
   'chat.statusId.waitingForModelFor': "Venter på at en annen chat blir ferdig før {model} ({role}) kan svare (plass {position} i køen) …",
+  'chat.statusId.waitingForModelNamedNoPlace': "Venter på at en annen chat blir ferdig før {model} kan svare …",
+  'chat.statusId.waitingForModelForNoPlace': "Venter på at en annen chat blir ferdig før {model} ({role}) kan svare …",
   'chat.statusId.waitedSoFar': "Ventet {seconds} s så langt.",
   'chat.statusId.compactingTools': "Komprimerer konteksten før neste verktøytrinn … Hele transkripsjonen din er fortsatt tilgjengelig.",
   'chat.statusId.compactingOlder': "Komprimerer eldre meldinger … Hele transkripsjonen din er fortsatt tilgjengelig.",

@@ -48,8 +48,11 @@ function front() {
         return res.end();
       }
       ev({ type: 'status', id: 'waitingForModel', text: 'Server English: waiting.', detail: { model: MODEL, role: 'smart', position: 1, waitedSeconds: 4 } });
-      const timer = setTimeout(() => { ev({ type: 'delta', text: 'Synthetic answer after the wait.' }); ev({ type: 'done', model: MODEL }); res.end(); }, 4000);
-      res.on('close', () => clearTimeout(timer));
+      // The queue grants the model and the answer starts, but the reply is not over yet: done comes later, as it does for a
+      // real answer. The server sends no status when the wait ends.
+      const timer = setTimeout(() => { ev({ type: 'delta', text: 'Synthetic answer after the wait.' }); }, 4000);
+      const finish = setTimeout(() => { ev({ type: 'done', model: MODEL }); res.end(); }, 6500);
+      res.on('close', () => { clearTimeout(timer); clearTimeout(finish); });
       return;
     }
     const up = http.request({ host: '127.0.0.1', port: INNER, path: req.url, method: req.method, headers: req.headers }, (r) => { res.writeHead(r.statusCode, r.headers); r.pipe(res); });
@@ -89,7 +92,11 @@ async function chatPage(browser) {
         await page.getByText(`Waiting for another chat to finish before ${MODEL} (Smart) can answer (place 1 in the queue)… Waited 4 s so far.`).waitFor({ timeout: 3500 });
         assert.equal(await page.getByText('Server English: waiting.').count(), 0, 'not the server\'s English');
         await page.locator('.msg[data-role=assistant] .bubble').filter({ hasText: 'Synthetic answer after the wait.' }).waitFor({ timeout: 10000 });
-        assert.equal(await page.getByText(/Waiting for another chat/).count(), 0, 'the waiting line goes once the answer arrives');
+        // Still streaming here (done is about 2.5 s away): the wait line is gone while the answer text is on screen.
+        assert.equal(await page.getByText(/Waiting for another chat/).count(), 0, 'the waiting line goes once the answer starts, before the reply is done');
+        assert.equal(await page.locator('.msg-meta').filter({ hasText: 'generating…' }).count(), 1, 'the line reads as generating while the answer streams');
+        await page.locator('.msg-meta').filter({ hasText: 'generating…' }).waitFor({ state: 'detached', timeout: 10000 });
+        assert.equal(await page.getByText(/Waiting for another chat/).count(), 0, 'and it stays gone after done');
       } finally { await page.close(); }
     });
     await check('a turn the queue refused reads as a plain sentence that says to try again', async () => {

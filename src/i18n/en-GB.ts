@@ -1313,6 +1313,8 @@ export const EN_GB = {
   'chat.statusId.waitingForModel': "Waiting for another chat to finish with the local model…",
   'chat.statusId.waitingForModelNamed': "Waiting for another chat to finish before {model} can answer (place {position} in the queue)…",
   'chat.statusId.waitingForModelFor': "Waiting for another chat to finish before {model} ({role}) can answer (place {position} in the queue)…",
+  'chat.statusId.waitingForModelNamedNoPlace': "Waiting for another chat to finish before {model} can answer…",
+  'chat.statusId.waitingForModelForNoPlace': "Waiting for another chat to finish before {model} ({role}) can answer…",
   'chat.statusId.waitedSoFar': "Waited {seconds} s so far.",
   'chat.statusId.compactingTools': "Compacting context before the next tool step… Your full transcript stays available.",
   'chat.statusId.compactingOlder': "Compacting older messages… Your full transcript stays available.",

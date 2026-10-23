@@ -1302,6 +1302,8 @@ export const DE_DE: Catalogue = {
   'chat.statusId.waitingForModel': "Warte, bis ein anderer Chat das lokale Modell freigibt …",
   'chat.statusId.waitingForModelNamed': "Warte, bis ein anderer Chat fertig ist, bevor {model} antworten kann (Platz {position} in der Warteschlange) …",
   'chat.statusId.waitingForModelFor': "Warte, bis ein anderer Chat fertig ist, bevor {model} ({role}) antworten kann (Platz {position} in der Warteschlange) …",
+  'chat.statusId.waitingForModelNamedNoPlace': "Warte, bis ein anderer Chat fertig ist, bevor {model} antworten kann …",
+  'chat.statusId.waitingForModelForNoPlace': "Warte, bis ein anderer Chat fertig ist, bevor {model} ({role}) antworten kann …",
   'chat.statusId.waitedSoFar': "Bisher {seconds} s gewartet.",
   'chat.statusId.compactingTools': "Kontext wird vor dem nächsten Werkzeugschritt komprimiert … Dein vollständiger Verlauf bleibt erhalten.",
   'chat.statusId.compactingOlder': "Ältere Nachrichten werden komprimiert … Dein vollständiger Verlauf bleibt erhalten.",

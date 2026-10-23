@@ -1302,6 +1302,8 @@ export const NL_NL: Catalogue = {
   'chat.statusId.waitingForModel': "Wachten tot een andere chat klaar is met het lokale model…",
   'chat.statusId.waitingForModelNamed': "Wachten tot een andere chat klaar is voordat {model} kan antwoorden (plaats {position} in de wachtrij)…",
   'chat.statusId.waitingForModelFor': "Wachten tot een andere chat klaar is voordat {model} ({role}) kan antwoorden (plaats {position} in de wachtrij)…",
+  'chat.statusId.waitingForModelNamedNoPlace': "Wachten tot een andere chat klaar is voordat {model} kan antwoorden…",
+  'chat.statusId.waitingForModelForNoPlace': "Wachten tot een andere chat klaar is voordat {model} ({role}) kan antwoorden…",
   'chat.statusId.waitedSoFar': "Tot nu toe {seconds} s gewacht.",
   'chat.statusId.compactingTools': "Context comprimeren vóór de volgende toolstap… Je volledige transcript blijft beschikbaar.",
   'chat.statusId.compactingOlder': "Oudere berichten comprimeren… Je volledige transcript blijft beschikbaar.",
