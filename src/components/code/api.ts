@@ -62,7 +62,7 @@ export interface PipelineView {
 }
 export interface PipelineStageMove { from: PipelineLifecycle | null; to: PipelineLifecycle; revision: number; reason?: string; reportHash?: string; at: number }
 /** What the server lists for a journal it cannot read (oversized or damaged): an id and nothing else. */
-export interface UnreadableTask { id: string; status: 'unreadable'; approval?: undefined }
+export interface UnreadableTask { status: 'unreadable'; id: string; approval?: undefined }
 export const isUnreadableTask = (task: { status: string }): task is UnreadableTask => task.status === 'unreadable';
 export interface CodeTask {
   id: string; status: 'queued' | 'running' | 'waiting_approval' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
