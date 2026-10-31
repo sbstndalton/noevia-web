@@ -35,6 +35,7 @@ async function mount(t, section, routes) {
   const calls = [];
   w.fetch = async (input, init = {}) => {
     const key = `${init.method || 'GET'} ${String(input)}`;
+    if (String(input) === '/api/account/preferences') return new w.Response('{}', { headers: { 'content-type': 'application/json' } });
     calls.push(key);
     const next = routes[key]?.shift();
     if (!next) throw Error('unexpected synthetic request ' + key);
@@ -72,5 +73,5 @@ test('#2267 the idle-unload section keeps a save error that a following load mus
   save.click();
   await m.fx.settle(40);
   assert.deepEqual(m.calls, ['GET /api/models/idle-unload', 'PUT /api/models/idle-unload', 'GET /api/models/idle-unload']);
-  assert.match(m.alert() ?? '', /could not be updated/, 'Saved, but the settings file failed: still shown after the reload');
+  assert.match(m.alert() ?? '', /mm\.idle\.savedFailed/, 'Saved, but the settings file failed: still shown after the reload');
 });
