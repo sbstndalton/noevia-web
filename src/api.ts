@@ -244,30 +244,40 @@ function postSourceUpload(id: string, body: SourceUploadBody, progress: (value: 
 }
 
 /** #1451: a busy answer (429) is retried a bounded number of times, with a stage line saying so. Any
- *  other failure, or a busy answer after the last retry, is thrown as it was. */
-async function postSourceUploadWithBusyRetry(id: string, body: SourceUploadBody, progress: (value: UploadProgress) => void): Promise<{ poll: string }> {
-  for (let attempt = 0; ; attempt++) {
+ *  other failure, or a busy answer after the last retry, is thrown as it was. `used` counts the retries
+ *  already spent on this file (a job that ended busy spends from the same budget, #2245). */
+async function postSourceUploadWithBusyRetry(id: string, body: SourceUploadBody, progress: (value: UploadProgress) => void, used: { n: number }): Promise<{ poll: string }> {
+  for (;;) {
     try { return await postSourceUpload(id, body, progress); }
     catch (err) {
-      if ((err as { status?: number }).status !== 429 || attempt >= BUSY_RETRY_DELAYS_MS.length) throw err;
-      progress({ stage: 'Waiting for another file to finish processing', stageKey: 'busy' });
-      await new Promise<void>(resolve => setTimeout(resolve, BUSY_RETRY_DELAYS_MS[attempt]));
+      if ((err as { status?: number }).status !== 429 || used.n >= BUSY_RETRY_DELAYS_MS.length) throw err;
+      await waitForBusy(progress, used);
     }
   }
 }
+async function waitForBusy(progress: (value: UploadProgress) => void, used: { n: number }) {
+  progress({ stage: 'Waiting for another file to finish processing', stageKey: 'busy' });
+  await new Promise<void>(resolve => setTimeout(resolve, BUSY_RETRY_DELAYS_MS[used.n++]));
+}
 
 export async function uploadProjectFile(id: string, body: SourceUploadBody, progress: (value: UploadProgress) => void = () => {}) {
-  const response = await postSourceUploadWithBusyRetry(id, body, progress);
-  progress({ stage: 'Upload received · waiting for processing', stageKey: 'received' });
+  // #2245: the job itself can end 429 ("another upload or sync of this project is still running; try again
+  // shortly"): it did nothing, so the file is sent again, within the same bounded budget as a busy answer.
+  const used = { n: 0 };
   for (;;) {
-    const job = await getJson<{ done: boolean; stage?: string; status?: number; body?: { error?: string; code?: string; name: string; path: string; bytes: number; unchanged?: boolean; attachment?: { reduction?: { note: string }; assetId?: string; state?: string; group?: string; reason?: string; reasonId?: string; reasonParams?: Record<string, string | number> }; document?: { state?: string; error?: string; errorId?: string } } }>(response.poll);
-    if (job.done) {
-      if ((job.status || 500) >= 400) throw failureWithCode(job.body?.error || 'Source processing failed', job.body?.code);
-      invalidateCached(WORKSPACE_KEY);
-      progress({ stage: 'Saved', stageKey: 'saved', percent: 100 }); return job.body!;
+    const response = await postSourceUploadWithBusyRetry(id, body, progress, used);
+    progress({ stage: 'Upload received · waiting for processing', stageKey: 'received' });
+    for (;;) {
+      const job = await getJson<{ done: boolean; stage?: string; status?: number; body?: { error?: string; code?: string; name: string; path: string; bytes: number; unchanged?: boolean; attachment?: { reduction?: { note: string }; assetId?: string; state?: string; group?: string; reason?: string; reasonId?: string; reasonParams?: Record<string, string | number> }; document?: { state?: string; error?: string; errorId?: string } } }>(response.poll);
+      if (job.done) {
+        if (job.status === 429 && used.n < BUSY_RETRY_DELAYS_MS.length) { await waitForBusy(progress, used); break; }
+        if ((job.status || 500) >= 400) throw failureWithCode(job.body?.error || 'Source processing failed', job.body?.code);
+        invalidateCached(WORKSPACE_KEY);
+        progress({ stage: 'Saved', stageKey: 'saved', percent: 100 }); return job.body!;
+      }
+      progress(job.stage ? { stage: job.stage } : { stage: 'Queued for processing', stageKey: 'queued' });
+      await new Promise(resolve => setTimeout(resolve, 750));
     }
-    progress(job.stage ? { stage: job.stage } : { stage: 'Queued for processing', stageKey: 'queued' });
-    await new Promise(resolve => setTimeout(resolve, 750));
   }
 }
 

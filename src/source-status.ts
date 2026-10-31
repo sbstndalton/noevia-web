@@ -145,7 +145,7 @@ export function sourceStatus(file: ProjectFile, t?: Translate): string {
   if (!d) return '';
   // #2237: the file is fine and the service that reads it is not there yet: one state, in plain words.
   // A record that still holds earlier text says so first: the queued read is for the newer upload.
-  if (d.state === 'queued') return `${d.stale ? 'Using previous text · ' : ''}${t ? t('projects.view.reason.extractionWaiting') : WAITING_EN}`;
+  if (d.state === 'queued') return `${d.stale ? `${t ? t('projects.view.usingPreviousText') : 'Using previous text'} · ` : ''}${t ? t('projects.view.reason.extractionWaiting') : WAITING_EN}`;
   const pages = d.pages ? ` · ${d.pages} ${d.pages === 1 ? "page" : "pages"}` : '';
   const incomplete = (d.pageStatus || []).filter(p => !['native', 'blank', 'ocr'].includes(p.status));
   // #700: a 'degraded' page had no text from layout analysis, so the PDF's own text layer was used.

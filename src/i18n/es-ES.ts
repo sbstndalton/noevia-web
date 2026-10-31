@@ -1405,6 +1405,7 @@ export const ES_ES: Catalogue = {
   'projects.view.reason.noOcrText': "El OCR no recuperó texto legible; prueba con un escaneo más nítido o un original desbloqueado.",
   'projects.view.reason.noNativeText': "No hay texto nativo legible. El contenido escaneado o basado en imágenes necesita OCR; el OCR no está instalado.",
   'projects.view.reason.extractionWaiting': "Esperando a que vuelva la lectura de documentos. El archivo está guardado y se leerá automáticamente.",
+  'projects.view.usingPreviousText': "Usando el texto anterior",
   'projects.view.reason.ocrTooLarge': "Este PDF supera lo que acepta el servicio de OCR (25 MB), así que sus páginas con imágenes no se enviaron a OCR; se leyó su propia capa de texto.",
   'projects.view.partiallyExtracted': "Extraído parcialmente",
   'projects.view.reason.nativeFallback': "páginas {pages}: el análisis de diseño no encontró texto, así que se usó la capa de texto propia del PDF; el orden de lectura y las tablas pueden ser imprecisos ahí",

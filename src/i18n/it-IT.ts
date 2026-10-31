@@ -1405,6 +1405,7 @@ export const IT_IT: Catalogue = {
   'projects.view.reason.noOcrText': "L’OCR non ha recuperato testo leggibile; prova con una scansione più nitida o un originale sbloccato.",
   'projects.view.reason.noNativeText': "Nessun testo nativo leggibile. I contenuti scansionati o basati su immagini richiedono l’OCR; l’OCR non è installato.",
   'projects.view.reason.extractionWaiting': "In attesa che la lettura dei documenti torni disponibile. Il file è salvato e verrà letto automaticamente.",
+  'projects.view.usingPreviousText': "Testo precedente in uso",
   'projects.view.reason.ocrTooLarge': "Questo PDF supera quanto accetta il servizio OCR (25 MB), quindi le sue pagine con immagini non sono state inviate all’OCR; è stato letto il loro livello di testo.",
   'projects.view.partiallyExtracted': "Estratto parzialmente",
   'projects.view.reason.nativeFallback': "pagine {pages}: l’analisi del layout non ha trovato testo, quindi è stato usato il livello di testo del PDF; ordine di lettura e tabelle potrebbero essere imprecisi",
