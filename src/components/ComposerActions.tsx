@@ -6,7 +6,7 @@ import { fileToBase64, uploadLimit } from '../sources';
 import { uploadTakenNames, uploadUnderFreeName } from '../project-files';
 import { appLocale } from '../user-preferences';
 import { ShellIcon } from './ShellIcon';
-import { uploadFailureText, uploadStageText, uploadUnreadableReason } from '../source-status';
+import { uploadFailureText, uploadStageText, uploadUnreadableReason, uploadWaitingReason } from '../source-status';
 import { formatPercent } from '../number-format';
 import { useT, type Translate } from '../i18n';
 import { toolsModeOf } from '../tools-mode';
@@ -53,6 +53,9 @@ export async function uploadAttachments(sink: AttachmentSink, files: File[], t: 
       // The chip names the file as it was stored, which is what the model is given: a name the project
       // already had was saved as a numbered copy ('report (2).pdf'), not under the person's own name.
       saved.push(name);
+      // #2237: saved, but the reading service is away: the model cannot see its text yet, and the person is told.
+      const waiting = uploadWaitingReason(result, t);
+      if (waiting) notices.push(`${file.name}: ${waiting}`);
       if (name !== file.name) notices.push(t('composer.upload.renamedCopy', { file: file.name, name }));
       if (result.attachment?.reduction?.note) notices.push(`${file.name}: ${result.attachment.reduction.note}`);
       if (result.attachment?.assetId) onImageAttached?.(result.attachment.assetId);

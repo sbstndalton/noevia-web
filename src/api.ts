@@ -834,10 +834,12 @@ export async function* streamChat(
   }
   if (!res.ok || !res.body) {
     const detail = await res.text().catch(() => '');
-    let message = '';
-    try { const error = JSON.parse(detail); message = typeof error.error === 'string' ? error.error : ''; } catch { /* Proxy HTML is not a useful error. */ }
+    let message = '', code: string | undefined;
+    try { const error = JSON.parse(detail); message = typeof error.error === 'string' ? error.error : ''; if (typeof error.code === 'string') code = error.code; } catch { /* Proxy HTML is not a useful error. */ }
     // Still refused after the one retry: say what is going on instead of a bare failure (the reason is the server's own text).
     if (retryableBusy) throw new Error(`${t('chat.failure.stillFinishing')}${message ? ` (${message})` : ''}`);
+    // A coded refusal keeps its code (#2232: `diaryUnavailable`); the Diary exchange is a write, so a timeout is not "nothing saved".
+    if (code) throw Object.assign(new Error(message), { code, write: !!body.files });
     throw new Error(message || (res.status === 524
       ? (body.spaceId === 'diary' ? 'The connection timed out. Your diary entry may still be saving; check the saved diary before sending again.' : 'The model connection timed out. Try compacting this chat or check the backend.')
       : `Chat request failed (${res.status}). Please check the connection.`));

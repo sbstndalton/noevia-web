@@ -26,6 +26,7 @@ export const PT_BR_DIARY: DiaryCatalogue = {
   'diary.errors.contextFailed': "Não foi possível ler o seu diário. Nada foi salvo, então você pode reenviar.",
   'diary.errors.diaryUnavailable': "Não foi possível acessar o companheiro de diário. Nada foi salvo, então você pode reenviar.",
   'diary.errors.diaryDown': "O diário está indisponível no momento. Tente novamente em instantes.",
+  'diary.errors.diaryDownWrite': "O diário está indisponível no momento. Sua última alteração pode não ter sido salva; confira o diário salvo antes de tentar novamente.",
   'diary.uncertain.banner.one': "Uma troca das {time} em {day} tem um resultado de salvamento incerto. Verifique a entrada salva antes de reenviar.",
   'diary.uncertain.banner.other': "{count} trocas em {day} a partir de {time} têm um resultado de salvamento incerto. Verifique a entrada salva antes de reenviar.",
   'diary.uncertain.show': "Mostrar",

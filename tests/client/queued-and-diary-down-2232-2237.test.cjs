@@ -44,11 +44,35 @@ test('the Diary being down is worded as down for now, and a send keeps its "noth
   assert.equal(diaryErrorText(t, new Error('Internal error'), 'en-GB'), 'Internal error');
 });
 
+test('a write that timed out says the change may not have been saved, never "try again" or "nothing was saved"', () => {
+  const write = Object.assign(new Error('x'), { code: 'diaryUnavailable', write: true });
+  assert.equal(diaryErrorText(t, write, 'en-GB'), 'diary.errors.diaryDownWrite|{}');
+  const { EN_GB_DIARY } = load('i18n/diary/en-GB');
+  assert.match(EN_GB_DIARY['diary.errors.diaryDownWrite'], /may not have been saved/);
+  assert.doesNotMatch(EN_GB_DIARY['diary.errors.diaryDownWrite'], /Nothing was saved|Try again shortly/);
+  assert.doesNotMatch(EN_GB_DIARY['diary.errors.diaryDown'], /saved/i, 'a read or listing has no save wording');
+  // The request error marks a PUT and a non-read POST as writes, and a listing or file read as reads.
+  const src = fs.readFileSync(path.join(SRC, 'diary-workspace.ts'), 'utf8');
+  assert.match(src, /method === 'PUT' \|\| \(method === 'POST' && path !== 'file'\)/);
+});
+
+test('streamChat keeps the code of a refused Diary exchange so it is worded as a write', () => {
+  const api = fs.readFileSync(path.join(SRC, 'api.ts'), 'utf8');
+  assert.match(api, /Object\.assign\(new Error\(message\), \{ code, write: !!body\.files \}\)/);
+});
+
+test('a queued record that still has earlier text says so first; the composer tells the person', () => {
+  const stale = { name: 'a.pdf', content: 'earlier', document: { ...queued.document, stale: true } };
+  assert.match(sourceStatus(stale), /^Using previous text · Waiting for document reading/);
+  assert.match(fs.readFileSync(path.join(SRC, 'components/ComposerActions.tsx'), 'utf8'), /uploadWaitingReason\(result, t\)[\s\S]{0,80}notices\.push/);
+  assert.match(fs.readFileSync(path.join(SRC, 'components/data/RetentionSetting.tsx'), 'utf8'), /if \(!r\.ok\) \{ notifyWorkspaceChanged\(\)/);
+});
+
 test('the new sentences exist in every catalogue', () => {
   const { catalogue, LOCALES } = require('./i18n-catalogue.cjs');
   for (const locale of LOCALES) {
     const c = catalogue(locale === 'en-US' ? 'en-GB' : locale);
-    assert.ok(c['diary.errors.diaryDown'] && c['projects.view.reason.extractionWaiting'], locale);
+    assert.ok(c['diary.errors.diaryDown'] && c['diary.errors.diaryDownWrite'] && c['projects.view.reason.extractionWaiting'], locale);
   }
 });
 
@@ -56,4 +80,28 @@ test('GET helpers keep the server code so the Diary page can word it', () => {
   const api = fs.readFileSync(path.join(SRC, 'api.ts'), 'utf8');
   const getJson = api.slice(api.indexOf('async function getJson'), api.indexOf('async function getJson') + 400);
   assert.match(getJson, /failureFromResponse\(res/);
+});
+
+// Runs the real uploadAttachments (composer) with fakes for its imports, as attachment-chip-stored-name does.
+test('a queued document attached from the composer gets a waiting notice, and a ready one none (#2237)', async () => {
+  const code = ts.transpileModule(fs.readFileSync(path.join(SRC, 'components/ComposerActions.tsx'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+  const real = load('source-status');
+  const fakes = {
+    react: { useEffect() {}, useId() {}, useRef() {}, useState() {} }, 'react/jsx-runtime': { jsx() {}, jsxs() {}, Fragment: {} },
+    '../api': { fetchToolboxes() {}, saveProjectConfig() {}, uploadProjectFile: async (_id, body) => (body.name.startsWith('q') ? { document: queued.document, attachment: { state: 'queued', group: 'Documents' } } : { document: { state: 'ready' }, attachment: { state: 'ready', group: 'Documents' } }) },
+    '../sources': { fileToBase64: async () => 'AA==', uploadLimit: () => 1e9 }, '../project-files': load('project-files'),
+    '../user-preferences': { appLocale: () => undefined }, './ShellIcon': { ShellIcon() {} }, '../source-status': real,
+    '../number-format': { formatPercent: () => '' }, '../i18n': { useT: () => t }, '../toolbox-copy': { toolboxCopy() {} },
+    '../tools-mode': { toolsModeOf: () => 'manual' }, './SegmentedControl': { SegmentedControl() {} },
+  };
+  const exports_ = {};
+  vm.runInNewContext(code, { exports: exports_, require: (id) => { if (!(id in fakes)) throw Error(`unexpected require ${id}`); return fakes[id]; }, JSON, Date, Object, Error, Promise, Math });
+  const run = async (name) => {
+    const statuses = [];
+    const tt = Object.assign((key, params) => (params ? `${key} ${JSON.stringify(params)}` : key), { plural: (key, n) => `${key}:${n}`, locale: 'en-GB' });
+    await exports_.uploadAttachments({ project: { id: 'p1', name: 'P', files: [] }, disabled: false, chatOnly: true, onChanged: async () => {}, onBusy: () => {}, onStatus: (s) => statuses.push(s), onSaved: () => {} }, [{ name, size: 3 }], tt);
+    return statuses.join('\n');
+  };
+  assert.match(await run('q.pdf'), /projects\.view\.reason\.extractionWaiting/);
+  assert.doesNotMatch(await run('ok.pdf'), /extractionWaiting/);
 });

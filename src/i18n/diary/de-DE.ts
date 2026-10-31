@@ -26,6 +26,7 @@ export const DE_DE_DIARY: DiaryCatalogue = {
   'diary.errors.contextFailed': "Dein Tagebuch konnte nicht gelesen werden. Es wurde nichts gespeichert, du kannst also erneut senden.",
   'diary.errors.diaryUnavailable': "Der Tagebuchbegleiter war nicht erreichbar. Es wurde nichts gespeichert, du kannst also erneut senden.",
   'diary.errors.diaryDown': "Das Tagebuch ist gerade nicht verfügbar. Versuche es gleich noch einmal.",
+  'diary.errors.diaryDownWrite': "Das Tagebuch ist gerade nicht verfügbar. Deine letzte Änderung wurde möglicherweise nicht gespeichert; prüfe das gespeicherte Tagebuch, bevor du es erneut versuchst.",
   'diary.uncertain.banner.one': "Ein Austausch von {time} am {day} hat ein unsicheres Speicherergebnis. Überprüfe den gespeicherten Eintrag, bevor du erneut sendest.",
   'diary.uncertain.banner.other': "{count} Austausche am {day} ab {time} haben ein unsicheres Speicherergebnis. Überprüfe den gespeicherten Eintrag, bevor du erneut sendest.",
   'diary.uncertain.show': "Anzeigen",

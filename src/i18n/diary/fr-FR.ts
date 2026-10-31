@@ -26,6 +26,7 @@ export const FR_FR_DIARY: DiaryCatalogue = {
   'diary.errors.contextFailed': "Votre journal n’a pas pu être lu. Rien n’a été enregistré, vous pouvez donc renvoyer.",
   'diary.errors.diaryUnavailable': "Le compagnon de journal est injoignable. Rien n’a été enregistré, vous pouvez donc renvoyer.",
   'diary.errors.diaryDown': "Le journal est indisponible pour le moment. Réessayez dans un instant.",
+  'diary.errors.diaryDownWrite': "Le journal est indisponible pour le moment. Votre dernière modification n’a peut-être pas été enregistrée ; vérifiez le journal enregistré avant de réessayer.",
   'diary.uncertain.banner.one': "Un échange de {time} le {day} a un résultat d’enregistrement incertain. Vérifiez l’entrée enregistrée avant de renvoyer.",
   'diary.uncertain.banner.other': "{count} échanges le {day} à partir de {time} ont un résultat d’enregistrement incertain. Vérifiez l’entrée enregistrée avant de renvoyer.",
   'diary.uncertain.show': "Afficher",

@@ -51,7 +51,8 @@ export function diaryErrorText(t: Translator, error: unknown, locale: string | u
   if (failure?.code === 'contextFailed') return t('diary.errors.contextFailed');
   // A send the Diary never received says nothing was saved; a read or a save the Diary could not take (#2232)
   // only says it is down for now.
-  if (failure?.code === 'diaryUnavailable') return t(failure.saved === false ? 'diary.errors.diaryUnavailable' : 'diary.errors.diaryDown');
+  // A change that timed out may have been committed: it must not say "try again" as if nothing happened.
+  if (failure?.code === 'diaryUnavailable') return t(failure.saved === false ? 'diary.errors.diaryUnavailable' : (failure as { write?: unknown }).write === true ? 'diary.errors.diaryDownWrite' : 'diary.errors.diaryDown');
   const limit = (error as { limit?: DiaryLimit } | null)?.limit;
   if (limit && typeof limit.code === 'string' && limit.params) {
     const p = limit.params, bytes = (n: number) => formatBinaryBytes(n, locale);
