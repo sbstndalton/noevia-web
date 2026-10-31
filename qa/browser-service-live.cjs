@@ -31,10 +31,12 @@
 // Never a real network target.
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path'), http = require('node:http'), crypto = require('node:crypto');
-const web = path.resolve(__dirname, '..');
+// noevia-core's server/ directory: QA_CORE_SERVER, else the CI workspace's server/ beside qa/, else a sibling
+// noevia-core checkout (as models-state-fixture.cjs).
+const CORE = path.resolve(process.env.QA_CORE_SERVER || [path.join(__dirname, '../server'), path.join(__dirname, '../../noevia-core/server')].find((d) => fs.existsSync(path.join(d, 'browser-service.cjs'))) || path.join(__dirname, '../server'));
 
-const { createBrowserService } = require(path.join(web, 'server/browser-service.cjs'));
-const { createBrowserRoutes } = require(path.join(web, 'server/routes/browser.cjs'));
+const { createBrowserService } = require(path.join(CORE, 'browser-service.cjs'));
+const { createBrowserRoutes } = require(path.join(CORE, 'routes/browser.cjs'));
 
 // ── a local fixture "site" the browser task is allowed to reach ──────────────────────────────
 function fixtureSite() {
@@ -76,9 +78,8 @@ async function waitFor(fn, { tries = 100, delay = 100 } = {}) {
   const projects = new Map([['proj-1', { id: 'proj-1', name: 'Browser QA project' }]]);
   const workspaceDir = path.join(dir, 'workspace');
   fs.mkdirSync(workspaceDir, { recursive: true });
-  // The service keys its per-tenant job store on workspace object identity (a WeakMap): the
-  // caller must hand back the *same* object every time, exactly as index.cjs's currentWorkspace()
-  // does, or every call looks like a fresh tenant whose prior job was abandoned mid-run.
+  // The service keys its per-tenant job store on the workspace directory, so a new object over the same one
+  // is the same tenant (#2261); the same object is handed back every time here all the same.
   const workspaceObj = { dir: workspaceDir };
   const workspace = () => workspaceObj;
   const getProject = (id) => projects.get(id) || null;
@@ -116,6 +117,10 @@ async function waitFor(fn, { tries = 100, delay = 100 } = {}) {
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const origin = `http://127.0.0.1:${server.address().port}`;
 
+  // Core's routes answer only the writes (the reads are the Rust front's since #2257): a task and the capabilities
+  // are read through the service itself, as the front's facts and task reads do.
+  const proj = projects.get('proj-1');
+  const readTask = (taskId) => { try { return { status: 200, body: service.get(workspaceObj, proj, taskId) }; } catch (e) { return { status: e.status || 500, body: { error: e.message } }; } };
   const call = (who, p, { method = 'GET', body } = {}) => fetch(origin + p, {
     method, headers: { 'content-type': 'application/json', 'x-qa-user': who }, body: body === undefined ? undefined : JSON.stringify(body),
   }).then(async (r) => ({ status: r.status, body: await r.json().catch(() => null) }));
@@ -142,15 +147,17 @@ async function waitFor(fn, { tries = 100, delay = 100 } = {}) {
     const serverOff = http.createServer((req, res) => { const url = new URL(req.url, 'http://x'); routesOff(req, res, { path: url.pathname, authn: { user: USERS.admin } }).then((h) => { if (!h) { res.writeHead(404); res.end(); } }); });
     await new Promise((r) => serverOff.listen(0, '127.0.0.1', r));
     const offOrigin = `http://127.0.0.1:${serverOff.address().port}`;
-    const offResp = await fetch(offOrigin + browserBase);
+    const offResp = await fetch(offOrigin + browserBase, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
     check('browser mode is 404 when features.browserExecutor is off', () => assert.equal(offResp.status, 404));
     serverOff.close();
 
     // ── capabilities probe ───────────────────────────────────────────────────────────────────
-    const probe = await call('admin', browserBase);
-    check('GET /browser reports capabilities', () => { assert.equal(probe.status, 200); assert.ok(Array.isArray(probe.body.capabilities)); });
-    const memberProbe = await call('member', browserBase);
-    check('a non-admin cannot even see the capabilities probe', () => assert.equal(memberProbe.status, 403));
+    const capabilities = service.facts(workspaceObj).capabilities;
+    check('the service reports its capabilities (the front serves them on GET /browser)', () => assert.ok(Array.isArray(capabilities) && capabilities.length > 0));
+    const memberStart = await call('member', browserBase, { method: 'POST', body: { domains: ['shop.example.test'] } });
+    check('a non-admin cannot start a task', () => assert.equal(memberStart.status, 403));
+    const readOnPost = await call('admin', browserBase);
+    check('core no longer answers a GET (the front does): 405', () => assert.equal(readOnPost.status, 405));
 
     // ── starting a task needs at least one domain ───────────────────────────────────────────
     const noDomains = await call('admin', browserBase, { method: 'POST', body: { domains: [] } });
@@ -184,7 +191,7 @@ async function waitFor(fn, { tries = 100, delay = 100 } = {}) {
       const clickPromise = call('admin', actBase, { method: 'POST', body: { type: 'click', selector: '#buy' } });
       clickPromise.then((r) => { if (process.env.QA_DEBUG) console.error('DEBUG click settled', JSON.stringify(r)); });
       const pendingTask = await waitFor(async () => {
-        const g = await call('admin', `${browserBase}/${taskId}`);
+        const g = readTask(taskId);
         if (process.env.QA_DEBUG) console.error('DEBUG poll1', JSON.stringify(g));
         return g.body?.status === 'waiting_approval' && g.body.approval ? g.body : null;
       });
@@ -207,7 +214,7 @@ async function waitFor(fn, { tries = 100, delay = 100 } = {}) {
       // ── ask again, this time approve ────────────────────────────────────────────────────────
       const clickPromise2 = call('admin', actBase, { method: 'POST', body: { type: 'click', selector: '#buy' } });
       const pendingTask2 = await waitFor(async () => {
-        const g = await call('admin', `${browserBase}/${taskId}`);
+        const g = readTask(taskId);
         return g.body?.status === 'waiting_approval' && g.body.approval ? g.body : null;
       });
       const approve = await call('admin', `${browserBase}/${taskId}/approve`, { method: 'POST', body: { decision: 'approve', approvalId: pendingTask2.approval.id } });
@@ -217,8 +224,8 @@ async function waitFor(fn, { tries = 100, delay = 100 } = {}) {
       check('the job journal records approval.decided: approve', () => assert.ok(journalLines().some((e) => e.type === 'approval.decided' && e.data?.decision === 'approve')));
 
       // ── a second, non-admin user cannot see or act on this admin's job ──────────────────────
-      const memberGet = await call('member', `${browserBase}/${taskId}`);
-      check('a second, non-admin user cannot see the job', () => assert.equal(memberGet.status, 403));
+      const memberFinish = await call('member', `${browserBase}/${taskId}/finish`, { method: 'POST', body: { result: 'x' } });
+      check('a second, non-admin user cannot finish the job', () => assert.equal(memberFinish.status, 403));
       const memberAct = await call('member', actBase, { method: 'POST', body: { type: 'extract', selector: '#note' } });
       check('...and cannot act on it either', () => assert.equal(memberAct.status, 403));
       const memberCancel = await call('member', `${browserBase}/${taskId}/cancel`, { method: 'POST' });
@@ -229,7 +236,7 @@ async function waitFor(fn, { tries = 100, delay = 100 } = {}) {
       if (process.env.QA_DEBUG) console.error('DEBUG cancel', JSON.stringify(cancel));
       check('cancel ends the task', () => assert.equal(cancel.status, 200));
       await waitFor(async () => {
-        const g = await call('admin', `${browserBase}/${taskId}`);
+        const g = readTask(taskId);
         if (process.env.QA_DEBUG) console.error('DEBUG post-cancel poll', JSON.stringify(g));
         return g.body?.status !== 'running';
       }, { tries: 30, delay: 100 });

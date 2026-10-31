@@ -12,8 +12,14 @@
 const os = require('node:os');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || `${os.homedir()}/noevia-local-test/node_modules/playwright-core`);
 const assert = require('node:assert/strict');
+const path = require('node:path'), fs = require('node:fs');
+// noevia-core's server/ (QA_CORE_SERVER, else beside qa/ in the CI workspace, else a sibling noevia-core checkout) and its test oracles: the
+// feature and decision-settings writers are the Rust front's now, and Core keeps the original Node behaviour as oracles (#2256).
+const CORE = path.resolve(process.env.QA_CORE_SERVER || [path.join(__dirname, '../server'), path.join(__dirname, '../../noevia-core/server')].find((d) => fs.existsSync(path.join(d, 'decision-settings.cjs'))) || path.join(__dirname, '../server'));
+process.env.QA_CORE_SERVER = CORE;
+const coreOracle = (file) => require(path.join(CORE, '../tests/server/oracles', file));
 const { createFixture } = require('./diary-fixture.cjs');
-const { createFeatures } = require('../server/features.cjs');
+const { createFeatures } = coreOracle('features-legacy.cjs');
 
 const PORT = Number(process.env.QA_PORT || 31617);
 const SHOTS = process.env.QA_SCREENSHOTS || '';
@@ -26,7 +32,7 @@ const LANGS = {
     landing: { badge: /Läuft in einem Projekt/, title: 'Projekt öffnen, um Code auszuführen', open: 'Code öffnen', header: 'Neue Aufgabe', listLabel: 'Projekte mit Code-Zugriff' },
     code: { intro: /Führt ein Coding-Harness in einem eigenen Git-Worktree auf einem eigenen Branch aus/, repository: 'Repository', preparation: 'Prompt-Aufbereitung', direct: 'Direkt', local: 'Lokaler Architekt', notAvailable: 'nicht verfügbar', prompt: 'Was soll es tun?', legend: 'Was diese Aufgabe darf', read: 'Das Repository lesen', edit: 'Dateien bearbeiten', run: 'Befehle ausführen', install: 'Abhängigkeiten installieren', start: 'Aufgabe starten', tasks: 'Aufgaben' },
     address: { h1: 'Webadresse', current: 'Aktuelle Adresse', earlier: 'Frühere Adressen', change: 'Adresse ändern', fresh: 'Neue Adresse', check: 'Prüfen und speichern' },
-    features: { h1: 'Funktionen', previews: 'Vorschau-Bereiche', previewsDesc: /Zeigt die noch nicht gebauten Vorschauen/, backups: 'Backups', diary: 'Tagebuch-Anfügewerkzeug' },
+    features: { h1: 'Funktionen', previews: 'Vorschau-Bereiche', previewsDesc: /Zeigt frühe Versionen von Geplant/, backups: 'Backups', diary: 'Tagebuch-Anfügewerkzeug' },
     experimental: { h1: 'Experimentell', title: 'Einrichtung des Entscheidungsdienstes', label: 'Endpunkt des Entscheidungsdienstes', planner: 'Planer-Review (Code-Modus)' },
     backups: { h1: 'Backups', destination: 'Ziel', schedule: 'Zeitplan', scheduleValue: /Täglich um 02:00 \(Serverzeit\)/, retention: 'Aufbewahrung', retentionValue: /Behält 7 tägliche, 4 wöchentliche und 6 monatliche Snapshots/, snapshots: 'Aufbewahrte Snapshots', last: 'Letztes Backup', connected: /Verbunden · zuletzt kopiert/ },
     weekdays: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'], hasEntries: 'hat Einträge',
@@ -36,7 +42,7 @@ const LANGS = {
     landing: { badge: /S’exécute dans un projet/, title: 'Ouvrez un projet pour lancer Code', open: 'Ouvrir Code', header: 'Nouvelle tâche', listLabel: 'Projets avec accès à Code' },
     code: { intro: /Lance un harnais de code dans un worktree git dédié/, repository: 'Dépôt', preparation: 'Préparation du prompt', direct: 'Direct', local: 'Architecte local', notAvailable: 'indisponible', prompt: 'Que doit-il faire ?', legend: 'Ce que cette tâche peut faire', read: 'Lire le dépôt', edit: 'Modifier des fichiers', run: 'Exécuter des commandes', install: 'Installer des dépendances', start: 'Démarrer la tâche', tasks: 'Tâches' },
     address: { h1: 'Adresse web', current: 'Adresse actuelle', earlier: 'Anciennes adresses', change: 'Modifier l’adresse', fresh: 'Nouvelle adresse', check: 'Vérifier et enregistrer' },
-    features: { h1: 'Fonctionnalités', previews: 'Surfaces en aperçu', previewsDesc: /Affiche les aperçus non construits/, backups: 'Sauvegardes', diary: 'Outil d’ajout au Journal' },
+    features: { h1: 'Fonctionnalités', previews: 'Surfaces en aperçu', previewsDesc: /Affiche les premières versions de Planifiées/, backups: 'Sauvegardes', diary: 'Outil d’ajout au Journal' },
     experimental: { h1: 'Expérimental', title: 'Configuration du service de décision', label: 'Point de terminaison de décision', planner: 'Relecture du Planificateur (mode Code)' },
     backups: { h1: 'Sauvegardes', destination: 'Destination', schedule: 'Planification', scheduleValue: /Tous les jours à 02:00 \(heure du serveur\)/, retention: 'Conservation', retentionValue: /Conserve 7 instantanés quotidiens, 4 hebdomadaires et 6 mensuels/, snapshots: 'Instantanés conservés', last: 'Dernière sauvegarde', connected: /Connecté · dernière copie/ },
     weekdays: ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'], hasEntries: 'a des entrées',
