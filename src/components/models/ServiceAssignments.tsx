@@ -26,7 +26,7 @@ type Tone = 'good' | 'warn' | 'bad' | 'muted';
 const STATE: Record<string, [MessageKey, Tone]> = {
   active: ['mm.assign.state.active', 'good'], configured: ['mm.assign.state.configured', 'muted'], switching: ['mm.assign.state.switching', 'warn'], missing: ['mm.assign.state.missing', 'bad'], notInstalled: ['mm.assign.state.notInstalled', 'bad'], off: ['mm.assign.state.off', 'muted'],
   // #2238: what the inference-machines probe found at a service that is set up (administrators only).
-  down: ['machines.health.down', 'warn'], unreachable: ['machines.health.unreachable', 'bad'],
+  down: ['mm.assign.state.down', 'warn'], unreachable: ['mm.assign.state.unreachable', 'bad'],
   loaded: ['mm.loaded', 'good'], sleeping: ['mm.card.sleeping', 'muted'], unloaded: ['mm.card.unloaded', 'muted'], unset: ['mm.assign.state.unset', 'muted'],
 };
 
