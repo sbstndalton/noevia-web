@@ -21,9 +21,11 @@ export interface BrowserTask {
 }
 export interface BrowserState {
   capabilities: string[];
-  /** False when the server has no egress proxy configured, and also (core#287) while a configured proxy is temporarily unavailable: the route
-   *  sends no field that tells the two apart, so the panel words its note for both (#2242). */
+  /** False when the server has no egress proxy configured, and also (core#287) while a configured proxy is temporarily unavailable. */
   network: boolean;
+  /** Which of the two it is (#2242): 'unconfigured' (an administrator sets it up), 'unavailable' (configured, not answering, often a
+   *  restart) or 'ready'. An older server sends none; the panel then words its note for both. */
+  networkState?: 'unconfigured' | 'unavailable' | 'ready';
   tasks: BrowserTask[];
 }
 export interface BrowserActionResult {

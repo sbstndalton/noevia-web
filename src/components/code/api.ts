@@ -98,7 +98,10 @@ export interface CodeState {
   repositories: { id: string }[]; capabilities: CodeAction[]; defaultCapabilities: CodeAction[];
   harnesses: Harness[]; promptPreparation: PreparationMode[]; sandboxed: boolean;
   /** False when the server has no egress proxy: a task can then have no network at all. */
-  network?: boolean; tasks: CodeTask[];
+  network?: boolean;
+  /** Why there is no network (#2242): 'unconfigured', 'unavailable' (the proxy is configured but not answering) or 'ready'. Older servers send none. */
+  networkState?: 'unconfigured' | 'unavailable' | 'ready';
+  tasks: CodeTask[];
 }
 export interface StartTask {
   repository: string; prompt: string; capabilities: CodeAction[]; domains: string[];
