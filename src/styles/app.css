@@ -102,6 +102,7 @@ body { margin: 0; background: var(--bg); }
 
 /* Setup wizard */
 .wizard-card { width: min(460px, 100%); }
+.wizard-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .wizard-progress {
   display: flex; align-items: center; gap: 6px;
   font-size: var(--text-caption); color: var(--text-faint);
