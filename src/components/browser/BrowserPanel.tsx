@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { cancelBrowserTask, decideBrowserTask, fetchBrowser, startBrowserTask } from './api';
-import type { BrowserState, BrowserTask } from './api';
+import { isUnreadableBrowserTask } from './api';
+import type { BrowserState, BrowserTask, UnreadableBrowserTask } from './api';
 import { fetchProfile } from '../../api';
 import { useT } from '../../i18n';
 import { isDecisionStale } from '../code/decision-guard';
@@ -182,14 +183,22 @@ export function EgressTemporaryNote({ isAdmin }: { isAdmin: boolean }): JSX.Elem
   </>;
 }
 
-function BrowserTaskCard({ task, busy, onDecide, onCancel }: {
-  task: BrowserTask; busy: string;
+export function BrowserTaskCard({ task, busy, onDecide, onCancel }: {
+  task: BrowserTask | UnreadableBrowserTask; busy: string;
   onDecide: (decision: 'approve' | 'approve_all' | 'deny', approvalId: string) => void; onCancel: () => void;
 }): JSX.Element {
+  const t = useT();
+  if (isUnreadableBrowserTask(task)) return <article className="code-task is-unreadable" data-task-id={task.id}>
+    <header>
+      <h3>{t('code.task.untitled')}</h3>
+      <span className="code-status">{t('code.status.unreadable')}</span>
+    </header>
+    <p className="code-note">{t('code.task.unreadable')}</p>
+  </article>;
   const active = ACTIVE.has(task.status);
   return <article className={`code-task is-${task.status}`} aria-busy={active && !task.approval}>
     <header>
-      <h3>{task.domains.join(', ') || 'Browser task'}</h3>
+      <h3>{(task.domains ?? []).join(', ') || 'Browser task'}</h3>
       <span className="code-status">{STATUS[task.status]}</span>
     </header>
     {task.stage && active && !task.approval && <p className="code-stage">{task.stage}</p>}
