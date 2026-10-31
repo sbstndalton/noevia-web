@@ -63,6 +63,8 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   const [canTune, setCanTune] = useState(false), [showTune, setShowTune] = useState(false), [admin, setAdmin] = useState(false);
   // A refresh that started before a newer one (or before a delete) must not overwrite its result.
   const requestRef = useRef(0);
+  // #2239: the list itself failed (models stays null): the "Loading models…" line gives way to the error and a retry.
+  const [listFailed, setListFailed] = useState(false);
   const [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(''), [filesNote, setFilesNote] = useState(''), [runtimeOptions, setRuntimeOptions] = useState(false);
   // The parent passes a fresh callback each render; the refresh below must stay stable.
   const changedRef = useRef(onChanged);
@@ -70,7 +72,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   // The engine's list answers in milliseconds; the file scan behind it can take seconds. Show the
   // list as soon as it arrives and let file details, updates and disk space fill in after.
   const refresh = useCallback(async () => {
-    setError('');
+    setError(''); setListFailed(false);
     const request = ++requestRef.current;
     const current = () => request === requestRef.current;
     const listed = fetchInstalledModels().then((installed) => { if (current()) setModels(installed); return installed; });
@@ -91,7 +93,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
         if (synced.added.length) { changedRef.current(); return; }   // models-changed refetches this list
       }
       setFilesNote(scan ? '' : tRef.current('mm.library.noService'));
-    } catch (e) { setError(errorText(e, tRef.current('mm.library.unavailable'))); }
+    } catch (e) { if (!current()) return; setListFailed(true); setError(errorText(e, tRef.current('mm.library.unavailable'))); }
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
   // Tabs mount per selection, so a mount-only fetch left this list showing
@@ -188,14 +190,14 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
         without changing what the page looks like. */}
     <h2 className="sr-only">{t('mm.tab.yours')}</h2>
     <div className="mm-library-bar">
-      <p className="mm-note" role="status">{models ? <>{t.plural('mm.library.count', installed.length, { shown: servable.length })}{needle ? t('mm.library.matching', { query: query.trim() }) : ''}{filter !== 'all' ? t('mm.library.afterFiltering') : ''}</> : t('mm.library.loading')}
-        {disk && <> · <span data-testid="models-disk">{t('mm.library.disk', { free: typeof disk.free === 'number' ? size(disk.free) : human(disk.freeH), total: typeof disk.total === 'number' ? size(disk.total) : human(disk.totalH), used: num(disk.usedPct, 0) })}</span></>}
+      <p className="mm-note" role="status">{models ? <>{t.plural('mm.library.count', installed.length, { shown: servable.length })}{needle ? t('mm.library.matching', { query: query.trim() }) : ''}{filter !== 'all' ? t('mm.library.afterFiltering') : ''}</> : listFailed ? null : t('mm.library.loading')}
+        {disk && <>{models || !listFailed ? ' · ' : ''}<span data-testid="models-disk">{t('mm.library.disk', { free: typeof disk.free === 'number' ? size(disk.free) : human(disk.freeH), total: typeof disk.total === 'number' ? size(disk.total) : human(disk.totalH), used: num(disk.usedPct, 0) })}</span></>}
         {models && !scanned && <span className="mm-scanning"> · {t('mm.library.scanning')}</span>}</p>
       <button className="btn btn-secondary btn-sm" disabled={busy === 'updates'} onClick={() => void checkUpdates()}>{busy === 'updates' ? t('mm.checking') : t('mm.library.checkUpdates')}</button>
       {canTune && <button className="btn btn-secondary btn-sm" aria-expanded={showTune} aria-controls="library-autotune" onClick={() => setShowTune(v => !v)}>{t('mm.library.tuneUntuned')}</button>}
     </div>
     {showTune && <section className="mm-panel" id="library-autotune"><h3>{t('mm.library.autoTuning')}</h3><AutoTune onChanged={onChanged}/></section>}
-    {error && <p role="alert" className="modal-err">{error}</p>}
+    {error && <p role="alert" className="modal-err">{error}{!models && listFailed && <> <button type="button" className="btn btn-secondary btn-sm" onClick={() => void refresh()}>{t('mm.tryAgain')}</button></>}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
     {filesNote && <p className="mm-note">{filesNote}</p>}
     {models && !servable.length && !orphanFiles.length && installed.length > 0 && <p className="mm-note">{t('mm.library.nothing')}</p>}

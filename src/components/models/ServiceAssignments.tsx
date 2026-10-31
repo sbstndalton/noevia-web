@@ -14,6 +14,8 @@ import type { MessageKey } from '../../i18n';
 import { embeddingOptions, fetchAssignments, rerankerCurrent, finishEmbeddingSwitch, resetReranker, saveReranker, serviceSwitchEmbedding, switchEmbedding, turnEmbeddingOff } from './assignments';
 import type { Assignments, ServiceAssignment, ServiceId } from './assignments';
 import { errorText } from './mm';
+import { fetchMachines } from '../machines/api';
+import type { MachinesHealth } from '../machines/api';
 import { isSleeping } from '../../model-residency';
 
 const SERVICE: Record<ServiceId, MessageKey> = { embedding: 'mm.assign.svc.embedding', reranker: 'mm.assign.svc.reranker', decision: 'mm.assign.svc.decision', sensitivity: 'mm.assign.svc.sensitivity', ocr: 'mm.assign.svc.ocr', documents: 'mm.assign.svc.documents' };
@@ -23,6 +25,8 @@ const ROLE: Record<Role, MessageKey> = { fast: 'mm.assign.role.fast', smart: 'mm
 type Tone = 'good' | 'warn' | 'bad' | 'muted';
 const STATE: Record<string, [MessageKey, Tone]> = {
   active: ['mm.assign.state.active', 'good'], configured: ['mm.assign.state.configured', 'muted'], switching: ['mm.assign.state.switching', 'warn'], missing: ['mm.assign.state.missing', 'bad'], notInstalled: ['mm.assign.state.notInstalled', 'bad'], off: ['mm.assign.state.off', 'muted'],
+  // #2238: what the inference-machines probe found at a service that is set up (administrators only).
+  down: ['machines.health.down', 'warn'], unreachable: ['machines.health.unreachable', 'bad'],
   loaded: ['mm.loaded', 'good'], sleeping: ['mm.card.sleeping', 'muted'], unloaded: ['mm.card.unloaded', 'muted'], unset: ['mm.assign.state.unset', 'muted'],
 };
 
@@ -30,6 +34,20 @@ export function StatePill({ state }: { state: string }): JSX.Element {
   const t = useT();
   const [key, tone] = STATE[state] || STATE.off;
   return <span className="mm-state" data-tone={tone}>{t(key)}</span>;
+}
+
+const PROBED: ServiceId[] = ['embedding', 'reranker', 'ocr', 'documents'];
+/** The state a row shows. Core's 'active' only means set up; where the machines probe has an answer for the service it decides. */
+function pillState(svc: ServiceAssignment, health: MachinesHealth['services'] | null): string {
+  if (svc.state === 'missing' && !svc.model) return 'notInstalled';
+  // The reranker's switch is on while core's state is 'off' (it has no model name to check): it is switched on, so it is judged
+  // like a set-up service, not shown as Off beside a switch that is on.
+  const setUp = svc.state === 'active' || (svc.id === 'reranker' && svc.enabled === true && svc.state === 'off');
+  if (!setUp) return svc.state;
+  if (svc.id === 'decision' || svc.id === 'sensitivity') return 'configured';
+  if (!PROBED.includes(svc.id)) return svc.state;
+  const probed = health?.[svc.id]?.state;
+  return probed === 'up' ? 'active' : probed === 'down' || probed === 'unreachable' ? probed : 'configured';
 }
 
 export function ServiceAssignments({ models }: { models: InstalledModel[] }): JSX.Element | null {
@@ -40,9 +58,17 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
   const [embedPick, setEmbedPick] = useState('');
   const live = useRef(true), request = useRef(0);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
+  // #2238: GET /api/models/assignments says 'active' for a service when an address is set up, not when it answers. An administrator also
+  // gets the inference-machines probe (GET /api/models/machines?health=1: one cached health request per service); until it answers,
+  // and for a member (who cannot read it), a set-up service reads "Configured", never "Running".
+  const [health, setHealth] = useState<MachinesHealth['services'] | null>(null);
   const load = useCallback(() => {
     const id = ++request.current;   // only the newest load may update the rows
-    fetchAssignments().then((v) => { if (live.current && id === request.current) { setInfo(v); setError(''); } }).catch(() => { if (live.current && id === request.current) setError(t('mm.assign.loadError')); });
+    fetchAssignments().then((v) => {
+      if (!live.current || id !== request.current) return;
+      setInfo(v); setError('');
+      if (v.admin) fetchMachines({ health: true }).then((m) => { if (live.current && id === request.current) setHealth(m.health?.services ?? null); }).catch(() => { if (live.current && id === request.current) setHealth(null); });
+    }).catch(() => { if (live.current && id === request.current) setError(t('mm.assign.loadError')); });
     fetchAutoRoles().then((v) => { if (live.current) setRoles(v.roles); }).catch(() => undefined);
   }, [t]);
   useEffect(() => { load(); }, [load]);
@@ -132,7 +158,7 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
       <span className="mm-assign-label">{t(SERVICE[svc.id])}</span>
       <span className="mm-assign-model" title={svc.model || undefined}>{name}{svc.next ? <small> → {svc.next}</small> : null}</span>
       {/* #1796 review: for Decision and Sensitivity core's 'active' only means an address is set up; nothing checks it answers. */}
-      <StatePill state={svc.state === 'missing' && !svc.model ? 'notInstalled' : (svc.id === 'decision' || svc.id === 'sensitivity') && svc.state === 'active' ? 'configured' : svc.state}/>
+      <StatePill state={pillState(svc, health)}/>
       <span className="mm-assign-control">
         {svc.id === 'embedding' && admin && svc.canChange && (svc.next
           ? <button className="popup-tab" disabled={busy !== ''} onClick={() => void runEmbedding(svc, true)}>{busy === 'embedding' ? t('mm.assign.switching') : t('mm.assign.finish')}</button>
