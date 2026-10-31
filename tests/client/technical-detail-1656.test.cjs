@@ -81,7 +81,8 @@ test('#1656 the wizard role comes from the mode: only the invited member is not 
   // #2242: a proxy that is configured but not answering is not an administrator's setup, so the role is not fetched for it either.
   assert.match(browser, /const needsAdmin = !!state && state\.network !== true && state\.networkState !== 'unavailable';/);
   assert.match(browser, /fetchProfile\(\)\.then\(p => \{ if \(live\) setIsAdmin\(p\?\.user\?\.role === 'admin'\); \}/);
-  assert.match(browser, /\{!online && <EgressUnavailableNote isAdmin=\{isAdmin\}\/>\}/);
+  assert.match(browser, /<EgressUnavailableNote isAdmin=\{isAdmin\}\/>/);
+  assert.match(browser, /\{!online && \(state\.networkState === 'unavailable' \? <EgressTemporaryNote\/> : <EgressUnavailableNote isAdmin=\{isAdmin\}\/>\)\}/);
 });
 
 test('#1656 every interface locale has both plain notes, with no placeholder and no environment variable name', () => {
