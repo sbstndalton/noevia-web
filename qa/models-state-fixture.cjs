@@ -15,6 +15,7 @@ process.env.QA_CORE_SERVER = CORE; // diary-fixture.cjs reads its route table fr
 const { createFixture } = require('./diary-fixture.cjs');
 const { withLocale } = require('./qa-locale.cjs');
 const core = (file) => require(path.join(CORE, file));
+const coreOracle = (file) => require(path.join(CORE, '../tests/server/oracles', file));
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || `${process.env.HOME}/noevia-local-test/node_modules/playwright-core`);
 
 const EMBED = 'embeddinggemma-2-Q8_0';
@@ -66,7 +67,7 @@ async function createState({ embedLoaded = true, savedDecisionUrl = null, rerank
   embeddingService.install(svc);
   await svc.refresh();
 
-  // The auto-roles go through core's real route over this in-memory workspace (#1667 saves a Creative role).
+  // The auto-roles go through core's real PUT over this in-memory workspace (#1667 saves a Creative role).
   const workspace = { userId: 'qa-admin', autoRoles: { ...ROLES }, saveAutoRoles() {} };
   const service = core('models.cjs').createModelService({ fetchJson: loaderFetch, env, modelManager, currentWorkspace: () => workspace, listWorkspaces: () => [] });
 
@@ -74,14 +75,24 @@ async function createState({ embedLoaded = true, savedDecisionUrl = null, rerank
   const store = { get: (k) => values.get(k), set: (k, v) => values.set(k, v), delete: (k) => values.delete(k) };
   const audits = [];
   if (rerankSavedOutside) values.set('rerank:configuration', JSON.stringify({ enabled: true, choice: 'llamacpp:synthetic-gone-reranker' }));
-  const decisionSettings = core('decision-settings.cjs').createDecisionSettings({ store, env, fetchImpl: async () => Response.json({ ready: true }), audit: (...a) => audits.push(a) });
+  // The decision row's writer is the Rust front's: Core only reads it, so this stands in for that writer on the fixture's store.
+  const decisionSettings = { ...core('decision-settings.cjs').createDecisionSettings({ store, env, fetchImpl: async () => Response.json({ ready: true }) }),
+    save(value, actor) {
+      const next = { url: String(value?.url || '').trim().replace(/\/+$/, ''), timeoutMs: value?.timeoutMs ?? 1500, ...(value?.model ? { model: value.model } : {}) };
+      values.set('decision:configuration', JSON.stringify(next)); audits.push(['decision.configure', actor, next]);
+      return this.get();
+    },
+    reset(actor) { values.delete('decision:configuration'); audits.push(['decision.reset', actor]); return this.get(); },
+    test: async () => ({ ready: true }) };
   if (savedDecisionUrl) decisionSettings.save({ url: savedDecisionUrl, timeoutMs: 1200 }, 'qa-admin');
   // #1665: the reranker switch, when this core has it (an older core shows the "before" state).
   const rerankSettings = fs.existsSync(path.join(CORE, 'rerank-settings.cjs')) ? core('rerank-settings.cjs').createRerankSettings({ store, env, audit: (...a) => audits.push(a) }) : null;
-  const features = core('features.cjs').createFeatures({ store, env: {}, availability: { stepSupervision: decisionSettings.unavailable, systemOneRouting: decisionSettings.unavailable, toolGate: decisionSettings.unavailable } });
+  // Feature settings and decision settings are the Rust front's now, and Core's own routes only refuse them. Core keeps
+  // the original Node behaviour as test oracles, which is what this in-process fixture answers from.
+  const features = coreOracle('features-legacy.cjs').createFeatures({ store, env: {}, availability: { stepSupervision: decisionSettings.unavailable, systemOneRouting: decisionSettings.unavailable, toolGate: decisionSettings.unavailable } });
 
   const respond = (out) => (res, status, body) => { out.status = status; out.body = body; };
-  const featureRoutes = (out) => core('routes/features.cjs').createFeatureRoutes({ features, decisionSettings, json: respond(out), readJson: async (req) => req.body });
+  const featureRoutes = (out) => coreOracle('feature-routes-legacy.cjs').createFeatureRoutes({ features, decisionSettings, json: respond(out), readJson: async (req) => req.body });
   const modelRoutes = (out) => core('routes/models.cjs').createModelRoutes({
     servedEmbeddingModels: async () => [EMBED], json: respond(out), readBody: async (req) => (req.body === undefined ? '' : JSON.stringify(req.body)), readJson: async (req) => req.body || {},
     fetchJson: loaderFetch, env, modelManager, getProvider: () => ({}), providerHeaders: () => ({}), DEFAULT_PROVIDER_ID: 'default',
@@ -108,6 +119,8 @@ async function createState({ embedLoaded = true, savedDecisionUrl = null, rerank
       if (r === 'sections') return { status: 200, body: { revision: 'r1', sections: [] } };
       return { status: 200, body: {} };
     }
+    // GET /api/auto-roles is the Rust front's; this is its answer over the in-memory workspace. The PUT below is still Core's.
+    if (pathname === '/api/auto-roles' && method === 'GET') return { status: 200, body: { configured: true, roles: { ...workspace.autoRoles }, missing: [] } };
     if (pathname === '/api/models/installed' || pathname === '/api/models/assignments' || pathname === '/api/models/reranker' || pathname === '/api/auto-roles') {
       await modelRoutes(out)(req, { setHeader() {} }, ctx);
       return out.status ? out : null;
