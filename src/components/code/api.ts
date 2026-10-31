@@ -61,6 +61,9 @@ export interface PipelineView {
   evidence: PipelineEvidence[]; audit: PipelineAudit | null;
 }
 export interface PipelineStageMove { from: PipelineLifecycle | null; to: PipelineLifecycle; revision: number; reason?: string; reportHash?: string; at: number }
+/** What the server lists for a journal it cannot read (oversized or damaged): an id and nothing else. */
+export interface UnreadableTask { status: 'unreadable'; id: string; approval?: undefined }
+export const isUnreadableTask = (task: { status: string }): task is UnreadableTask => task.status === 'unreadable';
 export interface CodeTask {
   id: string; status: 'queued' | 'running' | 'waiting_approval' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
   stage: string | null; error: string | null; createdAt: number; updatedAt: number;
@@ -101,7 +104,7 @@ export interface CodeState {
   network?: boolean;
   /** Why there is no network (#2242): 'unconfigured', 'unavailable' (the proxy is configured but not answering) or 'ready'. Older servers send none. */
   networkState?: 'unconfigured' | 'unavailable' | 'ready';
-  tasks: CodeTask[];
+  tasks: (CodeTask | UnreadableTask)[];
 }
 export interface StartTask {
   repository: string; prompt: string; capabilities: CodeAction[]; domains: string[];
@@ -128,7 +131,7 @@ export const fetchCode = (projectId: string) => apiFetch(base(projectId)).then(r
  *  answer every call, not a briefly-stale one. */
 export const fetchCodeAccess = (projectId: string) => cached(`noevia:code-access:${projectId}`, () => fetchCode(projectId));
 export const startTask = (projectId: string, body: StartTask) => post(base(projectId), body).then(r => read<{ taskId: string; branch: string }>(r));
-export const fetchTask = (projectId: string, id: string) => apiFetch(`${base(projectId)}/${id}`).then(r => read<CodeTask>(r));
+export const fetchTask = (projectId: string, id: string) => apiFetch(`${base(projectId)}/${id}`).then(r => read<CodeTask | UnreadableTask>(r));
 export const cancelTask = (projectId: string, id: string) => post(`${base(projectId)}/${id}/cancel`).then(r => read<CodeTask>(r));
 /** Answers one named approval. A 409 means that card is gone: refresh and show what is waiting now. */
 export const decideTask = (projectId: string, id: string, approvalId: string, decision: 'approve' | 'approve_all' | 'deny') =>

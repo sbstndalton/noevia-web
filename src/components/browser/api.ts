@@ -12,6 +12,9 @@ export interface BrowserApproval {
   url: string | null; typed: string | null; file: string | null;
   screenshot?: string; screenshotOmitted?: boolean; screenshotOmissionReason?: string;
 }
+/** What the server lists for a journal it cannot read (oversized or damaged): an id and nothing else. */
+export interface UnreadableBrowserTask { id: string; status: 'unreadable'; approval?: undefined }
+export const isUnreadableBrowserTask = (task: { status: string }): task is UnreadableBrowserTask => task.status === 'unreadable';
 export interface BrowserTask {
   id: string; status: 'queued' | 'running' | 'waiting_approval' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
   stage: string | null; error: string | null; createdAt: number; updatedAt: number;
@@ -26,7 +29,7 @@ export interface BrowserState {
   /** Which of the two it is (#2242): 'unconfigured' (an administrator sets it up), 'unavailable' (configured, not answering, often a
    *  restart) or 'ready'. An older server sends none; the panel then words its note for both. */
   networkState?: 'unconfigured' | 'unavailable' | 'ready';
-  tasks: BrowserTask[];
+  tasks: (BrowserTask | UnreadableBrowserTask)[];
 }
 export interface BrowserActionResult {
   status: 'done' | 'blocked' | 'uncertain'; origin: string; reason?: string;

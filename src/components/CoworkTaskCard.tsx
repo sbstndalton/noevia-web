@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { cancelTask, decideTask, fetchTask } from './code/api';
-import type { CodeTask } from './code/api';
+import type { CodeTask, UnreadableTask } from './code/api';
 import { ApprovalCard } from './code/CodePanel';
 import { isDecisionStale } from './code/decision-guard';
 import { TASK_FINAL } from '../chat-mode';
 import type { CoworkTaskRef } from '../types';
 
-const STATUS_LABEL: Record<CodeTask['status'], string> = {
+const STATUS_LABEL: Record<CodeTask['status'] | UnreadableTask['status'], string> = {
+  unreadable: 'Record unreadable',
   queued: 'Queued', running: 'Running', waiting_approval: 'Waiting for your approval', completed: 'Completed',
   failed: 'Failed', cancelled: 'Cancelled', interrupted: 'Interrupted',
 };
@@ -18,10 +19,10 @@ const STATUS_LABEL: Record<CodeTask['status'], string> = {
  * failed or stopped. It follows the task by polling its own endpoint; nothing here decides.
  */
 export function CoworkTaskCard({ task: ref, onRetry, disabled }: { task: CoworkTaskRef; onRetry: () => void; disabled: boolean }): JSX.Element {
-  const [task, setTask] = useState<CodeTask | null>(null);
+  const [task, setTask] = useState<CodeTask | UnreadableTask | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const live = useRef<CodeTask | null>(null);
+  const live = useRef<CodeTask | UnreadableTask | null>(null);
   const load = useCallback(async () => {
     try { const next = await fetchTask(ref.projectId, ref.taskId); live.current = next; setTask(next); setError(''); return next; }
     catch (err) { setError(err instanceof Error ? err.message : 'Task status is unavailable.'); return null; }
@@ -30,7 +31,7 @@ export function CoworkTaskCard({ task: ref, onRetry, disabled }: { task: CoworkT
     let stop = false, timer = 0;
     const tick = async () => {
       const next = await load();
-      if (!stop && !(next && TASK_FINAL.has(next.status))) timer = window.setTimeout(tick, 2000);
+      if (!stop && !(next && (next.status === 'unreadable' || TASK_FINAL.has(next.status)))) timer = window.setTimeout(tick, 2000);
     };
     void tick();
     return () => { stop = true; window.clearTimeout(timer); };
@@ -48,25 +49,26 @@ export function CoworkTaskCard({ task: ref, onRetry, disabled }: { task: CoworkT
     catch (err) { setError(err instanceof Error ? err.message : 'Cancel failed.'); }
     finally { setBusy(false); }
   };
-  const final = !!task && TASK_FINAL.has(task.status);
-  const output = task?.assistantOutput?.text?.trim() || '';
+  const unreadable = task?.status === 'unreadable';
+  const final = !!task && (unreadable || TASK_FINAL.has(task.status));
+  const output = (task && !unreadable ? task.assistantOutput?.text?.trim() : '') || '';
   return <section className="cowork-task" aria-label={`Cowork task in ${ref.repository}`} aria-busy={!final}>
     <header className="cowork-task-head">
       <span className="cowork-task-title">Cowork task · {ref.repository}</span>
       <span className="cowork-task-status" data-status={task?.status ?? 'loading'} role="status">{task ? STATUS_LABEL[task.status] : 'Loading…'}</span>
     </header>
-    {task?.stage && !final && <p className="cowork-task-note">{task.stage}</p>}
-    {task && task.steps.length > 0 && <ol className="cowork-task-steps">
+    {task && !unreadable && task.stage && !final && <p className="cowork-task-note">{task.stage}</p>}
+    {task && !unreadable && (task.steps ?? []).length > 0 && <ol className="cowork-task-steps">
       {task.steps.slice(-5).map(step => <li key={step.id} data-status={step.status}>{step.title}</li>)}
     </ol>}
     {output && <pre className="cowork-task-output">{output.length > 1200 ? `…${output.slice(-1200)}` : output}</pre>}
-    {task?.approval && task.status === 'waiting_approval' && <ApprovalCard approval={task.approval} busy={busy} onDecide={(d, id) => void decide(d, id)} />}
-    {task?.error && <p className="cowork-task-note" role="alert">{task.error}</p>}
+    {task && !unreadable && task.approval && task.status === 'waiting_approval' && <ApprovalCard approval={task.approval} busy={busy} onDecide={(d, id) => void decide(d, id)} />}
+    {task && !unreadable && task.error && <p className="cowork-task-note" role="alert">{task.error}</p>}
     {error && <p className="cowork-task-note" role="alert">{error}</p>}
     <div className="cowork-task-actions">
       {task && !final && <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => void cancel()}>Cancel task</button>}
-      {task && final && task.status !== 'completed' && <button type="button" className="btn btn-secondary" disabled={disabled} onClick={onRetry}>Retry as a new task</button>}
-      {task?.branch && <span className="cowork-task-note">Branch <code>{task.branch}</code></span>}
+      {task && final && task.status !== 'completed' && !unreadable && <button type="button" className="btn btn-secondary" disabled={disabled} onClick={onRetry}>Retry as a new task</button>}
+      {task && !unreadable && task.branch && <span className="cowork-task-note">Branch <code>{task.branch}</code></span>}
     </div>
   </section>;
 }

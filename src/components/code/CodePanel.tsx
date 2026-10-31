@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { cancelTask, decideTask, fetchCode, startTask } from './api';
-import type { CodeAction, CodeApproval, CodeReview, CodeState, CodeTask, NetworkActivity, PreparationMode } from './api';
+import { isUnreadableTask } from './api';
+import type { CodeAction, CodeApproval, CodeReview, CodeState, CodeTask, NetworkActivity, PreparationMode, UnreadableTask } from './api';
 import { isDecisionStale } from './decision-guard';
 import { effectivePreparationId, harnessName, harnessVersionNote, offeredPreparations } from '../../code-panel-copy';
 import { fetchProfile } from '../../api';
@@ -282,13 +283,28 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
   </div>;
 }
 
-function TaskCard({ task, busy, onDecide, onCancel }: {
-  task: CodeTask; busy: string;
+const isoOrEmpty = (at: unknown): string => { const d = new Date(at as number); return Number.isFinite(d.getTime()) ? d.toISOString() : ''; };
+
+/** A journal the server could not read (#2270): said plainly, with nothing to cancel or decide. */
+function UnreadableCard({ task }: { task: UnreadableTask }): JSX.Element {
+  const t = useT();
+  return <article className="code-task is-unreadable" data-task-id={task.id}>
+    <header>
+      <h3>{t('code.task.untitled')}</h3>
+      <span className="code-status">{t('code.status.unreadable')}</span>
+    </header>
+    <p className="code-note">{t('code.task.unreadable')}</p>
+  </article>;
+}
+
+export function TaskCard({ task, busy, onDecide, onCancel }: {
+  task: CodeTask | UnreadableTask; busy: string;
   onDecide: (decision: 'approve' | 'approve_all' | 'deny', approvalId: string) => void; onCancel: () => void;
 }): JSX.Element {
   const t = useT();
+  if (isUnreadableTask(task)) return <UnreadableCard task={task}/>;
   const active = ACTIVE.has(task.status);
-  const updated = new Date(task.updatedAt).toLocaleString(appLocale() ?? [], { dateStyle: 'medium', timeStyle: 'short' });
+  const updated = Number.isFinite(new Date(task.updatedAt).getTime()) ? new Date(task.updatedAt).toLocaleString(appLocale() ?? [], { dateStyle: 'medium', timeStyle: 'short' }) : '';
   // #1157: a pipeline task stopped by one of its own checks is "Blocked" in its timeline; the header
   // used to say "Failed" for the same thing. #1156: a finished task whose change nobody accepted must
   // not read as plainly "Finished". Both come from fields the server already sends.
@@ -311,8 +327,8 @@ function TaskCard({ task, busy, onDecide, onCancel }: {
       <h3>{task.task || task.branch || t('code.task.untitled')}</h3>
       <span className="code-status">{badge}</span>
     </header>
-    <p className="code-meta">{[task.branch, task.capabilities.map(a => actionLabel(t, a)).join(' · ')].filter(Boolean).join(' · ') || t('code.task.readOnly')}</p>
-    <p className="code-stage"><span role={task.status === 'waiting_approval' ? 'status' : undefined}>{outcome}</span> · {t('code.task.elapsed', { time: elapsed(task) })} · {t('code.task.updated')} <time dateTime={new Date(task.updatedAt).toISOString()}>{updated}</time></p>
+    <p className="code-meta">{[task.branch, (task.capabilities ?? []).map(a => actionLabel(t, a)).join(' · ')].filter(Boolean).join(' · ') || t('code.task.readOnly')}</p>
+    <p className="code-stage"><span role={task.status === 'waiting_approval' ? 'status' : undefined}>{outcome}</span> · {t('code.task.elapsed', { time: elapsed(task) })} · {t('code.task.updated')} <time dateTime={isoOrEmpty(task.updatedAt)}>{updated}</time></p>
     <PipelineStrip task={task}/>
     {task.error && <p className="code-note is-error">{task.error}</p>}
     {task.approval && <ApprovalCard approval={task.approval} busy={busy.startsWith('decide:')} onDecide={onDecide}/>}
