@@ -181,7 +181,8 @@ export interface ToolCallView {
 export interface DocumentStatus {
   version?: string;
   byteHash?: string;
-  state: 'ready' | 'partial' | 'failed';
+  /** `queued` (#2237): the service that reads documents was not there; the file is kept and is read when it is back. */
+  state: 'ready' | 'partial' | 'failed' | 'queued';
   stale?: boolean;
   pages?: number;
   truncated?: boolean;

@@ -25,6 +25,7 @@ export const NL_NL_DIARY: DiaryCatalogue = {
   'diary.errors.modelNotServed': "De dagboekbegeleider is ingesteld op het model “{model}”, dat de lokale engine niet aanbiedt. Er is niets opgeslagen. Vraag een beheerder het dagboekmodel te wijzigen.",
   'diary.errors.contextFailed': "Je dagboek kon niet worden gelezen. Er is niets opgeslagen, dus je kunt opnieuw verzenden.",
   'diary.errors.diaryUnavailable': "De dagboekbegeleider was niet bereikbaar. Er is niets opgeslagen, dus je kunt opnieuw verzenden.",
+  'diary.errors.diaryDown': "Het dagboek is op dit moment niet beschikbaar. Probeer het zo opnieuw.",
   'diary.uncertain.banner.one': "Een uitwisseling van {time} op {day} heeft een onzeker opslagresultaat. Controleer het opgeslagen item voordat je opnieuw verzendt.",
   'diary.uncertain.banner.other': "{count} uitwisselingen op {day} vanaf {time} hebben een onzeker opslagresultaat. Controleer het opgeslagen item voordat je opnieuw verzendt.",
   'diary.uncertain.show': "Tonen",

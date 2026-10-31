@@ -25,6 +25,7 @@ export const ES_ES_DIARY: DiaryCatalogue = {
   'diary.errors.modelNotServed': "El compañero de diario está configurado para usar el modelo «{model}», que el motor local no ofrece. No se guardó nada. Pide a un administrador que cambie el modelo del diario.",
   'diary.errors.contextFailed': "No se pudo leer tu diario. No se guardó nada, así que puedes reenviar.",
   'diary.errors.diaryUnavailable': "No se pudo acceder al compañero de diario. No se guardó nada, así que puedes reenviar.",
+  'diary.errors.diaryDown': "El diario no está disponible en este momento. Inténtalo de nuevo en breve.",
   'diary.uncertain.banner.one': "Un intercambio de las {time} del {day} tiene un resultado de guardado incierto. Revisa la entrada guardada antes de reenviar.",
   'diary.uncertain.banner.other': "{count} intercambios del {day} desde {time} tienen un resultado de guardado incierto. Revisa la entrada guardada antes de reenviar.",
   'diary.uncertain.show': "Mostrar",

@@ -314,7 +314,8 @@ async function describeFailure(res: Response, fallback: string): Promise<string>
 
 async function getJson<T>(url: string): Promise<T> {
   const res = await apiFetch(url);
-  if (!res.ok) throw new Error(await describeFailure(res, `GET ${url} failed`));
+  // Keeps the server's stable `code` (#2232: `diaryUnavailable`) so the screen can word it itself.
+  if (!res.ok) throw await failureFromResponse(res, `GET ${url} failed`);
   return res.json() as Promise<T>;
 }
 

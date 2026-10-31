@@ -6,7 +6,7 @@ import { ComposerModel } from './ComposerModel';
 import { ComposerTextarea } from './ComposerTextarea';
 import { SkillPinSelect, useSkillPinOptions } from './SkillPinPicker';
 import type { SkillPin } from '../api-contract';
-import { sourceStatus, uploadFailureText, uploadStageText, uploadUnreadableReason, isUnreadableSource, attachmentReason, sourceCounts } from '../source-status';
+import { sourceStatus, uploadFailureText, uploadStageText, uploadUnreadableReason, uploadWaitingReason, isUnreadableSource, attachmentReason, sourceCounts } from '../source-status';
 import { ShellIcon } from './ShellIcon';
 import { ProjectIcon } from './ProjectIdentity';
 import { useEffect, useRef, useState } from 'react';
@@ -208,7 +208,7 @@ export function ProjectView({
         const unreadable = uploadUnreadableReason(result, t);
         const copy = name !== file.name ? t('projects.view.savedAsCopy', { name, original: file.name }) : '';
         const note = result.attachment?.reduction?.note;
-        update(i, { stage: unreadable || [copy, note].filter(Boolean).join(' · ') || t('projects.view.saved'), percent: 100, finished: Date.now(), failed: !!unreadable });
+        update(i, { stage: unreadable || [copy, note, uploadWaitingReason(result, t)].filter(Boolean).join(' · ') || t('projects.view.saved'), percent: 100, finished: Date.now(), failed: !!unreadable });
         onRefresh();
       } catch (err) { update(i, { stage: uploadFailureText(err, t, t('projects.view.uploadFailed')), finished: Date.now(), failed: true }); }
     }
@@ -257,7 +257,7 @@ export function ProjectView({
           const done = await uploadProjectFile(project.id, { name: a.path.split('/').pop() || a.path, dataBase64, relativePath: a.path, importId: plan.importId }, value => update(i, { stage: uploadStageText(t, value), percent: value.percent }));
           const unreadable = uploadUnreadableReason(done, t);
           if (done.unchanged) result.unchanged += 1; else if (a.change === 'changed') result.updated += 1; else result.added += 1;
-          update(i, { stage: unreadable || (done.unchanged ? t('projects.folder.unchanged') : a.change === 'changed' ? t('projects.folder.updated') : t('projects.view.saved')), percent: 100, finished: Date.now(), failed: !!unreadable });
+          update(i, { stage: unreadable || (done.unchanged ? t('projects.folder.unchanged') : [a.change === 'changed' ? t('projects.folder.updated') : t('projects.view.saved'), uploadWaitingReason(done, t)].filter(Boolean).join(' · ')), percent: 100, finished: Date.now(), failed: !!unreadable });
         } catch (err) {
           result.failed += 1;
           const message = uploadFailureText(err, t, t('projects.view.uploadFailed'));
