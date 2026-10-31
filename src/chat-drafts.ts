@@ -72,6 +72,8 @@ export function writeDraft(chatId: string, text: string): void {
   if (!chatId) return;
   if (!text) { clearDraft(chatId); return; }
   const store = readStore();
+  // Re-insert so a same-millisecond tie keeps the sort below in true touch order.
+  delete store[chatId];
   store[chatId] = { text: text.slice(0, MAX_DRAFT_CHARS), updatedAt: Date.now() };
   const ids = Object.keys(store);
   if (ids.length > MAX_CHATS) {
