@@ -1086,6 +1086,7 @@ export const EN_GB = {
   'wizard.originPrivateLan': "This address only works on your local network. Passkeys and some browser security features require HTTPS and will not work from a plain IP address — you can still sign in with your password. You can point noevia at a real domain later and keep this address working alongside it; an administrator sets that up in the server configuration.",
   'browser.egressUnavailable': 'The network proxy is not available, so a browser task cannot open right now. It may only be restarting; if it stays unavailable, an administrator sets it up in the server configuration.',
   'browser.egressTemporary': "The network proxy is not answering right now, so a browser task cannot open. This is usually a restart: wait a moment and reload this page.",
+  'egress.stillDownAdmin': "If it is still not answering after a few minutes, the egress proxy is down rather than restarting: check that its container is running and read its log.",
   'code.panel.harnessNone': "None configured on this server",
   'code.panel.preparation': "Prompt preparation",
   'code.prep.direct.label': "Direct",

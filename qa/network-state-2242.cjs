@@ -7,6 +7,8 @@
 // Synthetic endpoints in the real shape.
 //   PLAYWRIGHT_MODULE=<playwright-core> QA_DIST=<dist dir> [QA_SHOTS=<dir>] [QA_TAG=before|after] node qa/network-state-2242.cjs
 // Fails on a build without the change, passes with it.
+// #2252 (review of web#112): "usually a restart" alone left an administrator waiting on a proxy that stays down. An administrator also gets one
+// line on what to do if it is still down after a few minutes (check the container and its log), in both panels; a member never sees it.
 const assert = require('node:assert/strict');
 const { run, openPage, shot, ADMIN, IPHONE, DESKTOP } = require('./web-fixes-lib.cjs');
 
@@ -35,7 +37,12 @@ run('network-state-2242', Number(process.env.QA_PORT || 32243), async (check, br
         assert.doesNotMatch(text, /administrator|server configuration/i, `an outage sends a person to an administrator: ${text}`);
         assert.equal(await page.getByText('Technical detail: CODE_EGRESS_PORT').count(), 0, 'no setting name for a passing outage, even to an administrator');
         assert.equal(await page.locator('.code-panel button.btn-primary').first().isDisabled(), true, 'a task cannot be started while the proxy is down');
-        await shot(page, `2242-state-browser-unavailable-${view.name}-${who}`);
+        const still = page.locator('.code-panel [data-note="egress-still-down"]');
+        // The role arrives with the profile, a moment after the note itself: wait for the line for an administrator, and give a member's page the same moment.
+        if (who === 'admin') { await still.waitFor({ timeout: 5000 }); assert.match(await still.textContent(), /still not answering after a few minutes[\s\S]*container[\s\S]*log/i); }
+        else await page.waitForTimeout(500);
+        assert.equal(await still.count(), who === 'admin' ? 1 : 0, 'the stays-down line is for administrators only');
+        await shot(page, `2252-state-browser-unavailable-${view.name}-${who}`);
         assert.deepEqual(errors, []); await context.close();
       });
       await check(`${view.name} ${who}: Browser panel, no proxy configured: an administrator sets it up (setting name for administrators only)`, async () => {
@@ -51,12 +58,15 @@ run('network-state-2242', Number(process.env.QA_PORT || 32243), async (check, br
     await check(`${view.name}: Code panel, proxy configured but not answering: the note says so`, async () => {
       const { page, context, errors } = await openPage(browser, view, 'light', { user: ADMIN, mock: mock('unavailable') });
       await page.goto(`${origin}/p/p-qa/code`);
-      const note = page.locator('.code-panel fieldset.code-capabilities .code-note').last();
+      const note = page.locator('.code-panel fieldset.code-capabilities .code-note:not([data-note])').last();
       await note.waitFor({ timeout: 15000 });
       const text = await note.textContent();
       assert.match(text, /not answering/i, text);
       assert.doesNotMatch(text, /does not run/i, `a restart is worded as a server without a proxy: ${text}`);
-      await shot(page, `2242-state-code-unavailable-${view.name}`);
+      const still = page.locator('.code-panel fieldset.code-capabilities [data-note="egress-still-down"]');
+      await still.waitFor({ timeout: 5000 }); // an administrator is told what to do when it stays down
+      assert.match(await still.textContent(), /container[\s\S]*log/i);
+      await shot(page, `2252-state-code-unavailable-${view.name}`);
       assert.deepEqual(errors, []); await context.close();
     });
     await check(`${view.name}: Code panel, no proxy configured: the note keeps the setup wording`, async () => {

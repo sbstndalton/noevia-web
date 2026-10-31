@@ -1075,6 +1075,7 @@ export const SV_SE: Catalogue = {
   'wizard.originPrivateLan': "Den här adressen fungerar bara på ditt lokala nätverk. Passnycklar och vissa säkerhetsfunktioner i webbläsaren kräver HTTPS och fungerar inte med en ren IP-adress, men du kan fortfarande logga in med ditt lösenord. Senare kan du använda noevia med ett riktigt domännamn och behålla den här adressen också; en administratör ställer in det i serverkonfigurationen.",
   'browser.egressUnavailable': "Nätverksproxyn är inte tillgänglig, så en webbläsaruppgift kan inte öppnas just nu. Den kanske bara startar om; förblir den otillgänglig ställer en administratör in den i serverkonfigurationen.",
   'browser.egressTemporary': "Nätverksproxyn svarar inte just nu, så en webbläsaruppgift kan inte öppnas. Det är oftast en omstart: vänta en stund och ladda om sidan.",
+  'egress.stillDownAdmin': "Svarar den fortfarande inte efter några minuter är den utgående proxyn nere och inte bara på väg att starta om: kontrollera att containern körs och läs loggen.",
   'code.panel.harnessNone': "Ingen konfigurerad på den här servern",
   'code.panel.preparation': "Promptförberedelse",
   'code.prep.direct.label': "Direkt",
