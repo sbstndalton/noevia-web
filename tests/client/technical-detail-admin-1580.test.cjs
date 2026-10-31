@@ -78,7 +78,7 @@ test('#1580 the MCP note reads the role from the cached profile and shows the va
 
 test('#1580 the Code panel fetches the role only where its note needs it, and shows the variable only to an administrator', () => {
   const src = read('src/components/code/CodePanel.tsx');
-  assert.match(src, /const needsAdmin = !!state && \(!state\.sandboxed \|\| state\.repositories\.length === 0\);/);
+  assert.match(src, /const needsAdmin = !!state && \(!state\.sandboxed \|\| state\.repositories\.length === 0 \|\| \(state\.network !== true && state\.networkState === 'unavailable'\)\);/);
   assert.match(src, /fetchProfile\(\)\.then\(p => \{ if \(live\) setIsAdmin\(p\?\.user\?\.role === 'admin'\); \}/);
   assert.match(src, /<TechnicalDetail isAdmin=\{isAdmin\} name="CODE_HARNESS_ENDPOINT"/);
   assert.match(src, /<TechnicalDetail isAdmin=\{isAdmin\} name="CODE_REPOS"/);

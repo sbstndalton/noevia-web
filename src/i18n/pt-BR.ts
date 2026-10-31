@@ -1075,6 +1075,7 @@ export const PT_BR: Catalogue = {
   'wizard.originPrivateLan': "Este endereço só funciona na sua rede local. Chaves de acesso (passkeys) e alguns recursos de segurança do navegador exigem HTTPS e não funcionam com um endereço IP puro, mas você ainda pode entrar com sua senha. Depois, você pode usar o noevia com um domínio real e continuar usando este endereço; um administrador configura isso nas configurações do servidor.",
   'browser.egressUnavailable': "O proxy de rede não está disponível, então uma tarefa do navegador não pode ser aberta agora. Ele pode estar apenas reiniciando; se continuar indisponível, um administrador o configura nas configurações do servidor.",
   'browser.egressTemporary': "O proxy de rede não está respondendo agora, então uma tarefa do navegador não pode abrir. Geralmente é uma reinicialização: aguarde um momento e recarregue esta página.",
+  'egress.stillDownAdmin': "Se ainda não responder após alguns minutos, o proxy de saída está fora do ar e não apenas reiniciando: verifique se o contêiner está em execução e leia o log.",
   'code.panel.harnessNone': "Nenhum configurado neste servidor",
   'code.panel.preparation': "Preparação do prompt",
   'code.prep.direct.label': "Direto",

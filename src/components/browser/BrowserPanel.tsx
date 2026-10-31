@@ -74,8 +74,9 @@ function ProjectBrowserPanel({ projectId }: { projectId: string }): JSX.Element 
   // The variable behind the offline note is for an administrator (#1656). The role is fetched only
   // where that note shows, and the profile is cached.
   const [isAdmin, setIsAdmin] = useState(false);
-  // A proxy that is configured but not answering is no matter for an administrator's setup (#2242).
-  const needsAdmin = !!state && state.network !== true && state.networkState !== 'unavailable';
+  // A proxy that is configured but not answering is no matter for an administrator's setup (#2242), but an administrator is told what to
+  // do when it stays down (#2252), so the role is read for both notes.
+  const needsAdmin = !!state && state.network !== true;
   useEffect(() => {
     if (!needsAdmin) return;
     let live = true;
@@ -125,7 +126,7 @@ function ProjectBrowserPanel({ projectId }: { projectId: string }): JSX.Element 
           session submits, sends, deletes or navigates off-site stops here for your answer first.</p>
       </div>
       {error && <p className="code-note is-error" role="alert">{error}</p>}
-      {!online && (state.networkState === 'unavailable' ? <EgressTemporaryNote/> : <EgressUnavailableNote isAdmin={isAdmin}/>)}
+      {!online && (state.networkState === 'unavailable' ? <EgressTemporaryNote isAdmin={isAdmin}/> : <EgressUnavailableNote isAdmin={isAdmin}/>)}
 
       <div className="code-field">
         <label htmlFor="browser-domains">Domains it may reach</label>
@@ -171,10 +172,14 @@ export function EgressUnavailableNote({ isAdmin }: { isAdmin: boolean }): JSX.El
   </>;
 }
 
-/** The proxy is configured but not answering (#2242): usually a restart, nothing for an administrator to set up. */
-export function EgressTemporaryNote(): JSX.Element {
+/** The proxy is configured but not answering (#2242): usually a restart, nothing for an administrator to set up. An administrator
+ *  is also told what to do when it stays down (#2252: "usually a restart" alone read as waiting forever). */
+export function EgressTemporaryNote({ isAdmin }: { isAdmin: boolean }): JSX.Element {
   const t = useT();
-  return <p className="code-note is-error" role="status">{t('browser.egressTemporary')}</p>;
+  return <>
+    <p className="code-note is-error" role="status">{t('browser.egressTemporary')}</p>
+    {isAdmin && <p className="code-note" data-note="egress-still-down">{t('egress.stillDownAdmin')}</p>}
+  </>;
 }
 
 function BrowserTaskCard({ task, busy, onDecide, onCancel }: {

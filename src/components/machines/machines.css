@@ -7,8 +7,12 @@
 .inference-machines .settings-section > h2 { margin: 0 2px var(--space-1); font-size: var(--text-footnote); font-weight: 700; color: var(--text-secondary); }
 .inference-machines .settings-section > .mm-note { margin: 0 2px var(--space-3); }
 .machines-row .model-name-group { gap: var(--space-1); }
-/* The Settings pane is narrower than the model manager: a shorter machine column leaves the notes room. */
-.inference-machines .mm-assign-list { grid-template-columns: minmax(96px, 170px) minmax(0, 200px) 110px minmax(0, 1fr); }
+/* The Settings pane is narrower than the model manager: a shorter machine column leaves the notes room. Only where the card is wide
+   enough for four columns (phone.css stacks it at 900 px and below, #2121): this selector out-ranks that container rule, so it
+   used to keep four columns under the stacked placement and the status pill sat mid-row (#2252). */
+@container mm-assign (min-width: 901px) {
+  .inference-machines .mm-assign-list { grid-template-columns: minmax(96px, 170px) minmax(0, 200px) 110px minmax(0, 1fr); }
+}
 /* #2234: the status carries the reason ("Unreachable · Embeddings (projects and Diary): Connection refused"); on a phone it wraps inside the row
    instead of running past the card's clipped edge. */
 .machines-row > .mm-state { max-width: 100%; white-space: normal; text-align: start; border-radius: var(--radius-control); }
