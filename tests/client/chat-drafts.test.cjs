@@ -95,6 +95,19 @@ test('touching an old chat again protects it from eviction ahead of chats untouc
   assert.equal(readDraft('chat-0'), 'freshly re-touched', 're-touching a chat must renew it, not just insert a duplicate entry');
 });
 
+test('#2247: a re-touched chat outlives untouched ones written in the same millisecond', () => {
+  const { readDraft, writeDraft } = freshModule();
+  const realNow = Date.now;
+  Date.now = () => 1_700_000_000_000;
+  try {
+    for (let i = 0; i < 50; i++) writeDraft(`chat-${i}`, `draft ${i}`);
+    writeDraft('chat-0', 'freshly re-touched');
+    for (let i = 50; i < 55; i++) writeDraft(`chat-${i}`, `draft ${i}`);
+    assert.equal(readDraft('chat-0'), 'freshly re-touched');
+    assert.equal(readDraft('chat-1'), '', 'the oldest untouched chat goes first');
+  } finally { Date.now = realNow; }
+});
+
 test('corrupt or non-object storage is treated as no drafts saved, not a thrown error', () => {
   global.localStorage = fakeLocalStorage();
   global.localStorage.setItem('noevia:chat-drafts', 'not json');
