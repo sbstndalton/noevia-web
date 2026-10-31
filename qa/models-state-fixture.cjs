@@ -129,6 +129,13 @@ async function createState({ embedLoaded = true, savedDecisionUrl = null, rerank
       const handled = await featureRoutes(out)(req, { setHeader() {} }, ctx);
       return handled ? out : null;
     }
+    // #2238: a set-up service reads "Configured", and "Running" only once the administrator's inference-machines probe (GET
+    // /api/models/machines?health=1) says it answers. The reranker's sidecar (when configured) and the embedding service (when it reports its model loaded) are synthetic ones that do.
+    if (pathname === '/api/models/machines') {
+      const probed = Boolean(rerank || rerankSavedOutside);
+      return { status: member ? 403 : 200, body: member ? { error: 'Administrator required' } : { machines: [{ id: 'local', builtIn: true, name: null, address: null, services: ['embedding', 'reranker', 'ocr', 'documents'] }], services: [],
+        health: { services: { ...(probed ? { reranker: { state: 'up' } } : {}), ...(embedLoaded ? { embedding: { state: 'up' } } : {}) }, machines: { local: 'up' } } } };
+    }
     if (pathname.startsWith('/api/models/')) return { status: 200, body: [] };
     return null;
   }
