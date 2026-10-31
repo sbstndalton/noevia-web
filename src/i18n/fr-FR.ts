@@ -1073,7 +1073,7 @@ export const FR_FR: Catalogue = {
   'code.harness.pi.label': "Assistant de programmation",
   'common.technicalDetail': "Détail technique : {name}",
   'wizard.originPrivateLan': "Cette adresse ne fonctionne que sur votre réseau local. Les clés d’accès et certaines fonctions de sécurité du navigateur exigent HTTPS et ne fonctionnent pas avec une adresse IP brute ; vous pouvez tout de même vous connecter avec votre mot de passe. Plus tard, vous pourrez utiliser noevia avec un nom de domaine et garder cette adresse en parallèle ; un administrateur le configure dans la configuration du serveur.",
-  'browser.egressUnavailable': "Ce serveur n’exécute pas le proxy réseau, donc une tâche de navigateur ne peut pas s’ouvrir. Un administrateur le configure dans la configuration du serveur.",
+  'browser.egressUnavailable': "Le proxy réseau n’est pas disponible, donc une tâche de navigateur ne peut pas s’ouvrir pour le moment. Il redémarre peut-être seulement ; s’il reste indisponible, un administrateur le configure dans la configuration du serveur.",
   'code.panel.harnessNone': "Aucun configuré sur ce serveur",
   'code.panel.preparation': "Préparation du prompt",
   'code.prep.direct.label': "Direct",

@@ -1073,7 +1073,7 @@ export const IT_IT: Catalogue = {
   'code.harness.pi.label': "Assistente di programmazione",
   'common.technicalDetail': "Dettaglio tecnico: {name}",
   'wizard.originPrivateLan': "Questo indirizzo funziona solo sulla rete locale. Le passkey e alcune funzioni di sicurezza del browser richiedono HTTPS e non funzionano con un indirizzo IP diretto, ma l’accesso con la password resta possibile. Più avanti si può usare noevia con un dominio reale e mantenere attivo anche questo indirizzo; un amministratore lo imposta nella configurazione del server.",
-  'browser.egressUnavailable': "Questo server non esegue il proxy di rete, quindi un’attività nel browser non può aprirsi. Un amministratore lo imposta nella configurazione del server.",
+  'browser.egressUnavailable': "Il proxy di rete non è disponibile, quindi al momento un’attività nel browser non può aprirsi. Forse si sta solo riavviando; se resta non disponibile, un amministratore lo imposta nella configurazione del server.",
   'code.panel.harnessNone': "Nessuno configurato su questo server",
   'code.panel.preparation': "Preparazione del prompt",
   'code.prep.direct.label': "Diretto",

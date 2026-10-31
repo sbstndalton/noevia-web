@@ -47,6 +47,8 @@ function pillState(svc: ServiceAssignment, health: MachinesHealth['services'] | 
   if (svc.id === 'decision' || svc.id === 'sensitivity') return 'configured';
   if (!PROBED.includes(svc.id)) return svc.state;
   const probed = health?.[svc.id]?.state;
+  // Switched on with no model and no address (a llama.cpp reranker): the probe has nothing to ask, and retrieval does not rerank.
+  if (svc.id === 'reranker' && svc.state === 'off' && probed === 'unknown') return 'off';
   return probed === 'up' ? 'active' : probed === 'down' || probed === 'unreachable' ? probed : 'configured';
 }
 
@@ -62,12 +64,13 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
   // gets the inference-machines probe (GET /api/models/machines?health=1: one cached health request per service); until it answers,
   // and for a member (who cannot read it), a set-up service reads "Configured", never "Running".
   const [health, setHealth] = useState<MachinesHealth['services'] | null>(null);
+  const [probeFailed, setProbeFailed] = useState(false);
   const load = useCallback(() => {
     const id = ++request.current;   // only the newest load may update the rows
     fetchAssignments().then((v) => {
       if (!live.current || id !== request.current) return;
       setInfo(v); setError('');
-      if (v.admin) fetchMachines({ health: true }).then((m) => { if (live.current && id === request.current) setHealth(m.health?.services ?? null); }).catch(() => { if (live.current && id === request.current) setHealth(null); });
+      if (v.admin) fetchMachines({ health: true }).then((m) => { if (live.current && id === request.current) { setHealth(m.health?.services ?? null); setProbeFailed(false); } }).catch(() => { if (live.current && id === request.current) { setHealth(null); setProbeFailed(true); } });
     }).catch(() => { if (live.current && id === request.current) setError(t('mm.assign.loadError')); });
     fetchAutoRoles().then((v) => { if (live.current) setRoles(v.roles); }).catch(() => undefined);
   }, [t]);
@@ -201,6 +204,7 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
     </li>;
   };
 
+  const downNames = info ? info.services.filter((s) => ['unreachable', 'down'].includes(pillState(s, health))).map((s) => t(SERVICE[s.id])).join(', ') : '';
   return <section className="mm-panel mm-assign" aria-labelledby="mm-assign-title">
     <div className="mm-panel-head"><h2 id="mm-assign-title">{t('mm.assign.title')}</h2></div>
     <p className="mm-note">{t('mm.assign.intro')}{info && !admin ? ` ${t('mm.assign.readOnly')}` : ''}</p>
@@ -210,6 +214,8 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
       {ROLES.map(roleRow)}
       {info.services.filter((s) => s.id === 'ocr' || s.id === 'documents').map(serviceRow)}
     </ul>}
+    {/* One polite announcement, only when something is wrong: the services that do not answer, or that the check itself failed (#2238). */}
+    <div aria-live="polite">{(downNames || probeFailed) && <p className="mm-assign-status mm-note">{downNames ? t('mm.assign.downSummary', { services: downNames }) : t('mm.assign.healthFailed')}</p>}</div>
     <div aria-live="polite">{(status || error) && <p className="mm-assign-status">{status && <span role="status" className="mm-note">{status}</span>}{error && <span role="alert" className="modal-err">{error}</span>}</p>}</div>
   </section>;
 }

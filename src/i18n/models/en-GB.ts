@@ -45,6 +45,8 @@ export const EN_GB_MODELS = {
   'mm.assign.state.off': "Off",
   'mm.assign.state.unreachable': "Unreachable",
   'mm.assign.state.down': "Error",
+  'mm.assign.healthFailed': 'Could not check whether these services answer. They may still be running.',
+  'mm.assign.downSummary': 'Not answering: {services}.',
   'mm.assign.state.unset': "Not set",
   'mm.assign.none': "None",
   'mm.assign.builtIn': "Built-in",

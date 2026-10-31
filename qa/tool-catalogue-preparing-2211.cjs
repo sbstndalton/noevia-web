@@ -25,6 +25,18 @@ const permitted = (refusals, counter) => async (page) => {
   });
 };
 
+
+/** A handler that answers each request with the next entry of `plan` ({ ...fulfill options, delay? }), then the list. */
+const planned = (plan, counter) => async (page) => {
+  await page.route('**/api/chats/*/context', (r) => r.fulfill({ json: { project: { id: 'p-syn', name: 'Synthetic', routing: 'auto', files: [], assets: [], toolboxes: ['core'], toolsMode: 'manual' } } }));
+  await page.route('**/api/toolboxes/permitted**', async (r) => {
+    const step = plan[counter.n] || { json: BOXES }; counter.n += 1;
+    if (step.delay) await new Promise((res) => setTimeout(res, step.delay));
+    return r.fulfill(step);
+  });
+};
+const UNREADABLE = { status: 503, json: { error: 'The tool permissions could not be read. Try again in a moment.' } };
+
 run('tool-catalogue-preparing-2211', Number(process.env.QA_PORT || 32211), async (check, browser, origin) => {
   for (const view of [{ name: '1440', options: DESKTOP }, { name: 'iphone', options: IPHONE }]) {
     for (const theme of ['light', 'dark']) {
@@ -73,10 +85,64 @@ run('tool-catalogue-preparing-2211', Number(process.env.QA_PORT || 32211), async
     await page.goto(origin);
     await page.getByRole('textbox', { name: 'Message', exact: true }).waitFor({ timeout: 15000 });
     await openToolCatalogue(page);
-    await page.locator('.tool-catalogue-panel .tool-catalogue-note').first().waitFor({ timeout: 10000 });
+    await page.locator('.tool-catalogue-panel .tool-catalogue-note', { hasText: /being prepared/i }).waitFor({ timeout: 6000 });
+    await page.waitForFunction(() => document.activeElement?.className === 'tool-catalogue-search');   // Escape works from the search box
     await page.keyboard.press('Escape');
+    await page.locator('.tool-catalogue-panel').waitFor({ state: 'detached' });
     await page.waitForTimeout(2600);
     assert.equal(counter.n, 1, `${counter.n} requests: the retry ran after the panel was closed`);
+    await context.close();
+  });
+
+  await check('1440 light: a 503 without Retry-After ("tool permissions could not be read") is shown as the failure it is, with no retry and no "being prepared"', async () => {
+    const counter = { n: 0 };
+    const { page, context } = await openPage(browser, { options: DESKTOP }, 'light', { mock: planned([UNREADABLE, UNREADABLE], counter) });
+    await page.goto(origin);
+    await page.getByRole('textbox', { name: 'Message', exact: true }).waitFor({ timeout: 15000 });
+    await openToolCatalogue(page);
+    const panel = page.locator('.tool-catalogue-panel');
+    const alert = panel.getByRole('alert');
+    await alert.waitFor({ timeout: 6000 });
+    assert.match(await alert.textContent(), /permissions could not be read/);
+    assert.equal(await panel.getByText(/being prepared/i).count(), 0);
+    await page.waitForTimeout(2600);
+    assert.equal(counter.n, 1, `${counter.n} requests: a failure that is not "preparing" must not be retried`);
+    await shot(page, '2211-unreadable-1440-light');
+    await context.close();
+  });
+  await check('1440 light: reopening after a "being prepared" never flashes it while the new request is pending', async () => {
+    const counter = { n: 0 };
+    const { page, context } = await openPage(browser, { options: DESKTOP }, 'light', { mock: planned([PREPARING, { json: BOXES, delay: 1200 }], counter) });
+    await page.goto(origin);
+    await page.getByRole('textbox', { name: 'Message', exact: true }).waitFor({ timeout: 15000 });
+    await openToolCatalogue(page);
+    await page.locator('.tool-catalogue-panel .tool-catalogue-note', { hasText: /being prepared/i }).waitFor({ timeout: 6000 });
+    await page.waitForFunction(() => document.activeElement?.className === 'tool-catalogue-search');
+    await page.keyboard.press('Escape');
+    await page.locator('.tool-catalogue-panel').waitFor({ state: 'detached' });
+    // Watch every text the panel shows from the moment it reopens.
+    await page.evaluate(() => {
+      window.__seen = [];
+      new MutationObserver(() => { const p = document.querySelector('.tool-catalogue-panel'); if (p) window.__seen.push(p.textContent); }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    });
+    await openToolCatalogue(page);
+    await page.locator('.tool-catalogue-panel').getByRole('option', { name: /QA files box/ }).waitFor({ timeout: 8000 });
+    const seen = await page.evaluate(() => window.__seen);
+    assert.ok(seen.some((t) => /Loading tools/.test(t)), 'the panel shows the loading line first');
+    assert.ok(!seen.some((t) => /being prepared/i.test(t)), 'the reopened panel flashed "being prepared"');
+    await context.close();
+  });
+  await check('1440 light: leaving the chat while the retry is pending cancels it (unmount)', async () => {
+    const counter = { n: 0 };
+    const { page, context } = await openPage(browser, { options: DESKTOP }, 'light', { mock: planned([PREPARING, PREPARING], counter) });
+    await page.goto(origin);
+    await page.getByRole('textbox', { name: 'Message', exact: true }).waitFor({ timeout: 15000 });
+    await openToolCatalogue(page);
+    await page.locator('.tool-catalogue-panel .tool-catalogue-note', { hasText: /being prepared/i }).waitFor({ timeout: 6000 });
+    await page.locator('.sidebar').getByRole('button', { name: 'Projects', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Message', exact: true }).waitFor({ state: 'detached' });
+    await page.waitForTimeout(2800);
+    assert.equal(counter.n, 1, `${counter.n} requests: the retry ran after the catalogue was unmounted`);
     await context.close();
   });
 });

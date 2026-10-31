@@ -1073,7 +1073,7 @@ export const NL_NL: Catalogue = {
   'code.harness.pi.label': "Codeassistent",
   'common.technicalDetail': "Technische details: {name}",
   'wizard.originPrivateLan': "Dit adres werkt alleen op je lokale netwerk. Passkeys en sommige beveiligingsfuncties van de browser vereisen HTTPS en werken niet met een los IP-adres, maar je kunt wel inloggen met je wachtwoord. Later kun je noevia aan een echte domeinnaam koppelen en dit adres blijven gebruiken; een beheerder regelt dat in de serverconfiguratie.",
-  'browser.egressUnavailable': "Deze server draait de netwerkproxy niet, dus een browsertaak kan helemaal niet worden geopend. Een beheerder regelt dat in de serverconfiguratie.",
+  'browser.egressUnavailable': "De netwerkproxy is niet beschikbaar, dus een browsertaak kan nu niet worden geopend. Hij start misschien alleen opnieuw op; blijft hij onbeschikbaar, dan regelt een beheerder dat in de serverconfiguratie.",
   'code.panel.harnessNone': "Geen geconfigureerd op deze server",
   'code.panel.preparation': "Promptvoorbereiding",
   'code.prep.direct.label': "Direct",

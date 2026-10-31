@@ -159,7 +159,8 @@ function ProjectBrowserPanel({ projectId }: { projectId: string }): JSX.Element 
   </div>;
 }
 
-/** This server runs no egress proxy, so no browser task can open (#1656). Plain words for everyone; the
+/** No browser task can open: the server runs no egress proxy, or it is temporarily down and the route cannot say which (#1656, #2242).
+ *  Plain words for everyone; the
  *  variable name it needs is shown to an administrator only. */
 export function EgressUnavailableNote({ isAdmin }: { isAdmin: boolean }): JSX.Element {
   const t = useT();

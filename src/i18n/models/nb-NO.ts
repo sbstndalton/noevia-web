@@ -41,6 +41,8 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.assign.state.off': "Av",
   'mm.assign.state.unreachable': "Utilgjengelig",
   'mm.assign.state.down': "Feil",
+  'mm.assign.healthFailed': "Kunne ikke sjekke om disse tjenestene svarer. De kan fortsatt kjøre.",
+  'mm.assign.downSummary': "Svarer ikke: {services}.",
   'mm.assign.state.unset': "Ikke valgt",
   'mm.assign.none': "Ingen",
   'mm.assign.builtIn': "Innebygd",

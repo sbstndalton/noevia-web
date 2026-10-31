@@ -52,13 +52,13 @@ test('#1656 the Browser offline note: a member reads only the plain words, an ad
   const render = (isAdmin) => renderToStaticMarkup(React.createElement(EgressUnavailableNote, { isAdmin }));
 
   const member = render(false);
-  assert.match(member, /network proxy, so a browser task cannot open at all/, 'the plain note reaches a member');
+  assert.match(member, /network proxy is not available, so a browser task cannot open right now/, 'the plain note reaches a member');
   assert.doesNotMatch(member, /CODE_EGRESS_PORT/, 'a member never sees the variable name');
   assert.doesNotMatch(member, ENV_LIKE);
   assert.doesNotMatch(member, /egress proxy/i, 'the jargon is gone from the member copy');
 
   const admin = render(true);
-  assert.match(admin, /network proxy, so a browser task cannot open at all/);
+  assert.match(admin, /network proxy is not available, so a browser task cannot open right now/);
   assert.match(admin, /Technical detail: CODE_EGRESS_PORT/, 'an administrator reads the variable');
   assert.match(admin, /role="status"/, 'the note keeps its status role');
 }));
@@ -95,6 +95,6 @@ test('#1656 every interface locale has both plain notes, with no placeholder and
     }
   }
   const en = catalogue('en-GB');
-  assert.equal(en['browser.egressUnavailable'], 'This server does not run the network proxy, so a browser task cannot open at all. An administrator sets it up in the server configuration.');
+  assert.equal(en['browser.egressUnavailable'], 'The network proxy is not available, so a browser task cannot open right now. It may only be restarting; if it stays unavailable, an administrator sets it up in the server configuration.');
   assert.match(en['wizard.originPrivateLan'], /^This address only works on your local network\./);
 });
