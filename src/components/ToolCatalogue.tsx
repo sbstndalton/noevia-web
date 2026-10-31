@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, FocusEvent, JSX, KeyboardEvent } from 'react';
-import { fetchPermittedTools } from '../api';
+import { fetchPermittedTools, ToolsPreparingError } from '../api';
 import { filterCatalogue, placeCatalogue, type CatalogueEntry, type PermittedBox } from '../tool-catalogue';
 import type { ChatMode } from '../chat-mode';
 import { ShellIcon } from './ShellIcon';
@@ -32,6 +32,8 @@ export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, on
   const [boxes, setBoxes] = useState<PermittedBox[] | null>(null);
   // A server message is shown as sent; our own failure is a code, translated at render.
   const [error, setError] = useState<{ kind: 'load' } | { kind: 'server'; text: string } | null>(null);
+  // #2211: the server answered 503 "being prepared": a calm status while the one retry is pending, not an alert.
+  const [preparing, setPreparing] = useState(false);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const [layout, setLayout] = useState<CSSProperties>({});
@@ -54,11 +56,19 @@ export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, on
   useEffect(() => {
     if (!open || boxes) return;
     let live = true;
-    setError(null);
-    fetchPermittedTools(projectId, mode)
-      .then(v => { if (live) { setBoxes(v.boxes); onBoxes(v.boxes); } })
-      .catch(err => { if (live) setError(err instanceof Error && err.message ? { kind: 'server', text: err.message } : { kind: 'load' }); });
-    return () => { live = false; };
+    let timer: number | undefined;
+    setError(null); setPreparing(false);
+    const fail = (err: unknown) => { if (live) { setPreparing(false); setError(err instanceof Error && err.message ? { kind: 'server', text: err.message } : { kind: 'load' }); } };
+    const load = (retry: boolean) => fetchPermittedTools(projectId, mode)
+      .then(v => { if (live) { setPreparing(false); setBoxes(v.boxes); onBoxes(v.boxes); } })
+      .catch(err => {
+        if (!live) return;
+        // Not ready yet: wait the time the server asked for (capped) and ask once more; only a second refusal is shown.
+        if (!retry && err instanceof ToolsPreparingError) { setPreparing(true); timer = window.setTimeout(() => void load(true), err.retryAfterMs); return; }
+        fail(err);
+      });
+    void load(false);
+    return () => { live = false; window.clearTimeout(timer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, boxes, projectId, mode]);
   useEffect(() => {
@@ -130,7 +140,7 @@ export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, on
         aria-controls={`${id}-list`} aria-activedescendant={rows.length ? `${id}-opt-${active}` : undefined}
         placeholder={t('tools.search')} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={onKey} />
       <p className="tool-catalogue-boundary">{t(projectId ? 'tools.boundaryProject' : 'tools.boundaryAccount')}</p>
-      {!boxes && !error && <p className="tool-catalogue-note" role="status">{t('composer.loadingTools')}</p>}
+      {!boxes && !error && <p className="tool-catalogue-note" role="status">{t(preparing ? 'tools.preparing' : 'composer.loadingTools')}</p>}
       {error && <p className="tool-catalogue-note" role="alert">{error.kind === 'server' ? error.text : t('tools.loadError')}</p>}
       {boxes && <ul id={`${id}-list`} className="tool-catalogue-list" role="listbox" aria-label={t('tools.trigger')}
         onMouseDown={keepFocusOnMouseDown}>

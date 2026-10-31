@@ -466,6 +466,7 @@ export const PT_BR: Catalogue = {
   'tools.boundaryProject': "Só são oferecidas ferramentas já conectadas e permitidas neste projeto. Escritas sempre pedem antes.",
   'tools.boundaryAccount': "Só são oferecidas ferramentas já conectadas e permitidas na sua conta. Escritas sempre pedem antes.",
   'tools.loadError': "Não foi possível carregar as ferramentas.",
+  'tools.preparing': "A lista de ferramentas está sendo preparada. Ela aparecerá em instantes.",
   'tools.onForChat': "Ativa neste chat",
   'tools.thisMessage': "Esta mensagem",
   'tools.allowed': "Permitida",

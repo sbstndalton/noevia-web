@@ -466,6 +466,7 @@ export const NL_NL: Catalogue = {
   'tools.boundaryProject': "Alleen gereedschap dat al gekoppeld en toegestaan is voor dit project wordt aangeboden. Schrijven vraagt altijd eerst.",
   'tools.boundaryAccount': "Alleen gereedschap dat al gekoppeld en toegestaan is voor je account wordt aangeboden. Schrijven vraagt altijd eerst.",
   'tools.loadError': "Gereedschap kon niet worden geladen.",
+  'tools.preparing': "De lijst met gereedschap wordt voorbereid. Hij verschijnt zo.",
   'tools.onForChat': "Aan voor deze chat",
   'tools.thisMessage': "Dit bericht",
   'tools.allowed': "Toegestaan",
