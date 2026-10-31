@@ -11,6 +11,9 @@ export class DiaryRequestError extends Error {
 /** The header an explicit Retry press adds so the server may reset a rejected-login cool-down (#1168). */
 export const STORAGE_RETRY_HEADER = 'X-Cowork-Storage-Retry';
 export async function diaryRequest<T>(path: string, body?: unknown, method = 'POST', signal?: AbortSignal, storageRetry = false): Promise<T> {
+  // A request with no body is a GET whatever `method` says (the default POST only applies when there is a body):
+  // it is not a write, so a failure of it must not read as "outcome unknown" (#2245).
+  if (body === undefined) method = 'GET';
   const retry: Record<string, string> = storageRetry ? { [STORAGE_RETRY_HEADER]: '1' } : {};
   const r = await apiFetch('/api/diary/' + path, body === undefined ? { signal, ...(storageRetry ? { headers: retry } : {}) } : { signal, method, headers: { 'Content-Type': 'application/json', ...retry }, body: JSON.stringify(body) });
   const value = await r.json();

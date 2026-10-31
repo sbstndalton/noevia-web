@@ -1405,6 +1405,7 @@ export const NB_NO: Catalogue = {
   'projects.view.reason.noOcrText': "OCR fant ingen lesbar tekst; prøv en tydeligere skanning eller en ulåst original.",
   'projects.view.reason.noNativeText': "Ingen lesbar innebygd tekst. Skannet eller bildebasert innhold krever OCR; OCR er ikke installert.",
   'projects.view.reason.extractionWaiting': "Venter på at dokumentlesingen kommer tilbake. Filen er lagret og blir lest automatisk.",
+  'projects.view.usingPreviousText': "Bruker forrige tekst",
   'projects.view.reason.ocrTooLarge': "Denne PDF-en er større enn OCR-tjenesten tar imot (25 MB), så sidene med bilder ble ikke sendt til OCR; deres eget tekstlag ble lest.",
   'projects.view.partiallyExtracted': "Delvis hentet ut",
   'projects.view.reason.nativeFallback': "sider {pages}: oppsettanalysen fant ingen tekst, så PDF-ens eget tekstlag ble brukt; leserekkefølge og tabeller kan være unøyaktige der",
