@@ -235,7 +235,7 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
             </label>;
           })}
         </div>
-        {!online && <p className="code-note">{t('code.panel.offlineNote')}</p>}
+        {!online && <p className="code-note">{t(state.networkState === 'unavailable' ? 'code.panel.offlineNoteTemporary' : 'code.panel.offlineNote')}</p>}
       </fieldset>
 
       {needsDomains && <div className="code-field">

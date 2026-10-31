@@ -78,7 +78,8 @@ test('#1656 the wizard role comes from the mode: only the invited member is not 
   const wizard = read('src/components/SetupWizard.tsx');
   assert.match(wizard, /<PrivateLanOriginNote isAdmin=\{mode !== 'invited'\}\/>/);
   const browser = read('src/components/browser/BrowserPanel.tsx');
-  assert.match(browser, /const needsAdmin = !!state && state\.network !== true;/);
+  // #2242: a proxy that is configured but not answering is not an administrator's setup, so the role is not fetched for it either.
+  assert.match(browser, /const needsAdmin = !!state && state\.network !== true && state\.networkState !== 'unavailable';/);
   assert.match(browser, /fetchProfile\(\)\.then\(p => \{ if \(live\) setIsAdmin\(p\?\.user\?\.role === 'admin'\); \}/);
   assert.match(browser, /\{!online && <EgressUnavailableNote isAdmin=\{isAdmin\}\/>\}/);
 });
