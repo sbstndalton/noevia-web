@@ -372,7 +372,7 @@ type IdleUnloadInfo = { seconds: number; source: 'setting' | 'env' | 'default'; 
   defaultSeconds: number; minSeconds: number; maxSeconds: number; applied?: boolean };
 type IdleApply = { state: 'applied' | 'pending' | 'failed'; loaded?: string[] };
 const IDLE_CHOICES = [300, 600, 900, 1800, 3600, 7200, 14400, 28800, 43200, 86400, 0];
-function IdleUnloadSection(): JSX.Element | null {
+export function IdleUnloadSection(): JSX.Element | null {
   const t = useT();
   const [info, setInfo] = useState<IdleUnloadInfo | null>(null);
   const [draft, setDraft] = useState<number | null>(null);
@@ -391,7 +391,8 @@ function IdleUnloadSection(): JSX.Element | null {
       if (r.status === 404 || r.status === 403) { setHidden(true); return; }
       if (!r.ok) { setError(t('mm.idle.loadError')); return; }
       const v = await r.json() as IdleUnloadInfo;
-      if (liveRef.current) { setInfo(v); setDraft(v.seconds); }
+      // #2267: as in the budget section; the 'saved but not applied' error set just before this load stays.
+      if (liveRef.current) { setInfo(v); setDraft(v.seconds); setError((e) => (e === t('mm.idle.loadError') ? '' : e)); }
     }).catch(() => { if (liveRef.current) setError(t('mm.idle.loadError')); });
   }, [t]);
   useEffect(() => { load(); }, [load]);
@@ -464,7 +465,7 @@ function IdleUnloadSection(): JSX.Element | null {
 type BudgetEstimate = { totalGib: number | null; cacheRamUnbounded?: boolean };
 type BudgetInfo = { budgetGib: number; source: 'admin' | 'deployment'; defaultGib: number; minGib: number; maxGib: number; limited?: boolean;
   models: { model: string; loaded: boolean; sleeping?: boolean; system: boolean; labels: string[]; estimate: BudgetEstimate | null; fits: boolean | null }[] | null; estimateError?: string };
-function InferenceBudgetSection(): JSX.Element | null {
+export function InferenceBudgetSection(): JSX.Element | null {
   const t = useT();
   const [info, setInfo] = useState<BudgetInfo | null>(null);
   const [draft, setDraft] = useState('');
@@ -481,7 +482,8 @@ function InferenceBudgetSection(): JSX.Element | null {
       if (r.status === 404 || r.status === 403) { setHidden(true); return; }
       if (!r.ok) { setError(t('mm.budget.loadError')); return; }
       const v = await r.json() as BudgetInfo;
-      if (liveRef.current) { setInfo(v); setDraft(String(v.budgetGib)); }
+      // #2267: a load that works clears an earlier failed load, so a passing 503 does not stay beside fresh data (a save's own error stays).
+      if (liveRef.current) { setInfo(v); setDraft(String(v.budgetGib)); setError((e) => (e === t('mm.budget.loadError') ? '' : e)); }
     }).catch(() => { if (liveRef.current) setError(t('mm.budget.loadError')); });
   }, [t]);
   useEffect(() => { load(); }, [load]);
