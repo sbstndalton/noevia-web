@@ -41,6 +41,8 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.assign.state.off': "Désactivé",
   'mm.assign.state.unreachable': "Injoignable",
   'mm.assign.state.down': "Erreur",
+  'mm.assign.healthFailed': "Impossible de vérifier si ces services répondent. Ils fonctionnent peut-être encore.",
+  'mm.assign.downSummary': "Ne répondent pas : {services}.",
   'mm.assign.state.unset': "Non défini",
   'mm.assign.none': "Aucun",
   'mm.assign.builtIn': "Intégré",

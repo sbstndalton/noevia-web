@@ -41,6 +41,8 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.assign.state.off': "Uit",
   'mm.assign.state.unreachable': "Onbereikbaar",
   'mm.assign.state.down': "Fout",
+  'mm.assign.healthFailed': "Kon niet controleren of deze diensten antwoorden. Ze draaien mogelijk nog.",
+  'mm.assign.downSummary': "Antwoorden niet: {services}.",
   'mm.assign.state.unset': "Niet ingesteld",
   'mm.assign.none': "Geen",
   'mm.assign.builtIn': "Ingebouwd",

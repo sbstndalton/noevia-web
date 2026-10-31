@@ -663,7 +663,7 @@ body { margin: 0; background: var(--bg); }
   background: none; border: none; cursor: pointer; color: inherit;
   font-size: var(--text-caption2); padding: 0 0 0 2px; line-height: 1;
 }
-.modal-err { margin: 0; font-size: var(--text-caption); color: var(--accent-text); }
+.modal-err { margin: 0; font-size: var(--text-caption); color: var(--status-danger, var(--danger)); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
 /* Standard button scale: .btn is the base; primary/secondary/ghost/icon are
    the variants. .modal-btn is kept as an alias so every existing call site

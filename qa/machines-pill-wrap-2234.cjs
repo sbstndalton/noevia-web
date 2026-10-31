@@ -47,6 +47,9 @@ run('machines-pill-wrap-2234', Number(process.env.QA_PORT || 32234), async (chec
         }
         assert.match(await pills.first().textContent(), /Unreachable · Embeddings \(projects and Diary\): Connection refused/);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'the page scrolls sideways');
+        // The Settings dialog fades in: photograph it once the transition has ended, not through the half-transparent page behind it.
+        await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'));
+        await page.waitForTimeout(700);
         await shot(page, `2234-machines-${view.name}-${theme}`, { fullPage: true });
         assert.deepEqual(errors, []);
         await context.close();

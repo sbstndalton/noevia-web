@@ -1073,7 +1073,7 @@ export const NB_NO: Catalogue = {
   'code.harness.pi.label': "Kodeassistent",
   'common.technicalDetail': "Teknisk detalj: {name}",
   'wizard.originPrivateLan': "Denne adressen fungerer bare på det lokale nettverket ditt. Passnøkler og noen sikkerhetsfunksjoner i nettleseren krever HTTPS og fungerer ikke med en ren IP-adresse, men du kan fortsatt logge inn med passordet ditt. Senere kan du bruke noevia med et ekte domenenavn og beholde denne adressen også; en administrator setter det opp i serverkonfigurasjonen.",
-  'browser.egressUnavailable': "Denne serveren kjører ikke nettverksproxyen, så en nettleseroppgave kan ikke åpnes i det hele tatt. En administrator setter den opp i serverkonfigurasjonen.",
+  'browser.egressUnavailable': "Nettverksproxyen er ikke tilgjengelig, så en nettleseroppgave kan ikke åpnes akkurat nå. Den starter kanskje bare på nytt; hvis den forblir utilgjengelig, setter en administrator den opp i serverkonfigurasjonen.",
   'code.panel.harnessNone': "Ingen er konfigurert på denne serveren",
   'code.panel.preparation': "Klargjøring av prompt",
   'code.prep.direct.label': "Direkte",

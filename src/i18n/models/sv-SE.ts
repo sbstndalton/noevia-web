@@ -41,6 +41,8 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.assign.state.off': "Av",
   'mm.assign.state.unreachable': "Onåbar",
   'mm.assign.state.down': "Fel",
+  'mm.assign.healthFailed': "Det gick inte att kontrollera om tjänsterna svarar. De kan fortfarande köra.",
+  'mm.assign.downSummary': "Svarar inte: {services}.",
   'mm.assign.state.unset': "Inte vald",
   'mm.assign.none': "Ingen",
   'mm.assign.builtIn': "Inbyggd",

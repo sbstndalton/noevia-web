@@ -876,13 +876,14 @@ export function fetchPermittedTools(projectId: string | null, mode: 'chat' | 'co
   return getPermitted(`/api/toolboxes/permitted?${q}`);
 }
 
-/** #2211: the 503 "The tool list is being prepared" (with Retry-After) is not a failure: the list is not ready yet. */
+/** #2211: the 503 "The tool list is being prepared" (with Retry-After, toolbox_routes.rs) is not a failure: the list is not ready yet. */
 export class ToolsPreparingError extends Error {
   constructor(message: string, readonly retryAfterMs: number) { super(message); this.name = 'ToolsPreparingError'; }
 }
 async function getPermitted<T>(url: string): Promise<T> {
   const res = await apiFetch(url);
-  if (res.status === 503) throw new ToolsPreparingError(await describeFailure(res, `GET ${url} failed`), historySaveRetryDelay(res.headers.get('Retry-After')));
+  // Only the "being prepared" answer carries Retry-After; the 503 "tool permissions could not be read" does not, and is a failure to show.
+  if (res.status === 503 && res.headers.get('Retry-After') !== null) throw new ToolsPreparingError(await describeFailure(res, `GET ${url} failed`), historySaveRetryDelay(res.headers.get('Retry-After')));
   if (!res.ok) throw new Error(await describeFailure(res, `GET ${url} failed`));
   return res.json() as Promise<T>;
 }

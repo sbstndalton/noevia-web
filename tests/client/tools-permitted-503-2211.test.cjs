@@ -26,11 +26,14 @@ test('a 503 with Retry-After is a ToolsPreparingError that carries the wait', ()
   assert.match(urls[0], /^\/api\/toolboxes\/permitted\?mode=chat&projectId=p1$/);
 }));
 
-test('the wait is capped, and 1 s when Retry-After is missing or not a number', async () => {
+test('the wait is capped, and 1 s when Retry-After is not a number', async () => {
   await withApi(() => PREPARING('3600'), async (api) => assert.rejects(api.fetchPermittedTools(null, 'chat'), (e) => e.retryAfterMs === api.HISTORY_SAVE_RETRY_CAP_MS));
-  await withApi(() => PREPARING(null), async (api) => assert.rejects(api.fetchPermittedTools(null, 'chat'), (e) => e instanceof api.ToolsPreparingError && e.retryAfterMs === 1000));
-  await withApi(() => PREPARING('soon'), async (api) => assert.rejects(api.fetchPermittedTools(null, 'chat'), (e) => e.retryAfterMs === 1000));
+  await withApi(() => PREPARING('soon'), async (api) => assert.rejects(api.fetchPermittedTools(null, 'chat'), (e) => e instanceof api.ToolsPreparingError && e.retryAfterMs === 1000));
 });
+
+test('a 503 without Retry-After ("The tool permissions could not be read", toolbox_routes.rs) is a plain failure, not "being prepared"', () => withApi(
+  () => new Response(JSON.stringify({ error: 'The tool permissions could not be read. Try again in a moment.' }), { status: 503, headers: { 'Content-Type': 'application/json' } }),
+  async (api) => assert.rejects(api.fetchPermittedTools(null, 'chat'), (e) => !(e instanceof api.ToolsPreparingError) && /permissions could not be read/.test(e.message))));
 
 test('other failures stay plain errors, and a 200 still returns the boxes', async () => {
   await withApi(() => new Response(JSON.stringify({ error: 'Server error' }), { status: 500 }), async (api) => assert.rejects(api.fetchPermittedTools(null, 'chat'), (e) => !(e instanceof api.ToolsPreparingError) && e.message === 'Server error'));

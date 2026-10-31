@@ -65,6 +65,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   const requestRef = useRef(0);
   // #2239: the list itself failed (models stays null): the "Loading models…" line gives way to the error and a retry.
   const [listFailed, setListFailed] = useState(false);
+  const failedRef = useRef(false), [retrying, setRetrying] = useState(false);
   const [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(''), [filesNote, setFilesNote] = useState(''), [runtimeOptions, setRuntimeOptions] = useState(false);
   // The parent passes a fresh callback each render; the refresh below must stay stable.
   const changedRef = useRef(onChanged);
@@ -72,10 +73,11 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   // The engine's list answers in milliseconds; the file scan behind it can take seconds. Show the
   // list as soon as it arrives and let file details, updates and disk space fill in after.
   const refresh = useCallback(async () => {
-    setError(''); setListFailed(false);
+    // A retry after a failed list keeps the error and its Try again button where they are until the list lands (focus stays on the button).
+    if (!failedRef.current) setError('');
     const request = ++requestRef.current;
     const current = () => request === requestRef.current;
-    const listed = fetchInstalledModels().then((installed) => { if (current()) setModels(installed); return installed; });
+    const listed = fetchInstalledModels().then((installed) => { if (current()) { setModels(installed); failedRef.current = false; setListFailed(false); setError(''); } return installed; });
     const local = mm<{ models: FileEntry[]; unregistered: string[] }>('models').catch(() => null);
     // `u.status` is missing rather than `{}` when the endpoint answers with an unexpected body —
     // `|| {}` keeps `updates[...]` a safe lookup instead of crashing on an undefined record.
@@ -93,7 +95,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
         if (synced.added.length) { changedRef.current(); return; }   // models-changed refetches this list
       }
       setFilesNote(scan ? '' : tRef.current('mm.library.noService'));
-    } catch (e) { if (!current()) return; setListFailed(true); setError(errorText(e, tRef.current('mm.library.unavailable'))); }
+    } catch (e) { if (!current()) return; failedRef.current = true; setListFailed(true); setError(errorText(e, tRef.current('mm.library.unavailable'))); }
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
   // Tabs mount per selection, so a mount-only fetch left this list showing
@@ -197,7 +199,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
       {canTune && <button className="btn btn-secondary btn-sm" aria-expanded={showTune} aria-controls="library-autotune" onClick={() => setShowTune(v => !v)}>{t('mm.library.tuneUntuned')}</button>}
     </div>
     {showTune && <section className="mm-panel" id="library-autotune"><h3>{t('mm.library.autoTuning')}</h3><AutoTune onChanged={onChanged}/></section>}
-    {error && <p role="alert" className="modal-err">{error}{!models && listFailed && <> <button type="button" className="btn btn-secondary btn-sm" onClick={() => void refresh()}>{t('mm.tryAgain')}</button></>}</p>}
+    {error && <p role="alert" className="modal-err">{error}{!models && listFailed && <> <button type="button" className="btn btn-secondary btn-sm" aria-disabled={retrying || undefined} onClick={() => { if (retrying) return; setRetrying(true); void refresh().finally(() => setRetrying(false)); }}>{t('mm.tryAgain')}</button></>}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
     {filesNote && <p className="mm-note">{filesNote}</p>}
     {models && !servable.length && !orphanFiles.length && installed.length > 0 && <p className="mm-note">{t('mm.library.nothing')}</p>}

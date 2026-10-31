@@ -1084,7 +1084,7 @@ export const EN_GB = {
   'code.harness.pi.label': "Coding assistant",
   'common.technicalDetail': "Technical detail: {name}",
   'wizard.originPrivateLan': "This address only works on your local network. Passkeys and some browser security features require HTTPS and will not work from a plain IP address — you can still sign in with your password. You can point noevia at a real domain later and keep this address working alongside it; an administrator sets that up in the server configuration.",
-  'browser.egressUnavailable': "This server does not run the network proxy, so a browser task cannot open at all. An administrator sets it up in the server configuration.",
+  'browser.egressUnavailable': 'The network proxy is not available, so a browser task cannot open right now. It may only be restarting; if it stays unavailable, an administrator sets it up in the server configuration.',
   'code.panel.harnessNone': "None configured on this server",
   'code.panel.preparation': "Prompt preparation",
   'code.prep.direct.label': "Direct",

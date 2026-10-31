@@ -1073,7 +1073,7 @@ export const SV_SE: Catalogue = {
   'code.harness.pi.label': "Kodassistent",
   'common.technicalDetail': "Teknisk detalj: {name}",
   'wizard.originPrivateLan': "Den här adressen fungerar bara på ditt lokala nätverk. Passnycklar och vissa säkerhetsfunktioner i webbläsaren kräver HTTPS och fungerar inte med en ren IP-adress, men du kan fortfarande logga in med ditt lösenord. Senare kan du använda noevia med ett riktigt domännamn och behålla den här adressen också; en administratör ställer in det i serverkonfigurationen.",
-  'browser.egressUnavailable': "Den här servern kör inte nätverksproxyn, så en webbläsaruppgift kan inte öppnas alls. En administratör ställer in den i serverkonfigurationen.",
+  'browser.egressUnavailable': "Nätverksproxyn är inte tillgänglig, så en webbläsaruppgift kan inte öppnas just nu. Den kanske bara startar om; förblir den otillgänglig ställer en administratör in den i serverkonfigurationen.",
   'code.panel.harnessNone': "Ingen konfigurerad på den här servern",
   'code.panel.preparation': "Promptförberedelse",
   'code.prep.direct.label': "Direkt",

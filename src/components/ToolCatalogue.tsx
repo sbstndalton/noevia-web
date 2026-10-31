@@ -68,7 +68,8 @@ export function ToolCatalogue({ open, onOpenChange, projectId, mode, toggled, on
         fail(err);
       });
     void load(false);
-    return () => { live = false; window.clearTimeout(timer); };
+    // Leaving (close, project or mode change, unmount) also drops the status, so a reopen cannot flash it.
+    return () => { live = false; window.clearTimeout(timer); setPreparing(false); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, boxes, projectId, mode]);
   useEffect(() => {
