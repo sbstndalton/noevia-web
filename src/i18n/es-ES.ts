@@ -466,6 +466,7 @@ export const ES_ES: Catalogue = {
   'tools.boundaryProject': "Solo se ofrecen herramientas ya conectadas y permitidas en este proyecto. Las escrituras siempre piden permiso.",
   'tools.boundaryAccount': "Solo se ofrecen herramientas ya conectadas y permitidas en tu cuenta. Las escrituras siempre piden permiso.",
   'tools.loadError': "No se han podido cargar las herramientas.",
+  'tools.preparing': "Se está preparando la lista de herramientas. Aparecerá en un momento.",
   'tools.onForChat': "Activa en este chat",
   'tools.thisMessage': "Este mensaje",
   'tools.allowed': "Permitida",

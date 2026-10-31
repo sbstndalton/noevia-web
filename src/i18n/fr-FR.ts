@@ -466,6 +466,7 @@ export const FR_FR: Catalogue = {
   'tools.boundaryProject': "Seuls les outils déjà connectés et autorisés pour ce projet sont proposés. Les écritures demandent toujours d’abord.",
   'tools.boundaryAccount': "Seuls les outils déjà connectés et autorisés pour votre compte sont proposés. Les écritures demandent toujours d’abord.",
   'tools.loadError': "Impossible de charger les outils.",
+  'tools.preparing': "La liste des outils est en cours de préparation. Elle apparaîtra dans un instant.",
   'tools.onForChat': "Activé pour cette discussion",
   'tools.thisMessage': "Ce message",
   'tools.allowed': "Autorisé",

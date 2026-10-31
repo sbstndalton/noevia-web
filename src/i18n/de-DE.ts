@@ -466,6 +466,7 @@ export const DE_DE: Catalogue = {
   'tools.boundaryProject': "Angeboten werden nur Werkzeuge, die für dieses Projekt verbunden und erlaubt sind. Schreibzugriffe fragen immer vorher.",
   'tools.boundaryAccount': "Angeboten werden nur Werkzeuge, die für dein Konto verbunden und erlaubt sind. Schreibzugriffe fragen immer vorher.",
   'tools.loadError': "Werkzeuge konnten nicht geladen werden.",
+  'tools.preparing': "Die Werkzeugliste wird vorbereitet. Sie erscheint gleich.",
   'tools.onForChat': "An für diesen Chat",
   'tools.thisMessage': "Diese Nachricht",
   'tools.allowed': "Erlaubt",

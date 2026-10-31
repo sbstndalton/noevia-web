@@ -466,6 +466,7 @@ export const SV_SE: Catalogue = {
   'tools.boundaryProject': "Bara verktyg som redan är anslutna och tillåtna för projektet erbjuds. Skrivningar frågar alltid först.",
   'tools.boundaryAccount': "Bara verktyg som redan är anslutna och tillåtna för ditt konto erbjuds. Skrivningar frågar alltid först.",
   'tools.loadError': "Verktygen kunde inte läsas in.",
+  'tools.preparing': "Verktygslistan förbereds. Den visas om ett ögonblick.",
   'tools.onForChat': "På för den här chatten",
   'tools.thisMessage': "Det här meddelandet",
   'tools.allowed': "Tillåtet",

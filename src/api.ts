@@ -873,7 +873,18 @@ export async function* streamChat(
 export function fetchPermittedTools(projectId: string | null, mode: 'chat' | 'cowork'): Promise<{ mode: string; boxes: import('./tool-catalogue').PermittedBox[] }> {
   const q = new URLSearchParams({ mode });
   if (projectId) q.set('projectId', projectId);
-  return getJson(`/api/toolboxes/permitted?${q}`);
+  return getPermitted(`/api/toolboxes/permitted?${q}`);
+}
+
+/** #2211: the 503 "The tool list is being prepared" (with Retry-After) is not a failure: the list is not ready yet. */
+export class ToolsPreparingError extends Error {
+  constructor(message: string, readonly retryAfterMs: number) { super(message); this.name = 'ToolsPreparingError'; }
+}
+async function getPermitted<T>(url: string): Promise<T> {
+  const res = await apiFetch(url);
+  if (res.status === 503) throw new ToolsPreparingError(await describeFailure(res, `GET ${url} failed`), historySaveRetryDelay(res.headers.get('Retry-After')));
+  if (!res.ok) throw new Error(await describeFailure(res, `GET ${url} failed`));
+  return res.json() as Promise<T>;
 }
 
 /** #236: a Cowork turn. The server guards it (403 member, 409 harness off) and starts a code task. */

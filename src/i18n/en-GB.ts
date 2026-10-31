@@ -475,6 +475,7 @@ export const EN_GB = {
   'tools.boundaryProject': 'Only tools already connected and permitted for this project are offered. Writes always ask first.',
   'tools.boundaryAccount': 'Only tools already connected and permitted for your account are offered. Writes always ask first.',
   'tools.loadError': 'Tools could not be loaded.',
+  'tools.preparing': 'The tool list is being prepared. It will appear in a moment.',
   'tools.onForChat': 'On for this chat',
   'tools.thisMessage': 'This message',
   'tools.allowed': 'Allowed',

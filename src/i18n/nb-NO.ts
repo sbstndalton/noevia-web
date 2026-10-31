@@ -466,6 +466,7 @@ export const NB_NO: Catalogue = {
   'tools.boundaryProject': "Bare verktøy som allerede er tilkoblet og tillatt for dette prosjektet, tilbys. Skriving spør alltid først.",
   'tools.boundaryAccount': "Bare verktøy som allerede er tilkoblet og tillatt for kontoen din, tilbys. Skriving spør alltid først.",
   'tools.loadError': "Verktøyene kunne ikke lastes.",
+  'tools.preparing': "Verktøylisten gjøres klar. Den vises om et øyeblikk.",
   'tools.onForChat': "På for denne chatten",
   'tools.thisMessage': "Denne meldingen",
   'tools.allowed': "Tillatt",
