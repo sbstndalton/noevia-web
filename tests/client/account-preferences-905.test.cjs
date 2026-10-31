@@ -133,7 +133,7 @@ test('an upload whose refresh throws reports a failure status instead of rejecti
     '../project-files': load('project-files.ts', {}), // #1454: the real name helper (pure, no imports at runtime)
     '../user-preferences': { appLocale: () => undefined },
     './ShellIcon': { ShellIcon() {} },
-    '../source-status': { uploadFailureText: (err, _t, fallback) => err?.message || fallback, uploadUnreadableReason: () => '' },
+    '../source-status': { uploadFailureText: (err, _t, fallback) => err?.message || fallback, uploadWaitingReason: () => '', uploadUnreadableReason: () => '' },
     '../number-format': { formatPercent: () => '' },
     '../i18n': { useT: () => t },
     '../toolbox-copy': { toolboxCopy() {} },

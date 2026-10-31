@@ -14,7 +14,7 @@ function harness(upload) {
   const statuses = [], busy = [];
   const t = Object.assign((key) => key, { plural: (key, _count, params) => `${key}:${params.target}` });
   const ctx = {
-    uploadLimit: () => 1e6, fileToBase64: async () => 'cWE=', uploadProjectFile: upload, uploadUnreadableReason: () => '',
+    uploadLimit: () => 1e6, fileToBase64: async () => 'cWE=', uploadProjectFile: upload, uploadWaitingReason: () => '', uploadUnreadableReason: () => '',
     uploadFailureText: (err) => String(err.message), formatPercent: String, appLocale: () => 'en-GB', Date, Math, Error,
     // Collaborators added since (#1454 free-name uploads, source-status stage text): pass-throughs here.
     uploadTakenNames: () => [], uploadUnderFreeName: async (name, _taken, up) => ({ name, result: await up(name) }), uploadStageText: (_t, value) => value.stage,
