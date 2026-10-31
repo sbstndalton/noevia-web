@@ -370,12 +370,14 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
           <div>
             <p>Passkeys are the recommended way to sign in using your device or a security key.</p>
             {error && <p className="auth-error" role="alert">{error}</p>}
-            <button type="button" disabled={busy} onClick={() => void finishPasskey()}>
-              {busy ? 'Waiting for your device…' : 'Create a passkey'}
-            </button>
-            <button type="button" className="modal-btn secondary" disabled={busy} onClick={() => void finish()}>
-              Set up later
-            </button>
+            <div className="wizard-actions">
+              <button type="button" disabled={busy} onClick={() => void finishPasskey()}>
+                {busy ? 'Waiting for your device…' : 'Create a passkey'}
+              </button>
+              <button type="button" className="modal-btn secondary" disabled={busy} onClick={() => void finish()}>
+                Set up later
+              </button>
+            </div>
             <small>You can add or remove passkeys in Settings → Security.</small>
           </div>
         )}
