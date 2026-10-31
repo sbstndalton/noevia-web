@@ -307,9 +307,14 @@ export const completeRecovery = (token: string, password: string) => postJson<{ 
  *  server already explains *why* (e.g. "origin not allowed", "invalid CSRF
  *  token"), and swallowing that forced users to guess from a status code alone. */
 /** The error for a failed request: the server's message, and its stable `code` when it sent one (#1428). */
-async function failureFromResponse(res: Response, fallback: string): Promise<Error & { code?: string }> {
-  const payload = await res.clone().json().catch(() => null) as { error?: unknown; code?: unknown } | null;
-  return failureWithCode(typeof payload?.error === 'string' && payload.error ? payload.error : `${fallback}: ${res.status}`, payload?.code);
+async function failureFromResponse(res: Response, fallback: string): Promise<Error & { code?: string; retryAfter?: number }> {
+  const payload = await res.clone().json().catch(() => null) as { error?: unknown; code?: unknown; retryAfter?: unknown } | null;
+  const err: Error & { code?: string; retryAfter?: number } = failureWithCode(typeof payload?.error === 'string' && payload.error ? payload.error : `${fallback}: ${res.status}`, payload?.code);
+  // #2252: a throttle's wait in seconds (storageThrottled: body field, and the Retry-After header) so the screen can say how long.
+  const header = Number(res.headers?.get?.('retry-after'));
+  const wait = typeof payload?.retryAfter === 'number' && payload.retryAfter > 0 ? payload.retryAfter : header > 0 && Number.isFinite(header) ? header : 0;
+  if (wait > 0) err.retryAfter = wait;
+  return err;
 }
 
 async function describeFailure(res: Response, fallback: string): Promise<string> {
