@@ -177,6 +177,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'backups.backingUp': "Wird gesichert …",
   'backups.reason.off': "Externe Backups sind ausgeschaltet (Einstellungen → Funktionen).",
   'backups.reason.notConfigured': "Nicht konfiguriert: Lege {gaps} fest.",
+  'backups.reason.keyUnusable': "Der Backup-Schlüssel kann nicht verwendet werden. Prüfe, ob die Schlüsseldatei vorhanden und gültig ist und nicht in einem gesicherten Ordner liegt.",
   'settings.group.personal': "Persönlich",
   'settings.group.account': "Konto & Verbindungen",
   'settings.group.admin': "Serververwaltung",

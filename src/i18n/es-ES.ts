@@ -1075,7 +1075,7 @@ export const ES_ES: Catalogue = {
   'wizard.originPrivateLan': "Esta dirección solo funciona en tu red local. Las passkeys y algunas funciones de seguridad del navegador requieren HTTPS y no funcionan con una dirección IP sin más; aun así, puedes entrar con tu contraseña. Más adelante puedes usar noevia con un dominio propio y seguir usando esta dirección; un administrador lo configura en la configuración del servidor.",
   'browser.egressUnavailable': "El proxy de red no está disponible, así que una tarea del navegador no puede abrirse ahora. Puede que solo se esté reiniciando; si sigue sin estar disponible, un administrador lo configura en la configuración del servidor.",
   'browser.egressTemporary': "El proxy de red no responde en este momento, así que una tarea del navegador no puede abrirse. Suele ser un reinicio: espera un momento y recarga esta página.",
-  'egress.stillDownAdmin': "Si sigue sin responder pasados unos minutos, el proxy de salida está caído y no solo reiniciándose: compruebe que su contenedor está en marcha y lea su registro.",
+  'egress.stillDownAdmin': "Si sigue sin responder pasados unos minutos, el proxy de salida está caído y no solo reiniciándose: comprueba que su contenedor está en marcha y lee su registro.",
   'code.panel.harnessNone': "Ninguno configurado en este servidor",
   'code.panel.preparation': "Preparación del prompt",
   'code.prep.direct.label': "Directo",

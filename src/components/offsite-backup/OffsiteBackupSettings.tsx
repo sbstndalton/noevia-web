@@ -11,7 +11,7 @@ import type { MessageKey, Translate } from '../../i18n';
 interface Status {
   enabled: boolean; ready: boolean; reason: string | null; busy: string | null; schedule: string; retention: string; destination: string | null; paths: number;
   /** #618: the same facts as structured fields, which the page translates; the English strings above stay as the fallback. */
-  reasonCode?: 'off' | 'notConfigured' | null; reasonGaps?: string[]; scheduleHour?: number;
+  reasonCode?: 'off' | 'notConfigured' | 'keyUnusable' | null; reasonGaps?: string[]; scheduleHour?: number;
   retentionPolicy?: { daily: number; weekly: number; monthly: number };
   destinationFolder?: { path: string; mirror: string | null } | null;
   lastBackup: { at: number; id: string; files: number; uploadedBytes: number } | null;
@@ -31,6 +31,7 @@ const reasonText = (t: Translate, s: Status): string | null => {
   if (!s.reason) return null;
   if (s.reasonCode === 'off') return t('backups.reason.off');
   if (s.reasonCode === 'notConfigured' && s.reasonGaps?.length) return t('backups.reason.notConfigured', { gaps: s.reasonGaps.join(', ') });
+  if (s.reasonCode === 'keyUnusable') return t('backups.reason.keyUnusable');
   return s.reason;
 };
 

@@ -177,6 +177,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'backups.backingUp': "Säkerhetskopierar…",
   'backups.reason.off': "Externa säkerhetskopior är avstängda (Inställningar → Funktioner).",
   'backups.reason.notConfigured': "Inte konfigurerad: ange {gaps}.",
+  'backups.reason.keyUnusable': "Säkerhetskopieringsnyckeln kan inte användas. Kontrollera att nyckelfilen finns, är giltig och inte ligger i en mapp som säkerhetskopieras.",
   'settings.group.personal': "Personligt",
   'settings.group.account': "Konto och anslutningar",
   'settings.group.admin': "Serveradministration",

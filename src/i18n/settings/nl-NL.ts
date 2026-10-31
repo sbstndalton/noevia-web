@@ -177,6 +177,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'backups.backingUp': "Back-up wordt gemaakt…",
   'backups.reason.off': "Externe back-ups staan uit (Instellingen → Functies).",
   'backups.reason.notConfigured': "Niet geconfigureerd: stel {gaps} in.",
+  'backups.reason.keyUnusable': "De back-upsleutel kan niet worden gebruikt. Controleer of het sleutelbestand bestaat, geldig is en niet in een back-upmap staat.",
   'settings.group.personal': "Persoonlijk",
   'settings.group.account': "Account en koppelingen",
   'settings.group.admin': "Serverbeheer",

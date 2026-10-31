@@ -177,6 +177,7 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'backups.backingUp': "Sauvegarde en cours…",
   'backups.reason.off': "Les sauvegardes hors site sont désactivées (Réglages → Fonctionnalités).",
   'backups.reason.notConfigured': "Non configuré : définissez {gaps}.",
+  'backups.reason.keyUnusable': "La clé de sauvegarde est inutilisable. Vérifiez que le fichier de clé existe, est valide et ne se trouve pas dans un dossier sauvegardé.",
   'settings.group.personal': "Préférences personnelles",
   'settings.group.account': "Compte et connexions",
   'settings.group.admin': "Administration du serveur",

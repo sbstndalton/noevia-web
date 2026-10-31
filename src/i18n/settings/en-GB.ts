@@ -169,6 +169,7 @@ export const EN_GB_SETTINGS = {
   'backups.backingUp': "Backing up…",
   'backups.reason.off': "Off-site backups are turned off (Settings → Features).",
   'backups.reason.notConfigured': "Not configured: set {gaps}.",
+  'backups.reason.keyUnusable': "The backup key cannot be used. Check that the key file exists, is valid and is not inside a backed-up folder.",
   'settings.group.personal': 'Personal',
   'settings.group.account': 'Account and connections',
   'settings.group.admin': 'Server administration',

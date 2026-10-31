@@ -165,7 +165,7 @@ async function nextcloudCall<T>(url: string, body: unknown): Promise<T> {
     try { payload = await res.clone().json(); } catch { /* not JSON */ }
     const err = failureWithCode(payload.error || await describeFailure(res, `POST ${url} failed`), payload.code) as NextcloudError;
     if (typeof payload.reason === 'string') err.reason = payload.reason;
-    if (typeof payload.retryAfter === 'number') err.retryAfter = payload.retryAfter;
+    if (typeof payload.retryAfter === 'number') err.retryAfter = Math.min(payload.retryAfter, RETRY_AFTER_CAP_SECONDS);
     throw err;
   }
   return res.json() as Promise<T>;
@@ -306,14 +306,18 @@ export const completeRecovery = (token: string, password: string) => postJson<{ 
 /** Prefer the server's own {error} message over a bare status code — the
  *  server already explains *why* (e.g. "origin not allowed", "invalid CSRF
  *  token"), and swallowing that forced users to guess from a status code alone. */
+/** The longest wait (seconds) shown for a throttle, whatever the server or a proxy asks (#2255). */
+export const RETRY_AFTER_CAP_SECONDS = 86400;
 /** The error for a failed request: the server's message, and its stable `code` when it sent one (#1428). */
 async function failureFromResponse(res: Response, fallback: string): Promise<Error & { code?: string; retryAfter?: number }> {
   const payload = await res.clone().json().catch(() => null) as { error?: unknown; code?: unknown; retryAfter?: unknown } | null;
   const err: Error & { code?: string; retryAfter?: number } = failureWithCode(typeof payload?.error === 'string' && payload.error ? payload.error : `${fallback}: ${res.status}`, payload?.code);
   // #2252: a throttle's wait in seconds (storageThrottled: body field, and the Retry-After header) so the screen can say how long.
-  const header = Number(res.headers?.get?.('retry-after'));
+  const raw = res.headers?.get?.('retry-after');
+  // Plain decimal seconds only: Number() would also read '0x10', '1e3' and ' 5 ' (an HTTP date is not a wait here).
+  const header = typeof raw === 'string' && /^[0-9]+$/.test(raw) ? Number(raw) : 0;
   const wait = typeof payload?.retryAfter === 'number' && payload.retryAfter > 0 ? payload.retryAfter : header > 0 && Number.isFinite(header) ? header : 0;
-  if (wait > 0) err.retryAfter = wait;
+  if (wait > 0) err.retryAfter = Math.min(wait, RETRY_AFTER_CAP_SECONDS);
   return err;
 }
 
