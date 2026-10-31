@@ -29,7 +29,9 @@ export function RetentionSetting(): JSX.Element {
     try {
       const r = await apiFetch('/api/account/retention', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ days, confirmDeletes }) });
       const body = await r.json().catch(() => ({}));
-      if (!r.ok) throw Error(body.error || t('common.saveFailed'));
+      // A refused or half-finished sweep may already have deleted chats (the server counts them in `deleted`):
+      // the workspace and this setting are read again before the error is shown (#2230).
+      if (!r.ok) { notifyWorkspaceChanged(); throw Error(body.error || t('common.saveFailed')); }
       setStatus(days ? [t('data.retentionOn', { days }), body.deleted ? t('data.deletedNow', { count: body.deleted }) : '', t('data.pinnedKept')].filter(Boolean).join(' ') : t('data.retentionOff'));
       if (body.deleted) notifyWorkspaceChanged(); else load();
     } catch (e) { setError(e instanceof Error ? e.message : t('common.saveFailed')); }

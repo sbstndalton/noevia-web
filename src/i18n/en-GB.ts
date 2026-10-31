@@ -1415,6 +1415,7 @@ export const EN_GB = {
   'projects.view.reason.ocrOmittedPages': 'OCR response omitted pages; refresh to retry.',
   'projects.view.reason.noOcrText': 'No readable text was recovered by OCR; try a clearer scan or an unlocked original.',
   'projects.view.reason.noNativeText': 'No readable native text. Scanned or image-based content needs OCR; OCR is not installed.',
+  'projects.view.reason.extractionWaiting': "Waiting for document reading to come back. The file is saved and will be read automatically.",
   'projects.view.reason.ocrTooLarge': 'This PDF is larger than the OCR service accepts (25 MB), so its image-bearing pages were not sent to OCR; their own text layer was read.',
   'projects.view.partiallyExtracted': 'Partially extracted',
   'projects.view.reason.nativeFallback': 'pages {pages}: layout analysis found no text, so the PDF’s own text layer was used; reading order and tables there may be rough',

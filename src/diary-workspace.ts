@@ -5,7 +5,8 @@ export interface FileEntry { path: string; name: string; isDir: boolean }
 export class DiaryRequestError extends Error {
   /** `code` is the server's stable key for a failure the screen words itself (#849: `storageLoginRejected`). */
   /** `retryAfter` is the wait in seconds the storage server asked for (#1168: `storageThrottled`). */
-  constructor(message: string, public status: number, public code?: string, public retryAfter?: number) { super(message); this.name='DiaryRequestError'; }
+  /** `write` is a request that changes the Diary: when it failed as `diaryUnavailable` its outcome is unknown (#2232). */
+  constructor(message: string, public status: number, public code?: string, public retryAfter?: number, public write = false) { super(message); this.name='DiaryRequestError'; }
 }
 /** The header an explicit Retry press adds so the server may reset a rejected-login cool-down (#1168). */
 export const STORAGE_RETRY_HEADER = 'X-Cowork-Storage-Retry';
@@ -15,7 +16,7 @@ export async function diaryRequest<T>(path: string, body?: unknown, method = 'PO
   const value = await r.json();
   if (!r.ok) {
     const wait = Number(value.retryAfter ?? r.headers?.get?.('Retry-After'));
-    throw new DiaryRequestError(value.error || 'Diary request failed', r.status, typeof value.code==='string' ? value.code : undefined, Number.isFinite(wait) && wait > 0 ? Math.ceil(wait) : undefined);
+    throw new DiaryRequestError(value.error || 'Diary request failed', r.status, typeof value.code==='string' ? value.code : undefined, Number.isFinite(wait) && wait > 0 ? Math.ceil(wait) : undefined, method === 'PUT' || (method === 'POST' && path !== 'file'));
   }
   return value;
 }

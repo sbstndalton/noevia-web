@@ -1404,6 +1404,7 @@ export const DE_DE: Catalogue = {
   'projects.view.reason.ocrOmittedPages': "Die OCR-Antwort ließ Seiten aus; aktualisiere, um es erneut zu versuchen.",
   'projects.view.reason.noOcrText': "Per OCR wurde kein lesbarer Text erkannt; versuche einen klareren Scan oder ein entsperrtes Original.",
   'projects.view.reason.noNativeText': "Kein lesbarer eingebetteter Text. Gescannte oder bildbasierte Inhalte brauchen OCR; OCR ist nicht installiert.",
+  'projects.view.reason.extractionWaiting': "Warte darauf, dass das Lesen von Dokumenten wieder verfügbar ist. Die Datei ist gespeichert und wird automatisch gelesen.",
   'projects.view.reason.ocrTooLarge': "Diese PDF ist größer, als der OCR-Dienst annimmt (25 MB). Ihre Seiten mit Bildern wurden daher nicht an OCR gesendet; ihre eigene Textebene wurde gelesen.",
   'projects.view.partiallyExtracted': "Teilweise extrahiert",
   'projects.view.reason.nativeFallback': "Seiten {pages}: Die Layoutanalyse fand keinen Text, daher wurde die eigene Textebene der PDF verwendet; Lesereihenfolge und Tabellen können dort ungenau sein",

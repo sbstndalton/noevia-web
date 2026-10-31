@@ -19,7 +19,7 @@ const LEGACY_REASONS: Record<string, string> = {
 };
 type Reasoned = { reason?: string; reasonId?: string; reasonParams?: Record<string, string | number> };
 
-const REASON_IDS = new Set(['binaryText', 'encoding', 'docxPartial', 'docxEmpty', 'imageTooLarge', 'ocrPageLimit', 'ocrOmittedPages', 'noOcrText', 'noNativeText', 'ocrTooLarge']);
+const REASON_IDS = new Set(['binaryText', 'encoding', 'docxPartial', 'docxEmpty', 'imageTooLarge', 'ocrPageLimit', 'ocrOmittedPages', 'noOcrText', 'noNativeText', 'ocrTooLarge', 'extractionWaiting']);
 
 function reasonText(t: Translate | undefined, id: string | undefined, params: Record<string, string | number> | undefined, english: string | undefined): string {
   if (!t) return english || '';
@@ -137,9 +137,15 @@ export function documentNotes(d: DocumentStatus | undefined): DocumentNote[] {
   return out;
 }
 
+/** The server's sentence for a document waiting for its reader (#2237), in English without `t`. */
+const WAITING_EN = 'Waiting for document reading to come back. The file is saved and will be read automatically.';
+
 export function sourceStatus(file: ProjectFile, t?: Translate): string {
   const d = file.document;
   if (!d) return '';
+  // #2237: the file is fine and the service that reads it is not there yet: one state, in plain words.
+  // A record that still holds earlier text says so first: the queued read is for the newer upload.
+  if (d.state === 'queued') return `${d.stale ? 'Using previous text · ' : ''}${t ? t('projects.view.reason.extractionWaiting') : WAITING_EN}`;
   const pages = d.pages ? ` · ${d.pages} ${d.pages === 1 ? "page" : "pages"}` : '';
   const incomplete = (d.pageStatus || []).filter(p => !['native', 'blank', 'ocr'].includes(p.status));
   // #700: a 'degraded' page had no text from layout analysis, so the PDF's own text layer was used.
@@ -247,6 +253,12 @@ export function uploadUnreadableReason(result: { attachment?: { state?: string; 
   if (d?.state === 'failed') return `${label}${d.error || d.errorId ? ' · ' + documentError(d, t) : ''}`;
   if (a && a.state === 'stored' && (a.group === 'Text' || a.group === 'Documents')) return `${label} · ${attachmentReason(a, t) || (t ? t('projects.view.reason.noText') : 'the original is kept, but no text could be read from it')}`;
   return '';
+}
+
+/** #2237: an upload the server kept but could not read yet because the reading service was away, or ''. It is
+ *  not a failure: the file is read when the service is back. */
+export function uploadWaitingReason(result: { document?: { state?: string } } | undefined, t?: Translate): string {
+  return result?.document?.state === 'queued' ? (t ? t('projects.view.reason.extractionWaiting') : WAITING_EN) : '';
 }
 
 /** Mirrors server/source-readability.cjs: an original whose text could not be read (#586). It is kept

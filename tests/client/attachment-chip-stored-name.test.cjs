@@ -23,7 +23,7 @@ function actionsWith(uploadProjectFile) {
     '../project-files': load('project-files.ts', {}),
     '../user-preferences': { appLocale: () => undefined },
     './ShellIcon': { ShellIcon() {} },
-    '../source-status': { uploadFailureText: (err, _t, fallback) => err?.message || fallback, uploadUnreadableReason: () => '' },
+    '../source-status': { uploadFailureText: (err, _t, fallback) => err?.message || fallback, uploadWaitingReason: () => '', uploadUnreadableReason: () => '' },
     '../number-format': { formatPercent: () => '' },
     '../i18n': { useT: () => t },
     '../toolbox-copy': { toolboxCopy() {} },

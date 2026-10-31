@@ -1404,6 +1404,7 @@ export const SV_SE: Catalogue = {
   'projects.view.reason.ocrOmittedPages': "OCR-svaret utelämnade sidor; uppdatera för att försöka igen.",
   'projects.view.reason.noOcrText': "OCR hittade ingen läsbar text; försök med en tydligare skanning eller ett olåst original.",
   'projects.view.reason.noNativeText': "Ingen läsbar inbäddad text. Skannat eller bildbaserat innehåll kräver OCR; OCR är inte installerat.",
+  'projects.view.reason.extractionWaiting': "Väntar på att dokumentläsningen ska komma tillbaka. Filen är sparad och läses automatiskt.",
   'projects.view.reason.ocrTooLarge': "Den här PDF:en är större än OCR-tjänsten tar emot (25 MB), så sidorna med bilder skickades inte till OCR; deras eget textlager lästes.",
   'projects.view.partiallyExtracted': "Delvis extraherad",
   'projects.view.reason.nativeFallback': "sidor {pages}: layoutanalysen hittade ingen text, så PDF:ens eget textlager användes; läsordning och tabeller kan vara oprecisa där",
