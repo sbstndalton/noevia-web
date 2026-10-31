@@ -1075,7 +1075,7 @@ export const DE_DE: Catalogue = {
   'wizard.originPrivateLan': "Diese Adresse funktioniert nur in deinem lokalen Netzwerk. Passkeys und einige Sicherheitsfunktionen des Browsers setzen HTTPS voraus und funktionieren mit einer reinen IP-Adresse nicht – du kannst dich aber weiterhin mit deinem Passwort anmelden. Später kannst du noevia unter einem echten Domainnamen betreiben und diese Adresse weiter nutzen; ein Administrator richtet das in der Serverkonfiguration ein.",
   'browser.egressUnavailable': "Der Netzwerk-Proxy ist nicht verfügbar, daher kann gerade keine Browser-Aufgabe geöffnet werden. Er startet vielleicht nur neu; bleibt er nicht verfügbar, richtet ein Administrator ihn in der Serverkonfiguration ein.",
   'browser.egressTemporary': "Der Netzwerk-Proxy antwortet gerade nicht, daher kann keine Browser-Aufgabe geöffnet werden. Meist ist das ein Neustart: kurz warten und diese Seite neu laden.",
-  'egress.stillDownAdmin': "Antwortet er nach einigen Minuten immer noch nicht, ist der Ausgangs-Proxy ausgefallen und startet nicht nur neu: Prüfen Sie, ob sein Container läuft, und lesen Sie sein Protokoll.",
+  'egress.stillDownAdmin': "Antwortet er nach einigen Minuten immer noch nicht, ist der Ausgangs-Proxy ausgefallen und startet nicht nur neu: Prüfe, ob sein Container läuft, und lies sein Protokoll.",
   'code.panel.harnessNone': "Auf diesem Server ist keines konfiguriert",
   'code.panel.preparation': "Prompt-Aufbereitung",
   'code.prep.direct.label': "Direkt",
