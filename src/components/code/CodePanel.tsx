@@ -104,7 +104,8 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
     };
   }, [load]);
   const running = !!state?.tasks.some(t => ACTIVE.has(t.status));
-  const needsAdmin = !!state && (!state.sandboxed || state.repositories.length === 0);
+  // The offline note's stays-down line (#2252) is for administrators too.
+  const needsAdmin = !!state && (!state.sandboxed || state.repositories.length === 0 || (state.network !== true && state.networkState === 'unavailable'));
   useEffect(() => {
     if (!needsAdmin) return;
     let live = true;
@@ -236,6 +237,7 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
           })}
         </div>
         {!online && <p className="code-note">{t(state.networkState === 'unavailable' ? 'code.panel.offlineNoteTemporary' : 'code.panel.offlineNote')}</p>}
+        {!online && state.networkState === 'unavailable' && isAdmin && <p className="code-note" data-note="egress-still-down">{t('egress.stillDownAdmin')}</p>}
       </fieldset>
 
       {needsDomains && <div className="code-field">

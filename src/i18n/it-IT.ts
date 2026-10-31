@@ -1075,6 +1075,7 @@ export const IT_IT: Catalogue = {
   'wizard.originPrivateLan': "Questo indirizzo funziona solo sulla rete locale. Le passkey e alcune funzioni di sicurezza del browser richiedono HTTPS e non funzionano con un indirizzo IP diretto, ma l’accesso con la password resta possibile. Più avanti si può usare noevia con un dominio reale e mantenere attivo anche questo indirizzo; un amministratore lo imposta nella configurazione del server.",
   'browser.egressUnavailable': "Il proxy di rete non è disponibile, quindi al momento un’attività nel browser non può aprirsi. Forse si sta solo riavviando; se resta non disponibile, un amministratore lo imposta nella configurazione del server.",
   'browser.egressTemporary': "Il proxy di rete non risponde al momento, quindi un’attività del browser non può aprirsi. Di solito è un riavvio: attendi un attimo e ricarica questa pagina.",
+  'egress.stillDownAdmin': "Se dopo qualche minuto continua a non rispondere, il proxy di uscita è fermo e non si sta solo riavviando: controlli che il suo container sia in esecuzione e legga il suo log.",
   'code.panel.harnessNone': "Nessuno configurato su questo server",
   'code.panel.preparation': "Preparazione del prompt",
   'code.prep.direct.label': "Diretto",

@@ -1075,6 +1075,7 @@ export const NB_NO: Catalogue = {
   'wizard.originPrivateLan': "Denne adressen fungerer bare på det lokale nettverket ditt. Passnøkler og noen sikkerhetsfunksjoner i nettleseren krever HTTPS og fungerer ikke med en ren IP-adresse, men du kan fortsatt logge inn med passordet ditt. Senere kan du bruke noevia med et ekte domenenavn og beholde denne adressen også; en administrator setter det opp i serverkonfigurasjonen.",
   'browser.egressUnavailable': "Nettverksproxyen er ikke tilgjengelig, så en nettleseroppgave kan ikke åpnes akkurat nå. Den starter kanskje bare på nytt; hvis den forblir utilgjengelig, setter en administrator den opp i serverkonfigurasjonen.",
   'browser.egressTemporary': "Nettverksproxyen svarer ikke akkurat nå, så en nettleseroppgave kan ikke åpnes. Det er vanligvis en omstart: vent litt og last siden på nytt.",
+  'egress.stillDownAdmin': "Svarer den fortsatt ikke etter noen minutter, er utgående proxy nede og ikke bare i ferd med å starte på nytt: sjekk at containeren kjører, og les loggen.",
   'code.panel.harnessNone': "Ingen er konfigurert på denne serveren",
   'code.panel.preparation': "Klargjøring av prompt",
   'code.prep.direct.label': "Direkte",

@@ -78,11 +78,11 @@ test('#1656 the wizard role comes from the mode: only the invited member is not 
   const wizard = read('src/components/SetupWizard.tsx');
   assert.match(wizard, /<PrivateLanOriginNote isAdmin=\{mode !== 'invited'\}\/>/);
   const browser = read('src/components/browser/BrowserPanel.tsx');
-  // #2242: a proxy that is configured but not answering is not an administrator's setup, so the role is not fetched for it either.
-  assert.match(browser, /const needsAdmin = !!state && state\.network !== true && state\.networkState !== 'unavailable';/);
+  // #2242/#2252: a proxy that is configured but not answering is not an administrator's setup, but an administrator is told what to do when it stays down, so the role is fetched for it too.
+  assert.match(browser, /const needsAdmin = !!state && state\.network !== true;/);
   assert.match(browser, /fetchProfile\(\)\.then\(p => \{ if \(live\) setIsAdmin\(p\?\.user\?\.role === 'admin'\); \}/);
   assert.match(browser, /<EgressUnavailableNote isAdmin=\{isAdmin\}\/>/);
-  assert.match(browser, /\{!online && \(state\.networkState === 'unavailable' \? <EgressTemporaryNote\/> : <EgressUnavailableNote isAdmin=\{isAdmin\}\/>\)\}/);
+  assert.match(browser, /\{!online && \(state\.networkState === 'unavailable' \? <EgressTemporaryNote isAdmin=\{isAdmin\}\/> : <EgressUnavailableNote isAdmin=\{isAdmin\}\/>\)\}/);
 });
 
 test('#1656 every interface locale has both plain notes, with no placeholder and no environment variable name', () => {

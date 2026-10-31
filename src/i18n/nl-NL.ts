@@ -1075,6 +1075,7 @@ export const NL_NL: Catalogue = {
   'wizard.originPrivateLan': "Dit adres werkt alleen op je lokale netwerk. Passkeys en sommige beveiligingsfuncties van de browser vereisen HTTPS en werken niet met een los IP-adres, maar je kunt wel inloggen met je wachtwoord. Later kun je noevia aan een echte domeinnaam koppelen en dit adres blijven gebruiken; een beheerder regelt dat in de serverconfiguratie.",
   'browser.egressUnavailable': "De netwerkproxy is niet beschikbaar, dus een browsertaak kan nu niet worden geopend. Hij start misschien alleen opnieuw op; blijft hij onbeschikbaar, dan regelt een beheerder dat in de serverconfiguratie.",
   'browser.egressTemporary': "De netwerkproxy reageert nu niet, dus een browsertaak kan niet openen. Meestal is dit een herstart: wacht even en laad deze pagina opnieuw.",
+  'egress.stillDownAdmin': "Reageert hij na enkele minuten nog steeds niet, dan ligt de uitgaande proxy eruit en herstart hij niet alleen: controleer of de container draait en lees het logboek.",
   'code.panel.harnessNone': "Geen geconfigureerd op deze server",
   'code.panel.preparation': "Promptvoorbereiding",
   'code.prep.direct.label': "Direct",
