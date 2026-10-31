@@ -43,6 +43,8 @@ export const EN_GB_MODELS = {
   'mm.assign.state.missing': "File missing",
   'mm.assign.state.notInstalled': "Not installed",
   'mm.assign.state.off': "Off",
+  'mm.assign.state.unreachable': "Unreachable",
+  'mm.assign.state.down': "Error",
   'mm.assign.state.unset': "Not set",
   'mm.assign.none': "None",
   'mm.assign.builtIn': "Built-in",

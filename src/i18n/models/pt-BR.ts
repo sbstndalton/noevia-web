@@ -39,6 +39,8 @@ export const PT_BR_MODELS: ModelsCatalogue = {
   'mm.assign.state.missing': "Arquivo ausente",
   'mm.assign.state.notInstalled': "Não instalado",
   'mm.assign.state.off': "Desligado",
+  'mm.assign.state.unreachable': "Inacessível",
+  'mm.assign.state.down': "Erro",
   'mm.assign.state.unset': "Não definido",
   'mm.assign.none': "Nenhum",
   'mm.assign.builtIn': "Integrado",

@@ -39,6 +39,8 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.assign.state.missing': "Bestand ontbreekt",
   'mm.assign.state.notInstalled': "Niet geïnstalleerd",
   'mm.assign.state.off': "Uit",
+  'mm.assign.state.unreachable': "Onbereikbaar",
+  'mm.assign.state.down': "Fout",
   'mm.assign.state.unset': "Niet ingesteld",
   'mm.assign.none': "Geen",
   'mm.assign.builtIn': "Ingebouwd",

@@ -39,6 +39,8 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.assign.state.missing': "Fil mangler",
   'mm.assign.state.notInstalled': "Ikke installert",
   'mm.assign.state.off': "Av",
+  'mm.assign.state.unreachable': "Utilgjengelig",
+  'mm.assign.state.down': "Feil",
   'mm.assign.state.unset': "Ikke valgt",
   'mm.assign.none': "Ingen",
   'mm.assign.builtIn': "Innebygd",

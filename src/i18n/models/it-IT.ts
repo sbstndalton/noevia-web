@@ -39,6 +39,8 @@ export const IT_IT_MODELS: ModelsCatalogue = {
   'mm.assign.state.missing': "File mancante",
   'mm.assign.state.notInstalled': "Non installato",
   'mm.assign.state.off': "Spento",
+  'mm.assign.state.unreachable': "Irraggiungibile",
+  'mm.assign.state.down': "Errore",
   'mm.assign.state.unset': "Non impostato",
   'mm.assign.none': "Nessuno",
   'mm.assign.builtIn': "Integrato",
