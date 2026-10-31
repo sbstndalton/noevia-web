@@ -1,4 +1,5 @@
 import { applyAppearance, savedPalette } from '../appearance';
+import type { Preference } from '../appearance';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { startRegistration } from '@simplewebauthn/browser';
@@ -98,9 +99,12 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
   const [diaryEnabled, setDiaryEnabled] = useState(initialUser?.diaryEnabled ?? false);
 
   // Prefs-step fields.
-  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
-    localStorage.getItem('cowork-theme') === 'light' ? 'light' : 'dark',
-  );
+  // #2236: a browser with no earlier choice follows its device, as the sign-in page before and Settings → Appearance
+  // after (System is the default there). Only an explicit light or dark kept in this browser pins it.
+  const [theme, setTheme] = useState<Preference>(() => {
+    const kept = localStorage.getItem('cowork-theme');
+    return kept === 'light' || kept === 'dark' ? kept : 'system';
+  });
   const [autoRouting, setAutoRouting] = useState(true);
   const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
   const timezoneSetting = timezoneEnvSetting(timezone);
@@ -109,7 +113,13 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
     // Through applyAppearance, so the saved preference and data-theme-preference follow the
     // choice too. Setting only data-theme left the preference stale, and picking a palette then
     // re-applied that stale mode: light was ticked while the page turned dark.
-    applyAppearance({ theme, light: savedPalette('light'), dark: savedPalette('dark') });
+    const apply = () => applyAppearance({ theme, light: savedPalette('light'), dark: savedPalette('dark') });
+    apply();
+    if (theme !== 'system') return;
+    // System follows the device while the wizard is open, as the app does after it.
+    const query = window.matchMedia?.('(prefers-color-scheme: light)');
+    query?.addEventListener('change', apply);
+    return () => query?.removeEventListener('change', apply);
   }, [theme]);
 
   useEffect(() => {
@@ -316,6 +326,10 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
         {step === 'prefs' && (
           <div>
             <p>Theme changes apply immediately in this browser. Auto routing is saved only when you choose “Use these preferences”. Check your browser timezone below.</p>
+            <label className="auth-option">
+              <input type="radio" name="wiz-theme" checked={theme === 'system'} onChange={() => setTheme('system')} />
+              <span><strong>Match this device</strong></span>
+            </label>
             <label className="auth-option">
               <input type="radio" name="wiz-theme" checked={theme === 'light'} onChange={() => setTheme('light')} />
               <span><strong>Light theme</strong></span>
