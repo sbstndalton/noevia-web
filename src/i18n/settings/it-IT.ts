@@ -177,6 +177,7 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'backups.backingUp': "Backup in corso…",
   'backups.reason.off': "I backup off-site sono disattivati (Impostazioni → Funzionalità).",
   'backups.reason.notConfigured': "Non configurato: imposta {gaps}.",
+  'backups.reason.keyUnusable': "Non è possibile usare la chiave di backup. Controlla che il file della chiave esista, sia valido e non si trovi in una cartella inclusa nel backup.",
   'settings.group.personal': "Personale",
   'settings.group.account': "Account e connessioni",
   'settings.group.admin': "Amministrazione server",

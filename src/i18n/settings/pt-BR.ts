@@ -177,6 +177,7 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'backups.backingUp': "Fazendo backup…",
   'backups.reason.off': "Os backups externos estão desativados (Configurações → Recursos).",
   'backups.reason.notConfigured': "Não configurado: defina {gaps}.",
+  'backups.reason.keyUnusable': "A chave de backup não pode ser usada. Verifique se o arquivo da chave existe, é válido e não está dentro de uma pasta com backup.",
   'settings.group.personal': "Pessoal",
   'settings.group.account': "Conta e conexões",
   'settings.group.admin': "Administração do servidor",

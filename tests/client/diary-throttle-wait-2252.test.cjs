@@ -45,3 +45,11 @@ test('the Retry-After header is the wait when the body has none, and a bad value
   assert.equal(plain.retryAfter, undefined);
   assert.equal(plain.code, 'diaryUnavailable');
 });
+
+// noevia#2255: the wait is capped at a day, and only plain decimal seconds count in the header.
+test('a huge wait is capped at 86400 and non-decimal Retry-After forms are no wait', async () => {
+  assert.equal((await month(reply(503, { code: 'storageThrottled', retryAfter: 9e9 }))).retryAfter, 86400, 'body');
+  assert.equal((await month(reply(503, { code: 'storageThrottled' }, { 'retry-after': '99999999' }))).retryAfter, 86400, 'header');
+  assert.equal((await month(reply(503, { code: 'storageThrottled' }, { 'retry-after': '86400' }))).retryAfter, 86400);
+  for (const bad of ['0x10', '1e3', ' 5 ', '5.5', 'Infinity', 'Fri, 31 Oct 2026 12:00:00 GMT']) assert.equal((await month(reply(503, { code: 'storageThrottled' }, { 'retry-after': bad }))).retryAfter, undefined, bad);
+});

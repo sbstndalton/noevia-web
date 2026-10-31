@@ -177,6 +177,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'backups.backingUp': "Haciendo copia…",
   'backups.reason.off': "Las copias de seguridad externas están desactivadas (Ajustes → Funciones).",
   'backups.reason.notConfigured': "Sin configurar: define {gaps}.",
+  'backups.reason.keyUnusable': "No se puede usar la clave de las copias de seguridad. Comprueba que el archivo de clave existe, es válido y no está dentro de una carpeta de la que se hace copia.",
   'settings.group.personal': "Personal",
   'settings.group.account': "Cuenta y conexiones",
   'settings.group.admin': "Administración del servidor",

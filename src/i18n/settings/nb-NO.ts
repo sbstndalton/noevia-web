@@ -177,6 +177,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'backups.backingUp': "Tar sikkerhetskopi …",
   'backups.reason.off': "Eksterne sikkerhetskopier er slått av (Innstillinger → Funksjoner).",
   'backups.reason.notConfigured': "Ikke konfigurert: sett {gaps}.",
+  'backups.reason.keyUnusable': "Sikkerhetskopinøkkelen kan ikke brukes. Sjekk at nøkkelfilen finnes, er gyldig og ikke ligger i en mappe som sikkerhetskopieres.",
   'settings.group.personal': "Personlig",
   'settings.group.account': "Konto og tilkoblinger",
   'settings.group.admin': "Serveradministrasjon",
