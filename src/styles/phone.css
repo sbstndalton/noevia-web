@@ -931,7 +931,11 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
 .mm-assign-status { margin: 8px 2px 0; }
 @media (pointer: fine) { .mm-assign-row select { height: 34px; min-height: 34px; padding-block: 0; } .mm-assign-row { min-height: 52px; } }
 @media (prefers-reduced-motion: reduce) { .mm-assign-row { transition: none; } }
-@media (max-width: 720px) {
+/* #2121: the four-column layout needs about 780 px for the card itself. The card's width is the window less the sidebar and
+   page margins, so a window-width query switched to the stacked layout far too late (a 768 px window leaves a 440 px card and
+   the controls column collapsed outside it). The container is the card's parent, so the layout follows the room it has. */
+:has(> .mm-assign-list) { container: mm-assign / inline-size; }
+@container mm-assign (max-width: 900px) {
   .mm-assign-list { grid-template-columns: minmax(0, 1fr) auto; }
   .mm-assign-row { row-gap: 4px; padding: 10px 14px; }
   .mm-assign-label { grid-column: 1; grid-row: 1; }
