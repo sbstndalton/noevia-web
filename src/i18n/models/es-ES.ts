@@ -1099,6 +1099,7 @@ export const ES_ES_MODELS: ModelsCatalogue = {
   'mm.idle.applyFailed': "No se pudo descargar el modelo ahora. Inténtalo de nuevo cuando terminen los chats.",
   'mm.idle.savedFailed': "Guardado, pero no se pudo actualizar el archivo de ajustes de modelos. Inténtalo de nuevo en un momento.",
   'mm.idle.invalid': "Elige «Nunca» o un tiempo de 5 minutos a 24 horas.",
+  'mm.idle.busy': "Los modelos están ocupados, así que no se cambió el tiempo de descarga por inactividad. Inténtalo de nuevo en breve.",
   'mm.idle.loadError': "No se pudo cargar el ajuste de descarga por inactividad.",
   'mm.idle.default': "predeterminado",
   'mm.fit.cacheRam': "caché de prompts {gib}",

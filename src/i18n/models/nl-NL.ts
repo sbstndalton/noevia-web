@@ -1099,6 +1099,7 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.idle.applyFailed': "Het model kon nu niet worden uitgeladen. Probeer het opnieuw als de chats klaar zijn.",
   'mm.idle.savedFailed': "Opgeslagen, maar het bestand met modelinstellingen kon niet worden bijgewerkt. Probeer het zo opnieuw.",
   'mm.idle.invalid': "Kies ‘Nooit’ of een tijd van 5 minuten tot 24 uur.",
+  'mm.idle.busy': "De modellen zijn bezig, dus de inactieve ontlaadtijd is niet gewijzigd. Probeer het zo opnieuw.",
   'mm.idle.loadError': "Kan de instelling voor uitladen niet laden.",
   'mm.idle.default': "standaard",
   'mm.fit.cacheRam': "promptcache {gib}",

@@ -1124,6 +1124,7 @@ export const EN_GB_MODELS = {
   'mm.idle.applyFailed': "Could not unload the model now. Try again when chats finish.",
   'mm.idle.savedFailed': "Saved, but the model settings file could not be updated. Try again in a moment.",
   'mm.idle.invalid': "Choose Never or a time from 5 minutes to 24 hours.",
+  'mm.idle.busy': "Models are busy, so the idle unload time was not changed. Try again shortly.",
   'mm.idle.loadError': "Could not load the idle unload setting.",
   'mm.idle.default': "default",
   'mm.fit.cacheRam': "prompt cache {gib}",

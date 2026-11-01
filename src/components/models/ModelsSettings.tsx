@@ -407,7 +407,7 @@ export function IdleUnloadSection(): JSX.Element | null {
       const r = await apiFetch('/api/models/idle-unload', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seconds }) });
       const body = await r.json().catch(() => ({})) as Partial<IdleUnloadInfo> & { apply?: IdleApply; errorId?: string };
       if (!liveRef.current) return;
-      if (!r.ok) { setError(body.errorId === 'idleUnloadInvalid' ? t('mm.idle.invalid') : t('mm.saveError')); return; }
+      if (!r.ok) { setError(body.errorId === 'idleUnloadInvalid' ? t('mm.idle.invalid') : body.errorId === 'idleUnloadBusy' ? t('mm.idle.busy') : t('mm.saveError')); return; }
       if (body.apply?.state === 'failed') setError(t('mm.idle.savedFailed'));
       // Not live yet: the persistent pending line below says so (from the server, after load()).
       else if (body.applied) setStatus(t('mm.idle.savedApplied'));

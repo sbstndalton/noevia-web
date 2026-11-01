@@ -1099,6 +1099,7 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.idle.applyFailed': "Det gick inte att ladda ur modellen nu. Försök igen när chattarna är klara.",
   'mm.idle.savedFailed': "Sparat, men filen med modellinställningar kunde inte uppdateras. Försök igen om en stund.",
   'mm.idle.invalid': "Välj ”Aldrig” eller en tid från 5 minuter till 24 timmar.",
+  'mm.idle.busy': "Modellerna är upptagna, så tiden för avlastning vid inaktivitet ändrades inte. Försök igen om en stund.",
   'mm.idle.loadError': "Det gick inte att läsa in inställningen för urladdning.",
   'mm.idle.default': "standard",
   'mm.fit.cacheRam': "promptcache {gib}",

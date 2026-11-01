@@ -1099,6 +1099,7 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.idle.applyFailed': "Das Modell konnte gerade nicht entladen werden. Versuche es erneut, wenn die Chats fertig sind.",
   'mm.idle.savedFailed': "Gespeichert, aber die Modelleinstellungsdatei konnte nicht aktualisiert werden. Versuche es gleich noch einmal.",
   'mm.idle.invalid': "Wähle „Nie“ oder eine Zeit von 5 Minuten bis 24 Stunden.",
+  'mm.idle.busy': "Die Modelle sind gerade beschäftigt, daher wurde die Leerlaufzeit nicht geändert. Versuche es gleich noch einmal.",
   'mm.idle.loadError': "Die Einstellung zum Entladen konnte nicht geladen werden.",
   'mm.idle.default': "Standard",
   'mm.fit.cacheRam': "Prompt-Cache {gib}",
