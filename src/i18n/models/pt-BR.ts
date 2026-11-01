@@ -1099,6 +1099,7 @@ export const PT_BR_MODELS: ModelsCatalogue = {
   'mm.idle.applyFailed': "Não foi possível descarregar o modelo agora. Tente de novo quando os chats terminarem.",
   'mm.idle.savedFailed': "Salvo, mas o arquivo de configurações dos modelos não pôde ser atualizado. Tente de novo em instantes.",
   'mm.idle.invalid': "Escolha “Nunca” ou um tempo de 5 minutos a 24 horas.",
+  'mm.idle.busy': "Os modelos estão ocupados, então o tempo de descarregamento por inatividade não foi alterado. Tente novamente em instantes.",
   'mm.idle.loadError': "Não foi possível carregar a configuração de descarregamento.",
   'mm.idle.default': "padrão",
   'mm.fit.cacheRam': "cache de prompts {gib}",

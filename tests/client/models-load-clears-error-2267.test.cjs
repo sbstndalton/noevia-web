@@ -75,3 +75,18 @@ test('#2267 the idle-unload section keeps a save error that a following load mus
   assert.deepEqual(m.calls, ['GET /api/models/idle-unload', 'PUT /api/models/idle-unload', 'GET /api/models/idle-unload']);
   assert.match(m.alert() ?? '', /mm\.idle\.savedFailed/, 'Saved, but the settings file failed: still shown after the reload');
 });
+
+test('#2276 a 409 idleUnloadBusy save shows the busy line, not the generic save error', async (t) => {
+  const m = await mount(t, 'idle', {
+    'GET /api/models/idle-unload': [{ status: 200, body: idle }],
+    'PUT /api/models/idle-unload': [{ status: 409, body: { error: 'Models are busy', errorId: 'idleUnloadBusy' } }],
+  });
+  const select = m.w.document.querySelector('select');
+  select.value = '600';
+  select.dispatchEvent(new m.w.Event('change', { bubbles: true }));
+  await m.fx.settle(10);
+  [...m.w.document.querySelectorAll('button')].find((b) => !b.disabled && b.classList.contains('primary')).click();
+  await m.fx.settle(40);
+  assert.match(m.alert() ?? '', /mm\.idle\.busy/);
+  assert.doesNotMatch(m.alert() ?? '', /mm\.saveError/);
+});

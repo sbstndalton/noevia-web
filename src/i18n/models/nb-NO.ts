@@ -1099,6 +1099,7 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.idle.applyFailed': "Kunne ikke laste ut modellen nå. Prøv igjen når chattene er ferdige.",
   'mm.idle.savedFailed': "Lagret, men filen med modellinnstillinger kunne ikke oppdateres. Prøv igjen om litt.",
   'mm.idle.invalid': "Velg «Aldri» eller en tid fra 5 minutter til 24 timer.",
+  'mm.idle.busy': "Modellene er opptatt, så tiden for avlasting ved inaktivitet ble ikke endret. Prøv igjen om litt.",
   'mm.idle.loadError': "Kunne ikke laste inn innstillingen for utlasting.",
   'mm.idle.default': "standard",
   'mm.fit.cacheRam': "prompt-buffer {gib}",

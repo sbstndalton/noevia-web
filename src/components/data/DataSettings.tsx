@@ -3,6 +3,7 @@ import type { JSX } from 'react';
 import { apiFetch } from '../../api';
 import { readConversationsFile } from './readExport';
 import { notifyWorkspaceChanged } from './workspace-changed';
+import { skippedSummary } from './import-summary';
 import { useArchivedCount } from './ArchivedChats';
 import { RetentionSetting } from './RetentionSetting';
 import { useT } from '../../i18n';
@@ -28,10 +29,9 @@ export function DataSettings({ onManageArchived }: { onManageArchived?: () => vo
       const response = await apiFetch('/api/import/conversations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parsed) });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw Error(body.error || t('data.importFailed'));
-      const skipped = Array.isArray(body.skipped) ? body.skipped.length : 0;
       setStatus([
         t.plural('data.imported', Number(body.imported) || 0),
-        skipped ? t.plural('data.skipped', skipped) : '',
+        ...skippedSummary(body.skipped, t),
         body.projectsCreated ? t.plural('data.projectsCreated', Number(body.projectsCreated)) : '',
       ].filter(Boolean).join(' '));
       notifyWorkspaceChanged();

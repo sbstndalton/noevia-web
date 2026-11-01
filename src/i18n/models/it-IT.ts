@@ -1099,6 +1099,7 @@ export const IT_IT_MODELS: ModelsCatalogue = {
   'mm.idle.applyFailed': "Impossibile scaricare il modello ora. Riprova quando le chat sono finite.",
   'mm.idle.savedFailed': "Salvato, ma non è stato possibile aggiornare il file delle impostazioni dei modelli. Riprova tra un momento.",
   'mm.idle.invalid': "Scegli «Mai» o un tempo da 5 minuti a 24 ore.",
+  'mm.idle.busy': "I modelli sono occupati, quindi il tempo di scaricamento per inattività non è stato cambiato. Riprova tra poco.",
   'mm.idle.loadError': "Impossibile caricare l’impostazione di scaricamento.",
   'mm.idle.default': "predefinito",
   'mm.fit.cacheRam': "cache dei prompt {gib}",

@@ -1099,6 +1099,7 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.idle.applyFailed': "Impossible de décharger le modèle maintenant. Réessayez quand les chats sont terminés.",
   'mm.idle.savedFailed': "Enregistré, mais le fichier de réglages des modèles n’a pas pu être mis à jour. Réessayez dans un instant.",
   'mm.idle.invalid': "Choisissez « Jamais » ou une durée de 5 minutes à 24 heures.",
+  'mm.idle.busy': "Les modèles sont occupés ; le délai de déchargement n’a pas été modifié. Réessayez dans un instant.",
   'mm.idle.loadError': "Impossible de charger le réglage de déchargement.",
   'mm.idle.default': "par défaut",
   'mm.fit.cacheRam': "cache des prompts {gib}",
