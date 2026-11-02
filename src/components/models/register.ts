@@ -5,6 +5,7 @@ import { translatePlural } from '../../i18n/core';
 
 // Outside React: messages in the interface language at the moment the note is written.
 const plural = (key: string, count: number, params?: Record<string, string | number>) => translatePlural(interfaceLocale(), key, count, params);
+const isBusy = (e: unknown) => (e as { code?: string }).code === 'modelsBusy' || (e as { errorId?: string }).errorId === 'modelsBusy';
 
 // A finished download gets conservative settings once (8k context, MTP only with a
 // draft head beside it, the GGUF's own template and sampling), then the preset file
@@ -15,7 +16,7 @@ export async function registerSafeDefaults(section: string): Promise<{ registere
   try { mtp = (await mm<{ mtp?: boolean }>(`sections/${encodeURIComponent(section)}/safe-defaults`, { body: {} })).mtp === true; }
   catch (e) {
     const status = (e as { status?: number }).status;
-    if (status === 409) return { registered: true, text: '' };
+    if (status === 409 && !isBusy(e)) return { registered: true, text: '' };
     if (status === 400) return { registered: false, text: '' };
     return { registered: false, text: t('mm.register.notWritten', { model: section, error: errorText(e, t('mm.unknownError')) }) };
   }
@@ -58,7 +59,14 @@ export async function registerNewFolderModels(stems: string[]): Promise<{ added:
       added.push(stem); if (r.mtp) mtp.push(stem);
     } catch (e) {
       const status = (e as { status?: number }).status;
-      if (status !== 409 && status !== 400) failed.push(`${stem} (${errorText(e, t('mm.register.error'))})`);
+      if (isBusy(e)) {
+        // No settings were written: a chat/tune finishing must allow a later refresh to retry.
+        try {
+          const current: unknown = JSON.parse(sessionStorage.getItem(TRIED_KEY) || '[]');
+          if (Array.isArray(current)) sessionStorage.setItem(TRIED_KEY, JSON.stringify(current.filter(s => s !== stem)));
+        } catch { /* optional */ }
+      }
+      if (isBusy(e) || (status !== 409 && status !== 400)) failed.push(`${stem} (${errorText(e, t('mm.register.error'))})`);
     }
   }
   if (!added.length) return { added, text: failed.length ? t('mm.register.failed', { files: failed.join(', ') }) : '' };
