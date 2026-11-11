@@ -169,6 +169,7 @@ dialog.confirm-dialog.dialog-sheet { width: min(420px, calc(100vw - 32px)); }
   background: var(--md-warning-container); color: var(--md-on-warning-container);
   font-size: var(--text-footnote); line-height: var(--leading-snug);
 }
+.conn-banner-tail { white-space: nowrap; }
 .conn-banner-link { color: inherit; font-weight: 500; text-decoration: underline; text-underline-offset: .18em; }
 .conn-banner[role='alert'] {
   border-color: color-mix(in srgb, var(--danger) 45%, transparent);
