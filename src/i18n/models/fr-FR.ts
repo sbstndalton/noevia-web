@@ -255,6 +255,8 @@ export const FR_FR_MODELS: ModelsCatalogue = {
   'mm.library.unavailable': "La bibliothèque de modèles est indisponible.",
   'mm.library.loadFailed': "le chargement a échoué",
   'mm.library.unloadFailed': "le déchargement a échoué",
+  'mm.library.inUseRetry': "{model} répond à une requête. Réessayez lorsqu’il est libre.",
+  'mm.library.gateRefused': "Le modèle local est occupé par une autre requête. Réessayez lorsqu’elle sera terminée.",
   'mm.unload.inUse': "{model} répond à une requête. Le décharger quand même arrête cette réponse.",
   'mm.unload.inUseNoForce': "{model} répond à une requête. Déchargez-le quand il sera inactif.",
   'mm.unload.anyway': "Décharger quand même",

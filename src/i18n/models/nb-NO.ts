@@ -255,6 +255,8 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.library.unavailable': "Modellbiblioteket er utilgjengelig.",
   'mm.library.loadFailed': "lasting mislyktes",
   'mm.library.unloadFailed': "avlasting mislyktes",
+  'mm.library.inUseRetry': "{model} svarer på en forespørsel. Prøv igjen når den er ledig.",
+  'mm.library.gateRefused': "Den lokale modellen er opptatt med en annen forespørsel. Prøv igjen når den er ferdig.",
   'mm.unload.inUse': "{model} svarer på en forespørsel. Avlaster du den likevel, stopper svaret.",
   'mm.unload.inUseNoForce': "{model} svarer på en forespørsel. Avlast den når den er ledig.",
   'mm.unload.anyway': "Avlast likevel",

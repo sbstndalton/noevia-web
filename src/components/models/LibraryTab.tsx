@@ -13,6 +13,7 @@ import { useModelsChanged } from '../../models-changed';
 import { MiddleTruncate } from '../MiddleTruncate';
 import { AutoTune } from './AutoTune';
 import { isSystemModel } from '../../model-system';
+import { refusalText } from '../../model-refusal';
 import { isChatGenerationModel } from '../../model-kind';
 import { bytesToModelSizeGB, formatModelSizeGB } from '../../model-size';
 import { useT } from '../../i18n';
@@ -131,13 +132,29 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
       const r = await apiFetch(`/api/models/${verb}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(force ? { name, force: true } : { name }) });
       const v = await r.json().catch(() => ({})) as { error?: string; code?: string; canForce?: boolean };
       if (verb === 'unload' && !force && r.status === 409 && v.code === 'model_in_use') { setInUse({ name, canForce: v.canForce === true }); return; }
-      if (!r.ok) throw Error(v.error || t(verb === 'load' ? 'mm.library.loadFailed' : 'mm.library.unloadFailed'));
+      if (!r.ok) throw Object.assign(Error(v.error || t(verb === 'load' ? 'mm.library.loadFailed' : 'mm.library.unloadFailed')), { code: v.code });
       setInUse(null);
       if (force) setMessage(t('mm.unload.forced', { model: name }));
       onChanged();
     }
-    catch (e) { setError(errorText(e, t('mm.library.opFailed'))); } finally { setBusy(''); }
+    catch (e) { setError(refusalText(e, t, name) ?? errorText(e, t('mm.library.opFailed'))); } finally { setBusy(''); }
   };
+  // #2136: the notice is about a model that was answering a request. Once the model is no longer loaded (it was unloaded elsewhere, or
+  // went to sleep) there is nothing left to unload anyway, so the notice goes. While it is up the list is read again every few seconds
+  // (for two minutes at most) so that happens without a reload.
+  useEffect(() => {
+    if (inUse && models && !models.some((m) => m.name === inUse.name && m.loaded && !isSleeping(m))) setInUse(null);
+  }, [inUse, models]);
+  useEffect(() => {
+    if (!inUse) return;
+    let live = true;
+    const until = Date.now() + 120_000;
+    const timer = window.setInterval(() => {
+      if (Date.now() > until) { window.clearInterval(timer); return; }
+      void fetchInstalledModels().then((installed) => { if (live) setModels(installed); }).catch(() => undefined);
+    }, 5000);
+    return () => { live = false; window.clearInterval(timer); };
+  }, [inUse]);
   // #1036: same reload call and 409 handling as the settings editor (ConfigureTab.apply).
   const [pendingLoaded, setPendingLoaded] = useState<string[]>([]);
   const applyReload = async (unload: boolean) => {
@@ -341,7 +358,7 @@ async function pruneMissingPresets(): Promise<{ removed: string[]; kept: string[
 
 async function deleteByName(name: string, extra: Record<string, unknown> = {}): Promise<string[]> {
   const r = await apiFetch('/api/models/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, ...extra }) });
-  if (!r.ok) { const b = await readErrorBody(r) as { error?: string; errorId?: string }; throw Object.assign(Error(httpErrorMessage(r.status, b.error)), { errorId: b.errorId }); }
+  if (!r.ok) { const b = await readErrorBody(r) as { error?: string; errorId?: string; code?: string }; throw Object.assign(Error(httpErrorMessage(r.status, b.error)), { errorId: b.errorId, code: b.code }); }
   const body = (await r.json().catch(() => ({}))) as { rolesCleared?: string[] };
   return Array.isArray(body.rolesCleared) ? body.rolesCleared : [];
 }
@@ -444,7 +461,7 @@ function DeleteModel({ model: m, file, kind: initialKind, onDeleted, onCancel, o
       // refusal again (the server still protects it after a switch) is shown, never swallowed.
       if (id === 'modelInUse' && kind !== 'inuse') { setKind('inuse'); return; }
       if (id === 'systemModel' && kind !== 'system') { setKind('system'); return; }
-      setError(id === 'modelInUse' ? t('mm.delete.stillInUse') : errorText(e, t('mm.deleteFailed')));
+      setError(id === 'modelInUse' ? t('mm.delete.stillInUse') : refusalText(e, t, m.name) ?? errorText(e, t('mm.deleteFailed')));
     } finally { setBusy(false); }
   };
   const label = t('mm.delete.label', { model: m.name });
