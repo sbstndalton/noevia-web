@@ -66,6 +66,7 @@ export const EN_GB = {
   'sidebar.noMatchingProjects': 'No matching projects.',
   'sidebar.createProjectHint': 'Create a project from the Projects page.',
   'sidebar.recentChats': 'Recent chats',
+  'sidebar.searchChats': "Matching chats",
   'sidebar.showFewer': 'Show fewer',
   'sidebar.viewAll': 'View all {count} chats',
   'sidebar.archivedChats': 'Archived chats',

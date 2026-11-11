@@ -63,6 +63,7 @@ export const ES_ES: Catalogue = {
   'sidebar.noMatchingProjects': "Ningún proyecto coincide.",
   'sidebar.createProjectHint': "Crea un proyecto desde la página Proyectos.",
   'sidebar.recentChats': "Chats recientes",
+  'sidebar.searchChats': "Chats coincidentes",
   'sidebar.showFewer': "Ver menos",
   'sidebar.viewAll': "Ver los {count} chats",
   'sidebar.archivedChats': "Chats archivados",

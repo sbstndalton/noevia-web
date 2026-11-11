@@ -63,6 +63,7 @@ export const SV_SE: Catalogue = {
   'sidebar.noMatchingProjects': "Inga matchande projekt.",
   'sidebar.createProjectHint': "Skapa ett projekt på sidan Projekt.",
   'sidebar.recentChats': "Senaste chattar",
+  'sidebar.searchChats': "Matchande chattar",
   'sidebar.showFewer': "Visa färre",
   'sidebar.viewAll': "Visa alla {count} chattar",
   'sidebar.archivedChats': "Arkiverade chattar",

@@ -824,7 +824,7 @@ export function Sidebar({
         <>
           <div className="divider" />
           <div className="spaces side-scroll side-scroll-chats">
-            <button className="section-label section-toggle" aria-expanded={!closedGroups.Chats} onClick={()=>setClosedGroups(g=>({...g,Chats:!g.Chats}))}>{t('sidebar.recentChats')}</button>
+            <button className="section-label section-toggle" aria-expanded={!closedGroups.Chats} onClick={()=>setClosedGroups(g=>({...g,Chats:!g.Chats}))}>{query ? t('sidebar.searchChats') : t('sidebar.recentChats')}</button>
             {(!closedGroups.Chats || query) && (
               <div className="recent-children">{boundedRecentChats.map(renderChat)}
                 {!query && unpinnedChats.length > RECENT_LIMIT && <button className="side-more" aria-expanded={allRecents} onClick={()=>setAllRecents(v=>!v)}>{allRecents ? t('sidebar.showFewer') : t('sidebar.viewAll', { count: unpinnedChats.length })}</button>}

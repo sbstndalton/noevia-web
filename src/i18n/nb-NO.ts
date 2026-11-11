@@ -63,6 +63,7 @@ export const NB_NO: Catalogue = {
   'sidebar.noMatchingProjects': "Ingen prosjekter passer.",
   'sidebar.createProjectHint': "Opprett et prosjekt fra Prosjekter-siden.",
   'sidebar.recentChats': "Nylige chatter",
+  'sidebar.searchChats': "Samsvarende chatter",
   'sidebar.showFewer': "Vis færre",
   'sidebar.viewAll': "Vis alle {count} chatter",
   'sidebar.archivedChats': "Arkiverte chatter",

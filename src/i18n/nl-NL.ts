@@ -63,6 +63,7 @@ export const NL_NL: Catalogue = {
   'sidebar.noMatchingProjects': "Geen overeenkomende projecten.",
   'sidebar.createProjectHint': "Maak een project aan op de pagina Projecten.",
   'sidebar.recentChats': "Recente chats",
+  'sidebar.searchChats': "Overeenkomende chats",
   'sidebar.showFewer': "Minder tonen",
   'sidebar.viewAll': "Alle {count} chats tonen",
   'sidebar.archivedChats': "Gearchiveerde chats",
