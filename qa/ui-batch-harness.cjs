@@ -35,4 +35,27 @@ async function run(name, port, body) {
   if (failed) process.exitCode = 1;
 }
 
-module.exports = { VIEWS, themedPage, shot, run };
+/** Models page over synthetic calls: an administrator, `installed` models and whatever `extra(path, request, json)` answers first
+ *  (return undefined to fall through to the quiet defaults). Everything else under /api/ the page asks for gets an empty answer. */
+async function mockModelsApi(page, { installed = () => [], extra = () => undefined, roles = { fast: 'Synthetic-Fast-Q4', smart: 'Synthetic-Fast-Q4' } } = {}) {
+  await page.route('**/api/**', (route) => {
+    const req = route.request(), p = new URL(req.url()).pathname;
+    const json = (b, status = 200) => route.fulfill({ status, json: b });
+    const own = extra(p, req, json);
+    if (own !== undefined) return own;
+    if (p === '/api/profile' || p === '/api/auth/session') return json({ user: { id: 'qa', username: 'admin', displayName: 'Synthetic admin', role: 'admin', diaryEnabled: false, onboarded: true }, passkeys: [] });
+    if (p === '/api/models/capabilities') return json({ kind: 'llamacpp', admin: true, autotune: true, presets: true, download: true, runtimeOptions: false, modelManagement: true });
+    if (p === '/api/models/installed') return json(installed());
+    if (p === '/api/auto-roles' && req.method() === 'GET') return json({ configured: true, roles, missing: [] });
+    if (p === '/api/models/autotune' || p === '/api/models/calibration') return json({ job: null, history: [] });
+    if (p === '/api/models/autotune/untuned') return json({ models: [], skipped: [] });
+    if (p === '/api/model-manager/downloads') return json({ jobs: [] });
+    if (p === '/api/model-manager/backends') return json({ backends: [] });
+    if (p === '/api/model-manager/models') return json({ models: [], unregistered: [] });
+    if (p === '/api/model-manager/models/updates') return json({ status: {} });
+    if (p.startsWith('/api/model-manager/') || p.startsWith('/api/models/')) return json({});
+    return route.continue();
+  });
+}
+
+module.exports = { VIEWS, themedPage, shot, run, mockModelsApi };
