@@ -35,6 +35,8 @@ export const NB_NO: Catalogue = {
   'sidebar.searchPlaceholder': 'Søk i chatter, prosjekter og sider…',
   'sidebar.destinations': 'Mål',
   'sidebar.noSearchResults': 'Ingen treff på chatter, prosjekter eller sider.',
+  'sidebar.searchTooLong': "Søk med høyst {max} tegn.",
+  'sidebar.searchTruncated': "Flere chatter har treff i meldingene sine enn det som kan vises. Snevre inn søket for å se alle.",
   'sidebar.searchResults.one': "{count} resultat",
   'sidebar.searchResults.other': "{count} resultater",
   'sidebar.showPinned': "Vis festede",

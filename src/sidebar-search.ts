@@ -2,6 +2,9 @@
 // DOM-order list of results ArrowDown/ArrowUp/Enter move through. Kept out of Sidebar.tsx so
 // they can be unit-tested without a DOM or React (tests/client/sidebar-search.test.cjs).
 
+/** The longest query `GET /api/chats/search` accepts (noevia-core SEARCH_MAX_QUERY); a longer one is refused with a 400. */
+export const SEARCH_MAX_QUERY = 200;
+
 /** Escapes every regex metacharacter in `s` so it can be dropped into `new RegExp(...)`
  *  literally. A query like "a.b(" must highlight only that literal text, and must never
  *  throw building the pattern — that would otherwise leave the whole search box unusable. */

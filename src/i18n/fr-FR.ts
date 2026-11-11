@@ -35,6 +35,8 @@ export const FR_FR: Catalogue = {
   'sidebar.searchPlaceholder': 'Rechercher des discussions, projets et pages…',
   'sidebar.destinations': 'Destinations',
   'sidebar.noSearchResults': 'Aucune discussion, aucun projet ni aucune page ne correspond.',
+  'sidebar.searchTooLong': "Recherchez au plus {max} caractères.",
+  'sidebar.searchTruncated': "Plus de discussions correspondent dans leurs messages que l’on ne peut en afficher. Affinez la recherche pour toutes les voir.",
   'sidebar.searchResults.one': "{count} résultat",
   'sidebar.searchResults.other': "{count} résultats",
   'sidebar.showPinned': "Afficher les éléments épinglés",

@@ -14,7 +14,7 @@ import { AccountMenu } from './AccountMenu';
 import { ModeSwitch } from './ModeSwitch';
 import { ContextMenu, ConfirmDialog } from './ContextMenu';
 import type { MenuItem } from './ContextMenu';
-import { buildSearchResults, chatMatchesQuery, matchingDestinations, parseSidebarQuery, searchResultKey } from '../sidebar-search';
+import { SEARCH_MAX_QUERY, buildSearchResults, chatMatchesQuery, matchingDestinations, parseSidebarQuery, searchResultKey } from '../sidebar-search';
 import { hasTag, tagTree } from '../chat-organise';
 import type { TagNode } from '../chat-organise';
 import { chatMoveTargets } from '../chat-move';
@@ -256,18 +256,20 @@ export function Sidebar({
   };
   const [query, setQuery] = useState('');
   // #1450: chats whose message text matches the query. Sent after a short pause, and kept only for the query it answered.
-  const [textHits, setTextHits] = useState<{ query: string; ids: ReadonlySet<string> } | null>(null);
+  const [textHits, setTextHits] = useState<{ query: string; ids: ReadonlySet<string>; truncated: boolean } | null>(null);
   const textQuery = query.trim();
+  // #2399: the server refuses a longer query; the field says so itself instead of reading as "no matches".
+  const queryTooLong = textQuery.length > SEARCH_MAX_QUERY;
   useEffect(() => {
-    if (textQuery.length < 2) { setTextHits(null); return; }
+    if (textQuery.length < 2 || queryTooLong) { setTextHits(null); return; }
     let live = true;
     const timer = window.setTimeout(() => {
       searchChatText(textQuery)
-        .then((r) => { if (live) setTextHits({ query: textQuery, ids: new Set(r.chats) }); })
+        .then((r) => { if (live) setTextHits({ query: textQuery, ids: new Set(r.chats), truncated: r.truncated }); })
         .catch(() => { if (live) setTextHits(null); });
     }, 300);
     return () => { live = false; window.clearTimeout(timer); };
-  }, [textQuery]);
+  }, [textQuery, queryTooLong]);
   // #741: a tag (sidebar Tags section, a graph's tag hub) filters the lists through the search box,
   // so the filter shows what it is and Escape clears it the usual way.
   const [openTags, setOpenTags] = useState<Record<string, boolean>>({});
@@ -463,6 +465,7 @@ export function Sidebar({
   const tagQuery = parsedQuery.tags.length > 0;
   const visibleProjects = sortedProjects.filter(p=>!tagQuery && p.name.toLowerCase().includes(query.toLowerCase()));
   const messageHits = !tagQuery && textHits && textHits.query === textQuery ? textHits.ids : null;
+  const messageHitsTruncated = !tagQuery && textHits?.query === textQuery && textHits.truncated;
   const visibleChats = recentChats(chats).filter(c=>(organise ? chatMatchesQuery(c, query, hasTag) : (c.title || '').toLowerCase().includes(query.toLowerCase())) || !!messageHits?.has(c.id));
   const tags = organise ? tagTree(chats) : [];
   const pinnedChats = visibleChats.filter(c=>c.pinned);
@@ -751,7 +754,8 @@ export function Sidebar({
       <div className="rail-tools"><button ref={railSearchButton} className="shell-icon-button" aria-label={t('sidebar.search')} onClick={e=>{setCollapsed(false);setExpanded(true);setSearching(true);searchTrigger.current=e.currentTarget;}}><ShellIcon name="search"/></button><button className="shell-icon-button" aria-label={t('sidebar.showPinned')} onClick={()=>{setCollapsed(false);setExpanded(true);setClosedGroups(g=>({...g,Pinned:false}));}}><ShellIcon name="pin"/></button></div>
       {code ? <div className="sidebar-history coding-history">
         {destinationResults}
-        {query && searchResults.length === 0 && <p className="side-hint" role="status">{t('sidebar.noSearchResults')}</p>}
+        {queryTooLong && <p className="side-hint" role="status">{t('sidebar.searchTooLong', { max: SEARCH_MAX_QUERY })}</p>}
+        {query && !queryTooLong && searchResults.length === 0 && <p className="side-hint" role="status">{t('sidebar.noSearchResults')}</p>}
         {!query && <>
         <div className="spaces side-scroll"><div className="sidebar-section-head"><span className="section-label">{t('sidebar.codingProjects')}</span></div>
           {/* #415: real projects once access is confirmed — the same list CodingWorkspace's own
@@ -777,7 +781,9 @@ export function Sidebar({
         </>}
       </div> : <div className="sidebar-history" onKeyDown={onChatListKeyDown}>
       {destinationResults}
-      {query && searchResults.length === 0 && <p className="side-hint" role="status">{t('sidebar.noSearchResults')}</p>}
+      {queryTooLong && <p className="side-hint" role="status">{t('sidebar.searchTooLong', { max: SEARCH_MAX_QUERY })}</p>}
+      {query && !queryTooLong && searchResults.length === 0 && <p className="side-hint" role="status">{t('sidebar.noSearchResults')}</p>}
+      {messageHitsTruncated && <p className="side-hint" role="status">{t('sidebar.searchTruncated')}</p>}
       {['Pinned','Projects'].map(group => {
         const entries = group==='Pinned' ? pinnedProjects : unpinnedProjects;
         if(group==='Pinned' && !entries.length && !pinnedChats.length)return null;

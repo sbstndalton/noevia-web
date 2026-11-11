@@ -35,6 +35,8 @@ export const IT_IT: Catalogue = {
   'sidebar.searchPlaceholder': 'Cerca chat, progetti e pagine…',
   'sidebar.destinations': 'Destinazioni',
   'sidebar.noSearchResults': 'Nessuna chat, progetto o pagina corrispondente.',
+  'sidebar.searchTooLong': "Cerca al massimo {max} caratteri.",
+  'sidebar.searchTruncated': "Più chat corrispondono nei loro messaggi di quante se ne possano mostrare. Restringi la ricerca per vederle tutte.",
   'sidebar.searchResults.one': "{count} risultato",
   'sidebar.searchResults.other': "{count} risultati",
   'sidebar.showPinned': "Mostra elementi fissati",

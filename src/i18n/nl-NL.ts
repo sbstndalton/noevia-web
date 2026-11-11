@@ -35,6 +35,8 @@ export const NL_NL: Catalogue = {
   'sidebar.searchPlaceholder': 'Zoek chats, projecten en pagina’s…',
   'sidebar.destinations': 'Bestemmingen',
   'sidebar.noSearchResults': 'Geen overeenkomende chats, projecten of pagina’s.',
+  'sidebar.searchTooLong': "Zoek met maximaal {max} tekens.",
+  'sidebar.searchTruncated': "Meer chats komen overeen in hun berichten dan er getoond kunnen worden. Verfijn de zoekopdracht om ze allemaal te zien.",
   'sidebar.searchResults.one': "{count} resultaat",
   'sidebar.searchResults.other': "{count} resultaten",
   'sidebar.showPinned': "Vastgezette items tonen",
