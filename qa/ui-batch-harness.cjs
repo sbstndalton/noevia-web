@@ -14,14 +14,23 @@ const SHOTS = process.env.QA_SHOTS || '';
 if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
 
 /** A page at `width` x `height`; the theme follows the device (the default preference), so colorScheme picks it. */
-function themedPage(browser, [width, height, theme]) {
-  return browser.newPage(withLocale({ viewport: { width, height }, colorScheme: theme }));
+let scriptName = 'qa', closed = 0;
+async function themedPage(browser, [width, height, theme]) {
+  const page = await browser.newPage(withLocale({ viewport: { width, height }, colorScheme: theme }));
+  // QA_SHOT_ON_CLOSE=1: a picture of the page as it ends, for a run against a build that fails before the script's own screenshot.
+  const close = page.close.bind(page);
+  page.close = async (...args) => {
+    if (SHOTS && process.env.QA_SHOT_ON_CLOSE) await page.screenshot({ path: `${SHOTS}/${scriptName}-end-${++closed}-${width}-${theme}.png` }).catch(() => undefined);
+    return close(...args);
+  };
+  return page;
 }
 
 async function shot(page, name) { if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}.png` }); }
 
 /** Runs `body(check, browser, origin)`; every `check` prints PASS or FAIL and a failure sets the exit code. */
 async function run(name, port, body) {
+  scriptName = name;
   const fixture = createFixture(port);
   await fixture.listen();
   const browser = await chromium.launch({ headless: true, ...(process.env.QA_CHROME_PATH ? { executablePath: process.env.QA_CHROME_PATH } : { channel: 'chrome' }) });
