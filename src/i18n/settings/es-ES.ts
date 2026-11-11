@@ -671,6 +671,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'data.archivedDesc': "Ocultos en la barra lateral y conservados hasta que los elimines. Búscalos, restáuralos o elimínalos en su propia vista.",
   'data.manageArchived': "Gestionar chats archivados",
   'data.retentionLoadError': "No se pudo cargar el ajuste de conservación.",
+  'data.retentionUnknown': "No cargado",
   'data.retentionCheckError': "No se pudo comprobar el ajuste de conservación. Inténtalo de nuevo.",
   'data.retentionOn': "Los chats sin actualizar durante {days} días se eliminan automáticamente.",
   'data.deletedNow': "Se eliminaron {count} ahora.",

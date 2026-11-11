@@ -671,6 +671,7 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'data.archivedDesc': "Nascoste dalla barra laterale e conservate finché non le elimini. Cercale, ripristinale o eliminale nella loro vista.",
   'data.manageArchived': "Gestisci chat archiviate",
   'data.retentionLoadError': "Impossibile caricare l’impostazione di conservazione.",
+  'data.retentionUnknown': "Non caricato",
   'data.retentionCheckError': "Impossibile verificare l’impostazione di conservazione. Riprova.",
   'data.retentionOn': "Le chat non aggiornate da {days} giorni vengono eliminate automaticamente.",
   'data.deletedNow': "{count} eliminate ora.",

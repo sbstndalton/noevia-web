@@ -671,6 +671,7 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'data.archivedDesc': "Masquées dans la barre latérale et conservées jusqu’à ce que vous les supprimiez. Recherchez-les, restaurez-les ou supprimez-les dans leur propre vue.",
   'data.manageArchived': "Gérer les discussions archivées",
   'data.retentionLoadError': "Impossible de charger le réglage de conservation.",
+  'data.retentionUnknown': "Non chargé",
   'data.retentionCheckError': "Impossible de vérifier le réglage de conservation. Réessayez.",
   'data.retentionOn': "Les discussions non mises à jour depuis {days} jours sont supprimées automatiquement.",
   'data.deletedNow': "{count} supprimées maintenant.",

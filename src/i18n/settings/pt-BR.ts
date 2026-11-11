@@ -671,6 +671,7 @@ export const PT_BR_SETTINGS: SettingsCatalogue = {
   'data.archivedDesc': "Ocultos na barra lateral e mantidos até você excluí-los. Pesquise, restaure ou exclua-os na visualização própria.",
   'data.manageArchived': "Gerenciar chats arquivados",
   'data.retentionLoadError': "Não foi possível carregar a configuração de retenção.",
+  'data.retentionUnknown': "Não carregado",
   'data.retentionCheckError': "Não foi possível verificar a configuração de retenção. Tente de novo.",
   'data.retentionOn': "Chats sem atualização há {days} dias são excluídos automaticamente.",
   'data.deletedNow': "{count} excluídos agora.",
