@@ -28,7 +28,10 @@ export function usePageAutosave(spaceId: string, page: PageBase) {
     const instance = new PageAutosave({
       save: (id, body, signal) => writePage(spaceId, id, body, signal),
       load: (id, signal) => readPage(spaceId, id, signal),
-      persist: (draft) => { if (draft) writePageDraft(spaceId, page.id, { ...draft, savedAt: Date.now() }); else clearPageDraft(spaceId, page.id); },
+      persist: (draft, saved) => {
+        if (draft) return writePageDraft(spaceId, page.id, { ...draft, savedAt: Date.now() });
+        clearPageDraft(spaceId, page.id, undefined, saved);
+      },
     });
     instance.receive(page, readPageDraft(spaceId, page.id));
     return instance;

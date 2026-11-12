@@ -27,7 +27,8 @@ export type DraftProblem = 'title-empty' | 'title-long' | 'too-large';
 export function draftProblem(draft: { title: string; content: string }): DraftProblem | null {
   const title = draft.title.trim();
   if (!title) return 'title-empty';
-  if ([...title].length > PAGE_TITLE_MAX) return 'title-long';
+  // The raw length: what is sent is what is counted (trimming only on send would make the draft differ from the base for ever).
+  if ([...draft.title].length > PAGE_TITLE_MAX) return 'title-long';
   if (utf8Bytes(draft.content) > PAGE_BYTES_MAX) return 'too-large';
   return null;
 }

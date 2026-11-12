@@ -74,8 +74,11 @@ test('a failed save keeps the draft on this device, shows failed, and does not r
 });
 
 test('retry after a failure saves; typing again also tries again', async () => {
-  let fail = true; const calls = [];
-  const { a, local } = machine({ save: async (id, body) => { calls.push(body); if (fail) throw new Error('offline'); return { version: 'v2' }; } });
+  let fail = true; const calls = []; let served = base();
+  const { a, local } = machine({
+    save: async (id, body) => { calls.push(body); if (fail) throw new Error('offline'); served = base({ version: `v${calls.length + 1}`, content: body.content }); return { version: served.version }; },
+    load: async () => served,
+  });
   a.receive(base());
   a.edit({ content: 'mine' });
   await wait(60);
@@ -250,4 +253,81 @@ test('leaving mid-conflict keeps the draft on this device and saves nothing', as
   await wait(30);
   assert.equal(n, 1, 'only the save that produced the conflict');
   assert.equal(local.value.content, 'mine');
+});
+
+test('a save whose answer never came, retried: if it had landed it is saved, not a false conflict', async () => {
+  let puts = 0; let serverText = 'one';
+  const { a, local } = machine({
+    timeoutMs: 30,
+    save: (id, body, signal) => { puts++; serverText = body.content; return new Promise((_, reject) => signal.addEventListener('abort', () => reject(new Error('aborted')))); },
+    load: async () => base({ version: 'v2', content: serverText }),
+  });
+  a.receive(base());
+  a.edit({ content: 'mine' });
+  await wait(100);
+  assert.equal(a.getSnapshot().fault.kind, 'timeout');
+  assert.equal(await a.flush(true), true, 'the write had landed');
+  assert.equal(puts, 1, 'no second write');
+  assert.equal(a.getSnapshot().status, 'saved');
+  assert.equal(a.getSnapshot().base.version, 'v2');
+  assert.equal(local.value, null);
+});
+
+test('after an unknown outcome, a page that moved on is a conflict, and one that did not is written again', async () => {
+  let theirs = base({ version: 'v8', content: 'theirs' }); const calls = [];
+  const { a } = machine({
+    save: async (id, body) => { calls.push(body); if (calls.length === 1) throw new Error('network down'); return { version: 'v9' }; },
+    load: async () => theirs,
+  });
+  a.receive(base());
+  a.edit({ content: 'mine' });
+  await wait(60);
+  assert.equal(a.getSnapshot().status, 'error');
+  await a.flush(true);
+  assert.equal(a.getSnapshot().status, 'conflict');
+  assert.equal(a.getSnapshot().remoteVersion, 'v8');
+  assert.equal(calls.length, 1);
+  // Same again, but nobody touched the page: the retry writes.
+  const second = []; theirs = base();
+  const m = machine({ save: async (id, body) => { second.push(body); if (second.length === 1) throw new Error('network down'); return { version: 'v9' }; }, load: async () => theirs });
+  m.a.receive(base()); m.a.edit({ content: 'mine' }); await wait(60);
+  assert.equal(await m.a.flush(true), true);
+  assert.equal(second.length, 2);
+});
+
+test('keep mine writes even when the draft was edited back to the old base text', async () => {
+  const calls = [];
+  const { a } = machine({ save: async (id, body) => { calls.push(body); if (calls.length === 1) throw conflict('v9'); return { version: 'v10' }; } });
+  a.receive(base());
+  a.edit({ content: 'x' });
+  await wait(60);
+  a.edit({ content: 'one' });
+  assert.equal(a.getSnapshot().status, 'conflict');
+  assert.equal(await a.keepMine(), true);
+  assert.equal(calls.length, 2, 'the server held another version, so mine is written');
+  assert.deepEqual(plain(calls[1]), { title: 'QA page', content: 'one', version: 'v9' });
+  assert.equal(a.getSnapshot().status, 'saved');
+});
+
+test('when the device cannot keep a copy the state says so, and says so again once it can', async () => {
+  let works = false;
+  const a = new PageAutosave({ delayMs: 15, save: async () => { throw new Error('offline'); }, load: async () => base(), persist: (d) => (d ? works : undefined) });
+  a.receive(base());
+  a.edit({ content: 'x' });
+  await wait(60);
+  assert.equal(a.getSnapshot().status, 'error');
+  assert.equal(a.getSnapshot().keptOnDevice, false);
+  works = true;
+  a.edit({ content: 'xy' });
+  assert.equal(a.getSnapshot().keptOnDevice, true);
+});
+
+test('a late save after leaving clears the device copy only if it is the text that was saved', async () => {
+  const seen = [];
+  const a = new PageAutosave({ delayMs: 10000, save: async (id, b) => ({ version: 'v2' }), load: async () => base(), persist: (d, saved) => { seen.push([d ? 'write' : 'clear', saved ? saved.content : null]); } });
+  a.receive(base());
+  a.edit({ content: 'last words' });
+  a.leave();
+  await wait(40);
+  assert.deepEqual(seen.filter((s) => s[0] === 'clear' && s[1]), [['clear', 'last words']]);
 });

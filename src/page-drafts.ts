@@ -7,6 +7,20 @@ const PREFIX = 'noevia:space-page-draft:';
 const key = (spaceId: string, pageId: string) => `${PREFIX}${spaceId}:${pageId}`;
 
 type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+
+// A tab whose account another tab replaced writes nothing into storage every tab shares (#1643), as chat drafts do.
+let writesBlocked: () => boolean = () => false;
+export function guardPageDraftWrites(blocked: () => boolean): void { writesBlocked = blocked; }
+
+/** Sign-out: no page text stays behind on the device (#791). */
+export function clearAllPageDrafts(store: Pick<Storage, 'removeItem' | 'key' | 'length'> | null = defaultStore() as Storage | null): void {
+  try {
+    if (!store) return;
+    const keys: string[] = [];
+    for (let i = 0; i < store.length; i++) { const k = store.key(i); if (k?.startsWith(PREFIX)) keys.push(k); }
+    for (const k of keys) store.removeItem(k);
+  } catch { /* nothing to clear */ }
+}
 const defaultStore = (): Store | null => { try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; } };
 
 export function readPageDraft(spaceId: string, pageId: string, store: Store | null = defaultStore()): PageDraftRecord | null {
@@ -20,9 +34,17 @@ export function readPageDraft(spaceId: string, pageId: string, store: Store | nu
 }
 
 export function writePageDraft(spaceId: string, pageId: string, draft: PageDraftRecord, store: Store | null = defaultStore()): boolean {
-  try { if (!store) return false; store.setItem(key(spaceId, pageId), JSON.stringify(draft)); return true; } catch { return false; }
+  try { if (!store || writesBlocked()) return false; store.setItem(key(spaceId, pageId), JSON.stringify(draft)); return true; } catch { return false; }
 }
 
-export function clearPageDraft(spaceId: string, pageId: string, store: Store | null = defaultStore()): void {
-  try { store?.removeItem(key(spaceId, pageId)); } catch { /* nothing to clear */ }
+/** Clears the device copy. With `onlyIfSaved`, only when it holds exactly that text: a late save that finishes after the page was
+ *  reopened and edited must not delete what the new editor stored. */
+export function clearPageDraft(spaceId: string, pageId: string, store: Store | null = defaultStore(), onlyIfSaved?: { title: string; content: string }): void {
+  try {
+    if (onlyIfSaved) {
+      const kept = readPageDraft(spaceId, pageId, store);
+      if (kept && (kept.title !== onlyIfSaved.title || kept.content !== onlyIfSaved.content)) return;
+    }
+    store?.removeItem(key(spaceId, pageId));
+  } catch { /* nothing to clear */ }
 }

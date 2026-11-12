@@ -22,6 +22,7 @@ run('spaces-library-2446', Number(process.env.QA_PORT || 32447), async (check, b
       try {
         await page.getByText('No Spaces yet').waitFor({ timeout: 10000 });
         await shot(page, `library-empty-${view[0]}-${view[2]}`);
+        server.listDelay = 800; // the list re-read after a create is slow: the new Space must not read as "not available" meanwhile
         await page.getByRole('button', { name: 'New space' }).click();
         const dialog = page.getByRole('dialog', { name: 'New space' });
         await dialog.waitFor();
@@ -36,6 +37,8 @@ run('spaces-library-2446', Number(process.env.QA_PORT || 32447), async (check, b
         await dialog.getByLabel('Space name').fill('QA-2446 Notes');
         await dialog.getByRole('button', { name: 'Create' }).click();
         await page.getByRole('heading', { name: 'QA-2446 Notes', level: 1 }).waitFor({ timeout: 10000 });
+        assert.equal(await page.getByText('This Space is not available').count(), 0);
+        server.listDelay = 0;
         assert.match(new URL(page.url()).pathname, /^\/spaces\/5a5a5a5a-/);
         await page.getByText('Create the first page in this Space.').waitFor();
         await shot(page, `pages-empty-${view[0]}-${view[2]}`);
@@ -118,6 +121,15 @@ run('spaces-library-2446', Number(process.env.QA_PORT || 32447), async (check, b
         await shot(page, `search-truncated-${view[0]}-${view[2]}`);
         await box.fill('');
         await page.waitForFunction(() => !document.body.textContent.includes('Only the first matches'), null, { timeout: 5000 });
+      } finally { await page.close(); }
+    });
+
+    await check(`${tag}: a Space with more pages than one answer holds says so, even with no search`, async () => {
+      const { page } = await seeded(browser, origin, view, '/spaces', (s) => { const sp = s.addSpace('QA-2446 Big'); for (let i = 0; i < 101; i++) s.addPage(sp.id, `QA page ${i}`, 'x'); });
+      try {
+        await page.getByRole('button', { name: 'Open QA-2446 Big' }).click();
+        await page.getByText('Showing the first 100 pages. Use search to find the rest.').waitFor({ timeout: 10000 });
+        await page.getByText('100 pages').first().waitFor();
       } finally { await page.close(); }
     });
 

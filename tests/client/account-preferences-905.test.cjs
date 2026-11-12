@@ -31,6 +31,7 @@ function fresh({ storage = fakeLocalStorage(), apiFetch = async () => { throw Er
     './account-session': { accountChangedElsewhere: () => false, bindTabAccount() {}, releaseTabAccount() {} },
     './chat-drafts': { claimDrafts() {}, clearAllDrafts() {}, guardDraftWrites() {} },
     './last-view': { readLastPlace: () => null, clearLastPlace() {}, guardLastPlaceWrites() {} },
+    './page-drafts': { clearAllPageDrafts() {}, guardPageDraftWrites() {} },
     './user-preferences': prefs,
   });
   return { prefs, device, storage, events };

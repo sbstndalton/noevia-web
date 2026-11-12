@@ -91,12 +91,12 @@ export function SpacePages({ space, revision, reloadSpaces, onBack, onOpenPage, 
           <SpaceActions space={space} revision={revision} reload={reloadSpaces} onDeleted={onDeleted} />
         </div>
         <div className="space-tools">
-          <label className="space-search">
+          <div className="space-search">
             <ShellIcon name="search" size={16} tone="decorative" />
             <input ref={searchBox} type="search" aria-label={t('spaces.searchLabel')} placeholder={t('spaces.searchPlaceholder')} value={raw}
               aria-invalid={search.kind === 'too-long'} aria-describedby={search.kind === 'too-long' ? 'space-search-limit' : undefined}
               onChange={(e) => setRaw(e.target.value)} />
-          </label>
+          </div>
           <div className="seg space-layout" role="group" aria-label={t('spaces.layoutLabel')}>
             <button type="button" className={layout === 'grid' ? 'is-selected' : ''} aria-pressed={layout === 'grid'} aria-label={t('spaces.viewGrid')} title={t('spaces.viewGrid')} onClick={() => setLayoutAndKeep('grid')}><ShellIcon name="grid" size={16} /></button>
             <button type="button" className={layout === 'list' ? 'is-selected' : ''} aria-pressed={layout === 'list'} aria-label={t('spaces.viewList')} title={t('spaces.viewList')} onClick={() => setLayoutAndKeep('list')}><ShellIcon name="list" size={16} /></button>
@@ -107,6 +107,7 @@ export function SpacePages({ space, revision, reloadSpaces, onBack, onOpenPage, 
         {createError && <p className="space-note is-error" role="alert">{createError}</p>}
         {failed === 'search' && <p className="space-note is-error" role="alert">{t('spaces.searchFailed')}</p>}
         {truncated && searching && search.kind === 'ok' && <p className="space-note" role="status">{t('spaces.searchTruncated')}</p>}
+        {truncated && !searching && <p className="space-note" role="status">{t('spaces.listTruncated', { count: shown.length })}</p>}
 
         {failed === 'load' && rows === null ? (
           <EmptyState role="alert" icon="circle-alert" title={t('spaces.loadFailedTitle')} action={<button type="button" className="btn btn-secondary" onClick={() => setAttempt((n) => n + 1)}>{t('spaces.retry')}</button>}>{t('spaces.loadFailedBody')}</EmptyState>

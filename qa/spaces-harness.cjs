@@ -32,7 +32,7 @@ const sha = (text) => crypto.createHash('sha256').update(text).digest('hex');
 function createSpacesServer({ capability = 'on' } = {}) {
   const st = {
     revision: 1, spaces: [], pages: new Map(), calls: [], capability,
-    forceSaveFailure: false, forceTruncated: false, hangSave: false, pageLimit: false,
+    listDelay: 0, forceSaveFailure: false, forceTruncated: false, hangSave: false, pageLimit: false,
     next: 1,
   };
   const id = (p) => `${p}-0000-4000-8000-${String(st.next++).padStart(12, '0')}`;
@@ -56,7 +56,7 @@ function createSpacesServer({ capability = 'on' } = {}) {
     if (st.capability === 'broken') return json({ error: 'boom' }, 500);
     const [sid, kind, pid] = parts;
     if (!sid) {
-      if (method === 'GET') return json({ revision: st.revision, spaces: st.spaces });
+      if (method === 'GET') { if (st.listDelay) await new Promise((r) => setTimeout(r, st.listDelay)); return json({ revision: st.revision, spaces: st.spaces }); }
       if (method === 'POST') { if (!body?.name || [...body.name].length > 80) return json({ error: 'Bad name', code: 'invalid_request' }, 400); const made = st.addSpace(body.name); return json({ revision: st.revision, space: made }, 201); }
     }
     const space = st.spaces.find((s) => s.id === sid);

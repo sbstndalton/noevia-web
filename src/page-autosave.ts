@@ -11,7 +11,11 @@
 //   sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
 //   furnished to do so, subject to the following conditions: The above copyright notice and this
 //   permission notice shall be included in all copies or substantial portions of the Software.
-//   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+//   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+//   NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+//   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+//   DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 // What changed: numeric `revision` became the content `version` (sha256) of our revision rule; the
 // delay is 1.5 s; a failed save or a 409 keeps the draft on this device (injected `persist`); a 409
@@ -27,6 +31,8 @@ export type SaveStatus = 'saved' | 'dirty' | 'saving' | 'error' | 'conflict';
 export type SaveFault = { kind: 'problem'; problem: DraftProblem } | { kind: 'server'; code?: string; message: string } | { kind: 'timeout' } | { kind: 'load-failed' };
 
 export interface SaveState {
+  /** False once this device could not keep a copy of the draft (storage full or unavailable): the text then exists only in this tab. */
+  keptOnDevice?: boolean;
   base?: PageBase;
   draft?: PageDraft;
   status: SaveStatus;
@@ -41,8 +47,9 @@ export interface LocalDraft { title: string; content: string; baseVersion: strin
 export interface AutosaveOptions {
   save(id: string, body: { title: string; content: string; version: string }, signal: AbortSignal): Promise<{ version: string }>;
   load(id: string, signal: AbortSignal): Promise<PageBase>;
-  /** Called with the draft to keep on this device, or null once nothing is left to keep. */
-  persist?(draft: LocalDraft | null): void;
+  /** Called with the draft to keep on this device (false when it could not be kept), or null once nothing is left to keep
+   *  (`saved` is then the text just saved, so a stale clear can be told from a current draft). */
+  persist?(draft: LocalDraft | null, saved?: PageDraft): boolean | void;
   delayMs?: number;
   timeoutMs?: number;
 }
@@ -61,6 +68,10 @@ export class PageAutosave {
   private controller?: AbortController;
   private pending?: Promise<boolean>;
   private generation = 0;
+  /** A save may have reached the server without its answer reaching us (timeout, dropped connection). */
+  private unknownOutcome = false;
+  /** "Keep mine" writes even when the draft equals the old base: the server holds something else. */
+  private force = false;
   private readonly delay: number;
   private readonly timeout: number;
   constructor(private readonly options: AutosaveOptions) {
@@ -78,10 +89,15 @@ export class PageAutosave {
 
   private keepLocal() {
     const { base, draft } = this.state;
-    if (base && draft && !same(base, draft)) this.options.persist?.({ title: draft.title, content: draft.content, baseVersion: base.version });
+    if (!base || !draft || (same(base, draft) && !this.force)) return;
+    const kept = this.options.persist?.({ title: draft.title, content: draft.content, baseVersion: base.version });
+    if (kept === false && this.state.keptOnDevice !== false) this.publish({ keptOnDevice: false });
+    else if (kept !== false && this.state.keptOnDevice === false) this.publish({ keptOnDevice: true });
   }
-  private clearLocal() { this.options.persist?.(null); }
-  private reset() { this.generation++; clearTimeout(this.timer); this.controller?.abort(); this.pending = undefined; }
+  /** Once the editor has left, a late save must not clear a device copy a newer editor of the same page has stored since. */
+  private leaving = false;
+  private clearLocal(saved?: PageDraft) { this.options.persist?.(null, this.leaving ? saved : undefined); }
+  private reset() { this.generation++; clearTimeout(this.timer); this.controller?.abort(); this.pending = undefined; this.unknownOutcome = false; this.force = false; }
 
   /** Show a page as the server has it, optionally with a draft read back from this device. A draft
    *  based on an older version than the page's is a conflict from the start: nothing is overwritten
@@ -118,10 +134,15 @@ export class PageAutosave {
     const { base, draft } = this.state;
     if (!base || !draft || this.state.status === 'conflict') return false;
     if (this.state.status === 'error' && !retry) return false;
-    if (!this.changed) { this.publish({ status: 'saved', fault: undefined }); this.clearLocal(); return true; }
+    if (!this.changed && !this.force) { this.publish({ status: 'saved', fault: undefined }); this.clearLocal(); return true; }
     const problem = draftProblem(draft);
     if (problem) { this.publish({ status: 'error', fault: { kind: 'problem', problem } }); this.keepLocal(); return false; }
     const generation = this.generation;
+    if (this.unknownOutcome) {
+      // The last save may have landed. Look before writing again, so our own earlier write is not a false conflict.
+      const verdict = await this.reconcile(base, draft, generation);
+      if (verdict !== 'go') return verdict === 'saved';
+    }
     const controller = this.controller = new AbortController();
     this.publish({ status: 'saving', fault: undefined });
     const sent = { ...draft };
@@ -135,12 +156,14 @@ export class PageAutosave {
         ]);
         if (generation !== this.generation) return false;
         const current = this.state.draft ?? sent;
+        this.force = false; this.unknownOutcome = false;
         this.publish({ base: { id: base.id, version: result.version, ...sent }, status: same(current, sent) ? 'saved' : 'dirty', fault: undefined, remoteVersion: undefined, restored: false });
-        if (this.state.status === 'saved') this.clearLocal(); else this.keepLocal();
+        if (this.state.status === 'saved') this.clearLocal(sent); else this.keepLocal();
         return true;
       } catch (error) {
         if (generation !== this.generation) return false;
         const e = statusOf(error);
+        if (timedOut || e.status === undefined) this.unknownOutcome = true;
         if (e.status === 409) this.publish({ status: 'conflict', fault: { kind: 'server', code: e.code, message: e.message }, remoteVersion: e.version });
         else this.publish({ status: 'error', fault: timedOut ? { kind: 'timeout' } : { kind: 'server', code: e.code, message: e.message } });
         this.keepLocal();
@@ -154,6 +177,27 @@ export class PageAutosave {
     return pending;
   }
 
+  /** After a save whose outcome is unknown: read the page. 'saved' = it already has our text; 'go' = unchanged, write again;
+   *  'conflict'/'error' = stop (state is published). */
+  private async reconcile(base: PageBase, draft: PageDraft, generation: number): Promise<'saved' | 'go' | 'conflict' | 'error'> {
+    try {
+      const now = await this.options.load(base.id, new AbortController().signal);
+      if (generation !== this.generation) return 'error';
+      if (now.title === draft.title && now.content === draft.content) {
+        this.unknownOutcome = false; this.force = false;
+        this.publish({ base: now, status: 'saved', fault: undefined, remoteVersion: undefined });
+        this.clearLocal(draft);
+        return 'saved';
+      }
+      if (now.version !== base.version) { this.publish({ status: 'conflict', fault: { kind: 'server', code: 'stale_revision', message: 'changed' }, remoteVersion: now.version }); this.keepLocal(); return 'conflict'; }
+      this.unknownOutcome = false;
+      return 'go';
+    } catch {
+      if (generation === this.generation) { this.publish({ status: 'error', fault: { kind: 'server', message: 'unreachable' } }); this.keepLocal(); }
+      return 'error';
+    }
+  }
+
   /** "Keep mine": save the draft again on top of the server's current version. */
   async keepMine(): Promise<boolean> {
     const { base, draft } = this.state;
@@ -165,6 +209,7 @@ export class PageAutosave {
       catch { if (generation === this.generation) this.publish({ fault: { kind: 'load-failed' } }); return false; }
       if (generation !== this.generation) return false;
     }
+    this.force = true;
     this.publish({ base: { ...base, version }, status: 'dirty', fault: undefined, remoteVersion: undefined });
     return this.flush();
   }
@@ -185,8 +230,9 @@ export class PageAutosave {
     }
   }
 
-  /** Last chance before the page goes away: keep whatever is unsaved on this device. */
-  keepForLeaving() { clearTimeout(this.timer); if (this.dirty) this.keepLocal(); }
+  /** Last chance before the page goes away: keep whatever is unsaved on this device. Only stores; the page may yet come back
+   *  (back-forward cache), so the autosave timer is left running. */
+  keepForLeaving() { if (this.dirty) this.keepLocal(); }
 
   /** The page itself is gone (deleted here): nothing is kept, nothing is saved. */
   discard() {
@@ -200,6 +246,8 @@ export class PageAutosave {
   /** The editor is going away. Never aborts a save in flight (that would lose it): keeps the draft on
    *  this device, drops the subscribers, and tries one last save of anything still unsaved. */
   leave() {
+    this.leaving = true;
+    clearTimeout(this.timer);
     this.keepForLeaving();
     this.listeners.clear();
     if (this.state.status === 'dirty' && !this.pending) void this.flush();

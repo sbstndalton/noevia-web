@@ -140,6 +140,23 @@ run('spaces-editor-2446', Number(process.env.QA_PORT || 32448), async (check, br
       });
     });
 
+    await check(`${tag}: a page deleted elsewhere: the text is not lost, it can be saved as a new page`, async () => {
+      await withPage(browser, origin, view, async ({ page, server, space }) => {
+        server.pages.set(space.id, []);
+        await body(page).fill('written after the page was deleted elsewhere');
+        await page.getByRole('alert').filter({ hasText: 'was deleted somewhere else' }).waitFor({ timeout: 6000 });
+        assert.equal(await page.getByRole('button', { name: 'Try saving again' }).count(), 0, 'retrying a deleted page can only fail again');
+        await shot(page, `editor-deleted-elsewhere-${view[0]}-${view[2]}`);
+        await page.getByRole('button', { name: 'Save as a new page' }).click();
+        await isState(page, 'Saved').waitFor({ timeout: 8000 }).catch(() => undefined);
+        await page.waitForFunction(() => document.querySelector('textarea')?.value === 'written after the page was deleted elsewhere', null, { timeout: 8000 });
+        const pages = server.pages.get(space.id);
+        assert.equal(pages.length, 1);
+        assert.equal(pages[0].content, 'written after the page was deleted elsewhere');
+        assert.deepEqual(await draftKeys(page), [], 'nothing left behind for the page that is gone');
+      });
+    });
+
     await check(`${tag}: a page over 512 KiB is not sent; the text stays; shrinking it saves`, async () => {
       await withPage(browser, origin, view, async ({ page, server }) => {
         await body(page).fill('a'.repeat(512 * 1024 + 1));
