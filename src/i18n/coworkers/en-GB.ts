@@ -163,6 +163,13 @@ export const EN_GB_COWORKERS = {
   'spaces.leaveBodyNoCopy': 'This device could not keep a copy of your edits, so they will be lost.',
   'spaces.listTruncated': 'Showing the first {count} pages. Use search to find the rest.',
   'spaces.saveAsNew': 'Save as a new page',
+  'pageSave.titleLabel': 'Title',
+  'pageSave.draftLabel': 'Draft',
+  'pageSave.ask': 'This page will be saved to {space}.',
+  'pageSave.notGranted': 'Not one of this coworker’s Spaces, so it will be refused.',
+  'pageSave.approve': 'Approve & save',
+  'pageSave.decline': 'Decline',
+  'pageSave.group': 'Save a page',
 } as const;
 
 export type CoworkersKey = keyof typeof EN_GB_COWORKERS;

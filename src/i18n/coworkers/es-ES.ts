@@ -162,4 +162,11 @@ export const ES_ES_COWORKERS: CoworkersCatalogue = {
   'spaces.leaveBodyNoCopy': "Este dispositivo no pudo guardar una copia de tus cambios, así que se perderán.",
   'spaces.listTruncated': "Se muestran las primeras {count} páginas. Usa la búsqueda para encontrar el resto.",
   'spaces.saveAsNew': "Guardar como página nueva",
+  'pageSave.titleLabel': "Título",
+  'pageSave.draftLabel': "Borrador",
+  'pageSave.ask': "Esta página se guardará en {space}.",
+  'pageSave.notGranted': "No es uno de los Espacios de este compañero, así que se rechazará.",
+  'pageSave.approve': "Aprobar y guardar",
+  'pageSave.decline': "Rechazar",
+  'pageSave.group': "Guardar una página",
 };

@@ -778,6 +778,8 @@ export async function* streamChat(
   targetKind?: string;
   /** 'tool_pending' (#658): the same change as one already saved in this chat. */
   repeatOf?: boolean;
+  /** 'tool_pending' (#2446): asked about every time; no chat-wide approval is offered. */
+  once?: boolean;
   /** 'tool_pending' (#769): sensitive arguments holding untrusted text; asked per call. */
   provenance?: unknown;
   /** 'tool_pending' (#865/#887): the id of the MCP server the call goes to. */

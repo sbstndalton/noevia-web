@@ -1,4 +1,6 @@
 import type { JSX } from 'react';
+import { Suspense } from 'react';
+import type { MouseEvent } from 'react';
 import type { ToolCallView } from '../types';
 import { useRef, useState } from 'react';
 import { decideToolApproval } from '../api';
@@ -9,6 +11,8 @@ import { formatNumber } from '../number-format';
 import { around } from '../text-around';
 import { showDirectionControls } from '../visible-controls';
 import { useServerLabel } from '../mcp-server-label';
+import { PAGE_SAVE_TOOL, parsePageDraft, parseSavedPage, useCoworkerConversation } from '../coworker-conversation';
+import { PageSaveApproval } from '../lazy-views';
 
 /** One drawn symbol per outcome — the list used ✓ and ⃠, which render differently on
  *  every platform and are not part of the icon set. */
@@ -46,6 +50,7 @@ function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
   const [sent, setSent] = useState(() => !!call.approvalId && decidedApprovals.has(call.approvalId));
   const [err, setErr] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const coworkerId = useCoworkerConversation();
   const decide = async (decision: 'approve' | 'deny' | 'approve_all') => {
     if (!call.approvalId || busy || sent) return;
     setBusy(true);
@@ -78,6 +83,12 @@ function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
   const serverLabel = useServerLabel(call.server);
   // The name is markup (bold), so the sentence is split around it and the words stay in the catalogue.
   const ask = around(t('chat.approval.ask'), 'name');
+  // #2446: a coworker's page save shows its title, destination Space and whole draft, with its own two buttons. Any
+  // other place, or arguments of another shape, gets the plain card below, which shows them raw.
+  const draft = call.name === PAGE_SAVE_TOOL && coworkerId ? parsePageDraft(call.args) : null;
+  if (draft && coworkerId) {
+    return <Suspense fallback={null}><PageSaveApproval.View draft={draft} coworkerId={coworkerId} locked={locked} sent={sent} err={err} onDecide={(d) => void decide(d)} containerRef={containerRef}/></Suspense>;
+  }
   return (
     <div className="tool-approval" role="group" tabIndex={-1} ref={containerRef} aria-label={t('chat.approval.group', { name })}>
       <span className="tool-approval-ask">
@@ -109,9 +120,10 @@ function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
         <button className="btn btn-secondary btn-sm" disabled={locked} onClick={() => void decide('deny')}>
           {t('chat.approval.decline')}
         </button>
-        <button className="btn btn-secondary btn-sm" disabled={locked} onClick={() => void decide('approve_all')}>
+        {/* A call the server asks about every time (`once`) has no chat-wide button. */}
+        {!call.once && <button className="btn btn-secondary btn-sm" disabled={locked} onClick={() => void decide('approve_all')}>
           {t('chat.approval.allowChat')}
-        </button>
+        </button>}
       </div>
       {sent && <span className="tool-approval-sent" role="status" data-testid="tool-approval-sent">{t('chat.approval.sent')}</span>}
       {err && <span className="modal-err tool-approval-err">{err}</span>}
@@ -154,6 +166,20 @@ function resultPreview(result: string, t: Translate, n: (count: number) => strin
   }
 }
 
+/** The page a coworker saved (#2446): a chip that opens it in Spaces. The address is shown only when it is the in-app
+ *  Spaces address of a page (parseSavedPage), and it opens as the app's own route, not a page load. */
+function SavedPageChip({ result }: { result: string | undefined }): JSX.Element | null {
+  const page = parseSavedPage(result);
+  if (!page) return null;
+  const open = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    window.history.pushState({ noevia: 1 }, '', page.link);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+  return <a className="tool-call-chip" href={page.link} onClick={open} data-testid="saved-page-chip"><ShellIcon name="file-text" size={14}/><span>{showDirectionControls(page.title)}</span></a>;
+}
+
 /** Every tool call for a reply, under its thinking block: one compact,
  *  collapsible list with a line per call. A write waiting for approval is
  *  never folded away — its full arguments are the approval gate. */
@@ -191,6 +217,7 @@ export function ToolCalls({ calls }: { calls: ToolCallView[] }): JSX.Element {
                     {c.args && <><span className="tool-call-label">{t('chat.toolCalls.arguments')}</span><pre>{pretty(c.args)}</pre></>}
                     {c.result !== undefined && <><span className="tool-call-label">{t('chat.toolCalls.result')}</span><pre>{c.result || t('chat.toolCalls.empty')}</pre></>}
                   </details>
+                  {c.name === PAGE_SAVE_TOOL && state === 'done' && <SavedPageChip result={c.result}/>}
                 </li>
               );
             })}
