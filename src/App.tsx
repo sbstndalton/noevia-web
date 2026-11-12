@@ -42,6 +42,7 @@ import {
   fetchFramingPreferences,
   decideRoute,
   fetchRoutingMode,
+  apiFetch,
 } from './api';
 import type { RoutingModeSettings } from './api';
 import { ForceLocalToggle, isRouteTarget } from './components/RouteControls';
@@ -70,7 +71,8 @@ import { ModelPopup } from './components/ModelPopup';
 import { rememberCreatedProject, withCreatedProjects } from './created-projects';
 import { ProjectView } from './components/ProjectView';
 import { ActiveCodeTasks } from './components/code/ActiveCodeTasks';
-import { Coding, Customise, Diary, ModelManager, Projects, Settings, ViewLoading, prefetchViewsWhenIdle } from './lazy-views';
+import { Coding, Customise, Diary, ModelManager, Projects, Settings, Spaces, ViewLoading, prefetchViewsWhenIdle } from './lazy-views';
+import { areaAvailable } from './area-gate';
 import { KeptOffDocument } from './components/KeptOffDocument';
 import { diaryOpened, diaryPresence } from './diary-presence';
 import type { SettingsSection } from './components/SettingsShell';
@@ -111,6 +113,7 @@ type View =
   | { kind: 'projects' }
   | { kind: 'plugins' }
   | { kind: 'archived' }
+  | { kind: 'spaces'; spaceId?: string; pageId?: string }
   | { kind: 'models'; model?: string }
   | { kind: 'project'; id: string; codeRequest?: string }
   | { kind: 'chat'; chatId: string; projectId?: string | null };
@@ -186,6 +189,14 @@ export default function App(): JSX.Element {
   // An address that names no page (#1469): shown as a not-found page with a way back into the app,
   // and left in the address bar until the person goes somewhere else.
   const [pageMissing, setPageMissing] = useState(initialNav.unknown);
+  // Spaces (#2446) exists only where the server has its routes for this account: null while that is
+  // being asked, false for a server without them (404 or any failure), so its paths read as unknown.
+  const [spacesAvailable, setSpacesAvailable] = useState<boolean | null>(null);
+  useEffect(() => {
+    let live = true;
+    void areaAvailable((path) => apiFetch(path), '/api/spaces', 'spaces').then((ok) => { if (live) setSpacesAvailable(ok); });
+    return () => { live = false; };
+  }, []);
   // The tab a project and Customise are on, so the address bar can carry it (#359). A project's
   // tab is kept with its id: another project opens on its own first tab, not on this one.
   // #552: a file a reply's source chip asked the project's Sources tab to reveal.
@@ -258,6 +269,7 @@ export default function App(): JSX.Element {
         case 'project': return { kind: 'project', id: route.id };
         case 'customise': return { kind: 'plugins' };
         case 'models': return route.model ? { kind: 'models', model: route.model } : { kind: 'models' };
+        case 'spaces': return { kind: 'spaces', spaceId: route.spaceId, pageId: route.pageId };
         default: return { kind: route.kind };
       }
     }
@@ -524,10 +536,15 @@ export default function App(): JSX.Element {
     if (view.kind === 'preview') return;
     // Not before the account is known: a `user: null` place reads as another account's (#791).
     if (!accountId) return;
+    // A Space is not somewhere to return to: the server may not have Spaces on the next visit.
+    if (view.kind === 'spaces') return;
     // The return target is never 'preview' by construction (this same guard runs before every
     // view change reaches navRef); the cast only tells TypeScript what the runtime already
     // guarantees.
-    const toPersist = persistedView(navRef.current, view) as Exclude<View, { kind: 'preview' }>;
+    const persisted = persistedView(navRef.current, view);
+    // A Space is not somewhere to return to: the server may not have Spaces on the next visit.
+    if (persisted.kind === 'preview' || persisted.kind === 'spaces') return;
+    const toPersist = persisted;
     writeLastPlace({ user: accountId, view: toPersist, settings: settingsOpen ? settingsSection : null });
   }, [view, settingsOpen, settingsSection, accountId]);
 
@@ -711,6 +728,8 @@ export default function App(): JSX.Element {
   // Any move off the page the address did not name (a sidebar link, a Back step) leaves it (#1469).
   const viewAtLoad = useRef(view);
   useEffect(() => { if (view !== viewAtLoad.current) setPageMissing(false); }, [view]);
+  // An area the server does not have for this account (Spaces, #2446) reads as an unknown page. After the effect above, so it wins on a view change.
+  useEffect(() => { if (view.kind === 'spaces' && spacesAvailable === false) setPageMissing(true); }, [view, spacesAvailable]);
   // Every commit, not on deps: the replace flag must be consumed by the first commit after it
   // was raised even when that commit leaves the path alone.
   useEffect(() => {
@@ -762,6 +781,9 @@ export default function App(): JSX.Element {
       case 'customise':
         setCustomiseTab(target.tab);
         if (current.kind !== 'plugins') setView({ kind: 'plugins' });
+        return;
+      case 'spaces':
+        if (!(current.kind === 'spaces' && current.spaceId === target.spaceId && current.pageId === target.pageId)) setView({ kind: 'spaces', spaceId: target.spaceId, pageId: target.pageId });
         return;
       case 'models':
         // Models & routing is always a Settings page (#304): never the place Settings' close returns to.
@@ -1823,6 +1845,7 @@ export default function App(): JSX.Element {
         onOpenProjectCode={(id) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}
         onOpenPlugins={() => { setAppMode('chat'); setCustomiseTab('connectors'); setView({ kind: 'plugins' }); }}
         onOpenArchived={() => { setAppMode('chat'); setView({ kind: 'archived' }); }}
+        onOpenSpaces={spacesAvailable ? () => { setAppMode('chat'); setView({ kind: 'spaces' }); } : undefined}
         onPreview={(title) => setView({kind:'preview',title})}
         showPreviews={showPreviews}
         projects={projects}
@@ -1861,6 +1884,8 @@ export default function App(): JSX.Element {
       {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} projectsLoaded={workspaceLoaded} onProjectsChanged={refreshProjects} onStartTask={startProjectTask}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
       <div className="chat-views" style={{display:appMode==='code'&&showPreviews?'none':'contents'}}>
       {view.kind === 'plugins' && <Suspense fallback={<ViewLoading name="customise" active={appMode === 'chat' && !settingsOpen} />}><Customise.View onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects} initialTab={customiseTab} onTabChange={setCustomiseTab}/></Suspense>}
+      {view.kind === 'spaces' && spacesAvailable === null && <ViewLoading name="spaces" active={appMode === 'chat' && !settingsOpen} />}
+      {view.kind === 'spaces' && spacesAvailable === true && <Suspense fallback={<ViewLoading name="spaces" active={appMode === 'chat' && !settingsOpen} />}><Spaces.View spaceId={view.spaceId} pageId={view.pageId} onNavigate={(spaceId, pageId) => setView({ kind: 'spaces', spaceId, pageId })}/></Suspense>}
       {view.kind === 'archived' && <ArchivedChatsView onDelete={handleDeleteChat} onOpenData={() => openSettings('data')}/>}
 
       {view.kind === 'preview' && showPreviews && <FeaturePreview title={view.title}/> }
@@ -2012,7 +2037,7 @@ export default function App(): JSX.Element {
             setView(target);
             setSettingsOpen(false);
           }}
-          onClosing={() => { if (view.kind !== 'preview') writeLastPlace({ user: accountId, view, settings: null }); }}
+          onClosing={() => { if (view.kind !== 'preview' && view.kind !== 'spaces') writeLastPlace({ user: accountId, view, settings: null }); }}
           onStartChat={startFreeChatWith}
           onOpenArchived={() => { pendingFromSettingsRef.current = 'data'; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'archived' }); }}
           onOpenDiary={diaryEnabled ? () => { pendingFromSettingsRef.current = 'diary'; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'diary' }); } : undefined}
