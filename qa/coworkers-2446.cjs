@@ -147,6 +147,61 @@ run('coworkers-2446', Number(process.env.QA_PORT || 32450), async (check, browse
       } finally { await page.close(); }
     });
 
+    await check(`${tag}: Esc or a backdrop click with typed edits asks before discarding; Cancel does not ask`, async () => {
+      const { page, sp } = await setup(browser, origin, view, { specialists: (s) => s.add(), route: (c) => `/coworkers/${c.id}` });
+      try {
+        await page.getByRole('heading', { name: 'QA Researcher', level: 1 }).waitFor({ timeout: 10000 });
+        await page.getByRole('button', { name: 'Settings for QA Researcher' }).click();
+        const dlg = sheet(page, 'Coworker settings');
+        await dlg.waitFor();
+        await dlg.getByLabel('Instructions').fill('A long block of instructions the person would hate to lose.');
+        await page.keyboard.press('Escape');
+        const ask = page.getByRole('dialog', { name: 'Discard your changes?' });
+        await ask.waitFor();
+        await page.waitForTimeout(400);
+        await shot(page, `coworker-discard-${view[0]}-${view[2]}`);
+        await ask.getByRole('button', { name: 'Cancel' }).click();
+        assert.equal(await dlg.getByLabel('Instructions').inputValue(), 'A long block of instructions the person would hate to lose.', 'the edit is still there');
+        // A click on the backdrop asks too.
+        await page.mouse.click(2, 2);
+        await page.getByRole('dialog', { name: 'Discard your changes?' }).waitFor();
+        await page.getByRole('dialog', { name: 'Discard your changes?' }).getByRole('button', { name: 'Discard' }).click();
+        await dlg.waitFor({ state: 'detached', timeout: 5000 });
+        assert.equal(sp.calls.filter((c) => c.method === 'PATCH').length, 0);
+        // Nothing typed: Esc just closes. And Cancel is an explicit choice that never asks.
+        await page.getByRole('button', { name: 'Settings for QA Researcher' }).click();
+        await sheet(page, 'Coworker settings').getByLabel('Instructions').fill('typed, then cancelled');
+        await sheet(page, 'Coworker settings').getByRole('button', { name: 'Cancel' }).click();
+        await sheet(page, 'Coworker settings').waitFor({ state: 'detached', timeout: 5000 });
+        await page.getByRole('button', { name: 'Settings for QA Researcher' }).click();
+        await page.keyboard.press('Escape');
+        await sheet(page, 'Coworker settings').waitFor({ state: 'detached', timeout: 5000 });
+      } finally { await page.close(); }
+    });
+
+    await check(`${tag}: a coworker deleted elsewhere: saving closes the sheet and goes to the list; a default Space of None is never changed`, async () => {
+      const { page, sp, spaces } = await setup(browser, origin, view, { specialists: (s, sps) => s.add({ spaces: sps.map((x) => x.id), defaultSpace: null }), route: (c) => `/coworkers/${c.id}` });
+      try {
+        await page.getByRole('heading', { name: 'QA Researcher', level: 1 }).waitFor({ timeout: 10000 });
+        await page.getByRole('button', { name: 'Settings for QA Researcher' }).click();
+        const dlg = sheet(page, 'Coworker settings');
+        await dlg.getByLabel('Instructions').fill('Only the instructions change.');
+        await dlg.getByRole('button', { name: 'Save' }).click();
+        await dlg.waitFor({ state: 'detached', timeout: 8000 });
+        const sent = patches(sp)[0].body;
+        assert.deepEqual(Object.keys(sent).sort(), ['brief', 'revision'], 'a default of None with Spaces granted is left alone');
+        assert.equal(sp.list[0].defaultSpace, null);
+        void spaces;
+        // Another tab deletes it; saving here ends on the list, not on a retry that can only fail.
+        await page.getByRole('button', { name: 'Settings for QA Researcher' }).click();
+        await sheet(page, 'Coworker settings').getByLabel('Instructions').fill('Too late.');
+        sp.list = []; sp.revision++;
+        await sheet(page, 'Coworker settings').getByRole('button', { name: 'Save' }).click();
+        await page.getByText('No coworkers yet').waitFor({ timeout: 10000 });
+        assert.equal(new URL(page.url()).pathname, '/coworkers');
+      } finally { await page.close(); }
+    });
+
     await check(`${tag}: with a conversation the chat view opens under the coworker's header, at the coworker's address`, async () => {
       const { page } = await setup(browser, origin, view, { specialists: (s, spaces) => s.add({ name: 'QA Talker', glyph: '✎', tint: 'success', spaces: [spaces[0].id], defaultSpace: spaces[0].id, projectId: 'specialist-qa-1', chatId: 'chat-qa-1' }), route: (c) => `/coworkers/${c.id}` });
       try {

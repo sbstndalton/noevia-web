@@ -12,8 +12,8 @@
 .cw-card .space-card-meta { grid-column: 2; }
 
 .cw-header { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) clamp(16px, 4vw, 34px); border-bottom: 1px solid var(--border-subtle); }
-.cw-workspace-embed .cw-header { flex: none; }
 .cw-header-text { flex: 1 1 auto; min-width: 0; }
+.cw-header-text h1:focus { outline: none; }
 .cw-header-text h1 { margin: 0; font-size: var(--text-headline); font-weight: var(--weight-title); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cw-status { margin: 0; font-size: var(--text-footnote); color: var(--text-secondary); }
 .cw-settings-btn { flex: none; min-height: var(--target-min); display: inline-flex; align-items: center; gap: var(--space-2); }
@@ -45,4 +45,3 @@
 .cw-check small { display: block; color: var(--text-secondary); font-size: var(--text-caption); }
 .cw-actions { flex-wrap: wrap; }
 .cw-delete { margin-inline-end: auto; color: var(--danger); }
-.cw-embed { display: flex; flex-direction: column; flex-grow: 1; min-width: 0; min-height: 0; }

@@ -49,17 +49,34 @@ test('tools travel only when the record has them', () => {
   assert.deepEqual(plain(f.changesFrom(withTools, { ...withTools, toolboxes: ['files', 'web'] })), { toolboxes: ['files', 'web'] });
 });
 
-test('the default Space is always one of the granted Spaces', () => {
-  assert.deepEqual(plain(f.withGrants(fields(), ['s2'])).defaultSpace, 's2', 'revoking the default falls back to the first granted');
+test('the default Space is one of the granted Spaces; None stays None', () => {
+  assert.deepEqual(plain(f.withGrants(fields(), ['s2'])).defaultSpace, 's2', 'a revoked default falls back to the first granted');
   assert.equal(f.withGrants(fields(), []).defaultSpace, null);
-  assert.equal(f.withGrants(fields({ defaultSpace: null }), ['s2', 's3']).defaultSpace, 's2');
+  assert.equal(f.withGrants(fields({ defaultSpace: null }), ['s2', 's3']).defaultSpace, null, 'a person who chose None keeps None');
   assert.equal(f.withGrants(fields(), ['s1', 's2', 's3']).defaultSpace, 's1');
+});
+
+test('granting the first Space makes it the default; later grants and revokes leave the default alone', () => {
+  const none = fields({ spaces: [], defaultSpace: null });
+  assert.equal(f.toggleGrant(none, 's1').defaultSpace, 's1');
+  const two = f.toggleGrant(f.toggleGrant(none, 's1'), 's2');
+  assert.deepEqual(plain(two.spaces), ['s1', 's2']);
+  assert.equal(two.defaultSpace, 's1');
+  assert.equal(f.toggleGrant(two, 's1').defaultSpace, 's2', 'revoking the default falls back');
+  assert.equal(f.toggleGrant({ ...two, defaultSpace: null }, 's2').defaultSpace, null, 'None is kept');
 });
 
 test('grants to a Space that no longer exists are dropped before saving', () => {
   const out = plain(f.pruneGrants(fields(), new Set(['s2'])));
   assert.deepEqual(out.spaces, ['s2']);
   assert.equal(out.defaultSpace, 's2');
+});
+
+test('saving an untouched record never changes its default Space, even when it is None with Spaces granted', () => {
+  const base = fields({ spaces: ['s1', 's2'], defaultSpace: null });
+  const pruned = f.pruneGrants({ ...base }, new Set(['s1', 's2']));
+  assert.equal(f.changesFrom(base, pruned), null);
+  assert.deepEqual(plain(f.changesFrom(base, f.pruneGrants({ ...base, name: 'Renamed' }, new Set(['s1', 's2'])))), { name: 'Renamed' });
 });
 
 test('a 409 reloads the record and keeps the edits: untouched fields take the newer value, edited ones stay', () => {
@@ -81,4 +98,21 @@ test('a 409 with no edits just adopts the fresh record', () => {
   const out = plain(f.afterStale({ base, draft: fields() }, { revision: 2, specialist: rec({ name: 'Renamed elsewhere' }) }));
   assert.equal(out.draft.name, 'Renamed elsewhere');
   assert.equal(f.changesFrom(out.base.fields, out.draft), null);
+});
+
+test('a 409 merges Spaces and tools as added and removed ids, so another tab\'s change to the same list is kept', () => {
+  const base = { revision: 3, fields: { ...fields({ spaces: ['A', 'B'], defaultSpace: 'A' }), toolboxes: ['t1'] } };
+  const draft = { ...base.fields, spaces: ['A', 'C'], toolboxes: ['t1', 't2'] };
+  const fresh = { revision: 4, specialist: rec({ spaces: ['A', 'B', 'D'], defaultSpace: 'A', toolboxes: ['t1', 't3'] }) };
+  const out = plain(f.afterStale({ base, draft }, fresh));
+  assert.deepEqual(out.draft.spaces, ['A', 'D', 'C'], 'I removed B and added C; their D stays');
+  assert.deepEqual(out.draft.toolboxes, ['t1', 't3', 't2'], 'I added t2; their t3 stays');
+  assert.equal(out.draft.defaultSpace, 'A');
+  assert.deepEqual(plain(f.changesFrom(out.base.fields, out.draft)), { spaces: ['A', 'D', 'C'], toolboxes: ['t1', 't3', 't2'] });
+});
+
+test('a 409 keeps a deliberate None as the default Space', () => {
+  const base = { revision: 1, fields: fields({ spaces: ['A'], defaultSpace: 'A' }) };
+  const out = plain(f.afterStale({ base, draft: { ...base.fields, defaultSpace: null } }, { revision: 2, specialist: rec({ spaces: ['A', 'B'], defaultSpace: 'A' }) }));
+  assert.equal(out.draft.defaultSpace, null);
 });

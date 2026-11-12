@@ -19,7 +19,7 @@
 //   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
 //   DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 //   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { useT } from '../../i18n';
 import '../../i18n/coworkers';
@@ -30,7 +30,7 @@ import { listSpaces, SpacesError, type Space } from '../../spaces-api';
 import { createSpecialist, deleteSpecialist, patchSpecialist, readSpecialist, type Specialist } from '../../specialists-api';
 import {
   afterStale, blankFields, changesFrom, COWORKER_BRIEF_MAX, COWORKER_GLYPH_MAX, COWORKER_NAME_MAX, countChars, fieldsOf,
-  formProblems, GLYPHS, pruneGrants, TINTS, withGrants, type FormState,
+  formProblems, GLYPHS, isDirty, pruneGrants, TINTS, toggleGrant, type FormState,
 } from '../../coworker-form';
 import { useModalDialog } from '../useModalDialog';
 import { ConfirmDialog } from '../ContextMenu';
@@ -55,6 +55,8 @@ export function CoworkerSettings({ mode, onSaved, onDeleted, onClose }: {
   const [error, setError] = useState('');
   const [stale, setStale] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const downOnBackdrop = useRef(false);
   const [spaces, setSpaces] = useState<Space[] | null>(null);
   const [spacesFailed, setSpacesFailed] = useState(false);
   const [boxes, setBoxes] = useState<Toolbox[] | null>(null);
@@ -76,6 +78,10 @@ export function CoworkerSettings({ mode, onSaved, onDeleted, onClose }: {
     'name-empty': t('coworkers.nameRequired'), 'name-long': t('coworkers.nameTooLong', { max: COWORKER_NAME_MAX }),
     'brief-long': t('coworkers.briefTooLong', { max: COWORKER_BRIEF_MAX }), 'glyph-long': t('coworkers.glyphTooLong', { max: COWORKER_GLYPH_MAX }),
   })[p];
+  // Leaving with typed edits asks first; Cancel is an explicit choice and does not.
+  const dirty = isDirty(form.base.fields, draft);
+  const requestClose = () => { if (busy) return; if (dirty) setConfirmDiscard(true); else onClose(); };
+  const gone = (e: unknown): boolean => mode.kind === 'edit' && e instanceof SpacesError && e.status === 404;
   const failure = (e: unknown): string => (e instanceof SpacesError && e.code === 'specialist_limit' ? t('coworkers.limit') : t('coworkers.saveFailed'));
 
   const submit = async () => {
@@ -97,6 +103,7 @@ export function CoworkerSettings({ mode, onSaved, onDeleted, onClose }: {
       const saved = await patchSpecialist(mode.record.specialist.id, form.base.revision, changes);
       onSaved(saved); onClose();
     } catch (e) {
+      if (gone(e)) { onDeleted?.(); onClose(); return; }
       if (mode.kind === 'edit' && e instanceof SpacesError && e.code === 'stale_revision') {
         // Changed elsewhere: reload the record as the new base and keep what was typed.
         try { const fresh = await readSpecialist(mode.record.specialist.id); setForm((f) => afterStale({ ...f, draft: fields }, fresh)); setStale(true); }
@@ -110,6 +117,7 @@ export function CoworkerSettings({ mode, onSaved, onDeleted, onClose }: {
     setConfirmDelete(false); setBusy(true);
     try { await deleteSpecialist(mode.record.specialist.id, form.base.revision); onDeleted?.(); onClose(); }
     catch (e) {
+      if (gone(e)) { onDeleted?.(); onClose(); return; }
       if (e instanceof SpacesError && e.code === 'stale_revision') {
         try { const fresh = await readSpecialist(mode.record.specialist.id); setForm((f) => afterStale(f, fresh)); setStale(true); } catch { setError(t('coworkers.deleteFailed')); }
       } else setError(t('coworkers.deleteFailed'));
@@ -121,7 +129,9 @@ export function CoworkerSettings({ mode, onSaved, onDeleted, onClose }: {
   const title = mode.kind === 'create' ? t('coworkers.createTitle') : t('coworkers.editTitle');
   return (
     <>
-    <dialog ref={dialog} className="modal-overlay native-modal" aria-label={title} onCancel={(e) => { e.preventDefault(); if (!busy) onClose(); }} onClick={() => { if (!busy) onClose(); }}>
+    <dialog ref={dialog} className="modal-overlay native-modal" aria-label={title} onCancel={(e) => { e.preventDefault(); requestClose(); }}
+      onMouseDown={(e) => { downOnBackdrop.current = e.target === e.currentTarget; }}
+      onClick={(e) => { if (downOnBackdrop.current && e.target === e.currentTarget) requestClose(); downOnBackdrop.current = false; }}>
       <form className="modal-card aero dialog-sheet cw-settings" noValidate onClick={(e) => e.stopPropagation()} onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         <div className="modal-head cw-settings-head"><CoworkerGlyph coworker={{ ...draft, name: draft.name || '?' }} /><h2>{title}</h2></div>
         {stale && <p className="space-note" role="status">{t('coworkers.staleNote')}</p>}
@@ -178,7 +188,7 @@ export function CoworkerSettings({ mode, onSaved, onDeleted, onClose }: {
             : spaces && spaces.length === 0 ? <p className="space-hint">{t('coworkers.spacesNone')}</p>
             : <ul className="cw-checks">{(spaces ?? []).map((s) => {
                 const on = draft.spaces.includes(s.id);
-                return <li key={s.id}><label className="cw-check"><input type="checkbox" checked={on} disabled={busy} onChange={() => setForm((f) => ({ ...f, draft: withGrants(f.draft, on ? f.draft.spaces.filter((x) => x !== s.id) : [...f.draft.spaces, s.id]) }))} /><span><strong>{s.name}</strong></span></label></li>;
+                return <li key={s.id}><label className="cw-check"><input type="checkbox" checked={on} disabled={busy} onChange={() => setForm((f) => ({ ...f, draft: toggleGrant(f.draft, s.id) }))} /><span><strong>{s.name}</strong></span></label></li>;
               })}</ul>}
           <label htmlFor={ids.default} className="cw-sub">{t('coworkers.defaultSpace')}</label>
           <select id={ids.default} value={draft.defaultSpace ?? ''} disabled={busy || draft.spaces.length === 0} onChange={(e) => edit({ defaultSpace: e.target.value || null })}>
@@ -196,6 +206,7 @@ export function CoworkerSettings({ mode, onSaved, onDeleted, onClose }: {
       </form>
     </dialog>
     {/* A sibling, not a child: a click inside it must not reach the sheet's own backdrop click. */}
+    {confirmDiscard && <ConfirmDialog danger title={t('coworkers.discardTitle')} body={t('coworkers.discardBody')} confirmLabel={t('coworkers.discardConfirm')} onConfirm={() => { setConfirmDiscard(false); onClose(); }} onCancel={() => setConfirmDiscard(false)} />}
     {confirmDelete && mode.kind === 'edit' && <ConfirmDialog danger title={t('coworkers.deleteTitle', { name: mode.record.specialist.name })} body={t('coworkers.deleteBody')} confirmLabel={t('coworkers.deleteConfirm')} onConfirm={() => void remove()} onCancel={() => setConfirmDelete(false)} />}
     </>
   );

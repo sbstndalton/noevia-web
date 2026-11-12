@@ -94,7 +94,7 @@ function CoworkerPage({ id, onNavigate, onOpenConversation }: { id: string; onNa
         <nav className="space-crumbs" aria-label={t('spaces.breadcrumb')}>
           <button type="button" className="btn btn-secondary space-back" onClick={() => onNavigate()}><ShellIcon name="arrow-left" size={16} /><span>{t('coworkers.back')}</span></button>
         </nav>
-        <CoworkerHeader record={record} spaces={spaces} onSaved={setRecord} onDeleted={() => onNavigate()} />
+        <CoworkerHeader record={record} spaces={spaces} onSaved={setRecord} onDeleted={() => onNavigate()} focusOnMount />
         <EmptyState icon="chat" title={t('coworkers.noConversationTitle')}>{t('coworkers.noConversationBody')}</EmptyState>
       </div>
     </main>
