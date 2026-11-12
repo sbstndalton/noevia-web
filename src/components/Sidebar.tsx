@@ -422,7 +422,7 @@ export function Sidebar({
   // positioned card is clipped by it, which made the card useless. Render it
   // fixed at a measured point instead, after a delay so it does not flash
   // while the pointer is only passing over the row.
-  const [hover, setHover] = useState<{ id: string; x: number; y: number; left: number } | null>(null);
+  const [hover, setHover] = useState<{ id: string; x: number; y: number; left: number; top: number; bottom: number } | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const openHover = (id: string, el: HTMLElement) => {
@@ -430,7 +430,7 @@ export function Sidebar({
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     hoverTimer.current = setTimeout(() => {
       const r = el.getBoundingClientRect();
-      setHover({ id, x: r.right + 10, y: r.top, left: r.left });
+      setHover({ id, x: r.right + 10, y: r.top, left: r.left, top: r.top, bottom: r.bottom });
     }, 450);
   };
   const closeHover = () => {
@@ -861,15 +861,22 @@ export function Sidebar({
         const p = projects.find((x) => x.id === hover.id);
         if (!p) return null;
         const files = p.files || [];
-        return (
+        // #2476: in a portal on <body>. Inside the sidebar the fixed card sat in the sidebar's stacking context, under the
+        // main pane, so everything right of the sidebar's edge was hidden.
+        return createPortal(
           <div className="row-card" role="tooltip" style={{ top: hover.y, left: hover.x }} ref={(card) => {
-            // #1167: keep the card inside the viewport. Beside the row when it fits, else on its
-            // left, else pinned to the right edge (over the row: the card never takes the pointer).
+            // #1167, #2476: keep the card inside the viewport and off the row it describes. Beside the row when it
+            // fits, else on its left, else under it (or over it when there is no room below), shifted to stay on screen.
             if (!card) return;
-            const w = card.getBoundingClientRect().width, edge = 8, room = window.innerWidth - edge;
-            let x = hover.x;
-            if (x + w > room) x = hover.left - 10 - w >= edge ? hover.left - 10 - w : Math.max(edge, room - w);
+            const { width: w, height: h } = card.getBoundingClientRect(), edge = 8, roomX = window.innerWidth - edge, roomY = window.innerHeight - edge;
+            const clampX = (x: number) => Math.max(edge, Math.min(x, roomX - w));
+            const clampY = (y: number) => Math.max(edge, Math.min(y, roomY - h));
+            let x = hover.x, y = hover.y;
+            if (x + w <= roomX) y = clampY(hover.y);
+            else if (hover.left - 10 - w >= edge) { x = hover.left - 10 - w; y = clampY(hover.y); }
+            else { x = clampX(hover.left); y = hover.bottom + 6 + h <= roomY ? hover.bottom + 6 : Math.max(edge, hover.top - 6 - h); }
             card.style.left = `${x}px`;
+            card.style.top = `${y}px`;
           }}>
             <strong>{p.name}</strong>
             {p.goal && <em>{p.goal}</em>}
@@ -877,7 +884,8 @@ export function Sidebar({
             {files.slice(0, 4).map((f) => <span key={f.name} className="row-card-src">{f.name}</span>)}
             {files.length > 4 && <span className="row-card-src">{t('sidebar.moreSources', { count: files.length - 4 })}</span>}
             {files.length === 0 && <span className="row-card-src">{t('sidebar.noSources')}</span>}
-          </div>
+          </div>,
+          document.body,
         );
       })()}
       {sorting && <ContextMenu at={sorting} onClose={()=>setSorting(null)} items={[
