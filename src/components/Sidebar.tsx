@@ -868,6 +868,7 @@ export function Sidebar({
             // #1167, #2476: keep the card inside the viewport and off the row it describes. Beside the row when it
             // fits, else on its left, else under it (or over it when there is no room below), shifted to stay on screen.
             if (!card) return;
+            card.style.left = '0px'; // measured with the whole width free, not what is left to the right of the row
             const { width: w, height: h } = card.getBoundingClientRect(), edge = 8, roomX = window.innerWidth - edge, roomY = window.innerHeight - edge;
             const clampX = (x: number) => Math.max(edge, Math.min(x, roomX - w));
             const clampY = (y: number) => Math.max(edge, Math.min(y, roomY - h));

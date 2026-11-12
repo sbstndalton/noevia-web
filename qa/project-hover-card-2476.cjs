@@ -42,7 +42,7 @@ run('project-hover-card-2476', Number(process.env.QA_PORT || 32476), async (chec
             const overlap = c.left < row.right && c.right > row.left && c.top < row.bottom && c.bottom > row.top;
             return { c: { l: c.left, t: c.top, r: c.right, b: c.bottom }, vw: innerWidth, vh: innerHeight, hidden, overlap };
           });
-          assert.ok(r.c.l >= 0 && r.c.t >= 0 && r.c.r <= r.vw && r.c.b <= r.vh, `${label}: card ${JSON.stringify(r.c)} outside ${r.vw}x${r.vh}`);
+          assert.ok(r.c.l >= 7.5 && r.c.t >= 7.5 && r.c.r <= r.vw - 7.5 && r.c.b <= r.vh - 7.5, `${label}: card ${JSON.stringify(r.c)} outside ${r.vw}x${r.vh}`);
           assert.equal(r.hidden, 0, `${label}: ${r.hidden} of 5 points of the card are covered by another element`);
           assert.equal(r.overlap, false, `${label}: the card covers its row`);
           await shot(page, `hover-card-${label}-${view[0]}-${view[2]}`);
