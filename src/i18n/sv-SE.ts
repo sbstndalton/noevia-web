@@ -355,6 +355,8 @@ export const SV_SE: Catalogue = {
   'projects.view.deleteFile': "Ta bort fil",
   'projects.view.removeImageTitle': "Ta bort denna bild?",
   'projects.view.removeImageBody': "Detta tar bort den tidigare uppladdningen från noevias egen lagring. Det går inte att ångra.",
+  'projects.view.removeSourceTitle': "Ta bort {name} från det här projektet?",
+  'projects.view.removeSourceBody': "{name} används inte längre som källa i svaren i det här projektet.",
   'projects.view.removeImage': "Ta bort bild",
   'projects.view.removeImageError': "Det gick inte att ta bort bilden",
   'projects.view.appendFile': "Lägg till .md / .txt",

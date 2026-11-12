@@ -355,6 +355,8 @@ export const PT_BR: Catalogue = {
   'projects.view.deleteFile': "Excluir arquivo",
   'projects.view.removeImageTitle': "Remover esta imagem?",
   'projects.view.removeImageBody': "Isso exclui o envio anterior do próprio armazenamento do noevia. Isso não pode ser desfeito.",
+  'projects.view.removeSourceTitle': "Remover {name} deste projeto?",
+  'projects.view.removeSourceBody': "{name} não será mais usado como fonte nas respostas deste projeto.",
   'projects.view.removeImage': "Remover imagem",
   'projects.view.removeImageError': "Não foi possível remover essa imagem",
   'projects.view.appendFile': "Anexar .md / .txt",

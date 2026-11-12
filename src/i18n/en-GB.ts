@@ -362,6 +362,8 @@ export const EN_GB = {
   'projects.view.deleteFile': 'Delete file',
   'projects.view.removeImageTitle': 'Remove this image?',
   'projects.view.removeImageBody': 'This deletes the earlier upload from noevia’s own storage. This cannot be undone.',
+  'projects.view.removeSourceTitle': 'Remove {name} from this project?',
+  'projects.view.removeSourceBody': '{name} will no longer be used as a source in this project’s answers.',
   'projects.view.removeImage': 'Remove image',
   'projects.view.removeImageError': 'Could not remove that image',
   'projects.view.appendFile': 'Append .md / .txt',
