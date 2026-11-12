@@ -47,7 +47,12 @@
 .space-card .space-actions { position: relative; z-index: 1; }
 .space-card-meta { grid-column: 2 / -1; margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); font-size: var(--text-caption); color: var(--text-secondary); }
 .space-grid .space-card-meta { grid-column: 2; }
-.space-grid .space-actions { grid-column: 3; grid-row: 1 / span 2; }
+/* #2487: the name takes the card's whole width (the actions sit on the second row beside the date), wraps to two lines, then ends in an
+   ellipsis; the full name is the button's title. */
+.space-grid .space-card-name { grid-column: 2 / -1; padding-block: var(--space-3); }  /* the padding is outside the clamped box, or a third line shows in it */
+.space-grid .space-card-open { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; overflow-wrap: anywhere; line-height: var(--leading-snug); min-height: 0; }
+.space-grid .space-card-meta { grid-row: 2; }
+.space-grid .space-actions { grid-column: 3; grid-row: 2; }
 .space-chip { padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--selected); color: var(--on-selected); }
 .space-card .space-note { grid-column: 1 / -1; margin: 0; }
 .space-card-skeleton { display: block; min-height: 96px; }
@@ -69,6 +74,7 @@
 .space-banner.is-error { border-color: var(--status-danger); }
 .space-banner h2 { margin: 0 0 var(--space-2); font-size: var(--text-headline); font-weight: var(--weight-title); }
 .space-banner p { margin: 0 0 var(--space-3); font-size: var(--text-callout); line-height: var(--leading-body); }
+.space-banner .space-banner-note { margin: var(--space-2) 0 0; font-size: var(--text-footnote); color: var(--text-secondary); }
 .space-banner-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
 .space-modes { display: inline-flex; margin-bottom: var(--space-3); }

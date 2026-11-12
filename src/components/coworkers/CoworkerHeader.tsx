@@ -5,6 +5,7 @@ import '../../i18n/coworkers';
 import type { Space } from '../../spaces-api';
 import type { Specialist } from '../../specialists-api';
 import { ShellIcon } from '../ShellIcon';
+import { focusHeading } from '../../quiet-focus';
 import { CoworkerGlyph } from './Glyph';
 import { CoworkerSettings } from './CoworkerSettings';
 import './coworkers.css';
@@ -28,7 +29,7 @@ export function CoworkerHeader({ record, spaces, onSaved, onDeleted, focusOnMoun
   const [open, setOpen] = useState(false);
   const c = record.specialist;
   const heading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => { if (focusOnMount) heading.current?.focus(); }, [focusOnMount]);
+  useEffect(() => { if (focusOnMount) focusHeading(heading.current); }, [focusOnMount]);
   return (
     <header className="cw-header">
       <CoworkerGlyph coworker={c} size="lg" />

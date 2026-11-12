@@ -28,6 +28,7 @@ import { pageName, relativeTime } from '../../spaces-format';
 import { createPage, listPages, SpacesError, type PageRow, type Space } from '../../spaces-api';
 import { EmptyState } from '../EmptyState';
 import { ShellIcon } from '../ShellIcon';
+import { focusHeading } from '../../quiet-focus';
 import { SpaceActions } from './SpaceActions';
 
 const LAYOUT_KEY = 'noevia:spaces-layout';
@@ -52,7 +53,7 @@ export function SpacePages({ space, revision, reloadSpaces, onBack, onOpenPage, 
   const search = searchQuery(typed);
   const q = search.kind === 'ok' ? search.q : '';
 
-  useEffect(() => { heading.current?.focus(); }, [space.id]);
+  useEffect(() => { focusHeading(heading.current); }, [space.id]);
   // The box is debounced; the request below follows the debounced text.
   useEffect(() => { const id = setTimeout(() => setTyped(raw), SEARCH_DELAY_MS); return () => clearTimeout(id); }, [raw]);
 

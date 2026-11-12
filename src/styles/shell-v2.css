@@ -79,6 +79,8 @@
 .settings-stage .settings-detail-scroll:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -4px; }
 /* #2401: focus the shell put there itself (a tap, a click, a deep link) is not the person's; a key press on the panel brings the frame back.
    !important: noevia.css sets the global :focus-visible ring with !important. */
+/* #2486: the same for a heading the route change focuses (src/quiet-focus.ts). */
+[data-quiet-focus]:focus-visible { outline: none !important; }
 .settings-stage .settings-detail-scroll[data-quiet-focus]:focus-visible { outline: none !important; }
 .settings-stage .settings-search { margin: 0 0 var(--space-2); padding: 7px calc(var(--space-3) - 1px); gap: 8px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-secondary); }
 .settings-stage .settings-search input { font-size: var(--text-footnote); }
