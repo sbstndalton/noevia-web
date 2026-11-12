@@ -35,6 +35,7 @@ function UpdatedNotice() {
 }
 
 export const Diary = lazyView(() => import('./components/DiaryView').then((m) => m.DiaryView));
+export const DiaryNotice = lazyView(() => import('./components/DiaryView').then((m) => m.DiaryNotice));
 export const Settings = lazyView(() => import('./components/SettingsShell').then((m) => m.SettingsShell));
 export const Projects = lazyView(() => import('./components/ProjectsView').then((m) => m.ProjectsView));
 // Customise (skills, connectors, plugins) carries the connector catalogue and the Settings strings.

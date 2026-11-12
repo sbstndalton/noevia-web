@@ -6,6 +6,7 @@ import { safeReturnPath } from '../routes';
 import type { AuthUser } from '../api';
 import { checkApiCompatibility } from '../api-contract';
 import { claimDeviceState } from '../account-device-state';
+import { clearPasskeyStepDeferral, deferPasskeyStep, passkeyStepDeferred } from '../passkey-later';
 import { ACCOUNT_CHANGED_EVENT, ACCOUNT_RELOAD_BLOCKED_EVENT, beginSignIn, unbindTabAccount, watchAccountSession } from '../account-session';
 
 // Only first-run and resumed onboarding need the wizard, and only passkey
@@ -95,7 +96,8 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
       // chat once signed in. safeReturnPath only ever yields a same-origin path this app makes,
       // and drops the invite token from the address.
       window.history.replaceState({}, '', safeReturnPath(window.location.pathname));
-      setScreen(session.user.onboarded === false ? 'wizard-resume' : 'secure');
+      // #2457: "Set up later" holds for 30 days in this browser, so the step is skipped within that time.
+      setScreen(session.user.onboarded === false ? 'wizard-resume' : passkeyStepDeferred(session.user.id) ? 'ready' : 'secure');
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not continue'); }
     finally { setBusy(false); }
   };
@@ -134,7 +136,7 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
     try {
       const challenge = await passkeyRegistrationOptions();
       const response = await (await webauthn()).startRegistration({ optionsJSON: challenge.options });
-      await passkeyRegistrationVerify(challenge.challengeToken, response, 'Primary passkey'); sessionStorage.setItem('cowork-new-account', '1'); setScreen('ready');
+      await passkeyRegistrationVerify(challenge.challengeToken, response, 'Primary passkey'); if (onboardingUser) clearPasskeyStepDeferral(onboardingUser.id); sessionStorage.setItem('cowork-new-account', '1'); setScreen('ready');
     } catch { setError('Passkey setup was cancelled or failed. You can add one later.'); }
     finally { setBusy(false); }
   };
@@ -159,7 +161,7 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
     <p>Passkeys are the recommended way to sign in using your device or security key.</p>
     {error && <p className="auth-error" role="alert">{error}</p>}
     <button type="button" disabled={busy} onClick={() => void addPasskey()}>{busy ? 'Waiting for your device…' : 'Create a passkey'}</button>
-    <button type="button" className="modal-btn secondary" disabled={busy} onClick={() => { sessionStorage.setItem('cowork-new-account', '1'); setScreen('ready'); }}>Set up later</button>
+    <button type="button" className="modal-btn secondary" disabled={busy} onClick={() => { if (onboardingUser) deferPasskeyStep(onboardingUser.id); sessionStorage.setItem('cowork-new-account', '1'); setScreen('ready'); }}>Set up later</button>
   </section></main>;
 
   return (

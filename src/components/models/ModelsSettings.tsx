@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { isResident } from '../../model-residency';
 import { ShellIcon } from '../ShellIcon';
-import type { JSX } from 'react';
+import type { JSX, KeyboardEvent } from 'react';
+import { nextTabIndex } from '../../tab-keys';
 import type { InstalledModel, Project, RouteRule } from '../../types';
 import { apiFetch, fetchAutoRoles, setAutoRoles as putAutoRoles, fetchRoutingDefault, putRoutingDefault } from '../../api';
 import { gib as formatGib } from './mm';
@@ -109,6 +110,36 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
     window.addEventListener('popstate', onPop);
     return () => { window.removeEventListener('noevia:open-model-settings', onOpen); window.removeEventListener('popstate', onPop); };
   }, []);
+  // #2460: ArrowLeft/ArrowRight (wrapping) and Home/End move focus and selection; only the selected tab is in the Tab order.
+  const tabRow = useRef<HTMLDivElement>(null);
+  const onTabKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const to = nextTabIndex(e.key, TABS.findIndex(([id]) => id === tab), TABS.length);
+    if (to === null) return;
+    e.preventDefault();
+    go(TABS[to][0], undefined, true);
+    tabRow.current?.querySelector<HTMLElement>(`[data-section="${TABS[to][0]}"]`)?.focus();
+  };
+  // #2459: a strip that still overflows (a long translation) scrolls sideways; an edge fade on the clipped side is the cue,
+  // and the selected tab is scrolled into view.
+  const markTabOverflow = () => {
+    const row = tabRow.current;
+    if (!row) return;
+    row.dataset.fadeStart = String(row.scrollLeft > 1);
+    row.dataset.fadeEnd = String(row.scrollLeft + row.clientWidth < row.scrollWidth - 1);
+  };
+  useLayoutEffect(() => {
+    const row = tabRow.current;
+    if (!row || open) return;
+    const selected = row.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (selected && row.scrollWidth > row.clientWidth) {
+      const left = selected.offsetLeft - row.offsetLeft, right = left + selected.offsetWidth;
+      if (left < row.scrollLeft) row.scrollLeft = left - 32; else if (right > row.scrollLeft + row.clientWidth) row.scrollLeft = right - row.clientWidth + 32;
+    }
+    markTabOverflow();
+    const watch = new ResizeObserver(markTabOverflow);
+    watch.observe(row);
+    return () => watch.disconnect();
+  }, [tab, open]);
   /** Old tab ids (the guided panel and the overview still name them) land on their new home. */
   const goLegacy = (old: LegacyTab) => { const to = LEGACY_TABS[old]; if (to.list) chooseList(to.list); go(to.tab, to.panel, true); };
   const chooseList = (next: 'installed' | 'discover') => { setList(next); setQuery(''); try { sessionStorage.setItem(LIST_KEY, next); } catch { /* optional */ } };
@@ -130,9 +161,9 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
 
     {/* One toolbar: the section, and on Models which list, a search and that list's filters. */}
     <nav className="mm-tabs mm-toolbar-one" aria-label={t('mm.navLabel')}>
-      <div className="mm-tabs-row" role="tablist">
+      <div className="mm-tabs-row" role="tablist" ref={tabRow} onScroll={markTabOverflow} onKeyDown={onTabKey}>
         {TABS.map(([id, label]) =>
-          <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-active' : ''} onClick={() => go(id, undefined, true)}>{t(label)}</button>)}
+          <button key={id} role="tab" data-section={id} aria-selected={tab === id} tabIndex={tab === id ? 0 : -1} className={tab === id ? 'is-active' : ''} onClick={() => go(id, undefined, true)}>{t(label)}</button>)}
       </div>
       {tab === 'models' && <div className="mm-search mm-search-inline">
         <ShellIcon name="search" size={16} tone="decorative"/>

@@ -71,7 +71,7 @@ import { ModelPopup } from './components/ModelPopup';
 import { rememberCreatedProject, withCreatedProjects } from './created-projects';
 import { ProjectView } from './components/ProjectView';
 import { ActiveCodeTasks } from './components/code/ActiveCodeTasks';
-import { Coding, Customise, Diary, ModelManager, Projects, Settings, Spaces, Coworkers, CoworkerChatHeader, ViewLoading, prefetchViewsWhenIdle } from './lazy-views';
+import { Coding, Customise, Diary, DiaryNotice, ModelManager, Projects, Settings, Spaces, Coworkers, CoworkerChatHeader, ViewLoading, prefetchViewsWhenIdle } from './lazy-views';
 import { areaAvailable } from './area-gate';
 import { KeptOffDocument } from './components/KeptOffDocument';
 import { diaryOpened, diaryPresence } from './diary-presence';
@@ -309,6 +309,7 @@ export default function App(): JSX.Element {
   const [isAdmin, setIsAdmin] = useState(false);
   // #1839: the composer mode bar is held until the role is known, not drawn as for a non-admin.
   const [profileKnown, setProfileKnown] = useState(false);
+  const [profileFailed, setProfileFailed] = useState(false);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
   // #1567: the last workspace fetch failed (the sidebar then stops showing a loading placeholder).
   const [workspaceFailed, setWorkspaceFailed] = useState(false);
@@ -516,7 +517,7 @@ export default function App(): JSX.Element {
         markReplace();
         setView(freshChatView());
       }
-    }).catch(() => setProfileKnown(true));
+    }).catch(() => { setProfileFailed(true); setProfileKnown(true); });
     fetchHealth()
       .then(setHealth)
       .catch(() => setHealth({ inferenceUp: false, diaryUp: null }));
@@ -2024,6 +2025,13 @@ export default function App(): JSX.Element {
 
       {/* #1635: the Diary is in the document only while it is on screen. Never opened: not mounted. Left:
           kept alive (draft, editor, in-flight save) but detached, not display:none behind the chat. */}
+      {/* #2456: /diary for an account whose Diary is off is a message, not an empty panel (and a loading state until the profile says). */}
+      {view.kind === 'diary' && !diaryCovered && !diaryEnabled && (profileKnown
+        ? <Suspense fallback={<ViewLoading name="diary" active={!settingsOpen} />}>{profileFailed
+          // The profile did not answer, so whether the Diary is on is unknown: not "off".
+          ? <DiaryNotice.View kind="unreachable" onRetry={() => { fetchProfile().then((p) => { setDiaryEnabled(p.user.diaryEnabled); setProfileFailed(false); }).catch(() => undefined); }} />
+          : <DiaryNotice.View kind="off" onSettings={() => openSettings('diary')} />}</Suspense>
+        : <ViewLoading name="diary" active={!settingsOpen} />)}
       {diaryPlace !== 'absent' && <KeptOffDocument className="diary-mount" shown={diaryPlace === 'shown'}><Suspense fallback={<ViewLoading name="diary" active={diaryPlace === 'shown' && !settingsOpen} />}>
         <Diary.View inferenceUp={health.inferenceUp} active={diaryPlace === 'shown'} /></Suspense></KeptOffDocument>}
 
