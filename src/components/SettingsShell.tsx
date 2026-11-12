@@ -301,6 +301,14 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   const title = groups.flatMap(g => g.items).find(([id]) => id === section)?.[1] || t('settings.title');
   const filtered = filterGroups(groups, query);
   const open = (id: string) => { setSection(id); props.onSection?.(id); setView('detail'); };
+  // #2458: while a search narrows the list, the detail pane follows it: one section left opens it, and when the open section
+  // is filtered out the first remaining one opens. Clearing the search leaves the pane where it is. On a phone the list and the
+  // detail are separate views, so nothing moves under the person.
+  useEffect(() => {
+    if (!query.trim() || phone()) return;
+    const ids = filtered.flatMap((g) => g.items.map(([id]) => id));
+    if (ids.length === 1 || (ids.length > 1 && !ids.includes(section))) setSection(ids[0]);
+  }, [query]);
   // On narrow screens the navigation disappears. Move focus into the new page
   // so keyboard and screen-reader users do not lose their place.
   useEffect(() => {
