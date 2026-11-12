@@ -93,6 +93,7 @@ import { foldDeferredMerge, mergeTranscripts, savedCopyExtends, type DeferredMer
 import { entriesFor, messageFromEntry, withStoredAnswers } from './transcript-variants';
 import { answersBeforeRegenerate, branchesBeforeEdit, selectAnswer, selectBranch, type VariantSource } from './transcript-variants';
 import { skippedChatIds, withoutSkipped } from './list-save';
+import { useSaveAfterCommit } from './use-save-after-commit';
 import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, shouldSaveChat, upsertChatMeta } from './chat-save';
 import { readLastPlace, writeLastPlace, clearLastPlace, type LastPlace } from './last-view';
 import { historyMode, matchPath, parsePath, routeForState, toPath, type CustomiseTab, type ProjectTab, type Route, type SyncedPlace } from './routes';
@@ -398,9 +399,6 @@ export default function App(): JSX.Element {
   const deferredMerges = useRef<Record<string, DeferredMerge>>({});
   // Saves queued or running per chat. The multi-tab sync (#1516) only adopts another tab's copy while none is.
   const savesInFlight = useRef<Record<string, number>>({});
-  // Chats whose transcript should be saved once the current render commits (kept out of state
-  // updaters, which StrictMode runs twice).
-  const persistAfterCommit = useRef<Set<string>>(new Set());
   // Chats deleted in this session. A save queued (or retried) after the delete must not write the
   // transcript back under the dead id.
   const deletedChats = useRef<Set<string>>(new Set());
@@ -875,12 +873,8 @@ export default function App(): JSX.Element {
       .finally(() => { savesInFlight.current[chatId] = Math.max(0, (savesInFlight.current[chatId] ?? 1) - 1); });
   }, []);
 
-  useEffect(() => {
-    if (!persistAfterCommit.current.size) return;
-    const due = [...persistAfterCommit.current];
-    persistAfterCommit.current.clear();
-    for (const chatId of due) persist(chatId, messagesByChat[chatId] ?? []);
-  }, [messagesByChat, persist]);
+  // Chats whose transcript is saved once the render holding their finished turn commits (#2489).
+  const persistAfterCommit = useSaveAfterCommit(messagesByChat, persist);
 
   // Upsert one chat's meta in its list's save queue (shared by the Chat and Cowork send paths).
   const queueMetaUpsert = useCallback((sentTo: string | null, chatId: string, make: (existing: ChatMeta | undefined) => ChatMeta) => {
@@ -1066,7 +1060,7 @@ export default function App(): JSX.Element {
         });
         // A chat deleted mid-reply stays deleted: no settle write, no save.
         if (!deletedChats.current.has(chatId)) {
-          persistAfterCommit.current.add(chatId);
+          persistAfterCommit.add(chatId);
           setMessagesByChat((prev) => ({
             ...prev,
             // Tool approvals and a routing question both die with the request (#793).
@@ -1364,7 +1358,7 @@ export default function App(): JSX.Element {
       sendingChats.current.delete(chatId);
       setStreamingChats(prev => { const next = { ...prev }; delete next[chatId]; return next; });
       if (!deletedChats.current.has(chatId)) {
-        persistAfterCommit.current.add(chatId);
+        persistAfterCommit.add(chatId);
         setMessagesByChat(prev => ({ ...prev, [chatId]: (prev[chatId] ?? []).map(m => (m.id === replyId ? { ...m, ...patch } : m)) }));
       }
     },
@@ -1632,7 +1626,7 @@ export default function App(): JSX.Element {
           abortStream(chatId);
           loadedChats.current.delete(chatId);
           sendingChats.current.delete(chatId);
-          persistAfterCommit.current.delete(chatId);
+          persistAfterCommit.delete(chatId);
           delete deferredMerges.current[chatId];
           delete historyRevisions.current[chatId];
           delete historyLoads.current[chatId];
