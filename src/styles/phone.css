@@ -1017,6 +1017,9 @@ html[data-motion='reduced'] .app-mode-switch.has-thumb > .glass-thumb { transiti
   .composer-add.glass { min-width: var(--target-min); min-height: var(--target-min); }
   .app .sidebar.pane .proj-row > .project-expand { min-width: var(--target-min); }
   .app .sidebar.pane .app-mode-switch.is-compact button { min-height: var(--target-min); }
+  /* #2461: the track grows with its taller segments, or the thumb and segments spill out of the 30px track over the header. */
+  .app .sidebar.pane:not(.is-collapsed) .shell-sidebar-head > .app-mode-switch.is-compact { height: calc(var(--target-min) + 4px); }
+  .app .sidebar.pane:not(.is-collapsed) .shell-sidebar-head > .app-mode-switch.is-compact > button { width: var(--target-min); height: var(--target-min); }
   .diary-view-toggle .popup-tab { min-width: var(--target-min); min-height: var(--target-min); }
   .diary-file-list button { min-height: var(--target-min); }
 }
