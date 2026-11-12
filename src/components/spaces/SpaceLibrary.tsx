@@ -69,7 +69,7 @@ export function SpaceLibrary({ list, state, reload, onOpen }: {
               <li key={s.id} className="space-card surface">
                 <span className="space-card-icon" aria-hidden="true"><ShellIcon name="folder-open" size={22} tone="decorative" /></span>
                 <h2 className="space-card-name">
-                  <button type="button" className="space-card-open" aria-label={t('spaces.openSpace', { name: s.name })} onClick={() => onOpen(s.id)}>{s.name}</button>
+                  <button type="button" className="space-card-open" aria-label={t('spaces.openSpace', { name: s.name })} title={s.name} onClick={() => onOpen(s.id)}>{s.name}</button>
                 </h2>
                 <time className="space-card-meta" dateTime={new Date(s.updatedAt < 1e11 ? s.updatedAt * 1000 : s.updatedAt).toISOString()}>{t('spaces.updated', { when: relativeTime(s.updatedAt, appLocale()) })}</time>
                 <SpaceActions space={s} revision={list?.revision ?? 0} reload={reload} size="icon" />

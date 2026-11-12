@@ -55,7 +55,7 @@ function CoworkerList({ onNavigate }: { onNavigate: (id?: string) => void }): JS
             {items.map((c) => (
               <li key={c.id} className="space-card cw-card surface">
                 <CoworkerGlyph coworker={c} />
-                <h2 className="space-card-name"><button type="button" className="space-card-open" aria-label={t('coworkers.open', { name: c.name })} onClick={() => onNavigate(c.id)}>{c.name}</button></h2>
+                <h2 className="space-card-name"><button type="button" className="space-card-open" aria-label={t('coworkers.open', { name: c.name })} title={c.name} onClick={() => onNavigate(c.id)}>{c.name}</button></h2>
                 <p className="space-card-meta">{statusLine(t, c, spaces)}</p>
               </li>
             ))}
