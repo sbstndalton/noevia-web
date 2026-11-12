@@ -105,8 +105,8 @@ test('#2136 a notice that was shown reads the list again by itself, not only whe
   assert.ok(listed > before, 'the list was re-read while the notice was up');
 });
 
-for (const [code, key] of [['inference_queue_full', 'mm.library.gateRefused'], ['inference_queue_timeout', 'mm.library.gateRefused'], ['gate_busy', 'mm.library.gateRefused'], ['model_in_use', 'mm.library.inUseRetry'],
-  ['engine_busy', 'The local model engine is busy. Try again shortly.'], ['engine_unavailable', 'The local model engine is not answering. Try again shortly.'],
+for (const [code, key] of [['inference_queue_full', 'mm.library.gateRefused'], ['inference_queue_timeout', 'mm.library.gateRefused'], ['model_in_use', 'mm.library.inUseRetry'],
+  ['engine_busy', 'The local model engine is busy. Try again shortly.'], ['gate_busy', 'The local model engine is busy. Try again shortly.'], ['engine_unavailable', 'The local model engine is not answering. Try again shortly.'],
   ['engine_switch_stuck', 'The local model engine is still releasing the previous model. Try again shortly.']]) {
   // The Models catalogue segment is not loaded here, so its keys show as keys; the base catalogue's English wording shows as text.
   test(`#2136 a refused load with code ${code} reads as ${key}, never the server's text`, async (t) => {

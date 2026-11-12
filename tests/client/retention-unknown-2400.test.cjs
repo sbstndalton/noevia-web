@@ -10,7 +10,7 @@ const src = fs.readFileSync(path.join(__dirname, '../../src/components/data/Rete
 test('noevia#2400 the select takes its value from the loaded state only', () => {
   assert.doesNotMatch(src, /state\?\.days \?\? 0/, 'no default of 0 ("Never") while the setting is unknown');
   assert.match(src, /value=\{state \? state\.days : ''\}/);
-  assert.match(src, /\{!state && <option value="" disabled>\{t\('data\.retentionUnknown'\)\}<\/option>\}/);
+  assert.match(src, /\{!state && <option value="" disabled>\{error === LOAD_ERROR \? t\('data\.retentionUnknown'\) : ''\}<\/option>\}/, 'blank while loading, "Not loaded" once it failed');
 });
 
 test('noevia#2400 every locale words the placeholder, differently from "Never"', () => {

@@ -43,6 +43,14 @@ run('reranker-switch-2397', Number(process.env.QA_PORT || 32397), async (check, 
       } finally { await page.close(); }
     });
   }
+  await check('a chosen reranker the probe cannot judge keeps the stored flag, so it can still be switched off', async () => {
+    const { page, rowEl } = await open(browser, origin, VIEWS[2], row({ choice: 'llamacpp:synthetic-reranker', choices: [{ id: 'llamacpp:synthetic-reranker', backend: 'llamacpp', model: 'synthetic-reranker' }] }), 'unknown');
+    try {
+      const toggle = rowEl.getByRole('switch');
+      assert.equal(await toggle.isChecked(), true, 'the stored flag shows');
+      assert.equal(await toggle.isDisabled(), false, 'and the switch can be turned off');
+    } finally { await page.close(); }
+  });
   await check('a reranker that answers keeps its switch on and usable', async () => {
     const { page, rowEl } = await open(browser, origin, VIEWS[2], row({ model: 'synthetic-reranker-base', state: 'active', choice: 'tei:synthetic-reranker-base', choices: [{ id: 'tei:synthetic-reranker-base', backend: 'tei', model: 'synthetic-reranker-base' }] }), 'up');
     try {

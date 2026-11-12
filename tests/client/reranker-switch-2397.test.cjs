@@ -7,7 +7,8 @@ const fs = require('node:fs'), path = require('node:path');
 const src = fs.readFileSync(path.join(__dirname, '../../src/components/models/ServiceAssignments.tsx'), 'utf8');
 
 test('noevia#2397 the switch is checked from the effective state, the same one the pill reads', () => {
-  assert.match(src, /const effectiveOn = svc\.enabled === true && pillState\(svc, health\) !== 'off';/);
+  assert.match(src, /const unavailable = current === '' && pillState\(svc, health\) === 'off';/);
+  assert.match(src, /const effectiveOn = svc\.enabled === true && !unavailable;/);
   assert.match(src, /checked=\{effectiveOn\}/);
   assert.doesNotMatch(src, /checked=\{svc\.enabled === true\}/);
   assert.match(src, /disabled=\{busy !== '' \|\| \(!current && !effectiveOn\)\}/, 'disabled while there is nothing to switch on');

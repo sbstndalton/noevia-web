@@ -39,7 +39,7 @@ export const EN_GB = {
   'sidebar.destinations': 'Destinations',
   'sidebar.noSearchResults': 'No matching chats, projects or pages.',
   'sidebar.searchTooLong': "Search for at most {max} characters.",
-  'sidebar.searchTruncated': "More chats match in their messages than can be shown. Narrow the search to see them all.",
+  'sidebar.searchTruncated': "Message search may be incomplete. Narrow the search to see more matches.",
   'sidebar.searchResults.one': '{count} result',
   'sidebar.searchResults.other': '{count} results',
   'sidebar.showPinned': 'Show pinned items',

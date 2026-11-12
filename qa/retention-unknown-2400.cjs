@@ -22,6 +22,20 @@ run('retention-unknown-2400', Number(process.env.QA_PORT || 32400), async (check
       } finally { await page.close(); }
     });
   }
+  await check('while the setting is still loading the select is blank, not "Never" and not "Not loaded"', async () => {
+    const page = await themedPage(browser, VIEWS[2]);
+    try {
+      let release;
+      const gate = new Promise((resolve) => { release = resolve; });
+      await page.route('**/api/account/retention', async (route) => { await gate; await route.fulfill({ json: { days: 30, periods: [30, 90, 365], preview: { 30: 0, 90: 0, 365: 0 } } }); });
+      await page.goto(`${origin}/settings/data`);
+      const select = page.getByRole('combobox', { name: 'Delete old chats' });
+      await select.waitFor({ timeout: 15000 });
+      assert.equal(await select.evaluate((el) => el.selectedOptions[0]?.textContent), '', 'blank while loading');
+      release();
+      await page.waitForFunction(() => document.querySelector('select[aria-label="Delete old chats"]')?.selectedOptions[0]?.textContent === 'After 30 days', null, { timeout: 10000 });
+    } finally { await page.close(); }
+  });
   await check('a loaded setting still reads Never, and a chosen period reads as chosen', async () => {
     const page = await themedPage(browser, VIEWS[2]);
     try {

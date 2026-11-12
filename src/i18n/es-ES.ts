@@ -36,7 +36,7 @@ export const ES_ES: Catalogue = {
   'sidebar.destinations': 'Destinos',
   'sidebar.noSearchResults': 'No hay chats, proyectos ni páginas coincidentes.',
   'sidebar.searchTooLong': "Busca con un máximo de {max} caracteres.",
-  'sidebar.searchTruncated': "Hay más chats con coincidencias en sus mensajes de los que se pueden mostrar. Acota la búsqueda para verlos todos.",
+  'sidebar.searchTruncated': "La búsqueda en los mensajes puede estar incompleta. Acota la búsqueda para ver más coincidencias.",
   'sidebar.searchResults.one': "{count} resultado",
   'sidebar.searchResults.other': "{count} resultados",
   'sidebar.showPinned': "Ver fijados",

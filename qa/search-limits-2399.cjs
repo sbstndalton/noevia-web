@@ -53,11 +53,11 @@ run('search-limits-2399', Number(process.env.QA_PORT || 32399), async (check, br
       try {
         const { box, searches } = await openSearch(page, origin);
         await box.fill('many');
-        await page.getByText('More chats match in their messages than can be shown. Narrow the search to see them all.').waitFor({ timeout: 5000 });
+        await page.getByText('Message search may be incomplete. Narrow the search to see more matches.').waitFor({ timeout: 5000 });
         assert.ok(searches.includes('many'));
         await shot(page, `search-truncated-${view[0]}-${view[2]}`);
         await box.fill('qa');
-        await page.waitForFunction(() => !document.body.textContent.includes('More chats match in their messages'), null, { timeout: 5000 });
+        await page.waitForFunction(() => !document.body.textContent.includes('Message search may be incomplete'), null, { timeout: 5000 });
       } finally { await page.close(); }
     });
   }

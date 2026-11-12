@@ -57,8 +57,8 @@ export function RetentionSetting(): JSX.Element {
       <div className="set-row-text"><span className="set-row-label">{t('data.deleteOld')}</span><span className="set-row-desc">{t('data.deleteOldDesc')}</span></div>
       <div className="set-row-control">
         <select aria-label={t('data.deleteOld')} value={state ? state.days : ''} disabled={!state || busy} onChange={(e) => void choose(Number(e.currentTarget.value))}>
-          {/* #2400: until the setting has loaded no period is chosen; "Never" would read as the setting being off. */}
-          {!state && <option value="" disabled>{t('data.retentionUnknown')}</option>}
+          {/* #2400: until the setting has loaded no period is chosen; "Never" would read as the setting being off. Blank while it loads, "Not loaded" once it failed. */}
+          {!state && <option value="" disabled>{error === LOAD_ERROR ? t('data.retentionUnknown') : ''}</option>}
           <option value={0}>{t('data.never')}</option>
           {(state?.periods || [30, 90, 365]).map((days) => <option key={days} value={days}>{t('data.afterDays', { days })}</option>)}
         </select>

@@ -52,10 +52,10 @@ const REFUSALS: Record<string, MessageKey> = {
   model_in_use: 'mm.library.inUseRetry',
   inference_queue_timeout: 'mm.library.gateRefused',
   inference_queue_full: 'mm.library.gateRefused',
-  gate_busy: 'mm.library.gateRefused',
   engine_switch_stuck: 'chat.failure.engineSwitchStuck',
   engine_unavailable: 'chat.failure.engineUnavailable',
   engine_busy: 'chat.failure.engineBusy',
+  gate_busy: 'chat.failure.engineBusy',   // as in chat (failure-copy.ts)
 };
 /** The sentence for a refusal with a known code, or null (the caller shows the server's text for any other). */
 function refusalText(err: unknown, say: (key: MessageKey, params?: Record<string, string | number>) => string, model: string): string | null {
@@ -168,7 +168,9 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     const until = Date.now() + 120_000;
     const timer = window.setInterval(() => {
       if (Date.now() > until) { window.clearInterval(timer); return; }
-      void fetchInstalledModels().then((installed) => { if (live) setModels(installed); }).catch(() => undefined);
+      // Same stale-answer rule as refresh(): a delete or a newer read that happened meanwhile wins.
+      const request = ++requestRef.current;
+      void fetchInstalledModels().then((installed) => { if (live && request === requestRef.current) setModels(installed); }).catch(() => undefined);
     }, 5000);
     return () => { live = false; window.clearInterval(timer); };
   }, [inUse]);
@@ -456,8 +458,8 @@ function DeleteModel({ model: m, file, kind: initialKind, onDeleted, onCancel, o
             // Folder-configured (source: 'preset') models take this path: the proxy also
             // unloads the engine model(s) the deleted file backed and clears any auto-role
             // that named them (#302).
-            const v = await mm<{ results: { ok: boolean; message: string }[]; rolesCleared?: string[] }>('models/delete', { body: { models: [file.key] } });
-            if (!v.results[0]?.ok) throw Error(v.results[0]?.message || t('mm.deleteFailed'));
+            const v = await mm<{ results: { ok: boolean; message: string; code?: string }[]; rolesCleared?: string[] }>('models/delete', { body: { models: [file.key] } });
+            if (!v.results[0]?.ok) throw Object.assign(Error(v.results[0]?.message || t('mm.deleteFailed')), { code: v.results[0]?.code });
             return Array.isArray(v.rolesCleared) ? v.rolesCleared : [];
           },
           removeSettings && file.sections.length ? async () => {

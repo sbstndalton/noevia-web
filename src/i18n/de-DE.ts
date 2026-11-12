@@ -36,7 +36,7 @@ export const DE_DE: Catalogue = {
   'sidebar.destinations': 'Ziele',
   'sidebar.noSearchResults': 'Keine passenden Chats, Projekte oder Seiten.',
   'sidebar.searchTooLong': "Suche mit höchstens {max} Zeichen.",
-  'sidebar.searchTruncated': "Mehr Chats enthalten den Suchtext in ihren Nachrichten, als angezeigt werden können. Die Suche eingrenzen, um alle zu sehen.",
+  'sidebar.searchTruncated': "Die Nachrichtensuche ist möglicherweise unvollständig. Die Suche eingrenzen, um mehr Treffer zu sehen.",
   'sidebar.searchResults.one': "{count} Ergebnis",
   'sidebar.searchResults.other': "{count} Ergebnisse",
   'sidebar.showPinned': "Angeheftete anzeigen",

@@ -36,7 +36,7 @@ export const SV_SE: Catalogue = {
   'sidebar.destinations': 'Mål',
   'sidebar.noSearchResults': 'Inga matchande chattar, projekt eller sidor.',
   'sidebar.searchTooLong': "Sök med högst {max} tecken.",
-  'sidebar.searchTruncated': "Fler chattar matchar i sina meddelanden än vad som kan visas. Begränsa sökningen för att se alla.",
+  'sidebar.searchTruncated': "Sökningen i meddelandena kan vara ofullständig. Begränsa sökningen för att se fler träffar.",
   'sidebar.searchResults.one': "{count} resultat",
   'sidebar.searchResults.other': "{count} resultat",
   'sidebar.showPinned': "Visa fästa",
