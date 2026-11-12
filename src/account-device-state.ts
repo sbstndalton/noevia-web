@@ -7,11 +7,13 @@ import { accountChangedElsewhere, bindTabAccount, releaseTabAccount } from './ac
 import { claimDrafts, clearAllDrafts, guardDraftWrites } from './chat-drafts';
 import { clearLastPlace, guardLastPlaceWrites, readLastPlace } from './last-view';
 import { claimPreferences, clearPreferences } from './user-preferences';
+import { clearAllPageDrafts, guardPageDraftWrites } from './page-drafts';
 
 // #1643: a tab whose account another tab replaced must not write that account's drafts or place
 // into storage every tab shares.
 guardDraftWrites(accountChangedElsewhere);
 guardLastPlaceWrites(accountChangedElsewhere);
+guardPageDraftWrites(accountChangedElsewhere);
 
 /** Sign-in: called by AuthGate with the session's account before the app renders, so a different
  *  account's draft or last chat never shows, not even until the profile loads. */
@@ -29,6 +31,7 @@ export function claimDeviceState(userId: string): void {
 export function clearDeviceState(): void {
   releaseTabAccount();
   clearAllDrafts();
+  clearAllPageDrafts();
   clearLastPlace();
   clearPreferences();
 }

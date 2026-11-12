@@ -94,3 +94,29 @@ test('relative times follow the locale and accept seconds or milliseconds', () =
   assert.match(fmt.relativeTime(now - 2 * 86400 * 1000, 'de-DE', now), /vorgestern/);
   assert.equal(fmt.pageName('  ', 'Untitled'), 'Untitled');
 });
+
+test('a title is counted as typed: 200 characters and a trailing space is too long', () => {
+  assert.equal(limits.draftProblem({ title: 't'.repeat(200) + ' ', content: '' }), 'title-long');
+  assert.equal(limits.draftProblem({ title: ' ' + 't'.repeat(199), content: '' }), null);
+});
+
+test('sign-out clears every page draft and nothing else; a tab whose account changed writes none', () => {
+  const m = new Map([['noevia:space-page-draft:a:b', '{}'], ['noevia:space-page-draft:c:d', '{}'], ['noevia:theme', 'dark']]);
+  const store = { get length() { return m.size; }, key: (i) => [...m.keys()][i] ?? null, removeItem: (k) => { m.delete(k); }, getItem: (k) => m.get(k) ?? null, setItem: (k, v) => { m.set(k, v); } };
+  drafts.clearAllPageDrafts(store);
+  assert.deepEqual([...m.keys()], ['noevia:theme']);
+  drafts.guardPageDraftWrites(() => true);
+  assert.equal(drafts.writePageDraft('s', 'p', { title: 'a', content: 'b', baseVersion: null, savedAt: 1 }, store), false);
+  assert.equal(m.size, 1);
+  drafts.guardPageDraftWrites(() => false);
+  assert.equal(drafts.writePageDraft('s', 'p', { title: 'a', content: 'b', baseVersion: null, savedAt: 1 }, store), true);
+});
+
+test('a conditional clear keeps a device copy that is not the text just saved', () => {
+  const store = memory();
+  drafts.writePageDraft('s', 'p', { title: 'T', content: 'new text from the reopened editor', baseVersion: 'v1', savedAt: 1 }, store);
+  drafts.clearPageDraft('s', 'p', store, { title: 'T', content: 'old text that just saved' });
+  assert.notEqual(drafts.readPageDraft('s', 'p', store), null);
+  drafts.clearPageDraft('s', 'p', store, { title: 'T', content: 'new text from the reopened editor' });
+  assert.equal(drafts.readPageDraft('s', 'p', store), null);
+});

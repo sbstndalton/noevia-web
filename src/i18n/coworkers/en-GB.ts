@@ -81,9 +81,9 @@ export const EN_GB_COWORKERS = {
   'spaces.problemTitleEmpty': 'Give the page a title to save it. Your text is still here.',
   'spaces.problemTitleLong': 'Use a title of at most {max} characters to save it. Your text is still here.',
   'spaces.problemTooLarge': 'This page is over {limit} and cannot be saved. Your text is still here.',
-  'spaces.saveFailed': 'The page could not be saved. Your text is kept on this device.',
-  'spaces.saveTimeout': 'Saving took too long. Your text is kept on this device.',
-  'spaces.pageGone': 'This page was deleted somewhere else. Your text is kept on this device.',
+  'spaces.saveFailed': 'The page could not be saved.',
+  'spaces.saveTimeout': 'Saving took too long.',
+  'spaces.pageGone': 'This page was deleted somewhere else.',
   'spaces.deletePage': 'Delete page',
   'spaces.deletePageTitle': 'Delete {title}?',
   'spaces.deletePageBody': 'This page is deleted for good.',
@@ -91,6 +91,11 @@ export const EN_GB_COWORKERS = {
   'spaces.leaveTitle': 'Leave without saving?',
   'spaces.leaveBody': 'Your edits stay on this device and come back when you reopen this page.',
   'spaces.leaveConfirm': 'Leave',
+  'spaces.keptOnDevice': 'Your text is kept on this device.',
+  'spaces.notKeptOnDevice': 'This device could not keep a copy, so keep this tab open until it is saved.',
+  'spaces.leaveBodyNoCopy': 'This device could not keep a copy of your edits, so they will be lost.',
+  'spaces.listTruncated': 'Showing the first {count} pages. Use search to find the rest.',
+  'spaces.saveAsNew': 'Save as a new page',
 } as const;
 
 export type CoworkersKey = keyof typeof EN_GB_COWORKERS;

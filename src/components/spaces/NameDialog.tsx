@@ -29,9 +29,9 @@ export function NameDialog({ title, confirmLabel, initial, onSubmit, onClose }: 
       <form className="modal-card aero dialog-sheet space-dialog" onClick={(e) => e.stopPropagation()} onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         <div className="modal-head"><h2>{title}</h2></div>
         <label htmlFor={field}>{t('spaces.nameLabel')}</label>
-        <input id={field} value={name} disabled={busy} aria-invalid={!!error} aria-describedby={`${field}-hint`} onChange={(e) => { setName(e.target.value); setError(''); }} />
+        <input id={field} value={name} disabled={busy} aria-invalid={!!error} aria-describedby={`${field}-hint${error || (length > SPACE_NAME_MAX && invalid) ? ` ${field}-error` : ''}`} onChange={(e) => { setName(e.target.value); setError(''); }} />
         <p id={`${field}-hint`} className={`space-hint${length > SPACE_NAME_MAX ? ' is-over' : ''}`}>{t('spaces.nameCount', { count: length, max: SPACE_NAME_MAX })}</p>
-        {(error || (length > SPACE_NAME_MAX && invalid)) && <p className="space-note is-error" role="alert">{error || invalid}</p>}
+        {(error || (length > SPACE_NAME_MAX && invalid)) && <p id={`${field}-error`} className="space-note is-error" role="alert">{error || invalid}</p>}
         <div className="confirm-actions">
           <button type="button" className="btn btn-secondary" onClick={onClose}>{t('spaces.cancel')}</button>
           <button type="submit" className="btn btn-primary" disabled={busy}>{confirmLabel}</button>

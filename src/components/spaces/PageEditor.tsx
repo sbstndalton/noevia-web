@@ -26,25 +26,27 @@ import { formatBytes } from '../../number-format';
 import { appLocale } from '../../user-preferences';
 import { PAGE_BYTES_MAX, PAGE_TITLE_MAX } from '../../spaces-limits';
 import type { SaveFault, SaveState } from '../../page-autosave';
-import { deletePage, type Page } from '../../spaces-api';
+import { createPage, deletePage, type Page } from '../../spaces-api';
 import { ConfirmDialog } from '../ContextMenu';
 import { MarkdownPreview } from '../DiaryModal';
 import { ShellIcon } from '../ShellIcon';
 import { usePageAutosave } from './usePageAutosave';
 import './spaces.css';
 
-export function faultText(t: Translate, fault: SaveFault | undefined): string {
+export function faultText(t: Translate, fault: SaveFault | undefined, kept = true): string {
   if (!fault) return '';
+  // The promise that the text is safe is only made when the device really kept a copy.
+  const tail = ' ' + (kept ? t('spaces.keptOnDevice') : t('spaces.notKeptOnDevice'));
   if (fault.kind === 'problem') {
     if (fault.problem === 'title-empty') return t('spaces.problemTitleEmpty');
     if (fault.problem === 'title-long') return t('spaces.problemTitleLong', { max: PAGE_TITLE_MAX });
     return t('spaces.problemTooLarge', { limit: formatBytes(PAGE_BYTES_MAX, appLocale()) });
   }
-  if (fault.kind === 'timeout') return t('spaces.saveTimeout');
+  if (fault.kind === 'timeout') return t('spaces.saveTimeout') + tail;
   if (fault.kind === 'load-failed') return t('spaces.conflictLoadFailed');
   if (fault.code === 'page_too_large') return t('spaces.problemTooLarge', { limit: formatBytes(PAGE_BYTES_MAX, appLocale()) });
-  if (fault.code === 'not_found') return t('spaces.pageGone');
-  return t('spaces.saveFailed');
+  if (fault.code === 'not_found') return t('spaces.pageGone') + tail;
+  return t('spaces.saveFailed') + tail;
 }
 
 const STATUS_KEY = { saved: 'spaces.statusSaved', saving: 'spaces.statusSaving', dirty: 'spaces.statusDirty', error: 'spaces.statusError', conflict: 'spaces.statusConflict' } as const;
@@ -55,14 +57,18 @@ export function SaveBadge({ state, t }: { state: SaveState; t: Translate }): JSX
   </p>;
 }
 
-export function PageEditor({ spaceId, spaceName, page, fresh, onBack, onDeleted }: {
+export function PageEditor({ spaceId, spaceName, page, fresh, onBack, onDeleted, onMoved }: {
   spaceId: string; spaceName: string; page: Page; fresh: boolean;
   onBack: () => void; onDeleted: () => void;
+  /** The text was saved as a new page (the old one is gone): show that page. */
+  onMoved: (pageId: string) => void;
 }): JSX.Element {
   const t = useT();
   const { controller, state } = usePageAutosave(spaceId, page);
   const heading = useRef<HTMLHeadingElement>(null);
   const titleInput = useRef<HTMLInputElement>(null);
+  const textArea = useRef<HTMLTextAreaElement>(null);
+  const [moving, setMoving] = useState(false);
   const [mode, setMode] = useState<'write' | 'preview'>('write');
   const [leaving, setLeaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -86,6 +92,14 @@ export function PageEditor({ spaceId, spaceName, page, fresh, onBack, onDeleted 
     const saved = controller.dirty ? await controller.flush() : true;
     if (saved || !controller.dirty) onBack(); else setLeaving(true);
   };
+  // A banner's own buttons vanish when it resolves; focus goes back to the text instead of dropping to the page.
+  const resolved = async (action: Promise<boolean>) => { await action; if (!document.activeElement || document.activeElement === document.body) textArea.current?.focus(); };
+  // The page was deleted somewhere else: the text is not lost, it becomes a new page.
+  const saveAsNew = async () => {
+    setMoving(true);
+    try { const made = await createPage(spaceId, draft.title.trim() || t('spaces.untitled'), draft.content); controller.discard(); onMoved(made.id); }
+    catch { setDeleteFailed(true); setMoving(false); }
+  };
   const remove = async () => {
     setDeleting(false);
     try { await deletePage(spaceId, page.id); controller.discard(); onDeleted(); }
@@ -94,7 +108,8 @@ export function PageEditor({ spaceId, spaceName, page, fresh, onBack, onDeleted 
 
   const bytes = new TextEncoder().encode(draft.content).length;
   const nearLimit = bytes > PAGE_BYTES_MAX * 0.9;
-  const faulted = state.status === 'error' || (state.status === 'conflict' && state.fault?.kind === 'load-failed');
+  const kept = state.keptOnDevice !== false;
+  const faultShown = state.status === 'error' || (state.status === 'conflict' && state.fault?.kind === 'load-failed');
   const title = draft.title.trim() || t('spaces.untitled');
 
   return (
@@ -109,7 +124,7 @@ export function PageEditor({ spaceId, spaceName, page, fresh, onBack, onDeleted 
         <div className="space-page-head">
           <label className="sr-only" htmlFor={ids.title}>{t('spaces.titleLabel')}</label>
           <input id={ids.title} ref={titleInput} className="space-title-input" value={draft.title} placeholder={t('spaces.untitled')}
-            aria-invalid={state.fault?.kind === 'problem' && state.fault.problem !== 'too-large'} aria-describedby={state.fault ? ids.fault : undefined}
+            aria-invalid={state.fault?.kind === 'problem' && state.fault.problem !== 'too-large'} aria-describedby={faultShown ? ids.fault : undefined}
             onChange={(e) => controller.edit({ title: e.target.value })} />
           <SaveBadge state={state} t={t} />
         </div>
@@ -122,16 +137,18 @@ export function PageEditor({ spaceId, spaceName, page, fresh, onBack, onDeleted 
             <p>{t('spaces.conflictBody')}</p>
             {state.fault?.kind === 'load-failed' && <p id={ids.fault}>{t('spaces.conflictLoadFailed')}</p>}
             <div className="space-banner-actions">
-              <button type="button" className="btn btn-primary" onClick={() => void controller.keepMine()}>{t('spaces.keepMine')}</button>
-              <button type="button" className="btn btn-secondary" onClick={() => void controller.takeTheirs()}>{t('spaces.takeTheirs')}</button>
+              <button type="button" className="btn btn-primary" onClick={() => void resolved(controller.keepMine())}>{t('spaces.keepMine')}</button>
+              <button type="button" className="btn btn-secondary" onClick={() => void resolved(controller.takeTheirs())}>{t('spaces.takeTheirs')}</button>
             </div>
           </div>
         )}
         {state.status === 'error' && (
           <div className="space-banner is-error" role="alert">
-            <p id={ids.fault}>{faultText(t, state.fault)}</p>
+            <p id={ids.fault}>{faultText(t, state.fault, kept)}</p>
             <div className="space-banner-actions">
-              <button type="button" className="btn btn-secondary" onClick={() => void controller.flush(true)}>{t('spaces.retrySave')}</button>
+              {state.fault?.kind === 'server' && state.fault.code === 'not_found'
+                ? <button type="button" className="btn btn-primary" disabled={moving} onClick={() => void saveAsNew()}>{t('spaces.saveAsNew')}</button>
+                : <button type="button" className="btn btn-secondary" onClick={() => void resolved(controller.flush(true))}>{t('spaces.retrySave')}</button>}
             </div>
           </div>
         )}
@@ -144,10 +161,10 @@ export function PageEditor({ spaceId, spaceName, page, fresh, onBack, onDeleted 
           ))}
         </div>
         {mode === 'write'
-          ? <textarea id={ids.content} className="space-content-input" aria-label={t('spaces.contentLabel')} spellCheck value={draft.content}
-              aria-invalid={state.fault?.kind === 'problem' && state.fault.problem === 'too-large'} aria-describedby={faulted || state.fault ? ids.fault : undefined}
+          ? <textarea ref={textArea} id={ids.content} className="space-content-input" aria-label={t('spaces.contentLabel')} spellCheck value={draft.content}
+              aria-invalid={state.fault?.kind === 'problem' && state.fault.problem === 'too-large'} aria-describedby={faultShown ? ids.fault : undefined}
               onChange={(e) => controller.edit({ content: e.target.value })} />
-          : <div className="space-preview" aria-label={t('spaces.tabPreview')}>
+          : <div className="space-preview" role="region" aria-label={t('spaces.tabPreview')}>
               <MarkdownPreview text={draft.content || t('spaces.emptyPreview')} />
             </div>}
         <div className="space-foot">
@@ -159,7 +176,7 @@ export function PageEditor({ spaceId, spaceName, page, fresh, onBack, onDeleted 
         {deleteFailed && <p className="space-note is-error" role="alert">{t('spaces.actionFailed')}</p>}
       </div>
       {deleting && <ConfirmDialog danger title={t('spaces.deletePageTitle', { title })} body={t('spaces.deletePageBody')} confirmLabel={t('spaces.deletePageConfirm')} onConfirm={() => void remove()} onCancel={() => setDeleting(false)} />}
-      {leaving && <ConfirmDialog danger title={t('spaces.leaveTitle')} body={t('spaces.leaveBody')} confirmLabel={t('spaces.leaveConfirm')} onConfirm={() => { setLeaving(false); onBack(); }} onCancel={() => setLeaving(false)} />}
+      {leaving && <ConfirmDialog danger title={t('spaces.leaveTitle')} body={kept ? t('spaces.leaveBody') : t('spaces.leaveBodyNoCopy')} confirmLabel={t('spaces.leaveConfirm')} onConfirm={() => { setLeaving(false); onBack(); }} onCancel={() => setLeaving(false)} />}
     </main>
   );
 }

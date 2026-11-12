@@ -107,6 +107,7 @@ export function SpacePages({ space, revision, reloadSpaces, onBack, onOpenPage, 
         {createError && <p className="space-note is-error" role="alert">{createError}</p>}
         {failed === 'search' && <p className="space-note is-error" role="alert">{t('spaces.searchFailed')}</p>}
         {truncated && searching && search.kind === 'ok' && <p className="space-note" role="status">{t('spaces.searchTruncated')}</p>}
+        {truncated && !searching && <p className="space-note" role="status">{t('spaces.listTruncated', { count: shown.length })}</p>}
 
         {failed === 'load' && rows === null ? (
           <EmptyState role="alert" icon="circle-alert" title={t('spaces.loadFailedTitle')} action={<button type="button" className="btn btn-secondary" onClick={() => setAttempt((n) => n + 1)}>{t('spaces.retry')}</button>}>{t('spaces.loadFailedBody')}</EmptyState>
