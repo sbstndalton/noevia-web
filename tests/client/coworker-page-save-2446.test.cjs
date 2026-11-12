@@ -91,6 +91,8 @@ test('the page-save card shows the title and the whole draft, with Approve & sav
     assert.ok(html.includes('QA &lt;plan&gt;'), 'the title, escaped');
     assert.ok(html.includes('line '.repeat(800)), 'the draft in full');
     assert.ok(html.includes('>Approve &amp; save<') && html.includes('>Decline<'));
+    assert.ok(html.includes('data-testid="page-save-checking"'), 'until the destination is known the card says it is checking');
+    assert.match(html, /<button[^>]*disabled=""[^>]*>Approve &amp; save<\/button>/, 'and Approve & save waits');
     assert.ok(!html.includes('Allow for this chat') && !html.includes('Allow once'));
     const sent = renderToStaticMarkup(React.createElement(PageSaveApproval, { draft, coworkerId: 'cc', locked: true, sent: true, err: 'Could not send', onDecide() {}, containerRef: { current: null } }));
     assert.equal((sent.match(/disabled/g) || []).length, 2);
@@ -116,9 +118,43 @@ test('a finished save shows a chip that opens the page; an error or a foreign li
 
 test('every shipped locale words the card', () => {
   const dir = path.join(__dirname, '../../src/i18n/coworkers');
-  const keys = ['pageSave.titleLabel', 'pageSave.draftLabel', 'pageSave.ask', 'pageSave.notGranted', 'pageSave.approve', 'pageSave.decline', 'pageSave.group'];
+  const keys = ['pageSave.titleLabel', 'pageSave.draftLabel', 'pageSave.ask', 'pageSave.notGranted', 'pageSave.approve', 'pageSave.decline', 'pageSave.group', 'pageSave.checking', 'pageSave.unverified'];
   for (const file of fs.readdirSync(dir).filter((f) => /^[a-z]{2}-[A-Z]{2}\.ts$/.test(f) && f !== 'en-US.ts')) {
     const text = fs.readFileSync(path.join(dir, file), 'utf8');
     for (const key of keys) assert.ok(text.includes(`'${key}':`), `${file} lacks ${key}`);
   }
+});
+
+test('the destination follows the server\'s rule and says so when it cannot be checked', async () => {
+  await withSsr(async (server) => {
+    const { destinationOf } = await server.ssrLoadModule('/src/components/coworkers/PageSaveApproval.tsx');
+    const co = { spaces: ['s1', 's2'], defaultSpace: 's1' };
+    const spaces = [{ id: 's1', name: 'QA notes' }, { id: 's2', name: 'QA notes' }, { id: 's3', name: 'QA other' }];
+    const d = (spaceId) => ({ title: 't', content: 'c', spaceId });
+    assert.deepEqual({ ...destinationOf(d(null), co, spaces, false) }, { kind: 'ok', name: 'QA notes' });
+    assert.deepEqual({ ...destinationOf(d('s2'), co, spaces, false) }, { kind: 'ok', name: 'QA notes' });
+    assert.equal(destinationOf(d('s3'), co, spaces, false).kind, 'notGranted', 'a Space outside the grant');
+    assert.equal(destinationOf(d(null), { spaces: ['s1'], defaultSpace: null }, spaces, false).kind, 'notGranted', 'no default and none named');
+    assert.equal(destinationOf(d(null), null, null, false).kind, 'checking');
+    assert.equal(destinationOf(d(null), co, null, false).kind, 'checking');
+    assert.deepEqual({ ...destinationOf(d('s9'), co, spaces, true) }, { kind: 'unverified', spaceId: 's9' }, 'a failed read is not "will be refused"');
+    assert.deepEqual({ ...destinationOf(d(null), co, spaces.filter((x) => x.id !== 's1'), false) }, { kind: 'unverified', spaceId: 's1' }, 'granted but not in the list');
+  });
+});
+
+test('inside a coworker conversation the plain card stands in while the page-save card loads, and an MCP tool of that name keeps the plain card', async () => {
+  await withSsr(async (server) => {
+    const React = require('react');
+    const { renderToStaticMarkup } = require('react-dom/server');
+    const { ToolCalls } = await server.ssrLoadModule('/src/components/ToolCalls.tsx');
+    const { CoworkerConversation } = await server.ssrLoadModule('/src/coworker-conversation.ts');
+    const args = JSON.stringify({ title: 'QA t', content: 'FULL ' + 'x'.repeat(2000) });
+    const render = (extra) => renderToStaticMarkup(React.createElement(CoworkerConversation.Provider, { value: 'cc' }, React.createElement(ToolCalls, { calls: [{ name: 'space_page_save', status: 'pending', approvalId: 'ap-1', args, once: true, ...extra }] })));
+    const loading = render({});
+    assert.ok(loading.includes('>Allow once<') && loading.includes('>Decline<'), 'an approval is never left without its buttons');
+    assert.ok(!loading.includes('Allow for this chat'));
+    assert.ok(loading.includes('FULL ' + 'x'.repeat(2000)), 'and the draft in full');
+    const mcp = render({ server: 'notes-server' });
+    assert.ok(mcp.includes('>via notes-server<') && !mcp.includes('page-save-approval'));
+  });
 });

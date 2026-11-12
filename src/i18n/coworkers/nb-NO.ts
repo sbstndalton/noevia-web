@@ -169,4 +169,6 @@ export const NB_NO_COWORKERS: CoworkersCatalogue = {
   'pageSave.approve': "Godkjenn og lagre",
   'pageSave.decline': "Avslå",
   'pageSave.group': "Lagre en side",
+  'pageSave.checking': "Sjekker hvor den lagres…",
+  'pageSave.unverified': "Kunne ikke sjekke målet (område-ID: {space}). Siden lagres bare hvis det er et av kollegaens Områder.",
 };

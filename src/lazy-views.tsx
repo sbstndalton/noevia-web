@@ -42,7 +42,6 @@ export const Projects = lazyView(() => import('./components/ProjectsView').then(
 export const Customise = lazyView(() => import('./components/plugins/PluginsView').then((m) => m.PluginsView));
 export const Spaces = lazyView(() => import('./components/spaces/SpacesView').then((m) => m.SpacesView));
 export const Coworkers = lazyView(() => import('./components/coworkers/CoworkersView').then((m) => m.CoworkersView));
-export const PageSaveApproval = lazyView(() => import('./components/coworkers/PageSaveApproval').then((m) => m.PageSaveApproval));
 export const CoworkerChatHeader = lazyView(() => import('./components/coworkers/CoworkerChatHeader').then((m) => m.CoworkerChatHeader));
 export const Coding = lazyView(() => import('./components/CodingWorkspace').then((m) => m.CodingWorkspace));
 

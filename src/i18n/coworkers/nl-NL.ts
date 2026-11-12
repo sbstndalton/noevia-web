@@ -169,4 +169,6 @@ export const NL_NL_COWORKERS: CoworkersCatalogue = {
   'pageSave.approve': "Goedkeuren en opslaan",
   'pageSave.decline': "Weigeren",
   'pageSave.group': "Een pagina opslaan",
+  'pageSave.checking': "Bestemming controleren…",
+  'pageSave.unverified': "De bestemming kon niet worden gecontroleerd (ruimte-id: {space}). De pagina wordt alleen opgeslagen als dit een van de Ruimtes van deze collega is.",
 };

@@ -170,6 +170,8 @@ export const EN_GB_COWORKERS = {
   'pageSave.approve': 'Approve & save',
   'pageSave.decline': 'Decline',
   'pageSave.group': 'Save a page',
+  'pageSave.checking': 'Checking where this will be saved…',
+  'pageSave.unverified': 'Could not check the destination (Space id: {space}). It is saved only if that is one of this coworker’s Spaces.',
 } as const;
 
 export type CoworkersKey = keyof typeof EN_GB_COWORKERS;

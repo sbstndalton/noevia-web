@@ -1,5 +1,6 @@
 import type { JSX } from 'react';
-import { Suspense } from 'react';
+import { Component, lazy, Suspense } from 'react';
+import type { ReactNode } from 'react';
 import type { MouseEvent } from 'react';
 import type { ToolCallView } from '../types';
 import { useRef, useState } from 'react';
@@ -12,7 +13,6 @@ import { around } from '../text-around';
 import { showDirectionControls } from '../visible-controls';
 import { useServerLabel } from '../mcp-server-label';
 import { PAGE_SAVE_TOOL, parsePageDraft, parseSavedPage, useCoworkerConversation } from '../coworker-conversation';
-import { PageSaveApproval } from '../lazy-views';
 
 /** One drawn symbol per outcome — the list used ✓ and ⃠, which render differently on
  *  every platform and are not part of the icon set. */
@@ -35,6 +35,16 @@ export const TOOL_RESULT_LIMIT = 4000;
 /** Approval ids this tab has already answered (#792). Ids are unique per request and the set lives
  *  only as long as the page, so it stays small; a reload settles every pending card anyway. */
 const decidedApprovals = new Set<string>();
+
+/** The page-save card is its own chunk (it carries the Coworkers strings); one retry if the chunk fails to load. */
+const PageSaveCard = lazy(() => import('./coworkers/PageSaveApproval').catch(() => import('./coworkers/PageSaveApproval')).then((m) => ({ default: m.PageSaveApproval })));
+
+/** Shows `fallback` (the plain approval card) if the page-save card throws or its chunk never loads. */
+class CardBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() { return this.state.failed ? this.props.fallback : this.props.children; }
+}
 
 /** A write tool waiting on the user. The arguments are shown in full and
  *  unabbreviated: this is the one moment where seeing exactly what the model
@@ -84,12 +94,11 @@ function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
   // The name is markup (bold), so the sentence is split around it and the words stay in the catalogue.
   const ask = around(t('chat.approval.ask'), 'name');
   // #2446: a coworker's page save shows its title, destination Space and whole draft, with its own two buttons. Any
-  // other place, or arguments of another shape, gets the plain card below, which shows them raw.
-  const draft = call.name === PAGE_SAVE_TOOL && coworkerId ? parsePageDraft(call.args) : null;
-  if (draft && coworkerId) {
-    return <Suspense fallback={null}><PageSaveApproval.View draft={draft} coworkerId={coworkerId} locked={locked} sent={sent} err={err} onDecide={(d) => void decide(d)} containerRef={containerRef}/></Suspense>;
-  }
-  return (
+  // other place, a call that goes to an MCP server, or arguments of another shape, gets the plain card, which shows
+  // the arguments raw. The plain card also stands in while the page-save card loads or if its chunk cannot load, so an
+  // approval that is blocking the turn is never left without a card.
+  const draft = call.name === PAGE_SAVE_TOOL && !call.server && coworkerId ? parsePageDraft(call.args) : null;
+  const plain = (
     <div className="tool-approval" role="group" tabIndex={-1} ref={containerRef} aria-label={t('chat.approval.group', { name })}>
       <span className="tool-approval-ask">
         {ask[0]}<strong>{name}</strong>{ask[1]}
@@ -129,6 +138,10 @@ function PendingToolCall({ call }: { call: ToolCallView }): JSX.Element {
       {err && <span className="modal-err tool-approval-err">{err}</span>}
     </div>
   );
+  if (draft && coworkerId) {
+    return <CardBoundary fallback={plain}><Suspense fallback={plain}><PageSaveCard draft={draft} coworkerId={coworkerId} locked={locked} sent={sent} err={err} onDecide={(d) => void decide(d)} containerRef={containerRef}/></Suspense></CardBoundary>;
+  }
+  return plain;
 }
 
 
@@ -224,7 +237,7 @@ export function ToolCalls({ calls }: { calls: ToolCallView[] }): JSX.Element {
         </details>
       )}
       {/* #2446: the pages a coworker saved, outside the folded list so the way to the page is always in view. */}
-      {settled.map((c, i) => c.name === PAGE_SAVE_TOOL && toolCallRowState(c) === 'done' ? <SavedPageChip key={`saved-${i}`} result={c.result}/> : null)}
+      {settled.map((c, i) => c.name === PAGE_SAVE_TOOL && !c.server && toolCallRowState(c) === 'done' ? <SavedPageChip key={`saved-${i}`} result={c.result}/> : null)}
     </div>
   );
 }

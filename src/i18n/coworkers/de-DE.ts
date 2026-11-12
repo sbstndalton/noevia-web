@@ -169,4 +169,6 @@ export const DE_DE_COWORKERS: CoworkersCatalogue = {
   'pageSave.approve': "Genehmigen & speichern",
   'pageSave.decline': "Ablehnen",
   'pageSave.group': "Eine Seite speichern",
+  'pageSave.checking': "Ziel wird geprüft…",
+  'pageSave.unverified': "Das Ziel konnte nicht geprüft werden (Bereichs-ID: {space}). Es wird nur gespeichert, wenn es einer der Bereiche dieses Mitarbeiters ist.",
 };

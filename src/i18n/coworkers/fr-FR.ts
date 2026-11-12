@@ -169,4 +169,6 @@ export const FR_FR_COWORKERS: CoworkersCatalogue = {
   'pageSave.approve': "Approuver et enregistrer",
   'pageSave.decline': "Refuser",
   'pageSave.group': "Enregistrer une page",
+  'pageSave.checking': "Vérification de la destination…",
+  'pageSave.unverified': "Impossible de vérifier la destination (id de l’Espace : {space}). La page n’est enregistrée que s’il s’agit d’un des Espaces de ce collègue.",
 };

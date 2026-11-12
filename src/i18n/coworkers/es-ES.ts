@@ -169,4 +169,6 @@ export const ES_ES_COWORKERS: CoworkersCatalogue = {
   'pageSave.approve': "Aprobar y guardar",
   'pageSave.decline': "Rechazar",
   'pageSave.group': "Guardar una página",
+  'pageSave.checking': "Comprobando dónde se guardará…",
+  'pageSave.unverified': "No se pudo comprobar el destino (id del Espacio: {space}). Solo se guarda si es uno de los Espacios de este compañero.",
 };

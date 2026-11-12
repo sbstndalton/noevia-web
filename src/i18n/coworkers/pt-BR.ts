@@ -169,4 +169,6 @@ export const PT_BR_COWORKERS: CoworkersCatalogue = {
   'pageSave.approve': "Aprovar e salvar",
   'pageSave.decline': "Recusar",
   'pageSave.group': "Salvar uma página",
+  'pageSave.checking': "Verificando onde será salva…",
+  'pageSave.unverified': "Não foi possível verificar o destino (id do Espaço: {space}). Só é salva se for um dos Espaços deste colega.",
 };

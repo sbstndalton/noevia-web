@@ -169,4 +169,6 @@ export const SV_SE_COWORKERS: CoworkersCatalogue = {
   'pageSave.approve': "Godkänn och spara",
   'pageSave.decline': "Avvisa",
   'pageSave.group': "Spara en sida",
+  'pageSave.checking': "Kontrollerar var den sparas…",
+  'pageSave.unverified': "Det gick inte att kontrollera målet (utrymmes-id: {space}). Sidan sparas bara om det är ett av kollegans Utrymmen.",
 };
