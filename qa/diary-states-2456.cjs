@@ -22,6 +22,29 @@ async function open(browser, origin, view, { diaryEnabled, diaryUp = () => true 
 const mainText = (page) => page.evaluate(() => [...document.querySelectorAll('main')].map((m) => m.innerText).join('\n'));
 
 run('diary-states-2456', Number(process.env.QA_PORT || 32456), async (check, browser, origin) => {
+  await check('profile unreadable: not claimed to be off; Try again recovers into the Diary, focus stays on the button', async () => {
+    let up = false;
+    const page = await themedPage(browser, [1280, 800, 'light']);
+    try {
+      await page.route('**/api/profile', (r) => up ? r.fulfill({ json: { user: user(true), passkeys: [] } }) : r.fulfill({ status: 500, json: { error: 'Internal error' } }));
+      await page.goto(`${origin}/diary`);
+      await page.getByRole('heading', { name: "Diary can't be reached right now" }).waitFor({ timeout: 15000 });
+      assert.equal(await page.getByText('Diary is off for this account').count(), 0);
+      up = true;
+      await page.getByRole('button', { name: 'Try again' }).click();
+      await page.locator('.diary-calendar, .diary-composer-dock').first().waitFor({ timeout: 15000 });
+    } finally { await page.close(); }
+  });
+  await check('Try again while still down keeps the notice and the focused button', async () => {
+    const page = await open(browser, origin, [1280, 800, 'light'], { diaryEnabled: true, diaryUp: () => false });
+    try {
+      await page.getByRole('heading', { name: "Diary can't be reached right now" }).waitFor({ timeout: 15000 });
+      await page.getByRole('button', { name: 'Try again' }).click();
+      await page.getByRole('heading', { name: "Diary can't be reached right now" }).waitFor({ timeout: 15000 });
+      await page.waitForTimeout(1500);
+      assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Try again');
+    } finally { await page.close(); }
+  });
   for (const view of VIEWS) {
     const tag = `${view[0]} px ${view[2]}`;
     await check(`${tag}: Diary off for the account shows a message and a way to Settings`, async () => {

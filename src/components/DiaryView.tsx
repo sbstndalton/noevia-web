@@ -43,7 +43,7 @@ import type { DiaryTurn as Turn } from '../diary-conversation';
 export function DiaryNotice({ kind, onSettings, onRetry }: { kind: 'off' | 'unreachable'; onSettings?: () => void; onRetry?: () => void }) {
   const t = useT();
   return <main className="main diary-workspace">
-    <section className="diary-notice" aria-labelledby="diary-notice-title">
+    <section className="diary-notice" aria-labelledby="diary-notice-title" role={kind === 'unreachable' ? 'alert' : undefined}>
       <h1 id="diary-notice-title">{kind === 'off' ? t('diary.off.title') : t('diary.unreachable.title')}</h1>
       <p>{kind === 'off' ? t('diary.off.body') : t('diary.unreachable.body')}</p>
       {kind === 'off'
@@ -344,6 +344,7 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   const savedLabel = storageMode === 'managed' ? t('diary.storage.appStorage') : storage?.kind === 'local' ? t('diary.storage.server') : storage?.kind === 'nextcloud' ? t('diary.storage.nextcloud') : storage?.kind === 's3' ? t('diary.storage.s3') : storage?.kind === 'webdav' ? t('diary.storage.webdav') : t('diary.storage.saved');
   const pendingCount = Object.keys(pendingSync).length + Object.keys(pendingLocal).length;
 
+  const [noticeRetry, setNoticeRetry] = useState(false);
   const loadedOnce = useRef(false);
   if (overview.ready) loadedOnce.current = true;
   const emptyDiary = overview.ready && !months.length && !overview.memory.length && !overview.sources.length;
@@ -401,9 +402,9 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
         recentDays = recentIds.flatMap(id => Object.keys(splitDays(logById.get(id)?.todayLog ?? '')));
         setDays(splitDays(logById.get(selectedId)?.todayLog ?? ''));
       }
-      if (!stale) setOverview({ready:true,failed:false,memory,sources,recentDays:[...new Set(recentDays)].sort().reverse().slice(0,7)});
+      if (!stale) { setNoticeRetry(false); setOverview({ready:true,failed:false,memory,sources,recentDays:[...new Set(recentDays)].sort().reverse().slice(0,7)}); }
     };
-    void load().catch(e => { if (!stale) { setError(diaryErrorText(t, e, appLocale())); setOverview(prev => ({...prev,ready:false,failed:true})); } });
+    void load().catch(e => { if (!stale) { setError(diaryErrorText(t, e, appLocale())); setNoticeRetry(false); setOverview(prev => ({...prev,ready:false,failed:true})); } });
     return () => { stale = true; };
   }, [folder, localFiles, month, revision, today, active]);
   useEffect(() => {
@@ -705,7 +706,8 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
     <p className="composer-hint">{busy ? t('diary.compose.workingOnDiary') : day ? t('diary.compose.writingToDay', { day: dayLabel(day) }) : t('diary.compose.localTimeHint')}</p>
   </div>;
   // #2456: nothing has loaded yet and the Diary's routes failed: say so, with Try again, rather than a page of empty cards and a raw server error.
-  if (overview.failed && !loadedOnce.current && !folder && !editor) return <DiaryNotice kind="unreachable" onRetry={() => { setError(''); bumpRevision(); }} />;
+  // `noticeRetry` keeps the notice (and the focused button) on screen from Try again until that read finishes.
+  if ((overview.failed || noticeRetry) && !loadedOnce.current && !folder && !editor) return <DiaryNotice kind="unreachable" onRetry={() => { setError(''); setNoticeRetry(true); bumpRevision(); }} />;
   return <main className="main diary-workspace" role={active ? undefined : 'none'}>
     <header className="chat-header diary-header"><div className="diary-breadcrumb"><button className="diary-home-link" disabled={busy} onClick={()=>editor?closeEditor():navigate(null)}>{t('diary.title')}</button>{month && <><span>/</span><button className="popup-tab" disabled={busy} onClick={()=>navigate(month)}>{monthLabel(month)}</button></>}{day && <span>/ {new Date(`${day}T12:00:00`).getDate()}</span>}</div><span className="diary-private">{t('diary.privateDiary')}</span></header>
     <div className="diary-layout" style={editor?{display:'none'}:undefined}><section className="diary-primary"><div className="diary-content-scroll" ref={scrollRef} onScroll={onScroll} onKeyDown={escapeDay}>

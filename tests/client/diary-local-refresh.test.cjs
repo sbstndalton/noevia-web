@@ -34,7 +34,7 @@ async function mounted(t, options = {}) {
     else if(url==='/api/diary/storage-status')data={mode:'legacy',backup:'not_configured'};
     else if(url==='/api/diary/source')data={months:[]};
     else if(url.startsWith('/api/diary/files'))data={files:[]};
-    else if(url==='/api/diary/today')data={todayLog:'',standingSections:{},memoryFiles:[]};
+    else if(url.startsWith('/api/diary/today'))data={todayLog:'',standingSections:{},memoryFiles:[]};
     else if(url.startsWith('/api/diary/exchanges'))data={exchanges:[]};
     else throw Error('unexpected synthetic GET '+url);
     return new w.Response(JSON.stringify(data),{headers:{'content-type':'application/json'}});

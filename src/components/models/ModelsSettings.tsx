@@ -133,7 +133,7 @@ export function ModelsSettings({ models, modelsLoaded, routes, projects, modelsE
     const selected = row.querySelector<HTMLElement>('[aria-selected="true"]');
     if (selected && row.scrollWidth > row.clientWidth) {
       const left = selected.offsetLeft - row.offsetLeft, right = left + selected.offsetWidth;
-      if (left < row.scrollLeft) row.scrollLeft = left - 8; else if (right > row.scrollLeft + row.clientWidth) row.scrollLeft = right - row.clientWidth + 8;
+      if (left < row.scrollLeft) row.scrollLeft = left - 32; else if (right > row.scrollLeft + row.clientWidth) row.scrollLeft = right - row.clientWidth + 32;
     }
     markTabOverflow();
     const watch = new ResizeObserver(markTabOverflow);
