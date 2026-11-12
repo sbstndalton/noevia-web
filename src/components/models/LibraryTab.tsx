@@ -13,7 +13,6 @@ import { useModelsChanged } from '../../models-changed';
 import { MiddleTruncate } from '../MiddleTruncate';
 import { AutoTune } from './AutoTune';
 import { isSystemModel } from '../../model-system';
-import { refusalText } from '../../model-refusal';
 import { isChatGenerationModel } from '../../model-kind';
 import { bytesToModelSizeGB, formatModelSizeGB } from '../../model-size';
 import { useT } from '../../i18n';
@@ -46,6 +45,24 @@ type Detail = FileEntry & { path: string; summary: { arch: string; general: Reco
 const TAG: Record<string, MessageKey> = { dense: 'mm.tag.dense', embedding: 'mm.tag.embeddings', embeddings: 'mm.tag.embeddings', rerank: 'mm.tag.reranking', reranking: 'mm.tag.reranking' };
 export const tagLabel = (t: (k: MessageKey) => string, label: string) => { const k = TAG[label.trim().toLowerCase()]; return k ? t(k) : label; };
 const BADGE: Record<string, MessageKey> = { coding: 'mm.badge.coding', writing: 'mm.badge.writing', reasoning: 'mm.badge.reasoning', tools: 'mm.badge.tools', vision: 'mm.badge.vision' };
+
+// noevia#2136: what this page says when the server refuses to load, unload or delete a model. The server's own sentence is English;
+// a refusal it labels with a known `code` (the model-in-use check, the local model's queue) reads in the interface language instead.
+const REFUSALS: Record<string, MessageKey> = {
+  model_in_use: 'mm.library.inUseRetry',
+  inference_queue_timeout: 'mm.library.gateRefused',
+  inference_queue_full: 'mm.library.gateRefused',
+  gate_busy: 'mm.library.gateRefused',
+  engine_switch_stuck: 'chat.failure.engineSwitchStuck',
+  engine_unavailable: 'chat.failure.engineUnavailable',
+  engine_busy: 'chat.failure.engineBusy',
+};
+/** The sentence for a refusal with a known code, or null (the caller shows the server's text for any other). */
+function refusalText(err: unknown, say: (key: MessageKey, params?: Record<string, string | number>) => string, model: string): string | null {
+  const code = (err as { code?: unknown } | null)?.code;
+  if (typeof code !== 'string' || !Object.prototype.hasOwnProperty.call(REFUSALS, code)) return null;
+  return say(REFUSALS[code], { model });
+}
 
 export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', filter = 'all' }: {
   onConfigure: (section: string) => void; onChanged: () => void;

@@ -7,8 +7,7 @@
 const nodeTest = require('node:test');
 const test = (name, fn) => nodeTest(name, { timeout: 30000 }, fn);
 const assert = require('node:assert/strict');
-const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
-const ts = require('typescript');
+const fs = require('node:fs'), path = require('node:path');
 const { JSDOM } = require('jsdom');
 const { build } = require('esbuild');
 const { catalogue, LOCALES } = require('./i18n-catalogue.cjs');
@@ -127,19 +126,16 @@ test('#2136 a refusal with no known code still shows the server text', async (t)
   assert.equal(m.alert(), 'Server English: something new.');
 });
 
-test('#2136 every locale words each refusal with the model name and no placeholder left', () => {
-  const src = fs.readFileSync(path.join(__dirname, '../../src/model-refusal.ts'), 'utf8');
-  const exports_ = {};
-  vm.runInNewContext(ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, { exports: exports_, Object });
+test('#2136 every refusal code maps to a key every locale words, with the model name where the sentence takes one', () => {
+  const src = fs.readFileSync(path.join(__dirname, '../../src/components/models/LibraryTab.tsx'), 'utf8');
+  const map = Object.fromEntries([...src.slice(src.indexOf('const REFUSALS'), src.indexOf('/** The sentence for a refusal')).matchAll(/(\w+): '([\w.]+)'/g)].map((m) => [m[1], m[2]]));
+  assert.deepEqual(Object.keys(map).sort(), ['engine_busy', 'engine_switch_stuck', 'engine_unavailable', 'gate_busy', 'inference_queue_full', 'inference_queue_timeout', 'model_in_use']);
   for (const locale of LOCALES) {
     const c = catalogue(locale);
-    const say = (key, params = {}) => String(c[key] ?? `MISSING ${key}`).replace(/\{(\w+)\}/g, (_, p) => (p in params ? params[p] : `{${p}}`));
-    for (const code of ['model_in_use', 'inference_queue_timeout', 'inference_queue_full', 'gate_busy', 'engine_switch_stuck', 'engine_unavailable', 'engine_busy']) {
-      const text = exports_.refusalText({ code }, say, MODEL);
-      assert.ok(text && !/MISSING|\{\w+\}/.test(text), `${locale} ${code}: ${text}`);
-      if (code === 'model_in_use') assert.ok(text.includes(MODEL), `${locale}: names the model`);
+    for (const [code, key] of Object.entries(map)) {
+      assert.ok(c[key], `${locale} ${code}: ${key} is worded`);
+      assert.doesNotMatch(c[key].replace(/\{model\}/g, ''), /\{\w+\}/, `${locale} ${key}: no other placeholder`);
     }
-    assert.equal(exports_.refusalText({ code: 'something_else' }, say, MODEL), null);
-    assert.equal(exports_.refusalText(new Error('x'), say, MODEL), null);
+    assert.match(c['mm.library.inUseRetry'], /\{model\}/, `${locale}: names the model`);
   }
 });
