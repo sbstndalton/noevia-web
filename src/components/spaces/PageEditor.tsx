@@ -22,7 +22,7 @@ import type { JSX } from 'react';
 import { useT } from '../../i18n';
 import type { Translate } from '../../i18n';
 import '../../i18n/coworkers';
-import { formatBytes } from '../../number-format';
+import { formatBinaryBytes } from '../../number-format';
 import { appLocale } from '../../user-preferences';
 import { PAGE_BYTES_MAX, PAGE_TITLE_MAX } from '../../spaces-limits';
 import type { SaveFault, SaveState } from '../../page-autosave';
@@ -40,11 +40,11 @@ export function faultText(t: Translate, fault: SaveFault | undefined, kept = tru
   if (fault.kind === 'problem') {
     if (fault.problem === 'title-empty') return t('spaces.problemTitleEmpty');
     if (fault.problem === 'title-long') return t('spaces.problemTitleLong', { max: PAGE_TITLE_MAX });
-    return t('spaces.problemTooLarge', { limit: formatBytes(PAGE_BYTES_MAX, appLocale()) });
+    return t('spaces.problemTooLarge', { limit: formatBinaryBytes(PAGE_BYTES_MAX, appLocale()) });
   }
   if (fault.kind === 'timeout') return t('spaces.saveTimeout') + tail;
   if (fault.kind === 'load-failed') return t('spaces.conflictLoadFailed');
-  if (fault.code === 'page_too_large') return t('spaces.problemTooLarge', { limit: formatBytes(PAGE_BYTES_MAX, appLocale()) });
+  if (fault.code === 'page_too_large') return t('spaces.problemTooLarge', { limit: formatBinaryBytes(PAGE_BYTES_MAX, appLocale()) });
   if (fault.code === 'not_found') return t('spaces.pageGone') + tail;
   return t('spaces.saveFailed') + tail;
 }
@@ -146,7 +146,8 @@ export function PageEditor({ spaceId, spaceName, page, fresh, onBack, onDeleted,
           <div className="space-banner is-error" role="alert">
             <p id={ids.fault}>{faultText(t, state.fault, kept)}</p>
             <div className="space-banner-actions">
-              {state.fault?.kind === 'server' && state.fault.code === 'not_found'
+              {state.fault?.kind === 'problem' ? null  // editing the text saves again by itself; a retry button could only fail the same way
+                : state.fault?.kind === 'server' && state.fault.code === 'not_found'
                 ? <button type="button" className="btn btn-primary" disabled={moving} onClick={() => void saveAsNew()}>{t('spaces.saveAsNew')}</button>
                 : <button type="button" className="btn btn-secondary" onClick={() => void resolved(controller.flush(true))}>{t('spaces.retrySave')}</button>}
             </div>
@@ -168,7 +169,7 @@ export function PageEditor({ spaceId, spaceName, page, fresh, onBack, onDeleted,
               <MarkdownPreview text={draft.content || t('spaces.emptyPreview')} />
             </div>}
         <div className="space-foot">
-          {nearLimit && <span className="space-size" role="status">{formatBytes(bytes, appLocale())} / {formatBytes(PAGE_BYTES_MAX, appLocale())}</span>}
+          {nearLimit && <span className="space-size" role="status">{formatBinaryBytes(bytes, appLocale())} / {formatBinaryBytes(PAGE_BYTES_MAX, appLocale())}</span>}
           <button type="button" className="btn btn-secondary space-danger" onClick={() => setDeleting(true)}>
             <ShellIcon name="trash" size={16} /><span>{t('spaces.deletePage')}</span>
           </button>
