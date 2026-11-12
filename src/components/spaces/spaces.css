@@ -69,6 +69,7 @@
 .space-banner.is-error { border-color: var(--status-danger); }
 .space-banner h2 { margin: 0 0 var(--space-2); font-size: var(--text-headline); font-weight: var(--weight-title); }
 .space-banner p { margin: 0 0 var(--space-3); font-size: var(--text-callout); line-height: var(--leading-body); }
+.space-banner .space-banner-note { margin: var(--space-2) 0 0; font-size: var(--text-footnote); color: var(--text-secondary); }
 .space-banner-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
 .space-modes { display: inline-flex; margin-bottom: var(--space-3); }

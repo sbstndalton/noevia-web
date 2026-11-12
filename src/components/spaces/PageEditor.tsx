@@ -141,6 +141,7 @@ export function PageEditor({ spaceId, spaceName, page, fresh, onBack, onDeleted,
               <button type="button" className="btn btn-primary" onClick={() => void resolved(controller.keepMine())}>{t('spaces.keepMine')}</button>
               <button type="button" className="btn btn-secondary" onClick={() => void resolved(controller.takeTheirs())}>{t('spaces.takeTheirs')}</button>
             </div>
+            <p className="space-banner-note">{t('spaces.conflictNote')}</p>
           </div>
         )}
         {state.status === 'error' && (

@@ -75,6 +75,15 @@ run('spaces-editor-2446', Number(process.env.QA_PORT || 32448), async (check, br
         assert.equal(await page.evaluate(() => document.activeElement?.tagName), 'TEXTAREA');
         await page.keyboard.type(' plus');
         assert.equal(await body(page).inputValue(), 'my edit plus', 'typing carries on through a conflict');
+        // #2488: the banner says what each choice does to the newer version, and that nothing changes until a choice is made.
+        const banner = page.getByRole('alert').filter({ hasText: 'This page changed somewhere else' });
+        await banner.getByText('changed somewhere else after you opened it', { exact: false }).waitFor({ timeout: 3000 });
+        await banner.getByRole('button', { name: 'Keep mine: replace the newer version', exact: true }).waitFor({ timeout: 3000 });
+        await banner.getByRole('button', { name: 'Take theirs: discard my changes here', exact: true }).waitFor({ timeout: 3000 });
+        assert.equal(await banner.getByText('Nothing is replaced until you choose.').count(), 1);
+        assert.equal(await banner.getByText('Nothing was overwritten').count(), 0, 'the old merge-sounding line is gone');
+        const box = await banner.getByRole('button', { name: /^Keep mine/ }).boundingBox();
+        assert.ok(box.width <= view[0], 'the Keep mine button fits the screen');
         await shot(page, `editor-conflict-${view[0]}-${view[2]}`);
         await page.getByRole('button', { name: 'Keep mine' }).click();
         await isState(page, 'Saved').waitFor({ timeout: 6000 });
