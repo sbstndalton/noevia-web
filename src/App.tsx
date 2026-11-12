@@ -1979,7 +1979,7 @@ export default function App(): JSX.Element {
           project={activeProject ?? null}
           onProjectChanged={refreshProjects}
           chatId={view.chatId}
-          title={activeChatMeta?.title ?? (activeMode === 'cowork' ? tr('sidebar.newTask') : tr('common.newChat'))}
+          title={view.coworkerId ? tr('sidebar.coworkerConversation') : activeChatMeta?.title ?? (activeMode === 'cowork' ? tr('sidebar.newTask') : tr('common.newChat'))}
           projectName={activeProject?.name ?? null}
           modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? chatGenerationModels(models) : null, autoRolesConfigured, defaultProviderId)}
           installedModels={modelsLoaded && !modelsError ? models : null}

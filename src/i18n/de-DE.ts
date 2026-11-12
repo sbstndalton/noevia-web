@@ -76,6 +76,7 @@ export const DE_DE: Catalogue = {
   'sidebar.diary': "Tagebuch",
   'sidebar.spaces': "Bereiche",
   'sidebar.coworkers': "Mitarbeiter",
+  'sidebar.coworkerConversation': "Gespräch",
   'sidebar.mcpServersBuiltIn': "{count} Server, integriert",
   'sidebar.mcpServersPartlyAdded': "{count} Server ({added} hinzugefügt)",
   'sidebar.mcpBuiltInTooltip': "Eingebaut, vom System eingerichtet statt von einem Administrator hinzugefügt. Anpassen → MCP-Server → Hinzugefügt zeigt nur Server, die ein Administrator dort hinzugefügt hat.",

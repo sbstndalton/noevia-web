@@ -37,7 +37,7 @@ run('coworkers-2446', Number(process.env.QA_PORT || 32450), async (check, browse
         await dlg.getByText('Give the coworker a name.').waitFor();
         assert.equal(sp.calls.filter((c) => c.method === 'POST').length, 0, 'an empty name sends nothing');
         await dlg.getByLabel('Name', { exact: true }).fill('QA Researcher');
-        await dlg.getByRole('button', { name: 'Use 🔎' }).click();
+        await dlg.getByRole('button', { name: 'Use ✦' }).click();
         await dlg.getByRole('button', { name: 'Blue' }).click();
         await dlg.getByLabel('Instructions').fill('Answer in two sentences.');
         await dlg.getByText('24 of 8000').waitFor();
@@ -50,7 +50,7 @@ run('coworkers-2446', Number(process.env.QA_PORT || 32450), async (check, browse
         await dlg.getByRole('button', { name: 'Create' }).click();
         await page.getByRole('heading', { name: 'QA Researcher', level: 1 }).waitFor({ timeout: 10000 });
         const post = sp.calls.find((c) => c.method === 'POST').body;
-        assert.deepEqual({ name: post.name, glyph: post.glyph, tint: post.tint, brief: post.brief, spaces: post.spaces.length, hasDefault: !!post.defaultSpace, toolboxes: post.toolboxes }, { name: 'QA Researcher', glyph: '🔎', tint: 'primary', brief: 'Answer in two sentences.', spaces: 2, hasDefault: true, toolboxes: undefined });
+        assert.deepEqual({ name: post.name, glyph: post.glyph, tint: post.tint, brief: post.brief, spaces: post.spaces.length, hasDefault: !!post.defaultSpace, toolboxes: post.toolboxes }, { name: 'QA Researcher', glyph: '✦', tint: 'primary', brief: 'Answer in two sentences.', spaces: 2, hasDefault: true, toolboxes: undefined });
         assert.match(new URL(page.url()).pathname, /^\/coworkers\/c0c0c0c0-/);
         await page.getByText('Can write to 2 Spaces · Default: QA-2446 Notes').waitFor();
         await page.getByText('The conversation is not ready yet').waitFor();
@@ -101,13 +101,13 @@ run('coworkers-2446', Number(process.env.QA_PORT || 32450), async (check, browse
     });
 
     await check(`${tag}: a 409 reloads the record and keeps the person's edits`, async () => {
-      const { page, sp, extra } = await setup(browser, origin, view, { specialists: (s) => s.add({ glyph: '🔎' }), route: (c) => `/coworkers/${c.id}` });
+      const { page, sp, extra } = await setup(browser, origin, view, { specialists: (s) => s.add({ glyph: '✦' }), route: (c) => `/coworkers/${c.id}` });
       try {
         await page.getByRole('heading', { name: 'QA Researcher', level: 1 }).waitFor({ timeout: 10000 });
         await page.getByRole('button', { name: 'Settings for QA Researcher' }).click();
         const dlg = sheet(page, 'Coworker settings');
         await dlg.waitFor();
-        sp.changeElsewhere(extra.id, { glyph: '🧭', brief: 'Changed by someone else.' });
+        sp.changeElsewhere(extra.id, { glyph: '❖', brief: 'Changed by someone else.' });
         await dlg.getByLabel('Name', { exact: true }).fill('QA Reader');
         await dlg.getByRole('button', { name: 'Save' }).click();
         await dlg.getByText('This coworker was changed somewhere else.', { exact: false }).waitFor({ timeout: 8000 });
@@ -120,7 +120,7 @@ run('coworkers-2446', Number(process.env.QA_PORT || 32450), async (check, browse
         await dlg.waitFor({ state: 'detached', timeout: 8000 });
         assert.equal(sp.list[0].name, 'QA Reader');
         assert.equal(sp.list[0].brief, 'Changed by someone else.');
-        assert.equal(sp.list[0].glyph, '🧭');
+        assert.equal(sp.list[0].glyph, '❖');
         const second = patches(sp)[1].body;
         assert.deepEqual(second, { revision: sp.revision - 1, name: 'QA Reader' });
       } finally { await page.close(); }
@@ -148,7 +148,7 @@ run('coworkers-2446', Number(process.env.QA_PORT || 32450), async (check, browse
     });
 
     await check(`${tag}: with a conversation the chat view opens under the coworker's header, at the coworker's address`, async () => {
-      const { page } = await setup(browser, origin, view, { specialists: (s, spaces) => s.add({ name: 'QA Talker', glyph: '✍️', tint: 'success', spaces: [spaces[0].id], defaultSpace: spaces[0].id, projectId: 'specialist-qa-1', chatId: 'chat-qa-1' }), route: (c) => `/coworkers/${c.id}` });
+      const { page } = await setup(browser, origin, view, { specialists: (s, spaces) => s.add({ name: 'QA Talker', glyph: '✎', tint: 'success', spaces: [spaces[0].id], defaultSpace: spaces[0].id, projectId: 'specialist-qa-1', chatId: 'chat-qa-1' }), route: (c) => `/coworkers/${c.id}` });
       try {
         await page.getByRole('heading', { name: 'QA Talker', level: 1 }).waitFor({ timeout: 15000 });
         await page.getByRole('button', { name: 'Send', exact: true }).waitFor({ timeout: 15000 });

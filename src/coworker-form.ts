@@ -11,8 +11,8 @@ export const TINTS = ['primary', 'secondary', 'tertiary', 'success', 'warning', 
 export type Tint = (typeof TINTS)[number];
 export const tintOf = (value: string): Tint => (TINTS as readonly string[]).includes(value) ? value as Tint : 'secondary';
 
-/** A few glyphs to start from; the field takes anything up to the limit. */
-export const GLYPHS = ['✨', '🔎', '✍️', '📚', '🧭', '🛠️', '📊', '🗂️', '💡', '🧪', '🌱', '🎯'] as const;
+/** A few glyphs to start from: plain symbols that every system font draws the same way; the field takes anything up to the limit (an emoji too). */
+export const GLYPHS = ['✦', '✎', '❖', '◆', '●', '▲', '★', '☾', '☀', '♥', '⚑', '✿'] as const;
 
 export const countChars = (text: string): number => [...text].length;
 /** What a coworker with no glyph shows: the first letter of its name. */

@@ -76,6 +76,7 @@ export const NB_NO: Catalogue = {
   'sidebar.diary': "Dagbok",
   'sidebar.spaces': "Områder",
   'sidebar.coworkers': "Kolleger",
+  'sidebar.coworkerConversation': "Samtale",
   'sidebar.mcpServersBuiltIn': "{count} tjenere, innebygd",
   'sidebar.mcpServersPartlyAdded': "{count} tjenere ({added} lagt til)",
   'sidebar.mcpBuiltInTooltip': "Innebygd, satt opp av systemet i stedet for lagt til av en administrator. Tilpass → MCP-servere → Lagt til viser bare tjenere en administrator har lagt til der.",

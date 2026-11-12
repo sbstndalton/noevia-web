@@ -76,6 +76,7 @@ export const FR_FR: Catalogue = {
   'sidebar.diary': "Journal",
   'sidebar.spaces': "Espaces",
   'sidebar.coworkers': "Collègues",
+  'sidebar.coworkerConversation': "Conversation",
   'sidebar.mcpServersBuiltIn': "{count} serveurs, intégrés",
   'sidebar.mcpServersPartlyAdded': "{count} serveurs ({added} ajoutés)",
   'sidebar.mcpBuiltInTooltip': "Intégré, configuré par le système plutôt qu’ajouté par un administrateur. Personnaliser → Serveurs MCP → Ajouté n’affiche que les serveurs qu’un administrateur y a ajoutés.",

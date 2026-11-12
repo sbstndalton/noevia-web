@@ -76,6 +76,7 @@ export const NL_NL: Catalogue = {
   'sidebar.diary': "Dagboek",
   'sidebar.spaces': "Ruimtes",
   'sidebar.coworkers': "Collega’s",
+  'sidebar.coworkerConversation': "Gesprek",
   'sidebar.mcpServersBuiltIn': "{count} servers, ingebouwd",
   'sidebar.mcpServersPartlyAdded': "{count} servers ({added} toegevoegd)",
   'sidebar.mcpBuiltInTooltip': "Ingebouwd, ingesteld door het systeem in plaats van toegevoegd door een beheerder. Aanpassen → MCP-servers → Toegevoegd toont alleen servers die een beheerder daar heeft toegevoegd.",

@@ -27,7 +27,7 @@
 
 .cw-settings { display: grid; gap: var(--space-2); max-width: 560px; max-height: calc(100dvh - var(--space-8)); overflow-y: auto; }
 .cw-settings :is(input:not([type='checkbox']), select, textarea) { box-sizing: border-box; width: 100%; min-height: var(--target-min); padding-inline: var(--space-3); border: 1px solid var(--control-border); border-radius: var(--radius-input); background: var(--bg-canvas); color: var(--text-primary); font-family: var(--font-ui); font-size: var(--text-input); }
-.cw-settings-head { display: flex; align-items: center; gap: var(--space-3); }
+.cw-settings-head { display: flex; align-items: center; justify-content: flex-start; gap: var(--space-3); }
 .cw-settings-head h2 { margin: 0; }
 .cw-brief { min-height: 160px; padding-block: var(--space-3); resize: vertical; line-height: var(--leading-body); }
 .cw-fieldset { margin: var(--space-2) 0 0; padding: 0; border: 0; min-width: 0; display: grid; gap: var(--space-2); }

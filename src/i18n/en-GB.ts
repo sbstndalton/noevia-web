@@ -79,6 +79,7 @@ export const EN_GB = {
   'sidebar.diary': 'Diary',
   'sidebar.spaces': 'Spaces',
   'sidebar.coworkers': 'Coworkers',
+  'sidebar.coworkerConversation': 'Conversation',
   // #366: the footer's server count and Plugins → Added count different things — say so rather
   // than let them look contradictory. Always shown with more than one server, so no singular form.
   'sidebar.mcpServersBuiltIn': "{count} servers, built in",

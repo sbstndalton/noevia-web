@@ -128,7 +128,7 @@ function addSpecialists(st, { capability = 'on', toolsSupported = false } = {}) 
   st.sp = { capability, toolsSupported, revision: 1, list: [], calls: [], next: 1 };
   const sp = st.sp;
   sp.add = (over = {}) => {
-    const c = { id: `c0c0c0c0-0000-4000-8000-${String(sp.next++).padStart(12, '0')}`, name: 'QA Researcher', glyph: '🔎', tint: 'info', brief: 'Be brief.', projectId: null, chatId: null, spaces: [], defaultSpace: null, createdAt: Date.now(), updatedAt: Date.now(), ...(toolsSupported ? { toolboxes: [] } : {}), ...over };
+    const c = { id: `c0c0c0c0-0000-4000-8000-${String(sp.next++).padStart(12, '0')}`, name: 'QA Researcher', glyph: '✦', tint: 'info', brief: 'Be brief.', projectId: null, chatId: null, spaces: [], defaultSpace: null, createdAt: Date.now(), updatedAt: Date.now(), ...(toolsSupported ? { toolboxes: [] } : {}), ...over };
     sp.list.push(c); sp.revision++; return c;
   };
   /** Another tab changes the record behind the open sheet. */

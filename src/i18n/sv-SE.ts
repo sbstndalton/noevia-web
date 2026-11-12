@@ -76,6 +76,7 @@ export const SV_SE: Catalogue = {
   'sidebar.diary': "Dagbok",
   'sidebar.spaces': "Utrymmen",
   'sidebar.coworkers': "Kollegor",
+  'sidebar.coworkerConversation': "Konversation",
   'sidebar.mcpServersBuiltIn': "{count} servrar, inbyggda",
   'sidebar.mcpServersPartlyAdded': "{count} servrar ({added} tillagda)",
   'sidebar.mcpBuiltInTooltip': "Inbyggd, konfigurerad av systemet i stället för tillagd av en administratör. Anpassa → MCP-servrar → Tillagd visar bara servrar som en administratör har lagt till där.",
