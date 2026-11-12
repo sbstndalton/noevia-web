@@ -95,6 +95,19 @@ test('relative times follow the locale and accept seconds or milliseconds', () =
   assert.equal(fmt.pageName('  ', 'Untitled'), 'Untitled');
 });
 
+test('the Coworkers paths parse, round-trip, and a coworker conversation keeps its own address', () => {
+  const id = '3f2b8c1e-0d4a-4c5e-9a77-1b2c3d4e5f60';
+  assert.deepEqual(plain(routes.matchPath('/coworkers')), { kind: 'coworkers' });
+  assert.deepEqual(plain(routes.matchPath(`/coworkers/${id}`)), { kind: 'coworkers', id });
+  for (const r of ['/coworkers', `/coworkers/${id}`]) assert.equal(routes.toPath(routes.matchPath(r)), r);
+  assert.equal(routes.matchPath(`/coworkers/${id}/x`), null);
+  assert.equal(routes.matchPath('/coworkers/a b'), null);
+  const nav = (view) => ({ view, settingsOpen: false, settingsSection: 'appearance', codeMode: false });
+  assert.deepEqual(plain(routes.routeForState(nav({ kind: 'chat', chatId: 'chat-1', projectId: 'specialist-1', coworkerId: id }))), { kind: 'coworkers', id });
+  assert.deepEqual(plain(routes.routeForState(nav({ kind: 'chat', chatId: 'chat-1', projectId: null }))), { kind: 'chat', chatId: 'chat-1' });
+  assert.deepEqual(plain(routes.routeForState(nav({ kind: 'coworkers', id }))), { kind: 'coworkers', id });
+});
+
 test('a title is counted as typed: 200 characters and a trailing space is too long', () => {
   assert.equal(limits.draftProblem({ title: 't'.repeat(200) + ' ', content: '' }), 'title-long');
   assert.equal(limits.draftProblem({ title: ' ' + 't'.repeat(199), content: '' }), null);

@@ -122,4 +122,67 @@ async function openNav(page) {
   if (await toggle.isVisible().catch(() => false)) await toggle.click();
 }
 
-module.exports = { ...base, VIEWS, createSpacesServer, mountSpaces, open, openNav, sha };
+/** Adds the coworker routes (sbstndalton/noevia-rs#445 shapes) to a Spaces server: `{revision, specialists}`, `{revision, specialist}`,
+ *  PATCH/DELETE checked against the list revision, unknown fields refused. `toolsSupported` puts `toolboxes` on the record. */
+function addSpecialists(st, { capability = 'on', toolsSupported = false } = {}) {
+  st.sp = { capability, toolsSupported, revision: 1, list: [], calls: [], next: 1 };
+  const sp = st.sp;
+  sp.add = (over = {}) => {
+    const c = { id: `c0c0c0c0-0000-4000-8000-${String(sp.next++).padStart(12, '0')}`, name: 'QA Researcher', glyph: '✦', tint: 'info', brief: 'Be brief.', projectId: null, chatId: null, spaces: [], defaultSpace: null, createdAt: Date.now(), updatedAt: Date.now(), ...(toolsSupported ? { toolboxes: [] } : {}), ...over };
+    sp.list.push(c); sp.revision++; return c;
+  };
+  /** Another tab changes the record behind the open sheet. */
+  sp.changeElsewhere = (id, patch) => { const c = sp.list.find((x) => x.id === id); Object.assign(c, patch, { updatedAt: Date.now() }); sp.revision++; return c; };
+  const ALLOWED = ['name', 'glyph', 'tint', 'brief', 'spaces', 'defaultSpace', ...(toolsSupported ? ['toolboxes'] : [])];
+  sp.handle = async (route) => {
+    const req = route.request(), url = new URL(req.url()), method = req.method();
+    const id = url.pathname.replace(/^\/api\/specialists\/?/, '').split('/').filter(Boolean)[0];
+    const json = (b, status = 200) => route.fulfill({ status, json: b });
+    const body = method === 'GET' ? null : (() => { try { return JSON.parse(req.postData() || 'null'); } catch { return null; } })();
+    sp.calls.push({ method, path: url.pathname, body });
+    if (sp.capability === 'absent') return json({ error: 'Not found' }, 404);
+    if (sp.capability === 'broken') return json({ error: 'boom' }, 500);
+    const bad = (m) => json({ error: m, code: 'invalid_request' }, 400);
+    const unknown = (b) => Object.keys(b || {}).filter((k) => k !== 'revision' && !ALLOWED.includes(k));
+    if (!id) {
+      if (method === 'GET') return json({ revision: sp.revision, specialists: sp.list });
+      if (method === 'POST') {
+        if (unknown(body).length) return bad(`unknown field ${unknown(body)[0]}`);
+        if (!body?.name?.trim() || [...body.name.trim()].length > 60) return bad('name must be 1 to 60 characters');
+        if ([...(body.brief || '')].length > 8000) return bad('brief too long');
+        if (sp.list.length >= 24) return json({ error: 'At most 24 coworkers', code: 'specialist_limit' }, 409);
+        const made = sp.add({ name: body.name.trim(), glyph: body.glyph || '', tint: body.tint || '', brief: body.brief || '', spaces: body.spaces || [], defaultSpace: body.defaultSpace ?? null });
+        return json({ revision: sp.revision, specialist: made }, 201);
+      }
+    }
+    const c = sp.list.find((x) => x.id === id);
+    if (!c) return json({ error: 'Not found', code: 'not_found' }, 404);
+    if (method === 'GET') return json({ revision: sp.revision, specialist: c });
+    if (method === 'PATCH') {
+      if (unknown(body).length) return bad(`unknown field ${unknown(body)[0]}`);
+      if (body?.revision !== sp.revision) return json({ error: 'Changed since you loaded it', code: 'stale_revision', revision: sp.revision }, 409);
+      if ('name' in body && (!body.name.trim() || [...body.name].length > 60)) return bad('name must be 1 to 60 characters');
+      if ('brief' in body && [...body.brief].length > 8000) return bad('brief too long');
+      const { revision, ...changes } = body; void revision;
+      Object.assign(c, changes, { updatedAt: Date.now() }); sp.revision++;
+      return json({ revision: sp.revision, specialist: c });
+    }
+    if (method === 'DELETE') {
+      if (body?.revision !== sp.revision) return json({ error: 'Changed since you loaded it', code: 'stale_revision', revision: sp.revision }, 409);
+      sp.list = sp.list.filter((x) => x.id !== id); sp.revision++; return json({ ok: true, revision: sp.revision });
+    }
+    return json({ error: 'Not found' }, 404);
+  };
+  return sp;
+}
+
+async function mountSpecialists(page, st) {
+  await page.route('**/api/specialists**', (route) => st.sp.handle(route));
+  // The shell's tool list, for the "Allowed tools" section (synthetic groups).
+  await page.route('**/api/toolboxes', (route) => route.fulfill({ json: { toolboxes: [
+    { id: 'qa-files', label: 'QA files', description: 'Read and write QA files.', source: 'mcp', toolCount: 3, estTokens: 100 },
+    { id: 'qa-web', label: 'QA web', description: 'Look things up on the web.', source: 'mcp', toolCount: 2, estTokens: 80 },
+  ], mcp: { enabled: false } } }));
+}
+
+module.exports = { ...base, VIEWS, createSpacesServer, mountSpaces, addSpecialists, mountSpecialists, open, openNav, sha };

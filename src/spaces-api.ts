@@ -12,11 +12,12 @@ export interface PageList { pages: PageRow[]; truncated: boolean }
 /** A refused request. `code` is the server's stable key (`stale_revision`, `page_too_large`, …);
  *  on a 409 `version` is the content's current version, which "keep mine" saves on top of. */
 export class SpacesError extends Error {
-  constructor(message: string, readonly status: number, readonly code?: string, readonly version?: string) { super(message); this.name = 'SpacesError'; }
+  /** `revision` is a list's current revision on a 409 `stale_revision` of a list write. */
+  constructor(message: string, readonly status: number, readonly code?: string, readonly version?: string, readonly revision?: number) { super(message); this.name = 'SpacesError'; }
 }
 
-const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
-const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+export const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+export const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 
 export function parseSpace(v: unknown): Space {
   if (!isObject(v) || typeof v.id !== 'string' || typeof v.name !== 'string') throw new SpacesError('Space response was invalid.', 200);
@@ -52,8 +53,9 @@ export function parsePageList(v: unknown): PageList {
   return { pages: v.pages.map(parsePageRow), truncated: v.truncated === true };
 }
 
-async function call(path: string, init: { method?: string; body?: unknown; signal?: AbortSignal } = {}): Promise<unknown> {
-  const response = await apiFetch(`/api/spaces${path}`, {
+/** One JSON call under `base` (`/api/spaces`, `/api/specialists`): the same errors and the same body rules for both areas. */
+export async function areaRequest(base: string, path: string, init: { method?: string; body?: unknown; signal?: AbortSignal } = {}): Promise<unknown> {
+  const response = await apiFetch(`${base}${path}`, {
     method: init.method ?? 'GET', signal: init.signal,
     ...(init.body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(init.body) }),
   });
@@ -61,10 +63,11 @@ async function call(path: string, init: { method?: string; body?: unknown; signa
   if (!response.ok) {
     const b = isObject(body) ? body : {};
     throw new SpacesError(typeof b.error === 'string' && b.error ? b.error : `Request failed (${response.status}).`, response.status,
-      typeof b.code === 'string' ? b.code : undefined, typeof b.version === 'string' ? b.version : undefined);
+      typeof b.code === 'string' ? b.code : undefined, typeof b.version === 'string' ? b.version : undefined, typeof b.revision === 'number' ? b.revision : undefined);
   }
   return body;
 }
+const call = (path: string, init: { method?: string; body?: unknown; signal?: AbortSignal } = {}) => areaRequest('/api/spaces', path, init);
 
 const enc = encodeURIComponent;
 
