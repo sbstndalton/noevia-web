@@ -217,13 +217,14 @@ export function ToolCalls({ calls }: { calls: ToolCallView[] }): JSX.Element {
                     {c.args && <><span className="tool-call-label">{t('chat.toolCalls.arguments')}</span><pre>{pretty(c.args)}</pre></>}
                     {c.result !== undefined && <><span className="tool-call-label">{t('chat.toolCalls.result')}</span><pre>{c.result || t('chat.toolCalls.empty')}</pre></>}
                   </details>
-                  {c.name === PAGE_SAVE_TOOL && state === 'done' && <SavedPageChip result={c.result}/>}
                 </li>
               );
             })}
           </ol>
         </details>
       )}
+      {/* #2446: the pages a coworker saved, outside the folded list so the way to the page is always in view. */}
+      {settled.map((c, i) => c.name === PAGE_SAVE_TOOL && toolCallRowState(c) === 'done' ? <SavedPageChip key={`saved-${i}`} result={c.result}/> : null)}
     </div>
   );
 }
