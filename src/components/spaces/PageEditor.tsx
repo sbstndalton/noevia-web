@@ -1,9 +1,22 @@
-// The page editor of a Space (sbstndalton/noevia#2446): a title, Markdown text with a preview, and
-// an autosave that says what it is doing. The page chrome (title above the text, a saved/saving
-// state beside it, conflict choices) follows OpenDots' page editor; the text surface is ours (a
-// textarea and our Markdown preview) and the save logic is src/page-autosave.ts.
-// Layout and state handling adapted from CopilotKit/OpenDots@46eaf96c9e3802adc972ceafd8f20f99bda34e70,
-// src/client/PageDocument.tsx (MIT, Copyright (c) Atai Barkai; notice in src/page-autosave.ts).
+// The page editor of a Space (sbstndalton/noevia#2446): a title, Markdown text with a preview, and an
+// autosave that says what it is doing; the save logic is src/page-autosave.ts.
+//
+// Adapted from CopilotKit/OpenDots@46eaf96c9e3802adc972ceafd8f20f99bda34e70, src/client/PageDocument.tsx (MIT, Copyright (c) Atai Barkai):
+// the page chrome (title above the text, a saved/saving state beside it, conflict choices). The text
+// surface is ours (a textarea and our Markdown preview). The upstream notice follows.
+//   The MIT License
+//   Copyright (c) Atai Barkai
+//   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+//   associated documentation files (the "Software"), to deal in the Software without restriction,
+//   including without limitation the rights to use, copy, modify, merge, publish, distribute,
+//   sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+//   furnished to do so, subject to the following conditions: The above copyright notice and this
+//   permission notice shall be included in all copies or substantial portions of the Software.
+//   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+//   NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+//   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+//   DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import { useEffect, useId, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { useT } from '../../i18n';
@@ -57,11 +70,10 @@ export function PageEditor({ spaceId, spaceName, page, fresh, onBack, onDeleted 
   const ids = { title: useId(), content: useId(), fault: useId() };
   const draft = state.draft ?? { title: page.title, content: page.content };
 
-  // Focus lands on the page when it opens (the title field for a page just created) and on the
-  // conflict choices when one appears, so a keyboard or screen-reader user is not left behind.
+  // Focus lands on the page when it opens (the title field for a page just created). A conflict or a
+  // failed save appears while the person is typing, so it never takes focus (that would swallow their
+  // next keystrokes); it is announced as an alert instead, and sits before the text in reading order.
   useEffect(() => { (fresh ? titleInput.current : heading.current)?.focus(); }, [fresh]);
-  const conflictRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (state.status === 'conflict') conflictRef.current?.focus(); }, [state.status]);
 
   // Closing or reloading the tab with something unsaved asks first (the draft is also kept here).
   useEffect(() => {
@@ -105,7 +117,7 @@ export function PageEditor({ spaceId, spaceName, page, fresh, onBack, onDeleted 
         {state.restored && <p className="space-note" role="status">{t('spaces.restoredNote')}</p>}
 
         {state.status === 'conflict' && (
-          <div className="space-banner is-conflict" role="alert" tabIndex={-1} ref={conflictRef}>
+          <div className="space-banner is-conflict" role="alert">
             <h2>{t('spaces.conflictTitle')}</h2>
             <p>{t('spaces.conflictBody')}</p>
             {state.fault?.kind === 'load-failed' && <p id={ids.fault}>{t('spaces.conflictLoadFailed')}</p>}

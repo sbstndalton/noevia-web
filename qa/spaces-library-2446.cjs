@@ -26,6 +26,8 @@ run('spaces-library-2446', Number(process.env.QA_PORT || 32447), async (check, b
         const dialog = page.getByRole('dialog', { name: 'New space' });
         await dialog.waitFor();
         // The limit is a count, and an empty name is refused before any request.
+        await page.waitForTimeout(400);
+        await shot(page, `dialog-new-space-${view[0]}-${view[2]}`);
         await dialog.getByRole('button', { name: 'Create' }).click();
         await dialog.getByText('Give the Space a name.').waitFor();
         assert.equal(server.calls.filter((c) => c.method === 'POST').length, 0);
@@ -46,7 +48,7 @@ run('spaces-library-2446', Number(process.env.QA_PORT || 32447), async (check, b
         assert.equal(server.spaces[0].name, 'QA-2446 Renamed');
         assert.equal(server.calls.find((c) => c.method === 'PATCH').body.revision >= 1, true, 'the list revision travels with the write');
         // An empty Space deletes after one confirmation, without withPages.
-        await page.getByRole('button', { name: 'Delete', exact: true }).first().click();
+        await page.getByRole('button', { name: 'Delete: QA-2446 Renamed' }).click();
         const confirm = page.getByRole('dialog', { name: 'Delete QA-2446 Renamed?' });
         await confirm.getByText('This Space has no pages.').waitFor();
         await confirm.getByRole('button', { name: 'Delete Space' }).click();
@@ -71,6 +73,7 @@ run('spaces-library-2446', Number(process.env.QA_PORT || 32447), async (check, b
         await page.getByRole('button', { name: 'Delete: QA-2446 Full' }).click();
         const confirm = page.getByRole('dialog', { name: 'Delete QA-2446 Full?' });
         await confirm.getByText('This Space still has pages. Deleting it deletes them too, and that cannot be undone.').waitFor();
+        await page.waitForTimeout(400);
         await shot(page, `delete-with-pages-${view[0]}-${view[2]}`);
         await confirm.getByRole('button', { name: 'Delete Space' }).click();
         await page.getByRole('button', { name: 'Open QA-2446 Full' }).waitFor({ state: 'detached', timeout: 10000 });

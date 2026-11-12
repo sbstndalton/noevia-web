@@ -71,12 +71,14 @@ run('spaces-editor-2446', Number(process.env.QA_PORT || 32448), async (check, br
         await isState(page, 'Needs your decision').waitFor();
         assert.equal(server.pages.get(space.id)[0].content, 'their first edit', 'the newer text is untouched');
         assert.equal((await draftKeys(page)).length, 1, 'the draft is kept on this device');
-        // Focus moved to the choices so a keyboard user lands on them.
-        assert.equal(await page.evaluate(() => document.activeElement?.className.includes('space-banner')), true);
+        // The conflict appears while the person may be typing: it must not take focus from the text.
+        assert.equal(await page.evaluate(() => document.activeElement?.tagName), 'TEXTAREA');
+        await page.keyboard.type(' plus');
+        assert.equal(await body(page).inputValue(), 'my edit plus', 'typing carries on through a conflict');
         await shot(page, `editor-conflict-${view[0]}-${view[2]}`);
         await page.getByRole('button', { name: 'Keep mine' }).click();
         await isState(page, 'Saved').waitFor({ timeout: 6000 });
-        assert.equal(server.pages.get(space.id)[0].content, 'my edit');
+        assert.equal(server.pages.get(space.id)[0].content, 'my edit plus');
         assert.equal(puts(server).filter((c) => c.body.version === server.pages.get(space.id)[0].version).length, 0);
         assert.deepEqual(await draftKeys(page), []);
         // Second conflict: take theirs.
@@ -123,6 +125,7 @@ run('spaces-editor-2446', Number(process.env.QA_PORT || 32448), async (check, br
         await page.getByRole('button', { name: 'QA-2446 Space' }).click();
         const dialog = page.getByRole('dialog', { name: 'Leave without saving?' });
         await dialog.waitFor();
+        await page.waitForTimeout(400);
         await shot(page, `editor-leave-${view[0]}-${view[2]}`);
         await dialog.getByRole('button', { name: 'Cancel' }).click();
         assert.equal(await body(page).inputValue(), 'unsaved text');

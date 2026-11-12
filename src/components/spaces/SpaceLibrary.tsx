@@ -1,6 +1,21 @@
-// The library of Spaces: a grid of cards, create, rename, delete. Layout adapted from
-// CopilotKit/OpenDots@46eaf96c9e3802adc972ceafd8f20f99bda34e70, src/client/SpaceNav.tsx and
-// src/client/SpaceLibrary.tsx (MIT, Copyright (c) Atai Barkai; notice in src/page-autosave.ts).
+// The library of Spaces: a grid of cards, create, rename, delete.
+//
+// Adapted from CopilotKit/OpenDots@46eaf96c9e3802adc972ceafd8f20f99bda34e70, src/client/SpaceNav.tsx and src/client/SpaceLibrary.tsx
+// (MIT, Copyright (c) Atai Barkai): the card grid, the empty and error states and the page header
+// pattern. The data, i18n, design tokens and accessibility are ours. The upstream notice follows.
+//   The MIT License
+//   Copyright (c) Atai Barkai
+//   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+//   associated documentation files (the "Software"), to deal in the Software without restriction,
+//   including without limitation the rights to use, copy, modify, merge, publish, distribute,
+//   sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+//   furnished to do so, subject to the following conditions: The above copyright notice and this
+//   permission notice shall be included in all copies or substantial portions of the Software.
+//   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+//   NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+//   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+//   DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import { useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { useT } from '../../i18n';

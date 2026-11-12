@@ -17,9 +17,11 @@
 .space-icon-btn { min-width: var(--target-min); padding-inline: var(--space-3); }
 
 .space-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
-.space-search { position: relative; flex: 1 1 220px; display: flex; align-items: center; }
+.space-search { position: relative; flex: 1 1 160px; display: flex; align-items: center; }
 .space-search > .icon, .space-search > svg { position: absolute; inset-inline-start: var(--space-3); pointer-events: none; }
-.space-search input { width: 100%; padding-inline-start: var(--space-10); }
+.space-search input, .space-dialog input { box-sizing: border-box; border: 1px solid var(--control-border); border-radius: var(--radius-input); background: var(--bg-canvas); color: var(--text-primary); font-family: var(--font-ui); font-size: var(--text-input); }
+.space-search input { width: 100%; padding-block: 0; padding-inline: var(--space-10) var(--space-3); }
+.space-dialog input { padding-inline: var(--space-3); }
 .space-layout { flex-shrink: 0; }
 
 .space-note { margin: 0 0 var(--space-3); font-size: var(--text-callout); color: var(--text-secondary); line-height: var(--leading-body); }
@@ -42,13 +44,12 @@
 .space-pages.grid .space-card-open { white-space: normal; line-height: var(--leading-snug); padding-block: var(--space-3); }
 /* The whole card opens; the actions sit above that layer. */
 .space-card-open::after { content: ''; position: absolute; inset: 0; border-radius: var(--radius-card); }
-.space-card-open:focus-visible { outline: none; }
-.space-card-open:focus-visible::after { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .space-card .space-actions { position: relative; z-index: 1; }
 .space-card-meta { grid-column: 2 / -1; margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); font-size: var(--text-caption); color: var(--text-secondary); }
 .space-grid .space-card-meta { grid-column: 2; }
 .space-grid .space-actions { grid-column: 3; grid-row: 1 / span 2; }
 .space-chip { padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--selected); color: var(--on-selected); }
+.space-card .space-note { grid-column: 1 / -1; margin: 0; }
 .space-card-skeleton { display: block; min-height: 96px; }
 .space-card-skeleton .skeleton { display: block; height: 14px; margin: var(--space-2) 0; border-radius: var(--radius-sm); }
 
@@ -68,7 +69,6 @@
 .space-banner.is-error { border-color: var(--status-danger); }
 .space-banner h2 { margin: 0 0 var(--space-2); font-size: var(--text-headline); font-weight: var(--weight-title); }
 .space-banner p { margin: 0 0 var(--space-3); font-size: var(--text-callout); line-height: var(--leading-body); }
-.space-banner:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .space-banner-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
 .space-modes { display: inline-flex; margin-bottom: var(--space-3); }
@@ -86,3 +86,7 @@
   .space-grid .space-card, .space-pages.list .space-card { grid-template-columns: auto 1fr; }
   .space-grid .space-actions { grid-column: 1 / -1; grid-row: auto; justify-content: flex-end; }
 }
+
+/* Below the floating drawer button, as the Projects library does (noevia.css, 519 px). */
+@media (max-width: 519px) { .main.spaces-workspace { padding-top: 60px; } }
+:root[data-layout="mobile"] .main.spaces-workspace { padding-top: 60px; }

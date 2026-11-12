@@ -1,6 +1,21 @@
-// Adapted from CopilotKit/OpenDots@46eaf96c9e3802adc972ceafd8f20f99bda34e70, src/client/editor/use-page-autosave.ts
-// (MIT, Copyright (c) Atai Barkai; the full notice is in src/page-autosave.ts). The hook shape is
-// upstream's; the transport is ours (src/spaces-api.ts) and the draft is kept on this device.
+// The hook that runs one page's autosave controller.
+//
+// Adapted from CopilotKit/OpenDots@46eaf96c9e3802adc972ceafd8f20f99bda34e70, src/client/editor/use-page-autosave.ts (MIT, Copyright (c)
+// Atai Barkai): the hook shape. The transport (src/spaces-api.ts) and the device draft are ours.
+// The upstream notice follows.
+//   The MIT License
+//   Copyright (c) Atai Barkai
+//   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+//   associated documentation files (the "Software"), to deal in the Software without restriction,
+//   including without limitation the rights to use, copy, modify, merge, publish, distribute,
+//   sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+//   furnished to do so, subject to the following conditions: The above copyright notice and this
+//   permission notice shall be included in all copies or substantial portions of the Software.
+//   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+//   NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+//   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+//   DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { PageAutosave, type PageBase, type SaveState } from '../../page-autosave';
 import { clearPageDraft, readPageDraft, writePageDraft } from '../../page-drafts';
