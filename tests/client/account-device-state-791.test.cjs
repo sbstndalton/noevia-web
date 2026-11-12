@@ -12,6 +12,8 @@ function fakeLocalStorage() {
     setItem: (key, value) => { store.set(key, String(value)); },
     removeItem: (key) => { store.delete(key); },
     keys: () => [...store.keys()],
+    get length() { return store.size; },
+    key: (i) => [...store.keys()][i] ?? null,
   };
 }
 
@@ -29,8 +31,9 @@ function fresh() {
   global.localStorage = fakeLocalStorage();
   const drafts = load('chat-drafts.ts', {});
   const lastView = load('last-view.ts', {});
-  const device = load('account-device-state.ts', { './account-session': session(), './chat-drafts': drafts, './last-view': lastView, './user-preferences': preferences() });
-  return { drafts, lastView, device, storage: global.localStorage };
+  const pageDrafts = load('page-drafts.ts', {});
+  const device = load('account-device-state.ts', { './account-session': session(), './chat-drafts': drafts, './last-view': lastView, './user-preferences': preferences(), './page-drafts': pageDrafts });
+  return { drafts, lastView, device, pageDrafts, storage: global.localStorage };
 }
 const place = (user, chatId = 'chat-of-a') => ({ user, view: { kind: 'chat', chatId, projectId: null }, settings: null });
 
@@ -112,7 +115,7 @@ test('a place is never written before the account is known, so a reload keeps th
 test('storage being unavailable never throws out of sign-in or sign-out', () => {
   global.localStorage = { getItem: () => { throw Error('blocked'); }, setItem: () => { throw Error('blocked'); }, removeItem: () => { throw Error('blocked'); } };
   const drafts = load('chat-drafts.ts', {}), lastView = load('last-view.ts', {});
-  const device = load('account-device-state.ts', { './account-session': session(), './chat-drafts': drafts, './last-view': lastView, './user-preferences': preferences() });
+  const device = load('account-device-state.ts', { './account-session': session(), './chat-drafts': drafts, './last-view': lastView, './user-preferences': preferences(), './page-drafts': load('page-drafts.ts', {}) });
   assert.doesNotThrow(() => device.claimDeviceState('user-a'));
   assert.doesNotThrow(() => device.clearDeviceState());
 });
@@ -123,4 +126,13 @@ test('sign-out and every sign-in path are wired to the device state', () => {
   const gate = fs.readFileSync(src('components/AuthGate.tsx'), 'utf8');
   // Probe, password and passkey: each claims before the app can render for the user.
   assert.equal((gate.match(/claimDeviceState\((?:user|session\.user)\.id\);\s*\n\s*setOnboardingUser/g) || []).length, 3);
+});
+
+test('sign-out also removes the unsaved text of Space pages (#2446)', () => {
+  const { pageDrafts, device, storage } = fresh();
+  device.claimDeviceState('user-a');
+  pageDrafts.writePageDraft('space-1', 'page-1', { title: 'QA-2446 page', content: 'synthetic unsaved page text', baseVersion: 'v1', savedAt: 1 });
+  assert.equal(storage.keys().some((k) => k.startsWith('noevia:space-page-draft:')), true);
+  device.clearDeviceState();
+  assert.deepEqual(storage.keys().filter((k) => k.startsWith('noevia:space-page-draft:')), [], 'nothing of the page text stays on the device');
 });

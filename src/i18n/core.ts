@@ -11,12 +11,13 @@ import type { ProjectsCatalogue, ProjectsKey } from './projects/en-GB';
 import type { DiaryCatalogue, DiaryKey } from './diary/en-GB';
 import type { ModelsCatalogue, ModelsKey } from './models/en-GB';
 import type { CustomiseCatalogue, CustomiseKey } from './customise/en-GB';
+import type { CoworkersCatalogue, CoworkersKey } from './coworkers/en-GB';
 
 /** Every message key: the base segment (first screen) or one of the lazy-view segments. */
-export type MessageKey = BaseKey | SettingsKey | ProjectsKey | DiaryKey | CustomiseKey | ModelsKey;
+export type MessageKey = BaseKey | SettingsKey | ProjectsKey | DiaryKey | CustomiseKey | ModelsKey | CoworkersKey;
 /** A translation of any segment; each file's own type still rejects keys English lacks. */
-export type Catalogue = BaseCatalogue | SettingsCatalogue | ProjectsCatalogue | DiaryCatalogue | CustomiseCatalogue | ModelsCatalogue;
-export type { BaseKey, SettingsKey, ProjectsKey, DiaryKey, CustomiseKey, ModelsKey };
+export type Catalogue = BaseCatalogue | SettingsCatalogue | ProjectsCatalogue | DiaryCatalogue | CustomiseCatalogue | ModelsCatalogue | CoworkersCatalogue;
+export type { BaseKey, SettingsKey, ProjectsKey, DiaryKey, CustomiseKey, ModelsKey, CoworkersKey };
 export type Params = Record<string, string | number>;
 
 export const BASE_LOCALE = 'en-GB';
@@ -34,9 +35,9 @@ export function registerCatalogue(locale: string, catalogue: Catalogue): void {
 /** Segments beyond the base: strings a lazy view needs, kept out of the first-load bundle.
  *  SEGMENTS[segment][locale] is that locale's part; the English part is registered by the view's
  *  own code when its chunk loads (settings/index.ts), the other locales through loaders.ts. */
-export const SEGMENT_NAMES = ['settings', 'projects', 'diary', 'customise', 'models'] as const;
+export const SEGMENT_NAMES = ['settings', 'projects', 'diary', 'customise', 'models', 'coworkers'] as const;
 export type Segment = (typeof SEGMENT_NAMES)[number];
-export const SEGMENTS: Record<Segment, Record<string, Catalogue>> = { settings: {}, projects: {}, diary: {}, customise: {}, models: {} };
+export const SEGMENTS: Record<Segment, Record<string, Catalogue>> = { settings: {}, projects: {}, diary: {}, customise: {}, models: {}, coworkers: {} };
 
 /** Adds one locale's part of a segment; ignored for an unknown segment or locale. */
 export function registerSegment(segment: Segment, locale: string, catalogue: Catalogue): void {

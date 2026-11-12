@@ -72,5 +72,5 @@ export const ICON_ACCENTS: Record<string, IconAccent> = {
 export const PLAIN_GLYPHS: readonly string[] = [
   'paperclip', 'wrench', 'message-square', 'code', 'plus', 'search', 'puzzle', 'folder-open', 'arrow-left', 'arrow-right',
   'arrow-up', 'arrow-down', 'x', 'user', 'user-round', 'chevron-down', 'chevron-left', 'chevron-right', 'moon', 'ellipsis',
-  'activity', 'lock', 'circle', 'check', 'refresh-cw', 'hand',
+  'activity', 'lock', 'circle', 'check', 'refresh-cw', 'hand', 'list',
 ];

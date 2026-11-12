@@ -8,7 +8,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 
 const I18N = path.join(__dirname, '../../src/i18n');
-const SEGMENT_DIRS = ['', 'settings/', 'diary/', 'projects/', 'customise/', 'models/'];
+const SEGMENT_DIRS = ['', 'settings/', 'diary/', 'projects/', 'customise/', 'models/', 'coworkers/'];
 const LOCALES = ['en-GB', 'de-DE', 'es-ES', 'fr-FR', 'it-IT', 'nb-NO', 'nl-NL', 'pt-BR', 'sv-SE'];
 
 function loadModule(file) {

@@ -1,0 +1,92 @@
+/* Spaces (sbstndalton/noevia#2446): library, page library and page editor. Tokens only; the
+   motion contract and the reduced-motion floor come from system/motion.css. */
+.spaces-workspace .settings-scroll { padding: var(--space-6) clamp(16px, 4vw, 34px) var(--space-10); }
+.spaces-workspace .settings-scroll > * { max-width: 1040px; margin-inline: auto; }
+.spaces-workspace :is(.btn, .seg button, input[type='search']) { min-height: var(--target-min); }
+.spaces-workspace .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); }
+.spaces-workspace .seg button { min-width: var(--target-min); display: inline-flex; align-items: center; justify-content: center; }
+.spaces-workspace :is(button, input, textarea):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.space-crumbs { margin-bottom: var(--space-4); }
+.space-back { max-width: 100%; }
+.space-back span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.space-title-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.space-title-row h1 { overflow-wrap: anywhere; }
+.space-title-row h1:focus { outline: none; }
+.space-actions { display: flex; gap: var(--space-2); }
+.space-icon-btn { min-width: var(--target-min); padding-inline: var(--space-3); }
+
+.space-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
+.space-search { position: relative; flex: 1 1 160px; display: flex; align-items: center; }
+.space-search > .icon, .space-search > svg { position: absolute; inset-inline-start: var(--space-3); pointer-events: none; }
+.space-search input, .space-dialog input { box-sizing: border-box; border: 1px solid var(--control-border); border-radius: var(--radius-input); background: var(--bg-canvas); color: var(--text-primary); font-family: var(--font-ui); font-size: var(--text-input); }
+.space-search input { width: 100%; padding-block: 0; padding-inline: var(--space-10) var(--space-3); }
+.space-dialog input { padding-inline: var(--space-3); }
+.space-layout { flex-shrink: 0; }
+
+.space-note { margin: 0 0 var(--space-3); font-size: var(--text-callout); color: var(--text-secondary); line-height: var(--leading-body); }
+.space-note.is-error { color: var(--danger); }
+.space-hint { margin: var(--space-1) 0 0; font-size: var(--text-caption); color: var(--text-secondary); }
+.space-hint.is-over { color: var(--danger); }
+.space-section-label { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); margin: var(--space-4) 0 var(--space-3); }
+.space-section-label h2 { margin: 0; font-size: var(--text-headline); font-weight: var(--weight-title); }
+.space-section-label span { font-size: var(--text-footnote); color: var(--text-secondary); }
+
+.space-grid, .space-pages { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+.space-grid, .space-pages.grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+.space-pages.list { grid-template-columns: 1fr; gap: var(--space-2); }
+.space-card { position: relative; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-4); min-height: 96px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-raised); }
+.space-pages.grid .space-page-card { grid-template-columns: auto 1fr; align-items: start; min-height: 120px; }
+.space-card:hover { border-color: var(--border-strong); }
+.space-card-icon { display: inline-flex; align-self: start; }
+.space-card-name { margin: 0; font-size: var(--text-body); font-weight: var(--weight-title); min-width: 0; }
+.space-card-open { all: unset; box-sizing: border-box; cursor: pointer; display: block; min-height: var(--target-min); line-height: var(--target-min); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); }
+.space-pages.grid .space-card-open { white-space: normal; line-height: var(--leading-snug); padding-block: var(--space-3); }
+/* The whole card opens; the actions sit above that layer. */
+.space-card-open::after { content: ''; position: absolute; inset: 0; border-radius: var(--radius-card); }
+.space-card .space-actions { position: relative; z-index: 1; }
+.space-card-meta { grid-column: 2 / -1; margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); font-size: var(--text-caption); color: var(--text-secondary); }
+.space-grid .space-card-meta { grid-column: 2; }
+.space-grid .space-actions { grid-column: 3; grid-row: 1 / span 2; }
+.space-chip { padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--selected); color: var(--on-selected); }
+.space-card .space-note { grid-column: 1 / -1; margin: 0; }
+.space-card-skeleton { display: block; min-height: 96px; }
+.space-card-skeleton .skeleton { display: block; height: 14px; margin: var(--space-2) 0; border-radius: var(--radius-sm); }
+
+.space-page-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); margin-bottom: var(--space-3); }
+.space-title-input { flex: 1 1 280px; min-width: 0; min-height: var(--target-min); padding: var(--space-2) var(--space-3); border: 1px solid transparent; border-radius: var(--radius-input); background: transparent; color: var(--text-primary); font-family: var(--font-display); font-size: var(--text-title1); font-weight: var(--weight-title); letter-spacing: var(--tracking-title); }
+.space-title-input:hover { border-color: var(--border-subtle); }
+.space-title-input:focus-visible { border-color: var(--border-strong); }
+.space-save { display: inline-flex; align-items: center; gap: var(--space-2); margin: 0; font-size: var(--text-footnote); color: var(--text-secondary); }
+.space-save-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--status-offline); }
+.space-save.is-saved .space-save-dot { background: var(--status-good); }
+.space-save.is-saving .space-save-dot, .space-save.is-dirty .space-save-dot { background: var(--status-warning); }
+.space-save.is-error .space-save-dot, .space-save.is-conflict .space-save-dot { background: var(--status-danger); }
+.space-save.is-error, .space-save.is-conflict { color: var(--text-primary); }
+
+.space-banner { margin: 0 0 var(--space-4); padding: var(--space-4); border: 1px solid var(--border-strong); border-radius: var(--radius-card); background: var(--bg-raised); }
+.space-banner.is-conflict { border-color: var(--status-warning); }
+.space-banner.is-error { border-color: var(--status-danger); }
+.space-banner h2 { margin: 0 0 var(--space-2); font-size: var(--text-headline); font-weight: var(--weight-title); }
+.space-banner p { margin: 0 0 var(--space-3); font-size: var(--text-callout); line-height: var(--leading-body); }
+.space-banner-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.space-modes { display: inline-flex; margin-bottom: var(--space-3); }
+.space-content-input { display: block; width: 100%; min-height: 52vh; box-sizing: border-box; resize: vertical; padding: var(--space-4); border: 1px solid var(--control-border); border-radius: var(--radius-input); background: var(--bg-canvas); color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-input); line-height: var(--leading-body); }
+.space-preview { min-height: 52vh; padding: var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--radius-input); background: var(--bg-canvas); overflow-wrap: anywhere; }
+.space-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-4); }
+.space-size { font-size: var(--text-footnote); color: var(--text-secondary); }
+.space-foot .space-danger { margin-inline-start: auto; color: var(--danger); }
+
+.space-dialog { display: grid; gap: var(--space-2); }
+.space-dialog input { min-height: var(--target-min); }
+
+@media (max-width: 560px) {
+  .space-title-input { font-size: var(--text-title3); }
+  .space-grid .space-card, .space-pages.list .space-card { grid-template-columns: auto 1fr; }
+  .space-grid .space-actions { grid-column: 1 / -1; grid-row: auto; justify-content: flex-end; }
+}
+
+/* Below the floating drawer button, as the Projects library does (noevia.css, 519 px). */
+@media (max-width: 519px) { .main.spaces-workspace { padding-top: 60px; } }
+:root[data-layout="mobile"] .main.spaces-workspace { padding-top: 60px; }

@@ -42,6 +42,7 @@ import {
   fetchFramingPreferences,
   decideRoute,
   fetchRoutingMode,
+  apiFetch,
 } from './api';
 import type { RoutingModeSettings } from './api';
 import { ForceLocalToggle, isRouteTarget } from './components/RouteControls';
@@ -70,7 +71,8 @@ import { ModelPopup } from './components/ModelPopup';
 import { rememberCreatedProject, withCreatedProjects } from './created-projects';
 import { ProjectView } from './components/ProjectView';
 import { ActiveCodeTasks } from './components/code/ActiveCodeTasks';
-import { Coding, Customise, Diary, DiaryNotice, ModelManager, Projects, Settings, ViewLoading, prefetchViewsWhenIdle } from './lazy-views';
+import { Coding, Customise, Diary, DiaryNotice, ModelManager, Projects, Settings, Spaces, Coworkers, CoworkerChatHeader, ViewLoading, prefetchViewsWhenIdle } from './lazy-views';
+import { areaAvailable } from './area-gate';
 import { KeptOffDocument } from './components/KeptOffDocument';
 import { diaryOpened, diaryPresence } from './diary-presence';
 import type { SettingsSection } from './components/SettingsShell';
@@ -111,9 +113,11 @@ type View =
   | { kind: 'projects' }
   | { kind: 'plugins' }
   | { kind: 'archived' }
+  | { kind: 'spaces'; spaceId?: string; pageId?: string }
+  | { kind: 'coworkers'; id?: string }
   | { kind: 'models'; model?: string }
   | { kind: 'project'; id: string; codeRequest?: string }
-  | { kind: 'chat'; chatId: string; projectId?: string | null };
+  | { kind: 'chat'; chatId: string; projectId?: string | null; /** Set when the chat is a coworker's conversation (#2446): the address stays /coworkers/<id> and a header sits above it. */ coworkerId?: string };
 
 /** #1508: how often the engine-wide stats snapshot is refreshed while the tab is visible. */
 const STATS_POLL_MS = 15_000;
@@ -186,6 +190,16 @@ export default function App(): JSX.Element {
   // An address that names no page (#1469): shown as a not-found page with a way back into the app,
   // and left in the address bar until the person goes somewhere else.
   const [pageMissing, setPageMissing] = useState(initialNav.unknown);
+  // Spaces (#2446) exists only where the server has its routes for this account: null while that is
+  // being asked, false for a server without them (404 or any failure), so its paths read as unknown.
+  const [spacesAvailable, setSpacesAvailable] = useState<boolean | null>(null);
+  const [coworkersAvailable, setCoworkersAvailable] = useState<boolean | null>(null);
+  useEffect(() => {
+    let live = true;
+    void areaAvailable((path) => apiFetch(path), '/api/spaces', 'spaces').then((ok) => { if (live) setSpacesAvailable(ok); });
+    void areaAvailable((path) => apiFetch(path), '/api/specialists', 'specialists').then((ok) => { if (live) setCoworkersAvailable(ok); });
+    return () => { live = false; };
+  }, []);
   // The tab a project and Customise are on, so the address bar can carry it (#359). A project's
   // tab is kept with its id: another project opens on its own first tab, not on this one.
   // #552: a file a reply's source chip asked the project's Sources tab to reveal.
@@ -258,6 +272,8 @@ export default function App(): JSX.Element {
         case 'project': return { kind: 'project', id: route.id };
         case 'customise': return { kind: 'plugins' };
         case 'models': return route.model ? { kind: 'models', model: route.model } : { kind: 'models' };
+        case 'spaces': return { kind: 'spaces', spaceId: route.spaceId, pageId: route.pageId };
+        case 'coworkers': return { kind: 'coworkers', id: route.id };
         default: return { kind: route.kind };
       }
     }
@@ -525,10 +541,15 @@ export default function App(): JSX.Element {
     if (view.kind === 'preview') return;
     // Not before the account is known: a `user: null` place reads as another account's (#791).
     if (!accountId) return;
+    // Spaces and Coworkers are not somewhere to return to: the server may not have them on the next visit.
+    if (view.kind === 'spaces' || view.kind === 'coworkers' || (view.kind === 'chat' && view.coworkerId)) return;
     // The return target is never 'preview' by construction (this same guard runs before every
     // view change reaches navRef); the cast only tells TypeScript what the runtime already
     // guarantees.
-    const toPersist = persistedView(navRef.current, view) as Exclude<View, { kind: 'preview' }>;
+    const persisted = persistedView(navRef.current, view);
+    // A Space is not somewhere to return to: the server may not have Spaces on the next visit.
+    if (persisted.kind === 'preview' || persisted.kind === 'spaces' || persisted.kind === 'coworkers' || (persisted.kind === 'chat' && persisted.coworkerId)) return;
+    const toPersist = persisted;
     writeLastPlace({ user: accountId, view: toPersist, settings: settingsOpen ? settingsSection : null });
   }, [view, settingsOpen, settingsSection, accountId]);
 
@@ -712,6 +733,8 @@ export default function App(): JSX.Element {
   // Any move off the page the address did not name (a sidebar link, a Back step) leaves it (#1469).
   const viewAtLoad = useRef(view);
   useEffect(() => { if (view !== viewAtLoad.current) setPageMissing(false); }, [view]);
+  // An area the server does not have for this account (Spaces, #2446) reads as an unknown page. After the effect above, so it wins on a view change.
+  useEffect(() => { if ((view.kind === 'spaces' && spacesAvailable === false) || (view.kind === 'coworkers' && coworkersAvailable === false)) setPageMissing(true); }, [view, spacesAvailable, coworkersAvailable]);
   // Every commit, not on deps: the replace flag must be consumed by the first commit after it
   // was raised even when that commit leaves the path alone.
   useEffect(() => {
@@ -764,6 +787,12 @@ export default function App(): JSX.Element {
         setCustomiseTab(target.tab);
         if (current.kind !== 'plugins') setView({ kind: 'plugins' });
         return;
+      case 'spaces':
+        if (!(current.kind === 'spaces' && current.spaceId === target.spaceId && current.pageId === target.pageId)) setView({ kind: 'spaces', spaceId: target.spaceId, pageId: target.pageId });
+        return;
+      case 'coworkers':
+        if (!((current.kind === 'coworkers' && current.id === target.id) || (current.kind === 'chat' && !!target.id && current.coworkerId === target.id))) setView({ kind: 'coworkers', id: target.id });
+        return;
       case 'models':
         // Models & routing is always a Settings page (#304): never the place Settings' close returns to.
         if (current.kind === 'models' && current.model === target.model) return;
@@ -788,7 +817,8 @@ export default function App(): JSX.Element {
   // Not this account's, or no longer anyone's (#359). Every read is scoped to the signed-in
   // account on the server, so another account's chat or project id finds nothing here — it is
   // shown exactly like a deleted one, with nothing about it (not even a title) to show.
-  const chatMissing = view.kind === 'chat' && workspaceLoaded && !activeChatMeta && !freshChats.current.has(view.chatId)
+  // A coworker's conversation lives in a hidden backing project, so it is in no chat list: never "not found" for that reason.
+  const chatMissing = view.kind === 'chat' && !view.coworkerId && workspaceLoaded && !activeChatMeta && !freshChats.current.has(view.chatId)
     && !!historyChecked[view.chatId] && messages.length === 0 && !streamingChats[view.chatId];
   const projectMissing = workspaceLoaded && ((view.kind === 'project' && !activeProject)
     // A new chat addressed into a project (`/p/<id>/new`) that this account does not have.
@@ -1429,6 +1459,13 @@ export default function App(): JSX.Element {
   const chooseAnswer = useCallback((chatId: string, userId: string, next: number) => showVariant(chatId, (msgs) => { const i = msgs.findIndex((m) => m.id === userId); return i < 0 ? null : selectAnswer(msgs, i, next); }), [showVariant]);
   const chooseVersion = useCallback((chatId: string, userId: string, next: number) => showVariant(chatId, (msgs) => { const i = msgs.findIndex((m) => m.id === userId); return i < 0 ? null : selectBranch(msgs, i, next, uid); }), [showVariant]);
 
+  // A coworker with a conversation (#2446): the existing chat view on that chat, under the coworker's own address.
+  const openCoworkerConversation = useCallback((c: { id: string; chatId: string | null; projectId: string | null }) => {
+    if (!c.chatId) return;
+    markReplace();
+    setView({ kind: 'chat', chatId: c.chatId, projectId: c.projectId, coworkerId: c.id });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- markReplace only touches refs
+  }, []);
   const startFreeChat = useCallback(() => {
     const chatId = freshChatId();
     loadedChats.current.add(chatId);
@@ -1824,6 +1861,8 @@ export default function App(): JSX.Element {
         onOpenProjectCode={(id) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}
         onOpenPlugins={() => { setAppMode('chat'); setCustomiseTab('connectors'); setView({ kind: 'plugins' }); }}
         onOpenArchived={() => { setAppMode('chat'); setView({ kind: 'archived' }); }}
+        onOpenCoworkers={coworkersAvailable ? () => { setAppMode('chat'); setView({ kind: 'coworkers' }); } : undefined}
+        onOpenSpaces={spacesAvailable ? () => { setAppMode('chat'); setView({ kind: 'spaces' }); } : undefined}
         onPreview={(title) => setView({kind:'preview',title})}
         showPreviews={showPreviews}
         projects={projects}
@@ -1831,9 +1870,9 @@ export default function App(): JSX.Element {
         projectsFailed={workspaceFailed}
         chats={allChats}
         organise={featureFlags.chatFraming === true}
-        activeView={view.kind}
+        activeView={view.kind === 'chat' && view.coworkerId ? 'coworkers' : view.kind}
         activeProjectId={activeProject?.id ?? null}
-        activeChatId={view.kind === 'chat' ? view.chatId : null}
+        activeChatId={view.kind === 'chat' && !view.coworkerId ? view.chatId : null}
         onNewChat={startFreeChat}
         onNewProjectChat={startProjectChat}
         onOpenProjects={() => { setAppMode('chat'); setView({ kind: 'projects' }); }}
@@ -1862,6 +1901,10 @@ export default function App(): JSX.Element {
       {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} projectsLoaded={workspaceLoaded} onProjectsChanged={refreshProjects} onStartTask={startProjectTask}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
       <div className="chat-views" style={{display:appMode==='code'&&showPreviews?'none':'contents'}}>
       {view.kind === 'plugins' && <Suspense fallback={<ViewLoading name="customise" active={appMode === 'chat' && !settingsOpen} />}><Customise.View onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects} initialTab={customiseTab} onTabChange={setCustomiseTab}/></Suspense>}
+      {view.kind === 'spaces' && spacesAvailable === null && <ViewLoading name="spaces" active={appMode === 'chat' && !settingsOpen} />}
+      {view.kind === 'spaces' && spacesAvailable === true && <Suspense fallback={<ViewLoading name="spaces" active={appMode === 'chat' && !settingsOpen} />}><Spaces.View spaceId={view.spaceId} pageId={view.pageId} onNavigate={(spaceId, pageId) => setView({ kind: 'spaces', spaceId, pageId })}/></Suspense>}
+      {view.kind === 'coworkers' && coworkersAvailable === null && <ViewLoading name="coworkers" active={appMode === 'chat' && !settingsOpen} />}
+      {view.kind === 'coworkers' && coworkersAvailable === true && <Suspense fallback={<ViewLoading name="coworkers" active={appMode === 'chat' && !settingsOpen} />}><Coworkers.View id={view.id} onNavigate={(id) => setView({ kind: 'coworkers', id })} onOpenConversation={openCoworkerConversation}/></Suspense>}
       {view.kind === 'archived' && <ArchivedChatsView onDelete={handleDeleteChat} onOpenData={() => openSettings('data')}/>}
 
       {view.kind === 'preview' && showPreviews && <FeaturePreview title={view.title}/> }
@@ -1931,12 +1974,13 @@ export default function App(): JSX.Element {
           </EmptyState>
         </main>
       )}
+      {view.kind === 'chat' && view.coworkerId && !chatMissing && !projectMissing && !pageMissing && <Suspense fallback={null}><CoworkerChatHeader.View id={view.coworkerId} onDeleted={() => setView({ kind: 'coworkers' })}/></Suspense>}
       {view.kind === 'chat' && !chatMissing && !projectMissing && !pageMissing && (
         <ChatView
           project={activeProject ?? null}
           onProjectChanged={refreshProjects}
           chatId={view.chatId}
-          title={activeChatMeta?.title ?? (activeMode === 'cowork' ? tr('sidebar.newTask') : tr('common.newChat'))}
+          title={view.coworkerId ? tr('sidebar.coworkerConversation') : activeChatMeta?.title ?? (activeMode === 'cowork' ? tr('sidebar.newTask') : tr('common.newChat'))}
           projectName={activeProject?.name ?? null}
           modelLabel={modelChoiceLabel(activeProject, modelsLoaded && !modelsError ? chatGenerationModels(models) : null, autoRolesConfigured, defaultProviderId)}
           installedModels={modelsLoaded && !modelsError ? models : null}
@@ -2020,7 +2064,7 @@ export default function App(): JSX.Element {
             setView(target);
             setSettingsOpen(false);
           }}
-          onClosing={() => { if (view.kind !== 'preview') writeLastPlace({ user: accountId, view, settings: null }); }}
+          onClosing={() => { if (view.kind !== 'preview' && view.kind !== 'spaces' && view.kind !== 'coworkers' && !(view.kind === 'chat' && view.coworkerId)) writeLastPlace({ user: accountId, view, settings: null }); }}
           onStartChat={startFreeChatWith}
           onOpenArchived={() => { pendingFromSettingsRef.current = 'data'; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'archived' }); }}
           onOpenDiary={diaryEnabled ? () => { pendingFromSettingsRef.current = 'diary'; setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'diary' }); } : undefined}
