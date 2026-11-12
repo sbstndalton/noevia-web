@@ -76,7 +76,7 @@ export function PageEditor({ spaceId, spaceName, page, fresh, onBack, onDeleted 
   };
   const remove = async () => {
     setDeleting(false);
-    try { await deletePage(spaceId, page.id, state.base?.version ?? page.version); controller.discard(); onDeleted(); }
+    try { await deletePage(spaceId, page.id); controller.discard(); onDeleted(); }
     catch { setDeleteFailed(true); }
   };
 
