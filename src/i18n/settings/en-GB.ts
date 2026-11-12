@@ -672,6 +672,7 @@ export const EN_GB_SETTINGS = {
   'data.archivedDesc': "Hidden from the sidebar, kept until you delete them. Search, restore or delete them in their own view.",
   'data.manageArchived': "Manage archived chats",
   'data.retentionLoadError': "The retention setting could not be loaded.",
+  'data.retentionUnknown': "Not loaded",
   'data.retentionCheckError': "The retention setting could not be checked. Try again.",
   'data.retentionOn': "Chats not updated for {days} days are deleted automatically.",
   'data.deletedNow': "Deleted {count} now.",

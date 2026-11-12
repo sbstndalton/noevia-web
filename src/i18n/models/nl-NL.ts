@@ -255,6 +255,8 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.library.unavailable': "De modelbibliotheek is niet beschikbaar.",
   'mm.library.loadFailed': "laden mislukt",
   'mm.library.unloadFailed': "ontladen mislukt",
+  'mm.library.inUseRetry': "{model} beantwoordt een verzoek. Probeer het opnieuw als het vrij is.",
+  'mm.library.gateRefused': "Het lokale model is bezig met een ander verzoek. Probeer het opnieuw als het klaar is.",
   'mm.unload.inUse': "{model} beantwoordt een verzoek. Als je het toch ontlaadt, stopt dat antwoord.",
   'mm.unload.inUseNoForce': "{model} beantwoordt een verzoek. Ontlaad het wanneer het vrij is.",
   'mm.unload.anyway': "Toch ontladen",

@@ -119,6 +119,11 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
     const choices = svc.choices || [];
     const current = rerankerCurrent(svc);
     const savedOutside = current !== '' && !choices.some((c) => c.id === current);
+    // #2397: the switch shows what is in effect. Core can report enabled with no reranker to run (the deployment switched it on; no model chosen,
+    // no address): the pill reads Off then, so the switch reads off too, and stays disabled until a reranker is chosen. With a reranker chosen
+    // the switch keeps showing the stored flag, so an enabled reranker can always be switched off.
+    const unavailable = current === '' && pillState(svc, health) === 'off';
+    const effectiveOn = svc.enabled === true && !unavailable;
     // The reranker service (TEI) is named by its model alone; a llama.cpp preset says where it runs.
     const label = (c: { backend: string; model: string }) => (c.backend === 'tei' ? c.model : t('mm.assign.rerankerLlamacpp', { model: c.model }));
     // #2114: a long name is cut inside the picker; its full text stays available as the title.
@@ -126,8 +131,8 @@ export function ServiceAssignments({ models }: { models: InstalledModel[] }): JS
     const currentLabel = current ? (currentChoice ? label(currentChoice) : savedOutside ? label({ backend: 'llamacpp', model: current.slice('llamacpp:'.length) }) : undefined) : undefined;
     return <span className="mm-assign-reranker" data-testid="reranker-switch">
       <label className="mm-assign-toggle">
-        <input type="checkbox" role="switch" className="noevia-switch" checked={svc.enabled === true}
-          disabled={busy !== '' || (!current && svc.enabled !== true)}
+        <input type="checkbox" role="switch" className="noevia-switch" checked={effectiveOn}
+          disabled={busy !== '' || (!current && !effectiveOn)}
           onChange={(e) => { const on = e.currentTarget.checked; void runReranker(() => saveReranker(on, savedOutside && !on ? undefined : current || null), on ? 'mm.assign.rerankerOn' : 'mm.assign.rerankerOff'); }}/>
         <span>{t('mm.assign.rerankerToggle')}</span>
       </label>

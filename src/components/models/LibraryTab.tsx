@@ -46,6 +46,24 @@ const TAG: Record<string, MessageKey> = { dense: 'mm.tag.dense', embedding: 'mm.
 export const tagLabel = (t: (k: MessageKey) => string, label: string) => { const k = TAG[label.trim().toLowerCase()]; return k ? t(k) : label; };
 const BADGE: Record<string, MessageKey> = { coding: 'mm.badge.coding', writing: 'mm.badge.writing', reasoning: 'mm.badge.reasoning', tools: 'mm.badge.tools', vision: 'mm.badge.vision' };
 
+// noevia#2136: what this page says when the server refuses to load, unload or delete a model. The server's own sentence is English;
+// a refusal it labels with a known `code` (the model-in-use check, the local model's queue) reads in the interface language instead.
+const REFUSALS: Record<string, MessageKey> = {
+  model_in_use: 'mm.library.inUseRetry',
+  inference_queue_timeout: 'mm.library.gateRefused',
+  inference_queue_full: 'mm.library.gateRefused',
+  engine_switch_stuck: 'chat.failure.engineSwitchStuck',
+  engine_unavailable: 'chat.failure.engineUnavailable',
+  engine_busy: 'chat.failure.engineBusy',
+  gate_busy: 'chat.failure.engineBusy',   // as in chat (failure-copy.ts)
+};
+/** The sentence for a refusal with a known code, or null (the caller shows the server's text for any other). */
+function refusalText(err: unknown, say: (key: MessageKey, params?: Record<string, string | number>) => string, model: string): string | null {
+  const code = (err as { code?: unknown } | null)?.code;
+  if (typeof code !== 'string' || !Object.prototype.hasOwnProperty.call(REFUSALS, code)) return null;
+  return say(REFUSALS[code], { model });
+}
+
 export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', filter = 'all' }: {
   onConfigure: (section: string) => void; onChanged: () => void;
   query?: string; sort?: 'name' | 'size' | 'modified'; filter?: 'all' | 'loaded' | 'vision' | 'unconfigured';
@@ -131,13 +149,31 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
       const r = await apiFetch(`/api/models/${verb}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(force ? { name, force: true } : { name }) });
       const v = await r.json().catch(() => ({})) as { error?: string; code?: string; canForce?: boolean };
       if (verb === 'unload' && !force && r.status === 409 && v.code === 'model_in_use') { setInUse({ name, canForce: v.canForce === true }); return; }
-      if (!r.ok) throw Error(v.error || t(verb === 'load' ? 'mm.library.loadFailed' : 'mm.library.unloadFailed'));
+      if (!r.ok) throw Object.assign(Error(v.error || t(verb === 'load' ? 'mm.library.loadFailed' : 'mm.library.unloadFailed')), { code: v.code });
       setInUse(null);
       if (force) setMessage(t('mm.unload.forced', { model: name }));
       onChanged();
     }
-    catch (e) { setError(errorText(e, t('mm.library.opFailed'))); } finally { setBusy(''); }
+    catch (e) { setError(refusalText(e, t, name) ?? errorText(e, t('mm.library.opFailed'))); } finally { setBusy(''); }
   };
+  // #2136: the notice is about a model that was answering a request. Once the model is no longer loaded (it was unloaded elsewhere, or
+  // went to sleep) there is nothing left to unload anyway, so the notice goes. While it is up the list is read again every few seconds
+  // (for two minutes at most) so that happens without a reload.
+  useEffect(() => {
+    if (inUse && models && !models.some((m) => m.name === inUse.name && m.loaded && !isSleeping(m))) setInUse(null);
+  }, [inUse, models]);
+  useEffect(() => {
+    if (!inUse) return;
+    let live = true;
+    const until = Date.now() + 120_000;
+    const timer = window.setInterval(() => {
+      if (Date.now() > until) { window.clearInterval(timer); return; }
+      // Same stale-answer rule as refresh(): a delete or a newer read that happened meanwhile wins.
+      const request = ++requestRef.current;
+      void fetchInstalledModels().then((installed) => { if (live && request === requestRef.current) setModels(installed); }).catch(() => undefined);
+    }, 5000);
+    return () => { live = false; window.clearInterval(timer); };
+  }, [inUse]);
   // #1036: same reload call and 409 handling as the settings editor (ConfigureTab.apply).
   const [pendingLoaded, setPendingLoaded] = useState<string[]>([]);
   const applyReload = async (unload: boolean) => {
@@ -341,7 +377,7 @@ async function pruneMissingPresets(): Promise<{ removed: string[]; kept: string[
 
 async function deleteByName(name: string, extra: Record<string, unknown> = {}): Promise<string[]> {
   const r = await apiFetch('/api/models/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, ...extra }) });
-  if (!r.ok) { const b = await readErrorBody(r) as { error?: string; errorId?: string }; throw Object.assign(Error(httpErrorMessage(r.status, b.error)), { errorId: b.errorId }); }
+  if (!r.ok) { const b = await readErrorBody(r) as { error?: string; errorId?: string; code?: string }; throw Object.assign(Error(httpErrorMessage(r.status, b.error)), { errorId: b.errorId, code: b.code }); }
   const body = (await r.json().catch(() => ({}))) as { rolesCleared?: string[] };
   return Array.isArray(body.rolesCleared) ? body.rolesCleared : [];
 }
@@ -422,8 +458,8 @@ function DeleteModel({ model: m, file, kind: initialKind, onDeleted, onCancel, o
             // Folder-configured (source: 'preset') models take this path: the proxy also
             // unloads the engine model(s) the deleted file backed and clears any auto-role
             // that named them (#302).
-            const v = await mm<{ results: { ok: boolean; message: string }[]; rolesCleared?: string[] }>('models/delete', { body: { models: [file.key] } });
-            if (!v.results[0]?.ok) throw Error(v.results[0]?.message || t('mm.deleteFailed'));
+            const v = await mm<{ results: { ok: boolean; message: string; code?: string }[]; rolesCleared?: string[] }>('models/delete', { body: { models: [file.key] } });
+            if (!v.results[0]?.ok) throw Object.assign(Error(v.results[0]?.message || t('mm.deleteFailed')), { code: v.results[0]?.code });
             return Array.isArray(v.rolesCleared) ? v.rolesCleared : [];
           },
           removeSettings && file.sections.length ? async () => {
@@ -444,7 +480,7 @@ function DeleteModel({ model: m, file, kind: initialKind, onDeleted, onCancel, o
       // refusal again (the server still protects it after a switch) is shown, never swallowed.
       if (id === 'modelInUse' && kind !== 'inuse') { setKind('inuse'); return; }
       if (id === 'systemModel' && kind !== 'system') { setKind('system'); return; }
-      setError(id === 'modelInUse' ? t('mm.delete.stillInUse') : errorText(e, t('mm.deleteFailed')));
+      setError(id === 'modelInUse' ? t('mm.delete.stillInUse') : refusalText(e, t, m.name) ?? errorText(e, t('mm.deleteFailed')));
     } finally { setBusy(false); }
   };
   const label = t('mm.delete.label', { model: m.name });

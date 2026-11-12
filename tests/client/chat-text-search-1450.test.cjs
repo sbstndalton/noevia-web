@@ -14,9 +14,10 @@ const api = fs.readFileSync(path.join(__dirname, '../../src/api.ts'), 'utf8');
 test('the client asks the server for message-text matches, encoded, and keeps only the answer for the current query', () => {
   assert.match(api, /export function searchChatText\(text: string\): Promise<\{ chats: string\[\]; truncated: boolean \}> \{/);
   assert.match(api, /getJson<\{ chats: string\[\]; truncated: boolean \}>\(`\/api\/chats\/search\?q=\$\{encodeURIComponent\(text\)\}`\)/);
-  assert.match(sidebar, /if \(textQuery\.length < 2\) \{ setTextHits\(null\); return; \}/);
+  // #2399: a query over the server's limit is not sent either.
+  assert.match(sidebar, /if \(textQuery\.length < 2 \|\| queryTooLong\) \{ setTextHits\(null\); return; \}/);
   assert.match(sidebar, /window\.setTimeout\(\(\) => \{[\s\S]*?searchChatText\(textQuery\)[\s\S]*?\}, 300\);/);
-  assert.match(sidebar, /if \(live\) setTextHits\(\{ query: textQuery, ids: new Set\(r\.chats\) \}\);/);
+  assert.match(sidebar, /if \(live\) setTextHits\(\{ query: textQuery, ids: new Set\(r\.chats\), truncated: r\.truncated \}\);/);
   assert.match(sidebar, /const messageHits = !tagQuery && textHits && textHits\.query === textQuery \? textHits\.ids : null;/);
 });
 

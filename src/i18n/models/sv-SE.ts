@@ -255,6 +255,8 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.library.unavailable': "Modellbiblioteket är inte tillgängligt.",
   'mm.library.loadFailed': "inläsningen misslyckades",
   'mm.library.unloadFailed': "urladdningen misslyckades",
+  'mm.library.inUseRetry': "{model} svarar på en begäran. Försök igen när den är ledig.",
+  'mm.library.gateRefused': "Den lokala modellen är upptagen med en annan begäran. Försök igen när den är klar.",
   'mm.unload.inUse': "{model} svarar på en begäran. Om du laddar ur den ändå avbryts det svaret.",
   'mm.unload.inUseNoForce': "{model} svarar på en begäran. Ladda ur den när den är ledig.",
   'mm.unload.anyway': "Ladda ur ändå",

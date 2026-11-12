@@ -255,6 +255,8 @@ export const IT_IT_MODELS: ModelsCatalogue = {
   'mm.library.unavailable': "La libreria dei modelli non è disponibile.",
   'mm.library.loadFailed': "caricamento non riuscito",
   'mm.library.unloadFailed': "scaricamento non riuscito",
+  'mm.library.inUseRetry': "{model} sta rispondendo a una richiesta. Riprova quando è libero.",
+  'mm.library.gateRefused': "Il modello locale è occupato con un’altra richiesta. Riprova quando ha finito.",
   'mm.unload.inUse': "{model} sta rispondendo a una richiesta. Scaricarlo comunque interrompe quella risposta.",
   'mm.unload.inUseNoForce': "{model} sta rispondendo a una richiesta. Scaricalo quando è inattivo.",
   'mm.unload.anyway': "Scarica comunque",

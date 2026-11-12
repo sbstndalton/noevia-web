@@ -671,6 +671,7 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'data.archivedDesc': "Verborgen in de zijbalk en bewaard totdat je ze verwijdert. Zoek, herstel of verwijder ze in hun eigen weergave.",
   'data.manageArchived': "Gearchiveerde chats beheren",
   'data.retentionLoadError': "De bewaarinstelling kon niet worden geladen.",
+  'data.retentionUnknown': "Niet geladen",
   'data.retentionCheckError': "De bewaarinstelling kon niet worden gecontroleerd. Probeer het opnieuw.",
   'data.retentionOn': "Chats die {days} dagen niet zijn bijgewerkt, worden automatisch verwijderd.",
   'data.deletedNow': "Nu {count} verwijderd.",

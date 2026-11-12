@@ -730,7 +730,12 @@ export function ChatView({
       {inferenceUp === false && (
         <div className="conn-banner" role="status">
           {t('chat.offline.text')}{' '}
-          {t('chat.offline.check', { settings: SETTINGS_MARK }).split(SETTINGS_MARK).flatMap((part, i) => i === 0 ? [part] : [<button key="settings" className="conn-banner-link" onClick={onOpenSettings}>{t('chat.offline.settings')}</button>, part])}
+          {t('chat.offline.check', { settings: SETTINGS_MARK }).split(SETTINGS_MARK).flatMap((part, i) => {
+            if (i === 0) return [part];
+            // #2326: the punctuation that closes the sentence wraps with the link, never alone on the next line.
+            const closing = part.match(/^\S*/)?.[0] ?? '';
+            return [<span key="settings" className="conn-banner-tail"><button className="conn-banner-link" onClick={onOpenSettings}>{t('chat.offline.settings')}</button>{closing}</span>, part.slice(closing.length)];
+          })}
         </div>
       )}
 

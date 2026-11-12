@@ -671,6 +671,7 @@ export const DE_DE_SETTINGS: SettingsCatalogue = {
   'data.archivedDesc': "In der Seitenleiste ausgeblendet und aufbewahrt, bis du sie löschst. In ihrer eigenen Ansicht kannst du sie durchsuchen, wiederherstellen oder löschen.",
   'data.manageArchived': "Archivierte Chats verwalten",
   'data.retentionLoadError': "Die Aufbewahrungseinstellung konnte nicht geladen werden.",
+  'data.retentionUnknown': "Nicht geladen",
   'data.retentionCheckError': "Die Aufbewahrungseinstellung konnte nicht geprüft werden. Versuche es erneut.",
   'data.retentionOn': "Chats, die {days} Tage nicht aktualisiert wurden, werden automatisch gelöscht.",
   'data.deletedNow': "{count} jetzt gelöscht.",

@@ -132,6 +132,9 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   const [profileAttempt, setProfileAttempt] = useState(0);
   const t = useT();
   const stage = useRef<HTMLElement>(null);
+  // #2401: whether the last input inside Settings was the keyboard. Focus the shell moves into the detail panel after a tap, a
+  // click or a deep link is not the person's own, so it draws no frame; after a key press (Enter on a list row) it keeps one.
+  const keyboardInput = useRef(false);
   const pendingInitialNavFocus = useRef<HTMLElement | null>(null);
   const onClose = useRef(props.onClose);
   onClose.current = props.onClose;
@@ -303,7 +306,11 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   useEffect(() => {
     if (view !== 'detail') return;
     stage.current?.querySelector('.settings-detail-scroll')?.scrollTo(0, 0);
-    if (phone()) stage.current?.querySelector<HTMLElement>('.settings-detail-scroll')?.focus({ preventScroll: true });
+    if (phone()) {
+      const panel = stage.current?.querySelector<HTMLElement>('.settings-detail-scroll');
+      if (panel && !keyboardInput.current) panel.dataset.quietFocus = '';
+      panel?.focus({ preventScroll: true });
+    }
   }, [section, view]);
   const showList = () => {
     setView('list');
@@ -324,7 +331,8 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
     void enterMotion(node, 'dialog');
   }, []);
   return <><div className={`settings-scrim${closing ? ' is-closing' : ''}`} aria-hidden="true" onClick={close}/>
-  <section ref={stage} className={`settings-stage${closing ? ' is-closing' : ''}`} data-view={view} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+  <section ref={stage} className={`settings-stage${closing ? ' is-closing' : ''}`} data-view={view} role="dialog" aria-modal="true" aria-labelledby={titleId}
+    onKeyDownCapture={() => { keyboardInput.current = true; }} onPointerDownCapture={() => { keyboardInput.current = false; }}>
     <aside className="settings-navigation">
       <div className="settings-nav-head">
         {/* #305: the old "Back to app" button here duplicated the X (both closed Settings). It
@@ -357,7 +365,8 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
             "Close settings" button ever exists — no ambiguity for queries or assistive tech. */}
         {view === 'detail' && <CloseButton onClick={close} label={t('settings.close')}/>}
       </header>
-      <div className="settings-detail-scroll" key={section} tabIndex={-1} aria-label={title}>
+      <div className="settings-detail-scroll" key={section} tabIndex={-1} aria-label={title}
+        onKeyDown={(e) => { if (e.target === e.currentTarget) delete e.currentTarget.dataset.quietFocus; }} onBlur={(e) => { if (e.target === e.currentTarget) delete e.currentTarget.dataset.quietFocus; }}>
         <SettingsPanelBoundary>
         {['security', 'users', 'diary', 'providers', 'models', 'status'].includes(section) ? (
           <SettingsView {...props} section={section} onOpenSection={open} adminConfirmed={profileKnown && isAdmin}/>

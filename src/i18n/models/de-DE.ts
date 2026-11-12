@@ -255,6 +255,8 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.library.unavailable': "Die Modellbibliothek ist nicht verfügbar.",
   'mm.library.loadFailed': "Laden fehlgeschlagen",
   'mm.library.unloadFailed': "Entladen fehlgeschlagen",
+  'mm.library.inUseRetry': "{model} beantwortet gerade eine Anfrage. Später erneut versuchen, wenn es frei ist.",
+  'mm.library.gateRefused': "Das lokale Modell ist mit einer anderen Anfrage beschäftigt. Erneut versuchen, wenn sie beendet ist.",
   'mm.unload.inUse': "{model} beantwortet gerade eine Anfrage. Wenn du es trotzdem entlädst, bricht diese Antwort ab.",
   'mm.unload.inUseNoForce': "{model} beantwortet gerade eine Anfrage. Entlade es, wenn es frei ist.",
   'mm.unload.anyway': "Trotzdem entladen",

@@ -671,6 +671,7 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'data.archivedDesc': "Dolda i sidofältet och sparade tills du tar bort dem. Sök, återställ eller ta bort dem i deras egen vy.",
   'data.manageArchived': "Hantera arkiverade chattar",
   'data.retentionLoadError': "Lagringsinställningen kunde inte läsas in.",
+  'data.retentionUnknown': "Inte inläst",
   'data.retentionCheckError': "Lagringsinställningen kunde inte kontrolleras. Försök igen.",
   'data.retentionOn': "Chattar som inte har uppdaterats på {days} dagar tas bort automatiskt.",
   'data.deletedNow': "Tog bort {count} nu.",

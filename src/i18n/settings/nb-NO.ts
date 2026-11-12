@@ -671,6 +671,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'data.archivedDesc': "Skjult fra sidefeltet og beholdt til du sletter dem. Søk i, gjenopprett eller slett dem i en egen visning.",
   'data.manageArchived': "Administrer arkiverte chatter",
   'data.retentionLoadError': "Oppbevaringsinnstillingen kunne ikke lastes inn.",
+  'data.retentionUnknown': "Ikke lastet inn",
   'data.retentionCheckError': "Oppbevaringsinnstillingen kunne ikke sjekkes. Prøv igjen.",
   'data.retentionOn': "Chatter som ikke er oppdatert på {days} dager, slettes automatisk.",
   'data.deletedNow': "Slettet {count} nå.",

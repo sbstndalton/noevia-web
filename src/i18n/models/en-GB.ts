@@ -264,6 +264,8 @@ export const EN_GB_MODELS = {
   'mm.library.unavailable': 'The model library is unavailable.',
   'mm.library.loadFailed': 'load failed',
   'mm.library.unloadFailed': 'unload failed',
+  'mm.library.inUseRetry': "{model} is answering a request. Try again when it is idle.",
+  'mm.library.gateRefused': "The local model is busy with another request. Try again when it has finished.",
   'mm.unload.inUse': "{model} is answering a request. Unloading it anyway stops that reply.",
   'mm.unload.inUseNoForce': "{model} is answering a request. Unload it when it is idle.",
   'mm.unload.anyway': "Unload anyway",
