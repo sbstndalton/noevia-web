@@ -12,6 +12,9 @@
 
 /* Diary workspace: writing first, browsing and configuration within reach. */
 .diary-workspace { min-width: 0; }
+.diary-notice { margin: auto; max-width: 440px; padding: var(--space-6) var(--space-5); text-align: center; display: grid; gap: var(--space-3); justify-items: center; }
+.diary-notice h1 { margin: 0; font-size: var(--text-title2); line-height: 1.25; font-weight: 600; }
+.diary-notice p { margin: 0; color: var(--text-secondary); font-size: var(--text-callout); line-height: 1.6; }
 .diary-layout { display: grid; grid-template-columns: minmax(0, 1fr) 290px; overflow-y: auto; flex: 1; min-height: 0; }
 .diary-primary { min-width: 0; padding: 36px clamp(20px, 4vw, 64px) 64px; }
 .diary-breadcrumb { display:flex; align-items:center; gap:12px; min-width:0; flex-wrap:wrap; }

@@ -38,6 +38,21 @@ import '../i18n/diary';
 import { diaryExchangeTarget } from '../diary-conversation';
 import type { DiaryTurn as Turn } from '../diary-conversation';
 
+/** #2456: what the Diary view shows instead of an empty panel. `off`: the account's Diary add-on is off (a button leads to Settings);
+ *  `unreachable`: it is on but did not answer (Try again). Never the server's own error text. */
+export function DiaryNotice({ kind, onSettings, onRetry }: { kind: 'off' | 'unreachable'; onSettings?: () => void; onRetry?: () => void }) {
+  const t = useT();
+  return <main className="main diary-workspace">
+    <section className="diary-notice" aria-labelledby="diary-notice-title">
+      <h1 id="diary-notice-title">{kind === 'off' ? t('diary.off.title') : t('diary.unreachable.title')}</h1>
+      <p>{kind === 'off' ? t('diary.off.body') : t('diary.unreachable.body')}</p>
+      {kind === 'off'
+        ? onSettings && <button type="button" className="modal-btn" onClick={onSettings}>{t('diary.off.openSettings')}</button>
+        : <button type="button" className="modal-btn" onClick={onRetry}>{t('diary.calendar.retryLoad')}</button>}
+    </section>
+  </main>;
+}
+
 // Dates read in the interface's Intl locale, not the browser's (#619).
 const dayLabel = (id: string): string => formatDayLabel(id, appLocale());
 const monthLabel = (id: string): string => formatMonthLabel(id, appLocale());
@@ -329,6 +344,8 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
   const savedLabel = storageMode === 'managed' ? t('diary.storage.appStorage') : storage?.kind === 'local' ? t('diary.storage.server') : storage?.kind === 'nextcloud' ? t('diary.storage.nextcloud') : storage?.kind === 's3' ? t('diary.storage.s3') : storage?.kind === 'webdav' ? t('diary.storage.webdav') : t('diary.storage.saved');
   const pendingCount = Object.keys(pendingSync).length + Object.keys(pendingLocal).length;
 
+  const loadedOnce = useRef(false);
+  if (overview.ready) loadedOnce.current = true;
   const emptyDiary = overview.ready && !months.length && !overview.memory.length && !overview.sources.length;
 
   useEffect(() => {
@@ -687,6 +704,8 @@ export function DiaryView({ inferenceUp, active = true }: { inferenceUp?: boolea
     {busy && extraAbort.current && <button className="popup-tab" onClick={()=>extraAbort.current?.abort()}>{t('diary.compose.cancelContext')}</button>}
     <p className="composer-hint">{busy ? t('diary.compose.workingOnDiary') : day ? t('diary.compose.writingToDay', { day: dayLabel(day) }) : t('diary.compose.localTimeHint')}</p>
   </div>;
+  // #2456: nothing has loaded yet and the Diary's routes failed: say so, with Try again, rather than a page of empty cards and a raw server error.
+  if (overview.failed && !loadedOnce.current && !folder && !editor) return <DiaryNotice kind="unreachable" onRetry={() => { setError(''); bumpRevision(); }} />;
   return <main className="main diary-workspace" role={active ? undefined : 'none'}>
     <header className="chat-header diary-header"><div className="diary-breadcrumb"><button className="diary-home-link" disabled={busy} onClick={()=>editor?closeEditor():navigate(null)}>{t('diary.title')}</button>{month && <><span>/</span><button className="popup-tab" disabled={busy} onClick={()=>navigate(month)}>{monthLabel(month)}</button></>}{day && <span>/ {new Date(`${day}T12:00:00`).getDate()}</span>}</div><span className="diary-private">{t('diary.privateDiary')}</span></header>
     <div className="diary-layout" style={editor?{display:'none'}:undefined}><section className="diary-primary"><div className="diary-content-scroll" ref={scrollRef} onScroll={onScroll} onKeyDown={escapeDay}>

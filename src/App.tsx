@@ -70,7 +70,7 @@ import { ModelPopup } from './components/ModelPopup';
 import { rememberCreatedProject, withCreatedProjects } from './created-projects';
 import { ProjectView } from './components/ProjectView';
 import { ActiveCodeTasks } from './components/code/ActiveCodeTasks';
-import { Coding, Customise, Diary, ModelManager, Projects, Settings, ViewLoading, prefetchViewsWhenIdle } from './lazy-views';
+import { Coding, Customise, Diary, DiaryNotice, ModelManager, Projects, Settings, ViewLoading, prefetchViewsWhenIdle } from './lazy-views';
 import { KeptOffDocument } from './components/KeptOffDocument';
 import { diaryOpened, diaryPresence } from './diary-presence';
 import type { SettingsSection } from './components/SettingsShell';
@@ -1980,6 +1980,10 @@ export default function App(): JSX.Element {
 
       {/* #1635: the Diary is in the document only while it is on screen. Never opened: not mounted. Left:
           kept alive (draft, editor, in-flight save) but detached, not display:none behind the chat. */}
+      {/* #2456: /diary for an account whose Diary is off is a message, not an empty panel (and a loading state until the profile says). */}
+      {view.kind === 'diary' && !diaryCovered && !diaryEnabled && (profileKnown
+        ? <Suspense fallback={<ViewLoading name="diary" active={!settingsOpen} />}><DiaryNotice.View kind="off" onSettings={() => openSettings('diary')} /></Suspense>
+        : <ViewLoading name="diary" active={!settingsOpen} />)}
       {diaryPlace !== 'absent' && <KeptOffDocument className="diary-mount" shown={diaryPlace === 'shown'}><Suspense fallback={<ViewLoading name="diary" active={diaryPlace === 'shown' && !settingsOpen} />}>
         <Diary.View inferenceUp={health.inferenceUp} active={diaryPlace === 'shown'} /></Suspense></KeptOffDocument>}
 
