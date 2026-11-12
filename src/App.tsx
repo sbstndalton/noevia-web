@@ -533,9 +533,11 @@ export default function App(): JSX.Element {
   // mid-detour must not turn it into a permanent return target that Settings' close resolves
   // back into forever — the return target underneath it is written instead.
   useEffect(() => {
-    if (view.kind === 'preview' || view.kind === 'spaces') return;
+    if (view.kind === 'preview') return;
     // Not before the account is known: a `user: null` place reads as another account's (#791).
     if (!accountId) return;
+    // A Space is not somewhere to return to: the server may not have Spaces on the next visit.
+    if (view.kind === 'spaces') return;
     // The return target is never 'preview' by construction (this same guard runs before every
     // view change reaches navRef); the cast only tells TypeScript what the runtime already
     // guarantees.
@@ -726,12 +728,14 @@ export default function App(): JSX.Element {
   // Any move off the page the address did not name (a sidebar link, a Back step) leaves it (#1469).
   const viewAtLoad = useRef(view);
   useEffect(() => { if (view !== viewAtLoad.current) setPageMissing(false); }, [view]);
+  // An area the server does not have for this account (Spaces, #2446) reads as an unknown page. After the effect above, so it wins on a view change.
+  useEffect(() => { if (view.kind === 'spaces' && spacesAvailable === false) setPageMissing(true); }, [view, spacesAvailable]);
   // Every commit, not on deps: the replace flag must be consumed by the first commit after it
   // was raised even when that commit leaves the path alone.
   useEffect(() => {
     const flagged = replaceAfter.current !== null && thisRender > replaceAfter.current;
     if (flagged) replaceAfter.current = null;
-    if (pageMissing || (view.kind === 'spaces' && spacesAvailable === false)) return;
+    if (pageMissing) return;
     if (!route || !routePath) return;
     const next: SyncedPlace = { path: routePath, kind: route.kind, chatId: view.kind === 'chat' ? view.chatId : null };
     const mode = historyMode(syncedPlace.current, next, { current: window.location.pathname, forceReplace: flagged });
@@ -1943,7 +1947,7 @@ export default function App(): JSX.Element {
           </EmptyState>
         </main>
       )}
-      {(pageMissing || (view.kind === 'spaces' && spacesAvailable === false)) && (
+      {pageMissing && (
         <main className="main">
           <EmptyState icon="chat" title={tr('nav.notFound.pageTitle')}
             action={<button className="btn btn-primary" onClick={() => { setPageMissing(false); startFreeChat(); }}>{tr('common.newChat')}</button>}>

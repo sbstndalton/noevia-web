@@ -91,12 +91,12 @@ export function SpacePages({ space, revision, reloadSpaces, onBack, onOpenPage, 
           <SpaceActions space={space} revision={revision} reload={reloadSpaces} onDeleted={onDeleted} />
         </div>
         <div className="space-tools">
-          <label className="space-search">
+          <div className="space-search">
             <ShellIcon name="search" size={16} tone="decorative" />
             <input ref={searchBox} type="search" aria-label={t('spaces.searchLabel')} placeholder={t('spaces.searchPlaceholder')} value={raw}
               aria-invalid={search.kind === 'too-long'} aria-describedby={search.kind === 'too-long' ? 'space-search-limit' : undefined}
               onChange={(e) => setRaw(e.target.value)} />
-          </label>
+          </div>
           <div className="seg space-layout" role="group" aria-label={t('spaces.layoutLabel')}>
             <button type="button" className={layout === 'grid' ? 'is-selected' : ''} aria-pressed={layout === 'grid'} aria-label={t('spaces.viewGrid')} title={t('spaces.viewGrid')} onClick={() => setLayoutAndKeep('grid')}><ShellIcon name="grid" size={16} /></button>
             <button type="button" className={layout === 'list' ? 'is-selected' : ''} aria-pressed={layout === 'list'} aria-label={t('spaces.viewList')} title={t('spaces.viewList')} onClick={() => setLayoutAndKeep('list')}><ShellIcon name="list" size={16} /></button>
