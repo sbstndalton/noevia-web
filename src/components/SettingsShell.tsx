@@ -307,7 +307,7 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   useEffect(() => {
     if (!query.trim() || phone()) return;
     const ids = filtered.flatMap((g) => g.items.map(([id]) => id));
-    if (ids.length === 1 || (ids.length > 1 && !ids.includes(section))) setSection(ids[0]);
+    if (ids.length === 1 || (ids.length > 1 && !ids.includes(section))) { setSection(ids[0]); props.onSection?.(ids[0]); }  // #2468: the address follows, as for a click
   }, [query]);
   // On narrow screens the navigation disappears. Move focus into the new page
   // so keyboard and screen-reader users do not lose their place.
