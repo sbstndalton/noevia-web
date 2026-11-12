@@ -19,3 +19,7 @@ test('noevia#2486 focusHeading is quiet after a pointer or none, loud after a ke
   assert.match(src, /el\.addEventListener\('keydown', loud\);\s*el\.addEventListener\('blur', loud\);/);
   assert.match(read('src/styles/shell-v2.css'), /^\[data-quiet-focus\]:focus-visible \{ outline: none !important; \}$/m);
 });
+
+test('noevia#2486 the listeners are installed at startup, not with the lazy Spaces and Coworkers chunks', () => {
+  assert.match(read('src/main.tsx'), /^import '\.\/quiet-focus';$/m);
+});

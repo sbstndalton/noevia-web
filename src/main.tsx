@@ -25,6 +25,8 @@ import './styles/phone.css';
 import './styles/system/components.css';
 // #510: space-driven declutter tiers (layout only); loads last.
 import './styles/space-tiers.css';
+// #2486: the key/pointer listeners must exist before a lazy view's heading takes focus.
+import './quiet-focus';
 
 startLogoAppearance();
 startFitToViewport();
