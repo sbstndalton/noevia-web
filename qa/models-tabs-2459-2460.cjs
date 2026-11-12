@@ -51,6 +51,7 @@ run('models-tabs-2459-2460', Number(process.env.QA_PORT || 32459), async (check,
         if (state.over) assert.equal(state.fadeStart, 'true', 'overflowing strip fades the scrolled-off start');
         else assert.notEqual(state.fadeEnd, 'true');
         console.log(`  ${locale}: overflow=${state.over}`);
+        if (state.over) await shot(page, `models-tabs-scroll-fade-${locale}`);
       } finally { await page.close(); }
     });
   }
