@@ -77,6 +77,7 @@ export const EN_GB = {
   'sidebar.expandNavigation': 'Expand navigation',
   'sidebar.collapseNavigation': 'Collapse navigation',
   'sidebar.diary': 'Diary',
+  'sidebar.spaces': 'Spaces',
   // #366: the footer's server count and Plugins → Added count different things — say so rather
   // than let them look contradictory. Always shown with more than one server, so no singular form.
   'sidebar.mcpServersBuiltIn': "{count} servers, built in",
@@ -705,6 +706,7 @@ export const EN_GB = {
   'viewLoading.diary': 'Diary',
   'viewLoading.projects': 'Projects',
   'viewLoading.coding': 'Coding',
+  'viewLoading.spaces': 'Spaces',
   'viewLoading.updatedText': 'This part of noevia could not be loaded. noevia may have been updated — reload the page to continue.',
   'viewLoading.reload': 'Reload',
   'stats.ariaLabel': 'Inference details',

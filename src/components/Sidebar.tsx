@@ -46,7 +46,9 @@ interface SidebarProps {
   /** #1567: the project list failed to load; the hint shows as before rather than a skeleton that never ends. */
   projectsFailed?: boolean;
   chats: ChatMeta[];
-  activeView: 'diary' | 'settings' | 'projects' | 'project' | 'chat' | 'preview' | 'models' | 'plugins' | 'archived';
+  activeView: 'diary' | 'settings' | 'projects' | 'project' | 'chat' | 'preview' | 'models' | 'plugins' | 'archived' | 'spaces';
+  /** Spaces (#2446): present only when the server has the Spaces routes for this account; without it there is no entry. */
+  onOpenSpaces?: () => void;
   /** Archived chats (#232): the management view outside Settings. */
   onOpenArchived?: () => void;
   /** Code mode reuses this sidebar with the coding destinations in place of the chat lists. */
@@ -117,6 +119,7 @@ export function Sidebar({
   onOpenArchived,
   showPreviews = false,
   onOpenProjects,
+  onOpenSpaces,
   onOpenProject,
   onOpenChat,
   onDeleteChat,
@@ -475,6 +478,7 @@ export function Sidebar({
   const boundedRecentChats = query || allRecents ? unpinnedChats : unpinnedChats.slice(0, RECENT_LIMIT);
   const destinations = matchingDestinations([
     { id: 'projects', label: t('sidebar.projects'), icon: 'folder', open: onOpenProjects },
+    ...(onOpenSpaces ? [{ id: 'spaces', label: t('sidebar.spaces'), icon: 'book', open: onOpenSpaces }] : []),
     { id: 'customise', label: t('sidebar.customise'), icon: 'plugins', open: onOpenPlugins },
     ...(diaryEnabled ? [{ id: 'diary', label: t('sidebar.diary'), icon: 'diary', open: onOpenDiary }] : []),
     ...(onOpenArchived ? [{ id: 'archived', label: t('sidebar.archivedChats'), icon: 'archive', open: onOpenArchived }] : []),
@@ -743,6 +747,10 @@ export function Sidebar({
           <ShellIcon name="folder" size={17}/>
           <span className="nav-name">{t('sidebar.projects')}</span>
         </button>
+        {onOpenSpaces && <button className={`nav-item${activeView === 'spaces' ? ' is-active' : ''}`} aria-label={t('sidebar.spaces')} aria-current={activeView === 'spaces' ? 'page' : undefined} onClick={onOpenSpaces}>
+          <ShellIcon name="book" size={17}/>
+          <span className="nav-name">{t('sidebar.spaces')}</span>
+        </button>}
         {/* Customise (formerly Plugins, #238) stays with the destinations. Diary is a permanent space, so it lives in the
             bottom bar beside Search: always one tap away, never in the way (user review). */}
         <button className={`nav-item${activeView === 'plugins' ? ' is-active' : ''}`} aria-label={t('sidebar.customise')} aria-current={activeView === 'plugins' ? 'page' : undefined} onClick={onOpenPlugins}>

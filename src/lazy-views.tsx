@@ -39,6 +39,7 @@ export const Settings = lazyView(() => import('./components/SettingsShell').then
 export const Projects = lazyView(() => import('./components/ProjectsView').then((m) => m.ProjectsView));
 // Customise (skills, connectors, plugins) carries the connector catalogue and the Settings strings.
 export const Customise = lazyView(() => import('./components/plugins/PluginsView').then((m) => m.PluginsView));
+export const Spaces = lazyView(() => import('./components/spaces/SpacesView').then((m) => m.SpacesView));
 export const Coding = lazyView(() => import('./components/CodingWorkspace').then((m) => m.CodingWorkspace));
 
 export function prefetchViewsWhenIdle(): () => void {
@@ -60,6 +61,7 @@ const VIEW_NAME_KEY: Record<string, MessageKey> = {
   diary: 'viewLoading.diary',
   projects: 'viewLoading.projects',
   coding: 'viewLoading.coding',
+  spaces: 'viewLoading.spaces',
 };
 
 /** Only the active destination announces; the Diary can preload while hidden. */

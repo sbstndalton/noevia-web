@@ -15,6 +15,7 @@
 //   /customise/<tab>               Customise (skills, connectors, plugins)
 //   /models  /models/<model>       Models & routing, optionally one model's page
 //   /diary  /archived  /code       the Diary, Archived chats, the Code workspace
+//   /spaces  /spaces/<id>  /spaces/<id>/<pageId>   Spaces: the library, one Space's pages, one page
 //
 // Anything else — junk, a truncated link, a path from a future version — reads as a new chat;
 // parsing never throws. Ids are only ever *names* here: whether a chat or project exists, and
@@ -33,7 +34,8 @@ export type Route =
   | { kind: 'models'; model?: string }
   | { kind: 'diary' }
   | { kind: 'archived' }
-  | { kind: 'code' };
+  | { kind: 'code' }
+  | { kind: 'spaces'; spaceId?: string; pageId?: string };
 
 export const PROJECT_TABS: readonly ProjectTab[] = ['chats', 'sources', 'research', 'code', 'browser'];
 
@@ -93,6 +95,11 @@ export function matchPath(pathname: string): Route | null {
     case 'diary': return s.length === 1 ? { kind: 'diary' } : null;
     case 'archived': return s.length === 1 ? { kind: 'archived' } : null;
     case 'code': return s.length === 1 ? { kind: 'code' } : null;
+    case 'spaces':
+      if (s.length === 1) return { kind: 'spaces' };
+      if (!ID.test(a)) return null;
+      if (s.length === 2) return { kind: 'spaces', spaceId: a };
+      return ID.test(b) ? { kind: 'spaces', spaceId: a, pageId: b } : null;
     case 'settings':
       if (s.length === 1) return { kind: 'settings', section: 'appearance' };
       return s.length === 2 && SECTION.test(a) ? { kind: 'settings', section: canonicalSection(a) } : null;
@@ -131,6 +138,9 @@ export function toPath(route: Route): string {
     case 'diary': return '/diary';
     case 'archived': return '/archived';
     case 'code': return '/code';
+    case 'spaces':
+      if (!route.spaceId || !ID.test(route.spaceId)) return '/spaces';
+      return route.pageId && ID.test(route.pageId) ? `/spaces/${seg(route.spaceId)}/${seg(route.pageId)}` : `/spaces/${seg(route.spaceId)}`;
   }
 }
 
@@ -155,7 +165,7 @@ export function safeReturnPath(raw: unknown): string {
 
 /** What App.tsx knows about the screen, reduced to what decides the path. */
 export interface NavSnapshot {
-  view: { kind: string; chatId?: string; projectId?: string | null; id?: string; model?: string };
+  view: { kind: string; chatId?: string; projectId?: string | null; id?: string; model?: string; spaceId?: string; pageId?: string };
   settingsOpen: boolean;
   settingsSection: string;
   /** The Code workspace is on screen (it replaces the chat views without changing `view`). */
@@ -183,6 +193,7 @@ export function routeForState(s: NavSnapshot): Route | null {
     case 'models': return v.model ? { kind: 'models', model: v.model } : { kind: 'models' };
     case 'diary': return { kind: 'diary' };
     case 'archived': return { kind: 'archived' };
+    case 'spaces': return { kind: 'spaces', ...(v.spaceId ? { spaceId: v.spaceId } : {}), ...(v.spaceId && v.pageId ? { pageId: v.pageId } : {}) };
     default: return null;
   }
 }

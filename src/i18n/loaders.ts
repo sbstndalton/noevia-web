@@ -77,7 +77,19 @@ export const MODELS_LOADERS: Record<string, () => Promise<Catalogue>> = {
   'pt-BR': () => import('./models/pt-BR').then((m) => m.PT_BR_MODELS),
   'sv-SE': () => import('./models/sv-SE').then((m) => m.SV_SE_MODELS),
 };
-const SEGMENT_LOADERS: Record<Segment, Record<string, () => Promise<Catalogue>>> = { settings: SETTINGS_LOADERS, projects: PROJECTS_LOADERS, diary: DIARY_LOADERS, customise: CUSTOMISE_LOADERS, models: MODELS_LOADERS };
+/** The Coworkers and Spaces segment of each locale (#2446). Requested only once a Spaces or Coworkers
+ *  view has loaded and registered its English part (coworkers/index.ts), never on the first screen. */
+export const COWORKERS_LOADERS: Record<string, () => Promise<Catalogue>> = {
+  'de-DE': () => import('./coworkers/de-DE').then((m) => m.DE_DE_COWORKERS),
+  'es-ES': () => import('./coworkers/es-ES').then((m) => m.ES_ES_COWORKERS),
+  'fr-FR': () => import('./coworkers/fr-FR').then((m) => m.FR_FR_COWORKERS),
+  'it-IT': () => import('./coworkers/it-IT').then((m) => m.IT_IT_COWORKERS),
+  'nb-NO': () => import('./coworkers/nb-NO').then((m) => m.NB_NO_COWORKERS),
+  'nl-NL': () => import('./coworkers/nl-NL').then((m) => m.NL_NL_COWORKERS),
+  'pt-BR': () => import('./coworkers/pt-BR').then((m) => m.PT_BR_COWORKERS),
+  'sv-SE': () => import('./coworkers/sv-SE').then((m) => m.SV_SE_COWORKERS),
+};
+const SEGMENT_LOADERS: Record<Segment, Record<string, () => Promise<Catalogue>>> = { settings: SETTINGS_LOADERS, projects: PROJECTS_LOADERS, diary: DIARY_LOADERS, customise: CUSTOMISE_LOADERS, models: MODELS_LOADERS, coworkers: COWORKERS_LOADERS };
 
 const pending = new Map<string, Promise<boolean>>();
 const failed = new Set<string>();
