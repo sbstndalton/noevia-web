@@ -355,6 +355,8 @@ export const NB_NO: Catalogue = {
   'projects.view.deleteFile': "Slett fil",
   'projects.view.removeImageTitle': "Fjerne dette bildet?",
   'projects.view.removeImageBody': "Dette sletter den tidligere opplastingen fra noevias eget lager. Dette kan ikke angres.",
+  'projects.view.removeSourceTitle': "Fjerne {name} fra dette prosjektet?",
+  'projects.view.removeSourceBody': "{name} brukes ikke lenger som kilde i svarene i dette prosjektet.",
   'projects.view.removeImage': "Fjern bilde",
   'projects.view.removeImageError': "Kunne ikke fjerne bildet",
   'projects.view.appendFile': "Legg til .md / .txt",

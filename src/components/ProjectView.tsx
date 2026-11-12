@@ -182,6 +182,8 @@ export function ProjectView({
   const [now, setNow] = useState(Date.now());
   useEffect(() => { if (!busyDocs) return; const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, [busyDocs]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  // #2475: Remove on a source that is only attached (nothing is deleted from storage) asks first as well.
+  const [confirmSourceRemove, setConfirmSourceRemove] = useState<string | null>(null);
   const [confirmImageDelete, setConfirmImageDelete] = useState<string | null>(null);
   // #397: this delete is permanent (unlike the sidebar's quick-archive, #362, which is
   // reversible via Archived), so it goes through the same confirm-before-destroy pattern as
@@ -340,7 +342,7 @@ export function ProjectView({
             {undeletableSynced && <small className="source-status">{t('projects.view.syncedFrom', { source: f.source || '' })}</small>}
           </span></span>
           {(f.attachment || f.document?.byteHash) && <a className="btn btn-ghost btn-sm" href={`/api/projects/${encodeURIComponent(project.id)}/${f.attachment ? 'uploads' : 'documents'}/original?name=${encodeURIComponent(f.name)}`} download>{t('projects.view.original')}</a>}
-          {!undeletableSynced && <button className="btn btn-ghost btn-sm" aria-label={t(deletable ? 'projects.view.deleteNamed' : 'projects.view.removeNamed', { name: f.name })} onClick={() => deletable ? setConfirmDelete(f.name) : onPatch(project.id, { files: filesAfterRemoval(project.files, f.name) })}>{deletable ? t('projects.view.delete') : t('projects.view.remove')}</button>}
+          {!undeletableSynced && <button className="btn btn-ghost btn-sm" aria-label={t(deletable ? 'projects.view.deleteNamed' : 'projects.view.removeNamed', { name: f.name })} onClick={() => deletable ? setConfirmDelete(f.name) : setConfirmSourceRemove(f.name)}>{deletable ? t('projects.view.delete') : t('projects.view.remove')}</button>}
         </li>;
   };
 
@@ -666,6 +668,16 @@ export function ProjectView({
           danger
           onCancel={() => setConfirmDelete(null)}
           onConfirm={() => { const path = confirmDelete; setConfirmDelete(null); void removeFile(path); }}
+        />
+      )}
+      {confirmSourceRemove && (
+        <ConfirmDialog
+          title={t('projects.view.removeSourceTitle', { name: confirmSourceRemove.split('/').pop() || '' })}
+          body={t('projects.view.removeSourceBody', { name: confirmSourceRemove })}
+          confirmLabel={t('projects.view.remove')}
+          danger
+          onCancel={() => setConfirmSourceRemove(null)}
+          onConfirm={() => { const name = confirmSourceRemove; setConfirmSourceRemove(null); onPatch(project.id, { files: filesAfterRemoval(project.files, name) }); }}
         />
       )}
       {confirmImageDelete && (

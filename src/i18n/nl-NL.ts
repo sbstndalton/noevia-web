@@ -355,6 +355,8 @@ export const NL_NL: Catalogue = {
   'projects.view.deleteFile': "Bestand verwijderen",
   'projects.view.removeImageTitle': "Deze afbeelding verwijderen?",
   'projects.view.removeImageBody': "Dit verwijdert de eerdere upload uit de eigen opslag van noevia. Dit kan niet ongedaan worden gemaakt.",
+  'projects.view.removeSourceTitle': "{name} uit dit project verwijderen?",
+  'projects.view.removeSourceBody': "{name} wordt niet meer als bron gebruikt in de antwoorden van dit project.",
   'projects.view.removeImage': "Afbeelding verwijderen",
   'projects.view.removeImageError': "Kon die afbeelding niet verwijderen",
   'projects.view.appendFile': ".md / .txt toevoegen",

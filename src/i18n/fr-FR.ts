@@ -355,6 +355,8 @@ export const FR_FR: Catalogue = {
   'projects.view.deleteFile': "Supprimer le fichier",
   'projects.view.removeImageTitle': "Retirer cette image ?",
   'projects.view.removeImageBody': "Cela supprime le téléversement antérieur du stockage propre de noevia. Cette action est irréversible.",
+  'projects.view.removeSourceTitle': "Retirer {name} de ce projet ?",
+  'projects.view.removeSourceBody': "{name} ne sera plus utilisé comme source dans les réponses de ce projet.",
   'projects.view.removeImage': "Retirer l’image",
   'projects.view.removeImageError': "Impossible de retirer cette image",
   'projects.view.appendFile': "Ajouter .md / .txt",
