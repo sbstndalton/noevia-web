@@ -13,6 +13,7 @@ import {
   setupStatus,
   apiFetch,
   putRoutingDefault,
+  fetchProfile,
 } from '../api';
 import type { AuthUser } from '../api';
 import { classifyOrigin, isIpAddressHost } from '../browser-support';
@@ -67,10 +68,18 @@ export interface SetupWizardProps {
   initialUser?: AuthUser;
 }
 
-/** Account choices live on the server; reload restarts the optional steps without
+/** The step a resumed wizard opens at (#2474): the first one the server does not already show as done for the
+ * account. Only the Diary choice (when it is on) and a registered passkey are visible in what the server reports,
+ * so provider and preferences always count as open. */
+export function resumeStep(mode: 'resume' | 'invited', diaryEnabled: boolean): Step {
+  if (mode === 'resume') return 'provider';
+  return diaryEnabled ? 'prefs' : 'diary';
+}
+
+/** Account choices live on the server; reload resumes the optional steps at the first one not done, without
  * overwriting them. Members never see deployment or global model controls. */
 export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWizardProps): JSX.Element {
-  const [step, setStep] = useState<Step>(mode === 'fresh' ? 'welcome' : mode === 'invited' ? 'diary' : 'provider');
+  const [step, setStep] = useState<Step>(mode === 'fresh' ? 'welcome' : resumeStep(mode, initialUser?.diaryEnabled ?? false));
   const [accountCreated, setAccountCreated] = useState(mode !== 'fresh');
   const heading = useRef<HTMLHeadingElement>(null);
   // Backups are deployment-wide, so only an administrator sees the step, and only when the
@@ -97,6 +106,15 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [diaryEnabled, setDiaryEnabled] = useState(initialUser?.diaryEnabled ?? false);
+  // Steps the account already shows as done (#2474): marked on the progress dots; Back still reaches them.
+  const [hasPasskey, setHasPasskey] = useState(false);
+  useEffect(() => {
+    if (mode === 'fresh') return;
+    let live = true;
+    void fetchProfile().then(p => { if (live) setHasPasskey(p.passkeys.length > 0); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [mode]);
+  const stepDone = (s: Step) => accountCreated && ((s === 'diary' && diaryEnabled) || (s === 'passkey' && hasPasskey));
 
   // Prefs-step fields.
   // #2236: a browser with no earlier choice follows its device, as the sign-in page before and Settings → Appearance
@@ -212,7 +230,7 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
       {visibleSteps.map((s, i) => (
         <span
           key={s}
-          className={`wizard-dot${s === step ? ' active' : ''}${i < stepNumber - 1 ? ' done' : ''}`}
+          className={`wizard-dot${s === step ? ' active' : ''}${i < stepNumber - 1 || (s !== step && stepDone(s)) ? ' done' : ''}`}
         />
       ))}
       <span className="wizard-step-label">
