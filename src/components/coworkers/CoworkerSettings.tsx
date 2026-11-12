@@ -120,6 +120,7 @@ export function CoworkerSettings({ mode, onSaved, onDeleted, onClose }: {
   const briefCount = countChars(draft.brief);
   const title = mode.kind === 'create' ? t('coworkers.createTitle') : t('coworkers.editTitle');
   return (
+    <>
     <dialog ref={dialog} className="modal-overlay native-modal" aria-label={title} onCancel={(e) => { e.preventDefault(); if (!busy) onClose(); }} onClick={() => { if (!busy) onClose(); }}>
       <form className="modal-card aero dialog-sheet cw-settings" noValidate onClick={(e) => e.stopPropagation()} onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         <div className="modal-head cw-settings-head"><CoworkerGlyph coworker={{ ...draft, name: draft.name || '?' }} /><h2>{title}</h2></div>
@@ -193,7 +194,9 @@ export function CoworkerSettings({ mode, onSaved, onDeleted, onClose }: {
           <button type="submit" className="btn btn-primary" disabled={busy}>{mode.kind === 'create' ? t('coworkers.create') : t('coworkers.save')}</button>
         </div>
       </form>
-      {confirmDelete && mode.kind === 'edit' && <ConfirmDialog danger title={t('coworkers.deleteTitle', { name: mode.record.specialist.name })} body={t('coworkers.deleteBody')} confirmLabel={t('coworkers.deleteConfirm')} onConfirm={() => void remove()} onCancel={() => setConfirmDelete(false)} />}
     </dialog>
+    {/* A sibling, not a child: a click inside it must not reach the sheet's own backdrop click. */}
+    {confirmDelete && mode.kind === 'edit' && <ConfirmDialog danger title={t('coworkers.deleteTitle', { name: mode.record.specialist.name })} body={t('coworkers.deleteBody')} confirmLabel={t('coworkers.deleteConfirm')} onConfirm={() => void remove()} onCancel={() => setConfirmDelete(false)} />}
+    </>
   );
 }
