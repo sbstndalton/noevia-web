@@ -163,6 +163,8 @@ export interface ToolCallView {
   targetKind?: 'drive' | 'drive-new';
   /** #658: the same tool, target and arguments as a change already saved in this chat. */
   repeatOf?: boolean;
+  /** #2446: the server asks about this call every time, so the card has no "Allow for this chat". */
+  once?: boolean;
   /** #769: sensitive arguments holding untrusted text (or `unchecked`), shown on the card. */
   provenance?: ToolProvenance[];
   /** #887: the id of the MCP server the call goes to (the `server` of a 'tool_pending' event). */

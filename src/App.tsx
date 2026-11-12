@@ -18,6 +18,7 @@ import { planRegenerate, resendOutcome, type ResendOutcome } from './regenerate'
 import { TOOL_RESULT_LIMIT } from './components/ToolCalls';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
+import { CoworkerConversation } from './coworker-conversation';
 import {
   createProject,
   deleteChat,
@@ -1850,6 +1851,7 @@ export default function App(): JSX.Element {
   );
 
   return (
+    <CoworkerConversation.Provider value={view.kind === 'chat' ? view.coworkerId ?? null : null}>
     <div className="app">
       <div className="regular-workspace" style={{display:'contents'}}>
       <Sidebar
@@ -2151,6 +2153,7 @@ export default function App(): JSX.Element {
       {shortcutsOpen && <ShortcutsDialog apple={appleKeys} onClose={() => setShortcutsOpen(false)} onOpenSettings={() => { setShortcutsOpen(false); openSettings('keyboard'); }} />}
 
     </div>
+    </CoworkerConversation.Provider>
   );
 }
 

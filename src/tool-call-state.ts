@@ -11,7 +11,7 @@ export function provenanceNotes(value: unknown): ToolProvenance[] {
 
 /** The approval card's call for a 'tool_pending' stream event, built the same way in chat and in
  *  the Diary, so both carry the resolved file an edit would change (#648). */
-export function pendingToolCall(ev: { name?: string; args?: string; id?: string; target?: string; targetKind?: string; repeatOf?: boolean; provenance?: unknown; server?: unknown }): ToolCallView {
+export function pendingToolCall(ev: { name?: string; args?: string; id?: string; target?: string; targetKind?: string; repeatOf?: boolean; once?: boolean; provenance?: unknown; server?: unknown }): ToolCallView {
   const provenance = provenanceNotes(ev.provenance);
   return {
     name: ev.name || 'tool',
@@ -23,6 +23,8 @@ export function pendingToolCall(ev: { name?: string; args?: string; id?: string;
     ...(ev.targetKind === 'drive' || ev.targetKind === 'drive-new' ? { targetKind: ev.targetKind } : {}),
     // #658: the same change as one already saved in this chat. A flag on the card, nothing more.
     ...(ev.repeatOf === true ? { repeatOf: true } : {}),
+    // #2446: a call the server asks about every time (the coworker's page save): no chat-wide button.
+    ...(ev.once === true ? { once: true } : {}),
     // #769: where a sensitive argument's text came from. A note on the card; all three actions stay.
     ...(provenance.length ? { provenance } : {}),
     // #887: which MCP server this write goes to, so two servers offering one tool name can be told apart.

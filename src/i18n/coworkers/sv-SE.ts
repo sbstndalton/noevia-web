@@ -162,4 +162,13 @@ export const SV_SE_COWORKERS: CoworkersCatalogue = {
   'spaces.leaveBodyNoCopy': "Den här enheten kunde inte behålla en kopia av dina ändringar, så de går förlorade.",
   'spaces.listTruncated': "De första {count} sidorna visas. Använd sökningen för att hitta resten.",
   'spaces.saveAsNew': "Spara som ny sida",
+  'pageSave.titleLabel': "Titel",
+  'pageSave.draftLabel': "Utkast",
+  'pageSave.ask': "Den här sidan sparas i {space}.",
+  'pageSave.notGranted': "Inte ett av kollegans Utrymmen, så den avvisas.",
+  'pageSave.approve': "Godkänn och spara",
+  'pageSave.decline': "Avvisa",
+  'pageSave.group': "Spara en sida",
+  'pageSave.checking': "Kontrollerar var den sparas…",
+  'pageSave.unverified': "Det gick inte att kontrollera målet (utrymmes-id: {space}). Sidan sparas bara om det är ett av kollegans Utrymmen.",
 };

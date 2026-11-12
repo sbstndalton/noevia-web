@@ -162,4 +162,13 @@ export const NL_NL_COWORKERS: CoworkersCatalogue = {
   'spaces.leaveBodyNoCopy': "Dit apparaat kon geen kopie van je wijzigingen bewaren, dus ze gaan verloren.",
   'spaces.listTruncated': "De eerste {count} pagina’s worden getoond. Gebruik zoeken om de rest te vinden.",
   'spaces.saveAsNew': "Opslaan als nieuwe pagina",
+  'pageSave.titleLabel': "Titel",
+  'pageSave.draftLabel': "Concept",
+  'pageSave.ask': "Deze pagina wordt opgeslagen in {space}.",
+  'pageSave.notGranted': "Geen van de Ruimtes van deze collega, dus het wordt geweigerd.",
+  'pageSave.approve': "Goedkeuren en opslaan",
+  'pageSave.decline': "Weigeren",
+  'pageSave.group': "Een pagina opslaan",
+  'pageSave.checking': "Bestemming controleren…",
+  'pageSave.unverified': "De bestemming kon niet worden gecontroleerd (ruimte-id: {space}). De pagina wordt alleen opgeslagen als dit een van de Ruimtes van deze collega is.",
 };

@@ -254,6 +254,10 @@ dialog.confirm-dialog.dialog-sheet { width: min(420px, calc(100vw - 32px)); }
 .tool-calls > ol { padding: 0 var(--space-1) var(--space-1); }
 .tool-call > details > summary { align-items: center; gap: var(--space-2); padding: var(--space-2); border-radius: var(--radius-sm); }
 .tool-call-state { display: inline-grid; place-items: center; width: 16px; flex: none; color: var(--status-connected); }
+/* #2446: the page a coworker saved, one tap from the chat. */
+.tool-call-chip { display: inline-flex; align-items: center; gap: var(--space-2); margin: var(--space-1) 0; padding: var(--space-1) var(--space-3); max-width: 100%; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-primary); background: var(--md-surface-container-low, transparent); font-size: var(--text-footnote); text-decoration: none; }
+.tool-call-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool-call-chip:hover { background: var(--md-surface-container, transparent); }
 .tool-call.is-running .tool-call-state > svg { animation: motion-spin var(--motion-async) var(--ease-async) infinite; }
 .tool-call.is-running .tool-call-state { color: var(--text-secondary); }
 .tool-call.is-declined .tool-call-state, .tool-call.is-not-run .tool-call-state { color: var(--status-danger); }

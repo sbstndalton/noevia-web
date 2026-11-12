@@ -162,4 +162,13 @@ export const NB_NO_COWORKERS: CoworkersCatalogue = {
   'spaces.leaveBodyNoCopy': "Denne enheten kunne ikke beholde en kopi av endringene dine, så de går tapt.",
   'spaces.listTruncated': "De første {count} sidene vises. Bruk søk for å finne resten.",
   'spaces.saveAsNew': "Lagre som ny side",
+  'pageSave.titleLabel': "Tittel",
+  'pageSave.draftLabel': "Utkast",
+  'pageSave.ask': "Denne siden lagres i {space}.",
+  'pageSave.notGranted': "Ikke et av kollegaens Områder, så den blir avvist.",
+  'pageSave.approve': "Godkjenn og lagre",
+  'pageSave.decline': "Avslå",
+  'pageSave.group': "Lagre en side",
+  'pageSave.checking': "Sjekker hvor den lagres…",
+  'pageSave.unverified': "Kunne ikke sjekke målet (område-ID: {space}). Siden lagres bare hvis det er et av kollegaens Områder.",
 };

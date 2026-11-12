@@ -162,4 +162,13 @@ export const FR_FR_COWORKERS: CoworkersCatalogue = {
   'spaces.leaveBodyNoCopy': "Cet appareil n’a pas pu garder de copie de vos modifications, elles seront donc perdues.",
   'spaces.listTruncated': "Les {count} premières pages sont affichées. Utilisez la recherche pour trouver le reste.",
   'spaces.saveAsNew': "Enregistrer comme nouvelle page",
+  'pageSave.titleLabel': "Titre",
+  'pageSave.draftLabel': "Brouillon",
+  'pageSave.ask': "Cette page sera enregistrée dans {space}.",
+  'pageSave.notGranted': "Ce n’est pas un des Espaces de ce collègue : elle sera refusée.",
+  'pageSave.approve': "Approuver et enregistrer",
+  'pageSave.decline': "Refuser",
+  'pageSave.group': "Enregistrer une page",
+  'pageSave.checking': "Vérification de la destination…",
+  'pageSave.unverified': "Impossible de vérifier la destination (id de l’Espace : {space}). La page n’est enregistrée que s’il s’agit d’un des Espaces de ce collègue.",
 };

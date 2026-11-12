@@ -162,4 +162,13 @@ export const DE_DE_COWORKERS: CoworkersCatalogue = {
   'spaces.leaveBodyNoCopy': "Dieses Gerät konnte keine Kopie deiner Änderungen behalten, sie gehen daher verloren.",
   'spaces.listTruncated': "Es werden die ersten {count} Seiten angezeigt. Nutze die Suche, um den Rest zu finden.",
   'spaces.saveAsNew': "Als neue Seite speichern",
+  'pageSave.titleLabel': "Titel",
+  'pageSave.draftLabel': "Entwurf",
+  'pageSave.ask': "Diese Seite wird in {space} gespeichert.",
+  'pageSave.notGranted': "Keiner der Bereiche dieses Mitarbeiters, deshalb wird es abgelehnt.",
+  'pageSave.approve': "Genehmigen & speichern",
+  'pageSave.decline': "Ablehnen",
+  'pageSave.group': "Eine Seite speichern",
+  'pageSave.checking': "Ziel wird geprüft…",
+  'pageSave.unverified': "Das Ziel konnte nicht geprüft werden (Bereichs-ID: {space}). Es wird nur gespeichert, wenn es einer der Bereiche dieses Mitarbeiters ist.",
 };
