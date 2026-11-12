@@ -30,6 +30,7 @@ import { createPage, deletePage, type Page } from '../../spaces-api';
 import { ConfirmDialog } from '../ContextMenu';
 import { MarkdownPreview } from '../DiaryModal';
 import { ShellIcon } from '../ShellIcon';
+import { focusHeading } from '../../quiet-focus';
 import { usePageAutosave } from './usePageAutosave';
 import './spaces.css';
 
@@ -79,7 +80,7 @@ export function PageEditor({ spaceId, spaceName, page, fresh, onBack, onDeleted,
   // Focus lands on the page when it opens (the title field for a page just created). A conflict or a
   // failed save appears while the person is typing, so it never takes focus (that would swallow their
   // next keystrokes); it is announced as an alert instead, and sits before the text in reading order.
-  useEffect(() => { (fresh ? titleInput.current : heading.current)?.focus(); }, [fresh]);
+  useEffect(() => { if (fresh) titleInput.current?.focus(); else focusHeading(heading.current); }, [fresh]);
 
   // Closing or reloading the tab with something unsaved asks first (the draft is also kept here).
   useEffect(() => {
