@@ -57,12 +57,13 @@ test('invitations default to member, the administrator choice sends admin, and r
     });
     await act(async () => { button('users.copyInvitation').click(); });
     assert.deepEqual(roles, ['member', 'admin']);
+    // An administrator link is one-off: the picker is back on member straight after it, before anything else happens.
+    assert.equal(document.querySelector('select').value, 'member');
     await act(async () => { button('users.recovery').click(); });
     assert.deepEqual(recoveries, ['other']);
     assert.deepEqual(roles, ['member', 'admin']);
     assert.ok([...document.querySelectorAll('input')].some(input => input.value.includes('?recovery=recovery-token')));
-    // An administrator link is one-off: the picker returns to member and the next link is a member link.
-    assert.equal(document.querySelector('select').value, 'member');
+    // The next link after an administrator one is a member link.
     await act(async () => { button('users.copyInvitation').click(); });
     assert.deepEqual(roles, ['member', 'admin', 'member']);
   } finally {
