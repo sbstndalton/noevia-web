@@ -1,6 +1,8 @@
 import type { SettingsCatalogue } from './en-GB';
 
 export const SV_SE_SETTINGS: SettingsCatalogue = {
+  'users.invitationRole': "Roll för inbjudan",
+  'users.roleInvitation': "Engångsinbjudan för {role} (går ut om 24 timmar)",
   "appearance.logo.test": "Testa nästa palett",
   "appearance.logo.reset": "Avsluta förhandsvisning",
   "appearance.logo.previewHint": "Endast förhandsvisning. Ditt sparade val ändras inte.",

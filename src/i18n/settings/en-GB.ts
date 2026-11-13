@@ -3,6 +3,8 @@
 // Customise chunks import, so these strings stay out of the first-load bundle. Anything the shell
 // shows before Settings opens (settings.title, the shortcut reference) stays in ../en-GB.ts.
 export const EN_GB_SETTINGS = {
+  'users.invitationRole': "Invitation role",
+  'users.roleInvitation': "Single-use invitation for {role} (expires in 24 hours)",
   'error.panel.title': 'This panel couldn’t be displayed',
   'error.panel.body': 'You can retry or choose another settings category.',
   'error.panel.retry': 'Retry panel',

@@ -1,6 +1,8 @@
 import type { SettingsCatalogue } from './en-GB';
 
 export const FR_FR_SETTINGS: SettingsCatalogue = {
+  'users.invitationRole': "Rôle de l’invitation",
+  'users.roleInvitation': "Invitation à usage unique pour {role} (expire dans 24 heures)",
   "appearance.logo.test": "Tester la palette suivante",
   "appearance.logo.reset": "Terminer l’aperçu",
   "appearance.logo.previewHint": "Aperçu uniquement. Votre choix enregistré reste inchangé.",

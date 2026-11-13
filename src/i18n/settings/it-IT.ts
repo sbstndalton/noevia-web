@@ -1,6 +1,8 @@
 import type { SettingsCatalogue } from './en-GB';
 
 export const IT_IT_SETTINGS: SettingsCatalogue = {
+  'users.invitationRole': "Ruolo dell’invito",
+  'users.roleInvitation': "Invito monouso per {role} (scade tra 24 ore)",
   "appearance.logo.test": "Prova la tavolozza successiva",
   "appearance.logo.reset": "Termina anteprima",
   "appearance.logo.previewHint": "Solo anteprima. La scelta salvata resta invariata.",
