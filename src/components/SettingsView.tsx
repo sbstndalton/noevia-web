@@ -284,6 +284,8 @@ function UsersCard(): JSX.Element {
     const result = recoveryId ? await createRecovery(recoveryId) : await createInvitation(invitationRole);
     const link = `${window.location.origin}/?${recoveryId ? 'recovery' : 'invite'}=${encodeURIComponent(result.token)}`;
     await copyLink(key, link, recoveryId ? t('users.recoveryLink') : t('users.roleInvitation', { role: t(invitationRole === 'admin' ? 'profile.admin' : 'profile.member') }));
+    // An administrator link is a one-off; the next link is a member link unless chosen again.
+    if (!recoveryId && invitationRole === 'admin') setInvitationRole('member');
   }, '', false);
   const actionFeedback = (key: string) => {
     const value = feedback[key];
