@@ -1,6 +1,8 @@
 import type { SettingsCatalogue } from './en-GB';
 
 export const PT_BR_SETTINGS: SettingsCatalogue = {
+  'users.invitationRole': "Função do convite",
+  'users.roleInvitation': "Convite de uso único para {role} (expira em 24 horas)",
   "appearance.logo.test": "Testar próxima paleta",
   "appearance.logo.reset": "Encerrar prévia",
   "appearance.logo.previewHint": "Somente prévia. Sua escolha salva não muda.",

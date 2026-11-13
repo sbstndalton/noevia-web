@@ -223,6 +223,7 @@ function UsersCard(): JSX.Element {
   const t = useT();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [users, setUsers] = useState<AuthUser[]>([]);
+  const [invitationRole, setInvitationRole] = useState<'member' | 'admin'>('member');
   const [denied, setDenied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
@@ -280,9 +281,9 @@ function UsersCard(): JSX.Element {
     }
   };
   const createLink = (key: string, recoveryId?: string) => act(key, recoveryId ? t('users.createRecovery') : t('users.createInvitation'), async () => {
-    const result = recoveryId ? await createRecovery(recoveryId) : await createInvitation();
+    const result = recoveryId ? await createRecovery(recoveryId) : await createInvitation(invitationRole);
     const link = `${window.location.origin}/?${recoveryId ? 'recovery' : 'invite'}=${encodeURIComponent(result.token)}`;
-    await copyLink(key, link, recoveryId ? t('users.recoveryLink') : t('users.singleUseInvitation'));
+    await copyLink(key, link, recoveryId ? t('users.recoveryLink') : t('users.roleInvitation', { role: t(invitationRole === 'admin' ? 'profile.admin' : 'profile.member') }));
   }, '', false);
   const actionFeedback = (key: string) => {
     const value = feedback[key];
@@ -316,7 +317,15 @@ function UsersCard(): JSX.Element {
       </div>)}
     </div>
     <div className="users-add">
-      <button className="modal-btn secondary" disabled={!!busy.invitation || loading} onClick={() => void createLink('invitation')}><ShellIcon name="plus" size={16}/>{t('users.copyInvitation')}</button>
+      <div className="users-actions">
+        <label className="field">{t('users.invitationRole')}
+          <select className="modal-input" value={invitationRole} disabled={!!busy.invitation || loading} onChange={e => setInvitationRole(e.currentTarget.value === 'admin' ? 'admin' : 'member')}>
+            <option value="member">{t('profile.member')}</option>
+            <option value="admin">{t('profile.admin')}</option>
+          </select>
+        </label>
+        <button className="modal-btn secondary" disabled={!!busy.invitation || loading} onClick={() => void createLink('invitation')}><ShellIcon name="plus" size={16}/>{t('users.copyInvitation')}</button>
+      </div>
       {actionFeedback('invitation')}
     </div>
     {error && <p className="modal-err" role="alert">{error}</p>}

@@ -1,6 +1,8 @@
 import type { SettingsCatalogue } from './en-GB';
 
 export const NL_NL_SETTINGS: SettingsCatalogue = {
+  'users.invitationRole': "Rol voor de uitnodiging",
+  'users.roleInvitation': "Eenmalige uitnodiging voor {role} (verloopt na 24 uur)",
   "appearance.logo.test": "Volgend palet testen",
   "appearance.logo.reset": "Voorbeeld beëindigen",
   "appearance.logo.previewHint": "Alleen een voorbeeld. Je opgeslagen keuze blijft hetzelfde.",
