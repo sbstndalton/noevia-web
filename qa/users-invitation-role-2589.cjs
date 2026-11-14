@@ -16,7 +16,7 @@ run('users-invitation-role-2589', Number(process.env.QA_PORT || 32589), async (c
     await check(`${width} px ${theme}: the copied notice names the role, also after "Copy link again"`, async () => {
       const page = await themedPage(browser, view);
       try {
-        await page.addInitScript(() => { Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => undefined } }); });
+        await page.addInitScript(() => { Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text) => { (window.__copies = window.__copies || []).push(text); } } }); });
         const roles = [];
         await page.route('**/api/**', (route) => {
           const req = route.request(), p = new URL(req.url()).pathname, json = (b, status = 200) => route.fulfill({ status, json: b });
@@ -32,12 +32,16 @@ run('users-invitation-role-2589', Number(process.env.QA_PORT || 32589), async (c
         const notice = (text) => users.getByRole('status').filter({ hasText: text }).waitFor({ timeout: 5000 });
         await users.getByRole('button', { name: 'Copy invitation link' }).click();
         await notice(SENTENCE.en.member);
+        const copies = () => page.evaluate(() => (window.__copies || []).length);
+        assert.equal(await copies(), 1, 'the first copy');
         await users.getByRole('button', { name: 'Copy link again' }).click();
+        await page.waitForFunction(() => (window.__copies || []).length === 2);
         await notice(SENTENCE.en.member);
         await users.getByLabel('Invitation role').selectOption('admin');
         await users.getByRole('button', { name: 'Copy invitation link' }).click();
         await notice(SENTENCE.en.admin);
         await users.getByRole('button', { name: 'Copy link again' }).click();
+        await page.waitForFunction(() => (window.__copies || []).length === 4);
         await notice(SENTENCE.en.admin);
         assert.deepEqual(roles, ['member', 'admin']);
         await shot(page, `users-invitation-role-2589-${width}-${theme}`);

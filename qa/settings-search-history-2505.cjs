@@ -75,4 +75,35 @@ run('settings-search-history-2505', Number(process.env.QA_PORT || 32505), async 
       assert.equal(await page.evaluate(() => history.length), length + 1, 'a click adds its own step');
     } finally { await page.close(); }
   });
+  await check('1280 px: further keys that leave the same single section do not turn the next click into a replace', async () => {
+    const { page, settings, search } = await settingsAt(browser, origin, [1280, 900, 'light']);
+    try {
+      await page.waitForFunction(() => location.pathname === '/settings/appearance', null, { timeout: 5000 });
+      await search.pressSequentially('notifications', { delay: 120 });
+      await settings.getByRole('heading', { name: 'Notifications' }).first().waitFor({ timeout: 5000 });
+      assert.equal(path(page), '/settings/notifications');
+      await search.fill('');
+      await settings.getByRole('button', { name: 'Appearance and language', exact: true }).click();
+      await page.waitForFunction(() => location.pathname === '/settings/appearance', null, { timeout: 5000 });
+      await page.goBack();
+      await page.waitForFunction(() => location.pathname === '/settings/notifications', null, { timeout: 5000 });
+      assert.equal(path(page), '/settings/notifications', 'the click was a step of its own, so Back returns to the search place');
+    } finally { await page.close(); }
+  });
+  await check('1280 px: Back during a search, then another key, does not overwrite the section the person was on', async () => {
+    const { page, settings, search } = await settingsAt(browser, origin, [1280, 900, 'light']);
+    try {
+      await page.waitForFunction(() => location.pathname === '/settings/appearance', null, { timeout: 5000 });
+      await search.pressSequentially('privacy', { delay: 250 });
+      await page.waitForTimeout(300);
+      await page.goBack();
+      await page.waitForFunction(() => location.pathname === '/settings/appearance', null, { timeout: 5000 });
+      await settings.getByRole('heading', { name: 'Appearance and language' }).first().waitFor({ timeout: 5000 });
+      await search.press('Backspace');
+      await page.waitForFunction(() => location.pathname !== '/settings/appearance', null, { timeout: 5000 });
+      await page.goBack();
+      await page.waitForFunction(() => location.pathname === '/settings/appearance', null, { timeout: 5000 });
+      assert.equal(path(page), '/settings/appearance', 'one more Back from the new search place returns to the section the person was on, not out of Settings');
+    } finally { await page.close(); }
+  });
 });

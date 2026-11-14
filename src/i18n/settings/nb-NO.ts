@@ -189,7 +189,7 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'backups.waiting': "En planlagt sikkerhetskopi er satt på pause mens verten tar sine egne sikkerhetskopier. Den fortsetter av seg selv etterpå.",
   'backups.retry.one': "Sikkerhetskopiene venter før nytt forsøk etter {count} mislykket forsøk. Neste forsøk skjer av seg selv.",
   'backups.retry.other': "Sikkerhetskopiene venter før nytt forsøk etter {count} mislykkede forsøk. Neste forsøk skjer av seg selv.",
-  'backups.emptyDestination': "Målet er tomt, men det er tatt sikkerhetskopier dit tidligere. Sjekk at det er montert og at det er riktig mappe eller bøtte. Bekreft bare hvis det virkelig er et nytt lager (en byttet disk, en gjenopprettet bøtte); da starter neste sikkerhetskopi en ny kjede der.",
+  'backups.emptyDestination': "Målet er tomt, men det er tatt sikkerhetskopier dit tidligere. Sjekk at det er montert og at det er riktig mappe eller bøtte. Bekreft bare hvis det virkelig er et nytt lager (en byttet disk, en nyopprettet bøtte); da starter neste sikkerhetskopi en ny kjede der.",
   'backups.newStore': "Dette er et nytt lager",
   'backups.newStoreConfirm': "Ja, start et nytt lager",
   'backups.newStoring': "Lagrer …",

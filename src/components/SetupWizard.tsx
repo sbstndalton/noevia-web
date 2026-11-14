@@ -14,7 +14,7 @@ import {
   apiFetch,
   putRoutingDefault,
   fetchProfile,
-  fetchSession,
+  probeSession,
 } from '../api';
 import type { AuthUser } from '../api';
 import { classifyOrigin, isIpAddressHost } from '../browser-support';
@@ -222,7 +222,7 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
       await completeOnboarding();
       // #2581: "Set up later" on the passkey step is the choice #2457 remembers for 30 days in this browser; without it the next
       // password sign-in asks again. A session that cannot be read only means the step shows once more.
-      if (deferPasskey) { const id = initialUser?.id ?? (await fetchSession().catch(() => null))?.user.id; if (id) deferPasskeyStep(id); }
+      if (deferPasskey) { const id = initialUser?.id ?? (await probeSession().catch(() => null))?.id; if (id) deferPasskeyStep(id); }
       sessionStorage.setItem('cowork-new-account', '1');
       onFinished();
     } catch {

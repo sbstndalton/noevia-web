@@ -184,7 +184,7 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'backups.incomplete.one': "La última copia está incompleta: {count} archivo no se pudo copiar y se dejó fuera.",
   'backups.incomplete.other': "La última copia está incompleta: {count} archivos no se pudieron copiar y se dejaron fuera.",
   'backups.incompleteUnknown': "La última copia está incompleta: algunos archivos no se pudieron copiar y se dejaron fuera.",
-  'backups.unreadable.one': "No se pudo leer {count} instantánea guardada. Los datos antiguos no se limpian hasta que se pueda.",
+  'backups.unreadable.one': "No se pudo leer {count} instantánea guardada. Los datos antiguos no se limpian hasta que se pueda leer.",
   'backups.unreadable.other': "No se pudieron leer {count} instantáneas guardadas. Los datos antiguos no se limpian hasta que se puedan leer.",
   'backups.waiting': "Una copia programada está en pausa mientras el host hace sus propias copias. Después continúa sola.",
   'backups.retry.one': "Las copias esperan antes de reintentar tras {count} intento fallido. El siguiente intento se hace solo.",

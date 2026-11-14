@@ -72,10 +72,11 @@ export function OffsiteBackupSettings(): JSX.Element {
   const act = async (label: string, url: string) => {
     ++request.current; // Earlier status reads cannot overwrite an action in progress.
     setBusy(label); setError(''); setLoadError('');
-    try { await call(url, failed, 'POST'); } catch (e) { setError((e as Error).message); } finally { setBusy(''); void load(); }
+    try { await call(url, failed, 'POST'); } catch (e) { setError((e as Error).message); } finally { setBusy(''); setConfirmNew(false); void load(); }
   };
   const reason = status ? reasonText(t, status) : null;
   const [confirmNew, setConfirmNew] = useState(false);
+  useEffect(() => { if (!status || !emptyDestination(status)) setConfirmNew(false); }, [status]); // a refusal that cleared is not still waiting for its confirmation
   const lastBackup = status?.lastBackup;
   const skipped = lastBackup?.skipped ?? 0;
   const failures = status?.backupRetry?.failures ?? 0;
@@ -97,7 +98,7 @@ export function OffsiteBackupSettings(): JSX.Element {
             ? <button type="button" className="btn btn-secondary" disabled={!!busy || !!status.busy} onClick={() => setConfirmNew(true)}>{t('backups.newStore')}</button>
             : <>
               <button type="button" className="btn btn-secondary" disabled={!!busy} onClick={() => setConfirmNew(false)}>{t('common.cancel')}</button>
-              <button type="button" className="btn btn-primary" disabled={!!busy || !!status.busy} onClick={() => { setConfirmNew(false); void act('newStore', '/api/admin/offsite-backup/new-store'); }}>{busy === 'newStore' ? t('backups.newStoring') : t('backups.newStoreConfirm')}</button>
+              <button type="button" className="btn btn-primary" disabled={!!busy || !!status.busy} onClick={() => void act('newStore', '/api/admin/offsite-backup/new-store')}>{busy === 'newStore' ? t('backups.newStoring') : t('backups.newStoreConfirm')}</button>
             </>}
         </div>
       </section>}
