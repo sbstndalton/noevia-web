@@ -54,7 +54,7 @@ import { frameWithLink, keepLinks, MAX_FRAME_LINKS } from './chat-organise';
 import { ChatLinks } from './components/ChatLinks';
 import type { FrameAction, FrameDraft } from './chat-frame';
 import { modeWithAccess, sessionMode, type ChatMode } from './chat-mode';
-import { STOPPED_SENDER } from './chat-labels';
+import { COWORK_SENDER, STOPPED_SENDER } from './chat-labels';
 import type {
   ChatMeta,
   HealthState,
@@ -1340,7 +1340,7 @@ export default function App(): JSX.Element {
       const existing = loaded ? resolveLoadedHistory(messagesRef.current[chatId] ?? [], loaded) : messagesRef.current[chatId] ?? [];
       const replyId = uid();
       setMessagesByChat(prev => ({ ...prev, [chatId]: [...existing, { id: uid(), role: 'user', content: text },
-        { id: replyId, role: 'assistant', content: '', senderLabel: 'Cowork', processingStatus: translateNow('chat.cowork.starting') }] }));
+        { id: replyId, role: 'assistant', content: '', senderLabel: COWORK_SENDER, processingStatus: translateNow('chat.cowork.starting') }] }));
       setStreamingChats(prev => ({ ...prev, [chatId]: true }));
       const sentAt = Date.now();
       queueMetaUpsert(projectId, chatId, (meta) => meta

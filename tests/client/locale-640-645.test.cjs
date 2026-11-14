@@ -35,7 +35,7 @@ const plain = (s) => s.replace(/[\u00a0\u202f]/g, ' ');
 const labels = load('chat-labels');
 
 test('#643 the known sender tokens are exactly the ones the app stores', () => {
-  assert.deepEqual([...labels.SENDER_TOKENS], ['Auto (fast)', 'Auto (smart)', 'Auto (code)', 'Auto (creative)', 'Auto (Fast/Smart)', 'Stopped']);
+  assert.deepEqual([...labels.SENDER_TOKENS], ['Auto (fast)', 'Auto (smart)', 'Auto (code)', 'Auto (creative)', 'Auto (Fast/Smart)', 'Stopped', 'Cowork']);
 });
 
 test('#643 every known sender token is worded in every locale, with and without the "Assistant · " prefix', () => {

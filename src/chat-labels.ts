@@ -10,9 +10,11 @@ const ROUTES = ['fast', 'smart', 'code', 'creative'] as const;
 
 /** The compact English label of a not-yet-routed Auto reply (also the composer's model label). */
 export const AUTO_PENDING_LABEL = 'Auto (Fast/Smart)';
+/** The stored sender of a reply that starts a code task: the internal mode id, drawn as the mode's name ("Task"). */
+export const COWORK_SENDER = 'Cowork';
 /** Every language-neutral sender token the app stores or draws: the routed Auto labels, the
  *  pending Auto label and the Stopped token (#626, #643). Each one has a translation. */
-export const SENDER_TOKENS: readonly string[] = [...ROUTES.map((r) => `Auto (${r})`), AUTO_PENDING_LABEL, 'Stopped'];
+export const SENDER_TOKENS: readonly string[] = [...ROUTES.map((r) => `Auto (${r})`), AUTO_PENDING_LABEL, 'Stopped', COWORK_SENDER];
 
 /** "Auto (fast)" -> "Auto (Schnell)"; "Auto (Fast/Smart)" -> "Auto (Schnell/Smart)"; "Stopped" -> "Gestoppt";
  *  any other label (a model name) as it is. */
@@ -25,6 +27,7 @@ export function senderLabelText(t: Translator, label: string): string {
     return t('chat.route.auto', { route });
   }
   if (bare === 'Stopped') return t('chat.stopped.sender');
+  if (bare === COWORK_SENDER) return t('projects.modeCowork');
   return bare;
 }
 

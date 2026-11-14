@@ -52,9 +52,9 @@ export function CoworkTaskCard({ task: ref, onRetry, disabled }: { task: CoworkT
   const unreadable = task?.status === 'unreadable';
   const final = !!task && (unreadable || TASK_FINAL.has(task.status));
   const output = (task && !unreadable ? task.assistantOutput?.text?.trim() : '') || '';
-  return <section className="cowork-task" aria-label={`Cowork task in ${ref.repository}`} aria-busy={!final}>
+  return <section className="cowork-task" aria-label={`Code task in ${ref.repository}`} aria-busy={!final}>
     <header className="cowork-task-head">
-      <span className="cowork-task-title">Cowork task · {ref.repository}</span>
+      <span className="cowork-task-title">Code task · {ref.repository}</span>
       <span className="cowork-task-status" data-status={task?.status ?? 'loading'} role="status">{task ? STATUS_LABEL[task.status] : 'Loading…'}</span>
     </header>
     {task && !unreadable && task.stage && !final && <p className="cowork-task-note">{task.stage}</p>}

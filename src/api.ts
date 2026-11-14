@@ -915,7 +915,7 @@ async function getPermitted<T>(url: string): Promise<T> {
 /** #236: a Cowork turn. The server guards it (403 member, 409 harness off) and starts a code task. */
 export async function startCowork(body: { projectId: string; chatId: string; repository: string; message: string }): Promise<{ taskId: string; branch: string; repository: string }> {
   const res = await apiFetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, mode: 'cowork', spaceId: body.projectId }) });
-  if (!res.ok) throw Object.assign(new Error(await describeFailure(res, 'Cowork task could not start')), { status: res.status });
+  if (!res.ok) throw Object.assign(new Error(await describeFailure(res, 'Code task could not start')), { status: res.status });
   const { task } = await res.json() as { task: { taskId: string; branch: string; repository: string } };
   return task;
 }
