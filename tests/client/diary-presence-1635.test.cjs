@@ -149,7 +149,7 @@ test('opened, left and reopened: kept alive, out of the document while left, dra
 test('App.tsx mounts the Diary through the presence rule, never display:none behind the chat', () => {
   const src = fs.readFileSync(path.join(ROOT, 'src/App.tsx'), 'utf8');
   assert.doesNotMatch(src, /className="diary-mount" style=\{\{ display:/, 'the Diary is again kept in the document with display:none');
-  assert.match(src, /const diaryCovered = appMode === 'code' && showPreviews;/);
+  assert.match(src, /const diaryCovered = appMode === 'code' && codeOffered;/);
   assert.match(src, /const diaryOpenedNow = diaryOpened\(diaryWasOpened, \{ enabled: diaryEnabled, viewKind: view\.kind, covered: diaryCovered \}\);/);
   assert.match(src, /const diaryPlace = diaryPresence\(\{ enabled: diaryEnabled, viewKind: view\.kind, opened: diaryOpenedNow, covered: diaryCovered \}\);/);
   // Only a Diary on screen fetches: Code mode leaves view.kind 'diary', so the view kind is not enough.

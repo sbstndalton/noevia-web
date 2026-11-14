@@ -1,5 +1,6 @@
 import { apiFetch } from '../../api';
 import { cached } from '../../request-cache';
+import { announceCodeTaskAnswer } from './active-tasks';
 
 /** noevia's own action classes, as `server/code-actions.cjs` names them. */
 export type CodeAction = 'read_repository' | 'edit_file' | 'execute_command' | 'install_dependency'
@@ -132,10 +133,11 @@ export const fetchCode = (projectId: string) => apiFetch(base(projectId)).then(r
 export const fetchCodeAccess = (projectId: string) => cached(`noevia:code-access:${projectId}`, () => fetchCode(projectId));
 export const startTask = (projectId: string, body: StartTask) => post(base(projectId), body).then(r => read<{ taskId: string; branch: string }>(r));
 export const fetchTask = (projectId: string, id: string) => apiFetch(`${base(projectId)}/${id}`).then(r => read<CodeTask | UnreadableTask>(r));
-export const cancelTask = (projectId: string, id: string) => post(`${base(projectId)}/${id}/cancel`).then(r => read<CodeTask>(r));
+/** Both answers tell the header banner and the sidebar list at once (#2599), so they stop showing the task as waiting. */
+export const cancelTask = (projectId: string, id: string) => post(`${base(projectId)}/${id}/cancel`).then(r => read<CodeTask>(r)).then(task => { announceCodeTaskAnswer({ taskId: id, answer: 'cancel' }); return task; });
 /** Answers one named approval. A 409 means that card is gone: refresh and show what is waiting now. */
 export const decideTask = (projectId: string, id: string, approvalId: string, decision: 'approve' | 'approve_all' | 'deny') =>
-  post(`${base(projectId)}/${id}/approve`, { decision, approvalId }).then(r => read<{ ok: true }>(r));
+  post(`${base(projectId)}/${id}/approve`, { decision, approvalId }).then(r => read<{ ok: true }>(r)).then(done => { announceCodeTaskAnswer({ taskId: id, answer: decision }); return done; });
 
 /** What a networked task reached through the egress proxy, and what it was refused, by host. */
 export type NetworkActivity = {

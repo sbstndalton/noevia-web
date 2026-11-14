@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../api';
-import { parseActiveTasks } from './active-tasks';
+import { ANSWERED_HOLD_MS, CODE_TASK_ANSWERED, applyAnswered, parseActiveTasks } from './active-tasks';
+import type { CodeTaskAnswer } from './active-tasks';
 import type { ActiveTask } from './active-tasks';
 export type { ActiveTask } from './active-tasks';
 
@@ -19,6 +20,24 @@ export function useActiveCodeTasks(enabled: boolean) {
   const [error, setError] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const [revision, setRevision] = useState(0);
+  // #2599: tasks the person has just allowed, declined or cancelled; the server can lag a few seconds behind its own answer.
+  const answered = useRef(new Map<string, { answer: CodeTaskAnswer['answer']; at: number }>());
+  // Ask again at once, once more while the server settles, and once more when the hold ends (each reload also repaints).
+  useEffect(() => {
+    if (!enabled) return;
+    const timers: number[] = [];
+    const answeredNow = (event: Event) => {
+      const { taskId, answer } = (event as CustomEvent<CodeTaskAnswer>).detail ?? {};
+      if (typeof taskId !== 'string') return;
+      const now = Date.now();
+      for (const [id, mark] of answered.current) if (now - mark.at >= ANSWERED_HOLD_MS) answered.current.delete(id);
+      answered.current.set(taskId, { answer, at: now });
+      setRevision((value) => value + 1);
+      for (const delay of [1500, ANSWERED_HOLD_MS + 50]) timers.push(window.setTimeout(() => setRevision((value) => value + 1), delay));
+    };
+    window.addEventListener(CODE_TASK_ANSWERED, answeredNow);
+    return () => { timers.forEach((id) => window.clearTimeout(id)); window.removeEventListener(CODE_TASK_ANSWERED, answeredNow); };
+  }, [enabled]);
   useEffect(() => {
     if (!enabled || unavailable) return;
     let live = true;
@@ -46,5 +65,6 @@ export function useActiveCodeTasks(enabled: boolean) {
     window.addEventListener('online', wake);
     return () => { live = false; if (timer) window.clearInterval(timer); document.removeEventListener('visibilitychange', wake); window.removeEventListener('online', wake); };
   }, [enabled, tasks.length, unavailable, revision]);
-  return { tasks, total, error, unavailable, retry: () => setRevision((value) => value + 1) };
+  const shown = applyAnswered(tasks, answered.current, Date.now());
+  return { tasks: shown, total: Math.max(0, total - (tasks.length - shown.length)), error, unavailable, retry: () => setRevision((value) => value + 1) };
 }
