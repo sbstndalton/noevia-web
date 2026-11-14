@@ -23,14 +23,23 @@ export type CodeTaskAnswer = { taskId: string; answer: 'approve' | 'approve_all'
 export function announceCodeTaskAnswer(detail: CodeTaskAnswer): void {
   if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent<CodeTaskAnswer>(CODE_TASK_ANSWERED, { detail }));
 }
-/** How long a task the person has just answered is shown as answered, whatever a lagging poll still says: a cancelled task is gone,
- *  an allowed or declined one is running again. After this the server's own answer is shown as it is (a second request can wait). */
+/** What the person answered and what the active list said about that task at that moment (`updatedAt` is the server's own clock for the
+ *  task row; every task event moves it, so a row that still holds the same value has not caught up with the answer). */
+export type AnsweredMark = { answer: CodeTaskAnswer['answer']; at: number; updatedAt: number | null };
+/** With no row to compare, a task the person has just answered is shown as answered this long. */
 export const ANSWERED_HOLD_MS = 4000;
-/** The tasks as the person sees them: `answered` maps task id -> { answer, at }; an entry older than ANSWERED_HOLD_MS no longer counts. */
-export function applyAnswered(tasks: ActiveTask[], answered: ReadonlyMap<string, { answer: CodeTaskAnswer['answer']; at: number }>, now: number): ActiveTask[] {
+/** With a row to compare, for as long as the server's row is unchanged, but never longer than this. */
+export const ANSWERED_MAX_MS = 20000;
+/** The tasks as the person sees them. A task they just answered is shown as answered (cancelled: gone; allowed or declined: running)
+ *  while the server's row for it is still the one they answered, so a lagging poll cannot bring the banner back; the moment the row
+ *  moves (a new request for a decision, a new stage, a finish) the server's answer is shown as it is. */
+export function applyAnswered(tasks: ActiveTask[], answered: ReadonlyMap<string, AnsweredMark>, now: number): ActiveTask[] {
   return tasks.flatMap((task) => {
     const mark = answered.get(task.id);
-    if (!mark || now - mark.at >= ANSWERED_HOLD_MS) return [task];
+    if (!mark) return [task];
+    const age = now - mark.at;
+    const unchanged = mark.updatedAt === null ? age < ANSWERED_HOLD_MS : age < ANSWERED_MAX_MS && task.updatedAt <= mark.updatedAt;
+    if (!unchanged) return [task];
     if (mark.answer === 'cancel') return [];
     return [task.status === 'waiting_approval' ? { ...task, status: 'running' as const, approvalAction: null } : task];
   });

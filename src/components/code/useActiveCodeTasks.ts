@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../api';
-import { ANSWERED_HOLD_MS, CODE_TASK_ANSWERED, applyAnswered, parseActiveTasks } from './active-tasks';
-import type { CodeTaskAnswer } from './active-tasks';
+import { ANSWERED_MAX_MS, CODE_TASK_ANSWERED, applyAnswered, parseActiveTasks } from './active-tasks';
+import type { AnsweredMark, CodeTaskAnswer } from './active-tasks';
 import type { ActiveTask } from './active-tasks';
 export type { ActiveTask } from './active-tasks';
 
@@ -21,8 +21,10 @@ export function useActiveCodeTasks(enabled: boolean) {
   const [unavailable, setUnavailable] = useState(false);
   const [revision, setRevision] = useState(0);
   // #2599: tasks the person has just allowed, declined or cancelled; the server can lag a few seconds behind its own answer.
-  const answered = useRef(new Map<string, { answer: CodeTaskAnswer['answer']; at: number }>());
-  // Ask again at once, once more while the server settles, and once more when the hold ends (each reload also repaints).
+  const answered = useRef(new Map<string, AnsweredMark>());
+  const lastTasks = useRef<ActiveTask[]>([]);
+  lastTasks.current = tasks;
+  // Ask again at once, a few more times while the server settles, and once more when the longest hold ends (each reload also repaints).
   useEffect(() => {
     if (!enabled) return;
     const timers: number[] = [];
@@ -30,10 +32,10 @@ export function useActiveCodeTasks(enabled: boolean) {
       const { taskId, answer } = (event as CustomEvent<CodeTaskAnswer>).detail ?? {};
       if (typeof taskId !== 'string') return;
       const now = Date.now();
-      for (const [id, mark] of answered.current) if (now - mark.at >= ANSWERED_HOLD_MS) answered.current.delete(id);
-      answered.current.set(taskId, { answer, at: now });
+      for (const [id, mark] of answered.current) if (now - mark.at >= ANSWERED_MAX_MS) answered.current.delete(id);
+      answered.current.set(taskId, { answer, at: now, updatedAt: lastTasks.current.find((task) => task.id === taskId)?.updatedAt ?? null });
       setRevision((value) => value + 1);
-      for (const delay of [1500, ANSWERED_HOLD_MS + 50]) timers.push(window.setTimeout(() => setRevision((value) => value + 1), delay));
+      for (const delay of [1500, 4000, 8000, 14000, ANSWERED_MAX_MS + 50]) timers.push(window.setTimeout(() => setRevision((value) => value + 1), delay));
     };
     window.addEventListener(CODE_TASK_ANSWERED, answeredNow);
     return () => { timers.forEach((id) => window.clearTimeout(id)); window.removeEventListener(CODE_TASK_ANSWERED, answeredNow); };

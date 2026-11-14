@@ -2030,7 +2030,7 @@ export default function App(): JSX.Element {
       {view.kind === 'diary' && !diaryCovered && !diaryEnabled && (profileKnown
         ? <Suspense fallback={<ViewLoading name="diary" active={!settingsOpen} />}>{profileFailed
           // The profile did not answer, so whether the Diary is on is unknown: not "off".
-          ? <DiaryNotice.View kind="unreachable" onRetry={() => { fetchProfile().then((p) => { setDiaryEnabled(p.user.diaryEnabled); setProfileFailed(false); }).catch(() => undefined); }} />
+          ? <DiaryNotice.View kind="unreachable" onRetry={() => { fetchProfile().then((p) => { setDiaryEnabled(p.user.diaryEnabled); setIsAdmin(p.user.role === 'admin'); setProfileFailed(false); }).catch(() => undefined); }} />
           : <DiaryNotice.View kind="off" onSettings={() => openSettings('diary')} />}</Suspense>
         : <ViewLoading name="diary" active={!settingsOpen} />)}
       {diaryPlace !== 'absent' && <KeptOffDocument className="diary-mount" shown={diaryPlace === 'shown'}><Suspense fallback={<ViewLoading name="diary" active={diaryPlace === 'shown' && !settingsOpen} />}>

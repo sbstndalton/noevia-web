@@ -23,7 +23,8 @@ const task = (status, over = {}) => ({ id: TASK, status, stage: null, error: nul
   identityHash: null, capabilities: CAPS, steps: [], plan: null, assistantOutput: null, approval: status === 'waiting_approval' ? approval : null, result: null, ...over });
 const finished = (id, status) => task(status, { id, task: `QA-2599 ${status} task`, approval: null });
 
-/** `state.status` is what the server really holds; `state.lagUntil` keeps the poll answering "waiting" a while after a decision. */
+/** What the server holds is `state.status` and `state.updatedAt` (its own clock for the task row, moved by every event). After a decision the
+ *  poll keeps answering the old row (waiting, the old updatedAt) for 6 s, longer than the client's short hold, as a lagging server does. */
 async function mock(page, role, state) {
   const me = user(role);
   await page.route('**/api/auth/session', (r) => r.fulfill({ json: { user: me, passkeys: [] } }));
@@ -35,16 +36,17 @@ async function mock(page, role, state) {
     { role: 'assistant', content: 'Started a Code task in qa-repo.', coworkTask: { projectId: 'p-cw', taskId: TASK, repository: 'qa-repo' } }], revision: 'r1' } }));
   await page.route('**/api/code/active', (r) => {
     if (role !== 'admin') return r.fulfill({ status: 403, json: { error: 'Administrator required' } });
-    const shownWaiting = state.status === 'waiting_approval' || Date.now() < state.lagUntil;
-    const live = state.gone && Date.now() >= state.lagUntil ? [] : (shownWaiting || state.status === 'running' ? [{ id: TASK, projectId: 'p-cw', projectName: PROJECT.name, title: 'QA-2599 fix the test',
-      status: shownWaiting ? 'waiting_approval' : 'running', stage: null, updatedAt: Date.now(), approvalAction: shownWaiting ? 'edit_file' : null }] : []);
-    return r.fulfill({ json: { tasks: state.active ?? live, total: (state.active ?? live).length } });
+    if (state.active) return r.fulfill({ json: { tasks: state.active, total: state.active.length } });
+    const row = Date.now() < (state.lagUntil || 0) ? state.before : { status: state.status, updatedAt: state.updatedAt };
+    const live = row.status === 'waiting_approval' || row.status === 'running'
+      ? [{ id: TASK, projectId: 'p-cw', projectName: PROJECT.name, title: 'QA-2599 fix the test', status: row.status, stage: null, updatedAt: row.updatedAt, approvalAction: row.status === 'waiting_approval' ? 'edit_file' : null }] : [];
+    return r.fulfill({ json: { tasks: live, total: live.length } });
   });
   await page.route('**/api/projects/*/code**', async (r) => {
     const req = r.request(), path = new URL(req.url()).pathname;
     if (role !== 'admin') return r.fulfill({ status: 403, json: { error: 'Administrator required' } });
-    if (req.method() === 'POST' && /\/approve$/.test(path)) { state.status = 'running'; state.lagUntil = Date.now() + 6000; return r.fulfill({ json: { ok: true } }); }
-    if (req.method() === 'POST' && /\/cancel$/.test(path)) { state.status = 'cancelled'; state.gone = true; state.lagUntil = Date.now() + 6000; return r.fulfill({ json: task('cancelled') }); }
+    if (req.method() === 'POST' && /\/approve$/.test(path)) { state.before = { status: state.status, updatedAt: state.updatedAt }; state.status = 'running'; state.updatedAt = Date.now(); state.lagUntil = Date.now() + 6000; return r.fulfill({ json: { ok: true } }); }
+    if (req.method() === 'POST' && /\/cancel$/.test(path)) { state.before = { status: state.status, updatedAt: state.updatedAt }; state.status = 'cancelled'; state.updatedAt = Date.now(); state.lagUntil = Date.now() + 6000; return r.fulfill({ json: task('cancelled') }); }
     if (path.endsWith(`/code/${TASK}`)) return r.fulfill({ json: task(state.status) });
     return r.fulfill({ json: { repositories: [{ id: 'qa-repo' }], capabilities: CAPS, defaultCapabilities: ['read_repository'], harnesses: [{ id: 'qa', label: 'QA', version: '1' }],
       promptPreparation: [{ id: 'direct', label: 'Direct', available: true, reason: 'QA direct.' }], sandboxed: true, network: false,
@@ -91,7 +93,7 @@ run('code-view-2599', Number(process.env.QA_PORT || 32599), async (check, browse
       ['Cancel task', (p) => p.getByRole('button', { name: 'Cancel task', exact: true }).click()],
     ]) {
       await check(`${tag}: after ${label} the "needs your decision" banner clears at once, not seconds later`, async () => {
-        const state = { status: 'waiting_approval', lagUntil: 0 };
+        const state = { status: 'waiting_approval', updatedAt: 1000, lagUntil: 0 };
         const page = await themedPage(browser, view);
         try {
           await mock(page, 'admin', state);
@@ -106,12 +108,33 @@ run('code-view-2599', Number(process.env.QA_PORT || 32599), async (check, browse
           const left = await page.locator('.active-code-entry summary', { hasText: 'needs your decision' }).count();
           assert.equal(left, 0, `the decision banner was still showing ${Date.now() - start} ms after ${label}`);
           await shot(page, `code-banner-cleared-${label.replace(/ /g, '-')}-${view[0]}-${view[2]}`);
-          // And it does not come back from the lagging poll that is still answering "waiting".
-          await page.waitForTimeout(1800);
-          assert.equal(await page.locator('.active-code-entry summary', { hasText: 'needs your decision' }).count(), 0, 'the banner came back');
+          // And it does not come back from the lagging poll, which answers "waiting" for 6 s: look again once the lag is over and the
+          // short hold would have ended (the row it answers has not moved until then).
+          await page.waitForTimeout(7500);
+          assert.equal(await page.locator('.active-code-entry summary', { hasText: 'needs your decision' }).count(), 0, 'the banner came back from the lagging poll');
         } finally { await page.close(); }
       });
     }
+
+    await check(`${tag}: an administrator whose first profile read failed keeps the Code switch after the Diary's Try again succeeds`, async () => {
+      const page = await themedPage(browser, view);
+      try {
+        await mock(page, 'admin', { status: 'completed', active: [] });
+        let reads = 0;
+        await page.route('**/api/profile', (r) => (++reads === 1 ? r.fulfill({ status: 500, json: { error: 'boom' } })
+          : r.fulfill({ json: { user: { ...user('admin'), diaryEnabled: false }, passkeys: [] } })));
+        await page.goto(origin + '/diary');
+        await page.getByRole('heading', { name: /Diary/ }).first().waitFor({ timeout: 20000 });
+        const retry = page.getByRole('button', { name: 'Try again' });
+        await retry.waitFor({ timeout: 15000 });
+        await retry.click();
+        await page.waitForFunction(() => !document.querySelector('.diary-notice [role="alert"]') && !document.querySelector('section.diary-notice[role="alert"]'), null, { timeout: 15000 });
+        await openDrawer(page);
+        await page.waitForTimeout(700);
+        await page.locator('.app-mode-switch [data-mode="code"]').filter({ visible: true }).first().waitFor({ timeout: 5000 });
+        await shot(page, `code-switch-after-retry-${view[0]}-${view[2]}`);
+      } finally { await page.close(); }
+    });
 
     await check(`${tag}: a member has no Code switch and /code lands in chat; an administrator keeps the switch`, async () => {
       const page = await themedPage(browser, view);
