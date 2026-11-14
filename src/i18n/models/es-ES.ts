@@ -252,6 +252,7 @@ export const ES_ES_MODELS: ModelsCatalogue = {
   'mm.badge.tools': "Uso de herramientas",
   'mm.badge.vision': "Visión",
   'mm.library.noService': "Los detalles de archivos, las descargas y la configuración necesitan el servicio de gestión de modelos, que no está disponible en este servidor.",
+  'mm.library.adminOnly': "Los detalles de archivos, las descargas y la configuración son solo para administradores.",
   'mm.library.unavailable': "La biblioteca de modelos no está disponible.",
   'mm.library.loadFailed': "no se pudo cargar",
   'mm.library.unloadFailed': "no se pudo descargar de memoria",

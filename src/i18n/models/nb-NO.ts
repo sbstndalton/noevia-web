@@ -252,6 +252,7 @@ export const NB_NO_MODELS: ModelsCatalogue = {
   'mm.badge.tools': "Verktøybruk",
   'mm.badge.vision': "Bilde",
   'mm.library.noService': "Fildetaljer, nedlastinger og innstillinger trenger modellbehandlingstjenesten, som ikke er tilgjengelig på denne serveren.",
+  'mm.library.adminOnly': "Fildetaljer, nedlastinger og innstillinger er forbeholdt administratorer.",
   'mm.library.unavailable': "Modellbiblioteket er utilgjengelig.",
   'mm.library.loadFailed': "lasting mislyktes",
   'mm.library.unloadFailed': "avlasting mislyktes",

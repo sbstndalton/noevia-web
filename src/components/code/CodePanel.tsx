@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import { cancelTask, decideTask, fetchCode, startTask } from './api';
+import { cancelTask, decideTask, fetchCode, PLANNER_PREPARATION, startTask } from './api';
 import { isUnreadableTask } from './api';
 import type { CodeAction, CodeApproval, CodeReview, CodeState, CodeTask, NetworkActivity, PreparationMode, UnreadableTask } from './api';
 import { isDecisionStale } from './decision-guard';
@@ -57,6 +57,8 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
   const [domains, setDomains] = useState('');
   const [harness, setHarness] = useState('');
   const [preparation, setPreparation] = useState('direct');
+  // #2643: the Planner stops at its plan for the person's answer only when the start asks it to (`approvePlan`); on by default.
+  const [reviewPlan, setReviewPlan] = useState(true);
   // The operator's variable names are for an administrator, and only where a note needs them (#1580 review).
   const [isAdmin, setIsAdmin] = useState(false);
   const mounted = useRef(true);
@@ -205,6 +207,10 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
               {byId(t, `code.prep.${m.id}.label`, m.label)}</option>)}
           </select>
           <PreparationNote mode={state.promptPreparation.find(m => m.id === selectedPreparation)}/>
+          {selectedPreparation === PLANNER_PREPARATION && <label className="code-capability">
+            <input type="checkbox" checked={reviewPlan} disabled={running || !!busy} onChange={e => setReviewPlan(e.target.checked)}/>
+            <span>{t('code.panel.reviewPlan')}</span>
+          </label>}
         </div>
       </div>
 
@@ -251,6 +257,7 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
       <div className="code-actions">
         <button type="button" className="btn btn-primary" disabled={!prompt.trim() || !repository || running || !!busy}
           onClick={() => act('start', () => startTask(projectId, { repository, prompt, capabilities: capabilities.filter(a => online || !needsNetwork(a)), harness, promptPreparation: selectedPreparation,
+            ...(selectedPreparation === PLANNER_PREPARATION && reviewPlan ? { approvePlan: true } : {}),
             domains: domains.split(',').map(d => d.trim()).filter(Boolean) }), () => setPrompt(''))}>{busy === 'start' ? t('code.panel.starting') : t('code.panel.start')}</button>
       </div>
       {running && <p className="code-note" role="status">{t('code.panel.oneTask')}</p>}
@@ -310,11 +317,12 @@ export function TaskCard({ task, busy, onDecide, onCancel }: {
   // not read as plainly "Finished". Both come from fields the server already sends.
   const blocked = task.status === 'failed' && task.lifecycle === 'blocked';
   const startedAgent = (task.stages || []).some(move => move.to === 'implementing');
-  const notAccepted = task.status === 'completed' && (task.result?.review
+  // #2646: a task that made no commit had nothing to accept, so declining its card is not a refusal.
+  const notAccepted = task.status === 'completed' && task.review?.code !== 'no_change' && (task.result?.review
     ? !task.result.review.accepted
     : task.result?.pipeline === true && task.result.accepted === false);
   const badge = blocked ? t('code.status.blocked') : notAccepted ? t('code.status.notAccepted') : statusLabel(t, task.status);
-  const outcome = task.status === 'waiting_approval' ? (task.approval ? t('code.task.waitingDecisionFor', { action: actionLabel(t, task.approval.action) }) : t('code.task.waitingDecision'))
+  const outcome = task.status === 'waiting_approval' ? (task.approval ? t('code.task.waitingDecisionFor', { action: approvalName(t, task.approval) }) : t('code.task.waitingDecision'))
     : notAccepted ? t('code.task.notAcceptedOutcome')
     : task.status === 'completed' ? (task.result?.tools ? t.plural('code.task.finishedAfter', task.result.tools) : statusLabel(t, 'completed'))
     : blocked ? t(startedAgent ? 'code.task.blockedOutcome' : 'code.task.blockedBeforeStart')
@@ -433,19 +441,32 @@ export function ApprovalCard({ approval, busy, onDecide }: {
   // of the approval actually on screen rather than whatever `approval` resolves to later.
   const approvalId = approval.id;
   return <div className="code-approval" role="group" aria-label={t('code.approval.group')}>
-    <p className="code-approval-title"><ShellIcon name="security" size={16} tone="decorative"/>{actionLabel(t, approval.action)}{approval.title ? ` — ${approval.title}` : ''}</p>
+    <p className="code-approval-title"><ShellIcon name="security" size={16} tone="decorative"/>{actionLabel(t, approval.action)}{approval.title && approval.title !== actionLabel(t, approval.action) ? ` — ${approval.title}` : ''}</p>
     {approval.reason && <p className="code-note">{approval.reason}</p>}
     {approval.command && <pre className="code-approval-args" aria-label={t('code.approval.command')}>{approval.command}</pre>}
     {approval.diff && <pre className="code-approval-args" aria-label={t('code.approval.changesTo', { path: approval.diff.path })}>{approval.diff.newText ?? ''}</pre>}
     {approval.arguments !== null && approval.arguments !== undefined &&
       <pre className="code-approval-args" aria-label={t('code.approval.arguments')}>{JSON.stringify(approval.arguments, null, 2)}</pre>}
     <div className="code-approval-actions">
-      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('approve', approvalId)}>{t('code.approval.allowOnce')}</button>
+      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('approve', approvalId)}>{approval.action === 'approve_plan' ? actionLabel(t, 'approve_plan') : t('code.approval.allowOnce')}</button>
       <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => onDecide('deny', approvalId)}>{t('code.approval.decline')}</button>
       {standing && <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => onDecide('approve_all', approvalId)}>{t('code.approval.allowTask')}</button>}
     </div>
     {!standing && approval.action !== 'approve_plan' && <p className="code-note">{t('code.approval.askedAlways')}</p>}
   </div>;
+}
+
+/** The card's name: "Accept the finished change", except where there is nothing to accept (#2646). */
+function approvalName(t: Translate, approval: CodeApproval): string {
+  return approval.action === 'review_change' && isNoChange(approval) ? t('code.review.group') : actionLabel(t, approval.action);
+}
+
+/** The server's own word that the task made no commits: its review code `no_change`, or (with no review code at all) a card whose base
+ *  and head are the one commit. Any other code (`not_released`, say) is a different reason the server gives, and is shown as it is. */
+export function isNoChange(approval: CodeApproval): boolean {
+  if (approval.review?.code) return approval.review.code === 'no_change';
+  const args = (approval.arguments && typeof approval.arguments === 'object' ? approval.arguments : {}) as { baseSha?: unknown; headSha?: unknown };
+  return typeof args.baseSha === 'string' && args.baseSha !== '' && args.baseSha === args.headSha;
 }
 
 /** The Planner's verdict, or the plain reason there is none. Advice, never the decision. */
@@ -477,21 +498,32 @@ function ReviewCard({ approval, busy, onDecide }: {
 }): JSX.Element {
   const t = useT();
   const approvalId = approval.id;
+  const noChange = isNoChange(approval);
   return <div className="code-approval code-review" role="group" aria-label={t('code.review.group')}>
-    <p className="code-approval-title"><ShellIcon name="security" size={16} tone="decorative"/>{actionLabel(t, 'review_change')}</p>
-    {approval.review && <ReviewVerdict review={approval.review}/>}
-    <AcceptWhat approval={approval}/>
+    <p className="code-approval-title"><ShellIcon name="security" size={16} tone="decorative"/>{approvalName(t, approval)}</p>
+    {!noChange && approval.review && <ReviewVerdict review={approval.review}/>}
+    {!noChange && <AcceptWhat approval={approval}/>}
     <AcceptSummary approval={approval}/>
-    {approval.reason && <p className="code-note">{approval.reason}</p>}
-    {approval.arguments !== null && approval.arguments !== undefined && (isPipelineCard(approval)
+    {!noChange && approval.reason && <p className="code-note">{approval.reason}</p>}
+    {!noChange && approval.arguments !== null && approval.arguments !== undefined && (isPipelineCard(approval)
       ? <details className="code-output-details code-pipe-details"><summary>{t('code.pipeline.accept.details')}</summary>
           <pre className="code-approval-args" tabIndex={0} aria-label={t('code.review.changeToAccept')}>{JSON.stringify(approval.arguments, null, 2)}</pre></details>
       : <pre className="code-approval-args" aria-label={t('code.review.changeToAccept')}>{JSON.stringify(approval.arguments, null, 2)}</pre>)}
-    <div className="code-approval-actions">
-      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('approve', approvalId)}>{acceptLabel(t, approval)}</button>
-      <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => onDecide('deny', approvalId)}>{t('code.approval.decline')}</button>
-    </div>
-    <p className="code-note">{t('code.review.advice')}</p>
+    {noChange
+      // #2646: no commits means nothing to accept. The server still asks, so the card says so and offers only the way out (a decline).
+      ? <>
+          <p className="code-note" data-note="no-change">{t('code.review.noChangeNote')}</p>
+          <div className="code-approval-actions">
+            <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('deny', approvalId)}>{t('code.review.close')}</button>
+          </div>
+        </>
+      : <>
+          <div className="code-approval-actions">
+            <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('approve', approvalId)}>{acceptLabel(t, approval)}</button>
+            <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => onDecide('deny', approvalId)}>{t('code.approval.decline')}</button>
+          </div>
+          <p className="code-note">{t('code.review.advice')}</p>
+        </>}
   </div>;
 }
 

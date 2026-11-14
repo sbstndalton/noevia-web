@@ -252,6 +252,7 @@ export const NL_NL_MODELS: ModelsCatalogue = {
   'mm.badge.tools': "Toolgebruik",
   'mm.badge.vision': "Beeld",
   'mm.library.noService': "Bestandsdetails, downloads en instellingen hebben de modelbeheerdienst nodig, en die is op deze server niet beschikbaar.",
+  'mm.library.adminOnly': "Bestandsdetails, downloads en instellingen zijn alleen voor beheerders.",
   'mm.library.unavailable': "De modelbibliotheek is niet beschikbaar.",
   'mm.library.loadFailed': "laden mislukt",
   'mm.library.unloadFailed': "ontladen mislukt",

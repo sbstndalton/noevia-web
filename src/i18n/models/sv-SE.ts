@@ -252,6 +252,7 @@ export const SV_SE_MODELS: ModelsCatalogue = {
   'mm.badge.tools': "Verktygsanvändning",
   'mm.badge.vision': "Bild",
   'mm.library.noService': "Fildetaljer, nedladdningar och inställningar kräver modellhanteringstjänsten, som inte är tillgänglig på den här servern.",
+  'mm.library.adminOnly': "Fildetaljer, nedladdningar och inställningar är bara för administratörer.",
   'mm.library.unavailable': "Modellbiblioteket är inte tillgängligt.",
   'mm.library.loadFailed': "inläsningen misslyckades",
   'mm.library.unloadFailed': "urladdningen misslyckades",

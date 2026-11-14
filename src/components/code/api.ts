@@ -107,9 +107,13 @@ export interface CodeState {
   networkState?: 'unconfigured' | 'unavailable' | 'ready';
   tasks: (CodeTask | UnreadableTask)[];
 }
+/** The id of the Planner preparation (core `PLANNER_PREPARATION`): the one start that can ask for a plan card. */
+export const PLANNER_PREPARATION = 'planner';
 export interface StartTask {
   repository: string; prompt: string; capabilities: CodeAction[]; domains: string[];
   harness?: string; promptPreparation?: string;
+  /** The Planner preparation only: stop at the plan card for the person's answer before any code runs (#2643). */
+  approvePlan?: boolean;
 }
 
 async function read<T>(response: Response): Promise<T> {
