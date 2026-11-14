@@ -1206,6 +1206,8 @@ export const EN_GB = {
   'code.review.group': "Review the finished change",
   'code.review.changeToAccept': "Change to accept",
   'code.review.accept': "Accept change",
+  'code.review.noChangeNote': "The task made no changes, so there is nothing to accept. Closing ends the task.",
+  'code.review.close': "Close",
   'code.review.advice': "The Planner’s verdict is advice. Only your answer accepts the change, one change at a time.",
   'code.review.outcome': "Planner review",
   'code.review.youAccepted': "You accepted this change.",

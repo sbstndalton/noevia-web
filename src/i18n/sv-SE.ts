@@ -1195,6 +1195,8 @@ export const SV_SE: Catalogue = {
   'code.review.group': "Granska den färdiga ändringen",
   'code.review.changeToAccept': "Ändring att godta",
   'code.review.accept': "Godta ändringen",
+  'code.review.noChangeNote': "Uppgiften gjorde inga ändringar, så det finns inget att godta. När du stänger avslutas uppgiften.",
+  'code.review.close': "Stäng",
   'code.review.advice': "Planerarens utlåtande är ett råd. Bara ditt svar godtar ändringen, en ändring i taget.",
   'code.review.outcome': "Planerarens granskning",
   'code.review.youAccepted': "Du godtog den här ändringen.",

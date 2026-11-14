@@ -1195,6 +1195,8 @@ export const NB_NO: Catalogue = {
   'code.review.group': "Vurder den ferdige endringen",
   'code.review.changeToAccept': "Endring som skal godtas",
   'code.review.accept': "Godta endringen",
+  'code.review.noChangeNote': "Oppgaven gjorde ingen endringer, så det er ingenting å godta. Når du lukker, avsluttes oppgaven.",
+  'code.review.close': "Lukk",
   'code.review.advice': "Planleggerens vurdering er et råd. Bare svaret ditt godtar endringen, én endring om gangen.",
   'code.review.outcome': "Vurdering fra Planleggeren",
   'code.review.youAccepted': "Du godtok denne endringen.",

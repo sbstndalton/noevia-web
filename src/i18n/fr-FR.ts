@@ -1195,6 +1195,8 @@ export const FR_FR: Catalogue = {
   'code.review.group': "Examiner la modification terminée",
   'code.review.changeToAccept': "Modification à accepter",
   'code.review.accept': "Accepter la modification",
+  'code.review.noChangeNote': "La tâche n’a rien modifié, il n’y a donc rien à accepter. Fermer met fin à la tâche.",
+  'code.review.close': "Fermer",
   'code.review.advice': "Le verdict du Planificateur n’est qu’un avis. Seule votre réponse accepte la modification, une à la fois.",
   'code.review.outcome': "Revue du Planificateur",
   'code.review.youAccepted': "Vous avez accepté cette modification.",

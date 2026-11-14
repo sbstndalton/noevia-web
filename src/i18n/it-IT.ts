@@ -1195,6 +1195,8 @@ export const IT_IT: Catalogue = {
   'code.review.group': "Rivedi la modifica completata",
   'code.review.changeToAccept': "Modifica da accettare",
   'code.review.accept': "Accetta la modifica",
+  'code.review.noChangeNote': "L’attività non ha apportato modifiche, quindi non c’è nulla da accettare. Chiudendo, l’attività termina.",
+  'code.review.close': "Chiudi",
   'code.review.advice': "Il verdetto del Pianificatore è un parere. Solo la tua risposta accetta la modifica, una alla volta.",
   'code.review.outcome': "Revisione del Pianificatore",
   'code.review.youAccepted': "Hai accettato questa modifica.",

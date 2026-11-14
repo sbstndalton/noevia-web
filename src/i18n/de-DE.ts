@@ -1195,6 +1195,8 @@ export const DE_DE: Catalogue = {
   'code.review.group': "Die fertige Änderung prüfen",
   'code.review.changeToAccept': "Anzunehmende Änderung",
   'code.review.accept': "Änderung annehmen",
+  'code.review.noChangeNote': "Die Aufgabe hat nichts geändert, es gibt also nichts anzunehmen. Mit „Schließen“ endet die Aufgabe.",
+  'code.review.close': "Schließen",
   'code.review.advice': "Das Urteil des Planers ist eine Empfehlung. Nur deine Antwort nimmt die Änderung an, jeweils eine Änderung auf einmal.",
   'code.review.outcome': "Prüfung durch den Planer",
   'code.review.youAccepted': "Du hast diese Änderung angenommen.",

@@ -1195,6 +1195,8 @@ export const PT_BR: Catalogue = {
   'code.review.group': "Revisar a alteração concluída",
   'code.review.changeToAccept': "Alteração a aceitar",
   'code.review.accept': "Aceitar alteração",
+  'code.review.noChangeNote': "A tarefa não fez nenhuma alteração, então não há nada para aceitar. Ao fechar, a tarefa termina.",
+  'code.review.close': "Fechar",
   'code.review.advice': "O veredito do Planejador é um conselho. Somente sua resposta aceita a alteração, uma de cada vez.",
   'code.review.outcome': "Revisão do Planejador",
   'code.review.youAccepted': "Você aceitou esta alteração.",

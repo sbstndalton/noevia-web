@@ -1195,6 +1195,8 @@ export const NL_NL: Catalogue = {
   'code.review.group': "De voltooide wijziging beoordelen",
   'code.review.changeToAccept': "Te accepteren wijziging",
   'code.review.accept': "Wijziging accepteren",
+  'code.review.noChangeNote': "De taak heeft niets gewijzigd, dus er valt niets te accepteren. Sluiten beëindigt de taak.",
+  'code.review.close': "Sluiten",
   'code.review.advice': "Het oordeel van de Planner is advies. Alleen jouw antwoord accepteert de wijziging, één wijziging per keer.",
   'code.review.outcome': "Beoordeling door de Planner",
   'code.review.youAccepted': "Je hebt deze wijziging geaccepteerd.",

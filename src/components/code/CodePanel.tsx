@@ -455,6 +455,13 @@ export function ApprovalCard({ approval, busy, onDecide }: {
   </div>;
 }
 
+/** The server's own word that the task made no commits: its review code `no_change`, or a card whose base and head are the one commit. */
+export function isNoChange(approval: CodeApproval): boolean {
+  if (approval.review?.code === 'no_change') return true;
+  const args = (approval.arguments && typeof approval.arguments === 'object' ? approval.arguments : {}) as { baseSha?: unknown; headSha?: unknown };
+  return typeof args.baseSha === 'string' && args.baseSha !== '' && args.baseSha === args.headSha;
+}
+
 /** The Planner's verdict, or the plain reason there is none. Advice, never the decision. */
 function ReviewVerdict({ review }: { review: CodeReview }): JSX.Element {
   const t = useT();
@@ -484,21 +491,32 @@ function ReviewCard({ approval, busy, onDecide }: {
 }): JSX.Element {
   const t = useT();
   const approvalId = approval.id;
+  const noChange = isNoChange(approval);
   return <div className="code-approval code-review" role="group" aria-label={t('code.review.group')}>
     <p className="code-approval-title"><ShellIcon name="security" size={16} tone="decorative"/>{actionLabel(t, 'review_change')}</p>
-    {approval.review && <ReviewVerdict review={approval.review}/>}
-    <AcceptWhat approval={approval}/>
+    {!noChange && approval.review && <ReviewVerdict review={approval.review}/>}
+    {!noChange && <AcceptWhat approval={approval}/>}
     <AcceptSummary approval={approval}/>
-    {approval.reason && <p className="code-note">{approval.reason}</p>}
-    {approval.arguments !== null && approval.arguments !== undefined && (isPipelineCard(approval)
+    {!noChange && approval.reason && <p className="code-note">{approval.reason}</p>}
+    {!noChange && approval.arguments !== null && approval.arguments !== undefined && (isPipelineCard(approval)
       ? <details className="code-output-details code-pipe-details"><summary>{t('code.pipeline.accept.details')}</summary>
           <pre className="code-approval-args" tabIndex={0} aria-label={t('code.review.changeToAccept')}>{JSON.stringify(approval.arguments, null, 2)}</pre></details>
       : <pre className="code-approval-args" aria-label={t('code.review.changeToAccept')}>{JSON.stringify(approval.arguments, null, 2)}</pre>)}
-    <div className="code-approval-actions">
-      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('approve', approvalId)}>{acceptLabel(t, approval)}</button>
-      <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => onDecide('deny', approvalId)}>{t('code.approval.decline')}</button>
-    </div>
-    <p className="code-note">{t('code.review.advice')}</p>
+    {noChange
+      // #2646: no commits means nothing to accept. The server still asks, so the card says so and offers only the way out (a decline).
+      ? <>
+          <p className="code-note" data-note="no-change">{t('code.review.noChangeNote')}</p>
+          <div className="code-approval-actions">
+            <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('deny', approvalId)}>{t('code.review.close')}</button>
+          </div>
+        </>
+      : <>
+          <div className="code-approval-actions">
+            <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('approve', approvalId)}>{acceptLabel(t, approval)}</button>
+            <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => onDecide('deny', approvalId)}>{t('code.approval.decline')}</button>
+          </div>
+          <p className="code-note">{t('code.review.advice')}</p>
+        </>}
   </div>;
 }
 
