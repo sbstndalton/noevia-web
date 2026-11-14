@@ -2,7 +2,8 @@ import type { SettingsCatalogue } from './en-GB';
 
 export const NB_NO_SETTINGS: SettingsCatalogue = {
   'users.invitationRole': "Rolle for invitasjonen",
-  'users.roleInvitation': "Engangsinvitasjon for {role} (utløper om 24 timer)",
+  'users.invitationMember': "Engangsinvitasjon for et medlem (utløper om 24 timer)",
+  'users.invitationAdmin': "Engangsinvitasjon for en administrator (utløper om 24 timer)",
   "appearance.logo.test": "Test neste palett",
   "appearance.logo.reset": "Avslutt forhåndsvisning",
   "appearance.logo.previewHint": "Kun forhåndsvisning. Det lagrede valget ditt forblir uendret.",
@@ -453,7 +454,6 @@ export const NB_NO_SETTINGS: SettingsCatalogue = {
   'users.createInvitation': "Opprett invitasjon",
   'users.recoveryLink': "Gjenopprettingslenke",
   'users.invitationLink': "Invitasjonslenke",
-  'users.singleUseInvitation': "Engangsinvitasjon (utløper om 24 timer)",
   'users.createdLink': "Opprettet lenke",
   'users.copyAgain': "Kopier lenken igjen",
   'users.loading': "Laster inn brukere…",

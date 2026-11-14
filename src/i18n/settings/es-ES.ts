@@ -2,7 +2,8 @@ import type { SettingsCatalogue } from './en-GB';
 
 export const ES_ES_SETTINGS: SettingsCatalogue = {
   'users.invitationRole': "Rol de la invitación",
-  'users.roleInvitation': "Invitación de un solo uso para {role} (caduca en 24 horas)",
+  'users.invitationMember': "Invitación de un solo uso para un miembro (caduca en 24 horas)",
+  'users.invitationAdmin': "Invitación de un solo uso para un administrador (caduca en 24 horas)",
   "appearance.logo.test": "Probar siguiente paleta",
   "appearance.logo.reset": "Finalizar vista previa",
   "appearance.logo.previewHint": "Solo vista previa. Tu selección guardada no cambia.",
@@ -453,7 +454,6 @@ export const ES_ES_SETTINGS: SettingsCatalogue = {
   'users.createInvitation': "Crear invitación",
   'users.recoveryLink': "Enlace de recuperación",
   'users.invitationLink': "Enlace de invitación",
-  'users.singleUseInvitation': "Invitación de un solo uso (caduca en 24 horas)",
   'users.createdLink': "Enlace creado",
   'users.copyAgain': "Copiar el enlace de nuevo",
   'users.loading': "Cargando usuarios…",

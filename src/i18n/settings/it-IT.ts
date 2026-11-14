@@ -2,7 +2,8 @@ import type { SettingsCatalogue } from './en-GB';
 
 export const IT_IT_SETTINGS: SettingsCatalogue = {
   'users.invitationRole': "Ruolo dell’invito",
-  'users.roleInvitation': "Invito monouso per {role} (scade tra 24 ore)",
+  'users.invitationMember': "Invito monouso per un membro (scade tra 24 ore)",
+  'users.invitationAdmin': "Invito monouso per un amministratore (scade tra 24 ore)",
   "appearance.logo.test": "Prova la tavolozza successiva",
   "appearance.logo.reset": "Termina anteprima",
   "appearance.logo.previewHint": "Solo anteprima. La scelta salvata resta invariata.",
@@ -453,7 +454,6 @@ export const IT_IT_SETTINGS: SettingsCatalogue = {
   'users.createInvitation': "Crea invito",
   'users.recoveryLink': "Link di recupero",
   'users.invitationLink': "Link di invito",
-  'users.singleUseInvitation': "Invito monouso (scade tra 24 ore)",
   'users.createdLink': "Link creato",
   'users.copyAgain': "Copia di nuovo il link",
   'users.loading': "Caricamento degli utenti…",

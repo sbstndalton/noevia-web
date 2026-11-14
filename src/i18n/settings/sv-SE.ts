@@ -2,7 +2,8 @@ import type { SettingsCatalogue } from './en-GB';
 
 export const SV_SE_SETTINGS: SettingsCatalogue = {
   'users.invitationRole': "Roll för inbjudan",
-  'users.roleInvitation': "Engångsinbjudan för {role} (går ut om 24 timmar)",
+  'users.invitationMember': "Engångsinbjudan för en medlem (går ut om 24 timmar)",
+  'users.invitationAdmin': "Engångsinbjudan för en administratör (går ut om 24 timmar)",
   "appearance.logo.test": "Testa nästa palett",
   "appearance.logo.reset": "Avsluta förhandsvisning",
   "appearance.logo.previewHint": "Endast förhandsvisning. Ditt sparade val ändras inte.",
@@ -453,7 +454,6 @@ export const SV_SE_SETTINGS: SettingsCatalogue = {
   'users.createInvitation': "Skapa inbjudan",
   'users.recoveryLink': "Återställningslänk",
   'users.invitationLink': "Inbjudningslänk",
-  'users.singleUseInvitation': "Engångsinbjudan (går ut om 24 timmar)",
   'users.createdLink': "Skapad länk",
   'users.copyAgain': "Kopiera länken igen",
   'users.loading': "Läser in användare…",

@@ -2,7 +2,8 @@ import type { SettingsCatalogue } from './en-GB';
 
 export const NL_NL_SETTINGS: SettingsCatalogue = {
   'users.invitationRole': "Rol voor de uitnodiging",
-  'users.roleInvitation': "Eenmalige uitnodiging voor {role} (verloopt na 24 uur)",
+  'users.invitationMember': "Eenmalige uitnodiging voor een lid (verloopt na 24 uur)",
+  'users.invitationAdmin': "Eenmalige uitnodiging voor een beheerder (verloopt na 24 uur)",
   "appearance.logo.test": "Volgend palet testen",
   "appearance.logo.reset": "Voorbeeld beëindigen",
   "appearance.logo.previewHint": "Alleen een voorbeeld. Je opgeslagen keuze blijft hetzelfde.",
@@ -453,7 +454,6 @@ export const NL_NL_SETTINGS: SettingsCatalogue = {
   'users.createInvitation': "Uitnodiging maken",
   'users.recoveryLink': "Herstellink",
   'users.invitationLink': "Uitnodigingslink",
-  'users.singleUseInvitation': "Eenmalige uitnodiging (verloopt over 24 uur)",
   'users.createdLink': "Aangemaakte link",
   'users.copyAgain': "Link opnieuw kopiëren",
   'users.loading': "Gebruikers laden…",

@@ -29,7 +29,8 @@ test('invitations default to member, the administrator choice sends admin, and r
   };
   const source = fs.readFileSync(path.join(__dirname, '../../src/components/SettingsView.tsx'), 'utf8');
   const start = source.indexOf('function UsersCard()');
-  const end = source.indexOf('\n/** Connect-a-provider', start);
+  // The card ends at the first top-level closing brace after it starts (#2589: not at the text of the next comment).
+  const end = source.indexOf('\n}\n', start) + 2;
   assert.ok(start >= 0 && end > start, 'UsersCard source boundary');
   const code = ts.transpileModule('export ' + source.slice(start, end), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
@@ -39,7 +40,7 @@ test('invitations default to member, the administrator choice sends admin, and r
     exports: exports_, require, ...React, ...api,
     window: dom.window, navigator: globalThis.navigator,
     ShellIcon: () => null,
-    useT: () => (key, params = {}) => key + (params.role ? ':' + params.role : ''),
+    useT: () => (key, params = {}) => key + (params.role ? ':' + params.role : '') + (params.link ? '|' + params.link : ''),
   });
   const root = createRoot(document.getElementById('root'));
   const button = key => [...document.querySelectorAll('button')].find(el => el.textContent === key);
@@ -57,6 +58,11 @@ test('invitations default to member, the administrator choice sends admin, and r
     });
     await act(async () => { button('users.copyInvitation').click(); });
     assert.deepEqual(roles, ['member', 'admin']);
+    // #2589: the notice names the role the link was made for, and so does "Copy link again".
+    const notices = () => [...document.querySelectorAll('[role="status"]')].map(el => el.textContent);
+    assert.ok(notices().includes('users.copied|users.invitationAdmin'), notices().join(' / '));
+    await act(async () => { button('users.copyAgain').click(); });
+    assert.ok(notices().includes('users.copied|users.invitationAdmin'), 'Copy again keeps the role: ' + notices().join(' / '));
     // An administrator link is one-off: the picker is back on member straight after it, before anything else happens.
     assert.equal(document.querySelector('select').value, 'member');
     await act(async () => { button('users.recovery').click(); });

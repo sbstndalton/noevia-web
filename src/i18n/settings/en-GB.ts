@@ -4,7 +4,8 @@
 // shows before Settings opens (settings.title, the shortcut reference) stays in ../en-GB.ts.
 export const EN_GB_SETTINGS = {
   'users.invitationRole': "Invitation role",
-  'users.roleInvitation': "Single-use invitation for {role} (expires in 24 hours)",
+  'users.invitationMember': "Single-use invitation for a member (expires in 24 hours)",
+  'users.invitationAdmin': "Single-use invitation for an administrator (expires in 24 hours)",
   'error.panel.title': 'This panel couldn’t be displayed',
   'error.panel.body': 'You can retry or choose another settings category.',
   'error.panel.retry': 'Retry panel',
@@ -454,7 +455,6 @@ export const EN_GB_SETTINGS = {
   'users.createInvitation': "Create invitation",
   'users.recoveryLink': "Recovery link",
   'users.invitationLink': "Invitation link",
-  'users.singleUseInvitation': "Single-use invitation (expires in 24 hours)",
   'users.createdLink': "Created link",
   'users.copyAgain': "Copy link again",
   'users.loading': "Loading users…",

@@ -2,7 +2,8 @@ import type { SettingsCatalogue } from './en-GB';
 
 export const FR_FR_SETTINGS: SettingsCatalogue = {
   'users.invitationRole': "Rôle de l’invitation",
-  'users.roleInvitation': "Invitation à usage unique pour {role} (expire dans 24 heures)",
+  'users.invitationMember': "Invitation à usage unique pour un membre (expire dans 24 heures)",
+  'users.invitationAdmin': "Invitation à usage unique pour un administrateur (expire dans 24 heures)",
   "appearance.logo.test": "Tester la palette suivante",
   "appearance.logo.reset": "Terminer l’aperçu",
   "appearance.logo.previewHint": "Aperçu uniquement. Votre choix enregistré reste inchangé.",
@@ -453,7 +454,6 @@ export const FR_FR_SETTINGS: SettingsCatalogue = {
   'users.createInvitation': "Créer une invitation",
   'users.recoveryLink': "Lien de récupération",
   'users.invitationLink': "Lien d’invitation",
-  'users.singleUseInvitation': "Invitation à usage unique (expire dans 24 heures)",
   'users.createdLink': "Lien créé",
   'users.copyAgain': "Copier à nouveau le lien",
   'users.loading': "Chargement des utilisateurs…",
