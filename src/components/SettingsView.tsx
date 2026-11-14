@@ -230,7 +230,7 @@ function UsersCard(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const pending = useRef(new Set<string>());
   const [busy, setBusy] = useState<Record<string, string>>({});
-  const [feedback, setFeedback] = useState<Record<string, { error?: string; notice?: string; link?: string }>>({});
+  const [feedback, setFeedback] = useState<Record<string, { error?: string; notice?: string; link?: string; label?: string }>>({});
   const listRequest = useRef(0);
   const refreshUsers = async () => {
     const request = ++listRequest.current;
@@ -275,15 +275,15 @@ function UsersCard(): JSX.Element {
   const copyLink = async (key: string, link: string, label: string) => {
     try {
       await navigator.clipboard.writeText(link);
-      setFeedback(prev => ({ ...prev, [key]: { notice: t('users.copied', { link: label }), link } }));
+      setFeedback(prev => ({ ...prev, [key]: { notice: t('users.copied', { link: label }), link, label } }));
     } catch {
-      setFeedback(prev => ({ ...prev, [key]: { error: t('users.copyFailed', { link: label }), link } }));
+      setFeedback(prev => ({ ...prev, [key]: { error: t('users.copyFailed', { link: label }), link, label } }));
     }
   };
   const createLink = (key: string, recoveryId?: string) => act(key, recoveryId ? t('users.createRecovery') : t('users.createInvitation'), async () => {
     const result = recoveryId ? await createRecovery(recoveryId) : await createInvitation(invitationRole);
     const link = `${window.location.origin}/?${recoveryId ? 'recovery' : 'invite'}=${encodeURIComponent(result.token)}`;
-    await copyLink(key, link, recoveryId ? t('users.recoveryLink') : t('users.roleInvitation', { role: t(invitationRole === 'admin' ? 'profile.admin' : 'profile.member') }));
+    await copyLink(key, link, recoveryId ? t('users.recoveryLink') : t(invitationRole === 'admin' ? 'users.invitationAdmin' : 'users.invitationMember'));
     // An administrator link is a one-off; the next link is a member link unless chosen again.
     if (!recoveryId && invitationRole === 'admin') setInvitationRole('member');
   }, '', false);
@@ -295,7 +295,7 @@ function UsersCard(): JSX.Element {
       {value?.notice && <p className="route-note" role="status">{value.notice}</p>}
       {value?.link && <div>
         <label className="field">{t('users.createdLink')}<input className="modal-input" readOnly value={value.link} onFocus={e => e.currentTarget.select()} /></label>
-        <button className="popup-tab" disabled={!!busy[key]} onClick={() => void copyLink(key, value.link!, key === 'invitation' ? t('users.invitationLink') : t('users.recoveryLink'))}>{t('users.copyAgain')}</button>
+        <button className="popup-tab" disabled={!!busy[key]} onClick={() => void copyLink(key, value.link!, value.label ?? (key === 'invitation' ? t('users.invitationLink') : t('users.recoveryLink')))}>{t('users.copyAgain')}</button>
       </div>}
     </>;
   };

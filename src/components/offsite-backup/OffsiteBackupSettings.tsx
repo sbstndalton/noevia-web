@@ -14,9 +14,12 @@ interface Status {
   reasonCode?: 'off' | 'notConfigured' | 'keyUnusable' | null; reasonGaps?: string[]; scheduleHour?: number;
   retentionPolicy?: { daily: number; weekly: number; monthly: number };
   destinationFolder?: { path: string; mirror: string | null } | null;
-  lastBackup: { at: number; id: string; files: number; uploadedBytes: number } | null;
+  /** #2203: `incomplete` and `skipped` say the snapshot left files out (unreadable, odd names, databases without a consistent copy). */
+  lastBackup: { at: number; id: string; files: number; uploadedBytes: number; incomplete?: boolean; skipped?: number } | null;
   lastVerify: { at?: number; verifiedAt: number; id: string; files: number } | null;
   lastError: { at: number; during: string; message: string } | null; snapshots: number | null;
+  /** #2203: listed snapshots whose manifest could not be read (pruning waits), a scheduled run paused for a quiet window, and the backoff after failed runs. */
+  unreadableSnapshots?: number | null; waitingForQuietWindow?: boolean; backupRetry?: { at: number; failures: number; attempts: number } | null;
   /** Google Drive, which noevia's backend copies the folder store to. Null for S3 targets. */
   google: GoogleState | null;
 }
@@ -34,6 +37,9 @@ const reasonText = (t: Translate, s: Status): string | null => {
   if (s.reasonCode === 'keyUnusable') return t('backups.reason.keyUnusable');
   return s.reason;
 };
+
+/** The refusal of an empty destination that had backups before. The server names the remedy by this wording and clears it by the same rule. */
+const emptyDestination = (s: Status): boolean => !!s.lastError?.message.startsWith('The backup destination is empty');
 
 async function call<T>(url: string, failed: (status: number) => string, method = 'GET'): Promise<T> {
   const r = await apiFetch(url, { method, headers: method === 'POST' ? { 'Content-Type': 'application/json' } : undefined, body: method === 'POST' ? '{}' : undefined });
@@ -66,15 +72,36 @@ export function OffsiteBackupSettings(): JSX.Element {
   const act = async (label: string, url: string) => {
     ++request.current; // Earlier status reads cannot overwrite an action in progress.
     setBusy(label); setError(''); setLoadError('');
-    try { await call(url, failed, 'POST'); } catch (e) { setError((e as Error).message); } finally { setBusy(''); void load(); }
+    try { await call(url, failed, 'POST'); } catch (e) { setError((e as Error).message); } finally { setBusy(''); setConfirmNew(false); void load(); }
   };
   const reason = status ? reasonText(t, status) : null;
+  const [confirmNew, setConfirmNew] = useState(false);
+  useEffect(() => { if (!status || !emptyDestination(status)) setConfirmNew(false); }, [status]); // a refusal that cleared is not still waiting for its confirmation
+  const lastBackup = status?.lastBackup;
+  const skipped = lastBackup?.skipped ?? 0;
+  const failures = status?.backupRetry?.failures ?? 0;
+  const unreadable = status?.unreadableSnapshots ?? 0;
   return <>
     <div className="settings-title"><h1>{t('settings.section.backups')}</h1><p>{t('backups.intro')}</p></div>
     {error && <p className="route-note" role="alert">{error}</p>}
     {loadError && <p className="route-note" role="alert">{loadError} <button type="button" className="btn btn-secondary" onClick={() => void load()}>{t('backups.reload')}</button></p>}
     {!status ? <p className="preview-footnote">{t('admin.loading')}</p> : <>
       {reason && <p className="route-note" role="status">{reason}</p>}
+      {lastBackup?.incomplete && <p className="route-note" role="status">{skipped > 0 ? t.plural('backups.incomplete', skipped) : t('backups.incompleteUnknown')}</p>}
+      {unreadable > 0 && <p className="route-note" role="status">{t.plural('backups.unreadable', unreadable)}</p>}
+      {status.waitingForQuietWindow && <p className="route-note" role="status">{t('backups.waiting')}</p>}
+      {failures > 0 && <p className="route-note" role="status">{t.plural('backups.retry', failures)}</p>}
+      {emptyDestination(status) && <section className="settings-section">
+        <p className="route-note" role="status">{t('backups.emptyDestination')}</p>
+        <div className="settings-actions">
+          {!confirmNew
+            ? <button type="button" className="btn btn-secondary" disabled={!!busy || !!status.busy} onClick={() => setConfirmNew(true)}>{t('backups.newStore')}</button>
+            : <>
+              <button type="button" className="btn btn-secondary" disabled={!!busy} onClick={() => setConfirmNew(false)}>{t('common.cancel')}</button>
+              <button type="button" className="btn btn-primary" disabled={!!busy || !!status.busy} onClick={() => void act('newStore', '/api/admin/offsite-backup/new-store')}>{busy === 'newStore' ? t('backups.newStoring') : t('backups.newStoreConfirm')}</button>
+            </>}
+        </div>
+      </section>}
       <div className="set-rows">
         <Row label={t('backups.destination')} value={status.destinationFolder
           ? (status.destinationFolder.mirror ? t('backups.destFolderMirror', { path: status.destinationFolder.path, mirror: status.destinationFolder.mirror }) : t('backups.destFolder', { path: status.destinationFolder.path }))

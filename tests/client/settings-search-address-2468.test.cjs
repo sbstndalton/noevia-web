@@ -6,6 +6,7 @@ const fs = require('node:fs'), path = require('node:path');
 
 test('noevia#2468 the search effect calls the same onSection path as open()', () => {
   const shell = fs.readFileSync(path.join(__dirname, '../../src/components/SettingsShell.tsx'), 'utf8');
-  assert.match(shell, /const open = \(id: string\) => \{ setSection\(id\); props\.onSection\?\.\(id\); setView\('detail'\); \};/);
-  assert.match(shell, /\{ setSection\(ids\[0\]\); props\.onSection\?\.\(ids\[0\]\); \}/);
+  assert.match(shell, /const open = \(id: string\) => \{ searchStep\.current = false; setSection\(id\); props\.onSection\?\.\(id\); setView\('detail'\); \};/);
+  // #2505: the first move of a search is a step like a click; the moves while it is typed replace it.
+  assert.match(shell, /props\.onSection\?\.\(ids\[0\], searchStep\.current \? \{ replace: true \} : undefined\)/);
 });

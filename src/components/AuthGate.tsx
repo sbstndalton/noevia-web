@@ -161,7 +161,7 @@ export function AuthGate({ children }: { children: ReactNode }): JSX.Element {
     <p>Passkeys are the recommended way to sign in using your device or security key.</p>
     {error && <p className="auth-error" role="alert">{error}</p>}
     <button type="button" disabled={busy} onClick={() => void addPasskey()}>{busy ? 'Waiting for your device…' : 'Create a passkey'}</button>
-    <button type="button" className="modal-btn secondary" disabled={busy} onClick={() => { if (onboardingUser) deferPasskeyStep(onboardingUser.id); sessionStorage.setItem('cowork-new-account', '1'); setScreen('ready'); }}>Set up later</button>
+    <button type="button" className="modal-btn secondary" disabled={busy} onClick={() => { if (onboardingUser) deferPasskeyStep(onboardingUser.id); setScreen('ready'); }}>Set up later</button>
   </section></main>;
 
   return (
