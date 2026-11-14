@@ -300,14 +300,24 @@ export function SettingsShell(props: SettingsViewProps & {initialSection?:Settin
   const titleId = useId();
   const title = groups.flatMap(g => g.items).find(([id]) => id === section)?.[1] || t('settings.title');
   const filtered = filterGroups(groups, query);
-  const open = (id: string) => { setSection(id); props.onSection?.(id); setView('detail'); };
+  // #2505: one search is one place in the history. The first section the query moves the pane to adds a step (Back returns to the
+  // section the person was on); the sections the query passes through while it is typed replace that step. A click, or clearing the
+  // search, starts a new place.
+  const searchStep = useRef(false);
+  const open = (id: string) => { searchStep.current = false; setSection(id); props.onSection?.(id); setView('detail'); };
   // #2458: while a search narrows the list, the detail pane follows it: one section left opens it, and when the open section
   // is filtered out the first remaining one opens. Clearing the search leaves the pane where it is. On a phone the list and the
   // detail are separate views, so nothing moves under the person.
   useEffect(() => {
-    if (!query.trim() || phone()) return;
+    if (!query.trim()) { searchStep.current = false; return; }
+    if (phone()) return;
     const ids = filtered.flatMap((g) => g.items.map(([id]) => id));
-    if (ids.length === 1 || (ids.length > 1 && !ids.includes(section))) { setSection(ids[0]); props.onSection?.(ids[0]); }  // #2468: the address follows, as for a click
+    if (ids.length === 1 || (ids.length > 1 && !ids.includes(section))) {
+      const moved = ids[0] !== section;
+      setSection(ids[0]);
+      props.onSection?.(ids[0], searchStep.current ? { replace: true } : undefined);  // #2468: the address follows, as for a click; #2505: one step per search
+      if (moved) searchStep.current = true;
+    }
   }, [query]);
   // On narrow screens the navigation disappears. Move focus into the new page
   // so keyboard and screen-reader users do not lose their place.
