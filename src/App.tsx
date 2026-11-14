@@ -1863,6 +1863,7 @@ export default function App(): JSX.Element {
         onOpenArchived={() => { setAppMode('chat'); setView({ kind: 'archived' }); }}
         onOpenCoworkers={coworkersAvailable ? () => { setAppMode('chat'); setView({ kind: 'coworkers' }); } : undefined}
         onOpenSpaces={spacesAvailable ? () => { setAppMode('chat'); setView({ kind: 'spaces' }); } : undefined}
+        onOpenSpacePage={spacesAvailable ? (spaceId, pageId) => { setAppMode('chat'); setView({ kind: 'spaces', spaceId, pageId }); } : undefined}
         onPreview={(title) => setView({kind:'preview',title})}
         showPreviews={codeOffered}
         projects={projects}

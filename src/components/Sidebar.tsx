@@ -19,6 +19,8 @@ import { hasTag, tagTree } from '../chat-organise';
 import type { TagNode } from '../chat-organise';
 import { chatMoveTargets } from '../chat-move';
 import type { SearchResultKind } from '../sidebar-search';
+import { searchSpacePages } from '../space-page-search';
+import type { PageSearch } from '../space-page-search';
 import { fetchToolboxes, fetchProfile, searchChatText } from '../api';
 import { downloadChatExport } from '../chat-export';
 import type { McpStatus } from '../api';
@@ -51,6 +53,8 @@ interface SidebarProps {
   onOpenCoworkers?: () => void;
   /** Spaces (#2446): present only when the server has the Spaces routes for this account; without it there is no entry. */
   onOpenSpaces?: () => void;
+  /** Opens one Space page (#2601); present with `onOpenSpaces`. Without it a search never looks at pages. */
+  onOpenSpacePage?: (spaceId: string, pageId: string) => void;
   /** Archived chats (#232): the management view outside Settings. */
   onOpenArchived?: () => void;
   /** Code mode reuses this sidebar with the coding destinations in place of the chat lists. */
@@ -122,6 +126,7 @@ export function Sidebar({
   showPreviews = false,
   onOpenProjects,
   onOpenSpaces,
+  onOpenSpacePage,
   onOpenCoworkers,
   onOpenProject,
   onOpenChat,
@@ -276,6 +281,20 @@ export function Sidebar({
     }, 300);
     return () => { live = false; window.clearTimeout(timer); };
   }, [textQuery, queryTooLong]);
+  // #2601: pages in the person's Spaces whose title or text holds the query (the server searches one Space at a time).
+  // Same pause as the message search; a failed lookup shows no pages, as a failed message search shows no extra chats.
+  const [pageHits, setPageHits] = useState<(PageSearch & { query: string }) | null>(null);
+  const pageSearchOn = !!onOpenSpaces && !!onOpenSpacePage && mode !== 'code' && !textQuery.startsWith('#');
+  useEffect(() => {
+    if (!pageSearchOn || textQuery.length < 2 || queryTooLong) { setPageHits(null); return; }
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      searchSpacePages(textQuery, controller.signal)
+        .then((r) => { if (!controller.signal.aborted) setPageHits({ ...r, query: textQuery }); })
+        .catch(() => { if (!controller.signal.aborted) setPageHits(null); });
+    }, 300);
+    return () => { controller.abort(); window.clearTimeout(timer); };
+  }, [pageSearchOn, textQuery, queryTooLong]);
   // #741: a tag (sidebar Tags section, a graph's tag hub) filters the lists through the search box,
   // so the filter shows what it is and Escape clears it the usual way.
   const [openTags, setOpenTags] = useState<Record<string, boolean>>({});
@@ -492,7 +511,8 @@ export function Sidebar({
   // flat, DOM-order list (destinations, pinned chats, pinned projects, unpinned projects, recent chats) —
   // the same order the groups below render them in — via real roving focus on each result's
   // own button (searchResultRefs), not a duplicate/virtual list.
-  const searchResults = query ? buildSearchResults(code ? [] : pinnedChats, code ? [] : pinnedProjects, code ? [] : unpinnedProjects, code ? [] : boundedRecentChats, destinations) : [];
+  const pages = pageSearchOn && pageHits?.query === textQuery ? pageHits.hits.map((hit) => ({ ...hit, id: `${hit.spaceId}/${hit.pageId}` })) : [];
+  const searchResults = query ? buildSearchResults(code ? [] : pinnedChats, code ? [] : pinnedProjects, code ? [] : unpinnedProjects, code ? [] : boundedRecentChats, destinations, pages) : [];
   const searchResultIndex = new Map(searchResults.map((r, i) => [searchResultKey(r.kind, r.id), i]));
   const searchResultRefs = useRef<Map<string, HTMLElement>>(new Map());
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -540,6 +560,17 @@ export function Sidebar({
       onKeyDown={onSearchResultKeyDown('destination', destination.id)}
       onClick={() => { destination.open?.(); setExpanded(false); setSearching(false); setQuery(''); }}
     ><ShellIcon name={destination.icon} size={17}/><SidebarLabel text={destination.label} highlight={query}/></button>)}
+  </div>;
+  const pageResults = query && pages.length > 0 && <div className="spaces side-scroll side-scroll-pages">
+    <div className="sidebar-section-head"><span className="section-label">{t('sidebar.pages')}</span></div>
+    {pages.map(page => <button
+      key={page.id}
+      ref={registerSearchResult('page', page.id)}
+      className="nav-item side-destination side-page"
+      aria-label={t('sidebar.pageInSpace', { title: page.title, space: page.spaceName })}
+      onKeyDown={onSearchResultKeyDown('page', page.id)}
+      onClick={() => { onOpenSpacePage?.(page.spaceId, page.pageId); setExpanded(false); setSearching(false); setQuery(''); }}
+    ><ShellIcon name="book" size={17}/><SidebarLabel text={page.title} highlight={query}/><small className="side-page-space" title={page.spaceName}>{page.spaceName}</small></button>)}
   </div>;
   const manualItems = (p: Project): MenuItem[] => {
     if(order.sort!=='manual')return [];
@@ -797,9 +828,11 @@ export function Sidebar({
         </>}
       </div> : <div className="sidebar-history" onKeyDown={onChatListKeyDown}>
       {destinationResults}
+      {pageResults}
       {queryTooLong && <p className="side-hint" role="status">{t('sidebar.searchTooLong', { max: SEARCH_MAX_QUERY })}</p>}
       {query && !queryTooLong && searchResults.length === 0 && <p className="side-hint" role="status">{t('sidebar.noSearchResults')}</p>}
       {messageHitsTruncated && <p className="side-hint" role="status">{t('sidebar.searchTruncated')}</p>}
+      {pageSearchOn && pageHits?.query === textQuery && pageHits.incomplete && <p className="side-hint" role="status">{t('sidebar.searchPagesTruncated')}</p>}
       {['Pinned','Projects'].map(group => {
         const entries = group==='Pinned' ? pinnedProjects : unpinnedProjects;
         if(group==='Pinned' && !entries.length && !pinnedChats.length)return null;
