@@ -14,10 +14,12 @@ import {
   apiFetch,
   putRoutingDefault,
   fetchProfile,
+  fetchSession,
 } from '../api';
 import type { AuthUser } from '../api';
 import { classifyOrigin, isIpAddressHost } from '../browser-support';
 import { timezoneEnvSetting } from '../setup-timezone';
+import { deferPasskeyStep } from '../passkey-later';
 import { ProviderForm } from './ProviderForm';
 import { StorageChoice } from './StorageChoice';
 import { GoogleDriveConnect, RecoveryKeyLink } from './offsite-backup/GoogleDriveSetup';
@@ -213,11 +215,14 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
     }
   };
 
-  const finish = async () => {
+  const finish = async (deferPasskey = false) => {
     setBusy(true);
     setError(null);
     try {
       await completeOnboarding();
+      // #2581: "Set up later" on the passkey step is the choice #2457 remembers for 30 days in this browser; without it the next
+      // password sign-in asks again. A session that cannot be read only means the step shows once more.
+      if (deferPasskey) { const id = initialUser?.id ?? (await fetchSession().catch(() => null))?.user.id; if (id) deferPasskeyStep(id); }
       sessionStorage.setItem('cowork-new-account', '1');
       onFinished();
     } catch {
@@ -406,7 +411,7 @@ export function SetupWizard({ onFinished, mode = 'fresh', initialUser }: SetupWi
               <button type="button" disabled={busy} onClick={() => void finishPasskey()}>
                 {busy ? 'Waiting for your device…' : 'Create a passkey'}
               </button>
-              <button type="button" className="modal-btn secondary" disabled={busy} onClick={() => void finish()}>
+              <button type="button" className="modal-btn secondary" disabled={busy} onClick={() => void finish(true)}>
                 Set up later
               </button>
             </div>
