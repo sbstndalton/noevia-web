@@ -87,6 +87,38 @@ function watch(page, ids) {
         assert.equal([...idsA].filter((id) => idsB.has(id)).length, 0, `different chats (A ${[...idsA]}, B ${[...idsB]})`);
       } finally { await context.close(); }
     });
+    // Two tabs with an unsent draft each; one tab sends, then the other reloads (and the other way round): each reload keeps its own chat.
+    for (const [sender, reloader] of [['A', 'B'], ['B', 'A']]) {
+      await check(`1280 px: tab ${sender} sends, then tab ${reloader} reloads: ${reloader}'s own new chat and draft are back, and its send still lands in its own chat`, async () => {
+        const context = await browser.newContext(withLocale({ viewport: { width: 1280, height: 900 } }));
+        try {
+          const tabs = { A: await context.newPage(), B: await context.newPage() };
+          const ids = { A: new Set(), B: new Set() };
+          watch(tabs.A, ids.A); watch(tabs.B, ids.B);
+          const box = (t) => tabs[t].getByRole('textbox', { name: 'Message', exact: true });
+          const text = (t) => `synthetic draft of tab ${t}`;
+          for (const t of ['A', 'B']) {
+            await tabs[t].goto(origin);
+            await box(t).fill(text(t));
+            await tabs[t].waitForFunction((x) => (localStorage.getItem('noevia:chat-drafts') || '').includes(x), text(t), { timeout: 10000 });
+            await tabs[t].waitForTimeout(800);
+          }
+          await box(sender).press('Enter');
+          await tabs[sender].waitForFunction((x) => document.body.innerText.includes(x), text(sender), { timeout: 10000 });
+          await tabs[sender].waitForTimeout(1500);
+          await tabs[reloader].reload();
+          await box(reloader).waitFor();
+          assert.equal(await box(reloader).inputValue(), text(reloader), `tab ${reloader} is back on its own new chat`);
+          await box(reloader).press('Enter');
+          await tabs[reloader].waitForFunction((x) => document.body.innerText.includes(x), text(reloader), { timeout: 10000 });
+          await tabs[reloader].waitForTimeout(2500);
+          assert.ok(ids.A.size >= 1 || ids.B.size >= 1);
+          const reloaded = [...ids[reloader]], sent = [...ids[sender]];
+          assert.ok(reloaded.length >= 1, `tab ${reloader} saved a history`);
+          assert.equal(reloaded.filter((id) => sent.includes(id)).length, 0, `different chats (${sender} ${sent}, ${reloader} ${reloaded})`);
+        } finally { await context.close(); }
+      });
+    }
     await check('1280 px: reloading the only tab keeps its new chat (the unsent draft is back)', async () => {
       const context = await browser.newContext(withLocale({ viewport: { width: 1280, height: 900 } }));
       try {
