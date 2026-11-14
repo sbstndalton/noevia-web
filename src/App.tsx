@@ -54,7 +54,7 @@ import { frameWithLink, keepLinks, MAX_FRAME_LINKS } from './chat-organise';
 import { ChatLinks } from './components/ChatLinks';
 import type { FrameAction, FrameDraft } from './chat-frame';
 import { modeWithAccess, sessionMode, type ChatMode } from './chat-mode';
-import { STOPPED_SENDER } from './chat-labels';
+import { COWORK_SENDER, STOPPED_SENDER } from './chat-labels';
 import type {
   ChatMeta,
   HealthState,
@@ -261,7 +261,6 @@ export default function App(): JSX.Element {
   }, [featureFlags.routingModes]);
   const showPreviews = featureFlags.previews === true;
   // Turning previews off while in Code must not leave both workspaces hidden.
-  useEffect(() => { if (!showPreviews && appMode === 'code') { markReplace(); setAppMode('chat'); } }, [showPreviews, appMode]);
   // Reload lands where you left off, not on a new chat. `restored` is kept so the
   // workspace load below can drop a reference to something that no longer exists.
   const restored = useRef<LastPlace | null>(initialNav.stored);
@@ -312,6 +311,11 @@ export default function App(): JSX.Element {
   // #1839: the composer mode bar is held until the role is known, not drawn as for a non-admin.
   const [profileKnown, setProfileKnown] = useState(false);
   const [profileFailed, setProfileFailed] = useState(false);
+  // #2599: Code is for administrators (the server answers a member 403). Once the profile says this account is not one, the Code
+  // switch goes and a Code address lands in chat, instead of a preview page with a draft composer that can run nothing.
+  const codeOffered = showPreviews && !(profileKnown && !profileFailed && !isAdmin);
+  // Turning previews off, or learning this account is no administrator, while in Code must not leave both workspaces hidden.
+  useEffect(() => { if (!codeOffered && appMode === 'code') { markReplace(); setAppMode('chat'); } }, [codeOffered, appMode]);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
   // #1567: the last workspace fetch failed (the sidebar then stops showing a loading placeholder).
   const [workspaceFailed, setWorkspaceFailed] = useState(false);
@@ -362,7 +366,7 @@ export default function App(): JSX.Element {
   const [diaryEnabled, setDiaryEnabled] = useState(false);
   // #1635: whether the Diary has been on screen in this tab; only the Diary becoming the view sets it.
   const [diaryWasOpened, setDiaryWasOpened] = useState(false);
-  const diaryCovered = appMode === 'code' && showPreviews; // the Code workspace hides the chat views
+  const diaryCovered = appMode === 'code' && codeOffered; // the Code workspace hides the chat views
   const diaryOpenedNow = diaryOpened(diaryWasOpened, { enabled: diaryEnabled, viewKind: view.kind, covered: diaryCovered });
   if (diaryOpenedNow !== diaryWasOpened) setDiaryWasOpened(diaryOpenedNow);
   const diaryPlace = diaryPresence({ enabled: diaryEnabled, viewKind: view.kind, opened: diaryOpenedNow, covered: diaryCovered });
@@ -1340,7 +1344,7 @@ export default function App(): JSX.Element {
       const existing = loaded ? resolveLoadedHistory(messagesRef.current[chatId] ?? [], loaded) : messagesRef.current[chatId] ?? [];
       const replyId = uid();
       setMessagesByChat(prev => ({ ...prev, [chatId]: [...existing, { id: uid(), role: 'user', content: text },
-        { id: replyId, role: 'assistant', content: '', senderLabel: 'Cowork', processingStatus: translateNow('chat.cowork.starting') }] }));
+        { id: replyId, role: 'assistant', content: '', senderLabel: COWORK_SENDER, processingStatus: translateNow('chat.cowork.starting') }] }));
       setStreamingChats(prev => ({ ...prev, [chatId]: true }));
       const sentAt = Date.now();
       queueMetaUpsert(projectId, chatId, (meta) => meta
@@ -1849,7 +1853,7 @@ export default function App(): JSX.Element {
     <div className="app">
       <div className="regular-workspace" style={{display:'contents'}}>
       <Sidebar
-        mode={appMode==='code'&&showPreviews?'code':'chat'}
+        mode={appMode==='code'&&codeOffered?'code':'chat'}
         codePage={codePage}
         onCodePage={setCodePage}
         onEnterCode={() => setAppMode('code')}
@@ -1859,8 +1863,9 @@ export default function App(): JSX.Element {
         onOpenArchived={() => { setAppMode('chat'); setView({ kind: 'archived' }); }}
         onOpenCoworkers={coworkersAvailable ? () => { setAppMode('chat'); setView({ kind: 'coworkers' }); } : undefined}
         onOpenSpaces={spacesAvailable ? () => { setAppMode('chat'); setView({ kind: 'spaces' }); } : undefined}
+        onOpenSpacePage={spacesAvailable ? (spaceId, pageId) => { setAppMode('chat'); setView({ kind: 'spaces', spaceId, pageId }); } : undefined}
         onPreview={(title) => setView({kind:'preview',title})}
-        showPreviews={showPreviews}
+        showPreviews={codeOffered}
         projects={projects}
         projectsLoaded={workspaceLoaded}
         projectsFailed={workspaceFailed}
@@ -1894,8 +1899,8 @@ export default function App(): JSX.Element {
       <div className="app-main" ref={appMain}>
       {/* In flow at the top of the pane: it pushes the view down rather than covering its header. */}
       {featureFlags.codeHarness === true && <ActiveCodeTasks onOpenProject={(id) => { setSettingsOpen(false); setAppMode('chat'); setView({ kind: 'project', id, codeRequest: uid() }); }}/>}
-      {appMode === 'code' && showPreviews && <Suspense fallback={<ViewLoading name="coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} projectsLoaded={workspaceLoaded} onProjectsChanged={refreshProjects} onStartTask={startProjectTask}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
-      <div className="chat-views" style={{display:appMode==='code'&&showPreviews?'none':'contents'}}>
+      {appMode === 'code' && codeOffered && <Suspense fallback={<ViewLoading name="coding" active={!settingsOpen} />}><div className="code-mount" style={{display:codeShown?'contents':'none'}}><Coding.View page={codePage} onStartChat={startFreeChatWith} projects={projects} projectsLoaded={workspaceLoaded} onProjectsChanged={refreshProjects} onStartTask={startProjectTask}/><MountedSignal onMounted={() => setCodeShown(true)}/></div></Suspense>}
+      <div className="chat-views" style={{display:appMode==='code'&&codeOffered?'none':'contents'}}>
       {view.kind === 'plugins' && <Suspense fallback={<ViewLoading name="customise" active={appMode === 'chat' && !settingsOpen} />}><Customise.View onStartChat={startFreeChatWith} projects={projects} onProjectsChanged={refreshProjects} initialTab={customiseTab} onTabChange={setCustomiseTab}/></Suspense>}
       {view.kind === 'spaces' && spacesAvailable === null && <ViewLoading name="spaces" active={appMode === 'chat' && !settingsOpen} />}
       {view.kind === 'spaces' && spacesAvailable === true && <Suspense fallback={<ViewLoading name="spaces" active={appMode === 'chat' && !settingsOpen} />}><Spaces.View spaceId={view.spaceId} pageId={view.pageId} onNavigate={(spaceId, pageId) => setView({ kind: 'spaces', spaceId, pageId })}/></Suspense>}
@@ -2025,7 +2030,7 @@ export default function App(): JSX.Element {
       {view.kind === 'diary' && !diaryCovered && !diaryEnabled && (profileKnown
         ? <Suspense fallback={<ViewLoading name="diary" active={!settingsOpen} />}>{profileFailed
           // The profile did not answer, so whether the Diary is on is unknown: not "off".
-          ? <DiaryNotice.View kind="unreachable" onRetry={() => { fetchProfile().then((p) => { setDiaryEnabled(p.user.diaryEnabled); setProfileFailed(false); }).catch(() => undefined); }} />
+          ? <DiaryNotice.View kind="unreachable" onRetry={() => { fetchProfile().then((p) => { setDiaryEnabled(p.user.diaryEnabled); setIsAdmin(p.user.role === 'admin'); setProfileFailed(false); }).catch(() => undefined); }} />
           : <DiaryNotice.View kind="off" onSettings={() => openSettings('diary')} />}</Suspense>
         : <ViewLoading name="diary" active={!settingsOpen} />)}
       {diaryPlace !== 'absent' && <KeptOffDocument className="diary-mount" shown={diaryPlace === 'shown'}><Suspense fallback={<ViewLoading name="diary" active={diaryPlace === 'shown' && !settingsOpen} />}>

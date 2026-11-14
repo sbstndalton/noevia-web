@@ -157,6 +157,9 @@ body { margin: 0; background: var(--bg); }
 .side-nav { display: flex; flex-direction: column; gap: 2px; }
 .nav-emoji { font-size: var(--text-callout); line-height: 1; flex-shrink: 0; }
 .side-hint { font-size: var(--text-caption); color: var(--text-faint); padding: 2px 12px; margin: 0; line-height: 1.5; }
+/* #2601: a page found by the sidebar search shows its Space after the title, clipped to a third of the row. */
+.sidebar .side-page .sidebar-label { flex: 1 1 auto; min-width: 0; }
+.sidebar .side-page .side-page-space { flex: 0 1 auto; max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-faint); font-size: var(--text-caption); }
 
 .pinned {
   display: flex; align-items: center; gap: 10px;
