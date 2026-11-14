@@ -1091,6 +1091,7 @@ export const PT_BR: Catalogue = {
   'egress.stillDownAdmin': "Se ainda não responder após alguns minutos, o proxy de saída está fora do ar e não apenas reiniciando: verifique se o contêiner está em execução e leia o log.",
   'code.panel.harnessNone': "Nenhum configurado neste servidor",
   'code.panel.preparation': "Preparação do prompt",
+  'code.panel.reviewPlan': "Revisar o plano antes de executá-lo",
   'code.prep.direct.label': "Direto",
   'code.prep.direct.reason': "Seu pedido vai para o modelo exatamente como você o escreveu.",
   'code.panel.sandboxOnline': "O harness é executado no contêiner sandbox: sem credenciais e sem rede, exceto os domínios abaixo.",

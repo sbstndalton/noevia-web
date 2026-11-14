@@ -1091,6 +1091,7 @@ export const SV_SE: Catalogue = {
   'egress.stillDownAdmin': "Svarar den fortfarande inte efter några minuter är den utgående proxyn nere och inte bara på väg att starta om: kontrollera att containern körs och läs loggen.",
   'code.panel.harnessNone': "Ingen konfigurerad på den här servern",
   'code.panel.preparation': "Promptförberedelse",
+  'code.panel.reviewPlan': "Granska planen innan den körs",
   'code.prep.direct.label': "Direkt",
   'code.prep.direct.reason': "Din förfrågan går till modellen precis som du skrev den.",
   'code.panel.sandboxOnline': "Harnessen körs i sandbox-containern: inga inloggningsuppgifter och inget nätverk utom domänerna nedan.",

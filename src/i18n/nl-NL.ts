@@ -1091,6 +1091,7 @@ export const NL_NL: Catalogue = {
   'egress.stillDownAdmin': "Reageert hij na enkele minuten nog steeds niet, dan ligt de uitgaande proxy eruit en herstart hij niet alleen: controleer of de container draait en lees het logboek.",
   'code.panel.harnessNone': "Geen geconfigureerd op deze server",
   'code.panel.preparation': "Promptvoorbereiding",
+  'code.panel.reviewPlan': "Het plan bekijken voordat het wordt uitgevoerd",
   'code.prep.direct.label': "Direct",
   'code.prep.direct.reason': "Je verzoek gaat naar het model zoals je het hebt geschreven.",
   'code.panel.sandboxOnline': "De harness draait in de sandbox-container: zonder inloggegevens en zonder netwerk, behalve de onderstaande domeinen.",

@@ -1091,6 +1091,7 @@ export const FR_FR: Catalogue = {
   'egress.stillDownAdmin': "S’il ne répond toujours pas au bout de quelques minutes, le proxy de sortie est en panne et ne redémarre pas simplement : vérifiez que son conteneur tourne et lisez son journal.",
   'code.panel.harnessNone': "Aucun configuré sur ce serveur",
   'code.panel.preparation': "Préparation du prompt",
+  'code.panel.reviewPlan': "Relire le plan avant son exécution",
   'code.prep.direct.label': "Direct",
   'code.prep.direct.reason': "Votre demande est transmise au modèle telle que vous l’avez écrite.",
   'code.panel.sandboxOnline': "Le harnais s’exécute dans le conteneur sandbox : sans identifiants et sans réseau, sauf les domaines ci-dessous.",

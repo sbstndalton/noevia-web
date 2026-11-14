@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import { cancelTask, decideTask, fetchCode, startTask } from './api';
+import { cancelTask, decideTask, fetchCode, PLANNER_PREPARATION, startTask } from './api';
 import { isUnreadableTask } from './api';
 import type { CodeAction, CodeApproval, CodeReview, CodeState, CodeTask, NetworkActivity, PreparationMode, UnreadableTask } from './api';
 import { isDecisionStale } from './decision-guard';
@@ -57,6 +57,8 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
   const [domains, setDomains] = useState('');
   const [harness, setHarness] = useState('');
   const [preparation, setPreparation] = useState('direct');
+  // #2643: the Planner stops at its plan for the person's answer only when the start asks it to (`approvePlan`); on by default.
+  const [reviewPlan, setReviewPlan] = useState(true);
   // The operator's variable names are for an administrator, and only where a note needs them (#1580 review).
   const [isAdmin, setIsAdmin] = useState(false);
   const mounted = useRef(true);
@@ -205,6 +207,10 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
               {byId(t, `code.prep.${m.id}.label`, m.label)}</option>)}
           </select>
           <PreparationNote mode={state.promptPreparation.find(m => m.id === selectedPreparation)}/>
+          {selectedPreparation === PLANNER_PREPARATION && <label className="code-capability">
+            <input type="checkbox" checked={reviewPlan} disabled={running || !!busy} onChange={e => setReviewPlan(e.target.checked)}/>
+            <span>{t('code.panel.reviewPlan')}</span>
+          </label>}
         </div>
       </div>
 
@@ -251,6 +257,7 @@ function ProjectCodePanel({ projectId }: { projectId: string }): JSX.Element {
       <div className="code-actions">
         <button type="button" className="btn btn-primary" disabled={!prompt.trim() || !repository || running || !!busy}
           onClick={() => act('start', () => startTask(projectId, { repository, prompt, capabilities: capabilities.filter(a => online || !needsNetwork(a)), harness, promptPreparation: selectedPreparation,
+            ...(selectedPreparation === PLANNER_PREPARATION && reviewPlan ? { approvePlan: true } : {}),
             domains: domains.split(',').map(d => d.trim()).filter(Boolean) }), () => setPrompt(''))}>{busy === 'start' ? t('code.panel.starting') : t('code.panel.start')}</button>
       </div>
       {running && <p className="code-note" role="status">{t('code.panel.oneTask')}</p>}
@@ -433,14 +440,14 @@ export function ApprovalCard({ approval, busy, onDecide }: {
   // of the approval actually on screen rather than whatever `approval` resolves to later.
   const approvalId = approval.id;
   return <div className="code-approval" role="group" aria-label={t('code.approval.group')}>
-    <p className="code-approval-title"><ShellIcon name="security" size={16} tone="decorative"/>{actionLabel(t, approval.action)}{approval.title ? ` — ${approval.title}` : ''}</p>
+    <p className="code-approval-title"><ShellIcon name="security" size={16} tone="decorative"/>{actionLabel(t, approval.action)}{approval.title && approval.title !== actionLabel(t, approval.action) ? ` — ${approval.title}` : ''}</p>
     {approval.reason && <p className="code-note">{approval.reason}</p>}
     {approval.command && <pre className="code-approval-args" aria-label={t('code.approval.command')}>{approval.command}</pre>}
     {approval.diff && <pre className="code-approval-args" aria-label={t('code.approval.changesTo', { path: approval.diff.path })}>{approval.diff.newText ?? ''}</pre>}
     {approval.arguments !== null && approval.arguments !== undefined &&
       <pre className="code-approval-args" aria-label={t('code.approval.arguments')}>{JSON.stringify(approval.arguments, null, 2)}</pre>}
     <div className="code-approval-actions">
-      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('approve', approvalId)}>{t('code.approval.allowOnce')}</button>
+      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onDecide('approve', approvalId)}>{approval.action === 'approve_plan' ? actionLabel(t, 'approve_plan') : t('code.approval.allowOnce')}</button>
       <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => onDecide('deny', approvalId)}>{t('code.approval.decline')}</button>
       {standing && <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => onDecide('approve_all', approvalId)}>{t('code.approval.allowTask')}</button>}
     </div>

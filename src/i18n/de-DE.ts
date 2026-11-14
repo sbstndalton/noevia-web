@@ -1091,6 +1091,7 @@ export const DE_DE: Catalogue = {
   'egress.stillDownAdmin': "Antwortet er nach einigen Minuten immer noch nicht, ist der Ausgangs-Proxy ausgefallen und startet nicht nur neu: Prüfe, ob sein Container läuft, und lies sein Protokoll.",
   'code.panel.harnessNone': "Auf diesem Server ist keines konfiguriert",
   'code.panel.preparation': "Prompt-Aufbereitung",
+  'code.panel.reviewPlan': "Den Plan prüfen, bevor er ausgeführt wird",
   'code.prep.direct.label': "Direkt",
   'code.prep.direct.reason': "Deine Anfrage geht so an das Modell, wie du sie geschrieben hast.",
   'code.panel.sandboxOnline': "Das Harness läuft im Sandbox-Container: ohne Zugangsdaten und ohne Netzwerk, außer den unten genannten Domains.",

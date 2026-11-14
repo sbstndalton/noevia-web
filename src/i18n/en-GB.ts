@@ -1102,6 +1102,7 @@ export const EN_GB = {
   'egress.stillDownAdmin': "If it is still not answering after a few minutes, the egress proxy is down rather than restarting: check that its container is running and read its log.",
   'code.panel.harnessNone': "None configured on this server",
   'code.panel.preparation': "Prompt preparation",
+  'code.panel.reviewPlan': "Review the plan before it runs",
   'code.prep.direct.label': "Direct",
   'code.prep.direct.reason': "Your request goes to the model as you wrote it.",
   'code.panel.sandboxOnline': "The harness runs in the sandbox container: no credentials, and no network except the domains below.",

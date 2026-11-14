@@ -1091,6 +1091,7 @@ export const NB_NO: Catalogue = {
   'egress.stillDownAdmin': "Svarer den fortsatt ikke etter noen minutter, er utgående proxy nede og ikke bare i ferd med å starte på nytt: sjekk at containeren kjører, og les loggen.",
   'code.panel.harnessNone': "Ingen er konfigurert på denne serveren",
   'code.panel.preparation': "Klargjøring av prompt",
+  'code.panel.reviewPlan': "Se over planen før den kjøres",
   'code.prep.direct.label': "Direkte",
   'code.prep.direct.reason': "Forespørselen din går til modellen slik du skrev den.",
   'code.panel.sandboxOnline': "Harnessen kjører i sandkasse-containeren: ingen legitimasjon og ingen nettverk, bortsett fra domenene nedenfor.",
