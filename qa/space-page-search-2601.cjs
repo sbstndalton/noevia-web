@@ -6,7 +6,9 @@
 // Offline: the fixture serves the build; /api/spaces and /api/chats/search are stubs.
 //   PLAYWRIGHT_MODULE=<playwright-core> QA_CHROME_PATH=<Chrome> QA_DIST=<dist> [QA_SHOTS=<dir>] node qa/space-page-search-2601.cjs
 const assert = require('node:assert/strict');
-const { themedPage, shot, run, createSpacesServer, mountSpaces, open, openNav } = require('./spaces-harness.cjs');
+const { themedPage, shot: takeShot, run, createSpacesServer, mountSpaces, open, openNav } = require('./spaces-harness.cjs');
+// The phone drawer slides in; a picture taken mid-slide proves nothing.
+const shot = async (page, name) => { await page.waitForTimeout(700); await takeShot(page, name); };
 
 const VIEWS = [[375, 812, 'light'], [375, 812, 'dark'], [1280, 900, 'light'], [1280, 900, 'dark']];
 
@@ -82,10 +84,11 @@ run('space-page-search-2601', Number(process.env.QA_PORT || 32601), async (check
       await mountSpaces(page, server);
       await open(page, origin, '/');
       const field = await openSearch(page);
+      const before = server.calls.length; // the shell's own probe of the Spaces routes has happened by now
       await field.fill('QA page d1');
       await page.getByText('No matching chats, projects or pages.').waitFor({ timeout: 10000 });
       await page.waitForTimeout(800);
-      assert.deepEqual(server.calls.filter((c) => /\/pages/.test(c.path)), [], 'no page search request');
+      assert.deepEqual(server.calls.slice(before), [], 'a search asked the Spaces routes for something');
       assert.equal(await page.locator('.side-scroll-pages').count(), 0);
     } finally { await page.close(); }
   });

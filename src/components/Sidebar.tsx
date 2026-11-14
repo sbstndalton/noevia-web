@@ -284,14 +284,16 @@ export function Sidebar({
   // #2601: pages in the person's Spaces whose title or text holds the query (the server searches one Space at a time).
   // Same pause as the message search; a failed lookup shows no pages, as a failed message search shows no extra chats.
   const [pageHits, setPageHits] = useState<(PageSearch & { query: string }) | null>(null);
-  const pageSearchOn = !!onOpenSpaces && !!onOpenSpacePage && mode !== 'code' && !textQuery.startsWith('#');
+  // A `#tag` (with chat organisation on) filters chats only: pages carry no tags, so nothing is asked.
+  const pageTagQuery = !!organise && parseSidebarQuery(query).tags.length > 0;
+  const pageSearchOn = !!onOpenSpaces && !!onOpenSpacePage && mode !== 'code' && !pageTagQuery;
   useEffect(() => {
     if (!pageSearchOn || textQuery.length < 2 || queryTooLong) { setPageHits(null); return; }
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       searchSpacePages(textQuery, controller.signal)
         .then((r) => { if (!controller.signal.aborted) setPageHits({ ...r, query: textQuery }); })
-        .catch(() => { if (!controller.signal.aborted) setPageHits(null); });
+        .catch(() => { if (!controller.signal.aborted) setPageHits({ hits: [], incomplete: false, query: textQuery }); });
     }, 300);
     return () => { controller.abort(); window.clearTimeout(timer); };
   }, [pageSearchOn, textQuery, queryTooLong]);
@@ -511,6 +513,8 @@ export function Sidebar({
   // flat, DOM-order list (destinations, pinned chats, pinned projects, unpinned projects, recent chats) —
   // the same order the groups below render them in — via real roving focus on each result's
   // own button (searchResultRefs), not a duplicate/virtual list.
+  // The no-results line waits for the page search to answer (or fail), so it is not announced for a query a page matches.
+  const pagesPending = pageSearchOn && textQuery.length >= 2 && !queryTooLong && pageHits?.query !== textQuery;
   const pages = pageSearchOn && pageHits?.query === textQuery ? pageHits.hits.map((hit) => ({ ...hit, id: `${hit.spaceId}/${hit.pageId}` })) : [];
   const searchResults = query ? buildSearchResults(code ? [] : pinnedChats, code ? [] : pinnedProjects, code ? [] : unpinnedProjects, code ? [] : boundedRecentChats, destinations, pages) : [];
   const searchResultIndex = new Map(searchResults.map((r, i) => [searchResultKey(r.kind, r.id), i]));
@@ -830,7 +834,7 @@ export function Sidebar({
       {destinationResults}
       {pageResults}
       {queryTooLong && <p className="side-hint" role="status">{t('sidebar.searchTooLong', { max: SEARCH_MAX_QUERY })}</p>}
-      {query && !queryTooLong && searchResults.length === 0 && <p className="side-hint" role="status">{t('sidebar.noSearchResults')}</p>}
+      {query && !queryTooLong && !pagesPending && searchResults.length === 0 && <p className="side-hint" role="status">{t('sidebar.noSearchResults')}</p>}
       {messageHitsTruncated && <p className="side-hint" role="status">{t('sidebar.searchTruncated')}</p>}
       {pageSearchOn && pageHits?.query === textQuery && pageHits.incomplete && <p className="side-hint" role="status">{t('sidebar.searchPagesTruncated')}</p>}
       {['Pinned','Projects'].map(group => {
