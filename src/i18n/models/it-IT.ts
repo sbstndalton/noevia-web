@@ -252,6 +252,7 @@ export const IT_IT_MODELS: ModelsCatalogue = {
   'mm.badge.tools': "Uso di strumenti",
   'mm.badge.vision': "Visione",
   'mm.library.noService': "Dettagli dei file, download e impostazioni richiedono il servizio di gestione dei modelli, che non è disponibile su questo server.",
+  'mm.library.adminOnly': "Dettagli dei file, download e impostazioni sono riservati agli amministratori.",
   'mm.library.unavailable': "La libreria dei modelli non è disponibile.",
   'mm.library.loadFailed': "caricamento non riuscito",
   'mm.library.unloadFailed': "scaricamento non riuscito",

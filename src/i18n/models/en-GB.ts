@@ -261,6 +261,7 @@ export const EN_GB_MODELS = {
   'mm.badge.tools': 'Tool use',
   'mm.badge.vision': 'Vision',
   'mm.library.noService': 'File details, downloads and settings need the model management service, which is not available on this server.',
+  'mm.library.adminOnly': 'File details, downloads and settings are for administrators.',
   'mm.library.unavailable': 'The model library is unavailable.',
   'mm.library.loadFailed': 'load failed',
   'mm.library.unloadFailed': 'unload failed',

@@ -252,6 +252,7 @@ export const DE_DE_MODELS: ModelsCatalogue = {
   'mm.badge.tools': "Tool-Nutzung",
   'mm.badge.vision': "Bildverständnis",
   'mm.library.noService': "Dateidetails, Downloads und Einstellungen brauchen den Modellverwaltungsdienst, der auf diesem Server nicht verfügbar ist.",
+  'mm.library.adminOnly': "Dateidetails, Downloads und Einstellungen sind Administratoren vorbehalten.",
   'mm.library.unavailable': "Die Modellbibliothek ist nicht verfügbar.",
   'mm.library.loadFailed': "Laden fehlgeschlagen",
   'mm.library.unloadFailed': "Entladen fehlgeschlagen",
