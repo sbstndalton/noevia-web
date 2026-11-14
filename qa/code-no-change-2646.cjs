@@ -16,18 +16,20 @@ const SHA = 'a'.repeat(40), HEAD2 = 'b'.repeat(40);
 const PROJECT = { id: 'p-nc', name: 'QA-2646 project', modes: ['chat'], goal: '', instructions: '', memories: [], files: [], assets: [], toolboxes: ['core'], createdAt: 1000, updatedAt: 1000, chats: [] };
 const ADMIN = { id: 'qa-admin', username: 'qa-admin', displayName: 'QA admin', role: 'admin', diaryEnabled: false, onboarded: true };
 const NO_COMMITS = 'The task made no commits, so there is nothing to review.';
-const CARD = (changed) => ({ id: '00000000-0000-4000-8000-000000000009', taskId: TASK, action: 'review_change', title: 'Accept this change', kind: 'review', command: '',
-  paths: changed ? ['src/qa.js'] : [],
-  reason: changed ? 'The Planner’s verdict is advice. Accepting records this reviewed head as accepted; nothing is merged automatically.'
-    : `Not reviewed: ${NO_COMMITS} Review the change on its branch yourself before accepting it.`,
-  arguments: { branch: 'noevia/qa-2646', baseSha: SHA, headSha: changed ? HEAD2 : SHA, files: changed ? ['src/qa.js'] : [] }, diff: null,
-  review: changed ? { status: 'completed', reviewer: 'planner', baseSha: SHA, headSha: HEAD2, verdict: 'approve', summary: 'QA: fine.', findings: [] }
-    : { status: 'failed', reviewer: 'planner', baseSha: SHA, headSha: SHA, code: 'no_change', reason: NO_COMMITS } });
-const task = (status, changed, over = {}) => ({ id: TASK, status, stage: null, error: null, createdAt: Date.now() - 90000, updatedAt: Date.now() - 60000, task: 'QA-2646 edit the file', branch: 'noevia/qa-2646', meta: null,
-  identityHash: null, capabilities: CAPS, steps: [], plan: null, assistantOutput: null, approval: status === 'waiting_approval' ? CARD(changed) : null, result: null,
-  review: CARD(changed).review, ...over });
+const NOT_RELEASED = 'The workspace was not released cleanly, so its change was not read.';
+// kind: 'none' (no commit), 'changed' (a real change) or 'stuck' (the workspace was not released: base = head too, but the server's code is not_released).
+const CARD = (kind) => ({ id: '00000000-0000-4000-8000-000000000009', taskId: TASK, action: 'review_change', title: 'Accept this change', kind: 'review', command: '',
+  paths: kind === 'changed' ? ['src/qa.js'] : [],
+  reason: kind === 'changed' ? 'The Planner’s verdict is advice. Accepting records this reviewed head as accepted; nothing is merged automatically.'
+    : `Not reviewed: ${kind === 'stuck' ? NOT_RELEASED : NO_COMMITS} Review the change on its branch yourself before accepting it.`,
+  arguments: { branch: 'noevia/qa-2646', baseSha: SHA, headSha: kind === 'changed' ? HEAD2 : SHA, files: kind === 'changed' ? ['src/qa.js'] : [] }, diff: null,
+  review: kind === 'changed' ? { status: 'completed', reviewer: 'planner', baseSha: SHA, headSha: HEAD2, verdict: 'approve', summary: 'QA: fine.', findings: [] }
+    : { status: 'failed', reviewer: 'planner', baseSha: SHA, headSha: SHA, code: kind === 'stuck' ? 'not_released' : 'no_change', reason: kind === 'stuck' ? NOT_RELEASED : NO_COMMITS } });
+const task = (status, kind, over = {}) => ({ id: TASK, status, stage: null, error: null, createdAt: Date.now() - 90000, updatedAt: Date.now() - 60000, task: 'QA-2646 edit the file', branch: 'noevia/qa-2646', meta: null,
+  identityHash: null, capabilities: CAPS, steps: [], plan: null, assistantOutput: null, approval: status === 'waiting_approval' ? CARD(kind) : null, result: null,
+  review: CARD(kind).review, ...over });
 
-async function mock(page, server, changed) {
+async function mock(page, server, kind) {
   await page.route('**/api/auth/session', (r) => r.fulfill({ json: { user: ADMIN, passkeys: [] } }));
   await page.route('**/api/profile', (r) => r.fulfill({ json: { user: ADMIN, passkeys: [] } }));
   await page.route('**/api/features', (r) => r.fulfill({ json: { flags: { codeHarness: true, previews: true } } }));
@@ -43,10 +45,10 @@ async function mock(page, server, changed) {
       const body = req.postDataJSON();
       server.answers.push(body);
       server.status = 'completed';
-      server.result = { stopReason: 'end_turn', review: { reviewed: false, verdict: null, accepted: body.decision !== 'deny', decision: body.decision, headSha: changed ? HEAD2 : SHA } };
+      server.result = { stopReason: 'end_turn', review: { reviewed: false, verdict: null, accepted: body.decision !== 'deny', decision: body.decision, headSha: kind === 'changed' ? HEAD2 : SHA } };
       return r.fulfill({ json: { ok: true } });
     }
-    const current = task(server.status, changed, { result: server.result || null });
+    const current = task(server.status, kind, { result: server.result || null });
     if (path.endsWith(`/code/${TASK}`)) return r.fulfill({ json: current });
     return r.fulfill({ json: { repositories: [{ id: 'qa-repo' }], capabilities: CAPS, defaultCapabilities: ['read_repository'], harnesses: [{ id: 'qa', label: 'QA', version: '1' }],
       promptPreparation: [{ id: 'direct', label: 'Direct', available: true, reason: 'Your request goes to the model as you wrote it.' }], sandboxed: true, network: false, tasks: [current] } });
@@ -74,10 +76,11 @@ run('code-no-change-2646', Number(process.env.QA_PORT || 32646), async (check, b
       const server = { status: 'waiting_approval', answers: [], result: null };
       const page = await themedPage(browser, view);
       try {
-        await mock(page, server, false);
+        await mock(page, server, 'none');
         await openCode(page, origin);
         const card = page.locator('.code-approval');
         await card.getByText('The task made no changes, so there is nothing to accept. Closing ends the task.', { exact: true }).waitFor({ timeout: 5000 });
+        assert.equal(await page.locator('section.code-tasks').getByText('Accept the finished change').count(), 0, 'the card or the stage line still says Accept the finished change');
         await card.scrollIntoViewIfNeeded();
         await page.waitForTimeout(500);
         await shot(page, `no-change-card-${view[0]}-${view[2]}`);
@@ -87,8 +90,11 @@ run('code-no-change-2646', Number(process.env.QA_PORT || 32646), async (check, b
         assert.equal(await card.getByText('Review the change on its branch yourself').count(), 0, 'the card still asks for a review of nothing');
         await card.getByRole('button', { name: 'Close', exact: true }).click();
         await page.locator('.code-approval').waitFor({ state: 'detached', timeout: 15000 });
-        assert.deepEqual(server.answers, [{ decision: 'deny', approvalId: CARD(false).id }]);
+        assert.deepEqual(server.answers, [{ decision: 'deny', approvalId: CARD('none').id }]);
         await page.getByText('There was no change to accept.').first().waitFor({ timeout: 15000 });
+        // Nobody refused anything: the header does not say the change "was not accepted".
+        assert.equal(await page.getByText('Not accepted', { exact: true }).count(), 0, 'the badge still says Not accepted');
+        assert.equal(await page.getByText(/Finished, but the change was not accepted/).count(), 0, 'the stage line still says the change was not accepted');
         await shot(page, `no-change-closed-${view[0]}-${view[2]}`);
       } finally { await page.close(); }
     });
@@ -97,7 +103,7 @@ run('code-no-change-2646', Number(process.env.QA_PORT || 32646), async (check, b
       const server = { status: 'waiting_approval', answers: [], result: null };
       const page = await themedPage(browser, view);
       try {
-        await mock(page, server, true);
+        await mock(page, server, 'changed');
         await openCode(page, origin);
         const card = page.locator('.code-approval');
         await card.getByRole('button', { name: 'Accept change', exact: true }).waitFor({ timeout: 5000 });
@@ -107,6 +113,20 @@ run('code-no-change-2646', Number(process.env.QA_PORT || 32646), async (check, b
         await card.scrollIntoViewIfNeeded();
         await page.waitForTimeout(300);
         await shot(page, `change-card-${view[0]}-${view[2]}`);
+      } finally { await page.close(); }
+    });
+
+    await check(`${tag}: a workspace that was not released (base = head, code not_released) keeps the server's reason and both answers`, async () => {
+      const server = { status: 'waiting_approval', answers: [], result: null };
+      const page = await themedPage(browser, view);
+      try {
+        await mock(page, server, 'stuck');
+        await openCode(page, origin);
+        const card = page.locator('.code-approval');
+        await card.getByText(NOT_RELEASED).first().waitFor({ timeout: 5000 });
+        await card.getByRole('button', { name: 'Accept change', exact: true }).waitFor({ timeout: 5000 });
+        await card.getByRole('button', { name: 'Decline', exact: true }).waitFor({ timeout: 5000 });
+        assert.equal(await card.getByText(/nothing to accept/).count(), 0, 'a stuck workspace is called "no changes"');
       } finally { await page.close(); }
     });
   }

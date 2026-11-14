@@ -54,6 +54,15 @@ run('models-member-403-2644', Number(process.env.QA_PORT || 32644), async (check
         await context.close();
       });
 
+      await check(`${tag}: an administrator the model manager itself refuses (403) keeps the service note and Check for updates`, async () => {
+        const { page, context } = await openPage(browser, view, theme, { user: ADMIN, mock: mock({ admin: true, managerStatus: 403 }) });
+        const tab = await library(page);
+        await tab.getByText(NO_SERVICE, { exact: true }).waitFor({ timeout: 15000 });
+        assert.equal(await page.getByText(ADMIN_ONLY).count(), 0, 'an administrator is told this is for administrators');
+        await tab.getByRole('button', { name: 'Check for updates' }).waitFor({ timeout: 5000 });
+        await context.close();
+      });
+
       await check(`${tag}: a model manager that is really down (502) still says so, and an administrator keeps Check for updates`, async () => {
         const { page, context } = await openPage(browser, view, theme, { user: ADMIN, mock: mock({ admin: true, managerStatus: 502 }) });
         const tab = await library(page);

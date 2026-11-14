@@ -317,11 +317,12 @@ export function TaskCard({ task, busy, onDecide, onCancel }: {
   // not read as plainly "Finished". Both come from fields the server already sends.
   const blocked = task.status === 'failed' && task.lifecycle === 'blocked';
   const startedAgent = (task.stages || []).some(move => move.to === 'implementing');
-  const notAccepted = task.status === 'completed' && (task.result?.review
+  // #2646: a task that made no commit had nothing to accept, so declining its card is not a refusal.
+  const notAccepted = task.status === 'completed' && task.review?.code !== 'no_change' && (task.result?.review
     ? !task.result.review.accepted
     : task.result?.pipeline === true && task.result.accepted === false);
   const badge = blocked ? t('code.status.blocked') : notAccepted ? t('code.status.notAccepted') : statusLabel(t, task.status);
-  const outcome = task.status === 'waiting_approval' ? (task.approval ? t('code.task.waitingDecisionFor', { action: actionLabel(t, task.approval.action) }) : t('code.task.waitingDecision'))
+  const outcome = task.status === 'waiting_approval' ? (task.approval ? t('code.task.waitingDecisionFor', { action: approvalName(t, task.approval) }) : t('code.task.waitingDecision'))
     : notAccepted ? t('code.task.notAcceptedOutcome')
     : task.status === 'completed' ? (task.result?.tools ? t.plural('code.task.finishedAfter', task.result.tools) : statusLabel(t, 'completed'))
     : blocked ? t(startedAgent ? 'code.task.blockedOutcome' : 'code.task.blockedBeforeStart')
@@ -455,9 +456,15 @@ export function ApprovalCard({ approval, busy, onDecide }: {
   </div>;
 }
 
-/** The server's own word that the task made no commits: its review code `no_change`, or a card whose base and head are the one commit. */
+/** The card's name: "Accept the finished change", except where there is nothing to accept (#2646). */
+function approvalName(t: Translate, approval: CodeApproval): string {
+  return approval.action === 'review_change' && isNoChange(approval) ? t('code.review.group') : actionLabel(t, approval.action);
+}
+
+/** The server's own word that the task made no commits: its review code `no_change`, or (with no review code at all) a card whose base
+ *  and head are the one commit. Any other code (`not_released`, say) is a different reason the server gives, and is shown as it is. */
 export function isNoChange(approval: CodeApproval): boolean {
-  if (approval.review?.code === 'no_change') return true;
+  if (approval.review?.code) return approval.review.code === 'no_change';
   const args = (approval.arguments && typeof approval.arguments === 'object' ? approval.arguments : {}) as { baseSha?: unknown; headSha?: unknown };
   return typeof args.baseSha === 'string' && args.baseSha !== '' && args.baseSha === args.headSha;
 }
@@ -493,7 +500,7 @@ function ReviewCard({ approval, busy, onDecide }: {
   const approvalId = approval.id;
   const noChange = isNoChange(approval);
   return <div className="code-approval code-review" role="group" aria-label={t('code.review.group')}>
-    <p className="code-approval-title"><ShellIcon name="security" size={16} tone="decorative"/>{actionLabel(t, 'review_change')}</p>
+    <p className="code-approval-title"><ShellIcon name="security" size={16} tone="decorative"/>{approvalName(t, approval)}</p>
     {!noChange && approval.review && <ReviewVerdict review={approval.review}/>}
     {!noChange && <AcceptWhat approval={approval}/>}
     <AcceptSummary approval={approval}/>

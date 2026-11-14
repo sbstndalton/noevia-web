@@ -84,7 +84,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
   // #2239: the list itself failed (models stays null): the "Loading models…" line gives way to the error and a retry.
   const [listFailed, setListFailed] = useState(false);
   const failedRef = useRef(false), [retrying, setRetrying] = useState(false);
-  const [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(''), [filesNote, setFilesNote] = useState(''), [adminOnly, setAdminOnly] = useState(false), [runtimeOptions, setRuntimeOptions] = useState(false);
+  const [error, setError] = useState(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(''), [filesNote, setFilesNote] = useState(''), [denied, setDenied] = useState(false), [runtimeOptions, setRuntimeOptions] = useState(false);
   // The parent passes a fresh callback each render; the refresh below must stay stable.
   const changedRef = useRef(onChanged);
   changedRef.current = onChanged;
@@ -97,8 +97,8 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     const current = () => request === requestRef.current;
     const listed = fetchInstalledModels().then((installed) => { if (current()) { setModels(installed); failedRef.current = false; setListFailed(false); setError(''); } return installed; });
     // #2644: the model manager's own answers are for administrators; a 403 is that, not a service that is down.
-    let denied = false;
-    const local = mm<{ models: FileEntry[]; unregistered: string[] }>('models').catch((e) => { denied = (e as { status?: number } | null)?.status === 403; return null; });
+    let refused = false;
+    const local = mm<{ models: FileEntry[]; unregistered: string[] }>('models').catch((e) => { refused = (e as { status?: number } | null)?.status === 403; return null; });
     // `u.status` is missing rather than `{}` when the endpoint answers with an unexpected body —
     // `|| {}` keeps `updates[...]` a safe lookup instead of crashing on an undefined record.
     void mm<{ status: Record<string, Update> }>('models/updates').then((u) => setUpdates(u.status || {})).catch(() => undefined);
@@ -114,14 +114,16 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
         if (synced.text) setMessage(synced.text);
         if (synced.added.length) { changedRef.current(); return; }   // models-changed refetches this list
       }
-      setAdminOnly(denied);
-      setFilesNote(scan ? '' : tRef.current(denied ? 'mm.library.adminOnly' : 'mm.library.noService'));
+      setDenied(refused);
+      setFilesNote(scan ? '' : tRef.current('mm.library.noService'));
     } catch (e) { if (!current()) return; failedRef.current = true; setListFailed(true); setError(errorText(e, tRef.current('mm.library.unavailable'))); }
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
   // Tabs mount per selection, so a mount-only fetch left this list showing
   // whatever was true when the tab was last opened.
   useModelsChanged(useCallback(() => { void refresh(); }, [refresh]));
+  // #2644: a 403 is "for administrators" only when this account is none; an administrator refused by the model manager itself still sees the service note.
+  const adminOnly = denied && !admin;
   const leftoverKey = (models || []).filter(m => m.missingFile === true).map(m => m.name).sort().join('\n');
   const pruned = useRef('');
   const prune = useCallback(async (manual: boolean) => {
@@ -240,7 +242,7 @@ export function LibraryTab({ onConfigure, onChanged, query = '', sort = 'name', 
     {showTune && <section className="mm-panel" id="library-autotune"><h3>{t('mm.library.autoTuning')}</h3><AutoTune onChanged={onChanged}/></section>}
     {error && <p role="alert" className="modal-err">{error}{!models && listFailed && <> <button type="button" className="btn btn-secondary btn-sm" aria-disabled={retrying || undefined} onClick={() => { if (retrying) return; setRetrying(true); void refresh().finally(() => setRetrying(false)); }}>{t('mm.tryAgain')}</button></>}</p>}
     {message && <p role="status" className="mm-note">{message}</p>}
-    {filesNote && <p className="mm-note">{filesNote}</p>}
+    {filesNote && <p className="mm-note">{adminOnly ? t('mm.library.adminOnly') : filesNote}</p>}
     {models && !servable.length && !orphanFiles.length && installed.length > 0 && <p className="mm-note">{t('mm.library.nothing')}</p>}
     {leftover.length > 0 && <p className="mm-note mm-leftover" role="status" data-testid="models-leftover"><span>{t.plural('mm.library.leftover', leftover.length, { models: leftover.map(m => m.name).join(', ') })}</span>
       {admin && <button className="btn btn-secondary btn-sm" disabled={busy === 'prune'} onClick={() => void prune(true)}>{busy === 'prune' ? t('mm.library.leftoverRemoving') : t('mm.library.leftoverRemove')}</button>}</p>}
