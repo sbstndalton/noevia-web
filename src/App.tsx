@@ -568,6 +568,8 @@ export default function App(): JSX.Element {
     const place = restored.current;
     if (!place || !workspaceLoaded) return;
     restored.current = null;
+    // #2579: a tab that is on its own new chat, not the saved place, has nothing of the saved place to drop.
+    if (view.kind === 'chat' && place.view.kind === 'chat' ? view.chatId !== place.view.chatId : view.kind !== place.view.kind) return;
     const projectExists = (id: string) => projects.some((p) => p.id === id);
     const stale =
       (place.view.kind === 'project' && !projectExists(place.view.id)) ||
@@ -738,6 +740,12 @@ export default function App(): JSX.Element {
     customiseTab, freshChat: freshChatOpen,
   });
   const routePath = route ? toPath(route) : null;
+  // #2579: the new chat a tab remembers for its reloads is the one it shows: a tab on anything else (an existing chat, another page,
+  // a copy of another tab's session) forgets it, or a later reload would bring it back empty.
+  useEffect(() => {
+    const own = ownNewChat();
+    if (own && !(view.kind === 'chat' && view.chatId === own)) rememberOwnNewChat(null);
+  }, [view]);
   // #2579: an empty new chat is leased, and remembered for this tab's reloads, for as long as this tab shows it (fresh-chat-lease.ts).
   // A chat restored from the saved place waits for the workspace, which tells an empty new chat from one still being fetched.
   const restoredHere = restored.current?.view.kind === 'chat' && view.kind === 'chat' && restored.current.view.chatId === view.chatId;
@@ -749,7 +757,12 @@ export default function App(): JSX.Element {
     if (!leasedInProject) rememberOwnNewChat(leasedChat);
     const beat = setInterval(() => holdFreshChat(leasedChat), LEASE_BEAT_MS);
     const leave = () => releaseFreshChat(leasedChat);
-    const back = (e: PageTransitionEvent) => { if (e.persisted) holdFreshChat(leasedChat); };
+    // Back from the back/forward cache: another tab may have taken this empty chat meanwhile, then this tab starts its own.
+    const back = (e: PageTransitionEvent) => {
+      if (!e.persisted) return;
+      if (leasedByAnotherTab(leasedChat)) setView(freshChatView(viewRef.current.kind === 'chat' ? viewRef.current.projectId ?? null : null));
+      else holdFreshChat(leasedChat);
+    };
     window.addEventListener('pagehide', leave);
     window.addEventListener('pageshow', back);
     return () => {

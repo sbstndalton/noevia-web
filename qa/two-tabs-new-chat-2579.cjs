@@ -119,6 +119,23 @@ function watch(page, ids) {
         } finally { await context.close(); }
       });
     }
+    await check("1280 px: a tab that shows something else does not keep another tab's new chat as its own (a duplicated tab)", async () => {
+      const context = await browser.newContext(withLocale({ viewport: { width: 1280, height: 900 } }));
+      try {
+        const a = await context.newPage();
+        await a.goto(origin);
+        await a.getByRole('textbox', { name: 'Message', exact: true }).waitFor();
+        await a.waitForFunction(() => !!sessionStorage.getItem('noevia:tab-new-chat'), null, { timeout: 10000 });
+        const x = await a.evaluate(() => sessionStorage.getItem('noevia:tab-new-chat'));
+        // A copy of tab A's session (what duplicating a tab does), opened on the Projects page: it never shows chat X.
+        const b = await context.newPage();
+        await b.addInitScript((id) => { if (!sessionStorage.getItem('noevia:tab-new-chat')) sessionStorage.setItem('noevia:tab-new-chat', id); }, x);
+        await b.goto(`${origin}/projects`);
+        await b.getByRole('heading', { name: 'Projects', exact: true }).first().waitFor({ timeout: 10000 });
+        await b.waitForTimeout(500);
+        assert.equal(await b.evaluate(() => sessionStorage.getItem('noevia:tab-new-chat')), null, "tab B does not keep tab A's new chat, which could later come back empty");
+      } finally { await context.close(); }
+    });
     await check('1280 px: reloading the only tab keeps its new chat (the unsent draft is back)', async () => {
       const context = await browser.newContext(withLocale({ viewport: { width: 1280, height: 900 } }));
       try {
