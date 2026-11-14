@@ -96,6 +96,7 @@ import { skippedChatIds, withoutSkipped } from './list-save';
 import { useSaveAfterCommit } from './use-save-after-commit';
 import { adoptMergedTranscript, enqueueKeyed, latestGate, resolveLoadedHistory, shouldSaveChat, upsertChatMeta } from './chat-save';
 import { readLastPlace, writeLastPlace, clearLastPlace, type LastPlace } from './last-view';
+import { holdFreshChat, releaseFreshChat, leasedByAnotherTab, LEASE_BEAT_MS } from './fresh-chat-lease';
 import { historyMode, matchPath, parsePath, routeForState, toPath, type CustomiseTab, type ProjectTab, type Route, type SyncedPlace } from './routes';
 import { EmptyState } from './components/EmptyState';
 import { currentRoutingDecision } from './current-routing';
@@ -279,6 +280,9 @@ export default function App(): JSX.Element {
       }
     }
     const saved = restored.current?.view;
+    // #2579: the saved chat is an empty new chat another tab of this browser is showing right now: start this tab's own, or both
+    // tabs would send into one chat.
+    if (saved?.kind === 'chat' && leasedByAnotherTab(saved.chatId)) return { kind: 'chat', chatId: freshChatId(), projectId: saved.projectId ?? null };
     // A saved chat may never have been written in; like a new chat it has no address yet.
     if (saved?.kind === 'chat') freshChats.current.add(saved.chatId);
     return saved ?? { kind: 'chat', chatId: freshChatId(), projectId: null };
@@ -732,6 +736,19 @@ export default function App(): JSX.Element {
     customiseTab, freshChat: freshChatOpen,
   });
   const routePath = route ? toPath(route) : null;
+  // #2579: an empty new chat is leased for as long as this tab shows it (see fresh-chat-lease.ts), once the workspace has loaded and the
+  // chat is known to be empty rather than one still being fetched.
+  const leasedChat = freshChatOpen && workspaceLoaded && view.kind === 'chat' ? view.chatId : null;
+  useEffect(() => {
+    if (!leasedChat) return;
+    holdFreshChat(leasedChat);
+    const beat = setInterval(() => holdFreshChat(leasedChat), LEASE_BEAT_MS);
+    const leave = () => releaseFreshChat(leasedChat);
+    const back = (e: PageTransitionEvent) => { if (e.persisted) holdFreshChat(leasedChat); };
+    window.addEventListener('pagehide', leave);
+    window.addEventListener('pageshow', back);
+    return () => { clearInterval(beat); window.removeEventListener('pagehide', leave); window.removeEventListener('pageshow', back); releaseFreshChat(leasedChat); };
+  }, [leasedChat]);
   const syncedPlace = useRef<SyncedPlace | null>(null);
   // Any move off the page the address did not name (a sidebar link, a Back step) leaves it (#1469).
   const viewAtLoad = useRef(view);
