@@ -59,6 +59,34 @@ function watch(page, ids) {
         } finally { await context.close(); }
       });
     }
+    await check('1280 px: with two tabs open, reloading either one keeps its own new chat (its unsent draft is back), and they still send into two chats', async () => {
+      const context = await browser.newContext(withLocale({ viewport: { width: 1280, height: 900 } }));
+      try {
+        const a = await context.newPage(), b = await context.newPage();
+        const idsA = new Set(), idsB = new Set();
+        watch(a, idsA); watch(b, idsB);
+        await a.goto(origin);
+        const boxA = a.getByRole('textbox', { name: 'Message', exact: true });
+        await boxA.fill('synthetic draft of tab A');
+        await a.waitForFunction(() => (localStorage.getItem('noevia:chat-drafts') || '').includes('synthetic draft of tab A'), null, { timeout: 10000 });
+        await a.waitForTimeout(800);
+        await b.goto(origin);
+        const boxB = b.getByRole('textbox', { name: 'Message', exact: true });
+        await boxB.fill('synthetic draft of tab B');
+        await b.waitForFunction(() => (localStorage.getItem('noevia:chat-drafts') || '').includes('synthetic draft of tab B'), null, { timeout: 10000 });
+        await a.waitForTimeout(4500); // both tabs have renewed their leases several times
+        await a.reload(); await boxA.waitFor();
+        assert.equal(await boxA.inputValue(), 'synthetic draft of tab A', 'tab A is back on its own new chat');
+        await b.reload(); await boxB.waitFor();
+        assert.equal(await boxB.inputValue(), 'synthetic draft of tab B', 'tab B is back on its own new chat');
+        await Promise.all([boxA.press('Enter'), boxB.press('Enter')]);
+        await a.waitForFunction(() => document.body.innerText.includes('synthetic draft of tab A'), null, { timeout: 10000 });
+        await b.waitForFunction(() => document.body.innerText.includes('synthetic draft of tab B'), null, { timeout: 10000 });
+        await a.waitForTimeout(2500);
+        assert.ok(idsA.size >= 1 && idsB.size >= 1, `both tabs saved a history (A ${[...idsA]}, B ${[...idsB]})`);
+        assert.equal([...idsA].filter((id) => idsB.has(id)).length, 0, `different chats (A ${[...idsA]}, B ${[...idsB]})`);
+      } finally { await context.close(); }
+    });
     await check('1280 px: reloading the only tab keeps its new chat (the unsent draft is back)', async () => {
       const context = await browser.newContext(withLocale({ viewport: { width: 1280, height: 900 } }));
       try {
